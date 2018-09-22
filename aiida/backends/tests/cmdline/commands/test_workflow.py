@@ -1,10 +1,10 @@
 from __future__ import absolute_import
-import click
 from click.testing import CliRunner
 from traceback import format_exception
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.commands.cmd_workflow import workflow_list, workflow_kill, workflow_report, workflow_logshow, format_pk
+from aiida.cmdline.commands.cmd_workflow import workflow_list, workflow_kill, workflow_report, workflow_logshow, \
+    format_pk
 
 
 def debug_msg(result):

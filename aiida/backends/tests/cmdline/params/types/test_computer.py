@@ -1,8 +1,7 @@
-#-*- coding: utf8 -*-
+# -*- coding: utf8 -*-
 from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.params.types import ComputerParamType
-from aiida.orm import Computer
 from aiida.orm.utils.loaders import OrmEntityLoader
 
 
@@ -26,9 +25,9 @@ class TestComputerParamType(AiidaTestCase):
         }
 
         cls.param = ComputerParamType()
-        cls.entity_01 = Computer(name='computer_01', **kwargs).store()
-        cls.entity_02 = Computer(name=str(cls.entity_01.pk), **kwargs).store()
-        cls.entity_03 = Computer(name=str(cls.entity_01.uuid), **kwargs).store()
+        cls.entity_01 = cls.backend.computers.create(name='computer_01', **kwargs).store()
+        cls.entity_02 = cls.backend.computers.create(name=str(cls.entity_01.pk), **kwargs).store()
+        cls.entity_03 = cls.backend.computers.create(name=str(cls.entity_01.uuid), **kwargs).store()
 
     def test_get_by_id(self):
         """

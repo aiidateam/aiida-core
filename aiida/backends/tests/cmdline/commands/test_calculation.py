@@ -24,10 +24,12 @@ class TestVerdiCalculation(AiidaTestCase):
         from aiida.backends.tests.utils.fixtures import import_archive_fixture
         from aiida.common.exceptions import ModificationNotAllowed
         from aiida.common.links import LinkType
-        from aiida.orm import Code, Computer, Group, Node, JobCalculation, CalculationFactory
+        from aiida.orm import Code, Group, Node, JobCalculation, CalculationFactory
         from aiida.orm.data.parameter import ParameterData
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.work.processes import ProcessState
+        from aiida.orm.backend import construct_backend
+        backend = construct_backend()
 
         rmq_config = rmq.get_rmq_config()
 
@@ -36,17 +38,14 @@ class TestVerdiCalculation(AiidaTestCase):
         cls.runner = runners.Runner(rmq_config=rmq_config, rmq_submit=True, poll_interval=0.)
         cls.daemon_runner = runners.DaemonRunner(rmq_config=rmq_config, rmq_submit=True, poll_interval=0.)
 
-        cls.computer = Computer(
-            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct',
-            workdir='/tmp/aiida').store()
+        cls.computer = backend.computers.create(name='comp', hostname='localhost', transport_type='local',
+                                                scheduler_type='direct', workdir='/tmp/aiida').store()
 
         cls.code = Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
         cls.group = Group(name='test_group').store()
         cls.node = Node().store()
         cls.calcs = []
 
-        from aiida.orm.backend import construct_backend
-        backend = construct_backend()
         authinfo = backend.authinfos.create(computer=cls.computer, user=backend.users.get_automatic_user())
         authinfo.store()
 
@@ -79,7 +78,6 @@ class TestVerdiCalculation(AiidaTestCase):
             cls.calcs.append(calc)
 
             if calculation_state == 'PARSING':
-
                 cls.KEY_ONE = 'key_one'
                 cls.KEY_TWO = 'key_two'
                 cls.VAL_ONE = 'val_one'
@@ -193,7 +191,6 @@ class TestVerdiCalculation(AiidaTestCase):
         """Test verdi calculation list with the calculation state filter"""
         for flag in ['-s', '--calculation-state']:
             for state in calc_states:
-
                 # Each valid state should have exactly one entry
                 options = ['-r', flag, state]
                 result = self.cli_runner.invoke(command.calculation_list, options)
@@ -228,7 +225,6 @@ class TestVerdiCalculation(AiidaTestCase):
         """Test verdi calculation list with the exit status filter"""
         for flag in ['-E', '--exit-status']:
             for exit_status in JobCalculationExitStatus:
-
                 options = ['-r', flag, exit_status.value]
                 result = self.cli_runner.invoke(command.calculation_list, options)
 

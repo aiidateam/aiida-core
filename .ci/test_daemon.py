@@ -188,10 +188,10 @@ def create_calculation(code, counter, inputval, use_cache=False):
         'retrieve_temporary_files': ['triple_value.tmp']
     })
     calc = code.new_calc()
-    calc.set_max_wallclock_seconds(5 * 60)  # 5 min
-    calc.set_resources({"num_machines": 1})
-    calc.set_withmpi(False)
-    calc.set_parser_name('simpleplugins.templatereplacer.doubler')
+    calc.set_option('max_wallclock_seconds', 5 * 60)  # 5 min
+    calc.set_option('resources', {"num_machines": 1})
+    calc.set_option('withmpi', False)
+    calc.set_option('parser_name', 'simpleplugins.templatereplacer.doubler')
 
     calc.use_parameters(parameters)
     calc.use_template(template)

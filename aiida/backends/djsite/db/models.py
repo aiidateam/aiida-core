@@ -129,7 +129,7 @@ class DbNode(m.Model):
        in the DbAttribute field). Moreover, Attributes define uniquely the
        Node so should be immutable
     """
-    uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION, db_index=True)
+    uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION, unique=True)
     # in the form data.upffile., data.structure., calculation., ...
     # Note that there is always a final dot, to allow to do queries of the
     # type (type__startswith="calculation.") and avoid problems with classes
@@ -1369,7 +1369,6 @@ class DbComputer(m.Model):
         """
         from django.core.exceptions import MultipleObjectsReturned
         from aiida.common.exceptions import NotExistent
-        from aiida.orm.computer import Computer
 
         if isinstance(computer, six.string_types):
             try:
@@ -1390,18 +1389,15 @@ class DbComputer(m.Model):
             if computer.pk is None:
                 raise ValueError("The computer instance you are passing has not been stored yet")
             dbcomputer = computer
-        elif isinstance(computer, Computer):
-            if computer.dbcomputer.pk is None:
-                raise ValueError("The computer instance you are passing has not been stored yet")
-            dbcomputer = computer.dbcomputer
         else:
             raise TypeError(
                 "Pass either a computer name, a DbComputer django instance, a Computer pk or a Computer object")
         return dbcomputer
 
     def get_aiida_class(self):
-        from aiida.orm.computer import Computer
-        return Computer(dbcomputer=self)
+        from aiida.orm.implementation.django.computer import DjangoComputer
+        from aiida.orm.backend import construct_backend
+        return DjangoComputer.from_dbmodel(self, construct_backend())
 
     def _get_val_from_metadata(self, key):
         import json
@@ -1431,14 +1427,6 @@ class DbComputer(m.Model):
         else:
             return "{} ({}) [DISABLED]".format(self.name, self.hostname)
 
-
-# class RunningJob(m.Model):
-#    calc = m.OneToOneField(DbNode,related_name='jobinfo') # OneToOneField implicitly sets unique=True
-#    calc_state = m.CharField(max_length=64)
-#    job_id = m.TextField(blank=True)
-#    scheduler_state = m.CharField(max_length=64,blank=True)
-#    # Will store a json of the last JobInfo got from the scheduler
-#    last_jobinfo = m.TextField(default='{}')
 
 @python_2_unicode_compatible
 class DbAuthInfo(m.Model):
@@ -1519,7 +1507,8 @@ class DbWorkflow(m.Model):
     nodeversion = m.IntegerField(default=1, editable=False)
     # to be implemented similarly to the DbNode class
     lastsyncedversion = m.IntegerField(default=0, editable=False)
-    state = m.CharField(max_length=255, choices=list(zip(list(wf_states), list(wf_states))), default=wf_states.INITIALIZED)
+    state = m.CharField(max_length=255, choices=list(zip(list(wf_states), list(wf_states))),
+                        default=wf_states.INITIALIZED)
     report = m.TextField(blank=True)
     # File variables, script is the complete dump of the workflow python script
     module = m.TextField(blank=False)

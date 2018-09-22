@@ -27,9 +27,11 @@
         aiida/backends/djsite/db/migrations/0011_delete_kombu_tables.py|
         aiida/backends/djsite/db/migrations/0012_drop_dblock.py|
         aiida/backends/djsite/db/migrations/0013_django_1_8.py|
+        aiida/backends/djsite/db/migrations/0014_add_node_uuid_unique_constraint.py|
         aiida/backends/djsite/db/migrations/__init__.py|
         aiida/backends/djsite/db/models.py|
         aiida/backends/djsite/db/subtests/djangomigrations.py|
+        aiida/backends/djsite/db/subtests/migrations.py|
         aiida/backends/djsite/db/subtests/generic.py|
         aiida/backends/djsite/db/subtests/__init__.py|
         aiida/backends/djsite/db/subtests/nodes.py|
@@ -67,6 +69,7 @@
         aiida/backends/sqlalchemy/migrations/versions/a6048f0ffca8_update_linktypes.py|
         aiida/backends/sqlalchemy/migrations/versions/e15ef2630a1b_initial_schema.py|
         aiida/backends/sqlalchemy/migrations/versions/f9a69de76a9a_delete_kombu_tables.py|
+        aiida/backends/sqlalchemy/migrations/versions/62fe0d36de90_add_node_uuid_unique_constraint.py|
         aiida/backends/sqlalchemy/models/authinfo.py|
         aiida/backends/sqlalchemy/models/base.py|
         aiida/backends/sqlalchemy/models/comment.py|

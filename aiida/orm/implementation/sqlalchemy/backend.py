@@ -10,7 +10,9 @@
 from __future__ import absolute_import
 from aiida.orm.backend import Backend
 
+from aiida.backends.sqlalchemy.queries import SqlaQueryManager
 from . import authinfo
+from . import computer
 from . import log
 from . import user
 
@@ -21,6 +23,8 @@ class SqlaBackend(Backend):
         self._logs = log.SqlaLogCollection(self)
         self._users = user.SqlaUserCollection(self)
         self._authinfos = authinfo.SqlaAuthInfoCollection(self)
+        self._computers = computer.SqlaComputerCollection(self)
+        self._query_manager = SqlaQueryManager(self)
 
     @property
     def logs(self):
@@ -33,3 +37,11 @@ class SqlaBackend(Backend):
     @property
     def authinfos(self):
         return self._authinfos
+
+    @property
+    def computers(self):
+        return self._computers
+
+    @property
+    def query_manager(self):
+        return self._query_manager

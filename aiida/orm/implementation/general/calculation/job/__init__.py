@@ -13,6 +13,7 @@ import abc
 import copy
 import datetime
 import enum
+import warnings
 
 import six
 from six.moves import range, zip
@@ -111,12 +112,62 @@ class AbstractJobCalculation(AbstractCalculation):
 
     @classmethod
     def process(cls):
+        """
+        Return the JobProcess class constructed based on this JobCalculatin class
+
+        :return: JobProcess class
+        """
         from aiida.work.job_processes import JobProcess
         return JobProcess.build(cls)
 
     @classmethod
     def get_builder(cls):
+        """
+        Return a JobProcessBuilder instance, tailored for this calculation class
+
+        This builder is a mapping of the inputs of the JobCalculation class, supports tab-completion, automatic
+        validation when settings values as well as automated docstrings for each input
+
+        :return: JobProcessBuilder instance
+        """
         return cls.process().get_builder()
+
+    def get_builder_restart(self):
+        """
+        Return a JobProcessBuilder instance, tailored for this calculation instance
+
+        This builder is a mapping of the inputs of the JobCalculation class, supports tab-completion, automatic
+        validation when settings values as well as automated docstrings for each input.
+
+        The fields of the builder will be pre-populated with all the inputs recorded for this instance as well as
+        settings all the options that were explicitly set for this calculation instance.
+
+        This builder can then directly be launched again to effectively run a duplicate calculation. But more useful
+        is that it serves as a starting point to, after changing one or more inputs, launch a similar calculation by
+        using this already completed calculation as a starting point.
+
+        :return: JobProcessBuilder instance
+        """
+        from aiida.work.job_processes import JobProcess
+        from aiida.work.ports import PortNamespace
+
+        inputs = self.get_inputs_dict()
+        options = self.get_options()
+        builder = self.get_builder()
+
+        for port_name, port in self.process().spec().inputs.items():
+            if port_name == JobProcess.OPTIONS_INPUT_LABEL:
+                setattr(builder, port_name, options)
+            elif isinstance(port, PortNamespace):
+                namespace = port_name + '_'
+                sub = {link[len(namespace):]: node for link, node in inputs.items() if link.startswith(namespace)}
+                if sub:
+                    setattr(builder, port_name, sub)
+            else:
+                if port_name in inputs:
+                    setattr(builder, port_name, inputs[port_name])
+
+        return builder
 
     def _init_internal_params(self):
         """
@@ -203,21 +254,25 @@ class AbstractJobCalculation(AbstractCalculation):
             raise ValidationError(
                 "No valid class/implementation found for the parser '{}'. "
                 "Set the parser to None if you do not need an automatic "
-                "parser.".format(self.get_parser_name())
+                "parser.".format(self.get_option('parser_name'))
             )
 
         computer = self.get_computer()
         s = computer.get_scheduler()
+        resources = self.get_option('resources')
+        def_cpus_machine = computer.get_default_mpiprocs_per_machine()
+        if def_cpus_machine is not None:
+            resources['default_mpiprocs_per_machine'] = def_cpus_machine
         try:
-            _ = s.create_job_resource(**self.get_resources(full=True))
+            _ = s.create_job_resource(**resources)
         except (TypeError, ValueError) as exc:
             raise ValidationError("Invalid resources for the scheduler of the "
                                   "specified computer: {}".format(exc))
 
-        if not isinstance(self.get_withmpi(), bool):
+        if not isinstance(self.get_option('withmpi', only_actually_set=False), bool):
             raise ValidationError(
                 "withmpi property must be boolean! It in instead {}"
-                "".format(str(type(self.get_withmpi())))
+                "".format(str(type(self.get_option('withmpi'))))
             )
 
     def _linking_as_output(self, dest, link_type):
@@ -286,12 +341,209 @@ class AbstractJobCalculation(AbstractCalculation):
         else:
             raise NotExistent("_raw_input_folder not created yet")
 
+    from aiida.orm.computer import Computer
+
+    options = {
+        'resources': {
+            'attribute_key': 'jobresource_params',
+            'valid_type': dict,
+            'default': {},
+            'help': 'Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '
+                    'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the '
+                    'scheduler for more details.'
+        },
+        'max_wallclock_seconds': {
+            'attribute_key': 'max_wallclock_seconds',
+            'valid_type': int,
+            'non_db': True,
+            'default': 1800,
+            'help': 'Set the wallclock in seconds asked to the scheduler',
+        },
+        'custom_scheduler_commands': {
+            'attribute_key': 'custom_scheduler_commands',
+            'valid_type': six.string_types,
+            'non_db': True,
+            'required': False,
+            'help': 'Set a (possibly multiline) string with the commands that the user wants to manually set for the '
+                    'scheduler. The difference of this option with respect to the `prepend_text` is the position in '
+                    'the scheduler submission file where such text is inserted: with this option, the string is '
+                    'inserted before any non-scheduler command',
+        },
+        'queue_name': {
+            'attribute_key': 'queue_name',
+            'valid_type': six.string_types,
+            'non_db': True,
+            'required': False,
+            'help': 'Set the name of the queue on the remote computer',
+        },
+        'account': {
+            'attribute_key': 'account',
+            'valid_type': six.string_types,
+            'non_db': True,
+            'required': False,
+            'help': 'Set the account to use in for the queue on the remote computer',
+        },
+        'qos': {
+            'attribute_key': 'qos',
+            'valid_type': six.string_types,
+            'non_db': True,
+            'required': False,
+            'help': 'Set the quality of service to use in for the queue on the remote computer',
+        },
+        'computer': {
+            'attribute_key': None,
+            'valid_type': Computer,
+            'non_db': True,
+            'required': False,
+            'help': 'Set the computer to be used by the calculation',
+        },
+        'withmpi': {
+            'attribute_key': 'withmpi',
+            'valid_type': bool,
+            'non_db': True,
+            'required': False,
+            'default': True,
+            'help': 'Set the calculation to use mpi',
+        },
+        'mpirun_extra_params': {
+            'attribute_key': 'mpirun_extra_params',
+            'valid_type': (list, tuple),
+            'non_db': True,
+            'required': False,
+            'help': 'Set the extra params to pass to the mpirun (or equivalent) command after the one provided in '
+                    'computer.mpirun_command. Example: mpirun -np 8 extra_params[0] extra_params[1] ... exec.x',
+        },
+        'import_sys_environment': {
+            'attribute_key': 'import_sys_environment',
+            'valid_type': bool,
+            'non_db': True,
+            'required': False,
+            'default': True,
+            'help': 'If set to true, the submission script will load the system environment variables',
+        },
+        'environment_variables': {
+            'attribute_key': 'custom_environment_variables',
+            'valid_type': dict,
+            'non_db': True,
+            'required': False,
+            'default': {},
+            'help': 'Set a dictionary of custom environment variables for this calculation',
+        },
+        'priority': {
+            'attribute_key': 'priority',
+            'valid_type': six.string_types[0],
+            'non_db': True,
+            'required': False,
+            'help': 'Set the priority of the job to be queued',
+        },
+        'max_memory_kb': {
+            'attribute_key': 'max_memory_kb',
+            'valid_type': int,
+            'non_db': True,
+            'required': False,
+            'help': 'Set the maximum memory (in KiloBytes) to be asked to the scheduler',
+        },
+        'prepend_text': {
+            'attribute_key': 'prepend_text',
+            'valid_type': six.string_types[0],
+            'non_db': True,
+            'required': False,
+            'help': 'Set the calculation-specific prepend text, which is going to be prepended in the scheduler-job '
+                    'script, just before the code execution',
+        },
+        'append_text': {
+            'attribute_key': 'append_text',
+            'valid_type': six.string_types[0],
+            'non_db': True,
+            'required': False,
+            'help': 'Set the calculation-specific append text, which is going to be appended in the scheduler-job '
+                    'script, just after the code execution',
+        },
+        'parser_name': {
+            'attribute_key': 'parser',
+            'valid_type': six.string_types[0],
+            'non_db': True,
+            'required': False,
+            'help': 'Set a string for the output parser. Can be None if no output plugin is available or needed',
+        }
+    }
+
+    def get_option(self, name, only_actually_set=True):
+        """
+        Retun the value of an option that was set for this JobCalculation
+
+        :param name: the option name
+        :param only_actually_set: when False will return the default value even when option had not been explicitly set
+        :return: the option value or None
+        :raises: ValueError for unknown option
+        """
+        if name not in self.options:
+            raise ValueError('unknown option {}'.format(name))
+
+        option = self.options[name]
+        attribute_key = option['attribute_key']
+        default = option.get('default', None)
+
+        attribute = self.get_attr(attribute_key, None)
+
+        if attribute is None and only_actually_set is False and default is not None:
+            attribute = default
+
+        return attribute
+
+    def set_option(self, name, value):
+        """
+        Set an option to the given value
+
+        :param name: the option name
+        :param value: the value to set
+        :raises: ValueError for unknown option
+        :raises: TypeError for values with invalid type
+        """
+        if name not in self.options:
+            raise ValueError('unknown option {}'.format(name))
+
+        option = self.options[name]
+        valid_type = option['valid_type']
+        attribute_key = option['attribute_key']
+
+        if not isinstance(value, valid_type):
+            raise TypeError('value is of invalid type {}'.format(type(value)))
+
+        self._set_attr(attribute_key, value)
+
+    def get_options(self, only_actually_set=True):
+        """
+        Return the dictionary of options set for this JobCalculation
+
+        :param only_actually_set: when False will return the default value even when option had not been explicitly set
+        :return: dictionary of the options and their values
+        """
+        options = {}
+        for name in self.options.keys():
+            value = self.get_option(name, only_actually_set=only_actually_set)
+            if value is not None:
+                options[name] = value
+
+        return options
+
+    def set_options(self, options):
+        """
+        Set the options for this JobCalculation
+
+        :param options: dictionary of option and their values to set
+        """
+        for name, value in options.items():
+            self.set_option(name, value)
+
     def set_queue_name(self, val):
         """
         Set the name of the queue on the remote computer.
 
         :param str val: the queue name
         """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
         if val is not None:
             self._set_attr('queue_name', six.text_type(val))
 
@@ -301,6 +553,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param str val: the account name
         """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
         if val is not None:
             self._set_attr('account', six.text_type(val))
 
@@ -310,6 +564,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param str val: the quality of service
         """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
         if val is not None:
             self._set_attr('qos', six.text_type(val))
 
@@ -320,6 +576,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param bool val: load the environment if True
         """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
         self._set_attr('import_sys_environment', bool(val))
 
     def get_import_sys_environment(self):
@@ -329,6 +587,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :return: a boolean. If True the system environment will be load.
         """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
         return self.get_attr('import_sys_environment', True)
 
     def set_environment_variables(self, env_vars_dict):
@@ -340,6 +600,8 @@ class AbstractJobCalculation(AbstractCalculation):
         In the remote-computer submission script, it's going to export
         variables as ``export 'keys'='values'``
         """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
         if not isinstance(env_vars_dict, dict):
             raise ValueError("You have to pass a "
                              "dictionary to set_environment_variables")
@@ -362,6 +624,8 @@ class AbstractJobCalculation(AbstractCalculation):
         Return an empty dictionary if no special environment variables have
         to be set for this calculation.
         """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
         return self.get_attr('custom_environment_variables', {})
 
     def set_priority(self, val):
@@ -370,6 +634,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param val: the values of priority as accepted by the cluster scheduler.
         """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
         self._set_attr('priority', six.text_type(val))
 
     def set_max_memory_kb(self, val):
@@ -378,6 +644,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param val: an integer. Default=None
         """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
         self._set_attr('max_memory_kb', int(val))
 
     def get_max_memory_kb(self):
@@ -386,6 +654,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :return: an integer
         """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
         return self.get_attr('max_memory_kb', None)
 
     def set_max_wallclock_seconds(self, val):
@@ -394,6 +664,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param val: An integer. Default=None
         """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
         self._set_attr('max_wallclock_seconds', int(val))
 
     def get_max_wallclock_seconds(self):
@@ -403,6 +675,8 @@ class AbstractJobCalculation(AbstractCalculation):
         :return: an integer
         :rtype: int
         """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
         return self.get_attr('max_wallclock_seconds', None)
 
     def set_resources(self, resources_dict):
@@ -414,6 +688,8 @@ class AbstractJobCalculation(AbstractCalculation):
         (scheduler type can be found with
         calc.get_computer().get_scheduler_type() )
         """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
         # Note: for the time being, resources are only validated during the
         # 'store' because here we are not sure that a Computer has been set
         # yet (in particular, if both computer and resources are set together
@@ -426,6 +702,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param val: A boolean. Default=True
         """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
         self._set_attr('withmpi', val)
 
     def get_withmpi(self):
@@ -434,6 +712,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :return: a boolean. Default=True.
         """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
         return self.get_attr('withmpi', True)
 
     def get_resources(self, full=False):
@@ -445,6 +725,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :return: a dictionary
         """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
         resources_dict = self.get_attr('jobresource_params', {})
 
         if full:
@@ -462,6 +744,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :return: a string or None.
         """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
         return self.get_attr('queue_name', None)
 
     def get_account(self):
@@ -470,6 +754,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :return: a string or None.
         """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
         return self.get_attr('account', None)
 
     def get_qos(self):
@@ -478,6 +764,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :return: a string or None.
         """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
         return self.get_attr('qos', None)
 
     def get_priority(self):
@@ -486,6 +774,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :return: a string or None
         """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
         return self.get_attr('priority', None)
 
     def get_prepend_text(self):
@@ -494,6 +784,8 @@ class AbstractJobCalculation(AbstractCalculation):
         which is going to be prepended in the scheduler-job script, just before
         the code execution.
         """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
         return self.get_attr("prepend_text", "")
 
     def set_prepend_text(self, val):
@@ -506,6 +798,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param val: a (possibly multiline) string
         """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
         self._set_attr("prepend_text", six.text_type(val))
 
     def get_append_text(self):
@@ -514,6 +808,8 @@ class AbstractJobCalculation(AbstractCalculation):
         which is going to be appended in the scheduler-job script, just after
         the code execution.
         """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
         return self.get_attr("append_text", "")
 
     def set_append_text(self, val):
@@ -524,6 +820,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param val: a (possibly multiline) string
         """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
         self._set_attr("append_text", six.text_type(val))
 
     def set_custom_scheduler_commands(self, val):
@@ -536,6 +834,8 @@ class AbstractJobCalculation(AbstractCalculation):
         inserted: with this method, the string is inserted before any
         non-scheduler command.
         """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
         self._set_attr("custom_scheduler_commands", six.text_type(val))
 
     def get_custom_scheduler_commands(self):
@@ -548,6 +848,8 @@ class AbstractJobCalculation(AbstractCalculation):
         :return: the custom scheduler command, or an empty string if no
           custom command was defined.
         """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
         return self.get_attr("custom_scheduler_commands", "")
 
     def get_mpirun_extra_params(self):
@@ -559,6 +861,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         Return an empty list if no parameters have been defined.
         """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
         return self.get_attr("mpirun_extra_params", [])
 
     def set_mpirun_extra_params(self, extra_params):
@@ -571,6 +875,8 @@ class AbstractJobCalculation(AbstractCalculation):
         :param extra_params: must be a list of strings, one for each
             extra parameter
         """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
         if extra_params is None:
             try:
                 self._del_attr("mpirun_extra_params")
@@ -588,6 +894,31 @@ class AbstractJobCalculation(AbstractCalculation):
                                  "set_mpirun_extra_params")
 
         self._set_attr("mpirun_extra_params", list(extra_params))
+
+    def set_parser_name(self, parser):
+        """
+        Set a string for the output parser
+        Can be None if no output plugin is available or needed.
+
+        :param parser: a string identifying the module of the parser.
+              Such module must be located within the folder 'aiida/parsers/plugins'
+        """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        self._set_attr('parser', parser)
+
+    def get_parser_name(self):
+        """
+        Return a string locating the module that contains
+        the output parser of this calculation, that will be searched
+        in the 'aiida/parsers/plugins' directory. None if no parser is needed/set.
+
+        :return: a string.
+        """
+        warnings.warn(
+            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+
+        return self.get_attr('parser', None)
 
     def add_link_from(self, src, label=None, link_type=LinkType.INPUT):
         """
@@ -1373,27 +1704,6 @@ class AbstractJobCalculation(AbstractCalculation):
 
         submit(ContinueJobCalculation, _calc=self)
 
-    def set_parser_name(self, parser):
-        """
-        Set a string for the output parser
-        Can be None if no output plugin is available or needed.
-
-        :param parser: a string identifying the module of the parser.
-              Such module must be located within the folder 'aiida/parsers/plugins'
-        """
-        self._set_attr('parser', parser)
-
-    def get_parser_name(self):
-        """
-        Return a string locating the module that contains
-        the output parser of this calculation, that will be searched
-        in the 'aiida/parsers/plugins' directory. None if no parser is needed/set.
-
-        :return: a string.
-        """
-
-        return self.get_attr('parser', None)
-
     def get_parserclass(self):
         """
         Return the output parser object for this calculation, or None
@@ -1404,7 +1714,7 @@ class AbstractJobCalculation(AbstractCalculation):
         """
         from aiida.parsers import ParserFactory
 
-        parser_name = self.get_parser_name()
+        parser_name = self.get_option('parser_name')
 
         if parser_name is not None:
             return ParserFactory(parser_name)
@@ -1581,17 +1891,20 @@ class AbstractJobCalculation(AbstractCalculation):
                                             [computer.get_prepend_text()] +
                                             [code.get_prepend_text() for code in codes] +
                                             [calcinfo.prepend_text,
-                                             self.get_prepend_text()] if _)
+                                             self.get_option('prepend_text')] if _)
 
         job_tmpl.append_text = "\n\n".join(_ for _ in
-                                           [self.get_append_text(),
+                                           [self.get_option('append_text'),
                                             calcinfo.append_text,
                                             code.get_append_text(),
                                             computer.get_append_text()] if _)
 
         # Set resources, also with get_default_mpiprocs_per_machine
-        resources_dict = self.get_resources(full=True)
-        job_tmpl.job_resource = s.create_job_resource(**resources_dict)
+        resources = self.get_option('resources')
+        def_cpus_machine = computer.get_default_mpiprocs_per_machine()
+        if def_cpus_machine is not None:
+            resources['default_mpiprocs_per_machine'] = def_cpus_machine
+        job_tmpl.job_resource = s.create_job_resource(**resources)
 
         subst_dict = {'tot_num_mpiprocs':
                           job_tmpl.job_resource.get_tot_num_mpiprocs()}
@@ -1600,20 +1913,8 @@ class AbstractJobCalculation(AbstractCalculation):
             subst_dict[k] = v
         mpi_args = [arg.format(**subst_dict) for arg in
                     computer.get_mpirun_command()]
-        extra_mpirun_params = self.get_mpirun_extra_params()  # this is the same for all codes in the same calc
+        extra_mpirun_params = self.get_option('mpirun_extra_params')  # this is the same for all codes in the same calc
 
-        ########################################################################
-        #         if self.get_withmpi():
-        #             job_tmpl.argv = (mpi_args + extra_mpirun_params +
-        #                              [code.get_execname()] +
-        #                              (calcinfo.cmdline_params if
-        #                               calcinfo.cmdline_params is not None else []))
-        #         else:
-        #             job_tmpl.argv = [code.get_execname()] + (
-        #                 calcinfo.cmdline_params if
-        #                 calcinfo.cmdline_params is not None else [])
-        #         job_tmpl.stdin_name = calcinfo.stdin_name
-        #         job_tmpl.stdout_name = calcinfo.stdout_name
 
         # set the codes_info
         if not isinstance(calcinfo.codes_info, (list, tuple)):
@@ -1640,7 +1941,7 @@ class AbstractJobCalculation(AbstractCalculation):
                                               "necessary to set withmpi in "
                                               "codes_info")
                 else:
-                    this_withmpi = self.get_withmpi()
+                    this_withmpi = self.get_option('withmpi')
 
             if this_withmpi:
                 this_argv = (mpi_args + extra_mpirun_params +
@@ -1675,33 +1976,33 @@ class AbstractJobCalculation(AbstractCalculation):
             job_tmpl.codes_run_mode = code_run_modes.SERIAL
         ########################################################################
 
-        custom_sched_commands = self.get_custom_scheduler_commands()
+        custom_sched_commands = self.get_option('custom_scheduler_commands')
         if custom_sched_commands:
             job_tmpl.custom_scheduler_commands = custom_sched_commands
 
-        job_tmpl.import_sys_environment = self.get_import_sys_environment()
+        job_tmpl.import_sys_environment = self.get_option('import_sys_environment')
 
-        job_tmpl.job_environment = self.get_environment_variables()
+        job_tmpl.job_environment = self.get_option('environment_variables')
 
-        queue_name = self.get_queue_name()
-        account = self.get_account()
-        qos = self.get_qos()
+        queue_name = self.get_option('queue_name')
+        account = self.get_option('account')
+        qos = self.get_option('qos')
         if queue_name is not None:
             job_tmpl.queue_name = queue_name
         if account is not None:
             job_tmpl.account = account
         if qos is not None:
             job_tmpl.qos = qos
-        priority = self.get_priority()
+        priority = self.get_option('priority')
         if priority is not None:
             job_tmpl.priority = priority
-        max_memory_kb = self.get_max_memory_kb()
+        max_memory_kb = self.get_option('max_memory_kb')
         if max_memory_kb is not None:
             job_tmpl.max_memory_kb = max_memory_kb
-        max_wallclock_seconds = self.get_max_wallclock_seconds()
+        max_wallclock_seconds = self.get_option('max_wallclock_seconds')
         if max_wallclock_seconds is not None:
             job_tmpl.max_wallclock_seconds = max_wallclock_seconds
-        max_memory_kb = self.get_max_memory_kb()
+        max_memory_kb = self.get_option('max_memory_kb')
         if max_memory_kb is not None:
             job_tmpl.max_memory_kb = max_memory_kb
 

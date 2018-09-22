@@ -14,7 +14,7 @@ Some generic methods of the module aiida.orm.utils
 Computer
 ++++++++
 
-.. automodule:: aiida.orm.implementation.general.computer
+.. automodule:: aiida.orm.computer
    :members:
    :noindex:
    :private-members:

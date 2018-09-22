@@ -186,7 +186,7 @@ class Node(AbstractNode):
         if self._dbnode.dbcomputer is None:
             return None
 
-        return Computer(dbcomputer=self._dbnode.dbcomputer)
+        return self.backend.computers.from_dbmodel(self._dbnode.dbcomputer)
 
     def _get_db_label_field(self):
         """

@@ -50,11 +50,10 @@ class TestVerdiExport(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         super(TestVerdiExport, cls).setUpClass(*args, **kwargs)
-        from aiida.orm import Code, Computer, Group, Node
+        from aiida.orm import Code, Group, Node
 
-        cls.computer = Computer(
-            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct',
-            workdir='/tmp/aiida').store()
+        cls.computer = cls.backend.computers.create(name='comp', hostname='localhost', transport_type='local',
+                                                    scheduler_type='direct', workdir='/tmp/aiida').store()
 
         cls.code = Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
         cls.group = Group(name='test_group').store()

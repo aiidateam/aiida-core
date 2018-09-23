@@ -11,11 +11,11 @@ class SomeWorkChain(WorkChain):
             cls.inspect_workchains,
         )
 
-    def submit_workchains(self)
+    def submit_workchains(self):
         for i in range(3):
             future = self.submit(SomeWorkChain)
             self.to_context(workchains=append_(future))
 
-    def inspect_workchains(self)
+    def inspect_workchains(self):
         for workchain in self.ctx.workchains:
             assert workchain.is_finished_ok

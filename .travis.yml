@@ -48,7 +48,7 @@ before_install:
 install:
     # Upgrade pip setuptools and wheel to be able to run the next command
     - pip install -U pip wheel setuptools
-    - pip install coveralls
+    - pip install coveralls flake8
     # Install AiiDA with some optional dependencies
     - if [ "$TEST_TYPE" == "docs" ]; then pip install . && pip install -r docs/requirements_for_rtd.txt; else pip install .[all]; fi
 
@@ -63,6 +63,10 @@ env:
     - TEST_AIIDA_BACKEND=sqlalchemy TEST_TYPE="tests"
 
 before_script:
+    # stop the build if there are Python syntax errors or undefined names
+    - flake8 . --count --select=E901,E999,F821,F822,F823 --show-source --statistics
+    # exit-zero treats all errors as warnings.  The GitHub editor is 127 chars wide
+    - flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - .ci/setup_profiles.sh
     - .ci/before_script.sh
 

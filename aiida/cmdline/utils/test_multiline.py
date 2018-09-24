@@ -15,8 +15,8 @@ class TestMultilineInput(unittest.TestCase):
         ## Sleep 1 is needed because on some filesystems (e.g. some pre 10.13 Mac) the
         ## filesystem returns the time with a precision of 1 second, and
         ## click uses the timestamp to decide if the file was re-saved or not.
-        editor_cmd = 'sleep 1 ; vim -c "g!/#/s/$/Test" -cwq'  # appends Test to
-        # every line not containing '#' character
+        editor_cmd = 'sleep 1 ; vim -c "g!/^#=/s/$/Test" -cwq'  # appends Test to
+        # every line that does NOT start with '#=' characters
         os.environ['EDITOR'] = editor_cmd
         os.environ['VISUAL'] = editor_cmd
         self.runner = CliRunner()
@@ -30,6 +30,19 @@ class TestMultilineInput(unittest.TestCase):
         result = edit_pre_post(pre='OldPre', post='OldPost')
         self.assertEqual(result[0], 'Test\nOldPreTest\nTest')
         self.assertEqual(result[1], 'Test\nOldPostTest\nTest')
+
+    def test_edit_pre_post_comment(self):
+        """Test that lines starting with '#=' are ignored and are not ignored
+        if they start with any other character"""
+        result = edit_pre_post(pre='OldPre\n#=Delete me', post='OldPost #=Dont delete me')
+        self.assertEqual(result[0], 'Test\nOldPreTest\nTest')
+        self.assertEqual(result[1], 'Test\nOldPost #=Dont delete meTest\nTest')
+
+    def test_edit_pre_bash_comment(self):
+        """Test that bash comments starting with '#' are NOT deleted"""
+        result = edit_pre_post(pre='OldPre\n# Dont delete me', post='OldPost # Dont delete me')
+        self.assertEqual(result[0], 'Test\nOldPreTest\n# Dont delete meTest\nTest')
+        self.assertEqual(result[1], 'Test\nOldPost # Dont delete meTest\nTest')
 
     def test_new_comment(self):
         new_comment = edit_comment()

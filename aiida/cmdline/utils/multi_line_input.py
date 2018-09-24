@@ -37,7 +37,7 @@ def edit_pre_post(pre=None, post=None, summary=None):
     # parts of the submission script
     separator = "#====================================================#\n" \
                 "#=               Post execution script              =#\n" \
-                "#=  I am acting a as separator, do not modify me!!! =#\n" \
+                "#=  I am acting as a separator, do not modify me!!! =#\n" \
                 "#====================================================#\n"
 
     content = template.render(default_pre=pre or '', separator=separator, default_post=post or '', summary=summary)
@@ -51,12 +51,12 @@ def edit_pre_post(pre=None, post=None, summary=None):
         except ValueError as err:
             if str(err) == "need more than 1 value to unpack":
                 raise InputValidationError("Looks like you modified the "
-                                           "separartor that should NOT be modified. Please be "
+                                           "separator that should NOT be modified. Please be "
                                            "careful!")
             elif str(err) == "too many values to unpack":
                 raise InputValidationError("Looks like you have more than one "
-                                           "separator, while only one is allowed. Please be "
-                                           "careful!")
+                                           "separator, while only one is needed "
+                                           "(and allowed). Please be careful!")
             else:
                 raise err
 

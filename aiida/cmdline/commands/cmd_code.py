@@ -79,7 +79,11 @@ def setup_code(non_interactive, **kwargs):
     from aiida.common.exceptions import ValidationError
 
     if not non_interactive:
-        pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
+        try:
+            pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
+        except InputValidationError as exception:
+            raise click.BadParameter('invalid prepend and or append text: {}'.format(exception))
+
         kwargs['prepend_text'] = pre
         kwargs['append_text'] = post
 
@@ -121,7 +125,11 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
     from aiida.common.exceptions import ValidationError
 
     if not non_interactive:
-        pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
+        try:
+            pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
+        except InputValidationError as exception:
+            raise click.BadParameter('invalid prepend and or append text: {}'.format(exception))
+
         kwargs['prepend_text'] = pre
         kwargs['append_text'] = post
 

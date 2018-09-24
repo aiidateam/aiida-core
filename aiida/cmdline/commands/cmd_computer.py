@@ -22,7 +22,7 @@ from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.cmdline.utils.multi_line_input import ensure_scripts
-from aiida.common.exceptions import ValidationError
+from aiida.common.exceptions import ValidationError, InputValidationError
 from aiida.control.computer import ComputerBuilder, get_computer_configuration
 from aiida.plugins.entry_point import get_entry_points
 from aiida.transport import cli as transport_cli
@@ -191,7 +191,11 @@ def computer_setup(ctx, non_interactive, **kwargs):
                            'computer starting from the settings of {c}.'.format(c=kwargs['label']))
 
     if not non_interactive:
-        pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
+        try:
+            pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
+        except InputValidationError as exception:
+            raise click.BadParameter('invalid prepend and or append text: {}'.format(exception))
+
         kwargs['prepend_text'] = pre
         kwargs['append_text'] = post
 
@@ -243,7 +247,11 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
         echo.echo_critical('A computer called {} already exists'.format(kwargs['label']))
 
     if not non_interactive:
-        pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
+        try:
+            pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
+        except InputValidationError as exception:
+            raise click.BadParameter('invalid prepend and or append text: {}'.format(exception))
+
         kwargs['prepend_text'] = pre
         kwargs['append_text'] = post
 

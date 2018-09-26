@@ -451,7 +451,7 @@ def _collect_calculation_data(calc):
         retrieved_abspath = calc.get_retrieved_node().get_abs_path()
         files_in  = _collect_files(calc._raw_input_folder.abspath)
         files_out = _collect_files(os.path.join(retrieved_abspath, 'path'))
-        this_calc['env'] = calc.get_environment_variables()
+        this_calc['env'] = calc.get_option('environment_variables')
         stdout_name = '{}.out'.format(aiida_executable_name)
         while stdout_name in [files_in,files_out]:
             stdout_name = '_{}'.format(stdout_name)
@@ -1047,7 +1047,7 @@ def export_cifnode(what, parameters=None, trajectory_index=None,
 
 def deposit(what, type, author_name=None, author_email=None, url=None,
             title=None, username=None, password=False, user_email=None,
-            code_label=default_options['code'], computer_name=None,
+            code=None, computer=None,
             replace=None, message=None, **kwargs):
     """
     Launches a
@@ -1087,7 +1087,7 @@ def deposit(what, type, author_name=None, author_email=None, url=None,
 
     if type == 'published':
         pass
-    elif type in ['prepublication','personal']:
+    elif type in ['prepublication', 'personal']:
         if not author_name:
             author_name = get_property('tcod.depositor_author_name')
             if not author_name:
@@ -1124,18 +1124,8 @@ def deposit(what, type, author_name=None, author_email=None, url=None,
         kwargs['datablock_names'] = [replace]
 
     cif = export_cifnode(what, store=True, **kwargs)
-
-    from aiida.orm.code import Code
-    from aiida.orm.computer import Computer
-    from aiida.orm.data.parameter import ParameterData
-    from aiida.common.exceptions import NotExistent
-
-    code = Code.get_from_string(code_label)
-    computer = None
-    if computer_name:
-        computer = Computer.get(computer_name)
     calc = code.new_calc(computer=computer)
-    calc.set_resources({'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+    calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
 
     if password:
         import getpass

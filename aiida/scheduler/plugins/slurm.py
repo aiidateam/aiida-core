@@ -319,6 +319,12 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
         if job_tmpl.queue_name:
             lines.append("#SBATCH --partition={}".format(job_tmpl.queue_name))
 
+        if job_tmpl.account:
+            lines.append("#SBATCH --account={}".format(job_tmpl.account))
+
+        if job_tmpl.qos:        
+            lines.append("#SBATCH --qos={}".format(job_tmpl.qos))
+
         if job_tmpl.priority:
             #  Run the job with an adjusted scheduling priority  within  SLURM.
             #  With no adjustment value the scheduling priority is decreased by

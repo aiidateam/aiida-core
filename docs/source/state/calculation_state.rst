@@ -96,22 +96,25 @@ where ``CALCULATIONPK`` is the PK of the calculation. This will open a new conne
 Setting calculation properties
 ==============================
 
-There are various methods which specify the calculation properties.
+There are various options that can be set that control the behavior of a calculation.
+They can be set through the :meth:~`.AbstractJobCalculation.set_option`` method.
 Here follows a brief documentation of their action. You can also find them in the  :class:`.AbstractJobCalculation` API reference.
 
-* ``c.set_max_memory_kb``: require explicitely the memory to be allocated to the scheduler job.
-* ``c.set_append_text``: write a set of bash commands to be executed after the call to the executable. These commands are executed only for this instance of calculations. Look also at the computer and code append_text to write bash commands for any job run on that  computer or with that code.
-* ``c.set_max_wallclock_seconds``: set (as integer) the scheduler-job wall-time in seconds.
-* ``c.set_computer``: set the computer on which the calculation is run. Unnecessary if the calculation has been created from a code.
-* ``c.set_mpirun_extra_params``: set as a list of strings the parameters to be passed to  the mpirun command.  Example: ``mpirun -np 8 extra_params[0] extra_params[1] ... exec.x`` Note: the process number is set by the resources.
-* ``c.set_custom_scheduler_commands``: set a string (even multiline) which contains  personalized job-scheduling commands. These commands are set at the beginning of the  job-scheduling script, before any non-scheduler command. (prepend_texts instead are set after all job-scheduling commands).
-* ``c.set_parser_name``: set the name of the parser to be used on the output. Typically, a plugin will have already a default plugin set, use this command to change it.
-* ``c.set_environment_variables``: set a dictionary, whose key and values will be used to  set new environment variables in the job-scheduling script before the execution of the  calculation. The dictionary is translated to: ``export 'keys'='values'``.
-* ``c.set_prepend_text``: set a string that contains bash commands, to be written in the job-scheduling script for this calculation, right before the call to the executable. (it is used for example to load modules). Note that there are also prepend text for the  computer (that are used for any job-scheduling script on the given computer) and for the code (that are used for any scheduling script using the given code), the prepend_text here is used only for this instance of the calculation: be careful in  avoiding duplication of bash commands.
-* ``c.set_extra``: pass a key and a value, to be stored in the ``Extra`` attribute table in  the database. 
-* ``c.set_extras``: like set extra, but you can pass a dictionary with multiple keys and values.
-* ``c.set_priority``: set the job-scheduler priority of the calculation (AiiDA does not  have internal priorities). The function accepts a value that depends on the scheduler. plugin (but typically is an integer).
-* ``c.set_queue_name``: pass in a string the name of the queue to use on the job-scheduler.
-* ``c.set_import_sys_environment``: default=True. If True, the job-scheduling script will load the environment variables.
-* ``c.set_resources``: set the resources to be used by the calculation like the number of nodes, wall-time, ..., by passing a dictionary to  this method. The keys of this dictionary, i.e. the resources, depend  on the specific scheduler plugin that has to run them. Look at the  documentation of the scheduler (type is given by: ``calc.get_computer().get_scheduler_type()``).
-* ``c.set_withmpi``: True or False, if True (the default) it will  call the executable as a parallel run.
+* ``max_memory_kb``: require explicitely the memory to be allocated to the scheduler job.
+* ``append_text``: write a set of bash commands to be executed after the call to the executable. These commands are executed only for this instance of calculations. Look also at the computer and code append_text to write bash commands for any job run on that  computer or with that code.
+* ``max_wallclock_seconds``: set (as integer) the scheduler-job wall-time in seconds.
+* ``computer``: set the computer on which the calculation is run. Unnecessary if the calculation has been created from a code.
+* ``mpirun_extra_params``: set as a list of strings the parameters to be passed to  the mpirun command.  Example: ``mpirun -np 8 extra_params[0] extra_params[1] ... exec.x`` Note: the process number is set by the resources.
+* ``custom_scheduler_commands``: set a string (even multiline) which contains  personalized job-scheduling commands. These commands are set at the beginning of the  job-scheduling script, before any non-scheduler command. (prepend_texts instead are set after all job-scheduling commands).
+* ``parser_name``: set the name of the parser to be used on the output. Typically, a plugin will have already a default plugin set, use this command to change it.
+* ``environment_variables``: set a dictionary, whose key and values will be used to  set new environment variables in the job-scheduling script before the execution of the  calculation. The dictionary is translated to: ``export 'keys'='values'``.
+* ``prepend_text``: set a string that contains bash commands, to be written in the job-scheduling script for this calculation, right before the call to the executable. (it is used for example to load modules). Note that there are also prepend text for the  computer (that are used for any job-scheduling script on the given computer) and for the code (that are used for any scheduling script using the given code), the prepend_text here is used only for this instance of the calculation: be careful in  avoiding duplication of bash commands.
+* ``extra``: pass a key and a value, to be stored in the ``Extra`` attribute table in  the database. 
+* ``extras``: like set extra, but you can pass a dictionary with multiple keys and values.
+* ``priority``: set the job-scheduler priority of the calculation (AiiDA does not  have internal priorities). The function accepts a value that depends on the scheduler. plugin (but typically is an integer).
+* ``queue_name``: pass in a string the name of the queue to use on the job-scheduler.
+* ``account``: pass in a string the name of the account/project to use on the job-scheduler.
+* ``qos``: pass in a string the name of the quality-of-service to use on the job-scheduler.
+* ``import_sys_environment``: default=True. If True, the job-scheduling script will load the environment variables.
+* ``resources``: set the resources to be used by the calculation like the number of nodes, wall-time, ..., by passing a dictionary to  this method. The keys of this dictionary, i.e. the resources, depend  on the specific scheduler plugin that has to run them. Look at the  documentation of the scheduler (type is given by: ``calc.get_computer().get_scheduler_type()``).
+* ``withmpi``: True or False, if True (the default) it will  call the executable as a parallel run.

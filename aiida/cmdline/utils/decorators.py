@@ -20,12 +20,14 @@ Provides:
 
 """
 from __future__ import absolute_import
-import sys
 from contextlib import contextmanager
 from functools import wraps
 
-import click
 from click_spinner import spinner
+
+from . import echo
+
+DAEMON_NOT_RUNNING_DEFAULT_MESSAGE = 'daemon is not running'
 
 
 def load_dbenv_if_not_loaded(**kwargs):
@@ -57,8 +59,14 @@ def with_dbenv(*load_dbenv_args, **load_dbenv_kwargs):
 
         @wraps(function)
         def decorated_function(*args, **kwargs):
-            """load dbenv if not yet loaded, then run the original function"""
-            load_dbenv_if_not_loaded(*load_dbenv_args, **load_dbenv_kwargs)
+            """Load dbenv if not yet loaded, then run the original function."""
+            from aiida.common.exceptions import ConfigurationError, IntegrityError
+
+            try:
+                load_dbenv_if_not_loaded(*load_dbenv_args, **load_dbenv_kwargs)
+            except (IntegrityError, ConfigurationError) as exception:
+                echo.echo_critical(str(exception))
+
             return function(*args, **kwargs)
 
         return decorated_function
@@ -106,33 +114,45 @@ def dbenv():
     yield
 
 
-def only_if_daemon_pid(function):
+def only_if_daemon_running(echo_function=echo.echo_critical, message=None):
     """
-    Function decorator to exit with a message if the daemon is not found running (by checking pid file)
+    Function decorator for CLI command to print critical error and exit automatically when daemon is not running.
+
+    The error printing and exit behavior can be controlled with the decorator keyword arguments. The default message
+    that is printed can be overridden as well as the echo function that is to be used. By default it uses the
+    `aiida.cmdline.utils.echo.echo_critical` function which automatically aborts the command. The function can be
+    substituted by for example `aiida.cmdline.utils.echo.echo_warning` to instead print just a warning and continue.
 
     Example::
 
-        @only_if_daemon_pid
+        @only_if_daemon_running(echo_function=echo.echo_warning, message='beware that the daemon is not running')
         def create_my_calculation():
             pass
+
+    :param echo_function: echo function to issue the message, should be from `aiida.cmdline.utils.echo`
+    :param message: optional message to override the default message
     """
+    if message is None:
+        message = DAEMON_NOT_RUNNING_DEFAULT_MESSAGE
 
-    @wraps(function)
-    def decorated_function(*args, **kwargs):
-        """
-        If daemon pid file is not found / empty, exit without doing anything
-        """
-        from aiida.daemon.client import DaemonClient
+    def decorator(function):
+        """Function decorator that checks if daemon is running and echo's message if not."""
 
-        daemon_client = DaemonClient()
+        @wraps(function)
+        def decorated_function(*args, **kwargs):
+            """If daemon pid file is not found / empty, echo message and call decorated function."""
+            from aiida.daemon.client import DaemonClient
 
-        if not daemon_client.get_daemon_pid():
-            click.echo('The daemon is not running')
-            sys.exit(0)
+            daemon_client = DaemonClient()
 
-        return function(*args, **kwargs)
+            if not daemon_client.get_daemon_pid():
+                echo_function(message)
 
-    return decorated_function
+            return function(*args, **kwargs)
+
+        return decorated_function
+
+    return decorator
 
 
 def check_circus_zmq_version(function):
@@ -158,12 +178,10 @@ def check_circus_zmq_version(function):
             if len(zmq_version) < 2:
                 raise ValueError()
         except (AttributeError, ValueError):
-            click.echo('Unknown PyZQM version - aborting...')
-            sys.exit(0)
+            echo.echo_critical('Unknown PyZQM version - aborting...')
 
         if zmq_version[0] < 13 or (zmq_version[0] == 13 and zmq_version[1] < 1):
-            click.echo('AiiDA daemon needs PyZMQ >= 13.1.0 to run - aborting...')
-            sys.exit(0)
+            echo.echo_critical('AiiDA daemon needs PyZMQ >= 13.1.0 to run - aborting...')
 
         return function(*args, **kwargs)
 
@@ -188,7 +206,7 @@ def deprecated_command(message):
         @wraps(function)
         def decorated_function(*args, **kwargs):
             """Echo a deprecation warning before doing anything else."""
-            from aiida.cmdline.utils import echo, templates
+            from aiida.cmdline.utils import templates
             from textwrap import wrap
 
             template = templates.env.get_template('deprecated.tpl')

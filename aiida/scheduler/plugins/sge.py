@@ -229,6 +229,9 @@ class SgeScheduler(aiida.scheduler.Scheduler):
         if job_tmpl.queue_name:
             lines.append("#$ -q {}".format(job_tmpl.queue_name))
 
+        if job_tmpl.account:
+            lines.append("#$ -P {}".format(job_tmpl.account))
+
         if job_tmpl.priority:
             # Priority of the job.  Format: host-dependent integer.  Default:
             # zero.   Range:  [-1023,  +1024].  Sets job's Priority

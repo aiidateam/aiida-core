@@ -97,7 +97,7 @@ us to understand the more sophisticated examples reported later.
             computer = Computer.get("localhost")
 
             calc = CustomCalc(computer=computer,withmpi=True)
-            calc.set_resources(num_machines=1, num_mpiprocs_per_machine=1)
+            calc.set_option('resources', num_machines=1, num_mpiprocs_per_machine=1)
             calc._set_state(calc_states.FINISHED)
             calc.store()
 
@@ -421,8 +421,8 @@ aside to the final optimal cell parameter value.
                 QECalc = CalculationFactory('quantumespresso.pw')
 
                 calc = QECalc(computer=computer)
-                calc.set_max_wallclock_seconds(max_wallclock_seconds)
-                calc.set_resources({"num_machines": num_machines, "num_mpiprocs_per_machine": num_mpiprocs_per_machine})
+                calc.set_option('max_wallclock_seconds', max_wallclock_seconds)
+                calc.set_option('resources', {"num_machines": num_machines, "num_mpiprocs_per_machine": num_mpiprocs_per_machine})
                 calc.store()
 
                 calc.use_code(code)
@@ -678,8 +678,8 @@ phonon vibrational frequncies for some XTiO3 materials, namely Ba, Sr and Pb.
                 QEPhCalc = CalculationFactory('quantumespresso.ph')
                 calc = QEPhCalc(computer=computer)
 
-                calc.set_max_wallclock_seconds(max_wallclock_seconds) # 30 min
-                calc.set_resources({"num_machines": num_machines, "num_mpiprocs_per_machine": num_mpiprocs_per_machine})
+                calc.set_option('max_wallclock_seconds', max_wallclock_seconds) # 30 min
+                calc.set_option('resources', {"num_machines": num_machines, "num_mpiprocs_per_machine": num_mpiprocs_per_machine})
                 calc.store()
 
                 calc.use_parameters(ph_parameters)

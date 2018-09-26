@@ -11,40 +11,21 @@
 This module provides list functionality to all data types.
 """
 from __future__ import absolute_import
-import click
+
 from aiida.cmdline.params import options
 
 LIST_OPTIONS = [
-    click.option(
-        '-p',
-        '--past-days',
-        type=click.INT,
-        default=None,
-        help="Add a filter to show only datas"
-        " created in the past N days"),
-    click.option(
-        '-A',
-        '--all-users',
-        is_flag=True,
-        default=False,
-        help="show for all users, rather than only for the"
-        "current user"),
-    options.RAW(),
+    options.GROUPS,
+    options.PAST_DAYS,
+    options.ALL_USERS,
+    options.RAW,
 ]
 
 
 def list_options(func):
-    """
-    Creates a decorator with all the options
-    """
+    """Creates a decorator with all the options."""
     for option in reversed(LIST_OPTIONS):
-        func = option(func)
-
-    # Additional options
-    # For some weird reason, if the following options are added to the above
-    # list they don't perform as expected (i.e. they stop being
-    # MultipleValueOption)
-    func = options.GROUPS()(func)
+        func = option()(func)
 
     return func
 
@@ -92,7 +73,7 @@ def query(datatype, project, past_days, group_pks, all_users):
 
 
 # pylint: disable=unused-argument,too-many-arguments
-def _list(datatype, columns, elements, elements_only, formulamode, past_days, groups, all_users):
+def data_list(datatype, columns, elements, elements_only, formula_mode, past_days, groups, all_users):
     """
     List stored objects
     """

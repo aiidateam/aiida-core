@@ -7,154 +7,114 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-This allows to manage TrajectoryData objects from command line.
-"""
+"""`verdi data trajectory` command."""
 from __future__ import absolute_import
-
 from six.moves import range
+
 import click
 
 from aiida.cmdline.commands.cmd_data import verdi_data
-from aiida.cmdline.commands.cmd_data.cmd_export import _export, export_options
-from aiida.cmdline.commands.cmd_data.cmd_list import _list, list_options
+from aiida.cmdline.commands.cmd_data import cmd_show
+from aiida.cmdline.commands.cmd_data.cmd_deposit import data_deposit_tcod, deposit_options
+from aiida.cmdline.commands.cmd_data.cmd_export import data_export, export_options
+from aiida.cmdline.commands.cmd_data.cmd_list import data_list, list_options
 from aiida.cmdline.commands.cmd_data.cmd_show import show_options
-from aiida.cmdline.commands.cmd_data.cmd_deposit import deposit_options, deposit_tcod
-from aiida.cmdline.utils import echo
-from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+from aiida.cmdline.params import arguments, options, types
+from aiida.cmdline.utils import decorators, echo
+
+LIST_PROJECT_HEADERS = ['Id', 'Label']
+EXPORT_FORMATS = ['cif', 'tcod', 'xsf']
+VISUALIZATION_FORMATS = ['jmol', 'xcrysden', 'mpl_heatmap', 'mpl_pos']
 
 
 @verdi_data.group('trajectory')
 def trajectory():
-    """
-    View and manipulate TrajectoryData instances.
-    """
+    """View and manipulate TrajectoryData instances."""
     pass
-
-
-PROJECT_HEADERS = ["Id", "Label"]
 
 
 @trajectory.command('list')
 @list_options
-def list_trajections(raw, past_days, groups, all_users):
-    """
-    List trajectories stored in database.
-    """
+@decorators.with_dbenv()
+def trajectory_list(raw, past_days, groups, all_users):
+    """List trajectories stored in database."""
     from aiida.orm.data.array.trajectory import TrajectoryData
     from tabulate import tabulate
+
     elements = None
     elements_only = False
     formulamode = None
-    entry_list = _list(TrajectoryData, PROJECT_HEADERS, elements, elements_only, formulamode, past_days, groups,
-                       all_users)
+    entry_list = data_list(TrajectoryData, LIST_PROJECT_HEADERS, elements, elements_only, formulamode, past_days,
+                           groups, all_users)
 
     counter = 0
     struct_list_data = list()
     if not raw:
-        struct_list_data.append(PROJECT_HEADERS)
+        struct_list_data.append(LIST_PROJECT_HEADERS)
     for entry in entry_list:
         for i, value in enumerate(entry):
             if isinstance(value, list):
-                entry[i] = ",".join(value)
-        for i in range(len(entry), len(PROJECT_HEADERS)):
+                entry[i] = ','.join(value)
+        for i in range(len(entry), len(LIST_PROJECT_HEADERS)):
             entry.append(None)
         counter += 1
     struct_list_data.extend(entry_list)
     if raw:
         echo.echo(tabulate(struct_list_data, tablefmt='plain'))
     else:
-        echo.echo(tabulate(struct_list_data, headers="firstrow"))
-        echo.echo("\nTotal results: {}\n".format(counter))
+        echo.echo(tabulate(struct_list_data, headers='firstrow'))
+        echo.echo('\nTotal results: {}\n'.format(counter))
 
 
 @trajectory.command('show')
+@arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:array.trajectory',)))
+@options.VISUALIZATION_FORMAT(type=click.Choice(VISUALIZATION_FORMATS), default='jmol')
 @show_options
-def show(**kwargs):
-    """
-    Visualize trajectory
-    """
-    from aiida.orm.data.array.trajectory import TrajectoryData
-    from aiida.cmdline.commands.cmd_data.cmd_show import _show_jmol
-    from aiida.cmdline.commands.cmd_data.cmd_show import _show_xcrysden
-    from aiida.cmdline.commands.cmd_data.cmd_show import _show_mpl_pos
-    from aiida.cmdline.commands.cmd_data.cmd_show import _show_mpl_heatmap
-    nodes = kwargs.pop('nodes')
-    given_format = kwargs.pop('show_format')
-    for node in nodes:
-        if not isinstance(node, TrajectoryData):
-            echo.echo_critical("Node {} is of class {} instead " "of {}".format(node, type(node), TrajectoryData))
+@decorators.with_dbenv()
+def trajectory_show(data, fmt):
+    """Visualize trajectory."""
+    try:
+        show_function = getattr(cmd_show, '_show_{}'.format(fmt))
+    except AttributeError:
+        echo.echo_critical('visualization format {} is not supported'.format(fmt))
 
-    kwargs = {k: v for k, v in kwargs.items() if v is not None}
-
-    if given_format == "jmol":
-        _show_jmol(given_format, nodes, **kwargs)
-    elif given_format == "xcrysden":
-        _show_xcrysden(given_format, nodes, **kwargs)
-    elif given_format == "mpl_pos":
-        _show_mpl_pos(given_format, nodes, **kwargs)
-    elif given_format == "mpl_heatmap":
-        _show_mpl_heatmap(given_format, nodes, **kwargs)
-    else:
-        raise NotImplementedError("The format {} is not yet implemented".format(given_format))
-
-
-SUPPORTED_FORMATS = ['cif', 'tcod', 'xsf']
+    show_function(fmt, data)
 
 
 @trajectory.command('export')
-@click.option('-y', '--format', type=click.Choice(SUPPORTED_FORMATS), default='cif', help="Type of the exported file.")
-@click.option(
-    '--step',
-    'trajectory_index',
-    type=click.INT,
-    default=None,
-    help="ID of the trajectory step. If none is supplied, all"
-    " steps are explored.")
+@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:array.trajectory',)))
+@options.EXPORT_FORMAT(type=click.Choice(EXPORT_FORMATS), default='cif')
+@options.TRAJECTORY_INDEX()
 @export_options
-def export(**kwargs):
-    """
-    Export trajectory
-    """
-    from aiida.orm.data.array.trajectory import TrajectoryData
-
-    node = kwargs.pop('node')
+@decorators.with_dbenv()
+def trajectory_export(**kwargs):
+    """Export trajectory."""
+    node = kwargs.pop('datum')
     output = kwargs.pop('output')
-    export_format = kwargs.pop('format')
+    fmt = kwargs.pop('fmt')
     force = kwargs.pop('force')
 
     kwargs = {k: v for k, v in kwargs.items() if v is not None}
 
-    if not isinstance(node, TrajectoryData):
-        echo.echo_critical("Node {} is of class {} instead of {}".format(node, type(node), TrajectoryData))
-    _export(node, output, export_format, other_args=kwargs, overwrite=force)
+    data_export(node, output, fmt, other_args=kwargs, overwrite=force)
 
 
 @trajectory.command('deposit')
-@click.option(
-    '--step',
-    'trajectory_index',
-    type=click.INT,
-    default=1,
-    help="ID of the trajectory step. If none is "
-    "supplied, all steps are exported.")
+@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:array.trajectory',)))
+@options.TRAJECTORY_INDEX()
 @deposit_options
-def deposit(**kwargs):
-    """
-    Deposit trajectory object
-    """
-    from aiida.orm.data.array.trajectory import TrajectoryData
-    if not is_dbenv_loaded():
-        load_dbenv()
-    node = kwargs.pop('node')
+@decorators.with_dbenv()
+def trajectory_deposit(**kwargs):
+    """Deposit trajectory object."""
+    node = kwargs.pop('datum')
+    database = kwargs.pop('database')
     deposition_type = kwargs.pop('deposition_type')
-    parameter_data = kwargs.pop('parameter_data')
-
-    if kwargs['database'] is None:
-        echo.echo_critical("Default database is not defined, please specify.")
+    parameters = kwargs.pop('parameters')
 
     kwargs = {k: v for k, v in kwargs.items() if v is not None}
 
-    if not isinstance(node, TrajectoryData):
-        echo.echo_critical("Node {} is of class {} instead of {}".format(node, type(node), TrajectoryData))
-    deposit_tcod(node, deposition_type, parameter_data, **kwargs)
+    if database == 'tcod':
+        calculation = data_deposit_tcod(node, deposition_type, parameters, **kwargs)
+        echo.echo_success('Created deposition calculation<{}>'.format(calculation.pk))
+    else:
+        echo.echo_critical('Unsupported database {}'.format(database))

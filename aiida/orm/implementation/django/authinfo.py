@@ -46,10 +46,7 @@ class DjangoAuthInfoCollection(AuthInfoCollection):
         from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
         try:
-            authinfo = DbAuthInfo.objects.get(
-                dbcomputer=computer.dbcomputer,
-                aiidauser=user.id)
-
+            authinfo = DbAuthInfo.objects.get(dbcomputer=computer.id, aiidauser=user.id)
             return self.from_dbmodel(authinfo)
         except ObjectDoesNotExist:
             raise exceptions.NotExistent(
@@ -122,7 +119,7 @@ class DjangoAuthInfo(AuthInfo):
 
     @property
     def computer(self):
-        return computers.Computer.get(self._dbauthinfo.dbcomputer)
+        return self.backend.computers.from_dbmodel(self._dbauthinfo.dbcomputer)
 
     @property
     def user(self):

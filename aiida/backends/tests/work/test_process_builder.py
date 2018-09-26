@@ -110,6 +110,23 @@ class TestProcessBuilder(AiidaTestCase):
         self.assertEquals(builder.__class__.c.__doc__, str(TestWorkChain.spec().inputs['c']))
         self.assertEquals(builder.c.__class__.d.__doc__, str(TestWorkChain.spec().inputs['c']['d']))
 
+    def test_job_calculation_get_builder_restart(self):
+        """
+        Test the get_builder_restart method of JobCalculation class
+        """
+        from aiida.orm.calculation.job import JobCalculation
+
+        original = JobCalculation()
+        original.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+        original.set_option('max_wallclock_seconds', 1800)
+        original.set_computer(self.computer)
+        original.label = 'original'
+        original.store()
+
+        builder = original.get_builder_restart()
+
+        self.assertDictEqual(builder.options, original.get_options())
+
     def test_code_get_builder(self):
         """
         Test that the get_builder method of Code returns a builder

@@ -71,7 +71,6 @@ class TestNodeHashing(AiidaTestCase):
             n2.store(use_cache=True)
             self.assertEqual(n1.uuid, n2.get_extra('_aiida_cached_from'))
 
-
     def test_node_uuid_hashing_for_querybuidler(self):
         """
         QueryBuilder results should be reusable and shouldn't brake hashing.
@@ -1832,18 +1831,6 @@ class TestSubNodesAndLinks(AiidaTestCase):
                 'num_machines': 1,
                 'num_mpiprocs_per_machine': 1
             }).store()
-        calc2 = JobCalculation(
-            computer=self.computer.name,
-            resources={
-                'num_machines': 1,
-                'num_mpiprocs_per_machine': 1
-            }).store()
-        calc3 = JobCalculation(
-            computer=self.computer.id,
-            resources={
-                'num_machines': 1,
-                'num_mpiprocs_per_machine': 1
-            }).store()
         with self.assertRaises(Exception):
             # I should get an error if I ask for a computer id/pk that doesn't
             # exist
@@ -2005,7 +1992,6 @@ class TestSubNodesAndLinks(AiidaTestCase):
         import tempfile
         from aiida.orm import JobCalculation, DataFactory
         from aiida.orm.code import Code
-        from aiida.orm.computer import Computer
         from aiida.common.datastructures import calc_states
 
         SinglefileData = DataFactory('singlefile')
@@ -2021,7 +2007,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         code.set_remote_computer_exec((self.computer, '/bin/true'))
         code.store()
 
-        unsavedcomputer = Computer(name='localhost2', hostname='localhost')
+        unsavedcomputer = self.backend.computers.create(name='localhost2', hostname='localhost')
 
         with self.assertRaises(ValueError):
             # I need to save the localhost entry first
@@ -2379,8 +2365,8 @@ class TestNodeDeletion(AiidaTestCase):
         caller, called = [Calculation().store() for i in range(2)]
         called.add_link_from(caller, link_type=LinkType.CALL)
 
-        uuids_check_existence = (caller.uuid, )
-        uuids_check_deleted = [n.uuid for n in (called, )]
+        uuids_check_existence = (caller.uuid,)
+        uuids_check_deleted = [n.uuid for n in (called,)]
 
         with Capturing():
             delete_nodes([called.pk], verbosity=2, force=True, follow_returns=True)

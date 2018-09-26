@@ -87,7 +87,7 @@ class ProcessBuilderNamespace(Mapping):
         return self._data.__repr__()
 
     def __dir__(self):
-        return sorted(set(self._valid_fields + [key for key, _ in self.__dict__ if key.startswith('_')]))
+        return sorted(set(self._valid_fields + [key for key, _ in self.__dict__.items() if key.startswith('_')]))
 
     def __iter__(self):
         for key in self._data:

@@ -905,6 +905,8 @@ class AbstractNode(object):
         :param computer: the computer object
         """
         if self._to_be_stored:
+            if not computer.is_stored:
+                raise ValueError("The computer instance has not yet been stored")
             self._set_db_computer(computer)
         else:
             raise ModificationNotAllowed(

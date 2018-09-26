@@ -17,7 +17,6 @@ from aiida.common.exceptions import ModificationNotAllowed
 from aiida.orm.node import Node
 
 
-
 class TestCode(AiidaTestCase):
     """
     Test the Code class.
@@ -48,7 +47,6 @@ class TestCode(AiidaTestCase):
         import tempfile
 
         from aiida.orm.code import Code
-        from aiida.orm.computer import Computer
         from aiida.common.exceptions import ValidationError
 
         with self.assertRaises(ValueError):
@@ -85,13 +83,10 @@ class TestCode(AiidaTestCase):
         self.assertEquals(code.get_remote_exec_path(), '/bin/ls')
         self.assertEquals(code.get_execname(), '/bin/ls')
 
-        self.assertTrue(code.can_run_on(self.computer.dbcomputer))
         self.assertTrue(code.can_run_on(self.computer))
-        othercomputer = Computer(name='another_localhost',
-                                 hostname='localhost',
-                                 transport_type='local',
-                                 scheduler_type='pbspro',
-                                 workdir='/tmp/aiida').store()
+        othercomputer = self.backend.computers.create(name='another_localhost', hostname='localhost',
+                                                      transport_type='local', scheduler_type='pbspro',
+                                                      workdir='/tmp/aiida').store()
         self.assertFalse(code.can_run_on(othercomputer))
 
 
@@ -447,6 +442,7 @@ class TestDbExtras(AiidaTestCase):
 
     def test_replacement(self):
         pass
+
 
 class TestBool(AiidaTestCase):
     def test_bool_conversion(self):

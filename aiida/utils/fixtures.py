@@ -438,13 +438,19 @@ class PluginTestCase(unittest.TestCase):
             def test_my_plugin(self):
                 # execute tests
     """
+    # Filled in during setUpClass
+    backend = None  # type :class:`aiida.orm.Backend`
 
     @classmethod
     def setUpClass(cls):
+        from aiida.orm.backend import construct_backend
+
         cls.fixture_manager = _GLOBAL_FIXTURE_MANAGER
         if not cls.fixture_manager.has_profile_open():
             raise ValueError(
                 "Fixture mananger has no open profile. Please use aiida.utils.fixtures.TestRunner to run these tests.")
+
+        cls.backend = construct_backend()
 
     def tearDown(self):
         self.fixture_manager.reset_db()

@@ -52,6 +52,7 @@ class AiidaTestCase(unittest.TestCase):
     """
     _class_was_setup = False
     __backend_instance = None
+    backend = None  # type: :class:`aiida.orm.backend.Backend`
 
     @classmethod
     def get_backend_class(cls):
@@ -108,7 +109,6 @@ class AiidaTestCase(unittest.TestCase):
 
     @classmethod
     def clean_db(cls):
-
         # Note: this will raise an exception, that will be seen as a test
         # failure. To be safe, you should do the same check also in the tearDownClass
         # to avoid that it is run
@@ -131,11 +131,9 @@ class AiidaTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls, *args, **kwargs):
-
         # Double check for double security to avoid to run the tearDown
         # if this is not a test profile
         check_if_tests_can_run()
-
         cls.__backend_instance.tearDownClass_method(*args, **kwargs)
 
 

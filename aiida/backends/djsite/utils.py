@@ -27,7 +27,7 @@ def load_dbenv(profile=None):
     """
     _load_dbenv_noschemacheck(profile)
     # Check schema version and the existence of the needed tables
-    check_schema_version()
+    check_schema_version(profile)
 
 
 def _load_dbenv_noschemacheck(profile):  # pylint: disable=unused-argument
@@ -97,7 +97,7 @@ def long_field_length():
     return 1024
 
 
-def check_schema_version():
+def check_schema_version(profile):
     """
     Check if the version stored in the database is the same of the version
     of the code.
@@ -114,7 +114,6 @@ def check_schema_version():
       Otherwise, just return.
     """
     import aiida.backends.djsite.db.models
-    from aiida.backends.settings import AIIDADB_PROFILE
     from django.db import connection
     from aiida.common.exceptions import ConfigurationError
 
@@ -133,12 +132,16 @@ def check_schema_version():
     filepath_utils = os.path.abspath(__file__)
     filepath_manage = os.path.join(os.path.dirname(filepath_utils), 'manage.py')
 
+    if profile is None:
+        from aiida.common.setup import get_default_profile
+        profile = get_default_profile()
+
     if code_schema_version != db_schema_version:
         raise ConfigurationError("The code schema version is {}, but the version stored in the "
                                  "database (DbSetting table) is {}, stopping.\n"
                                  "To migrate the database to the current version, run the following commands:"
                                  "\n  verdi daemon stop\n  python {} --aiida-profile={} migrate".format(
-                                     code_schema_version, db_schema_version, filepath_manage, AIIDADB_PROFILE))
+                                     code_schema_version, db_schema_version, filepath_manage, profile))
 
 
 def set_db_schema_version(version):

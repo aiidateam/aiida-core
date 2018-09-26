@@ -46,7 +46,6 @@
         aiida/backends/djsite/settings/settings_profile.py|
         aiida/backends/djsite/settings/settings.py|
         aiida/backends/djsite/settings/wsgi.py|
-        aiida/backends/djsite/utils.py|
         aiida/backends/general/abstractqueries.py|
         aiida/backends/general/querybuilder_interface.py|
         aiida/backends/__init__.py|

@@ -451,7 +451,7 @@ def _collect_calculation_data(calc):
         retrieved_abspath = calc.get_retrieved_node().get_abs_path()
         files_in  = _collect_files(calc._raw_input_folder.abspath)
         files_out = _collect_files(os.path.join(retrieved_abspath, 'path'))
-        this_calc['env'] = calc.get_environment_variables()
+        this_calc['env'] = calc.get_option('environment_variables')
         stdout_name = '{}.out'.format(aiida_executable_name)
         while stdout_name in [files_in,files_out]:
             stdout_name = '_{}'.format(stdout_name)
@@ -1125,7 +1125,7 @@ def deposit(what, type, author_name=None, author_email=None, url=None,
 
     cif = export_cifnode(what, store=True, **kwargs)
     calc = code.new_calc(computer=computer)
-    calc.set_resources({'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+    calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
 
     if password:
         import getpass

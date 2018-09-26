@@ -89,8 +89,9 @@ class DbComputer(Base):
         return dbcomputer
 
     def get_aiida_class(self):
-        from aiida.orm.computer import Computer
-        return Computer(dbcomputer=self)
+        from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
+        backend = SqlaBackend()
+        return backend.computers.from_dbmodel(self)
 
     def get_workdir(self):
         try:

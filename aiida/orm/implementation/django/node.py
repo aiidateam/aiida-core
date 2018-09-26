@@ -9,7 +9,6 @@
 ###########################################################################
 
 from __future__ import absolute_import
-import copy
 from functools import reduce
 
 import six
@@ -25,9 +24,8 @@ from aiida.common.folders import RepositoryFolder
 from aiida.common.links import LinkType
 from aiida.common.utils import get_new_uuid, type_check
 from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT, _HASH_EXTRA_KEY
-from aiida.orm.implementation.django.computer import Computer
-from aiida.orm.mixins import Sealable
 
+from . import computer as computers
 from . import user as users
 
 
@@ -314,11 +312,11 @@ class Node(AbstractNode):
         if self._dbnode.dbcomputer is None:
             return None
         else:
-            return Computer(dbcomputer=self._dbnode.dbcomputer)
+            return self._backend.computers.from_dbmodel(self._dbnode.dbcomputer)
 
     def _set_db_computer(self, computer):
-        from aiida.backends.djsite.db.models import DbComputer
-        self._dbnode.dbcomputer = DbComputer.get_dbcomputer(computer)
+        type_check(computer, computers.DjangoComputer)
+        self._dbnode.dbcomputer = computer.dbcomputer
 
     def _set_db_attr(self, key, value):
         """

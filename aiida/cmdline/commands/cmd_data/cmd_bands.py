@@ -45,9 +45,11 @@ def bands():
 @options.FORMULA_MODE()
 def bands_list(elements, elements_exclusive, raw, formula_mode, past_days, groups, all_users):
     """List BandsData objects."""
-    from aiida.backends.utils import QueryFactory
+    from aiida.orm import construct_backend
     from tabulate import tabulate
     from argparse import Namespace
+
+    backend = construct_backend()
 
     args = Namespace()
     args.element = elements
@@ -61,7 +63,7 @@ def bands_list(elements, elements_exclusive, raw, formula_mode, past_days, group
         args.group_pk = None
     args.all_users = all_users
 
-    query = QueryFactory()()
+    query = backend.query_manager
     entry_list = query.get_bands_and_parents_structure(args)
 
     counter = 0

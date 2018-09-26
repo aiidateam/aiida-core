@@ -9,7 +9,6 @@
 ###########################################################################
 from __future__ import absolute_import
 import abc
-
 import six
 
 from aiida.transport import TransportFactory

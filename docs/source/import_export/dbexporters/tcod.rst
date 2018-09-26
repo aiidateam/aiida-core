@@ -59,7 +59,7 @@ Where:
 * ``CODE_LABEL`` -- label of AiiDA :py:class:`Code <aiida.orm.implementation.general.code.AbstractCode>`,
   associated with *cif_cod_deposit*;
 * ``COMPUTER_NAME`` -- name of AiiDA
-  :py:class:`Computer <aiida.orm.implementation.general.computer.AbstractComputer>`, where
+  :py:class:`Computer <aiida.orm.Computer>`, where
   *cif_cod_deposit* script is to be launched;
 * ``REPLACE`` -- `TCOD ID`_ of the replaced entry in the event of
   redeposition;

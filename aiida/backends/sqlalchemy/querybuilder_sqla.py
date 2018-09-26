@@ -141,8 +141,8 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
 
     @property
     def AiidaComputer(self):
-        import aiida.orm.implementation.sqlalchemy.computer
-        return aiida.orm.implementation.sqlalchemy.computer.Computer
+        import aiida.orm.computer
+        return aiida.orm.computer.Computer
 
     def get_session(self):
         return aiida.backends.sqlalchemy.get_scoped_session()

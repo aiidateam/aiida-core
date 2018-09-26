@@ -43,10 +43,10 @@ parameters = ParameterData(dict={'x1':2,'x2':3})
 calc = code.new_calc()
 calc.label = "Test sum"
 calc.description = "Test calculation with the sum code"
-calc.set_max_wallclock_seconds(30*60) # 30 min
+calc.set_option('max_wallclock_seconds', 30*60) # 30 min
 calc.set_computer(computer)
-calc.set_withmpi(False)
-calc.set_resources({"num_machines": 1})
+calc.set_option('withmpi', False)
+calc.set_option('resources', {"num_machines": 1})
 
 calc.use_parameters(parameters)
 

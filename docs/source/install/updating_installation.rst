@@ -72,14 +72,20 @@ This updates your daemon profile and related files.
 Version migration instructions
 ==============================
 
-Updating from 0.11.* to 0.12.0
-------------------------------
-No particular changes have been introduced in ``v0.12.0`` that require specific migration operations.
+Updating from 0.12.* to 1.0
+---------------------------
+
+Configuration file
+^^^^^^^^^^^^^^^^^^
+* The tab-completion activation for ``verdi`` has changed, simply replace the ``eval "$(verdi completioncommand)"`` line in your activation script with ``eval "$(_VERDI_COMPLETE=source verdi)"``
+
+
 
 Updating from older versions
 ----------------------------
 To find the update instructions for older versions of AiiDA follow the following links to the documentation of the corresponding version:
 
+* `0.11.*`_
 * `0.10.*`_
 * `0.9.*`_
 * `0.8.* Django`_
@@ -89,7 +95,8 @@ To find the update instructions for older versions of AiiDA follow the following
 * `0.5.* Django`_
 * `0.4.* Django`_
 
-.. _0.10.*: http://aiida-core.readthedocs.io/en/v0.11.4/installation/updating.html#updating-from-0-9-to-0-10-0
+.. _0.11.*: https://aiida-core.readthedocs.io/en/v0.12.2/installation/updating.html#updating-from-0-11-to-0-12-0
+.. _0.10.*: http://aiida-core.readthedocs.io/en/v0.10.0/installation/updating.html#updating-from-0-9-to-0-10-0
 .. _0.9.*: http://aiida-core.readthedocs.io/en/v0.10.0/installation/updating.html#updating-from-0-9-to-0-10-0
 .. _0.8.* Django: http://aiida-core.readthedocs.io/en/v0.9.1/installation/index.html#updating-from-0-8-django-to-0-9-0-django
 .. _0.7.* Django: http://aiida-core.readthedocs.io/en/v0.8.1/installation/index.html#updating-from-0-7-0-django-to-0-8-0-django

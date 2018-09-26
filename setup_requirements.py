@@ -9,7 +9,7 @@
 ###########################################################################
 
 install_requires = [
-    'reentry==1.2.0',
+    'reentry==1.2.1',
     'python-dateutil==2.7.2',
     'python-mimeparse==1.6.0',
     'django==1.8.19',

@@ -14,24 +14,18 @@ from __future__ import print_function
 from __future__ import absolute_import
 import collections
 
-import tornado.ioloop
 import yaml
 
+from tornado import gen
 import plumpy
-from plumpy.rmq import RmqCommunicator, RmqConnector
-from plumpy.process_comms import PID_KEY
+import kiwipy.rmq
 from kiwipy import communications
 
 from aiida.utils.serialize import serialize_data, deserialize_data
 from aiida.work.exceptions import PastException
-from aiida.work.persistence import AiiDAPersister
-
-from . import persistence
-from . import utils
 
 __all__ = [
-    'new_control_panel', 'new_blocking_control_panel', 'BlockingProcessControlPanel', 'RemoteException',
-    'CommunicationTimeout', 'DeliveryFailed', 'ProcessLauncher', 'ProcessControlPanel'
+    'RemoteException', 'CommunicationTimeout', 'DeliveryFailed', 'ProcessLauncher', 'create_controller', 'create_communicator'
 ]
 
 RemoteException = plumpy.RemoteException
@@ -182,57 +176,6 @@ def _store_inputs(inputs):
                 _store_inputs(node)
 
 
-class LaunchProcessAction(plumpy.LaunchProcessAction):
-    """Sub classing plumpy.LaunchProcessAction to ensure that inputs are stored and serialized."""
-
-    def __init__(self, *args, **kwargs):
-        """
-        Calls through to the constructor of the plum LaunchProcessAction while making sure that
-        any unstored nodes in the inputs are first stored and the data is then serialized
-        """
-        kwargs['inputs'] = store_and_serialize_inputs(kwargs['inputs'])
-        kwargs['class_loader'] = persistence.get_object_loader()
-        super(LaunchProcessAction, self).__init__(*args, **kwargs)
-
-
-class ExecuteProcessAction(plumpy.Action):
-    """
-    A sub class of plumpy.Action to execute a Process.
-
-    First the Process is instantiated with the provided inputs, after which a checkpoint is saved.is
-    Subsequenctly the Process is cloesd and a ContinueProcessAction will be sent to RabbitMQ.
-    """
-
-    def __init__(self, process_class, init_args=None, init_kwargs=None, nowait=False, persister=None):
-        """Store the construction arguments, setting defaults if they are not provided."""
-        super(ExecuteProcessAction, self).__init__()
-        self._process_class = process_class
-        self._args = init_args or ()
-        self._kwargs = init_kwargs or {}
-        self._nowait = nowait
-
-        if persister is not None:
-            self._persister = persister
-        else:
-            self._persister = AiiDAPersister()
-
-    def execute(self, publisher):
-        """
-        Instantiate the Process, create a checkpoint and sent a ContinueProcessAction task over the publisher
-
-        :param publisher: the published to use to send the continuation task
-        :returns: the completed future with the value set to the pk of the instantiated calculation node
-        """
-        proc = self._process_class(*self._args, **self._kwargs)
-        self._persister.save_checkpoint(proc)
-        proc.close()
-
-        continue_action = plumpy.ContinueProcessAction(proc.calc.pk, play=True)
-        continue_action.execute(publisher)
-
-        self.set_result(proc.calc.pk)
-
-
 class ProcessLauncher(plumpy.ProcessLauncher):
     """
     A sub class of plumpy.ProcessLauncher to launch a Process
@@ -241,7 +184,8 @@ class ProcessLauncher(plumpy.ProcessLauncher):
     that if it is already marked as terminated, it is not continued but the future is reconstructed and returned
     """
 
-    def _continue(self, task):
+    @gen.coroutine
+    def _continue(self, communicator, pid, nowait, tag=None):
         """
         Continue the task
 
@@ -249,20 +193,24 @@ class ProcessLauncher(plumpy.ProcessLauncher):
         case it is not continued, but the corresponding future is reconstructed and returned. This scenario may
         occur when the Process was already completed by another worker that however failed to send the acknowledgment.
 
-        :param task: the task to continue
+        :param communicator: the communicator that called this method
+        :param pid: the pid of the process to continue
+        :param nowait: if True don't wait for the process to finish, just return the pid, otherwise wait and
+            return the results
+        :param tag: the tag of the checkpoint to continue from
         :raises plumpy.TaskRejected: if the node corresponding to the task cannot be loaded
         """
         from aiida.common import exceptions
         from aiida.orm import load_node, Data
 
         try:
-            node = load_node(pk=task[PID_KEY])
+            node = load_node(pk=pid)
         except (exceptions.MultipleObjectsError, exceptions.NotExistent) as exception:
             raise plumpy.TaskRejected('Cannot continue process: {}'.format(exception))
 
         if node.is_terminated:
 
-            future = plumpy.Future()
+            future = communicator.create_future()
 
             if node.is_finished:
                 future.set_result(dict(node.get_outputs(node_type=Data, also_labels=True)))
@@ -271,177 +219,50 @@ class ProcessLauncher(plumpy.ProcessLauncher):
             elif node.is_killed:
                 future.set_exception(plumpy.KilledError())
 
-            return future
+            raise gen.Return(future.result())
 
-        return super(ProcessLauncher, self)._continue(task)
+        result = yield super(ProcessLauncher, self)._continue(communicator, pid, nowait, tag)
+        raise gen.Return(result)
 
 
-class ProcessControlPanel(object):
+def create_controller(communicator=None):
     """
-    RMQ control panel for launching, controlling and getting status of
-    Processes over the RMQ protocol.
+    Create a RemoteProcessThreadController
+
+    :param communicator: a :class:`~kiwipy.Communicator`
+    :return: a :class:`~aiida.work.rmq.RemoteProcessThreadController` instance
     """
+    if communicator is None:
+        communicator = create_communicator()
 
-    def __init__(self, prefix, rmq_connector, testing_mode=False):
-        self._connector = rmq_connector
-
-        message_exchange = get_message_exchange_name(prefix)
-        task_exchange = get_task_exchange_name(prefix)
-
-        task_queue = get_launch_queue_name(prefix)
-        self._communicator = RmqCommunicator(
-            rmq_connector,
-            exchange_name=message_exchange,
-            task_exchange=task_exchange,
-            task_queue=task_queue,
-            encoder=encode_response,
-            decoder=decode_response,
-            testing_mode=testing_mode,
-            task_prefetch_count=_RMQ_TASK_PREFETCH_COUNT)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
-
-    @property
-    def communicator(self):
-        return self._communicator
-
-    def close(self):
-        self._communicator.disconnect()
-
-    def connect(self):
-        return self._communicator.connect()
-
-    def pause_process(self, pid, msg=None):
-        return self.execute_action(plumpy.PauseAction(pid, msg))
-
-    def play_process(self, pid):
-        return self.execute_action(plumpy.PlayAction(pid))
-
-    def kill_process(self, pid, msg=None):
-        return self.execute_action(plumpy.KillAction(pid, msg))
-
-    def request_status(self, pid):
-        return self.execute_action(plumpy.StatusAction(pid))
-
-    def launch_process(self, process_class, init_args=None, init_kwargs=None):
-        action = LaunchProcessAction(process_class, init_args, init_kwargs)
-        action.execute(self._communicator)
-        return action
-
-    def continue_process(self, pid):
-        action = plumpy.ContinueProcessAction(pid)
-        action.execute(self._communicator)
-        return action
-
-    def execute_process(self, process_class, init_args=None, init_kwargs=None):
-        action = ExecuteProcessAction(process_class, init_args, init_kwargs)
-        action.execute(self._communicator)
-        return action
-
-    def execute_action(self, action):
-        action.execute(self._communicator)
-        return action
+    return plumpy.RemoteProcessThreadController(communicator=communicator)
 
 
-class BlockingProcessControlPanel(ProcessControlPanel):
+def create_communicator(url=None, prefix=None, task_prefetch_count=_RMQ_TASK_PREFETCH_COUNT, testing_mode=False):
     """
-    A blocking adapter for the ProcessControlPanel.
-    """
+    Create a Communicator
 
-    def __init__(self, prefix, testing_mode=False, timeout=None):
-        self._loop = tornado.ioloop.IOLoop()
-        connector = create_rmq_connector(self._loop)
-        super(BlockingProcessControlPanel, self).__init__(prefix, connector, testing_mode)
-
-        self._timeout = timeout
-        self.connect()
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
-        self._loop.close()
-
-    @property
-    def timeout(self):
-        return self._timeout
-
-    def execute_process_start(self, process_class, init_args=None, init_kwargs=None):
-        action = ExecuteProcessAction(process_class, init_args, init_kwargs, nowait=True)
-        action.execute(self._communicator)
-        self._communicator.await(action, timeout=self.timeout)
-        return action.result()
-
-    def execute_action(self, action):
-        with utils.loop_scope(self._loop):
-            action.execute(self._communicator)
-            return self._communicator.await(action, timeout=self.timeout)
-
-    def close(self):
-        self._communicator.disconnect()
-
-
-def new_control_panel():
-    """
-    Create a new control panel based on the current profile configuration
-
-    :return: A new control panel instance
-    :rtype: :py:class:`aiida.work.rmq.ProcessControlPanel`
-    """
-    prefix = get_rmq_prefix()
-    connector = create_rmq_connector()
-    return ProcessControlPanel(prefix, connector)
-
-
-def new_blocking_control_panel(timeout=None):
-    """
-    Create a new blocking control panel based on the current profile configuration
-
-    :param timeout: optional default timeout for await instructions
-    :return: A new control panel instance
-    :rtype: :py:class:`aiida.work.rmq.BlockingProcessControlPanel`
-    """
-    prefix = get_rmq_prefix()
-    return BlockingProcessControlPanel(prefix, timeout=timeout)
-
-
-def create_rmq_connector(loop=None):
-    """
-    Create an RmqConnector
-
-    :param loop: optional event loop to set for the connector, by default will get the current event loop
-    :returns: the instantiated RmqConnector
-    """
-    if loop is None:
-        loop = tornado.ioloop.IOLoop.current()
-    return RmqConnector(amqp_url=get_rmq_url(), loop=loop)
-
-
-def create_communicator(loop=None, prefix=None, testing_mode=False):
-    """
-    Create and RmqCommunicator
-
-    :param loop: optionally a specific event loop to use
     :param prefix: optionally a specific prefix to use for the RMQ connection
     :param testing_mode: whether to create a communicator in testing mode
-    :returns: the instantiated RmqCommunicator
+    :type testing_mode: bool
+    :return: the communicator instance
+    :rtype: :class:`kiwipy.Communicator`
     """
+    if url is None:
+        url = get_rmq_url()
+
     if prefix is None:
         prefix = get_rmq_prefix()
 
     message_exchange = get_message_exchange_name(prefix)
     task_queue = get_launch_queue_name(prefix)
 
-    connector = create_rmq_connector(loop)
-
-    return RmqCommunicator(
-        connector,
-        exchange_name=message_exchange,
+    return kiwipy.rmq.RmqThreadCommunicator.connect(
+        connection_params={'url': get_rmq_url()},
+        message_exchange=message_exchange,
+        encoder=encode_response,
+        decoder=decode_response,
         task_queue=task_queue,
+        task_prefetch_count=task_prefetch_count,
         testing_mode=testing_mode,
-        task_prefetch_count=_RMQ_TASK_PREFETCH_COUNT)
+    )

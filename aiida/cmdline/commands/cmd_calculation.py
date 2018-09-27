@@ -363,17 +363,20 @@ def calculation_kill(calculations, force):
         warning = 'Are you sure you want to kill {} calculations?'.format(len(calculations))
         click.confirm(warning, abort=True)
 
-    with work.new_control_panel() as control_panel:
+    with work.create_communicator() as communicator:
+
+        controller = work.create_controller(communicator=communicator)
+
         futures = []
         for calculation in calculations:
             try:
-                future = control_panel.kill_process(calculation)
+                future = controller.kill_process(calculation)
                 futures.append((calculation, future))
             except (work.RemoteException, work.DeliveryFailed) as exc:
                 echo.echo_error('Calculation<{}> killing failed {}'.format(calculation, exc))
 
         for future in futures:
-            result = control_panel._communicator.await(future[1])
+            result = future.result()
             if result:
                 echo.echo_success('Calculation<{}> successfully killed'.format(future[0]))
             else:

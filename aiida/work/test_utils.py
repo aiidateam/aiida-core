@@ -24,7 +24,7 @@ class DummyProcess(Process):
         spec.inputs.dynamic = True
         spec.outputs.dynamic = True
 
-    def _run(self):
+    def run(self):
         pass
 
 
@@ -38,7 +38,7 @@ class AddProcess(Process):
         spec.input('b', required=True)
         spec.output('result', required=True)
 
-    def _run(self):
+    def run(self):
         self.out(self.inputs.a + self.inputs.b)
 
 
@@ -50,21 +50,21 @@ class BadOutput(Process):
         super(BadOutput, cls).define(spec)
         spec.outputs.dynamic = True
 
-    def _run(self):
+    def run(self):
         self.out("bad_output", 5)
 
 
 class ExceptionProcess(Process):
     """A Process that raises a RuntimeError when run."""
 
-    def _run(self):  # pylint: disable=no-self-use
+    def run(self):  # pylint: disable=no-self-use
         raise RuntimeError('CRASH')
 
 
 class WaitProcess(Process):
     """A Process that waits until it is asked to continue."""
 
-    def _run(self):
+    def run(self):
         return plumpy.Wait(self.next_step)
 
     def next_step(self):

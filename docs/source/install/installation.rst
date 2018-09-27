@@ -194,18 +194,16 @@ Configure AiiDA
 
 Verdi tab-completion
 --------------------
-The ``verdi`` command line tool has many commands and options.
-To simplify its usage, there is a way to enable tab-completion for it in your bash shell.
-To do so, simply run the following command::
+The ``verdi`` command line interface has many commands and options.
+To simplify its usage, there is a way to enable tab-completion for it in your shell.
+To do so, simply add the following line to the activation script of your virtual environment (or to your shell config, e.g. ``.bashrc``)::
 
-    $ verdi completioncommand
-
-and append the result to the activation script of your virtual environment (or to your bash config, e.g. ``.bashrc``).
-Alternatively, you can accomplish the same by simply adding the following line to the activation script::
-
-    eval "$(verdi completioncommand)"
+    eval "$(_VERDI_COMPLETE=source verdi)"
 
 For the changes to apply to your current shell, make sure to source the activation script or ``.bashrc`` (depending the approach you chose).
+
+.. note::
+    This line replaces the ``eval "$(verdi completioncommand)"`` line that was used in ``aiida-core<1.0.0``.
 
 Adding AiiDA to the PATH
 ------------------------

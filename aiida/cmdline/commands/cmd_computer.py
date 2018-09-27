@@ -22,7 +22,7 @@ from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.cmdline.utils.multi_line_input import ensure_scripts
-from aiida.common.exceptions import ValidationError
+from aiida.common.exceptions import ValidationError, InputValidationError
 from aiida.control.computer import ComputerBuilder, get_computer_configuration
 from aiida.plugins.entry_point import get_entry_points
 from aiida.transport import cli as transport_cli
@@ -47,16 +47,6 @@ def get_computer_names():
     return []
 
 
-@with_dbenv()
-def get_computer(name):
-    """
-    Get a Computer object with given name, or raise NotExistent
-    """
-    from aiida.orm.computer import Computer
-    return Computer.get(name)
-
-
-@with_dbenv()
 def prompt_for_computer_configuration(computer):  # pylint: disable=unused-argument
     pass
 
@@ -162,7 +152,7 @@ def get_parameter_default(parameter, ctx):
 
     try:
         value = getattr(ctx.computer_builder, parameter)
-        if value == '':
+        if value == '' or value is None:
             value = default
     except KeyError:
         value = default
@@ -201,7 +191,11 @@ def computer_setup(ctx, non_interactive, **kwargs):
                            'computer starting from the settings of {c}.'.format(c=kwargs['label']))
 
     if not non_interactive:
-        pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
+        try:
+            pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
+        except InputValidationError as exception:
+            raise click.BadParameter('invalid prepend and or append text: {}'.format(exception))
+
         kwargs['prepend_text'] = pre
         kwargs['append_text'] = post
 
@@ -253,7 +247,11 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
         echo.echo_critical('A computer called {} already exists'.format(kwargs['label']))
 
     if not non_interactive:
-        pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
+        try:
+            pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
+        except InputValidationError as exception:
+            raise click.BadParameter('invalid prepend and or append text: {}'.format(exception))
+
         kwargs['prepend_text'] = pre
         kwargs['append_text'] = post
 
@@ -354,7 +352,6 @@ def computer_disable(user, computer):
 @with_dbenv()
 def computer_list(all_entries, raw):
     """List available computers."""
-    from aiida.orm.computer import Computer
     from aiida.orm.backend import construct_backend
 
     backend = construct_backend()
@@ -366,7 +363,7 @@ def computer_list(all_entries, raw):
         echo.echo_info("(use 'verdi computer show COMPUTERNAME' to see the details)")
     if computer_names:
         for name in sorted(computer_names):
-            computer = Computer.get(name)
+            computer = backend.computers.get(name=name)
 
             is_configured = computer.is_user_configured(backend.users.get_automatic_user())
             is_user_enabled = computer.is_user_enabled(backend.users.get_automatic_user())
@@ -561,12 +558,14 @@ def computer_delete(computer):
     it.
     """
     from aiida.common.exceptions import InvalidOperation
-    from aiida.orm.computer import delete_computer
+    from aiida.orm.backend import construct_backend
 
-    compname = computer.get_name()
+    backend = construct_backend()
+
+    compname = computer.name
 
     try:
-        delete_computer(computer)
+        backend.computers.delete(computer.id)
     except InvalidOperation as error:
         echo.echo_critical(str(error))
 

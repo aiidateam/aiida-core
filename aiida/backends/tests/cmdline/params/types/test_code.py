@@ -2,7 +2,7 @@
 from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.params.types import CodeParamType
-from aiida.orm import Code, Computer
+from aiida.orm import Code
 from aiida.orm.utils.loaders import OrmEntityLoader
 
 

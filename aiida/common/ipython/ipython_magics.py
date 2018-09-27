@@ -36,6 +36,7 @@ Usage
 from __future__ import absolute_import
 import json
 import IPython
+import six
 from IPython.core.magic import magics_class, line_magic, Magics, needs_local_scope
 
 
@@ -87,7 +88,7 @@ class AiiDALoaderMagics(Magics):
             self.current_state = "Loaded AiiDA DB environment."
 
         user_ns = get_start_namespace()
-        for k, v in user_ns.iteritems():
+        for k, v in six.iteritems(user_ns):
             add_to_ns(local_ns, k, v)
 
         return self

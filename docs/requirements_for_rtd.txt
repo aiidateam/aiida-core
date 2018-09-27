@@ -36,7 +36,6 @@ flask-marshmallow==0.9.0
 futures; python_version=="2.7"
 ipython>=4.0,<6.0
 itsdangerous==0.24
-kiwipy==0.2.1
 marshmallow-sqlalchemy==0.13.2
 meld3==1.0.2
 mock==2.0.0
@@ -45,8 +44,7 @@ paramiko==2.4.2
 passlib==1.7.1
 pathlib2; python_version<"3.5"
 pgtest==1.1.0
-pika==0.12.0
-plumpy==0.10.6
+plumpy==0.11.2
 psutil==5.4.5
 pyblake2==1.1.2; python_version<"3.6"
 pymatgen==2018.4.20

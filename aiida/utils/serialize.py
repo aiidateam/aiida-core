@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""Serialisation functions for AiiDA types"""
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -20,7 +21,6 @@ from plumpy.utils import AttributesFrozendict
 from aiida.common.extendeddicts import AttributeDict
 from aiida.orm import Group, Node, load_group, load_node
 
-
 _PREFIX_KEY_TUPLE = 'tuple():'
 _PREFIX_VALUE_NODE = 'aiida_node:'
 _PREFIX_VALUE_GROUP = 'aiida_group:'
@@ -38,8 +38,8 @@ def encode_key(key):
     """
     if isinstance(key, tuple):
         return '{}{}'.format(_PREFIX_KEY_TUPLE, key)
-    else:
-        return key
+
+    return key
 
 
 def decode_key(key):
@@ -53,8 +53,8 @@ def decode_key(key):
 
     if isinstance(key, six.string_types) and key.startswith(_PREFIX_KEY_TUPLE):
         return literal_eval(key[len(_PREFIX_KEY_TUPLE):])
-    else:
-        return key
+
+    return key
 
 
 def serialize_data(data):
@@ -68,22 +68,24 @@ def serialize_data(data):
     :param data: a single value or collection
     :return: the serialized data with the same internal structure
     """
+    # pylint: disable=too-many-return-statements
+
     if isinstance(data, Node):
         return '{}{}'.format(_PREFIX_VALUE_NODE, data.uuid)
-    elif isinstance(data, Group):
+    if isinstance(data, Group):
         return '{}{}'.format(_PREFIX_VALUE_GROUP, data.uuid)
-    elif isinstance(data, uuid.UUID):
+    if isinstance(data, uuid.UUID):
         return '{}{}'.format(_PREFIX_VALUE_UUID, data)
-    elif isinstance(data, AttributeDict):
+    if isinstance(data, AttributeDict):
         return AttributeDict({encode_key(key): serialize_data(value) for key, value in data.items()})
-    elif isinstance(data, AttributesFrozendict):
+    if isinstance(data, AttributesFrozendict):
         return AttributesFrozendict({encode_key(key): serialize_data(value) for key, value in data.items()})
-    elif isinstance(data, collections.Mapping):
+    if isinstance(data, collections.Mapping):
         return {encode_key(key): serialize_data(value) for key, value in data.items()}
-    elif isinstance(data, collections.Sequence) and not isinstance(data, six.string_types):
+    if isinstance(data, collections.Sequence) and not isinstance(data, six.string_types):
         return [serialize_data(value) for value in data]
-    else:
-        return data
+
+    return data
 
 
 def deserialize_data(data):
@@ -95,19 +97,21 @@ def deserialize_data(data):
     :param data: serialized data
     :return: the deserialized data with keys decoded and node instances loaded from UUID's
     """
+    # pylint: disable=too-many-return-statements
+
     if isinstance(data, AttributeDict):
         return AttributeDict({decode_key(key): deserialize_data(value) for key, value in data.items()})
-    elif isinstance(data, AttributesFrozendict):
+    if isinstance(data, AttributesFrozendict):
         return AttributesFrozendict({decode_key(key): deserialize_data(value) for key, value in data.items()})
-    elif isinstance(data, collections.Mapping):
+    if isinstance(data, collections.Mapping):
         return {decode_key(key): deserialize_data(value) for key, value in data.items()}
-    elif isinstance(data, collections.Sequence) and not isinstance(data, six.string_types):
+    if isinstance(data, collections.Sequence) and not isinstance(data, six.string_types):
         return [deserialize_data(value) for value in data]
-    elif isinstance(data, six.string_types) and data.startswith(_PREFIX_VALUE_NODE):
+    if isinstance(data, six.string_types) and data.startswith(_PREFIX_VALUE_NODE):
         return load_node(uuid=data[len(_PREFIX_VALUE_NODE):])
-    elif isinstance(data, six.string_types) and data.startswith(_PREFIX_VALUE_GROUP):
+    if isinstance(data, six.string_types) and data.startswith(_PREFIX_VALUE_GROUP):
         return load_group(uuid=data[len(_PREFIX_VALUE_GROUP):])
-    elif isinstance(data, six.string_types) and data.startswith(_PREFIX_VALUE_UUID):
+    if isinstance(data, six.string_types) and data.startswith(_PREFIX_VALUE_UUID):
         return uuid.UUID(data[len(_PREFIX_VALUE_UUID):])
-    else:
-        return data
+
+    return data

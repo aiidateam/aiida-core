@@ -74,8 +74,8 @@ class Runner(object):
     """Class that can launch processes by running in the current interpreter or by submitting them to the daemon."""
 
     _persister = None
-    _rmq_connector = None
     _communicator = None
+    _controller = None
     _closed = False
 
     # pylint: disable=too-many-arguments
@@ -105,8 +105,8 @@ class Runner(object):
         # Save kwargs for creating child runners
         self._kwargs = {
             'rmq_config': rmq_config,
-            'poll_interval': poll_interval,
             'rmq_submit': rmq_submit,
+            'poll_interval': poll_interval,
             'enable_persistence': enable_persistence
         }
 
@@ -119,10 +119,6 @@ class Runner(object):
     @property
     def loop(self):
         return self._loop
-
-    @property
-    def rmq(self):
-        return self._rmq
 
     @property
     def transport(self):
@@ -139,6 +135,10 @@ class Runner(object):
     @property
     def job_manager(self):
         return self._job_manager
+
+    @property
+    def controller(self):
+        return self._controller
 
     def is_closed(self):
         return self._closed
@@ -157,13 +157,13 @@ class Runner(object):
             return self._loop.run_sync(lambda: future)
 
     def close(self):
-        """Close the runner by stopping the loop and disconnecting the RmqConnector if it has one."""
+        """Close the runner by stopping the loop and stopping the Communicator if it has one."""
         assert not self._closed
 
-        self.stop()
+        if self.communicator is not None:
+            self.communicator._communicator.stop()  # pylint: disable=protected-access
 
-        if self._rmq_connector is not None:
-            self._rmq_connector.disconnect()
+        self.stop()
 
         self._closed = True
 
@@ -225,7 +225,8 @@ class Runner(object):
         if self._rmq_submit:
             self.persister.save_checkpoint(process)
             process.close()
-            self.rmq.continue_process(process.pid)
+            # Do not wait for the future's result, because in the case of a single worker this would cock-block itself
+            self.controller.continue_process(process.pid, nowait=False)
         else:
             # Run in this runner
             self.loop.add_callback(process.step_until_terminated)
@@ -339,20 +340,9 @@ class Runner(object):
         :param task_prefetch_count: the maximum number of tasks the communicator may retrieve at a given time
         :param testing_mode: whether to create a communicator in testing mode
         """
-        self._rmq_connector = plumpy.rmq.RmqConnector(amqp_url=url, loop=self._loop)
-
-        self._rmq_communicator = plumpy.rmq.RmqCommunicator(
-            self._rmq_connector,
-            exchange_name=rmq.get_message_exchange_name(prefix),
-            task_queue=rmq.get_launch_queue_name(prefix),
-            testing_mode=testing_mode,
-            task_prefetch_count=task_prefetch_count)
-
-        self._rmq = rmq.ProcessControlPanel(prefix=prefix, rmq_connector=self._rmq_connector, testing_mode=testing_mode)
-        self._communicator = self._rmq.communicator
-
-        # Establish RMQ connection
-        self._communicator.connect()
+        communicator = rmq.create_communicator(url, prefix, task_prefetch_count, testing_mode=testing_mode)
+        self._communicator = plumpy.wrap_communicator(communicator, loop=self.loop)
+        self._controller = rmq.create_controller(communicator=communicator)
 
     def _create_child_runner(self):
         return Runner(**self._kwargs)

@@ -380,12 +380,12 @@ class TestWorkchain(AiidaTestCase):
         test_case = self
 
         class ReturnA(work.Process):
-            def _run(self):
+            def run(self):
                 self.out('res', A)
                 return
 
         class ReturnB(work.Process):
-            def _run(self):
+            def run(self):
                 self.out('res', B)
                 return
 
@@ -597,7 +597,7 @@ class TestWorkchain(AiidaTestCase):
         test_case = self
 
         class SimpleWc(work.Process):
-            def _run(self):
+            def run(self):
                 self.out('_return', val)
                 return
 
@@ -1296,7 +1296,7 @@ class TestDefaultUniqueness(AiidaTestCase):
             super(TestDefaultUniqueness.Child, cls).define(spec)
             spec.input('a', valid_type=Bool, default=Bool(True))
 
-        def _run(self):
+        def run(self):
             pass
 
     def test_unique_default_inputs(self):

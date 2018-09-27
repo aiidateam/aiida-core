@@ -10,14 +10,21 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
+import datetime
+
 from aiida.backends.testbase import AiidaTestCase
 from aiida import work
 import aiida.work.test_utils
+
+from tornado import gen
 
 from . import utils
 
 
 class TestWf(AiidaTestCase):
+    TIMEOUT = datetime.timedelta(seconds=5.0)
+
     def test_calculation_future_broadcasts(self):
         runner = utils.create_test_runner(with_communicator=True)
         proc = work.test_utils.DummyProcess()
@@ -27,7 +34,7 @@ class TestWf(AiidaTestCase):
             poll_interval=None,
             communicator=runner.communicator)
         work.run(proc)
-        calc_node = runner.run_until_complete(future)
+        calc_node = runner.run_until_complete(gen.with_timeout(self.TIMEOUT, future))
         self.assertEqual(proc.calc.pk, calc_node.pk)
 
     def test_calculation_future_polling(self):
@@ -39,5 +46,5 @@ class TestWf(AiidaTestCase):
             loop=runner.loop,
             poll_interval=0)
         work.run(proc)
-        calc_node = runner.run_until_complete(future)
+        calc_node = runner.run_until_complete(gen.with_timeout(self.TIMEOUT, future))
         self.assertEqual(proc.calc.pk, calc_node.pk)

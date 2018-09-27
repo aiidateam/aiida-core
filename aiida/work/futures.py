@@ -16,12 +16,10 @@ import tornado.gen
 import kiwipy
 import plumpy
 
-__all__ = ['Future', 'CalculationFuture']
-
-Future = plumpy.Future
+__all__ = ['CalculationFuture']
 
 
-class CalculationFuture(Future):
+class CalculationFuture(plumpy.Future):
     """
     A future that waits for a calculation to complete using both polling and
     listening for broadcast events if possible

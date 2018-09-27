@@ -364,7 +364,6 @@
         aiida/utils/find_folder.py|
         aiida/utils/__init__.py|
         aiida/utils/queries.py|
-        aiida/utils/serialize.py|
         aiida/utils/test_timezone.py|
         aiida/utils/timezone.py|
         aiida/utils/which.py|

@@ -138,7 +138,7 @@ class WorkChain(Process):
             self.insert_awaitable(awaitable)
 
     @override
-    def _run(self):
+    def run(self):
         self._stepper = self.spec().get_outline().create_stepper(self)
         return self._do_step()
 

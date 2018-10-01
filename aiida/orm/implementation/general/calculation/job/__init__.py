@@ -23,6 +23,7 @@ from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
 from aiida.common.links import LinkType
 from aiida.plugins.loader import get_plugin_type_from_type_string
 from aiida.common.utils import str_timedelta, classproperty
+from aiida.orm.computer import Computer
 from aiida.orm.implementation.general.calculation import AbstractCalculation
 from aiida.orm.mixins import Sealable
 from aiida.utils import timezone
@@ -152,7 +153,7 @@ class AbstractJobCalculation(AbstractCalculation):
         from aiida.work.ports import PortNamespace
 
         inputs = self.get_inputs_dict()
-        options = self.get_options()
+        options = self.get_options(only_actually_set=True)
         builder = self.get_builder()
 
         for port_name, port in self.process().spec().inputs.items():
@@ -341,8 +342,6 @@ class AbstractJobCalculation(AbstractCalculation):
         else:
             raise NotExistent("_raw_input_folder not created yet")
 
-    from aiida.orm.computer import Computer
-
     options = {
         'resources': {
             'attribute_key': 'jobresource_params',
@@ -364,6 +363,7 @@ class AbstractJobCalculation(AbstractCalculation):
             'valid_type': six.string_types,
             'non_db': True,
             'required': False,
+            'default': '',
             'help': 'Set a (possibly multiline) string with the commands that the user wants to manually set for the '
                     'scheduler. The difference of this option with respect to the `prepend_text` is the position in '
                     'the scheduler submission file where such text is inserted: with this option, the string is '
@@ -410,6 +410,7 @@ class AbstractJobCalculation(AbstractCalculation):
             'valid_type': (list, tuple),
             'non_db': True,
             'required': False,
+            'default': [],
             'help': 'Set the extra params to pass to the mpirun (or equivalent) command after the one provided in '
                     'computer.mpirun_command. Example: mpirun -np 8 extra_params[0] extra_params[1] ... exec.x',
         },
@@ -448,6 +449,7 @@ class AbstractJobCalculation(AbstractCalculation):
             'valid_type': six.string_types[0],
             'non_db': True,
             'required': False,
+            'default': '',
             'help': 'Set the calculation-specific prepend text, which is going to be prepended in the scheduler-job '
                     'script, just before the code execution',
         },
@@ -456,6 +458,7 @@ class AbstractJobCalculation(AbstractCalculation):
             'valid_type': six.string_types[0],
             'non_db': True,
             'required': False,
+            'default': '',
             'help': 'Set the calculation-specific append text, which is going to be appended in the scheduler-job '
                     'script, just after the code execution',
         },
@@ -468,7 +471,7 @@ class AbstractJobCalculation(AbstractCalculation):
         }
     }
 
-    def get_option(self, name, only_actually_set=True):
+    def get_option(self, name, only_actually_set=False):
         """
         Retun the value of an option that was set for this JobCalculation
 
@@ -512,7 +515,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
         self._set_attr(attribute_key, value)
 
-    def get_options(self, only_actually_set=True):
+    def get_options(self, only_actually_set=False):
         """
         Return the dictionary of options set for this JobCalculation
 
@@ -1911,8 +1914,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
         for k, v in job_tmpl.job_resource.items():
             subst_dict[k] = v
-        mpi_args = [arg.format(**subst_dict) for arg in
-                    computer.get_mpirun_command()]
+        mpi_args = [arg.format(**subst_dict) for arg in computer.get_mpirun_command()]
         extra_mpirun_params = self.get_option('mpirun_extra_params')  # this is the same for all codes in the same calc
 
 

@@ -377,6 +377,15 @@ def main():
         print("#" * 78)
         print("####### TIME ELAPSED: {} s".format(time.time() - start_time))
         print("#" * 78)
+        print("Output of 'verdi process list -a':")
+        try:
+            print(subprocess.check_output(
+                ["verdi", "process", "list", "-a"],
+                stderr=subprocess.STDOUT,
+            ))
+        except subprocess.CalledProcessError as e:
+            print("Note: the command failed, message: {}".format(e))
+
         print("Output of 'verdi calculation list -a':")
         try:
             print(subprocess.check_output(

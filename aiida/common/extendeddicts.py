@@ -11,6 +11,7 @@ from __future__ import absolute_import
 import collections
 
 import six
+import yaml
 
 from aiida.common.exceptions import ValidationError
 from aiida.common.lang import override
@@ -30,7 +31,6 @@ class Enumerate(frozenset):
     def __delattr__(self, name):
         raise AttributeError("Cannot delete attribute in Enumerate '{}'".format(
             self.__class__.__name__))
-
 
 class AttributeDict(dict):
     """
@@ -281,3 +281,18 @@ class DefaultFieldsAttributeDict(AttributeDict):
         Return the extra keys defined in the instance.
         """
         return [_ for _ in self.keys() if _ not in self._default_fields]
+
+def add_mapping_representer(tag, node_cls):
+    def representer(dumper, node):
+        return dumper.represent_mapping(tag, node)
+
+    def constructor(loader, data):
+        result = node_cls()
+        yield result
+        mapping = loader.construct_mapping(data)
+        result.update(mapping)
+
+    yaml.add_representer(node_cls, representer)
+    yaml.add_constructor(tag, constructor)
+
+add_mapping_representer('!!aiida:AttributeDict', AttributeDict)

@@ -283,6 +283,10 @@ class DefaultFieldsAttributeDict(AttributeDict):
         return [_ for _ in self.keys() if _ not in self._default_fields]
 
 def add_mapping_representer(tag, node_cls):
+    """
+    Adds a YAML mapping representer and constructor to the given class, with the
+    specified tag.
+    """
     def representer(dumper, node):
         return dumper.represent_mapping(tag, node)
 

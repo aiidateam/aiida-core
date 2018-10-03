@@ -355,7 +355,7 @@ class AbstractJobCalculation(AbstractCalculation):
             'attribute_key': 'max_wallclock_seconds',
             'valid_type': int,
             'non_db': True,
-            'default': 1800,
+            'required': False,
             'help': 'Set the wallclock in seconds asked to the scheduler',
         },
         'custom_scheduler_commands': {

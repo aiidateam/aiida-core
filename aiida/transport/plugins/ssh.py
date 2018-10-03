@@ -519,8 +519,6 @@ class SshTransport(aiida.transport.Transport):
 
         self._sftp.close()
         self._client.close()
-        if self._proxy is not None:
-            self._proxy.close()
         self._is_open = False
 
     @property

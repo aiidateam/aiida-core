@@ -9,9 +9,13 @@
 ###########################################################################
 """General utilities for Transport classes."""
 from __future__ import absolute_import
+
+import time
+
 from paramiko import ProxyCommand
 
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
+from six.moves import range
 
 
 class FileAttribute(FixedFieldsAttributeDict):
@@ -34,14 +38,36 @@ class _DetachedProxyCommand(ProxyCommand):
     """Modifies paramiko's ProxyCommand by launching the process in a separate process group."""
 
     def __init__(self, command_line):
+        # Note that the super().__init__ must _NOT_ be called here, otherwise
+        # two subprocesses will be created.
         import os
         from subprocess import Popen, PIPE
         from shlex import split as shlsplit
-        super(_DetachedProxyCommand, self).__init__(command_line)
 
         self.cmd = shlsplit(command_line)
         self.process = Popen(self.cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, bufsize=0, preexec_fn=os.setsid)
         self.timeout = None
+
+    def close(self):
+        try:
+            self.process.terminate()
+        # In case the process doesn't exist anymore
+        except OSError:
+            pass
+        for _ in range(10):
+            if self.process.poll() is not None:
+                break
+            time.sleep(0.2)
+        else:
+            try:
+                self.process.kill()
+            # In case the process doesn't exist anymore
+            except OSError:
+                pass
+            for _ in range(10):
+                if self.process.poll() is not None:
+                    break
+                time.sleep(0.2)
 
 
 def copy_from_remote_to_remote(transportsource, transportdestination, remotesource, remotedestination, **kwargs):

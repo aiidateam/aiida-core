@@ -433,6 +433,7 @@ class SshTransport(aiida.transport.Transport):
 
         self._is_open = False
         self._sftp = None
+        self._proxy = None
 
         self._machine = machine
 
@@ -484,8 +485,8 @@ class SshTransport(aiida.transport.Transport):
         connection_arguments = self._connect_args
         proxystring = connection_arguments.pop('proxy_command', None)
         if proxystring is not None:
-            proxy = _DetachedProxyCommand(proxystring)
-            connection_arguments['sock'] = proxy
+            self._proxy = _DetachedProxyCommand(proxystring)
+            connection_arguments['sock'] = self._proxy
 
         try:
             self._client.connect(self._machine, **connection_arguments)
@@ -518,6 +519,8 @@ class SshTransport(aiida.transport.Transport):
 
         self._sftp.close()
         self._client.close()
+        if self._proxy is not None:
+            self._proxy.close()
         self._is_open = False
 
     @property

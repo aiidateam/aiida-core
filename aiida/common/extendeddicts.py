@@ -299,4 +299,4 @@ def add_mapping_representer(tag, node_cls):
     yaml.add_representer(node_cls, representer)
     yaml.add_constructor(tag, constructor)
 
-add_mapping_representer('!!aiida:AttributeDict', AttributeDict)
+add_mapping_representer('!aiida:AttributeDict', AttributeDict)

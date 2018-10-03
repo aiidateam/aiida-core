@@ -13,9 +13,9 @@ from __future__ import absolute_import
 import time
 
 from paramiko import ProxyCommand
+from six.moves import range
 
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
-from six.moves import range
 
 
 class FileAttribute(FixedFieldsAttributeDict):
@@ -37,8 +37,8 @@ class FileAttribute(FixedFieldsAttributeDict):
 class _DetachedProxyCommand(ProxyCommand):
     """Modifies paramiko's ProxyCommand by launching the process in a separate process group."""
 
-    def __init__(self, command_line):
-        # Note that the super().__init__ must _NOT_ be called here, otherwise
+    def __init__(self, command_line):  # pylint: disable=super-init-not-called
+        # Note that the super().__init__ MUST NOT be called here, otherwise
         # two subprocesses will be created.
         import os
         from subprocess import Popen, PIPE

@@ -697,6 +697,63 @@ class TestSimple(AiidaTestCase):
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
+    def test_group_export(self):
+        """
+        Test that when exporting just a group, its nodes are also exported
+        """
+        import os
+        import shutil
+        import tempfile
+
+        from aiida.orm import load_node
+        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.data.structure import StructureData
+        from aiida.orm.importexport import export
+        from aiida.common.datastructures import calc_states
+        from aiida.orm.querybuilder import QueryBuilder
+
+        # Creating a folder for the import/export files
+        temp_folder = tempfile.mkdtemp()
+        try:
+            # Create another user
+            new_email = "newuser@new.n"
+            user = self.backend.users.create(email=new_email)
+            user.store()
+
+            # Create a structure data node
+            sd1 = StructureData()
+            sd1.set_user(user)
+            sd1.label = 'sd1'
+            sd1.store()
+
+            # Create a group and add the data inside
+            from aiida.orm.group import Group
+            g1 = Group(name="node_group")
+            g1.store()
+            g1.add_nodes([sd1])
+            g1_uuid = g1.uuid
+
+            # At this point we export the generated data
+            filename1 = os.path.join(temp_folder, "export1.tar.gz")
+            export([g1], outfile=filename1, silent=True)
+            n_uuids = [sd1.uuid]
+            self.clean_db()
+            self.insert_data()
+            import_data(filename1, silent=True)
+
+            # Check that the imported nodes are correctly imported and that
+            # the user assigned to the nodes is the right one
+            for uuid in n_uuids:
+                self.assertEquals(load_node(uuid).get_user().email, new_email)
+
+            # Check that the exported group is imported correctly
+            qb = QueryBuilder()
+            qb.append(Group, filters={'uuid': {'==': g1_uuid}})
+            self.assertEquals(qb.count(), 1, "The group was not found.")
+        finally:
+            # Deleting the created temporary folder
+            shutil.rmtree(temp_folder, ignore_errors=True)
+
     def test_workfunction_1(self):
         import shutil, os, tempfile
 

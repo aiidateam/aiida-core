@@ -29,10 +29,9 @@ def configure_computer(computer, user=None, **kwargs):
     if valid_keys:
         auth_params.update(kwargs)
         authinfo.set_auth_params(auth_params)
-        from aiida.settings import BACKEND
-        if BACKEND == 'sqlalchemy':
-            authinfo._dbauthinfo.auth_params = auth_params  # pylint: disable=protected-access
-    authinfo.store()
+        authinfo.store()
+
+    return authinfo
 
 
 def get_computer_configuration(computer, user=None):

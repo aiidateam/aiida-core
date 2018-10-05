@@ -133,8 +133,8 @@ def check_schema_version(profile):
     filepath_manage = os.path.join(os.path.dirname(filepath_utils), 'manage.py')
 
     if profile is None:
-        from aiida.common.setup import get_default_profile
-        profile = get_default_profile()
+        from aiida.common.setup import get_default_profile_name
+        profile = get_default_profile_name()
 
     if code_schema_version != db_schema_version:
         raise ConfigurationError("The code schema version is {}, but the version stored in the "

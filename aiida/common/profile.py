@@ -33,7 +33,7 @@ def get_current_profile_name():
     """
     Return the currently configured profile name or if not set, the default profile
     """
-    return settings.AIIDADB_PROFILE or setup.get_default_profile()
+    return settings.AIIDADB_PROFILE or setup.get_default_profile_name()
 
 
 def get_current_profile_config():
@@ -41,6 +41,21 @@ def get_current_profile_config():
     Return the configuration of the currently active profile or if not set, the default profile
     """
     return setup.get_profile_config(get_current_profile_name())
+
+
+class Profile(dict):
+
+    def __init__(self, *args, **kwargs):
+        self._name = kwargs.pop('name', None)
+        super(Profile, self).__init__(*args, **kwargs)
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        self._name = value
 
 
 class ProfileConfig(object):

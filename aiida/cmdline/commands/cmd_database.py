@@ -46,13 +46,13 @@ def database_integrity(apply_patch):
     """
     from aiida.backends import settings
     from aiida.backends.utils import _load_dbenv_noschemacheck
-    from aiida.common.setup import get_default_profile
+    from aiida.common.setup import get_default_profile_name
     from aiida.manage.database.integrity import deduplicate_node_uuids
 
     if settings.AIIDADB_PROFILE is not None:
         profile = settings.AIIDADB_PROFILE
     else:
-        profile = get_default_profile()
+        profile = get_default_profile_name()
 
     _load_dbenv_noschemacheck(profile)
 

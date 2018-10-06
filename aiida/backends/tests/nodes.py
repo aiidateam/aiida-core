@@ -29,6 +29,11 @@ from aiida.orm.utils import load_node
 from aiida.utils.capturing import Capturing
 from aiida.utils.delete_nodes import delete_nodes
 
+try:
+    long        # Python 2
+except NameError:
+    long = int  # Python 2
+
 
 class TestNodeCopyDeepcopy(AiidaTestCase):
     """Test that calling copy and deepcopy on a Node does the right thing."""

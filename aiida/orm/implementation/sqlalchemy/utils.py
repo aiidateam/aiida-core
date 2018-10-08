@@ -12,6 +12,7 @@ import contextlib
 
 import six
 from sqlalchemy import inspect
+from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.orm.mapper import Mapper
 from sqlalchemy.types import Integer, Boolean
 import sqlalchemy.exc
@@ -57,7 +58,7 @@ class ModelWrapper(object):
         return self._model.id is not None
 
     def save(self):
-        """ Store the model (possibly updating values if changed) """
+        """Store the model (possibly updating values if changed)."""
         try:
             self._model.save(commit=True)
         except sqlalchemy.exc.IntegrityError as e:
@@ -67,10 +68,12 @@ class ModelWrapper(object):
     def _is_model_field(self, name):
         return inspect(self._model.__class__).has_property(name)
 
-    def _flush(self, fields=None):
-        """ If the user is stored then save the current value """
+    def _flush(self, fields=()):
+        """If the user is stored then save the current value."""
         if self.is_saved():
-            # At the moment we have no way to specify which fields to update
+            for field in fields:
+                flag_modified(self._model, field)
+
             self.save()
 
     def _ensure_model_uptodate(self, fields=None):

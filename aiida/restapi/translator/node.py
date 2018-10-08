@@ -573,13 +573,14 @@ class NodeTranslator(BaseTranslator):
         qb = QueryBuilder()
         qb.append(Node, tag="main", project=['*'],
                   filters=self._id_filter)
-        qb.append(Node, tag="in", project=['*'], edge_project=['label'],
+        qb.append(Node, tag="in", project=['*'], edge_project=['label', 'type'],
                   input_of='main')
 
         if qb.count() > 0:
             for input in qb.iterdict():
                 node = input['in']['*']
-                linktype = input['main--in']['label']
+                linklabel = input['main--in']['label']
+                linktype = input['main--in']['type']
                 pk = node.pk
                 uuid = node.uuid
                 nodetype = node.type
@@ -596,6 +597,7 @@ class NodeTranslator(BaseTranslator):
                     "displaytype": display_type,
                     "group": "inputs",
                     "description": description,
+                    "linklabel": linklabel,
                     "linktype": linktype,
                     "shape": get_node_shape(nodetype)
                 })
@@ -604,7 +606,7 @@ class NodeTranslator(BaseTranslator):
                     "to": 0,
                     "arrows": "to",
                     "color": {"inherit": 'from'},
-                    "linktype": linktype,
+                    "label": linktype,
                 })
                 nodeCount += 1
 
@@ -612,12 +614,13 @@ class NodeTranslator(BaseTranslator):
         qb = QueryBuilder()
         qb.append(Node, tag="main", project=['*'],
                   filters=self._id_filter)
-        qb.append(Node, tag="out", project=['*'], edge_project=['label'],
+        qb.append(Node, tag="out", project=['*'], edge_project=['label', 'type'],
                   output_of='main')
         if qb.count() > 0:
             for output in qb.iterdict():
                 node = output['out']['*']
-                linktype = output['main--out']['label']
+                linklabel = output['main--out']['label']
+                linktype = output['main--out']['type']
                 pk = node.pk
                 uuid = node.uuid
                 nodetype = node.type
@@ -634,6 +637,7 @@ class NodeTranslator(BaseTranslator):
                     "displaytype": display_type,
                     "group": "outputs",
                     "description": description,
+                    "linklabel": linklabel,
                     "linktype": linktype,
                     "shape": get_node_shape(nodetype)
                 })
@@ -642,7 +646,7 @@ class NodeTranslator(BaseTranslator):
                     "to": nodeCount,
                     "arrows": "to",
                     "color": {"inherit": 'to'},
-                    "linktype": linktype
+                    "label": linktype
                 })
                 nodeCount += 1
 

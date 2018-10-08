@@ -71,10 +71,11 @@ class TransportQueue(object):
         :param authinfo: The authinfo to be used to get transport
         :return: A future that can be yielded to give the transport
         """
+        open_callback_handle = None
         transport_request = self._transport_requests.get(authinfo.id, None)
 
-        open_callback_handle = None
         if transport_request is None:
+
             transport_request = TransportRequest()
             self._transport_requests[authinfo.id] = transport_request
 
@@ -91,6 +92,9 @@ class TransportQueue(object):
                     except Exception as exception:  # pylint: disable=broad-except
                         _LOGGER.error('exception occurred while trying to open transport:\n %s', exception)
                         transport_request.future.set_exception(exception)
+
+                        # Cleanup of the stale TransportRequest with the excepted transport future
+                        self._transport_requests.pop(authinfo.id, None)
                     else:
                         transport_request.future.set_result(transport)
 
@@ -117,4 +121,4 @@ class TransportQueue(object):
                 elif open_callback_handle is not None:
                     self._loop.remove_timeout(open_callback_handle)
 
-                del self._transport_requests[authinfo.id]
+                self._transport_requests.pop(authinfo.id, None)

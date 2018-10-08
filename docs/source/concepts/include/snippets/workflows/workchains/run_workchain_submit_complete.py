@@ -11,9 +11,9 @@ class SomeWorkChain(WorkChain):
             cls.inspect_workchain,
         )
 
-    def submit_workchain(self)
+    def submit_workchain(self):
         future = self.submit(SomeWorkChain)
         return ToContext(workchain=future)
 
-    def inspect_workchain(self)
+    def inspect_workchain(self):
         assert self.ctx.workchain.is_finished_ok

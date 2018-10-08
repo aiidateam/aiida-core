@@ -62,7 +62,7 @@ class ComputerCollection(Collection):
         if not res:
             raise exceptions.NotExistent("No computer with filter '{}' found".format(filters))
         if len(res) > 1:
-            exceptions.MultipleObjectsError("Multiple computers found with the same id '{}'".format(id))
+            raise exceptions.MultipleObjectsError("Multiple computers found with the same id '{}'".format(id))
 
         return res[0]
 

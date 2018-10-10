@@ -35,12 +35,13 @@ class TestProcessControl(AiidaTestCase):
 
         # These two need to share a common event loop otherwise the first will never send
         # the message while the daemon is running listening to intercept
-        self.runner = runners.Runner(rmq_config=rmq_config, poll_interval=0.)
+        self.runner = runners.Runner(rmq_config=rmq_config, poll_interval=0., testing_mode=True)
         self.daemon_runner = runners.DaemonRunner(
             rmq_config=rmq_config,
             rmq_submit=True,
             poll_interval=0.,
-            loop=self.runner.loop)
+            loop=self.runner.loop,
+            testing_mode=True)
 
         self.executor = ThreadPoolExecutor(max_workers=1)
         self.executor.submit(self.daemon_runner.start)

@@ -85,7 +85,8 @@ class Runner(object):
                  loop=None,
                  rmq_submit=False,
                  enable_persistence=True,
-                 persister=None):
+                 persister=None,
+                 testing_mode=False):
         self._loop = loop if loop is not None else tornado.ioloop.IOLoop()
         self._poll_interval = poll_interval
         self._rmq_submit = rmq_submit
@@ -96,7 +97,7 @@ class Runner(object):
             self._persister = persister if persister is not None else persistence.AiiDAPersister()
 
         if rmq_config is not None:
-            self._setup_rmq(**rmq_config)
+            self._setup_rmq(testing_mode=testing_mode, **rmq_config)
         elif self._rmq_submit:
             logger = logging.getLogger(__name__)
             logger.warning('Disabling rmq submission, no RMQ config provided')

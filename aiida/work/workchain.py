@@ -21,7 +21,6 @@ from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import override
 from aiida.common.utils import classproperty
 from aiida.orm.utils import load_node, load_workflow
-from aiida.utils.serialize import serialize_data, deserialize_data
 
 from .awaitable import AwaitableTarget, AwaitableAction, construct_awaitable
 from .context import ToContext, assign_, append_
@@ -68,7 +67,7 @@ class WorkChain(Process):
     def save_instance_state(self, out_state, save_context):
         super(WorkChain, self).save_instance_state(out_state, save_context)
         # Save the context
-        out_state[self._CONTEXT] = serialize_data(self.ctx)
+        out_state[self._CONTEXT] = self.ctx
 
         # Ask the stepper to save itself
         if self._stepper is not None:
@@ -78,7 +77,7 @@ class WorkChain(Process):
     def load_instance_state(self, saved_state, load_context):
         super(WorkChain, self).load_instance_state(saved_state, load_context)
         # Load the context
-        self._context = AttributeDict(**deserialize_data(saved_state[self._CONTEXT]))
+        self._context = saved_state[self._CONTEXT]
 
         # Recreate the stepper
         self._stepper = None

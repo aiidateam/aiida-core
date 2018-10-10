@@ -19,7 +19,6 @@ import os
 from aiida.orm.implementation.django.backend import DjangoBackend
 from aiida.backends.testimplbase import AiidaTestImplementation
 
-
 # Add a new entry here if you add a file with tests under aiida.backends.djsite.db.subtests
 # The key is the name to use in the 'verdi test' command (e.g., a key 'generic'
 # can be run using 'verdi test db.generic')
@@ -34,6 +33,8 @@ class DjangoTests(AiidaTestImplementation):
     """
     Automatically takes care of the setUpClass and TearDownClass, when needed.
     """
+
+    # pylint: disable=attribute-defined-outside-init
 
     # Note this is has to be a normal method, not a class method
     def setUpClass_method(self):
@@ -62,16 +63,14 @@ class DjangoTests(AiidaTestImplementation):
         try:
             self.user = DbUser.objects.get(email=get_configured_user_email())
         except ObjectDoesNotExist:
-            self.user = DbUser.objects.create_user(get_configured_user_email(),
-                                                   'fakepwd')
+            self.user = DbUser.objects.create_user(get_configured_user_email(), 'fakepwd')
         # Reqired by the calling class
         self.user_email = self.user.email
 
         super(DjangoTests, self).insert_data()
 
     def clean_db(self):
-        from aiida.backends.djsite.db.models import (
-            DbComputer, DbUser, DbWorkflow, DbWorkflowStep, DbWorkflowData)
+        from aiida.backends.djsite.db.models import (DbComputer, DbUser, DbWorkflow, DbWorkflowStep, DbWorkflowData)
         from aiida.common.utils import get_configured_user_email
 
         # Complicated way to make sure we 'unwind' all the relationships
@@ -80,7 +79,7 @@ class DjangoTests(AiidaTestImplementation):
         DbWorkflowStep.sub_workflows.through.objects.all().delete()
         DbWorkflowData.objects.all().delete()
         DbWorkflowStep.objects.all().delete()
-        DbWorkflow.objects.all().delete()
+        DbWorkflow.objects.all().delete()  # pylint: disable=no-member
 
         # Delete groups
         from aiida.backends.djsite.db.models import DbGroup
@@ -98,7 +97,7 @@ class DjangoTests(AiidaTestImplementation):
         # delete computers and users
         from aiida.backends.djsite.db.models import DbNode
 
-        DbNode.objects.all().delete()
+        DbNode.objects.all().delete()  # pylint: disable=no-member
 
         # I delete all the users except the default user.
         # See discussion in setUpClass
@@ -116,8 +115,7 @@ class DjangoTests(AiidaTestImplementation):
         from aiida.common.setup import TEST_KEYWORD
         from aiida.common.exceptions import InvalidOperation
 
-        base_repo_path = os.path.basename(
-            os.path.normpath(REPOSITORY_PATH))
+        base_repo_path = os.path.basename(os.path.normpath(REPOSITORY_PATH))
         if TEST_KEYWORD not in base_repo_path:
             raise InvalidOperation("Be careful. The repository for the tests "
                                    "is not a test repository. I will not "

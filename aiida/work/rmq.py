@@ -13,15 +13,14 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import collections
-
-import yaml
+import functools
 
 from tornado import gen
 import plumpy
 import kiwipy.rmq
 from kiwipy import communications
 
-from aiida.utils.serialize import serialize_data, deserialize_data
+from aiida.utils import serialize
 from aiida.work.exceptions import PastException
 
 __all__ = [
@@ -125,46 +124,6 @@ def get_task_exchange_name(prefix):
     return '{}.{}'.format(prefix, _TASK_EXCHANGE)
 
 
-def encode_response(response):
-    """
-    Used by kiwipy to encode a message for sending.  Because we can have nodes, we have
-    to convert these to PIDs before sending (we can't just send the live instance)
-
-    :param response: The message to encode
-    :return: The encoded message
-    :rtype: str
-    """
-    serialized = serialize_data(response)
-    return yaml.dump(serialized)
-
-
-def decode_response(response):
-    """
-    Used by kiwipy to decode a message that has been received.  We check for
-    any node PKs and convert these back into the corresponding node instance
-    using `load_node`.  Any other entries are left untouched.
-
-    .. see: `encode_response`
-
-    :param response: The response string to decode
-    :return: A data structure containing deserialized node instances
-    """
-    response = yaml.load(response)
-    return deserialize_data(response)
-
-
-def store_and_serialize_inputs(inputs):
-    """
-    Iterate over the values of the input dictionary, try to store them as if they were unstored
-    nodes and then return the serialized dictionary
-
-    :param inputs: dictionary where keys are potentially unstored node instances
-    :returns: a dictionary where nodes are serialized
-    """
-    _store_inputs(inputs)
-    return serialize_data(inputs)
-
-
 def _store_inputs(inputs):
     """
     Try to store the values in the input dictionary. For nested dictionaries, the values are stored by recursively.
@@ -223,7 +182,11 @@ class ProcessLauncher(plumpy.ProcessLauncher):
             raise gen.Return(future.result())
 
         result = yield super(ProcessLauncher, self)._continue(communicator, pid, nowait, tag)
-        raise gen.Return(result)
+
+        # Ensure that the result is serialized such that communication thread won't have to do database operations
+        serialized = serialize.serialize(result)
+
+        raise gen.Return(serialized)
 
 
 def create_controller(communicator=None):
@@ -272,8 +235,8 @@ def create_communicator(url=None, prefix=None, task_prefetch_count=_RMQ_TASK_PRE
     return kiwipy.rmq.RmqThreadCommunicator.connect(
         connection_params={'url': get_rmq_url()},
         message_exchange=message_exchange,
-        encoder=encode_response,
-        decoder=decode_response,
+        encoder=functools.partial(serialize.serialize, encoding='utf-8'),
+        decoder=serialize.deserialize,
         task_exchange=task_exchange,
         task_queue=task_queue,
         task_prefetch_count=task_prefetch_count,

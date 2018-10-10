@@ -11,7 +11,6 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import tempfile
 
 import six
 
@@ -40,12 +39,13 @@ class TestProcess(AiidaTestCase):
         del process
 
         loaded_process = saved_state.unbundle()
-        result_from_loaded = work.launch.run(loaded_process)
+        work.launch.run(loaded_process)
 
         self.assertEqual(loaded_process.state, work.ProcessState.FINISHED)
 
 
 class TestAiiDAPersister(AiidaTestCase):
+    maxDiff = 1024
 
     def setUp(self):
         super(TestAiiDAPersister, self).setUp()
@@ -57,7 +57,7 @@ class TestAiiDAPersister(AiidaTestCase):
         bundle_saved = self.persister.save_checkpoint(process)
         bundle_loaded = self.persister.load_checkpoint(process.calc.pk)
 
-        self.assertEquals(bundle_saved, bundle_loaded)
+        self.assertDictEqual(bundle_saved, bundle_loaded)
 
     def test_delete_checkpoint(self):
         process = DummyProcess()

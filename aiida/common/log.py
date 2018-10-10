@@ -21,7 +21,6 @@ from aiida.common import setup
 LOG_LEVEL_REPORT = 23
 logging.addLevelName(LOG_LEVEL_REPORT, 'REPORT')
 
-
 # Convenience dictionary of available log level names and their log level integer
 LOG_LEVELS = {
     logging.getLevelName(logging.NOTSET): logging.NOTSET,
@@ -32,7 +31,6 @@ LOG_LEVELS = {
     logging.getLevelName(logging.ERROR): logging.ERROR,
     logging.getLevelName(logging.CRITICAL): logging.CRITICAL,
 }
-
 
 # The AiiDA logger
 aiidalogger = logging.getLogger('aiida')
@@ -54,6 +52,11 @@ class DBLogHandler(logging.Handler):
         from aiida.backends.utils import is_dbenv_loaded
         if not is_dbenv_loaded():
             return
+
+        if record.exc_info:
+            # We do this because if there is exc_info this will put an appropriate string in exc_text.
+            # See: https://github.com/python/cpython/blob/1c2cb516e49ceb56f76e90645e67e8df4e5df01a/Lib/logging/handlers.py#L590
+            self.format(record)
 
         from aiida.orm.backend import construct_backend
         from django.core.exceptions import ImproperlyConfigured

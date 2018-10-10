@@ -166,8 +166,6 @@ py:class  tornado.concurrent.Future
 
 py:class  IPython.core.magic.Magics
 
-#py:class  json.json
-
 py:class  HTMLParser.HTMLParser
 py:class  html.parser.HTMLParser
 
@@ -210,3 +208,8 @@ py:mod    click
 py:class  click.Choice
 
 py:func   click.Option.get_default
+
+py:class yaml.Dumper
+py:class yaml.Loader
+py:class yaml.dumper.Dumper
+py:class yaml.loader.Loader

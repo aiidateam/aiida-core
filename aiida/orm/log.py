@@ -7,9 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Module for orm logging abstract classes"""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from abc import abstractmethod, abstractproperty, ABCMeta
 from collections import namedtuple
 
@@ -32,8 +34,7 @@ class LogCollection(Collection):
     """
 
     @abstractmethod
-    def create_entry(self, time, loggername, levelname, objname,
-                     objpk=None, message="", metadata=None):
+    def create_entry(self, time, loggername, levelname, objname, objpk=None, message="", metadata=None):
         """
         Create a log entry.
 
@@ -54,6 +55,7 @@ class LogCollection(Collection):
         :return: An object implementing the log entry interface
         :rtype: :class:`aiida.orm.log.Log`
         """
+        # pylint: disable=too-many-arguments
         pass
 
     def create_entry_from_record(self, record):
@@ -75,6 +77,9 @@ class LogCollection(Collection):
         if objpk is None or objname is None:
             return None
 
+        metadata = dict(record.__dict__)
+        # Get rid of the exc info because this is usually not serializable
+        metadata['exc_info'] = None
         return self.create_entry(
             time=timezone.make_aware(datetime.fromtimestamp(record.created)),
             loggername=record.name,
@@ -82,8 +87,7 @@ class LogCollection(Collection):
             objname=objname,
             objpk=objpk,
             message=record.getMessage(),
-            metadata=record.__dict__
-        )
+            metadata=metadata)
 
     @abstractmethod
     def find(self, filter_by=None, order_by=None, limit=None):
@@ -102,17 +106,21 @@ class LogCollection(Collection):
         pass
 
     @abstractmethod
-    def delete_many(self, filter):
+    def delete_many(self, filters):
         """
-        Delete all the log entries matching the given filter
+        Delete all the log entries matching the given filters
         """
         pass
 
 
 @six.add_metaclass(ABCMeta)
 class Log(CollectionEntry):
+    """
+    A log entry in the log collection
+    """
+
     @abstractproperty
-    def id(self):
+    def id(self):  # pylint: disable=invalid-name
         """
         Get the primary key of the entry
 

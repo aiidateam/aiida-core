@@ -37,7 +37,6 @@
         aiida/backends/djsite/db/subtests/__init__.py|
         aiida/backends/djsite/db/subtests/nodes.py|
         aiida/backends/djsite/db/subtests/query.py|
-        aiida/backends/djsite/db/testbase.py|
         aiida/backends/djsite/db/views.py|
         aiida/backends/djsite/globalsettings.py|
         aiida/backends/djsite/__init__.py|
@@ -149,7 +148,6 @@
         aiida/backends/tests/test_caching_config.py|
         aiida/backends/tests/test_plugin_loader.py|
         aiida/backends/tests/utils/fixtures.py|
-        aiida/backends/tests/utils/test_serialize.py|
         aiida/backends/tests/work/class_loader.py|
         aiida/backends/tests/work/daemon.py|
         aiida/backends/tests/workflows.py|
@@ -288,7 +286,6 @@
         aiida/orm/implementation/sqlalchemy/workflow.py|
         aiida/orm/importexport.py|
         aiida/orm/__init__.py|
-        aiida/orm/log.py|
         aiida/orm/mixins.py|
         aiida/orm/node.py|
         aiida/orm/querybuilder.py|
@@ -374,7 +371,6 @@
         aiida/workflows/wf_XTiO3.py|
         aiida/work/__init__.py|
         aiida/work/job_processes.py|
-        aiida/work/processes.py|
         aiida/work/run.py|
         fastentrypoints.py|
         setup.py|

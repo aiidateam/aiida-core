@@ -38,8 +38,8 @@ class AiidaTestImplementation(object):
     """
 
     # This should be set by the implementing class in setUpClass_method()
-    backend = None  # type: :class:`aiida.orm.backend.Backend`
-    computer = None  # type: :class:`aiida.orm.Computer`
+    backend = None  # type: aiida.orm.Backend
+    computer = None  # type: aiida.orm.Computer
 
     @abstractmethod
     def setUpClass_method(self):

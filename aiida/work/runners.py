@@ -227,7 +227,7 @@ class Runner(object):
             self.persister.save_checkpoint(process)
             process.close()
             # Do not wait for the future's result, because in the case of a single worker this would cock-block itself
-            self.controller.continue_process(process.pid, nowait=False)
+            self.controller.continue_process(process.pid, nowait=False, no_reply=True)
         else:
             # Run in this runner
             self.loop.add_callback(process.step_until_terminated)

@@ -215,11 +215,8 @@ def computer_setup(ctx, non_interactive, **kwargs):
     else:
         echo.echo_success('Computer<{}> {} created'.format(computer.pk, computer.name))
 
-    if not non_interactive and click.confirm('Do you want to configure the computer now?'):
-        ctx.invoke(computer_configure.commands[computer.get_transport_type()], computer=computer)
-    else:
-        echo.echo_info('Note: before the computer can be used, it has to be configured with the command:')
-        echo.echo_info('  verdi computer configure {} {}'.format(computer.get_transport_type(), computer.name))
+    echo.echo_info('Note: before the computer can be used, it has to be configured with the command:')
+    echo.echo_info('  verdi computer configure {} {}'.format(computer.get_transport_type(), computer.name))
 
 
 @verdi_computer.command('duplicate')
@@ -281,11 +278,8 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
     is_configured = computer.is_user_configured(backend.users.get_automatic_user())
 
     if not is_configured:
-        if not non_interactive and click.confirm('Do you want to configure the computer now?'):
-            ctx.invoke(computer_configure.commands[computer.get_transport_type()], computer=computer)
-        else:
-            echo.echo_info('Note: before the computer can be used, it has to be configured with the command:')
-            echo.echo_info('  verdi computer configure {} {}'.format(computer.get_transport_type(), computer.name))
+        echo.echo_info('Note: before the computer can be used, it has to be configured with the command:')
+        echo.echo_info('  verdi computer configure {} {}'.format(computer.get_transport_type(), computer.name))
 
 
 @verdi_computer.command('enable')

@@ -20,7 +20,6 @@ from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.orm.calculation.function import FunctionCalculation
 from aiida.orm.calculation.work import WorkCalculation
-from aiida.work import runners, rmq, test_utils
 
 
 def get_result_lines(result):
@@ -30,24 +29,13 @@ def get_result_lines(result):
 class TestVerdiWork(AiidaTestCase):
     """Tests for `verdi work`."""
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        super(TestVerdiWork, cls).setUpClass(*args, **kwargs)
-        rmq_config = rmq.get_rmq_config()
-
-        # These two need to share a common event loop otherwise the first will never send
-        # the message while the daemon is running listening to intercept
-        cls.runner = runners.Runner(rmq_config=rmq_config, rmq_submit=True, poll_interval=0., testing_mode=True)
-
-        cls.daemon_runner = runners.DaemonRunner(rmq_config=rmq_config, rmq_submit=True, poll_interval=0., testing_mode=True)
-
     def setUp(self):
         super(TestVerdiWork, self).setUp()
         self.cli_runner = CliRunner()
 
     def test_status(self):
         """Test the status command."""
-        calc = self.runner.submit(test_utils.WaitProcess)
+        calc = WorkCalculation().store()
         result = self.cli_runner.invoke(cmd_work.work_status, [str(calc.pk)])
         self.assertIsNone(result.exception)
 

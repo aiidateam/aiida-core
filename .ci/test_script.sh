@@ -34,7 +34,7 @@ case "$TEST_TYPE" in
 
         # Run verdi devel tests
         VERDI=`which verdi`
-        coverage run -a $VERDI -p test_${TEST_AIIDA_BACKEND} devel tests
+        coverage run -a $VERDI -p test_${TEST_AIIDA_BACKEND} devel tests -v
 
         # Run the daemon tests using docker
         # Note: This is not a typo, the profile is called ${TEST_AIIDA_BACKEND}

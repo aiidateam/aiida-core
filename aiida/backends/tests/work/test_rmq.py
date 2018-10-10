@@ -11,8 +11,10 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import uuid
+import datetime
 
 import plumpy
+from tornado import gen
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.data.int import Int
@@ -28,7 +30,6 @@ class TestProcessControl(AiidaTestCase):
 
     def setUp(self):
         super(TestProcessControl, self).setUp()
-        from concurrent.futures import ThreadPoolExecutor
 
         prefix = '{}.{}'.format(self.__class__.__name__, uuid.uuid4())
         rmq_config = rmq.get_rmq_config(prefix)
@@ -43,87 +44,109 @@ class TestProcessControl(AiidaTestCase):
             loop=self.runner.loop,
             testing_mode=True)
 
-        self.executor = ThreadPoolExecutor(max_workers=1)
-        self.executor.submit(self.daemon_runner.start)
-
     def tearDown(self):
         self.daemon_runner.close()
         self.runner.close()
-        self.executor.shutdown()
         super(TestProcessControl, self).tearDown()
 
     def test_submit_simple(self):
         # Launch the process
-        calc_node = self.runner.submit(test_utils.DummyProcess)
-        self._wait_for_calc(calc_node)
+        @gen.coroutine
+        def do_submit():
+            calc_node = self.runner.submit(test_utils.DummyProcess)
+            yield self.wait_for_calc(calc_node)
 
-        self.assertTrue(calc_node.is_finished_ok)
-        self.assertEqual(calc_node.process_state.value, plumpy.ProcessState.FINISHED.value)
+            self.assertTrue(calc_node.is_finished_ok)
+            self.assertEqual(calc_node.process_state.value, plumpy.ProcessState.FINISHED.value)
+
+        self.runner.loop.run_sync(do_submit)
 
     def test_launch_with_inputs(self):
-        a = Int(5)
-        b = Int(10)
+        @gen.coroutine
+        def do_launch():
+            a = Int(5)
+            b = Int(10)
 
-        calc_node = self.runner.submit(test_utils.AddProcess, a=a, b=b)
-        self._wait_for_calc(calc_node)
-        self.assertTrue(calc_node.is_finished_ok)
-        self.assertEqual(calc_node.process_state.value, plumpy.ProcessState.FINISHED.value)
+            calc_node = self.runner.submit(test_utils.AddProcess, a=a, b=b)
+            yield self.wait_for_calc(calc_node)
+            self.assertTrue(calc_node.is_finished_ok)
+            self.assertEqual(calc_node.process_state.value, plumpy.ProcessState.FINISHED.value)
+
+        self.runner.loop.run_sync(do_launch)
 
     def test_submit_bad_input(self):
         with self.assertRaises(ValueError):
             self.runner.submit(test_utils.AddProcess, a=Int(5))
 
     def test_exception_process(self):
-        calc_node = self.runner.submit(test_utils.ExceptionProcess)
-        self._wait_for_calc(calc_node)
+        @gen.coroutine
+        def do_exception():
+            calc_node = self.runner.submit(test_utils.ExceptionProcess)
+            yield self.wait_for_calc(calc_node)
 
-        self.assertFalse(calc_node.is_finished_ok)
-        self.assertEqual(calc_node.process_state.value, plumpy.ProcessState.EXCEPTED.value)
+            self.assertFalse(calc_node.is_finished_ok)
+            self.assertEqual(calc_node.process_state.value, plumpy.ProcessState.EXCEPTED.value)
+
+        self.runner.loop.run_sync(do_exception)
 
     def test_pause(self):
         """Testing sending a pause message to the process."""
-        calc_node = self.runner.submit(test_utils.WaitProcess)
-        self.assertFalse(calc_node.paused)
 
-        future = self.runner.controller.pause_process(calc_node.pk)
-        result = future.result(timeout=self.TIMEOUT)
-        self.assertTrue(result)
-        self.assertTrue(calc_node.paused)
+        @gen.coroutine
+        def do_pause():
+            calc_node = self.runner.submit(test_utils.WaitProcess)
+            self.assertFalse(calc_node.paused)
+
+            result = yield with_timeout(self.runner.controller.pause_process(calc_node.pk))
+            self.assertTrue(result)
+            self.assertTrue(calc_node.paused)
+
+        self.runner.loop.run_sync(do_pause)
 
     def test_pause_play(self):
         """Test sending a pause and then a play message."""
-        calc_node = self.runner.submit(test_utils.WaitProcess)
-        self.assertFalse(calc_node.paused)
 
-        pause_message = 'Take a seat'
-        future = self.runner.controller.pause_process(calc_node.pk, msg=pause_message)
-        result = future.result(timeout=self.TIMEOUT)
-        self.assertTrue(calc_node.paused)
-        self.assertEqual(calc_node.process_status, pause_message)
+        @gen.coroutine
+        def do_pause_play():
+            calc_node = self.runner.submit(test_utils.WaitProcess)
+            self.assertFalse(calc_node.paused)
 
-        future = self.runner.controller.play_process(calc_node.pk)
-        result = future.result(timeout=self.TIMEOUT)
-        self.assertTrue(result)
-        self.assertFalse(calc_node.paused)
-        self.assertEqual(calc_node.process_status, None)
+            pause_message = 'Take a seat'
+            yield with_timeout(self.runner.controller.pause_process(calc_node.pk, msg=pause_message))
+            self.assertTrue(calc_node.paused)
+            self.assertEqual(calc_node.process_status, pause_message)
+
+            result = yield with_timeout(self.runner.controller.play_process(calc_node.pk))
+            self.assertTrue(result)
+            self.assertFalse(calc_node.paused)
+            self.assertEqual(calc_node.process_status, None)
+
+        self.runner.loop.run_sync(do_pause_play)
 
     def test_kill(self):
         """Test sending a kill message."""
-        calc_node = self.runner.submit(test_utils.WaitProcess)
-        self.assertFalse(calc_node.is_killed)
 
-        kill_message = 'Sorry, you have to go mate'
-        future = self.runner.controller.kill_process(calc_node.pk, msg=kill_message)
-        result = future.result(timeout=self.TIMEOUT)
-        self.assertTrue(result)
+        @gen.coroutine
+        def do_kill():
+            calc_node = self.runner.submit(test_utils.WaitProcess)
+            self.assertFalse(calc_node.is_killed)
 
-        self._wait_for_calc(calc_node)
-        self.assertTrue(calc_node.is_killed)
-        self.assertEqual(calc_node.process_status, kill_message)
+            kill_message = 'Sorry, you have to go mate'
+            result = yield with_timeout(self.runner.controller.kill_process(calc_node.pk, msg=kill_message))
+            self.assertTrue(result)
 
-    def _wait_for_calc(self, calc_node, timeout=2.):
-        import threading
-        event = threading.Event()
+            self.wait_for_calc(calc_node)
+            self.assertTrue(calc_node.is_killed)
+            self.assertEqual(calc_node.process_status, kill_message)
+
+        self.runner.loop.run_sync(do_kill)
+
+    @gen.coroutine
+    def wait_for_calc(self, calc_node, timeout=2.):
         future = self.runner.get_calculation_future(calc_node.pk)
-        future.add_done_callback(lambda x: event.set())
-        event.wait(timeout=timeout)
+        raise gen.Return((yield with_timeout(future, timeout)))
+
+
+@gen.coroutine
+def with_timeout(what, timeout=5.0):
+    raise gen.Return((yield gen.with_timeout(datetime.timedelta(seconds=timeout), what)))

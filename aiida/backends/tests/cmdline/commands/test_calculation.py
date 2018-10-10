@@ -41,13 +41,6 @@ class TestVerdiCalculation(AiidaTestCase):
         from aiida.orm.backend import construct_backend
         backend = construct_backend()
 
-        rmq_config = rmq.get_rmq_config()
-
-        # These two need to share a common event loop otherwise the first will never send
-        # the message while the daemon is running listening to intercept
-        cls.runner = runners.Runner(rmq_config=rmq_config, rmq_submit=True, poll_interval=0., testing_mode=True)
-        cls.daemon_runner = runners.DaemonRunner(rmq_config=rmq_config, rmq_submit=True, poll_interval=0., testing_mode=True)
-
         cls.computer = backend.computers.create(name='comp', hostname='localhost', transport_type='local',
                                                 scheduler_type='direct', workdir='/tmp/aiida').store()
 

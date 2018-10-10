@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-"""Serialisation functions for AiiDA types"""
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,110 +7,242 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+Serialisation functions for AiiDA types
+
+WARNING: Changing the representation of things here may break people's current saved e.g. things like
+checkpoints and messages in the RabbitMQ queue so do so with caution.  It is fine to add representers
+for new types though.
+"""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import collections
-import uuid
-from ast import literal_eval
 
-import six
+from functools import partial
+import yaml
+
+import plumpy
 from plumpy.utils import AttributesFrozendict
 
-from aiida.common.extendeddicts import AttributeDict
-from aiida.orm import Group, Node, load_group, load_node
+from aiida import common, orm
 
-_PREFIX_KEY_TUPLE = 'tuple():'
-_PREFIX_VALUE_NODE = 'aiida_node:'
-_PREFIX_VALUE_GROUP = 'aiida_group:'
-_PREFIX_VALUE_UUID = 'aiida_uuid:'
+_NODE_TAG = '!aiida_node'
+_GROUP_TAG = '!aiida_group'
+_COMPUTER_TAG = '!aiida_computer'
+_ATTRIBUTE_DICT_TAG = '!aiida_attributedict'
+_PLUMPY_ATTRIBUTES_FROZENDICT_TAG = '!plumpy:attributes_frozendict'
+_PLUMPY_BUNDLE = '!plumpy:bundle'
 
 
-def encode_key(key):
+def represent_node(dumper, node):
     """
-    Helper function for the serialize_data function which may need to serialize a
-    dictionary that uses tuples as keys. This function will encode the tuple into
-    a string such that it is JSON serializable
+    Represent a node in YAML
 
-    :param key: the key to encode
-    :return: the encoded key
+    :param dumper: the dumper to use
+    :param node: the node to represent
+    :type node: :class:`aiida.orm.node.Node`
+    :return: the representation
     """
-    if isinstance(key, tuple):
-        return '{}{}'.format(_PREFIX_KEY_TUPLE, key)
+    if not node.is_stored:
+        raise ValueError("The node must be stored to be able to represent")
+    return dumper.represent_scalar(_NODE_TAG, u'%s' % node.uuid)
 
-    return key
 
-
-def decode_key(key):
+def node_constructor(loader, node):
     """
-    Helper function for the deserialize_data function which can undo the key encoding
-    of tuple keys done by the encode_key function
+    Load an aiida node from the yaml representation
 
-    :param key: the key to decode
-    :return: the decoded key
+    :param loader: the yaml loader
+    :param node: the yaml representation
+    :return: the aiida node
+    :rtype: :class:`aiida.orm.node.Node`
+    """
+    yaml_node = loader.construct_scalar(node)
+    return orm.load_node(uuid=yaml_node)
+
+
+def represent_group(dumper, group):
+    """
+    Represent a group in YAML
+
+    :param dumper: the dumper to use
+    :param group: the group to represent
+    :type group: :class:`aiida.orm.Group`
+    :return: the representation
+    """
+    if not group.is_stored:
+        raise ValueError("The group must be stored to be able to represent")
+    return dumper.represent_scalar(_GROUP_TAG, u'%s' % group.uuid)
+
+
+def group_constructor(loader, group):
+    """
+    Load an aiida group from the yaml representation
+
+    :param loader: the yaml loader
+    :param group: the yaml representation
+    :return: the aiida group
+    :rtype: :class:`aiida.orm.Group`
+    """
+    yaml_node = loader.construct_scalar(group)
+    return orm.load_group(uuid=yaml_node)
+
+
+def represent_computer(dumper, computer):
+    """
+    Represent a group in YAML
+
+    :param dumper: the dumper to use
+    :param computer: the computer to represent
+    :type computer: :class:`aiida.orm.Computer`
+    :return: the representation
+    """
+    if not computer.is_stored:
+        raise ValueError("The computer must be stored to be able to represent")
+    return dumper.represent_scalar(_COMPUTER_TAG, u'%s' % computer.uuid)
+
+
+def computer_constructor(loader, computer):
+    """
+    Load an aiida computer from the yaml representation
+
+    :param loader: the yaml loader
+    :param computer: the yaml representation
+    :return: the aiida computer
+    :rtype: :class:`aiida.orm.Computer`
+    """
+    from aiida.orm.backend import construct_backend
+    backend = construct_backend()
+    yaml_node = loader.construct_scalar(computer)
+    return backend.computers.get(uuid=yaml_node)
+
+
+class AiiDADumper(yaml.Dumper):
+    """
+    Custom AiiDA YAML dumper.  Needed so that we don't have to encode each type in the AiiDA graph
+    hierarchy separately using a custom representer.
     """
 
-    if isinstance(key, six.string_types) and key.startswith(_PREFIX_KEY_TUPLE):
-        return literal_eval(key[len(_PREFIX_KEY_TUPLE):])
+    def represent_data(self, data):
+        if isinstance(data, orm.Node):
+            return represent_node(self, data)
+        if isinstance(data, orm.Computer):
+            return represent_computer(self, data)
+        if isinstance(data, orm.Group):
+            return represent_group(self, data)
 
-    return key
+        return super(AiiDADumper, self).represent_data(data)
 
 
-def serialize_data(data):
+class AiiDALoader(yaml.Loader):
+    """AiiDA specific YAML loader"""
+    pass
+
+
+def represent_mapping(tag, dumper, mapping):
     """
-    Serialize a value or collection that may potentially contain AiiDA nodes, which
-    will be serialized to their UUID. Keys encountered in any mappings, such as a dictionary,
-    will also be encoded if necessary. An example is where tuples are used as keys in the
-    pseudo potential input dictionaries. These operations will ensure that the returned data is
-    JSON serializable.
+    Represent an AttributeDict in YAML
 
-    :param data: a single value or collection
-    :return: the serialized data with the same internal structure
+    :param tag: the yaml  tag to use
+    :param dumper: the dumper to use
+    :type dumper: :class:`yaml.dumper.Dumper`
+    :param mapping: the attribute dict to represent
+    :return: the representation
     """
-    # pylint: disable=too-many-return-statements
-
-    if isinstance(data, Node):
-        return '{}{}'.format(_PREFIX_VALUE_NODE, data.uuid)
-    if isinstance(data, Group):
-        return '{}{}'.format(_PREFIX_VALUE_GROUP, data.uuid)
-    if isinstance(data, uuid.UUID):
-        return '{}{}'.format(_PREFIX_VALUE_UUID, data)
-    if isinstance(data, AttributeDict):
-        return AttributeDict({encode_key(key): serialize_data(value) for key, value in data.items()})
-    if isinstance(data, AttributesFrozendict):
-        return AttributesFrozendict({encode_key(key): serialize_data(value) for key, value in data.items()})
-    if isinstance(data, collections.Mapping):
-        return {encode_key(key): serialize_data(value) for key, value in data.items()}
-    if isinstance(data, collections.Sequence) and not isinstance(data, six.string_types):
-        return [serialize_data(value) for value in data]
-
-    return data
+    return dumper.represent_mapping(tag, mapping)
 
 
-def deserialize_data(data):
+def mapping_constructor(mapping_type, loader, mapping):
     """
-    Deserialize a single value or a collection that may contain serialized AiiDA nodes. This is
-    essentially the inverse operation of serialize_data which will reload node instances from
-    the serialized UUID data. Encoded tuples that are used as dictionary keys will be decoded.
+    Construct an AttributeDict from the representation
 
-    :param data: serialized data
-    :return: the deserialized data with keys decoded and node instances loaded from UUID's
+    :param mapping_type: the class of the mapping to construct, must accept a dictionary as a
+        sole constructor argument to be compatible
+    :param loader: the yaml loader
+    :type loader: :class:`yaml.loader.Loader`
+    :param mapping: the attribute dict representation
+    :return: the mapping type
     """
-    # pylint: disable=too-many-return-statements
+    yaml_node = loader.construct_mapping(mapping)
+    return mapping_type(yaml_node)
 
-    if isinstance(data, AttributeDict):
-        return AttributeDict({decode_key(key): deserialize_data(value) for key, value in data.items()})
-    if isinstance(data, AttributesFrozendict):
-        return AttributesFrozendict({decode_key(key): deserialize_data(value) for key, value in data.items()})
-    if isinstance(data, collections.Mapping):
-        return {decode_key(key): deserialize_data(value) for key, value in data.items()}
-    if isinstance(data, collections.Sequence) and not isinstance(data, six.string_types):
-        return [deserialize_data(value) for value in data]
-    if isinstance(data, six.string_types) and data.startswith(_PREFIX_VALUE_NODE):
-        return load_node(uuid=data[len(_PREFIX_VALUE_NODE):])
-    if isinstance(data, six.string_types) and data.startswith(_PREFIX_VALUE_GROUP):
-        return load_group(uuid=data[len(_PREFIX_VALUE_GROUP):])
-    if isinstance(data, six.string_types) and data.startswith(_PREFIX_VALUE_UUID):
-        return uuid.UUID(data[len(_PREFIX_VALUE_UUID):])
 
-    return data
+# All the mapping types:
+
+yaml.add_representer(
+    common.extendeddicts.AttributeDict, partial(represent_mapping, _ATTRIBUTE_DICT_TAG), Dumper=AiiDADumper)
+yaml.add_constructor(
+    _ATTRIBUTE_DICT_TAG, partial(mapping_constructor, common.extendeddicts.AttributeDict), Loader=AiiDALoader)
+
+yaml.add_representer(
+    AttributesFrozendict, partial(represent_mapping, _PLUMPY_ATTRIBUTES_FROZENDICT_TAG), Dumper=AiiDADumper)
+yaml.add_constructor(
+    _PLUMPY_ATTRIBUTES_FROZENDICT_TAG, partial(mapping_constructor, AttributesFrozendict), Loader=AiiDALoader)
+
+
+def represent_bundle(dumper, bundle):
+    """
+    Represent an AttributeDict in YAML
+
+    :param tag: the yaml  tag to use
+    :param dumper: the dumper to use
+    :type dumper: :class:`yaml.dumper.Dumper`
+    :param bundle: the attribute dict to represent
+    :return: the representation
+    """
+    as_dict = dict(bundle)
+    return dumper.represent_mapping(_PLUMPY_BUNDLE, as_dict)
+
+
+def bundle_constructor(loader, mapping):
+    """
+    Construct an AttributeDict from the representation
+
+    :param mapping: the class of the mapping to construct, must accept a dictionary as a sole constructor argument to
+        be compatible
+    :param loader: the yaml loader
+    :type loader: :class:`yaml.loader.Loader`
+    :param mapping: the attribute dict representation
+    :return: the mapping type
+    """
+    yaml_node = loader.construct_mapping(mapping)
+    bundle = plumpy.Bundle.__new__(plumpy.Bundle)
+    bundle.update(yaml_node)
+    return bundle
+
+
+yaml.add_representer(plumpy.Bundle, represent_bundle, Dumper=AiiDADumper)
+yaml.add_constructor(_PLUMPY_BUNDLE, bundle_constructor, Loader=AiiDALoader)
+
+yaml.add_constructor(_NODE_TAG, node_constructor, Loader=AiiDALoader)
+yaml.add_constructor(_GROUP_TAG, group_constructor, Loader=AiiDALoader)
+yaml.add_constructor(_COMPUTER_TAG, computer_constructor, Loader=AiiDALoader)
+
+
+def serialize(data, encoding=None):
+    """
+    Serialize the given data structure into a string
+
+    The function supports standard data containers such as maps and lists as well as AiiDA nodes which will be
+    serialized into strings, before the whole data structure is dumped into a string using YAML.
+
+    :param data: the general data to serialize
+    :param encoding: optional encoding for the serialized string
+    :return: string representation of the serialized data structure or byte array if specific encoding is specified
+    """
+    if encoding is not None:
+        serialized = yaml.dump(data, encoding=encoding, Dumper=AiiDADumper)
+    else:
+        serialized = yaml.dump(data, Dumper=AiiDADumper)
+
+    return serialized
+
+
+def deserialize(serialized):
+    """
+    Deserialize a string that represents a serialized data structure
+
+    :param serialized: the string representation of serialized data
+    :return: the deserialized data structure
+    """
+    return yaml.load(serialized, Loader=AiiDALoader)

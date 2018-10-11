@@ -14,27 +14,26 @@ import numbers
 import random
 import time
 import uuid
+import codecs
 from datetime import datetime
 
 import six
 from six.moves import range
 from passlib.context import CryptContext
 
-try: # Python3
+try:  # Python3
     from functools import singledispatch
     from collections import abc
-except ImportError: # Python2
+except ImportError:  # Python2
     from singledispatch import singledispatch
     import collections as abc
 
 import numpy as np
 
 from .folders import Folder
-
 """
 Here we define a single password hashing instance for the full AiiDA.
 """
-
 
 # The prefix of the hashed using pbkdf2_sha256 algorithm in Django
 HASHING_PREFIX_DJANGO = "pbkdf2_sha256"
@@ -46,7 +45,7 @@ UNUSABLE_PASSWORD_PREFIX = '!'
 # Number of random chars to add after UNUSABLE_PASSWORD_PREFIX
 UNUSABLE_PASSWORD_SUFFIX_LENGTH = 40
 
-HASHING_KEY="HashingKey"
+HASHING_KEY = "HashingKey"
 
 pwd_context = CryptContext(
     # The list of hashes that we support
@@ -56,12 +55,11 @@ pwd_context = CryptContext(
 
     # We set the number of rounds that should be used...
     pbkdf2_sha256__default_rounds=8000,
-    )
+)
 
 
 def create_unusable_pass():
-    return UNUSABLE_PASSWORD_PREFIX + get_random_string(
-        UNUSABLE_PASSWORD_SUFFIX_LENGTH)
+    return UNUSABLE_PASSWORD_PREFIX + get_random_string(UNUSABLE_PASSWORD_SUFFIX_LENGTH)
 
 
 def is_password_usable(enc_pass):
@@ -73,12 +71,12 @@ def is_password_usable(enc_pass):
 
     # Backward compatibility for old Django hashing
     if enc_pass.startswith(HASHING_PREFIX_DJANGO):
-        enc_pass = enc_pass.replace(HASHING_PREFIX_DJANGO,
-                                    HASHING_PREFIX_PBKDF2_SHA256, 1)
+        enc_pass = enc_pass.replace(HASHING_PREFIX_DJANGO, HASHING_PREFIX_PBKDF2_SHA256, 1)
         if pwd_context.identify(enc_pass) is not None:
             return True
 
     return False
+
 
 ###################################################################
 # THE FOLLOWING WAS TAKEN FROM DJANGO BUT IT CAN BE EASILY REPLACED
@@ -95,9 +93,7 @@ except NotImplementedError:
     using_sysrandom = False
 
 
-def get_random_string(length=12,
-                      allowed_chars='abcdefghijklmnopqrstuvwxyz'
-                                    'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'):
+def get_random_string(length=12, allowed_chars='abcdefghijklmnopqrstuvwxyz' 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'):
     """
     Returns a securely generated random string.
 
@@ -111,31 +107,10 @@ def get_random_string(length=12,
         # time a random string is required. This may change the
         # properties of the chosen random sequence slightly, but this
         # is better than absolute predictability.
-        random.seed(
-            hashlib.sha256(
-                ("%s%s%s" % (
-                    random.getstate(),
-                    time.time(),
-                    HASHING_KEY)).encode('utf-8')
-            ).digest())
+        random.seed(hashlib.sha256(("%s%s%s" % (random.getstate(), time.time(), HASHING_KEY)).encode('utf-8')).digest())
     return ''.join(random.choice(allowed_chars) for i in range(length))
 
 
-def make_hash_with_type(type_chr, string_to_hash):
-    """
-    get a hash digest for a given enumerated type and its content
-
-    :param type_chr: a single char, lower case for simple datatypes, upper case for composite datatypes
-    :param string_to_hash: an encoded string (a `str` in Python 2, latin1-encoded `bytes` in Python 3)
-
-    We don't check anything for speed efficiency.
-
-    The `latin1` here is not an error. Since this was introduced in Python 2 and no proper care was
-    taken to properly encode/decode strings, the default was used, which was `latin1` at that time.
-    """
-    return hashlib.sha224(type_chr.encode('latin1') + string_to_hash).hexdigest()
-
-@singledispatch
 def make_hash(object_to_hash, **kwargs):
     """
     Makes a hash from a dictionary, list, tuple or set to any level, that contains
@@ -204,91 +179,127 @@ def make_hash(object_to_hash, **kwargs):
     the string of dictionary do not suffice if we want to check for equality
     of dictionaries using hashes.
     """
-    raise ValueError("Value of type {} cannot be hashed".format(
-        type(object_to_hash))
-    )
+    int_hash = _make_int_hash(object_to_hash, **kwargs)
+    return u'{:052x}'.format(int_hash)
 
-@make_hash.register(abc.Sequence)
+
+# int hashes with size 28 bytes
+INT_HASH_MASK = 2**(8 * 28) - 1
+
+
+@singledispatch
+def _make_int_hash(object_to_hash, **kwargs):
+    raise ValueError("Value of type {} cannot be hashed".format(type(object_to_hash)))
+
+
+def _combine_hash_list(hashes):
+    if not hashes:
+        return 0
+    res = hashes[0]
+    for val in hashes[1:]:
+        res = _hash_combine(res, val)
+    return res
+
+
+# def _make_int_hash_with_type(type_bytes, bytes_to_hash):
+#     """
+#     get a hash digest for a given enumerated type and its content
+#
+#     :param type_chr: a single char, lower case for simple datatypes, upper case for composite datatypes
+#     :param string_to_hash: an encoded string (a `str` in Python 2, latin1-encoded `bytes` in Python 3)
+#
+#     We don't check anything for speed efficiency.
+#
+#     The `latin1` here is not an error. Since this was introduced in Python 2 and no proper care was
+#     taken to properly encode/decode strings, the default was used, which was `latin1` at that time.
+#     """
+#     return _hash_combine(hashlib.sha)
+#     return hashlib.sha224(type_chr.encode('latin1') + string_to_hash).hexdigest()
+
+
+def _add_type_salt(type_bytes):
+    assert isinstance(type_bytes, six.binary_type)
+    salt_hash = int(codecs.encode(hashlib.sha224(type_bytes).digest(), 'hex'), 16)
+
+    def decorator(func):
+
+        def inner(object_to_hash, **kwargs):
+            return _hash_combine(salt_hash, func(object_to_hash, **kwargs))
+
+        return inner
+
+    return decorator
+
+
+def _hash_combine(hash1, hash2):
+    """
+    Combine two hashes, using the approach of boost::hash_combine.
+    """
+    return (hash1 ^ (hash2 + 0x9e3779b9 + (hash1 << 6) + (hash1 >> 2))) & INT_HASH_MASK
+
+
+@_make_int_hash.register(abc.Sequence)
+@_add_type_salt(b'L')
 def _(sequence, **kwargs):
-    hashes = tuple([
-        make_hash(x, **kwargs) for x in sequence
-    ])
-    return make_hash_with_type('L', ",".join(hashes).encode('latin1'))
+    return _combine_hash_list([_make_int_hash(x, **kwargs) for x in sequence])
 
-@make_hash.register(abc.Set)
+
+@_make_int_hash.register(abc.Set)
+@_add_type_salt(b'S')
 def _(object_to_hash, **kwargs):
-    hashes = tuple([
-            make_hash(x, **kwargs)
-            for x
-            in sorted(object_to_hash)
-        ])
-    return make_hash_with_type('S', ",".join(hashes).encode('latin1'))
+    hashes = sorted(_make_int_hash(x, **kwargs) for x in object_to_hash)
+    return _combine_hash_list(hashes)
 
-@make_hash.register(abc.Mapping)
+
+@_make_int_hash.register(abc.Mapping)
+@_add_type_salt(b'D')
 def _(mapping, **kwargs):
-    hashed_dictionary = {
-        k: make_hash(v, **kwargs)
-        for k,v
-        in mapping.items()
-    }
-    return make_hash_with_type(
-        'D',
-        make_hash(sorted(hashed_dictionary.items()), **kwargs).encode('latin1')
-    )
+    hashed_items = sorted(_make_int_hash(item, **kwargs) for item in mapping.items())
+    return _combine_hash_list(hashed_items)
 
-@make_hash.register(numbers.Real)
-def _(object_to_hash, **kwargs):
-    return make_hash_with_type(
-            'f',
-            truncate_float64(object_to_hash).tobytes()
-        )
 
-@make_hash.register(numbers.Complex)
+@_make_int_hash.register(numbers.Real)
+@_add_type_salt(b'f')
 def _(object_to_hash, **kwargs):
-    return make_hash_with_type(
-        'c',
-        ','.join([
-            make_hash(object_to_hash.real, **kwargs),
-            make_hash(object_to_hash.imag, **kwargs)
-        ]).encode('latin1')
-    )
+    return _make_int_hash(truncate_float64(object_to_hash).tobytes(), **kwargs)
 
-@make_hash.register(numbers.Integral)
-def _(object_to_hash, **kwargs):
-    return make_hash_with_type('i', str(object_to_hash).encode('latin1'))
 
-# if the type is unicode in Python 2 or a str in Python 3, convert it
-# to a str in Python 2 and bytes in Python 3 using the default Python 2 encoding.
-# This should emulate what the hashlib has been doing internally: converting
-# unicode strings to latin1 bytes representation before hashing.
-@make_hash.register(six.text_type)
+@_make_int_hash.register(numbers.Complex)
+@_add_type_salt(b'c')
 def _(object_to_hash, **kwargs):
-    return make_hash_with_type('s', object_to_hash.encode('latin1'))
+    return _combine_hash_list(
+        [_make_int_hash(object_to_hash.real, **kwargs),
+         _make_int_hash(object_to_hash.imag, **kwargs)])
+
+
+# If the type is unicode in Python 2 or a str in Python 3, convert it
+# to a str in Python 2 and bytes in Python 3 using the utf-8 encoding.
+@_make_int_hash.register(six.text_type)
+@_add_type_salt(b's')
+def _(object_to_hash, **kwargs):
+    return _make_int_hash(object_to_hash.encode('utf-8'), **kwargs)
+
 
 # for str in Python 2 and bytes in Python 3, simply forward them to
 # the hashing function, without trying to encode them
-@make_hash.register(six.binary_type)
+@_make_int_hash.register(six.binary_type)
 def _(object_to_hash, **kwargs):
-    return make_hash_with_type('s', object_to_hash)
-
-@make_hash.register(bool)
-def _(object_to_hash, **kwargs):
-    return make_hash_with_type('b', str(object_to_hash).encode('latin1'))
-
-@make_hash.register(type(None))
-def _(object_to_hash, **kwargs):
-    return make_hash_with_type('n', str(object_to_hash).encode('latin1'))
-
-@make_hash.register(datetime)
-def _(object_to_hash, **kwargs):
-    return make_hash_with_type('d', str(object_to_hash).encode('latin1'))
-
-@make_hash.register(uuid.UUID)
-def _(object_to_hash, **kwargs):
-    return make_hash_with_type('u', str(object_to_hash).encode('latin1'))
+    return int(codecs.encode(hashlib.sha224(object_to_hash).digest(), 'hex'), 16)
 
 
-@make_hash.register(Folder)
+def _make_int_hash_from_str_repr(object_to_hash):
+    return _make_int_hash(str(object_to_hash).encode('utf-8'))
+
+
+_make_int_hash.register(int)(_add_type_salt(b'i')(_make_int_hash_from_str_repr))
+_make_int_hash.register(bool)(_add_type_salt(b'b')(_make_int_hash_from_str_repr))
+_make_int_hash.register(type(None))(_add_type_salt(b'n')(_make_int_hash_from_str_repr))
+_make_int_hash.register(datetime)(_add_type_salt(b'd')(_make_int_hash_from_str_repr))
+_make_int_hash.register(uuid.UUID)(_add_type_salt(b'u')(_make_int_hash_from_str_repr))
+
+
+@_make_int_hash.register(Folder)
+@_add_type_salt(b'pd')
 def _(folder, **kwargs):
     # make sure file is closed after being read
     def _read_file(folder, name):
@@ -297,39 +308,27 @@ def _(folder, **kwargs):
 
     ignored_folder_content = kwargs.get('ignored_folder_content', [])
 
-    return make_hash_with_type(
-        'pd',
-        make_hash([
-            (
-                name,
-                folder.get_subfolder(name) if folder.isdir(name) else
-                make_hash_with_type('pf', _read_file(folder, name))
-            )
-            for name in sorted(folder.get_content_list())
-            if name not in ignored_folder_content
-        ], **kwargs).encode('latin1')
-    )
+    return _make_int_hash([(name, folder.get_subfolder(name)) if folder.isdir(name) else _hash_combine(
+        _make_int_hash(b'pf', **kwargs), _make_int_hash(_read_file(folder, name), **kwargs))
+                           for name in sorted(folder.get_content_list())
+                           if name not in ignored_folder_content], **kwargs)
 
-@make_hash.register(np.ndarray)
+
+@_make_int_hash.register(np.ndarray)
 def _(object_to_hash, **kwargs):
     if object_to_hash.dtype == np.float64:
-        return make_hash_with_type(
-            'af',
-            make_hash(truncate_array64(object_to_hash).tobytes(), **kwargs).encode('latin1')
-        )
+        return _hash_combine(
+            _make_int_hash(b'af', **kwargs),
+            _make_int_hash(truncate_array64(object_to_hash).tobytes(), **kwargs))
     elif object_to_hash.dtype == np.complex128:
-        return make_hash_with_type(
-            'ac',
-            make_hash([
-                object_to_hash.real,
-                object_to_hash.imag
-            ], **kwargs).encode('latin1')
-        )
+        return _hash_combine(
+            _make_int_hash(b'ac', **kwargs),
+            _make_int_hash([object_to_hash.real, object_to_hash.imag], **kwargs))
     else:
-        return make_hash_with_type(
-            'ao',
-            make_hash(object_to_hash.tobytes(), **kwargs).encode('latin1')
-        )
+        return _hash_combine(
+            _make_int_hash(b'ao', **kwargs),
+            _make_int_hash(object_to_hash.tobytes(), **kwargs))
+
 
 def truncate_float64(x, num_bits=4):
     mask = ~(2**num_bits - 1)
@@ -337,6 +336,7 @@ def truncate_float64(x, num_bits=4):
     masked_int = int_repr & mask
     truncated_x = masked_int.view(np.float64)
     return truncated_x
+
 
 def truncate_array64(x, num_bits=4):
     mask = ~(2**num_bits - 1)

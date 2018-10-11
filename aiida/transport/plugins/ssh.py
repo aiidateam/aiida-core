@@ -70,7 +70,7 @@ class SshTransport(aiida.transport.Transport):
         ('key_filename', {'type': AbsolutePathParamType(dir_okay=False, exists=True), 'prompt': 'SSH key file', 'help': 'Manually pass a key file', 'non_interactive_default': True}),
         ('timeout', {'type': int, 'prompt': 'Connection timeout in s', 'help': 'time in seconds to wait for connection before giving up', 'non_interactive_default': True}),
         ('allow_agent', {'switch': True, 'prompt': 'Allow ssh agent', 'help': 'switch to allow or disallow ssh agent', 'non_interactive_default': True}),
-        ('proxy_command', {'prompt': 'SSH proxy command', 'help': 'SSH proxy command', 'non_interactive_default': True}),  # Managed 'manually' in connect
+        ('proxy_command', {'prompt': 'SSH proxy command', 'help': 'SSH proxy command', 'non_interactive_default': ''}),  # Managed 'manually' in connect
         ('compress', {'switch': True, 'prompt': 'Compress file transfers', 'help': 'switch file transfer compression on / off', 'non_interactive_default': True}),
         ('gss_auth', {'type': bool, 'prompt': 'GSS auth', 'help': 'GSS auth for kerberos', 'non_interactive_default': True}),
         ('gss_kex', {'type': bool, 'prompt': 'GSS kex', 'help': 'GSS kex for kerberos', 'non_interactive_default': True}),
@@ -483,8 +483,8 @@ class SshTransport(aiida.transport.Transport):
             raise InvalidOperation("Cannot open the transport twice")
         # Open a SSHClient
         connection_arguments = self._connect_args
-        proxystring = connection_arguments.pop('proxy_command', None)
-        if proxystring is not None:
+        proxystring = connection_arguments.pop('proxy_command', '')
+        if proxystring == '':
             self._proxy = _DetachedProxyCommand(proxystring)
             connection_arguments['sock'] = self._proxy
 

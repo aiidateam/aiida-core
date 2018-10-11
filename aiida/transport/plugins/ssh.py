@@ -484,7 +484,7 @@ class SshTransport(aiida.transport.Transport):
         # Open a SSHClient
         connection_arguments = self._connect_args
         proxystring = connection_arguments.pop('proxy_command', '')
-        if proxystring == '':
+        if proxystring != '':
             self._proxy = _DetachedProxyCommand(proxystring)
             connection_arguments['sock'] = self._proxy
 

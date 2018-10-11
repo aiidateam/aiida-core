@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
@@ -8,18 +7,24 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-import json
-import sys
+"""
+`verdi completioncommand` command, to return the string to insert
+into the bash script to activate completion.
+"""
+from __future__ import absolute_import
+import click
+from aiida.cmdline.commands.cmd_verdi import verdi
 
-in_file = sys.argv[1]
-out_file = sys.argv[2]
 
-print("Some output from the code")
+@verdi.command('completioncommand')
+def verdi_completioncommand():
+    """
+    Return the bash code to activate completion.
 
-with open(in_file) as f:
-    in_dict = json.load(f)
+    :note: this command is mainly for back-compatibility.
+        You should rather use:;
 
-out_dict = { 'sum':in_dict['x1']+in_dict['x2'] }
-
-with open(out_file,'w') as f:
-    json.dump(out_dict,f)
+            eval "$(_VERDI_COMPLETE=source verdi)"
+    """
+    from click_completion import get_auto_shell, get_code
+    click.echo(get_code(shell=get_auto_shell()))

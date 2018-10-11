@@ -69,7 +69,6 @@ class InteractiveOption(ConditionalOption):
             passed the click context
 
         """
-
         # intercept prompt kwarg; I need to pop it before calling super
         self._prompt = kwargs.pop('prompt', None)
 
@@ -207,6 +206,15 @@ class InteractiveOption(ConditionalOption):
 
     def prompt_callback(self, ctx, param, value):
         """decide wether to initiate the prompt_loop or not"""
+
+        # From click.core.Context:
+        # if resilient_parsing is enabled then Click will
+        # parse without any interactivity or callback
+        # invocation.
+        # Therefore if this flag is set, we should not
+        # do any prompting.
+        if ctx.resilient_parsing:
+            return None
 
         # a value was given on the command line: then  just go with validation
         if value is not None:

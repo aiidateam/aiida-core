@@ -35,6 +35,7 @@ from . import processes
 
 __all__ = ['JobProcess']
 
+UPLOAD_COMMAND = 'upload'
 SUBMIT_COMMAND = 'submit'
 UPDATE_COMMAND = 'update'
 RETRIEVE_COMMAND = 'retrieve'
@@ -45,6 +46,61 @@ TRANSPORT_TASK_MAXIMUM_ATTEMTPS = 5
 
 
 logger = logging.getLogger(__name__)
+
+
+@coroutine
+def task_upload_job(node, transport_queue, calc_info, script_filename, cancel_flag):
+    """
+    Transport task that will attempt to upload the files of a job calculation to the remote
+
+    The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
+    function is called, wrapped in the exponential_backoff_retry coroutine, which, in case of a caught exception, will
+    retry after an interval that increases exponentially with the number of retries, for a maximum number of retries.
+    If all retries fail, the task will raise a TransportTaskException
+
+    :param node: the node that represents the job calculation
+    :param transport_queue: the TransportQueue from which to request a Transport
+    :param calc_info: the calculation info datastructure returned by `JobCalculation._presubmit`
+    :param script_filename: the job launch script returned by `JobCalculation._presubmit`
+    :param cancel_flag: the cancelled flag that will be queried to determine whether the task was cancelled
+    :raises: Return if the tasks was successfully completed
+    :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
+    """
+    initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
+    max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
+
+    authinfo = node.get_computer().get_authinfo(node.get_user())
+
+    state_pending = calc_states.SUBMITTING
+
+    if is_progressive_state_change(node.get_state(), state_pending):
+        node._set_state(state_pending)
+    else:
+        logger.warning('ignored invalid proposed state change: {} to {}'.format(node.get_state(), state_pending))
+
+    @coroutine
+    def do_upload():
+        with transport_queue.request_transport(authinfo) as request:
+            transport = yield request
+
+            # It may have taken time to get the transport, check if we've been cancelled
+            if cancel_flag.is_cancelled:
+                raise plumpy.CancelledError('task_upload_job for calculation<{}> cancelled'.format(node.pk))
+
+            logger.info('uploading calculation<{}>'.format(node.pk))
+            raise Return(execmanager.upload_calculation(node, transport, calc_info, script_filename))
+
+    try:
+        result = yield exponential_backoff_retry(
+            do_upload, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.CancelledError)
+    except plumpy.CancelledError:
+        pass
+    except Exception:
+        logger.warning('uploading calculation<{}> failed'.format(node.pk))
+        raise TransportTaskException('upload_calculation failed {} times consecutively'.format(max_attempts))
+    else:
+        logger.info('uploading calculation<{}> successful'.format(node.pk))
+        raise Return(result)
 
 
 @coroutine
@@ -82,13 +138,7 @@ def task_submit_job(node, transport_queue, calc_info, script_filename, cancel_fl
             logger.info('submitting calculation<{}>'.format(node.pk))
             raise Return(execmanager.submit_calculation(node, transport, calc_info, script_filename))
 
-    state_pending = calc_states.SUBMITTING
     state_success = calc_states.WITHSCHEDULER
-
-    if is_progressive_state_change(node.get_state(), state_pending):
-        node._set_state(state_pending)
-    else:
-        logger.warning('ignored invalid proposed state change: {} to {}'.format(node.get_state(), state_pending))
 
     try:
         result = yield exponential_backoff_retry(
@@ -288,7 +338,11 @@ class Waiting(plumpy.Waiting):
 
         try:
 
-            if command == SUBMIT_COMMAND:
+            if command == UPLOAD_COMMAND:
+                calc_info, script_filename = yield self._launch_task(task_upload_job, calculation, transport_queue, *args)
+                raise Return(self.submit(calc_info, script_filename))
+
+            elif command == SUBMIT_COMMAND:
                 yield self._launch_task(task_submit_job, calculation, transport_queue, *args)
                 raise Return(self.scheduler_update())
 
@@ -336,6 +390,30 @@ class Waiting(plumpy.Waiting):
             raise Return(result)
         finally:
             self._task = None
+
+    def upload(self, calc_info, script_filename):
+        """
+        Create the next state to go to
+
+        :return: The appropriate WAITING state
+        """
+        return self.create_state(
+            processes.ProcessState.WAITING,
+            None,
+            msg='Waiting for calculation folder upload',
+            data=(UPLOAD_COMMAND, calc_info, script_filename))
+
+    def submit(self, calc_info, script_filename):
+        """
+        Create the next state to go to
+
+        :return: The appropriate WAITING state
+        """
+        return self.create_state(
+            processes.ProcessState.WAITING,
+            None,
+            msg='Waiting for scheduler submission',
+            data=(SUBMIT_COMMAND, calc_info, script_filename))
 
     def scheduler_update(self):
         """
@@ -555,8 +633,8 @@ class JobProcess(processes.Process):
             # After this call, no modifications to the folder should be done
             self.calc._store_raw_input_folder(folder.abspath)
 
-        # Launch the submit operation
-        return plumpy.Wait(msg='Waiting to submit', data=(SUBMIT_COMMAND, calc_info, script_filename))
+        # Launch the upload operation
+        return plumpy.Wait(msg='Waiting to upload', data=(UPLOAD_COMMAND, calc_info, script_filename))
 
     def retrieved(self, retrieved_temporary_folder=None):
         """

@@ -192,8 +192,6 @@ class DjangoComputer(Computer):
                 "Integrity error, probably the hostname already exists in the"
                 " DB")
 
-        # This is useful because in this way I can do
-        # c = Computer().store()
         return self
 
     @property

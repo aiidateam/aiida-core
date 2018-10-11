@@ -84,6 +84,7 @@ db_test_list = {
         'common.datastructures': ['aiida.backends.tests.common.test_datastructures'],
         'control.computer': ['aiida.backends.tests.control.test_computer_ctrl'],
         'daemon.client': ['aiida.backends.tests.daemon.test_client'],
+        'orm.authinfo': ['aiida.backends.tests.orm.authinfo'],
         'orm.data.frozendict': ['aiida.backends.tests.orm.data.frozendict'],
         'orm.data.remote': ['aiida.backends.tests.orm.data.remote'],
         'orm.log': ['aiida.backends.tests.orm.log'],

@@ -72,7 +72,7 @@ class DbNode(Base):
     aiida_query = _QueryProperty(_AiidaQuery)
 
     id = Column(Integer, primary_key=True)
-    uuid = Column(UUID(as_uuid=True), default=uuid_func)
+    uuid = Column(UUID(as_uuid=True), default=uuid_func, unique=True)
     type = Column(String(255), index=True)
     process_type = Column(String(255), index=True)
     label = Column(String(255), index=True, nullable=True,

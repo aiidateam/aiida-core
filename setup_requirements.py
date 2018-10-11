@@ -9,7 +9,7 @@
 ###########################################################################
 
 install_requires = [
-    'reentry==1.2.0',
+    'reentry==1.2.1',
     'python-dateutil==2.7.2',
     'python-mimeparse==1.6.0',
     'django==1.8.19',
@@ -38,11 +38,12 @@ install_requires = [
     'ete3==3.1.1',
     'uritools==2.1.0',
     'psycopg2-binary==2.7.4',
-    'paramiko==2.4.1',
+    'paramiko==2.4.2',
     'ecdsa==0.13',
     'pika==0.11.2',
     'ipython>=4.0,<6.0',  # Version of ipython non enforced, because some still prefer version 4 rather than the latest
     'plumpy==0.10.6',
+    'kiwipy==0.2.1',
     'circus==0.14.0',
     'tornado==4.5.3',  # As of 2018/03/06 Tornado released v5.0 which breaks circus 0.14.0
     'chainmap; python_version<"3.5"',
@@ -109,6 +110,7 @@ extras_require = {
         'yapf==0.23.0',
         'prospector==0.12.11',
         'pylint==1.8.4',
+        'pylint-django==0.11.1',
         'pep8-naming==0.3.3',
         'toml==0.9.4'
     ],

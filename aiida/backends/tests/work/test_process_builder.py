@@ -125,7 +125,7 @@ class TestProcessBuilder(AiidaTestCase):
 
         builder = original.get_builder_restart()
 
-        self.assertDictEqual(builder.options, original.get_options())
+        self.assertDictEqual(builder.options, original.get_options(only_actually_set=True))
 
     def test_code_get_builder(self):
         """

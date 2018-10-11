@@ -34,11 +34,12 @@ ete3==3.1.1
 flask-marshmallow==0.9.0
 ipython>=4.0,<6.0
 itsdangerous==0.24
+kiwipy==0.2.1
 marshmallow-sqlalchemy==0.13.2
 meld3==1.0.2
 mock==2.0.0
 numpy==1.14.3
-paramiko==2.4.1
+paramiko==2.4.2
 passlib==1.7.1
 pathlib2; python_version<"3.5"
 pgtest==1.1.0
@@ -54,7 +55,7 @@ python-memcached==1.59
 python-mimeparse==1.6.0
 pytz==2018.4
 qe-tools==1.1.0
-reentry==1.2.0
+reentry==1.2.1
 seekpath==1.8.1
 singledispatch>=3.4.0.3; python_version<"3.5"
 six==1.11.0

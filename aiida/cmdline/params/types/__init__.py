@@ -14,6 +14,7 @@ from .node import NodeParamType
 from .nonemptystring import NonEmptyStringParamType
 from .path import AbsolutePathParamType
 from .plugin import PluginParamType
+from .profile import ProfileParamType
 from .user import UserParamType
 from .test_module import TestModuleParamType
 
@@ -21,5 +22,5 @@ __all__ = [
     'LazyChoice', 'IdentifierParamType', 'CalculationParamType', 'CodeParamType', 'ComputerParamType', 'DataParamType',
     'GroupParamType', 'NodeParamType', 'MpirunCommandParamType', 'MultipleValueParamType', 'NonEmptyStringParamType',
     'PluginParamType', 'AbsolutePathParamType', 'ShebangParamType', 'LegacyWorkflowParamType', 'UserParamType',
-    'TestModuleParamType'
+    'TestModuleParamType', 'ProfileParamType'
 ]

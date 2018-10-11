@@ -7,6 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+This modules contains a number of utility functions specific to the
+Django backend.
+"""
 
 from __future__ import absolute_import
 import os
@@ -23,10 +27,10 @@ def load_dbenv(profile=None):
     """
     _load_dbenv_noschemacheck(profile)
     # Check schema version and the existence of the needed tables
-    check_schema_version()
+    check_schema_version(profile)
 
 
-def _load_dbenv_noschemacheck(profile):
+def _load_dbenv_noschemacheck(profile):  # pylint: disable=unused-argument
     """
     Load the database environment (Django) WITHOUT CHECKING THE SCHEMA VERSION.
 
@@ -44,13 +48,24 @@ def _load_dbenv_noschemacheck(profile):
 
 
 def get_log_messages(obj):
+    """
+    Get a list of log messages from the database for the given
+    object (typically a Node)
+
+    :param obj: the object (typically a Node) for which you want to get
+        a list of DbLog messages
+    :return: a list of log messages. Each log message is a dictionary
+        including a 'loggername', a 'levelname', a 'message', a 'time' at
+        which the log message was issued, as well as additional 'metadata'
+    """
     from aiida.backends.djsite.db.models import DbLog
     import json
 
     extra = get_dblogger_extra(obj)
+
     # convert to list, too
-    log_messages = list(DbLog.objects.filter(**extra).order_by('time').values(
-        'loggername', 'levelname', 'message', 'metadata', 'time'))
+    log_messages = list(
+        DbLog.objects.filter(**extra).order_by('time').values('loggername', 'levelname', 'message', 'metadata', 'time'))
 
     # deserialize metadata
     for log in log_messages:
@@ -59,7 +74,7 @@ def get_log_messages(obj):
     return log_messages
 
 
-_aiida_autouser_cache = None
+_aiida_autouser_cache = None  # pylint: disable=invalid-name
 
 
 def long_field_length():
@@ -77,11 +92,12 @@ def long_field_length():
 
     if 'mysql' in settings.DATABASES['default']['ENGINE']:
         return 255
-    else:
-        return 1024
+
+    # else
+    return 1024
 
 
-def check_schema_version():
+def check_schema_version(profile):
     """
     Check if the version stored in the database is the same of the version
     of the code.
@@ -97,9 +113,7 @@ def check_schema_version():
     :raise ConfigurationError: if the two schema versions do not match.
       Otherwise, just return.
     """
-    import os
     import aiida.backends.djsite.db.models
-    from aiida.backends.utils import get_current_profile
     from django.db import connection
     from aiida.common.exceptions import ConfigurationError
 
@@ -118,19 +132,16 @@ def check_schema_version():
     filepath_utils = os.path.abspath(__file__)
     filepath_manage = os.path.join(os.path.dirname(filepath_utils), 'manage.py')
 
+    if profile is None:
+        from aiida.common.setup import get_default_profile_name
+        profile = get_default_profile_name()
+
     if code_schema_version != db_schema_version:
-        raise ConfigurationError(
-            "The code schema version is {}, but the version stored in the "
-            "database (DbSetting table) is {}, stopping.\n"
-            "To migrate the database to the current version, run the following commands:"
-            "\n  verdi daemon stop\n  python {} --aiida-profile={} migrate".
-                format(
-                code_schema_version,
-                db_schema_version,
-                filepath_manage,
-                get_current_profile()
-            )
-        )
+        raise ConfigurationError("The code schema version is {}, but the version stored in the "
+                                 "database (DbSetting table) is {}, stopping.\n"
+                                 "To migrate the database to the current version, run the following commands:"
+                                 "\n  verdi daemon stop\n  python {} --aiida-profile={} migrate".format(
+                                     code_schema_version, db_schema_version, filepath_manage, profile))
 
 
 def set_db_schema_version(version):
@@ -140,8 +151,7 @@ def set_db_schema_version(version):
     """
     from aiida.backends.utils import set_global_setting
     return set_global_setting(
-        'db|schemaversion', version,
-        description="The version of the schema used in this database.")
+        'db|schemaversion', version, description="The version of the schema used in this database.")
 
 
 def get_db_schema_version():
@@ -156,7 +166,7 @@ def get_db_schema_version():
         return None
 
 
-def delete_nodes_and_connections_django(pks_to_delete):
+def delete_nodes_and_connections_django(pks_to_delete):  # pylint: disable=invalid-name
     """
     Delete all nodes corresponding to pks in the input.
     :param pks_to_delete: A list, tuple or set of pks that should be deleted.
@@ -165,10 +175,10 @@ def delete_nodes_and_connections_django(pks_to_delete):
     from django.db.models import Q
     from aiida.backends.djsite.db import models
     with transaction.atomic():
+        # This is fixed in pylint-django>=2, but this supports only py3
+        # pylint: disable=no-member
         # Delete all links pointing to or from a given node
-        models.DbLink.objects.filter(
-            Q(input__in=pks_to_delete) |
-            Q(output__in=pks_to_delete)).delete()
+        models.DbLink.objects.filter(Q(input__in=pks_to_delete) | Q(output__in=pks_to_delete)).delete()
         # now delete nodes
         models.DbNode.objects.filter(pk__in=pks_to_delete).delete()
 
@@ -177,9 +187,9 @@ def pass_to_django_manage(argv, profile=None):
     """
     Call the corresponding django manage.py command
     """
-    from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+    from aiida.backends.utils import load_dbenv as load_dbenv_, is_dbenv_loaded
     if not is_dbenv_loaded():
-        load_dbenv(profile=profile)
+        load_dbenv_(profile=profile)
 
-    import django.core.management
-    django.core.management.execute_from_command_line(argv)
+    from django.core import management
+    management.execute_from_command_line(argv)

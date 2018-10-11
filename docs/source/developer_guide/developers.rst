@@ -72,16 +72,16 @@ If you need to change the database schema follow these steps:
 
 3. Open the generated file and make the following changes::
 
-    from aiida.backends.djsite.db.migrations import update_schema_version
+    from aiida.backends.djsite.db.migrations import upgrade_schema_version
     ...
-    SCHEMA_VERSION = # choose an appropriate version number
-                     # (hint: higher than the last migration!)
+    REVISION = # choose an appropriate version number (hint: higher than the last migration!)
+    DOWN_REVISION = # the revision number of the previous migration
     ...
     class Migration(migrations.Migration):
       ...
       operations = [
         ..
-        update_schema_version(SCHEMA_VERSION)
+        upgrade_schema_version(REVISION, DOWN_REVISION)
       ]
 
 5. Change the ``LATEST_MIGRATION`` variable in

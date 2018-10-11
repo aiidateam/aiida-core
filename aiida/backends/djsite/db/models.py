@@ -129,7 +129,7 @@ class DbNode(m.Model):
        in the DbAttribute field). Moreover, Attributes define uniquely the
        Node so should be immutable
     """
-    uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION, db_index=True)
+    uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION, unique=True)
     # in the form data.upffile., data.structure., calculation., ...
     # Note that there is always a final dot, to allow to do queries of the
     # type (type__startswith="calculation.") and avoid problems with classes

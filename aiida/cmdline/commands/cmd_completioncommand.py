@@ -7,28 +7,24 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from __future__ import unicode_literals
+"""
+`verdi completioncommand` command, to return the string to insert
+into the bash script to activate completion.
+"""
 from __future__ import absolute_import
-
-from django.db import models, migrations
-from aiida.backends.djsite.db.migrations import upgrade_schema_version
-
-
-REVISION = '1.0.10'
-DOWN_REVISION = '1.0.9'
+import click
+from aiida.cmdline.commands.cmd_verdi import verdi
 
 
-class Migration(migrations.Migration):
+@verdi.command('completioncommand')
+def verdi_completioncommand():
+    """
+    Return the bash code to activate completion.
 
-    dependencies = [
-        ('db', '0009_base_data_plugin_type_string'),
-    ]
+    :note: this command is mainly for back-compatibility.
+        You should rather use:;
 
-    operations = [
-        migrations.AddField(
-            model_name='dbnode',
-            name='process_type',
-            field=models.CharField(max_length=255, db_index=True, null=True)
-        ),
-        upgrade_schema_version(REVISION, DOWN_REVISION)
-    ]
+            eval "$(_VERDI_COMPLETE=source verdi)"
+    """
+    from click_completion import get_auto_shell, get_code
+    click.echo(get_code(shell=get_auto_shell()))

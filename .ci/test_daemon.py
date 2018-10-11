@@ -54,6 +54,7 @@ def print_daemon_log():
 
 
 def jobs_have_finished(pks):
+    global load_node  # instantiated by the verdi run command
     finished_list = [load_node(pk).is_terminated for pk in pks]
     node_list = [load_node(pk) for pk in pks]
     num_finished = len([_ for _ in finished_list if _])
@@ -77,6 +78,7 @@ def print_logshow(pk):
 
 
 def validate_calculations(expected_results):
+    global load_node  # instantiated by the verdi run command
     valid = True
     actual_dict = {}
     for pk, expected_dict in expected_results.items():
@@ -109,6 +111,7 @@ def validate_calculations(expected_results):
 
 
 def validate_workchains(expected_results):
+    global load_node  # instantiated by the verdi run command
     valid = True
     for pk, expected_value in expected_results.items():
         this_valid = True
@@ -144,6 +147,7 @@ def validate_cached(cached_calcs):
     """
     Check that the calculations with created with caching are indeed cached.
     """
+    global load_node  # instantiated by the verdi run command
     valid = True
     for calc in cached_calcs:
 
@@ -377,6 +381,15 @@ def main():
         print("#" * 78)
         print("####### TIME ELAPSED: {} s".format(time.time() - start_time))
         print("#" * 78)
+        print("Output of 'verdi process list -a':")
+        try:
+            print(subprocess.check_output(
+                ["verdi", "process", "list", "-a"],
+                stderr=subprocess.STDOUT,
+            ))
+        except subprocess.CalledProcessError as e:
+            print("Note: the command failed, message: {}".format(e))
+
         print("Output of 'verdi calculation list -a':")
         try:
             print(subprocess.check_output(

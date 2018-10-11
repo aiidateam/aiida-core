@@ -994,7 +994,6 @@ class TestManager(AiidaTestCase):
         """
         from aiida.orm import Node, DataFactory, Calculation
         from collections import defaultdict
-        from aiida.backends.general.abstractqueries import AbstractQueryManager
 
         def store_and_add(n, statistics):
             n.store()
@@ -1002,12 +1001,7 @@ class TestManager(AiidaTestCase):
             statistics['types'][n._plugin_type_string] += 1
             statistics['ctime_by_day'][n.ctime.strftime('%Y-%m-%d')] += 1
 
-        class QueryManagerDefault(AbstractQueryManager):
-            pass
-
-        qmanager_default = QueryManagerDefault(self.backend)
-
-        current_db_statistics = qmanager_default.get_creation_statistics()
+        current_db_statistics = self.backend.query_manager.get_creation_statistics()
         types = defaultdict(int)
         types.update(current_db_statistics['types'])
         ctime_by_day = defaultdict(int)
@@ -1026,7 +1020,7 @@ class TestManager(AiidaTestCase):
         store_and_add(ParameterData(), expected_db_statistics)
         store_and_add(Calculation(), expected_db_statistics)
 
-        new_db_statistics = qmanager_default.get_creation_statistics()
+        new_db_statistics = self.backend.query_manager.get_creation_statistics()
         # I only check a few fields
         new_db_statistics = {k: v for k, v in new_db_statistics.items() if k in expected_db_statistics}
 

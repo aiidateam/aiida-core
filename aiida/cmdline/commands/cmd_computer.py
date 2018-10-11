@@ -22,7 +22,7 @@ from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.cmdline.utils.multi_line_input import ensure_scripts
-from aiida.common.exceptions import ValidationError
+from aiida.common.exceptions import ValidationError, InputValidationError
 from aiida.control.computer import ComputerBuilder, get_computer_configuration
 from aiida.plugins.entry_point import get_entry_points
 from aiida.transport import cli as transport_cli
@@ -191,7 +191,11 @@ def computer_setup(ctx, non_interactive, **kwargs):
                            'computer starting from the settings of {c}.'.format(c=kwargs['label']))
 
     if not non_interactive:
-        pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
+        try:
+            pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
+        except InputValidationError as exception:
+            raise click.BadParameter('invalid prepend and or append text: {}'.format(exception))
+
         kwargs['prepend_text'] = pre
         kwargs['append_text'] = post
 
@@ -211,11 +215,8 @@ def computer_setup(ctx, non_interactive, **kwargs):
     else:
         echo.echo_success('Computer<{}> {} created'.format(computer.pk, computer.name))
 
-    if not non_interactive and click.confirm('Do you want to configure the computer now?'):
-        ctx.invoke(computer_configure.commands[computer.get_transport_type()], computer=computer)
-    else:
-        echo.echo_info('Note: before the computer can be used, it has to be configured with the command:')
-        echo.echo_info('  verdi computer configure {} {}'.format(computer.get_transport_type(), computer.name))
+    echo.echo_info('Note: before the computer can be used, it has to be configured with the command:')
+    echo.echo_info('  verdi computer configure {} {}'.format(computer.get_transport_type(), computer.name))
 
 
 @verdi_computer.command('duplicate')
@@ -243,7 +244,11 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
         echo.echo_critical('A computer called {} already exists'.format(kwargs['label']))
 
     if not non_interactive:
-        pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
+        try:
+            pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
+        except InputValidationError as exception:
+            raise click.BadParameter('invalid prepend and or append text: {}'.format(exception))
+
         kwargs['prepend_text'] = pre
         kwargs['append_text'] = post
 
@@ -273,11 +278,8 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
     is_configured = computer.is_user_configured(backend.users.get_automatic_user())
 
     if not is_configured:
-        if not non_interactive and click.confirm('Do you want to configure the computer now?'):
-            ctx.invoke(computer_configure.commands[computer.get_transport_type()], computer=computer)
-        else:
-            echo.echo_info('Note: before the computer can be used, it has to be configured with the command:')
-            echo.echo_info('  verdi computer configure {} {}'.format(computer.get_transport_type(), computer.name))
+        echo.echo_info('Note: before the computer can be used, it has to be configured with the command:')
+        echo.echo_info('  verdi computer configure {} {}'.format(computer.get_transport_type(), computer.name))
 
 
 @verdi_computer.command('enable')

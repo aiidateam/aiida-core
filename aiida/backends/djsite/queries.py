@@ -18,6 +18,20 @@ class DjangoQueryManager(AbstractQueryManager):
     def __init__(self, backend):
         super(DjangoQueryManager, self).__init__(backend)
 
+    def raw(self, query):
+        """Execute a raw SQL statement and return the result.
+
+        :param query: a string containing a raw SQL statement
+        :return: the result of the query
+        """
+        from django.db import connection
+
+        with connection.cursor() as cursor:
+            cursor.execute(query)
+            results = cursor.fetchall()
+
+        return results
+
     def query_jobcalculations_by_computer_user_state(
             self, state, computer=None, user=None,
             only_computer_user_pairs=False,

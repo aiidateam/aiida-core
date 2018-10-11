@@ -185,16 +185,28 @@ def make_hash(object_to_hash, **kwargs):
     return u'{:052x}'.format(int_hash)
 
 
+@singledispatch
+def _make_int_hash(object_to_hash, **kwargs):
+    """
+    Implementation of the ``make_hash`` function. The hash is created as a
+    28 byte integer, and only later converted to a string.
+    """
+    raise ValueError("Value of type {} cannot be hashed".format(type(object_to_hash)))
+
 # int hashes with size 28 bytes
 INT_HASH_MASK = 2**(8 * 28) - 1
 
-
-@singledispatch
-def _make_int_hash(object_to_hash, **kwargs):
-    raise ValueError("Value of type {} cannot be hashed".format(type(object_to_hash)))
+def _hash_combine(hash1, hash2):
+    """
+    Combine two hashes, using the approach of boost::hash_combine.
+    """
+    return (hash1 ^ (hash2 + 0x9e3779b9 + (hash1 << 6) + (hash1 >> 2))) & INT_HASH_MASK
 
 
 def _combine_hash_list(hashes):
+    """
+    Combines multiple hashes.
+    """
     if not hashes:
         return 0
     res = hashes[0]
@@ -203,23 +215,13 @@ def _combine_hash_list(hashes):
     return res
 
 
-# def _make_int_hash_with_type(type_bytes, bytes_to_hash):
-#     """
-#     get a hash digest for a given enumerated type and its content
-#
-#     :param type_chr: a single char, lower case for simple datatypes, upper case for composite datatypes
-#     :param string_to_hash: an encoded string (a `str` in Python 2, latin1-encoded `bytes` in Python 3)
-#
-#     We don't check anything for speed efficiency.
-#
-#     The `latin1` here is not an error. Since this was introduced in Python 2 and no proper care was
-#     taken to properly encode/decode strings, the default was used, which was `latin1` at that time.
-#     """
-#     return _hash_combine(hashlib.sha)
-#     return hashlib.sha224(type_chr.encode('latin1') + string_to_hash).hexdigest()
-
-
 def _add_type_salt(type_bytes):
+    """
+    Decorator which combines the output of the decorated function with a given
+    'type salt', which is a type-specific hash. The purpose of this is that
+    two objects which have the same binary structure but different types do not
+    hash to the same value.
+    """
     assert isinstance(type_bytes, six.binary_type)
     salt_hash = int(codecs.encode(hashlib.sha224(type_bytes).digest(), 'hex'), 16)
 
@@ -231,13 +233,6 @@ def _add_type_salt(type_bytes):
         return inner
 
     return decorator
-
-
-def _hash_combine(hash1, hash2):
-    """
-    Combine two hashes, using the approach of boost::hash_combine.
-    """
-    return (hash1 ^ (hash2 + 0x9e3779b9 + (hash1 << 6) + (hash1 >> 2))) & INT_HASH_MASK
 
 
 @_make_int_hash.register(abc.Sequence)
@@ -282,8 +277,6 @@ def _(object_to_hash, **kwargs):
     return _make_int_hash(object_to_hash.encode('utf-8'), **kwargs)
 
 
-# for str in Python 2 and bytes in Python 3, simply forward them to
-# the hashing function, without trying to encode them
 @_make_int_hash.register(six.binary_type)
 def _(object_to_hash, **kwargs):
     return int(codecs.encode(hashlib.sha224(object_to_hash).digest(), 'hex'), 16)

@@ -1,7 +1,7 @@
-![image](https://travis-ci.org/aiidateam/aiida_core.svg?branch=develop)](https://travis-ci.org/aiidateam/aiida_core)
-![image](https://coveralls.io/repos/github/aiidateam/aiida_core/badge.svg?branch=develop)](https://coveralls.io/github/aiidateam/aiida_core?branch=develop)
-![image](https://readthedocs.org/projects/aiida-core/badge)](http://aiida-core.readthedocs.io/)
-![image](https://badge.fury.io/py/aiida-core.svg)](https://badge.fury.io/py/aiida-core)
+![travis](https://travis-ci.org/aiidateam/aiida_core.svg?branch=develop)
+![coveralls](https://coveralls.io/repos/github/aiidateam/aiida_core/badge.svg?branch=develop)
+![readthedocs](https://readthedocs.org/projects/aiida-core/badge)
+![badge.fury](https://badge.fury.io/py/aiida-core.svg)
 
 AiiDA
 =====

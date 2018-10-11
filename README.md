@@ -1,10 +1,7 @@
-[![image](https://travis-ci.org/aiidateam/aiida_core.svg?branch=develop)](https://travis-ci.org/aiidateam/aiida_core)
-
-[![image](https://coveralls.io/repos/github/aiidateam/aiida_core/badge.svg?branch=develop)](https://coveralls.io/github/aiidateam/aiida_core?branch=develop)
-
-[![image](https://readthedocs.org/projects/aiida-core/badge)](http://aiida-core.readthedocs.io/)
-
-[![image](https://badge.fury.io/py/aiida-core.svg)](https://badge.fury.io/py/aiida-core)
+![image](https://travis-ci.org/aiidateam/aiida_core.svg?branch=develop)](https://travis-ci.org/aiidateam/aiida_core)
+![image](https://coveralls.io/repos/github/aiidateam/aiida_core/badge.svg?branch=develop)](https://coveralls.io/github/aiidateam/aiida_core?branch=develop)
+![image](https://readthedocs.org/projects/aiida-core/badge)](http://aiida-core.readthedocs.io/)
+![image](https://badge.fury.io/py/aiida-core.svg)](https://badge.fury.io/py/aiida-core)
 
 AiiDA
 =====
@@ -66,5 +63,5 @@ Science Foundation\](<http://www.snf.ch/en>), as well as by the \[MaX
 European Centre of Excellence\](<http://www.max-centre.eu/>) funded by
 the Horizon 2020 EINFRA-5 program, Grant No. 676598.
 
-!\[MARVEL\](miscellaneous/logos/MARVEL.png)
-!\[MaX\](miscellaneous/logos/MaX.png)
+![MARVEL](miscellaneous/logos/MARVEL.png)
+![MaX](miscellaneous/logos/MaX.png)

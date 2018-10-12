@@ -70,9 +70,8 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
-****************
 Acknowledgements
-****************
+================
 
 This work is supported by the `MARVEL National Centre for Competency in Research`_ 
 funded by the `Swiss National Science Foundation`_, as well as by the 

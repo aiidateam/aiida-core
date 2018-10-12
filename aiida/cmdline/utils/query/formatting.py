@@ -40,7 +40,7 @@ def format_state(process_state, paused=None, exit_status=None):
             symbol = u'\u23F5'
     else:
         # Unknown process state, use invisible separator
-        symbol = u'\x00\xA0'
+        symbol = u'\u00B7'  # middle dot
 
     if process_state == 'finished' and exit_status is not None:
         return u'{} {} [{}]'.format(symbol, format_process_state(process_state), exit_status)

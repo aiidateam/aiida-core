@@ -101,3 +101,22 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
+****************
+Acknowledgements
+****************
+
+This work is supported by the `MARVEL National Centre for Competency in Research`_ 
+funded by the `Swiss National Science Foundation`_, as well as by the 
+`MaX European Centre of Excellence`_ funded by the Horizon 2020 EINFRA-5 program, Grant No. 676598.
+
+.. figure:: images/MARVEL.png
+    :height: 100px
+    :align: center
+.. figure:: images/MaX.png
+    :height: 80px
+    :align: center
+
+.. _MARVEL National Centre for Competency in Research: http://www.marvel-nccr.ch
+.. _Swiss National Science Foundation: http://www.snf.ch/en
+.. _MaX European Centre of Excellence: http://www.max-centre.eu

@@ -101,13 +101,6 @@ class SshTransport(aiida.transport.Transport):
     _DEFAULT_SAFE_OPEN_INTERVAL = 5
 
     @classmethod
-    def _convert_username_fromstring(cls, string):
-        """
-        Convert the username from string.
-        """
-        return string
-
-    @classmethod
     def _get_username_suggestion_string(cls, computer):
         """
         Return a suggestion for the specific field.
@@ -119,18 +112,6 @@ class SshTransport(aiida.transport.Transport):
         return str(config.get('user', getpass.getuser()))
 
     @classmethod
-    def _convert_port_fromstring(cls, string):
-        """
-        Convert the port from string.
-        """
-        from aiida.common.exceptions import ValidationError
-
-        try:
-            return int(string)
-        except ValueError:
-            raise ValidationError("The port must be an integer")
-
-    @classmethod
     def _get_port_suggestion_string(cls, computer):
         """
         Return a suggestion for the specific field.
@@ -138,23 +119,6 @@ class SshTransport(aiida.transport.Transport):
         config = parse_sshconfig(computer.hostname)
         # Either the configured user in the .ssh/config, or the default SSH port
         return str(config.get('port', 22))
-
-    @classmethod
-    def _convert_key_filename_fromstring(cls, string):
-        """
-        Convert the port from string.
-        """
-        from aiida.common.exceptions import ValidationError
-
-        path = os.path.expanduser(string)
-
-        if not os.path.isabs(path):
-            raise ValidationError("The key filename must be an absolute path")
-
-        if not os.path.exists(path):
-            raise ValidationError("The key filename must exist")
-
-        return path
 
     @classmethod
     def _get_key_filename_suggestion_string(cls, computer):
@@ -187,18 +151,6 @@ class SshTransport(aiida.transport.Transport):
         return os.path.expanduser(identity)
 
     @classmethod
-    def _convert_timeout_fromstring(cls, string):
-        """
-        Convert the port from string.
-        """
-        from aiida.common.exceptions import ValidationError
-
-        try:
-            return int(string)
-        except ValueError:
-            raise ValidationError("The timeout must be an integer")
-
-    @classmethod
     def _get_timeout_suggestion_string(cls, computer):
         """
         Return a suggestion for the specific field.
@@ -209,18 +161,6 @@ class SshTransport(aiida.transport.Transport):
         return str(config.get('connecttimeout', "60"))
 
     @classmethod
-    def _convert_allow_agent_fromstring(cls, string):
-        """
-        Convert the port from string.
-        """
-        from aiida.common.exceptions import ValidationError
-
-        try:
-            return convert_to_bool(string)
-        except ValueError:
-            raise ValidationError("Allow_agent must be an boolean")
-
-    @classmethod
     def _get_allow_agent_suggestion_string(cls, computer):
         """
         Return a suggestion for the specific field.
@@ -229,36 +169,12 @@ class SshTransport(aiida.transport.Transport):
         return convert_to_bool(str(config.get('allow_agent', "no")))
 
     @classmethod
-    def _convert_look_for_keys_fromstring(cls, string):
-        """
-        Convert the port from string.
-        """
-        from aiida.common.exceptions import ValidationError
-
-        try:
-            return convert_to_bool(string)
-        except ValueError:
-            raise ValidationError("look_for_keys must be an boolean")
-
-    @classmethod
     def _get_look_for_keys_suggestion_string(cls, computer):
         """
         Return a suggestion for the specific field.
         """
         config = parse_sshconfig(computer.hostname)
         return convert_to_bool(str(config.get('look_for_keys', "no")))
-
-    @classmethod
-    def _convert_proxy_command_fromstring(cls, string):
-        """
-        Convert the proxy command from string.
-        """
-        from aiida.common.exceptions import ValidationError
-
-        if str(string).strip():
-            return str(string)
-        else:
-            return None
 
     @classmethod
     def _get_proxy_command_suggestion_string(cls, computer):
@@ -283,35 +199,11 @@ class SshTransport(aiida.transport.Transport):
         return " ".join(new_pieces)
 
     @classmethod
-    def _convert_compress_fromstring(cls, string):
-        """
-        Convert the port from string.
-        """
-        from aiida.common.exceptions import ValidationError
-
-        try:
-            return convert_to_bool(string)
-        except ValueError:
-            raise ValidationError("compress must be an boolean")
-
-    @classmethod
     def _get_compress_suggestion_string(cls, computer):
         """
         Return a suggestion for the specific field.
         """
         return "True"
-
-    @classmethod
-    def _convert_load_system_host_keys_fromstring(cls, string):
-        """
-        Convert the port from string.
-        """
-        from aiida.common.exceptions import ValidationError
-
-        try:
-            return convert_to_bool(string)
-        except ValueError:
-            raise ValidationError("compress must be an boolean")
 
     @classmethod
     def _get_load_system_host_keys_suggestion_string(cls, computer):
@@ -321,30 +213,11 @@ class SshTransport(aiida.transport.Transport):
         return "True"
 
     @classmethod
-    def _convert_key_policy_fromstring(cls, string):
-        """
-        Convert the port from string.
-        """
-        return string
-
-    @classmethod
     def _get_key_policy_suggestion_string(cls, computer):
         """
         Return a suggestion for the specific field.
         """
         return "RejectPolicy"
-
-    @classmethod
-    def _convert_gss_auth_fromstring(cls, string):
-        """
-        Convert the gss auth. command from string.
-        """
-        from aiida.common.exceptions import ValidationError
-
-        try:
-            return convert_to_bool(string)
-        except ValueError:
-            raise ValidationError("gss_auth must be an boolean")
 
     @classmethod
     def _get_gss_auth_suggestion_string(cls, computer):
@@ -355,18 +228,6 @@ class SshTransport(aiida.transport.Transport):
         return convert_to_bool(str(config.get('gssapiauthentication', "no")))
 
     @classmethod
-    def _convert_gss_kex_fromstring(cls, string):
-        """
-        Convert the gss key exchange command from string.
-        """
-        from aiida.common.exceptions import ValidationError
-
-        try:
-            return convert_to_bool(string)
-        except ValueError:
-            raise ValidationError("gss_kex must be an boolean")
-
-    @classmethod
     def _get_gss_kex_suggestion_string(cls, computer):
         """
         Return a suggestion for the specific field.
@@ -375,33 +236,12 @@ class SshTransport(aiida.transport.Transport):
         return convert_to_bool(str(config.get('gssapikeyexchange', "no")))
 
     @classmethod
-    def _convert_gss_deleg_creds_fromstring(cls, string):
-        """
-        Convert the gss auth. command from string.
-        """
-        from aiida.common.exceptions import ValidationError
-
-        try:
-            return convert_to_bool(string)
-        except ValueError:
-            raise ValidationError("gss_deleg_creds must be an boolean")
-
-    @classmethod
     def _get_gss_deleg_creds_suggestion_string(cls, computer):
         """
         Return a suggestion for the specific field.
         """
         config = parse_sshconfig(computer.hostname)
         return convert_to_bool(str(config.get('gssapidelegatecredentials', "no")))
-
-    @classmethod
-    def _convert_gss_host_fromstring(cls, string):
-        """
-        Convert the gss auth. command from string.
-        """
-        from aiida.common.exceptions import ValidationError
-
-        return str(string)
 
     @classmethod
     def _get_gss_host_suggestion_string(cls, computer):
@@ -486,9 +326,7 @@ class SshTransport(aiida.transport.Transport):
         # Open a SSHClient
         connection_arguments = self._connect_args
         proxystring = connection_arguments.pop('proxy_command', None)
-        if proxystring == "":
-            proxystring = None
-        if proxystring is not None:
+        if proxystring:
             self._proxy = _DetachedProxyCommand(proxystring)
             connection_arguments['sock'] = self._proxy
 

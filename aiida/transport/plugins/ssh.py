@@ -67,7 +67,7 @@ class SshTransport(aiida.transport.Transport):
         ('username', {'prompt': 'User name', 'help': 'user name for the computer', 'non_interactive_default': True}),
         ('port', {'option': options.PORT, 'prompt': 'port Nr', 'non_interactive_default': True}),
         ('look_for_keys', {'switch': True, 'prompt': 'Look for keys', 'help': 'switch automatic key file discovery on / off', 'non_interactive_default': True}),
-        ('key_filename', {'type': AbsolutePathParamType(dir_okay=False, exists=True), 'prompt': 'SSH key file', 'help': 'Manually pass a key file', 'non_interactive_default': True}),
+        ('key_filename', {'type': AbsolutePathParamType(dir_okay=False, exists=True), 'prompt': 'SSH key file', 'help': 'Manually pass a key file if default path is not set in ssh config', 'non_interactive_default': True}),
         ('timeout', {'type': int, 'prompt': 'Connection timeout in s', 'help': 'time in seconds to wait for connection before giving up', 'non_interactive_default': True}),
         ('allow_agent', {'switch': True, 'prompt': 'Allow ssh agent', 'help': 'switch to allow or disallow ssh agent', 'non_interactive_default': True}),
         ('proxy_command', {'prompt': 'SSH proxy command', 'help': 'SSH proxy command', 'non_interactive_default': True}),  # Managed 'manually' in connect
@@ -225,7 +225,8 @@ class SshTransport(aiida.transport.Transport):
         """
         Return a suggestion for the specific field.
         """
-        return ""
+        config = parse_sshconfig(computer.hostname)
+        return convert_to_bool(str(config.get('allow_agent', "no")))
 
     @classmethod
     def _convert_look_for_keys_fromstring(cls, string):
@@ -244,7 +245,8 @@ class SshTransport(aiida.transport.Transport):
         """
         Return a suggestion for the specific field.
         """
-        return ""
+        config = parse_sshconfig(computer.hostname)
+        return convert_to_bool(str(config.get('look_for_keys', "no")))
 
     @classmethod
     def _convert_proxy_command_fromstring(cls, string):
@@ -484,6 +486,8 @@ class SshTransport(aiida.transport.Transport):
         # Open a SSHClient
         connection_arguments = self._connect_args
         proxystring = connection_arguments.pop('proxy_command', None)
+        if proxystring == "":
+            proxystring = None
         if proxystring is not None:
             self._proxy = _DetachedProxyCommand(proxystring)
             connection_arguments['sock'] = self._proxy

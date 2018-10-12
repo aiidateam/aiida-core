@@ -573,11 +573,12 @@ def computer_configure():
 
 
 @computer_configure.command('show')
-@click.option('--current/--defaults')
+@click.option(
+    '--defaults', is_flag=True, default=False, help='Show the default configuration settings for this computer.')
 @click.option('--as-option-string', is_flag=True)
 @options.USER()
 @arguments.COMPUTER()
-def computer_config_show(computer, user, current, as_option_string):
+def computer_config_show(computer, user, defaults, as_option_string):
     """Show the current or default configuration for COMPUTER."""
     import tabulate
     from aiida.common.utils import escape_for_bash
@@ -591,10 +592,11 @@ def computer_config_show(computer, user, current, as_option_string):
         if isinstance(param, click.core.Option)
     ]
     option_list = [option for option in option_list if option.name in transport_cls.get_valid_auth_params()]
-    if current:
-        config = get_computer_configuration(computer, user)
-    else:
+
+    if defaults:
         config = {option.name: transport_cli.transport_option_default(option.name, computer) for option in option_list}
+    else:
+        config = get_computer_configuration(computer, user)
 
     option_items = []
     if as_option_string:
@@ -614,7 +616,12 @@ def computer_config_show(computer, user, current, as_option_string):
         opt_string = ' '.join(option_items)
         echo.echo(escape_for_bash(opt_string))
     else:
-        table = [('* ' + name, config[name]) for name in transport_cls.get_valid_auth_params()]
+        table = []
+        for name in transport_cls.get_valid_auth_params():
+            if name in config:
+                table.append(('* ' + name, config[name]))
+            else:
+                table.append(('* ' + name, '-'))
         echo.echo(tabulate.tabulate(table, tablefmt='plain'))
 
 

@@ -153,7 +153,7 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
     except ValidationError as exception:
         echo.echo_critical('Unable to store the Code: {}'.format(exception))
 
-    echo.echo_success('Code<{}> {} created'.format(code.pk, code.full_label))
+    echo.echo_success('Code<{}> {} created'.format(new_code.pk, new_code.full_label))
 
 
 @verdi_code.command()

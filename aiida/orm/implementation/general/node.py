@@ -15,11 +15,6 @@ import logging
 import importlib
 import collections
 
-try:
-    import pathlib
-except ImportError:
-    import pathlib2 as pathlib
-
 import six
 
 from aiida.backends.utils import validate_attribute_key

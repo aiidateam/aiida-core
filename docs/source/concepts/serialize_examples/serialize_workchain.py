@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from aiida.work import WorkChain
 from aiida.orm.data import to_aiida_type
 # The basic types need to be loaded such that they are registered with

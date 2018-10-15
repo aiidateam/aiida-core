@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from aiida.orm.data.int import Int
 from aiida.work.workfunctions import workfunction
 

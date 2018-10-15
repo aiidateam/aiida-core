@@ -1837,13 +1837,14 @@ class AbstractNode(object):
         if not self._cacheable:
             return iter(())
 
-        from aiida.orm.querybuilder import QueryBuilder
-
         hash_ = self.get_hash()
-        if hash_:
-            qb = QueryBuilder()
-            qb.append(self.__class__, filters={'extras._aiida_hash': hash_}, project='*', subclassing=False)
-            same_nodes = (n[0] for n in qb.iterall())
+        if not hash_:
+            return iter(())
+
+        from aiida.orm.querybuilder import QueryBuilder
+        qb = QueryBuilder()
+        qb.append(self.__class__, filters={'extras._aiida_hash': hash_}, project='*', subclassing=False)
+        same_nodes = (n[0] for n in qb.iterall())
         return (n for n in same_nodes if n._is_valid_cache())
 
     def _is_valid_cache(self):

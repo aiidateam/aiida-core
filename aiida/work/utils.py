@@ -152,8 +152,8 @@ def exponential_backoff_retry(fct, initial_interval=10.0, max_attempts=5, logger
                 logger.warning('maximum attempts %d of calling %s, exceeded', max_attempts, coro.__name__)
                 raise
             else:
-                logger.warning('iteration %d of %s excepted, retrying after %d seconds', iteration + 1, coro.__name__,
-                               interval)
+                logger.exception('iteration %d of %s excepted, retrying after %d seconds', iteration + 1, coro.__name__,
+                                 interval)
 
                 yield gen.sleep(interval)
                 interval *= 2

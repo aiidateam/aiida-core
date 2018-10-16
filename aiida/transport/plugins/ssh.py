@@ -949,7 +949,7 @@ class SshTransport(aiida.transport.Transport):
         cp_flags = '-r -f'
         return self.copy(remotesource, remotedestination, dereference, cp_flags, pattern)
 
-    def copy(self, remotesource, remotedestination, dereference=False):
+    def copy(self, remotesource, remotedestination, dereference=False, pattern=None, cp_flags=None):
         """
         Copy a file or a directory from remote source to remote destination.
         Flags used: ``-r``: recursive copy; ``-f``: force, makes the command non interactive;
@@ -969,12 +969,13 @@ class SshTransport(aiida.transport.Transport):
 
         # TODO: verify that it does not re
 
-        # For the moment, these are hardcoded. They may become parameters
-        # as soon as we see the need.
-        cp_flags = '-r -f'
+        if cp_flags is None:
+            cp_flags = '-r -f'
+
+        # For the moment, this is hardcoded. May become a parameter
         cp_exe = 'cp'
 
-        ## To evaluate if we also want -p: preserves mode,ownership and timestamp
+        # To evaluate if we also want -p: preserves mode,ownership and timestamp
         if dereference:
             # use -L; --dereference is not supported on mac
             cp_flags += ' -L'
@@ -989,7 +990,7 @@ class SshTransport(aiida.transport.Transport):
                              'Found instead %s as remotedestination' % remotedestination)
 
         if self.has_magic(remotedestination):
-            raise ValueError("Pathname patterns are not allowed in the " "destination")
+            raise ValueError("Pathname patterns are not allowed in the destination")
 
         if self.has_magic(remotesource):
             to_copy_list = self.glob(remotesource)

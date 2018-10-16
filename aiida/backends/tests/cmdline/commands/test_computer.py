@@ -511,13 +511,11 @@ class TestVerdiComputerCommands(AiidaTestCase):
         """
         Prepare the computer and user
         """
-        from aiida.control.computer import configure_computer
-
         self.user = self.backend.users.get_automatic_user()
 
         # I need to configure the computer here; being 'local',
         # there should not be any options asked here
-        configure_computer(self.comp)
+        self.comp.configure()
 
         assert self.comp.is_user_configured(self.user), "There was a problem configuring the test computer"
         self.runner = CliRunner()

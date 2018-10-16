@@ -703,6 +703,62 @@ class Computer(CollectionEntry):
             raise exceptions.ConfigurationError('No scheduler found for {} [type {}], message: {}'.format(
                 self.name, self.get_scheduler_type(), exc))
 
+    def configure(self, user=None, **kwargs):
+        """
+        Configure a computer for a user with valid auth params passed via kwargs
+
+        :param user: the user to configure the computer for
+        :kwargs: the configuration keywords with corresponding values
+        :return: the authinfo object for the configured user
+        :rtype: :class:`aiida.orm.AuthInfo`
+        """
+        from aiida.orm.backend import construct_backend
+
+        transport_cls = self.get_transport_class()
+        backend = construct_backend()
+        user = user or backend.users.get_automatic_user()
+
+        try:
+            authinfo = self.get_authinfo(user)
+        except exceptions.NotExistent:
+            authinfo = backend.authinfos.create(self, user)
+
+        auth_params = authinfo.get_auth_params()
+        valid_keys = set(transport_cls.get_valid_auth_params())
+
+        if not set(kwargs.keys()).issubset(valid_keys):
+            invalid_keys = [key for key in kwargs if key not in valid_keys]
+            raise ValueError('{transport}: recieved invalid authentication parameter(s) "{invalid}"'.format(
+                transport=transport_cls, invalid=invalid_keys))
+
+        if valid_keys:
+            auth_params.update(kwargs)
+            authinfo.set_auth_params(auth_params)
+            authinfo.store()
+
+        return authinfo
+
+    def get_configuration(self, user=None):
+        """
+        Get the configuration of computer for the given user as a dictionary
+
+        :param user: the user to to get the configuration for.  Uses default user if `None`
+        :type user: :class:`aiida.orm.User`
+        """
+        from aiida.orm.backend import construct_backend
+
+        backend = construct_backend()
+        user = user or backend.users.get_automatic_user()
+
+        config = {}
+        try:
+            authinfo = backend.authinfos.get(self, user)
+            config = authinfo.get_auth_params()
+        except exceptions.NotExistent:
+            pass
+
+        return config
+
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))
 

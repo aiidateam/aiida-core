@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm import CalculationFactory
 from aiida.orm.data.parameter import ParameterData
@@ -46,7 +47,7 @@ class TestProcessBuilder(AiidaTestCase):
         """
         Check that the builder has all the input ports of the process class as attributes
         """
-        for name, port in self.process_class.spec().inputs.iteritems():
+        for name, port in self.process_class.spec().inputs.items():
             self.assertTrue(hasattr(self.builder, name))
 
     def test_process_builder_set_attributes(self):
@@ -108,6 +109,23 @@ class TestProcessBuilder(AiidaTestCase):
         self.assertEquals(builder.__class__.b.__doc__, str(TestWorkChain.spec().inputs['b']))
         self.assertEquals(builder.__class__.c.__doc__, str(TestWorkChain.spec().inputs['c']))
         self.assertEquals(builder.c.__class__.d.__doc__, str(TestWorkChain.spec().inputs['c']['d']))
+
+    def test_job_calculation_get_builder_restart(self):
+        """
+        Test the get_builder_restart method of JobCalculation class
+        """
+        from aiida.orm.calculation.job import JobCalculation
+
+        original = JobCalculation()
+        original.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+        original.set_option('max_wallclock_seconds', 1800)
+        original.set_computer(self.computer)
+        original.label = 'original'
+        original.store()
+
+        builder = original.get_builder_restart()
+
+        self.assertDictEqual(builder.options, original.get_options(only_actually_set=True))
 
     def test_code_get_builder(self):
         """

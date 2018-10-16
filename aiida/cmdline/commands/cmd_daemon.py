@@ -8,8 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi daemon` commands."""
+from __future__ import absolute_import
 import os
-import sys
 import subprocess
 import time
 
@@ -17,7 +17,7 @@ import click
 from click_spinner import spinner
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.utils import decorators
+from aiida.cmdline.utils import decorators, echo
 from aiida.cmdline.utils.common import get_env_with_venv_bin
 from aiida.cmdline.utils.daemon import get_daemon_status, print_client_response_status
 from aiida.common.profile import get_current_profile_name
@@ -32,7 +32,7 @@ def verdi_daemon():
 
 
 @verdi_daemon.command()
-@click.option('--foreground', is_flag=True, help='Run in foreground')
+@click.option('--foreground', is_flag=True, help='Run in foreground.')
 @decorators.with_dbenv()
 @decorators.check_circus_zmq_version
 def start(foreground):
@@ -41,7 +41,7 @@ def start(foreground):
     """
     client = DaemonClient()
 
-    click.echo('Starting the daemon... ', nl=False)
+    echo.echo('Starting the daemon... ', nl=False)
 
     if foreground:
         command = ['verdi', '-p', client.profile_name, 'daemon', '_start_circus', '--foreground']
@@ -52,8 +52,7 @@ def start(foreground):
         currenv = get_env_with_venv_bin()
         subprocess.check_output(command, env=currenv)
     except subprocess.CalledProcessError as exception:
-        click.echo('failed: {}'.format(exception))
-        sys.exit(1)
+        echo.echo_critical('{}'.format(exception))
 
     # We add a small timeout to give the pid-file a chance to be created
     with spinner():
@@ -64,7 +63,7 @@ def start(foreground):
 
 
 @verdi_daemon.command()
-@click.option('--all', 'all_profiles', is_flag=True, help='Show all daemons')
+@click.option('--all', 'all_profiles', is_flag=True, help='Show all daemons.')
 def status(all_profiles):
     """
     Print the status of the current daemon or all daemons
@@ -79,12 +78,12 @@ def status(all_profiles):
         click.secho('Profile: ', fg='red', bold=True, nl=False)
         click.secho('{}'.format(profile_name), bold=True)
         result = get_daemon_status(client)
-        click.echo(result)
+        echo.echo(result)
 
 
 @verdi_daemon.command()
 @click.argument('number', default=1, type=int)
-@decorators.only_if_daemon_pid
+@decorators.only_if_daemon_running()
 def incr(number):
     """
     Add NUMBER [default=1] workers to the running daemon
@@ -96,7 +95,7 @@ def incr(number):
 
 @verdi_daemon.command()
 @click.argument('number', default=1, type=int)
-@decorators.only_if_daemon_pid
+@decorators.only_if_daemon_running()
 def decr(number):
     """
     Remove NUMBER [default=1] workers from the running daemon
@@ -122,8 +121,8 @@ def logshow():
 
 
 @verdi_daemon.command()
-@click.option('--no-wait', is_flag=True, help='Do not wait for confirmation')
-@click.option('--all', 'all_profiles', is_flag=True, help='Stop all daemons')
+@click.option('--no-wait', is_flag=True, help='Do not wait for confirmation.')
+@click.option('--all', 'all_profiles', is_flag=True, help='Stop all daemons.')
 def stop(no_wait, all_profiles):
     """
     Stop the daemon
@@ -141,15 +140,15 @@ def stop(no_wait, all_profiles):
         click.secho('{}'.format(profile_name), bold=True)
 
         if not client.is_daemon_running:
-            click.echo('Daemon was not running')
+            echo.echo('Daemon was not running')
             continue
 
         wait = not no_wait
 
         if wait:
-            click.echo('Waiting for the daemon to shut down... ', nl=False)
+            echo.echo('Waiting for the daemon to shut down... ', nl=False)
         else:
-            click.echo('Shutting the daemon down')
+            echo.echo('Shutting the daemon down')
 
         response = client.stop_daemon(wait)
 
@@ -158,11 +157,11 @@ def stop(no_wait, all_profiles):
 
 
 @verdi_daemon.command()
-@click.option('--reset', is_flag=True, help='Completely reset the daemon')
-@click.option('--no-wait', is_flag=True, help='Do not wait for confirmation')
+@click.option('--reset', is_flag=True, help='Completely reset the daemon.')
+@click.option('--no-wait', is_flag=True, help='Do not wait for confirmation.')
 @click.pass_context
 @decorators.with_dbenv()
-@decorators.only_if_daemon_pid
+@decorators.only_if_daemon_running()
 def restart(ctx, reset, no_wait):
     """
     Restart the daemon. By default will only reset the workers of the running daemon.
@@ -180,9 +179,9 @@ def restart(ctx, reset, no_wait):
     else:
 
         if wait:
-            click.echo('Restarting the daemon... ', nl=False)
+            echo.echo('Restarting the daemon... ', nl=False)
         else:
-            click.echo('Restarting the daemon')
+            echo.echo('Restarting the daemon')
 
         response = client.restart_daemon(wait)
 
@@ -191,7 +190,7 @@ def restart(ctx, reset, no_wait):
 
 
 @verdi_daemon.command()
-@click.option('--foreground', is_flag=True, help='Run in foreground')
+@click.option('--foreground', is_flag=True, help='Run in foreground.')
 @decorators.with_dbenv()
 @decorators.check_circus_zmq_version
 def _start_circus(foreground):
@@ -235,7 +234,7 @@ def _start_circus(foreground):
             },
             'env': get_env_with_venv_bin(),
         }]
-    } # yapf: disable
+    }  # yapf: disable
 
     if not foreground:
         daemonize()
@@ -246,8 +245,7 @@ def _start_circus(foreground):
     try:
         pidfile.create(os.getpid())
     except RuntimeError as exception:
-        click.echo(str(exception))
-        sys.exit(1)
+        echo.echo_critical(str(exception))
 
     # Configure the logger
     loggerconfig = None
@@ -274,5 +272,3 @@ def _start_circus(foreground):
             arbiter = None
             if pidfile is not None:
                 pidfile.unlink()
-
-    sys.exit(0)

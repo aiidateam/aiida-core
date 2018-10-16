@@ -7,10 +7,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 from aiida.common.exceptions import InputValidationError, ValidationError, \
     InvalidOperation
 from aiida.restapi.common.exceptions import RestValidationError
 from aiida.restapi.translator.base import BaseTranslator
+from aiida import orm
 
 
 class NodeTranslator(BaseTranslator):
@@ -43,7 +45,6 @@ class NodeTranslator(BaseTranslator):
     _visformat = None
     _filename = None
     _rtype = None
-
 
     def __init__(self, Class=None, **kwargs):
         """
@@ -116,6 +117,7 @@ class NodeTranslator(BaseTranslator):
         """
 
         self._subclasses = self._get_subclasses()
+        self._backend = orm.construct_backend()
 
     def set_query_type(self, query_type, alist=None, nalist=None, elist=None,
                        nelist=None, downloadformat=None, visformat=None,
@@ -156,8 +158,7 @@ class NodeTranslator(BaseTranslator):
             self._filename = filename
             self._rtype = rtype
         else:
-            raise InputValidationError("invalid result/content value: {"
-                                       "}".format(query_type))
+            raise InputValidationError("invalid result/content value: {}".format(query_type))
 
         ## Add input/output relation to the query help
         if self._result_type is not self.__label__:
@@ -370,7 +371,7 @@ class NodeTranslator(BaseTranslator):
                 full_path = full_path_base + '.py'
                 # I could use load_module but it takes lots of arguments,
                 # then I use load_source
-                app_module = imp.load_source("rst"+name, full_path)
+                app_module = imp.load_source("rst" + name, full_path)
 
             # Go through the content of the module
             if not is_pkg:
@@ -514,10 +515,8 @@ class NodeTranslator(BaseTranslator):
     def get_statistics(self, user_pk=None):
         """Return statistics for a given node"""
 
-        from aiida.backends.utils import QueryFactory
-        qmanager = QueryFactory()()
+        qmanager = self._backend.query_manager
         return qmanager.get_creation_statistics(user_pk=user_pk)
-
 
     def get_io_tree(self, uuid_pattern):
         from aiida.orm.querybuilder import QueryBuilder

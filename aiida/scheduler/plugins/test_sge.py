@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 import unittest
 import logging
 from aiida.scheduler.plugins.sge import *
@@ -338,8 +339,8 @@ class TestCommand(unittest.TestCase):
 
         try:
             time_struct = time.strptime(string, fmt)
-        except Exception as e:
-            raise ValueError("Unable to parse time string {}, the message " "was {}".format(string, e.message))
+        except Exception as exc:
+            raise ValueError("Unable to parse time string {}, the message " "was {}".format(string, exc))
 
         # I convert from a time_struct to a datetime object going through
         # the seconds since epoch, as suggested on stackoverflow:

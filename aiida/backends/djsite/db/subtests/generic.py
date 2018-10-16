@@ -11,6 +11,7 @@
 Generic tests that need the use of the DB
 """
 
+from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
 from aiida.orm.node import Node
@@ -22,17 +23,15 @@ class TestComputer(AiidaTestCase):
     """
 
     def test_deletion(self):
-        from aiida.orm.computer import Computer
-        from aiida.orm import delete_computer, JobCalculation
+        from aiida.orm import JobCalculation
         from aiida.common.exceptions import InvalidOperation
 
-        newcomputer = Computer(name="testdeletioncomputer", hostname='localhost',
-                               transport_type='local',
-                               scheduler_type='pbspro',
-                               workdir='/tmp/aiida').store()
+        newcomputer = self.backend.computers.create(name="testdeletioncomputer", hostname='localhost',
+                                                    transport_type='local', scheduler_type='pbspro',
+                                                    workdir='/tmp/aiida').store()
 
         # # This should be possible, because nothing is using this computer
-        delete_computer(newcomputer)
+        self.backend.computers.delete(newcomputer.id)
 
         calc_params = {
             'computer': self.computer,
@@ -45,7 +44,7 @@ class TestComputer(AiidaTestCase):
         # This should fail, because there is at least a calculation
         # using this computer (the one created just above)
         with self.assertRaises(InvalidOperation):
-            delete_computer(self.computer)
+            self.backend.computers.delete(self.computer.id)
 
 
 class TestGroupsDjango(AiidaTestCase):

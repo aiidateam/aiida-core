@@ -1,8 +1,18 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 utilities for getting multi line input from the commandline
 """
+from __future__ import absolute_import
 import click
+from aiida.common.exceptions import InputValidationError
 
 
 def ensure_scripts(pre, post, summary):
@@ -29,13 +39,39 @@ def edit_pre_post(pre=None, post=None, summary=None):
     from aiida.cmdline.utils.templates import env
     template = env.get_template('prepost.bash.tpl')
     summary = summary or {}
-    summary = {k: v for k, v in summary.iteritems() if v}
-    content = template.render(default_pre=pre or '', default_post=post or '', summary=summary)
+    summary = {k: v for k, v in summary.items() if v}
+
+    # Define a separator that will be splitting pre- and post- execution
+    # parts of the submission script
+    separator = "#====================================================#\n" \
+                "#=               Post execution script              =#\n" \
+                "#=  I am acting as a separator, do not modify me!!! =#\n" \
+                "#====================================================#\n"
+
+    content = template.render(default_pre=pre or '', separator=separator, default_post=post or '', summary=summary)
     mlinput = click.edit(content, extension='.bash')
     if mlinput:
         import re
-        stripped_input = re.sub(r'(^#.*$\n)+', '#', mlinput, flags=re.M).strip('#')
-        pre, post = [text.strip() for text in stripped_input.split('#')]
+
+        # Splitting the text in pre- and post- halfs
+        try:
+            pre, post = mlinput.split(separator)
+        except ValueError as err:
+            if str(err) == "need more than 1 value to unpack":
+                raise InputValidationError("Looks like you modified the "
+                                           "separator that should NOT be modified. Please be "
+                                           "careful!")
+            elif str(err) == "too many values to unpack":
+                raise InputValidationError("Looks like you have more than one "
+                                           "separator, while only one is needed "
+                                           "(and allowed). Please be careful!")
+            else:
+                raise err
+
+        # Removing all the comments starting from '#=' in both pre- and post-
+        # parts
+        pre = re.sub(r'(^#=.*$\n)+', '', pre, flags=re.M).strip()
+        post = re.sub(r'(^#=.*$\n)+', '', post, flags=re.M).strip()
     else:
         pre, post = ('', '')
     return pre, post

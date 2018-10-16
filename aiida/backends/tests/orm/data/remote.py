@@ -7,13 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 import errno
 import os
 import shutil
 import tempfile
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm import Computer
 from aiida.orm.backend import construct_backend
 from aiida.orm.data.remote import RemoteData
 

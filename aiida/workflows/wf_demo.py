@@ -7,6 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
+from __future__ import print_function
 import plumpy
 import aiida.common
 from aiida.common import aiidalogger
@@ -30,7 +32,7 @@ class WorkflowDemo(Workflow):
         computer = Computer.get("localhost")
 
         calc = CustomCalc(computer=computer, withmpi=True)
-        calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
+        calc.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
         calc.store()
         calc._set_state(calc_states.FINISHED)
         calc._set_process_state(plumpy.ProcessState.FINISHED)
@@ -88,7 +90,7 @@ class SubWorkflowDemo(Workflow):
         computer = Computer.get("localhost")
 
         calc = CustomCalc(computer=computer, withmpi=True)
-        calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
+        calc.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
         calc.store()
         calc._set_state(calc_states.FINISHED)
         calc._set_process_state(plumpy.ProcessState.FINISHED)
@@ -141,7 +143,7 @@ class BranchWorkflowDemo(Workflow):
         computer = Computer.get("localhost")
 
         calc = CustomCalc(computer=computer, withmpi=True)
-        calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
+        calc.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
         calc.store()
         calc._set_state(calc_states.FINISHED)
         calc._set_process_state(plumpy.ProcessState.FINISHED)
@@ -207,7 +209,7 @@ class BranchWorkflowDemo(Workflow):
 
     @Workflow.step
     def finalize(self):
-        print "Here in finalize"
+        print("Here in finalize")
         self.append_to_report("Nothing else to do")
 
         self.next(self.exit)
@@ -228,7 +230,7 @@ class LoopBranchWorkflowDemo(Workflow):
         computer = Computer.get("localhost")
 
         calc = CustomCalc(computer=computer, withmpi=True)
-        calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
+        calc.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
         calc.store()
         calc._set_state(calc_states.FINISHED)
         calc._set_process_state(plumpy.ProcessState.FINISHED)

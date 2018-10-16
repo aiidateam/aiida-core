@@ -7,18 +7,38 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
+from __future__ import print_function
+import six
+from six.moves import zip
 from aiida.backends.general.abstractqueries import AbstractQueryManager
 
 
-class QueryManagerDjango(AbstractQueryManager):
+class DjangoQueryManager(AbstractQueryManager):
+    def __init__(self, backend):
+        super(DjangoQueryManager, self).__init__(backend)
+
+    def raw(self, query):
+        """Execute a raw SQL statement and return the result.
+
+        :param query: a string containing a raw SQL statement
+        :return: the result of the query
+        """
+        from django.db import connection
+
+        with connection.cursor() as cursor:
+            cursor.execute(query)
+            results = cursor.fetchall()
+
+        return results
 
     def query_jobcalculations_by_computer_user_state(
             self, state, computer=None, user=None,
             only_computer_user_pairs=False,
             only_enabled=True, limit=None):
-        # Here I am overriding the implementation using the QueryBuilder:
-
         """
+        Overrides the implementation using the QueryBuilder
+
         Filter all calculations with a given state.
 
         Issue a warning if the state is not in the list of valid states.
@@ -26,9 +46,7 @@ class QueryManagerDjango(AbstractQueryManager):
         :param state: The state to be used to filter (should be a string among
                 those defined in aiida.common.datastructures.calc_states)
         :type state: str
-        :param computer: a Django DbComputer entry, or a Computer object, of a
-                computer in the DbComputer table.
-                A string for the hostname is also valid.
+        :param computer: A Computer object or a string of the computer name
         :param user: a Django entry (or its pk) of a user in the DbUser table;
                 if present, the results are restricted to calculations of that
                 specific user
@@ -44,7 +62,6 @@ class QueryManagerDjango(AbstractQueryManager):
         """
         # I assume that calc_states are strings. If this changes in the future,
         # update the filter below from dbattributes__tval to the correct field.
-        from aiida.orm import Computer
         from aiida.common.exceptions import InputValidationError
         from aiida.orm.implementation.django.calculation.job import JobCalculation
         from aiida.common.datastructures import calc_states
@@ -56,10 +73,12 @@ class QueryManagerDjango(AbstractQueryManager):
 
         kwargs = {}
         if computer is not None:
-            # I convert it from various type of inputs
-            # (string, DbComputer, Computer)
-            # to a DbComputer type
-            kwargs['dbcomputer'] = Computer.get(computer).dbcomputer
+            if isinstance(computer, six.string_types):
+                computer = self._backend.computers.get(name=computer)
+
+            # Get the DbComputer
+            kwargs['dbcomputer'] = computer.dbcomputer
+
         if user is not None:
             kwargs['user'] = user
         if only_enabled:
@@ -74,8 +93,9 @@ class QueryManagerDjango(AbstractQueryManager):
             computer_users_ids = queryresults.values_list(
                 'dbcomputer__id', 'user__id').distinct()
             computer_users = []
-            for computer_id, user_id in computer_users_ids:  # return cls(dbcomputer=DbComputer.get_dbcomputer(computer))DbNode.objects.get(pk=pk).get_aiida_class()
-                computer_users.append((Computer.get(computer_id), DbUser.objects.get(pk=user_id).get_aiida_class()))
+            for computer_id, user_id in computer_users_ids:
+                comp = self._backend.computers.get(computer_id)
+                computer_users.append((comp, DbUser.objects.get(pk=user_id).get_aiida_class()))
             return computer_users
 
         elif limit is not None:
@@ -117,9 +137,9 @@ class QueryManagerDjango(AbstractQueryManager):
 
         total_query = s.query(dummy_model.DbNode)
         types_query = s.query(dummy_model.DbNode.type.label('typestring'),
-                                            sa.func.count(dummy_model.DbNode.id))
+                              sa.func.count(dummy_model.DbNode.id))
         stat_query = s.query(sa.func.date_trunc('day', dummy_model.DbNode.ctime).label('cday'),
-                           sa.func.count(dummy_model.DbNode.id))
+                             sa.func.count(dummy_model.DbNode.id))
 
         if user_pk is not None:
             total_query = total_query.filter(dummy_model.DbNode.user_id == user_pk)
@@ -342,11 +362,11 @@ def get_closest_parents(pks, *args, **kwargs):
     result_dict = {}
     all_chunk_pks = grouper(chunk_size, the_pks)
     if print_progress:
-        print "Chunk size:", chunk_size
+        print("Chunk size:", chunk_size)
 
     for i, chunk_pks in enumerate(all_chunk_pks):
         if print_progress:
-            print "Dealing with chunk #", i
+            print("Dealing with chunk #", i)
         result_chunk_dict = {}
         q_pks = Node.query(pk__in=chunk_pks).values_list('pk', flat=True)
         # Now I am looking for parents (depth=0) of the nodes in the chunk:

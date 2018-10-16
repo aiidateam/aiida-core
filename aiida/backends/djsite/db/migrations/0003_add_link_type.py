@@ -8,14 +8,15 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from __future__ import unicode_literals
+from __future__ import absolute_import
 
 from django.db import models, migrations
 import aiida.utils.timezone
-from aiida.backends.djsite.db.migrations import update_schema_version
+from aiida.backends.djsite.db.migrations import upgrade_schema_version
 
 
-
-SCHEMA_VERSION = "1.0.3"
+REVISION = '1.0.3'
+DOWN_REVISION = '1.0.2'
 
 
 class Migration(migrations.Migration):
@@ -95,5 +96,5 @@ class Migration(migrations.Migration):
             name='dblink',
             unique_together=set([]),
         ),
-        update_schema_version(SCHEMA_VERSION)
+        upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

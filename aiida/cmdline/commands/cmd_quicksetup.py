@@ -9,6 +9,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi quicksetup` command."""
+from __future__ import absolute_import
 import os
 import sys
 import hashlib
@@ -17,6 +18,7 @@ import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
+from aiida.cmdline.utils import echo
 from aiida.control.profile import setup_profile
 from aiida.control.postgres import Postgres, manual_setup_instructions, prompt_db_info
 
@@ -69,7 +71,7 @@ def quicksetup(profile_name, only_config, set_default, non_interactive, backend,
     # be named test_...
     import getpass
     osuser = getpass.getuser()
-    aiida_base_dir_hash = hashlib.md5(AIIDA_CONFIG_FOLDER).hexdigest()
+    aiida_base_dir_hash = hashlib.md5(AIIDA_CONFIG_FOLDER.encode('utf-8')).hexdigest()
     dbname = db_name or profile_name + '_' + osuser + '_' + aiida_base_dir_hash
 
     # default database user name is aiida_qs_<login-name>
@@ -84,10 +86,10 @@ def quicksetup(profile_name, only_config, set_default, non_interactive, backend,
     from aiida.common.setup import get_or_create_config
     confs = get_or_create_config()
     profs = confs.get('profiles', {})
-    for profile in profs.itervalues():
+    for profile in profs.values():
         if profile.get('AIIDADB_USER', '') == dbuser and not db_password:
             dbpass = profile.get('AIIDADB_PASS')
-            print 'using found password for {}'.format(dbuser)
+            echo.echo('using found password for {}'.format(dbuser))
             break
 
     try:

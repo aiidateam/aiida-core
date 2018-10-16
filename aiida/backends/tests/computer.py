@@ -10,6 +10,7 @@
 """
 Tests for the NWChem input plugins.
 """
+from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.transport import TransportFactory
 from aiida.common.exceptions import NotExistent
@@ -22,14 +23,9 @@ class TestComputer(AiidaTestCase):
         Test the get_transport method of Computer
         """
         import tempfile
-        from aiida.orm import Computer
-        from aiida.orm.backend import construct_backend
 
-        new_comp = Computer(name='bbb',
-                            hostname='localhost',
-                            transport_type='local',
-                            scheduler_type='direct',
-                            workdir='/tmp/aiida')
+        new_comp = self.backend.computers.create(name='bbb', hostname='localhost', transport_type='local',
+                                                 scheduler_type='direct', workdir='/tmp/aiida')
         new_comp.store()
 
         # Configure the computer - no parameters for local transport
@@ -48,21 +44,16 @@ class TestComputer(AiidaTestCase):
             self.assertEquals(transport.isfile(f.name), False)
 
     def test_delete(self):
-        from aiida.orm import Computer
-        new_comp = Computer(name='aaa',
-                            hostname='aaa',
-                            transport_type='local',
-                            scheduler_type='pbspro',
-                            workdir='/tmp/aiida')
+        new_comp = self.backend.computers.create(name='aaa', hostname='aaa', transport_type='local',
+                                                 scheduler_type='pbspro', workdir='/tmp/aiida')
         new_comp.store()
 
         comp_pk = new_comp.pk
 
-        check_computer = Computer.get(comp_pk)
+        check_computer = self.backend.computers.get(comp_pk)
         self.assertEquals(comp_pk, check_computer.pk)
 
-        from aiida.orm.computer import delete_computer
-        delete_computer(pk=comp_pk)
+        self.backend.computers.delete(comp_pk)
 
         with self.assertRaises(NotExistent):
-            Computer.get(comp_pk)
+            self.backend.computers.get(comp_pk)

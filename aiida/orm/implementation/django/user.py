@@ -8,11 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
+from functools import reduce
+
 from aiida.backends.djsite.db.models import DbUser
 from aiida.orm.user import User, UserCollection
 from aiida.utils.email import normalize_email
 from aiida.common.utils import type_check
-
 from . import utils
 
 

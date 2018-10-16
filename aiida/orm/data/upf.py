@@ -10,7 +10,10 @@
 """
 This module manages the UPF pseudopotentials in the local repository.
 """
+from __future__ import absolute_import
 import re
+
+import six
 
 import aiida.orm.user
 from aiida.orm.data.singlefile import SinglefileData
@@ -99,7 +102,7 @@ def get_pseudos_dict(structure, family_name):
     # Will contain a list of all species of the pseudo with given PK
     pseudo_species = defaultdict(list)
 
-    for kindname, pseudo in kind_pseudo_dict.iteritems():
+    for kindname, pseudo in kind_pseudo_dict.items():
         pseudo_dict[pseudo.pk] = pseudo
         pseudo_species[pseudo.pk].append(kindname)
 
@@ -315,19 +318,6 @@ def parse_upf(fname, check_filename=True):
     return parsed_data
 
 
-# def test_parser(folder):
-#    import os
-#    from aiida.common.exceptions import ParsingError
-#
-#    for fn in os.listdir(folder):
-#        if os.path.isfile(fn) and fn.lower().endswith('.upf'):
-#            try:
-#                data = parse_upf(os.path.join(folder, fn))
-#            except ParsingError as e:
-#                print "~~~~~~~~~~~~~~~~~~~~ ERROR: %s" % e.message
-
-
-
 class UpfData(SinglefileData):
     """
     Function not yet documented.
@@ -535,7 +525,7 @@ class UpfData(SinglefileData):
         if user is not None:
             group_query_params['user'] = user
 
-        if isinstance(filter_elements, basestring):
+        if isinstance(filter_elements, six.string_types):
             filter_elements = [filter_elements]
 
         if filter_elements is not None:

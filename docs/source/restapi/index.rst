@@ -116,7 +116,7 @@ AiiDA object(s) you want to request. The following resources are available:
 +============================================================================================+===================+
 | :py:class:`Calculation <aiida.orm.implementation.general.calculation.AbstractCalculation>` | ``/calculations`` |
 +--------------------------------------------------------------------------------------------+-------------------+
-| :py:class:`Computer <aiida.orm.implementation.general.computer.AbstractComputer>`          | ``/computers``    |
+| :py:class:`Computer <aiida.orm.computer.Computer>`                                         | ``/computers``    |
 +--------------------------------------------------------------------------------------------+-------------------+
 | :py:class:`Data <aiida.orm.data.Data>`                                                     | ``/data``         |
 +--------------------------------------------------------------------------------------------+-------------------+
@@ -124,7 +124,7 @@ AiiDA object(s) you want to request. The following resources are available:
 +--------------------------------------------------------------------------------------------+-------------------+
 | :py:class:`Node <aiida.orm.implementation.general.node.AbstractNode>`                      | ``/nodes``        |
 +--------------------------------------------------------------------------------------------+-------------------+
-| :py:class:`User <aiida.orm.user.User>`                                                     | ``/users``        |
+| :py:class:`User <aiida.orm.User>`                                                          | ``/users``        |
 +--------------------------------------------------------------------------------------------+-------------------+
 | :py:class:`BandsData <aiida.orm.data.array.bands.BandsData>`                               | ``/bands``        |
 +--------------------------------------------------------------------------------------------+-------------------+

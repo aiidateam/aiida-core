@@ -7,14 +7,41 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 from abc import ABCMeta, abstractmethod
+from six.moves import zip
+import six
 
 
+@six.add_metaclass(ABCMeta)
 class AbstractQueryManager(object):
-    __metaclass__ = ABCMeta
+    def __init__(self, backend):
+        """
+        :param backend: The AiiDA backend
+        :type backend: :class:`aiida.orm.Backend`
+        """
+        self._backend = backend
 
-    def __init__(self, *args, **kwargs):
+    @abstractmethod
+    def raw(self, query):
+        """Execute a raw SQL statement and return the result.
+
+        :param query: a string containing a raw SQL statement
+        :return: the result of the query
+        """
         pass
+
+    def get_duplicate_node_uuids(self):
+        """
+        Return a list of nodes that have an identical UUID
+
+        :return: list of tuples of (pk, uuid) of nodes with duplicate UUIDs
+        """
+        query = """
+            SELECT s.id, s.uuid FROM (SELECT *, COUNT(*) OVER(PARTITION BY uuid) AS c FROM db_dbnode)
+            AS s WHERE c > 1
+            """
+        return self.raw(query)
 
     # This is an example of a query that could be overriden by a better implementation,
     # for performance reasons:
@@ -105,7 +132,7 @@ class AbstractQueryManager(object):
             if limit is not None:
                 qb.limit(limit)
             returnresult = qb.all()
-            returnresult = zip(*returnresult)[0]
+            returnresult = next(zip(*returnresult))
         return returnresult
 
     def get_creation_statistics(
@@ -141,7 +168,7 @@ class AbstractQueryManager(object):
             def get_statistics_dict(dataset):
                 results = {}
                 for count, typestring in sorted(
-                        (v, k) for k, v in dataset.iteritems())[::-1]:
+                        (v, k) for k, v in dataset.items())[::-1]:
                     results[typestring] = count
                 return results
 
@@ -301,7 +328,7 @@ class AbstractQueryManager(object):
 
         return entry_list
 
-    def get_all_parents(self, node_pks, return_values=['id']):
+    def get_all_parents(self, node_pks, return_values=('id',)):
         """
         Get all the parents of given nodes
         :param node_pks: one node pk or an iterable of node pks

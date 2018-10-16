@@ -8,63 +8,99 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 import json
 import collections
-
+import six
 from django.db import IntegrityError, transaction
-from django.core.exceptions import ObjectDoesNotExist
 
 from aiida.backends.djsite.db.models import DbComputer
-from aiida.common.lang import override
-from aiida.orm.implementation.general.computer import AbstractComputer, Util as ComputerUtil
+from aiida.common.utils import type_check
 from aiida.common.exceptions import (NotExistent, ConfigurationError,
                                      InvalidOperation, DbContentError)
+from aiida.orm.computer import Computer, ComputerCollection
+from . import utils
 
-class Computer(AbstractComputer):
+
+class DjangoComputerCollection(ComputerCollection):
+    def create(self, name, hostname, description='', transport_type='', scheduler_type='', workdir=None,
+               enabled_state=True):
+        return DjangoComputer(self.backend, name=name, hostname=hostname, description=description,
+                              transport_type=transport_type, scheduler_type=scheduler_type, workdir=workdir,
+                              enabled=enabled_state)
+
+    def list_names(self):
+        from aiida.backends.djsite.db.models import DbComputer
+        return list(DbComputer.objects.filter().values_list('name', flat=True))
+
+    def delete(self, id):
+        """ Delete the computer with the given id """
+        from django.db.models.deletion import ProtectedError
+        try:
+            DbComputer.objects.filter(pk=id).delete()
+        except ProtectedError:
+            raise InvalidOperation("Unable to delete the requested computer: there"
+                                   "is at least one node using this computer")
+
+    def from_dbmodel(self, computer):
+        """
+        Create a DjangoComputer from a DbComputer instance
+
+        :param computer: The dbcomputer instance
+        :type computer: :class:`aiida.backends.djsite.db.models.DbComputer`
+        :return: The DjangoComputer instance
+        :rtype: :class:`aiida.orm.implementation.django.computer.DjangoComputer`
+        """
+        return DjangoComputer.from_dbmodel(computer, self.backend)
+
+
+class DjangoComputer(Computer):
+    @classmethod
+    def from_dbmodel(cls, dbmodel, backend):
+        """
+        Create a DjangoUser from a dbmodel instance
+
+        :param dbmodel: The dbmodel instance
+        :type dbmodel: :class:`aiida.backends.djsite.db.models.DbComputer`
+        :param backend: The backend
+        :type backend: :class:`aiida.orm.implementation.django.backend.DjangoBackend`
+        :return: A DjangoComputer instance
+        :rtype: :class:`aiida.orm.implementation.django.computer.DjangoComputer`
+        """
+        type_check(dbmodel, DbComputer)
+        computer = cls.__new__(cls)
+        super(DjangoComputer, computer).__init__(backend)
+        computer._dbcomputer = utils.ModelWrapper(dbmodel)
+        return computer
+
     @property
     def uuid(self):
-        return unicode(self._dbcomputer.uuid)
+        return six.text_type(self._dbcomputer.uuid)
 
     @property
     def pk(self):
-        return self.dbcomputer.pk
+        return self._dbcomputer.pk
 
     @property
     def id(self):
-        return self.dbcomputer.pk
+        return self._dbcomputer.pk
 
-    def __init__(self, **kwargs):
-        super(Computer, self).__init__()
-
-        uuid = kwargs.pop('uuid', None)
-        if uuid is not None:
-            if kwargs:
-                raise ValueError("If you pass a uuid, you cannot pass any "
-                                 "further parameter")
-            try:
-                dbcomputer = DbComputer.objects.get(uuid=uuid)
-            except ObjectDoesNotExist:
-                raise NotExistent("No entry with UUID={} found".format(uuid))
-
-            self._dbcomputer = dbcomputer
-        else:
-            if 'dbcomputer' in kwargs:
-                dbcomputer = kwargs.pop('dbcomputer')
-                if not (isinstance(dbcomputer, DbComputer)):
-                    raise TypeError("dbcomputer must be of type DbComputer")
-                self._dbcomputer = dbcomputer
-
-                if kwargs:
-                    raise ValueError("If you pass a dbcomputer parameter, "
-                                     "you cannot pass any further parameter")
-            else:
-                self._dbcomputer = DbComputer()
-
-            # Set all remaining parameters, stop if unknown
-            self.set(**kwargs)
+    def __init__(self, backend, name, hostname, description='', transport_type='', scheduler_type='', workdir=None,
+                 enabled=True):
+        super(Computer, self).__init__(backend)
+        self._dbcomputer = utils.ModelWrapper(DbComputer(
+            name=name,
+            hostname=hostname,
+            description=description,
+            transport_type=transport_type,
+            scheduler_type=scheduler_type,
+            enabled=enabled
+        ))
+        if workdir:
+            self.set_workdir(workdir)
 
     def set(self, **kwargs):
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             try:
                 method = getattr(self, 'set_{}'.format(k))
             except AttributeError:
@@ -74,11 +110,6 @@ class Computer(AbstractComputer):
                 raise ValueError("Unable to set '{0}', set_{0} is not "
                                  "callable!".format(k))
             method(v)
-
-    @classmethod
-    def list_names(cls):
-        from aiida.backends.djsite.db.models import DbComputer
-        return list(DbComputer.objects.filter().values_list('name', flat=True))
 
     @property
     def full_text_info(self):
@@ -103,7 +134,7 @@ class Computer(AbstractComputer):
             ret_lines.append(" * Default number of cpus per machine: {}".format(
                 def_cpus_machine))
         ret_lines.append(" * Used by:        {} nodes".format(
-            len(self.dbcomputer.dbnodes.all())))
+            len(self._dbcomputer.dbnodes.all())))
 
         ret_lines.append(" * prepend text:")
         if self.get_prepend_text().strip():
@@ -121,17 +152,12 @@ class Computer(AbstractComputer):
         return "\n".join(ret_lines)
 
     @property
-    def to_be_stored(self):
-        return (self._dbcomputer.pk is None)
-
-    @classmethod
-    def get(cls, computer):
-        from aiida.backends.djsite.db.models import DbComputer
-        return cls(dbcomputer=DbComputer.get_dbcomputer(computer))
+    def is_stored(self):
+        return self._dbcomputer.pk is not None
 
     def copy(self):
         from aiida.backends.djsite.db.models import DbComputer
-        if self.to_be_stored:
+        if not self.is_stored:
             raise InvalidOperation(
                 "You can copy a computer only after having stored it")
         newdbcomputer = DbComputer.objects.get(pk=self.pk)
@@ -144,24 +170,20 @@ class Computer(AbstractComputer):
     @property
     def dbcomputer(self):
         """
-        Return the DbComputer. If already saved, reloads it from the DB.
+        Return the underlying DbComputer
 
         :return: Return the DbComputer
+        :rtype: :class:`aiida.backends.djsite.db.models.DbComputer`
         """
-        if self._dbcomputer.pk:
-            self._dbcomputer = DbComputer.objects.get(pk=self._dbcomputer.pk)
-
-        return self._dbcomputer
+        return self._dbcomputer._model
 
     def store(self):
-        # if self.to_be_stored:
-
         # As a first thing, I check if the data is valid
         self.validate()
+        sid = transaction.savepoint()
         try:
             # transactions are needed here for Postgresql:
             # https://docs.djangoproject.com/en/1.5/topics/db/transactions/#handling-exceptions-within-postgresql-transactions
-            sid = transaction.savepoint()
             self._dbcomputer.save()
             transaction.savepoint_commit(sid)
         except IntegrityError:
@@ -170,37 +192,30 @@ class Computer(AbstractComputer):
                 "Integrity error, probably the hostname already exists in the"
                 " DB")
 
-        # This is useful because in this way I can do
-        # c = Computer().store()
         return self
 
     @property
     def name(self):
-        return self.dbcomputer.name
+        return self._dbcomputer.name
 
     @property
     def description(self):
-        return self.dbcomputer.description
+        return self._dbcomputer.description
 
     @property
     def hostname(self):
-        return self.dbcomputer.hostname
+        return self._dbcomputer.hostname
 
     def _get_metadata(self):
-        return json.loads(self.dbcomputer.metadata)
+        return json.loads(self._dbcomputer.metadata)
 
     def _set_metadata(self, metadata_dict):
         # When setting, use the uncached _dbcomputer
-
-        # if not self.to_be_stored:
-        #            raise ModificationNotAllowed("Cannot set a property after having stored the entry")
         self._dbcomputer.metadata = json.dumps(metadata_dict)
-        if not self.to_be_stored:
-            self._dbcomputer.save()
 
     def get_transport_params(self):
         try:
-            return json.loads(self.dbcomputer.transport_params)
+            return json.loads(self._dbcomputer.transport_params)
         except ValueError:
             raise DbContentError(
                 "Error while reading transport_params for computer {}".format(
@@ -208,66 +223,53 @@ class Computer(AbstractComputer):
 
     def set_transport_params(self, val):
         # When setting, use the uncached _dbcomputer
-
-        # if self.to_be_stored:
         try:
             self._dbcomputer.transport_params = json.dumps(val)
         except ValueError:
             raise ValueError("The set of transport_params are not JSON-able")
-        if not self.to_be_stored:
-            self._dbcomputer.save()
 
     def get_workdir(self):
         try:
-            return self.dbcomputer.get_workdir()
+            return self._dbcomputer.get_workdir()
         except ConfigurationError:
             # This happens the first time: I provide a reasonable default value
             return "/scratch/{username}/aiida_run/"
 
     def get_shebang(self):
         try:
-            return self.dbcomputer.get_shebang()
+            return self._dbcomputer.get_shebang()
         except ConfigurationError:
             # This happens the first time: I provide a reasonable default value
             return "#!/bin/bash"
 
-
     def set_workdir(self, val):
-        # if self.to_be_stored:
-        if not isinstance(val, basestring):
+        if not isinstance(val, six.string_types):
             raise ValueError("Computer work directory needs to be string, got {}".format(val))
 
         metadata = self._get_metadata()
         metadata['workdir'] = val
         self._set_metadata(metadata)
 
-
     def get_name(self):
-        return self.dbcomputer.name
+        return self._dbcomputer.name
 
     def set_name(self, val):
         # When setting, use the uncached _dbcomputer
         self._dbcomputer.name = val
-        if not self.to_be_stored:
-            self._dbcomputer.save()
 
     def get_hostname(self):
-        return self.dbcomputer.hostname
+        return self._dbcomputer.hostname
 
     def set_hostname(self, val):
         # When setting, use the uncached _dbcomputer
         self._dbcomputer.hostname = val
-        if not self.to_be_stored:
-            self._dbcomputer.save()
 
     def get_description(self):
-        return self.dbcomputer.description
+        return self._dbcomputer.description
 
     def set_description(self, val):
         # When setting, use the uncached _dbcomputer
         self._dbcomputer.description = val
-        if not self.to_be_stored:
-            self._dbcomputer.save()
 
     def get_calculations_on_computer(self):
         from aiida.backends.djsite.db.models import DbNode
@@ -275,7 +277,7 @@ class Computer(AbstractComputer):
                                      type__startswith='calculation')
 
     def is_enabled(self):
-        return self.dbcomputer.enabled
+        return self._dbcomputer.enabled
 
     def set_enabled_state(self, enabled):
         """
@@ -285,38 +287,17 @@ class Computer(AbstractComputer):
         """
         # When setting, use the uncached _dbcomputer
         self._dbcomputer.enabled = enabled
-        if not self.to_be_stored:
-            self._dbcomputer.save()
 
     def get_scheduler_type(self):
-        return self.dbcomputer.scheduler_type
+        return self._dbcomputer.scheduler_type
 
     def set_scheduler_type(self, val):
         # When setting, use the uncached _dbcomputer
         self._dbcomputer.scheduler_type = val
-        if not self.to_be_stored:
-            self._dbcomputer.save()
 
     def get_transport_type(self):
-        return self.dbcomputer.transport_type
+        return self._dbcomputer.transport_type
 
     def set_transport_type(self, val):
         # When setting, use the uncached _dbcomputer
         self._dbcomputer.transport_type = val
-        if not self.to_be_stored:
-            self._dbcomputer.save()
-
-
-class Util(ComputerUtil):
-    @override
-    def delete_computer(self, pk):
-        """
-        Delete the computer with the given pk.
-        :param pk: The computer pk.
-        """
-        from django.db.models.deletion import ProtectedError
-        try:
-            DbComputer.objects.filter(pk=pk).delete()
-        except ProtectedError:
-            raise InvalidOperation("Unable to delete the requested computer: there"
-                                   "is at least one node using this computer")

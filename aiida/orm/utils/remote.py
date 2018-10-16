@@ -1,5 +1,15 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+from __future__ import absolute_import
 import os
+import six
 
 
 def clean_remote(transport, path):
@@ -10,7 +20,7 @@ def clean_remote(transport, path):
     :param transport: an open Transport channel
     :param path: an absolute path on the remote made available through the transport
     """
-    if not isinstance(path, basestring):
+    if not isinstance(path, six.string_types):
         raise ValueError('the path has to be a string type')
 
     if not os.path.isabs(path):

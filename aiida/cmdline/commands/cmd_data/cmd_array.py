@@ -7,33 +7,26 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-This allows to manage ArrayData objects from command line.
-"""
+"""`verdi data array` command."""
+from __future__ import absolute_import
+
 from aiida.cmdline.commands.cmd_data import verdi_data
-from aiida.cmdline.params import arguments
-from aiida.cmdline.utils import echo
+from aiida.cmdline.params import arguments, types
 
 
 @verdi_data.group('array')
 def array():
-    """
-    Manipulate ArrayData objects
-    """
+    """Manipulate ArrayData objects."""
     pass
 
 
 @array.command('show')
-@arguments.NODES()
-def show(nodes):
-    """
-    Visualize array object
-    """
-    from aiida.orm.data.array import ArrayData
+@arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:array',)))
+def array_show(data):
+    """Visualize ArrayData objects."""
     from aiida.cmdline.utils.echo import echo_dictionary
-    for node in nodes:
-        if not isinstance(node, ArrayData):
-            echo.echo_critical("Node {} is of class {} instead of" " {}".format(node, type(node), ArrayData))
+
+    for node in data:
         the_dict = {}
         for arrayname in node.arraynames():
             the_dict[arrayname] = node.get_array(arrayname).tolist()

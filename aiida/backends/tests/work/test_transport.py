@@ -1,9 +1,24 @@
+# -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+from __future__ import absolute_import
+import unittest
+
+import six
+from six.moves import range
 from tornado.gen import coroutine, Return
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.work.transports import TransportQueue
 
 
+@unittest.skipIf(six.PY3, "Broken on Python 3")
 class TestTransportQueue(AiidaTestCase):
     """ Tests for the transport queue """
 

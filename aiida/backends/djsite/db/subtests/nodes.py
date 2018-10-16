@@ -11,15 +11,30 @@
 Tests for nodes, attributes and links
 """
 
+from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.node import Node
-
 
 
 class TestDataNodeDjango(AiidaTestCase):
     """
     These tests check the features of Data nodes that differ from the base Node
     """
+
+    def test_uuid_uniquess(self):
+        """
+        A uniqueness constraint on the UUID column of the Node model should prevent multiple nodes with identical UUID
+        """
+        from django.db import IntegrityError
+
+        a = Node()
+        b = Node()
+        b.dbnode.uuid = a.uuid
+        a.store()
+
+        with self.assertRaises(IntegrityError):
+            b.store()
+
     def test_links_and_queries(self):
         from aiida.backends.djsite.db.models import DbNode, DbLink
 
@@ -259,10 +274,10 @@ class TestNodeBasicDjango(AiidaTestCase):
             'list': 66.3,
         }
 
-        for k, v in extras_to_set.iteritems():
+        for k, v in extras_to_set.items():
             a.set_extra(k, v)
 
-        for k, v in new_extras.iteritems():
+        for k, v in new_extras.items():
             # I delete one by one the keys and check if the operation is
             # performed correctly
             a.set_extra(k, v)
@@ -329,7 +344,7 @@ class TestNodeBasicDjango(AiidaTestCase):
         """
         """
         from aiida.orm import load_node
-        from aiida.common.exceptions import NotExistent, InputValidationError
+        from aiida.common.exceptions import InputValidationError
 
         a = Node()
         a.store()
@@ -346,5 +361,3 @@ class TestNodeBasicDjango(AiidaTestCase):
             load_node(uuid=a.pk)
         with self.assertRaises(InputValidationError):
             load_node()
-
-

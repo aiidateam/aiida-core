@@ -7,10 +7,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from aiida.common.exceptions import InternalError
+from __future__ import absolute_import
 from abc import ABCMeta, abstractmethod
 
+import six
 
+from aiida.common.exceptions import InternalError
+
+
+@six.add_metaclass(ABCMeta)
 class AiidaTestImplementation(object):
     """
     For each implementation, define what to do at setUp and tearDown.
@@ -29,7 +34,10 @@ class AiidaTestImplementation(object):
     These two are then exposed by the ``self.get_computer()`` and ``self.get_user_email()``
     methods.
     """
-    __metaclass__ = ABCMeta
+
+    # This should be set by the implementing class in setUpClass_method()
+    backend = None  # type: :class:`aiida.orm.backend.Backend`
+    computer = None  # type: :class:`aiida.orm.Computer`
 
     @abstractmethod
     def setUpClass_method(self):
@@ -62,12 +70,17 @@ class AiidaTestImplementation(object):
         """
         pass
 
-    @abstractmethod
     def insert_data(self):
         """
         This method inserts default data into the database.
         """
-        pass
+        self.computer = self.backend.computers.create(
+            name='localhost',
+            hostname='localhost',
+            transport_type='local',
+            scheduler_type='pbspro',
+            workdir='/tmp/aiida')
+        self.computer.store()
 
     def get_computer(self):
         """
@@ -86,4 +99,3 @@ class AiidaTestImplementation(object):
             return self.user_email
         except AttributeError:
             raise InternalError("The AiiDA Test implementation should define a self.computer in the setUpClass_method")
-

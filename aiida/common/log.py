@@ -7,9 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 import logging
 from copy import deepcopy
-from logging import config
 from aiida.common import setup
 
 # Custom logging level, intended specifically for informative log messages
@@ -150,6 +150,7 @@ LOGGING = {
     },
 }
 
+
 def configure_logging(daemon=False, daemon_log_file=None):
     """
     Setup the logging by retrieving the LOGGING dictionary from aiida and passing it to
@@ -162,6 +163,8 @@ def configure_logging(daemon=False, daemon_log_file=None):
         of the default 'console' StreamHandler
     :param daemon_log_file: absolute filepath of the log file for the RotatingFileHandler
     """
+    from logging.config import dictConfig
+
     config = deepcopy(LOGGING)
     daemon_handler_name = 'daemon_log_file'
 
@@ -181,10 +184,10 @@ def configure_logging(daemon=False, daemon_log_file=None):
             'maxBytes': 100000,
         }
 
-        for name, logger in config.get('loggers', {}).iteritems():
+        for name, logger in config.get('loggers', {}).items():
             logger.setdefault('handlers', []).append(daemon_handler_name)
 
-    logging.config.dictConfig(config)
+    dictConfig(config)
 
 
 def get_dblogger_extra(obj):

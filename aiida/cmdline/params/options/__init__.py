@@ -1,13 +1,21 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """Provide reusable options, helping to keep interfaces consistent."""
 # yapf: disable
 
+from __future__ import absolute_import
 import click
 
 from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 from aiida.cmdline.params import types
 from aiida.cmdline.params.options.conditional import ConditionalOption
-from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.params.options.multivalue import MultipleValueOption
 from aiida.cmdline.params.options.overridable import OverridableOption
 
@@ -103,6 +111,15 @@ SILENT = OverridableOption(
     '-s', '--silent',
     is_flag=True, default=False,
     help='Suppress any output printed to stdout.')
+
+VISUALIZATION_FORMAT = OverridableOption(
+    '-F', '--format', 'fmt', show_default=True, help='Format of the visualized output.')
+
+INPUT_FORMAT = OverridableOption(
+    '-F', '--format', 'fmt', show_default=True, help='Format of the input file.')
+
+EXPORT_FORMAT = OverridableOption(
+    '-F', '--format', 'fmt', show_default=True, help='Format of the exported file.')
 
 ARCHIVE_FORMAT = OverridableOption(
     '-F', '--archive-format',
@@ -307,3 +324,29 @@ TIMEOUT = OverridableOption(
     '-t', '--timeout',
     type=click.FLOAT, default=5.0, show_default=True,
     help='Time in seconds to wait for a response before timing out.')
+
+FORMULA_MODE = OverridableOption(
+    '-f', '--formula-mode',
+    type=click.Choice(['hill', 'hill_compact', 'reduce', 'group', 'count', 'count_compact']),
+    default='hill',
+    help='Mode for printing the chemical formula.')
+
+TRAJECTORY_INDEX = OverridableOption(
+    '-i', '--trajectory-index', 'trajectory_index',
+    type=click.INT,
+    default=None,
+    help='Specific step of the Trajecotry to select.')
+
+WITH_ELEMENTS = OverridableOption(
+    '-e', '--with-elements', 'elements',
+    type=click.STRING,
+    cls=MultipleValueOption,
+    default=None,
+    help='Only select objects containing these elements.')
+
+WITH_ELEMENTS_EXCLUSIVE = OverridableOption(
+    '-E', '--with-elements-exclusive', 'elements_exclusive',
+    type=click.STRING,
+    cls=MultipleValueOption,
+    default=None,
+    help='Only select objects containing only these and no other elements.')

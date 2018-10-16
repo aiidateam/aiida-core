@@ -8,6 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
+import datetime
+from django.utils import timezone
 from aiida.common.log import get_dblogger_extra
 
 

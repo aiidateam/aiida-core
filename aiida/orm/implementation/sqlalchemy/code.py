@@ -8,12 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 import os
 
 from aiida.backends.sqlalchemy.models.computer import DbComputer
-
-from aiida.common.exceptions import NotExistent, MultipleObjectsError, InvalidOperation
-
+from aiida.common.exceptions import InvalidOperation
 from aiida.orm.implementation.general.code import AbstractCode
 from aiida.orm.implementation.sqlalchemy.computer import Computer
 
@@ -113,15 +112,13 @@ def delete_code(code):
     computer.delete().
     """
     if not isinstance(code, Code):
-        raise TypeError("code must be an instance of "
-                        "aiida.orm.computer.Code")
+        raise TypeError('code must be an instance of aiida.orm.computer.Code')
 
     existing_outputs = code.get_outputs()
 
     if len(existing_outputs) != 0:
-        raise InvalidOperation(
-            "Unable to delete the requested code because it "
-            "has {} output links".format(len(existing_outputs)))
+        raise InvalidOperation('Unable to delete {} because it has {} output links'.format(
+            code.full_label, len(existing_outputs)))
     else:
         repo_folder = code._repository_folder
         from aiida.backends.sqlalchemy import get_scoped_session
@@ -133,5 +130,6 @@ def delete_code(code):
         except:
             session.rollback()
             raise
-    # If all went well, erase also the folder
-    repo_folder.erase()
+        else:
+            # If all went well, erase also the folder
+            repo_folder.erase()

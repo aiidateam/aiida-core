@@ -10,6 +10,7 @@
 """
 This module defines the main data structures used by Calculations.
 """
+from __future__ import absolute_import
 from aiida.common.extendeddicts import DefaultFieldsAttributeDict, Enumerate
 
 class CalcState(Enumerate):
@@ -70,7 +71,7 @@ def sort_states(list_states, use_key=False):
 
     except KeyError as e:
         raise ValueError("At least one of the provided states is not "
-                         "valid ({})".format(e.message))
+                         "valid ({})".format(e.args[0]))
 
     # In-place sort
     list_to_sort.sort()

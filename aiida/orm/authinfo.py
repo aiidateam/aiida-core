@@ -7,7 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 import abc
+import six
 
 from aiida.transport import TransportFactory
 from aiida.common.exceptions import (ConfigurationError, MissingPluginError)
@@ -16,10 +18,9 @@ from .backend import Collection, CollectionEntry
 __all__ = ['AuthInfo', 'AuthInfoCollection']
 
 
+@six.add_metaclass(abc.ABCMeta)
 class AuthInfoCollection(Collection):
     """The collection of AuthInfo entries."""
-
-    __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
     def create(self, computer, user):
@@ -55,14 +56,13 @@ class AuthInfoCollection(Collection):
         pass
 
 
+@six.add_metaclass(abc.ABCMeta)
 class AuthInfo(CollectionEntry):
     """
     Base class to map a DbAuthInfo, that contains computer configuration
     specific to a given user (authorization info and other metadata, like
     how often to check on a given computer etc.)
     """
-
-    __metaclass__ = abc.ABCMeta
 
     def pk(self):
         """
@@ -172,9 +172,9 @@ class AuthInfo(CollectionEntry):
         computer = self.computer
         try:
             ThisTransport = TransportFactory(computer.get_transport_type())
-        except MissingPluginError as e:
+        except MissingPluginError as exc:
             raise ConfigurationError('No transport found for {} [type {}], message: {}'.format(
-                computer.hostname, computer.get_transport_type(), e.message))
+                computer.hostname, computer.get_transport_type(), exc))
 
-        params = dict(computer.get_transport_params().items() + self.get_auth_params().items())
+        params = dict(list(computer.get_transport_params().items()) + list(self.get_auth_params().items()))
         return ThisTransport(machine=computer.hostname, **params)

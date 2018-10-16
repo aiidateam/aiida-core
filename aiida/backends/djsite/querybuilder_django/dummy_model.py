@@ -13,10 +13,11 @@ using SQLAlchemy.
 This is done to query the database with more performant ORM of SA.
 """
 
+from __future__ import absolute_import
 from sqlalchemy.ext.declarative import declarative_base
 
 from sqlalchemy import (
-    Column, Table, ForeignKey, UniqueConstraint,create_engine,
+    Column, Table, ForeignKey, UniqueConstraint, create_engine,
     select, func, join, and_, or_, not_, except_, case, exists,
     text
 )
@@ -40,12 +41,11 @@ from sqlalchemy.sql.expression import FunctionElement, cast
 from sqlalchemy.sql.base import ImmutableColumnCollection
 from sqlalchemy.ext.compiler import compiles
 
-
 # SETTINGS:
 from aiida.common.setup import get_profile_config
 from aiida.backends import settings
 
-#EXCEPTIONS
+# EXCEPTIONS
 from aiida.common.exceptions import DbContentError, MissingPluginError
 
 # MISC
@@ -55,6 +55,7 @@ from aiida.common.datastructures import (calc_states, _sorted_datastates,
                                          sort_states)
 
 Base = declarative_base()
+
 
 class DbLink(Base):
     __tablename__ = "db_dblink"
@@ -72,34 +73,36 @@ class DbLink(Base):
             initially="DEFERRED"
         )
     )
-    type=Column(String(255))
+    type = Column(String(255))
     input = relationship("DbNode", primaryjoin="DbLink.input_id == DbNode.id")
     output = relationship("DbNode", primaryjoin="DbLink.output_id == DbNode.id")
     label = Column(String(255), index=True, nullable=False)
+
 
 class DbCalcState(Base):
     __tablename__ = "db_dbcalcstate"
     id = Column(Integer, primary_key=True)
     dbnode = relationship(
-            'DbNode',
-            backref=backref('dbstates', passive_deletes=True)
-        )
+        'DbNode',
+        backref=backref('dbstates', passive_deletes=True)
+    )
     state = Column(String(255))
     time = Column(DateTime(timezone=True), default=timezone.now)
     dbnode_id = Column(
-            Integer,
-            ForeignKey(
-                'db_dbnode.id', ondelete="CASCADE",
-                deferrable=True, initially="DEFERRED"
-            )
+        Integer,
+        ForeignKey(
+            'db_dbnode.id', ondelete="CASCADE",
+            deferrable=True, initially="DEFERRED"
         )
+    )
     __table_args__ = (
         UniqueConstraint('dbnode_id', 'state'),
     )
 
+
 class DbAttribute(Base):
     __tablename__ = "db_dbattribute"
-    id  = Column(Integer, primary_key = True)
+    id = Column(Integer, primary_key=True)
     dbnode_id = Column(Integer, ForeignKey('db_dbnode.id'))
     key = Column(String(255))
     datatype = Column(String(10))
@@ -107,13 +110,12 @@ class DbAttribute(Base):
     fval = Column(Float, default=None, nullable=True)
     ival = Column(Integer, default=None, nullable=True)
     bval = Column(Boolean, default=None, nullable=True)
-    dval = Column(DateTime, default=None, nullable = True)
-
+    dval = Column(DateTime, default=None, nullable=True)
 
 
 class DbExtra(Base):
     __tablename__ = "db_dbextra"
-    id  = Column(Integer, primary_key = True)
+    id = Column(Integer, primary_key=True)
     dbnode_id = Column(Integer, ForeignKey('db_dbnode.id'))
     key = Column(String(255))
     datatype = Column(String(10))
@@ -121,7 +123,7 @@ class DbExtra(Base):
     fval = Column(Float, default=None, nullable=True)
     ival = Column(Integer, default=None, nullable=True)
     bval = Column(Boolean, default=None, nullable=True)
-    dval = Column(DateTime, default=None, nullable = True)
+    dval = Column(DateTime, default=None, nullable=True)
 
 
 class DbComputer(Base):
@@ -153,6 +155,7 @@ class DbComputer(Base):
         )
         return djcomputer.get_aiida_class()
 
+
 class DbUser(Base):
     __tablename__ = "db_dbuser"
 
@@ -172,7 +175,7 @@ class DbUser(Base):
     def get_aiida_class(self):
         from aiida.backends.djsite.db.models import DbUser as DjangoSchemaDbUser
         djuser = DjangoSchemaDbUser(
-            id=self.id,email=self.email, password=self.password,
+            id=self.id, email=self.email, password=self.password,
             first_name=self.first_name, last_name=self.last_name,
             institution=self.institution, is_staff=self.is_staff,
             is_active=self.is_active, last_login=self.last_login,
@@ -186,14 +189,15 @@ table_groups_nodes = Table(
     Base.metadata,
     Column('id', Integer, primary_key=True),
     Column(
-            'dbnode_id', Integer,
-            ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")
-        ),
+        'dbnode_id', Integer,
+        ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")
+    ),
     Column(
-            'dbgroup_id', Integer,
-            ForeignKey('db_dbgroup.id', deferrable=True, initially="DEFERRED")
-        )
+        'dbgroup_id', Integer,
+        ForeignKey('db_dbgroup.id', deferrable=True, initially="DEFERRED")
+    )
 )
+
 
 class DbGroup(Base):
     __tablename__ = "db_dbgroup"
@@ -209,11 +213,11 @@ class DbGroup(Base):
     description = Column(Text, nullable=True)
 
     user_id = Column(
-            Integer,
-            ForeignKey(
-                'db_dbuser.id', ondelete='CASCADE',
-                deferrable=True, initially="DEFERRED")
-            )
+        Integer,
+        ForeignKey(
+            'db_dbuser.id', ondelete='CASCADE',
+            deferrable=True, initially="DEFERRED")
+    )
     user = relationship('DbUser', backref=backref('dbgroups', cascade='merge'))
 
     dbnodes = relationship('DbNode', secondary=table_groups_nodes,
@@ -228,21 +232,21 @@ class DbGroup(Base):
             return '<DbGroup [type: {}] "{}">'.format(self.type, self.name)
         else:
             return '<DbGroup [user-defined] "{}">'.format(self.name)
+
     def get_aiida_class(self):
         from aiida.orm.implementation.django.group import Group as DjangoAiidaGroup
         from aiida.backends.djsite.db.models import DbGroup as DjangoSchemaDbGroup
         dbgroup = DjangoSchemaDbGroup(
-            id = self.id,
-            type = self.type,
-            uuid = self.uuid,
-            name = self.name,
-            time = self.time,
-            description  = self.description,
-            user_id = self.user_id,
+            id=self.id,
+            type=self.type,
+            uuid=self.uuid,
+            name=self.name,
+            time=self.time,
+            description=self.description,
+            user_id=self.user_id,
         )
 
         return DjangoAiidaGroup(dbgroup=dbgroup)
-
 
 
 class DbNode(Base):
@@ -278,15 +282,13 @@ class DbNode(Base):
     attributes = relationship('DbAttribute', uselist=True, backref='dbnode')
     extras = relationship('DbExtra', uselist=True, backref='dbnode')
 
-
-
     outputs = relationship(
         "DbNode",
-        secondary       =   "db_dblink",
-        primaryjoin     =   "DbNode.id == DbLink.input_id",
-        secondaryjoin   =   "DbNode.id == DbLink.output_id",
-        backref         =   backref("inputs", passive_deletes=True),
-        passive_deletes =   True
+        secondary="db_dblink",
+        primaryjoin="DbNode.id == DbLink.input_id",
+        secondaryjoin="DbNode.id == DbLink.output_id",
+        backref=backref("inputs", passive_deletes=True),
+        passive_deletes=True
     )
 
     def get_aiida_class(self):
@@ -331,7 +333,6 @@ class DbNode(Base):
         return select([DbUser.email]).where(DbUser.id == cls.user_id).label(
             'user_email')
 
-
     # Computer name
     @hybrid_property
     def computer_name(self):
@@ -347,7 +348,7 @@ class DbNode(Base):
         database)
         """
         return select([DbComputer.name]).where(DbComputer.id ==
-                                                 cls.dbcomputer_id).label(
+                                               cls.dbcomputer_id).label(
             'computer_name')
 
     # State
@@ -360,10 +361,10 @@ class DbNode(Base):
             return None
         all_states = DbCalcState.query.filter(DbCalcState.dbnode_id == self.id).all()
         if all_states:
-            #return max((st.time, st.state) for st in all_states)[1]
+            # return max((st.time, st.state) for st in all_states)[1]
             return sort_states(((dbcalcstate.state, dbcalcstate.state.value)
                                 for dbcalcstate in all_states),
-                                use_key=True)[0]
+                               use_key=True)[0]
         else:
             return None
 
@@ -380,7 +381,7 @@ class DbNode(Base):
             in enumerate(_sorted_datastates[::-1], start=1)}
         custom_sort_order = case(value=DbCalcState.state,
                                  whens=whens,
-                                 else_=100) # else: high value to put it at the bottom
+                                 else_=100)  # else: high value to put it at the bottom
 
         # Add numerical state to string, to allow to sort them
         states_with_num = select([
@@ -403,7 +404,7 @@ class DbNode(Base):
             DbCalcState.state.label('state_string'),
             calc_state_num.c.recent_state.label('recent_state'),
             custom_sort_order.label('num_state'),
-        ]).select_from(#DbCalcState).alias().join(
+        ]).select_from(  # DbCalcState).alias().join(
             join(DbCalcState, calc_state_num, DbCalcState.dbnode_id == calc_state_num.c.dbnode_id)).alias()
 
         # Get the association between each calc and only its corresponding most-recent-state row
@@ -413,13 +414,11 @@ class DbNode(Base):
         ]).select_from(all_states_q).where(all_states_q.c.num_state == all_states_q.c.recent_state).alias()
 
         # Final filtering for the actual query
-        return select([subq.c.state]).\
+        return select([subq.c.state]). \
             where(
-                    subq.c.dbnode_id == cls.id,
-                ).\
+            subq.c.dbnode_id == cls.id,
+        ). \
             label('laststate')
-
-
 
 
 profile = get_profile_config(settings.AIIDADB_PROFILE)
@@ -440,5 +439,3 @@ def get_aldjemy_session():
 
 
 session = get_aldjemy_session()
-
-

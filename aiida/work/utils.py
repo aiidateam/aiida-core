@@ -9,8 +9,11 @@
 ###########################################################################
 # pylint: disable=invalid-name
 """Utilities for the workflow engine."""
+from __future__ import absolute_import
 import contextlib
 import logging
+
+from six.moves import range
 import tornado.ioloop
 from tornado.concurrent import Future
 from tornado.gen import coroutine, sleep, Return
@@ -133,6 +136,8 @@ def exponential_backoff_retry(fct, initial_interval=10.0, max_attempts=5, logger
                 logger.warning('maximum attempts %d of calling %s, exceeded', max_attempts, coro.__name__)
                 raise
             else:
+                import traceback
+                traceback.print_exc()
                 logger.warning('iteration %d of %s excepted, retrying after %d seconds', iteration + 1, coro.__name__,
                                interval)
                 yield sleep(interval)

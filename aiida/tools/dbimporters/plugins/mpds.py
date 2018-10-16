@@ -8,10 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 import copy
 import enum
 import json
 import os
+
+from six.moves import range
 import requests
 
 from aiida.tools.dbimporters.baseclasses import CifEntry, DbEntry, DbImporter, DbSearchResults
@@ -187,7 +190,7 @@ class MpdsDbImporter(DbImporter):
         count = content['count']
         npages = content['npages']
 
-        for page in range(0, npages):
+        for page in range(npages):
 
             response = self.get(q=json.dumps(query), fmt=fmt, pagesize=pagesize, page=page)
             content = self.get_response_content(response, fmt=fmt)
@@ -199,7 +202,7 @@ class MpdsDbImporter(DbImporter):
                 else:
                     last = pagesize
 
-                for i in range(0, last):
+                for i in range(last):
                     result = content['out'][i]
                     result['license'] = content['disclaimer']
 

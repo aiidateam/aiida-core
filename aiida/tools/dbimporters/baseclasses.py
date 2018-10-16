@@ -9,6 +9,10 @@
 ###########################################################################
 
 
+from __future__ import absolute_import
+
+import six
+
 from aiida.orm.calculation.inline import optional_inline
 
 
@@ -212,9 +216,9 @@ class DbEntry(object):
     def __repr__(self):
         return "{}({})".format(self.__class__.__name__,
                                ",".join(["{}={}".format(k, '"{}"'.format(v)
-                               if issubclass(v.__class__, basestring)
+                               if issubclass(v.__class__, six.string_types)
                                else v)
-                                         for k, v in self.source.iteritems()]))
+                                         for k, v in self.source.items()]))
 
     @property
     def contents(self):
@@ -222,10 +226,10 @@ class DbEntry(object):
         Returns raw contents of a file as string.
         """
         if self._contents is None:
-            import urllib2
+            from six.moves import urllib
             from hashlib import md5
 
-            self._contents = urllib2.urlopen(self.source['uri']).read()
+            self._contents = urllib.request.urlopen(self.source['uri']).read()
             self.source['source_md5'] = md5(self._contents).hexdigest()
         return self._contents
 
@@ -273,9 +277,9 @@ class CifEntry(DbEntry):
         .. note:: To be removed, as it is duplicated in
             :py:class:`aiida.orm.data.cif.CifData`.
         """
-        import StringIO
+        from six.moves import cStringIO as StringIO
         from aiida.orm.data.cif import CifData
-        return CifData.read_cif(StringIO.StringIO(self.cif))
+        return CifData.read_cif(StringIO(self.cif))
 
     def get_cif_node(self, store=False, parse_policy='lazy'):
         """
@@ -290,7 +294,7 @@ class CifEntry(DbEntry):
 
         cifnode = None
 
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write(self.cif)
             f.flush()
             cifnode = CifData(file=f.name, source=self.source, parse_policy=parse_policy)
@@ -339,7 +343,7 @@ class UpfEntry(DbEntry):
 
         # Prefixing with an ID in order to start file name with the name
         # of the described element.
-        with tempfile.NamedTemporaryFile(prefix=self.source['id']) as f:
+        with tempfile.NamedTemporaryFile(mode='w+', prefix=self.source['id']) as f:
             f.write(self.contents)
             f.flush()
             upfnode = UpfData(file=f.name, source=self.source)

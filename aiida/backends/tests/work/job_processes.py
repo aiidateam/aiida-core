@@ -8,6 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
+
+import six
+
 from aiida import work
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.utils import classproperty
@@ -15,6 +19,7 @@ from aiida.orm.data.int import Int
 from aiida.orm.calculation.job.simpleplugins.templatereplacer import TemplatereplacerCalculation
 from aiida.work.persistence import ObjectLoader
 from aiida.work.job_processes import JobProcess
+from aiida.work.process_builder import JobProcessBuilder
 from aiida.work import Process
 
 from . import utils
@@ -46,7 +51,7 @@ class AdditionalParameterCalculation(TemplatereplacerCalculation):
         """
         if isinstance(kind, (tuple, list)):
             suffix_string = '_'.join(kind)
-        elif isinstance(kind, basestring):
+        elif isinstance(kind, six.string_types):
             suffix_string = kind
         else:
             raise TypeError('invalid additional parameter type')
@@ -68,9 +73,20 @@ class TestJobProcess(AiidaTestCase):
         self.runner = None
         work.set_runner(None)
 
-    def test_class_loader(self):
-        cl = ObjectLoader()
-        TemplatereplacerProcess = JobProcess.build(TemplatereplacerCalculation)
+    def test_job_calculation_process(self):
+        """Verify that JobCalculation.process returns a sub class of JobProcess with correct calculation class."""
+        process = TemplatereplacerCalculation.process()
+        self.assertTrue(issubclass(process, JobProcess))
+        self.assertEqual(process._calc_class, TemplatereplacerCalculation)
+
+    def test_job_calculation_get_builder(self):
+        """Verify that JobCalculation.get_builder() returns an instance of JobProcessBuilder."""
+        process = TemplatereplacerCalculation.process()
+        builder = TemplatereplacerCalculation.get_builder()
+        self.assertTrue(isinstance(builder, JobProcessBuilder))
+
+        # Class objects are actually different memory instances so can't use assertEqual on simply instances
+        self.assertEqual(builder.process_class.__name__, process.__name__)
 
     def test_job_process_set_label_and_description(self):
         """

@@ -9,6 +9,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi process` command."""
+from __future__ import absolute_import
 import click
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
@@ -59,9 +60,10 @@ def process_list(all_entries, process_state, exit_status, failed, past_days, lim
 @arguments.PROCESSES()
 @options.TIMEOUT()
 @decorators.with_dbenv()
+@decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_kill(processes, timeout):
     """Kill running processes."""
-    from aiida.work import RemoteException, DeliveryFailed, TimeoutError, new_blocking_control_panel
+    from aiida.work import RemoteException, DeliveryFailed, CommunicationTimeout, new_blocking_control_panel
 
     with new_blocking_control_panel(timeout=timeout) as control_panel:
         for process in processes:
@@ -75,19 +77,20 @@ def process_kill(processes, timeout):
                     echo.echo_success('killed Process<{}>'.format(process.pk))
                 else:
                     echo.echo_error('problem killing Process<{}>'.format(process.pk))
-            except TimeoutError:
+            except CommunicationTimeout:
                 echo.echo_error('call to kill Process<{}> timed out'.format(process.pk))
             except (RemoteException, DeliveryFailed) as exception:
-                echo.echo_error('failed to kill Process<{}>: {}'.format(process.pk, exception.message))
+                echo.echo_error('failed to kill Process<{}>: {}'.format(process.pk, exception))
 
 
 @verdi_process.command('pause')
 @arguments.PROCESSES()
 @options.TIMEOUT()
 @decorators.with_dbenv()
+@decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_pause(processes, timeout):
     """Pause running processes."""
-    from aiida.work import RemoteException, DeliveryFailed, TimeoutError, new_blocking_control_panel
+    from aiida.work import RemoteException, DeliveryFailed, CommunicationTimeout, new_blocking_control_panel
 
     with new_blocking_control_panel(timeout=timeout) as control_panel:
         for process in processes:
@@ -101,19 +104,20 @@ def process_pause(processes, timeout):
                     echo.echo_success('paused Process<{}>'.format(process.pk))
                 else:
                     echo.echo_error('problem pausing Process<{}>'.format(process.pk))
-            except TimeoutError:
+            except CommunicationTimeout:
                 echo.echo_error('call to pause Process<{}> timed out'.format(process.pk))
             except (RemoteException, DeliveryFailed) as exception:
-                echo.echo_error('failed to pause Process<{}>: {}'.format(process.pk, exception.message))
+                echo.echo_error('failed to pause Process<{}>: {}'.format(process.pk, exception))
 
 
 @verdi_process.command('play')
 @arguments.PROCESSES()
 @options.TIMEOUT()
 @decorators.with_dbenv()
+@decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_play(processes, timeout):
     """Play paused processes."""
-    from aiida.work import RemoteException, DeliveryFailed, TimeoutError, new_blocking_control_panel
+    from aiida.work import RemoteException, DeliveryFailed, CommunicationTimeout, new_blocking_control_panel
 
     with new_blocking_control_panel(timeout=timeout) as control_panel:
         for process in processes:
@@ -127,15 +131,16 @@ def process_play(processes, timeout):
                     echo.echo_success('played Process<{}>'.format(process.pk))
                 else:
                     echo.echo_critical('problem playing Process<{}>'.format(process.pk))
-            except TimeoutError:
+            except CommunicationTimeout:
                 echo.echo_error('call to play Process<{}> timed out'.format(process.pk))
             except (RemoteException, DeliveryFailed) as exception:
-                echo.echo_critical('failed to play Process<{}>: {}'.format(process.pk, exception.message))
+                echo.echo_critical('failed to play Process<{}>: {}'.format(process.pk, exception))
 
 
 @verdi_process.command('watch')
 @arguments.PROCESSES()
 @decorators.with_dbenv()
+@decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_watch(processes):
     """Watch the state transitions for a process."""
     from kiwipy import BroadcastFilter

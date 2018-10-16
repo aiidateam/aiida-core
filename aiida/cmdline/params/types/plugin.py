@@ -1,5 +1,16 @@
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """Click parameter type for AiiDA Plugins."""
+from __future__ import absolute_import
+
+import six
 import click
 
 from aiida.cmdline.utils import decorators
@@ -26,7 +37,7 @@ class PluginParamType(click.ParamType):
         click.option(... type=PluginParamType(group=('calculations', 'data'))
 
     """
-    name = 'aiida plugin'
+    name = 'plugin'
 
     def __init__(self, group=None, load=False, *args, **kwargs):
         """
@@ -39,7 +50,7 @@ class PluginParamType(click.ParamType):
         if group is None:
             self._groups = tuple(valid_entry_point_groups)
         else:
-            if isinstance(group, basestring):
+            if isinstance(group, six.string_types):
                 invalidated_groups = tuple([group])
             elif isinstance(group, tuple):
                 invalidated_groups = group
@@ -196,12 +207,12 @@ class PluginParamType(click.ParamType):
         try:
             entry_point = self.get_entry_point_from_string(value)
         except ValueError as exception:
-            raise click.BadParameter(exception.message)
+            raise click.BadParameter(str(exception))
 
         if self.load:
             try:
                 return entry_point.load()
             except LoadingEntryPointError as exception:
-                raise click.BadParameter(exception.message)
+                raise click.BadParameter(str(exception))
         else:
             return entry_point

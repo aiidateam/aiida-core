@@ -8,23 +8,20 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 import functools
 import os
 import shutil
 
 from sqlalchemy.orm import sessionmaker
 
-import aiida.backends.sqlalchemy
-from aiida.backends.settings import AIIDADB_PROFILE
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.backends.sqlalchemy.models.user import DbUser
 from aiida.backends.sqlalchemy.utils import install_tc
 from aiida.backends.testimplbase import AiidaTestImplementation
-from aiida.common.setup import get_profile_config
 from aiida.common.utils import get_configured_user_email
-from aiida.orm.computer import Computer
-
+from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
 
 # Querying for expired objects automatically doesn't seem to work.
 # That's why expire on commit=False resolves many issues of objects beeing
@@ -40,7 +37,6 @@ Session = sessionmaker(expire_on_commit=expire_on_commit)
 # (It shouldn't, as it risks to destroy the DB if there are not the checks
 # in place, and these are implemented in the AiidaTestCase
 class SqlAlchemyTests(AiidaTestImplementation):
-
     # Specify the need to drop the table at the beginning of a test case
     # If True, completely drops the tables and recreates the schema, 
     # but this is usually unnecessary and pretty slow
@@ -66,7 +62,7 @@ class SqlAlchemyTests(AiidaTestImplementation):
             install_tc(self.test_session.connection)
         else:
             self.clean_db()
-
+        self.backend = SqlaBackend()
         self.insert_data()
 
     def setUp_method(self):
@@ -81,7 +77,7 @@ class SqlAlchemyTests(AiidaTestImplementation):
         """
         email = get_configured_user_email()
 
-        has_user = DbUser.query.filter(DbUser.email==email).first()
+        has_user = DbUser.query.filter(DbUser.email == email).first()
         if not has_user:
             self.user = DbUser(get_configured_user_email(), "foo", "bar",
                                "tests")
@@ -93,24 +89,7 @@ class SqlAlchemyTests(AiidaTestImplementation):
         # Required by the calling class
         self.user_email = self.user.email
 
-        # Also self.computer is required by the calling class
-        has_computer = DbComputer.query.filter(DbComputer.hostname ==
-                                               'localhost').first()
-        if not has_computer:
-            self.computer = SqlAlchemyTests._create_computer()
-            self.computer.store()
-        else:
-            self.computer = Computer(dbcomputer=has_computer)
-
-    @staticmethod
-    def _create_computer(**kwargs):
-        defaults = dict(name='localhost',
-                        hostname='localhost',
-                        transport_type='local',
-                        scheduler_type='pbspro',
-                        workdir='/tmp/aiida')
-        defaults.update(kwargs)
-        return Computer(**defaults)
+        super(SqlAlchemyTests, self).insert_data()
 
     @staticmethod
     def inject_computer(f):

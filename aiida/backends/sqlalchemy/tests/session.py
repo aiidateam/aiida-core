@@ -11,6 +11,7 @@
 Testing Session possible problems.
 """
 
+from __future__ import absolute_import
 import os
 from sqlalchemy.orm import sessionmaker
 
@@ -56,7 +57,6 @@ class TestSessionSqla(AiidaTestCase):
         expire_on_commit=True & adding manually and committing
         computer and code objects.
         """
-        from aiida.orm.implementation.sqlalchemy.computer import Computer
         from aiida.orm.implementation.sqlalchemy.code import Code
 
         self.set_connection(expire_on_commit=True)
@@ -72,7 +72,7 @@ class TestSessionSqla(AiidaTestCase):
                         transport_type='local',
                         scheduler_type='pbspro',
                         workdir='/tmp/aiida')
-        computer = Computer(**defaults)
+        computer = self.backend.computers.create(**defaults)
         session.add(computer._dbcomputer)
         session.commit()
 
@@ -89,7 +89,6 @@ class TestSessionSqla(AiidaTestCase):
         their built-in store function.
         """
         from aiida.backends.sqlalchemy.models.user import DbUser
-        from aiida.orm.implementation.sqlalchemy.computer import Computer
         from aiida.orm.implementation.sqlalchemy.code import Code
 
         session = aiida.backends.sqlalchemy.get_scoped_session()
@@ -105,7 +104,7 @@ class TestSessionSqla(AiidaTestCase):
                         transport_type='local',
                         scheduler_type='pbspro',
                         workdir='/tmp/aiida')
-        computer = Computer(**defaults)
+        computer = self.backend.computers.create(**defaults)
         computer.store()
 
         code = Code()
@@ -119,7 +118,6 @@ class TestSessionSqla(AiidaTestCase):
         expire_on_commit=False & adding manually and committing
         computer and code objects.
         """
-        from aiida.orm.implementation.sqlalchemy.computer import Computer
         from aiida.orm.implementation.sqlalchemy.code import Code
 
         self.set_connection(expire_on_commit=False)
@@ -135,7 +133,7 @@ class TestSessionSqla(AiidaTestCase):
                         transport_type='local',
                         scheduler_type='pbspro',
                         workdir='/tmp/aiida')
-        computer = Computer(**defaults)
+        computer = self.backend.computers.create(**defaults)
         session.add(computer._dbcomputer)
         session.commit()
 
@@ -153,7 +151,6 @@ class TestSessionSqla(AiidaTestCase):
         """
         self.set_connection(expire_on_commit=False)
 
-        from aiida.orm.implementation.sqlalchemy.computer import Computer
         from aiida.orm.implementation.sqlalchemy.code import Code
 
         session = aiida.backends.sqlalchemy.get_scoped_session()
@@ -167,7 +164,7 @@ class TestSessionSqla(AiidaTestCase):
                         transport_type='local',
                         scheduler_type='pbspro',
                         workdir='/tmp/aiida')
-        computer = Computer(**defaults)
+        computer = self.backend.computers.create(**defaults)
         computer.store()
 
         code = Code()

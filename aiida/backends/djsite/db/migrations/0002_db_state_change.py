@@ -8,13 +8,15 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from __future__ import unicode_literals
+from __future__ import absolute_import
 
 from django.db import models, migrations
 
-from aiida.backends.djsite.db.migrations import update_schema_version
+from aiida.backends.djsite.db.migrations import upgrade_schema_version
 
 
-SCHEMA_VERSION = "1.0.2"
+REVISION = '1.0.2'
+DOWN_REVISION = '1.0.1'
 
 
 def fix_calc_states(apps, schema_editor):
@@ -59,5 +61,5 @@ class Migration(migrations.Migration):
         ),
         # Fix up any calculation states that had one of the removed states
         migrations.RunPython(fix_calc_states),
-        update_schema_version(SCHEMA_VERSION)
+        upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

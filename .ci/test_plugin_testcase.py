@@ -13,6 +13,7 @@ Test the plugin test case
 This must be in a standalone script because it would clash with other tests,
 Since the dbenv gets loaded on the temporary profile.
 """
+from __future__ import absolute_import
 import os
 import sys
 import unittest
@@ -49,19 +50,18 @@ class PluginTestCase1(PluginTestCase):
         data.store()
         return data
 
-    @staticmethod
-    def get_computer(temp_dir):
+    @classmethod
+    def get_computer(cls, temp_dir):
         """
         Create and store a new computer, and return it
         """
-        from aiida.orm import Computer
-        computer = Computer(
+        computer = cls.backend.computers.create(
             name='localhost',
-            description='my computer',
             hostname='localhost',
-            workdir=temp_dir,
+            description='my computer',
             transport_type='local',
             scheduler_type='direct',
+            workdir=temp_dir,
             enabled_state=True)
         computer.store()
         return computer
@@ -70,11 +70,10 @@ class PluginTestCase1(PluginTestCase):
         """
         Check that the data is indeed in the DB when calling load_node
         """
-        from aiida.orm import Computer
         from aiida.orm.utils import load_node
         self.assertTrue(is_dbenv_loaded())
         self.assertEqual(load_node(self.data_pk).uuid, self.data.uuid)
-        self.assertEqual(Computer.get('localhost').uuid, self.computer.uuid)
+        self.assertEqual(self.backend.computers.get(name='localhost').uuid, self.computer.uuid)
 
     def test_tear_down(self):
         """
@@ -106,4 +105,7 @@ class PluginTestCase2(PluginTestCase):
 if __name__ == '__main__':
     MODULE = sys.modules[__name__]
     SUITE = unittest.defaultTestLoader.loadTestsFromModule(MODULE)
-    TestRunner().run(SUITE, backend=determine_backend())
+    RESULT = TestRunner().run(SUITE, backend=determine_backend())
+
+    EXIT_CODE = int(not RESULT.wasSuccessful())
+    sys.exit(EXIT_CODE)

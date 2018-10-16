@@ -8,9 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 from aiida.orm.implementation.django.node import Node
 from aiida.orm.implementation.general.calculation import AbstractCalculation
-
 
 
 class Calculation(AbstractCalculation, Node):

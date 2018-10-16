@@ -8,7 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 from abc import ABCMeta, abstractmethod, abstractproperty
+
+import six
 
 from aiida.common.exceptions import UniquenessError, NotExistent, MultipleObjectsError
 from aiida.common.utils import abstractclassmethod, abstractstaticmethod
@@ -33,12 +36,11 @@ def get_group_type_mapping():
             'autogroup.run': VERDIAUTOGROUP_TYPE}
 
 
+@six.add_metaclass(ABCMeta)
 class AbstractGroup(object):
     """
     An AiiDA ORM implementation of group of nodes.
     """
-
-    __metaclass__ = ABCMeta
 
     @abstractmethod
     def __init__(self, **kwargs):
@@ -102,8 +104,7 @@ class AbstractGroup(object):
     @abstractproperty
     def user(self):
         """
-        :return: a Django DbUser object, representing the user associated to
-          this group.
+        :return: a Django DbUser object, representing the user associated to this group.
         """
         pass
 
@@ -117,16 +118,14 @@ class AbstractGroup(object):
     @abstractproperty
     def pk(self):
         """
-        :return: the principal key (the ID) as an integer, or None if the
-           node was not stored yet
+        :return: the principal key (the ID) as an integer, or None if the node was not stored yet
         """
         pass
 
     @abstractproperty
     def id(self):
         """
-        :return: the principal key (the ID) as an integer, or None if the
-           node was not stored yet
+        :return: the principal key (the ID) as an integer, or None if the node was not stored yet
         """
         pass
 
@@ -235,8 +234,7 @@ class AbstractGroup(object):
     @abstractproperty
     def is_stored(self):
         """
-        :return: True if the respective DbNode has been already saved in the
-          DB, False otherwise
+        :return: True if the respective DbNode has been already saved in the DB, False otherwise
         """
         pass
 

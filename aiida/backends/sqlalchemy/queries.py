@@ -7,13 +7,30 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 from aiida.backends.general.abstractqueries import AbstractQueryManager
 
 
-class QueryManagerSQLA(AbstractQueryManager):
+class SqlaQueryManager(AbstractQueryManager):
     """
     SQLAlchemy implementation of custom queries, for efficiency reasons
     """
+
+    def __init__(self, backend):
+        super(SqlaQueryManager, self).__init__(backend)
+
+    def raw(self, query):
+        """Execute a raw SQL statement and return the result.
+
+        :param query: a string containing a raw SQL statement
+        :return: the result of the query
+        """
+        from aiida.backends.sqlalchemy import get_scoped_session
+
+        session = get_scoped_session()
+        result = session.execute(query)
+
+        return result.fetchall()
 
     def get_creation_statistics(
             self,
@@ -50,9 +67,9 @@ class QueryManagerSQLA(AbstractQueryManager):
 
         total_query = s.query(m.node.DbNode)
         types_query = s.query(m.node.DbNode.type.label('typestring'),
-                sa.func.count(m.node.DbNode.id))
+                              sa.func.count(m.node.DbNode.id))
         stat_query = s.query(sa.func.date_trunc('day', m.node.DbNode.ctime).label('cday'),
-                           sa.func.count(m.node.DbNode.id))
+                             sa.func.count(m.node.DbNode.id))
 
         if user_pk is not None:
             total_query = total_query.filter(m.node.DbNode.user_id == user_pk)
@@ -73,5 +90,3 @@ class QueryManagerSQLA(AbstractQueryManager):
 
         return retdict
         # Still not containing all dates
-
-

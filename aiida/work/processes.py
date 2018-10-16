@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 import abc
 import collections
 import enum
@@ -16,6 +17,9 @@ import itertools
 import plumpy
 import uuid
 import traceback
+
+import six
+from six.moves import zip, filter, range
 from pika.exceptions import ConnectionClosed
 
 from plumpy import ProcessState
@@ -41,12 +45,12 @@ __all__ = ['Process', 'ProcessState', 'FunctionProcess']
 
 
 @plumpy.auto_persist('_parent_pid', '_enable_persistence')
+@six.add_metaclass(abc.ABCMeta)
 class Process(plumpy.Process):
     """
     This class represents an AiiDA process which can be executed and will
     have full provenance saved in the database.
     """
-    __metaclass__ = abc.ABCMeta
 
     _spec_type = ProcessSpec
     _calc_class = WorkCalculation
@@ -63,8 +67,8 @@ class Process(plumpy.Process):
     def define(cls, spec):
         super(Process, cls).define(spec)
         spec.input('store_provenance', valid_type=bool, default=True, non_db=True)
-        spec.input('description', valid_type=basestring, required=False, non_db=True)
-        spec.input('label', valid_type=basestring, required=False, non_db=True)
+        spec.input('description', valid_type=six.string_types[0], required=False, non_db=True)
+        spec.input('label', valid_type=six.string_types[0], required=False, non_db=True)
         spec.inputs.valid_type = (Data, Calculation)
         spec.outputs.valid_type = (Data,)
 
@@ -141,7 +145,7 @@ class Process(plumpy.Process):
         out_state[self.SaveKeys.CALC_ID.value] = self.pid
 
     def get_provenance_inputs_iterator(self):
-        return itertools.ifilter(lambda kv: not kv[0].startswith('_'), self.inputs.iteritems())
+        return filter(lambda kv: not kv[0].startswith('_'), self.inputs.items())
 
     @override
     def load_instance_state(self, saved_state, load_context):
@@ -454,7 +458,7 @@ class Process(plumpy.Process):
         """
         parent_calc = self.get_parent_calc()
 
-        for name, input_value in self._flat_inputs().iteritems():
+        for name, input_value in self._flat_inputs().items():
 
             if isinstance(input_value, Calculation):
                 input_value = utils.get_or_create_output_group(input_value)
@@ -561,7 +565,7 @@ class Process(plumpy.Process):
             # Get the list of ports that were exposed for the given Process class in the current namespace
             exposed_inputs_list = self.spec()._exposed_inputs[namespace][process_class]
 
-            for name, port in port_namespace.ports.iteritems():
+            for name, port in port_namespace.ports.items():
                 if name in inputs and name in exposed_inputs_list:
                     exposed_inputs[name] = inputs[name]
 
@@ -775,7 +779,7 @@ class FunctionProcess(Process):
         if isinstance(result, Data):
             self.out(self.SINGLE_RETURN_LINKNAME, result)
         elif isinstance(result, collections.Mapping):
-            for name, value in result.iteritems():
+            for name, value in result.items():
                 self.out(name, value)
         else:
             raise TypeError(

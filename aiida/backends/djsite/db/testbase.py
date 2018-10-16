@@ -10,10 +10,13 @@
 """
 Base class for AiiDA tests
 """
-from django.utils import unittest
+from __future__ import absolute_import
 import shutil
 import os
+
+from aiida.orm.implementation.django.backend import DjangoBackend
 from aiida.backends.testimplbase import AiidaTestImplementation
+
 
 # Add a new entry here if you add a file with tests under aiida.backends.djsite.db.subtests
 # The key is the name to use in the 'verdi test' command (e.g., a key 'generic'
@@ -33,6 +36,7 @@ class DjangoTests(AiidaTestImplementation):
     # Note this is has to be a normal method, not a class method
     def setUpClass_method(self):
         self.clean_db()
+        self.backend = DjangoBackend()
         self.insert_data()
 
     def setUp_method(self):
@@ -48,7 +52,6 @@ class DjangoTests(AiidaTestImplementation):
         from django.core.exceptions import ObjectDoesNotExist
 
         from aiida.backends.djsite.db.models import DbUser
-        from aiida.orm.computer import Computer
         from aiida.common.utils import get_configured_user_email
         # We create the user only once:
         # Otherwise, get_automatic_user() will fail when the
@@ -62,13 +65,7 @@ class DjangoTests(AiidaTestImplementation):
         # Reqired by the calling class
         self.user_email = self.user.email
 
-        # Also self.computer is required by the calling class
-        self.computer = Computer(name='localhost',
-                                hostname='localhost',
-                                transport_type='local',
-                                scheduler_type='pbspro',
-                                workdir='/tmp/aiida')
-        self.computer.store()
+        super(DjangoTests, self).insert_data()
 
     def clean_db(self):
         from aiida.backends.djsite.db.models import (

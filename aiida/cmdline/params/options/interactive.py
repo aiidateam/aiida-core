@@ -1,10 +1,19 @@
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 .. module::interactive
     :synopsis: Tools and an option class for interactive parameter entry with
     additional features such as help lookup.
 """
 
+from __future__ import absolute_import
 import click
 
 from aiida.cmdline.params.options.conditional import ConditionalOption
@@ -68,7 +77,6 @@ class InteractiveOption(ConditionalOption):
             passed the click context
 
         """
-
         # intercept prompt kwarg; I need to pop it before calling super
         self._prompt = kwargs.pop('prompt', None)
 
@@ -109,10 +117,23 @@ class InteractiveOption(ConditionalOption):
 
         return super(InteractiveOption, self).get_default(ctx)
 
+    @staticmethod
+    def custom_value_proc(value):
+        """Custom value_proc function for the click.prompt which it will call to do value conversion.
+
+        Simply return the value, because we want to take care of value conversion ourselves in the `simple_prompt_loop`.
+        If we let `click.prompt` do it, it will raise an exception when the user passes a control character, like the
+        question mark, to bring up the help message and the type of the option is not a string, causing conversion to
+        fail.
+        """
+        return value
+
     def prompt_func(self, ctx):
         """prompt function with args set"""
         return click.prompt(
             click.style(self._prompt, fg=self.PROMPT_COLOR),
+            type=self.type,
+            value_proc=self.custom_value_proc,
             prompt_suffix=click.style(': ', fg=self.PROMPT_COLOR),
             default=self._get_default(ctx),
             hide_input=self.hide_input,
@@ -131,8 +152,13 @@ class InteractiveOption(ConditionalOption):
         msg = self.help or 'Expecting {}'.format(self.type.name)
         choices = getattr(self.type, 'complete', lambda x, y: [])(None, '')
         if choices:
-            msg += '\none of:\n'
-            choice_table = ['\t{:<12} {}'.format(*choice) for choice in choices]
+            choice_table = []
+            msg += '\nSelect one of:\n'
+            for choice in choices:
+                if isinstance(choice, tuple):
+                    choice_table.append('\t{:<12} {}'.format(*choice))
+                else:
+                    choice_table.append('\t{:<12}'.format(choice))
             msg += '\n'.join(choice_table)
         return msg
 
@@ -158,7 +184,7 @@ class InteractiveOption(ConditionalOption):
             value = self.type.convert(value, param, ctx)
             successful = True
         except click.BadParameter as err:
-            echo.echo_error(err.message)
+            echo.echo_error(str(err))
             self.ctrl_help()
         return successful, value
 
@@ -188,6 +214,15 @@ class InteractiveOption(ConditionalOption):
 
     def prompt_callback(self, ctx, param, value):
         """decide wether to initiate the prompt_loop or not"""
+
+        # From click.core.Context:
+        # if resilient_parsing is enabled then Click will
+        # parse without any interactivity or callback
+        # invocation.
+        # Therefore if this flag is set, we should not
+        # do any prompting.
+        if ctx.resilient_parsing:
+            return None
 
         # a value was given on the command line: then  just go with validation
         if value is not None:

@@ -7,10 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 import collections
 import uuid
 from ast import literal_eval
+
+import six
 from plumpy.utils import AttributesFrozendict
+
 from aiida.common.extendeddicts import AttributeDict
 from aiida.orm import Group, Node, load_group, load_node
 
@@ -44,7 +48,8 @@ def decode_key(key):
     :param key: the key to decode
     :return: the decoded key
     """
-    if key.startswith(_PREFIX_KEY_TUPLE):
+
+    if isinstance(key, six.string_types) and key.startswith(_PREFIX_KEY_TUPLE):
         return literal_eval(key[len(_PREFIX_KEY_TUPLE):])
     else:
         return key
@@ -68,12 +73,12 @@ def serialize_data(data):
     elif isinstance(data, uuid.UUID):
         return '{}{}'.format(_PREFIX_VALUE_UUID, data)
     elif isinstance(data, AttributeDict):
-        return AttributeDict({encode_key(key): serialize_data(value) for key, value in data.iteritems()})
+        return AttributeDict({encode_key(key): serialize_data(value) for key, value in data.items()})
     elif isinstance(data, AttributesFrozendict):
-        return AttributesFrozendict({encode_key(key): serialize_data(value) for key, value in data.iteritems()})
+        return AttributesFrozendict({encode_key(key): serialize_data(value) for key, value in data.items()})
     elif isinstance(data, collections.Mapping):
-        return {encode_key(key): serialize_data(value) for key, value in data.iteritems()}
-    elif isinstance(data, collections.Sequence) and not isinstance(data, (str, unicode)):
+        return {encode_key(key): serialize_data(value) for key, value in data.items()}
+    elif isinstance(data, collections.Sequence) and not isinstance(data, six.string_types):
         return [serialize_data(value) for value in data]
     else:
         return data
@@ -89,18 +94,18 @@ def deserialize_data(data):
     :return: the deserialized data with keys decoded and node instances loaded from UUID's
     """
     if isinstance(data, AttributeDict):
-        return AttributeDict({decode_key(key): deserialize_data(value) for key, value in data.iteritems()})
+        return AttributeDict({decode_key(key): deserialize_data(value) for key, value in data.items()})
     elif isinstance(data, AttributesFrozendict):
-        return AttributesFrozendict({decode_key(key): deserialize_data(value) for key, value in data.iteritems()})
+        return AttributesFrozendict({decode_key(key): deserialize_data(value) for key, value in data.items()})
     elif isinstance(data, collections.Mapping):
-        return {decode_key(key): deserialize_data(value) for key, value in data.iteritems()}
-    elif isinstance(data, collections.Sequence) and not isinstance(data, (str, unicode)):
+        return {decode_key(key): deserialize_data(value) for key, value in data.items()}
+    elif isinstance(data, collections.Sequence) and not isinstance(data, six.string_types):
         return [deserialize_data(value) for value in data]
-    elif isinstance(data, (str, unicode)) and data.startswith(_PREFIX_VALUE_NODE):
+    elif isinstance(data, six.string_types) and data.startswith(_PREFIX_VALUE_NODE):
         return load_node(uuid=data[len(_PREFIX_VALUE_NODE):])
-    elif isinstance(data, (str, unicode)) and data.startswith(_PREFIX_VALUE_GROUP):
+    elif isinstance(data, six.string_types) and data.startswith(_PREFIX_VALUE_GROUP):
         return load_group(uuid=data[len(_PREFIX_VALUE_GROUP):])
-    elif isinstance(data, (str, unicode)) and data.startswith(_PREFIX_VALUE_UUID):
+    elif isinstance(data, six.string_types) and data.startswith(_PREFIX_VALUE_UUID):
         return uuid.UUID(data[len(_PREFIX_VALUE_UUID):])
     else:
         return data

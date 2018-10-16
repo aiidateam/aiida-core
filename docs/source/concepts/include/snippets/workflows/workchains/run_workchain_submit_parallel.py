@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from aiida.orm.data.int import Int
 from aiida.work.workchain import WorkChain, ToContext
 
@@ -11,13 +12,13 @@ class SomeWorkChain(WorkChain):
             cls.inspect_workchains,
         )
 
-    def submit_workchains(self)
+    def submit_workchains(self):
         for i in range(3):
             future = self.submit(SomeWorkChain)
             key = 'workchain_{}'.format(i)
-            self.to_context(key=future)
+            self.to_context(**{key:future})
 
-    def inspect_workchains(self)
+    def inspect_workchains(self):
         for i in range(3):
             key = 'workchain_{}'.format(i)
             assert self.ctx[key].is_finished_ok

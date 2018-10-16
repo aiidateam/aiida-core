@@ -8,10 +8,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-import sys
-import os
+from __future__ import print_function
 
-from aiida.common.exceptions import NotExistent
+import os
+import sys
+
+from aiida.orm import DataFactory
+from aiida.orm.computer import Computer
+from aiida.orm.implementation.sqlalchemy.code import Code
+
 ParameterData = DataFactory('parameter')
 
 # The name of the code setup in AiiDA
@@ -28,8 +33,8 @@ try:
     else:
         raise IndexError
 except IndexError:
-    print >> sys.stderr, ("The first parameter can only be either "
-                          "--send or --dont-send")
+    print(("The first parameter can only be either "
+                          "--send or --dont-send"), file=sys.stderr)
     sys.exit(1)
 
 code = Code.get_from_string(codename)
@@ -43,21 +48,21 @@ parameters = ParameterData(dict={'x1':2,'x2':3})
 calc = code.new_calc()
 calc.label = "Test sum"
 calc.description = "Test calculation with the sum code"
-calc.set_max_wallclock_seconds(30*60) # 30 min
+calc.set_option('max_wallclock_seconds', 30*60) # 30 min
 calc.set_computer(computer)
-calc.set_withmpi(False)
-calc.set_resources({"num_machines": 1})
+calc.set_option('withmpi', False)
+calc.set_option('resources', {"num_machines": 1})
 
 calc.use_parameters(parameters)
 
 if submit_test:
     subfolder, script_filename = calc.submit_test()
-    print "Test submit file in {}".format(os.path.join(
+    print("Test submit file in {}".format(os.path.join(
         os.path.relpath(subfolder.abspath),
         script_filename
-        ))
+        )))
 else:
     calc.store_all()
     calc.submit()
-    print "submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(
-        calc.uuid,calc.dbnode.pk)
+    print("submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(
+        calc.uuid,calc.dbnode.pk))

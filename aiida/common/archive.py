@@ -8,6 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
+from __future__ import print_function
+import sys
+from six.moves import range
+
+
 def extract_zip(infile, folder, nodes_export_subfolder="nodes",
                 silent=False):
     """
@@ -22,10 +28,13 @@ def extract_zip(infile, folder, nodes_export_subfolder="nodes",
     import zipfile
 
     if not silent:
-        print "READING DATA AND METADATA..."
+        print("READING DATA AND METADATA...")
 
     try:
         with zipfile.ZipFile(infile, "r", allowZip64=True) as zip:
+
+            if not zip.namelist():
+                raise ValueError("The zip file is empty.")
 
             zip.extract(path=folder.abspath,
                    member='metadata.json')
@@ -33,7 +42,7 @@ def extract_zip(infile, folder, nodes_export_subfolder="nodes",
                    member='data.json')
 
             if not silent:
-                print "EXTRACTING NODE DATA..."
+                print("EXTRACTING NODE DATA...")
 
             for membername in zip.namelist():
                 # Check that we are only exporting nodes within
@@ -62,7 +71,7 @@ def extract_tar(infile, folder, nodes_export_subfolder="nodes",
     import tarfile
 
     if not silent:
-        print "READING DATA AND METADATA..."
+        print("READING DATA AND METADATA...")
 
     try:
         with tarfile.open(infile, "r:*", format=tarfile.PAX_FORMAT) as tar:
@@ -73,19 +82,19 @@ def extract_tar(infile, folder, nodes_export_subfolder="nodes",
                    member=tar.getmember('data.json'))
 
             if not silent:
-                print "EXTRACTING NODE DATA..."
+                print("EXTRACTING NODE DATA...")
 
             for member in tar.getmembers():
                 if member.isdev():
                     # safety: skip if character device, block device or FIFO
-                    print >> sys.stderr, ("WARNING, device found inside the "
-                        "import file: {}".format(member.name))
+                    print("WARNING, device found inside the import file: {}"
+                          .format(member.name), file=sys.stderr)
                     continue
                 if member.issym() or member.islnk():
                     # safety: in export, I set dereference=True therefore
                     # there should be no symbolic or hard links.
-                    print >> sys.stderr, ("WARNING, link found inside the "
-                        "import file: {}".format(member.name))
+                    print("WARNING, link found inside the import file: {}"
+                          .format(member.name), file=sys.stderr)
                     continue
                 # Check that we are only exporting nodes within
                 # the subfolder!
@@ -143,16 +152,16 @@ def extract_cif(infile, folder, nodes_export_subfolder="nodes",
     :param silent: suppress debug print
     """
     import os
-    import urllib2
+    from six.moves import urllib
     import CifFile
     from aiida.common.exceptions import ValidationError
     from aiida.common.utils import md5_file, sha1_file
     from aiida.tools.dbexporters.tcod import decode_textfield
 
     values = CifFile.ReadCif(infile)
-    values = values[values.keys()[0]] # taking the first datablock in CIF
+    values = values[list(values.keys())[0]] # taking the first datablock in CIF
 
-    for i in range(0,len(values['_tcod_file_id'])-1):
+    for i in range(len(values['_tcod_file_id'])-1):
         name = values['_tcod_file_name'][i]
         if not name.startswith(aiida_export_subfolder+os.sep):
             continue
@@ -165,7 +174,7 @@ def extract_cif(infile, folder, nodes_export_subfolder="nodes",
         if contents == '?' or contents == '.':
             uri = values['_tcod_file_uri'][i]
             if uri is not None and uri != '?' and uri != '.':
-                contents = urllib2.urlopen(uri).read()
+                contents = urllib.request.urlopen(uri).read()
         encoding = values['_tcod_file_content_encoding'][i]
         if encoding == '.':
             encoding = None

@@ -7,9 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-import HTMLParser
+from __future__ import absolute_import
+from __future__ import print_function
 import sys
 
+import six
+from six.moves import zip
+from six.moves.html_parser import HTMLParser
 from aiida.common import exceptions
 from aiida.common.utils import (export_shard_uuid, get_class_string,
                                 get_object_from_string, grouper)
@@ -17,6 +21,7 @@ from aiida.orm.computer import Computer
 from aiida.orm.group import Group
 from aiida.orm.node import Node
 from aiida.orm.user import User
+
 
 IMPORTGROUP_TYPE = 'aiida.import'
 COMP_DUPL_SUFFIX = ' (Imported #{})'
@@ -244,8 +249,8 @@ def deserialize_attributes(attributes_data, conversion_data):
 
     if isinstance(attributes_data, dict):
         ret_data = {}
-        for k, v in attributes_data.iteritems():
-            # print "k: ", k, " v: ", v
+        for k, v in attributes_data.items():
+            # print("k: ", k, " v: ", v)
             if conversion_data is not None:
                 ret_data[k] = deserialize_attributes(v, conversion_data[k])
             else:
@@ -370,8 +375,13 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                 extract_tar(in_path, folder, silent=silent,
                             nodes_export_subfolder=nodes_export_subfolder)
             elif zipfile.is_zipfile(in_path):
-                extract_zip(in_path, folder, silent=silent,
-                            nodes_export_subfolder=nodes_export_subfolder)
+                try:
+                    extract_zip(in_path, folder, silent=silent,
+                                nodes_export_subfolder=nodes_export_subfolder)
+                except ValueError as exc:
+                    print("The following problem occured while processing the "
+                          "provided file: {}".format(exc))
+                    return
             elif os.path.isfile(in_path) and in_path.endswith('.cif'):
                 extract_cif(in_path, folder, silent=silent,
                             nodes_export_subfolder=nodes_export_subfolder)
@@ -380,6 +390,10 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                                  "is neither a (possibly compressed) tar file, "
                                  "nor a zip file.")
 
+        if not folder.get_content_list():
+            from aiida.common.exceptions import ContentNotExistent
+            raise ContentNotExistent("The provided file/folder ({}) is empty"
+                                     .format(in_path))
         try:
             with open(folder.get_abs_path('metadata.json')) as f:
                 metadata = json.load(f)
@@ -394,16 +408,15 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
         # PRELIMINARY CHECKS #
         ######################
         if metadata['export_version'] != expected_export_version:
-            raise ValueError("File export version is {}, but I can import only "
-                             "version {}".format(metadata['export_version'],
-                                                 expected_export_version))
+            raise exceptions.IncompatibleArchiveVersionError('Archive schema version {} is incompatible with the '
+                'currently supported schema version {}'.format(metadata['export_version'], expected_export_version))
 
         ##########################################################################
         # CREATE UUID REVERSE TABLES AND CHECK IF I HAVE ALL NODES FOR THE LINKS #
         ##########################################################################
         linked_nodes = set(chain.from_iterable((l['input'], l['output'])
                                                for l in data['links_uuid']))
-        group_nodes = set(chain.from_iterable(data['groups_uuid'].itervalues()))
+        group_nodes = set(chain.from_iterable(six.itervalues(data['groups_uuid'])))
 
         # I preload the nodes, I need to check each of them later, and I also
         # store them in a reverse table
@@ -416,8 +429,11 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
 
         db_nodes_uuid = set(relevant_db_nodes.keys())
         # ~ dbnode_model = get_class_string(models.DbNode)
-        # ~ print dbnode_model
-        import_nodes_uuid = set(v['uuid'] for v in data['export_data'][NODE_ENTITY_NAME].values())
+        # ~ print(dbnode_model)
+        if NODE_ENTITY_NAME in data['export_data']:
+            import_nodes_uuid = set(v['uuid'] for v in data['export_data'][NODE_ENTITY_NAME].values())
+        else:
+            import_nodes_uuid = set()
 
         # the combined set of linked_nodes and group_nodes was obtained from looking at all the links
         # the combined set of db_nodes_uuid and import_nodes_uuid was received from the staff actually referred to in export_data
@@ -469,12 +485,12 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
         # CREATE IMPORT DATA DIRECT UNIQUE_FIELD MAPPINGS #
         ###################################################
         import_unique_ids_mappings = {}
-        for model_name, import_data in data['export_data'].iteritems():
+        for model_name, import_data in data['export_data'].items():
             if model_name in metadata['unique_identifiers']:
                 # I have to reconvert the pk to integer
                 import_unique_ids_mappings[model_name] = {
                     int(k): v[metadata['unique_identifiers'][model_name]] for k, v in
-                    import_data.iteritems()}
+                    import_data.items()}
 
         ###############
         # IMPORT DATA #
@@ -511,8 +527,8 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                                    import_unique_ids})}
 
                         foreign_ids_reverse_mappings[model_name] = {
-                            k: v.pk for k, v in relevant_db_entries.iteritems()}
-                        for k, v in data['export_data'][model_name].iteritems():
+                            k: v.pk for k, v in relevant_db_entries.items()}
+                        for k, v in data['export_data'][model_name].items():
                             if v[unique_identifier] in relevant_db_entries.keys():
                                 # Already in DB
                                 existing_entries[model_name][k] = v
@@ -531,7 +547,7 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                 unique_identifier = metadata['unique_identifiers'].get(
                     model_name, None)
 
-                for import_entry_id, entry_data in existing_entries[model_name].iteritems():
+                for import_entry_id, entry_data in existing_entries[model_name].items():
                     unique_id = entry_data[unique_identifier]
                     existing_entry_id = foreign_ids_reverse_mappings[model_name][unique_id]
                     # TODO COMPARE, AND COMPARE ATTRIBUTES
@@ -540,10 +556,10 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                     ret_dict[model_name]['existing'].append((import_entry_id,
                                                              existing_entry_id))
                     if not silent:
-                        print "existing %s: %s (%s->%s)" % (model_name, unique_id,
+                        print("existing %s: %s (%s->%s)" % (model_name, unique_id,
                                                             import_entry_id,
-                                                            existing_entry_id)
-                        # print "  `-> WARNING: NO DUPLICITY CHECK DONE!"
+                                                            existing_entry_id))
+                        # print("  `-> WARNING: NO DUPLICITY CHECK DONE!")
                         # CHECK ALSO FILES!
 
                 # Store all objects for this model in a list, and store them
@@ -553,13 +569,13 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                 import_entry_ids = {}
                 dupl_counter = 0
                 imported_comp_names = set()
-                for import_entry_id, entry_data in new_entries[model_name].iteritems():
+                for import_entry_id, entry_data in new_entries[model_name].items():
                     unique_id = entry_data[unique_identifier]
                     import_data = dict(deserialize_field(
                         k, v, fields_info=fields_info,
                         import_unique_ids_mappings=import_unique_ids_mappings,
                         foreign_ids_reverse_mappings=foreign_ids_reverse_mappings)
-                                       for k, v in entry_data.iteritems())
+                                       for k, v in entry_data.items())
 
                     if Model is models.DbComputer:
                         # Check if there is already a computer with the same
@@ -596,7 +612,7 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                 # are nodes). Note: only for new entries!
                 if model_name == NODE_ENTITY_NAME:
                     if not silent:
-                        print "STORING NEW NODE FILES..."
+                        print("STORING NEW NODE FILES...")
                     for o in objects_to_create:
 
                         subfolder = folder.get_subfolder(os.path.join(
@@ -627,10 +643,10 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                 imported_states = []
                 if model_name == NODE_ENTITY_NAME:
                     if not silent:
-                        print "SETTING THE IMPORTED STATES FOR NEW NODES..."
+                        print("SETTING THE IMPORTED STATES FOR NEW NODES...")
                     # I set for all nodes, even if I should set it only
                     # for calculations
-                    for unique_id, new_pk in just_saved.iteritems():
+                    for unique_id, new_pk in just_saved.items():
                         imported_states.append(
                             models.DbCalcState(dbnode_id=new_pk,
                                                state=calc_states.IMPORTED))
@@ -638,7 +654,7 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
 
                 # Now I have the PKs, print the info
                 # Moreover, set the foreing_ids_reverse_mappings
-                for unique_id, new_pk in just_saved.iteritems():
+                for unique_id, new_pk in just_saved.items():
                     import_entry_id = import_entry_ids[unique_id]
                     foreign_ids_reverse_mappings[model_name][unique_id] = new_pk
                     if model_name not in ret_dict:
@@ -647,15 +663,15 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                                                         new_pk))
 
                     if not silent:
-                        print "NEW %s: %s (%s->%s)" % (model_name, unique_id,
+                        print("NEW %s: %s (%s->%s)" % (model_name, unique_id,
                                                        import_entry_id,
-                                                       new_pk)
+                                                       new_pk))
 
                 # For DbNodes, we also have to store Attributes!
                 if model_name == NODE_ENTITY_NAME:
                     if not silent:
-                        print "STORING NEW NODE ATTRIBUTES..."
-                    for unique_id, new_pk in just_saved.iteritems():
+                        print("STORING NEW NODE ATTRIBUTES...")
+                    for unique_id, new_pk in just_saved.items():
                         import_entry_id = import_entry_ids[unique_id]
                         # Get attributes from import file
                         try:
@@ -678,7 +694,7 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                             with_transaction=False)
 
             if not silent:
-                print "STORING NODE LINKS..."
+                print("STORING NODE LINKS...")
             ## TODO: check that we are not creating input links of an already
             ##       existing node...
             import_links = data['links_uuid']
@@ -690,9 +706,8 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
             existing_links_labels = {(l[0], l[1]): l[2] for l in existing_links_raw}
             existing_input_links = {(l[1], l[2]): l[0] for l in existing_links_raw}
 
-            # ~ print foreign_ids_reverse_mappings
+            # ~ print(foreign_ids_reverse_mappings)
             dbnode_reverse_mappings = foreign_ids_reverse_mappings[NODE_ENTITY_NAME]
-            # ~ get_class_string(models.DbNode)]
             for link in import_links:
                 try:
                     in_id = dbnode_reverse_mappings[link['input']]
@@ -720,13 +735,26 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                         # the correct name
                 except KeyError:
                     try:
-                        existing_input = existing_input_links[out_id, link['label']]
-                        # If existing_input were the correct one, I would have found
-                        # it already in the previous step!
-                        raise ValueError("There exists already an input link "
-                                         "to node {} with label {} but it "
-                                         "does not come the expected input {}"
-                                         .format(out_id, link['label'], in_id))
+                        # We try to get the existing input of the link that
+                        # points to "out" and has label link['label'].
+                        # If there is no existing_input, it means that the
+                        # link doesn't exist and it has to be created. If
+                        # it exists, then the only case that we can have more
+                        # than one links with the same name entering a node
+                        # is the case of the RETURN links of workflows/
+                        # workchains. If it is not this case, then it is
+                        # an error.
+                        existing_input = existing_input_links[out_id,
+                                                              link['label']]
+
+                        if link['type'] != LinkType.RETURN:
+                            raise ValueError(
+                                "There exists already an input link to node "
+                                "with UUID {} with label {} but it does not "
+                                "come from the expected input with UUID {} "
+                                "but from a node with UUID {}."
+                                    .format(link['output'], link['label'],
+                                            link['input'], existing_input))
                     except KeyError:
                         # New link
                         links_to_store.append(models.DbLink(
@@ -738,17 +766,17 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
             # Store new links
             if links_to_store:
                 if not silent:
-                    print "   ({} new links...)".format(len(links_to_store))
+                    print("   ({} new links...)".format(len(links_to_store)))
 
                 models.DbLink.objects.bulk_create(links_to_store)
             else:
                 if not silent:
-                    print "   (0 new links...)"
+                    print("   (0 new links...)")
 
             if not silent:
-                print "STORING GROUP ELEMENTS..."
+                print("STORING GROUP ELEMENTS...")
             import_groups = data['groups_uuid']
-            for groupuuid, groupnodes in import_groups.iteritems():
+            for groupuuid, groupnodes in import_groups.items():
                 # TODO: cache these to avoid too many queries
                 group = models.DbGroup.objects.get(uuid=groupuuid)
                 nodes_to_store = [dbnode_reverse_mappings[node_uuid]
@@ -763,11 +791,11 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
             existing = existing_entries.get(dbnode_model_name, {})
             existing_pk = [foreign_ids_reverse_mappings[
                                dbnode_model_name][v['uuid']]
-                           for v in existing.itervalues()]
+                           for v in six.itervalues(existing)]
             new = new_entries.get(dbnode_model_name, {})
             new_pk = [foreign_ids_reverse_mappings[
                           dbnode_model_name][v['uuid']]
-                      for v in new.itervalues()]
+                      for v in six.itervalues(new)]
 
             pks_for_group = existing_pk + new_pk
 
@@ -796,15 +824,15 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                     pk__in=pks_for_group))
 
                 if not silent:
-                    print "IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.name)
+                    print("IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.name))
             else:
                 if not silent:
-                    print "NO DBNODES TO IMPORT, SO NO GROUP CREATED"
+                    print("NO DBNODES TO IMPORT, SO NO GROUP CREATED")
 
     if not silent:
-        print "*** WARNING: MISSING EXISTING UUID CHECKS!!"
-        print "*** WARNING: TODO: UPDATE IMPORT_DATA WITH DEFAULT VALUES! (e.g. calc status, user pwd, ...)"
-        print "DONE."
+        print("*** WARNING: MISSING EXISTING UUID CHECKS!!")
+        print("*** WARNING: TODO: UPDATE IMPORT_DATA WITH DEFAULT VALUES! (e.g. calc status, user pwd, ...)")
+        print("DONE.")
 
     return ret_dict
 
@@ -844,11 +872,11 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
     from aiida.orm import Node, Group
     from aiida.common.archive import extract_tree, extract_tar, extract_zip, extract_cif
-    from aiida.common.links import LinkType
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.common.utils import get_object_from_string
     from aiida.common.datastructures import calc_states
     from aiida.orm.querybuilder import QueryBuilder
+    from aiida.common.links import LinkType
 
     # Backend specific imports
     from aiida.backends.sqlalchemy.models.node import DbCalcState
@@ -884,6 +912,10 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                                  "is neither a (possibly compressed) tar "
                                  "file, nor a zip file.")
 
+        if not folder.get_content_list():
+            from aiida.common.exceptions import ContentNotExistent
+            raise ContentNotExistent("The provided file/folder ({}) is empty"
+                                     .format(in_path))
         try:
             with open(folder.get_abs_path('metadata.json')) as f:
                 metadata = json.load(f)
@@ -898,10 +930,8 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
         # PRELIMINARY CHECKS #
         ######################
         if metadata['export_version'] != expected_export_version:
-            raise ValueError("File export version is {}, but I can "
-                             "import only version {}"
-                             .format(metadata['export_version'],
-                                     expected_export_version))
+            raise exceptions.IncompatibleArchiveVersionError('Archive schema version {} is incompatible with the '
+                'currently supported schema version {}'.format(metadata['export_version'], expected_export_version))
 
         ###################################################################
         #           CREATE UUID REVERSE TABLES AND CHECK IF               #
@@ -910,7 +940,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
         linked_nodes = set(chain.from_iterable((l['input'], l['output'])
                                                for l in data['links_uuid']))
         group_nodes = set(chain.from_iterable(
-            data['groups_uuid'].itervalues()))
+            six.itervalues(data['groups_uuid'])))
 
         # Check that UUIDs are valid
         linked_nodes = set(x for x in linked_nodes if validate_uuid(x))
@@ -929,8 +959,9 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
             for res in qb.iterall():
                 db_nodes_uuid.add(res[0])
 
-        for v in data['export_data'][NODE_ENTITY_NAME].values():
-            import_nodes_uuid.add(v['uuid'])
+        if NODE_ENTITY_NAME in data['export_data']:
+            for v in data['export_data'][NODE_ENTITY_NAME].values():
+                import_nodes_uuid.add(v['uuid'])
 
         unknown_nodes = linked_nodes.union(group_nodes) - db_nodes_uuid.union(
             import_nodes_uuid)
@@ -999,13 +1030,13 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
         # }
         import_unique_ids_mappings = {}
         # Export data since v0.3 contains the keys entity_name
-        for entity_name, import_data in data['export_data'].iteritems():
+        for entity_name, import_data in data['export_data'].items():
             # Again I need the entity_name since that's what's being stored since 0.3
             if entity_name in metadata['unique_identifiers']:
                 # I have to reconvert the pk to integer
                 import_unique_ids_mappings[entity_name] = {
                     int(k): v[metadata['unique_identifiers'][entity_name]]
-                    for k, v in import_data.iteritems()}
+                    for k, v in import_data.items()}
         ###############
         # IMPORT DATA #
         ###############
@@ -1052,11 +1083,11 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
                             foreign_ids_reverse_mappings[entity_name] = {
                                 k: v.pk for k, v in
-                                relevant_db_entries.iteritems()}
+                                relevant_db_entries.items()}
 
                         dupl_counter = 0
                         imported_comp_names = set()
-                        for k, v in data['export_data'][entity_name].iteritems():
+                        for k, v in data['export_data'][entity_name].items():
                             if entity_name == COMPUTER_ENTITY_NAME:
                                 # The following is done for compatibility
                                 # reasons in case the export file was generated
@@ -1065,15 +1096,13 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                                 # stored as (unicode) strings of the serialized
                                 # JSON objects and not as simple serialized
                                 # JSON objects.
-                                if ((type(v['metadata']) is str) or
-                                        (type(v['metadata']) is unicode)):
-                                    v['metadata'] = json.loads(v['metadata'])
+                                if (isinstance(v['metadata'], six.string_types) or
+                                        isinstance(v['metadata'], six.binary_type)):
+                                    v['metadata'] = json.loads(v['metadata'])  # loads() can handle str and unicode/bytes
 
-                                if ((type(v['transport_params']) is str) or
-                                        (type(v['transport_params']) is
-                                         unicode)):
-                                    v['transport_params'] = json.loads(
-                                        v['transport_params'])
+                                if (isinstance(v['transport_params'], six.string_types) or
+                                        isinstance(v['transport_params'], six.binary_type)):
+                                    v['transport_params'] = json.loads(v['transport_params'])
 
                                 # Check if there is already a computer with the
                                 # same name in the database
@@ -1120,7 +1149,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 fields_info = metadata['all_fields_info'].get(entity_name, {})
                 unique_identifier = metadata['unique_identifiers'].get(entity_name, None)
 
-                for import_entry_id, entry_data in (existing_entries[entity_name].iteritems()):
+                for import_entry_id, entry_data in (existing_entries[entity_name].items()):
                     unique_id = entry_data[unique_identifier]
                     existing_entry_id = foreign_ids_reverse_mappings[entity_name][unique_id]
                     # TODO COMPARE, AND COMPARE ATTRIBUTES
@@ -1128,10 +1157,10 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                         ret_dict[entity_name] = {'new': [], 'existing': []}
                     ret_dict[entity_name]['existing'].append((import_entry_id, existing_entry_id))
                     if not silent:
-                        print "existing %s: %s (%s->%s)" % (entity_sig,
+                        print("existing %s: %s (%s->%s)" % (entity_sig,
                                                             unique_id,
                                                             import_entry_id,
-                                                            existing_entry_id)
+                                                            existing_entry_id))
 
                 # Store all objects for this model in a list, and store them
                 # all in once at the end.
@@ -1139,13 +1168,13 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 # This is needed later to associate the import entry with the new pk
                 import_entry_ids = dict()
 
-                for import_entry_id, entry_data in (new_entries[entity_name].iteritems()):
+                for import_entry_id, entry_data in (new_entries[entity_name].items()):
                     unique_id = entry_data[unique_identifier]
                     import_data = dict(deserialize_field(
                         k, v, fields_info=fields_info,
                         import_unique_ids_mappings=import_unique_ids_mappings,
                         foreign_ids_reverse_mappings=foreign_ids_reverse_mappings)
-                                       for k, v in entry_data.iteritems())
+                                       for k, v in entry_data.items())
 
                     # We convert the Django fields to SQLA. Note that some of
                     # the Django fields were converted to SQLA compatible
@@ -1172,7 +1201,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 if entity_sig == entity_names_to_signatures[NODE_ENTITY_NAME]:
 
                     if not silent:
-                        print "STORING NEW NODE FILES & ATTRIBUTES..."
+                        print("STORING NEW NODE FILES & ATTRIBUTES...")
                     for o in objects_to_create:
 
                         # Creating the needed files
@@ -1229,7 +1258,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 if import_entry_ids.keys():
                     qb = QueryBuilder()
                     qb.append(entity, filters={
-                        unique_identifier: {"in": import_entry_ids.keys()}},
+                        unique_identifier: {"in": list(import_entry_ids.keys())}},
                               project=[unique_identifier, "id"], tag="res")
                     just_saved = {v[0]: v[1] for v in qb.all()}
                 else:
@@ -1241,10 +1270,10 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                     # Needs more from here and below
                     ################################################
                     if not silent:
-                        print "SETTING THE IMPORTED STATES FOR NEW NODES..."
+                        print("SETTING THE IMPORTED STATES FOR NEW NODES...")
                     # I set for all nodes, even if I should set it only
                     # for calculations
-                    for unique_id, new_pk in just_saved.iteritems():
+                    for unique_id, new_pk in just_saved.items():
                         imported_states.append(
                             DbCalcState(dbnode_id=new_pk,
                                         state=calc_states.IMPORTED))
@@ -1253,7 +1282,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
                 # Now I have the PKs, print the info
                 # Moreover, set the foreing_ids_reverse_mappings
-                for unique_id, new_pk in just_saved.iteritems():
+                for unique_id, new_pk in just_saved.items():
                     from uuid import UUID
                     if isinstance(unique_id, UUID):
                         unique_id = str(unique_id)
@@ -1265,12 +1294,12 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                                                          new_pk))
 
                     if not silent:
-                        print "NEW %s: %s (%s->%s)" % (entity_sig, unique_id,
+                        print("NEW %s: %s (%s->%s)" % (entity_sig, unique_id,
                                                        import_entry_id,
-                                                       new_pk)
+                                                       new_pk))
 
             if not silent:
-                print "STORING NODE LINKS..."
+                print("STORING NODE LINKS...")
             ## TODO: check that we are not creating input links of an already
             ##       existing node...
             import_links = data['links_uuid']
@@ -1278,8 +1307,8 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
             # Needed for fast checks of existing links
             from aiida.backends.sqlalchemy.models.node import DbLink
-            existing_links_raw = session.query(DbLink.input, DbLink.output,
-                                               DbLink.label).all()
+            existing_links_raw = session.query(
+                DbLink.input_id, DbLink.output_id,DbLink.label).all()
             existing_links_labels = {(l[0], l[1]): l[2]
                                      for l in existing_links_raw}
             existing_input_links = {(l[1], l[2]): l[0]
@@ -1313,14 +1342,26 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                         # the correct name
                 except KeyError:
                     try:
+                        # We try to get the existing input of the link that
+                        # points to "out" and has label link['label'].
+                        # If there is no existing_input, it means that the
+                        # link doesn't exist and it has to be created. If
+                        # it exists, then the only case that we can have more
+                        # than one links with the same name entering a node
+                        # is the case of the RETURN links of workflows/
+                        # workchains. If it is not this case, then it is
+                        # an error.
                         existing_input = existing_input_links[out_id,
                                                               link['label']]
-                        # If existing_input were the correct one, I would have
-                        # it already in the previous step!
-                        raise ValueError("There exists already an input link "
-                                         "to node {} with label {} but it "
-                                         "does not come the expected input {}"
-                                         .format(out_id, link['label'], in_id))
+
+                        if link['type'] != LinkType.RETURN:
+                            raise ValueError(
+                                "There exists already an input link to node "
+                                "with UUID {} with label {} but it does not "
+                                "come from the expected input with UUID {} "
+                                "but from a node with UUID {}."
+                                    .format(link['output'], link['label'],
+                                            link['input'], existing_input))
                     except KeyError:
                         # New link
                         links_to_store.append(DbLink(
@@ -1333,16 +1374,16 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
             # Store new links
             if links_to_store:
                 if not silent:
-                    print "   ({} new links...)".format(len(links_to_store))
+                    print("   ({} new links...)".format(len(links_to_store)))
                 session.add_all(links_to_store)
             else:
                 if not silent:
-                    print "   (0 new links...)"
+                    print("   (0 new links...)")
 
             if not silent:
-                print "STORING GROUP ELEMENTS..."
+                print("STORING GROUP ELEMENTS...")
             import_groups = data['groups_uuid']
-            for groupuuid, groupnodes in import_groups.iteritems():
+            for groupuuid, groupnodes in import_groups.items():
                 # # TODO: cache these to avoid too many queries
                 qb_group = QueryBuilder().append(
                     Group, filters={'uuid': {'==': groupuuid}})
@@ -1358,10 +1399,10 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
             # Put everything in a specific group
             existing = existing_entries.get(NODE_ENTITY_NAME, {})
             existing_pk = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']]
-                           for v in existing.itervalues()]
+                           for v in six.itervalues(existing)]
             new = new_entries.get(NODE_ENTITY_NAME, {})
             new_pk = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']]
-                      for v in new.itervalues()]
+                      for v in six.itervalues(new)]
 
             pks_for_group = existing_pk + new_pk
 
@@ -1399,26 +1440,28 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 #     pk__in=pks_for_group))
 
                 if not silent:
-                    print "IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.name)
+                    print("IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.name))
             else:
                 if not silent:
-                    print "NO DBNODES TO IMPORT, SO NO GROUP CREATED"
+                    print("NO DBNODES TO IMPORT, SO NO GROUP CREATED")
 
+            if not silent:
+                print("COMMITTING EVERYTHING...")
             session.commit()
         except:
-            print "Rolling back"
+            print("Rolling back")
             session.rollback()
             raise
 
     if not silent:
-        print "*** WARNING: MISSING EXISTING UUID CHECKS!!"
-        print "*** WARNING: TODO: UPDATE IMPORT_DATA WITH DEFAULT VALUES! (e.g. calc status, user pwd, ...)"
-        print "DONE."
+        print("*** WARNING: MISSING EXISTING UUID CHECKS!!")
+        print("*** WARNING: TODO: UPDATE IMPORT_DATA WITH DEFAULT VALUES! (e.g. calc status, user pwd, ...)")
+        print("DONE.")
 
     return ret_dict
 
 
-class HTMLGetLinksParser(HTMLParser.HTMLParser):
+class HTMLGetLinksParser(HTMLParser):
     def __init__(self, filter_extension=None):
         """
         If a filter_extension is passed, only links with extension matching
@@ -1426,7 +1469,7 @@ class HTMLGetLinksParser(HTMLParser.HTMLParser):
         """
         self.filter_extension = filter_extension
         self.links = []
-        HTMLParser.HTMLParser.__init__(self)
+        super(HTMLGetLinksParser, self).__init__()
 
     def handle_starttag(self, tag, attrs):
         """
@@ -1451,17 +1494,16 @@ def get_valid_import_links(url):
     Open the given URL, parse the HTML and return a list of valid links where
     the link file has a .aiida extension.
     """
-    import urllib2
-    import urlparse
+    from six.moves import urllib
 
-    request = urllib2.urlopen(url)
+    request = urllib.request.urlopen(url)
     parser = HTMLGetLinksParser(filter_extension='aiida')
     parser.feed(request.read())
 
     return_urls = []
 
     for link in parser.get_links():
-        return_urls.append(urlparse.urljoin(request.geturl(), link))
+        return_urls.append(urllib.parse.urljoin(request.geturl(), link))
 
     return return_urls
 
@@ -1481,13 +1523,13 @@ def serialize_field(data, track_conversion=False):
         if track_conversion:
             ret_data = {}
             ret_conversion = {}
-            for k, v in data.iteritems():
+            for k, v in data.items():
                 ret_data[k], ret_conversion[k] = serialize_field(
                     data=v, track_conversion=track_conversion)
         else:
             ret_data = {k: serialize_field(data=v,
                                            track_conversion=track_conversion)
-                        for k, v in data.iteritems()}
+                        for k, v in data.items()}
     elif isinstance(data, (list, tuple)):
         if track_conversion:
             ret_data = []
@@ -1548,7 +1590,7 @@ def serialize_dict(datadict, remove_fields=[], rename_fields={},
 
     conversions = {}
 
-    for k, v in datadict.iteritems():
+    for k, v in datadict.items():
         if k not in remove_fields:
             # rename_fields.get(k,k): use the replacement if found in rename_fields,
             # otherwise use 'k' as the default value.
@@ -1610,8 +1652,8 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str,
     project_cols = ["id"]
     for prop in entity_prop:
         nprop = prop
-        if file_fields_to_model_fields.has_key(current_entity_str):
-            if file_fields_to_model_fields[current_entity_str].has_key(prop):
+        if current_entity_str in file_fields_to_model_fields:
+            if prop in file_fields_to_model_fields[current_entity_str]:
                 nprop = file_fields_to_model_fields[current_entity_str][prop]
 
         project_cols.append(nprop)
@@ -1630,50 +1672,53 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str,
     # prepare the recursion for the referenced entities
     foreign_fields = {k: v for k, v in
                       all_fields_info[
-                          current_entity_str].iteritems()
-                      # all_fields_info[model_name].iteritems()
+                          current_entity_str].items()
+                      # all_fields_info[model_name].items()
                       if 'requires' in v}
 
     new_tag_suffixes = tag_suffixes + [current_entity_str]
-    for k, v in foreign_fields.iteritems():
+    for k, v in foreign_fields.items():
         ref_model_name = v['requires']
         fill_in_query(partial_query, current_entity_str, ref_model_name,
                       new_tag_suffixes)
 
 
-def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
-                allowed_licenses=None, forbidden_licenses=None,
-                silent=False, use_querybuilder_ancestors=False):
+def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
+                silent=False, input_forward=False, create_reversed=True,
+                return_reversed=False, call_reversed=False, **kwargs):
     """
-    Export the DB entries passed in the 'what' list to a file tree.
-
+    Export the entries passed in the 'what' list to a file tree.
     :todo: limit the export to finished or failed calculations.
-
-    :param what: a list of Django database entries; they can belong to different
-      models.
+    :param what: a list of entity instances; they can belong to
+    different models/entities.
     :param folder: a :py:class:`Folder <aiida.common.folders.Folder>` object
-    :param also_parents: if True, also all the parents are stored (from the transitive closure)
-    :param also_calc_outputs: if True, any output of a calculation is also exported
+    :param input_forward: Follow forward INPUT links (recursively) when
+    calculating the node set to export.
+    :param create_reversed: Follow reversed CREATE links (recursively) when
+    calculating the node set to export.
+    :param return_reversed: Follow reversed RETURN links (recursively) when
+    calculating the node set to export.
+    :param call_reversed: Follow reversed CALL links (recursively) when
+    calculating the node set to export.
     :param allowed_licenses: a list or a function. If a list, then checks
-      whether all licenses of Data nodes are in the list. If a function,
-      then calls function for licenses of Data nodes expecting True if
-      license is allowed, False otherwise.
+    whether all licenses of Data nodes are in the list. If a function,
+    then calls function for licenses of Data nodes expecting True if
+    license is allowed, False otherwise.
     :param forbidden_licenses: a list or a function. If a list, then checks
-      whether all licenses of Data nodes are in the list. If a function,
-      then calls function for licenses of Data nodes expecting True if
-      license is allowed, False otherwise.
+    whether all licenses of Data nodes are in the list. If a function,
+    then calls function for licenses of Data nodes expecting True if
+    license is allowed, False otherwise.
     :param silent: suppress debug prints
     :raises LicensingException: if any node is licensed under forbidden
-      license
+    license
     """
     import json
     import aiida
 
-    from aiida.orm import Node, Calculation, Data
+    from aiida.orm import Node, Calculation, Data, Group, Code
     from aiida.common.links import LinkType
     from aiida.common.folders import RepositoryFolder
     from aiida.orm.querybuilder import QueryBuilder
-    from aiida.backends.utils import QueryFactory
     if not silent:
         print("STARTING EXPORT...")
 
@@ -1681,9 +1726,14 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
 
     all_fields_info, unique_identifiers = get_all_fields_info()
 
-    given_node_entry_ids = set()
+    # The set that contains the nodes ids of the nodes that should be exported
+    to_be_exported = set()
+
+    given_data_entry_ids = set()
+    given_calculation_entry_ids = set()
     given_group_entry_ids = set()
     given_computer_entry_ids = set()
+    given_groups = set()
 
     # I store a list of the actual dbnodes
     for entry in what:
@@ -1692,52 +1742,223 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
         entry_class_string = get_class_string(entry)
         # Now a load the backend-independent name into entry_entity_name, e.g. Node!
         entry_entity_name = schema_to_entity_names(entry_class_string)
-        if entry_entity_name == GROUP_ENTITY_NAME:
+        if issubclass(entry.__class__, Group):
             given_group_entry_ids.add(entry.pk)
-        elif entry_entity_name == NODE_ENTITY_NAME:
-            given_node_entry_ids.add(entry.pk)
-        elif entry_entity_name == COMPUTER_ENTITY_NAME:
+            given_groups.add(entry)
+        elif issubclass(entry.__class__, Node):
+            # The Code node should be treated as a Data node
+            if (issubclass(entry.__class__, Data) or issubclass(entry.__class__, Code)):
+                given_data_entry_ids.add(entry.pk)
+            elif issubclass(entry.__class__, Calculation):
+                given_calculation_entry_ids.add(entry.pk)
+        elif issubclass(entry.__class__, Computer):
             given_computer_entry_ids.add(entry.pk)
         else:
             raise ValueError("I was given {}, which is not a DbNode or DbGroup instance".format(entry))
 
-    if also_parents:
-        if given_node_entry_ids:
-            # Also add the parents (to any level) to the query
-            # This is done via the ancestor relationship.
-            if use_querybuilder_ancestors:
-                qb = QueryBuilder()
-                qb.append(Node, tag='low_node',
-                          filters={'id': {'in': given_node_entry_ids}})
-                qb.append(Node, ancestor_of='low_node', project=['id'])
-                additional_ids = [_ for _, in qb.all()]
+    # Add all the nodes contained within the specified groups
+    for group in given_groups:
+        for entry in group.nodes:
+            # The Code node should be treated as a Data nodes
+            if (issubclass(entry.__class__, Data) or issubclass(entry.__class__, Code)):
+                given_data_entry_ids.add(entry.pk)
+            elif issubclass(entry.__class__, Calculation):
+                given_calculation_entry_ids.add(entry.pk)
+
+    # We will iteratively explore the AiiDA graph to find further nodes that
+    # should also be exported.
+
+    # We repeat until there are no further nodes to be visited
+    while given_calculation_entry_ids or given_data_entry_ids:
+
+        # If is is a calculation node
+        if given_calculation_entry_ids:
+            curr_node_id = given_calculation_entry_ids.pop()
+            # If it is already visited continue to the next node
+            if curr_node_id in to_be_exported:
+                continue
+            # Otherwise say that it is a node to be exported
             else:
-                q = QueryFactory()()
-                additional_ids = [_ for _, in q.get_all_parents(given_node_entry_ids, return_values=['id'])]
+                to_be_exported.add(curr_node_id)
 
-            given_node_entry_ids = given_node_entry_ids.union(additional_ids)
-
-    if also_calc_outputs:
-        if given_node_entry_ids:
-            # Add all (direct) outputs of a calculation object that was already
-            # selected
+            # INPUT(Data, Calculation) - Reversed
             qb = QueryBuilder()
-            # Only looking at calculations and subclasses that are in my entries:
-            qb.append(Calculation, tag='high_node',
-                      filters={'id': {'in': given_node_entry_ids}})
-            # Only looking at the output that was created by a calculation.
-            # From the OPM we know it has to be Data, linked by CREATE.
-            qb.append(Data, output_of='high_node', project=['id'],
-                      edge_filters={'type': {'==': LinkType.CREATE.value}})  # and the outputs
-            additional_ids = [_ for [_] in qb.all()]
-            given_node_entry_ids = given_node_entry_ids.union(additional_ids)
+            qb.append(Data, tag='predecessor', project=['id'])
+            qb.append(Calculation, output_of='predecessor',
+                      filters={'id': {'==': curr_node_id}},
+                      edge_filters={
+                          'type': {
+                              '==': LinkType.INPUT.value}})
+            res = {_[0] for _ in qb.all()}
+            given_data_entry_ids.update(res - to_be_exported)
+            # The same until Code becomes a subclass of Data
+            qb = QueryBuilder()
+            qb.append(Code, tag='predecessor', project=['id'])
+            qb.append(Calculation, output_of='predecessor',
+                      filters={'id': {'==': curr_node_id}},
+                      edge_filters={
+                          'type': {
+                              '==': LinkType.INPUT.value}})
+            res = {_[0] for _ in qb.all()}
+            given_data_entry_ids.update(res - to_be_exported)
+
+
+            # INPUT(Data, Calculation) - Forward
+            if input_forward:
+                qb = QueryBuilder()
+                qb.append(Data, tag='predecessor', project=['id'],
+                          filters={'id': {'==': curr_node_id}})
+                qb.append(Calculation, output_of='predecessor',
+                          edge_filters={
+                              'type': {
+                                  '==': LinkType.INPUT.value}})
+                res = {_[0] for _ in qb.all()}
+                given_data_entry_ids.update(res - to_be_exported)
+                # The same until Code becomes a subclass of Data
+                qb = QueryBuilder()
+                qb.append(Code, tag='predecessor', project=['id'],
+                          filters={'id': {'==': curr_node_id}})
+                qb.append(Calculation, output_of='predecessor',
+                          edge_filters={
+                              'type': {
+                                  '==': LinkType.INPUT.value}})
+                res = {_[0] for _ in qb.all()}
+                given_data_entry_ids.update(res - to_be_exported)
+
+
+            # CREATE/RETURN(Calculation, Data) - Forward
+            qb = QueryBuilder()
+            qb.append(Calculation, tag='predecessor',
+                      filters={'id': {'==': curr_node_id}})
+            qb.append(Data, output_of='predecessor', project=['id'],
+                      edge_filters={
+                          'type': {
+                              'in': [LinkType.CREATE.value,
+                                     LinkType.RETURN.value]}})
+            res = {_[0] for _ in qb.all()}
+            given_data_entry_ids.update(res - to_be_exported)
+            # The same until Code becomes a subclass of Data
+            qb = QueryBuilder()
+            qb.append(Calculation, tag='predecessor',
+                      filters={'id': {'==': curr_node_id}})
+            qb.append(Code, output_of='predecessor', project=['id'],
+                      edge_filters={
+                          'type': {
+                              'in': [LinkType.CREATE.value,
+                                     LinkType.RETURN.value]}})
+            res = {_[0] for _ in qb.all()}
+            given_data_entry_ids.update(res - to_be_exported)
+
+
+            # CREATE(Calculation, Data) - Reversed
+            if create_reversed:
+                qb = QueryBuilder()
+                qb.append(Calculation, tag='predecessor')
+                qb.append(Data, output_of='predecessor', project=['id'],
+                          filters={'id': {'==': curr_node_id}},
+                          edge_filters={
+                              'type': {
+                                  'in': [LinkType.CREATE.value]}})
+                res = {_[0] for _ in qb.all()}
+                given_data_entry_ids.update(res - to_be_exported)
+                # The same until Code becomes a subclass of Data
+                qb = QueryBuilder()
+                qb.append(Calculation, tag='predecessor')
+                qb.append(Code, output_of='predecessor', project=['id'],
+                          filters={'id': {'==': curr_node_id}},
+                          edge_filters={
+                              'type': {
+                                  'in': [LinkType.CREATE.value]}})
+                res = {_[0] for _ in qb.all()}
+                given_data_entry_ids.update(res - to_be_exported)
+
+
+            # RETURN(Calculation, Data) - Reversed
+            if return_reversed:
+                qb = QueryBuilder()
+                qb.append(Calculation, tag='predecessor')
+                qb.append(Data, output_of='predecessor', project=['id'],
+                          filters={'id': {'==': curr_node_id}},
+                          edge_filters={
+                              'type': {
+                                  'in': [LinkType.RETURN.value]}})
+                res = {_[0] for _ in qb.all()}
+                given_data_entry_ids.update(res - to_be_exported)
+                # The same until Code becomes a subclass of Data
+                qb = QueryBuilder()
+                qb.append(Calculation, tag='predecessor')
+                qb.append(Code, output_of='predecessor', project=['id'],
+                          filters={'id': {'==': curr_node_id}},
+                          edge_filters={
+                              'type': {
+                                  'in': [LinkType.RETURN.value]}})
+                res = {_[0] for _ in qb.all()}
+                given_data_entry_ids.update(res - to_be_exported)
+
+            # CALL(Calculation, Calculation) - Forward
+            qb = QueryBuilder()
+            qb.append(Calculation, tag='predecessor',
+                      filters={'id': {'==': curr_node_id}})
+            qb.append(Calculation, output_of='predecessor', project=['id'],
+                      edge_filters={
+                          'type': {
+                              '==': LinkType.CALL.value}})
+            res = {_[0] for _ in qb.all()}
+            given_calculation_entry_ids.update(res - to_be_exported)
+
+
+            # CALL(Calculation, Calculation) - Reversed
+            if call_reversed:
+                qb = QueryBuilder()
+                qb.append(Calculation, tag='predecessor')
+                qb.append(Calculation, output_of='predecessor', project=['id'],
+                          filters={'id': {'==': curr_node_id}},
+                          edge_filters={
+                              'type': {
+                                  '==': LinkType.CALL.value}})
+                res = {_[0] for _ in qb.all()}
+                given_calculation_entry_ids.update(res - to_be_exported)
+
+
+        # If it is a Data node
+        else:
+            curr_node_id = given_data_entry_ids.pop()
+            # If it is already visited continue to the next node
+            if curr_node_id in to_be_exported:
+                continue
+            # Otherwise say that it is a node to be exported
+            else:
+                to_be_exported.add(curr_node_id)
+
+            # Case 2:
+            # CREATE(Calculation, Data) - Reversed
+            qb = QueryBuilder()
+            qb.append(Calculation, tag='predecessor', project=['id'])
+            qb.append(Data, output_of='predecessor',
+                      filters={'id': {'==': curr_node_id}},
+                      edge_filters={
+                          'type': {
+                              '==': LinkType.CREATE.value}})
+            res = {_[0] for _ in qb.all()}
+            given_calculation_entry_ids.update(res - to_be_exported)
+            # The same until Code becomes a subclass of Data
+            qb = QueryBuilder()
+            qb.append(Calculation, tag='predecessor', project=['id'])
+            qb.append(Code, output_of='predecessor',
+                      filters={'id': {'==': curr_node_id}},
+                      edge_filters={
+                          'type': {
+                              '==': LinkType.CREATE.value}})
+            res = {_[0] for _ in qb.all()}
+            given_calculation_entry_ids.update(res - to_be_exported)
+
 
     # Here we get all the columns that we plan to project per entity that we
     # would like to extract
     given_entities = list()
     if len(given_group_entry_ids) > 0:
         given_entities.append(GROUP_ENTITY_NAME)
-    if len(given_node_entry_ids) > 0:
+    if len(to_be_exported) > 0:
         given_entities.append(NODE_ENTITY_NAME)
     if len(given_computer_entry_ids) > 0:
         given_entities.append(COMPUTER_ENTITY_NAME)
@@ -1753,7 +1974,7 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
         for prop in entity_prop:
             # nprop contains the list of projections
             nprop = (file_fields_to_model_fields[given_entity][prop]
-                     if file_fields_to_model_fields[given_entity].has_key(prop)
+                     if prop in file_fields_to_model_fields[given_entity]
                      else prop)
             project_cols.append(nprop)
 
@@ -1761,7 +1982,7 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
         if given_entity == GROUP_ENTITY_NAME:
             entry_ids_to_add = given_group_entry_ids
         elif given_entity == NODE_ENTITY_NAME:
-            entry_ids_to_add = given_node_entry_ids
+            entry_ids_to_add = to_be_exported
         elif given_entity == COMPUTER_ENTITY_NAME:
             entry_ids_to_add = given_computer_entry_ids
 
@@ -1777,7 +1998,7 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
     if allowed_licenses is not None or forbidden_licenses is not None:
         qb = QueryBuilder()
         qb.append(Node, project=["id", "attributes.source.license"],
-                  filters={"id": {"in": given_node_entry_ids}})
+                  filters={"id": {"in": to_be_exported}})
         # Skip those nodes where the license is not set (this is the standard behavior with Django)
         node_licenses = list((a, b) for [a, b] in qb.all() if b is not None)
         check_licences(node_licenses, allowed_licenses, forbidden_licenses)
@@ -1786,18 +2007,18 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
     ##### Start automatic recursive export data generation #####
     ############################################################
     if not silent:
-        print "STORING DATABASE ENTRIES..."
+        print("STORING DATABASE ENTRIES...")
 
     export_data = dict()
     entity_separator = '_'
-    for entity_name, partial_query in entries_to_add.iteritems():
+    for entity_name, partial_query in entries_to_add.items():
 
         foreign_fields = {k: v for k, v in
-                          all_fields_info[entity_name].iteritems()
-                          # all_fields_info[model_name].iteritems()
+                          all_fields_info[entity_name].items()
+                          # all_fields_info[model_name].items()
                           if 'requires' in v}
 
-        for k, v in foreign_fields.iteritems():
+        for k, v in foreign_fields.items():
             ref_model_name = v['requires']
             fill_in_query(partial_query, entity_name, ref_model_name,
                           [entity_name], entity_separator)
@@ -1828,22 +2049,22 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
     ######################################
     # I use .get because there may be no nodes to export
     all_nodes_pk = list()
-    if export_data.has_key(NODE_ENTITY_NAME):
+    if NODE_ENTITY_NAME in export_data:
         all_nodes_pk.extend(export_data.get(NODE_ENTITY_NAME).keys())
 
     if sum(len(model_data) for model_data in export_data.values()) == 0:
         if not silent:
-            print "No nodes to store, exiting..."
+            print("No nodes to store, exiting...")
         return
 
     if not silent:
-        print "Exporting a total of {} db entries, of which {} nodes.".format(
-            sum(len(model_data) for model_data in export_data.values()),
-            len(all_nodes_pk))
+        print("Exporting a total of {} db entries, of which {} nodes."
+              .format(sum(len(model_data) for model_data in export_data.values()),
+                      len(all_nodes_pk)))
 
     ## ATTRIBUTES
     if not silent:
-        print "STORING NODE ATTRIBUTES..."
+        print("STORING NODE ATTRIBUTES...")
     node_attributes = {}
     node_attributes_conversion = {}
 
@@ -1860,31 +2081,244 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
                 n.get_attrs(), track_conversion=True)
 
     if not silent:
-        print "STORING NODE LINKS..."
-    ## All 'parent' links (in this way, I can automatically export a node
-    ## that will get automatically attached to a parent node in the end DB,
-    ## if the parent node is already present in the DB)
-    links_uuid = list()
-    # Export links only if there are nodes to be extracted
+        print("STORING NODE LINKS...")
+
+    links_uuid_dict = dict()
     if len(all_nodes_pk) > 0:
+        # INPUT (Data, Calculation) - Forward, by the Calculation node
+        if input_forward:
+            # INPUT (Data, Calculation)
+            links_qb = QueryBuilder()
+            links_qb.append(Data,
+                            project=['uuid'], tag='input',
+                            filters = {'id': {'in': all_nodes_pk}})
+            links_qb.append(Calculation,
+                            project=['uuid'], tag='output',
+                            edge_filters={'type':{'==':LinkType.INPUT.value}},
+                            edge_project=['label', 'type'], output_of='input')
+            for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
+                val = {
+                    'input': str(input_uuid),
+                    'output': str(output_uuid),
+                    'label': str(link_label),
+                    'type':str(link_type)
+                }
+                links_uuid_dict[frozenset(val.items())] = val
+            # INPUT (Code, Calculation)
+            # The same as above until Code becomes a subclass of Data
+            links_qb = QueryBuilder()
+            links_qb.append(Code,
+                            project=['uuid'], tag='input',
+                            filters = {'id': {'in': all_nodes_pk}})
+            links_qb.append(Calculation,
+                            project=['uuid'], tag='output',
+                            edge_filters={'type':{'==':LinkType.INPUT.value}},
+                            edge_project=['label', 'type'], output_of='input')
+            for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
+                val = {
+                    'input': str(input_uuid),
+                    'output': str(output_uuid),
+                    'label': str(link_label),
+                    'type':str(link_type)
+                }
+                links_uuid_dict[frozenset(val.items())] = val
+
+        # INPUT (Data, Calculation) - Backward, by the Calculation node
         links_qb = QueryBuilder()
-        links_qb.append(Node, project=['uuid'], tag='input')
-        links_qb.append(Node,
+        links_qb.append(Data,
+                        project=['uuid'], tag='input')
+        links_qb.append(Calculation,
                         project=['uuid'], tag='output',
                         filters={'id': {'in': all_nodes_pk}},
-                        edge_filters={'type': {'in': (LinkType.CREATE.value, LinkType.INPUT.value)}},
+                        edge_filters={'type':{'==':LinkType.INPUT.value}},
                         edge_project=['label', 'type'], output_of='input')
-
         for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-            links_uuid.append({
+            val = {
+                'input': str(input_uuid),
+                'output': str(output_uuid),
+                'label': str(link_label),
+                'type':str(link_type)
+            }
+            links_uuid_dict[frozenset(val.items())] = val
+        # INPUT (Data, Calculation) - Backward, by the Calculation node
+        # The same as above until Code becomes a subclass of Data
+        links_qb = QueryBuilder()
+        links_qb.append(Code,
+                        project=['uuid'], tag='input')
+        links_qb.append(Calculation,
+                        project=['uuid'], tag='output',
+                        filters={'id': {'in': all_nodes_pk}},
+                        edge_filters={
+                            'type': {'==': LinkType.INPUT.value}},
+                        edge_project=['label', 'type'], output_of='input')
+        for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
+            val = {
                 'input': str(input_uuid),
                 'output': str(output_uuid),
                 'label': str(link_label),
                 'type': str(link_type)
-            })
+            }
+            links_uuid_dict[frozenset(val.items())] = val
+
+        # CREATE (Calculation, Data) - Forward, by the Calculation node
+        links_qb = QueryBuilder()
+        links_qb.append(Calculation,
+                        project=['uuid'], tag='input',
+                        filters={'id': {'in': all_nodes_pk}})
+        links_qb.append(Data,
+                        project=['uuid'], tag='output',
+                        edge_filters={'type': {'==': LinkType.CREATE.value}},
+                        edge_project=['label', 'type'], output_of='input')
+        for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
+            val = {
+                'input': str(input_uuid),
+                'output': str(output_uuid),
+                'label': str(link_label),
+                'type':str(link_type)
+            }
+            links_uuid_dict[frozenset(val.items())] = val
+        # CREATE (Calculation, Code) - Forward, by the Calculation node
+        # The same as above until Code becomes a subclass of Data
+        # This case will not happen (with the current setup - a code is not
+        # created by a calculation) but it is addded for completeness
+        links_qb = QueryBuilder()
+        links_qb.append(Calculation,
+                        project=['uuid'], tag='input',
+                        filters={'id': {'in': all_nodes_pk}})
+        links_qb.append(Code,
+                        project=['uuid'], tag='output',
+                        edge_filters={'type': {'==': LinkType.CREATE.value}},
+                        edge_project=['label', 'type'], output_of='input')
+        for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
+            val = {
+                'input': str(input_uuid),
+                'output': str(output_uuid),
+                'label': str(link_label),
+                'type': str(link_type)
+            }
+            links_uuid_dict[frozenset(val.items())] = val
+
+
+        # CREATE (Calculation, Data) - Backward, by the Data node
+        if create_reversed:
+            links_qb = QueryBuilder()
+            links_qb.append(Calculation,
+                            project=['uuid'], tag='input',
+                            filters={'id': {'in': all_nodes_pk}})
+            links_qb.append(Data,
+                            project=['uuid'], tag='output',
+                            edge_filters={'type': {'==': LinkType.CREATE.value}},
+                            edge_project=['label', 'type'], output_of='input')
+            for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
+                val = {
+                    'input': str(input_uuid),
+                    'output': str(output_uuid),
+                    'label': str(link_label),
+                    'type':str(link_type)
+                }
+                links_uuid_dict[frozenset(val.items())] = val
+        # CREATE (Calculation, Code) - Backward, by the Code node
+        # The same as above until Code becomes a subclass of Data
+        # This case will not happen (with the current setup - a code is not
+        # created by a calculation) but it is addded for completeness
+        if create_reversed:
+            links_qb = QueryBuilder()
+            links_qb.append(Calculation,
+                            project=['uuid'], tag='input',
+                            filters={'id': {'in': all_nodes_pk}})
+            links_qb.append(Data,
+                            project=['uuid'], tag='output',
+                            edge_filters={'type': {'==': LinkType.CREATE.value}},
+                            edge_project=['label', 'type'], output_of='input')
+            for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
+                val = {
+                    'input': str(input_uuid),
+                    'output': str(output_uuid),
+                    'label': str(link_label),
+                    'type':str(link_type)
+                }
+                links_uuid_dict[frozenset(val.items())] = val
+
+        # RETURN (Calculation, Data) - Forward, by the Calculation node
+        links_qb = QueryBuilder()
+        links_qb.append(Calculation,
+                        project=['uuid'], tag='input',
+                        filters={'id': {'in': all_nodes_pk}})
+        links_qb.append(Data,
+                        project=['uuid'], tag='output',
+                        edge_filters={'type': {'==': LinkType.RETURN.value}},
+                        edge_project=['label', 'type'], output_of='input')
+        for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
+            val = {
+                'input': str(input_uuid),
+                'output': str(output_uuid),
+                'label': str(link_label),
+                'type':str(link_type)
+            }
+            links_uuid_dict[frozenset(val.items())] = val
+
+        # RETURN (Calculation, Data) - Backward, by the Data node
+        if return_reversed:
+            links_qb = QueryBuilder()
+            links_qb.append(Calculation,
+                            project=['uuid'], tag='input')
+            links_qb.append(Data,
+                            project=['uuid'], tag='output',
+                            filters={'id': {'in': all_nodes_pk}},
+                            edge_filters={'type': {'==': LinkType.RETURN.value}},
+                            edge_project=['label', 'type'], output_of='input')
+            for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
+                val = {
+                    'input': str(input_uuid),
+                    'output': str(output_uuid),
+                    'label': str(link_label),
+                    'type':str(link_type)
+                }
+                links_uuid_dict[frozenset(val.items())] = val
+
+        # CALL (Calculation [caller], Calculation [called]) - Forward, by
+        # the Calculation node
+        links_qb = QueryBuilder()
+        links_qb.append(Calculation,
+                        project=['uuid'], tag='input',
+                        filters={'id': {'in': all_nodes_pk}})
+        links_qb.append(Calculation,
+                        project=['uuid'], tag='output',
+                        edge_filters={'type': {'==': LinkType.CALL.value}},
+                        edge_project=['label', 'type'], output_of='input')
+        for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
+            val = {
+                'input': str(input_uuid),
+                'output': str(output_uuid),
+                'label': str(link_label),
+                'type':str(link_type)
+            }
+            links_uuid_dict[frozenset(val.items())] = val
+
+        # CALL (Calculation [caller], Calculation [called]) - Backward,
+        # by the Calculation [called] node
+        if call_reversed:
+            links_qb = QueryBuilder()
+            links_qb.append(Calculation,
+                            project=['uuid'], tag='input')
+            links_qb.append(Calculation,
+                            project=['uuid'], tag='output',
+                            filters={'id': {'in': all_nodes_pk}},
+                            edge_filters={'type': {'==': LinkType.CALL.value}},
+                            edge_project=['label', 'type'], output_of='input')
+            for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
+                val = {
+                    'input': str(input_uuid),
+                    'output': str(output_uuid),
+                    'label': str(link_label),
+                    'type':str(link_type)
+                }
+                links_uuid_dict[frozenset(val.items())] = val
+
+    links_uuid = list(links_uuid_dict.values())
 
     if not silent:
-        print "STORING GROUP ELEMENTS..."
+        print("STORING GROUP ELEMENTS...")
     groups_uuid = dict()
     # If a group is in the exported date, we export the group/node correlation
     if GROUP_ENTITY_NAME in export_data:
@@ -1896,7 +2330,7 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
             group_uuid_qb.append(entity_names_to_entities[NODE_ENTITY_NAME],
                                  project=['uuid'], member_of='group')
             for res in group_uuid_qb.iterall():
-                if groups_uuid.has_key(str(res[0])):
+                if str(res[0]) in groups_uuid:
                     groups_uuid[str(res[0])].append(str(res[1]))
                 else:
                     groups_uuid[str(res[0])] = [str(res[1])]
@@ -1914,7 +2348,7 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
             export_data.pop(entity_name))
 
     if not silent:
-        print "STORING DATA..."
+        print("STORING DATA...")
 
     with folder.open('data.json', 'w') as f:
         json.dump({
@@ -1939,7 +2373,7 @@ def export_tree(what, folder, also_parents=True, also_calc_outputs=True,
         json.dump(metadata, f)
 
     if silent is not True:
-        print "STORING FILES..."
+        print("STORING FILES...")
 
     # If there are no nodes, there are no files to store
     if len(all_nodes_pk) > 0:
@@ -2034,11 +2468,11 @@ class MyWritingZipFile(object):
         self._buffer = None
 
     def open(self):
-        import StringIO
+        from six.moves import cStringIO as StringIO
 
         if self._buffer is not None:
             raise IOError("Cannot open again!")
-        self._buffer = StringIO.StringIO()
+        self._buffer = StringIO()
 
     def write(self, data):
         self._buffer.write(data)
@@ -2081,7 +2515,7 @@ class ZipFolder(object):
         import zipfile
         import os
 
-        if isinstance(zipfolder_or_fname, basestring):
+        if isinstance(zipfolder_or_fname, six.string_types):
             the_mode = mode
             if the_mode is None:
                 the_mode = "r"
@@ -2133,14 +2567,13 @@ class ZipFolder(object):
         import os
 
         if dest_name is None:
-            base_filename = unicode(os.path.basename(src))
+            base_filename = six.text_type(os.path.basename(src))
         else:
-            base_filename = unicode(dest_name)
+            base_filename = six.text_type(dest_name)
 
         base_filename = self._get_internal_path(base_filename)
 
-        if not isinstance(src, unicode):
-            src = unicode(src)
+        src = six.text_type(src)
 
         if not os.path.isabs(src):
             raise ValueError("src must be an absolute path in insert_file")
@@ -2180,22 +2613,35 @@ def export_zip(what, outfile='testzip', overwrite=False,
     with ZipFolder(outfile, mode='w', use_compression=use_compression) as folder:
         export_tree(what, folder=folder, silent=silent, **kwargs)
     if not silent:
-        print "File written in {:10.3g} s.".format(time.time() - t)
+        print("File written in {:10.3g} s.".format(time.time() - t))
 
 
-def export(what, outfile='export_data.aiida.tar.gz', overwrite=False, silent=False, **kwargs):
+def export(what, outfile='export_data.aiida.tar.gz', overwrite=False,
+           silent=False, **kwargs):
     """
-    Export the DB entries passed in the 'what' list on a file.
-
+    Export the entries passed in the 'what' list to a file tree.
     :todo: limit the export to finished or failed calculations.
-
-    :param what: a list of Django database entries; they can belong to different
-      models.
-    :param also_parents: if True, also all the parents are stored (from the transitive closure)
-    :param also_calc_outputs: if True, any output of a calculation is also exported
+    :param what: a list of entity instances; they can belong to
+    different models/entities.
+    :param input_forward: Follow forward INPUT links (recursively) when
+    calculating the node set to export.
+    :param create_reversed: Follow reversed CREATE links (recursively) when
+    calculating the node set to export.
+    :param return_reversed: Follow reversed RETURN links (recursively) when
+    calculating the node set to export.
+    :param call_reversed: Follow reversed CALL links (recursively) when
+    calculating the node set to export.
+    :param allowed_licenses: a list or a function. If a list, then checks
+    whether all licenses of Data nodes are in the list. If a function,
+    then calls function for licenses of Data nodes expecting True if
+    license is allowed, False otherwise.
+    :param forbidden_licenses: a list or a function. If a list, then checks
+    whether all licenses of Data nodes are in the list. If a function,
+    then calls function for licenses of Data nodes expecting True if
+    license is allowed, False otherwise.
     :param outfile: the filename of the file on which to export
     :param overwrite: if True, overwrite the output file without asking.
-        if False, raise an IOError in this case.
+    if False, raise an IOError in this case.
     :param silent: suppress debug print
 
     :raise IOError: if overwrite==False and the filename already exists.
@@ -2217,31 +2663,22 @@ def export(what, outfile='export_data.aiida.tar.gz', overwrite=False, silent=Fal
     t2 = time.time()
 
     if not silent:
-        print "COMPRESSING..."
+        print("COMPRESSING...")
 
-    # PAX_FORMAT: virtually no limitations, better support for unicode
-    #   characters
-    # dereference=True: at the moment, we should not have any symlink or
-    #   hardlink in the AiiDA repository; therefore, do not store symlinks
-    #   or hardlinks, but store the actual destinations.
-    #   This also simplifies the checks on import.
     t3 = time.time()
     with tarfile.open(outfile, "w:gz", format=tarfile.PAX_FORMAT,
                       dereference=True) as tar:
         tar.add(folder.abspath, arcname="")
-
-        #        import shutil
-        #        shutil.make_archive(outfile, 'zip', folder.abspath)#, base_dir='aiida')
     t4 = time.time()
 
     if not silent:
         filecr_time = t2 - t1
         filecomp_time = t4 - t3
-        print "Exported in {:6.2g}s, compressed in {:6.2g}s, total: {:6.2g}s.".format(filecr_time, filecomp_time,
-                                                                                      filecr_time + filecomp_time)
+        print("Exported in {:6.2g}s, compressed in {:6.2g}s, total: {:6.2g}s."
+              .format(filecr_time, filecomp_time, filecr_time + filecomp_time))
 
     if not silent:
-        print "DONE."
+        print("DONE.")
 
 # Following code: to serialize the date directly when dumping into JSON.
 # In our case, it is better to have a finer control on how to parse fields.

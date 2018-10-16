@@ -7,12 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 import functools
 import logging
 import shutil
 import sys
 import tempfile
-from future.utils import raise_
+
+import six
 from tornado.gen import coroutine, Return
 
 import plumpy
@@ -30,8 +32,10 @@ from aiida.work.utils import exponential_backoff_retry, interruptable_task
 from . import persistence
 from . import processes
 
+
 __all__ = ['JobProcess']
 
+UPLOAD_COMMAND = 'upload'
 SUBMIT_COMMAND = 'submit'
 UPDATE_COMMAND = 'update'
 RETRIEVE_COMMAND = 'retrieve'
@@ -42,6 +46,61 @@ TRANSPORT_TASK_MAXIMUM_ATTEMTPS = 5
 
 
 logger = logging.getLogger(__name__)
+
+
+@coroutine
+def task_upload_job(node, transport_queue, calc_info, script_filename, cancel_flag):
+    """
+    Transport task that will attempt to upload the files of a job calculation to the remote
+
+    The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
+    function is called, wrapped in the exponential_backoff_retry coroutine, which, in case of a caught exception, will
+    retry after an interval that increases exponentially with the number of retries, for a maximum number of retries.
+    If all retries fail, the task will raise a TransportTaskException
+
+    :param node: the node that represents the job calculation
+    :param transport_queue: the TransportQueue from which to request a Transport
+    :param calc_info: the calculation info datastructure returned by `JobCalculation._presubmit`
+    :param script_filename: the job launch script returned by `JobCalculation._presubmit`
+    :param cancel_flag: the cancelled flag that will be queried to determine whether the task was cancelled
+    :raises: Return if the tasks was successfully completed
+    :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
+    """
+    initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
+    max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
+
+    authinfo = node.get_computer().get_authinfo(node.get_user())
+
+    state_pending = calc_states.SUBMITTING
+
+    if is_progressive_state_change(node.get_state(), state_pending):
+        node._set_state(state_pending)
+    else:
+        logger.warning('ignored invalid proposed state change: {} to {}'.format(node.get_state(), state_pending))
+
+    @coroutine
+    def do_upload():
+        with transport_queue.request_transport(authinfo) as request:
+            transport = yield request
+
+            # It may have taken time to get the transport, check if we've been cancelled
+            if cancel_flag.is_cancelled:
+                raise plumpy.CancelledError('task_upload_job for calculation<{}> cancelled'.format(node.pk))
+
+            logger.info('uploading calculation<{}>'.format(node.pk))
+            raise Return(execmanager.upload_calculation(node, transport, calc_info, script_filename))
+
+    try:
+        result = yield exponential_backoff_retry(
+            do_upload, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.CancelledError)
+    except plumpy.CancelledError:
+        pass
+    except Exception:
+        logger.warning('uploading calculation<{}> failed'.format(node.pk))
+        raise TransportTaskException('upload_calculation failed {} times consecutively'.format(max_attempts))
+    else:
+        logger.info('uploading calculation<{}> successful'.format(node.pk))
+        raise Return(result)
 
 
 @coroutine
@@ -79,13 +138,7 @@ def task_submit_job(node, transport_queue, calc_info, script_filename, cancel_fl
             logger.info('submitting calculation<{}>'.format(node.pk))
             raise Return(execmanager.submit_calculation(node, transport, calc_info, script_filename))
 
-    state_pending = calc_states.SUBMITTING
     state_success = calc_states.WITHSCHEDULER
-
-    if is_progressive_state_change(node.get_state(), state_pending):
-        node._set_state(state_pending)
-    else:
-        logger.warning('ignored invalid proposed state change: {} to {}'.format(node.get_state(), state_pending))
 
     try:
         result = yield exponential_backoff_retry(
@@ -285,7 +338,11 @@ class Waiting(plumpy.Waiting):
 
         try:
 
-            if command == SUBMIT_COMMAND:
+            if command == UPLOAD_COMMAND:
+                calc_info, script_filename = yield self._launch_task(task_upload_job, calculation, transport_queue, *args)
+                raise Return(self.submit(calc_info, script_filename))
+
+            elif command == SUBMIT_COMMAND:
                 yield self._launch_task(task_submit_job, calculation, transport_queue, *args)
                 raise Return(self.scheduler_update())
 
@@ -312,7 +369,7 @@ class Waiting(plumpy.Waiting):
             exc_info = sys.exc_info()
             yield self._launch_task(task_kill_job, calculation, transport_queue)
             self._killing.set_result(True)
-            raise_(*exc_info)
+            six.reraise(*exc_info)
         except Return:
             calculation._set_process_status(None)
             raise
@@ -333,6 +390,30 @@ class Waiting(plumpy.Waiting):
             raise Return(result)
         finally:
             self._task = None
+
+    def upload(self, calc_info, script_filename):
+        """
+        Create the next state to go to
+
+        :return: The appropriate WAITING state
+        """
+        return self.create_state(
+            processes.ProcessState.WAITING,
+            None,
+            msg='Waiting for calculation folder upload',
+            data=(UPLOAD_COMMAND, calc_info, script_filename))
+
+    def submit(self, calc_info, script_filename):
+        """
+        Create the next state to go to
+
+        :return: The appropriate WAITING state
+        """
+        return self.create_state(
+            processes.ProcessState.WAITING,
+            None,
+            msg='Waiting for scheduler submission',
+            data=(SUBMIT_COMMAND, calc_info, script_filename))
 
     def scheduler_update(self):
         """
@@ -395,59 +476,22 @@ class JobProcess(processes.Process):
     @classmethod
     def build(cls, calc_class):
         from aiida.orm.data import Data
-        from aiida.orm.computer import Computer
 
         def define(cls_, spec):
             super(JobProcess, cls_).define(spec)
 
-            # Define the 'options' inputs namespace and its input ports
             spec.input_namespace(cls.OPTIONS_INPUT_LABEL, help='various options')
-            spec.input('{}.resources'.format(cls.OPTIONS_INPUT_LABEL), valid_type=dict,
-                       help='Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '
-                            'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the scheduler.')
-            spec.input('{}.max_wallclock_seconds'.format(cls.OPTIONS_INPUT_LABEL), valid_type=int, non_db=True,
-                       default=1800,
-                       help='Set the wallclock in seconds asked to the scheduler')
-            spec.input('{}.custom_scheduler_commands'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring,
-                       non_db=True, required=False,
-                       help='Set a (possibly multiline) string with the commands that the user wants to manually set for the '
-                            'scheduler. The difference of this method with respect to the set_prepend_text is the position in the '
-                            'scheduler submission file where such text is inserted: with this method, the string is inserted before '
-                            ' any non-scheduler command')
-            spec.input('{}.queue_name'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True,
-                       required=False,
-                       help='Set the name of the queue on the remote computer')
-            spec.input('{}.computer'.format(cls.OPTIONS_INPUT_LABEL), valid_type=Computer, non_db=True, required=False,
-                       help='Set the computer to be used by the calculation')
-            spec.input('{}.withmpi'.format(cls.OPTIONS_INPUT_LABEL), valid_type=bool, non_db=True, required=False,
-                       help='Set the calculation to use mpi')
-            spec.input('{}.mpirun_extra_params'.format(cls.OPTIONS_INPUT_LABEL), valid_type=(list, tuple), non_db=True,
-                       required=False,
-                       help='Set the extra params to pass to the mpirun (or equivalent) command after the one provided in '
-                            'computer.mpirun_command. Example: mpirun -np 8 extra_params[0] extra_params[1] ... exec.x')
-            spec.input('{}.import_sys_environment'.format(cls.OPTIONS_INPUT_LABEL), valid_type=bool, non_db=True,
-                       required=False,
-                       help='If set to true, the submission script will load the system environment variables')
-            spec.input('{}.environment_variables'.format(cls.OPTIONS_INPUT_LABEL), valid_type=dict, non_db=True,
-                       required=False,
-                       help='Set a dictionary of custom environment variables for this calculation')
-            spec.input('{}.priority'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True,
-                       required=False,
-                       help='Set the priority of the job to be queued')
-            spec.input('{}.max_memory_kb'.format(cls.OPTIONS_INPUT_LABEL), valid_type=int, non_db=True, required=False,
-                       help='Set the maximum memory (in KiloBytes) to be asked to the scheduler')
-            spec.input('{}.prepend_text'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True,
-                       required=False,
-                       help='Set the calculation-specific prepend text, which is going to be prepended in the scheduler-job script, just before the code execution')
-            spec.input('{}.append_text'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True,
-                       required=False,
-                       help='Set the calculation-specific append text, which is going to be appended in the scheduler-job script, just after the code execution')
-            spec.input('{}.parser_name'.format(cls.OPTIONS_INPUT_LABEL), valid_type=basestring, non_db=True,
-                       required=False,
-                       help='Set a string for the output parser. Can be None if no output plugin is available or needed')
+            for key, option in calc_class.options.items():
+                spec.input(
+                    '{}.{}'.format(cls.OPTIONS_INPUT_LABEL, key),
+                    required=option.get('required', True),
+                    valid_type=option.get('valid_type', object),  # Should match everything, as in all types are valid
+                    non_db=option.get('non_db', True),
+                    help=option.get('help', '')
+                )
 
             # Define the actual inputs based on the use methods of the calculation class
-            for key, use_method in calc_class._use_methods.iteritems():
+            for key, use_method in calc_class._use_methods.items():
 
                 valid_type = use_method['valid_types']
                 docstring = use_method.get('docstring', None)
@@ -534,7 +578,7 @@ class JobProcess(processes.Process):
             if isinstance(port, PortNamespace):
                 additional = self._calc_class._use_methods[name]['additional_parameter']
 
-                for k, v in input_value.iteritems():
+                for k, v in input_value.items():
                     try:
                         getattr(self.calc, 'use_{}'.format(name))(v, **{additional: k})
                     except AttributeError:
@@ -589,8 +633,8 @@ class JobProcess(processes.Process):
             # After this call, no modifications to the folder should be done
             self.calc._store_raw_input_folder(folder.abspath)
 
-        # Launch the submit operation
-        return plumpy.Wait(msg='Waiting to submit', data=(SUBMIT_COMMAND, calc_info, script_filename))
+        # Launch the upload operation
+        return plumpy.Wait(msg='Waiting to upload', data=(UPLOAD_COMMAND, calc_info, script_filename))
 
     def retrieved(self, retrieved_temporary_folder=None):
         """
@@ -614,7 +658,7 @@ class JobProcess(processes.Process):
                     raise
 
         # Finally link up the outputs and we're done
-        for label, node in self.calc.get_outputs_dict().iteritems():
+        for label, node in self.calc.get_outputs_dict().items():
             self.out(label, node)
 
         return exit_code

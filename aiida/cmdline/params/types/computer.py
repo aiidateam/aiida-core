@@ -1,7 +1,16 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 Module for the custom click param type computer
 """
+from __future__ import absolute_import
 from click.types import StringParamType
 from .identifier import IdentifierParamType
 
@@ -80,8 +89,8 @@ class MpirunCommandParamType(StringParamType):
         try:
             newval.format(**subst)
         except KeyError as exc:
-            self.fail("In workdir there is an unknown replacement " "field '{}'".format(exc.message))
+            self.fail("In workdir there is an unknown replacement field '{}'".format(exc.args[0]))
         except ValueError as exc:
-            self.fail("Error in the string: '{}'".format(exc.message))
+            self.fail("Error in the string: '{}'".format(exc))
 
         return newval

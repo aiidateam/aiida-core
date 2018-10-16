@@ -1,5 +1,14 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """A utility module with mapper objects that map database entities projections on attributes and labels."""
+from __future__ import absolute_import
 from aiida.cmdline.utils.query import formatting
 
 
@@ -71,6 +80,7 @@ class CalculationProjectionMapper(ProjectionMapper):
     """The CLI projection mapper for Calculation derived entities."""
 
     def __init__(self, projections, projection_labels=None, projection_attributes=None, projection_formatters=None):
+        # pylint: disable=too-many-locals
         from aiida.orm.calculation import Calculation
         from aiida.orm.mixins import Sealable
 

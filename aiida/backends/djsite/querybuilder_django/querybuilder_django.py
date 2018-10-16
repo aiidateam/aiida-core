@@ -9,12 +9,15 @@
 ###########################################################################
 
 
+from __future__ import absolute_import
 import datetime
 from datetime import datetime
 from json import loads as json_loads
 
+import six
+
 # ~ import aiida.backends.djsite.querybuilder_django.dummy_model as dummy_model
-import dummy_model
+from . import dummy_model
 from aiida.backends.djsite.db.models import DbAttribute, DbExtra, ObjectDoesNotExist
 
 from sqlalchemy import and_, or_, not_, exists, select, exists, case
@@ -90,13 +93,13 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
 
     @property
     def AiidaUser(self):
-        import aiida.orm.user
+        import aiida.orm
         return aiida.orm.User
 
     @property
     def AiidaComputer(self):
-        import aiida.orm.implementation.django.computer
-        return aiida.orm.implementation.django.computer.Computer
+        import aiida.orm
+        return aiida.orm.Computer
 
     def get_filter_expr_from_column(self, operator, value, column):
 
@@ -225,7 +228,7 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
                     "You have to give an integer when comparing to a length"
                 )
         elif operator in ('like', 'ilike'):
-            if not isinstance(value, basestring):
+            if not isinstance(value, six.string_types):
                 raise InputValidationError(
                     "Value for operator {} has to be a string (you gave {})"
                     "".format(operator, value)
@@ -386,7 +389,7 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
 
         else:
             types_n_casts = []
-            if isinstance(value_to_consider, basestring):
+            if isinstance(value_to_consider, six.string_types):
                 types_n_casts.append(('t', None))
             elif isinstance(value_to_consider, bool):
                 types_n_casts.append(('b', None))
@@ -539,6 +542,9 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
     def iterall(self, query, batch_size, tag_to_index_dict):
         from django.db import transaction
 
+        if not tag_to_index_dict:
+            raise Exception("Got an empty dictionary: {}".format(tag_to_index_dict))
+
         with transaction.atomic():
             results = query.yield_per(batch_size)
 
@@ -546,7 +552,7 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
                 # Sqlalchemy, for some strange reason, does not return a list of lsits
                 # if you have provided an ormclass
 
-                if tag_to_index_dict.values() == ['*']:
+                if list(tag_to_index_dict.values()) == ['*']:
                     for rowitem in results:
                         yield [self.get_aiida_res(tag_to_index_dict[0], rowitem)]
                 else:
@@ -559,16 +565,19 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
                         for colindex, rowitem
                         in enumerate(resultrow)
                     ]
-            else:
-                raise Exception("Got an empty dictionary: {}".format(tag_to_index_dict))
 
     def iterdict(self, query, batch_size, tag_to_projected_entity_dict):
         from django.db import transaction
+
+        nr_items = sum(len(v) for v in tag_to_projected_entity_dict.values())
+
+        if not nr_items:
+            raise Exception("Got an empty dictionary")
+
         # Wrapping everything in an atomic transaction:
         with transaction.atomic():
             results = query.yield_per(batch_size)
             # Two cases: If one column was asked, the database returns a matrix of rows * columns:
-            nr_items = sum([len(v) for v in tag_to_projected_entity_dict.values()])
             if nr_items > 1:
                 for this_result in results:
                     yield {
@@ -603,5 +612,3 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
                             }
                             for tag, projected_entities_dict in tag_to_projected_entity_dict.items()
                         }
-            else:
-                raise Exception("Got an empty dictionary")

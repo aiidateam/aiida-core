@@ -7,9 +7,16 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
+from __future__ import division
+
+import six
+from six.moves import range, zip
 import numpy
+
 from aiida.common.utils import classproperty
 from aiida.orm.data.array import ArrayData
+
 
 DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/datatypes/kpoints.html#deprecated-methods'
 
@@ -131,7 +138,7 @@ class KpointsData(ArrayData):
         labels = self.get_attr('labels', None)
         if labels is None or label_numbers is None:
             return None
-        return zip(label_numbers, labels)
+        return list(zip(label_numbers, labels))
 
     @labels.setter
     def labels(self, value):
@@ -545,14 +552,14 @@ class KpointsData(ArrayData):
         import copy
         if not isinstance(value, dict):
             raise ValueError("bravais_lattice is not a dict")
-        if not all([value.has_key(i) for i in ["short_name", "extended_name", "index", "permutation"]]):
+        if not all([i in value for i in ["short_name", "extended_name", "index", "permutation"]]):
             raise ValueError()
 
         bravais_lattice = copy.copy(value)
         bravais_lattice['permutation'] = [int(i) for i in value['permutation']]
 
         try:
-            if not isinstance(bravais_lattice['variation'], basestring):
+            if not isinstance(bravais_lattice['variation'], six.string_types):
                 raise ValueError()
         except KeyError:
             pass

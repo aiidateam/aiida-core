@@ -10,6 +10,7 @@
 """
 This allows to setup and configure a user from command line.
 """
+from __future__ import absolute_import
 from functools import partial
 import click
 
@@ -51,19 +52,19 @@ PASSWORD_UNCHANGED = '***'  # noqa
     prompt='First name',
     type=str,
     contextual_default=partial(get_default, 'first_name'),
-    cls=options.InteractiveOption)
+    cls=options.interactive.InteractiveOption)
 @click.option(
     '--last-name',
     prompt='Last name',
     type=str,
     contextual_default=partial(get_default, 'last_name'),
-    cls=options.InteractiveOption)
+    cls=options.interactive.InteractiveOption)
 @click.option(
     '--institution',
     prompt='Institution',
     type=str,
     contextual_default=partial(get_default, 'institution'),
-    cls=options.InteractiveOption)
+    cls=options.interactive.InteractiveOption)
 @click.option(
     '--password',
     prompt='Password',
@@ -72,7 +73,7 @@ PASSWORD_UNCHANGED = '***'  # noqa
     type=str,
     default=PASSWORD_UNCHANGED,
     confirmation_prompt=True,
-    cls=options.InteractiveOption)
+    cls=options.interactive.InteractiveOption)
 @with_dbenv()
 def configure(user, first_name, last_name, institution, password, non_interactive):
     """

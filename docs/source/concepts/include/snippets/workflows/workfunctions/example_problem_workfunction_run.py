@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from aiida.work.launch import run_get_node, run_get_pid
 from aiida.work.workfunctions import workfunction
 

@@ -12,6 +12,10 @@ Plugin for LSF.
 This has been tested on the CERN lxplus cluster (LSF 9.1.3)
 """
 from __future__ import division
+from __future__ import absolute_import
+
+import six
+
 import aiida.scheduler
 from aiida.common.utils import escape_for_bash
 from aiida.scheduler import SchedulerError, SchedulerParsingError
@@ -264,7 +268,7 @@ class LsfScheduler(aiida.scheduler.Scheduler):
 
         if jobs:
             joblist = []
-            if isinstance(jobs, basestring):
+            if isinstance(jobs, six.string_types):
                 joblist.append(jobs)
             else:
                 if not isinstance(jobs, (tuple, list)):
@@ -331,7 +335,7 @@ class LsfScheduler(aiida.scheduler.Scheduler):
 
             # prepend a 'j' (for 'job') before the string if the string
             # is now empty or does not start with a valid character
-            if not job_title or (job_title[0] not in string.letters + string.digits):
+            if not job_title or (job_title[0] not in string.ascii_letters + string.digits):
                 job_title = 'j' + job_title
 
             # Truncate to the first 128 characters
@@ -422,7 +426,7 @@ class LsfScheduler(aiida.scheduler.Scheduler):
             lines.append("# ENVIRONMENT VARIABLES BEGIN ###")
             if not isinstance(job_tmpl.job_environment, dict):
                 raise ValueError("If you provide job_environment, it must be " "a dictionary")
-            for key, value in job_tmpl.job_environment.iteritems():
+            for key, value in job_tmpl.job_environment.items():
                 lines.append("export {}={}".format(key.strip(), escape_for_bash(value)))
             lines.append("# ENVIRONMENT VARIABLES END  ###")
             lines.append(empty_line)

@@ -11,6 +11,7 @@
 This file provides very simple workflows for testing purposes.
 Do not delete, otherwise 'verdi developertest' will stop to work.
 """
+from __future__ import absolute_import
 import plumpy
 from aiida.orm.workflow import Workflow
 
@@ -31,7 +32,7 @@ class WFTestSimple(Workflow):
     @Workflow.step
     def start(self):
         # Testing calculations
-        self.attach_calculation(generate_calc())
+        self.attach_calculation(generate_calc(self))
 
         # Test process
         self.next(self.second_step)
@@ -45,7 +46,7 @@ class FailingWFTestSimple(WFTestSimple):
     @Workflow.step
     def start(self):
         # Testing calculations
-        self.attach_calculation(self.generate_calc())
+        self.attach_calculation(self.generate_calc(self))
 
         # Test process
         self.next(self.second_step)
@@ -53,7 +54,7 @@ class FailingWFTestSimple(WFTestSimple):
     @Workflow.step
     def second_step(self):
         # Testing calculations
-        self.attach_calculation(generate_calc())
+        self.attach_calculation(generate_calc(self))
         # Raise a test exception that should make the workflow to stop
         raise Exception('Test exception')
 
@@ -71,7 +72,7 @@ class FailingWFTestSimpleWithSubWF(Workflow):
 
     @Workflow.step
     def start(self):
-        self.attach_calculation(generate_calc())
+        self.attach_calculation(generate_calc(self))
 
         # Create two subworkflows
         w = FailingWFTestSimple()
@@ -95,7 +96,7 @@ class WFTestSimpleWithSubWF(Workflow):
 
     @Workflow.step
     def start(self):
-        self.attach_calculation(generate_calc())
+        self.attach_calculation(generate_calc(self))
 
         # Create two subworkflows
         w = WFTestSimple()
@@ -113,16 +114,16 @@ class WFTestSimpleWithSubWF(Workflow):
         self.next(self.exit)
 
 
-def generate_calc():
-    from aiida.orm import Code, Computer, CalculationFactory
+def generate_calc(workflow):
+    from aiida.orm import CalculationFactory
     from aiida.common.datastructures import calc_states
 
     CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
 
-    computer = Computer.get("localhost")
+    computer = workflow._backend.computers.get(name='localhost')
 
     calc = CustomCalc(computer=computer, withmpi=True)
-    calc.set_resources(
+    calc.set_option('resources',
         {"num_machines": 1, "num_mpiprocs_per_machine": 1})
     calc.store()
     calc._set_state(calc_states.FINISHED)

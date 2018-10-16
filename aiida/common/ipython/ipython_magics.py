@@ -33,20 +33,21 @@ Usage
 
    In [2]: %aiida
 """
+from __future__ import absolute_import
 import json
 import IPython
-from IPython.core.magic import (magics_class, line_magic, Magics, 
-                                needs_local_scope)
+import six
+from IPython.core.magic import magics_class, line_magic, Magics, needs_local_scope
 
 
 def add_to_ns(local_ns, name, obj):
     """
-    Add a new variable with name ``name`` and value ``obj`` to the 
-    namespace ``local_ns``, optionally showing a warning if we are 
+    Add a new variable with name ``name`` and value ``obj`` to the
+    namespace ``local_ns``, optionally showing a warning if we are
     hiding an existing variable.
-    
+
     .. todo:: implement the warning.
-    
+
     Example::
 
         # assuming that local_ns is a dictionary, e.g. from locals()
@@ -57,7 +58,8 @@ def add_to_ns(local_ns, name, obj):
         # TODO: print warning, or raise
         pass
     local_ns[name] = obj
-    
+
+
 @magics_class
 class AiiDALoaderMagics(Magics):
 
@@ -71,13 +73,12 @@ class AiiDALoaderMagics(Magics):
         Usage::
 
             %aiida [optional parameters]
-        
+
         .. todo:: implement parameters, e.g. for the profile to load.
         """
-        import aiida
-        
         from aiida import is_dbenv_loaded, load_dbenv
-                
+        from aiida.cmdline.utils.shell import get_start_namespace
+
         self.is_warning = False
         if is_dbenv_loaded():
             self.current_state = "Note! AiiDA DB environment already loaded! I do not reload it again."
@@ -86,19 +87,17 @@ class AiiDALoaderMagics(Magics):
             load_dbenv()
             self.current_state = "Loaded AiiDA DB environment."
 
-        from aiida.cmdline.commands.shell import Shell
-        user_ns = Shell().get_start_namespace()
-        for k, v in user_ns.iteritems():
+        user_ns = get_start_namespace()
+        for k, v in six.iteritems(user_ns):
             add_to_ns(local_ns, k, v)
-            
+
         return self
 
     def _repr_json_(self):
         """
         Output in JSON format.
         """
-        obj = {
-            'current_state': self.current_state}
+        obj = {'current_state': self.current_state}
         if IPython.version_info[0] >= 3:
             return obj
         else:
@@ -141,7 +140,7 @@ class AiiDALoaderMagics(Magics):
 
         pp.text(text)
 
-        
+
 def load_ipython_extension(ipython):
     """
     Triggers the load of all the AiiDA magic commands.

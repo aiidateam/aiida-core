@@ -1,5 +1,14 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """Tests for `verdi export`."""
+from __future__ import absolute_import
 import errno
 import os
 import tempfile
@@ -49,15 +58,25 @@ class TestVerdiExport(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         super(TestVerdiExport, cls).setUpClass(*args, **kwargs)
-        from aiida.orm import Code, Computer, Group, Node
+        from aiida.orm import Code, Group, Node
 
-        cls.computer = Computer(
-            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct',
-            workdir='/tmp/aiida').store()
+        cls.computer = cls.backend.computers.create(name='comp', hostname='localhost', transport_type='local',
+                                                    scheduler_type='direct', workdir='/tmp/aiida').store()
 
         cls.code = Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
         cls.group = Group(name='test_group').store()
         cls.node = Node().store()
+
+        # some of the export tests write in the current directory,
+        # make sure it is writeable and we don't pollute the current one
+        cls.old_cwd = os.getcwd()
+        cls.cwd = tempfile.mkdtemp(__name__)
+        os.chdir(cls.cwd)
+
+    @classmethod
+    def tearDownClass(cls, *args, **kwargs):
+        os.chdir(cls.old_cwd)
+        os.rmdir(cls.cwd)
 
     def setUp(self):
         self.cli_runner = CliRunner()

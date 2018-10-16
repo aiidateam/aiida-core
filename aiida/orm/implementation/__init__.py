@@ -8,25 +8,25 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 from aiida.backends.settings import BACKEND
 from aiida.common.exceptions import ConfigurationError
 from aiida.orm.implementation.general.group import get_group_type_mapping
 from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 
-__all__ = ['Node', 'Computer', 'Group', 'Workflow', 'kill_all', 'get_all_running_steps',
+__all__ = ['Node', 'Group', 'Workflow', 'kill_all', 'get_all_running_steps',
            'get_workflow_info', 'Code', 'delete_code', 'Comment']
 
 if BACKEND == BACKEND_SQLA:
     from aiida.orm.implementation.sqlalchemy.node import Node
-    from aiida.orm.implementation.sqlalchemy.computer import Computer
     from aiida.orm.implementation.sqlalchemy.group import Group
-    from aiida.orm.implementation.sqlalchemy.workflow import Workflow, kill_all, get_workflow_info, get_all_running_steps
+    from aiida.orm.implementation.sqlalchemy.workflow import Workflow, kill_all, get_workflow_info, \
+        get_all_running_steps
     from aiida.orm.implementation.sqlalchemy.code import Code, delete_code
     from aiida.orm.implementation.sqlalchemy.comment import Comment
     from aiida.backends.sqlalchemy import models
 elif BACKEND == BACKEND_DJANGO:
     from aiida.orm.implementation.django.node import Node
-    from aiida.orm.implementation.django.computer import Computer
     from aiida.orm.implementation.django.group import Group
     from aiida.orm.implementation.django.workflow import Workflow, kill_all, get_workflow_info, get_all_running_steps
     from aiida.orm.implementation.django.code import Code, delete_code
@@ -38,5 +38,3 @@ elif BACKEND is None:
 else:
     raise ConfigurationError("Unknown settings.BACKEND: {}".format(
         BACKEND))
-
-from aiida.orm.computer import delete_computer

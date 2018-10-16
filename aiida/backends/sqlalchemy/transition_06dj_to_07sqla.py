@@ -8,11 +8,16 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
 import gc
 import getpass
 import math
 import os
 import sys
+
+from six.moves import range
 
 from sqlalchemy import ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
@@ -201,10 +206,10 @@ def transition_extras(profile=None, group_size=1000, delete_table=False):
         from aiida.backends.sqlalchemy.models.node import DbNode
         total_nodes = session.query(func.count(DbNode.id)).scalar()
 
-        total_groups = int(math.ceil(total_nodes/float(group_size)))
+        total_groups = int(math.ceil(total_nodes/group_size))
         error = False
 
-        for i in xrange(total_groups):
+        for i in range(total_groups):
 
             print("Migrating group {} of {}".format(i, total_groups))
             nodes = DbNode.query.options(
@@ -291,10 +296,10 @@ def transition_attributes(profile=None, group_size=1000, debug=False,
         from aiida.backends.sqlalchemy.models.node import DbNode
         total_nodes = session.query(func.count(DbNode.id)).scalar()
 
-        total_groups = int(math.ceil(total_nodes/float(group_size)))
+        total_groups = int(math.ceil(total_nodes/group_size))
         error = False
 
-        for i in xrange(total_groups):
+        for i in range(total_groups):
             print("Migrating group {} of {}".format(i, total_groups))
 
             nodes = DbNode.query.options(
@@ -571,7 +576,7 @@ def change_backend_to_sqla(profile=None):
 
         if setup.aiidadb_backend_key in curr_profile.keys():
             if curr_profile[aiidadb_backend_key] == aiidadb_backend_value_sqla:
-                print "This is already an SQLAlchemy profile. Exiting"
+                print("This is already an SQLAlchemy profile. Exiting")
                 sys.exit(0)
             curr_profile[aiidadb_backend_key] = \
                 aiidadb_backend_value_sqla

@@ -10,6 +10,7 @@
 """
 Generic tests that need the be specific to sqlalchemy
 """
+from __future__ import absolute_import
 import unittest
 
 from aiida.backends.testbase import AiidaTestCase
@@ -23,18 +24,16 @@ class TestComputer(AiidaTestCase):
     """
 
     def test_deletion(self):
-        from aiida.orm.computer import Computer
-        from aiida.orm import delete_computer, JobCalculation
+        from aiida.orm import JobCalculation
         from aiida.common.exceptions import InvalidOperation
         import aiida.backends.sqlalchemy
 
-        newcomputer = Computer(name="testdeletioncomputer", hostname='localhost',
-                               transport_type='local',
-                               scheduler_type='pbspro',
-                               workdir='/tmp/aiida').store()
+        newcomputer = self.backend.computers.create(name="testdeletioncomputer", hostname='localhost',
+                                                    transport_type='local', scheduler_type='pbspro',
+                                                    workdir='/tmp/aiida').store()
 
         # # This should be possible, because nothing is using this computer
-        delete_computer(newcomputer)
+        self.backend.computers.delete(newcomputer.id)
 
         calc_params = {
             'computer': self.computer,
@@ -51,7 +50,7 @@ class TestComputer(AiidaTestCase):
         try:
             session.begin_nested()
             with self.assertRaises(InvalidOperation):
-                delete_computer(self.computer)
+                self.backend.computers.delete(self.computer.id)
         finally:
             session.rollback()
 

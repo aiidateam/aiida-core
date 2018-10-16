@@ -12,7 +12,11 @@ Plugin for SLURM.
 This has been tested on SLURM 14.03.7 on the CSCS.ch machines.
 """
 from __future__ import division
+from __future__ import absolute_import
 import re
+
+import six
+from six.moves import zip
 
 import aiida.scheduler
 from aiida.common.utils import escape_for_bash
@@ -205,7 +209,7 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
 
         if jobs:
             joblist = []
-            if isinstance(jobs, basestring):
+            if isinstance(jobs, six.string_types):
                 joblist.append(jobs)
             else:
                 if not isinstance(jobs, (tuple, list)):
@@ -280,7 +284,7 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
 
             # prepend a 'j' (for 'job') before the string if the string
             # is now empty or does not start with a valid charachter
-            if not job_title or (job_title[0] not in string.letters + string.digits):
+            if not job_title or (job_title[0] not in string.ascii_letters + string.digits):
                 job_title = 'j' + job_title
 
             # Truncate to the first 128 characters
@@ -314,6 +318,12 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
 
         if job_tmpl.queue_name:
             lines.append("#SBATCH --partition={}".format(job_tmpl.queue_name))
+
+        if job_tmpl.account:
+            lines.append("#SBATCH --account={}".format(job_tmpl.account))
+
+        if job_tmpl.qos:        
+            lines.append("#SBATCH --qos={}".format(job_tmpl.qos))
 
         if job_tmpl.priority:
             #  Run the job with an adjusted scheduling priority  within  SLURM.
@@ -380,7 +390,7 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
             lines.append("# ENVIRONMENT VARIABLES BEGIN ###")
             if not isinstance(job_tmpl.job_environment, dict):
                 raise ValueError("If you provide job_environment, it must be " "a dictionary")
-            for key, value in job_tmpl.job_environment.iteritems():
+            for key, value in job_tmpl.job_environment.items():
                 lines.append("export {}={}".format(key.strip(), escape_for_bash(value)))
             lines.append("# ENVIRONMENT VARIABLES  END  ###")
             lines.append(empty_line)
@@ -646,7 +656,7 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
         try:
             time_struct = time.strptime(string, fmt)
         except Exception as exc:
-            self.logger.debug("Unable to parse time string {}, the message " "was {}".format(string, exc.message))
+            self.logger.debug("Unable to parse time string {}, the message " "was {}".format(string, exc))
             raise ValueError("Problem parsing the time string.")
 
         # I convert from a time_struct to a datetime object going through

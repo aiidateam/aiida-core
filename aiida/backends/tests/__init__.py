@@ -7,6 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
+
+from six.moves import range
+
 try:
     from reentry import manager as epm
 except ImportError:
@@ -21,6 +25,7 @@ db_test_list = {
         'generic': ['aiida.backends.djsite.db.subtests.generic'],
         'nodes': ['aiida.backends.djsite.db.subtests.nodes'],
         'djangomigrations': ['aiida.backends.djsite.db.subtests.djangomigrations'],
+        'migrations': ['aiida.backends.djsite.db.subtests.migrations'],
         'query': ['aiida.backends.djsite.db.subtests.query'],
     },
     BACKEND_SQLA: {
@@ -79,6 +84,7 @@ db_test_list = {
         'common.datastructures': ['aiida.backends.tests.common.test_datastructures'],
         'control.computer': ['aiida.backends.tests.control.test_computer_ctrl'],
         'daemon.client': ['aiida.backends.tests.daemon.test_client'],
+        'orm.authinfo': ['aiida.backends.tests.orm.authinfo'],
         'orm.data.frozendict': ['aiida.backends.tests.orm.data.frozendict'],
         'orm.data.remote': ['aiida.backends.tests.orm.data.remote'],
         'orm.log': ['aiida.backends.tests.orm.log'],
@@ -158,10 +164,10 @@ def get_db_test_list():
         raise ConfigurationError("A 'common' key must always be defined!")
 
     retdict = defaultdict(list)
-    for k, tests in common_tests.iteritems():
+    for k, tests in common_tests.items():
         for t in tests:
             retdict[k].append(t)
-    for k, tests in be_tests.iteritems():
+    for k, tests in be_tests.items():
         for t in tests:
             retdict[k].append(t)
 
@@ -173,9 +179,9 @@ def get_db_test_list():
     # Explode the dictionary so that if I have a.b.c,
     # I can run it also just with 'a' or with 'a.b'
     final_retdict = defaultdict(list)
-    for k, v in retdict.iteritems():
+    for k, v in retdict.items():
         final_retdict[k] = v
-    for k, v in retdict.iteritems():
+    for k, v in retdict.items():
         if '.' in k:
             parts = k.split('.')
             for last_idx in range(1, len(parts)):

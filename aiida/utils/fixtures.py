@@ -30,6 +30,8 @@ AiiDA:
     * create and configure a profile
 
 """
+from __future__ import absolute_import
+from __future__ import print_function
 import unittest
 import tempfile
 import shutil
@@ -288,6 +290,9 @@ class FixtureManager(object):
 
     @backend.setter
     def backend(self, backend):
+        if self.__is_running_on_test_profile:
+            raise FixtureError('backend cannot be changed after setting up the environment')
+
         valid_backends = [BACKEND_DJANGO, BACKEND_SQLA]
         if backend not in valid_backends:
             raise ValueError('invalid backend {}, must be one of {}'.format(backend, valid_backends))
@@ -387,24 +392,27 @@ _GLOBAL_FIXTURE_MANAGER = FixtureManager()
 
 
 @contextmanager
-def fixture_manager():
+def fixture_manager(backend=BACKEND_DJANGO):
     """
     Context manager for FixtureManager objects
 
     Example test runner (unittest)::
 
-        with fixture_manager() as fixture_mgr:
+        with fixture_manager(backend) as fixture_mgr:
             # ready for tests
         # everything cleaned up
 
     Example fixture (pytest)::
 
         def aiida_profile():
-            with fixture_manager() as fixture_mgr:
+            with fixture_manager(backend) as fixture_mgr:
                 yield fixture_mgr
+
+    :param backend: database backend, either BACKEND_SQLA or BACKEND_DJANGO
     """
     try:
         if not _GLOBAL_FIXTURE_MANAGER.has_profile_open():
+            _GLOBAL_FIXTURE_MANAGER.backend = backend
             _GLOBAL_FIXTURE_MANAGER.create_profile()
         yield _GLOBAL_FIXTURE_MANAGER
     finally:
@@ -430,13 +438,19 @@ class PluginTestCase(unittest.TestCase):
             def test_my_plugin(self):
                 # execute tests
     """
+    # Filled in during setUpClass
+    backend = None  # type :class:`aiida.orm.Backend`
 
     @classmethod
     def setUpClass(cls):
+        from aiida.orm.backend import construct_backend
+
         cls.fixture_manager = _GLOBAL_FIXTURE_MANAGER
         if not cls.fixture_manager.has_profile_open():
             raise ValueError(
                 "Fixture mananger has no open profile. Please use aiida.utils.fixtures.TestRunner to run these tests.")
+
+        cls.backend = construct_backend()
 
     def tearDown(self):
         self.fixture_manager.reset_db()
@@ -466,6 +480,5 @@ class TestRunner(unittest.runner.TextTestRunner):
         """
         from aiida.utils.capturing import Capturing
         with Capturing():
-            with fixture_manager() as manager:
-                manager.backend = backend
+            with fixture_manager(backend=backend):
                 return super(TestRunner, self).run(suite)

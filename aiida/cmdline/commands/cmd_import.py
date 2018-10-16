@@ -8,11 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi import` command."""
+from __future__ import absolute_import
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params.options import MultipleValueOption
 from aiida.cmdline.utils import decorators, echo
+from aiida.common import exceptions
 
 
 @verdi.command('import')
@@ -30,9 +32,9 @@ def cmd_import(archives, webpages):
 
     The ARCHIVES can be specified by their relative or absolute file path, or their HTTP URL.
     """
-    # pylint: disable=too-many-branches,broad-except
+    # pylint: disable=too-many-branches,too-many-statements,broad-except
     import traceback
-    import urllib2
+    from six.moves import urllib
 
     from aiida.common.folders import SandboxFolder
     from aiida.orm.importexport import get_valid_import_links, import_data
@@ -63,9 +65,15 @@ def cmd_import(archives, webpages):
         echo.echo_critical('no valid exported archives were found')
 
     for archive in archives_file:
+
+        echo.echo_info('importing archive {}'.format(archive))
+
         try:
-            echo.echo_info('importing archive {}'.format(archive))
             import_data(archive)
+        except exceptions.IncompatibleArchiveVersionError as exception:
+            echo.echo_warning('{} cannot be imported: {}'.format(archive, exception))
+            echo.echo_warning('run `verdi export migrate {}` to update it'.format(archive))
+            continue
         except Exception:
             echo.echo_error('an exception occurred while importing the archive {}'.format(archive))
             echo.echo(traceback.format_exc())
@@ -74,20 +82,28 @@ def cmd_import(archives, webpages):
             echo.echo_success('imported archive {}'.format(archive))
 
     for archive in archives_url:
+
+        echo.echo_info('downloading archive {}'.format(archive))
+
         try:
-            echo.echo_info('downloading archive {}'.format(archive))
+            response = urllib.request.urlopen(archive)
+        except Exception as exception:
+            echo.echo_warning('downloading archive {} failed: {}'.format(archive, exception))
 
-            response = urllib2.urlopen(archive)
+        with SandboxFolder() as temp_folder:
+            temp_file = 'importfile.tar.gz'
+            temp_folder.create_file_from_filelike(response, temp_file)
+            echo.echo_success('archive downloaded, proceeding with import')
 
-            with SandboxFolder() as temp_folder:
-                temp_file = 'importfile.tar.gz'
-                temp_folder.create_file_from_filelike(response, temp_file)
-                echo.echo_success('archive downloaded, proceeding with import')
+            try:
                 import_data(temp_folder.get_abs_path(temp_file))
-
-        except Exception:
-            echo.echo_error('an exception occurred while importing the archive {}'.format(archive))
-            echo.echo(traceback.format_exc())
-            click.confirm('do you want to continue?', abort=True)
-        else:
-            echo.echo_success('imported archive {}'.format(archive))
+            except exceptions.IncompatibleArchiveVersionError as exception:
+                echo.echo_warning('{} cannot be imported: {}'.format(archive, exception))
+                echo.echo_warning('download the archive file and run `verdi export migrate` to update it')
+                continue
+            except Exception:
+                echo.echo_error('an exception occurred while importing the archive {}'.format(archive))
+                echo.echo(traceback.format_exc())
+                click.confirm('do you want to continue?', abort=True)
+            else:
+                echo.echo_success('imported archive {}'.format(archive))

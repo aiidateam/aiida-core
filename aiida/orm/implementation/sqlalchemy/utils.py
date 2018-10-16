@@ -7,13 +7,18 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 import contextlib
+
+import six
 from sqlalchemy import inspect
+from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.orm.mapper import Mapper
 from sqlalchemy.types import Integer, Boolean
 import sqlalchemy.exc
 
 from aiida.common import exceptions
+
 
 __all__ = ['django_filter', 'get_attr']
 
@@ -33,6 +38,12 @@ class ModelWrapper(object):
         object.__setattr__(self, '_model', model)
 
     def __getattr__(self, item):
+        # Python 3's implementation of copy.copy does not call __init__ on the new object
+        # but manually restores attributes instead. Make sure we never get into a recursive
+        # loop by protecting the only special variable here: _model
+        if item == '_model':
+            raise AttributeError()
+
         if self.is_saved() and self._is_model_field(item):
             self._ensure_model_uptodate(fields=(item,))
 
@@ -47,7 +58,7 @@ class ModelWrapper(object):
         return self._model.id is not None
 
     def save(self):
-        """ Store the model (possibly updating values if changed) """
+        """Store the model (possibly updating values if changed)."""
         try:
             self._model.save(commit=True)
         except sqlalchemy.exc.IntegrityError as e:
@@ -57,10 +68,12 @@ class ModelWrapper(object):
     def _is_model_field(self, name):
         return inspect(self._model.__class__).has_property(name)
 
-    def _flush(self, fields=None):
-        """ If the user is stored then save the current value """
+    def _flush(self, fields=()):
+        """If the user is stored then save the current value."""
         if self.is_saved():
-            # At the moment we have no way to specify which fields to update
+            for field in fields:
+                flag_modified(self._model, field)
+
             self.save()
 
     def _ensure_model_uptodate(self, fields=None):
@@ -86,7 +99,7 @@ def disable_expire_on_commit(session):
 
 def iter_dict(attrs):
     if isinstance(attrs, dict):
-        for key in sorted(attrs.iterkeys()):
+        for key in sorted(attrs.keys()):
             it = iter_dict(attrs[key])
             for k, v in it:
                 new_key = key
@@ -156,7 +169,7 @@ def django_filter(cls_query, **kwargs):
     tmp_attr = dict(key=None, val=None)
     tmp_extra = dict(key=None, val=None)
 
-    for key in sorted(kwargs.iterkeys()):
+    for key in sorted(kwargs.keys()):
         val = kwargs[key]
 
         join, field, op = [None] * 3
@@ -170,7 +183,7 @@ def django_filter(cls_query, **kwargs):
         # we have either "computer__id", which means join + field quality or
         # "id__gte" which means field + op
         elif len(splits) == 2:
-            if splits[1] in _from_op.iterkeys():
+            if splits[1] in _from_op.keys():
                 field, op = splits
             else:
                 join, field = splits
@@ -196,9 +209,7 @@ def django_filter(cls_query, **kwargs):
                 q = q.join(join, aliased=True)
                 current_join = join
 
-            current_cls = filter(lambda r: r[0] == join,
-                                 inspect(cls).relationships.items()
-                                 )[0][1].argument
+            current_cls = [r for r in inspect(cls).relationships.items() if r[0] == join][0][1].argument
             if isinstance(current_cls, Mapper):
                 current_cls = current_cls.class_
             else:
@@ -229,22 +240,22 @@ def django_filter(cls_query, **kwargs):
         if val:
             q = q.filter(apply_json_cast(cls.attributes[key], val) == val)
         else:
-            q = q.filter(cls.attributes.has_key(tmp_attr["key"]))
+            q = q.filter(tmp_attr["key"] in cls.attributes)
     key = tmp_extra["key"]
     if key:
         val = tmp_extra["val"]
         if val:
             q = q.filter(apply_json_cast(cls.extras[key], val) == val)
         else:
-            q = q.filter(cls.extras.has_key(tmp_extra["key"]))
+            q = q.filter(tmp_extra["key"] in cls.extras)
 
     return q
 
 
 def apply_json_cast(attr, val):
-    if isinstance(val, basestring):
+    if isinstance(val, six.string_types):
         attr = attr.astext
-    if isinstance(val, int) or isinstance(val, long):
+    if isinstance(val, six.integer_types):
         attr = attr.astext.cast(Integer)
     if isinstance(val, bool):
         attr = attr.astext.cast(Boolean)

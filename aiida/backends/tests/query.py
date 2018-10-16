@@ -8,8 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from aiida.backends.testbase import AiidaTestCase
+from __future__ import absolute_import
+from __future__ import print_function
 import unittest
+
+from six.moves import range, zip
+
+from aiida.backends.testbase import AiidaTestCase
 import aiida.backends.settings as settings
 
 
@@ -20,9 +25,8 @@ class TestQueryBuilder(AiidaTestCase):
         This tests the classifications of the QueryBuilder
         """
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm.utils import (DataFactory, CalculationFactory)
         from aiida.orm.data.structure import StructureData
-        from aiida.orm import Group, User, Node, Computer, Data, Calculation
+        from aiida.orm import Group, User, Node, Computer, Data
         from aiida.common.exceptions import InputValidationError
 
         qb = QueryBuilder()
@@ -82,7 +86,6 @@ class TestQueryBuilder(AiidaTestCase):
         ):
             self.assertEqual(clstype, Data._plugin_type_string)
             self.assertEqual(query_type_string, Data._query_type_string)
-
 
     def test_simple_query_1(self):
         """
@@ -318,19 +321,21 @@ class TestQueryBuilder(AiidaTestCase):
             self.assertEqual(qb.count(), 1)
 
         # Now I am testing the subclassing with tuples:
-        qb = QueryBuilder().append(cls=(StructureData, ParameterData), filters={'attributes.cat':'miau'})
+        qb = QueryBuilder().append(cls=(StructureData, ParameterData), filters={'attributes.cat': 'miau'})
         self.assertEqual(qb.count(), 2)
-        qb = QueryBuilder().append(type=('data.structure.StructureData.',  'data.parameter.ParameterData.'), filters={'attributes.cat':'miau'})
+        qb = QueryBuilder().append(type=('data.structure.StructureData.', 'data.parameter.ParameterData.'),
+                                   filters={'attributes.cat': 'miau'})
         self.assertEqual(qb.count(), 2)
-        qb = QueryBuilder().append(cls=(StructureData, ParameterData), filters={'attributes.cat':'miau'}, subclassing=False)
+        qb = QueryBuilder().append(cls=(StructureData, ParameterData), filters={'attributes.cat': 'miau'},
+                                   subclassing=False)
         self.assertEqual(qb.count(), 2)
-        qb = QueryBuilder().append(cls=(StructureData, Data), filters={'attributes.cat':'miau'}, )
+        qb = QueryBuilder().append(cls=(StructureData, Data), filters={'attributes.cat': 'miau'}, )
         self.assertEqual(qb.count(), 3)
-        qb = QueryBuilder().append(type=('data.structure.StructureData.',  'data.parameter.ParameterData.'),
-                filters={'attributes.cat':'miau'}, subclassing=False)
+        qb = QueryBuilder().append(type=('data.structure.StructureData.', 'data.parameter.ParameterData.'),
+                                   filters={'attributes.cat': 'miau'}, subclassing=False)
         self.assertEqual(qb.count(), 2)
-        qb = QueryBuilder().append(type=('data.structure.StructureData.',  'data.Data.'),
-                filters={'attributes.cat':'miau'}, subclassing=False)
+        qb = QueryBuilder().append(type=('data.structure.StructureData.', 'data.Data.'),
+                                   filters={'attributes.cat': 'miau'}, subclassing=False)
         self.assertEqual(qb.count(), 2)
 
     def test_list_behavior(self):
@@ -433,12 +438,12 @@ class TestQueryBuilder(AiidaTestCase):
 
 
 class TestQueryHelp(AiidaTestCase):
-    def test_queryhelp(self):   
+    def test_queryhelp(self):
         """
         Here I test the queryhelp by seeing whether results are the same as using the append method.
         I also check passing of tuples.
         """
-        
+
         from aiida.orm.data.structure import StructureData
         from aiida.orm.data.parameter import ParameterData
         from aiida.orm.data import Data
@@ -462,9 +467,9 @@ class TestQueryHelp(AiidaTestCase):
                 ((ParameterData, Data), 2, False),
                 ((ParameterData, Data), 3, True),
                 ((ParameterData, Data, StructureData), 3, False),
-            ):
+        ):
             qb = QueryBuilder()
-            qb.append(cls, filters={'attributes.foo-qh2':'bar'}, subclassing=subclassing, project='uuid')
+            qb.append(cls, filters={'attributes.foo-qh2': 'bar'}, subclassing=subclassing, project='uuid')
             self.assertEqual(qb.count(), expected_count)
 
             qh = qb.get_json_compatible_queryhelp()
@@ -474,19 +479,19 @@ class TestQueryHelp(AiidaTestCase):
                 sorted([uuid for uuid, in qb.all()]),
                 sorted([uuid for uuid, in qb_new.all()]))
 
-        qb = QueryBuilder().append(Group, filters={'name':'helloworld'})
+        qb = QueryBuilder().append(Group, filters={'name': 'helloworld'})
         self.assertEqual(qb.count(), 1)
 
-        qb = QueryBuilder().append((Group,), filters={'name':'helloworld'})
+        qb = QueryBuilder().append((Group,), filters={'name': 'helloworld'})
         self.assertEqual(qb.count(), 1)
 
-        qb = QueryBuilder().append(Computer,)
+        qb = QueryBuilder().append(Computer, )
         self.assertEqual(qb.count(), 1)
 
         qb = QueryBuilder().append(cls=(Computer,))
         self.assertEqual(qb.count(), 1)
 
-            
+
 class TestQueryBuilderCornerCases(AiidaTestCase):
     """
     In this class corner cases of QueryBuilder are added.
@@ -587,54 +592,54 @@ class QueryBuilderLimitOffsetsTest(AiidaTestCase):
             Node, project='attributes.foo'
         ).order_by({Node: 'ctime'})
 
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(10))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(10)))
 
         # Now applying an offset:
         qb.offset(5)
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(5, 10))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(5, 10)))
 
         # Now also applying a limit:
         qb.limit(3)
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(5, 8))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(5, 8)))
 
         # Specifying the order  explicitly the order:
         qb = QueryBuilder().append(
             Node, project='attributes.foo'
         ).order_by({Node: {'ctime': {'order': 'asc'}}})
 
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(10))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(10)))
 
         # Now applying an offset:
         qb.offset(5)
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(5, 10))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(5, 10)))
 
         # Now also applying a limit:
         qb.limit(3)
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(5, 8))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(5, 8)))
 
         # Reversing the order:
         qb = QueryBuilder().append(
             Node, project='attributes.foo'
         ).order_by({Node: {'ctime': {'order': 'desc'}}})
 
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(9, -1, -1))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(9, -1, -1)))
 
         # Now applying an offset:
         qb.offset(5)
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(4, -1, -1))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(4, -1, -1)))
 
         # Now also applying a limit:
         qb.limit(3)
-        res = list(zip(*qb.all())[0])
-        self.assertEqual(res, range(4, 1, -1))
+        res = next(zip(*qb.all()))
+        self.assertEqual(res, tuple(range(4, 1, -1)))
 
 
 class QueryBuilderJoinsTests(AiidaTestCase):
@@ -709,7 +714,7 @@ class QueryBuilderJoinsTests(AiidaTestCase):
                 Node, edge_filters={'label': 'is_advisor'}, tag='student'
             ).count(), 7)
 
-        for adv_id, number_students in zip(range(3), (2, 2, 3)):
+        for adv_id, number_students in zip(list(range(3)), (2, 2, 3)):
             self.assertEqual(QueryBuilder().append(
                 Node, filters={'attributes.advisor_id': adv_id}
             ).append(
@@ -753,9 +758,8 @@ class QueryBuilderPath(AiidaTestCase):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import Node
         from aiida.common.links import LinkType
-        from aiida.backends.utils import QueryFactory
 
-        q = QueryFactory()()
+        q = self.backend.query_manager
         n1 = Node()
         n1.label = 'n1'
         n1.store()
@@ -912,9 +916,9 @@ class QueryBuilderPath(AiidaTestCase):
             Node, descendant_of='anc', filters={'id': n8.pk}, edge_tag='edge'
         )
         qb.add_projection('edge', 'depth')
-        self.assertTrue(set(zip(*qb.all())[0]), set([5, 6]))
+        self.assertTrue(set(next(zip(*qb.all()))), set([5, 6]))
         qb.add_filter('edge', {'depth': 6})
-        self.assertTrue(set(zip(*qb.all())[0]), set([6]))
+        self.assertTrue(set(next(zip(*qb.all()))), set([6]))
 
 
 class TestConsistency(AiidaTestCase):
@@ -930,7 +934,7 @@ class TestConsistency(AiidaTestCase):
 
         for idx, item in enumerate(QueryBuilder().append(Node, project=['id', 'label']).iterall(batch_size=10)):
             if idx % 10 == 10:
-                print "creating new node"
+                print("creating new node")
                 n = Node()
                 n.store()
         self.assertEqual(idx, 99)
@@ -944,7 +948,6 @@ class TestManager(AiidaTestCase):
 
         I try to implement it in a way that does not depend on the past state.
         """
-        from aiida.backends.utils import QueryFactory
         from aiida.orm import Node, DataFactory, Calculation
         from collections import defaultdict
 
@@ -954,7 +957,7 @@ class TestManager(AiidaTestCase):
             statistics['types'][n._plugin_type_string] += 1
             statistics['ctime_by_day'][n.ctime.strftime('%Y-%m-%d')] += 1
 
-        qmanager = QueryFactory()()
+        qmanager = self.backend.query_manager
         current_db_statistics = qmanager.get_creation_statistics()
         types = defaultdict(int)
         types.update(current_db_statistics['types'])
@@ -976,10 +979,10 @@ class TestManager(AiidaTestCase):
 
         new_db_statistics = qmanager.get_creation_statistics()
         # I only check a few fields
-        new_db_statistics = {k: v for k, v in new_db_statistics.iteritems() if k in expected_db_statistics}
+        new_db_statistics = {k: v for k, v in new_db_statistics.items() if k in expected_db_statistics}
 
         expected_db_statistics = {k: dict(v) if isinstance(v, defaultdict) else v
-                                  for k, v in expected_db_statistics.iteritems()}
+                                  for k, v in expected_db_statistics.items()}
 
         self.assertEquals(new_db_statistics, expected_db_statistics)
 
@@ -991,7 +994,6 @@ class TestManager(AiidaTestCase):
         """
         from aiida.orm import Node, DataFactory, Calculation
         from collections import defaultdict
-        from aiida.backends.general.abstractqueries import AbstractQueryManager
 
         def store_and_add(n, statistics):
             n.store()
@@ -999,12 +1001,7 @@ class TestManager(AiidaTestCase):
             statistics['types'][n._plugin_type_string] += 1
             statistics['ctime_by_day'][n.ctime.strftime('%Y-%m-%d')] += 1
 
-        class QueryManagerDefault(AbstractQueryManager):
-            pass
-
-        qmanager_default = QueryManagerDefault()
-
-        current_db_statistics = qmanager_default.get_creation_statistics()
+        current_db_statistics = self.backend.query_manager.get_creation_statistics()
         types = defaultdict(int)
         types.update(current_db_statistics['types'])
         ctime_by_day = defaultdict(int)
@@ -1023,11 +1020,11 @@ class TestManager(AiidaTestCase):
         store_and_add(ParameterData(), expected_db_statistics)
         store_and_add(Calculation(), expected_db_statistics)
 
-        new_db_statistics = qmanager_default.get_creation_statistics()
+        new_db_statistics = self.backend.query_manager.get_creation_statistics()
         # I only check a few fields
-        new_db_statistics = {k: v for k, v in new_db_statistics.iteritems() if k in expected_db_statistics}
+        new_db_statistics = {k: v for k, v in new_db_statistics.items() if k in expected_db_statistics}
 
         expected_db_statistics = {k: dict(v) if isinstance(v, defaultdict) else v
-                                  for k, v in expected_db_statistics.iteritems()}
+                                  for k, v in expected_db_statistics.items()}
 
         self.assertEquals(new_db_statistics, expected_db_statistics)

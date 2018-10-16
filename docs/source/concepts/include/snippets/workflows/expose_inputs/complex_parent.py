@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from aiida.work import ToContext, WorkChain, run
 
 from child import ChildWorkChain
@@ -17,9 +18,9 @@ class ComplexParentWorkChain(WorkChain):
 
     def run_children(self):
         child_1_inputs = self.exposed_inputs(ChildWorkChain, namespace='child_1')
-        child_2_inputs = self.exposed_inputs(ChildWorkChain, namespace='child_1', agglomerate=False)
+        child_2_inputs = self.exposed_inputs(ChildWorkChain, namespace='child_2', agglomerate=False)
         child_1 = self.submit(ChildWorkChain, **child_1_inputs)
-        child_2 = self.submit(ChildWorkChain, **child_2_inputs, a=self.inputs.a)
+        child_2 = self.submit(ChildWorkChain, a=self.inputs.a, **child_2_inputs)
         return ToContext(child_1=child_1, child_2=child_2)
 
     def finalize(self):

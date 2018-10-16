@@ -9,6 +9,7 @@
 ###########################################################################
 """Defines the migrations on the config.json file."""
 
+from __future__ import absolute_import
 from aiida.common.exceptions import ConfigurationVersionError
 from ._migrations import (
     _MIGRATION_LOOKUP, CURRENT_CONFIG_VERSION, OLDEST_COMPATIBLE_CONFIG_VERSION

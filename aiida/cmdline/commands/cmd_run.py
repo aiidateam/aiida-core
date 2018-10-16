@@ -1,5 +1,14 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """`verdi run` command."""
+from __future__ import absolute_import
 import contextlib
 import os
 import sys
@@ -94,10 +103,12 @@ def run(scriptname, varargs, group, group_name, exclude, excludesubclasses, incl
                 # Add local folder to sys.path
                 sys.path.insert(0, os.path.abspath(os.curdir))
                 # Pass only globals_dict
-                exec (handle, globals_dict)
+                # Disable yapf to keep Python 3 style here.
+                # Python 3 does not support a file handle for the first argument anymore.
+                exec(handle.read(), globals_dict)  # yapf:disable # pylint: disable=exec-used
         except SystemExit:
             # Script called sys.exit()
             # Re-raise the exception to have the error code properly returned at the end
             raise
-        finally:
-            handle.close()
+    finally:
+        handle.close()

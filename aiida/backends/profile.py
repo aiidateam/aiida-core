@@ -8,9 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 from aiida.backends import settings
 from aiida.common.exceptions import InvalidOperation
-from aiida.common.setup import get_default_profile, get_profile_config
+from aiida.common.setup import get_default_profile_name, get_profile_config
 
 
 # Possible choices for backend
@@ -33,7 +34,7 @@ def load_profile(profile=None):
             raise ValueError('Error in profile loading')
     else:
         if profile is None:
-            profile = get_default_profile()
+            profile = get_default_profile_name()
 
         settings.AIIDADB_PROFILE = profile
 

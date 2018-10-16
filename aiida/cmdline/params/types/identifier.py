@@ -1,15 +1,26 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """
 Module for custom click param type identifier
 """
+from __future__ import absolute_import
 from abc import ABCMeta, abstractproperty
 
+import six
 import click
 
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.plugins.entry_point import get_entry_point_from_string
 
 
+@six.add_metaclass(ABCMeta)
 class IdentifierParamType(click.ParamType):
     """
     An extension of click.ParamType for a generic identifier parameter. In AiiDA, orm entities can often be
@@ -19,8 +30,6 @@ class IdentifierParamType(click.ParamType):
     parameter type should implement the `orm_class_loader` method to return the appropriate orm class loader,
     which should be a subclass of `aiida.orm.utils.loaders.OrmEntityLoader` for the corresponding orm class.
     """
-
-    __metaclass__ = ABCMeta
 
     def __init__(self, sub_classes=None):
         """
@@ -113,6 +122,6 @@ class IdentifierParamType(click.ParamType):
         try:
             entity = loader.load_entity(value, sub_classes=self._sub_classes)
         except (MultipleObjectsError, NotExistent, ValueError) as exception:
-            raise click.BadParameter(exception.message)
+            raise click.BadParameter(str(exception))
 
         return entity

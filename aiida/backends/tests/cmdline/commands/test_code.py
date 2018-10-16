@@ -1,10 +1,20 @@
+# -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """Tests for the 'verdi code' command."""
+from __future__ import absolute_import
 import os
 import subprocess as sp
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.commands.cmd_code import (setup_code, delete, hide, reveal, relabel, code_list, show)
+from aiida.cmdline.commands.cmd_code import (setup_code, delete, hide, reveal, relabel, code_list, show, code_duplicate)
 from aiida.common.exceptions import NotExistent
 
 
@@ -15,14 +25,12 @@ class TestVerdiCodeSetup(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         super(TestVerdiCodeSetup, cls).setUpClass(*args, **kwargs)
-        from aiida.orm import Computer
-        new_comp = Computer(
-            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida')
+        new_comp = cls.backend.computers.create(name='comp', hostname='localhost', transport_type='local',
+                                                scheduler_type='direct', workdir='/tmp/aiida')
         new_comp.store()
 
     def setUp(self):
-        from aiida.orm import Computer
-        self.comp = Computer.get('comp')
+        self.comp = self.backend.computers.get(name='comp')
 
         self.runner = CliRunner()
         self.this_folder = os.path.dirname(__file__)
@@ -33,7 +41,7 @@ class TestVerdiCodeSetup(AiidaTestCase):
 
     def test_reachable(self):
         output = sp.check_output(['verdi', 'code', 'setup', '--help'])
-        self.assertIn('Usage:', output)
+        self.assertIn(b'Usage:', output)
 
     def test_interactive_remote(self):
         from aiida.orm import Code
@@ -100,14 +108,13 @@ class TestVerdiCodeCommands(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         super(TestVerdiCodeCommands, cls).setUpClass(*args, **kwargs)
-        from aiida.orm import Computer
-        new_comp = Computer(
-            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida')
+        new_comp = cls.backend.computers.create(name='comp', hostname='localhost', transport_type='local',
+                                                scheduler_type='direct', workdir='/tmp/aiida')
         new_comp.store()
 
     def setUp(self):
-        from aiida.orm import Computer, Code
-        self.comp = Computer.get('comp')
+        from aiida.orm import Code
+        self.comp = self.backend.computers.get(name='comp')
 
         try:
             code = Code.get_from_string('code')
@@ -117,6 +124,7 @@ class TestVerdiCodeCommands(AiidaTestCase):
                 remote_computer_exec=[self.comp, '/remote/abs/path'],
             )
             code.label = 'code'
+            code.description = 'desc'
             code.store()
         self.code = code
 
@@ -197,3 +205,29 @@ class TestVerdiCodeCommands(AiidaTestCase):
         result = self.runner.invoke(show, [str(self.code.pk)])
         self.assertIsNone(result.exception)
         self.assertTrue(str(self.code.pk) in result.output)
+
+    def test_code_duplicate_interactive(self):
+        os.environ['VISUAL'] = 'sleep 1; vim -cwq'
+        os.environ['EDITOR'] = 'sleep 1; vim -cwq'
+        label = 'code_duplicate_interactive'
+        user_input = label + '\n\n\n\n\n\n'
+        result = self.runner.invoke(code_duplicate, [str(self.code.pk)], input=user_input, catch_exceptions=False)
+        self.assertIsNone(result.exception, result.output)
+
+        from aiida.orm import Code
+        new_code = Code.get_from_string(label)
+        self.assertEquals(self.code.description, new_code.description)
+        self.assertEquals(self.code.get_prepend_text(), new_code.get_prepend_text())
+        self.assertEquals(self.code.get_append_text(), new_code.get_append_text())
+
+    def test_code_duplicate_non_interactive(self):
+        label = 'code_duplicate_noninteractive'
+        result = self.runner.invoke(code_duplicate, ['--non-interactive', '--label=' + label, str(self.code.pk)])
+        self.assertIsNone(result.exception)
+
+        from aiida.orm import Code
+        new_code = Code.get_from_string(label)
+        self.assertEquals(self.code.description, new_code.description)
+        self.assertEquals(self.code.get_prepend_text(), new_code.get_prepend_text())
+        self.assertEquals(self.code.get_append_text(), new_code.get_append_text())
+        self.assertEquals(self.code.get_input_plugin_name(), new_code.get_input_plugin_name())

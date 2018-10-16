@@ -1,10 +1,19 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 # pylint: disable=superfluous-parens,too-many-locals,too-many-statements,too-many-branches
 """Functions to create, inspect and manipulate profiles in the configuration file."""
+from __future__ import absolute_import
 import os
 import sys
 
-import click
+from aiida.cmdline.utils import echo
 
 
 def setup_profile(profile, only_config, set_default=False, non_interactive=False, **kwargs):
@@ -63,34 +72,30 @@ def setup_profile(profile, only_config, set_default=False, non_interactive=False
                 repo=kwargs['repo'],
                 force_overwrite=kwargs.get('force_overwrite', False))
         except ValueError as exception:
-            click.echo("Error during configuation: {}".format(exception.message), err=True)
-            sys.exit(1)
+            echo.echo_critical("Error during configuation: {}".format(exception))
         except KeyError as exception:
             import traceback
-            click.echo(traceback.format_exc())
-            click.echo(
+            echo.echo(traceback.format_exc())
+            echo.echo_critical(
                 "--non-interactive requires all values to be given on the commandline! Missing argument: {}".format(
-                    exception.message),
-                err=True)
-            sys.exit(1)
+                    exception.args[0]))
     else:
         try:
             created_conf = create_configuration(profile=gprofile)
         except ValueError as exception:
-            print >> sys.stderr, "Error during configuration: {}".format(exception.message)
-            sys.exit(1)
+            echo.echo_critical("Error during configuration: {}".format(exception))
 
         # Set default DB profile
         set_default_profile(gprofile, force_rewrite=False)
 
     if only_user_config:
-        print("Only user configuration requested, " "skipping the migrate command")
+        echo.echo("Only user configuration requested, skipping the migrate command")
     else:
-        print("Executing now a migrate command...")
+        echo.echo("Executing now a migrate command...")
 
         backend_choice = created_conf['AIIDADB_BACKEND']
         if backend_choice == BACKEND_DJANGO:
-            print("...for Django backend")
+            echo.echo("...for Django backend")
             # The correct profile is selected within load_dbenv.
             # Setting os.umask here since sqlite database gets created in
             # this step.
@@ -117,7 +122,7 @@ def setup_profile(profile, only_config, set_default=False, non_interactive=False
             set_backend_type(BACKEND_DJANGO)
 
         elif backend_choice == BACKEND_SQLA:
-            print("...for SQLAlchemy backend")
+            echo.echo("...for SQLAlchemy backend")
             from aiida import is_dbenv_loaded
             from aiida.backends.sqlalchemy.utils import _load_dbenv_noschemacheck, check_schema_version
             from aiida.backends.profile import load_profile
@@ -137,10 +142,10 @@ def setup_profile(profile, only_config, set_default=False, non_interactive=False
         else:
             raise InvalidOperation("Not supported backend selected.")
 
-    print("Database was created successfully")
+    echo.echo("Database was created successfully")
 
     # I create here the default user
-    print("Loading new environment...")
+    echo.echo("Loading new environment...")
     if only_user_config:
         from aiida.backends.utils import load_dbenv, is_dbenv_loaded
         # db environment has not been loaded in this case
@@ -152,17 +157,17 @@ def setup_profile(profile, only_config, set_default=False, non_interactive=False
 
     backend = construct_backend()
     if not backend.users.find(email=DEFAULT_AIIDA_USER):
-        print("Installing default AiiDA user...")
+        echo.echo("Installing default AiiDA user...")
         nuser = backend.users.create(email=DEFAULT_AIIDA_USER, first_name="AiiDA", last_name="Daemon")
         nuser.is_active = True
         nuser.store()
 
     from aiida.common.utils import get_configured_user_email
     email = get_configured_user_email()
-    print("Starting user configuration for {}...".format(email))
+    echo.echo("Starting user configuration for {}...".format(email))
     if email == DEFAULT_AIIDA_USER:
-        print("You set up AiiDA using the default Daemon email ({}),".format(email))
-        print("therefore no further user configuration will be asked.")
+        echo.echo("You set up AiiDA using the default Daemon email ({}),".format(email))
+        echo.echo("therefore no further user configuration will be asked.")
     else:
         if non_interactive:
             # Here we map the keyword arguments onto the command line arguments
@@ -188,4 +193,4 @@ def setup_profile(profile, only_config, set_default=False, non_interactive=False
     if set_default:
         set_default_profile(profile, force_rewrite=True)
 
-    print("Setup finished.")
+    echo.echo("Setup finished.")

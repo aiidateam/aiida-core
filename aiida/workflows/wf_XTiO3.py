@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from __future__ import division
+from __future__ import absolute_import
+from six.moves import zip, range
 import aiida.common
 from aiida.common import aiidalogger
 from aiida.orm.workflow import Workflow
@@ -98,8 +100,8 @@ class WorkflowXTiO3_EOS(Workflow):
         QECalc = CalculationFactory('quantumespresso.pw')
 
         calc = QECalc(computer=computer)
-        calc.set_max_wallclock_seconds(max_wallclock_seconds)
-        calc.set_resources({"num_machines": num_machines})
+        calc.set_option('max_wallclock_seconds', max_wallclock_seconds)
+        calc.set_option('resources', {"num_machines": num_machines})
         calc.store()
 
         calc.use_code(code)
@@ -171,8 +173,8 @@ class WorkflowXTiO3_EOS(Workflow):
         e_calcs = [c.res.energy for c in start_calcs]
         v_calcs = [c.res.volume for c in start_calcs]
 
-        e_calcs = zip(*sorted(zip(a_sweep, e_calcs)))[1]
-        v_calcs = zip(*sorted(zip(a_sweep, v_calcs)))[1]
+        e_calcs = list(zip(*sorted(zip(a_sweep, e_calcs))))[1]
+        v_calcs = list(zip(*sorted(zip(a_sweep, v_calcs))))[1]
 
         #  Add to report
         #-----------------------------------------

@@ -8,13 +8,15 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from __future__ import unicode_literals
+from __future__ import absolute_import
 
 from django.db import models, migrations
 import aiida.utils.timezone
-from aiida.backends.djsite.db.migrations import update_schema_version
+from aiida.backends.djsite.db.migrations import upgrade_schema_version
 
 
-SCHEMA_VERSION = "1.0.5"
+REVISION = '1.0.5'
+DOWN_REVISION = '1.0.4'
 
 
 class Migration(migrations.Migration):
@@ -36,5 +38,5 @@ class Migration(migrations.Migration):
             field=models.DateTimeField(auto_now=True, db_index=True),
             preserve_default=True,
         ),
-        update_schema_version(SCHEMA_VERSION)
+        upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

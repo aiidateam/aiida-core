@@ -14,6 +14,7 @@ Revises: f9a69de76a9a
 Create Date: 2018-05-10 19:08:51.780194
 
 """
+from __future__ import absolute_import
 from alembic import op
 from sqlalchemy.dialects import postgresql
 import sqlalchemy as sa

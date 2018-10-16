@@ -8,12 +8,15 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 from __future__ import unicode_literals
+from __future__ import absolute_import
 
-from django.db import models, migrations
-from aiida.backends.djsite.db.migrations import update_schema_version
+from django.db import migrations
+from aiida.backends.djsite.db.migrations import upgrade_schema_version
 
 
-SCHEMA_VERSION = "1.0.7"
+REVISION = '1.0.8'
+DOWN_REVISION = '1.0.7'
+
 
 class Migration(migrations.Migration):
 
@@ -125,6 +128,6 @@ class Migration(migrations.Migration):
                     AND ( db_dblink_1.type = null  OR db_dblink_1.type = '')
             );
         """),
-        update_schema_version(SCHEMA_VERSION)
+        upgrade_schema_version(REVISION, DOWN_REVISION)
 
     ]

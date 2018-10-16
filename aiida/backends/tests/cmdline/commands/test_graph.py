@@ -1,6 +1,16 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """Tests for verdi graph"""
+from __future__ import absolute_import
 import errno
+import tempfile
 import os
 
 from click.testing import CliRunner
@@ -34,6 +44,17 @@ class TestVerdiGraph(AiidaTestCase):
         from aiida.orm import Node
 
         cls.node = Node().store()
+
+        # some of the export tests write in the current directory,
+        # make sure it is writeable and we don't pollute the current one
+        cls.old_cwd = os.getcwd()
+        cls.cwd = tempfile.mkdtemp(__name__)
+        os.chdir(cls.cwd)
+
+    @classmethod
+    def tearDownClass(cls, *args, **kwargs):
+        os.chdir(cls.old_cwd)
+        os.rmdir(cls.cwd)
 
     def setUp(self):
         self.cli_runner = CliRunner()

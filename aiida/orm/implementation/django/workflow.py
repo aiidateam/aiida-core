@@ -7,8 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import absolute_import
 import importlib
 from collections import Mapping
+
+import six
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
@@ -23,6 +26,7 @@ from aiida.common.utils import md5_file, str_timedelta
 from aiida.orm.implementation.django.calculation.job import JobCalculation
 from aiida.orm.implementation.general.workflow import AbstractWorkflow
 from aiida.utils import timezone
+
 
 logger = aiidalogger.getChild('Workflow')
 
@@ -312,7 +316,7 @@ class Workflow(AbstractWorkflow):
 
         def par_validate(params):
             the_params = {}
-            for k, v in params.iteritems():
+            for k, v in params.items():
                 if any([isinstance(v, int),
                         isinstance(v, bool),
                         isinstance(v, float),
@@ -473,7 +477,7 @@ class Workflow(AbstractWorkflow):
         :raise: ObjectDoesNotExist: if there is no step with the specific name.
         :return: a DbWorkflowStep object.
         """
-        if isinstance(step_method, basestring):
+        if isinstance(step_method, six.string_types):
             step_method_name = step_method
         else:
 
@@ -544,7 +548,7 @@ class Workflow(AbstractWorkflow):
         except ImportError:
             raise InternalError("Unable to load the workflow module {}".format(module))
 
-        for elem_name, elem in wf_mod.__dict__.iteritems():
+        for elem_name, elem in wf_mod.__dict__.items():
 
             if module_class == elem_name:  # and issubclass(elem, Workflow):
                 return getattr(wf_mod, elem_name)(uuid=wf_db.uuid)

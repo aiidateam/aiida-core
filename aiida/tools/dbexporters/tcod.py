@@ -8,6 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
+from __future__ import division
+
+from six.moves import range
+
 from aiida.orm import DataFactory
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.calculation.inline import optional_inline
@@ -107,7 +112,7 @@ def cif_encode_contents(content, gzip=False, gzip_threshold=1024):
     elif gzip and len(content) >= gzip_threshold:
         # content is larger than some arbitrary value and should be gzipped
         method = 'gzip+base64'
-    elif float(len(re.findall('[^\x09\x0A\x0D\x20-\x7E]', content)))/len(content) > 0.25:
+    elif len(re.findall('[^\x09\x0A\x0D\x20-\x7E]', content))/len(content) > 0.25:
         # contents are assumed to be binary
         method = 'base64'
     elif re.search('^\s*data_',content) is not None or \
@@ -411,7 +416,7 @@ def _inline_to_standalone_script(calc):
 
 for key, value in {}(
     {}
-    ).iteritems():
+    ).items():
     value.store()
 """.format(code_string, function_name, args_string)
 
@@ -446,7 +451,7 @@ def _collect_calculation_data(calc):
         retrieved_abspath = calc.get_retrieved_node().get_abs_path()
         files_in  = _collect_files(calc._raw_input_folder.abspath)
         files_out = _collect_files(os.path.join(retrieved_abspath, 'path'))
-        this_calc['env'] = calc.get_environment_variables()
+        this_calc['env'] = calc.get_option('environment_variables')
         stdout_name = '{}.out'.format(aiida_executable_name)
         while stdout_name in [files_in,files_out]:
             stdout_name = '_{}'.format(stdout_name)
@@ -727,11 +732,10 @@ def _collect_tags(node, calc,parameters=None,
 
         with SandboxFolder() as folder:
             try:
-                export_tree([node.dbnode], folder=folder, silent=True,
+                export_tree([node], folder=folder, silent=True,
                             allowed_licenses=['CC0'])
-            except LicensingException as e:
-                raise LicensingException(e.message + \
-                                         ". Only CC0 license is accepted.")
+            except LicensingException as exc:
+                raise LicensingException("{}. Only CC0 license is accepted.".format(exc))
 
             files = _collect_files(folder.abspath)
             with open(folder.get_abs_path('data.json')) as f:
@@ -811,7 +815,7 @@ def _collect_tags(node, calc,parameters=None,
             tags[tag] = []
     for encoding in encodings:
         layers = encoding.split('+')
-        for i in range(0, len(layers)):
+        for i in range(len(layers)):
             tags['_tcod_content_encoding_id'].append(encoding)
             tags['_tcod_content_encoding_layer_id'].append(i+1)
             tags['_tcod_content_encoding_layer_type'].append(layers[i])
@@ -886,7 +890,7 @@ def add_metadata_inline(what, node, parameters, args):
 
     datablocks = []
     loops = {}
-    dataname = node.values.keys()[0]
+    dataname = list(node.values.keys())[0]
     datablock = dict()
     for tag in node.values[dataname].keys():
         datablock[tag] = node.values[dataname][tag]
@@ -907,7 +911,7 @@ def add_metadata_inline(what, node, parameters, args):
     loops.update(tcod_loops)
 
     for datablock in datablocks:
-        for k,v in dict(tags.items() + additional_tags.items()).iteritems():
+        for k,v in dict(tags.items() + additional_tags.items()).items():
             if not k.startswith('_'):
                 raise ValueError("Tag '{}' does not seem to start with "
                                  "an underscode ('_'): all CIF tags must "
@@ -1043,7 +1047,7 @@ def export_cifnode(what, parameters=None, trajectory_index=None,
 
 def deposit(what, type, author_name=None, author_email=None, url=None,
             title=None, username=None, password=False, user_email=None,
-            code_label=default_options['code'], computer_name=None,
+            code=None, computer=None,
             replace=None, message=None, **kwargs):
     """
     Launches a
@@ -1083,7 +1087,7 @@ def deposit(what, type, author_name=None, author_email=None, url=None,
 
     if type == 'published':
         pass
-    elif type in ['prepublication','personal']:
+    elif type in ['prepublication', 'personal']:
         if not author_name:
             author_name = get_property('tcod.depositor_author_name')
             if not author_name:
@@ -1120,18 +1124,8 @@ def deposit(what, type, author_name=None, author_email=None, url=None,
         kwargs['datablock_names'] = [replace]
 
     cif = export_cifnode(what, store=True, **kwargs)
-
-    from aiida.orm.code import Code
-    from aiida.orm.computer import Computer
-    from aiida.orm.data.parameter import ParameterData
-    from aiida.common.exceptions import NotExistent
-
-    code = Code.get_from_string(code_label)
-    computer = None
-    if computer_name:
-        computer = Computer.get(computer_name)
     calc = code.new_calc(computer=computer)
-    calc.set_resources({'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+    calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
 
     if password:
         import getpass
@@ -1268,7 +1262,7 @@ def translate_calculation_specific_values(calc, translator, **kwargs):
         # '_tcod_atom_site_resid_force_Cartn_z': 'get_atom_site_residual_force_Cartesian_z',
     }
     tags = dict()
-    for tag, function in translation_map.iteritems():
+    for tag, function in translation_map.items():
         value = None
         try:
             value = getattr(translator, function)(calc, **kwargs)
@@ -1276,7 +1270,7 @@ def translate_calculation_specific_values(calc, translator, **kwargs):
             pass
         if value is not None:
             if isinstance(value,list):
-                for i in range(0,len(value)):
+                for i in range(len(value)):
                     if value[i] is None:
                         value[i] = '?'
             tags[tag] = value

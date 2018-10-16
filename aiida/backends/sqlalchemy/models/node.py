@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 from sqlalchemy import ForeignKey, select, func, join, and_, case
 from sqlalchemy.orm import (
     relationship, backref, Query, mapper,
@@ -71,7 +72,7 @@ class DbNode(Base):
     aiida_query = _QueryProperty(_AiidaQuery)
 
     id = Column(Integer, primary_key=True)
-    uuid = Column(UUID(as_uuid=True), default=uuid_func)
+    uuid = Column(UUID(as_uuid=True), default=uuid_func, unique=True)
     type = Column(String(255), index=True)
     process_type = Column(String(255), index=True)
     label = Column(String(255), index=True, nullable=True,

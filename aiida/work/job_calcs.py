@@ -71,6 +71,8 @@ class JobsList(object):
             kwargs = {'as_dict': True}
             if scheduler.get_feature('can_query_by_user'):
                 kwargs['user'] = "$USER"
+            else:
+                kwargs['jobs'] = self._get_jobs_with_scheduler()
 
             scheduler_response = scheduler.getJobs(**kwargs)
             jobs_cache = {}
@@ -194,6 +196,15 @@ class JobsList(object):
 
     def _update_requests_outstanding(self):
         return any(not request.done() for request in itervalues(self._job_update_requests))
+
+    def _get_jobs_with_scheduler(self):
+        """
+        Get all the jobs that are currently with scheduler for this authinfo
+
+        :return: the list of jobs with the scheduler
+        :rtype: list
+        """
+        return [str(job_id) for job_id, _ in self._job_update_requests.items()]
 
 
 class JobManager(object):

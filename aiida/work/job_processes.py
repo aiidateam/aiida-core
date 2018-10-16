@@ -63,6 +63,7 @@ def task_upload_job(node, transport_queue, calc_info, script_filename, cancellab
     :param calc_info: the calculation info datastructure returned by `JobCalculation._presubmit`
     :param script_filename: the job launch script returned by `JobCalculation._presubmit`
     :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
+    :type cancellable: :class:`aiida.work.utils.InterruptableFuture`
     :raises: Return if the tasks was successfully completed
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """

@@ -220,7 +220,6 @@
         aiida/orm/calculation/job/simpleplugins/templatereplacer.py|
         aiida/orm/calculation/work.py|
         aiida/orm/code.py|
-        aiida/orm/computer.py|
         aiida/orm/data/array/bands.py|
         aiida/orm/data/array/__init__.py|
         aiida/orm/data/array/kpoints.py|

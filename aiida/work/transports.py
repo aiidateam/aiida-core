@@ -76,7 +76,6 @@ class TransportQueue(object):
 
         if transport_request is None:
             # There is no existing request for this transport (i.e. on this authinfo)
-
             transport_request = TransportRequest()
             self._transport_requests[authinfo.id] = transport_request
 

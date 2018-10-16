@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from aiida.work import ToContext, WorkChain, run
 from child import ChildWorkChain
 

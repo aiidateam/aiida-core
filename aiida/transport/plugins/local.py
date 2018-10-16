@@ -541,7 +541,7 @@ class LocalTransport(Transport):
 
     # please refactor: issue #1780 on github
     # pylint: disable=too-many-branches
-    def copy(self, remotesource, remotedestination, *args, **kwargs):
+    def copy(self, remotesource, remotedestination, dereference=False, recursive=True):
         """
         Copies a file or a folder from 'remote' remotesource to 'remote' remotedestination.
         Automatically redirects to copyfile or copytree.
@@ -549,11 +549,12 @@ class LocalTransport(Transport):
         :param remotesource: path to local file
         :param remotedestination: path to remote file
         :param dereference: follow symbolic links. Default = False
+        :param recursive: if True copy directories recursively, otherwise only copy the specified file(s)
+        :type recursive: bool
 
         :raise ValueError: if 'remote' remotesource or remotedestinationis not valid
         :raise OSError: if remotesource does not exist
         """
-        dereference = kwargs.get('dereference', args[0] if args else True)
         if not remotesource:
             raise ValueError("Input remotesource to copy " "must be a non empty object")
         if not remotedestination:
@@ -601,16 +602,17 @@ class LocalTransport(Transport):
                 # With self.copytree, the (possible) relative path is OK
                 self.copytree(remotesource, remotedestination, dereference)
 
-    def copyfile(self, remotesource, remotedestination, *args, **kwargs):  # pylint: disable=unused-argument
+    def copyfile(self, remotesource, remotedestination, dereference=False):
         """
         Copies a file from 'remote' remotesource to
         'remote' remotedestination.
 
         :param remotesource: path to local file
         :param remotedestination: path to remote file
+        :param dereference: if True copy the contents of any symlinks found, otherwise copy the symlinks themselves
+        :type dereference: bool
         :raise ValueError: if 'remote' remotesource or remotedestination is not valid
         :raise OSError: if remotesource does not exist
-
         """
         if not remotesource:
             raise ValueError("Input remotesource to copyfile " "must be a non empty object")
@@ -621,9 +623,13 @@ class LocalTransport(Transport):
         if not os.path.exists(the_source):
             raise OSError("Source not found")
 
-        shutil.copyfile(the_source, the_destination)
+        if not dereference and os.path.islink(remotesource):
+            linkto = os.readlink(the_source)
+            os.symlink(linkto, the_destination)
+        else:
+            shutil.copyfile(the_source, the_destination)
 
-    def copytree(self, remotesource, remotedestination, *args, **kwargs):
+    def copytree(self, remotesource, remotedestination, dereference=False):
         """
         Copies a folder from 'remote' remotesource to
         'remote' remotedestination.
@@ -635,7 +641,6 @@ class LocalTransport(Transport):
         :raise ValueError: if 'remote' remotesource or remotedestination is not valid
         :raise OSError: if remotesource does not exist
         """
-        dereference = kwargs.get('dereference', args[0] if args else False)
         if not remotesource:
             raise ValueError("Input remotesource to copytree " "must be a non empty object")
         if not remotedestination:

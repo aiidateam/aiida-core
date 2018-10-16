@@ -923,33 +923,13 @@ class SshTransport(aiida.transport.Transport):
             aiida_attr[key] = getattr(paramiko_attr, key)
         return aiida_attr
 
-    def copyfile(self, remotesource, remotedestination, dereference=False, pattern=None):
-        """
-        Copy a file from remote source to remote destination
-        Redirects to copy().
+    def copyfile(self, remotesource, remotedestination, dereference=False):
+        return self.copy(remotesource, remotedestination, dereference)
 
-        :param remotesource:
-        :param remotedestination:
-        :param dereference:
-        :param pattern:
-        """
-        cp_flags = '-f'
-        return self.copy(remotesource, remotedestination, dereference, cp_flags, pattern)
+    def copytree(self, remotesource, remotedestination, dereference=False):
+        return self.copy(remotesource, remotedestination, dereference, recursive=True)
 
-    def copytree(self, remotesource, remotedestination, dereference=False, pattern=None):
-        """
-        copy a folder recursively from remote source to remote destination
-        Redirects to copy()
-
-        :param remotesource:
-        :param remotedestination:
-        :param dereference:
-        :param pattern:
-        """
-        cp_flags = '-r -f'
-        return self.copy(remotesource, remotedestination, dereference, cp_flags, pattern)
-
-    def copy(self, remotesource, remotedestination, dereference=False, pattern=None, cp_flags=None):
+    def copy(self, remotesource, remotedestination, dereference=False, recursive=True):
         """
         Copy a file or a directory from remote source to remote destination.
         Flags used: ``-r``: recursive copy; ``-f``: force, makes the command non interactive;
@@ -959,18 +939,18 @@ class SshTransport(aiida.transport.Transport):
         :param remotedestination: file to copy to
         :param dereference: if True, copy content instead of copying the symlinks only
             Default = False.
+        :param recursive: if True copy directories recursively, otherwise only copy the specified file(s)
+        :type recursive: bool
         :raise IOError: if the cp execution failed.
 
         .. note:: setting dereference equal to True could cause infinite loops.
         """
         # In the majority of cases, we should deal with linux cp commands
-
         # TODO : do we need to avoid the aliases when calling cp_exe='cp'? Call directly /bin/cp?
 
-        # TODO: verify that it does not re
-
-        if cp_flags is None:
-            cp_flags = '-r -f'
+        cp_flags = '-f'
+        if recursive:
+            cp_flags += ' -r'
 
         # For the moment, this is hardcoded. May become a parameter
         cp_exe = 'cp'

@@ -21,7 +21,6 @@ try:
 except ImportError:
     import subprocess
 
-import os
 import click
 
 _CREATE_USER_COMMAND = 'CREATE USER "{}" WITH PASSWORD \'{}\''
@@ -323,7 +322,7 @@ def _pg_execute_sh(command, user='postgres', **kwargs):
         options += '-p {}'.format(port)
 
     # Build command line
-    sudo_cmd = ['sudo', '-S']
+    sudo_cmd = ['sudo']
     non_interactive = kwargs.pop('non_interactive', None)
     if non_interactive:
         sudo_cmd += ['-n']
@@ -331,7 +330,7 @@ def _pg_execute_sh(command, user='postgres', **kwargs):
     from aiida.common.utils import escape_for_bash
     psql_cmd = ['psql {options} -tc {}'.format(escape_for_bash(command), options=options)]
     sudo_su_psql = sudo_cmd + su_cmd + psql_cmd
-    result = subprocess.check_output(sudo_su_psql, preexec_fn=os.setsid, **kwargs)
+    result = subprocess.check_output(sudo_su_psql, **kwargs)
 
     result = result.decode('utf-8').strip().split('\n')
     result = [i for i in result if i]

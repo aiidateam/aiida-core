@@ -715,7 +715,7 @@ class Computer(CollectionEntry):
         from aiida.orm.backend import construct_backend
 
         transport_cls = self.get_transport_class()
-        backend = construct_backend()
+        backend = self.backend
         user = user or backend.users.get_automatic_user()
 
         try:

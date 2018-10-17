@@ -23,7 +23,7 @@ from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.cmdline.utils.multi_line_input import ensure_scripts
 from aiida.common.exceptions import ValidationError, InputValidationError
-from aiida.control.computer import ComputerBuilder, get_computer_configuration
+from aiida.control.computer import ComputerBuilder
 from aiida.plugins.entry_point import get_entry_points
 from aiida.transport import cli as transport_cli
 
@@ -583,9 +583,6 @@ def computer_config_show(computer, user, defaults, as_option_string):
     import tabulate
     from aiida.common.utils import escape_for_bash
 
-    config = {}
-    table = []
-
     transport_cls = computer.get_transport_class()
     option_list = [
         param for param in transport_cli.create_configure_cmd(computer.get_transport_type()).params
@@ -596,7 +593,7 @@ def computer_config_show(computer, user, defaults, as_option_string):
     if defaults:
         config = {option.name: transport_cli.transport_option_default(option.name, computer) for option in option_list}
     else:
-        config = get_computer_configuration(computer, user)
+        config = computer.get_configuration(user)
 
     option_items = []
     if as_option_string:

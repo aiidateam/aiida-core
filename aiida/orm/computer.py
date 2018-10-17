@@ -712,7 +712,6 @@ class Computer(CollectionEntry):
         :return: the authinfo object for the configured user
         :rtype: :class:`aiida.orm.AuthInfo`
         """
-        from aiida.orm.backend import construct_backend
 
         transport_cls = self.get_transport_class()
         backend = self.backend

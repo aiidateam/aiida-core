@@ -747,7 +747,7 @@ class Computer(CollectionEntry):
         """
         from aiida.orm.backend import construct_backend
 
-        backend = construct_backend()
+        backend = self.backend
         user = user or backend.users.get_automatic_user()
 
         config = {}

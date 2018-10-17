@@ -1932,26 +1932,26 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
 
             # Case 2:
             # CREATE(Calculation, Data) - Reversed
-            qb = QueryBuilder()
-            qb.append(Calculation, tag='predecessor', project=['id'])
-            qb.append(Data, output_of='predecessor',
-                      filters={'id': {'==': curr_node_id}},
-                      edge_filters={
-                          'type': {
-                              '==': LinkType.CREATE.value}})
-            res = {_[0] for _ in qb.all()}
-            given_calculation_entry_ids.update(res - to_be_exported)
-            # The same until Code becomes a subclass of Data
-            qb = QueryBuilder()
-            qb.append(Calculation, tag='predecessor', project=['id'])
-            qb.append(Code, output_of='predecessor',
-                      filters={'id': {'==': curr_node_id}},
-                      edge_filters={
-                          'type': {
-                              '==': LinkType.CREATE.value}})
-            res = {_[0] for _ in qb.all()}
-            given_calculation_entry_ids.update(res - to_be_exported)
-
+            if create_reversed:
+                qb = QueryBuilder()
+                qb.append(Calculation, tag='predecessor', project=['id'])
+                qb.append(Data, output_of='predecessor',
+                          filters={'id': {'==': curr_node_id}},
+                          edge_filters={
+                              'type': {
+                                  '==': LinkType.CREATE.value}})
+                res = {_[0] for _ in qb.all()}
+                given_calculation_entry_ids.update(res - to_be_exported)
+                # The same until Code becomes a subclass of Data
+                qb = QueryBuilder()
+                qb.append(Calculation, tag='predecessor', project=['id'])
+                qb.append(Code, output_of='predecessor',
+                          filters={'id': {'==': curr_node_id}},
+                          edge_filters={
+                              'type': {
+                                  '==': LinkType.CREATE.value}})
+                res = {_[0] for _ in qb.all()}
+                given_calculation_entry_ids.update(res - to_be_exported)
 
     # Here we get all the columns that we plan to project per entity that we
     # would like to extract

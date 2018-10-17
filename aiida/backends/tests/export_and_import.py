@@ -1654,6 +1654,57 @@ class TestLinks(AiidaTestCase):
 
         return graph_nodes, export_list[export_combination]
 
+    def test_data_create_reversed_false(self):
+        """Verify that create_reversed = False is respected when only exporting Data nodes."""
+        import os
+        import shutil
+        import tempfile
+
+        from aiida.common.datastructures import calc_states
+        from aiida.orm import Data, Group
+        from aiida.orm.data.base import Int
+        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.importexport import export
+        from aiida.common.links import LinkType
+        from aiida.orm.querybuilder import QueryBuilder
+
+        tmp_folder = tempfile.mkdtemp()
+
+        try:
+            data_input = Int(1).store()
+            data_output = Int(2).store()
+
+            calc = JobCalculation()
+            calc.set_computer(self.computer)
+            calc.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
+            calc.store()
+
+            calc.add_link_from(data_input, 'input', link_type=LinkType.INPUT)
+            calc._set_state(calc_states.PARSING)
+            data_output.add_link_from(calc, 'create', link_type=LinkType.CREATE)
+
+            group = Group.create(name='test_group')
+            group.add_nodes(data_output)
+
+            export_file = os.path.join(tmp_folder, 'export.tar.gz')
+            export([group], outfile=export_file, silent=True, create_reversed=False)
+
+            self.clean_db()
+            self.insert_data()
+
+            import_data(export_file, silent=True)
+
+            builder = QueryBuilder()
+            builder.append(Data)
+            self.assertEqual(builder.count(), 1, 'Expected a single Data node but got {}'.format(builder.count()))
+            self.assertEqual(builder.all()[0][0].uuid, data_output.uuid)
+
+            builder = QueryBuilder()
+            builder.append(JobCalculation)
+            self.assertEqual(builder.count(), 0, 'Expected no Calculation nodes')
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)
+
     def test_complex_workflow_graph_links(self):
         """
         This test checks that all the needed links are correctly exported and

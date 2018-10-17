@@ -34,30 +34,22 @@ def verdi_export():
 @options.ARCHIVE_FORMAT()
 @options.FORCE(help='overwrite output file if it already exists')
 @click.option(
-    '-i',
-    '--input-forward',
-    is_flag=True,
+    '--input-forward/--no-input-forward',
     default=False,
     show_default=True,
     help='Follow forward INPUT links (recursively) when calculating the node set to export.')
 @click.option(
-    '-c',
-    '--create-reversed',
-    is_flag=True,
+    '--create-reversed/--no-create-reversed',
     default=True,
     show_default=True,
     help='Follow reverse CREATE links (recursively) when calculating the node set to export.')
 @click.option(
-    '-r',
-    '--return-reversed',
-    is_flag=True,
+    '--return-reversed/--no-return-reversed',
     default=False,
     show_default=True,
     help='Follow reverse RETURN links (recursively) when calculating the node set to export.')
 @click.option(
-    '-x',
-    '--call-reversed',
-    is_flag=True,
+    '--call-reversed/--no-call-reversed',
     default=False,
     show_default=True,
     help='Follow reverse CALL links (recursively) when calculating the node set to export.')

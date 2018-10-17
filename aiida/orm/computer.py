@@ -745,7 +745,6 @@ class Computer(CollectionEntry):
         :param user: the user to to get the configuration for.  Uses default user if `None`
         :type user: :class:`aiida.orm.User`
         """
-        from aiida.orm.backend import construct_backend
 
         backend = self.backend
         user = user or backend.users.get_automatic_user()

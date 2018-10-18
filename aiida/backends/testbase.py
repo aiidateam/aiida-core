@@ -123,6 +123,12 @@ class AiidaTestCase(unittest.TestCase):
 
     @classproperty
     def computer(cls):
+        """
+        Get the default computer for this test
+
+        :return: the test computer
+        :rtype: :class:`aiida.orm.Computer`
+        """
         return cls.__backend_instance.get_computer()
 
     @classproperty

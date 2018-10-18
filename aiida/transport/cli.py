@@ -37,7 +37,6 @@ def match_comp_transport(ctx, param, computer, transport_type):
 def configure_computer_main(computer, user, **kwargs):
     """Configure a computer via the CLI."""
     from aiida.orm.backend import construct_backend
-    from aiida.control.computer import configure_computer
     from aiida.common.utils import get_configured_user_email
     backend = construct_backend()
     user = user or backend.users.get_automatic_user()
@@ -46,7 +45,7 @@ def configure_computer_main(computer, user, **kwargs):
     if user.email != get_configured_user_email():
         echo.echo_info('Configuring different user, defaults may not be appropriate.')
 
-    configure_computer(computer, user=user, **kwargs)
+    computer.configure(user=user, **kwargs)
     echo.echo_success('{} successfully configured for {}'.format(computer.name, user.email))
 
 

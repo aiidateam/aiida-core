@@ -10,7 +10,6 @@
 """Unit tests for the AuthInfo ORM class."""
 from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
-from aiida.control.computer import configure_computer
 
 
 class TestAuthinfo(AiidaTestCase):
@@ -19,7 +18,7 @@ class TestAuthinfo(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         super(TestAuthinfo, cls).setUpClass(*args, **kwargs)
-        cls.auth_info = configure_computer(cls.computer)
+        cls.auth_info = cls.computer.configure()  # pylint: disable=no-member
 
     def test_set_auth_params(self):
         """Test the auth_params setter."""

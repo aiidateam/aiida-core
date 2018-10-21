@@ -1,7 +1,6 @@
 set -ev
 
-if [[ "$TEST_TYPE" != "pre-commit" ]]
-    # no setup at all required for pre-commit to run
+if [[ "$TEST_TYPE" == "tests" || "$TEST_TYPE" == "docs" ]]
 then
     # Here I create the actual DB for submission
     psql -c "CREATE DATABASE $TEST_AIIDA_BACKEND;" -U postgres

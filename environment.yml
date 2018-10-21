@@ -1,7 +1,7 @@
 # Usage: conda env create -f environment.yml
 ---
 channels:
-- anaconda
+- defaults
 - conda-forge
 - etetoolkit
 dependencies:

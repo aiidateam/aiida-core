@@ -88,7 +88,7 @@ def update_environment_yml():
     install_requires = pkg_string.split(sep)
     environment = dict(
         name = 'aiida',
-        channels = ['anaconda', 'conda-forge', 'etetoolkit'],
+        channels = ['defaults', 'conda-forge', 'etetoolkit'],
         dependencies = install_requires,
     )
 

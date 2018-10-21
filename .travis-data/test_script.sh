@@ -40,7 +40,7 @@ case "$TEST_TYPE" in
         ;;
     conda)
         # Note: Not added to install in order not to slow down other tests
-        ${DATA_DIR}/install_conda.sh
+        source ${DATA_DIR}/install_conda.sh
 
         # Replace dep1 dep2 ... with your dependencies
         conda env create -f environment.yml -n test-environment python=$TRAVIS_PYTHON_VERSION

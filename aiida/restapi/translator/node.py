@@ -573,77 +573,100 @@ class NodeTranslator(BaseTranslator):
         qb = QueryBuilder()
         qb.append(Node, tag="main", project=['*'],
                   filters=self._id_filter)
-        qb.append(Node, tag="in", project=['*'], edge_project=['label'],
+        qb.append(Node, tag="in", project=['*'], edge_project=['label', 'type'],
                   input_of='main')
+
+        input_node_pks = {}
 
         if qb.count() > 0:
             for input in qb.iterdict():
                 node = input['in']['*']
-                linktype = input['main--in']['label']
                 pk = node.pk
-                uuid = node.uuid
-                nodetype = node.type
-                display_type = nodetype.split('.')[-2]
-                description = node.get_desc()
-                if description == '':
-                    description = node.type.split('.')[-2]
+                linklabel = input['main--in']['label']
+                linktype = input['main--in']['type']
 
-                nodes.append({
-                    "id": nodeCount,
-                    "nodeid": pk,
-                    "nodeuuid": uuid,
-                    "nodetype": nodetype,
-                    "displaytype": display_type,
-                    "group": "inputs",
-                    "description": description,
-                    "linktype": linktype,
-                    "shape": get_node_shape(nodetype)
-                })
+                # add node if it is not present
+                if pk not in input_node_pks.keys():
+                    input_node_pks[pk] = nodeCount
+                    uuid = node.uuid
+                    nodetype = node.type
+                    display_type = nodetype.split('.')[-2]
+                    description = node.get_desc()
+                    if description == '':
+                        description = node.type.split('.')[-2]
+
+                    nodes.append({
+                        "id": nodeCount,
+                        "nodeid": pk,
+                        "nodeuuid": uuid,
+                        "nodetype": nodetype,
+                        "displaytype": display_type,
+                        "group": "inputs",
+                        "description": description,
+                        "linklabel": linklabel,
+                        "linktype": linktype,
+                        "shape": get_node_shape(nodetype)
+                    })
+                    nodeCount += 1
+
+                from_edge = input_node_pks[pk]
                 edges.append({
-                    "from": nodeCount,
+                    "from": from_edge,
                     "to": 0,
                     "arrows": "to",
                     "color": {"inherit": 'from'},
-                    "linktype": linktype,
+                    "label": linktype,
                 })
-                nodeCount += 1
+
 
         # get all outputs
         qb = QueryBuilder()
         qb.append(Node, tag="main", project=['*'],
                   filters=self._id_filter)
-        qb.append(Node, tag="out", project=['*'], edge_project=['label'],
+        qb.append(Node, tag="out", project=['*'], edge_project=['label', 'type'],
                   output_of='main')
+
+        output_node_pks = {}
+
         if qb.count() > 0:
             for output in qb.iterdict():
                 node = output['out']['*']
-                linktype = output['main--out']['label']
                 pk = node.pk
-                uuid = node.uuid
-                nodetype = node.type
-                display_type = nodetype.split('.')[-2]
-                description = node.get_desc()
-                if description == '':
-                    description = node.type.split('.')[-2]
+                linklabel = output['main--out']['label']
+                linktype = output['main--out']['type']
 
-                nodes.append({
-                    "id": nodeCount,
-                    "nodeid": pk,
-                    "nodeuuid": uuid,
-                    "nodetype": nodetype,
-                    "displaytype": display_type,
-                    "group": "outputs",
-                    "description": description,
-                    "linktype": linktype,
-                    "shape": get_node_shape(nodetype)
-                })
+                # add node if it is not present
+                if pk not in output_node_pks.keys():
+                    output_node_pks[pk] = nodeCount
+                    uuid = node.uuid
+                    nodetype = node.type
+                    display_type = nodetype.split('.')[-2]
+                    description = node.get_desc()
+                    if description == '':
+                        description = node.type.split('.')[-2]
+
+                    nodes.append({
+                        "id": nodeCount,
+                        "nodeid": pk,
+                        "nodeuuid": uuid,
+                        "nodetype": nodetype,
+                        "displaytype": display_type,
+                        "group": "outputs",
+                        "description": description,
+                        "linklabel": linklabel,
+                        "linktype": linktype,
+                        "shape": get_node_shape(nodetype)
+                    })
+                    nodeCount += 1
+
+                to_edge = output_node_pks[pk]
                 edges.append({
                     "from": 0,
-                    "to": nodeCount,
+                    "to": to_edge,
                     "arrows": "to",
                     "color": {"inherit": 'to'},
-                    "linktype": linktype
+                    "label": linktype
                 })
-                nodeCount += 1
+
 
         return {"nodes": nodes, "edges": edges}

@@ -1,10 +1,11 @@
+# Usage: conda env create -f environment.yml
 ---
 channels:
 - anaconda
 - conda-forge
 - etetoolkit
 dependencies:
-- reentry==1.2.0
+- reentry==1.2.2
 - python-dateutil==2.7.2
 - python-mimeparse==1.6.0
 - django==1.7.11
@@ -40,7 +41,7 @@ dependencies:
 - ete3==3.1.1
 - uritools==2.1.0
 - psycopg2==2.7.4
-- paramiko==2.4.1
+- paramiko==2.4.2
 - ecdsa==0.13
 - ipython<6.0
 name: aiida

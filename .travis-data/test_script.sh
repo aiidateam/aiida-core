@@ -3,6 +3,8 @@
 # Be verbose, and stop with error as soon there's one
 set -ev
 
+DATA_DIR=${TRAVIS_BUILD_DIR}/.travis-data
+
 case "$TEST_TYPE" in
     docs)
         # Compile the docs (HTML format); 
@@ -12,7 +14,6 @@ case "$TEST_TYPE" in
         SPHINXOPTS="-nW" make -C docs
         ;;
     tests)
-        DATA_DIR=${TRAVIS_BUILD_DIR}/.travis-data
 
         # make sure we have the correct pg_ctl in our path for pgtest, to prevent issue #1722
         # this must match the version request in travis.yml
@@ -36,5 +37,13 @@ case "$TEST_TYPE" in
         ;;
     pre-commit)
         pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
+        ;;
+    conda)
+        # Note: Not added to install in order not to slow down other tests
+        ${DATA_DIR}/install_conda.sh
+
+        # Replace dep1 dep2 ... with your dependencies
+        conda env create -f environment.yml -n test-environment python=$TRAVIS_PYTHON_VERSION
+        source activate test-environment
         ;;
 esac

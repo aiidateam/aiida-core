@@ -66,6 +66,17 @@
         utils/validate_pyproject|
       )$
     pass_filenames: false
+  - id: conda
+    name: Validating environment.yml
+    entry: python ./utils/validate_pyproject.py conda
+    language: system
+    files: >-
+      (?x)^(
+        setup_requirements.py|
+        environment.yml|
+        utils/validate_pyproject|
+      )$
+    pass_filenames: false
 
 - repo: git://github.com/pre-commit/pre-commit-hooks
   sha: v1.1.1

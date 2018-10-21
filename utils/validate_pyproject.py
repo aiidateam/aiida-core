@@ -13,6 +13,11 @@ import os
 import sys
 import toml
 
+dir_path = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(os.path.join(dir_path, os.pardir))
+import setup_requirements
+
+
 @click.group()
 def cli():
     pass
@@ -25,11 +30,7 @@ def validate_pyproject():
     filename_pyproject = 'pyproject.toml'
     filename_requirements = 'setup_requirements.py'
 
-    dir_path = os.path.dirname(os.path.realpath(__file__))
     toml_file = os.path.join(dir_path, os.pardir, filename_pyproject)
-    sys.path.append(os.path.join(dir_path, os.pardir))
-
-    import setup_requirements
 
     reentry_requirement = None
 
@@ -75,9 +76,8 @@ def update_environment_yml():
     from setup_requirements import install_requires
     import yaml
 
-    dir_path = os.path.dirname(os.path.realpath(__file__))
     environment_filename = 'environment.yml'
-    file_path = os.path.join(dir_path, environment_filename)
+    file_path = os.path.join(dir_path, os.pardir, environment_filename)
 
     # fix incompatibilities between conda and pypi
     replacements = {
@@ -94,6 +94,7 @@ def update_environment_yml():
     )
 
     with open(file_path, 'w') as f:
+        f.write('# Usage: conda env create -f environment.yml\n')
         yaml.dump(environment, f,
                 explicit_start=True,
                 default_flow_style=False)

@@ -76,28 +76,28 @@ def update_environment_yml():
     from setup_requirements import install_requires
     import yaml
 
-    environment_filename = 'environment.yml'
-    file_path = os.path.join(dir_path, os.pardir, environment_filename)
-
     # fix incompatibilities between conda and pypi
     replacements = {
         'psycopg2-binary' : 'psycopg2',
         'validate-email' : 'validate_email',
     }
-    for k in replacements:
-        install_requires = [ i.replace(k, replacements[k]) for i in install_requires]
-
+    sep = '%'  # use something forbidden in conda package names
+    pkg_string = sep.join(install_requires)
+    for (pypi_pkg_name, conda_pkg_name) in iter(replacements.items()):
+        pkg_string = pkg_string.replace(pypi_pkg_name, conda_pkg_name)
+    install_requires = pkg_string.split(sep)
     environment = dict(
         name = 'aiida',
         channels = ['anaconda', 'conda-forge', 'etetoolkit'],
         dependencies = install_requires,
     )
 
-    with open(file_path, 'w') as f:
-        f.write('# Usage: conda env create -f environment.yml\n')
-        yaml.dump(environment, f,
-                explicit_start=True,
-                default_flow_style=False)
+    environment_filename = 'environment.yml'
+    file_path = os.path.join(dir_path, os.pardir, environment_filename)
+    with open(file_path, 'w') as env_file:
+        env_file.write('# Usage: conda env create -f environment.yml\n')
+        yaml.dump(environment, env_file, explicit_start=True, 
+                  default_flow_style=False)
 
 cli.add_command(validate_pyproject)
 cli.add_command(update_environment_yml)

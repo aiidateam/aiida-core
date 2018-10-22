@@ -11,17 +11,17 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from __future__ import print_function
 
 import datetime
 import sys
 import subprocess
+import time
 from concurrent.futures import Future
 
 from click.testing import CliRunner
 from tornado import gen
-import plumpy
 import kiwipy
+import plumpy
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_process
@@ -31,11 +31,15 @@ from aiida.work import runners, rmq, test_utils
 class TestVerdiProcess(AiidaTestCase):
     """Tests for `verdi process`."""
 
+    TEST_TIMEOUT = 10.
+
     def setUp(self):
         super(TestVerdiProcess, self).setUp()
+        from aiida.common.profile import get_profile
         from aiida.daemon.client import DaemonClient
 
-        self.daemon_client = DaemonClient()
+        profile = get_profile()
+        self.daemon_client = DaemonClient(profile)
         self.daemon_pid = subprocess.Popen(
             self.daemon_client.cmd_string.split(), stderr=sys.stderr, stdout=sys.stdout).pid
         self.runner = runners.Runner(
@@ -57,6 +61,11 @@ class TestVerdiProcess(AiidaTestCase):
         from aiida.orm import load_node
 
         calc = self.runner.submit(test_utils.WaitProcess)
+        start_time = time.time()
+        while calc.process_state is not plumpy.ProcessState.WAITING:
+            if time.time() - start_time >= self.TEST_TIMEOUT:
+                self.fail("Timed out waiting for process to enter waiting state")
+
         self.assertFalse(calc.paused)
         result = self.cli_runner.invoke(cmd_process.process_pause, [str(calc.pk)])
         self.assertIsNone(result.exception, result.exception)
@@ -79,15 +88,15 @@ class TestVerdiProcess(AiidaTestCase):
 
         # Here we now that the process is with the daemon runner and in the waiting state so we can starting running
         # the `verdi process` commands that we want to test
-        result = self.cli_runner.invoke(cmd_process.process_pause, [str(calc.pk)])
+        result = self.cli_runner.invoke(cmd_process.process_pause, ['--wait', str(calc.pk)])
         self.assertIsNone(result.exception, result.exception)
         self.assertTrue(calc.paused)
 
-        result = self.cli_runner.invoke(cmd_process.process_play, [str(calc.pk)])
+        result = self.cli_runner.invoke(cmd_process.process_play, ['--wait', str(calc.pk)])
         self.assertIsNone(result.exception, result.exception)
         self.assertFalse(calc.paused)
 
-        result = self.cli_runner.invoke(cmd_process.process_kill, [str(calc.pk)])
+        result = self.cli_runner.invoke(cmd_process.process_kill, ['--wait', str(calc.pk)])
         self.assertIsNone(result.exception, result.exception)
         self.assertTrue(calc.is_terminated)
         self.assertTrue(calc.is_killed)

@@ -97,7 +97,8 @@ class TestProcessControl(AiidaTestCase):
             calc_node = self.runner.submit(test_utils.WaitProcess)
             self.assertFalse(calc_node.paused)
 
-            result = yield with_timeout(self.runner.controller.pause_process(calc_node.pk))
+            future = yield with_timeout(self.runner.controller.pause_process(calc_node.pk))
+            result = yield self.wait_future(future)
             self.assertTrue(result)
             self.assertTrue(calc_node.paused)
 
@@ -112,11 +113,13 @@ class TestProcessControl(AiidaTestCase):
             self.assertFalse(calc_node.paused)
 
             pause_message = 'Take a seat'
-            yield with_timeout(self.runner.controller.pause_process(calc_node.pk, msg=pause_message))
+            future = yield with_timeout(self.runner.controller.pause_process(calc_node.pk, msg=pause_message))
+            result = yield self.wait_future(future)
             self.assertTrue(calc_node.paused)
             self.assertEqual(calc_node.process_status, pause_message)
 
-            result = yield with_timeout(self.runner.controller.play_process(calc_node.pk))
+            future = yield with_timeout(self.runner.controller.play_process(calc_node.pk))
+            result = yield self.wait_future(future)
             self.assertTrue(result)
             self.assertFalse(calc_node.paused)
             self.assertEqual(calc_node.process_status, None)
@@ -132,7 +135,8 @@ class TestProcessControl(AiidaTestCase):
             self.assertFalse(calc_node.is_killed)
 
             kill_message = 'Sorry, you have to go mate'
-            result = yield with_timeout(self.runner.controller.kill_process(calc_node.pk, msg=kill_message))
+            future = yield with_timeout(self.runner.controller.kill_process(calc_node.pk, msg=kill_message))
+            result = yield self.wait_future(future)
             self.assertTrue(result)
 
             self.wait_for_calc(calc_node)
@@ -144,6 +148,10 @@ class TestProcessControl(AiidaTestCase):
     @gen.coroutine
     def wait_for_calc(self, calc_node, timeout=2.):
         future = self.runner.get_calculation_future(calc_node.pk)
+        raise gen.Return((yield with_timeout(future, timeout)))
+
+    @gen.coroutine
+    def wait_future(self, future, timeout=2.):
         raise gen.Return((yield with_timeout(future, timeout)))
 
 

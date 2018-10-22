@@ -16,6 +16,7 @@ from __future__ import print_function
 import datetime
 import sys
 import subprocess
+import time
 from concurrent.futures import Future
 
 from click.testing import CliRunner
@@ -30,6 +31,8 @@ from aiida.work import runners, rmq, test_utils
 
 class TestVerdiProcess(AiidaTestCase):
     """Tests for `verdi process`."""
+
+    TEST_TIMEOUT = 10.
 
     def setUp(self):
         super(TestVerdiProcess, self).setUp()
@@ -57,6 +60,11 @@ class TestVerdiProcess(AiidaTestCase):
         from aiida.orm import load_node
 
         calc = self.runner.submit(test_utils.WaitProcess)
+        start_time = time.time()
+        while calc.process_state is not plumpy.ProcessState.WAITING:
+            if time.time() - start_time >= self.TEST_TIMEOUT:
+                self.fail("Timed out waiting for process to enter waiting state")
+
         self.assertFalse(calc.paused)
         result = self.cli_runner.invoke(cmd_process.process_pause, [str(calc.pk)])
         self.assertIsNone(result.exception, result.exception)
@@ -87,7 +95,7 @@ class TestVerdiProcess(AiidaTestCase):
         self.assertIsNone(result.exception, result.exception)
         self.assertFalse(calc.paused)
 
-        result = self.cli_runner.invoke(cmd_process.process_kill, [str(calc.pk)])
+        result = self.cli_runner.invoke(cmd_process.process_kill, ['--wait', str(calc.pk)])
         self.assertIsNone(result.exception, result.exception)
         self.assertTrue(calc.is_terminated)
         self.assertTrue(calc.is_killed)

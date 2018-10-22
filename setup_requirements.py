@@ -103,7 +103,9 @@ extras_require = {
         'pgtest==1.1.0',
         'sqlalchemy-diff==0.1.3',
         'coverage==4.5.1',
-        'codecov==2.0.15'
+        'codecov==2.0.15',
+        'pytest-concurrent==0.1.2',
+        'futures==3.2.0',
     ],
     'dev_precommit': [
         'pre-commit==1.8.2',

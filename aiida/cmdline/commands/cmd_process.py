@@ -61,15 +61,21 @@ def process_list(all_entries, process_state, exit_status, failed, past_days, lim
 @verdi_process.command('kill')
 @arguments.PROCESSES()
 @options.TIMEOUT()
+@click.option(
+    '--wait/--no-wait',
+    default=False,
+    help="wait for the action to be completed otherwise return as soon as it's scheduled")
 @decorators.with_dbenv()
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
-def process_kill(processes, timeout):
+def process_kill(processes, timeout, wait):
     """Kill running processes."""
-    from aiida.work import RemoteException, DeliveryFailed, CommunicationTimeout, create_communicator, create_controller
+    from aiida.work import create_communicator, create_controller
 
     with create_communicator() as communicator:
 
         controller = create_controller(communicator=communicator)
+
+        futures = {}
 
         for process in processes:
 
@@ -77,32 +83,31 @@ def process_kill(processes, timeout):
                 echo.echo_error('Process<{}> is already terminated'.format(process.pk))
                 continue
 
-            try:
-                future = controller.kill_process(process.pk, msg='Killed through `verdi process kill`')
-                result = future.result(timeout=timeout)
+            future = controller.kill_process(process.pk, msg='Killed through `verdi process kill`')
+            futures[future] = process
 
-                if result:
-                    echo.echo_success('killed Process<{}>'.format(process.pk))
-                else:
-                    echo.echo_error('problem killing Process<{}>'.format(process.pk))
-            except CommunicationTimeout:
-                echo.echo_error('call to kill Process<{}> timed out'.format(process.pk))
-            except (RemoteException, DeliveryFailed) as exception:
-                echo.echo_error('failed to kill Process<{}>: {}'.format(process.pk, exception))
+        process_actions(futures, 'kill', 'killing', 'killed', wait, timeout)
 
 
 @verdi_process.command('pause')
 @arguments.PROCESSES()
 @options.TIMEOUT()
+@click.option(
+    '--wait/--no-wait',
+    default=False,
+    help="wait for the action to be completed otherwise return as soon as it's scheduled")
 @decorators.with_dbenv()
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
-def process_pause(processes, timeout):
+def process_pause(processes, timeout, wait):
     """Pause running processes."""
-    from aiida.work import RemoteException, DeliveryFailed, CommunicationTimeout, create_communicator, create_controller
+    from aiida.work import create_communicator, create_controller
 
     with create_communicator() as communicator:
 
         controller = create_controller(communicator=communicator)
+
+        # Keep track of the relation between the future and process
+        futures = {}
 
         for process in processes:
 
@@ -110,32 +115,29 @@ def process_pause(processes, timeout):
                 echo.echo_error('Process<{}> is already terminated'.format(process.pk))
                 continue
 
-            try:
-                future = controller.pause_process(process.pk, msg='Paused through `verdi process pause`')
-                result = future.result(timeout=timeout)
+            future = controller.pause_process(process.pk, msg='Paused through `verdi process pause`')
+            futures[future] = process
 
-                if result:
-                    echo.echo_success('paused Process<{}>'.format(process.pk))
-                else:
-                    echo.echo_error('problem pausing Process<{}>'.format(process.pk))
-            except CommunicationTimeout:
-                echo.echo_error('call to pause Process<{}> timed out'.format(process.pk))
-            except (RemoteException, DeliveryFailed) as exception:
-                echo.echo_error('failed to pause Process<{}>: {}'.format(process.pk, exception))
+        process_actions(futures, 'pause', 'pausing', 'paused', wait, timeout)
 
 
 @verdi_process.command('play')
 @arguments.PROCESSES()
 @options.TIMEOUT()
+@click.option(
+    '--wait/--no-wait',
+    default=False,
+    help="wait for the action to be completed otherwise return as soon as it's scheduled")
 @decorators.with_dbenv()
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
-def process_play(processes, timeout):
+def process_play(processes, timeout, wait):
     """Play paused processes."""
-    from aiida.work import RemoteException, DeliveryFailed, CommunicationTimeout, create_communicator, create_controller
+    from aiida.work import create_communicator, create_controller
 
     with create_communicator() as communicator:
 
         controller = create_controller(communicator=communicator)
+        futures = {}
 
         for process in processes:
 
@@ -143,18 +145,10 @@ def process_play(processes, timeout):
                 echo.echo_error('Process<{}> is already terminated'.format(process.pk))
                 continue
 
-            try:
-                future = controller.play_process(process.pk)
-                result = future.result(timeout=timeout)
+            future = controller.play_process(process.pk)
+            futures[future] = process
 
-                if result:
-                    echo.echo_success('played Process<{}>'.format(process.pk))
-                else:
-                    echo.echo_critical('problem playing Process<{}>'.format(process.pk))
-            except CommunicationTimeout:
-                echo.echo_error('call to play Process<{}> timed out'.format(process.pk))
-            except (RemoteException, DeliveryFailed) as exception:
-                echo.echo_critical('failed to play Process<{}>: {}'.format(process.pk, exception))
+        process_actions(futures, 'play', 'playing', 'played', wait, timeout)
 
 
 @verdi_process.command('watch')
@@ -191,3 +185,76 @@ def process_watch(processes):
 
         # Reraise to trigger clicks builtin abort sequence
         raise
+
+
+def process_actions(futures_map, infinitive, present, past, wait=False, timeout=None):
+    """
+    Process the requested actions sent to a set of Processes given a map of the futures and the
+    corresponding processes.  This function will echo the correct information strings based on
+    the outcomes of the futures and the given verb conjugations.  You can optionally wait for
+    any pending actions to be completed before the functions returns and use a timeout to put
+    a maximum wait time on the actions.
+
+    :param futures_map: the map of action futures and the corresponding processes
+    :type futures_map: dict
+    :param infinitive: the infinitive form of the action verb
+    :type infinitive: str
+    :param present: the present tense form
+    :type present: str
+    :param past: the past tense form
+    :type past: str
+    :param wait: if True, waits for pending actions to be competed, otherwise just returns
+    :type wait: bool
+    :param timeout: the timeout (in seconds) to wait for actions to be completed
+    :type timeout: float
+    """
+    # pylint: disable=too-many-branches
+    import kiwipy
+    from aiida.work import CommunicationTimeout
+    from concurrent import futures
+
+    scheduled = {}
+    try:
+        for future in futures.as_completed(futures_map.keys(), timeout=timeout):
+            # Get the corresponding process
+            process = futures_map[future]
+
+            try:
+                result = future.result()
+            except CommunicationTimeout:
+                echo.echo_error('call to {} Process<{}> timed out'.format(infinitive, process.pk))
+            except Exception as exception:  # pylint: disable=broad-except
+                echo.echo_error('failed to {} Process<{}>: {}'.format(infinitive, process.pk, exception))
+            else:
+                if result is True:
+                    echo.echo_success('{} Process<{}>'.format(past, process.pk))
+                elif result is False:
+                    echo.echo_error('problem {} Process<{}>'.format(present, process.pk))
+                elif isinstance(result, kiwipy.Future):
+                    echo.echo_success('scheduled {} Process<{}>'.format(infinitive, process.pk))
+                    scheduled[result] = process
+                else:
+                    echo.echo_error('got unexpected response when {} Process<{}>: {}'.format(
+                        present, process.pk, result))
+
+        if wait and scheduled:
+            echo.echo_info('waiting for process(es) {}'.format(','.join([str(proc.pk) for proc in scheduled.values()])))
+
+            for future in futures.as_completed(scheduled.keys(), timeout=timeout):
+                process = scheduled[future]
+
+                try:
+                    result = future.result()
+                except Exception as exception:  # pylint: disable=broad-except
+                    echo.echo_error('failed to {} Process<{}>: {}'.format(infinitive, process.pk, exception))
+                else:
+                    if result is True:
+                        echo.echo_success('{} Process<{}>'.format(past, process.pk))
+                    elif result is False:
+                        echo.echo_error('problem {} Process<{}>'.format(present, process.pk))
+                    else:
+                        echo.echo_error('got unexpected response when {} Process<{}>: {}'.format(
+                            present, process.pk, result))
+
+    except futures.TimeoutError:
+        echo.echo_error('timed out trying to {} processes {}'.format(infinitive, futures_map.values()))

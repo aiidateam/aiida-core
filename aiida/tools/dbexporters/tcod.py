@@ -13,6 +13,7 @@ from __future__ import division
 
 from six.moves import range
 
+import io
 from aiida.orm import DataFactory
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.calculation.inline import optional_inline
@@ -529,6 +530,18 @@ def _collect_files(base, path=''):
     from aiida.common.utils import md5_file,sha1_file
     import os
 
+    def get_dict(base, path):
+        # note: we assume file is already utf8-encoded
+        with io.open(os.path.join(base,path), mode='rb') as f:
+            the_dict = {
+                'name': path,
+                'contents': f.read(),
+                'md5': md5_file(os.path.join(base,path)),
+                'sha1': sha1_file(os.path.join(base,path)),
+                'type': 'file',
+            }
+        return the_dict
+
     def get_filename(file_dict):
         return file_dict['name']
 
@@ -549,37 +562,19 @@ def _collect_files(base, path=''):
         return sorted(files_now,key=get_filename)
     elif path == '.aiida/calcinfo.json':
         files = []
-        with open(os.path.join(base,path)) as f:
-            files.append({
-                'name': path,
-                'contents': f.read(),
-                'md5': md5_file(os.path.join(base,path)),
-                'sha1': sha1_file(os.path.join(base,path)),
-                'type': 'file',
-                })
+        files.append(get_dict(base, path))
+
         import json
         with open(os.path.join(base,path)) as f:
             calcinfo = json.load(f)
         if 'local_copy_list' in calcinfo:
             for local_copy in calcinfo['local_copy_list']:
-                with open(local_copy[0]) as f:
-                    files.append({
-                        'name': os.path.normpath(local_copy[1]),
-                        'contents': f.read(),
-                        'md5': md5_file(local_copy[0]),
-                        'sha1': sha1_file(local_copy[0]),
-                        'type': 'file',
-                        })
+                files.append(get_dict("", local_copy[0]))
+
         return files
+
     else:
-        with open(os.path.join(base,path)) as f:
-            return [{
-                'name': path,
-                'contents': f.read(),
-                'md5': md5_file(os.path.join(base,path)),
-                'sha1': sha1_file(os.path.join(base,path)),
-                'type': 'file',
-                }]
+        return get_dict(base, path)
 
 
 def extend_with_cmdline_parameters(parser, expclass="Data"):
@@ -933,7 +928,7 @@ def export_cif(what, **kwargs):
     :return: string with contents of CIF file.
     """
     cif = export_cifnode(what, **kwargs)
-    return cif._exportstring('cif')[0]
+    return cif._exportcontent('cif')[0]
 
 
 def export_values(what, **kwargs):

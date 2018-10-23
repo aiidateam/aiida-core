@@ -867,7 +867,7 @@ class CifData(SinglefileData):
             self.set_values(self._values)
 
         with self._get_folder_pathsubfolder.open(self.filename) as f:
-            return f.read(), {}
+            return f.read().encode('utf-8'), {}
 
     # pylint: disable=unused-argument
     def _prepare_tcod(self, main_file_name="", **kwargs):

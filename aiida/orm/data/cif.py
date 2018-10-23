@@ -545,7 +545,7 @@ class CifData(SinglefileData):
         """
         import tempfile
         cif = cif_from_ase(aseatoms)
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             with HiddenPrints():
                 f.write(pycifrw_from_cif(cif, loops=ase_loops).WriteOut())
             f.flush()
@@ -583,7 +583,7 @@ class CifData(SinglefileData):
         .. note:: requires PyCifRW module.
         """
         import tempfile
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             with HiddenPrints():
                 f.write(values.WriteOut())
             f.flush()

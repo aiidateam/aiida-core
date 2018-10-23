@@ -11,6 +11,7 @@
 
 from __future__ import absolute_import
 
+import sys
 from six.moves.urllib.parse import unquote  # pylint: disable=import-error
 from flask import request, make_response
 from flask_restful import Resource
@@ -35,7 +36,7 @@ class ServerInfo(Resource):
 
         ## Decode url parts
         path = unquote(request.path)
-        query_string = unquote(request.query_string)
+        query_string = unquote(request.query_string.decode('utf-8'))
         url = unquote(request.url)
         url_root = unquote(request.url_root)
 
@@ -112,9 +113,10 @@ class BaseResource(Resource):
 
         ## Decode url parts
         path = unquote(request.path)
-        query_string = unquote(request.query_string)
+        query_string = unquote(request.query_string.decode('utf-8'))
         url = unquote(request.url)
         url_root = unquote(request.url_root)
+
 
         ## Parse request
         (resource_type, page, id, query_type) = self.utils.parse_path(path, parse_pk_uuid=self.parse_pk_uuid)
@@ -164,9 +166,10 @@ class BaseResource(Resource):
             url_root=url_root,
             path=request.path,
             id=id,
-            query_string=request.query_string,
+            query_string=query_string,
             resource_type=resource_type,
             data=results)
+
         return self.utils.build_response(status=200, headers=headers, data=data)
 
 
@@ -204,7 +207,7 @@ class Node(Resource):
 
         ## Decode url parts
         path = unquote(request.path)
-        query_string = unquote(request.query_string)
+        query_string = unquote(request.query_string.decode('utf-8'))
         url = unquote(request.url)
         url_root = unquote(request.url_root)
 

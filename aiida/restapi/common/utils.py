@@ -772,7 +772,7 @@ class Utils(object):
         valueDateTime = Combine(
             valueDate +
             Optional(valueTime) +
-            Optional(valueShift) + WE(printables.translate(None, '&'))
+            Optional(valueShift) + WE(printables.replace("&",""))
             # To us the
             # word must end with '&' or end of the string
             # Adding  WordEnd  only here is very important. This makes atomic

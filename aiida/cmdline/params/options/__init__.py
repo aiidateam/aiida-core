@@ -7,8 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Provide reusable options, helping to keep interfaces consistent."""
 # yapf: disable
+"""Provide reusable options, helping to keep interfaces consistent."""
+
 
 from __future__ import absolute_import
 import click

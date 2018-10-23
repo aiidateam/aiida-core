@@ -545,7 +545,7 @@ class CifData(SinglefileData):
         """
         import tempfile
         cif = cif_from_ase(aseatoms)
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             with HiddenPrints():
                 f.write(pycifrw_from_cif(cif, loops=ase_loops).WriteOut())
             f.flush()
@@ -583,7 +583,7 @@ class CifData(SinglefileData):
         .. note:: requires PyCifRW module.
         """
         import tempfile
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             with HiddenPrints():
                 f.write(values.WriteOut())
             f.flush()
@@ -867,7 +867,7 @@ class CifData(SinglefileData):
             self.set_values(self._values)
 
         with self._get_folder_pathsubfolder.open(self.filename) as f:
-            return f.read(), {}
+            return f.read().encode('utf-8'), {}
 
     # pylint: disable=unused-argument
     def _prepare_tcod(self, main_file_name="", **kwargs):
@@ -875,7 +875,7 @@ class CifData(SinglefileData):
         Write the given CIF to a string of format TCOD CIF.
         """
         from aiida.tools.dbexporters.tcod import export_cif
-        return export_cif(self, **kwargs).encode('utf-8'), {}
+        return export_cif(self, **kwargs), {}
 
     def _get_object_ase(self):
         """

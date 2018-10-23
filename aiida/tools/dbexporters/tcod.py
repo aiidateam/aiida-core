@@ -13,6 +13,7 @@ from __future__ import division
 
 from six.moves import range
 
+import io
 from aiida.orm import DataFactory
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.calculation.inline import optional_inline
@@ -99,12 +100,13 @@ def cif_encode_contents(content, gzip=False, gzip_threshold=1024):
     symbols, too long lines or lines starting with semicolons (';')
     is encoded using Quoted-printable encoding.
 
-    :param content: the content to be encoded
+    :param content: the content to be encoded, bytes are expected
     :return content: encoded content
     :return encoding: a string specifying used encoding (None, 'base64',
         'ncr', 'quoted-printable', 'gzip+base64')
     """
     import re
+
     method = None
     if len(content) == 0:
         # content is empty
@@ -112,28 +114,28 @@ def cif_encode_contents(content, gzip=False, gzip_threshold=1024):
     elif gzip and len(content) >= gzip_threshold:
         # content is larger than some arbitrary value and should be gzipped
         method = 'gzip+base64'
-    elif len(re.findall('[^\x09\x0A\x0D\x20-\x7E]', content))/len(content) > 0.25:
+    elif len(re.findall(b'[^\x09\x0A\x0D\x20-\x7E]', content))/len(content) > 0.25:
         # contents are assumed to be binary
         method = 'base64'
-    elif re.search('^\s*data_',content) is not None or \
-         re.search('\n\s*data_',content) is not None:
+    elif re.search(b'^\s*data_',content) is not None or \
+         re.search(b'\n\s*data_',content) is not None:
         # contents have CIF datablock header-like lines, that may be
         # dangerous when parsed with primitive parsers
         method = 'base64'
-    elif re.search('.{2048}.',content) is not None:
+    elif re.search(b'.{2048}.',content) is not None:
         # lines are too long
         method = 'quoted-printable'
-    elif len(re.findall('[^\x09\x0A\x0D\x20-\x7E]', content)) > 0:
+    elif len(re.findall(b'[^\x09\x0A\x0D\x20-\x7E]', content)) > 0:
         # contents have non-ASCII symbols
         method = 'quoted-printable'
-    elif re.search('^;', content) is not None or re.search('\n;', content) is not None:
+    elif re.search(b'^;', content) is not None or re.search(b'\n;', content) is not None:
         # content has lines starting with semicolon (';')
         method = 'quoted-printable'
-    elif re.search('\t', content) is not None:
+    elif re.search(b'\t', content) is not None:
         # content has TAB symbols, which may be lost during the
         # parsing of TCOD CIF file
         method = 'quoted-printable'
-    elif content == '.' or content == '?':
+    elif content == b'.' or content == b'?':
         method = 'quoted-printable'
     else:
         method = None
@@ -162,7 +164,7 @@ def encode_textfield_base64(content, foldwidth=76):
     import base64
 
     content = base64.standard_b64encode(content)
-    content = "\n".join(list(content[i:i + foldwidth]
+    content = b"\n".join(list(content[i:i + foldwidth]
                              for i in range(0, len(content), foldwidth)))
     return content
 
@@ -199,21 +201,21 @@ def encode_textfield_quoted_printable(content):
     content = quopri.encodestring(content)
 
     def match2qp(m):
-        prefix = ''
-        postfix = ''
+        prefix = b''
+        postfix = b''
         if 'prefix' in m.groupdict().keys():
             prefix = m.group('prefix')
         if 'postfix' in m.groupdict().keys():
             postfix = m.group('postfix')
         h = hex(ord(m.group('chr')))[2:].upper()
         if len(h) == 1:
-            h = "0{}".format(h)
-        return "{}={}{}".format(prefix, h, postfix)
+            h = "0%s" % h
+        return b"%s=%s%s" % (prefix, h.encode('utf-8'), postfix)
 
-    content = re.sub('^(?P<chr>;)', match2qp, content)
-    content = re.sub('(?P<chr>[\t\r])', match2qp, content)
-    content = re.sub('(?P<prefix>\n)(?P<chr>;)', match2qp, content)
-    content = re.sub('^(?P<chr>[\.\?])$', match2qp, content)
+    content = re.sub(b'^(?P<chr>;)', match2qp, content)
+    content = re.sub(b'(?P<chr>[\t\r])', match2qp, content)
+    content = re.sub(b'(?P<prefix>\n)(?P<chr>;)', match2qp, content)
+    content = re.sub(b'^(?P<chr>[\.\?])$', match2qp, content)
     return content
 
 
@@ -529,6 +531,18 @@ def _collect_files(base, path=''):
     from aiida.common.utils import md5_file,sha1_file
     import os
 
+    def get_dict(name, full_path):
+        # note: we assume file is already utf8-encoded
+        with io.open(full_path, mode='rb') as f:
+            the_dict = {
+                'name': path,
+                'contents': f.read(),
+                'md5': md5_file(full_path),
+                'sha1': sha1_file(full_path),
+                'type': 'file',
+            }
+        return the_dict
+
     def get_filename(file_dict):
         return file_dict['name']
 
@@ -549,37 +563,21 @@ def _collect_files(base, path=''):
         return sorted(files_now,key=get_filename)
     elif path == '.aiida/calcinfo.json':
         files = []
-        with open(os.path.join(base,path)) as f:
-            files.append({
-                'name': path,
-                'contents': f.read(),
-                'md5': md5_file(os.path.join(base,path)),
-                'sha1': sha1_file(os.path.join(base,path)),
-                'type': 'file',
-                })
+        files.append(get_dict(name=path, full_path=os.path.join(base, path)))
+
         import json
         with open(os.path.join(base,path)) as f:
             calcinfo = json.load(f)
         if 'local_copy_list' in calcinfo:
             for local_copy in calcinfo['local_copy_list']:
-                with open(local_copy[0]) as f:
-                    files.append({
-                        'name': os.path.normpath(local_copy[1]),
-                        'contents': f.read(),
-                        'md5': md5_file(local_copy[0]),
-                        'sha1': sha1_file(local_copy[0]),
-                        'type': 'file',
-                        })
+                files.append(get_dict(name=os.path.normpath(local_copy[1]), 
+                        full_path=local_copy[0]))
+
         return files
+
     else:
-        with open(os.path.join(base,path)) as f:
-            return [{
-                'name': path,
-                'contents': f.read(),
-                'md5': md5_file(os.path.join(base,path)),
-                'sha1': sha1_file(os.path.join(base,path)),
-                'type': 'file',
-                }]
+        tmp = get_dict(name=path, full_path=os.path.join(base, path))
+        return [tmp]
 
 
 def extend_with_cmdline_parameters(parser, expclass="Data"):
@@ -910,8 +908,9 @@ def add_metadata_inline(what, node, parameters, args):
     tags = _collect_tags(what, calc, parameters=parameters, **kwargs)
     loops.update(tcod_loops)
 
+    tags.update(additional_tags)
     for datablock in datablocks:
-        for k,v in dict(tags.items() + additional_tags.items()).items():
+        for k,v in tags.items():
             if not k.startswith('_'):
                 raise ValueError("Tag '{}' does not seem to start with "
                                  "an underscode ('_'): all CIF tags must "
@@ -932,7 +931,7 @@ def export_cif(what, **kwargs):
     :return: string with contents of CIF file.
     """
     cif = export_cifnode(what, **kwargs)
-    return cif._exportstring('cif')[0]
+    return cif._exportcontent('cif')[0]
 
 
 def export_values(what, **kwargs):

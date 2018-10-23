@@ -90,7 +90,8 @@ extras_require = {
         'pymatgen==2018.4.20',
         'ase==3.12.0',  # Updating breaks tests
         'PyMySQL==0.8.0',  # Required by ICSD tools
-        'PyCifRW==4.2.1',  # Updating breaks tests
+        "PyCifRW==4.2.1; python_version < '3'", # Does not support python3
+        "PyCifRW==4.4; python_version >= '3'", # Does not support python2
         'seekpath==1.8.1',
         'qe-tools==1.1.0',
     ],

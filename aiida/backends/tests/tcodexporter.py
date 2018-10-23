@@ -252,7 +252,6 @@ class TestTcodDbExporter(AiidaTestCase):
 
 
     @unittest.skipIf(not has_nwchem_plugin(), "NWChem plugin is not installed")
-    @unittest.skipIf(six.PY3, "Broken on Python 3")
     def test_nwcpymatgen_translation(self):
         from .tcodexporter import FakeObject
         from aiida.orm.data.parameter import ParameterData

@@ -384,7 +384,7 @@ class TestTcodDbExporter(AiidaTestCase):
         self.assertEqual(val['_symmetry_space_group_name_H-M'], 'Pm-3m')
         self.assertEqual(val['_symmetry_space_group_name_Hall'], '-P 4 2 3')
 
-    @unittest.skipIf(six.PY3, "Broken on Python 3")
+
     def test_cmdline_parameters(self):
         """
         Ensuring that neither extend_with_cmdline_parameters() nor

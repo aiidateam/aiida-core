@@ -72,7 +72,7 @@ class TestTcodDbExporter(AiidaTestCase):
                           (b'line\n=3Bline', 'quoted-printable'))
         self.assertEquals(cif_encode_contents(b'tabbed\ttext'),
                           (b'tabbed=09text', 'quoted-printable'))
-        self.assertEquals(cif_encode_contents('angstrom Å'.encode('utf-8')),
+        self.assertEquals(cif_encode_contents(u'angstrom Å'.encode('utf-8')),
                           (b'angstrom =C3=85', 'quoted-printable'))
         self.assertEquals(cif_encode_contents(b'.'),
                           (b'=2E', 'quoted-printable'))
@@ -82,11 +82,11 @@ class TestTcodDbExporter(AiidaTestCase):
         # This one is particularly tricky: a long line is folded by the QP
         # and the semicolon sign becomes the first character on a new line.
         self.assertEquals(cif_encode_contents(
-            "Å{};a".format("".join("a" for i in range(0, 69))).encode('utf-8')),
+            u"Å{};a".format("".join("a" for i in range(0, 69))).encode('utf-8')),
             (b'=C3=85aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
              b'aaaaaaaaaaaaaaaaaaaaaaaaaaaaa=\n=3Ba',
              'quoted-printable'))
-        self.assertEquals(cif_encode_contents('angstrom ÅÅÅ'.encode('utf-8')),
+        self.assertEquals(cif_encode_contents(u'angstrom ÅÅÅ'.encode('utf-8')),
                           (b'YW5nc3Ryb20gw4XDhcOF', 'base64'))
         self.assertEquals(cif_encode_contents(
             "".join("a" for i in range(0, 2048)).encode('utf-8'))[1],

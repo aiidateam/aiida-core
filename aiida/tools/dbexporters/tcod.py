@@ -910,8 +910,9 @@ def add_metadata_inline(what, node, parameters, args):
     tags = _collect_tags(what, calc, parameters=parameters, **kwargs)
     loops.update(tcod_loops)
 
+    tags.update(additional_tags)
     for datablock in datablocks:
-        for k,v in dict(tags.items() + additional_tags.items()).items():
+        for k,v in tags.items():
             if not k.startswith('_'):
                 raise ValueError("Tag '{}' does not seem to start with "
                                  "an underscode ('_'): all CIF tags must "

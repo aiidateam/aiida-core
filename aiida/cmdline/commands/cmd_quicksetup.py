@@ -9,6 +9,7 @@
 ###########################################################################
 # pylint: disable=too-many-arguments,too-many-locals,too-many-statements,too-many-branches
 """`verdi quicksetup` command."""
+from __future__ import print_function
 from __future__ import absolute_import
 import os
 import sys

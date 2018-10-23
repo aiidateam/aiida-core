@@ -10,6 +10,7 @@
 """
 A custom click type that defines a lazy choice
 """
+from __future__ import print_function
 from __future__ import absolute_import
 import click
 

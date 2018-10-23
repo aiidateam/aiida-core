@@ -9,6 +9,7 @@
 ###########################################################################
 """A utility module with simple functions to format variables into strings for cli outputs."""
 
+from __future__ import print_function
 from __future__ import absolute_import
 
 

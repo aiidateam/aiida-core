@@ -9,6 +9,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division  # actually unused, but prevents 2to3-fixer from running run on this file
 import os

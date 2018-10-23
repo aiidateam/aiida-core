@@ -9,6 +9,7 @@
 ###########################################################################
 # pylint: disable=protected-access,invalid-name,too-many-arguments,too-many-locals
 """`verdi calculation` commands."""
+from __future__ import print_function
 from __future__ import absolute_import
 import os
 

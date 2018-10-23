@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import print_function
 from __future__ import absolute_import
 from aiida.orm.calculation.job.sum import SumCalculation
 from aiida.parsers.parser import Parser

@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi rehash`."""
+from __future__ import print_function
 from __future__ import absolute_import
 from click.testing import CliRunner
 

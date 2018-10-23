@@ -9,6 +9,7 @@
 ###########################################################################
 # pylint: disable=global-statement
 """Definition of AiiDA's process persister and the necessary object loaders."""
+from __future__ import print_function
 from __future__ import absolute_import
 import logging
 import traceback

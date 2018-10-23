@@ -10,5 +10,6 @@
 
 
 # CUSTOM USER CLASS
+from __future__ import print_function
 from __future__ import absolute_import
 AUTH_USER_MODEL = 'db.DbUser'

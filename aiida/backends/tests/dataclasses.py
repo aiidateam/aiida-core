@@ -2018,7 +2018,7 @@ class TestStructureData(AiidaTestCase):
         a.append_atom(position=(1., 1., 1.), symbols=['Ti'])
 
         c = a._get_cif()
-        lines = c._prepare_cif()[0].split('\n')
+        lines = c._prepare_cif()[0].decode('utf-8').split('\n')
         non_comments = []
         for line in lines:
             if not re.search('^#', line):

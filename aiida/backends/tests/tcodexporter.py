@@ -72,7 +72,7 @@ class TestTcodDbExporter(AiidaTestCase):
                           (b'line\n=3Bline', 'quoted-printable'))
         self.assertEquals(cif_encode_contents(b'tabbed\ttext'),
                           (b'tabbed=09text', 'quoted-printable'))
-        self.assertEquals(cif_encode_contents('angstrom Å'.encode('utf-8')),
+        self.assertEquals(cif_encode_contents(u'angstrom Å'.encode('utf-8')),
                           (b'angstrom =C3=85', 'quoted-printable'))
         self.assertEquals(cif_encode_contents(b'.'),
                           (b'=2E', 'quoted-printable'))
@@ -82,11 +82,11 @@ class TestTcodDbExporter(AiidaTestCase):
         # This one is particularly tricky: a long line is folded by the QP
         # and the semicolon sign becomes the first character on a new line.
         self.assertEquals(cif_encode_contents(
-            "Å{};a".format("".join("a" for i in range(0, 69))).encode('utf-8')),
+            u"Å{};a".format("".join("a" for i in range(0, 69))).encode('utf-8')),
             (b'=C3=85aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
              b'aaaaaaaaaaaaaaaaaaaaaaaaaaaaa=\n=3Ba',
              'quoted-printable'))
-        self.assertEquals(cif_encode_contents('angstrom ÅÅÅ'.encode('utf-8')),
+        self.assertEquals(cif_encode_contents(u'angstrom ÅÅÅ'.encode('utf-8')),
                           (b'YW5nc3Ryb20gw4XDhcOF', 'base64'))
         self.assertEquals(cif_encode_contents(
             "".join("a" for i in range(0, 2048)).encode('utf-8'))[1],
@@ -361,7 +361,6 @@ class TestTcodDbExporter(AiidaTestCase):
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
-    @unittest.skipIf(six.PY3, "Broken on Python 3")
     def test_symmetry_reduction(self):
         from aiida.orm.data.structure import StructureData
         from aiida.tools.dbexporters.tcod import export_values
@@ -383,7 +382,7 @@ class TestTcodDbExporter(AiidaTestCase):
         self.assertEqual(val['_symmetry_space_group_name_H-M'], 'Pm-3m')
         self.assertEqual(val['_symmetry_space_group_name_Hall'], '-P 4 2 3')
 
-    @unittest.skipIf(six.PY3, "Broken on Python 3")
+
     def test_cmdline_parameters(self):
         """
         Ensuring that neither extend_with_cmdline_parameters() nor
@@ -413,7 +412,6 @@ class TestTcodDbExporter(AiidaTestCase):
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
-    @unittest.skipIf(six.PY3, "Broken on Python 3")
     def test_export_trajectory(self):
         from aiida.orm.data.structure import StructureData
         from aiida.orm.data.array.trajectory import TrajectoryData

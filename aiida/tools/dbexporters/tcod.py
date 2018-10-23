@@ -788,6 +788,9 @@ def _collect_tags(node, calc,parameters=None,
                     cif_encode_contents(f['contents'],
                                         gzip=gzip,
                                         gzip_threshold=gzip_threshold)
+                # PyCIFRW is not able to deal with bytes, therefore they have to
+                # be converted to Unicode
+                contents = contents.decode('utf-8')
             else:
                 contents = '.'
 

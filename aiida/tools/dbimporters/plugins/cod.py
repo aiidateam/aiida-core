@@ -197,7 +197,7 @@ class CodDbImporter(DbImporter):
         :return: string containing a SQL statement.
         """
         sql_parts = ["(status IS NULL OR status != 'retracted')"]
-        for key in self._keywords.keys():
+        for key in sorted(self._keywords.keys()):
             if key in kwargs.keys():
                 values = kwargs.pop(key)
                 if not isinstance(values, list):

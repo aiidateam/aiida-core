@@ -317,15 +317,15 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
                                          "loop".format(tag))
                     if row_size == 0:
                         continue
-                    datablock.AddItem(tag,tag_values)
+                    datablock.AddItem(tag, tag_values)
                     tags_seen.append(tag)
                     tags_in_loops.append(tag)
             if row_size is not None and row_size > 0:
                 datablock.CreateLoop(datanames=tags_seen)
         for tag in sorted(values.keys()):
             if not tag in tags_in_loops:
-                datablock.AddItem(tag,values[tag])
-            # create automatically a loop for non-scalar values
+                datablock.AddItem(tag, values[tag])
+                # create automatically a loop for non-scalar values
                 if isinstance(values[tag], (tuple, list)) and tag not in loops.keys():
                     datablock.CreateLoop([tag])
     return cif

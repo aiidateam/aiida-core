@@ -362,7 +362,6 @@ class TestTcodDbExporter(AiidaTestCase):
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
-    @unittest.skipIf(six.PY3, "Broken on Python 3")
     def test_symmetry_reduction(self):
         from aiida.orm.data.structure import StructureData
         from aiida.tools.dbexporters.tcod import export_values

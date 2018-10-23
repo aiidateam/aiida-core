@@ -269,7 +269,7 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
     Constructs PyCifRW's CifFile from an array of CIF datablocks.
 
     :param datablocks: an array of CIF datablocks
-    :param loops: optional list of lists of CIF tag loops.
+    :param loops: optional dict of lists of CIF tag loops.
     :param names: optional list of datablock names
     :return: CifFile
     """
@@ -299,9 +299,10 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
             name = names[i]
         datablock = CifBlock()
         cif[name] = datablock
+        tags_in_loops = []
         for loopname in loops.keys():
-            loopdata = ([[]], [[]])
             row_size = None
+            tags_seen = []
             for tag in loops[loopname]:
                 if tag in values:
                     tag_values = values.pop(tag)
@@ -314,15 +315,19 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
                                          "'{}' is different from "
                                          "the others in the same "
                                          "loop".format(tag))
-                    loopdata[0][0].append(tag)
-                    loopdata[1][0].append(tag_values)
+                    if row_size == 0:
+                        continue
+                    datablock.AddItem(tag,tag_values)
+                    tags_seen.append(tag)
+                    tags_in_loops.append(tag)
             if row_size is not None and row_size > 0:
-                datablock.AddCifItem(loopdata)
+                datablock.CreateLoop(datanames=tags_seen)
         for tag in sorted(values.keys()):
-            datablock[tag] = values[tag]
+            if not tag in tags_in_loops:
+                datablock.AddItem(tag,values[tag])
             # create automatically a loop for non-scalar values
-            if isinstance(values[tag], (tuple, list)) and tag not in loops.keys():
-                datablock.CreateLoop([tag])
+                if isinstance(values[tag], (tuple, list)) and tag not in loops.keys():
+                    datablock.CreateLoop([tag])
     return cif
 
 

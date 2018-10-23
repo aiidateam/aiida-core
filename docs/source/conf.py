@@ -19,6 +19,7 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
+from __future__ import absolute_import
 import sys, os
 
 # Following 3 lines avoid the need of importing load_dbenv() for compiling the

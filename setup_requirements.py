@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import absolute_import
 install_requires = [
     'reentry==1.2.1',
     'python-dateutil==2.7.2',

@@ -9,6 +9,7 @@
 ###########################################################################
 
 
+from __future__ import absolute_import
 LOAD_DBENV_CALLED = False
 LOAD_PROFILE_CALLED = False
 AIIDADB_PROFILE = None

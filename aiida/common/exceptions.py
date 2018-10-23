@@ -9,6 +9,7 @@
 ###########################################################################
 
 
+from __future__ import absolute_import
 class AiidaException(Exception):
     """
     Base class for all AiiDA exceptions.

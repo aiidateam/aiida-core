@@ -20,10 +20,11 @@ from six.moves import range
 from aiida.common.exceptions import NotExistent
 from aiida.common.caching import enable_caching
 from aiida.daemon.client import DaemonClient
-from aiida.orm import DataFactory
+from aiida.orm import Code, CalculationFactory, DataFactory
 from aiida.orm.data.int import Int
 from aiida.orm.data.str import Str
 from aiida.orm.data.list import List
+from aiida.orm.data.structure import StructureData
 from aiida.orm.calculation import JobCalculation
 from aiida.work.launch import run_get_node, submit
 from aiida.work.persistence import ObjectLoader
@@ -74,8 +75,8 @@ def print_logshow(pk):
             ["verdi", "calculation", "logshow", "{}".format(pk)],
             stderr=subprocess.STDOUT,
         ))
-    except subprocess.CalledProcessError as e2:
-        print("Note: the command failed, message: {}".format(e))
+    except subprocess.CalledProcessError as exception:
+        print("Note: the command failed, message: {}".format(exception))
 
 
 def validate_calculations(expected_results):

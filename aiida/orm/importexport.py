@@ -2581,13 +2581,13 @@ class ZipFolder(object):
 
         if not overwrite:
             try:
-                self._zipfile.getinfo(filename)
+                self._zipfile.getinfo(base_filename)
                 exists = True
             except KeyError:
                 exists = False
             if exists:
                 raise IOError("destination already exists: {}".format(
-                    filename))
+                    base_filename))
 
         # print src, filename
         if os.path.isdir(src):

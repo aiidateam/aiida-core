@@ -739,7 +739,7 @@ def create_configuration(profile='default'):
 
         # Check if the new repository is a test repository and if it already exists.
         if is_test_profile:
-            if TEST_KEYWORD not in os.path.basename(new_repo_path):
+            if TEST_KEYWORD not in os.path.basename(new_repo_path.rstrip('/')):
                 raise ValueError(
                     "The repository directory for test profiles should "
                     "contain the test keyword '{}'".format(TEST_KEYWORD))

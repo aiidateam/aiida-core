@@ -198,10 +198,10 @@ class TrajectoryData(ArrayData):
                                     self.get_times(),
                                     self.get_velocities())
         # Should catch TypeErrors, ValueErrors, and KeyErrors for missing arrays
-        except Exception as exc:
+        except Exception as exception:
             raise ValidationError("The TrajectoryData did not validate. "
                                   "Error: {} with message {}".format(
-                type(e).__name__, exc))
+                type(exception).__name__, exception))
 
     @property
     def numsteps(self):

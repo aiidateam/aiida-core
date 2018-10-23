@@ -143,6 +143,7 @@ class TestWf(AiidaTestCase):
         """
         Simple workfunction that defines a positional argument and keyword arguments
         """
+        INPUT = 1
         ARGS_INPUT = (Int(DEFAULT_INT),)
         KWARGS_INPUT = {'b': Int(INPUT)}
 

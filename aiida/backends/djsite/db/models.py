@@ -972,7 +972,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
                                               original_pk=self.subspecifier_pk)['attr']
         except DeserializationException as exc:
             exc = DbContentError(exc)
-            exc.original_exception = e
+            exc.original_exception = exc
             raise exc
 
     @classmethod
@@ -1111,7 +1111,7 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
                                           original_pk=dbnodepk)
         except DeserializationException as exc:
             exc = DbContentError(exc)
-            exc.original_exception = e
+            exc.original_exception = exc
             raise exc
 
     @classmethod

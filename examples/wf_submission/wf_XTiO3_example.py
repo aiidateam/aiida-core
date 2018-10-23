@@ -12,7 +12,9 @@ from __future__ import absolute_import
 from __future__ import print_function
 from aiida.workflows.wf_XTiO3 import WorkflowXTiO3_EOS
 import sys
+from aiida.common.exceptions import NotExistent
 from aiida.common.example_helpers import test_and_get_code
+from aiida.orm import DataFactory
 
 
 # This example runs a set of calculation for at various lattice parameter

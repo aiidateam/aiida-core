@@ -20,7 +20,7 @@ def command():
 
     @click.command
     @with_dbenv()
-    def inner():
-        func(*args, **kwargs)
+    def inner(func):
+        func()
 
     return inner

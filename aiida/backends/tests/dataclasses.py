@@ -151,7 +151,6 @@ class TestCifData(AiidaTestCase):
     from aiida.orm.data.cif import has_pycifrw
     from aiida.orm.data.structure import has_ase, has_pymatgen, has_spglib, \
         get_pymatgen_version
-    from distutils.version import StrictVersion
     
 
     valid_sample_cif_str = '''
@@ -2485,7 +2484,6 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
     Tests the creation of StructureData from a pymatgen Structure and
     Molecule objects.
     """
-    from distutils.version import StrictVersion
     from aiida.orm.data.structure import has_pymatgen, get_pymatgen_version
 
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
@@ -2683,7 +2681,6 @@ class TestPymatgenFromStructureData(AiidaTestCase):
     Tests the creation of pymatgen Structure and Molecule objects from
     StructureData.
     """
-    from distutils.version import StrictVersion
     from aiida.orm.data.structure import has_ase, has_pymatgen, \
         get_pymatgen_version
 

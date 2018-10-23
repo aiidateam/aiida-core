@@ -100,12 +100,13 @@ def cif_encode_contents(content, gzip=False, gzip_threshold=1024):
     symbols, too long lines or lines starting with semicolons (';')
     is encoded using Quoted-printable encoding.
 
-    :param content: the content to be encoded
+    :param content: the content to be encoded, bytes are expected
     :return content: encoded content
     :return encoding: a string specifying used encoding (None, 'base64',
         'ncr', 'quoted-printable', 'gzip+base64')
     """
     import re
+
     method = None
     if len(content) == 0:
         # content is empty
@@ -134,7 +135,7 @@ def cif_encode_contents(content, gzip=False, gzip_threshold=1024):
         # content has TAB symbols, which may be lost during the
         # parsing of TCOD CIF file
         method = 'quoted-printable'
-    elif content == '.' or content == '?':
+    elif content == b'.' or content == b'?':
         method = 'quoted-printable'
     else:
         method = None
@@ -163,7 +164,7 @@ def encode_textfield_base64(content, foldwidth=76):
     import base64
 
     content = base64.standard_b64encode(content)
-    content = "\n".join(list(content[i:i + foldwidth]
+    content = b"\n".join(list(content[i:i + foldwidth]
                              for i in range(0, len(content), foldwidth)))
     return content
 
@@ -200,21 +201,21 @@ def encode_textfield_quoted_printable(content):
     content = quopri.encodestring(content)
 
     def match2qp(m):
-        prefix = ''
-        postfix = ''
+        prefix = b''
+        postfix = b''
         if 'prefix' in m.groupdict().keys():
             prefix = m.group('prefix')
         if 'postfix' in m.groupdict().keys():
             postfix = m.group('postfix')
         h = hex(ord(m.group('chr')))[2:].upper()
         if len(h) == 1:
-            h = "0{}".format(h)
-        return "{}={}{}".format(prefix, h, postfix)
+            h = "0%s" % h
+        return b"%s=%s%s" % (prefix, h.encode('utf-8'), postfix)
 
-    content = re.sub('^(?P<chr>;)', match2qp, content)
-    content = re.sub('(?P<chr>[\t\r])', match2qp, content)
-    content = re.sub('(?P<prefix>\n)(?P<chr>;)', match2qp, content)
-    content = re.sub('^(?P<chr>[\.\?])$', match2qp, content)
+    content = re.sub(b'^(?P<chr>;)', match2qp, content)
+    content = re.sub(b'(?P<chr>[\t\r])', match2qp, content)
+    content = re.sub(b'(?P<prefix>\n)(?P<chr>;)', match2qp, content)
+    content = re.sub(b'^(?P<chr>[\.\?])$', match2qp, content)
     return content
 
 

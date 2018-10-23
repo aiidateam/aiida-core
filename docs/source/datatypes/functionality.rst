@@ -20,7 +20,7 @@ The list of all valid export formats can be obtained calling
 formats.
 
 If you don't want to export directly to a file, but want to get simply the content
-of the file as a string, then you can call the :py:meth:`~aiida.orm.data.Data._exportstring()`
+of the file as a string, then you can call the :py:meth:`~aiida.orm.data.Data._exportcontent()`
 method, passing also a ``fileformat`` parameter.
 The return value is a tuple of length 2: the first element is a string
 with the content of the "main" file, while the second is a dictionary (possibly empty)

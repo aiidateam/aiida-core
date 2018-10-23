@@ -932,7 +932,7 @@ def export_cif(what, **kwargs):
     :return: string with contents of CIF file.
     """
     cif = export_cifnode(what, **kwargs)
-    return cif._exportstring('cif')[0]
+    return cif._exportcontent('cif')[0]
 
 
 def export_values(what, **kwargs):

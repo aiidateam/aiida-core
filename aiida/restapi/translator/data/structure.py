@@ -58,7 +58,7 @@ class StructureDataTranslator(DataTranslator):
 
         if format in node.get_export_formats():
             try:
-                response["str_viz_info"]["data"] = node._exportcontent(format)[0]
+                response["str_viz_info"]["data"] = node._exportcontent(format)[0].decode('utf-8')
                 response["str_viz_info"]["format"] = format
             except LicensingException as exc:
                 response = str(exc)

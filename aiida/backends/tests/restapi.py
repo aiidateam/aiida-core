@@ -29,7 +29,6 @@ ParameterData = DataFactory('parameter')
 KpointsData = DataFactory('array.kpoints')
 
 
-@unittest.skipIf(six.PY3, "Broken on Python 3")
 class RESTApiTestCase(AiidaTestCase):
     """
     Setup of the tests for the AiiDA RESTful-api

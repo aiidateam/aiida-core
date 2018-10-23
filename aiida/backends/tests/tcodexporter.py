@@ -150,7 +150,7 @@ class TestTcodDbExporter(AiidaTestCase):
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     @unittest.skipIf(not has_nwchem_plugin(), "NWChem plugin is not installed")
     @unittest.skipIf(six.PY3, "Broken on Python 3")
-    def test_cif_structure_roundtrip(self):
+    def test_cif_structure_roundtrip(self): # solved, PR: 2087
         from aiida.tools.dbexporters.tcod import export_cif, export_values
         from aiida.orm import Code
         from aiida.orm import JobCalculation
@@ -252,7 +252,6 @@ class TestTcodDbExporter(AiidaTestCase):
 
 
     @unittest.skipIf(not has_nwchem_plugin(), "NWChem plugin is not installed")
-    @unittest.skipIf(six.PY3, "Broken on Python 3")
     def test_nwcpymatgen_translation(self):
         from .tcodexporter import FakeObject
         from aiida.orm.data.parameter import ParameterData
@@ -328,7 +327,7 @@ class TestTcodDbExporter(AiidaTestCase):
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     @unittest.skipIf(not has_nwchem_plugin(), "NWChem plugin is not installed")
     @unittest.skipIf(six.PY3, "Broken on Python 3")
-    def test_inline_export(self):
+    def test_inline_export(self): # solved, PR: 2090
         from aiida.orm.data.cif import CifData
         from aiida.tools.dbexporters.tcod import export_values
         import tempfile

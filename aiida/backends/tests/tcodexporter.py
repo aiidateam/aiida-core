@@ -52,9 +52,7 @@ class FakeObject(object):
 
 
 class TestTcodDbExporter(AiidaTestCase):
-    """
-    Tests for TcodDbExporter class.
-    """
+    """Tests for TcodDbExporter class."""
     from aiida.orm.data.structure import has_ase, has_spglib
     from aiida.orm.data.cif import has_pycifrw
 
@@ -99,11 +97,8 @@ class TestTcodDbExporter(AiidaTestCase):
         self.assertEquals(cif_encode_contents(b'datatest')[1], None)
         self.assertEquals(cif_encode_contents(b'data_test')[1], 'base64')
 
-    @unittest.skipIf(six.PY3, "Broken on Python 3")
     def test_collect_files(self):
-        """
-        Testing the collection of files from file tree.
-        """
+        """Testing the collection of files from file tree."""
         from aiida.tools.dbexporters.tcod import _collect_files
         from aiida.common.folders import SandboxFolder
         from six.moves import cStringIO as StringIO
@@ -132,21 +127,21 @@ class TestTcodDbExporter(AiidaTestCase):
         sha1 = 'a94a8fe5ccb19ba61c4c0873d391e987982fbbd3'
         self.assertEquals(
             _collect_files(sf.abspath),
-            [{'name': '_.out', 'contents': 'test', 'md5': md5,
+            [{'name': '_.out', 'contents': b'test', 'md5': md5,
               'sha1': sha1, 'type': 'file'},
-             {'name': '_aiidasubmit.sh', 'contents': 'test', 'md5': md5,
+             {'name': '_aiidasubmit.sh', 'contents': b'test', 'md5': md5,
               'sha1': sha1, 'type': 'file'},
-             {'name': 'aiida.in', 'contents': 'test', 'md5': md5,
+             {'name': 'aiida.in', 'contents': b'test', 'md5': md5,
               'sha1': sha1, 'type': 'file'},
-             {'name': 'aiida.out', 'contents': 'test', 'md5': md5,
+             {'name': 'aiida.out', 'contents': b'test', 'md5': md5,
               'sha1': sha1, 'type': 'file'},
              {'name': 'out/', 'type': 'folder'},
-             {'name': 'out/out', 'contents': 'test', 'md5': md5,
+             {'name': 'out/out', 'contents': b'test', 'md5': md5,
               'sha1': sha1, 'type': 'file'},
              {'name': 'pseudo/', 'type': 'folder'},
              {'name': 'save/', 'type': 'folder'},
              {'name': 'save/1/', 'type': 'folder'},
-             {'name': 'save/1/log.log', 'contents': 'test', 'md5': md5,
+             {'name': 'save/1/log.log', 'contents': b'test', 'md5': md5,
               'sha1': sha1, 'type': 'file'},
              {'name': 'save/2/', 'type': 'folder'}])
 

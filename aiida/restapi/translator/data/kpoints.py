@@ -129,6 +129,7 @@ class KpointsDataTranslator(DataTranslator):
                 has_labels=True
                 high_symm_rel = {}
                 path = []
+                old_label = None
 
                 for idx, label in node.labels:
                     high_symm_rel[label] = explicit_kpoints_rel[idx].tolist()

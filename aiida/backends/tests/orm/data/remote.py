@@ -49,7 +49,7 @@ class TestRemoteData(AiidaTestCase):
             if exception.errno == errno.ENOENT:
                 pass
             elif exception.errno == errno.ENOTDIR:
-                os.remove(the_path)
+                os.remove(self.tmp_path)
             else:
                 raise IOError(exception)
 

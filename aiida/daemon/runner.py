@@ -30,7 +30,11 @@ def start_daemon():
     daemon_client = DaemonClient()
     configure_logging(daemon=True, daemon_log_file=daemon_client.daemon_log_file)
 
-    runner = DaemonRunner(rmq_config=get_rmq_config(), rmq_submit=False)
+    try:
+        runner = DaemonRunner(rmq_config=get_rmq_config(), rmq_submit=False)
+    except Exception as exception:
+        logger.exception('daemon runner failed to start')
+        raise
 
     def shutdown_daemon(num, frame):
         logger.info('Received signal to shut down the daemon runner')

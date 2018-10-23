@@ -23,7 +23,7 @@ from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.cmdline.utils.multi_line_input import ensure_scripts
 from aiida.common.exceptions import ValidationError, InputValidationError
-from aiida.control.computer import ComputerBuilder, get_computer_configuration
+from aiida.control.computer import ComputerBuilder
 from aiida.plugins.entry_point import get_entry_points
 from aiida.transport import cli as transport_cli
 
@@ -573,17 +573,15 @@ def computer_configure():
 
 
 @computer_configure.command('show')
-@click.option('--current/--defaults')
+@click.option(
+    '--defaults', is_flag=True, default=False, help='Show the default configuration settings for this computer.')
 @click.option('--as-option-string', is_flag=True)
 @options.USER()
 @arguments.COMPUTER()
-def computer_config_show(computer, user, current, as_option_string):
+def computer_config_show(computer, user, defaults, as_option_string):
     """Show the current or default configuration for COMPUTER."""
     import tabulate
     from aiida.common.utils import escape_for_bash
-
-    config = {}
-    table = []
 
     transport_cls = computer.get_transport_class()
     option_list = [
@@ -591,10 +589,11 @@ def computer_config_show(computer, user, current, as_option_string):
         if isinstance(param, click.core.Option)
     ]
     option_list = [option for option in option_list if option.name in transport_cls.get_valid_auth_params()]
-    if current:
-        config = get_computer_configuration(computer, user)
-    else:
+
+    if defaults:
         config = {option.name: transport_cli.transport_option_default(option.name, computer) for option in option_list}
+    else:
+        config = computer.get_configuration(user)
 
     option_items = []
     if as_option_string:
@@ -614,7 +613,12 @@ def computer_config_show(computer, user, current, as_option_string):
         opt_string = ' '.join(option_items)
         echo.echo(escape_for_bash(opt_string))
     else:
-        table = [('* ' + name, config[name]) for name in transport_cls.get_valid_auth_params()]
+        table = []
+        for name in transport_cls.get_valid_auth_params():
+            if name in config:
+                table.append(('* ' + name, config[name]))
+            else:
+                table.append(('* ' + name, '-'))
         echo.echo(tabulate.tabulate(table, tablefmt='plain'))
 
 

@@ -67,7 +67,7 @@ class SshTransport(aiida.transport.Transport):
         ('username', {'prompt': 'User name', 'help': 'user name for the computer', 'non_interactive_default': True}),
         ('port', {'option': options.PORT, 'prompt': 'port Nr', 'non_interactive_default': True}),
         ('look_for_keys', {'switch': True, 'prompt': 'Look for keys', 'help': 'switch automatic key file discovery on / off', 'non_interactive_default': True}),
-        ('key_filename', {'type': AbsolutePathParamType(dir_okay=False, exists=True), 'prompt': 'SSH key file', 'help': 'Manually pass a key file', 'non_interactive_default': True}),
+        ('key_filename', {'type': AbsolutePathParamType(dir_okay=False, exists=True), 'prompt': 'SSH key file', 'help': 'Manually pass a key file if default path is not set in ssh config', 'non_interactive_default': True}),
         ('timeout', {'type': int, 'prompt': 'Connection timeout in s', 'help': 'time in seconds to wait for connection before giving up', 'non_interactive_default': True}),
         ('allow_agent', {'switch': True, 'prompt': 'Allow ssh agent', 'help': 'switch to allow or disallow ssh agent', 'non_interactive_default': True}),
         ('proxy_command', {'prompt': 'SSH proxy command', 'help': 'SSH proxy command', 'non_interactive_default': True}),  # Managed 'manually' in connect
@@ -101,13 +101,6 @@ class SshTransport(aiida.transport.Transport):
     _DEFAULT_SAFE_OPEN_INTERVAL = 5
 
     @classmethod
-    def _convert_username_fromstring(cls, string):
-        """
-        Convert the username from string.
-        """
-        return string
-
-    @classmethod
     def _get_username_suggestion_string(cls, computer):
         """
         Return a suggestion for the specific field.
@@ -119,18 +112,6 @@ class SshTransport(aiida.transport.Transport):
         return str(config.get('user', getpass.getuser()))
 
     @classmethod
-    def _convert_port_fromstring(cls, string):
-        """
-        Convert the port from string.
-        """
-        from aiida.common.exceptions import ValidationError
-
-        try:
-            return int(string)
-        except ValueError:
-            raise ValidationError("The port must be an integer")
-
-    @classmethod
     def _get_port_suggestion_string(cls, computer):
         """
         Return a suggestion for the specific field.
@@ -138,23 +119,6 @@ class SshTransport(aiida.transport.Transport):
         config = parse_sshconfig(computer.hostname)
         # Either the configured user in the .ssh/config, or the default SSH port
         return str(config.get('port', 22))
-
-    @classmethod
-    def _convert_key_filename_fromstring(cls, string):
-        """
-        Convert the port from string.
-        """
-        from aiida.common.exceptions import ValidationError
-
-        path = os.path.expanduser(string)
-
-        if not os.path.isabs(path):
-            raise ValidationError("The key filename must be an absolute path")
-
-        if not os.path.exists(path):
-            raise ValidationError("The key filename must exist")
-
-        return path
 
     @classmethod
     def _get_key_filename_suggestion_string(cls, computer):
@@ -187,18 +151,6 @@ class SshTransport(aiida.transport.Transport):
         return os.path.expanduser(identity)
 
     @classmethod
-    def _convert_timeout_fromstring(cls, string):
-        """
-        Convert the port from string.
-        """
-        from aiida.common.exceptions import ValidationError
-
-        try:
-            return int(string)
-        except ValueError:
-            raise ValidationError("The timeout must be an integer")
-
-    @classmethod
     def _get_timeout_suggestion_string(cls, computer):
         """
         Return a suggestion for the specific field.
@@ -209,54 +161,20 @@ class SshTransport(aiida.transport.Transport):
         return str(config.get('connecttimeout', "60"))
 
     @classmethod
-    def _convert_allow_agent_fromstring(cls, string):
-        """
-        Convert the port from string.
-        """
-        from aiida.common.exceptions import ValidationError
-
-        try:
-            return convert_to_bool(string)
-        except ValueError:
-            raise ValidationError("Allow_agent must be an boolean")
-
-    @classmethod
     def _get_allow_agent_suggestion_string(cls, computer):
         """
         Return a suggestion for the specific field.
         """
-        return ""
-
-    @classmethod
-    def _convert_look_for_keys_fromstring(cls, string):
-        """
-        Convert the port from string.
-        """
-        from aiida.common.exceptions import ValidationError
-
-        try:
-            return convert_to_bool(string)
-        except ValueError:
-            raise ValidationError("look_for_keys must be an boolean")
+        config = parse_sshconfig(computer.hostname)
+        return convert_to_bool(str(config.get('allow_agent', "no")))
 
     @classmethod
     def _get_look_for_keys_suggestion_string(cls, computer):
         """
         Return a suggestion for the specific field.
         """
-        return ""
-
-    @classmethod
-    def _convert_proxy_command_fromstring(cls, string):
-        """
-        Convert the proxy command from string.
-        """
-        from aiida.common.exceptions import ValidationError
-
-        if str(string).strip():
-            return str(string)
-        else:
-            return None
+        config = parse_sshconfig(computer.hostname)
+        return convert_to_bool(str(config.get('look_for_keys', "no")))
 
     @classmethod
     def _get_proxy_command_suggestion_string(cls, computer):
@@ -281,35 +199,11 @@ class SshTransport(aiida.transport.Transport):
         return " ".join(new_pieces)
 
     @classmethod
-    def _convert_compress_fromstring(cls, string):
-        """
-        Convert the port from string.
-        """
-        from aiida.common.exceptions import ValidationError
-
-        try:
-            return convert_to_bool(string)
-        except ValueError:
-            raise ValidationError("compress must be an boolean")
-
-    @classmethod
     def _get_compress_suggestion_string(cls, computer):
         """
         Return a suggestion for the specific field.
         """
         return "True"
-
-    @classmethod
-    def _convert_load_system_host_keys_fromstring(cls, string):
-        """
-        Convert the port from string.
-        """
-        from aiida.common.exceptions import ValidationError
-
-        try:
-            return convert_to_bool(string)
-        except ValueError:
-            raise ValidationError("compress must be an boolean")
 
     @classmethod
     def _get_load_system_host_keys_suggestion_string(cls, computer):
@@ -319,30 +213,11 @@ class SshTransport(aiida.transport.Transport):
         return "True"
 
     @classmethod
-    def _convert_key_policy_fromstring(cls, string):
-        """
-        Convert the port from string.
-        """
-        return string
-
-    @classmethod
     def _get_key_policy_suggestion_string(cls, computer):
         """
         Return a suggestion for the specific field.
         """
         return "RejectPolicy"
-
-    @classmethod
-    def _convert_gss_auth_fromstring(cls, string):
-        """
-        Convert the gss auth. command from string.
-        """
-        from aiida.common.exceptions import ValidationError
-
-        try:
-            return convert_to_bool(string)
-        except ValueError:
-            raise ValidationError("gss_auth must be an boolean")
 
     @classmethod
     def _get_gss_auth_suggestion_string(cls, computer):
@@ -353,18 +228,6 @@ class SshTransport(aiida.transport.Transport):
         return convert_to_bool(str(config.get('gssapiauthentication', "no")))
 
     @classmethod
-    def _convert_gss_kex_fromstring(cls, string):
-        """
-        Convert the gss key exchange command from string.
-        """
-        from aiida.common.exceptions import ValidationError
-
-        try:
-            return convert_to_bool(string)
-        except ValueError:
-            raise ValidationError("gss_kex must be an boolean")
-
-    @classmethod
     def _get_gss_kex_suggestion_string(cls, computer):
         """
         Return a suggestion for the specific field.
@@ -373,33 +236,12 @@ class SshTransport(aiida.transport.Transport):
         return convert_to_bool(str(config.get('gssapikeyexchange', "no")))
 
     @classmethod
-    def _convert_gss_deleg_creds_fromstring(cls, string):
-        """
-        Convert the gss auth. command from string.
-        """
-        from aiida.common.exceptions import ValidationError
-
-        try:
-            return convert_to_bool(string)
-        except ValueError:
-            raise ValidationError("gss_deleg_creds must be an boolean")
-
-    @classmethod
     def _get_gss_deleg_creds_suggestion_string(cls, computer):
         """
         Return a suggestion for the specific field.
         """
         config = parse_sshconfig(computer.hostname)
         return convert_to_bool(str(config.get('gssapidelegatecredentials', "no")))
-
-    @classmethod
-    def _convert_gss_host_fromstring(cls, string):
-        """
-        Convert the gss auth. command from string.
-        """
-        from aiida.common.exceptions import ValidationError
-
-        return str(string)
 
     @classmethod
     def _get_gss_host_suggestion_string(cls, computer):
@@ -484,7 +326,7 @@ class SshTransport(aiida.transport.Transport):
         # Open a SSHClient
         connection_arguments = self._connect_args
         proxystring = connection_arguments.pop('proxy_command', None)
-        if proxystring is not None:
+        if proxystring:
             self._proxy = _DetachedProxyCommand(proxystring)
             connection_arguments['sock'] = self._proxy
 
@@ -1081,33 +923,13 @@ class SshTransport(aiida.transport.Transport):
             aiida_attr[key] = getattr(paramiko_attr, key)
         return aiida_attr
 
-    def copyfile(self, remotesource, remotedestination, dereference=False, pattern=None):
-        """
-        Copy a file from remote source to remote destination
-        Redirects to copy().
+    def copyfile(self, remotesource, remotedestination, dereference=False):
+        return self.copy(remotesource, remotedestination, dereference)
 
-        :param remotesource:
-        :param remotedestination:
-        :param dereference:
-        :param pattern:
-        """
-        cp_flags = '-f'
-        return self.copy(remotesource, remotedestination, dereference, cp_flags, pattern)
+    def copytree(self, remotesource, remotedestination, dereference=False):
+        return self.copy(remotesource, remotedestination, dereference, recursive=True)
 
-    def copytree(self, remotesource, remotedestination, dereference=False, pattern=None):
-        """
-        copy a folder recursively from remote source to remote destination
-        Redirects to copy()
-
-        :param remotesource:
-        :param remotedestination:
-        :param dereference:
-        :param pattern:
-        """
-        cp_flags = '-r -f'
-        return self.copy(remotesource, remotedestination, dereference, cp_flags, pattern)
-
-    def copy(self, remotesource, remotedestination, dereference=False):
+    def copy(self, remotesource, remotedestination, dereference=False, recursive=True):
         """
         Copy a file or a directory from remote source to remote destination.
         Flags used: ``-r``: recursive copy; ``-f``: force, makes the command non interactive;
@@ -1117,22 +939,23 @@ class SshTransport(aiida.transport.Transport):
         :param remotedestination: file to copy to
         :param dereference: if True, copy content instead of copying the symlinks only
             Default = False.
+        :param recursive: if True copy directories recursively, otherwise only copy the specified file(s)
+        :type recursive: bool
         :raise IOError: if the cp execution failed.
 
         .. note:: setting dereference equal to True could cause infinite loops.
         """
         # In the majority of cases, we should deal with linux cp commands
-
         # TODO : do we need to avoid the aliases when calling cp_exe='cp'? Call directly /bin/cp?
 
-        # TODO: verify that it does not re
+        cp_flags = '-f'
+        if recursive:
+            cp_flags += ' -r'
 
-        # For the moment, these are hardcoded. They may become parameters
-        # as soon as we see the need.
-        cp_flags = '-r -f'
+        # For the moment, this is hardcoded. May become a parameter
         cp_exe = 'cp'
 
-        ## To evaluate if we also want -p: preserves mode,ownership and timestamp
+        # To evaluate if we also want -p: preserves mode,ownership and timestamp
         if dereference:
             # use -L; --dereference is not supported on mac
             cp_flags += ' -L'
@@ -1147,7 +970,7 @@ class SshTransport(aiida.transport.Transport):
                              'Found instead %s as remotedestination' % remotedestination)
 
         if self.has_magic(remotedestination):
-            raise ValueError("Pathname patterns are not allowed in the " "destination")
+            raise ValueError("Pathname patterns are not allowed in the destination")
 
         if self.has_magic(remotesource):
             to_copy_list = self.glob(remotesource)

@@ -38,7 +38,7 @@ install_requires = [
     'ete3==3.1.1',
     'uritools==2.1.0',
     'psycopg2-binary==2.7.4',
-    'paramiko==2.4.1',
+    'paramiko==2.4.2',
     'ecdsa==0.13',
     'pika==0.11.2',
     'ipython>=4.0,<6.0',  # Version of ipython non enforced, because some still prefer version 4 rather than the latest

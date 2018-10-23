@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from aiida.orm.data.bool import Bool
 from aiida.orm.data.float import Float
 from aiida.orm.data.int import Int

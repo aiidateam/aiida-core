@@ -697,6 +697,63 @@ class TestSimple(AiidaTestCase):
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
+    def test_group_export(self):
+        """
+        Test that when exporting just a group, its nodes are also exported
+        """
+        import os
+        import shutil
+        import tempfile
+
+        from aiida.orm import load_node
+        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.data.structure import StructureData
+        from aiida.orm.importexport import export
+        from aiida.common.datastructures import calc_states
+        from aiida.orm.querybuilder import QueryBuilder
+
+        # Creating a folder for the import/export files
+        temp_folder = tempfile.mkdtemp()
+        try:
+            # Create another user
+            new_email = "newuser@new.n"
+            user = self.backend.users.create(email=new_email)
+            user.store()
+
+            # Create a structure data node
+            sd1 = StructureData()
+            sd1.set_user(user)
+            sd1.label = 'sd1'
+            sd1.store()
+
+            # Create a group and add the data inside
+            from aiida.orm.group import Group
+            g1 = Group(name="node_group")
+            g1.store()
+            g1.add_nodes([sd1])
+            g1_uuid = g1.uuid
+
+            # At this point we export the generated data
+            filename1 = os.path.join(temp_folder, "export1.tar.gz")
+            export([g1], outfile=filename1, silent=True)
+            n_uuids = [sd1.uuid]
+            self.clean_db()
+            self.insert_data()
+            import_data(filename1, silent=True)
+
+            # Check that the imported nodes are correctly imported and that
+            # the user assigned to the nodes is the right one
+            for uuid in n_uuids:
+                self.assertEquals(load_node(uuid).get_user().email, new_email)
+
+            # Check that the exported group is imported correctly
+            qb = QueryBuilder()
+            qb.append(Group, filters={'uuid': {'==': g1_uuid}})
+            self.assertEquals(qb.count(), 1, "The group was not found.")
+        finally:
+            # Deleting the created temporary folder
+            shutil.rmtree(temp_folder, ignore_errors=True)
+
     def test_workfunction_1(self):
         import shutil, os, tempfile
 
@@ -1596,6 +1653,57 @@ class TestLinks(AiidaTestCase):
         ]
 
         return graph_nodes, export_list[export_combination]
+
+    def test_data_create_reversed_false(self):
+        """Verify that create_reversed = False is respected when only exporting Data nodes."""
+        import os
+        import shutil
+        import tempfile
+
+        from aiida.common.datastructures import calc_states
+        from aiida.orm import Data, Group
+        from aiida.orm.data.base import Int
+        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.importexport import export
+        from aiida.common.links import LinkType
+        from aiida.orm.querybuilder import QueryBuilder
+
+        tmp_folder = tempfile.mkdtemp()
+
+        try:
+            data_input = Int(1).store()
+            data_output = Int(2).store()
+
+            calc = JobCalculation()
+            calc.set_computer(self.computer)
+            calc.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
+            calc.store()
+
+            calc.add_link_from(data_input, 'input', link_type=LinkType.INPUT)
+            calc._set_state(calc_states.PARSING)
+            data_output.add_link_from(calc, 'create', link_type=LinkType.CREATE)
+
+            group = Group.create(name='test_group')
+            group.add_nodes(data_output)
+
+            export_file = os.path.join(tmp_folder, 'export.tar.gz')
+            export([group], outfile=export_file, silent=True, create_reversed=False)
+
+            self.clean_db()
+            self.insert_data()
+
+            import_data(export_file, silent=True)
+
+            builder = QueryBuilder()
+            builder.append(Data)
+            self.assertEqual(builder.count(), 1, 'Expected a single Data node but got {}'.format(builder.count()))
+            self.assertEqual(builder.all()[0][0].uuid, data_output.uuid)
+
+            builder = QueryBuilder()
+            builder.append(JobCalculation)
+            self.assertEqual(builder.count(), 0, 'Expected no Calculation nodes')
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)
 
     def test_complex_workflow_graph_links(self):
         """

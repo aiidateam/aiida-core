@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """A utility module with simple functions to format variables into strings for cli outputs."""
 
 from __future__ import absolute_import
@@ -40,7 +48,7 @@ def format_state(process_state, paused=None, exit_status=None):
             symbol = u'\u23F5'
     else:
         # Unknown process state, use invisible separator
-        symbol = u'\x00\xA0'
+        symbol = u'\u00B7'  # middle dot
 
     if process_state == 'finished' and exit_status is not None:
         return u'{} {} [{}]'.format(symbol, format_process_state(process_state), exit_status)

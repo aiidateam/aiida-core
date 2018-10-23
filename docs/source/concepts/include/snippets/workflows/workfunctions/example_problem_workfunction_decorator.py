@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from aiida.work.workfunctions import workfunction
 
 a = 1

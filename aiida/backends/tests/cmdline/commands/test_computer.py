@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """Tests for the 'verdi computer' command."""
 from __future__ import absolute_import
 import os
@@ -502,13 +511,11 @@ class TestVerdiComputerCommands(AiidaTestCase):
         """
         Prepare the computer and user
         """
-        from aiida.control.computer import configure_computer
-
         self.user = self.backend.users.get_automatic_user()
 
         # I need to configure the computer here; being 'local',
         # there should not be any options asked here
-        configure_computer(self.comp)
+        self.comp.configure()
 
         assert self.comp.is_user_configured(self.user), "There was a problem configuring the test computer"
         self.runner = CliRunner()

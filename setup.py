@@ -145,5 +145,5 @@ if __name__ == '__main__':
             ]
         },
         scripts=['bin/runaiida'],
-        long_description=open(path.join(aiida_folder, 'README.rst')).read(),
+        long_description=open(path.join(aiida_folder, 'README.md')).read(),
     )

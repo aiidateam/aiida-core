@@ -430,7 +430,10 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
         db_nodes_uuid = set(relevant_db_nodes.keys())
         # ~ dbnode_model = get_class_string(models.DbNode)
         # ~ print(dbnode_model)
-        import_nodes_uuid = set(v['uuid'] for v in data['export_data'][NODE_ENTITY_NAME].values())
+        if NODE_ENTITY_NAME in data['export_data']:
+            import_nodes_uuid = set(v['uuid'] for v in data['export_data'][NODE_ENTITY_NAME].values())
+        else:
+            import_nodes_uuid = set()
 
         # the combined set of linked_nodes and group_nodes was obtained from looking at all the links
         # the combined set of db_nodes_uuid and import_nodes_uuid was received from the staff actually referred to in export_data
@@ -956,8 +959,9 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
             for res in qb.iterall():
                 db_nodes_uuid.add(res[0])
 
-        for v in data['export_data'][NODE_ENTITY_NAME].values():
-            import_nodes_uuid.add(v['uuid'])
+        if NODE_ENTITY_NAME in data['export_data']:
+            for v in data['export_data'][NODE_ENTITY_NAME].values():
+                import_nodes_uuid.add(v['uuid'])
 
         unknown_nodes = linked_nodes.union(group_nodes) - db_nodes_uuid.union(
             import_nodes_uuid)
@@ -1729,6 +1733,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     given_calculation_entry_ids = set()
     given_group_entry_ids = set()
     given_computer_entry_ids = set()
+    given_groups = set()
 
     # I store a list of the actual dbnodes
     for entry in what:
@@ -1739,6 +1744,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
         entry_entity_name = schema_to_entity_names(entry_class_string)
         if issubclass(entry.__class__, Group):
             given_group_entry_ids.add(entry.pk)
+            given_groups.add(entry)
         elif issubclass(entry.__class__, Node):
             # The Code node should be treated as a Data node
             if (issubclass(entry.__class__, Data) or issubclass(entry.__class__, Code)):
@@ -1749,6 +1755,15 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             given_computer_entry_ids.add(entry.pk)
         else:
             raise ValueError("I was given {}, which is not a DbNode or DbGroup instance".format(entry))
+
+    # Add all the nodes contained within the specified groups
+    for group in given_groups:
+        for entry in group.nodes:
+            # The Code node should be treated as a Data nodes
+            if (issubclass(entry.__class__, Data) or issubclass(entry.__class__, Code)):
+                given_data_entry_ids.add(entry.pk)
+            elif issubclass(entry.__class__, Calculation):
+                given_calculation_entry_ids.add(entry.pk)
 
     # We will iteratively explore the AiiDA graph to find further nodes that
     # should also be exported.
@@ -1917,26 +1932,26 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
 
             # Case 2:
             # CREATE(Calculation, Data) - Reversed
-            qb = QueryBuilder()
-            qb.append(Calculation, tag='predecessor', project=['id'])
-            qb.append(Data, output_of='predecessor',
-                      filters={'id': {'==': curr_node_id}},
-                      edge_filters={
-                          'type': {
-                              '==': LinkType.CREATE.value}})
-            res = {_[0] for _ in qb.all()}
-            given_calculation_entry_ids.update(res - to_be_exported)
-            # The same until Code becomes a subclass of Data
-            qb = QueryBuilder()
-            qb.append(Calculation, tag='predecessor', project=['id'])
-            qb.append(Code, output_of='predecessor',
-                      filters={'id': {'==': curr_node_id}},
-                      edge_filters={
-                          'type': {
-                              '==': LinkType.CREATE.value}})
-            res = {_[0] for _ in qb.all()}
-            given_calculation_entry_ids.update(res - to_be_exported)
-
+            if create_reversed:
+                qb = QueryBuilder()
+                qb.append(Calculation, tag='predecessor', project=['id'])
+                qb.append(Data, output_of='predecessor',
+                          filters={'id': {'==': curr_node_id}},
+                          edge_filters={
+                              'type': {
+                                  '==': LinkType.CREATE.value}})
+                res = {_[0] for _ in qb.all()}
+                given_calculation_entry_ids.update(res - to_be_exported)
+                # The same until Code becomes a subclass of Data
+                qb = QueryBuilder()
+                qb.append(Calculation, tag='predecessor', project=['id'])
+                qb.append(Code, output_of='predecessor',
+                          filters={'id': {'==': curr_node_id}},
+                          edge_filters={
+                              'type': {
+                                  '==': LinkType.CREATE.value}})
+                res = {_[0] for _ in qb.all()}
+                given_calculation_entry_ids.update(res - to_be_exported)
 
     # Here we get all the columns that we plan to project per entity that we
     # would like to extract

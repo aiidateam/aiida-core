@@ -113,24 +113,24 @@ def cif_encode_contents(content, gzip=False, gzip_threshold=1024):
     elif gzip and len(content) >= gzip_threshold:
         # content is larger than some arbitrary value and should be gzipped
         method = 'gzip+base64'
-    elif len(re.findall('[^\x09\x0A\x0D\x20-\x7E]', content))/len(content) > 0.25:
+    elif len(re.findall(b'[^\x09\x0A\x0D\x20-\x7E]', content))/len(content) > 0.25:
         # contents are assumed to be binary
         method = 'base64'
-    elif re.search('^\s*data_',content) is not None or \
-         re.search('\n\s*data_',content) is not None:
+    elif re.search(b'^\s*data_',content) is not None or \
+         re.search(b'\n\s*data_',content) is not None:
         # contents have CIF datablock header-like lines, that may be
         # dangerous when parsed with primitive parsers
         method = 'base64'
-    elif re.search('.{2048}.',content) is not None:
+    elif re.search(b'.{2048}.',content) is not None:
         # lines are too long
         method = 'quoted-printable'
-    elif len(re.findall('[^\x09\x0A\x0D\x20-\x7E]', content)) > 0:
+    elif len(re.findall(b'[^\x09\x0A\x0D\x20-\x7E]', content)) > 0:
         # contents have non-ASCII symbols
         method = 'quoted-printable'
-    elif re.search('^;', content) is not None or re.search('\n;', content) is not None:
+    elif re.search(b'^;', content) is not None or re.search(b'\n;', content) is not None:
         # content has lines starting with semicolon (';')
         method = 'quoted-printable'
-    elif re.search('\t', content) is not None:
+    elif re.search(b'\t', content) is not None:
         # content has TAB symbols, which may be lost during the
         # parsing of TCOD CIF file
         method = 'quoted-printable'
@@ -530,14 +530,14 @@ def _collect_files(base, path=''):
     from aiida.common.utils import md5_file,sha1_file
     import os
 
-    def get_dict(base, path):
+    def get_dict(name, full_path):
         # note: we assume file is already utf8-encoded
-        with io.open(os.path.join(base,path), mode='rb') as f:
+        with io.open(full_path, mode='rb') as f:
             the_dict = {
                 'name': path,
                 'contents': f.read(),
-                'md5': md5_file(os.path.join(base,path)),
-                'sha1': sha1_file(os.path.join(base,path)),
+                'md5': md5_file(full_path),
+                'sha1': sha1_file(full_path),
                 'type': 'file',
             }
         return the_dict
@@ -562,19 +562,21 @@ def _collect_files(base, path=''):
         return sorted(files_now,key=get_filename)
     elif path == '.aiida/calcinfo.json':
         files = []
-        files.append(get_dict(base, path))
+        files.append(get_dict(name=path, full_path=os.path.join(base, path)))
 
         import json
         with open(os.path.join(base,path)) as f:
             calcinfo = json.load(f)
         if 'local_copy_list' in calcinfo:
             for local_copy in calcinfo['local_copy_list']:
-                files.append(get_dict("", local_copy[0]))
+                files.append(get_dict(name=os.path.normpath(local_copy[1]), 
+                        full_path=local_copy[0]))
 
         return files
 
     else:
-        return get_dict(base, path)
+        tmp = get_dict(name=path, full_path=os.path.join(base, path))
+        return [tmp]
 
 
 def extend_with_cmdline_parameters(parser, expclass="Data"):

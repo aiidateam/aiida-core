@@ -26,9 +26,9 @@ class TestCodDbImporter(AiidaTestCase):
     """
     from aiida.orm.data.cif import has_pycifrw
 
-    @unittest.skipIf(six.PY3, "Broken on Python 3")
     def test_query_construction_1(self):
         from aiida.tools.dbimporters.plugins.cod import CodDbImporter
+        import re
 
         codi = CodDbImporter()
         q = codi.query_sql(id=["1000000", 3000000],
@@ -43,12 +43,18 @@ class TestCodDbImporter(AiidaTestCase):
                            measurement_temp=[0, 10.5],
                            measurement_pressure=[1000, 1001],
                            determination_method=["single crystal", None])
+
+        # Rounding errors occurr in Python 2 and Python 3 thus they are averted using
+        # the following precision stripping regular expressions.
+        q = re.sub(r'(\d\.\d{6})\d+', r'\1', q)
+        q = re.sub(r'(120.00)39+', r'\g<1>4', q)
+
         self.assertEquals(q, \
                           "SELECT file, svnrevision FROM data WHERE "
                           "(status IS NULL OR status != 'retracted') AND "
-                          "(a BETWEEN 3.33233333333 AND 3.33433333333 OR "
+                          "(a BETWEEN 3.332333 AND 3.334333 OR "
                           "a BETWEEN 0.999 AND 1.001) AND "
-                          "(alpha BETWEEN 1.66566666667 AND 1.66766666667 OR "
+                          "(alpha BETWEEN 1.665666 AND 1.667666 OR "
                           "alpha BETWEEN -0.001 AND 0.001) AND "
                           "(chemname LIKE '%caffeine%' OR "
                           "chemname LIKE '%serotonine%') AND "
@@ -66,7 +72,6 @@ class TestCodDbImporter(AiidaTestCase):
                           "(vol BETWEEN 99.999 AND 100.001 OR "
                           "vol BETWEEN 120.004 AND 120.006)")
 
-    @unittest.skipIf(six.PY3, "Broken on Python 3")
     def test_datatype_checks(self):
         """
         Rather complicated, but wide-coverage test for data types, accepted
@@ -92,7 +97,7 @@ class TestCodDbImporter(AiidaTestCase):
                    codi._volume_clause]
         results = [[0, 4, 4, 0, 1, 1],
                    [0, 0, 0, 0, 1, 1],
-                   [2, 0, 2, 0, 2, 2],
+                   [2, 0, 0, 0, 2, 2],
                    [0, 0, 0, 0, 1, 1],
                    [2, 0, 0, 0, 2, 2],
                    [0, 3, 3, 3, 0, 3]]
@@ -106,7 +111,6 @@ class TestCodDbImporter(AiidaTestCase):
                     message = str(exc)
                 self.assertEquals(message, messages[results[i][j]])
 
-    @unittest.skipIf(six.PY3, "Broken on Python 3")
     def test_dbentry_creation(self):
         """
         Tests the creation of CodEntry from CodSearchResults.
@@ -132,7 +136,6 @@ class TestCodDbImporter(AiidaTestCase):
                            "http://www.crystallography.net/cod/2000000.cif@1234"])
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
-    @unittest.skipIf(six.PY3, "Broken on Python 3")
     def test_dbentry_to_cif_node(self):
         """
         Tests the creation of CifData node from CodEntry.
@@ -159,7 +162,6 @@ class TestCodDbImporter(AiidaTestCase):
         })
 
 
-@unittest.skipIf(six.PY3, "Broken on Python 3")
 class TestTcodDbImporter(AiidaTestCase):
     """
     Test the TcodDbImporter class.
@@ -189,7 +191,6 @@ class TestTcodDbImporter(AiidaTestCase):
                            "http://www.crystallography.net/tcod/20000000.cif@1234"])
 
 
-@unittest.skipIf(six.PY3, "Broken on Python 3")
 class TestPcodDbImporter(AiidaTestCase):
     """
     Test the PcodDbImporter class.
@@ -213,7 +214,6 @@ class TestPcodDbImporter(AiidaTestCase):
                           ["http://www.crystallography.net/pcod/cif/1/123/12345678.cif"])
 
 
-@unittest.skipIf(six.PY3, "Broken on Python 3")
 class TestMpodDbImporter(AiidaTestCase):
     """
     Test the MpodDbImporter class.

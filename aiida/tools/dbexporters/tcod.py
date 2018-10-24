@@ -463,29 +463,33 @@ def _collect_calculation_data(calc):
         stderr_name = '{}.err'.format(aiida_executable_name)
         while stderr_name in [files_in,files_out]:
             stderr_name = '_{}'.format(stderr_name)
+        # Output/error of schedulers are converted to bytes as file contents have to be bytes.
         if calc.get_scheduler_output() is not None:
+            scheduler_output = calc.get_scheduler_output().encode('utf-8')
             files_out.append({
                 'name'    : stdout_name,
-                'contents': calc.get_scheduler_output(),
-                'md5'     : hashlib.md5(calc.get_scheduler_output()).hexdigest(),
-                'sha1'    : hashlib.sha1(calc.get_scheduler_output()).hexdigest(),
+                'contents': scheduler_output,
+                'md5'     : hashlib.md5(scheduler_output).hexdigest(),
+                'sha1'    : hashlib.sha1(scheduler_output).hexdigest(),
                 'role'    : 'stdout',
                 'type'    : 'file',
                 })
             this_calc['stdout'] = stdout_name
         if calc.get_scheduler_error() is not None:
+            scheduler_error = calc.get_scheduler_error().encode('utf-8')
             files_out.append({
                 'name'    : stderr_name,
-                'contents': calc.get_scheduler_error(),
-                'md5'     : hashlib.md5(calc.get_scheduler_error()).hexdigest(),
-                'sha1'    : hashlib.sha1(calc.get_scheduler_error()).hexdigest(),
+                'contents': scheduler_error,
+                'md5'     : hashlib.md5(scheduler_error).hexdigest(),
+                'sha1'    : hashlib.sha1(scheduler_error).hexdigest(),
                 'role'    : 'stderr',
                 'type'    : 'file',
                 })
             this_calc['stderr'] = stderr_name
     elif isinstance(calc, InlineCalculation):
         # Calculation is InlineCalculation
-        python_script = _inline_to_standalone_script(calc)
+        # Contents of scripts are converted to bytes as file contents have to be bytes.
+        python_script = _inline_to_standalone_script(calc).encode('utf-8')
         files_in.append({
             'name'    : inline_executable_name,
             'contents': python_script,
@@ -494,6 +498,7 @@ def _collect_calculation_data(calc):
             'type'    : 'file',
             })
         shell_script = '#!/bin/bash\n\nverdi run {}\n'.format(inline_executable_name)
+        shell_script = shell_script.encode('utf-8')
         files_in.append({
             'name'    : aiida_executable_name,
             'contents': shell_script,
@@ -702,7 +707,7 @@ def _collect_tags(node, calc,parameters=None,
         tags['_tcod_computation_reference_uuid'].append(step['uuid'])
         if 'env' in step:
             tags['_tcod_computation_environment'].append(
-                "\n".join(["%s=%s" % (key,step['env'][key]) for key in step['env']]))
+                "\n".join(["%s=%s" % (key,step['env'][key]) for key in sorted(step['env'])]))
         else:
             tags['_tcod_computation_environment'].append('')
         if 'stdout' in step and step['stdout'] is not None:

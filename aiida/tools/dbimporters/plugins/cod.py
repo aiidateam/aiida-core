@@ -70,7 +70,7 @@ class CodDbImporter(DbImporter):
         Returns SQL query predicate for querying formula fields.
         """
         for e in values:
-            if not isinstance(e, str):
+            if not isinstance(e, six.string_types):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
         return self._str_exact_clause(key, \

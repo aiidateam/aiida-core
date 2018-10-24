@@ -151,8 +151,7 @@ class TestTcodDbExporter(AiidaTestCase):
     @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     @unittest.skipIf(not has_nwchem_plugin(), "NWChem plugin is not installed")
-    @unittest.skipIf(six.PY3, "Broken on Python 3")
-    def test_cif_structure_roundtrip(self): # solved, PR: 2087
+    def test_cif_structure_roundtrip(self):
         from aiida.tools.dbexporters.tcod import export_cif, export_values
         from aiida.orm import Code
         from aiida.orm import JobCalculation
@@ -217,7 +216,7 @@ class TestTcodDbExporter(AiidaTestCase):
             calc.add_link_from(cif, "cif")
 
         calc.store()
-        calc._set_state(calc_states.SUBMITTING)
+        calc._set_state(calc_states.TOSUBMIT)
         with SandboxFolder() as f:
             calc._store_raw_input_folder(f.abspath)
 
@@ -233,6 +232,7 @@ class TestTcodDbExporter(AiidaTestCase):
             f.flush()
 
         fd.store()
+        calc._set_state(calc_states.PARSING)
         fd.add_link_from(calc, calc._get_linkname_retrieved(), LinkType.CREATE)
 
         pd.add_link_from(calc, "calc", LinkType.CREATE)
@@ -328,8 +328,7 @@ class TestTcodDbExporter(AiidaTestCase):
     @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     @unittest.skipIf(not has_nwchem_plugin(), "NWChem plugin is not installed")
-    @unittest.skipIf(six.PY3, "Broken on Python 3")
-    def test_inline_export(self): # solved, PR: 2090
+    def test_inline_export(self):
         from aiida.orm.data.cif import CifData
         from aiida.tools.dbexporters.tcod import export_values
         import tempfile

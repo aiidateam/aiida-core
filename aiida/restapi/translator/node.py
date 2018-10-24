@@ -385,7 +385,7 @@ class NodeTranslator(BaseTranslator):
 
         return results
 
-    def get_visualization_data(self, node, format=None):
+    def get_visualization_data(self, node, visformat=None):
         """
         Generic function to get the data required to visualize the node with
         a specific plugin.
@@ -394,6 +394,7 @@ class NodeTranslator(BaseTranslator):
         to the resource
 
         :param node: node object that has to be visualized
+        :param visformat: visualization format
         :returns: data selected and serializaed for visualization
         """
 
@@ -411,11 +412,11 @@ class NodeTranslator(BaseTranslator):
             if subclass._aiida_type.split('.')[-1] == tclass.__name__:
                 lowtrans = subclass
 
-        visualization_data = lowtrans.get_visualization_data(node, format=format)
+        visualization_data = lowtrans.get_visualization_data(node, visformat=visformat)
 
         return visualization_data
 
-    def get_downloadable_data(self, node, format=None):
+    def get_downloadable_data(self, node, download_format=None):
         """
         Generic function to download file in specified format.
         Actual definition is in child classes as the content to be
@@ -423,7 +424,7 @@ class NodeTranslator(BaseTranslator):
         to the resource
 
         :param node: node object
-        :param format: file extension format
+        :param download_format: file extension format
         :returns: data in selected format to download
         """
 
@@ -441,7 +442,7 @@ class NodeTranslator(BaseTranslator):
             if subclass._aiida_type.split('.')[-1] == tclass.__name__:
                 lowtrans = subclass
 
-        downloadable_data = lowtrans.get_downloadable_data(node, format=format)
+        downloadable_data = lowtrans.get_downloadable_data(node, download_format=download_format)
 
         return downloadable_data
 

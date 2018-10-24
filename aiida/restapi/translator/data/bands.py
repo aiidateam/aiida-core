@@ -7,8 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+Translator for bands data
+"""
+
 from __future__ import absolute_import
 from aiida.restapi.translator.data import DataTranslator
+
 
 class BandsDataTranslator(DataTranslator):
     """
@@ -32,20 +37,14 @@ class BandsDataTranslator(DataTranslator):
         Initialise the parameters.
         Create the basic query_help
         """
-        super(BandsDataTranslator, self).__init__(Class=self.__class__,
-                                                  **kwargs)
+        super(BandsDataTranslator, self).__init__(Class=self.__class__, **kwargs)
 
     @staticmethod
-    def get_visualization_data(node, format=None):
+    def get_visualization_data(node, visformat=None):
         """
-
         Returns: data in a format required by dr.js to visualize a 2D plot
         with multiple data series.
 
-        """
-
-
-        """
         Strategy: I take advantage of the export functionality of BandsData
         objects. The raw export has to be filtered for string escape characters.
         this is done by decoding the string returned by node._exportcontent.
@@ -55,27 +54,26 @@ class BandsDataTranslator(DataTranslator):
         """
 
         import ujson as uj
-        json_string = node._exportcontent('json', comments=False)
+        json_string = node._exportcontent('json', comments=False)  # pylint: disable=protected-access
         json_content = uj.decode(json_string[0])
 
         # Add Ylabel which by default is not exported
-        Y_label = node.label + ' ({})'.format(node.get_attr('units'))
-        json_content['Y_label'] = Y_label
+        y_label = node.label + ' ({})'.format(node.get_attr('units'))
+        json_content['Y_label'] = y_label
 
         return json_content
 
     @staticmethod
-    def get_downloadable_data(node, format=None):
+    def get_downloadable_data(node, download_format=None):
         """
         Generic function extented for kpoints data. Currently
         it is not implemented.
 
         :param node: node object that has to be visualized
-        :param format: file extension format
+        :param download_format: file extension format
         :returns: raise RestFeatureNotAvailable exception
         """
 
         from aiida.restapi.common.exceptions import RestFeatureNotAvailable
 
         raise RestFeatureNotAvailable("This endpoint is not available for Bands.")
-

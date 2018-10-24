@@ -249,7 +249,7 @@ class DbEntry(object):
         """
         from hashlib import md5
         self._contents = contents
-        self.source['source_md5'] = md5(self._contents).hexdigest()
+        self.source['source_md5'] = md5(self._contents.encode("utf-8")).hexdigest()
 
 
 class CifEntry(DbEntry):

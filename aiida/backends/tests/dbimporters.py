@@ -130,7 +130,6 @@ class TestCodDbImporter(AiidaTestCase):
                            "http://www.crystallography.net/cod/2000000.cif@1234"])
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
-    @unittest.skipIf(six.PY3, "Broken on Python 3")
     def test_dbentry_to_cif_node(self):
         """
         Tests the creation of CifData node from CodEntry.

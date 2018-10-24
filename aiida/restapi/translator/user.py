@@ -7,6 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Translator for user"""
+
 from __future__ import absolute_import
 from aiida.restapi.translator.base import BaseTranslator
 
@@ -37,25 +39,33 @@ class UserTranslator(BaseTranslator):
     # All the values from column_order must present in additional info dict
     # Note: final schema will contain details for only the fields present in column order
     _schema_projections = {
-        "column_order": [
-            "id",
-            "first_name",
-            "last_name",
-            "email",
-            "institution",
-            "date_joined",
-            "last_login",
-            "is_active"
-        ],
+        "column_order":
+        ["id", "first_name", "last_name", "email", "institution", "date_joined", "last_login", "is_active"],
         "additional_info": {
-            "id": {"is_display": True},
-            "first_name": {"is_display": True},
-            "last_name": {"is_display": True},
-            "email": {"is_display": True},
-            "institution": {"is_display": True},
-            "date_joined": {"is_display": False},
-            "last_login": {"is_display": False},
-            "is_active": {"is_display": False}
+            "id": {
+                "is_display": True
+            },
+            "first_name": {
+                "is_display": True
+            },
+            "last_name": {
+                "is_display": True
+            },
+            "email": {
+                "is_display": True
+            },
+            "institution": {
+                "is_display": True
+            },
+            "date_joined": {
+                "is_display": False
+            },
+            "last_login": {
+                "is_display": False
+            },
+            "is_active": {
+                "is_display": False
+            }
         }
     }
 

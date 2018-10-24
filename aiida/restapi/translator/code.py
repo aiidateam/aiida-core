@@ -7,9 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+Translator for code
+"""
 
 from __future__ import absolute_import
 from aiida.restapi.translator.node import NodeTranslator
+
 
 class CodeTranslator(NodeTranslator):
     """

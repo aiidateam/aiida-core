@@ -318,14 +318,10 @@
         aiida/restapi/common/__init__.py|
         aiida/restapi/common/exceptions.py|
         aiida/restapi/common/utils.py|
-        aiida/restapi/run_api.py|
         aiida/restapi/translator/base.py|
-        aiida/restapi/translator/code.py|
-        aiida/restapi/translator/computer.py|
-        aiida/restapi/translator/group.py|
-        aiida/restapi/translator/__init__.py|
         aiida/restapi/translator/node.py|
-        aiida/restapi/translator/user.py|
+        aiida/restapi/run_api.py|
+        aiida/restapi/resource.py|
         aiida/scheduler/datastructures.py|
         aiida/scheduler/__init__.py|
         aiida/scheduler/plugins/direct.py|

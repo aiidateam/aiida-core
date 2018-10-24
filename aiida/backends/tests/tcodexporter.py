@@ -217,7 +217,7 @@ class TestTcodDbExporter(AiidaTestCase):
             calc.add_link_from(cif, "cif")
 
         calc.store()
-        calc._set_state(calc_states.SUBMITTING)
+        calc._set_state(calc_states.TOSUBMIT)
         with SandboxFolder() as f:
             calc._store_raw_input_folder(f.abspath)
 
@@ -233,6 +233,7 @@ class TestTcodDbExporter(AiidaTestCase):
             f.flush()
 
         fd.store()
+        calc._set_state(calc_states.PARSING)
         fd.add_link_from(calc, calc._get_linkname_retrieved(), LinkType.CREATE)
 
         pd.add_link_from(calc, "calc", LinkType.CREATE)

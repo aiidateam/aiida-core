@@ -14,12 +14,16 @@ Unittests for aiida.common.hashing:make_hash with hardcoded hash values
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import unittest
 import itertools
 from datetime import datetime
 
 import six
 import numpy as np
+
+try:
+    import unittest2 as unittest
+except ImportError:
+    import unittest
 
 from aiida.common.hashing import make_hash, create_unusable_pass, is_password_usable
 from aiida.common.folders import SandboxFolder

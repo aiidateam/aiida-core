@@ -32,6 +32,7 @@ from itertools import chain
 import six
 from six.moves import range
 from passlib.context import CryptContext
+import pytz
 
 try:  # Python3
     from functools import singledispatch
@@ -254,7 +255,19 @@ def _(val, **kwargs):
 @_make_hash.register(datetime)
 def _(val, **kwargs):
     """hashes the little-endian rep of the float <epoch-seconds>.<subseconds>"""
-    return [_single_digest('datetime', struct.pack("<d", (val - datetime(1970, 1, 1)).total_seconds()))]
+
+    # see also https://stackoverflow.com/a/8778548 for an excellent elaboration
+
+    if six.PY2:
+        if val.tzinfo is not None and val.utcoffset() is not None:
+            val = val.replace(tzinfo=None) - val.utcoffset()
+        timestamp = (val - datetime(1970, 1, 1)).total_seconds()
+    else:
+        if val.tzinfo is None or val.utcoffset() is None:
+            val = val.replace(tzinfo=pytz.utc)
+        timestamp = val.timestamp()
+
+    return [_single_digest('datetime', struct.pack("<d", timestamp))]
 
 
 @_make_hash.register(uuid.UUID)

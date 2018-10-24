@@ -20,6 +20,7 @@ import uuid
 from datetime import datetime
 
 import numpy as np
+import pytz
 
 try:
     import unittest2 as unittest
@@ -130,10 +131,19 @@ class MakeHashTest(unittest.TestCase):
         self.assertNotEqual(make_hash(some_uuid), make_hash(str(some_uuid)))
 
     def test_datetime(self):
+        # test for timezone-naive datetime:
         self.assertEqual(
             make_hash(datetime(2018, 8, 18, 8, 18)), 'c5ba00262f54deb718601b44dea01765ce009fd08f31967f2e65b7050b036426')
         self.assertEqual(
             make_hash(datetime.utcfromtimestamp(0)), 'a4de78590a7a290f0446f15c68639f5be3a4dde9140606cf6edcdcfc6bb8b5b0')
+
+        # test with timezone-aware datetime:
+        self.assertEqual(
+            make_hash(datetime(2018, 8, 18, 8, 18).replace(tzinfo=pytz.timezone('US/Eastern'))),
+            '2e7cb55d2a3982bd7a509aac0cb74c7dd485a9350d55eeb944bec3e1971d8dc0')
+        self.assertEqual(
+            make_hash(datetime(2018, 8, 18, 8, 18).replace(tzinfo=pytz.timezone('Europe/Amsterdam'))),
+            'd28a58c7af872bab9f07d2610e313bbd14de8530e62245ebc52821708883188f')
 
     def test_numpy_types(self):
         self.assertEqual(

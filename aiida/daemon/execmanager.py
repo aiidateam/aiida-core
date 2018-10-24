@@ -53,7 +53,7 @@ def upload_calculation(calculation, transport, calc_info, script_filename):
         return
 
     codes_info = calc_info.codes_info
-    input_codes = [load_node(_.code_uuid, sub_class=Code) for _ in codes_info]
+    input_codes = [load_node(_.code_uuid, sub_classes=(Code,)) for _ in codes_info]
 
     logger_extra = get_dblogger_extra(calculation)
     transport._set_logger_extra(logger_extra)

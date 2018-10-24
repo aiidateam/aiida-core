@@ -66,7 +66,6 @@ class TestCodDbImporter(AiidaTestCase):
                           "(vol BETWEEN 99.999 AND 100.001 OR "
                           "vol BETWEEN 120.004 AND 120.006)")
 
-    @unittest.skipIf(six.PY3, "Broken on Python 3")
     def test_datatype_checks(self):
         """
         Rather complicated, but wide-coverage test for data types, accepted
@@ -92,7 +91,7 @@ class TestCodDbImporter(AiidaTestCase):
                    codi._volume_clause]
         results = [[0, 4, 4, 0, 1, 1],
                    [0, 0, 0, 0, 1, 1],
-                   [2, 0, 2, 0, 2, 2],
+                   [2, 0, 0, 0, 2, 2],
                    [0, 0, 0, 0, 1, 1],
                    [2, 0, 0, 0, 2, 2],
                    [0, 3, 3, 3, 0, 3]]

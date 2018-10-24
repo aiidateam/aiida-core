@@ -108,13 +108,20 @@ class DbSearchResults(object):
             self._position = 0
             self._increment = increment
 
-        def next(self):
+        def __next__(self):
             pos = self._position
             if pos >= 0 and pos < len(self._results):
                 self._position = self._position + self._increment
                 return self._results[pos]
             else:
                 raise StopIteration()
+
+        def next(self):
+            """
+            The iterator method expected by python 2.x,
+            implemented as python 3.x style method.
+            """
+            return self.__next__()
 
     def __iter__(self):
         """

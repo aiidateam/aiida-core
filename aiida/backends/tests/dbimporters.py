@@ -106,7 +106,6 @@ class TestCodDbImporter(AiidaTestCase):
                     message = str(exc)
                 self.assertEquals(message, messages[results[i][j]])
 
-    @unittest.skipIf(six.PY3, "Broken on Python 3")
     def test_dbentry_creation(self):
         """
         Tests the creation of CodEntry from CodSearchResults.
@@ -159,7 +158,6 @@ class TestCodDbImporter(AiidaTestCase):
         })
 
 
-@unittest.skipIf(six.PY3, "Broken on Python 3")
 class TestTcodDbImporter(AiidaTestCase):
     """
     Test the TcodDbImporter class.
@@ -189,7 +187,6 @@ class TestTcodDbImporter(AiidaTestCase):
                            "http://www.crystallography.net/tcod/20000000.cif@1234"])
 
 
-@unittest.skipIf(six.PY3, "Broken on Python 3")
 class TestPcodDbImporter(AiidaTestCase):
     """
     Test the PcodDbImporter class.
@@ -213,7 +210,6 @@ class TestPcodDbImporter(AiidaTestCase):
                           ["http://www.crystallography.net/pcod/cif/1/123/12345678.cif"])
 
 
-@unittest.skipIf(six.PY3, "Broken on Python 3")
 class TestMpodDbImporter(AiidaTestCase):
     """
     Test the MpodDbImporter class.

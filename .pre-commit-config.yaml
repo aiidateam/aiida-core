@@ -320,7 +320,6 @@
         aiida/restapi/common/utils.py|
         aiida/restapi/run_api.py|
         aiida/restapi/translator/base.py|
-        aiida/restapi/translator/calculation/__init__.py|
         aiida/restapi/translator/code.py|
         aiida/restapi/translator/computer.py|
         aiida/restapi/translator/group.py|

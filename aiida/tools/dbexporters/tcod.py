@@ -276,7 +276,10 @@ def decode_textfield_ncr(content):
     import re
 
     def match2str(m):
-        return chr(int(m.group(1))).encode('utf-8')
+        if isinstance(m.group(1), str):
+            return chr(int(m.group(1)))
+        else:
+            return bytes([int(m.group(1))])
 
     return re.sub(b'&#(\d+);', match2str, content)
 

@@ -517,7 +517,6 @@ class TestTcodDbExporter(AiidaTestCase):
         self.assertEqual(sorted(v['0'].keys()),
                          expected_tags)
 
-    @unittest.skipIf(six.PY3, "Broken on Python 3")
     def test_contents_encoding_2(self):
         """
         Testing the logic of choosing the encoding and the process of
@@ -578,14 +577,14 @@ class TestTcodDbExporter(AiidaTestCase):
         check_quoted_printable(self, b';\n', b'=3B\n')
         check_quoted_printable(self, b'line\n;line', b'line\n=3Bline')
         check_quoted_printable(self, b'tabbed\ttext', b'tabbed=09text')
-        check_quoted_printable(self, 'angstrom Å'.encode('utf-8'), b'angstrom =C3=85')
+        check_quoted_printable(self, u'angstrom Å'.encode('utf-8'), b'angstrom =C3=85')
         check_quoted_printable(self, b'line\rline\x00', b'line=0Dline=00')
         # This one is particularly tricky: a long line is folded by the QP
         # and the semicolon sign becomes the first character on a new line.
         check_quoted_printable(self,
-                              "Å{};a".format("".join("a" for i in range(0, 69))),
-                              '=C3=85aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-                              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaa=\n=3Ba')
+                              u"Å{};a".format("".join("a" for i in range(0, 69))).encode('utf-8'),
+                              b'=C3=85aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+                              b'aaaaaaaaaaaaaaaaaaaaaaaaaaaaa=\n=3Ba')
 
-        check_base64(self, 'angstrom ÅÅÅ', 'YW5nc3Ryb20gw4XDhcOF')
-        check_gzip_base64(self, 'angstrom ÅÅÅ')
+        check_base64(self, u'angstrom ÅÅÅ'.encode('utf-8'), b'YW5nc3Ryb20gw4XDhcOF')
+        check_gzip_base64(self, u'angstrom ÅÅÅ'.encode('utf-8'))

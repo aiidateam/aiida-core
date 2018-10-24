@@ -21,8 +21,23 @@ from datetime import datetime
 import six
 import numpy as np
 
-from aiida.common.hashing import make_hash
+from aiida.common.hashing import make_hash, create_unusable_pass, is_password_usable
 from aiida.common.folders import SandboxFolder
+
+
+class PasswordFunctions(unittest.TestCase):
+    """
+    Tests for the password hashing functions.
+    """
+
+    def test_unusable_password(self):
+        self.assertTrue(create_unusable_pass().startswith('!'))
+        self.assertTrue(len(create_unusable_pass()) > 20)
+
+    def test_is_usable(self):
+        self.assertFalse(is_password_usable(None))
+        self.assertFalse(is_password_usable('!foo'))
+        self.assertFalse(is_password_usable('random string without hash identification'))
 
 
 class MakeHashTest(unittest.TestCase):

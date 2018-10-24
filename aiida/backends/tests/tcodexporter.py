@@ -10,6 +10,8 @@
 """
 Tests for TestTcodDbExporter
 """
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 import unittest
 
@@ -359,7 +361,7 @@ class TestTcodDbExporter(AiidaTestCase):
         s = a._get_aiida_structure(store=True)
         val = export_values(s)
         script = val.first_block()['_tcod_file_contents'][1]
-        function = '_get_aiida_structure_ase_inline'
+        function = '_get_aiida_structure_pymatgen_inline'
         self.assertNotEqual(script.find(function), script.rfind(function))
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")

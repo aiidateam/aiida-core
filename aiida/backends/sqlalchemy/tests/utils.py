@@ -21,6 +21,8 @@ from PostgreSQL.
 """
 
 
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 from sqlalchemy_utils.functions.database import drop_database
 

@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 import json
 
@@ -237,8 +239,8 @@ class DbWorkflowData(Base):
             return instance, False
         else:
             params = dict((k, v) for k, v in kwargs.items() if not isinstance(v, ClauseElement))
-            instance = model(**params)
-            session.add(instance)
+            instance = self.__class__(**params)
+            instance.save()
             return instance, True
 
     def set_value(self, arg):

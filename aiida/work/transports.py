@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """A transport queue to batch process multiple tasks that require a Transport."""
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 from collections import namedtuple
 import contextlib

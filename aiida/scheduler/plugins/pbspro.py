@@ -11,6 +11,7 @@
 Plugin for PBSPro.
 This has been tested on PBSPro v. 12.
 """
+from __future__ import print_function
 from __future__ import division
 
 from __future__ import absolute_import

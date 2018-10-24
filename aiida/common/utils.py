@@ -13,6 +13,8 @@ miscellaneous utilities for different parts in AiiDA
 
 # pylint: disable=too-many-lines
 
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 import datetime
 import filecmp
@@ -859,9 +861,9 @@ class combomethod(object):  # pylint: disable=invalid-name,too-few-public-method
             def do(self, **kwargs):
                 isclass = kwargs.get('isclass')
                 if isclass:
-                    print "I am a class", self
+                    print("I am a class", self)
                 else:
-                    print "I am an instance", self
+                    print("I am an instance", self)
 
         A.do()
         A().do()

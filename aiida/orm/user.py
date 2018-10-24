@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Module for the ORM user classes yo
-"""
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -10,7 +7,12 @@ Module for the ORM user classes yo
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+Module for the ORM user classes yo
+"""
 
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 import abc
 

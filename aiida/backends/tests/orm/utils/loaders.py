@@ -13,17 +13,136 @@ from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import NotExistent
 from aiida.orm import Group, Node
-from aiida.orm.utils import load_group, load_node
+from aiida.orm.utils import load_entity, load_code, load_computer, load_group, load_node
+from aiida.orm.utils.loaders import NodeEntityLoader
 
 
 class TestOrmUtils(AiidaTestCase):
 
+    def test_load_entiy(self):
+        """Test the functionality of load_entity which is the base function for the other loader functions."""
+        entity_loader = NodeEntityLoader
+
+        with self.assertRaises(TypeError):
+            load_entity(entity_loader=None)
+
+        # No identifier keyword arguments specified
+        with self.assertRaises(ValueError):
+            load_entity(entity_loader)
+
+        # More than one identifier keyword arguments specified
+        with self.assertRaises(ValueError):
+            load_entity(entity_loader, identifier='a', pk=1)
+
+        with self.assertRaises(TypeError):
+            load_entity(entity_loader, pk='1')
+
+        with self.assertRaises(TypeError):
+            load_entity(entity_loader, uuid=1)
+
+        with self.assertRaises(TypeError):
+            load_entity(entity_loader, label=1)
+
+    def test_load_code(self):
+        """Test the functionality of load_code."""
+        from aiida.orm.code import Code
+
+        label = 'compy'
+        code = Code()
+        code.label = label
+        code.set_remote_computer_exec((self.computer, '/x.x'))
+        code.store()
+
+        # Load through full label
+        loaded_code = load_code(code.full_label)
+        self.assertEquals(loaded_code.uuid, code.uuid)
+
+        # Load through label
+        loaded_code = load_code(code.label)
+        self.assertEquals(loaded_code.uuid, code.uuid)
+
+        # Load through uuid
+        loaded_code = load_code(code.uuid)
+        self.assertEquals(loaded_code.uuid, code.uuid)
+
+        # Load through pk
+        loaded_code = load_code(code.pk)
+        self.assertEquals(loaded_code.uuid, code.uuid)
+
+        # Load through full label explicitly
+        loaded_code = load_code(label=code.full_label)
+        self.assertEquals(loaded_code.uuid, code.uuid)
+
+        # Load through label explicitly
+        loaded_code = load_code(label=code.label)
+        self.assertEquals(loaded_code.uuid, code.uuid)
+
+        # Load through uuid explicitly
+        loaded_code = load_code(uuid=code.uuid)
+        self.assertEquals(loaded_code.uuid, code.uuid)
+
+        # Load through pk explicitly
+        loaded_code = load_code(pk=code.pk)
+        self.assertEquals(loaded_code.uuid, code.uuid)
+
+        # Load through partial uuid
+        loaded_code = load_code(uuid=code.uuid[:2])
+        self.assertEquals(loaded_code.uuid, code.uuid)
+
+        # Load through partial uuid
+        loaded_code = load_code(uuid=code.uuid[:10])
+        self.assertEquals(loaded_code.uuid, code.uuid)
+
+        with self.assertRaises(NotExistent):
+            load_code('non-existent-uuid')
+
+    def test_load_computer(self):
+        """Test the functionality of load_group."""
+        computer = self.computer
+
+        # Load through label
+        loaded_computer = load_computer(computer.label)
+        self.assertEquals(loaded_computer.uuid, computer.uuid)
+
+        # Load through uuid
+        loaded_computer = load_computer(computer.uuid)
+        self.assertEquals(loaded_computer.uuid, computer.uuid)
+
+        # Load through pk
+        loaded_computer = load_computer(computer.pk)
+        self.assertEquals(loaded_computer.uuid, computer.uuid)
+
+        # Load through label explicitly
+        loaded_computer = load_computer(label=computer.label)
+        self.assertEquals(loaded_computer.uuid, computer.uuid)
+
+        # Load through uuid explicitly
+        loaded_computer = load_computer(uuid=computer.uuid)
+        self.assertEquals(loaded_computer.uuid, computer.uuid)
+
+        # Load through pk explicitly
+        loaded_computer = load_computer(pk=computer.pk)
+        self.assertEquals(loaded_computer.uuid, computer.uuid)
+
+        # Load through partial uuid
+        loaded_computer = load_computer(uuid=computer.uuid[:2])
+        self.assertEquals(loaded_computer.uuid, computer.uuid)
+
+        # Load through partial uuid
+        loaded_computer = load_computer(uuid=computer.uuid[:10])
+        self.assertEquals(loaded_computer.uuid, computer.uuid)
+
+        with self.assertRaises(NotExistent):
+            load_computer('non-existent-uuid')
+
     def test_load_group(self):
-        """
-        Test the functionality of load_group
-        """
+        """Test the functionality of load_group."""
         name = 'groupie'
         group = Group(name=name).store()
+
+        # Load through label
+        loaded_group = load_group(group.name)
+        self.assertEquals(loaded_group.uuid, group.uuid)
 
         # Load through uuid
         loaded_group = load_group(group.uuid)
@@ -31,6 +150,10 @@ class TestOrmUtils(AiidaTestCase):
 
         # Load through pk
         loaded_group = load_group(group.pk)
+        self.assertEquals(loaded_group.uuid, group.uuid)
+
+        # Load through label explicitly
+        loaded_group = load_group(label=group.name)
         self.assertEquals(loaded_group.uuid, group.uuid)
 
         # Load through uuid explicitly
@@ -53,9 +176,7 @@ class TestOrmUtils(AiidaTestCase):
             load_group('non-existent-uuid')
 
     def test_load_node(self):
-        """
-        Test the functionality of load_node
-        """
+        """Test the functionality of load_node."""
         node = Node().store()
 
         # Load through uuid

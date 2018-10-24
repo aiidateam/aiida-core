@@ -7,6 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 import json
 
@@ -148,7 +150,7 @@ class DjangoAuthInfo(AuthInfo):
         # Raises ValueError if data is not JSON-serializable
         self._dbauthinfo.auth_params = json.dumps(auth_params)
 
-    def get_metadata(self):
+    def _get_metadata(self):
         """
         Get the metadata dictionary from the DB
 
@@ -163,7 +165,7 @@ class DjangoAuthInfo(AuthInfo):
                 "Error while reading metadata for dbauthinfo, aiidauser={}, computer={}".format(
                     self.aiidauser.email, self.dbcomputer.hostname))
 
-    def set_metadata(self, metadata):
+    def _set_metadata(self, metadata):
         """
         Replace the metadata dictionary in the DB with the provided dictionary
         """

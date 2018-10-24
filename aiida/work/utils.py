@@ -9,14 +9,15 @@
 ###########################################################################
 # pylint: disable=invalid-name
 """Utilities for the workflow engine."""
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 import contextlib
 import logging
 
 from six.moves import range
 import tornado.ioloop
-from tornado.concurrent import Future
-from tornado.gen import coroutine, sleep, Return
+from tornado import concurrent, gen
 
 from aiida.common.links import LinkType
 from aiida.orm.calculation import Calculation, WorkCalculation, FunctionCalculation
@@ -30,15 +31,39 @@ PROCESS_STATE_CHANGE_DESCRIPTION = 'The last time a process of type {}, changed 
 PROCESS_CALC_TYPES = (WorkCalculation, FunctionCalculation)
 
 
-class CancelFlag(object):
-    """A simple container that can be passed by reference to signal that the task was cancelled."""
+class InterruptableFuture(concurrent.Future):
+    """A future that can be interrupted by calling `interrupt`."""
 
-    def __init__(self):
-        self.cancelled = False
+    def interrupt(self, reason):
+        """This method should be called to interrupt the coroutine represented by this InterruptableFuture."""
+        self.set_exception(reason)
 
-    @property
-    def is_cancelled(self):
-        return self.cancelled
+    @gen.coroutine
+    def with_interrupt(self, yieldable):
+        """
+        Yield a yieldable which will be interrupted if this future is interrupted ::
+
+            from tornado import ioloop, gen
+            loop = ioloop.IOLoop.current()
+
+            interruptable = InterutableFuture()
+            loop.add_callback(interruptable.interrupt, RuntimeError("STOP"))
+            loop.run_sync(lambda: interruptable.with_interrupt(gen.sleep(2)))
+            >>> RuntimeError: STOP
+
+
+        :param yieldable: The yieldable
+        :return: The result of the yieldable
+        """
+        # Wait for one of the two to finish, if it's us that finishes we expect that it was
+        # because of an exception that will have been raised automatically
+        wait_iterator = gen.WaitIterator(yieldable, self)
+        result = yield wait_iterator.next()  # pylint: disable=stop-iteration-return
+        if not wait_iterator.current_index == 0:
+            raise RuntimeError("This interruptible future had it's result set unexpectedly to {}".format(result))
+
+        result = yield [yieldable, self][0]
+        raise gen.Return(result)
 
 
 def interruptable_task(coro, loop=None):
@@ -50,23 +75,14 @@ def interruptable_task(coro, loop=None):
     :return: an InterruptableFuture
     """
 
-    class InterruptableFuture(Future):
-        """A future that can be interrupted by calling `interrupt`."""
-
-        def interrupt(self, reason):
-            """This method should be called to interrupt the coroutine represented by this InterruptableFuture."""
-            cancel_flag.cancelled = True
-            self.set_exception(reason)
-
     loop = loop or tornado.ioloop.IOLoop.current()
     future = InterruptableFuture()
-    cancel_flag = CancelFlag()
 
-    @coroutine
+    @gen.coroutine
     def execute_coroutine():
         """Coroutine that wraps the original coroutine and sets it result on the future only if not already set."""
         try:
-            result = yield coro(cancel_flag)
+            result = yield coro(future)
         except Exception as exception:  # pylint: disable=broad-except
             if not future.done():
                 future.set_exception(exception)
@@ -100,7 +116,7 @@ def ensure_coroutine(fct):
     return wrapper
 
 
-@coroutine
+@gen.coroutine
 def exponential_backoff_retry(fct, initial_interval=10.0, max_attempts=5, logger=None, ignore_exceptions=None):
     """
     Coroutine to call a function, recalling it with an exponential backoff in the case of an exception
@@ -136,14 +152,13 @@ def exponential_backoff_retry(fct, initial_interval=10.0, max_attempts=5, logger
                 logger.warning('maximum attempts %d of calling %s, exceeded', max_attempts, coro.__name__)
                 raise
             else:
-                import traceback
-                traceback.print_exc()
-                logger.warning('iteration %d of %s excepted, retrying after %d seconds', iteration + 1, coro.__name__,
-                               interval)
-                yield sleep(interval)
+                logger.exception('iteration %d of %s excepted, retrying after %d seconds', iteration + 1, coro.__name__,
+                                 interval)
+
+                yield gen.sleep(interval)
                 interval *= 2
 
-    raise Return(result)
+    raise gen.Return(result)
 
 
 def is_work_calc_type(calc_node):
@@ -278,3 +293,83 @@ def get_process_state_change_timestamp(process_type=None):
         return None
 
     return max(timestamps)
+
+
+class RefObjectStore(object):
+    """
+    An object store that has a reference count based on a context manager.
+    Basic usage::
+
+        store = RefObjectStore()
+        with store.get('Martin', lambda: 'martin.uhrin@epfl.ch') as email:
+            with store.get('Martin') as email2:
+                email is email2  # True
+
+    The use case for this store is when you have an object can be used by
+    multiple parts of the code simultaneously (nested or async code) and
+    where there should be one instance that exists for the lifetime of these
+    contexts.  Once noone is using the object, it should be removed from the
+    store (and therefore eventually garbage collected).
+    """
+
+    class Reference(object):
+        """
+        A reference to store the context reference count and the object
+        itself.
+        """
+
+        def __init__(self, obj):
+            self._count = 0
+            self._obj = obj
+
+        @property
+        def count(self):
+            """
+            Get the reference count for the object
+            :return: The reference count
+            :rtype: int
+            """
+            return self._count
+
+        @contextlib.contextmanager
+        def get(self):
+            """
+            Get the object itself.  This will up the reference count for the duration of
+            the context.
+            :return: The object
+            """
+            self._count += 1
+            try:
+                yield self._obj
+            finally:
+                self._count -= 1
+
+    def __init__(self):
+        self._objects = {}
+
+    @contextlib.contextmanager
+    def get(self, identifier, constructor=None):
+        """
+        Get or create an object.  The internal reference count will be upped for
+        the duration of the context.  If the reference count drops to 0 the object
+        will be automatically removed from the list.
+
+        :param identifier: The key identifying the object
+        :param constructor: An optional constructor that is called with no arguments
+            if the object doesn't already exist in the store
+        :return: The object corresponding to the identifier
+        """
+        try:
+            ref = self._objects[identifier]
+        except KeyError:
+            if constructor is None:
+                raise ValueError("Object not found and no constructor given")
+            ref = self.Reference(constructor())
+            self._objects[identifier] = ref
+
+        try:
+            with ref.get() as obj:
+                yield obj
+        finally:
+            if ref.count == 0:
+                self._objects.pop(identifier)

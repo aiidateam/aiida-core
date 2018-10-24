@@ -7,12 +7,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
+import unittest
 from tornado.ioloop import IOLoop
 from tornado.gen import coroutine
 
 from aiida.backends.testbase import AiidaTestCase
+import aiida.work as work
 from aiida.work.utils import exponential_backoff_retry
 
 ITERATION = 0
@@ -67,3 +70,65 @@ class TestExponentialBackoffRetry(AiidaTestCase):
             except Exception as e:
                 print(e)
                 raise
+
+
+class RefObjectsStore(unittest.TestCase):
+    def test_simple(self):
+        """ Test the reference counting works """
+        IDENTIFIER = 'a'
+        OBJECT = 'my string'
+        obj_store = work.utils.RefObjectStore()
+
+        with obj_store.get(IDENTIFIER, lambda: OBJECT) as obj:
+            # Make sure we got back the same object
+            self.assertIs(OBJECT, obj)
+
+            # Now check that the reference has the correct information
+            ref = obj_store._objects['a']
+            self.assertEqual(OBJECT, ref._obj)
+            self.assertEqual(1, ref.count)
+
+            # Now request the object again
+            with obj_store.get(IDENTIFIER) as obj2:
+                # ...and check the reference has had it's count upped
+                self.assertEqual(OBJECT, obj2)
+                self.assertEqual(2, ref.count)
+
+            # Now it should have been reduced
+            self.assertEqual(1, ref.count)
+
+        # Finally the store should be empty  (there are no more references)
+        self.assertEqual(0, len(obj_store._objects))
+
+    def test_get_no_constructor(self):
+        """
+        Test that trying to get an object that does exists and providing
+        no means to construct it fails
+        """
+        obj_store = work.utils.RefObjectStore()
+        with self.assertRaises(ValueError):
+            with obj_store.get('a'):
+                pass
+
+    def test_construct(self):
+        """ Test that construction only gets called when used """
+        IDENTIFIER = 'a'
+        OBJECT = 'my string'
+
+        # Use a list for a  single number so we can get references to it
+        times_constructed = [0, ]
+
+        def construct():
+            times_constructed[0] += 1
+            return OBJECT
+
+        obj_store = work.utils.RefObjectStore()
+        with obj_store.get(IDENTIFIER, construct):
+            self.assertEqual(1, times_constructed[0])
+            with obj_store.get(IDENTIFIER, construct):
+                self.assertEqual(1, times_constructed[0])
+
+        # Now the object should be removed and so another call to get
+        # should create
+        with obj_store.get(IDENTIFIER, construct):
+            self.assertEqual(2, times_constructed[0])

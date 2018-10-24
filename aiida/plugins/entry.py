@@ -15,6 +15,8 @@ location for the (implicit) definition of the registry format.
 """
 
 
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 class InvalidPluginEntryError(Exception):
     def __init__(self, msg=''):

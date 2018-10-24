@@ -7,6 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 import abc
 import six
@@ -59,10 +61,12 @@ class AuthInfoCollection(Collection):
 @six.add_metaclass(abc.ABCMeta)
 class AuthInfo(CollectionEntry):
     """
-    Base class to map a DbAuthInfo, that contains computer configuration
-    specific to a given user (authorization info and other metadata, like
-    how often to check on a given computer etc.)
+    Store the settings of a particular user on a given computer.
+    (e.g. authorization info and other metadata, like how often to check on a
+    given computer etc.)
     """
+
+    METADATA_WORKDIR = 'workdir'
 
     def pk(self):
         """
@@ -82,7 +86,7 @@ class AuthInfo(CollectionEntry):
         """
         Is the computer enabled for this user?
 
-        :return: Boolean
+        :rtype: bool
         """
         pass
 
@@ -97,10 +101,22 @@ class AuthInfo(CollectionEntry):
 
     @abc.abstractproperty
     def computer(self):
+        """
+        The computer that this authinfo relates to
+
+        :return: The corresponding computer
+        :rtype: :class:`aiida.orm.Computer`
+        """
         pass
 
     @abc.abstractproperty
     def user(self):
+        """
+        The user that this authinfo relates to
+
+        :return: The corresponding user
+        :rtype: :class:`aiida.orm.User`
+        """
         pass
 
     @abc.abstractproperty
@@ -109,6 +125,7 @@ class AuthInfo(CollectionEntry):
         Is it already stored or not?
 
         :return: Boolean
+        :rtype: bool
         """
         pass
 
@@ -131,7 +148,7 @@ class AuthInfo(CollectionEntry):
         pass
 
     @abc.abstractmethod
-    def get_metadata(self):
+    def _get_metadata(self):
         """
         Get the metadata dictionary
 
@@ -140,11 +157,22 @@ class AuthInfo(CollectionEntry):
         pass
 
     @abc.abstractmethod
-    def set_metadata(self, metadata):
+    def _set_metadata(self, metadata):
         """
         Replace the metadata dictionary in the DB with the provided dictionary
         """
         pass
+
+    def _get_property(self, name):
+        try:
+            return self._get_metadata()[name]
+        except KeyError:
+            raise ValueError('Unknown property: {}'.format(name))
+
+    def _set_property(self, name, value):
+        metadata = self._get_metadata()
+        metadata[name] = value
+        self._set_metadata(metadata)
 
     def get_workdir(self):
         """
@@ -152,11 +180,9 @@ class AuthInfo(CollectionEntry):
 
         :return: a string
         """
-        metadata = self.get_metadata()
-
         try:
-            return metadata['workdir']
-        except KeyError:
+            return self._get_property(self.METADATA_WORKDIR)
+        except ValueError:
             return self.computer.get_workdir()
 
     def __str__(self):

@@ -11,6 +11,8 @@
 Module for all scheduler related things
 """
 
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 from abc import ABCMeta, abstractmethod
 
@@ -20,7 +22,7 @@ import aiida.common
 from aiida.common.utils import classproperty, escape_for_bash
 from aiida.common.exceptions import AiidaException, FeatureNotAvailable
 from aiida.plugins.factory import BaseFactory
-from aiida.scheduler.datastructures import JobTemplate
+from aiida.scheduler.datastructures import JobTemplate, JobInfo, JOB_STATES
 
 
 def SchedulerFactory(entry_point):

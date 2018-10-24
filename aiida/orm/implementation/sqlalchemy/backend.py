@@ -7,6 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 from aiida.orm.backend import Backend
 
@@ -45,3 +47,7 @@ class SqlaBackend(Backend):
     @property
     def query_manager(self):
         return self._query_manager
+
+    def query_builder(self):
+        from aiida.orm.querybuilder import QueryBuilder
+        return QueryBuilder()

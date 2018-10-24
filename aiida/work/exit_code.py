@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """A namedtuple and namespace for ExitCodes that can be used to exit from Processes."""
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 from collections import namedtuple
 from aiida.common.extendeddicts import AttributeDict

@@ -10,6 +10,8 @@
 """
 This module defines the main data structures used by Calculations.
 """
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 from aiida.common.extendeddicts import DefaultFieldsAttributeDict, Enumerate
 

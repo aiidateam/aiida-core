@@ -18,6 +18,8 @@ the file system behind itself.
 These problems could also be addressed in tearDown methods of the test cases instead.
 It has not been done due to time constraints yet.
 """
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 import unittest
 import os

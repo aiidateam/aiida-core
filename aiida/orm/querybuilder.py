@@ -20,6 +20,7 @@ when instantiated by the user.
 """
 
 # Warnings are issued for deprecations:
+from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 import warnings
@@ -382,6 +383,7 @@ class QueryBuilder(object):
             # I have been passed a list of classes (hopefully) instead of a class.
             # Going through each element of the list/tuple/set:
             query_type_string = []
+            ormclass = None
             ormclasstype = []
             for i, c in enumerate(classifier):
                 ormclassifiers = func(c, self._impl)
@@ -798,10 +800,10 @@ class QueryBuilder(object):
                 self._tag_to_alias_map.pop(tag, None)
                 self._filters.pop(tag)
                 self._projections.pop(tag)
-                if edge_exists:
-                    self._tag_to_alias_map.pop(edge_tag)
-                    self._filters.pop(edge_tag)
-                    self._projections.pop(edge_tag)
+                if edge_tag is not None:
+                    self._tag_to_alias_map.pop(edge_tag, None)
+                    self._filters.pop(edge_tag, None)
+                    self._projections.pop(edge_tag, None)
                 # There's not more to clean up here!
                 raise e
 
@@ -900,10 +902,10 @@ class QueryBuilder(object):
                         for key in this_order_spec.keys():
                             if key not in allowed_keys:
                                 raise InputValidationError(
-                                    "The allowed key for an order specification\n"
+                                    "The allowed keys for an order specification\n"
                                     "are {}\n"
                                     "{} is not valid\n"
-                                    "".format(', '.join(allowed_keys), k)
+                                    "".format(', '.join(allowed_keys), key)
                                 )
                         this_order_spec['order'] = this_order_spec.get('order', 'asc')
                         if this_order_spec['order'] not in possible_orders:
@@ -1748,7 +1750,7 @@ class QueryBuilder(object):
                 except KeyError:
                     raise InputValidationError(
                         'Key {} is unknown to the types I know about:\n'
-                        '{}'.format(val, self._tag_to_alias_map.keys())
+                        '{}'.format(self._get_tag_from_specification(joining_value), self._tag_to_alias_map.keys())
                     )
         return returnval
 
@@ -1777,12 +1779,8 @@ class QueryBuilder(object):
             else:
                 raise InputValidationError
         else:
-            try:
-                inp = replacement_dict.get(inp, inp)
-            except Exception as e:
-                raise Exception("""
-                Exception thrown: {}\n
-                while replacing {}""".format(e, inp))
+            raise ValueError('unsupported type {} for input value'.format(type(inp)))
+
         return inp
 
     def get_json_compatible_queryhelp(self):

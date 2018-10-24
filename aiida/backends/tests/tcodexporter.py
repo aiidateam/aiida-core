@@ -565,22 +565,22 @@ class TestTcodDbExporter(AiidaTestCase):
             self.assertEquals(text, decoded)
             self.assertEquals(text, decoded_universal)
 
-        check_ncr(self, '.', '&#46;')
-        check_ncr(self, '?', '&#63;')
-        check_ncr(self, ';\n', '&#59;\n')
-        check_ncr(self, 'line\n;line', 'line\n&#59;line')
-        check_ncr(self, 'tabbed\ttext', 'tabbed&#9;text')
-        check_ncr(self, 'angstrom Å', 'angstrom &#195;&#133;')
-        check_ncr(self, '<html>&#195;&#133;</html>',
-                 '<html>&#38;#195;&#38;#133;</html>')
+        check_ncr(self, b'.', b'&#46;')
+        check_ncr(self, b'?', b'&#63;')
+        check_ncr(self, b';\n', b'&#59;\n')
+        check_ncr(self, b'line\n;line', b'line\n&#59;line')
+        check_ncr(self, b'tabbed\ttext', b'tabbed&#9;text')
+        check_ncr(self, u'angstrom Å'.encode('utf-8'), b'angstrom &#195;&#133;')
+        check_ncr(self, b'<html>&#195;&#133;</html>',
+                 b'<html>&#38;#195;&#38;#133;</html>')
 
-        check_quoted_printable(self, '.', '=2E')
-        check_quoted_printable(self, '?', '=3F')
-        check_quoted_printable(self, ';\n', '=3B\n')
-        check_quoted_printable(self, 'line\n;line', 'line\n=3Bline')
-        check_quoted_printable(self, 'tabbed\ttext', 'tabbed=09text')
-        check_quoted_printable(self, 'angstrom Å', 'angstrom =C3=85')
-        check_quoted_printable(self, 'line\rline\x00', 'line=0Dline=00')
+        check_quoted_printable(self, b'.', b'=2E')
+        check_quoted_printable(self, b'?', b'=3F')
+        check_quoted_printable(self, b';\n', b'=3B\n')
+        check_quoted_printable(self, b'line\n;line', b'line\n=3Bline')
+        check_quoted_printable(self, b'tabbed\ttext', b'tabbed=09text')
+        check_quoted_printable(self, 'angstrom Å'.encode('utf-8'), b'angstrom =C3=85')
+        check_quoted_printable(self, b'line\rline\x00', b'line=0Dline=00')
         # This one is particularly tricky: a long line is folded by the QP
         # and the semicolon sign becomes the first character on a new line.
         check_quoted_printable(self,

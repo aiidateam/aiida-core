@@ -163,10 +163,12 @@ def encode_textfield_base64(content, foldwidth=76):
     :return: encoded string
     """
     import base64
-
+    #print ("\nstart:", content, type(content))
     content = base64.standard_b64encode(content)
+    #print ("\nend:", content, type(content))
     content = b"\n".join(list(content[i:i + foldwidth]
                              for i in range(0, len(content), foldwidth)))
+    #print ("\nto return:", content, type(content))
     return content
 
 
@@ -248,19 +250,19 @@ def encode_textfield_ncr(content):
     import re
 
     def match2ncr(m):
-        prefix = ''
-        postfix = ''
+        prefix = b''
+        postfix = b''
         if 'prefix' in m.groupdict().keys():
             prefix = m.group('prefix')
         if 'postfix' in m.groupdict().keys():
             postfix = m.group('postfix')
-        return prefix + '&#' + str(ord(m.group('chr'))) + ';' + postfix
+        return prefix + b'&#' + str(ord(m.group('chr'))).encode('utf-8') + b';' + postfix
 
-    content = re.sub('(?P<chr>[&\t])', match2ncr, content)
-    content = re.sub('(?P<chr>[^\x09\x0A\x0D\x20-\x7E])', match2ncr, content)
-    content = re.sub('^(?P<chr>;)', match2ncr, content)
-    content = re.sub('(?P<prefix>\n)(?P<chr>;)', match2ncr, content)
-    content = re.sub('^(?P<chr>[\.\?])$', match2ncr, content)
+    content = re.sub(b'(?P<chr>[&\t])', match2ncr, content)
+    content = re.sub(b'(?P<chr>[^\x09\x0A\x0D\x20-\x7E])', match2ncr, content)
+    content = re.sub(b'^(?P<chr>;)', match2ncr, content)
+    content = re.sub(b'(?P<prefix>\n)(?P<chr>;)', match2ncr, content)
+    content = re.sub(b'^(?P<chr>[\.\?])$', match2ncr, content)
     return content
 
 
@@ -274,9 +276,9 @@ def decode_textfield_ncr(content):
     import re
 
     def match2str(m):
-        return chr(int(m.group(1)))
+        return chr(int(m.group(1))).encode('utf-8')
 
-    return re.sub('&#(\d+);', match2str, content)
+    return re.sub(b'&#(\d+);', match2str, content)
 
 
 def encode_textfield_gzip_base64(content, **kwargs):

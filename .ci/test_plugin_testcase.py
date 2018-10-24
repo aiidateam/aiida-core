@@ -13,6 +13,8 @@ Test the plugin test case
 This must be in a standalone script because it would clash with other tests,
 Since the dbenv gets loaded on the temporary profile.
 """
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 import os
 import sys

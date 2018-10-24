@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Function decorator that will turn a normal function into an AiiDA workfunction."""
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 import functools
 from . import processes

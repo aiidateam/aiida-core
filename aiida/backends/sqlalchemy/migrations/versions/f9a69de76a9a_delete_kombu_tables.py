@@ -14,6 +14,7 @@ Revises: 6c629c886f84
 Create Date: 2018-05-10 15:07:59.235950
 
 """
+from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 from alembic import op

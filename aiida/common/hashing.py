@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 import hashlib
 import numbers
@@ -175,17 +177,17 @@ def make_hash(object_to_hash, **kwargs):
             '3':4, 3:4
         }
 
-        print str(aa) == str(bb)
-        print aa == bb
-        print
-        print hashlib.sha224(str(aa)).hexdigest()
-        print hashlib.sha224(str(bb)).hexdigest()
-        print hashlib.sha224(str(aa)).hexdigest(
-            ) == hashlib.sha224(str(bb)).hexdigest()
-        print
-        print make_hash(aa)
-        print make_hash(bb)
-        print make_hash(aa) == make_hash(bb)
+        print(str(aa) == str(bb))
+        print(aa == bb)
+        print()
+        print(hashlib.sha224(str(aa)).hexdigest())
+        print(hashlib.sha224(str(bb)).hexdigest())
+        print(hashlib.sha224(str(aa)).hexdigest(
+            ) == hashlib.sha224(str(bb)).hexdigest())
+        print()
+        print(make_hash(aa))
+        print(make_hash(bb))
+        print(make_hash(aa) == make_hash(bb))
 
     produces the output::
 

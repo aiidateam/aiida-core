@@ -10,6 +10,9 @@
 
 
 
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 def normalize_email(email):
     """
     Normalize the address by lowercasing the domain part of the email

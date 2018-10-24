@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Manage computer objects with lazy loading of the db env"""
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.utils.error_accumulator import ErrorAccumulator

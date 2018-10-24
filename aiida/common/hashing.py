@@ -15,6 +15,10 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import hashlib
+try:  # Python3
+    from hashlib import blake2b
+except ImportError:  # Python2
+    from pyblake2 import blake2b
 import numbers
 import random
 import time
@@ -46,7 +50,7 @@ HASHING_PREFIX_DJANGO = "pbkdf2_sha256"
 HASHING_PREFIX_PBKDF2_SHA256 = "$pbkdf2-sha256"
 
 # This will never be a valid encoded hash
-UNUSABLE_PASSWORD_PREFIX = '!'
+UNUSABLE_PASSWORD_PREFIX = '!'  # noqa
 # Number of random chars to add after UNUSABLE_PASSWORD_PREFIX
 UNUSABLE_PASSWORD_SUFFIX_LENGTH = 40
 
@@ -153,13 +157,13 @@ def make_hash(object_to_hash, **kwargs):
 
     # use the Unlimited fanout hashing protocol outlined in
     #   https://blake2.net/blake2_20130129.pdf
-    final_hash = hashlib.blake2b(node_depth=1, last_node=True, **BLAKE2B_OPTIONS)  # pylint: disable=no-member
+    final_hash = blake2b(node_depth=1, last_node=True, **BLAKE2B_OPTIONS)
 
     for sub in hashes:
         final_hash.update(sub)
 
     # add an empty last leaf node
-    final_hash.update(hashlib.blake2b(node_depth=0, last_node=True, **BLAKE2B_OPTIONS).digest())  # pylint: disable=no-member
+    final_hash.update(blake2b(node_depth=0, last_node=True, **BLAKE2B_OPTIONS).digest())
 
     return final_hash.hexdigest()
 
@@ -174,12 +178,25 @@ def _make_hash(object_to_hash, **_):
 
 
 def _single_digest(obj_type, obj_bytes=b''):
-    return hashlib.blake2b(obj_bytes, person=obj_type.encode('ascii'), node_depth=0, **BLAKE2B_OPTIONS).digest()  # pylint: disable=no-member
+    return blake2b(obj_bytes, person=obj_type.encode('ascii'), node_depth=0, **BLAKE2B_OPTIONS).digest()
 
 
 @_make_hash.register(six.binary_type)
 def _(bytes_obj, **kwargs):
-    return [_single_digest('', bytes_obj)]
+    """
+    Hash arbitrary binary strings (str in Python 2, bytes in Python 3).
+    For compat reason between Python 2 and 3, this gets the same hash-type
+    as for unicode in Python 2, resp. str in Python 3."""
+    return [_single_digest('str', bytes_obj)]
+
+
+@_make_hash.register(six.text_type)
+def _(val, **kwargs):
+    """
+    If the type is unicode in Python 2 or a str in Python 3, convert it
+    to a str in Python 2 and bytes in Python 3 using the utf-8 encoding.
+    """
+    return [_single_digest('str', val.encode('utf-8'))]
 
 
 @_make_hash.register(abc.Sequence)
@@ -209,8 +226,8 @@ def _(mapping, **kwargs):
 
 
 @_make_hash.register(numbers.Real)
-def _(object_to_hash, **kwargs):
-    return [_single_digest('float', struct.pack("<d", truncate_float64(object_to_hash)))]
+def _(val, **kwargs):
+    return [_single_digest('float', struct.pack("<d", truncate_float64(val)))]
 
 
 @_make_hash.register(numbers.Complex)
@@ -218,14 +235,7 @@ def _(val, **kwargs):
     return [_single_digest('complex', struct.pack("<dd", truncate_float64(val.real), truncate_float64(val.imag)))]
 
 
-# If the type is unicode in Python 2 or a str in Python 3, convert it
-# to a str in Python 2 and bytes in Python 3 using the utf-8 encoding.
-@_make_hash.register(six.text_type)
-def _(val, **kwargs):
-    return [_single_digest('str', val.encode('utf-8'))]
-
-
-@_make_hash.register(int)
+@_make_hash.register(numbers.Integral)
 def _(val, **kwargs):
     """get the hash of the little-endian signed long long representation of the integer"""
     return [_single_digest('int', struct.pack("<q", val))]

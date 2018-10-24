@@ -49,6 +49,7 @@ install_requires = [
     'kiwipy==0.2.1',
     'circus==0.14.0',
     'tornado==4.5.3',  # As of 2018/03/06 Tornado released v5.0 which breaks circus 0.14.0
+    'pyblake2==1.1.2; python_version<"3.6"',
     'chainmap; python_version<"3.5"',
     'pathlib2; python_version<"3.5"',
     'singledispatch>=3.4.0.3; python_version<"3.5"',

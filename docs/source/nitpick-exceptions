@@ -56,6 +56,7 @@ py:class  list
 py:class  object
 py:class  unittest.case.TestCase
 py:class  unittest.runner.TextTestRunner
+py:class  unittest2.case.TestCase
 py:meth   unittest.TestLoader.discover
 py:class  ABCMeta
 py:class  exceptions.Exception

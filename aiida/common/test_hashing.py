@@ -121,7 +121,7 @@ class MakeHashTest(unittest.TestCase):
         self.assertEqual(make_hash(obj_a), make_hash(obj_b))
 
     def test_bytes(self):
-        self.assertEqual(make_hash(b'foo'), '814a149f7569f1009b24670adfdc8a1edddb4759e2d7da85cd00386facfaebb2')
+        self.assertEqual(make_hash(b'foo'), '459062c44082269b2d07f78c1b6e8c98b93448606bfb1cc1f48284cdfcea74e3')
 
     def test_uuid(self):
         some_uuid = uuid.UUID('62c42d58-56e8-4ade-9d5e-18de3a7baacd')
@@ -138,7 +138,7 @@ class MakeHashTest(unittest.TestCase):
     def test_numpy_types(self):
         self.assertEqual(
             make_hash(np.float64(3.141)), 'd00f2e88a088626f5db3eadb6d9d40c74b4b4d3f9f07c1ca2f76b247fe39530b')  # pylint: disable=no-member
-        self.assertEqual(make_hash(np.int64(42)), '3369413755ea6c01984a21d01fe231fab8dfde02787ba5d9c1527b08778acc12')  # pylint: disable=no-member
+        self.assertEqual(make_hash(np.int64(42)), '9498ab55b7c66c66b2d19f9dd8b668acf8e2facf44da0fb466f6986999bb8a56')  # pylint: disable=no-member
 
     def test_numpy_arrays(self):
         self.assertEqual(

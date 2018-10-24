@@ -217,10 +217,10 @@ class DbEntry(object):
 
     def __repr__(self):
         return "{}({})".format(self.__class__.__name__,
-                               ",".join(["{}={}".format(k, '"{}"'.format(v)
-                               if issubclass(v.__class__, six.string_types)
-                               else v)
-                                         for k, v in self.source.items()]))
+                               ",".join(["{}={}".format(k, '"{}"'.format(self.source[k])
+                               if issubclass(self.source[k].__class__, six.string_types)
+                               else self.source[k])
+                                         for k in sorted(self.source.keys())]))
 
     @property
     def contents(self):

@@ -14,6 +14,8 @@ For the time being the API returns the parsed valid endpoints upon GET request
 Author: Snehal P. Waychal and Fernando Gargiulo @ Theos, EPFL
 """
 
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 from flask import Flask, jsonify
 from flask_restful import Api

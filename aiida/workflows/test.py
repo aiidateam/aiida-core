@@ -11,6 +11,8 @@
 This file provides very simple workflows for testing purposes.
 Do not delete, otherwise 'verdi developertest' will stop to work.
 """
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 import plumpy
 from aiida.orm.workflow import Workflow

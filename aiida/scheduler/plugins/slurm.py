@@ -11,6 +11,7 @@
 Plugin for SLURM.
 This has been tested on SLURM 14.03.7 on the CSCS.ch machines.
 """
+from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 import re

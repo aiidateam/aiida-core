@@ -10,6 +10,8 @@
 """
 This allows to manage profiles from command line.
 """
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 import click
 
@@ -44,7 +46,7 @@ def profile_list():
     else:
         echo.echo_info('default profile is highlighted and marked by the * symbol')
 
-    for profile in get_profiles_list():
+    for profile in sorted(get_profiles_list()):
         if profile == default_profile:
             color = 'green'
             symbol = '*'

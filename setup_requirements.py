@@ -8,6 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 install_requires = [
     'reentry==1.2.1',
     'python-dateutil==2.7.2',
@@ -40,8 +43,8 @@ install_requires = [
     'psycopg2-binary==2.7.4',
     'paramiko==2.4.2',
     'ecdsa==0.13',
-    'pika==0.11.2',
     'ipython>=4.0,<6.0',  # Version of ipython non enforced, because some still prefer version 4 rather than the latest
+    'pika==0.12.0',
     'plumpy==0.10.6',
     'kiwipy==0.2.1',
     'circus==0.14.0',

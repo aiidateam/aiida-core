@@ -11,6 +11,8 @@
 Translator for kpoints data
 """
 
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 from aiida.restapi.translator.data import DataTranslator
 
@@ -126,7 +128,7 @@ class KpointsDataTranslator(DataTranslator):
                 has_labels = True
                 high_symm_rel = {}
                 path = []
-                old_label = ""
+                old_label = None
 
                 for idx, label in node.labels:
                     high_symm_rel[label] = explicit_kpoints_rel[idx].tolist()

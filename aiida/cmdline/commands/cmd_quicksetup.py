@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=too-many-arguments,too-many-locals,too-many-statements,too-many-branches
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,7 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=too-many-arguments,too-many-locals,too-many-statements,too-many-branches
 """`verdi quicksetup` command."""
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 import os
 import sys
@@ -27,7 +29,7 @@ def _check_db_name(dbname, postgres):
     """Looks up if a database with the name exists, prompts for using or creating a differently named one."""
     create = True
     while create and postgres.db_exists(dbname):
-        click.echo('database {} already exists!'.format(dbname))
+        echo.echo_info('database {} already exists!'.format(dbname))
         if not click.confirm('Use it (make sure it is not used by another profile)?'):
             dbname = click.prompt('new name', type=str, default=dbname)
         else:
@@ -101,7 +103,7 @@ def quicksetup(profile_name, only_config, set_default, non_interactive, backend,
         if create:
             postgres.create_db(dbuser, dbname)
     except Exception as exception:
-        click.echo('\n'.join([
+        echo.echo_error('\n'.join([
             'Oops! Something went wrong while creating the database for you.',
             'You may continue with the quicksetup, however:',
             'For aiida to work correctly you will have to do that yourself as follows.',
@@ -148,3 +150,4 @@ def quicksetup(profile_name, only_config, set_default, non_interactive, backend,
     }
 
     setup_profile(profile_name, only_config=only_config, set_default=set_default, non_interactive=True, **setup_args)
+    echo.echo_success("Set up profile '{}'.".format(profile_name))

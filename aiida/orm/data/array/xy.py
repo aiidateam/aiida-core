@@ -13,6 +13,8 @@ collections of y-arrays bound to a single x-array, and the methods to operate
 on them.
 """
 
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 
 import six

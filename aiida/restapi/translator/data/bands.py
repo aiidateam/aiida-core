@@ -11,6 +11,8 @@
 Translator for bands data
 """
 
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 from aiida.restapi.translator.data import DataTranslator
 

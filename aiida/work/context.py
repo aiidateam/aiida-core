@@ -8,6 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Convenience functions to add awaitables to the Context of a WorkChain."""
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 from .awaitable import construct_awaitable, AwaitableAction
 
 __all__ = ['ToContext', 'assign_', 'append_']

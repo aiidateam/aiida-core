@@ -13,6 +13,8 @@ results. These are general and contain only the main logic; where appropriate,
 the routines make reference to the suitable plugins for all
 plugin-specific operations.
 """
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 import os
 
@@ -236,49 +238,6 @@ def submit_calculation(calculation, transport, calc_info, script_filename):
     calculation._set_job_id(job_id)
 
 
-def update_calculation(calculation, transport):
-    """
-    Update the scheduler state of a calculation
-
-    :param calculation: the instance of JobCalculation to update.
-    :param transport: an already opened transport to use to query the scheduler
-    """
-    scheduler = calculation.get_computer().get_scheduler()
-    scheduler.set_transport(transport)
-
-    job_id = calculation.get_job_id()
-
-    kwargs = {'as_dict': True}
-
-    if scheduler.get_feature('can_query_by_user'):
-        kwargs['user'] = "$USER"
-    else:
-        # In general schedulers can either query by user or by jobs, but not both
-        # (see also docs of the Scheduler class)
-        kwargs['jobs'] = [job_id]
-
-    found_jobs = scheduler.getJobs(**kwargs)
-    job_info = found_jobs.get(job_id, None)
-
-    if job_info is None:
-        # If the job is computed or not found assume it's done
-        job_done = True
-        calculation._set_scheduler_state(JOB_STATES.DONE)
-    else:
-        job_done = job_info.job_state == JOB_STATES.DONE
-        update_job_calc_from_job_info(calculation, job_info)
-
-    if job_done:
-        try:
-            detailed_job_info = scheduler.get_detailed_jobinfo(job_id)
-        except exceptions.FeatureNotAvailable:
-            detailed_job_info = ('This scheduler does not implement get_detailed_jobinfo')
-
-        update_job_calc_from_detailed_job_info(calculation, detailed_job_info)
-
-    return job_done
-
-
 def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
     """
     Retrieve all the files of a completed job calculation using the given transport.
@@ -372,43 +331,6 @@ def kill_calculation(calculation, transport):
     return True
 
 
-def update_job_calc_from_job_info(calc, job_info):
-    """
-    Updates the job info for a JobCalculation using job information
-    as obtained from the scheduler.
-
-    :param calc: The job calculation
-    :param job_info: the information returned by the scheduler for this job
-    :return: True if the job state is DONE, False otherwise
-    :rtype: bool
-    """
-    calc._set_scheduler_state(job_info.job_state)
-    calc._set_last_jobinfo(job_info)
-
-    return job_info.job_state in JOB_STATES.DONE
-
-
-def update_job_calc_from_detailed_job_info(calc, detailed_job_info):
-    """
-    Updates the detailed job info for a JobCalculation as obtained from
-    the scheduler
-
-    :param calc: The job calculation
-    :param detailed_job_info: the detailed information as returned by the
-        scheduler for this job
-    """
-    from aiida.scheduler.datastructures import JobInfo
-
-    last_jobinfo = calc._get_last_jobinfo()
-    if last_jobinfo is None:
-        last_jobinfo = JobInfo()
-        last_jobinfo.job_id = calc.get_job_id()
-        last_jobinfo.job_state = JOB_STATES.DONE
-
-    last_jobinfo.detailedJobinfo = detailed_job_info
-    calc._set_last_jobinfo(last_jobinfo)
-
-
 def parse_results(job, retrieved_temporary_folder=None):
     """
     Parse the results for a given JobCalculation (job)
@@ -434,11 +356,11 @@ def parse_results(job, retrieved_temporary_folder=None):
                 files.append("- [F] {}".format(os.path.join(root, filename)))
 
         execlogger.debug("[parsing of calc {}] "
-            "Content of the retrieved_temporary_folder: \n"
-            "{}".format(job.pk, "\n".join(files)), extra=logger_extra)
+                         "Content of the retrieved_temporary_folder: \n"
+                         "{}".format(job.pk, "\n".join(files)), extra=logger_extra)
     else:
         execlogger.debug("[parsing of calc {}] "
-            "No retrieved_temporary_folder.".format(job.pk), extra=logger_extra)
+                         "No retrieved_temporary_folder.".format(job.pk), extra=logger_extra)
 
     if Parser is not None:
 
@@ -459,7 +381,7 @@ def parse_results(job, retrieved_temporary_folder=None):
             pass
         else:
             raise ValueError("parse_from_calc returned an 'exit_code' of invalid_type: {}. It should "
-                "return a boolean, integer or ExitCode instance".format(type(exit_code)))
+                             "return a boolean, integer or ExitCode instance".format(type(exit_code)))
 
         for label, n in new_nodes_tuple:
             n.add_link_from(job, label=label, link_type=LinkType.CREATE)
@@ -569,5 +491,6 @@ def retrieve_files_from_list(calculation, transport, folder, retrieve_list):
                 local_names = [os.path.split(item)[1]]
 
         for rem, loc in zip(remote_names, local_names):
-            transport.logger.debug("[retrieval of calc {}] Trying to retrieve remote item '{}'".format(calculation.pk, rem))
+            transport.logger.debug(
+                "[retrieval of calc {}] Trying to retrieve remote item '{}'".format(calculation.pk, rem))
             transport.get(rem, os.path.join(folder, loc), ignore_nonexisting=True)

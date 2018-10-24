@@ -11,6 +11,8 @@
 Tests for nodes, attributes and links
 """
 
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.node import Node

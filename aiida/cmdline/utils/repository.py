@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility functions for command line commands operating on the repository."""
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 from aiida.cmdline.utils import echo
 

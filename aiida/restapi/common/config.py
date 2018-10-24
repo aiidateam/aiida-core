@@ -12,6 +12,9 @@ Constants used in rest api
 """
 
 ## Pagination defaults
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 LIMIT_DEFAULT = 400
 PERPAGE_DEFAULT = 20
 

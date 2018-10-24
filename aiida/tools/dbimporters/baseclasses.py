@@ -238,8 +238,8 @@ class DbEntry(object):
             from six.moves import urllib
             from hashlib import md5
 
-            self._contents = urllib.request.urlopen(self.source['uri']).read()
-            self.source['source_md5'] = md5(self._contents).hexdigest()
+            self._contents = urllib.request.urlopen(self.source['uri']).read().decode("utf-8")
+            self.source['source_md5'] = md5(self._contents.encode("utf-8")).hexdigest()
         return self._contents
 
     @contents.setter

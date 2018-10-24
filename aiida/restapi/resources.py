@@ -116,7 +116,6 @@ class BaseResource(Resource):
         url = unquote(request.url)
         url_root = unquote(request.url_root)
 
-
         ## Parse request
         (resource_type, page, id, query_type) = self.utils.parse_path(path, parse_pk_uuid=self.parse_pk_uuid)
         (limit, offset, perpage, orderby, filters, _alist, _nalist, _elist, _nelist, _downloadformat, _visformat,

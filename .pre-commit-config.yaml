@@ -327,6 +327,7 @@
         aiida/restapi/translator/data/__init__.py|
         aiida/restapi/translator/data/kpoints.py|
         aiida/restapi/translator/data/structure.py|
+        aiida/restapi/translator/data/cif.py|
         aiida/restapi/translator/data/upf.py|
         aiida/restapi/translator/group.py|
         aiida/restapi/translator/__init__.py|

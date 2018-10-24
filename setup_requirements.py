@@ -104,6 +104,7 @@ extras_require = {
     ],
     # Requirements for testing
     'testing': [
+        'unittest2==1.1.0; python_version<"3.5"',
         'pgtest==1.1.0',
         'sqlalchemy-diff==0.1.3',
         'coverage==4.5.1',

@@ -20,13 +20,13 @@ from six.moves import range
 
 from aiida.backends.testbase import AiidaTestCase
 
-@unittest.skipIf(six.PY3, "Broken on Python 3")
 class TestCodDbImporter(AiidaTestCase):
     """
     Test the CodDbImporter class.
     """
     from aiida.orm.data.cif import has_pycifrw
 
+    @unittest.skipIf(six.PY3, "Broken on Python 3")
     def test_query_construction_1(self):
         from aiida.tools.dbimporters.plugins.cod import CodDbImporter
 
@@ -66,6 +66,7 @@ class TestCodDbImporter(AiidaTestCase):
                           "(vol BETWEEN 99.999 AND 100.001 OR "
                           "vol BETWEEN 120.004 AND 120.006)")
 
+    @unittest.skipIf(six.PY3, "Broken on Python 3")
     def test_datatype_checks(self):
         """
         Rather complicated, but wide-coverage test for data types, accepted
@@ -105,6 +106,7 @@ class TestCodDbImporter(AiidaTestCase):
                     message = str(exc)
                 self.assertEquals(message, messages[results[i][j]])
 
+    @unittest.skipIf(six.PY3, "Broken on Python 3")
     def test_dbentry_creation(self):
         """
         Tests the creation of CodEntry from CodSearchResults.
@@ -130,6 +132,7 @@ class TestCodDbImporter(AiidaTestCase):
                            "http://www.crystallography.net/cod/2000000.cif@1234"])
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
+    @unittest.skipIf(six.PY3, "Broken on Python 3")
     def test_dbentry_to_cif_node(self):
         """
         Tests the creation of CifData node from CodEntry.

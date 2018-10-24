@@ -312,9 +312,6 @@
         aiida/plugins/loader.py|
         aiida/plugins/registry.py|
         aiida/plugins/utils.py|
-        aiida/restapi/common/config.py|
-        aiida/restapi/common/__init__.py|
-        aiida/restapi/common/exceptions.py|
         aiida/restapi/common/utils.py|
         aiida/restapi/translator/base.py|
         aiida/restapi/translator/node.py|

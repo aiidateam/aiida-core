@@ -17,6 +17,7 @@ import os
 from aiida.restapi.translator.node import NodeTranslator
 from aiida.restapi.common.exceptions import RestInputValidationError
 
+
 class CalculationTranslator(NodeTranslator):
     """
     Translator relative to resource 'calculations' and aiida class Calculation
@@ -119,7 +120,7 @@ class CalculationTranslator(NodeTranslator):
 
         if node.type.startswith("calculation.job."):
 
-            input_folder = node._raw_input_folder # pylint: disable=protected-access
+            input_folder = node._raw_input_folder  # pylint: disable=protected-access
 
             if filename is not None:
                 response = {}
@@ -167,7 +168,7 @@ class CalculationTranslator(NodeTranslator):
                 response["data"] = "This node does not have retrieved folder"
                 return response
 
-            output_folder = retrieved_folder._get_folder_pathsubfolder # pylint: disable=protected-access
+            output_folder = retrieved_folder._get_folder_pathsubfolder  # pylint: disable=protected-access
 
             if filename is not None:
 

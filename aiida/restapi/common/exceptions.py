@@ -25,17 +25,20 @@ from __future__ import absolute_import
 from aiida.common.exceptions import ValidationError, InputValidationError, \
     FeatureNotAvailable
 
+
 class RestValidationError(ValidationError):
     """
     document with an example
     """
     pass
 
+
 class RestInputValidationError(InputValidationError):
     """
     document with an example
     """
     pass
+
 
 class RestFeatureNotAvailable(FeatureNotAvailable):
     pass

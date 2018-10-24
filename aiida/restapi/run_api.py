@@ -20,6 +20,7 @@ from flask_cors import CORS
 
 from aiida.backends.utils import load_dbenv
 
+
 # pylint: disable=inconsistent-return-statements,too-many-locals
 def run_api(flask_app, flask_api, *args, **kwargs):
     """
@@ -128,8 +129,8 @@ def run_api(flask_app, flask_api, *args, **kwargs):
     if parse_aiida_profile and parsed_args.aiida_profile is not None:
         aiida_profile = parsed_args.aiida_profile
 
-    elif confs.default_aiida_profile is not None:
-        aiida_profile = confs.default_aiida_profile
+    elif confs.DEFAULT_AIIDA_PROFILE is not None:
+        aiida_profile = confs.DEFAULT_AIIDA_PROFILE
 
     else:
         aiida_profile = "default"

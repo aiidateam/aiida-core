@@ -129,8 +129,7 @@ class Utils(object):
         if path.startswith(self.PREFIX):
             return path[len(self.PREFIX):]
         else:
-            raise ValidationError(
-                'path has to start with {}'.format(self.PREFIX))
+            raise ValidationError('path has to start with {}'.format(self.PREFIX))
 
     def split_path(self, path):
         """
@@ -205,17 +204,13 @@ class Utils(object):
         if path[0] == 'schema':
             query_type = path.pop(0)
             if path:
-                raise RestInputValidationError(
-                    "url requesting schema resources do not "
-                    "admit further fields")
+                raise RestInputValidationError("url requesting schema resources do not " "admit further fields")
             else:
                 return (resource_type, page, id, query_type)
         elif path[0] == 'statistics':
             query_type = path.pop(0)
             if path:
-                raise RestInputValidationError(
-                    "url requesting statistics resources do not "
-                    "admit further fields")
+                raise RestInputValidationError("url requesting statistics resources do not " "admit further fields")
             else:
                 return (resource_type, page, id, query_type)
         elif path[0] == "io" or path[0] == "content":
@@ -234,8 +229,13 @@ class Utils(object):
                 page = int(path.pop(0))
                 return (resource_type, page, id, query_type)
 
-    def validate_request(self, limit=None, offset=None, perpage=None, page=None,
-                         query_type=None, is_querystring_defined=False):
+    def validate_request(self,
+                         limit=None,
+                         offset=None,
+                         perpage=None,
+                         page=None,
+                         query_type=None,
+                         is_querystring_defined=False):
         """
         Performs various checks on the consistency of the request.
         Add here all the checks that you want to do, except validity of the page
@@ -246,13 +246,10 @@ class Utils(object):
         # TODO Consider using **kwargs so to make easier to add more validations
         # 1. perpage incompatible with offset and limits
         if perpage is not None and (limit is not None or offset is not None):
-            raise RestValidationError("perpage key is incompatible with "
-                                      "limit and offset")
+            raise RestValidationError("perpage key is incompatible with " "limit and offset")
         # 2. /page/<int: page> in path is incompatible with limit and offset
         if page is not None and (limit is not None or offset is not None):
-            raise RestValidationError("requesting a specific page is "
-                                      "incompatible "
-                                      "with limit and offset")
+            raise RestValidationError("requesting a specific page is " "incompatible " "with limit and offset")
         # 3. perpage requires that the path contains a page request
         if perpage is not None and page is None:
             raise RestValidationError("perpage key requires that a page is "
@@ -260,9 +257,7 @@ class Utils(object):
                                       "/page/)")
         # 4. No querystring if query type = schema'
         if query_type in ('schema') and is_querystring_defined:
-            raise RestInputValidationError("schema requests do not allow "
-                                           "specifying a query string")
-
+            raise RestInputValidationError("schema requests do not allow " "specifying a query string")
 
     def paginate(self, page, perpage, total_count):
         """
@@ -312,8 +307,7 @@ class Utils(object):
         #  and next page
         if page > last_page or page < 1:
             raise RestInputValidationError("Non existent page requested. The "
-                                           "page range is [{} : {}]".format(
-                first_page, last_page))
+                                           "page range is [{} : {}]".format(first_page, last_page))
         else:
             limit = perpage
             offset = (page - 1) * perpage
@@ -326,10 +320,7 @@ class Utils(object):
             else:
                 next_page = None
 
-        rel_pages = dict(prev=prev_page,
-                         next=next_page,
-                         first=first_page,
-                         last=last_page)
+        rel_pages = dict(prev=prev_page, next=next_page, first=first_page, last=last_page)
 
         return (limit, offset, rel_pages)
 
@@ -362,8 +353,7 @@ class Utils(object):
         ## Input consistency
         # rel_pages cannot be defined without url
         if rel_pages is not None and url is None:
-            raise InputValidationError("'rel_pages' parameter requires 'url' "
-                                       "parameter to be defined")
+            raise InputValidationError("'rel_pages' parameter requires 'url' " "parameter to be defined")
 
         headers = {}
 
@@ -481,9 +471,7 @@ class Utils(object):
         else:
             raise RestValidationError("The datetime resolution is not valid.")
 
-        filter = {
-            'and': [{'>=': reference_datetime}, {'<': reference_datetime + Dt}]
-        }
+        filter = {'and': [{'>=': reference_datetime}, {'<': reference_datetime + Dt}]}
 
         return filter
 
@@ -533,50 +521,29 @@ class Utils(object):
 
         ## Check the reserved keywords
         if 'limit' in field_counts.keys() and field_counts['limit'] > 1:
-            raise RestInputValidationError("You cannot specify limit more than "
-                                           "once")
+            raise RestInputValidationError("You cannot specify limit more than " "once")
         if 'offset' in field_counts.keys() and field_counts['offset'] > 1:
-            raise RestInputValidationError(
-                "You cannot specify offset more than "
-                "once")
+            raise RestInputValidationError("You cannot specify offset more than " "once")
         if 'perpage' in field_counts.keys() and field_counts['perpage'] > 1:
-            raise RestInputValidationError(
-                "You cannot specify perpage more than "
-                "once")
+            raise RestInputValidationError("You cannot specify perpage more than " "once")
         if 'orderby' in field_counts.keys() and field_counts['orderby'] > 1:
-            raise RestInputValidationError(
-                "You cannot specify orderby more than "
-                "once")
+            raise RestInputValidationError("You cannot specify orderby more than " "once")
         if 'alist' in field_counts.keys() and field_counts['alist'] > 1:
-            raise RestInputValidationError("You cannot specify alist more than "
-                                           "once")
+            raise RestInputValidationError("You cannot specify alist more than " "once")
         if 'nalist' in field_counts.keys() and field_counts['nalist'] > 1:
-            raise RestInputValidationError(
-                "You cannot specify nalist more than "
-                "once")
+            raise RestInputValidationError("You cannot specify nalist more than " "once")
         if 'elist' in field_counts.keys() and field_counts['elist'] > 1:
-            raise RestInputValidationError("You cannot specify elist more than "
-                                           "once")
+            raise RestInputValidationError("You cannot specify elist more than " "once")
         if 'nelist' in field_counts.keys() and field_counts['nelist'] > 1:
-            raise RestInputValidationError(
-                "You cannot specify nelist more than "
-                "once")
+            raise RestInputValidationError("You cannot specify nelist more than " "once")
         if 'format' in field_counts.keys() and field_counts['format'] > 1:
-            raise RestInputValidationError(
-                "You cannot specify format more than "
-                "once")
+            raise RestInputValidationError("You cannot specify format more than " "once")
         if 'visformat' in field_counts.keys() and field_counts['visformat'] > 1:
-            raise RestInputValidationError(
-                "You cannot specify visformat more than "
-                "once")
+            raise RestInputValidationError("You cannot specify visformat more than " "once")
         if 'filename' in field_counts.keys() and field_counts['filename'] > 1:
-            raise RestInputValidationError(
-                "You cannot specify filename more than "
-                "once")
+            raise RestInputValidationError("You cannot specify filename more than " "once")
         if 'rtype' in field_counts.keys() and field_counts['rtype'] > 1:
-            raise RestInputValidationError(
-                "You cannot specify rtype more than "
-                "once")
+            raise RestInputValidationError("You cannot specify rtype more than " "once")
 
         ## Extract results
         for field in field_list:
@@ -585,52 +552,38 @@ class Utils(object):
                 if field[1] == '=':
                     limit = field[2]
                 else:
-                    raise RestInputValidationError(
-                        "only assignment operator '=' "
-                        "is permitted after 'limit'")
+                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'limit'")
             elif field[0] == 'offset':
                 if field[1] == '=':
                     offset = field[2]
                 else:
-                    raise RestInputValidationError(
-                        "only assignment operator '=' "
-                        "is permitted after 'offset'")
+                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'offset'")
             elif field[0] == 'perpage':
                 if field[1] == '=':
                     perpage = field[2]
                 else:
-                    raise RestInputValidationError(
-                        "only assignment operator '=' "
-                        "is permitted after 'perpage'")
+                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'perpage'")
 
             elif field[0] == 'alist':
                 if field[1] == '=':
                     alist = field[2]
                 else:
-                    raise RestInputValidationError(
-                        "only assignment operator '=' "
-                        "is permitted after 'alist'")
+                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'alist'")
             elif field[0] == 'nalist':
                 if field[1] == '=':
                     nalist = field[2]
                 else:
-                    raise RestInputValidationError(
-                        "only assignment operator '=' "
-                        "is permitted after 'nalist'")
+                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'nalist'")
             elif field[0] == 'elist':
                 if field[1] == '=':
                     elist = field[2]
                 else:
-                    raise RestInputValidationError(
-                        "only assignment operator '=' "
-                        "is permitted after 'elist'")
+                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'elist'")
             elif field[0] == 'nelist':
                 if field[1] == '=':
                     nelist = field[2]
                 else:
-                    raise RestInputValidationError(
-                        "only assignment operator '=' "
-                        "is permitted after 'nelist'")
+                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'nelist'")
 
             elif field[0] == 'orderby':
                 if field[1] == '=':
@@ -641,41 +594,31 @@ class Utils(object):
                     else:
                         orderby.extend([field[2]])
                 else:
-                    raise RestInputValidationError(
-                        "only assignment operator '=' "
-                        "is permitted after 'orderby'")
+                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'orderby'")
 
             elif field[0] == 'format':
                 if field[1] == '=':
                     downloadformat = field[2]
                 else:
-                    raise RestInputValidationError(
-                        "only assignment operator '=' "
-                        "is permitted after 'format'")
+                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'format'")
 
             elif field[0] == 'visformat':
                 if field[1] == '=':
                     visformat = field[2]
                 else:
-                    raise RestInputValidationError(
-                        "only assignment operator '=' "
-                        "is permitted after 'visformat'")
+                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'visformat'")
 
             elif field[0] == 'filename':
                 if field[1] == '=':
                     filename = field[2]
                 else:
-                    raise RestInputValidationError(
-                        "only assignment operator '=' "
-                        "is permitted after 'filename'")
+                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'filename'")
 
             elif field[0] == 'rtype':
                 if field[1] == '=':
                     rtype = field[2]
                 else:
-                    raise RestInputValidationError(
-                        "only assignment operator '=' "
-                        "is permitted after 'rtype'")
+                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'rtype'")
 
             else:
 
@@ -684,8 +627,7 @@ class Utils(object):
                 operator = field[1]
                 field_value = field[2]
 
-                if isinstance(field_value,
-                              datetime_precision) and operator == '=':
+                if isinstance(field_value, datetime_precision) and operator == '=':
                     filter_value = self.build_datetime_filter(field_value)
                 else:
                     filter_value = {self.op_conv_map[field[1]]: field_value}
@@ -694,11 +636,7 @@ class Utils(object):
                 if field_counts[field_key] > 1:
 
                     if field_key not in filters.keys():
-                        filters.update({
-                            field_key: {
-                                'and': [filter_value]
-                            }
-                        })
+                        filters.update({field_key: {'and': [filter_value]}})
                     else:
                         filters[field_key]['and'].append(filter_value)
                 else:
@@ -708,8 +646,8 @@ class Utils(object):
         # if limit is None:
         #     limit = self.LIMIT_DEFAULT
 
-        return (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-                nelist, downloadformat, visformat, filename, rtype)
+        return (limit, offset, perpage, orderby, filters, alist, nalist, elist, nelist, downloadformat, visformat,
+                filename, rtype)
 
     def parse_query_string(self, query_string):
         """
@@ -734,15 +672,11 @@ class Utils(object):
         # key types
         key = Word(alphas + '_', alphanums + '_')
         # operators
-        operator = (Literal('=like=') | Literal('=ilike=') |
-                    Literal('=in=') | Literal('=notin=') |
-                    Literal('=') | Literal('!=') |
-                    Literal('>=') | Literal('>') |
-                    Literal('<=') | Literal('<'))
+        operator = (Literal('=like=') | Literal('=ilike=') | Literal('=in=') | Literal('=notin=') | Literal('=') |
+                    Literal('!=') | Literal('>=') | Literal('>') | Literal('<=') | Literal('<'))
         # Value types
         valueNum = ppc.number
-        valueBool = (Literal('true') | Literal('false')).addParseAction(
-            lambda toks: bool(toks[0]))
+        valueBool = (Literal('true') | Literal('false')).addParseAction(lambda toks: bool(toks[0]))
         valueString = QuotedString('"', escQuote='""')
         valueOrderby = Combine(Optional(Word('+-', exact=1)) + key)
 
@@ -751,28 +685,16 @@ class Utils(object):
         #  them and convert them to datetime objects
         # Date
         valueDate = Combine(
-            Word(nums, exact=4) +
-            Literal('-') + Word(nums, exact=2) +
-            Literal('-') + Word(nums, exact=2)
-        )
+            Word(nums, exact=4) + Literal('-') + Word(nums, exact=2) + Literal('-') + Word(nums, exact=2))
         # Time
         valueTime = Combine(
-            Literal('T') +
-            Word(nums, exact=2) +
-            Optional(Literal(':') + Word(nums, exact=2)) +
-            Optional(Literal(':') + Word(nums, exact=2))
-        )
+            Literal('T') + Word(nums, exact=2) + Optional(Literal(':') + Word(nums, exact=2)) +
+            Optional(Literal(':') + Word(nums, exact=2)))
         # Shift
-        valueShift = Combine(
-            Word('+-', exact=1) +
-            Word(nums, exact=2) +
-            Optional(Literal(':') + Word(nums, exact=2))
-        )
+        valueShift = Combine(Word('+-', exact=1) + Word(nums, exact=2) + Optional(Literal(':') + Word(nums, exact=2)))
         # Combine atomic values
         valueDateTime = Combine(
-            valueDate +
-            Optional(valueTime) +
-            Optional(valueShift) + WE(printables.replace("&",""))
+            valueDate + Optional(valueTime) + Optional(valueShift) + WE(printables.replace("&", ""))
             # To us the
             # word must end with '&' or end of the string
             # Adding  WordEnd  only here is very important. This makes atomic
@@ -795,27 +717,24 @@ class Utils(object):
             try:
                 dt = dtparser.parse(datetime_string)
             except ValueError:
-                raise RestInputValidationError(
-                    "time value has wrong format. The "
-                    "right format is "
-                    "<date>T<time><offset>, "
-                    "where <date> is expressed as "
-                    "[YYYY]-[MM]-[DD], "
-                    "<time> is expressed as [HH]:[MM]:["
-                    "SS], "
-                    "<offset> is expressed as +/-[HH]:["
-                    "MM] "
-                    "given with "
-                    "respect to UTC")
+                raise RestInputValidationError("time value has wrong format. The "
+                                               "right format is "
+                                               "<date>T<time><offset>, "
+                                               "where <date> is expressed as "
+                                               "[YYYY]-[MM]-[DD], "
+                                               "<time> is expressed as [HH]:[MM]:["
+                                               "SS], "
+                                               "<offset> is expressed as +/-[HH]:["
+                                               "MM] "
+                                               "given with "
+                                               "respect to UTC")
             if dt.tzinfo is not None:
-                tzoffset_minutes = int(
-                    dt.tzinfo.utcoffset(None).total_seconds() // 60)
+                tzoffset_minutes = int(dt.tzinfo.utcoffset(None).total_seconds() // 60)
 
-                return datetime_precision(dt.replace(tzinfo=FixedOffsetTimezone(
-                    offset=tzoffset_minutes, name=None)), precision)
+                return datetime_precision(
+                    dt.replace(tzinfo=FixedOffsetTimezone(offset=tzoffset_minutes, name=None)), precision)
             else:
-                return datetime_precision(dt.replace(tzinfo=FixedOffsetTimezone(
-                    offset=0, name=None)), precision)
+                return datetime_precision(dt.replace(tzinfo=FixedOffsetTimezone(offset=0, name=None)), precision)
 
         ########################################################################
 
@@ -823,17 +742,14 @@ class Utils(object):
         valueDateTime.setParseAction(validate_time)
 
         # More General types
-        value = (valueString | valueBool | valueDateTime | valueNum |
-                 valueOrderby)
+        value = (valueString | valueBool | valueDateTime | valueNum | valueOrderby)
         # List of values (I do not check the homogeneity of the types of values,
         # query builder will do it somehow)
-        valueList = Group(value + OneOrMore(Suppress(',') + value) + Optional(
-            Suppress(',')))
+        valueList = Group(value + OneOrMore(Suppress(',') + value) + Optional(Suppress(',')))
 
         # Fields
         singleField = Group(key + operator + value)
-        listField = Group(
-            key + (Literal('=in=') | Literal('=notin=')) + valueList)
+        listField = Group(key + (Literal('=in=') | Literal('=notin=')) + valueList)
         orderbyField = Group(key + Literal('=') + valueList)
         Field = (listField | orderbyField | singleField)
 
@@ -856,14 +772,13 @@ class Utils(object):
             field_list = [entry for entry in fields.asList() if entry[0] != "_"]
 
         except ParseException as e:
-            raise RestInputValidationError(
-                "The query string format is invalid. "
-                "Parser returned this massage: \"{"
-                "}.\" Please notice that the column "
-                "number "
-                "is counted from "
-                "the first character of the query "
-                "string.".format(e))
+            raise RestInputValidationError("The query string format is invalid. "
+                                           "Parser returned this massage: \"{"
+                                           "}.\" Please notice that the column "
+                                           "number "
+                                           "is counted from "
+                                           "the first character of the query "
+                                           "string.".format(e))
 
         ## return the translator instructions elaborated from the field_list
         return self.build_translator_parameters(field_list)
@@ -884,4 +799,3 @@ def list_routes():
         output.append(line)
 
     return sorted(set(output))
-    

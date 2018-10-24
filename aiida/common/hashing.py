@@ -49,9 +49,9 @@ UNUSABLE_PASSWORD_SUFFIX_LENGTH = 40
 
 HASHING_KEY = "HashingKey"
 
-pwd_context = CryptContext(
+pwd_context = CryptContext(  # pylint: disable=invalid-name
     # The list of hashes that we support
-    schemes=["pbkdf2_sha256", "des_crypt"],
+    schemes=["argon2", "pbkdf2_sha256", "des_crypt"],
     # The default hashing mechanism
     default="pbkdf2_sha256",
 

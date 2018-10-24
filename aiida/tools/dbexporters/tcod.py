@@ -163,12 +163,10 @@ def encode_textfield_base64(content, foldwidth=76):
     :return: encoded string
     """
     import base64
-    #print ("\nstart:", content, type(content))
+
     content = base64.standard_b64encode(content)
-    #print ("\nend:", content, type(content))
     content = b"\n".join(list(content[i:i + foldwidth]
                              for i in range(0, len(content), foldwidth)))
-    #print ("\nto return:", content, type(content))
     return content
 
 

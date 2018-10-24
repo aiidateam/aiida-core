@@ -274,10 +274,9 @@ class RESTApiTestCase(AiidaTestCase):
                 self.assertEqual(
                     len(response["data"][result_name]), len(expected_data))
 
-                for expected_node, response_node in zip(expected_data,
-                                                        response["data"][
-                                                            result_name]):
-                    self.assertEqual(response_node['uuid'], expected_node['uuid'])
+                expected_node_uuids = [node['uuid'] for node in expected_data]
+                result_node_uuids = [node['uuid'] for node in response["data"][result_name]]
+                self.assertEqual(expected_node_uuids, result_node_uuids)
 
                 self.compare_extra_response_data(node_type, url, response, uuid)
 
@@ -301,18 +300,16 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         Requests the details of single computer
         """
-        node_uuid = self.get_dummy_data()["computers"][0]["uuid"]
-        RESTApiTestCase.process_test(self, "computers",
-                                     "/computers/" + str(node_uuid),
-                                     expected_list_ids=[0], uuid=node_uuid)
+        node_uuid = self.get_dummy_data()["computers"][1]["uuid"]
+        RESTApiTestCase.process_test(self, "computers", "/computers/" + str(node_uuid), expected_list_ids=[1],
+                                     uuid=node_uuid)
 
     ############### full list with limit, offset, page, perpage #############
     def test_computers_list(self):
         """
         Get the full list of computers from database
         """
-        RESTApiTestCase.process_test(self, "computers",
-                                     "/computers?orderby=+id", full_list=True)
+        RESTApiTestCase.process_test(self, "computers", "/computers?orderby=+id", full_list=True)
 
     def test_computers_list_limit_offset(self):
         """
@@ -321,8 +318,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         It should return the no of rows specified in limit from
         database starting from the no. specified in offset
         """
-        RESTApiTestCase.process_test(self, "computers",
-                                     "/computers?limit=2&offset=2&orderby=+id",
+        RESTApiTestCase.process_test(self, "computers", "/computers?limit=2&offset=2&orderby=+id",
                                      expected_range=[2, 4])
 
     def test_computers_list_limit_only(self):
@@ -332,9 +328,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         It should return the no of rows specified in limit from
         database.
         """
-        RESTApiTestCase.process_test(self, "computers",
-                                     "/computers?limit=2&orderby=+id",
-                                     expected_range=[None, 2])
+        RESTApiTestCase.process_test(self, "computers", "/computers?limit=2&orderby=+id", expected_range=[None, 2])
 
     def test_computers_list_offset_only(self):
         """
@@ -343,9 +337,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         It should return all the rows from database starting from
         the no. specified in offset
         """
-        RESTApiTestCase.process_test(self, "computers",
-                                     "/computers?offset=2&orderby=+id",
-                                     expected_range=[2, None])
+        RESTApiTestCase.process_test(self, "computers", "/computers?offset=2&orderby=+id", expected_range=[2, None])
 
     def test_computers_list_limit_offset_perpage(self):
         """
@@ -353,8 +345,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         would return the error message.
         """
         expected_error = "perpage key is incompatible with limit and offset"
-        RESTApiTestCase.process_test(self, "computers",
-                                     "/computers?offset=2&limit=1&perpage=2&orderby=+id",
+        RESTApiTestCase.process_test(self, "computers", "/computers?offset=2&limit=1&perpage=2&orderby=+id",
                                      expected_errormsg=expected_error)
 
     def test_computers_list_page_limit_offset(self):
@@ -364,8 +355,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         expected_error = "requesting a specific page is incompatible with " \
                          "limit and offset"
-        RESTApiTestCase.process_test(self, "computers",
-                                     "/computers/page/2?offset=2&limit=1&orderby=+id",
+        RESTApiTestCase.process_test(self, "computers", "/computers/page/2?offset=2&limit=1&orderby=+id",
                                      expected_errormsg=expected_error)
 
     def test_computers_list_page_limit_offset_perpage(self):
@@ -374,8 +364,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         would return the error message.
         """
         expected_error = "perpage key is incompatible with limit and offset"
-        RESTApiTestCase.process_test(self, "computers",
-                                     "/computers/page/2?offset=2&limit=1&perpage=2&orderby=+id",
+        RESTApiTestCase.process_test(self, "computers", "/computers/page/2?offset=2&limit=1&perpage=2&orderby=+id",
                                      expected_errormsg=expected_error)
 
     def test_computers_list_page_default(self):
@@ -387,17 +376,14 @@ class RESTApiTestSuite(RESTApiTestCase):
         "/page" acts as "/page/1?perpage=default_value"
 
         """
-        RESTApiTestCase.process_test(self, "computers",
-                                     "/computers/page?orderby=+id",
-                                     full_list=True)
+        RESTApiTestCase.process_test(self, "computers", "/computers/page?orderby=+id", full_list=True)
 
     def test_computers_list_page_perpage(self):
         """
         no.of pages = total no. of computers in database / perpage
         Using this formula it returns the no. of rows for requested page
         """
-        RESTApiTestCase.process_test(self, "computers",
-                                     "/computers/page/1?perpage=2&orderby=+id",
+        RESTApiTestCase.process_test(self, "computers", "/computers/page/1?perpage=2&orderby=+id",
                                      expected_range=[None, 2])
 
     def test_computers_list_page_perpage_exceed(self):
@@ -409,8 +395,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         expected_error = "Non existent page requested. The page range is [1 : " \
                          "3]"
-        RESTApiTestCase.process_test(self, "computers",
-                                     "/computers/page/4?perpage=2&orderby=+id",
+        RESTApiTestCase.process_test(self, "computers", "/computers/page/4?perpage=2&orderby=+id",
                                      expected_errormsg=expected_error)
 
     ############### list filters ########################
@@ -419,10 +404,8 @@ class RESTApiTestSuite(RESTApiTestCase):
         Add filter on the id of computer and get the filtered computer
         list (e.g. id=1)
         """
-        node_pk = self.get_dummy_data()["computers"][0]["id"]
-        RESTApiTestCase.process_test(self, "computers",
-                                     "/computers?id=" + str(node_pk),
-                                     expected_list_ids=[0])
+        node_pk = self.get_dummy_data()["computers"][1]["id"]
+        RESTApiTestCase.process_test(self, "computers", "/computers?id=" + str(node_pk), expected_list_ids=[1])
 
     def test_computers_filter_id2(self):
         """
@@ -430,8 +413,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         list (e.g. id > 2)
         """
         node_pk = self.get_dummy_data()["computers"][1]["id"]
-        RESTApiTestCase.process_test(self, "computers", "/computers?id>" + str(
-            node_pk) + "&orderby=+id",
+        RESTApiTestCase.process_test(self, "computers", "/computers?id>" + str(node_pk) + "&orderby=+id",
                                      expected_range=[2, None])
 
     def test_computers_filter_pk(self):
@@ -439,28 +421,22 @@ class RESTApiTestSuite(RESTApiTestCase):
         Add filter on the id of computer and get the filtered computer
         list (e.g. id=1)
         """
-        node_pk = self.get_dummy_data()["computers"][0]["id"]
-        RESTApiTestCase.process_test(self, "computers",
-                                     "/computers?pk=" + str(node_pk),
-                                     expected_list_ids=[0])
+        node_pk = self.get_dummy_data()["computers"][1]["id"]
+        RESTApiTestCase.process_test(self, "computers", "/computers?pk=" + str(node_pk), expected_list_ids=[1])
 
     def test_computers_filter_name(self):
         """
         Add filter for the name of computer and get the filtered computer
         list
         """
-        RESTApiTestCase.process_test(self, "computers",
-                                     '/computers?name="test1"',
-                                     expected_list_ids=[1])
+        RESTApiTestCase.process_test(self, "computers", '/computers?name="test1"', expected_list_ids=[1])
 
     def test_computers_filter_hostname(self):
         """
         Add filter for the hostname of computer and get the filtered computer
         list
         """
-        RESTApiTestCase.process_test(self, "computers",
-                                     '/computers?hostname="test1.epfl.ch"',
-                                     expected_list_ids=[1])
+        RESTApiTestCase.process_test(self, "computers", '/computers?hostname="test1.epfl.ch"', expected_list_ids=[1])
 
     def test_computers_filter_transport_type(self):
         """
@@ -468,9 +444,8 @@ class RESTApiTestSuite(RESTApiTestCase):
         computer
         list
         """
-        RESTApiTestCase.process_test(self, "computers",
-                                     '/computers?transport_type="local"&orderby=+id',
-                                     expected_list_ids=[0, 3])
+        RESTApiTestCase.process_test(self, "computers", '/computers?transport_type="local"&name="test3"&orderby=+id',
+                                     expected_list_ids=[3])
 
     ############### list orderby ########################
     def test_computers_orderby_id_asc(self):
@@ -478,80 +453,78 @@ class RESTApiTestSuite(RESTApiTestCase):
         Returns the computers list ordered by "id" in ascending
         order
         """
-        RESTApiTestCase.process_test(self, "computers", "/computers?orderby=id",
-                                     full_list=True)
+        RESTApiTestCase.process_test(self, "computers", "/computers?orderby=id", full_list=True)
 
     def test_computers_orderby_id_asc_sign(self):
         """
         Returns the computers list ordered by "+id" in ascending
         order
         """
-        RESTApiTestCase.process_test(self, "computers",
-                                     "/computers?orderby=+id",
-                                     full_list=True)
+        RESTApiTestCase.process_test(self, "computers", "/computers?orderby=+id", full_list=True)
 
     def test_computers_orderby_id_desc(self):
         """
         Returns the computers list ordered by "id" in descending
         order
         """
-        RESTApiTestCase.process_test(self, "computers",
-                                     "/computers?orderby=-id",
-                                     expected_list_ids=[4, 3, 2, 1, 0])
+        RESTApiTestCase.process_test(self, "computers", "/computers?orderby=-id", expected_list_ids=[4, 3, 2, 1, 0])
 
     def test_computers_orderby_name_asc(self):
         """
         Returns the computers list ordered by "name" in ascending
         order
         """
-        RESTApiTestCase.process_test(self, "computers",
-                                     "/computers?orderby=name",
-                                     full_list=True)
+        node_pk = self.get_dummy_data()["computers"][0]["id"]
+        RESTApiTestCase.process_test(self, "computers", '/computers?pk>' + str(node_pk) + '&orderby=name',
+                                     expected_list_ids=[1, 2, 3, 4])
 
     def test_computers_orderby_name_asc_sign(self):
         """
         Returns the computers list ordered by "+name" in ascending
         order
         """
-        RESTApiTestCase.process_test(self, "computers",
-                                     "/computers?orderby=+name",
-                                     full_list=True)
+        node_pk = self.get_dummy_data()["computers"][0]["id"]
+        RESTApiTestCase.process_test(self, "computers", '/computers?pk>' + str(node_pk) + '&orderby=+name',
+                                     expected_list_ids=[1, 2, 3, 4])
 
     def test_computers_orderby_name_desc(self):
         """
         Returns the computers list ordered by "name" in descending
         order
         """
-        RESTApiTestCase.process_test(self, "computers",
-                                     "/computers?orderby=-name",
-                                     expected_list_ids=[4, 3, 2, 1, 0])
+        node_pk = self.get_dummy_data()["computers"][0]["id"]
+        RESTApiTestCase.process_test(self, "computers", '/computers?pk>' + str(node_pk) + '&orderby=-name',
+                                     expected_list_ids=[4, 3, 2, 1])
 
     def test_computers_orderby_scheduler_type_asc(self):
         """
         Returns the computers list ordered by "scheduler_type" in ascending
         order
         """
+        node_pk = self.get_dummy_data()["computers"][0]["id"]
         RESTApiTestCase.process_test(self, "computers",
-                                     "/computers?orderby=scheduler_type",
-                                     expected_list_ids=[0, 1, 3, 4, 2])
+                                     '/computers?transport_type="ssh"&pk>' + str(node_pk) + '&orderby=scheduler_type',
+                                     expected_list_ids=[1, 4, 2])
 
     def test_computers_orderby_scheduler_type_asc_sign(self):
         """
         Returns the computers list ordered by "+scheduler_type" in ascending
         order
         """
+        node_pk = self.get_dummy_data()["computers"][0]["id"]
         RESTApiTestCase.process_test(self, "computers",
-                                     "/computers?orderby=+scheduler_type",
-                                     expected_list_ids=[0, 1, 3, 4, 2])
+                                     '/computers?transport_type="ssh"&pk>' + str(node_pk) + '&orderby=+scheduler_type',
+                                     expected_list_ids=[1, 4, 2])
 
     def test_computers_orderby_scheduler_type_desc(self):
         """
         Returns the computers list ordered by "scheduler_type" in descending
         order
         """
+        node_pk = self.get_dummy_data()["computers"][0]["id"]
         RESTApiTestCase.process_test(self, "computers",
-                                     "/computers?orderby=-scheduler_type",
-                                     expected_list_ids=[2, 3, 4, 0, 1])
+                                     '/computers?pk>' + str(node_pk) + '&transport_type="ssh"&orderby=-scheduler_type',
+                                     expected_list_ids=[2, 4, 1])
 
     ############### list orderby combinations #######################
     def test_computers_orderby_mixed1(self):
@@ -560,9 +533,9 @@ class RESTApiTestSuite(RESTApiTestCase):
         ascending order and if it is having same transport_type, order it
         by "id"
         """
-        RESTApiTestCase.process_test(self, "computers",
-                                     "/computers?orderby=transport_type,id",
-                                     expected_list_ids=[0, 3, 1, 2, 4])
+        node_pk = self.get_dummy_data()["computers"][0]["id"]
+        RESTApiTestCase.process_test(self, "computers", '/computers?pk>' + str(node_pk) + '&orderby=transport_type,id',
+                                     expected_list_ids=[3, 1, 2, 4])
 
     def test_computers_orderby_mixed2(self):
         """
@@ -570,9 +543,10 @@ class RESTApiTestSuite(RESTApiTestCase):
         descending order and if it is having same scheduler_type, order it
         by "name"
         """
+        node_pk = self.get_dummy_data()["computers"][0]["id"]
         RESTApiTestCase.process_test(self, "computers",
-                                     "/computers?orderby=-scheduler_type,name",
-                                     expected_list_ids=[2, 3, 4, 0, 1])
+                                     '/computers?pk>' + str(node_pk) + '&orderby=-scheduler_type,name',
+                                     expected_list_ids=[2, 3, 4, 1])
 
     def test_computers_orderby_mixed3(self):
         """
@@ -610,9 +584,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         filtered computer list
         """
         node_pk = self.get_dummy_data()["computers"][0]["id"]
-        RESTApiTestCase.process_test(self, "computers",
-                                     '/computers?id>' + str(
-                                         node_pk) + '&hostname="test1.epfl.ch"',
+        RESTApiTestCase.process_test(self, "computers", '/computers?id>' + str(node_pk) + '&hostname="test1.epfl.ch"',
                                      expected_list_ids=[1])
 
     def test_computers_filter_mixed2(self):
@@ -622,9 +594,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         node_pk = self.get_dummy_data()["computers"][0]["id"]
         RESTApiTestCase.process_test(self, "computers",
-                                     '/computers?id>' + str(
-                                         node_pk) +
-                                     '&hostname="test3.epfl.ch"&transport_type="ssh"',
+                                     '/computers?id>' + str(node_pk) + '&hostname="test3.epfl.ch"&transport_type="ssh"',
                                      empty_list=True)
 
     ############### list all parameter combinations #######################
@@ -633,9 +603,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         url parameters: id, limit and offset
         """
         node_pk = self.get_dummy_data()["computers"][0]["id"]
-        RESTApiTestCase.process_test(self, "computers",
-                                     "/computers?id>" + str(
-                                         node_pk) + "&limit=2&offset=3",
+        RESTApiTestCase.process_test(self, "computers", "/computers?id>" + str(node_pk) + "&limit=2&offset=3",
                                      expected_list_ids=[4])
 
     def test_computers_mixed2(self):
@@ -644,8 +612,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         node_pk = self.get_dummy_data()["computers"][0]["id"]
         RESTApiTestCase.process_test(self, "computers",
-                                     "/computers/page/2?id>" + str(
-                                         node_pk) + "&perpage=2&orderby=+id",
+                                     "/computers/page/2?id>" + str(node_pk) + "&perpage=2&orderby=+id",
                                      expected_list_ids=[3, 4])
 
     def test_computers_mixed3(self):
@@ -654,9 +621,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         node_pk = self.get_dummy_data()["computers"][0]["id"]
         RESTApiTestCase.process_test(self, "computers",
-                                     '/computers?id>=' + str(
-                                         node_pk) +
-                                     '&transport_type="ssh"&orderby=-id&limit=2',
+                                     '/computers?id>=' + str(node_pk) + '&transport_type="ssh"&orderby=-id&limit=2',
                                      expected_list_ids=[4, 2])
 
     ########## pass unknown url parameter ###########

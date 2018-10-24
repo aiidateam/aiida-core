@@ -11,6 +11,8 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+import io
+
 from aiida.cmdline.utils import echo
 
 
@@ -52,7 +54,7 @@ def cat_repo_files(node, path):
             raise ValueError("No file '{}' in the repo".format(path))
 
         absfname = fldr.get_abs_path(fname)
-        with open(absfname) as repofile:
+        with io.open(absfname, encoding='utf8') as repofile:
             for line in repofile:
                 sys.stdout.write(line)
 

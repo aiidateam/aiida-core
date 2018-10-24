@@ -12,6 +12,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 from abc import ABCMeta
 
+import io
 try:
     from functools import singledispatch  # Python 3.4+
 except ImportError:
@@ -265,10 +266,10 @@ class Data(Node):
 
         for additional_fname, additional_fcontent in extra_files.items():
             retlist.append(additional_fname)
-            with open(additional_fname, 'wb') as f:
+            with io.open(additional_fname, 'wb', encoding=None) as f:
                 f.write(additional_fcontent) #.encode('utf-8')) # This is up to each specific plugin
         retlist.append(path)
-        with open(path, 'wb') as f:
+        with io.open(path, 'wb', encoding=None) as f:
             f.write(filetext)
 
         return retlist
@@ -335,7 +336,7 @@ class Data(Node):
         """
         if fileformat is None:
             fileformat = fname.split('.')[-1]
-        with open(fname, 'r') as f:  # reads in cwd, if fname is not absolute
+        with io.open(fname, 'r', encoding='utf8') as f:  # reads in cwd, if fname is not absolute
             self.importstring(f.read(), fileformat)
 
     def _get_importers(self):

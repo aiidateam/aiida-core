@@ -11,6 +11,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+import io
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.caching import enable_caching
 from aiida.orm.calculation.inline import make_inline, InlineCalculation
@@ -99,7 +100,7 @@ class TestInlineCalculation(AiidaTestCase):
         # into memory, which should be exactly this test file
         function_source_file = node.function_source_file
 
-        with open(function_source_file) as handle:
+        with io.open(function_source_file, encoding='utf8') as handle:
             function_source_code = handle.readlines()
 
         # Get the attributes that should be stored in the node

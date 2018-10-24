@@ -13,6 +13,7 @@ Tests for TestTcodDbExporter
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+import io
 import unittest
 
 import six
@@ -194,13 +195,13 @@ class TestTcodDbExporter(AiidaTestCase):
             calc._store_raw_input_folder(f.abspath)
 
         fd = FolderData()
-        with open(fd._get_folder_pathsubfolder.get_abs_path(
-                calc._SCHED_OUTPUT_FILE), 'w') as f:
+        with io.open(fd._get_folder_pathsubfolder.get_abs_path(
+                calc._SCHED_OUTPUT_FILE), 'w', encoding='utf8') as f:
             f.write("standard output")
             f.flush()
 
-        with open(fd._get_folder_pathsubfolder.get_abs_path(
-                calc._SCHED_ERROR_FILE), 'w') as f:
+        with io.open(fd._get_folder_pathsubfolder.get_abs_path(
+                calc._SCHED_ERROR_FILE), 'w', encoding='uft8') as f:
             f.write("standard error")
             f.flush()
 

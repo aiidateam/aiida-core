@@ -13,6 +13,7 @@ Tests for specific subclasses of Data
 from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
+import io
 import unittest
 
 from six.moves import range
@@ -127,12 +128,12 @@ class TestSinglefileData(AiidaTestCase):
 
         self.assertEquals(a.get_folder_list(), [basename])
 
-        with open(a.get_abs_path(basename)) as f:
+        with io.open(a.get_abs_path(basename), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content)
 
         a.store()
 
-        with open(a.get_abs_path(basename)) as f:
+        with io.open(a.get_abs_path(basename), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content)
         self.assertEquals(a.get_folder_list(), [basename])
 
@@ -141,7 +142,7 @@ class TestSinglefileData(AiidaTestCase):
         # I check the retrieved object
         self.assertTrue(isinstance(b, SinglefileData))
         self.assertEquals(b.get_folder_list(), [basename])
-        with open(b.get_abs_path(basename)) as f:
+        with io.open(b.get_abs_path(basename), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content)
 
 
@@ -219,7 +220,7 @@ class TestCifData(AiidaTestCase):
 
         self.assertEquals(a.get_folder_list(), [basename])
 
-        with open(a.get_abs_path(basename)) as f:
+        with io.open(a.get_abs_path(basename), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content)
 
         a.store()
@@ -230,7 +231,7 @@ class TestCifData(AiidaTestCase):
             'version': '1234',
         })
 
-        with open(a.get_abs_path(basename)) as f:
+        with io.open(a.get_abs_path(basename), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content)
         self.assertEquals(a.get_folder_list(), [basename])
 
@@ -239,7 +240,7 @@ class TestCifData(AiidaTestCase):
         # I check the retrieved object
         self.assertTrue(isinstance(b, CifData))
         self.assertEquals(b.get_folder_list(), [basename])
-        with open(b.get_abs_path(basename)) as f:
+        with io.open(b.get_abs_path(basename), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content)
 
         # Checking the get_or_create() method:
@@ -251,7 +252,7 @@ class TestCifData(AiidaTestCase):
         self.assertTrue(isinstance(c, CifData))
         self.assertTrue(not created)
 
-        with open(c.get_file_abs_path()) as f:
+        with io.open(c.get_file_abs_path(), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content)
 
         other_content = "data_test _cell_length_b 10(1)"
@@ -263,7 +264,7 @@ class TestCifData(AiidaTestCase):
         self.assertTrue(isinstance(c, CifData))
         self.assertTrue(created)
 
-        with open(c.get_file_abs_path()) as f:
+        with io.open(c.get_file_abs_path(), encoding='utf8') as f:
             self.assertEquals(f.read(), other_content)
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
@@ -3463,7 +3464,7 @@ class TestTrajectoryData(AiidaTestCase):
             files_created = [] # In case there is an exception
             try:
                 files_created = n.export(filename, fileformat=format)
-                with open(filename) as f:
+                with io.open(filename, encoding='utf8') as f:
                     filedata = f.read()
             finally:
                 for file in files_created:
@@ -4282,7 +4283,7 @@ class TestBandsData(AiidaTestCase):
             files_created = [] # In case there is an exception
             try:
                 files_created = b.export(filename, fileformat=format)
-                with open(filename) as f:
+                with io.open(filename, encoding='utf8') as f:
                     filedata = f.read()
             finally:
                 for file in files_created:

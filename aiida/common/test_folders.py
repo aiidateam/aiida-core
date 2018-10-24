@@ -10,6 +10,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+import io
 import unittest
 
 
@@ -29,10 +30,10 @@ class FoldersTest(unittest.TestCase):
 
         tmpsource = tempfile.mkdtemp()
         tmpdest = tempfile.mkdtemp()
-        with open(os.path.join(tmpsource, "sąžininga"), 'w') as f:
-            f.write("test")
-        with open(os.path.join(tmpsource, "žąsis"), 'w') as f:
-            f.write("test")
+        with io.open(os.path.join(tmpsource, "sąžininga"), 'w', encoding='utf8') as f:
+            f.write(u"test")
+        with io.open(os.path.join(tmpsource, "žąsis"), 'w', encoding='utf8') as f:
+            f.write(u"test")
         fd = Folder(tmpdest)
         fd.insert_path(tmpsource, "destination")
         fd.insert_path(tmpsource, u"šaltinis")

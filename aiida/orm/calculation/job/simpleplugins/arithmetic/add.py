@@ -10,6 +10,8 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+import io
+
 from aiida.common.utils import classproperty
 from aiida.common.exceptions import InputValidationError, ValidationError
 from aiida.common.datastructures import CalcInfo, CodeInfo
@@ -190,5 +192,5 @@ class ArithmeticAddCalculation(JobCalculation):
         """
         filename = tempfolder.get_abs_path(self._INPUT_FILE_NAME)
 
-        with open(filename, 'w') as handle:
+        with io.open(filename, 'w', encoding='utf8') as handle:
             handle.write('{} {}\n'.format(input_x.value, input_y.value))

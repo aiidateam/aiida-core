@@ -10,15 +10,16 @@
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
+import io
 import os
 import uuid
-import aiida
 import logging
 import json
 
 import six
 from six.moves import input
 
+import aiida
 from aiida.common.exceptions import ConfigurationError
 from aiida.utils.find_folder import find_path
 from .additions.config_migrations import check_and_migrate_config, add_config_version
@@ -110,7 +111,7 @@ def _load_config():
     aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
     conf_file = os.path.join(aiida_dir, CONFIG_FNAME)
     try:
-        with open(conf_file, 'r') as json_file:
+        with io.open(conf_file, 'r', encoding='utf8') as json_file:
             return json.load(json_file)
     except IOError:
         # No configuration file
@@ -141,7 +142,7 @@ def store_config(confs):
     conf_file = os.path.join(aiida_dir, CONFIG_FNAME)
     old_umask = os.umask(DEFAULT_UMASK)
     try:
-        with open(conf_file, 'w') as json_file:
+        with io.open(conf_file, 'w', encoding='utf8') as json_file:
             json.dump(confs, json_file, indent=CONFIG_INDENT_SIZE)
     finally:
         os.umask(old_umask)
@@ -172,13 +173,13 @@ def try_create_secret_key():
 
     if os.path.exists(secret_key_full_name):
         # If for some reason the file is empty, regenerate it
-        with open(secret_key_full_name) as f:
+        with io.open(secret_key_full_name, encoding='utf8') as f:
             if f.read().strip():
                 return
 
     old_umask = os.umask(DEFAULT_UMASK)
     try:
-        with open(secret_key_full_name, 'w') as f:
+        with io.open(secret_key_full_name, 'w', encoding='utf8') as f:
             f.write(generate_random_secret_key())
     finally:
         os.umask(old_umask)
@@ -203,7 +204,7 @@ def create_htaccess_file():
 
     old_umask = os.umask(DEFAULT_UMASK)
     try:
-        with open(htaccess_full_name, 'w') as f:
+        with io.open(htaccess_full_name, 'w', encoding='utf8') as f:
             f.write(
                 """#### No one should read this folder!
                 ## Please double check, though, that your Apache configuration honors
@@ -230,7 +231,7 @@ def get_secret_key():
     secret_key_full_name = os.path.join(aiida_dir, SECRET_KEY_FNAME)
 
     try:
-        with open(secret_key_full_name) as f:
+        with io.open(secret_key_full_name, encoding='utf8') as f:
             secret_key = f.read()
     except (OSError, IOError):
         raise ConfigurationError("Unable to find the secret key file "

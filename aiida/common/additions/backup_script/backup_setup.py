@@ -11,6 +11,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import datetime
+import io
 import json
 import logging
 import os
@@ -218,7 +219,7 @@ class BackupSetup(object):
             backup_variables = self.construct_backup_variables(
                 file_backup_folder_abs)
 
-            with open(final_conf_filepath, 'w') as backup_info_file:
+            with io.open(final_conf_filepath, 'w', encoding='utf8') as backup_info_file:
                 json.dump(backup_variables, backup_info_file)
         # If the backup parameters are configured manually
         else:
@@ -269,7 +270,7 @@ backup_inst.run()
                                    self._script_filename)
 
         # Write the contents to the script
-        with open(script_path, 'w') as script_file:
+        with io.open(script_path, 'w', encoding='utf8') as script_file:
             script_file.write(script_content)
 
         # Set the right permissions

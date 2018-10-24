@@ -11,6 +11,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import errno
+import io
 import os
 import shutil
 import tempfile
@@ -37,7 +38,7 @@ class TestRemoteData(AiidaTestCase):
         self.remote = RemoteData(computer=self.computer)
         self.remote.set_remote_path(self.tmp_path)
 
-        with open(os.path.join(self.tmp_path, 'file.txt'), 'w') as handle:
+        with io.open(os.path.join(self.tmp_path, 'file.txt'), 'w', encoding='utf8') as handle:
             handle.write('test string')
 
         self.remote.set_computer(self.computer)

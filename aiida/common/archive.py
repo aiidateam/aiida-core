@@ -12,12 +12,14 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import contextlib
+import io
 import json
 import os
 import tarfile
 import sys
 import zipfile
 from functools import wraps
+
 from six.moves import range
 
 from aiida.common.exceptions import ContentNotExistent, InvalidOperation
@@ -404,7 +406,7 @@ def extract_cif(infile, folder, nodes_export_subfolder="nodes",
         contents = decode_textfield(contents,encoding)
         if os.path.dirname(dest_path) != '':
             folder.get_subfolder(os.path.dirname(dest_path)+os.sep,create=True)
-        with open(folder.get_abs_path(dest_path),'w') as f:
+        with io.open(folder.get_abs_path(dest_path),'w', encoding='utf8') as f:
             f.write(contents)
             f.flush()
         md5  = values['_tcod_file_md5sum'][i]

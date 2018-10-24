@@ -11,6 +11,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import enum
+import io
 import os
 import shutil
 import socket
@@ -139,13 +140,13 @@ class DaemonClient(object):
         """
         if self.is_daemon_running:
             try:
-                with open(self.circus_port_file, 'r') as fhandle:
+                with io.open(self.circus_port_file, 'r', encoding='utf8') as fhandle:
                     return int(fhandle.read().strip())
             except (ValueError, IOError):
                 raise RuntimeError('daemon is running so port file should have been there but could not read it')
         else:
             port = self.get_available_port()
-            with open(self.circus_port_file, 'w') as handle:
+            with io.open(self.circus_port_file, 'w', encoding='utf8') as handle:
                 handle.write(str(port))
 
             return port
@@ -168,7 +169,7 @@ class DaemonClient(object):
         """
         if self.is_daemon_running:
             try:
-                return open(self.circus_socket_file, 'r').read().strip()
+                return io.open(self.circus_socket_file, 'r', encoding='utf8').read().strip()
             except (ValueError, IOError):
                 raise RuntimeError('daemon is running so sockets file should have been there but could not read it')
         else:
@@ -178,7 +179,7 @@ class DaemonClient(object):
                 return self._SOCKET_DIRECTORY
 
             socket_dir_path = tempfile.mkdtemp()
-            with open(self.circus_socket_file, 'w') as handle:
+            with io.open(self.circus_socket_file, 'w', encoding='utf8') as handle:
                 handle.write(socket_dir_path)
 
             self._SOCKET_DIRECTORY = socket_dir_path
@@ -192,7 +193,7 @@ class DaemonClient(object):
         """
         if os.path.isfile(self.circus_pid_file):
             try:
-                return int(open(self.circus_pid_file, 'r').read().strip())
+                return int(io.open(self.circus_pid_file, 'r', encoding='utf8').read().strip())
             except (ValueError, IOError):
                 return None
         else:

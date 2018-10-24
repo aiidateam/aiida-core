@@ -10,6 +10,7 @@
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
+import io
 import sys
 
 import six
@@ -396,10 +397,10 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
             raise ContentNotExistent("The provided file/folder ({}) is empty"
                                      .format(in_path))
         try:
-            with open(folder.get_abs_path('metadata.json')) as f:
+            with io.open(folder.get_abs_path('metadata.json'), encoding='utf8') as f:
                 metadata = json.load(f)
 
-            with open(folder.get_abs_path('data.json')) as f:
+            with io.open(folder.get_abs_path('data.json'), encoding='utf8') as f:
                 data = json.load(f)
         except IOError as e:
             raise ValueError("Unable to find the file {} in the import "
@@ -918,10 +919,10 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
             raise ContentNotExistent("The provided file/folder ({}) is empty"
                                      .format(in_path))
         try:
-            with open(folder.get_abs_path('metadata.json')) as f:
+            with io.open(folder.get_abs_path('metadata.json'), encoding='utf8') as f:
                 metadata = json.load(f)
 
-            with open(folder.get_abs_path('data.json')) as f:
+            with io.open(folder.get_abs_path('data.json'), encoding='utf8') as f:
                 data = json.load(f)
         except IOError as e:
             raise ValueError("Unable to find the file {} in the import "

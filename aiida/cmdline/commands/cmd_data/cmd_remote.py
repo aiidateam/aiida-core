@@ -12,6 +12,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+import io
 import click
 
 from aiida.cmdline.commands.cmd_data import verdi_data
@@ -63,7 +64,7 @@ def remote_cat(datum, path):
         with tempfile.NamedTemporaryFile(delete=False) as tmpf:
             tmpf.close()
             datum.getfile(path, tmpf.name)
-            with open(tmpf.name) as fobj:
+            with io.open(tmpf.name, encoding='utf8') as fobj:
                 sys.stdout.write(fobj.read())
     except IOError as err:
         echo.echo_critical('{}: {}'.format(err.errno, str(err)))

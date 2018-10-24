@@ -14,6 +14,7 @@ import os
 import shutil
 import fnmatch
 import tempfile
+import io
 
 import six
 
@@ -239,7 +240,7 @@ class Folder(object):
         # go beyond the folder limits
         dest_abs_path = self.get_abs_path(filename)
 
-        with open(dest_abs_path, 'w') as f:
+        with io.open(dest_abs_path, 'w', encoding='utf8') as f:
             shutil.copyfileobj(src_filelike, f)
 
         # Set the mode
@@ -291,12 +292,15 @@ class Folder(object):
 
         return dest_abs_path
 
-    def open(self, name, mode='r'):
+    def open(self, name, mode='r', encoding='utf8'):
         """
         Open a file in the current folder and return the corresponding
         file object.
         """
-        return open(self.get_abs_path(name), mode)
+        if 'b' in mode:
+            encoding=None
+        
+        return io.open(self.get_abs_path(name), mode, encoding=encoding)
 
     @property
     def abspath(self):

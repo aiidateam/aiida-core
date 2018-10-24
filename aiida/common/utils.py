@@ -20,6 +20,7 @@ import datetime
 import filecmp
 import functools
 import inspect
+import io
 import os.path
 import sys
 import numbers
@@ -335,7 +336,7 @@ def md5_file(filename, block_size_factor=128):
     import hashlib
 
     md5 = hashlib.md5()
-    with open(filename, 'rb') as fhandle:
+    with io.open(filename, 'rb', encoding=None) as fhandle:
         # I read 128 bytes at a time until it returns the empty string b''
         for chunk in iter(lambda: fhandle.read(block_size_factor * md5.block_size), b''):
             md5.update(chunk)
@@ -361,7 +362,7 @@ def sha1_file(filename, block_size_factor=128):
     import hashlib
 
     sha1 = hashlib.sha1()
-    with open(filename, 'rb') as fhandle:
+    with io.open(filename, 'rb', encoding=None) as fhandle:
         # I read 128 bytes at a time until it returns the empty string b''
         for chunk in iter(lambda: fhandle.read(block_size_factor * sha1.block_size), b''):
             sha1.update(chunk)
@@ -596,8 +597,7 @@ def xyz_parser_iterator(xyz_string):
             """
             return self.__next__()
 
-    pos_regex = re.compile(
-        r"""
+    pos_regex = re.compile(r"""
 ^                                                                             # Linestart
 [ \t]*                                                                        # Optional white space
 (?P<sym>[A-Za-z]+[A-Za-z0-9]*)\s+                                             # get the symbol
@@ -605,8 +605,7 @@ def xyz_parser_iterator(xyz_string):
 (?P<y> [\+\-]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([Ee][\+\-]?\d+)? ) [ \t]+     # Get y
 (?P<z> [\+\-]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([Ee][\+\-]?\d+)? )            # Get z
 """, re.X | re.M)
-    pos_block_regex = re.compile(
-        r"""
+    pos_block_regex = re.compile(r"""
                                                             # First line contains an integer
                                                             # and only an integer: the number of atoms
 ^[ \t]* (?P<natoms> [0-9]+) [ \t]*[\n]                      # End first line
@@ -1253,7 +1252,7 @@ class HiddenPrints(object):  # pylint: disable=too-few-public-methods
     def __enter__(self):
         from os import devnull
         self._original_stdout = sys.stdout
-        sys.stdout = open(devnull, 'w')
+        sys.stdout = io.open(devnull, 'w', encoding='utf8')
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         sys.stdout = self._original_stdout

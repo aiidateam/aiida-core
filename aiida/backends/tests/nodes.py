@@ -14,6 +14,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 import copy
+import io
 import unittest
 
 import six
@@ -654,9 +655,9 @@ class TestNodeBasic(AiidaTestCase):
 
         self.assertEquals(
             set(a.get_folder_list()), set(['file1.txt', 'file2.txt']))
-        with open(a.get_abs_path('file1.txt')) as f:
+        with io.open(a.get_abs_path('file1.txt'), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content)
-        with open(a.get_abs_path('file2.txt')) as f:
+        with io.open(a.get_abs_path('file2.txt'), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content)
 
         b = a.clone()
@@ -665,9 +666,9 @@ class TestNodeBasic(AiidaTestCase):
         # Check that the content is there
         self.assertEquals(
             set(b.get_folder_list()), set(['file1.txt', 'file2.txt']))
-        with open(b.get_abs_path('file1.txt')) as f:
+        with io.open(b.get_abs_path('file1.txt'), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content)
-        with open(b.get_abs_path('file2.txt')) as f:
+        with io.open(b.get_abs_path('file2.txt'), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content)
 
         # I overwrite a file and create a new one in the clone only
@@ -680,18 +681,18 @@ class TestNodeBasic(AiidaTestCase):
         # I check the new content, and that the old one has not changed
         self.assertEquals(
             set(a.get_folder_list()), set(['file1.txt', 'file2.txt']))
-        with open(a.get_abs_path('file1.txt')) as f:
+        with io.open(a.get_abs_path('file1.txt'), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content)
-        with open(a.get_abs_path('file2.txt')) as f:
+        with io.open(a.get_abs_path('file2.txt'), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content)
         self.assertEquals(
             set(b.get_folder_list()),
             set(['file1.txt', 'file2.txt', 'file3.txt']))
-        with open(b.get_abs_path('file1.txt')) as f:
+        with io.open(b.get_abs_path('file1.txt'), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content)
-        with open(b.get_abs_path('file2.txt')) as f:
+        with io.open(b.get_abs_path('file2.txt'), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content_different)
-        with open(b.get_abs_path('file3.txt')) as f:
+        with io.open(b.get_abs_path('file3.txt'), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content_different)
 
         # This should in principle change the location of the files,
@@ -709,19 +710,19 @@ class TestNodeBasic(AiidaTestCase):
 
         self.assertEquals(
             set(a.get_folder_list()), set(['file1.txt', 'file2.txt']))
-        with open(a.get_abs_path('file1.txt')) as f:
+        with io.open(a.get_abs_path('file1.txt'), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content)
-        with open(a.get_abs_path('file2.txt')) as f:
+        with io.open(a.get_abs_path('file2.txt'), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content)
 
         self.assertEquals(
             set(c.get_folder_list()),
             set(['file1.txt', 'file2.txt', 'file4.txt']))
-        with open(c.get_abs_path('file1.txt')) as f:
+        with io.open(c.get_abs_path('file1.txt'), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content_different)
-        with open(c.get_abs_path('file2.txt')) as f:
+        with io.open(c.get_abs_path('file2.txt'), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content)
-        with open(c.get_abs_path('file4.txt')) as f:
+        with io.open(c.get_abs_path('file4.txt'), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content_different)
 
     def test_folders(self):
@@ -750,11 +751,11 @@ class TestNodeBasic(AiidaTestCase):
         os.makedirs(tree_1)
         file_content = 'some text ABCDE'
         file_content_different = 'other values 12345'
-        with open(os.path.join(tree_1, 'file1.txt'), 'w') as f:
+        with io.open(os.path.join(tree_1, 'file1.txt'), 'w', encoding='utf8') as f:
             f.write(file_content)
         os.mkdir(os.path.join(tree_1, 'dir1'))
         os.mkdir(os.path.join(tree_1, 'dir1', 'dir2'))
-        with open(os.path.join(tree_1, 'dir1', 'file2.txt'), 'w') as f:
+        with io.open(os.path.join(tree_1, 'dir1', 'file2.txt'), 'w', encoding='utf8') as f:
             f.write(file_content)
         os.mkdir(os.path.join(tree_1, 'dir1', 'dir2', 'dir3'))
 
@@ -769,10 +770,10 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(
             set(a.get_folder_list(os.path.join('tree_1', 'dir1'))),
             set(['dir2', 'file2.txt']))
-        with open(a.get_abs_path(os.path.join('tree_1', 'file1.txt'))) as f:
+        with io.open(a.get_abs_path(os.path.join('tree_1', 'file1.txt')), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content)
-        with open(a.get_abs_path(os.path.join('tree_1', 'dir1',
-                                              'file2.txt'))) as f:
+        with io.open(a.get_abs_path(os.path.join('tree_1', 'dir1',
+                                              'file2.txt')), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content)
 
         # try to exit from the folder
@@ -790,10 +791,10 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(
             set(b.get_folder_list(os.path.join('tree_1', 'dir1'))),
             set(['dir2', 'file2.txt']))
-        with open(b.get_abs_path(os.path.join('tree_1', 'file1.txt'))) as f:
+        with io.open(b.get_abs_path(os.path.join('tree_1', 'file1.txt')), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content)
-        with open(b.get_abs_path(os.path.join('tree_1', 'dir1',
-                                              'file2.txt'))) as f:
+        with io.open(b.get_abs_path(os.path.join('tree_1', 'dir1',
+                                              'file2.txt')), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content)
 
         # I overwrite a file and create a new one in the copy only
@@ -818,10 +819,10 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(
             set(a.get_folder_list(os.path.join('tree_1', 'dir1'))),
             set(['dir2', 'file2.txt']))
-        with open(a.get_abs_path(os.path.join('tree_1', 'file1.txt'))) as f:
+        with io.open(a.get_abs_path(os.path.join('tree_1', 'file1.txt')), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content)
-        with open(a.get_abs_path(os.path.join('tree_1', 'dir1',
-                                              'file2.txt'))) as f:
+        with io.open(a.get_abs_path(os.path.join('tree_1', 'dir1',
+                                              'file2.txt')), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content)
         # new
         self.assertEquals(
@@ -832,10 +833,10 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(
             set(b.get_folder_list(os.path.join('tree_1', 'dir1'))),
             set(['dir2', 'file2.txt']))
-        with open(b.get_abs_path(os.path.join('tree_1', 'file1.txt'))) as f:
+        with io.open(b.get_abs_path(os.path.join('tree_1', 'file1.txt')), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content)
-        with open(b.get_abs_path(os.path.join('tree_1', 'dir1',
-                                              'file2.txt'))) as f:
+        with io.open(b.get_abs_path(os.path.join('tree_1', 'dir1',
+                                              'file2.txt')), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content)
 
         # This should in principle change the location of the files,
@@ -860,10 +861,10 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(
             set(a.get_folder_list(os.path.join('tree_1', 'dir1'))),
             set(['dir2', 'file2.txt']))
-        with open(a.get_abs_path(os.path.join('tree_1', 'file1.txt'))) as f:
+        with io.open(a.get_abs_path(os.path.join('tree_1', 'file1.txt')), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content)
-        with open(a.get_abs_path(os.path.join('tree_1', 'dir1',
-                                              'file2.txt'))) as f:
+        with io.open(a.get_abs_path(os.path.join('tree_1', 'dir1',
+                                              'file2.txt')), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content)
 
         # check new
@@ -873,10 +874,10 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(
             set(c.get_folder_list(os.path.join('tree_1', 'dir1'))),
             set(['file2.txt', 'file4.txt']))
-        with open(c.get_abs_path(os.path.join('tree_1', 'file1.txt'))) as f:
+        with io.open(c.get_abs_path(os.path.join('tree_1', 'file1.txt'))) as f:
             self.assertEquals(f.read(), file_content_different)
-        with open(c.get_abs_path(os.path.join('tree_1', 'dir1',
-                                              'file2.txt'))) as f:
+        with io.open(c.get_abs_path(os.path.join('tree_1', 'dir1',
+                                              'file2.txt')), encoding='utf8') as f:
             self.assertEquals(f.read(), file_content)
 
         # garbage cleaning

@@ -12,6 +12,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import inspect
+import io
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.common.lang import override
 from aiida.common.links import LinkType
@@ -57,7 +58,7 @@ class FunctionCalculationMixin(object):
 
         try:
             source_file_path = inspect.getsourcefile(func)
-            with open(source_file_path) as handle:
+            with io.open(source_file_path, encoding='utf8') as handle:
                 self._set_source_file(handle)
         except (IOError, OSError):
             pass

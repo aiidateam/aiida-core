@@ -14,6 +14,7 @@ import abc
 import copy
 import datetime
 import enum
+import io
 import warnings
 
 import six
@@ -2169,9 +2170,9 @@ class AbstractJobCalculation(AbstractCalculation):
                 t.put(src_abs_path, dest_rel_path)
 
             if remote_copy_list:
-                with open(os.path.join(subfolder.abspath,
+                with io.open(os.path.join(subfolder.abspath,
                                        '_aiida_remote_copy_list.txt'),
-                          'w') as f:
+                          'w', encoding='utf8') as f:
                     for (remote_computer_uuid, remote_abs_path,
                          dest_rel_path) in remote_copy_list:
                         try:
@@ -2186,9 +2187,9 @@ class AbstractJobCalculation(AbstractCalculation):
                                                          dest_rel_path))
 
             if remote_symlink_list:
-                with open(os.path.join(subfolder.abspath,
+                with io.open(os.path.join(subfolder.abspath,
                                        '_aiida_remote_symlink_list.txt'),
-                          'w') as f:
+                          'w', encoding='utf8') as f:
                     for (remote_computer_uuid, remote_abs_path,
                          dest_rel_path) in remote_symlink_list:
                         try:

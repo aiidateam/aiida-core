@@ -13,6 +13,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+import io
+
 import click
 import tabulate
 
@@ -165,9 +167,9 @@ def migrate(input_file, output_file, force, silent, archive_format):
             echo.echo_critical('invalid file format, expected either a zip archive or gzipped tarball')
 
         try:
-            with open(folder.get_abs_path('data.json')) as handle:
+            with io.open(folder.get_abs_path('data.json'), encoding='utf8') as handle:
                 data = json.load(handle)
-            with open(folder.get_abs_path('metadata.json')) as handle:
+            with io.open(folder.get_abs_path('metadata.json'), encoding='utf8') as handle:
                 metadata = json.load(handle)
         except IOError:
             echo.echo_critical('export archive does not contain the required file {}'.format(handle.filename))
@@ -189,10 +191,10 @@ def migrate(input_file, output_file, force, silent, archive_format):
 
         new_version = verify_metadata_version(metadata)
 
-        with open(folder.get_abs_path('data.json'), 'w') as handle:
+        with io.open(folder.get_abs_path('data.json'), 'w', encoding='utf8') as handle:
             json.dump(data, handle)
 
-        with open(folder.get_abs_path('metadata.json'), 'w') as handle:
+        with io.open(folder.get_abs_path('metadata.json'), 'w', encoding='utf8') as handle:
             json.dump(metadata, handle)
 
         if archive_format == 'zip' or archive_format == 'zip-uncompressed':

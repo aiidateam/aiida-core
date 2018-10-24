@@ -14,7 +14,7 @@ Tests for the export and import routines.
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-
+import io
 import six
 from six.moves import range, zip
 
@@ -299,12 +299,12 @@ class TestSimple(AiidaTestCase):
             with tarfile.open(filename, "r:gz", format=tarfile.PAX_FORMAT) as tar:
                 tar.extractall(unpack_tmp_folder)
 
-            with open(os.path.join(unpack_tmp_folder,
-                                   'metadata.json'), 'r') as f:
+            with io.open(os.path.join(unpack_tmp_folder,
+                                   'metadata.json'), 'r', encoding='utf8') as f:
                 metadata = json.load(f)
             metadata['export_version'] = 0.0
-            with open(os.path.join(unpack_tmp_folder,
-                                   'metadata.json'), 'w') as f:
+            with io.open(os.path.join(unpack_tmp_folder,
+                                   'metadata.json', encoding='utf8'), 'w') as f:
                 json.dump(metadata, f)
 
             with tarfile.open(filename, "w:gz", format=tarfile.PAX_FORMAT) as tar:
@@ -351,14 +351,14 @@ class TestSimple(AiidaTestCase):
                     filename, "r:gz", format=tarfile.PAX_FORMAT) as tar:
                 tar.extractall(unpack.abspath)
 
-            with open(unpack.get_abs_path('data.json'), 'r') as f:
+            with io.open(unpack.get_abs_path('data.json'), 'r', encoding='utf8') as f:
                 metadata = json.load(f)
             metadata['links_uuid'].append({
                 'output': sd.uuid,
                 'input': 'non-existing-uuid',
                 'label': 'parent'
             })
-            with open(unpack.get_abs_path('data.json'), 'w') as f:
+            with io.open(unpack.get_abs_path('data.json'), 'w', encoding='utf8') as f:
                 json.dump(metadata, f)
 
             with tarfile.open(

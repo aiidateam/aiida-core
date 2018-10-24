@@ -11,6 +11,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
 import sys
+import io
 import os
 import shutil
 import unittest
@@ -485,7 +486,7 @@ class TestVerdiDataRemote(AiidaTestCase):
         self.r = RemoteData()
         p = tempfile.mkdtemp()
         self.r.set_remote_path(p)
-        with open(p + '/file.txt', 'w') as f:
+        with io.open(p + '/file.txt', 'w', encoding='utf8') as f:
             f.write("test string")
         self.r.set_computer(comp)
         self.r.store()

@@ -13,6 +13,7 @@ This module manages the UPF pseudopotentials in the local repository.
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+import io
 import re
 
 import six
@@ -265,7 +266,7 @@ def parse_upf(fname, check_filename=True):
 
     parsed_data = {}
 
-    with open(fname) as f:
+    with io.open(fname, encoding='utf8') as f:
         first_line = f.readline().strip()
         match = _upfversion_regexp.match(first_line)
         if match:

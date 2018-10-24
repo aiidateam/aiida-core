@@ -10,7 +10,9 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import os, tempfile
+import io
+import os 
+import tempfile
 
 def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='dot',
         include_calculation_inputs=False, include_calculation_outputs=False):
@@ -176,7 +178,7 @@ def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='
 
     # Writing the graph to a temporary file
     fd, fname = tempfile.mkstemp(suffix='.dot')
-    with open(fname, 'w') as fout:
+    with io.open(fname, 'w', encoding='utf8') as fout:
         fout.write("digraph G {\n")
         for l_name, l_values in links.items():
             fout.write('    {}\n'.format(l_values))

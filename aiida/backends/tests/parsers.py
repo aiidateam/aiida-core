@@ -14,7 +14,7 @@ Tests for specific subclasses of Data
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-
+import io
 import six
 from six.moves import range
 
@@ -111,12 +111,12 @@ def output_test(pk, testname, skip_uuids_from_inputs=[]):
                 also_calc_outputs=False)
 
     # Create an empty checks file
-    with open(os.path.join(outfolder, '_aiida_checks.json'), 'w') as f:
+    with io.open(os.path.join(outfolder, '_aiida_checks.json', encoding='utf8'), 'w') as f:
         json.dump({}, f)
 
     for path, dirlist, filelist in os.walk(outfolder):
         if len(dirlist) == 0 and len(filelist) == 0:
-            with open("{}/.gitignore".format(path), 'w') as f:
+            with io.open("{}/.gitignore".format(path), 'w', encoding='utf8') as f:
                 f.write("# This is a placeholder file, used to make git "
                         "store an empty folder")
                 f.flush()
@@ -196,7 +196,7 @@ class TestParsers(AiidaTestCase):
         retrieved = calc.out.retrieved
 
         try:
-            with open(os.path.join(outfolder, '_aiida_checks.json')) as f:
+            with io.open(os.path.join(outfolder, '_aiida_checks.json', encoding='utf8')) as f:
                 tests = json.load(f)
         except IOError:
             raise ValueError("This test does not provide a check file!")

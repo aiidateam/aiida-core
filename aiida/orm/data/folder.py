@@ -53,8 +53,8 @@ class FolderData(Data):
         from aiida.common.exceptions import NotExistent
 
         try:
-            with open(self._get_folder_pathsubfolder.get_abs_path(
-                    path, check_existence=True)) as f:
+            with io.open(self._get_folder_pathsubfolder.get_abs_path(
+                    path, check_existence=True), encoding='utf8') as f:
                 return f.read()
         except (OSError, IOError):
             raise NotExistent("Error reading the file '{}' inside node with "

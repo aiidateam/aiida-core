@@ -15,6 +15,7 @@ in a Brillouin zone, and how to operate on them.
 from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
+import io
 from string import Template
 
 import six
@@ -1057,7 +1058,7 @@ class BandsData(KpointsData):
         if not os.path.exists(filename):
             raise RuntimeError("Unable to generate the PDF...")
 
-        with open(filename, 'rb') as f:
+        with io.open(filename, 'rb', encoding=None) as f:
             imgdata = f.read()
         os.remove(filename)
 
@@ -1113,7 +1114,7 @@ class BandsData(KpointsData):
         if not os.path.exists(filename):
             raise RuntimeError("Unable to generate the PNG...")
 
-        with open(filename, 'rb') as f:
+        with io.open(filename, 'rb', encoding=None) as f:
             imgdata = f.read()
         os.remove(filename)
 
@@ -1715,7 +1716,7 @@ matplotlib_import_data_inline_template = Template(
 ''')
 
 matplotlib_import_data_fromfile_template = Template(
-    '''with open("$json_fname") as f:
+    '''with io.open("$json_fname", encoding='utf8') as f:
     all_data_str = f.read()
 ''')
 

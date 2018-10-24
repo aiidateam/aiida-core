@@ -10,6 +10,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+import io
 import unittest
 import tempfile
 
@@ -37,7 +38,7 @@ class CacheConfigTest(unittest.TestCase):
                 'disabled': ['aiida.orm.calculation.job.simpleplugins.templatereplacer.TemplatereplacerCalculation', 'aiida.orm.data.bool.Bool']
             }
         }
-        with tempfile.NamedTemporaryFile() as tf, open(tf.name, 'w') as of:
+        with tempfile.NamedTemporaryFile() as tf, io.open(tf.name, 'w', encoding='utf8') as of:
             yaml.dump(self.config_reference, of)
             configure(config_file=tf.name)
 

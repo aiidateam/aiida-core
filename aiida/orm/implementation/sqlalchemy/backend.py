@@ -47,3 +47,7 @@ class SqlaBackend(Backend):
     @property
     def query_manager(self):
         return self._query_manager
+
+    def query_builder(self):
+        from aiida.orm.querybuilder import QueryBuilder
+        return QueryBuilder()

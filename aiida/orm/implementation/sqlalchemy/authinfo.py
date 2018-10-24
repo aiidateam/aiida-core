@@ -144,7 +144,7 @@ class SqlaAuthInfo(AuthInfo):
         # Raises ValueError if data is not JSON-serializable
         self._dbauthinfo.auth_params = auth_params
 
-    def get_metadata(self):
+    def _get_metadata(self):
         """
         Get the metadata dictionary from the DB
 
@@ -152,7 +152,7 @@ class SqlaAuthInfo(AuthInfo):
         """
         return self._dbauthinfo._metadata
 
-    def set_metadata(self, metadata):
+    def _set_metadata(self, metadata):
         """
         Replace the metadata dictionary in the DB with the provided dictionary
         """

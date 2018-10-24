@@ -483,7 +483,8 @@ def _collect_calculation_data(calc):
             this_calc['stderr'] = stderr_name
     elif isinstance(calc, InlineCalculation):
         # Calculation is InlineCalculation
-        python_script = _inline_to_standalone_script(calc)
+        # Contents of scripts are converted to bytes as file contents have to be bytes.
+        python_script = _inline_to_standalone_script(calc).encode('utf-8')
         files_in.append({
             'name'    : inline_executable_name,
             'contents': python_script,
@@ -492,6 +493,7 @@ def _collect_calculation_data(calc):
             'type'    : 'file',
             })
         shell_script = '#!/bin/bash\n\nverdi run {}\n'.format(inline_executable_name)
+        shell_script = shell_script.encode('utf-8')
         files_in.append({
             'name'    : aiida_executable_name,
             'contents': shell_script,

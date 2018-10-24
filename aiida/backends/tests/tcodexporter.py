@@ -329,8 +329,7 @@ class TestTcodDbExporter(AiidaTestCase):
     @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     @unittest.skipIf(not has_nwchem_plugin(), "NWChem plugin is not installed")
-    @unittest.skipIf(six.PY3, "Broken on Python 3")
-    def test_inline_export(self): # solved, PR: 2090
+    def test_inline_export(self):
         from aiida.orm.data.cif import CifData
         from aiida.tools.dbexporters.tcod import export_values
         import tempfile

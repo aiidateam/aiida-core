@@ -11,7 +11,6 @@
 
 from __future__ import absolute_import
 
-import sys
 from six.moves.urllib.parse import unquote  # pylint: disable=import-error
 from flask import request, make_response
 from flask_restful import Resource

@@ -15,6 +15,7 @@ the data structure to be filled for job submission (JobTemplate), and
 the data structure that is returned when querying for jobs in the scheduler
 (JobInfo).
 """
+from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 from aiida.common.extendeddicts import (DefaultFieldsAttributeDict, Enumerate)

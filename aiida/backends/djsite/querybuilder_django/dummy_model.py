@@ -13,6 +13,8 @@ using SQLAlchemy.
 This is done to query the database with more performant ORM of SA.
 """
 
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 from sqlalchemy.ext.declarative import declarative_base
 

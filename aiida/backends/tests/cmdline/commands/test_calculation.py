@@ -9,6 +9,8 @@
 ###########################################################################
 # pylint: disable=protected-access,too-many-locals,invalid-name,too-many-public-methods
 """Tests for `verdi calculation`."""
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 from click.testing import CliRunner
 

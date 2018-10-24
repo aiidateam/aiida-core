@@ -7,6 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 import sys
 
@@ -972,7 +974,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
                                               original_pk=self.subspecifier_pk)['attr']
         except DeserializationException as exc:
             exc = DbContentError(exc)
-            exc.original_exception = e
+            exc.original_exception = exc
             raise exc
 
     @classmethod
@@ -1111,7 +1113,7 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
                                           original_pk=dbnodepk)
         except DeserializationException as exc:
             exc = DbContentError(exc)
-            exc.original_exception = e
+            exc.original_exception = exc
             raise exc
 
     @classmethod

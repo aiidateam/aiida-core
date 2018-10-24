@@ -12,6 +12,7 @@ This module defines the classes for structures and all related
 functions to operate on them.
 """
 
+from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
 import itertools

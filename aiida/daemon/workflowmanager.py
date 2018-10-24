@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 from aiida.common import aiidalogger
 from aiida.common.datastructures import wf_states, wf_exit_call, wf_default_call

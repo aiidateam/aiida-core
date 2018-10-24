@@ -14,6 +14,8 @@ Revises: 0aebbeab274d
 Create Date: 2018-03-15 13:23:12.941148
 
 """
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 from alembic import op
 import sqlalchemy as sa

@@ -19,6 +19,8 @@ Local transport
 ### we should instead keep track internally of the 'current working directory'
 ### in the exact same way as paramiko does already.
 
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 import errno
 import os

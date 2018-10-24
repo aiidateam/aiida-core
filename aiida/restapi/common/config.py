@@ -8,6 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 ## Pagination defaults
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 LIMIT_DEFAULT = 400
 PERPAGE_DEFAULT = 20
 

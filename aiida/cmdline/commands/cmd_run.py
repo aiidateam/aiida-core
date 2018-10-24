@@ -93,6 +93,9 @@ def run(scriptname, varargs, group, group_name, exclude, excludesubclasses, incl
         # Note: this is also set in the exec environment! This is the intended behavior
         autogroup.current_autogroup = aiida_verdilib_autogroup
 
+    # Initialize the variable here, otherwise we get UnboundLocalError in the finally clause if it fails to open
+    handle = None
+
     try:
         handle = open(scriptname)
     except IOError:
@@ -113,4 +116,5 @@ def run(scriptname, varargs, group, group_name, exclude, excludesubclasses, incl
             # Re-raise the exception to have the error code properly returned at the end
             raise
     finally:
-        handle.close()
+        if handle:
+            handle.close()

@@ -220,7 +220,7 @@ class BackupSetup(object):
                 file_backup_folder_abs)
 
             with io.open(final_conf_filepath, 'wb', encoding=None) as backup_info_file:
-                json.dump(backup_variables, backup_info_file)
+                json.dump(backup_variables, backup_info_file, ensure_ascii=False)
         # If the backup parameters are configured manually
         else:
             sys.stdout.write(

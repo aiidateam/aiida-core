@@ -397,11 +397,11 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
             raise ContentNotExistent("The provided file/folder ({}) is empty"
                                      .format(in_path))
         try:
-            with io.open(folder.get_abs_path('metadata.json'), encoding='utf8') as f:
-                metadata = json.load(f)
+            with io.open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
+                metadata = json.load(fhandle)
 
-            with io.open(folder.get_abs_path('data.json'), encoding='utf8') as f:
-                data = json.load(f)
+            with io.open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
+                data = json.load(fhandle)
         except IOError as e:
             raise ValueError("Unable to find the file {} in the import "
                              "file or folder".format(e.filename))
@@ -2352,14 +2352,14 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     if not silent:
         print("STORING DATA...")
 
-    with folder.open('data.json', 'w') as fhandle:
+    with folder.open('data.json', 'wb') as fhandle:
         json.dump({
             'node_attributes': node_attributes,
             'node_attributes_conversion': node_attributes_conversion,
             'export_data': export_data,
             'links_uuid': links_uuid,
             'groups_uuid': groups_uuid,
-        }, fhandle)
+        }, fhandle, ensure_ascii=False)
 
     # Add proper signature to unique identifiers & all_fields_info
     # Ignore if a key doesn't exist in any of the two dictionaries
@@ -2371,8 +2371,8 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
         'unique_identifiers': unique_identifiers,
     }
 
-    with folder.open('metadata.json', 'w') as fhandle:
-        json.dump(metadata, fhandle)
+    with folder.open('metadata.json', 'wb') as fhandle:
+        json.dump(metadata, fhandle, ensure_ascii=False)
 
     if silent is not True:
         print("STORING FILES...")

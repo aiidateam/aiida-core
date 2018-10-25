@@ -305,7 +305,7 @@ class TestSimple(AiidaTestCase):
             metadata['export_version'] = 0.0
             with io.open(os.path.join(unpack_tmp_folder,
                                    'metadata.json'), 'wb', encoding=None) as fhandle:
-                json.dump(metadata, fhandle)
+                json.dump(metadata, fhandle, ensure_ascii=False)
 
             with tarfile.open(filename, "w:gz", format=tarfile.PAX_FORMAT) as tar:
                 tar.add(unpack_tmp_folder, arcname="")
@@ -359,7 +359,7 @@ class TestSimple(AiidaTestCase):
                 'label': 'parent'
             })
             with io.open(unpack.get_abs_path('data.json'), 'wb', encoding=None) as fhandle:
-                json.dump(metadata, fhandle)
+                json.dump(metadata, fhandle, ensure_ascii=False)
 
             with tarfile.open(
                     filename, "w:gz", format=tarfile.PAX_FORMAT) as tar:

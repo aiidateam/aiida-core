@@ -74,6 +74,9 @@ class TestTcodDbExporter(AiidaTestCase):
                           (b'line\n=3Bline', 'quoted-printable'))
         self.assertEquals(cif_encode_contents(b'tabbed\ttext'),
                           (b'tabbed=09text', 'quoted-printable'))
+        # Angstrom symbol 'Å' will be encoded as two bytes, thus encoding it
+        # for CIF will produce two quoted-printable entities, '=C3' and '=85',
+        # one for each byte.
         self.assertEquals(cif_encode_contents(u'angstrom Å'.encode('utf-8')),
                           (b'angstrom =C3=85', 'quoted-printable'))
         self.assertEquals(cif_encode_contents(b'.'),
@@ -568,6 +571,9 @@ class TestTcodDbExporter(AiidaTestCase):
         check_ncr(self, b';\n', b'&#59;\n')
         check_ncr(self, b'line\n;line', b'line\n&#59;line')
         check_ncr(self, b'tabbed\ttext', b'tabbed&#9;text')
+        # Angstrom symbol 'Å' will be encoded as two bytes, thus encoding it
+        # for CIF will produce two NCR entities, '&#195;' and '&#133;', one for
+        # each byte.
         check_ncr(self, u'angstrom Å'.encode('utf-8'), b'angstrom &#195;&#133;')
         check_ncr(self, b'<html>&#195;&#133;</html>',
                  b'<html>&#38;#195;&#38;#133;</html>')
@@ -577,6 +583,9 @@ class TestTcodDbExporter(AiidaTestCase):
         check_quoted_printable(self, b';\n', b'=3B\n')
         check_quoted_printable(self, b'line\n;line', b'line\n=3Bline')
         check_quoted_printable(self, b'tabbed\ttext', b'tabbed=09text')
+        # Angstrom symbol 'Å' will be encoded as two bytes, thus encoding it
+        # for CIF will produce two quoted-printable entities, '=C3' and '=85',
+        # one for each byte.
         check_quoted_printable(self, u'angstrom Å'.encode('utf-8'), b'angstrom =C3=85')
         check_quoted_printable(self, b'line\rline\x00', b'line=0Dline=00')
         # This one is particularly tricky: a long line is folded by the QP

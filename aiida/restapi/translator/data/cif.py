@@ -54,7 +54,7 @@ class CifDataTranslator(DataTranslator):
 
         if format in node.get_export_formats():
             try:
-                response["str_viz_info"]["data"] = node._exportstring(format)[0]
+                response["str_viz_info"]["data"] = node._exportcontent(format)[0]
                 response["str_viz_info"]["format"] = format
             except LicensingException as exc:
                 response = str(exc)
@@ -80,7 +80,7 @@ class CifDataTranslator(DataTranslator):
 
         format = 'cif'
         try:
-            response["data"] = node._exportstring(format)[0]
+            response["data"] = node._exportcontent(format)[0]
             response["status"] = 200
             response["filename"] = node.uuid + "." + format
         except LicensingException as exc:

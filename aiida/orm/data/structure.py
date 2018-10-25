@@ -1034,7 +1034,7 @@ class StructureData(Data):
         Write the given structure to a string of format TCOD CIF.
         """
         from aiida.tools.dbexporters.tcod import export_cif
-        return export_cif(self, **kwargs).encode('utf-8'), {}
+        return export_cif(self, **kwargs), {}
 
     def _prepare_chemdoodle(self, main_file_name=""):
         """

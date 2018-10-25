@@ -118,7 +118,7 @@ class TestVerdiDataExportable:
                                              catch_exceptions=False)
                 self.assertEquals(res.exit_code, 0,
                                   "The command did not finish "
-                                  "correctly")
+                                  "correctly. Output:\n{}".format(res.output))
 
         # Check that the output to file flags work correctly:
         # -o, --output
@@ -132,7 +132,7 @@ class TestVerdiDataExportable:
                                              catch_exceptions=False)
                 self.assertEquals(res.exit_code, 0,
                                   "The command should finish correctly."
-                                  "Output: {}".format(res.output_bytes))
+                                  "Output:\n{}".format(res.output))
 
                 # Try to export it again. It should fail because the
                 # file exists
@@ -149,7 +149,7 @@ class TestVerdiDataExportable:
                                              catch_exceptions=False)
                 self.assertEquals(res.exit_code, 0,
                                   "The command should finish correctly."
-                                  "Output: {}".format(res.output_bytes))
+                                  "Output: {}".format(res.output))
             finally:
                 shutil.rmtree(tmpd)
 

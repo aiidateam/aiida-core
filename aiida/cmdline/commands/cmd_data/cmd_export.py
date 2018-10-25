@@ -81,8 +81,8 @@ def data_export(node, output_fname, fileformat, other_args=None, overwrite=False
     :param node: the Data node to print or store on disk
     :param output_fname: The filename to store the main file. If empty or
         None, print instead
-    :param fileformat: a string to pass to the _exportstring method
-    :param other_args: a dictionary with additional kwargs to pass to _exportstring
+    :param fileformat: a string to pass to the _exportcontent method
+    :param other_args: a dictionary with additional kwargs to pass to _exportcontent
     :param overwrite: if False, stops if any file already exists (when output_fname
         is not empty
 
@@ -97,9 +97,9 @@ def data_export(node, output_fname, fileformat, other_args=None, overwrite=False
             try:
                 node.export(output_fname, fileformat=fileformat, overwrite=overwrite, **other_args)
             except OSError as err:
-                echo.echo_critical("verdi: ERROR while exporting file:\n{}".format(err))
+                echo.echo_critical("OSError while exporting file:\n{}".format(err))
         else:
-            filetext, extra_files = node._exportstring(fileformat, main_file_name=output_fname, **other_args)
+            filetext, extra_files = node._exportcontent(fileformat, main_file_name=output_fname, **other_args)
             if extra_files:
                 echo.echo_critical("This format requires to write more than one file.\n"
                                    "You need to pass the -o option to specify a file name.")
@@ -108,6 +108,6 @@ def data_export(node, output_fname, fileformat, other_args=None, overwrite=False
     except TypeError as err:
         # This typically occurs for parameters that are passed down to the
         # methods in, e.g., BandsData, but they are not accepted
-        echo.echo_critical("verdi: ERROR, probably a parameter is not "
-                           "supported by the specific format.\nError "
+        echo.echo_critical("TypeError, perhaps a parameter is not "
+                           "supported by the specific format?\nError "
                            "message: {}".format(err))

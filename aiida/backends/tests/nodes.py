@@ -915,7 +915,7 @@ class TestNodeBasic(AiidaTestCase):
 
         a.store()
 
-        b = load_node(a.uuid)
+        b = load_node(uuid=a.uuid)
         self.assertIsNone(a.get_attr('none'))
         self.assertEquals(self.boolval, b.get_attr('bool'))
         self.assertEquals(self.intval, b.get_attr('integer'))
@@ -1537,14 +1537,14 @@ class TestNodeBasic(AiidaTestCase):
         node = Node().store()
         uuid_stored = node.uuid  # convenience to store the uuid
         # Simple test to see whether I load correctly from the pk:
-        self.assertEqual(uuid_stored, load_node(node.pk).uuid)
+        self.assertEqual(uuid_stored, load_node(pk=node.pk).uuid)
         # Testing the loading with the uuid:
-        self.assertEqual(uuid_stored, load_node(uuid_stored).uuid)
+        self.assertEqual(uuid_stored, load_node(uuid=uuid_stored).uuid)
 
         # Here I'm testing whether loading the node with the beginnings of a uuid works
         for i in range(10, len(uuid_stored), 2):
             start_uuid = uuid_stored[:i]
-            self.assertEqual(uuid_stored, load_node(start_uuid).uuid)
+            self.assertEqual(uuid_stored, load_node(uuid=start_uuid).uuid)
 
         # Testing whether loading the node with part of UUID works, removing the dashes
         for i in range(10, len(uuid_stored), 2):
@@ -1552,11 +1552,11 @@ class TestNodeBasic(AiidaTestCase):
             self.assertEqual(uuid_stored, load_node(uuid=start_uuid).uuid)
             # If I don't allow load_node to fix the dashes, this has to raise:
             with self.assertRaises(NotExistent):
-                load_node(start_uuid, query_with_dashes=False)
+                load_node(uuid=start_uuid, query_with_dashes=False)
 
         # Now I am reverting the order of the uuid, this will raise a NotExistent error:
         with self.assertRaises(NotExistent):
-            load_node(uuid_stored[::-1])
+            load_node(uuid=uuid_stored[::-1])
 
         # I am giving a non-sensical pk, this should also raise
         with self.assertRaises(NotExistent):
@@ -1565,7 +1565,7 @@ class TestNodeBasic(AiidaTestCase):
         # Last check, when asking for specific subclass, this should raise:
         for spec in (node.pk, uuid_stored):
             with self.assertRaises(NotExistent):
-                load_node(spec, sub_class=ArrayData)
+                load_node(spec, sub_classes=(ArrayData,))
 
     def test_load_unknown_calculation_type(self):
         """

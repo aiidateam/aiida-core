@@ -321,6 +321,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         Requests the details of single computer
         """
         node_uuid = self.get_dummy_data()["computers"][1]["uuid"]
+
         RESTApiTestCase.process_test(
             self, "computers", "/computers/" + str(node_uuid), expected_list_ids=[1], uuid=node_uuid)
 
@@ -428,6 +429,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         list (e.g. id=1)
         """
         node_pk = self.get_dummy_data()["computers"][1]["id"]
+
         RESTApiTestCase.process_test(self, "computers", "/computers?id=" + str(node_pk), expected_list_ids=[1])
 
     def test_computers_filter_id2(self):

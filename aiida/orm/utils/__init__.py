@@ -10,69 +10,45 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from abc import ABCMeta
 
 import six
 
-from aiida.common.exceptions import InputValidationError
-from aiida.common.utils import abstractclassmethod
-from aiida.plugins.factory import BaseFactory
+from aiida.plugins.factory import CalculationFactory, DataFactory, WorkflowFactory
 
-__all__ = ['CalculationFactory', 'DataFactory', 'WorkflowFactory', 'load_group', 
-           'load_node', 'load_workflow', 'BackendDelegateWithDefault']
+__all__ = ['CalculationFactory', 'DataFactory', 'WorkflowFactory', 'load_code', 'load_computer', 'load_group', 'load_node', 'load_workflow']
 
 
-def CalculationFactory(entry_point):
+def load_entity(entity_loader=None, identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True):
     """
-    Return the Calculation plugin class for a given entry point
+    Load a Code instance by one of its identifiers: pk, uuid or label
 
-    :param entry_point: the entry point name of the Calculation plugin
-    """
-    return BaseFactory('aiida.calculations', entry_point)
+    If the type of the identifier is unknown simply pass it without a keyword and the loader will attempt to
+    automatically infer the type.
 
-
-def DataFactory(entry_point):
-    """
-    Return the Data plugin class for a given entry point
-
-    :param entry_point: the entry point name of the Data plugin
-    """
-    return BaseFactory('aiida.data', entry_point)
-
-
-def WorkflowFactory(entry_point):
-    """
-    Return the Workflow plugin class for a given entry point
-
-    :param entry_point: the entry point name of the Workflow plugin
-    """
-    return BaseFactory('aiida.workflows', entry_point)
-
-
-def load_group(identifier=None, pk=None, uuid=None, label=None, query_with_dashes=True):
-    """
-    Load a group by one of its identifiers: pk, uuid or label. If the type of the identifier is unknown
-    simply pass it without a keyword and the loader will attempt to infer the type
-
-    :param identifier: pk (integer), uuid (string) or label (string) of a group
-    :param pk: pk of a group
-    :param uuid: uuid of a group, or the beginning of the uuid
-    :param label: label of a group
+    :param identifier: pk (integer), uuid (string) or label (string) of a Code
+    :param pk: pk of a Code
+    :param uuid: uuid of a Code, or the beginning of the uuid
+    :param label: label of a Code
+    :param sub_classes: an optional tuple of orm classes to narrow the queryset. Each class should be a strict sub class
+        of the ORM class of the given entity loader.
     :param bool query_with_dashes: allow to query for a uuid with dashes
-    :returns: the group instance
-    :raise InputValidationError: if none or more than one of the identifiers are supplied
+    :returns: the Code instance
+    :raise ValueError: if none or more than one of the identifiers are supplied
     :raise TypeError: if the provided identifier has the wrong type
-    :raise NotExistent: if no matching Group is found
-    :raise MultipleObjectsError: if more than one Group was found
+    :raise NotExistent: if no matching Code is found
+    :raise MultipleObjectsError: if more than one Code was found
     """
-    from aiida.orm.utils.loaders import IdentifierType, GroupEntityLoader
+    from aiida.orm.utils.loaders import OrmEntityLoader, IdentifierType
 
-    # Verify that at least and at most one identifier is specified
+    if entity_loader is None or not issubclass(entity_loader, OrmEntityLoader):
+        raise TypeError('entity_loader should be a sub class of {}'.format(type(OrmEntityLoader)))
+
     inputs_provided = [value is not None for value in (identifier, pk, uuid, label)].count(True)
+
     if inputs_provided == 0:
-        raise InputValidationError("one of the parameters 'identifier', pk', 'uuid' or 'label' has to be specified")
+        raise ValueError("one of the parameters 'identifier', pk', 'uuid' or 'label' has to be specified")
     elif inputs_provided > 1:
-        raise InputValidationError("only one of parameters 'identifier', pk', 'uuid' or 'label' has to be specified")
+        raise ValueError("only one of parameters 'identifier', pk', 'uuid' or 'label' has to be specified")
 
     if pk is not None:
 
@@ -101,10 +77,82 @@ def load_group(identifier=None, pk=None, uuid=None, label=None, query_with_dashe
         identifier = str(identifier)
         identifier_type = None
 
-    return GroupEntityLoader.load_entity(identifier, identifier_type, query_with_dashes=query_with_dashes)
+    return entity_loader.load_entity(identifier, identifier_type, sub_classes=sub_classes, query_with_dashes=query_with_dashes)
 
 
-def load_node(identifier=None, pk=None, uuid=None, sub_class=None, query_with_dashes=True):
+def load_code(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True):
+    """
+    Load a Code instance by one of its identifiers: pk, uuid or label
+
+    If the type of the identifier is unknown simply pass it without a keyword and the loader will attempt to
+    automatically infer the type.
+
+    :param identifier: pk (integer), uuid (string) or label (string) of a Code
+    :param pk: pk of a Code
+    :param uuid: uuid of a Code, or the beginning of the uuid
+    :param label: label of a Code
+    :param sub_classes: an optional tuple of orm classes to narrow the queryset. Each class should be a strict sub class
+        of the ORM class of the given entity loader.
+    :param bool query_with_dashes: allow to query for a uuid with dashes
+    :return: the Code instance
+    :raise ValueError: if none or more than one of the identifiers are supplied
+    :raise TypeError: if the provided identifier has the wrong type
+    :raise NotExistent: if no matching Code is found
+    :raise MultipleObjectsError: if more than one Code was found
+    """
+    from aiida.orm.utils.loaders import CodeEntityLoader
+    return load_entity(CodeEntityLoader, identifier=identifier, pk=pk, uuid=uuid, label=label, sub_classes=sub_classes, query_with_dashes=query_with_dashes)
+
+
+def load_computer(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True):
+    """
+    Load a Computer instance by one of its identifiers: pk, uuid or label
+
+    If the type of the identifier is unknown simply pass it without a keyword and the loader will attempt to
+    automatically infer the type.
+
+    :param identifier: pk (integer), uuid (string) or label (string) of a Computer
+    :param pk: pk of a Computer
+    :param uuid: uuid of a Computer, or the beginning of the uuid
+    :param label: label of a Computer
+    :param sub_classes: an optional tuple of orm classes to narrow the queryset. Each class should be a strict sub class
+        of the ORM class of the given entity loader.
+    :param bool query_with_dashes: allow to query for a uuid with dashes
+    :return: the Computer instance
+    :raise ValueError: if none or more than one of the identifiers are supplied
+    :raise TypeError: if the provided identifier has the wrong type
+    :raise NotExistent: if no matching Computer is found
+    :raise MultipleObjectsError: if more than one Computer was found
+    """
+    from aiida.orm.utils.loaders import ComputerEntityLoader
+    return load_entity(ComputerEntityLoader, identifier=identifier, pk=pk, uuid=uuid, label=label, sub_classes=sub_classes, query_with_dashes=query_with_dashes)
+
+
+def load_group(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True):
+    """
+    Load a Group instance by one of its identifiers: pk, uuid or label
+
+    If the type of the identifier is unknown simply pass it without a keyword and the loader will attempt to
+    automatically infer the type.
+
+    :param identifier: pk (integer), uuid (string) or label (string) of a Group
+    :param pk: pk of a Group
+    :param uuid: uuid of a Group, or the beginning of the uuid
+    :param label: label of a Group
+    :param sub_classes: an optional tuple of orm classes to narrow the queryset. Each class should be a strict sub class
+        of the ORM class of the given entity loader.
+    :param bool query_with_dashes: allow to query for a uuid with dashes
+    :return: the Group instance
+    :raise ValueError: if none or more than one of the identifiers are supplied
+    :raise TypeError: if the provided identifier has the wrong type
+    :raise NotExistent: if no matching Group is found
+    :raise MultipleObjectsError: if more than one Group was found
+    """
+    from aiida.orm.utils.loaders import GroupEntityLoader
+    return load_entity(GroupEntityLoader, identifier=identifier, pk=pk, uuid=uuid, label=label, sub_classes=sub_classes, query_with_dashes=query_with_dashes)
+
+
+def load_node(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True):
     """
     Load a node by one of its identifiers: pk or uuid. If the type of the identifier is unknown
     simply pass it without a keyword and the loader will attempt to infer the type
@@ -112,47 +160,18 @@ def load_node(identifier=None, pk=None, uuid=None, sub_class=None, query_with_da
     :param identifier: pk (integer) or uuid (string)
     :param pk: pk of a node
     :param uuid: uuid of a node, or the beginning of the uuid
-    :param sub_class: an optional tuple of orm classes, that should each be strict sub class of Node,
-        to narrow the queryset
+    :param label: label of a Node
+    :param sub_classes: an optional tuple of orm classes to narrow the queryset. Each class should be a strict sub class
+        of the ORM class of the given entity loader.
     :param bool query_with_dashes: allow to query for a uuid with dashes
     :returns: the node instance
-    :raise InputValidationError: if none or more than one of the identifiers are supplied
+    :raise ValueError: if none or more than one of the identifiers are supplied
     :raise TypeError: if the provided identifier has the wrong type
     :raise NotExistent: if no matching Node is found
     :raise MultipleObjectsError: if more than one Node was found
     """
-    from aiida.orm.utils.loaders import IdentifierType, NodeEntityLoader
-
-    # Verify that at least and at most one identifier is specified
-    inputs_provided = [value is not None for value in (identifier, pk, uuid)].count(True)
-    if inputs_provided == 0:
-        raise InputValidationError("one of the parameters 'identifier', 'pk' or 'uuid' has to be specified")
-    elif inputs_provided > 1:
-        raise InputValidationError("only one of parameters 'identifier', 'pk' or 'uuid' has to be specified")
-
-    if pk is not None:
-
-        if not isinstance(pk, int):
-            raise TypeError('a pk has to be an integer')
-
-        identifier = pk
-        identifier_type = IdentifierType.ID
-
-    elif uuid is not None:
-
-        if not isinstance(uuid, six.string_types):
-            raise TypeError('uuid has to be a string type')
-
-        identifier = uuid
-        identifier_type = IdentifierType.UUID
-    else:
-        identifier = str(identifier)
-        identifier_type = None
-
-    if sub_class is not None and not isinstance(sub_class, tuple):
-        sub_class = (sub_class,)
-
-    return NodeEntityLoader.load_entity(identifier, identifier_type, sub_class, query_with_dashes)
+    from aiida.orm.utils.loaders import NodeEntityLoader
+    return load_entity(NodeEntityLoader, identifier=identifier, pk=pk, uuid=uuid, label=label, sub_classes=sub_classes, query_with_dashes=query_with_dashes)
 
 
 def load_workflow(wf_id=None, pk=None, uuid=None):
@@ -202,29 +221,3 @@ def load_workflow(wf_id=None, pk=None, uuid=None):
             return Workflow.get_subclass_from_uuid(uuid)
         else:
             raise ValueError("'uuid' has to be a string, unicode or a UUID instance")
-
-
-@six.add_metaclass(ABCMeta)
-class BackendDelegateWithDefault(object):
-    """
-    This class is a helper to implement the delegation pattern [1] by
-    delegating functionality (i.e. calling through) to the backend class
-    which will do the actual work.
-
-    [1] https://en.wikipedia.org/wiki/Delegation_pattern
-    """
-
-    _DEFAULT = None
-
-    @abstractclassmethod
-    def create_default(cls):
-        raise NotImplementedError("The subclass should implement this")
-
-    @classmethod
-    def get_default(cls):
-        if cls._DEFAULT is None:
-            cls._DEFAULT = cls.create_default()
-        return cls._DEFAULT
-
-    def __init__(self, backend):
-        self._backend = backend

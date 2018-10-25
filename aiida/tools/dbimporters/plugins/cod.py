@@ -331,7 +331,7 @@ class CodEntry(CifEntry):
     _license = 'CC0'
 
     def __init__(self, uri, db_name='Crystallography Open Database',
-                 db_uri='http://www.crystallography.net', **kwargs):
+                 db_uri='http://www.crystallography.net/cod', **kwargs):
         """
         Creates an instance of
         :py:class:`aiida.tools.dbimporters.plugins.cod.CodEntry`, related

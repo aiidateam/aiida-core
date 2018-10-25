@@ -124,7 +124,7 @@ class TestCodDbImporter(AiidaTestCase):
         self.assertEquals(len(results), 3)
         self.assertEquals(results.at(1).source, {
             'db_name': 'Crystallography Open Database',
-            'db_uri': 'http://www.crystallography.net',
+            'db_uri': 'http://www.crystallography.net/cod',
             'extras': {},
             'id': '1000001',
             'license': 'CC0',
@@ -154,7 +154,7 @@ class TestCodDbImporter(AiidaTestCase):
                           '070711e8e99108aade31d20cd5c94c48')
         self.assertEquals(cif.source, {
             'db_name': 'Crystallography Open Database',
-            'db_uri': 'http://www.crystallography.net',
+            'db_uri': 'http://www.crystallography.net/cod',
             'id': None,
             'version': None,
             'extras': {},

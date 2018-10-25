@@ -103,8 +103,11 @@ def cif_encode_contents(content, gzip=False, gzip_threshold=1024):
     symbols, too long lines or lines starting with semicolons (';')
     is encoded using Quoted-printable encoding.
 
-    :param content: the content to be encoded, bytes are expected
-    :return content: encoded content
+    The encoding is performed byte-by-byte, so Unicode code points
+    spanning more than one byte will be split and encoded separately.
+
+    :param content: the content to be encoded in bytes
+    :return content: encoded content in bytes
     :return encoding: a string specifying used encoding (None, 'base64',
         'ncr', 'quoted-printable', 'gzip+base64')
     """
@@ -160,9 +163,9 @@ def encode_textfield_base64(content, foldwidth=76):
     Encodes the contents for CIF textfield in Base64 using standard Python
     implementation (``base64.standard_b64encode()``).
 
-    :param content: a string with contents
+    :param content: contents as bytes
     :param foldwidth: maximum width of line (default is 76)
-    :return: encoded string
+    :return: encoded string as bytes
     """
     import base64
 
@@ -177,8 +180,8 @@ def decode_textfield_base64(content):
     Decodes the contents for CIF textfield from Base64 using standard
     Python implementation (``base64.standard_b64decode()``)
 
-    :param content: a string with contents
-    :return: decoded string
+    :param content: contents as bytes
+    :return: decoded string as bytes
     """
     import base64
 
@@ -195,8 +198,8 @@ def encode_textfield_quoted_printable(content):
         * '``\\t``' and '``\\r``';
         * '``.``' and '``?``', if comprise the entire textfield.
 
-    :param content: a string with contents
-    :return: encoded string
+    :param content: contents as bytes
+    :return: encoded string as bytes
     """
     import re
     import quopri
@@ -226,8 +229,8 @@ def decode_textfield_quoted_printable(content):
     """
     Decodes the contents for CIF textfield from quoted-printable encoding.
 
-    :param content: a string with contents
-    :return: decoded string
+    :param content: contents as bytes
+    :return: decoded string as bytes
     """
     import quopri
 
@@ -244,8 +247,8 @@ def encode_textfield_ncr(content):
         * '``\\t``'
         * '``.``' and '``?``', if comprise the entire textfield.
 
-    :param content: a string with contents
-    :return: encoded string
+    :param content: contents as bytes
+    :return: encoded string as bytes
     """
     import re
 
@@ -270,12 +273,22 @@ def decode_textfield_ncr(content):
     """
     Decodes the contents for CIF textfield from Numeric Character Reference.
 
-    :param content: a byte string with contents
-    :return: decoded byte string
+    :param content: contents as bytes
+    :return: decoded string as bytes
     """
     import re
 
     def match2str(m):
+        """
+        Function returns a byte with a value of the first group of regular
+        expression. Different methods to convert int -> byte are used for
+        Python 2 and Python 3 as there seems to be no common way to do so.
+        chr() in Python 3 returns value in Unicode format which is incompatible
+        with the requested return value of bytes format.
+
+        :param match: match result of re.sub
+        :return: a single byte having a value of the first group in re.sub
+        """
         byte_value = int(m.group(1))
         if six.PY2:
             return chr(byte_value)
@@ -289,8 +302,8 @@ def encode_textfield_gzip_base64(content, **kwargs):
     """
     Gzips the given string and encodes it in Base64.
 
-    :param content: a string with contents
-    :return: encoded string
+    :param content: contents as bytes
+    :return: encoded string as bytes
     """
     from aiida.common.utils import gzip_string
 
@@ -302,22 +315,22 @@ def decode_textfield_gzip_base64(content):
     Decodes the contents for CIF textfield from Base64 and decompresses
     them with gzip.
 
-    :param content: a string with contents
-    :return: decoded string
+    :param content: contents as bytes
+    :return: decoded string as bytes
     """
     from aiida.common.utils import gunzip_string
 
     return gunzip_string(decode_textfield_base64(content))
 
 
-def decode_textfield(content,method):
+def decode_textfield(content, method):
     """
     Decodes the contents of encoded CIF textfield.
 
-    :param content: the content to be decoded
+    :param content: the content to be decoded as bytes
     :param method: method, which was used for encoding the contents
         (None, 'base64', 'ncr', 'quoted-printable', 'gzip+base64')
-    :return: decoded content
+    :return: decoded content as bytes
     :raises ValueError: if the encoding method is unknown
     """
     if method == 'base64':

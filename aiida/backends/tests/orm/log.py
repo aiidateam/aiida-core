@@ -18,7 +18,7 @@ from six.moves import range
 from aiida.utils.timezone import now
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.orm.log import OrderSpecifier, ASCENDING, DESCENDING
-from aiida.orm.backend import construct_backend
+from aiida.orm.backends import construct_backend
 from aiida.orm.calculation import Calculation
 from aiida.backends.testbase import AiidaTestCase
 

@@ -25,7 +25,8 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
 from aiida.common.folders import RepositoryFolder
 from aiida.common.links import LinkType
 from aiida.common.utils import get_new_uuid, type_check
-from aiida.orm.implementation.general.node import AbstractNode, _NO_DEFAULT, _HASH_EXTRA_KEY
+from aiida import orm
+from aiida.orm.implementation.general.node import AbstractNode, _HASH_EXTRA_KEY
 
 from . import computer as computers
 from . import user as users
@@ -314,7 +315,8 @@ class Node(AbstractNode):
         if self._dbnode.dbcomputer is None:
             return None
         else:
-            return self._backend.computers.from_dbmodel(self._dbnode.dbcomputer)
+            return orm.Computer.from_bakend_entity(
+                self._backend.computers.from_dbmodel(self._dbnode.dbcomputer))
 
     def _set_db_computer(self, computer):
         type_check(computer, computers.DjangoComputer)

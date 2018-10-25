@@ -38,7 +38,7 @@ class TestVerdiCalculation(AiidaTestCase):
         from aiida.orm.data.parameter import ParameterData
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.work.processes import ProcessState
-        from aiida.orm.backend import construct_backend
+        from aiida.orm.backends import construct_backend
         backend = construct_backend()
 
         rmq_config = rmq.get_rmq_config()

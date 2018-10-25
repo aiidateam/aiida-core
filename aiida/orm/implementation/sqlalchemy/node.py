@@ -29,9 +29,10 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed, NotE
 from aiida.common.links import LinkType
 from aiida.common.utils import type_check
 from aiida.orm.implementation.general.node import AbstractNode, _HASH_EXTRA_KEY
-from aiida.orm.implementation.sqlalchemy.computer import Computer
 from aiida.orm.implementation.sqlalchemy.utils import get_attr
+from aiida import orm
 
+from . import computer as computers
 from . import user as users
 
 
@@ -188,7 +189,8 @@ class Node(AbstractNode):
         if self._dbnode.dbcomputer is None:
             return None
 
-        return self.backend.computers.from_dbmodel(self._dbnode.dbcomputer)
+        return orm.Computer.from_bakend_entity(
+            self.backend.computers.from_dbmodel(self._dbnode.dbcomputer))
 
     def _get_db_label_field(self):
         """
@@ -275,9 +277,9 @@ class Node(AbstractNode):
                     Node, filters={
                         'id': self.pk
                     }, tag='parent').append(
-                        Node, filters={
-                            'id': src.pk
-                        }, tag='child', descendant_of='parent').count() > 0:
+                Node, filters={
+                    'id': src.pk
+                }, tag='child', descendant_of='parent').count() > 0:
                 raise ValueError("The link you are attempting to create would generate a loop")
 
         if label is None:
@@ -338,7 +340,8 @@ class Node(AbstractNode):
         return ((i.label, i.output.get_aiida_class()) for i in DbLink.query.filter_by(**link_filter).distinct().all())
 
     def _set_db_computer(self, computer):
-        self._dbnode.dbcomputer = DbComputer.get_dbcomputer(computer)
+        type_check(computer, computers.SqlaComputer)
+        self._dbnode.dbcomputer = computer.dbcomputer
 
     def _set_db_attr(self, key, value):
         """

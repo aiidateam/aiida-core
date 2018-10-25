@@ -122,7 +122,7 @@ def generate_calc(workflow):
 
     CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
 
-    computer = workflow._backend.computers.get(name='localhost')
+    computer = workflow.backend.computers.get(name='localhost')
 
     calc = CustomCalc(computer=computer, withmpi=True)
     calc.set_option('resources',

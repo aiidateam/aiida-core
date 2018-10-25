@@ -16,7 +16,8 @@ from collections import namedtuple
 import six
 
 from aiida.utils import timezone
-from .backend import Collection, CollectionEntry
+from .backends import CollectionEntry
+from aiida.orm.entities import Collection
 
 ASCENDING = 1
 DESCENDING = -1

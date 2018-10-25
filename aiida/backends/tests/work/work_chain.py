@@ -579,7 +579,7 @@ class TestWorkchain(AiidaTestCase):
                 spec.outputs.dynamic = True
 
             def run(self):
-                from aiida.orm.backend import construct_backend
+                from aiida.orm.backends import construct_backend
                 self._backend = construct_backend()
                 self._backend.logs.delete_many({})
                 self.report("Testing the report function")

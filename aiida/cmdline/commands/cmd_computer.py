@@ -240,7 +240,7 @@ def computer_setup(ctx, non_interactive, **kwargs):
 @with_dbenv()
 def computer_duplicate(ctx, computer, non_interactive, **kwargs):
     """Duplicate a Computer."""
-    from aiida.orm.backend import construct_backend
+    from aiida.orm.backends import construct_backend
 
     if kwargs['label'] in get_computer_names():
         echo.echo_critical('A computer called {} already exists'.format(kwargs['label']))
@@ -348,7 +348,7 @@ def computer_disable(user, computer):
 @with_dbenv()
 def computer_list(all_entries, raw):
     """List available computers."""
-    from aiida.orm.backend import construct_backend
+    from aiida.orm.backends import construct_backend
 
     backend = construct_backend()
 
@@ -469,7 +469,7 @@ def computer_test(user, print_traceback, computer):
     """
     import traceback
     from aiida.common.exceptions import NotExistent
-    from aiida.orm.backend import construct_backend
+    from aiida.orm.backends import construct_backend
 
     backend = construct_backend()
 
@@ -554,7 +554,7 @@ def computer_delete(computer):
     it.
     """
     from aiida.common.exceptions import InvalidOperation
-    from aiida.orm.backend import construct_backend
+    from aiida.orm.backends import construct_backend
 
     backend = construct_backend()
 

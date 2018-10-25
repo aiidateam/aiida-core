@@ -52,7 +52,7 @@ class DbComputer(Base):
         self.transport_params = {}
         # TODO SP: it's supposed to be nullable, but there is a NOT NULL
         # constraint inside the DB.
-        self.description= ""
+        self.description = ""
 
         super(DbComputer, self).__init__(*args, **kwargs)
 
@@ -65,7 +65,7 @@ class DbComputer(Base):
         from aiida.orm.computer import Computer
         if isinstance(computer, six.string_types):
             try:
-                dbcomputer = cls.session.query(cls).filter(cls.name==computer).one()
+                dbcomputer = cls.session.query(cls).filter(cls.name == computer).one()
             except NoResultFound:
                 raise NotExistent("No computer found in the table of computers with "
                                   "the given name '{}'".format(computer))
@@ -74,7 +74,7 @@ class DbComputer(Base):
                                      "pass a Computer instance".format(computer))
         elif isinstance(computer, int):
             try:
-                dbcomputer = cls.session.query(cls).filter(cls.id==computer).one()
+                dbcomputer = cls.session.query(cls).filter(cls.id == computer).one()
             except NoResultFound:
                 raise NotExistent("No computer found in the table of computers with "
                                   "the given id '{}'".format(computer))
@@ -87,27 +87,14 @@ class DbComputer(Base):
                 raise ValueError("The computer instance you are passing has not been stored yet")
             dbcomputer = computer.dbcomputer
         else:
-            raise TypeError("Pass either a computer name, a DbComputer SQLAlchemy instance, a Computer id or a Computer object")
+            raise TypeError(
+                "Pass either a computer name, a DbComputer SQLAlchemy instance, a Computer id or a Computer object")
         return dbcomputer
 
     def get_aiida_class(self):
         from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
         backend = SqlaBackend()
         return backend.computers.from_dbmodel(self)
-
-    def get_workdir(self):
-        try:
-            return self._metadata['workdir']
-        except KeyError:
-            raise ConfigurationError('No workdir found for DbComputer {} '.format(
-                self.name))
-
-    def get_shebang(self):
-        try:
-            return self._metadata['shebang']
-        except KeyError:
-            raise ConfigurationError('No shebang found for DbComputer {} '.format(
-                self.name))
 
     @property
     def pk(self):

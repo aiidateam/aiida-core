@@ -351,7 +351,7 @@ class TestVerdiComputerConfigure(AiidaTestCase):
 
     def setUp(self):
         """Prepare computer builder with common properties."""
-        from aiida.orm.backend import construct_backend
+        from aiida.orm.backends import construct_backend
         from aiida.control.computer import ComputerBuilder
         self.backend = construct_backend()
         self.user = self.backend.users.get_automatic_user()

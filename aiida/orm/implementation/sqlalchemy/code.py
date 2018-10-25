@@ -16,7 +16,8 @@ import os
 from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.common.exceptions import InvalidOperation
 from aiida.orm.implementation.general.code import AbstractCode
-from aiida.orm.implementation.sqlalchemy.computer import Computer
+
+from aiida import orm
 
 
 class Code(AbstractCode):
@@ -57,7 +58,7 @@ class Code(AbstractCode):
         if not os.path.isabs(remote_exec_path):
             raise ValueError("exec_path must be an absolute path (on the remote machine)")
 
-        if not isinstance(computer, Computer):
+        if not isinstance(computer, orm.Computer):
             raise TypeError("Computer must be of type Computer, got '{}'".format(type(computer)))
 
         self._set_remote()
@@ -92,7 +93,7 @@ class Code(AbstractCode):
             return True
         else:
             dbcomputer = computer
-            if isinstance(dbcomputer, Computer):
+            if isinstance(dbcomputer, orm.Computer):
                 dbcomputer = dbcomputer.dbcomputer
             if not isinstance(dbcomputer, DbComputer):
                 raise ValueError("computer must be either a Computer or DbComputer object")

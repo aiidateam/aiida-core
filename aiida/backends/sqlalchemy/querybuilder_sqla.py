@@ -79,23 +79,6 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
     schema defined in backends.sqlalchemy.models
     """
 
-    def __init__(self, *args, **kwargs):
-        # ~ from aiida.orm.implementation.sqlalchemy.node import Node as AiidaNode
-        # ~ from aiida.orm.implementation.sqlalchemy.group import Group as AiidaGroup
-        # ~ from aiida.orm.implementation.sqlalchemy.computer import Computer as AiidaComputer
-        # ~ from aiida.orm.implementation.sqlalchemy.user import User as AiidaUser
-        # ~ self.Link               = DbLink
-        # ~ self.Node               = DbNode
-        # ~ self.Computer           = DbComputer
-        # ~ self.User               = DbUser
-        # ~ self.Group              = DbGroup
-        # ~ self.table_groups_nodes = table_groups_nodes
-        # ~ self.AiidaNode          = AiidaNode
-        # ~ self.AiidaGroup         = AiidaGroup
-        # ~ self.AiidaComputer      = AiidaComputer
-        # ~ self.AiidaUser          = AiidaUser
-        super(QueryBuilderImplSQLA, self).__init__(*args, **kwargs)
-
     @property
     def Node(self):
         import aiida.backends.sqlalchemy.models.node

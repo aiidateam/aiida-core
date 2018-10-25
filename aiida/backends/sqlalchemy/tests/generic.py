@@ -69,7 +69,7 @@ class TestGroupsSqla(AiidaTestCase):
         from aiida.orm.group import Group
         from aiida.common.exceptions import NotExistent, MultipleObjectsError
         from aiida.backends.sqlalchemy.models.user import DbUser
-        from aiida.orm.backend import construct_backend
+        from aiida.orm.backends import construct_backend
 
         backend = construct_backend()
 

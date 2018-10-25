@@ -1278,7 +1278,7 @@ class TestNodeBasic(AiidaTestCase):
         # of directly loading datetime.datetime.now(), or you can get a
         # "can't compare offset-naive and offset-aware datetimes" error
         from aiida.utils import timezone
-        from aiida.orm.backend import construct_backend
+        from aiida.orm.backends import construct_backend
         import time
 
         backend = construct_backend()

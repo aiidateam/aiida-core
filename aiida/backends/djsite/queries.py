@@ -201,7 +201,7 @@ class DjangoQueryManager(AbstractQueryManager):
         from django.db.models import Q
         from aiida.common.utils import grouper
         from aiida.backends.djsite.db import models
-        from aiida.orm.backend import construct_backend
+        from aiida.orm.backends import construct_backend
         from aiida.orm.data.structure import (get_formula, get_symbols_string)
         from aiida.orm.data.array.bands import BandsData
 

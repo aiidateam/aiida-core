@@ -15,6 +15,7 @@ from abc import ABCMeta, abstractmethod
 import six
 
 from aiida.common.exceptions import InternalError
+from aiida.orm import Computer
 
 
 @six.add_metaclass(ABCMeta)
@@ -38,8 +39,8 @@ class AiidaTestImplementation(object):
     """
 
     # This should be set by the implementing class in setUpClass_method()
-    backend = None  # type: :class:`aiida.orm.backend.Backend`
-    computer = None  # type: :class:`aiida.orm.Computer`
+    backend = None  # type: aiida.orm.implementation.Backend
+    computer = None  # type: aiida.orm.Computer
 
     @abstractmethod
     def setUpClass_method(self):
@@ -76,13 +77,14 @@ class AiidaTestImplementation(object):
         """
         This method inserts default data into the database.
         """
-        self.computer = self.backend.computers.create(
+        self.computer = Computer(
             name='localhost',
             hostname='localhost',
             transport_type='local',
             scheduler_type='pbspro',
-            workdir='/tmp/aiida')
-        self.computer.store()
+            workdir='/tmp/aiida',
+            backend=self.backend
+        ).store()
 
     def get_computer(self):
         """

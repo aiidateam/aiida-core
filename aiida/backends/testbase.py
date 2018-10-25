@@ -87,7 +87,7 @@ class AiidaTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        from aiida.orm.backend import construct_backend
+        from aiida.orm.backends import construct_backend
 
         # Note: this will raise an exception, that will be seen as a test
         # failure. To be safe, you should do the same check also in the tearDownClass

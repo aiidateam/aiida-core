@@ -222,7 +222,7 @@ def group_list(all_users, user_email, group_type, with_description, count, past_
     import datetime
     from aiida.utils import timezone
     from aiida.orm.group import get_group_type_mapping
-    from aiida.orm.backend import construct_backend
+    from aiida.orm.backends import construct_backend
     from tabulate import tabulate
 
     if all_users and user_email is not None:

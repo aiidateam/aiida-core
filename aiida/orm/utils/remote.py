@@ -55,7 +55,7 @@ def get_calculation_remote_paths(calculation_pks=None, past_days=None, older_tha
     """
     from datetime import timedelta
 
-    from aiida.orm.backend import construct_backend
+    from aiida.orm.backends import construct_backend
     from aiida.orm.computer import Computer as OrmComputer
     from aiida.orm.user import User as OrmUser
     from aiida.orm.calculation import Calculation as OrmCalculation

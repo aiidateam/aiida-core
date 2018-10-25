@@ -19,19 +19,15 @@ from sqlalchemy.orm.session import make_transient
 from sqlalchemy.orm.attributes import flag_modified
 
 from aiida.common.utils import type_check
-from aiida.orm.computer import Computer, ComputerCollection
 from aiida.backends.sqlalchemy.models.computer import DbComputer
-from aiida.common.exceptions import (ConfigurationError, InvalidOperation)
-from aiida.common.lang import override
+from aiida.common.exceptions import InvalidOperation
+from aiida.orm.implementation.computers import BackendComputerCollection, BackendComputer
 from . import utils
 
 
-class SqlaComputerCollection(ComputerCollection):
-    def create(self, name, hostname, description='', transport_type='', scheduler_type='', workdir=None,
-               enabled_state=True):
-        return SqlaComputer(self.backend, name=name, hostname=hostname, description=description,
-                            transport_type=transport_type, scheduler_type=scheduler_type, workdir=workdir,
-                            enabled=enabled_state)
+class SqlaComputerCollection(BackendComputerCollection):
+    def create(self, **attributes):
+        return SqlaComputer(self.backend, attributes)
 
     def list_names(cls):
         from aiida.backends.sqlalchemy import get_scoped_session
@@ -59,7 +55,7 @@ class SqlaComputerCollection(ComputerCollection):
         return SqlaComputer.from_dbmodel(computer, self.backend)
 
 
-class SqlaComputer(Computer):
+class SqlaComputer(BackendComputer):
     @classmethod
     def from_dbmodel(cls, dbmodel, backend):
         type_check(dbmodel, DbComputer)
@@ -80,19 +76,9 @@ class SqlaComputer(Computer):
     def id(self):
         return self._dbcomputer.id
 
-    def __init__(self, backend, name, hostname, description='', transport_type='', scheduler_type='', workdir=None,
-                 enabled=True):
-        super(Computer, self).__init__(backend)
-        self._dbcomputer = utils.ModelWrapper(DbComputer(
-            name=name,
-            hostname=hostname,
-            description=description,
-            transport_type=transport_type,
-            scheduler_type=scheduler_type,
-            enabled=enabled
-        ))
-        if workdir:
-            self.set_workdir(workdir)
+    def __init__(self, backend, attributes):
+        super(SqlaComputer, self).__init__(backend)
+        self._dbcomputer = utils.ModelWrapper(DbComputer(**attributes))
 
     def set(self, **kwargs):
 
@@ -109,51 +95,9 @@ class SqlaComputer(Computer):
             flag_modified(self._dbcomputer, "_metadata")
 
     @property
-    def full_text_info(self):
-        ret_lines = []
-        ret_lines.append("Computer name:     {}".format(self.name))
-        ret_lines.append(" * PK:             {}".format(self.pk))
-        ret_lines.append(" * UUID:           {}".format(self.uuid))
-        ret_lines.append(" * Description:    {}".format(self.description))
-        ret_lines.append(" * Hostname:       {}".format(self.hostname))
-        ret_lines.append(" * Enabled:        {}".format("True" if self.is_enabled() else "False"))
-        ret_lines.append(" * Transport type: {}".format(self.get_transport_type()))
-        ret_lines.append(" * Scheduler type: {}".format(self.get_scheduler_type()))
-        ret_lines.append(" * Work directory: {}".format(self.get_workdir()))
-        ret_lines.append(" * Shebang:        {}".format(self.get_shebang()))
-        ret_lines.append(" * mpirun command: {}".format(" ".join(
-            self.get_mpirun_command())))
-        def_cpus_machine = self.get_default_mpiprocs_per_machine()
-
-        if def_cpus_machine is not None:
-            ret_lines.append(" * Default number of cpus per machine: {}".format(
-                def_cpus_machine))
-        ret_lines.append(" * Used by:        {} nodes".format(
-            len(self._dbcomputer.dbnodes)))
-
-        ret_lines.append(" * prepend text:")
-
-        if self.get_prepend_text().strip():
-            for l in self.get_prepend_text().split('\n'):
-                ret_lines.append("   {}".format(l))
-        else:
-            ret_lines.append("   # No prepend text.")
-
-        ret_lines.append(" * append text:")
-
-        if self.get_append_text().strip():
-            for l in self.get_append_text().split('\n'):
-                ret_lines.append("   {}".format(l))
-        else:
-            ret_lines.append("   # No append text.")
-
-        return "\n".join(ret_lines)
-
-    @property
     def is_stored(self):
         return self._dbcomputer.id is not None
 
-    @override
     def copy(self):
         from aiida.backends.sqlalchemy import get_scoped_session
         session = get_scoped_session()
@@ -174,8 +118,6 @@ class SqlaComputer(Computer):
         return self._dbcomputer._model
 
     def store(self):
-        self.validate()
-
         try:
             self._dbcomputer.save()
         except SQLAlchemyError:
@@ -197,10 +139,10 @@ class SqlaComputer(Computer):
     def hostname(self):
         return self._dbcomputer.hostname
 
-    def _get_metadata(self):
+    def get_metadata(self):
         return self._dbcomputer._metadata
 
-    def _set_metadata(self, metadata_dict):
+    def set_metadata(self, metadata_dict):
         self._dbcomputer._metadata = metadata_dict
         flag_modified(self._dbcomputer, "_metadata")
 
@@ -216,26 +158,6 @@ class SqlaComputer(Computer):
             self._dbcomputer.transport_params = val
         except ValueError:
             raise ValueError("The set of transport_params are not JSON-able")
-
-    def get_workdir(self):
-        try:
-            return self._dbcomputer.get_workdir()
-        except ConfigurationError:
-            # This happens the first time: I provide a reasonable default value
-            return "/scratch/{username}/aiida_run/"
-
-    def set_workdir(self, val):
-        pass
-        metadata = self._get_metadata()
-        metadata['workdir'] = val
-        self._set_metadata(metadata)
-
-    def get_shebang(self):
-        try:
-            return self._dbcomputer.get_shebang()
-        except ConfigurationError:
-            # This happens the first time: I provide a reasonable default value
-            return "#!/bin/bash"
 
     def get_name(self):
         return self._dbcomputer.name
@@ -255,12 +177,6 @@ class SqlaComputer(Computer):
     def set_description(self, val):
         self._dbcomputer.description = val
 
-    def get_calculations_on_computer(self):
-        from aiida.backends.sqlalchemy.models.node import DbNode
-        return DbNode.query.filter(
-            DbNode.dbcomputer_id == self._dbcomputer.id,
-            DbNode.type.like("calculation%")).all()
-
     def is_enabled(self):
         return self._dbcomputer.enabled
 
@@ -270,9 +186,9 @@ class SqlaComputer(Computer):
     def get_scheduler_type(self):
         return self._dbcomputer.scheduler_type
 
-    def set_scheduler_type(self, val):
+    def set_scheduler_type(self, scheduler_type):
 
-        self._dbcomputer.scheduler_type = val
+        self._dbcomputer.scheduler_type = scheduler_type
 
     def get_transport_type(self):
         return self._dbcomputer.transport_type

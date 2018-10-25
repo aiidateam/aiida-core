@@ -113,7 +113,7 @@ def workflow_list(short, all_states, depth, past_days, workflows):
     """List legacy workflows"""
     from aiida.backends.utils import get_workflow_list
     from aiida.orm.workflow import get_workflow_info
-    from aiida.orm.backend import construct_backend  # pylint: disable=no-name-in-module
+    from aiida.orm.backends import construct_backend  # pylint: disable=no-name-in-module
     tab_size = 2
 
     backend = construct_backend()

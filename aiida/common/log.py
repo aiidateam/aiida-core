@@ -55,7 +55,7 @@ class DBLogHandler(logging.Handler):
         if not is_dbenv_loaded():
             return
 
-        from aiida.orm.backend import construct_backend
+        from aiida.orm.backends import construct_backend
         from django.core.exceptions import ImproperlyConfigured
 
         try:

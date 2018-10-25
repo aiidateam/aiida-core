@@ -16,7 +16,7 @@ import shutil
 import tempfile
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm.backend import construct_backend
+from aiida.orm.backends import construct_backend
 from aiida.orm.data.remote import RemoteData
 
 

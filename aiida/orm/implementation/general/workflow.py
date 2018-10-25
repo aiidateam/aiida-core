@@ -24,7 +24,7 @@ from aiida.common.datastructures import (wf_states, wf_exit_call,
 from aiida.common.utils import str_timedelta
 from aiida.common import aiidalogger
 from aiida.orm.implementation.calculation import JobCalculation
-from aiida.orm.backend import construct_backend
+from aiida.orm.backends import construct_backend
 from aiida.utils import timezone
 from aiida.common.log import get_dblogger_extra
 from aiida.common.utils import abstractclassmethod
@@ -584,7 +584,7 @@ class AbstractWorkflow(object):
 
                 # self.get_steps(wrapped_method).set_nextcall(wf_exit_call)
 
-            automatic_user = self._backend.users.get_automatic_user()
+            automatic_user = self.backend.users.get_automatic_user()
             method_step, created = self.dbworkflowinstance.steps.get_or_create(
                 name=wrapped_method, user=automatic_user.dbuser)
             try:

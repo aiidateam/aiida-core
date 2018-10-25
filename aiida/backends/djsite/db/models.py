@@ -105,7 +105,7 @@ class DbUser(AbstractBaseUser, PermissionsMixin):
 
     def get_aiida_class(self):
         from aiida.orm.implementation.django.user import DjangoUser
-        from aiida.orm.backend import construct_backend
+        from aiida.orm.backends import construct_backend
         return DjangoUser.from_dbmodel(self, construct_backend())
 
 
@@ -1398,7 +1398,7 @@ class DbComputer(m.Model):
 
     def get_aiida_class(self):
         from aiida.orm.implementation.django.computer import DjangoComputer
-        from aiida.orm.backend import construct_backend
+        from aiida.orm.backends import construct_backend
         return DjangoComputer.from_dbmodel(self, construct_backend())
 
     def _get_val_from_metadata(self, key):
@@ -1413,15 +1413,6 @@ class DbComputer(m.Model):
             return metadata[key]
         except KeyError:
             raise ConfigurationError('No {} found for DbComputer {} '.format(key, self.name))
-
-    def get_workdir(self):
-        return self._get_val_from_metadata('workdir')
-
-    def get_shebang(self):
-        """
-        Return the shebang line
-        """
-        return self._get_val_from_metadata('shebang')
 
     def __str__(self):
         if self.enabled:

@@ -396,7 +396,7 @@ def calculation_cleanworkdir(calculations, past_days, older_than, computers, for
     If both are specified, a logical AND is done between the two, i.e. the calculations that will be cleaned have been
     modified AFTER [-p option] days from now, but BEFORE [-o option] days from now.
     """
-    from aiida.orm.backend import construct_backend
+    from aiida.orm.backends import construct_backend
     from aiida.orm.utils.loaders import ComputerEntityLoader, IdentifierType
     from aiida.orm.utils.remote import clean_remote, get_calculation_remote_paths
 

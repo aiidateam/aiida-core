@@ -40,25 +40,6 @@ from aiida.common.exceptions import (
 
 class QueryBuilderImplDjango(QueryBuilderInterface):
 
-    def __init__(self, *args, **kwargs):
-        # ~ from aiida.orm.implementation.django.node import Node as AiidaNode
-        # ~ from aiida.orm.implementation.django.group import Group as AiidaGroup
-        # ~ from aiida.orm.implementation.django.computer import Computer as AiidaComputer
-        # ~ from aiida.orm.implementation.django.user import User as AiidaUser
-
-        # ~ self.Link               = dummy_model.DbLink
-        # ~ self.Node               = dummy_model.DbNode
-        # ~ self.Computer           = dummy_model.DbComputer
-        # ~ self.User               = dummy_model.DbUser
-        # ~ self.Group              = dummy_model.DbGroup
-        # ~ self.table_groups_nodes = dummy_model.table_groups_nodes
-        # ~ self.AiidaNode          = AiidaNode
-        # ~ self.AiidaGroup         = AiidaGroup
-        # ~ self.AiidaComputer      = AiidaComputer
-        # ~ self.AiidaUser          = AiidaUser
-
-        super(QueryBuilderImplDjango, self).__init__(*args, **kwargs)
-
     @property
     def Node(self):
         return dummy_model.DbNode

@@ -24,6 +24,24 @@ def BaseFactory(group, name):
     return load_entry_point(group, name)
 
 
+def CalculationFactory(entry_point):
+    """
+    Return the Calculation plugin class for a given entry point
+
+    :param entry_point: the entry point name of the Calculation plugin
+    """
+    return BaseFactory('aiida.calculations', entry_point)
+
+
+def DataFactory(entry_point):
+    """
+    Return the Data plugin class for a given entry point
+
+    :param entry_point: the entry point name of the Data plugin
+    """
+    return BaseFactory('aiida.data', entry_point)
+
+
 def TransportFactory(entry_point):  # pylint: disable=invalid-name
     """
     Return the Transport plugin class for a given entry point
@@ -31,3 +49,12 @@ def TransportFactory(entry_point):  # pylint: disable=invalid-name
     :param entry_point: the entry point name of the Transport plugin
     """
     return BaseFactory('aiida.transports', entry_point)
+
+
+def WorkflowFactory(entry_point):
+    """
+    Return the Workflow plugin class for a given entry point
+
+    :param entry_point: the entry point name of the Workflow plugin
+    """
+    return BaseFactory('aiida.workflows', entry_point)

@@ -82,7 +82,7 @@ def output_test(pk, testname, skip_uuids_from_inputs=[]):
     from aiida.orm import JobCalculation
     from aiida.orm.utils import load_node
     from aiida.orm.importexport import export_tree
-    c = load_node(pk, sub_class=JobCalculation)
+    c = load_node(pk, sub_classes=(JobCalculation,))
     outfolder = "test_{}_{}".format(
         c.get_option('parser_name').replace('.', '_'),
         testname)

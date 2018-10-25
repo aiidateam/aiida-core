@@ -53,7 +53,7 @@ def upload_calculation(calculation, transport, calc_info, script_filename):
         return
 
     codes_info = calc_info.codes_info
-    input_codes = [load_node(_.code_uuid, sub_class=Code) for _ in codes_info]
+    input_codes = [load_node(_.code_uuid, sub_classes=(Code,)) for _ in codes_info]
 
     logger_extra = get_dblogger_extra(calculation)
     transport._set_logger_extra(logger_extra)
@@ -340,12 +340,11 @@ def parse_results(job, retrieved_temporary_folder=None):
     from aiida.orm.calculation.job import JobCalculationExitStatus
     from aiida.work import ExitCode
 
-    logger_extra = get_dblogger_extra(job)
-
-    job._set_state(calc_states.PARSING)
+    assert job.get_state() == calc_states.PARSING, 'the job should be in the PARSING state when calling this function'
 
     Parser = job.get_parserclass()
     exit_code = ExitCode()
+    logger_extra = get_dblogger_extra(job)
 
     if retrieved_temporary_folder:
         files = []

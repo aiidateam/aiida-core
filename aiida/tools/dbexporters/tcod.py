@@ -15,6 +15,8 @@ from __future__ import division
 from six.moves import range
 
 import io
+import six
+
 from aiida.orm import DataFactory
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.calculation.inline import optional_inline
@@ -268,16 +270,17 @@ def decode_textfield_ncr(content):
     """
     Decodes the contents for CIF textfield from Numeric Character Reference.
 
-    :param content: a string with contents
-    :return: decoded string
+    :param content: a byte string with contents
+    :return: decoded byte string
     """
     import re
 
     def match2str(m):
-        if isinstance(m.group(1), str):
-            return chr(int(m.group(1)))
+        byte_value = int(m.group(1))
+        if six.PY2:
+            return chr(byte_value)
         else:
-            return bytes([int(m.group(1))])
+            return bytes([byte_value])
 
     return re.sub(b'&#(\d+);', match2str, content)
 

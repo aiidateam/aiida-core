@@ -20,8 +20,9 @@ from flask_restful import Resource
 from aiida.restapi.common.utils import Utils
 
 
-# pylint: disable=missing-docstring,fixme
 class ServerInfo(Resource):
+    # pylint: disable=fixme
+    """Endpointd to return general server info"""
 
     def __init__(self, **kwargs):
         # Configure utils
@@ -84,13 +85,14 @@ class ServerInfo(Resource):
         return self.utils.build_response(status=200, headers=headers, data=data)
 
 
-## TODO add the caching support. I cache total count, results, and possibly
-# set_query
 class BaseResource(Resource):
+    # pylint: disable=fixme
     """
     Each derived class will instantiate a different type of translator.
     This is the only difference in the classes.
     """
+
+    ## TODO add the caching support. I cache total count, results, and possibly
 
     def __init__(self, **kwargs):
 
@@ -105,11 +107,13 @@ class BaseResource(Resource):
         self.utils = Utils(**self.utils_confs)
         self.method_decorators = {'get': kwargs.get('get_decorators', [])}
 
-    # pylint: disable=too-many-locals,redefined-builtin,invalid-name
-    def get(self, id=None, page=None):
+    def get(self, id=None, page=None):  # pylint: disable=redefined-builtin,invalid-name,unused-argument
+        # pylint: disable=too-many-locals
         """
-        Get method for the Computer resource
-        :return:
+        Get method for the resource
+        :param id: node identifier
+        :param page: page no, used for pagination
+        :return: http response
         """
 
         ## Decode url parts
@@ -119,7 +123,7 @@ class BaseResource(Resource):
         url_root = unquote(request.url_root)
 
         ## Parse request
-        (resource_type, page, id, query_type) = self.utils.parse_path(path, parse_pk_uuid=self.parse_pk_uuid)
+        (resource_type, page, node_id, query_type) = self.utils.parse_path(path, parse_pk_uuid=self.parse_pk_uuid)
         (limit, offset, perpage, orderby, filters, _alist, _nalist, _elist, _nelist, _downloadformat, _visformat,
          _filename, _rtype) = self.utils.parse_query_string(query_string)
 
@@ -142,7 +146,7 @@ class BaseResource(Resource):
 
         else:
             ## Set the query, and initialize qb object
-            self.trans.set_query(filters=filters, orders=orderby, id=id)
+            self.trans.set_query(filters=filters, orders=orderby, node_id=node_id)
 
             ## Count results
             total_count = self.trans.get_total_count()
@@ -165,7 +169,7 @@ class BaseResource(Resource):
             url=url,
             url_root=url_root,
             path=request.path,
-            id=id,
+            id=node_id,
             query_string=query_string,
             resource_type=resource_type,
             data=results)
@@ -197,12 +201,14 @@ class Node(Resource):
         self.utils = Utils(**self.utils_confs)
         self.method_decorators = {'get': kwargs.get('get_decorators', [])}
 
-    #pylint: disable=too-many-locals,too-many-statements
-    #pylint: disable=redefined-builtin,invalid-name,too-many-branches
-    def get(self, id=None, page=None):
+    def get(self, id=None, page=None):  # pylint: disable=redefined-builtin,invalid-name,unused-argument
+        # pylint: disable=too-many-locals,too-many-statements,too-many-branches,fixme
         """
         Get method for the Node resource.
-        :return:
+
+        :param id: node identifier
+        :param page: page no, used for pagination
+        :return: http response
         """
 
         ## Decode url parts
@@ -212,7 +218,7 @@ class Node(Resource):
         url_root = unquote(request.url_root)
 
         ## Parse request
-        (resource_type, page, id, query_type) = self.utils.parse_path(path, parse_pk_uuid=self.parse_pk_uuid)
+        (resource_type, page, node_id, query_type) = self.utils.parse_path(path, parse_pk_uuid=self.parse_pk_uuid)
 
         (limit, offset, perpage, orderby, filters, alist, nalist, elist, nelist, downloadformat, visformat, filename,
          rtype) = self.utils.parse_query_string(query_string)
@@ -249,14 +255,14 @@ class Node(Resource):
         # TODO Might need to be improved
         elif query_type == "tree":
             headers = self.utils.build_headers(url=request.url, total_count=0)
-            results = self.trans.get_io_tree(id)
+            results = self.trans.get_io_tree(node_id)
         else:
             ## Initialize the translator
             self.trans.set_query(
                 filters=filters,
                 orders=orderby,
                 query_type=query_type,
-                id=id,
+                node_id=node_id,
                 alist=alist,
                 nalist=nalist,
                 elist=elist,
@@ -323,7 +329,7 @@ class Node(Resource):
             url=url,
             url_root=url_root,
             path=path,
-            id=id,
+            id=node_id,
             query_string=query_string,
             resource_type=resource_type,
             data=results)
@@ -332,6 +338,7 @@ class Node(Resource):
 
 
 class Computer(BaseResource):
+    """ Resource for Computer """
 
     def __init__(self, **kwargs):
         super(Computer, self).__init__(**kwargs)
@@ -346,6 +353,7 @@ class Computer(BaseResource):
 
 
 class Group(BaseResource):
+    """ Resource for Group """
 
     def __init__(self, **kwargs):
         super(Group, self).__init__(**kwargs)
@@ -357,6 +365,7 @@ class Group(BaseResource):
 
 
 class User(BaseResource):
+    """ Resource for User """
 
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)
@@ -368,6 +377,7 @@ class User(BaseResource):
 
 
 class Calculation(Node):
+    """ Resource for Calculation """
 
     def __init__(self, **kwargs):
         super(Calculation, self).__init__(**kwargs)
@@ -381,6 +391,7 @@ class Calculation(Node):
 
 
 class Code(Node):
+    """ Resource for Code """
 
     def __init__(self, **kwargs):
         super(Code, self).__init__(**kwargs)
@@ -394,6 +405,7 @@ class Code(Node):
 
 
 class Data(Node):
+    """ Resource for Data node """
 
     def __init__(self, **kwargs):
         super(Data, self).__init__(**kwargs)
@@ -407,6 +419,7 @@ class Data(Node):
 
 
 class StructureData(Data):
+    """ Resource for structure data """
 
     def __init__(self, **kwargs):
 
@@ -422,6 +435,7 @@ class StructureData(Data):
 
 
 class KpointsData(Data):
+    """ Resource for kpoints data """
 
     def __init__(self, **kwargs):
         super(KpointsData, self).__init__(**kwargs)
@@ -435,6 +449,7 @@ class KpointsData(Data):
 
 
 class BandsData(Data):
+    """ Resource for Bands data """
 
     def __init__(self, **kwargs):
         super(BandsData, self).__init__(**kwargs)
@@ -449,6 +464,7 @@ class BandsData(Data):
 
 
 class CifData(Data):
+    """ Resource for cif data """
 
     def __init__(self, **kwargs):
 
@@ -464,6 +480,7 @@ class CifData(Data):
 
 
 class UpfData(Data):
+    """ Resource for upf data """
 
     def __init__(self, **kwargs):
 

@@ -108,13 +108,20 @@ class DbSearchResults(object):
             self._position = 0
             self._increment = increment
 
-        def next(self):
+        def __next__(self):
             pos = self._position
             if pos >= 0 and pos < len(self._results):
                 self._position = self._position + self._increment
                 return self._results[pos]
             else:
                 raise StopIteration()
+
+        def next(self):
+            """
+            The iterator method expected by python 2.x,
+            implemented as python 3.x style method.
+            """
+            return self.__next__()
 
     def __iter__(self):
         """
@@ -217,10 +224,10 @@ class DbEntry(object):
 
     def __repr__(self):
         return "{}({})".format(self.__class__.__name__,
-                               ",".join(["{}={}".format(k, '"{}"'.format(v)
-                               if issubclass(v.__class__, six.string_types)
-                               else v)
-                                         for k, v in self.source.items()]))
+                               ",".join(["{}={}".format(k, '"{}"'.format(self.source[k])
+                               if issubclass(self.source[k].__class__, six.string_types)
+                               else self.source[k])
+                                         for k in sorted(self.source.keys())]))
 
     @property
     def contents(self):
@@ -231,8 +238,8 @@ class DbEntry(object):
             from six.moves import urllib
             from hashlib import md5
 
-            self._contents = urllib.request.urlopen(self.source['uri']).read()
-            self.source['source_md5'] = md5(self._contents).hexdigest()
+            self._contents = urllib.request.urlopen(self.source['uri']).read().decode("utf-8")
+            self.source['source_md5'] = md5(self._contents.encode("utf-8")).hexdigest()
         return self._contents
 
     @contents.setter
@@ -242,7 +249,7 @@ class DbEntry(object):
         """
         from hashlib import md5
         self._contents = contents
-        self.source['source_md5'] = md5(self._contents).hexdigest()
+        self.source['source_md5'] = md5(self._contents.encode("utf-8")).hexdigest()
 
 
 class CifEntry(DbEntry):

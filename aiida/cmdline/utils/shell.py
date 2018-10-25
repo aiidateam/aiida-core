@@ -127,7 +127,7 @@ def _ipython_pre_100():
 
 def _ipython():
     """Start IPython >= 1.0"""
-    from IPython import start_ipython  # pylint: disable=import-error
+    from IPython import start_ipython  # pylint: disable=import-error,no-name-in-module
 
     user_ns = get_start_namespace()
     if user_ns:

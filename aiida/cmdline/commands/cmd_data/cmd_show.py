@@ -60,7 +60,7 @@ def _show_jmol(exec_name, trajectory_list, **kwargs):
     # pylint: disable=protected-access
     with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
         for trajectory in trajectory_list:
-            tmpf.write(trajectory._exportstring('cif', **kwargs)[0])
+            tmpf.write(trajectory._exportcontent('cif', **kwargs)[0])
         tmpf.flush()
 
         try:
@@ -89,7 +89,7 @@ def _show_xcrysden(exec_name, object_list, **kwargs):
 
     # pylint: disable=protected-access
     with tempfile.NamedTemporaryFile(mode='w+', suffix='.xsf') as tmpf:
-        tmpf.write(obj._exportstring('xsf', **kwargs)[0])
+        tmpf.write(obj._exportcontent('xsf', **kwargs)[0])
         tmpf.flush()
 
         try:
@@ -149,7 +149,7 @@ def _show_vesta(exec_name, structure_list):
     # pylint: disable=protected-access
     with tempfile.NamedTemporaryFile(mode='w+', suffix='.cif') as tmpf:
         for structure in structure_list:
-            tmpf.write(structure._exportstring('cif')[0])
+            tmpf.write(structure._exportcontent('cif')[0])
         tmpf.flush()
 
         try:
@@ -178,7 +178,7 @@ def _show_vmd(exec_name, structure_list):
 
     # pylint: disable=protected-access
     with tempfile.NamedTemporaryFile(mode='w+', suffix='.xsf') as tmpf:
-        tmpf.write(structure._exportstring('xsf')[0])
+        tmpf.write(structure._exportcontent('xsf')[0])
         tmpf.flush()
 
         try:
@@ -209,7 +209,7 @@ def _show_xmgrace(exec_name, list_bands):
         # extract number of bands
         nbnds = bnds.get_bands().shape[1]
         # pylint: disable=protected-access
-        text, _ = bnds._exportstring(
+        text, _ = bnds._exportcontent(
             'agr', setnumber_offset=current_band_number, color_number=(iband + 1 % max_num_agr_colors))
         # write a tempfile
         tempf = tempfile.NamedTemporaryFile('w+', suffix='.agr')

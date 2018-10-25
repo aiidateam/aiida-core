@@ -53,11 +53,8 @@ class FakeObject(object):
             return self._dictionary[name]
 
 
-@unittest.skipIf(six.PY3, "Broken on Python 3")
 class TestTcodDbExporter(AiidaTestCase):
-    """
-    Tests for TcodDbExporter class.
-    """
+    """Tests for TcodDbExporter class."""
     from aiida.orm.data.structure import has_ase, has_spglib
     from aiida.orm.data.cif import has_pycifrw
 
@@ -67,45 +64,46 @@ class TestTcodDbExporter(AiidaTestCase):
         encoding contents.
         """
         from aiida.tools.dbexporters.tcod import cif_encode_contents
-        self.assertEquals(cif_encode_contents('simple line')[1],
+        self.assertEquals(cif_encode_contents(b'simple line')[1],
                           None)
-        self.assertEquals(cif_encode_contents(' ;\n ;')[1],
+        self.assertEquals(cif_encode_contents(b' ;\n ;')[1],
                           None)
-        self.assertEquals(cif_encode_contents(';\n'),
-                          ('=3B\n', 'quoted-printable'))
-        self.assertEquals(cif_encode_contents('line\n;line'),
-                          ('line\n=3Bline', 'quoted-printable'))
-        self.assertEquals(cif_encode_contents('tabbed\ttext'),
-                          ('tabbed=09text', 'quoted-printable'))
-        self.assertEquals(cif_encode_contents('angstrom Å'),
-                          ('angstrom =C3=85', 'quoted-printable'))
-        self.assertEquals(cif_encode_contents('.'),
-                          ('=2E', 'quoted-printable'))
-        self.assertEquals(cif_encode_contents('?'),
-                          ('=3F', 'quoted-printable'))
-        self.assertEquals(cif_encode_contents('.?'), ('.?', None))
+        self.assertEquals(cif_encode_contents(b';\n'),
+                          (b'=3B\n', 'quoted-printable'))
+        self.assertEquals(cif_encode_contents(b'line\n;line'),
+                          (b'line\n=3Bline', 'quoted-printable'))
+        self.assertEquals(cif_encode_contents(b'tabbed\ttext'),
+                          (b'tabbed=09text', 'quoted-printable'))
+        # Angstrom symbol 'Å' will be encoded as two bytes, thus encoding it
+        # for CIF will produce two quoted-printable entities, '=C3' and '=85',
+        # one for each byte.
+        self.assertEquals(cif_encode_contents(u'angstrom Å'.encode('utf-8')),
+                          (b'angstrom =C3=85', 'quoted-printable'))
+        self.assertEquals(cif_encode_contents(b'.'),
+                          (b'=2E', 'quoted-printable'))
+        self.assertEquals(cif_encode_contents(b'?'),
+                          (b'=3F', 'quoted-printable'))
+        self.assertEquals(cif_encode_contents(b'.?'), (b'.?', None))
         # This one is particularly tricky: a long line is folded by the QP
         # and the semicolon sign becomes the first character on a new line.
         self.assertEquals(cif_encode_contents(
-            "Å{};a".format("".join("a" for i in range(0, 69)))),
-            ('=C3=85aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-             'aaaaaaaaaaaaaaaaaaaaaaaaaaaaa=\n=3Ba',
+            u"Å{};a".format("".join("a" for i in range(0, 69))).encode('utf-8')),
+            (b'=C3=85aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+             b'aaaaaaaaaaaaaaaaaaaaaaaaaaaaa=\n=3Ba',
              'quoted-printable'))
-        self.assertEquals(cif_encode_contents('angstrom ÅÅÅ'),
-                          ('YW5nc3Ryb20gw4XDhcOF', 'base64'))
+        self.assertEquals(cif_encode_contents(u'angstrom ÅÅÅ'.encode('utf-8')),
+                          (b'YW5nc3Ryb20gw4XDhcOF', 'base64'))
         self.assertEquals(cif_encode_contents(
-            "".join("a" for i in range(0, 2048)))[1],
+            "".join("a" for i in range(0, 2048)).encode('utf-8'))[1],
                           None)
         self.assertEquals(cif_encode_contents(
-            "".join("a" for i in range(0, 2049)))[1],
+            "".join("a" for i in range(0, 2049)).encode('utf-8'))[1],
                           'quoted-printable')
-        self.assertEquals(cif_encode_contents('datatest')[1], None)
-        self.assertEquals(cif_encode_contents('data_test')[1], 'base64')
+        self.assertEquals(cif_encode_contents(b'datatest')[1], None)
+        self.assertEquals(cif_encode_contents(b'data_test')[1], 'base64')
 
     def test_collect_files(self):
-        """
-        Testing the collection of files from file tree.
-        """
+        """Testing the collection of files from file tree."""
         from aiida.tools.dbexporters.tcod import _collect_files
         from aiida.common.folders import SandboxFolder
         from six.moves import cStringIO as StringIO
@@ -134,28 +132,27 @@ class TestTcodDbExporter(AiidaTestCase):
         sha1 = 'a94a8fe5ccb19ba61c4c0873d391e987982fbbd3'
         self.assertEquals(
             _collect_files(sf.abspath),
-            [{'name': '_.out', 'contents': 'test', 'md5': md5,
+            [{'name': '_.out', 'contents': b'test', 'md5': md5,
               'sha1': sha1, 'type': 'file'},
-             {'name': '_aiidasubmit.sh', 'contents': 'test', 'md5': md5,
+             {'name': '_aiidasubmit.sh', 'contents': b'test', 'md5': md5,
               'sha1': sha1, 'type': 'file'},
-             {'name': 'aiida.in', 'contents': 'test', 'md5': md5,
+             {'name': 'aiida.in', 'contents': b'test', 'md5': md5,
               'sha1': sha1, 'type': 'file'},
-             {'name': 'aiida.out', 'contents': 'test', 'md5': md5,
+             {'name': 'aiida.out', 'contents': b'test', 'md5': md5,
               'sha1': sha1, 'type': 'file'},
              {'name': 'out/', 'type': 'folder'},
-             {'name': 'out/out', 'contents': 'test', 'md5': md5,
+             {'name': 'out/out', 'contents': b'test', 'md5': md5,
               'sha1': sha1, 'type': 'file'},
              {'name': 'pseudo/', 'type': 'folder'},
              {'name': 'save/', 'type': 'folder'},
              {'name': 'save/1/', 'type': 'folder'},
-             {'name': 'save/1/log.log', 'contents': 'test', 'md5': md5,
+             {'name': 'save/1/log.log', 'contents': b'test', 'md5': md5,
               'sha1': sha1, 'type': 'file'},
              {'name': 'save/2/', 'type': 'folder'}])
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
-    @unittest.skipIf(not has_nwchem_plugin(), "NWChem plugin is not installed")
     def test_cif_structure_roundtrip(self):
         from aiida.tools.dbexporters.tcod import export_cif, export_values
         from aiida.orm import Code
@@ -332,7 +329,6 @@ class TestTcodDbExporter(AiidaTestCase):
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
-    @unittest.skipIf(not has_nwchem_plugin(), "NWChem plugin is not installed")
     def test_inline_export(self):
         from aiida.orm.data.cif import CifData
         from aiida.tools.dbexporters.tcod import export_values
@@ -387,6 +383,7 @@ class TestTcodDbExporter(AiidaTestCase):
         self.assertEqual(val['_atom_site_label'], ['Ba1', 'Ti1', 'O1'])
         self.assertEqual(val['_symmetry_space_group_name_H-M'], 'Pm-3m')
         self.assertEqual(val['_symmetry_space_group_name_Hall'], '-P 4 2 3')
+
 
     def test_cmdline_parameters(self):
         """
@@ -567,28 +564,34 @@ class TestTcodDbExporter(AiidaTestCase):
             self.assertEquals(text, decoded)
             self.assertEquals(text, decoded_universal)
 
-        check_ncr(self, '.', '&#46;')
-        check_ncr(self, '?', '&#63;')
-        check_ncr(self, ';\n', '&#59;\n')
-        check_ncr(self, 'line\n;line', 'line\n&#59;line')
-        check_ncr(self, 'tabbed\ttext', 'tabbed&#9;text')
-        check_ncr(self, 'angstrom Å', 'angstrom &#195;&#133;')
-        check_ncr(self, '<html>&#195;&#133;</html>',
-                 '<html>&#38;#195;&#38;#133;</html>')
+        check_ncr(self, b'.', b'&#46;')
+        check_ncr(self, b'?', b'&#63;')
+        check_ncr(self, b';\n', b'&#59;\n')
+        check_ncr(self, b'line\n;line', b'line\n&#59;line')
+        check_ncr(self, b'tabbed\ttext', b'tabbed&#9;text')
+        # Angstrom symbol 'Å' will be encoded as two bytes, thus encoding it
+        # for CIF will produce two NCR entities, '&#195;' and '&#133;', one for
+        # each byte.
+        check_ncr(self, u'angstrom Å'.encode('utf-8'), b'angstrom &#195;&#133;')
+        check_ncr(self, b'<html>&#195;&#133;</html>',
+                 b'<html>&#38;#195;&#38;#133;</html>')
 
-        check_quoted_printable(self, '.', '=2E')
-        check_quoted_printable(self, '?', '=3F')
-        check_quoted_printable(self, ';\n', '=3B\n')
-        check_quoted_printable(self, 'line\n;line', 'line\n=3Bline')
-        check_quoted_printable(self, 'tabbed\ttext', 'tabbed=09text')
-        check_quoted_printable(self, 'angstrom Å', 'angstrom =C3=85')
-        check_quoted_printable(self, 'line\rline\x00', 'line=0Dline=00')
+        check_quoted_printable(self, b'.', b'=2E')
+        check_quoted_printable(self, b'?', b'=3F')
+        check_quoted_printable(self, b';\n', b'=3B\n')
+        check_quoted_printable(self, b'line\n;line', b'line\n=3Bline')
+        check_quoted_printable(self, b'tabbed\ttext', b'tabbed=09text')
+        # Angstrom symbol 'Å' will be encoded as two bytes, thus encoding it
+        # for CIF will produce two quoted-printable entities, '=C3' and '=85',
+        # one for each byte.
+        check_quoted_printable(self, u'angstrom Å'.encode('utf-8'), b'angstrom =C3=85')
+        check_quoted_printable(self, b'line\rline\x00', b'line=0Dline=00')
         # This one is particularly tricky: a long line is folded by the QP
         # and the semicolon sign becomes the first character on a new line.
         check_quoted_printable(self,
-                              "Å{};a".format("".join("a" for i in range(0, 69))),
-                              '=C3=85aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-                              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaa=\n=3Ba')
+                              u"Å{};a".format("".join("a" for i in range(0, 69))).encode('utf-8'),
+                              b'=C3=85aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+                              b'aaaaaaaaaaaaaaaaaaaaaaaaaaaaa=\n=3Ba')
 
-        check_base64(self, 'angstrom ÅÅÅ', 'YW5nc3Ryb20gw4XDhcOF')
-        check_gzip_base64(self, 'angstrom ÅÅÅ')
+        check_base64(self, u'angstrom ÅÅÅ'.encode('utf-8'), b'YW5nc3Ryb20gw4XDhcOF')
+        check_gzip_base64(self, u'angstrom ÅÅÅ'.encode('utf-8'))

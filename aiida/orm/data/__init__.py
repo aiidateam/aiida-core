@@ -177,22 +177,25 @@ class Data(Node):
         return super(Data, self)._linking_as_output(dest, link_type)
 
     @override
-    def _exportstring(self, fileformat, main_file_name="", **kwargs):
+    def _exportcontent(self, fileformat, main_file_name="", **kwargs):
         """
-        Converts a Data object to other text format.
+        Converts a Data node to one (or multiple) files.
 
-        :param fileformat: a string (the extension) to describe the file format.
-        :param main_file_name: empty by default, contains the (full) path and filename
-             of the main file, if any. This is not used directly, but is used to
-             infer useful unique names for the additional files, if any. For instance,
-             if the main file for gnuplot is '../myplot.gnu', the plugin could decide
-             to store the dat file under '../myplot_data.dat'. It is up to the plugin
-             to properly deal with this filename (or ignore it, if not relevant, e.g.
-             if no additional files need to be created)
-        :param kwargs: any other parameter is passed down to the specific plugin
+        Note: Export plugins should return utf8-encoded **bytes**, which can be
+        directly dumped to file.
+
+        :param fileformat: the extension, uniquely specifying the file format.
+        :type fileformat: str
+        :param main_file_name: (empty by default) Can be used by plugin to
+            infer sensible names for additional files, if necessary.  E.g. if the
+            main file is '../myplot.gnu', the plugin may decide to store the dat
+            file under '../myplot_data.dat'.
+        :type main_file_name: str
+        :param kwargs: other parameters are passed down to the plugin
         :returns: a tuple of length 2. The first element is the content of the
             otuput file. The second is a dictionary (possibly empty) in the format
             {filename: filecontent} for any additional file that should be produced.
+        :rtype: (bytes, dict)
         """
         exporters = self._get_exporters()
 
@@ -221,7 +224,7 @@ class Data(Node):
             it will try to use the extension of the file name.
         :param overwrite: if set to True, overwrites file found at path. Default=False
         :param kwargs: additional parameters to be passed to the
-            _exportstring method
+            _exportcontent method
         :return: the list of files created
         """
         import os
@@ -247,7 +250,7 @@ class Data(Node):
 
         retlist = []
 
-        filetext, extra_files = self._exportstring(
+        filetext, extra_files = self._exportcontent(
             fileformat, main_file_name=path, **kwargs)
 
         if not overwrite:

@@ -270,7 +270,7 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
     Constructs PyCifRW's CifFile from an array of CIF datablocks.
 
     :param datablocks: an array of CIF datablocks
-    :param loops: optional list of lists of CIF tag loops.
+    :param loops: optional dict of lists of CIF tag loops.
     :param names: optional list of datablock names
     :return: CifFile
     """
@@ -300,9 +300,10 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
             name = names[i]
         datablock = CifBlock()
         cif[name] = datablock
+        tags_in_loops = []
         for loopname in loops.keys():
-            loopdata = ([[]], [[]])
             row_size = None
+            tags_seen = []
             for tag in loops[loopname]:
                 if tag in values:
                     tag_values = values.pop(tag)
@@ -315,15 +316,19 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
                                          "'{}' is different from "
                                          "the others in the same "
                                          "loop".format(tag))
-                    loopdata[0][0].append(tag)
-                    loopdata[1][0].append(tag_values)
+                    if row_size == 0:
+                        continue
+                    datablock.AddItem(tag, tag_values)
+                    tags_seen.append(tag)
+                    tags_in_loops.append(tag)
             if row_size is not None and row_size > 0:
-                datablock.AddCifItem(loopdata)
+                datablock.CreateLoop(datanames=tags_seen)
         for tag in sorted(values.keys()):
-            datablock[tag] = values[tag]
-            # create automatically a loop for non-scalar values
-            if isinstance(values[tag], (tuple, list)) and tag not in loops.keys():
-                datablock.CreateLoop([tag])
+            if not tag in tags_in_loops:
+                datablock.AddItem(tag, values[tag])
+                # create automatically a loop for non-scalar values
+                if isinstance(values[tag], (tuple, list)) and tag not in loops.keys():
+                    datablock.CreateLoop([tag])
     return cif
 
 
@@ -546,7 +551,7 @@ class CifData(SinglefileData):
         """
         import tempfile
         cif = cif_from_ase(aseatoms)
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             with HiddenPrints():
                 f.write(pycifrw_from_cif(cif, loops=ase_loops).WriteOut())
             f.flush()
@@ -584,7 +589,7 @@ class CifData(SinglefileData):
         .. note:: requires PyCifRW module.
         """
         import tempfile
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
             with HiddenPrints():
                 f.write(values.WriteOut())
             f.flush()
@@ -868,7 +873,7 @@ class CifData(SinglefileData):
             self.set_values(self._values)
 
         with self._get_folder_pathsubfolder.open(self.filename) as f:
-            return f.read(), {}
+            return f.read().encode('utf-8'), {}
 
     # pylint: disable=unused-argument
     def _prepare_tcod(self, main_file_name="", **kwargs):
@@ -876,7 +881,7 @@ class CifData(SinglefileData):
         Write the given CIF to a string of format TCOD CIF.
         """
         from aiida.tools.dbexporters.tcod import export_cif
-        return export_cif(self, **kwargs).encode('utf-8'), {}
+        return export_cif(self, **kwargs), {}
 
     def _get_object_ase(self):
         """

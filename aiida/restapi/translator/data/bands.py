@@ -50,14 +50,14 @@ class BandsDataTranslator(DataTranslator):
         """
         Strategy: I take advantage of the export functionality of BandsData
         objects. The raw export has to be filtered for string escape characters.
-        this is done by decoding the string returned by node._exportstring.
+        this is done by decoding the string returned by node._exportcontent.
 
         TODO: modify the function exportstring (or add another function in
         BandsData) so that it returns a python object rather than a string.
         """
 
         import ujson as uj
-        json_string = node._exportstring('json', comments=False)
+        json_string = node._exportcontent('json', comments=False)
         json_content = uj.decode(json_string[0])
 
         # Add Ylabel which by default is not exported

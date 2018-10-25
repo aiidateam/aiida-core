@@ -70,7 +70,7 @@ class CodDbImporter(DbImporter):
         Returns SQL query predicate for querying formula fields.
         """
         for e in values:
-            if not isinstance(e, str):
+            if not isinstance(e, six.string_types):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
         return self._str_exact_clause(key, \
@@ -199,7 +199,7 @@ class CodDbImporter(DbImporter):
         :return: string containing a SQL statement.
         """
         sql_parts = ["(status IS NULL OR status != 'retracted')"]
-        for key in self._keywords.keys():
+        for key in sorted(self._keywords.keys()):
             if key in kwargs.keys():
                 values = kwargs.pop(key)
                 if not isinstance(values, list):
@@ -331,7 +331,7 @@ class CodEntry(CifEntry):
     _license = 'CC0'
 
     def __init__(self, uri, db_name='Crystallography Open Database',
-                 db_uri='http://www.crystallography.net', **kwargs):
+                 db_uri='http://www.crystallography.net/cod', **kwargs):
         """
         Creates an instance of
         :py:class:`aiida.tools.dbimporters.plugins.cod.CodEntry`, related

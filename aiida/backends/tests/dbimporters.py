@@ -20,7 +20,6 @@ from six.moves import range
 
 from aiida.backends.testbase import AiidaTestCase
 
-@unittest.skipIf(six.PY3, "Broken on Python 3")
 class TestCodDbImporter(AiidaTestCase):
     """
     Test the CodDbImporter class.
@@ -29,6 +28,7 @@ class TestCodDbImporter(AiidaTestCase):
 
     def test_query_construction_1(self):
         from aiida.tools.dbimporters.plugins.cod import CodDbImporter
+        import re
 
         codi = CodDbImporter()
         q = codi.query_sql(id=["1000000", 3000000],
@@ -43,28 +43,34 @@ class TestCodDbImporter(AiidaTestCase):
                            measurement_temp=[0, 10.5],
                            measurement_pressure=[1000, 1001],
                            determination_method=["single crystal", None])
+
+        # Rounding errors occurr in Python 2 and Python 3 thus they are averted using
+        # the following precision stripping regular expressions.
+        q = re.sub(r'(\d\.\d{6})\d+', r'\1', q)
+        q = re.sub(r'(120.00)39+', r'\g<1>4', q)
+
         self.assertEquals(q, \
                           "SELECT file, svnrevision FROM data WHERE "
                           "(status IS NULL OR status != 'retracted') AND "
-                          "(method IN ('single crystal') OR method IS NULL) AND "
-                          "(file IN (1000000, 3000000)) AND "
+                          "(a BETWEEN 3.332333 AND 3.334333 OR "
+                          "a BETWEEN 0.999 AND 1.001) AND "
+                          "(alpha BETWEEN 1.665666 AND 1.667666 OR "
+                          "alpha BETWEEN -0.001 AND 0.001) AND "
                           "(chemname LIKE '%caffeine%' OR "
                           "chemname LIKE '%serotonine%') AND "
-                          "(formula IN ('- C6 H6 -')) AND "
-                          "(a BETWEEN 3.33233333333 AND 3.33433333333 OR "
-                          "a BETWEEN 0.999 AND 1.001) AND "
-                          "(celltemp BETWEEN -0.001 AND 0.001 OR "
-                          "celltemp BETWEEN 10.499 AND 10.501) AND "
-                          "(vol BETWEEN 99.999 AND 100.001 OR "
-                          "vol BETWEEN 120.004 AND 120.006) AND "
-                          "(alpha BETWEEN 1.66566666667 AND 1.66766666667 OR "
-                          "alpha BETWEEN -0.001 AND 0.001) AND "
-                          "(cellpressure BETWEEN 999 AND 1001 OR "
-                          "cellpressure BETWEEN 1000 AND 1002) AND "
+                          "(method IN ('single crystal') OR method IS NULL) AND "
                           "(formula REGEXP ' C[0-9 ]' AND "
                           "formula REGEXP ' H[0-9 ]' AND "
                           "formula REGEXP ' Cl[0-9 ]') AND "
-                          "(nel IN (5)) AND (sg IN ('P -1'))")
+                          "(formula IN ('- C6 H6 -')) AND "
+                          "(file IN (1000000, 3000000)) AND "
+                          "(cellpressure BETWEEN 999 AND 1001 OR "
+                          "cellpressure BETWEEN 1000 AND 1002) AND "
+                          "(celltemp BETWEEN -0.001 AND 0.001 OR "
+                          "celltemp BETWEEN 10.499 AND 10.501) AND "
+                          "(nel IN (5)) AND (sg IN ('P -1')) AND "
+                          "(vol BETWEEN 99.999 AND 100.001 OR "
+                          "vol BETWEEN 120.004 AND 120.006)")
 
     def test_datatype_checks(self):
         """
@@ -91,7 +97,7 @@ class TestCodDbImporter(AiidaTestCase):
                    codi._volume_clause]
         results = [[0, 4, 4, 0, 1, 1],
                    [0, 0, 0, 0, 1, 1],
-                   [2, 0, 2, 0, 2, 2],
+                   [2, 0, 0, 0, 2, 2],
                    [0, 0, 0, 0, 1, 1],
                    [2, 0, 0, 0, 2, 2],
                    [0, 3, 3, 3, 0, 3]]
@@ -116,14 +122,16 @@ class TestCodDbImporter(AiidaTestCase):
                                     {'id': '1000001', 'svnrevision': '1234'},
                                     {'id': '2000000', 'svnrevision': '1234'}])
         self.assertEquals(len(results), 3)
-        self.assertEquals(str(results.at(1)),
-                          'CodEntry(license="CC0",'
-                          'db_name="Crystallography Open Database",version="1234",'
-                          'uri="http://www.crystallography.net/cod/1000001.cif@1234",'
-                          'source_md5=None,db_uri="http://www.crystallography.net",'
-                          'id="1000001",extras={})')
-        self.assertEquals(results.at(1).source['uri'], \
-                          "http://www.crystallography.net/cod/1000001.cif@1234")
+        self.assertEquals(results.at(1).source, {
+            'db_name': 'Crystallography Open Database',
+            'db_uri': 'http://www.crystallography.net/cod',
+            'extras': {},
+            'id': '1000001',
+            'license': 'CC0',
+            'source_md5': None,
+            'uri': 'http://www.crystallography.net/cod/1000001.cif@1234',
+            'version': '1234',
+        })
         self.assertEquals([x.source['uri'] for x in results],
                           ["http://www.crystallography.net/cod/1000000.cif",
                            "http://www.crystallography.net/cod/1000001.cif@1234",
@@ -146,7 +154,7 @@ class TestCodDbImporter(AiidaTestCase):
                           '070711e8e99108aade31d20cd5c94c48')
         self.assertEquals(cif.source, {
             'db_name': 'Crystallography Open Database',
-            'db_uri': 'http://www.crystallography.net',
+            'db_uri': 'http://www.crystallography.net/cod',
             'id': None,
             'version': None,
             'extras': {},
@@ -156,7 +164,6 @@ class TestCodDbImporter(AiidaTestCase):
         })
 
 
-@unittest.skipIf(six.PY3, "Broken on Python 3")
 class TestTcodDbImporter(AiidaTestCase):
     """
     Test the TcodDbImporter class.
@@ -172,22 +179,22 @@ class TestTcodDbImporter(AiidaTestCase):
                                      {'id': '10000001', 'svnrevision': '1234'},
                                      {'id': '20000000', 'svnrevision': '1234'}])
         self.assertEquals(len(results), 3)
-        self.assertEquals(str(results.at(1)),
-                          'TcodEntry(license="CC0",'
-                          'db_name="Theoretical Crystallography Open Database",'
-                          'version="1234",'
-                          'uri="http://www.crystallography.net/tcod/10000001.cif@1234",'
-                          'source_md5=None,db_uri="http://www.crystallography.net/tcod",'
-                          'id="10000001",extras={})')
-        self.assertEquals(results.at(1).source['uri'], \
-                          "http://www.crystallography.net/tcod/10000001.cif@1234")
+        self.assertEquals(results.at(1).source, {
+            'db_name': 'Theoretical Crystallography Open Database',
+            'db_uri': 'http://www.crystallography.net/tcod',
+            'extras': {},
+            'id': '10000001',
+            'license': 'CC0',
+            'source_md5': None,
+            'uri': 'http://www.crystallography.net/tcod/10000001.cif@1234',
+            'version': '1234',
+        })
         self.assertEquals([x.source['uri'] for x in results],
                           ["http://www.crystallography.net/tcod/10000000.cif",
                            "http://www.crystallography.net/tcod/10000001.cif@1234",
                            "http://www.crystallography.net/tcod/20000000.cif@1234"])
 
 
-@unittest.skipIf(six.PY3, "Broken on Python 3")
 class TestPcodDbImporter(AiidaTestCase):
     """
     Test the PcodDbImporter class.
@@ -201,18 +208,18 @@ class TestPcodDbImporter(AiidaTestCase):
 
         results = PcodSearchResults([{'id': '12345678'}])
         self.assertEquals(len(results), 1)
-        self.assertEquals(str(results.at(0)),
-                          'PcodEntry(license="CC0",'
-                          'db_name="Predicted Crystallography Open Database",'
-                          'version=None,'
-                          'uri="http://www.crystallography.net/pcod/cif/1/123/12345678.cif",'
-                          'source_md5=None,db_uri="http://www.crystallography.net/pcod",'
-                          'id="12345678",extras={})')
-        self.assertEquals([x.source['uri'] for x in results],
-                          ["http://www.crystallography.net/pcod/cif/1/123/12345678.cif"])
+        self.assertEquals(results.at(0).source, {
+            'db_name': 'Predicted Crystallography Open Database',
+            'db_uri': 'http://www.crystallography.net/pcod',
+            'extras': {},
+            'id': '12345678',
+            'license': 'CC0',
+            'source_md5': None,
+            'uri': 'http://www.crystallography.net/pcod/cif/1/123/12345678.cif',
+            'version': None,
+        })
 
 
-@unittest.skipIf(six.PY3, "Broken on Python 3")
 class TestMpodDbImporter(AiidaTestCase):
     """
     Test the MpodDbImporter class.
@@ -226,15 +233,16 @@ class TestMpodDbImporter(AiidaTestCase):
 
         results = MpodSearchResults([{'id': '1234567'}])
         self.assertEquals(len(results), 1)
-        self.assertEquals(str(results.at(0)),
-                          'MpodEntry(license=None,'
-                          'db_name="Material Properties Open Database",'
-                          'version=None,'
-                          'uri="http://mpod.cimav.edu.mx/datafiles/1234567.mpod",'
-                          'source_md5=None,db_uri="http://mpod.cimav.edu.mx",'
-                          'id="1234567",extras={})')
-        self.assertEquals([x.source['uri'] for x in results],
-                          ["http://mpod.cimav.edu.mx/datafiles/1234567.mpod"])
+        self.assertEquals(results.at(0).source, {
+            'db_name': 'Material Properties Open Database',
+            'db_uri': 'http://mpod.cimav.edu.mx',
+            'extras': {},
+            'id': '1234567',
+            'license': None,
+            'source_md5': None,
+            'uri': 'http://mpod.cimav.edu.mx/datafiles/1234567.mpod',
+            'version': None,
+        })
 
 
 class TestNnincDbImporter(AiidaTestCase):

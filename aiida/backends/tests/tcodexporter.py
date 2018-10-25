@@ -74,6 +74,11 @@ class TestTcodDbExporter(AiidaTestCase):
                           (b'line\n=3Bline', 'quoted-printable'))
         self.assertEquals(cif_encode_contents(b'tabbed\ttext'),
                           (b'tabbed=09text', 'quoted-printable'))
+
+        # Angstrom symbol 'Å' will be encoded as two bytes, thus encoding it
+        # for CIF will produce two quoted-printable entities, '=C3' and '=85',
+        # one for each byte.
+
         self.assertEquals(cif_encode_contents(u'angstrom Å'.encode('utf-8')),
                           (b'angstrom =C3=85', 'quoted-printable'))
         self.assertEquals(cif_encode_contents(b'.'),
@@ -150,8 +155,6 @@ class TestTcodDbExporter(AiidaTestCase):
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
-    @unittest.skipIf(not has_nwchem_plugin(), "NWChem plugin is not installed")
-    @unittest.skipIf(six.PY3, "Broken on Python 3")
     def test_cif_structure_roundtrip(self):
         from aiida.tools.dbexporters.tcod import export_cif, export_values
         from aiida.orm import Code
@@ -329,8 +332,6 @@ class TestTcodDbExporter(AiidaTestCase):
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
-    @unittest.skipIf(not has_nwchem_plugin(), "NWChem plugin is not installed")
-    @unittest.skipIf(six.PY3, "Broken on Python 3")
     def test_inline_export(self):
         from aiida.orm.data.cif import CifData
         from aiida.tools.dbexporters.tcod import export_values
@@ -387,7 +388,7 @@ class TestTcodDbExporter(AiidaTestCase):
         self.assertEqual(val['_symmetry_space_group_name_H-M'], 'Pm-3m')
         self.assertEqual(val['_symmetry_space_group_name_Hall'], '-P 4 2 3')
 
-    @unittest.skipIf(six.PY3, "Broken on Python 3")
+
     def test_cmdline_parameters(self):
         """
         Ensuring that neither extend_with_cmdline_parameters() nor
@@ -569,28 +570,34 @@ class TestTcodDbExporter(AiidaTestCase):
             self.assertEquals(text, decoded)
             self.assertEquals(text, decoded_universal)
 
-        check_ncr(self, '.', '&#46;')
-        check_ncr(self, '?', '&#63;')
-        check_ncr(self, ';\n', '&#59;\n')
-        check_ncr(self, 'line\n;line', 'line\n&#59;line')
-        check_ncr(self, 'tabbed\ttext', 'tabbed&#9;text')
-        check_ncr(self, 'angstrom Å', 'angstrom &#195;&#133;')
-        check_ncr(self, '<html>&#195;&#133;</html>',
-                 '<html>&#38;#195;&#38;#133;</html>')
+        check_ncr(self, b'.', b'&#46;')
+        check_ncr(self, b'?', b'&#63;')
+        check_ncr(self, b';\n', b'&#59;\n')
+        check_ncr(self, b'line\n;line', b'line\n&#59;line')
+        check_ncr(self, b'tabbed\ttext', b'tabbed&#9;text')
+        # Angstrom symbol 'Å' will be encoded as two bytes, thus encoding it
+        # for CIF will produce two NCR entities, '&#195;' and '&#133;', one for
+        # each byte.
+        check_ncr(self, u'angstrom Å'.encode('utf-8'), b'angstrom &#195;&#133;')
+        check_ncr(self, b'<html>&#195;&#133;</html>',
+                 b'<html>&#38;#195;&#38;#133;</html>')
 
-        check_quoted_printable(self, '.', '=2E')
-        check_quoted_printable(self, '?', '=3F')
-        check_quoted_printable(self, ';\n', '=3B\n')
-        check_quoted_printable(self, 'line\n;line', 'line\n=3Bline')
-        check_quoted_printable(self, 'tabbed\ttext', 'tabbed=09text')
-        check_quoted_printable(self, 'angstrom Å', 'angstrom =C3=85')
-        check_quoted_printable(self, 'line\rline\x00', 'line=0Dline=00')
+        check_quoted_printable(self, b'.', b'=2E')
+        check_quoted_printable(self, b'?', b'=3F')
+        check_quoted_printable(self, b';\n', b'=3B\n')
+        check_quoted_printable(self, b'line\n;line', b'line\n=3Bline')
+        check_quoted_printable(self, b'tabbed\ttext', b'tabbed=09text')
+        # Angstrom symbol 'Å' will be encoded as two bytes, thus encoding it
+        # for CIF will produce two quoted-printable entities, '=C3' and '=85',
+        # one for each byte.
+        check_quoted_printable(self, u'angstrom Å'.encode('utf-8'), b'angstrom =C3=85')
+        check_quoted_printable(self, b'line\rline\x00', b'line=0Dline=00')
         # This one is particularly tricky: a long line is folded by the QP
         # and the semicolon sign becomes the first character on a new line.
         check_quoted_printable(self,
-                              "Å{};a".format("".join("a" for i in range(0, 69))),
-                              '=C3=85aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-                              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaa=\n=3Ba')
+                              u"Å{};a".format("".join("a" for i in range(0, 69))).encode('utf-8'),
+                              b'=C3=85aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+                              b'aaaaaaaaaaaaaaaaaaaaaaaaaaaaa=\n=3Ba')
 
-        check_base64(self, 'angstrom ÅÅÅ', 'YW5nc3Ryb20gw4XDhcOF')
-        check_gzip_base64(self, 'angstrom ÅÅÅ')
+        check_base64(self, u'angstrom ÅÅÅ'.encode('utf-8'), b'YW5nc3Ryb20gw4XDhcOF')
+        check_gzip_base64(self, u'angstrom ÅÅÅ'.encode('utf-8'))

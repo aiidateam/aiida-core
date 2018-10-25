@@ -6,7 +6,8 @@ Flask-SQLAlchemy==2.3.2
 Flask==1.0.2
 Jinja2==2.10
 MarkupSafe==1.0
-PyCifRW==4.2.1
+PyCifRW==4.2.1; python_version < '3'
+PyCifRW==4.4; python_version >= '3'
 PyMySQL==0.8.0
 PyYAML==3.12
 Pygments==2.2.0

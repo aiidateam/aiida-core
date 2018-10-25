@@ -12,7 +12,10 @@ from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
 
+from six import int2byte
 from six.moves import range
+
+import io
 
 from aiida.orm import DataFactory
 from aiida.orm.data.parameter import ParameterData
@@ -100,12 +103,16 @@ def cif_encode_contents(content, gzip=False, gzip_threshold=1024):
     symbols, too long lines or lines starting with semicolons (';')
     is encoded using Quoted-printable encoding.
 
-    :param content: the content to be encoded
-    :return content: encoded content
+    The encoding is performed byte-by-byte, so Unicode code points
+    spanning more than one byte will be split and encoded separately.
+
+    :param content: the content to be encoded in bytes
+    :return content: encoded content in bytes
     :return encoding: a string specifying used encoding (None, 'base64',
         'ncr', 'quoted-printable', 'gzip+base64')
     """
     import re
+
     method = None
     if len(content) == 0:
         # content is empty
@@ -113,28 +120,28 @@ def cif_encode_contents(content, gzip=False, gzip_threshold=1024):
     elif gzip and len(content) >= gzip_threshold:
         # content is larger than some arbitrary value and should be gzipped
         method = 'gzip+base64'
-    elif len(re.findall('[^\x09\x0A\x0D\x20-\x7E]', content))/len(content) > 0.25:
+    elif len(re.findall(b'[^\x09\x0A\x0D\x20-\x7E]', content))/len(content) > 0.25:
         # contents are assumed to be binary
         method = 'base64'
-    elif re.search('^\s*data_',content) is not None or \
-         re.search('\n\s*data_',content) is not None:
+    elif re.search(b'^\s*data_',content) is not None or \
+         re.search(b'\n\s*data_',content) is not None:
         # contents have CIF datablock header-like lines, that may be
         # dangerous when parsed with primitive parsers
         method = 'base64'
-    elif re.search('.{2048}.',content) is not None:
+    elif re.search(b'.{2048}.',content) is not None:
         # lines are too long
         method = 'quoted-printable'
-    elif len(re.findall('[^\x09\x0A\x0D\x20-\x7E]', content)) > 0:
+    elif len(re.findall(b'[^\x09\x0A\x0D\x20-\x7E]', content)) > 0:
         # contents have non-ASCII symbols
         method = 'quoted-printable'
-    elif re.search('^;', content) is not None or re.search('\n;', content) is not None:
+    elif re.search(b'^;', content) is not None or re.search(b'\n;', content) is not None:
         # content has lines starting with semicolon (';')
         method = 'quoted-printable'
-    elif re.search('\t', content) is not None:
+    elif re.search(b'\t', content) is not None:
         # content has TAB symbols, which may be lost during the
         # parsing of TCOD CIF file
         method = 'quoted-printable'
-    elif content == '.' or content == '?':
+    elif content == b'.' or content == b'?':
         method = 'quoted-printable'
     else:
         method = None
@@ -156,14 +163,14 @@ def encode_textfield_base64(content, foldwidth=76):
     Encodes the contents for CIF textfield in Base64 using standard Python
     implementation (``base64.standard_b64encode()``).
 
-    :param content: a string with contents
+    :param content: contents as bytes
     :param foldwidth: maximum width of line (default is 76)
-    :return: encoded string
+    :return: encoded string as bytes
     """
     import base64
 
     content = base64.standard_b64encode(content)
-    content = "\n".join(list(content[i:i + foldwidth]
+    content = b"\n".join(list(content[i:i + foldwidth]
                              for i in range(0, len(content), foldwidth)))
     return content
 
@@ -173,8 +180,8 @@ def decode_textfield_base64(content):
     Decodes the contents for CIF textfield from Base64 using standard
     Python implementation (``base64.standard_b64decode()``)
 
-    :param content: a string with contents
-    :return: decoded string
+    :param content: contents as bytes
+    :return: decoded string as bytes
     """
     import base64
 
@@ -191,8 +198,8 @@ def encode_textfield_quoted_printable(content):
         * '``\\t``' and '``\\r``';
         * '``.``' and '``?``', if comprise the entire textfield.
 
-    :param content: a string with contents
-    :return: encoded string
+    :param content: contents as bytes
+    :return: encoded string as bytes
     """
     import re
     import quopri
@@ -200,21 +207,18 @@ def encode_textfield_quoted_printable(content):
     content = quopri.encodestring(content)
 
     def match2qp(m):
-        prefix = ''
-        postfix = ''
+        prefix = b''
         if 'prefix' in m.groupdict().keys():
             prefix = m.group('prefix')
-        if 'postfix' in m.groupdict().keys():
-            postfix = m.group('postfix')
         h = hex(ord(m.group('chr')))[2:].upper()
         if len(h) == 1:
             h = "0{}".format(h)
-        return "{}={}{}".format(prefix, h, postfix)
+        return b"%s=%s" % (prefix, h.encode('utf-8'))
 
-    content = re.sub('^(?P<chr>;)', match2qp, content)
-    content = re.sub('(?P<chr>[\t\r])', match2qp, content)
-    content = re.sub('(?P<prefix>\n)(?P<chr>;)', match2qp, content)
-    content = re.sub('^(?P<chr>[\.\?])$', match2qp, content)
+    content = re.sub(b'^(?P<chr>;)', match2qp, content)
+    content = re.sub(b'(?P<chr>[\t\r])', match2qp, content)
+    content = re.sub(b'(?P<prefix>\n)(?P<chr>;)', match2qp, content)
+    content = re.sub(b'^(?P<chr>[\.\?])$', match2qp, content)
     return content
 
 
@@ -222,8 +226,8 @@ def decode_textfield_quoted_printable(content):
     """
     Decodes the contents for CIF textfield from quoted-printable encoding.
 
-    :param content: a string with contents
-    :return: decoded string
+    :param content: contents as bytes
+    :return: decoded string as bytes
     """
     import quopri
 
@@ -240,25 +244,22 @@ def encode_textfield_ncr(content):
         * '``\\t``'
         * '``.``' and '``?``', if comprise the entire textfield.
 
-    :param content: a string with contents
-    :return: encoded string
+    :param content: contents as bytes
+    :return: encoded string as bytes
     """
     import re
 
     def match2ncr(m):
-        prefix = ''
-        postfix = ''
+        prefix = b''
         if 'prefix' in m.groupdict().keys():
             prefix = m.group('prefix')
-        if 'postfix' in m.groupdict().keys():
-            postfix = m.group('postfix')
-        return prefix + '&#' + str(ord(m.group('chr'))) + ';' + postfix
+        return prefix + b'&#' + str(ord(m.group('chr'))).encode('utf-8') + b';'
 
-    content = re.sub('(?P<chr>[&\t])', match2ncr, content)
-    content = re.sub('(?P<chr>[^\x09\x0A\x0D\x20-\x7E])', match2ncr, content)
-    content = re.sub('^(?P<chr>;)', match2ncr, content)
-    content = re.sub('(?P<prefix>\n)(?P<chr>;)', match2ncr, content)
-    content = re.sub('^(?P<chr>[\.\?])$', match2ncr, content)
+    content = re.sub(b'(?P<chr>[&\t])', match2ncr, content)
+    content = re.sub(b'(?P<chr>[^\x09\x0A\x0D\x20-\x7E])', match2ncr, content)
+    content = re.sub(b'^(?P<chr>;)', match2ncr, content)
+    content = re.sub(b'(?P<prefix>\n)(?P<chr>;)', match2ncr, content)
+    content = re.sub(b'^(?P<chr>[\.\?])$', match2ncr, content)
     return content
 
 
@@ -266,23 +267,31 @@ def decode_textfield_ncr(content):
     """
     Decodes the contents for CIF textfield from Numeric Character Reference.
 
-    :param content: a string with contents
-    :return: decoded string
+    :param content: contents as bytes
+    :return: decoded string as bytes
     """
     import re
 
     def match2str(m):
-        return chr(int(m.group(1)))
+        """
+        Function returns a byte with a value of the first group of regular
+        expression.
 
-    return re.sub('&#(\d+);', match2str, content)
+        :param match: match result of re.sub
+        :return: a single byte having a value of the first group in re.sub
+        """
+        byte_value = int(m.group(1))
+        return int2byte(byte_value)
+
+    return re.sub(b'&#(\d+);', match2str, content)
 
 
 def encode_textfield_gzip_base64(content, **kwargs):
     """
     Gzips the given string and encodes it in Base64.
 
-    :param content: a string with contents
-    :return: encoded string
+    :param content: contents as bytes
+    :return: encoded string as bytes
     """
     from aiida.common.utils import gzip_string
 
@@ -294,22 +303,22 @@ def decode_textfield_gzip_base64(content):
     Decodes the contents for CIF textfield from Base64 and decompresses
     them with gzip.
 
-    :param content: a string with contents
-    :return: decoded string
+    :param content: contents as bytes
+    :return: decoded string as bytes
     """
     from aiida.common.utils import gunzip_string
 
     return gunzip_string(decode_textfield_base64(content))
 
 
-def decode_textfield(content,method):
+def decode_textfield(content, method):
     """
     Decodes the contents of encoded CIF textfield.
 
-    :param content: the content to be decoded
+    :param content: the content to be decoded as bytes
     :param method: method, which was used for encoding the contents
         (None, 'base64', 'ncr', 'quoted-printable', 'gzip+base64')
-    :return: decoded content
+    :return: decoded content as bytes
     :raises ValueError: if the encoding method is unknown
     """
     if method == 'base64':
@@ -459,29 +468,33 @@ def _collect_calculation_data(calc):
         stderr_name = '{}.err'.format(aiida_executable_name)
         while stderr_name in [files_in,files_out]:
             stderr_name = '_{}'.format(stderr_name)
+        # Output/error of schedulers are converted to bytes as file contents have to be bytes.
         if calc.get_scheduler_output() is not None:
+            scheduler_output = calc.get_scheduler_output().encode('utf-8')
             files_out.append({
                 'name'    : stdout_name,
-                'contents': calc.get_scheduler_output(),
-                'md5'     : hashlib.md5(calc.get_scheduler_output()).hexdigest(),
-                'sha1'    : hashlib.sha1(calc.get_scheduler_output()).hexdigest(),
+                'contents': scheduler_output,
+                'md5'     : hashlib.md5(scheduler_output).hexdigest(),
+                'sha1'    : hashlib.sha1(scheduler_output).hexdigest(),
                 'role'    : 'stdout',
                 'type'    : 'file',
                 })
             this_calc['stdout'] = stdout_name
         if calc.get_scheduler_error() is not None:
+            scheduler_error = calc.get_scheduler_error().encode('utf-8')
             files_out.append({
                 'name'    : stderr_name,
-                'contents': calc.get_scheduler_error(),
-                'md5'     : hashlib.md5(calc.get_scheduler_error()).hexdigest(),
-                'sha1'    : hashlib.sha1(calc.get_scheduler_error()).hexdigest(),
+                'contents': scheduler_error,
+                'md5'     : hashlib.md5(scheduler_error).hexdigest(),
+                'sha1'    : hashlib.sha1(scheduler_error).hexdigest(),
                 'role'    : 'stderr',
                 'type'    : 'file',
                 })
             this_calc['stderr'] = stderr_name
     elif isinstance(calc, InlineCalculation):
         # Calculation is InlineCalculation
-        python_script = _inline_to_standalone_script(calc)
+        # Contents of scripts are converted to bytes as file contents have to be bytes.
+        python_script = _inline_to_standalone_script(calc).encode('utf-8')
         files_in.append({
             'name'    : inline_executable_name,
             'contents': python_script,
@@ -490,6 +503,7 @@ def _collect_calculation_data(calc):
             'type'    : 'file',
             })
         shell_script = '#!/bin/bash\n\nverdi run {}\n'.format(inline_executable_name)
+        shell_script = shell_script.encode('utf-8')
         files_in.append({
             'name'    : aiida_executable_name,
             'contents': shell_script,
@@ -530,6 +544,18 @@ def _collect_files(base, path=''):
     from aiida.common.utils import md5_file,sha1_file
     import os
 
+    def get_dict(name, full_path):
+        # note: we assume file is already utf8-encoded
+        with io.open(full_path, mode='rb') as f:
+            the_dict = {
+                'name': path,
+                'contents': f.read(),
+                'md5': md5_file(full_path),
+                'sha1': sha1_file(full_path),
+                'type': 'file',
+            }
+        return the_dict
+
     def get_filename(file_dict):
         return file_dict['name']
 
@@ -550,37 +576,21 @@ def _collect_files(base, path=''):
         return sorted(files_now,key=get_filename)
     elif path == '.aiida/calcinfo.json':
         files = []
-        with open(os.path.join(base,path)) as f:
-            files.append({
-                'name': path,
-                'contents': f.read(),
-                'md5': md5_file(os.path.join(base,path)),
-                'sha1': sha1_file(os.path.join(base,path)),
-                'type': 'file',
-                })
+        files.append(get_dict(name=path, full_path=os.path.join(base, path)))
+
         import json
         with open(os.path.join(base,path)) as f:
             calcinfo = json.load(f)
         if 'local_copy_list' in calcinfo:
             for local_copy in calcinfo['local_copy_list']:
-                with open(local_copy[0]) as f:
-                    files.append({
-                        'name': os.path.normpath(local_copy[1]),
-                        'contents': f.read(),
-                        'md5': md5_file(local_copy[0]),
-                        'sha1': sha1_file(local_copy[0]),
-                        'type': 'file',
-                        })
+                files.append(get_dict(name=os.path.normpath(local_copy[1]), 
+                        full_path=local_copy[0]))
+
         return files
+
     else:
-        with open(os.path.join(base,path)) as f:
-            return [{
-                'name': path,
-                'contents': f.read(),
-                'md5': md5_file(os.path.join(base,path)),
-                'sha1': sha1_file(os.path.join(base,path)),
-                'type': 'file',
-                }]
+        tmp = get_dict(name=path, full_path=os.path.join(base, path))
+        return [tmp]
 
 
 def extend_with_cmdline_parameters(parser, expclass="Data"):
@@ -702,7 +712,7 @@ def _collect_tags(node, calc,parameters=None,
         tags['_tcod_computation_reference_uuid'].append(step['uuid'])
         if 'env' in step:
             tags['_tcod_computation_environment'].append(
-                "\n".join(["%s=%s" % (key,step['env'][key]) for key in step['env']]))
+                "\n".join(["{}={}".format(key, step['env'][key]) for key in sorted(step['env'])]))
         else:
             tags['_tcod_computation_environment'].append('')
         if 'stdout' in step and step['stdout'] is not None:
@@ -791,6 +801,9 @@ def _collect_tags(node, calc,parameters=None,
                     cif_encode_contents(f['contents'],
                                         gzip=gzip,
                                         gzip_threshold=gzip_threshold)
+                # PyCIFRW is not able to deal with bytes, therefore they have to
+                # be converted to Unicode
+                contents = contents.decode('utf-8')
             else:
                 contents = '.'
 
@@ -911,8 +924,9 @@ def add_metadata_inline(what, node, parameters, args):
     tags = _collect_tags(what, calc, parameters=parameters, **kwargs)
     loops.update(tcod_loops)
 
+    tags.update(additional_tags)
     for datablock in datablocks:
-        for k,v in dict(tags.items() + additional_tags.items()).items():
+        for k,v in tags.items():
             if not k.startswith('_'):
                 raise ValueError("Tag '{}' does not seem to start with "
                                  "an underscode ('_'): all CIF tags must "
@@ -933,7 +947,7 @@ def export_cif(what, **kwargs):
     :return: string with contents of CIF file.
     """
     cif = export_cifnode(what, **kwargs)
-    return cif._exportstring('cif')[0]
+    return cif._exportcontent('cif')[0]
 
 
 def export_values(what, **kwargs):

@@ -32,6 +32,7 @@ ecdsa==0.13
 enum34==1.1.6; python_version<"3.5"
 ete3==3.1.1
 flask-marshmallow==0.9.0
+futures; python_version=="2.7"
 ipython>=4.0,<6.0
 itsdangerous==0.24
 kiwipy==0.2.1

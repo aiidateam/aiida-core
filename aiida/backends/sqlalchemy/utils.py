@@ -74,7 +74,7 @@ def reset_session(config):
         ).format(sep=':' if config['AIIDADB_PORT'] else '', **config)
 
     sa.engine = create_engine(engine_url, json_serializer=dumps_json,
-                              json_deserializer=loads_json)
+                              json_deserializer=loads_json, encoding='utf-8')
     sa.scopedsessionclass = scoped_session(sessionmaker(bind=sa.engine,
                                                         expire_on_commit=True))
     register_after_fork(sa.engine, recreate_after_fork)

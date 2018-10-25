@@ -40,9 +40,9 @@ If you want to change the password you just created use the command::
 
     ALTER USER aiida PASSWORD '<password>';
 
-Next we create the database itself::
+Next we create the database itself. Keep in mind that we enforce the UTF-8 encoding and specific locales::
 
-    CREATE DATABASE aiidadb OWNER aiida;
+    CREATE DATABASE aiidadb OWNER aiida ENCODING 'UTF8' LC_COLLATE='en_US.UTF-8' LC_CTYPE='en_US.UTF-8' TEMPLATE=template0;
 
 and grant all privileges on this DB to the previously-created ``aiida`` user::
 

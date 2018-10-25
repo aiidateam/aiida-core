@@ -76,15 +76,19 @@ class MakeHashTest(unittest.TestCase):
             'c404bf9a62cba3518de5c2bae8c67010aff6e4051cce565fa247a7f1d71f1fc7')
 
     def test_collection_with_ordered_sets(self):
-        self.assertEqual(make_hash((1, 2, 3)), '27e6598a3bd1c878ca09db22f4d93ebcb1a0e08db27e09c737e7f2e698dcce5b')
-        self.assertEqual(make_hash([1, 2, 3]), '27e6598a3bd1c878ca09db22f4d93ebcb1a0e08db27e09c737e7f2e698dcce5b')
+        self.assertEqual(make_hash((1, 2, 3)), '2827844e2fb5c034967dbc69e5b8039c39705272b9969f18f5e4c4e2345ca77d')
+        self.assertEqual(make_hash([1, 2, 3]), '2827844e2fb5c034967dbc69e5b8039c39705272b9969f18f5e4c4e2345ca77d')
 
         for perm in itertools.permutations([1, 2, 3]):
             with self.subTest(orig=[1, 2, 3], perm=perm):
                 self.assertNotEqual(make_hash(perm), make_hash({1, 2, 3}))
 
+    def test_collisions_with_nested_objs(self):
+        self.assertNotEqual(make_hash([[1, 2], 3]), make_hash([[1, 2, 3]]))
+        self.assertNotEqual(make_hash({1, 2}), make_hash({1: 2}))
+
     def test_collection_with_unordered_sets(self):
-        self.assertEqual(make_hash({1, 2, 3}), '2e096a4b81ab724c2250835fc2fef7d932a7a86deafe1fb584ff329adcc34e0f')
+        self.assertEqual(make_hash({1, 2, 3}), '4783567a68ed025ac3dc59346ded2328d56c975e31453e3823bdda480e64b139')
         self.assertEqual(make_hash({1, 2, 3}), make_hash({2, 1, 3}))
 
     def test_collection_with_dicts(self):
@@ -92,12 +96,20 @@ class MakeHashTest(unittest.TestCase):
             make_hash({
                 'a': 'b',
                 'c': 'd'
-            }), '1890162a70dbbcbef2d0cc40b9bd90463459f2e7e72573628e7f1c003ca25c95')
+            }), '656ef313d44684c44977b0c75f48f27a43686c63ae44c8778ea0fe05f629b3b9')
 
         # order changes in dictionaries should give the same hashes
         self.assertEqual(
-            make_hash(collections.OrderedDict([('c', 'd'), ('a', 'b')])),
-            make_hash(collections.OrderedDict([('a', 'b'), ('c', 'd')])))
+            make_hash(collections.OrderedDict([('c', 'd'), ('a', 'b')]), odict_as_unordered=True),
+            make_hash(collections.OrderedDict([('a', 'b'), ('c', 'd')]), odict_as_unordered=True))
+
+    def test_collection_with_odicts(self):
+        # ordered dicts should always give a different hash (because they are a different type), unless told otherwise:
+        self.assertNotEqual(
+            make_hash(collections.OrderedDict([('a', 'b'), ('c', 'd')])), make_hash(dict([('a', 'b'), ('c', 'd')])))
+        self.assertEqual(
+            make_hash(collections.OrderedDict([('a', 'b'), ('c', 'd')]), odict_as_unordered=True),
+            make_hash(dict([('a', 'b'), ('c', 'd')])))
 
     def test_nested_collections(self):
         obj_a = collections.OrderedDict([
@@ -118,8 +130,10 @@ class MakeHashTest(unittest.TestCase):
             '1': 'hello',
         }), ('3', 4), (3, 4)])
 
-        self.assertEqual(make_hash(obj_a), 'e6cd3e2e7f540793a91330776a16e8908d6fe4db0d7d01fd592195f92bffe2b9')
-        self.assertEqual(make_hash(obj_a), make_hash(obj_b))
+        self.assertEqual(
+            make_hash(obj_a, odict_as_unordered=True),
+            'f05e75e0713d895b4858de62ee72e75fe3acb74d2e9754f149f87615eb6e826f')
+        self.assertEqual(make_hash(obj_a, odict_as_unordered=True), make_hash(obj_b, odict_as_unordered=True))
 
     def test_bytes(self):
         self.assertEqual(make_hash(b'foo'), '459062c44082269b2d07f78c1b6e8c98b93448606bfb1cc1f48284cdfcea74e3')
@@ -177,10 +191,10 @@ class MakeHashTest(unittest.TestCase):
             fhandle.close()
 
             folder_hash = make_hash(folder)
-            self.assertEqual(folder_hash, '5a4f4a762f6e6be02baca1922a4bb82fe8d9665c3ee356acbd141326adff0e0d')
+            self.assertEqual(folder_hash, '47d9cdb2247e75eca492035f60f09fdd0daf87bbba40bb658d2d7e84f21f26c5')
 
             nested_obj = ['1.0.0a2', {u'array|a': [1001]}, folder, None]
-            self.assertEqual(make_hash(nested_obj), '70a831e02a5d26985cab4a83e45bef439b2fbc771900f23362a91631d545d621')
+            self.assertEqual(make_hash(nested_obj), '3a29176b16f7a4dfb78d9ef06f882cf228a2796b762f98dda80e7dda688af201')
 
             with folder.open('file3.npy', 'wb') as fhandle:
                 np.save(fhandle, np.arange(10))

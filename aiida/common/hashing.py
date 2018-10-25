@@ -36,10 +36,11 @@ import pytz
 
 try:  # Python3
     from functools import singledispatch
-    from collections import abc
+    from collections import abc, OrderedDict
 except ImportError:  # Python2
     from singledispatch import singledispatch
     import collections as abc
+    from collections import OrderedDict
 
 import numpy as np
 
@@ -182,6 +183,9 @@ def _single_digest(obj_type, obj_bytes=b''):
     return blake2b(obj_bytes, person=obj_type.encode('ascii'), node_depth=0, **BLAKE2B_OPTIONS).digest()
 
 
+_END_DIGEST = _single_digest(')')
+
+
 @_make_hash.register(six.binary_type)
 def _(bytes_obj, **kwargs):
     """
@@ -203,14 +207,16 @@ def _(val, **kwargs):
 @_make_hash.register(abc.Sequence)
 def _(sequence_obj, **kwargs):
     # unpack the list and use the elements
-    return [_single_digest('list')] + list(chain.from_iterable(_make_hash(i, **kwargs) for i in sequence_obj))
+    return [_single_digest('list(')] + list(chain.from_iterable(
+        _make_hash(i, **kwargs) for i in sequence_obj)) + [_END_DIGEST]
 
 
 @_make_hash.register(abc.Set)
 def _(set_obj, **kwargs):
     # turn the set objects into a list of hashes which are always sortable,
     # then return a flattened list of the hashes
-    return [_single_digest('set')] + list(chain.from_iterable(sorted(_make_hash(i, **kwargs) for i in set_obj)))
+    return [_single_digest('set(')] + list(chain.from_iterable(sorted(
+        _make_hash(i, **kwargs) for i in set_obj))) + [_END_DIGEST]
 
 
 @_make_hash.register(abc.Mapping)
@@ -221,9 +227,25 @@ def _(mapping, **kwargs):
         for key, value in mapping.items():
             yield (_make_hash(key, **kwargs), value)
 
-    return ([_single_digest('dict')] + list(
+    return [_single_digest('dict(')] + list(
         chain.from_iterable((k_digest + _make_hash(val, **kwargs))
-                            for k_digest, val in sorted(hashed_key_mapping(), key=itemgetter(0)))))
+                            for k_digest, val in sorted(hashed_key_mapping(), key=itemgetter(0)))) + [_END_DIGEST]
+
+
+@_make_hash.register(OrderedDict)
+def _(mapping, **kwargs):
+    """
+    Hashing of OrderedDicts
+
+    :param odict_as_unordered: hash OrderedDicts as normal dicts (mostly for testing)
+    """
+
+    if kwargs.get('odict_as_unordered', False):
+        return _make_hash.registry[abc.Mapping](mapping)
+
+    return ([_single_digest('odict(')] + list(
+        chain.from_iterable(
+            (_make_hash(key, **kwargs) + _make_hash(val, **kwargs)) for key, val in mapping.items())) + [_END_DIGEST])
 
 
 @_make_hash.register(numbers.Real)
@@ -286,17 +308,19 @@ def _(folder, **kwargs):
 
     def folder_digests(subfolder):
         """traverses the given folder and yields digests for the contained objects"""
-        for name in sorted(subfolder.get_content_list()):
+        for name, isfile in sorted(subfolder.get_content_list(only_paths=False), key=itemgetter(0)):
             if name in ignored_folder_content:
                 continue
 
-            if subfolder.isdir(name):
-                yield _single_digest('folder', name.encode('utf-8'))
+            if isfile:
+                yield _single_digest('fname', name.encode('utf-8'))
+                with subfolder.open(name, mode='rb') as fhandle:
+                    yield _single_digest('fcontent', fhandle.read())
+            else:
+                yield _single_digest('dir(', name.encode('utf-8'))
                 for digest in folder_digests(subfolder.get_subfolder(name)):
                     yield digest
-            else:
-                with subfolder.open(name, mode='rb') as fhandle:
-                    yield _single_digest('file', fhandle.read())
+                yield _END_DIGEST
 
     return [_single_digest('folder')] + [d for d in folder_digests(folder)]
 

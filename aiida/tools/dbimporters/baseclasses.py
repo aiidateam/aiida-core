@@ -191,7 +191,7 @@ class DbEntry(object):
     _license = None
 
     def __init__(self, db_name=None, db_uri=None, id=None,
-                 version=None, extras={}, uri=None):
+                 version=None, lic=None, extras={}, uri=None):
         """
         Sets the basic parameters for the database entry:
 
@@ -202,6 +202,7 @@ class DbEntry(object):
         :param extras: a dictionary with some extra parameters
             (e.g. database ID number)
         :param uri: URI of the structure (should be permanent)
+        :param lic: the license
         """
         self.source = {
             'db_name': db_name,
@@ -211,7 +212,7 @@ class DbEntry(object):
             'extras': extras,
             'uri': uri,
             'source_md5': None,
-            'license': self._license,
+            'license': lic,
         }
         self._contents = None
 

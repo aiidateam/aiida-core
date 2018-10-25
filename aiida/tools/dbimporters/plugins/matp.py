@@ -14,7 +14,6 @@ from __future__ import absolute_import
 import os
 import datetime
 import requests
-
 from pymatgen import MPRester
 from aiida.tools.dbimporters.baseclasses import CifEntry, DbEntry, DbImporter, DbSearchResults
 
@@ -24,7 +23,7 @@ class MatProjImporter(DbImporter):
     Database importer for the Materials Project.
     """
 
-    _collection = 'structures'
+    _properties = 'structure'
     _supported_keywords = None
 
     def __init__(self, api_key=None):
@@ -45,7 +44,7 @@ class MatProjImporter(DbImporter):
         api_key = kwargs['api_key']
         if api_key is None:
             try:
-                self._api_key = os.environ['PMG_MAPI_KEY']
+                api_key = os.environ['PMG_MAPI_KEY']
             except KeyError:
                 raise ValueError('API key not supplied and PMG_MAPI_KEY environment '
                                  'variable not set. Either pass it when initializing the class, '
@@ -75,11 +74,11 @@ class MatProjImporter(DbImporter):
         return self._api_key
 
     @property
-    def collection(self):
+    def properties(self):
         """
-        Return the collection that will be queried
+        Return the properties that will be queried
         """
-        return self._collection
+        return self._properties
 
     @property
     def get_supported_keywords(self):
@@ -92,10 +91,10 @@ class MatProjImporter(DbImporter):
 
     def query(self, **kwargs):
         """
-        Query the database with a given dictionary of query parameters for a given collection
+        Query the database with a given dictionary of query parameters for a given properties
 
         :param query: a dictionary with the query parameters
-        :param collection: the collection to query
+        :param properties: the properties to query
         """
         try:
             query = kwargs['query']
@@ -103,58 +102,40 @@ class MatProjImporter(DbImporter):
             raise AttributeError('Make sure the supplied dictionary has `query` as a key. This '
                                  'should contain a dictionary with the right query needed.')
         try:
-            collection = kwargs['collection']
+            properties = kwargs['properties']
         except AttributeError:
-            raise AttributeError('Make sure the supplied dictionary has `collection` as a key.')
+            raise AttributeError('Make sure the supplied dictionary has `properties` as a key.')
 
         if not isinstance(query, dict):
             raise TypeError('The query argument should be a dictionary')
 
-        if collection is None:
-            collection = self._collection
+        if properties is None:
+            properties = self._properties
 
-        if collection == 'structure':
-            results = []
-            collection_list = ['structure', 'material_id', 'cif']
-            for entry in self.find(query, collection_list):
-                results.append(entry)
-            search_results = MatProjSearchResults(results, return_class=MatProjCifEntry)
-        else:
-            raise ValueError('Unsupported collection: {}'.format(collection))
+        if properties != 'structure':
+            raise ValueError('Unsupported properties: {}'.format(properties))
+
+        results = []
+        properties_list = ['structure', 'material_id', 'cif']
+        for entry in self.find(query, properties_list):
+            results.append(entry)
+        search_results = MatProjSearchResults(results, return_class=MatProjCifEntry)
 
         return search_results
 
-    def find(self, query, collection):
+    def find(self, query, properties):
         """
         Query the database with a given dictionary of query parameters
 
         :param query: a dictionary with the query parameters
         """
-        for entry in self._mpr.query(criteria=query, properties=collection):
+        for entry in self._mpr.query(criteria=query, properties=properties):
             yield entry
 
 
-class MatProjEntry(DbEntry):
+class MatProjCifEntry(CifEntry, DbEntry):  # pylint: disable=abstract-method
     """
-    Represents an Materials Project database entry
-    """
-
-    def __init__(self, **kwargs):
-        """
-        Set the class license from the source dictionary
-        """
-        lic = kwargs.pop('license', None)
-
-        if lic is not None:
-            self._license = lic
-
-        super(MatProjEntry, self).__init__(**kwargs)
-
-
-class MatProjCifEntry(CifEntry, MatProjEntry):  # pylint: disable=abstract-method
-    """
-    An extension of the MatProjEntry class with the CifEntry class, which will treat
-    the contents property through the URI as a cif file
+    A Materials Project entry class which extends the DbEntry class with a CifEntry class.
     """
 
     def __init__(self, url, **kwargs):
@@ -180,8 +161,8 @@ class MatProjSearchResults(DbSearchResults):  # pylint: disable=abstract-method
     _db_uri = 'https://materialsproject.org'
     _material_base_url = 'https://materialsproject.org/materials/'
     _license = 'Unknown'
-    _version = 'Pulled from the Materials Project databse at: ' + str(datetime.datetime.now())
-    _return_class = MatProjEntry
+    _version = str(datetime.datetime.now())
+    _return_class = MatProjCifEntry
 
     def __init__(self, results, return_class=None):
         if return_class is not None:
@@ -198,8 +179,8 @@ class MatProjSearchResults(DbSearchResults):  # pylint: disable=abstract-method
             'db_name': self._db_name,
             'db_uri': self._db_uri,
             'id': result_dict['material_id'],
-            'license': self._license,
-            'uri': self._material_base_url + result_dict['material_id'],
+            'lic': self._license,
+            'uri': self._get_url(result_dict),
             'version': self._version,
         }
 

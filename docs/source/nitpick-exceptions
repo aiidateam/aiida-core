@@ -66,6 +66,7 @@ py:class  Exception
 py:class  ValueError
 py:class  BaseException
 py:class  str
+py:class  bytes
 py:class  tuple
 py:class  int
 py:class  float

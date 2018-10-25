@@ -220,7 +220,6 @@
         aiida/orm/calculation/job/simpleplugins/templatereplacer.py|
         aiida/orm/calculation/work.py|
         aiida/orm/code.py|
-        aiida/orm/computer.py|
         aiida/orm/data/array/bands.py|
         aiida/orm/data/array/__init__.py|
         aiida/orm/data/array/kpoints.py|
@@ -458,7 +457,11 @@
   sha: a234ce4e185cf77a55632888f1811d83b4ad9ef2
   hooks:
   - id: python-modernize
-    exclude: ^docs/
+    exclude: >
+      (?x)^(
+        docs/.*|
+        aiida/work/utils.py  # exclude because tornado WaitIterator.next() does not work with next(...)
+      )$
     args:
       - --write
       - --nobackups

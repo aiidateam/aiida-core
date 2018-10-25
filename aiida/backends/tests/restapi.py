@@ -277,10 +277,9 @@ class RESTApiTestCase(AiidaTestCase):
                 self.assertEqual(
                     len(response["data"][result_name]), len(expected_data))
 
-                for expected_node, response_node in zip(expected_data,
-                                                        response["data"][
-                                                            result_name]):
-                    self.assertEqual(response_node['uuid'], expected_node['uuid'])
+                expected_node_uuids = [node['uuid'] for node in expected_data]
+                result_node_uuids = [node['uuid'] for node in response["data"][result_name]]
+                self.assertEqual(expected_node_uuids, result_node_uuids)
 
                 self.compare_extra_response_data(node_type, url, response, uuid)
 
@@ -304,10 +303,10 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         Requests the details of single computer
         """
-        node_uuid = self.get_dummy_data()["computers"][0]["uuid"]
+        node_uuid = self.get_dummy_data()["computers"][1]["uuid"]
         RESTApiTestCase.process_test(self, "computers",
                                      "/computers/" + str(node_uuid),
-                                     expected_list_ids=[0], uuid=node_uuid)
+                                     expected_list_ids=[1], uuid=node_uuid)
 
     ############### full list with limit, offset, page, perpage #############
     def test_computers_list(self):
@@ -422,10 +421,10 @@ class RESTApiTestSuite(RESTApiTestCase):
         Add filter on the id of computer and get the filtered computer
         list (e.g. id=1)
         """
-        node_pk = self.get_dummy_data()["computers"][0]["id"]
+        node_pk = self.get_dummy_data()["computers"][1]["id"]
         RESTApiTestCase.process_test(self, "computers",
                                      "/computers?id=" + str(node_pk),
-                                     expected_list_ids=[0])
+                                     expected_list_ids=[1])
 
     def test_computers_filter_id2(self):
         """
@@ -442,10 +441,10 @@ class RESTApiTestSuite(RESTApiTestCase):
         Add filter on the id of computer and get the filtered computer
         list (e.g. id=1)
         """
-        node_pk = self.get_dummy_data()["computers"][0]["id"]
+        node_pk = self.get_dummy_data()["computers"][1]["id"]
         RESTApiTestCase.process_test(self, "computers",
                                      "/computers?pk=" + str(node_pk),
-                                     expected_list_ids=[0])
+                                     expected_list_ids=[1])
 
     def test_computers_filter_name(self):
         """
@@ -472,8 +471,8 @@ class RESTApiTestSuite(RESTApiTestCase):
         list
         """
         RESTApiTestCase.process_test(self, "computers",
-                                     '/computers?transport_type="local"&orderby=+id',
-                                     expected_list_ids=[0, 3])
+                                     '/computers?transport_type="local"&name="test3"&orderby=+id',
+                                     expected_list_ids=[3])
 
     ############### list orderby ########################
     def test_computers_orderby_id_asc(self):
@@ -507,54 +506,63 @@ class RESTApiTestSuite(RESTApiTestCase):
         Returns the computers list ordered by "name" in ascending
         order
         """
+        node_pk = self.get_dummy_data()["computers"][0]["id"]
         RESTApiTestCase.process_test(self, "computers",
-                                     "/computers?orderby=name",
-                                     full_list=True)
+                                     '/computers?pk>' + str(node_pk)+'&orderby=name',
+                                     expected_list_ids=[1, 2, 3, 4])
 
     def test_computers_orderby_name_asc_sign(self):
         """
         Returns the computers list ordered by "+name" in ascending
         order
         """
+        node_pk = self.get_dummy_data()["computers"][0]["id"]
         RESTApiTestCase.process_test(self, "computers",
-                                     "/computers?orderby=+name",
-                                     full_list=True)
+                                     '/computers?pk>' + str(node_pk)+'&orderby=+name',
+                                     expected_list_ids=[1, 2, 3, 4])
 
     def test_computers_orderby_name_desc(self):
         """
         Returns the computers list ordered by "name" in descending
         order
         """
+        node_pk = self.get_dummy_data()["computers"][0]["id"]
         RESTApiTestCase.process_test(self, "computers",
-                                     "/computers?orderby=-name",
-                                     expected_list_ids=[4, 3, 2, 1, 0])
+                                     '/computers?pk>' + str(node_pk)+'&orderby=-name',
+                                     expected_list_ids=[4, 3, 2, 1])
 
     def test_computers_orderby_scheduler_type_asc(self):
         """
         Returns the computers list ordered by "scheduler_type" in ascending
         order
         """
+        node_pk = self.get_dummy_data()["computers"][0]["id"]
         RESTApiTestCase.process_test(self, "computers",
-                                     "/computers?orderby=scheduler_type",
-                                     expected_list_ids=[0, 1, 3, 4, 2])
+                                     '/computers?transport_type="ssh"&pk>' +
+                                     str(node_pk)+'&orderby=scheduler_type',
+                                     expected_list_ids=[1, 4, 2])
 
     def test_computers_orderby_scheduler_type_asc_sign(self):
         """
         Returns the computers list ordered by "+scheduler_type" in ascending
         order
         """
+        node_pk = self.get_dummy_data()["computers"][0]["id"]
         RESTApiTestCase.process_test(self, "computers",
-                                     "/computers?orderby=+scheduler_type",
-                                     expected_list_ids=[0, 1, 3, 4, 2])
+                                     '/computers?transport_type="ssh"&pk>' +
+                                     str(node_pk)+'&orderby=+scheduler_type',
+                                     expected_list_ids=[1, 4, 2])
 
     def test_computers_orderby_scheduler_type_desc(self):
         """
         Returns the computers list ordered by "scheduler_type" in descending
         order
         """
+        node_pk = self.get_dummy_data()["computers"][0]["id"]
         RESTApiTestCase.process_test(self, "computers",
-                                     "/computers?orderby=-scheduler_type",
-                                     expected_list_ids=[2, 3, 4, 0, 1])
+                                     '/computers?pk>' + str(node_pk) +
+                                     '&transport_type="ssh"&orderby=-scheduler_type',
+                                     expected_list_ids=[2, 4, 1])
 
     ############### list orderby combinations #######################
     def test_computers_orderby_mixed1(self):
@@ -563,9 +571,10 @@ class RESTApiTestSuite(RESTApiTestCase):
         ascending order and if it is having same transport_type, order it
         by "id"
         """
+        node_pk = self.get_dummy_data()["computers"][0]["id"]
         RESTApiTestCase.process_test(self, "computers",
-                                     "/computers?orderby=transport_type,id",
-                                     expected_list_ids=[0, 3, 1, 2, 4])
+                                     '/computers?pk>'+str(node_pk)+'&orderby=transport_type,id',
+                                     expected_list_ids=[3, 1, 2, 4])
 
     def test_computers_orderby_mixed2(self):
         """
@@ -573,9 +582,10 @@ class RESTApiTestSuite(RESTApiTestCase):
         descending order and if it is having same scheduler_type, order it
         by "name"
         """
+        node_pk = self.get_dummy_data()["computers"][0]["id"]
         RESTApiTestCase.process_test(self, "computers",
-                                     "/computers?orderby=-scheduler_type,name",
-                                     expected_list_ids=[2, 3, 4, 0, 1])
+                                     '/computers?pk>'+str(node_pk)+'&orderby=-scheduler_type,name',
+                                     expected_list_ids=[2, 3, 4, 1])
 
     def test_computers_orderby_mixed3(self):
         """

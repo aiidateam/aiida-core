@@ -43,7 +43,7 @@ paramiko==2.4.2
 passlib==1.7.1
 pathlib2; python_version<"3.5"
 pgtest==1.1.0
-pika==0.11.2
+pika==0.12.0
 plumpy==0.10.6
 psutil==5.4.5
 pymatgen==2018.4.20

@@ -133,6 +133,7 @@ py:class  logging.Logger
 
 py:class  paramiko.proxy.ProxyCommand
 
+py:class  plumpy.futures.Future
 py:class  plumpy.processes.Process
 py:class  plumpy.process_comms.ProcessLauncher
 py:class  plumpy.process_spec.ProcessSpec
@@ -154,6 +155,7 @@ py:meth   plumpy.process_spec.ProcessSpec.expose_outputs
 py:class  kiwipy.futures.Future
 py:class  kiwipy.communications.TimeoutError
 
+py:class  tornado.ioloop.IOLoop
 py:class  tornado.concurrent.Future
 
 py:class  IPython.core.magic.Magics

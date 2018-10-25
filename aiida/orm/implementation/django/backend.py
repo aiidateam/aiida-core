@@ -47,3 +47,10 @@ class DjangoBackend(Backend):
     @property
     def query_manager(self):
         return self._query_manager
+
+    def query_builder(self):
+        # For now this doesn't select the Django one because that's
+        # done in the constructor of QueryBuilder but ideally this
+        # should be reworked so the Django version subclasses QueryBuilder
+        from aiida.orm.querybuilder import QueryBuilder
+        return QueryBuilder()

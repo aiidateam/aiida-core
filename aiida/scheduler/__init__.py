@@ -22,7 +22,7 @@ import aiida.common
 from aiida.common.utils import classproperty, escape_for_bash
 from aiida.common.exceptions import AiidaException, FeatureNotAvailable
 from aiida.plugins.factory import BaseFactory
-from aiida.scheduler.datastructures import JobTemplate
+from aiida.scheduler.datastructures import JobTemplate, JobInfo, JOB_STATES
 
 
 def SchedulerFactory(entry_point):

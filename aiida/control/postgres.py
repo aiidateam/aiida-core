@@ -27,7 +27,9 @@ import click
 
 _CREATE_USER_COMMAND = 'CREATE USER "{}" WITH PASSWORD \'{}\''
 _DROP_USER_COMMAND = 'DROP USER "{}"'
-_CREATE_DB_COMMAND = 'CREATE DATABASE "{}" OWNER "{}"'
+_CREATE_DB_COMMAND = ('CREATE DATABASE "{}" OWNER "{}" ENCODING \'UTF8\' '
+                      'LC_COLLATE=\'en_US.UTF-8\' LC_CTYPE=\'en_US.UTF-8\' '
+                      'TEMPLATE=template0')
 _DROP_DB_COMMAND = 'DROP DATABASE "{}"'
 _GRANT_PRIV_COMMAND = 'GRANT ALL PRIVILEGES ON DATABASE "{}" TO "{}"'
 _GET_USERS_COMMAND = "SELECT usename FROM pg_user WHERE usename='{}'"
@@ -129,7 +131,8 @@ class Postgres(object):
             self._no_setup_detected()
         elif not self.interactive and not self.quiet:
             click.echo(('Database setup not confirmed, (non-interactive). '
-                        'This may cause problems if the current user is not allowed to create databases.'))
+                        'This may cause problems if the current user is not '
+                        'allowed to create databases.'))
 
         return bool(self.pg_execute != _pg_execute_not_connected)
 

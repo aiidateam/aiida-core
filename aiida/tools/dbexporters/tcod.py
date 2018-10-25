@@ -724,7 +724,7 @@ def _collect_tags(node, calc,parameters=None,
         tags['_tcod_computation_reference_uuid'].append(step['uuid'])
         if 'env' in step:
             tags['_tcod_computation_environment'].append(
-                "\n".join(["%s=%s" % (key,step['env'][key]) for key in sorted(step['env'])]))
+                "\n".join(["{}={}".format(key, step['env'][key]) for key in sorted(step['env'])]))
         else:
             tags['_tcod_computation_environment'].append('')
         if 'stdout' in step and step['stdout'] is not None:

@@ -82,20 +82,6 @@ class MatProjImporter(DbImporter):
         return self._collection
 
     @property
-    def pagesize(self):
-        """
-        Return the pagesize set for the importer
-        """
-        raise NotImplementedError('not implemented in the Materials Project importer')
-
-    @property
-    def structures(self):
-        """
-        Access the structures collection in the MPDS
-        """
-        raise NotImplementedError('not implemented in the Materials Project importer')
-
-    @property
     def get_supported_keywords(self):
         """
         Returns the list of all supported query keywords
@@ -115,7 +101,7 @@ class MatProjImporter(DbImporter):
             query = kwargs['query']
         except AttributeError:
             raise AttributeError('Make sure the supplied dictionary has `query` as a key. This '
-                                 'should containg a dictionary with the right query needed.')
+                                 'should contain a dictionary with the right query needed.')
         try:
             collection = kwargs['collection']
         except AttributeError:

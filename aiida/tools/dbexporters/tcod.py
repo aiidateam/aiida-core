@@ -208,15 +208,12 @@ def encode_textfield_quoted_printable(content):
 
     def match2qp(m):
         prefix = b''
-        postfix = b''
         if 'prefix' in m.groupdict().keys():
             prefix = m.group('prefix')
-        if 'postfix' in m.groupdict().keys():
-            postfix = m.group('postfix')
         h = hex(ord(m.group('chr')))[2:].upper()
         if len(h) == 1:
             h = "0{}".format(h)
-        return b"%s=%s%s" % (prefix, h.encode('utf-8'), postfix)
+        return b"%s=%s" % (prefix, h.encode('utf-8'))
 
     content = re.sub(b'^(?P<chr>;)', match2qp, content)
     content = re.sub(b'(?P<chr>[\t\r])', match2qp, content)
@@ -254,12 +251,9 @@ def encode_textfield_ncr(content):
 
     def match2ncr(m):
         prefix = b''
-        postfix = b''
         if 'prefix' in m.groupdict().keys():
             prefix = m.group('prefix')
-        if 'postfix' in m.groupdict().keys():
-            postfix = m.group('postfix')
-        return prefix + b'&#' + str(ord(m.group('chr'))).encode('utf-8') + b';' + postfix
+        return prefix + b'&#' + str(ord(m.group('chr'))).encode('utf-8') + b';'
 
     content = re.sub(b'(?P<chr>[&\t])', match2ncr, content)
     content = re.sub(b'(?P<chr>[^\x09\x0A\x0D\x20-\x7E])', match2ncr, content)

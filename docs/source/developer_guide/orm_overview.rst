@@ -85,7 +85,7 @@ ORM documentation: Data
 .. automodule:: aiida.orm.data
    :members:
    :noindex:
-   :private-members: _exportstring
+   :private-members: _exportcontent
 
 .. _my-ref-to-structure:
 

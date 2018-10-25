@@ -7,10 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
-import unittest
 
-import six
 from six.moves import range
 from tornado.gen import coroutine, Return
 
@@ -18,7 +18,6 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.work.transports import TransportQueue
 
 
-@unittest.skipIf(six.PY3, "Broken on Python 3")
 class TestTransportQueue(AiidaTestCase):
     """ Tests for the transport queue """
 

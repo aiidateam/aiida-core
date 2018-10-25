@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """A utility module with mapper objects that map database entities projections on attributes and labels."""
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 from aiida.cmdline.utils.query import formatting
 

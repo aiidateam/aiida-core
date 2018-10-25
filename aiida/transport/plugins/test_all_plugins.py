@@ -19,6 +19,7 @@ Plugin specific tests will be written in the plugin itself.
 # TODO : test for exotic cases of copy with source = destination
 # TODO : silly cases of copy/put/get from self to self
 
+from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 import unittest

@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 import os
@@ -14,6 +15,8 @@ import sys
 import unittest
 from unittest import (
     TestSuite, defaultTestLoader as test_loader)
+
+from tornado import ioloop
 
 from aiida.backends import settings
 from aiida.backends.tests import get_db_test_list
@@ -52,7 +55,7 @@ class AiidaTestCase(unittest.TestCase):
     """
     _class_was_setup = False
     __backend_instance = None
-    backend = None  # type: :class:`aiida.orm.backend.Backend`
+    backend = None  # type: aiida.orm.Backend
 
     @classmethod
     def get_backend_class(cls):
@@ -98,10 +101,19 @@ class AiidaTestCase(unittest.TestCase):
         cls._class_was_setup = True
 
     def setUp(self):
+        # Install a new IOLoop so that any messing up of the state of the loop is not propagated
+        # to subsequent tests.
+        # This call should come before the backend instance setup call just in case it uses the loop
+        ioloop.IOLoop().make_current()
         self.__backend_instance.setUp_method()
 
     def tearDown(self):
         self.__backend_instance.tearDown_method()
+        # Clean up the loop we created in set up.
+        # Call this after the instance tear down just in case it uses the loop
+        loop = ioloop.IOLoop.current()
+        if not loop._closing:
+            loop.close()
 
     @classmethod
     def insert_data(cls):

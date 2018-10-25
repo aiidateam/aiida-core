@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Common utility functions for command line commands."""
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 import os
 import sys

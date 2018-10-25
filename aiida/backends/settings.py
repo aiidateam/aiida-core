@@ -9,6 +9,9 @@
 ###########################################################################
 
 
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 LOAD_DBENV_CALLED = False
 LOAD_PROFILE_CALLED = False
 AIIDADB_PROFILE = None

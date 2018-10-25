@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Transport interface."""
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 from abc import ABCMeta
 import os
@@ -61,15 +63,16 @@ class Transport(object):
 
         This object can be used in nested `with` statements and the connection
         will only be opened once and closed when the final `with` scope
-        finishes e.g.:
-        >>> t = Transport()
-        >>> with t:
-        >>>     # Connection is now open..
-        >>>     with t:
-        >>>         # ..still open..
-        >>>         pass
-        >>>     # ..still open..
-        >>> # ...closed
+        finishes e.g.::
+
+            t = Transport()
+            with t:
+                # Connection is now open..
+                with t:
+                    # ..still open..
+                    pass
+                # ..still open..
+            # ...closed
 
         """
         # Keep track of how many times enter has been called

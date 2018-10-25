@@ -9,6 +9,8 @@
 ###########################################################################
 # pylint: disable=global-statement
 """Runners that can run and submit processes."""
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 from collections import namedtuple
 from contextlib import contextmanager
@@ -18,6 +20,7 @@ import tornado.ioloop
 import plumpy
 
 from aiida.orm import load_node, load_workflow
+from . import job_calcs
 from . import futures
 from . import persistence
 from . import rmq
@@ -87,6 +90,7 @@ class Runner(object):
         self._poll_interval = poll_interval
         self._rmq_submit = rmq_submit
         self._transport = transports.TransportQueue(self._loop)
+        self._job_manager = job_calcs.JobManager(self._transport)
 
         if enable_persistence:
             self._persister = persister if persister is not None else persistence.AiiDAPersister()
@@ -131,6 +135,10 @@ class Runner(object):
     @property
     def communicator(self):
         return self._communicator
+
+    @property
+    def job_manager(self):
+        return self._job_manager
 
     def is_closed(self):
         return self._closed

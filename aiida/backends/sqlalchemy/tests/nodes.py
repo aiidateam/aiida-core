@@ -11,6 +11,8 @@
 Tests for nodes, attributes and links
 """
 
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.node import Node
@@ -247,7 +249,7 @@ class TestNodeBasicSQLA(AiidaTestCase):
         Test for load_node() function.
         """
         from aiida.orm import load_node
-        from aiida.common.exceptions import NotExistent, InputValidationError
+        from aiida.common.exceptions import NotExistent
         import aiida.backends.sqlalchemy
         from aiida.backends.sqlalchemy import get_scoped_session
 
@@ -263,14 +265,14 @@ class TestNodeBasicSQLA(AiidaTestCase):
 
         try:
             session.begin_nested()
-            with self.assertRaises(InputValidationError):
+            with self.assertRaises(ValueError):
                 load_node(identifier=a.pk, pk=a.pk)
         finally:
             session.rollback()
 
         try:
             session.begin_nested()
-            with self.assertRaises(InputValidationError):
+            with self.assertRaises(ValueError):
                 load_node(pk=a.pk, uuid=a.uuid)
         finally:
             session.rollback()
@@ -291,7 +293,7 @@ class TestNodeBasicSQLA(AiidaTestCase):
 
         try:
             session.begin_nested()
-            with self.assertRaises(InputValidationError):
+            with self.assertRaises(ValueError):
                 load_node()
         finally:
             session.rollback()

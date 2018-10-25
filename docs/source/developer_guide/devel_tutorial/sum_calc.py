@@ -8,6 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 from aiida.orm import JobCalculation
 from aiida.orm.data.parameter import ParameterData 
 from aiida.common.utils import classproperty

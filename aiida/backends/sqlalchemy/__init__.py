@@ -10,6 +10,9 @@
 
 # The next two serve as 'global' variables, set in the load_dbenv
 # call. They are properly reset upon forking.
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 engine = None
 scopedsessionclass = None
 

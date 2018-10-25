@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Manage code objects with lazy loading of the db env"""
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 import enum
 import os

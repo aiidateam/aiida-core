@@ -10,6 +10,8 @@
 
 # The current configuration version. Increment this value whenever a change
 # to the config.json structure is made.
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 CURRENT_CONFIG_VERSION = 3
 

@@ -10,6 +10,8 @@
 """
 Module for the custom click param type computer
 """
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 from click.types import StringParamType
 from .identifier import IdentifierParamType

@@ -340,12 +340,11 @@ def parse_results(job, retrieved_temporary_folder=None):
     from aiida.orm.calculation.job import JobCalculationExitStatus
     from aiida.work import ExitCode
 
-    logger_extra = get_dblogger_extra(job)
-
-    job._set_state(calc_states.PARSING)
+    assert job.get_state() == calc_states.PARSING, 'the job should be in the PARSING state when calling this function'
 
     Parser = job.get_parserclass()
     exit_code = ExitCode()
+    logger_extra = get_dblogger_extra(job)
 
     if retrieved_temporary_folder:
         files = []

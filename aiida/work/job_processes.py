@@ -119,6 +119,11 @@ def task_submit_job(node, transport_queue, calc_info, script_filename, cancellab
     :raises: Return if the tasks was successfully completed
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
+    if node.get_state() == calc_states.WITHSCHEDULER:
+        assert node.get_job_id() is not None, 'job is WITHSCHEDULER, however, it does not have a job id'
+        logger.warning('calculation<{}> already marked as WITHSCHEDULER, skipping task_submit_job'.format(node.pk))
+        raise Return(node.get_job_id())
+
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
     max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
 
@@ -132,8 +137,6 @@ def task_submit_job(node, transport_queue, calc_info, script_filename, cancellab
             logger.info('submitting calculation<{}>'.format(node.pk))
             raise Return(execmanager.submit_calculation(node, transport, calc_info, script_filename))
 
-    state_success = calc_states.WITHSCHEDULER
-
     try:
         result = yield exponential_backoff_retry(
             do_submit, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption)
@@ -144,26 +147,37 @@ def task_submit_job(node, transport_queue, calc_info, script_filename, cancellab
         raise TransportTaskException('submit_calculation failed {} times consecutively'.format(max_attempts))
     else:
         logger.info('submitting calculation<{}> successful'.format(node.pk))
-        node._set_state(state_success)
+        node._set_state(calc_states.WITHSCHEDULER)
         raise Return(result)
 
 
 @coroutine
-def task_update_job(job_calc, job_manager, cancellable):
+def task_update_job(node, job_manager, cancellable):
     """
-    :param job_calc: The job calculation node
-    :type job_calc: :class:`aiida.orm.calculation.JobCalculation`
+    Transport task that will attempt to update the scheduler status of the job calculation
+
+    The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
+    function is called, wrapped in the exponential_backoff_retry coroutine, which, in case of a caught exception, will
+    retry after an interval that increases exponentially with the number of retries, for a maximum number of retries.
+    If all retries fail, the task will raise a TransportTaskException
+
+    :param node: the node that represents the job calculation
+    :type node: :class:`aiida.orm.calculation.JobCalculation`
     :param job_manager: The job manager
     :type job_manager: :class:`aiida.work.job_calcs.JobManager`
     :param cancellable: A cancel flag
     :type cancellable: :class:`aiida.work.utils.InterruptableFuture`
     :raises: Return containing True if the tasks was successfully completed, False otherwise
     """
+    if node.get_state() == calc_states.COMPUTED:
+        logger.warning('calculation<{}> already marked as COMPUTED, skipping task_update_job'.format(node.pk))
+        raise Return(True)
+
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
     max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
 
-    authinfo = job_calc.get_computer().get_authinfo(job_calc.get_user())
-    job_id = job_calc.get_job_id()
+    authinfo = node.get_computer().get_authinfo(node.get_user())
+    job_id = node.get_job_id()
 
     @coroutine
     def do_update():
@@ -173,28 +187,27 @@ def task_update_job(job_calc, job_manager, cancellable):
 
         if job_info is None:
             # If the job is computed or not found assume it's done
-            job_calc._set_scheduler_state(JOB_STATES.DONE)
+            node._set_scheduler_state(JOB_STATES.DONE)
             job_done = True
         else:
-            job_calc._set_last_jobinfo(job_info)
-            job_calc._set_scheduler_state(job_info.job_state)
+            node._set_last_jobinfo(job_info)
+            node._set_scheduler_state(job_info.job_state)
             job_done = job_info.job_state == JOB_STATES.DONE
 
         raise Return(job_done)
 
     try:
         job_done = yield exponential_backoff_retry(
-            do_update, initial_interval, max_attempts, logger=job_calc.logger, ignore_exceptions=plumpy.Interruption)
+            do_update, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption)
     except plumpy.Interruption:
         raise
     except Exception:
-        import traceback
-        logger.warning('updating calculation<{}> failed'.format(job_calc.pk))
+        logger.warning('updating calculation<{}> failed'.format(node.pk))
         raise TransportTaskException('update_calculation failed {} times consecutively'.format(max_attempts))
     else:
-        logger.info('updating calculation<{}> successful'.format(job_calc.pk))
+        logger.info('updating calculation<{}> successful'.format(node.pk))
         if job_done:
-            job_calc._set_state(calc_states.COMPUTED)
+            node._set_state(calc_states.COMPUTED)
 
         raise Return(job_done)
 
@@ -216,6 +229,10 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
     :raises: Return if the tasks was successfully completed
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
+    if node.get_state() == calc_states.PARSING:
+        logger.warning('calculation<{}> already marked as PARSING, skipping task_retrieve_job'.format(node.pk))
+        raise Return(True)
+
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
     max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
 
@@ -245,6 +262,7 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
         logger.warning('retrieving calculation<{}> failed'.format(node.pk))
         raise TransportTaskException('retrieve_calculation failed {} times consecutively'.format(max_attempts))
     else:
+        node._set_state(calc_states.PARSING)
         logger.info('retrieving calculation<{}> successful'.format(node.pk))
         raise Return(result)
 

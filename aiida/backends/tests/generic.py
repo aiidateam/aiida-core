@@ -38,7 +38,7 @@ class TestCode(AiidaTestCase):
         with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
             fhandle.write("#/bin/bash\n\necho test run\n")
             fhandle.flush()
-            code.add_path(f.name, 'test.sh')
+            code.add_path(fhandle.name, 'test.sh')
 
         code.store()
         self.assertTrue(code.can_run_on(self.computer))
@@ -71,7 +71,7 @@ class TestCode(AiidaTestCase):
         with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
             fhandle.write("#/bin/bash\n\necho test run\n")
             fhandle.flush()
-            code.add_path(f.name, 'test.sh')
+            code.add_path(fhandle.name, 'test.sh')
 
         with self.assertRaises(ValidationError):
             # There are files inside

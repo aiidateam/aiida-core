@@ -7,6 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+""" Util methods """
+
 from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
@@ -20,9 +22,9 @@ from aiida.restapi.common.exceptions import RestValidationError, \
     RestInputValidationError
 
 # Important to match querybuilder keys
-pk_dbsynonym = 'id'
+PK_DBSYNONYM = 'id'
 # Example uuid (version 4)
-uuid_ref = 'd55082b6-76dc-426b-af89-0e08b59524d2'
+UUID_REF = 'd55082b6-76dc-426b-af89-0e08b59524d2'
 
 
 ########################## Classes #####################
@@ -33,7 +35,13 @@ class CustomJSONEncoder(JSONEncoder):
     encoder.
     """
 
+    # pylink: disable=arguments-differ,method-hidden
     def default(self, obj):
+        """
+        Override default method from JSONEncoder to change serializer
+        :param obj: Object e.g. dict, list that will be serialized
+        :return: serialized object
+        """
 
         from aiida.restapi.common.config import SERIALIZER_CONFIG
 
@@ -41,7 +49,7 @@ class CustomJSONEncoder(JSONEncoder):
         if isinstance(obj, datetime):
             if 'datetime_format' in SERIALIZER_CONFIG.keys() and \
                             SERIALIZER_CONFIG[
-                                'datetime_format'] is not 'default':
+                                'datetime_format'] != 'default':
                 if SERIALIZER_CONFIG['datetime_format'] == 'asinput':
                     if obj.utcoffset() is not None:
                         obj = obj - obj.utcoffset()
@@ -55,7 +63,8 @@ class CustomJSONEncoder(JSONEncoder):
         return JSONEncoder.default(self, obj)
 
 
-class datetime_precision():
+class DatetimePrecision():
+    # pylint: disable=too-few-public-methods
     """
     A simple class which stores a datetime object with its precision. No
     internal check is done (cause itis not possible).
@@ -66,15 +75,15 @@ class datetime_precision():
                 4 (dare + hour + minute +second)
     """
 
-    def __init__(self, dt, precision):
+    def __init__(self, dtobj, precision):
 
-        if not isinstance(dt, datetime):
-            raise TypeError("dt argument has to be a datetime object")
+        if not isinstance(dtobj, datetime):
+            raise TypeError("dtobj argument has to be a datetime object")
 
-        if type(precision) is not int:
+        if not isinstance(precision, int):
             raise TypeError("precision argument has to be an integer")
 
-        self.dt = dt
+        self.dtobj = dtobj
         self.precision = precision
 
 
@@ -110,9 +119,9 @@ class Utils(object):
         Sets internally the configuration parameters
         """
 
-        self.PREFIX = kwargs['PREFIX']
-        self.PERPAGE_DEFAULT = kwargs['PERPAGE_DEFAULT']
-        self.LIMIT_DEFAULT = kwargs['LIMIT_DEFAULT']
+        self.prefix = kwargs['PREFIX']
+        self.perpage_default = kwargs['PERPAGE_DEFAULT']
+        self.limit_default = kwargs['LIMIT_DEFAULT']
 
     def strip_prefix(self, path):
         """
@@ -127,37 +136,39 @@ class Utils(object):
         :return: the same URL without the prefix
         """
 
-        if path.startswith(self.PREFIX):
-            return path[len(self.PREFIX):]
+        if path.startswith(self.prefix):
+            return path[len(self.prefix):]
         else:
-            raise ValidationError('path has to start with {}'.format(self.PREFIX))
+            raise ValidationError('path has to start with {}'.format(self.prefix))
 
     def split_path(self, path):
+        # pylint: disable=no-self-use
         """
         :param path: entire path contained in flask request
         :return: list of each element separated by '/'
         """
+
         # type: (string) -> (list_of_strings).
         return [f for f in path.split('/') if f]
 
     def parse_path(self, path_string, parse_pk_uuid=None):
+        # pylint: disable=inconsistent-return-statements,too-many-return-statements,too-many-branches
         """
         Takes the path and parse it checking its validity. Does not parse "io",
         "content" fields. I do not check the validity of the path, since I assume
         that this is done by the Flask routing methods.
-  
+
         :param path_string: the path string
-        :param parse_id_uuid: if 'pk' ('uuid') expects an integer (uuid 
-            starting pattern) 
+        :param parse_id_uuid: if 'pk' ('uuid') expects an integer (uuid starting pattern)
         :return: resource_type (string)
             page (integer)
-            id (string: uuid starting pattern, int: pk)
+            node_id (string: uuid starting pattern, int: pk)
             query_type (string))
         """
 
         ## Initialization
         page = None
-        id = None
+        node_id = None
         query_type = "default"
         path = self.split_path(self.strip_prefix(path_string))
 
@@ -168,17 +179,17 @@ class Utils(object):
         # Resource type
         resource_type = path.pop(0)
         if not path:
-            return (resource_type, page, id, query_type)
+            return (resource_type, page, node_id, query_type)
 
         # Validate uuid or starting pattern of uuid.
-        # Technique: - take our uuid_ref and replace the first characters the
+        # Technique: - take our UUID_REF and replace the first characters the
         #  string to be validated as uuid.
         #            - validate instead the newly built string
         if parse_pk_uuid == 'pk':
             raw_id = path[0]
             try:
                 # Check whether it can be an integer
-                id = int(raw_id)
+                node_id = int(raw_id)
             except ValueError:
                 pass
             else:
@@ -186,19 +197,19 @@ class Utils(object):
         elif parse_pk_uuid == 'uuid':
             import uuid
             raw_id = path[0]
-            maybe_uuid = raw_id + uuid_ref[len(raw_id):]
+            maybe_uuid = raw_id + UUID_REF[len(raw_id):]
             try:
                 _ = uuid.UUID(maybe_uuid, version=4)
             except ValueError:
                 # assume that it cannot be an id and go to the next check
                 pass
             else:
-                # It is an id so pop out the path element
-                id = raw_id
+                # It is a node_id so pop out the path element
+                node_id = raw_id
                 path.pop(0)
 
         if not path:
-            return (resource_type, page, id, query_type)
+            return (resource_type, page, node_id, query_type)
 
         # Query type (input, output, attributes, extras, visualization,
         # schema, statistics)
@@ -207,28 +218,27 @@ class Utils(object):
             if path:
                 raise RestInputValidationError("url requesting schema resources do not " "admit further fields")
             else:
-                return (resource_type, page, id, query_type)
+                return (resource_type, page, node_id, query_type)
         elif path[0] == 'statistics':
             query_type = path.pop(0)
             if path:
                 raise RestInputValidationError("url requesting statistics resources do not " "admit further fields")
             else:
-                return (resource_type, page, id, query_type)
+                return (resource_type, page, node_id, query_type)
         elif path[0] == "io" or path[0] == "content":
             path.pop(0)
             query_type = path.pop(0)
             if not path:
-                return (resource_type, page, id, query_type)
+                return (resource_type, page, node_id, query_type)
 
         # Page (this has to be in any case the last field)
         if path[0] == "page":
             path.pop(0)
             if not path:
                 page = 1
-                return (resource_type, page, id, query_type)
-            else:
-                page = int(path.pop(0))
-                return (resource_type, page, id, query_type)
+                return (resource_type, page, node_id, query_type)
+            page = int(path.pop(0))
+            return (resource_type, page, node_id, query_type)
 
     def validate_request(self,
                          limit=None,
@@ -237,6 +247,7 @@ class Utils(object):
                          page=None,
                          query_type=None,
                          is_querystring_defined=False):
+        # pylint: disable=fixme,no-self-use,too-many-arguments
         """
         Performs various checks on the consistency of the request.
         Add here all the checks that you want to do, except validity of the page
@@ -261,6 +272,7 @@ class Utils(object):
             raise RestInputValidationError("schema requests do not allow " "specifying a query string")
 
     def paginate(self, page, perpage, total_count):
+        # pylint disable=too-many-branches
         """
         Calculates limit and offset for the reults of a query,
         given the page and the number of restuls per page.
@@ -292,7 +304,7 @@ class Utils(object):
             except ValueError:
                 raise InputValidationError("perpage must be an integer")
         else:
-            perpage = self.PERPAGE_DEFAULT
+            perpage = self.perpage_default
 
         ## First_page is anyway 1
         first_page = 1
@@ -365,6 +377,7 @@ class Utils(object):
 
         ## Two auxiliary functions
         def split_url(url):
+            """ Split url into path and query string """
             if '?' in url:
                 [path, query_string] = url.split('?')
                 question_mark = '?'
@@ -401,6 +414,7 @@ class Utils(object):
         return headers
 
     def build_response(self, status=200, headers=None, data=None):
+        # pylint: disable=no-self-use
         """
         Build the response
 
@@ -432,18 +446,19 @@ class Utils(object):
         response.status_code = status
 
         if headers is not None:
-            for k, v in headers.items():
-                response.headers[k] = v
+            for key, val in headers.items():
+                response.headers[key] = val
 
         return response
 
-    def build_datetime_filter(self, dt):
+    def build_datetime_filter(self, dtobj):
+        # pylint: disable=no-self-use
         """
         This function constructs a filter for a datetime object to be in a
         certain datetime interval according to the precision.
 
-        The interval is [reference_datetime, reference_datetime + Dt],
-        where Dt is a function fo the required precision.
+        The interval is [reference_datetime, reference_datetime + delta_time],
+        where delta_time is a function fo the required precision.
 
         This function should be used to replace a datetime filter based on
         the equality operator that is inehrently "picky" because it implies
@@ -454,29 +469,30 @@ class Utils(object):
         :return: a suitable entry of the filter dictionary
         """
 
-        if not isinstance(dt, datetime_precision):
-            TypeError("dt argument has to be a datetime_precision object")
+        if not isinstance(dtobj, DatetimePrecision):
+            TypeError("dtobj argument has to be a DatetimePrecision object")
 
-        reference_datetime = dt.dt
-        precision = dt.precision
+        reference_datetime = dtobj.dtobj
+        precision = dtobj.precision
 
         ## Define interval according to the precision
         if precision == 1:
-            Dt = timedelta(days=1)
+            delta_time = timedelta(days=1)
         elif precision == 2:
-            Dt = timedelta(hours=1)
+            delta_time = timedelta(hours=1)
         elif precision == 3:
-            Dt = timedelta(minutes=1)
+            delta_time = timedelta(minutes=1)
         elif precision == 4:
-            Dt = timedelta(seconds=1)
+            delta_time = timedelta(seconds=1)
         else:
             raise RestValidationError("The datetime resolution is not valid.")
 
-        filter = {'and': [{'>=': reference_datetime}, {'<': reference_datetime + Dt}]}
+        filters = {'and': [{'>=': reference_datetime}, {'<': reference_datetime + delta_time}]}
 
-        return filter
+        return filters
 
     def build_translator_parameters(self, field_list):
+        # pylint: disable=too-many-locals,too-many-statements,too-many-branches
         """
         Takes a list of elements resulting from the parsing the query_string and
         elaborates them in order to provide translator-compliant instructions
@@ -588,9 +604,9 @@ class Utils(object):
 
             elif field[0] == 'orderby':
                 if field[1] == '=':
-                    # Consider value (gives string) and valueList (gives list of
+                    # Consider value (gives string) and value_list (gives list of
                     # strings) cases
-                    if type(field[2]) == list:
+                    if isinstance(field[2], list):
                         orderby.extend(field[2])
                     else:
                         orderby.extend([field[2]])
@@ -628,7 +644,7 @@ class Utils(object):
                 operator = field[1]
                 field_value = field[2]
 
-                if isinstance(field_value, datetime_precision) and operator == '=':
+                if isinstance(field_value, DatetimePrecision) and operator == '=':
                     filter_value = self.build_datetime_filter(field_value)
                 else:
                     filter_value = {self.op_conv_map[field[1]]: field_value}
@@ -645,12 +661,13 @@ class Utils(object):
 
         # #Impose defaults if needed
         # if limit is None:
-        #     limit = self.LIMIT_DEFAULT
+        #     limit = self.limit_default
 
         return (limit, offset, perpage, orderby, filters, alist, nalist, elist, nelist, downloadformat, visformat,
                 filename, rtype)
 
     def parse_query_string(self, query_string):
+        # pylint: disable=too-many-locals
         """
         Function that parse the querystring, extracting infos for limit, offset,
         ordering, filters, attribute and extra projections.
@@ -676,26 +693,26 @@ class Utils(object):
         operator = (Literal('=like=') | Literal('=ilike=') | Literal('=in=') | Literal('=notin=') | Literal('=') |
                     Literal('!=') | Literal('>=') | Literal('>') | Literal('<=') | Literal('<'))
         # Value types
-        valueNum = ppc.number
-        valueBool = (Literal('true') | Literal('false')).addParseAction(lambda toks: bool(toks[0]))
-        valueString = QuotedString('"', escQuote='""')
-        valueOrderby = Combine(Optional(Word('+-', exact=1)) + key)
+        value_num = ppc.number
+        value_bool = (Literal('true') | Literal('false')).addParseAction(lambda toks: bool(toks[0]))
+        value_string = QuotedString('"', escQuote='""')
+        value_orderby = Combine(Optional(Word('+-', exact=1)) + key)
 
         ## DateTimeShift value. First, compose the atomic values and then
         # combine
         #  them and convert them to datetime objects
         # Date
-        valueDate = Combine(
+        value_date = Combine(
             Word(nums, exact=4) + Literal('-') + Word(nums, exact=2) + Literal('-') + Word(nums, exact=2))
         # Time
-        valueTime = Combine(
+        value_time = Combine(
             Literal('T') + Word(nums, exact=2) + Optional(Literal(':') + Word(nums, exact=2)) +
             Optional(Literal(':') + Word(nums, exact=2)))
         # Shift
-        valueShift = Combine(Word('+-', exact=1) + Word(nums, exact=2) + Optional(Literal(':') + Word(nums, exact=2)))
+        value_shift = Combine(Word('+-', exact=1) + Word(nums, exact=2) + Optional(Literal(':') + Word(nums, exact=2)))
         # Combine atomic values
-        valueDateTime = Combine(
-            valueDate + Optional(valueTime) + Optional(valueShift) + WE(printables.replace("&", ""))
+        value_datetime = Combine(
+            value_date + Optional(value_time) + Optional(value_shift) + WE(printables.replace("&", ""))
             # To us the
             # word must end with '&' or end of the string
             # Adding  WordEnd  only here is very important. This makes atomic
@@ -703,11 +720,16 @@ class Utils(object):
             # usable alone individually.
         )
 
-        ############################################################################
-        # Function to convert datetime string into datetime object. The
-        # format is
-        # compliant with ParseAction requirements
-        def validate_time(s, loc, toks):
+        ########################################################################
+
+        def validate_time(toks):
+            """
+            Function to convert datetime string into datetime object. The format is
+            compliant with ParseAction requirements
+
+            :param toks: datetime string passed in tokens
+            :return: datetime object
+            """
 
             datetime_string = toks[0]
 
@@ -716,7 +738,7 @@ class Utils(object):
 
             # Parse
             try:
-                dt = dtparser.parse(datetime_string)
+                dtobj = dtparser.parse(datetime_string)
             except ValueError:
                 raise RestInputValidationError("time value has wrong format. The "
                                                "right format is "
@@ -729,42 +751,41 @@ class Utils(object):
                                                "MM] "
                                                "given with "
                                                "respect to UTC")
-            if dt.tzinfo is not None:
-                tzoffset_minutes = int(dt.tzinfo.utcoffset(None).total_seconds() // 60)
+            if dtobj.tzinfo is not None:
+                tzoffset_minutes = int(dtobj.tzinfo.utcoffset(None).total_seconds() // 60)
+                return DatetimePrecision(
+                    dtobj.replace(tzinfo=FixedOffsetTimezone(offset=tzoffset_minutes, name=None)), precision)
 
-                return datetime_precision(
-                    dt.replace(tzinfo=FixedOffsetTimezone(offset=tzoffset_minutes, name=None)), precision)
-            else:
-                return datetime_precision(dt.replace(tzinfo=FixedOffsetTimezone(offset=0, name=None)), precision)
+            return DatetimePrecision(dtobj.replace(tzinfo=FixedOffsetTimezone(offset=0, name=None)), precision)
 
         ########################################################################
 
         # Convert datetime value to datetime object
-        valueDateTime.setParseAction(validate_time)
+        value_datetime.setParseAction(validate_time)
 
         # More General types
-        value = (valueString | valueBool | valueDateTime | valueNum | valueOrderby)
+        value = (value_string | value_bool | value_datetime | value_num | value_orderby)
         # List of values (I do not check the homogeneity of the types of values,
         # query builder will do it somehow)
-        valueList = Group(value + OneOrMore(Suppress(',') + value) + Optional(Suppress(',')))
+        value_list = Group(value + OneOrMore(Suppress(',') + value) + Optional(Suppress(',')))
 
         # Fields
-        singleField = Group(key + operator + value)
-        listField = Group(key + (Literal('=in=') | Literal('=notin=')) + valueList)
-        orderbyField = Group(key + Literal('=') + valueList)
-        Field = (listField | orderbyField | singleField)
+        single_field = Group(key + operator + value)
+        list_field = Group(key + (Literal('=in=') | Literal('=notin=')) + value_list)
+        orderby_field = Group(key + Literal('=') + value_list)
+        field = (list_field | orderby_field | single_field)
 
         # Fields separator
         separator = Suppress(Literal('&'))
 
         # General query string
-        generalGrammar = SS() + Optional(Field) + ZeroOrMore(
-            separator + Field) + \
+        general_grammar = SS() + Optional(field) + ZeroOrMore(
+            separator + field) + \
                          Optional(separator) + SE()
 
         ## Parse the query string
         try:
-            fields = generalGrammar.parseString(query_string)
+            fields = general_grammar.parseString(query_string)
 
             # JQuery adds _=timestamp a parameter to not use cached data/response.
             # To handle query, remove this "_" parameter from the query string
@@ -772,14 +793,14 @@ class Utils(object):
             # (https://github.com/aiidateam/aiida_core/issues/789) in aiida_core
             field_list = [entry for entry in fields.asList() if entry[0] != "_"]
 
-        except ParseException as e:
+        except ParseException as err:
             raise RestInputValidationError("The query string format is invalid. "
                                            "Parser returned this massage: \"{"
                                            "}.\" Please notice that the column "
                                            "number "
                                            "is counted from "
                                            "the first character of the query "
-                                           "string.".format(e))
+                                           "string.".format(err))
 
         ## return the translator instructions elaborated from the field_list
         return self.build_translator_parameters(field_list)
@@ -788,11 +809,11 @@ class Utils(object):
 def list_routes():
     """List available routes"""
     from six.moves import urllib
-    from flask import current_app, url_for
+    from flask import current_app
 
     output = []
     for rule in current_app.url_map.iter_rules():
-        if rule.endpoint is "static":
+        if rule.endpoint == "static":
             continue
 
         methods = ','.join(rule.methods)

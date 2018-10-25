@@ -21,7 +21,7 @@ from aiida.common.utils import get_object_from_string
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.restapi.common.exceptions import RestValidationError, \
     RestInputValidationError
-from aiida.restapi.common.utils import pk_dbsynonym
+from aiida.restapi.common.utils import PK_DBSYNONYM
 
 
 class BaseTranslator(object):
@@ -239,7 +239,7 @@ class BaseTranslator(object):
                         self._query_help["filters"][tag] = {}
                         for filter_key, filter_value in tag_filters.items():
                             if filter_key == "pk":
-                                filter_key = pk_dbsynonym
+                                filter_key = PK_DBSYNONYM
                             self._query_help["filters"][tag][filter_key] \
                                 = filter_value
         else:
@@ -316,7 +316,7 @@ class BaseTranslator(object):
                 else:
                     order_dict[column] = 'asc'
             if 'pk' in order_dict:
-                order_dict[pk_dbsynonym] = order_dict.pop('pk')
+                order_dict[PK_DBSYNONYM] = order_dict.pop('pk')
             return order_dict
 
         ## Assign orderby field query_help

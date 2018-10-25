@@ -311,7 +311,6 @@
         aiida/plugins/loader.py|
         aiida/plugins/registry.py|
         aiida/plugins/utils.py|
-        aiida/restapi/common/utils.py|
         aiida/scheduler/datastructures.py|
         aiida/scheduler/__init__.py|
         aiida/scheduler/plugins/direct.py|

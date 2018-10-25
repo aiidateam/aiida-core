@@ -92,7 +92,9 @@ class DjangoAuthInfo(AuthInfo):
         """
         super(DjangoAuthInfo, self).__init__(backend)
         type_check(user, users.DjangoUser)
-        self._dbauthinfo = utils.ModelWrapper(DbAuthInfo(dbcomputer=computer.dbcomputer, aiidauser=user.dbuser))
+        backend_computer = computer.backend_entity
+        type_check(backend_computer, computers.DjangoComputer)
+        self._dbauthinfo = utils.ModelWrapper(DbAuthInfo(dbcomputer=backend_computer.dbcomputer, aiidauser=user.dbuser))
 
     @property
     def dbauthinfo(self):

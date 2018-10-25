@@ -284,8 +284,9 @@
         aiida/orm/implementation/sqlalchemy/user.py|
         aiida/orm/implementation/sqlalchemy/utils.py|
         aiida/orm/implementation/sqlalchemy/workflow.py|
-        aiida/orm/importexport.py|
         aiida/orm/__init__.py|
+        aiida/orm/importexport.py|
+        aiida/orm/log.py|
         aiida/orm/mixins.py|
         aiida/orm/node.py|
         aiida/orm/querybuilder.py|

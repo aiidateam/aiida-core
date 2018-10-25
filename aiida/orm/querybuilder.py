@@ -149,9 +149,6 @@ def get_querybuilder_classifiers_from_type(ormclasstype, obj):
     return ormclasstype, query_type_string, ormclass
 
 
-
-
-
 class QueryBuilder(object):
     """
     The class to query the AiiDA database. 
@@ -358,9 +355,9 @@ class QueryBuilder(object):
 
         que = self.get_query()
         return str(que.statement.compile(
-                compile_kwargs={"literal_binds": True},
-                dialect=mydialect.dialect())
-            )
+            compile_kwargs={"literal_binds": True},
+            dialect=mydialect.dialect())
+        )
 
     def _get_ormclass(self, cls, ormclasstype):
         """
@@ -377,7 +374,6 @@ class QueryBuilder(object):
             classifier = ormclasstype
         else:
             raise RuntimeError("Neither cls nor ormclasstype specified")
-
 
         if isinstance(classifier, (tuple, list, set)):
             # I have been passed a list of classes (hopefully) instead of a class.
@@ -398,7 +394,6 @@ class QueryBuilder(object):
                 ormclasstype.append(ormclassifiers[0])
         else:
             ormclasstype, query_type_string, ormclass = func(classifier, self._impl)
-
 
         return ormclass, ormclasstype, query_type_string
 
@@ -518,39 +513,29 @@ class QueryBuilder(object):
         # the class or the type (not both)
         if cls and type:
             raise InputValidationError(
-                "\n\n\n"
-                "You cannot specify both a \n"
-                "class ({})\n"
-                "and a type ({})\n\n"
-                "".format(cls, type)
+                "You cannot specify both a "
+                "class ({}) "
+                "and a type ({})".format(cls, type)
             )
 
         if not (cls or type):
-            raise InputValidationError(
-                "\n\n"
-                "You need to specify at least a class or a type"
-                "\n\n"
-            )
+            raise InputValidationError("You need to specify at least a class or a type")
 
         # Let's check if it is a valid class or type
         if cls:
             if isinstance(cls, (tuple, list, set)):
                 for c in cls:
                     if not inspect_isclass(c):
-                        raise InputValidationError(
-                            "\n\n"
-                            "{} was passed with kw 'cls', but is not a class"
-                            "\n\n".format(c)
-                    )
+                        raise InputValidationError("{} was passed with kw 'cls', but is not a class".format(c))
             else:
                 if not inspect_isclass(cls):
                     raise InputValidationError(
                         "\n\n"
                         "{} was passed with kw 'cls', but is not a class"
                         "\n\n".format(cls)
-                )
+                    )
         elif type:
-            
+
             if isinstance(type, (tuple, list, set)):
                 for t in type:
                     if not isinstance(t, six.string_types):
@@ -958,24 +943,24 @@ class QueryBuilder(object):
         """
         Add a filter on the type based on the query_type_string
         """
-        def get_type_filter(q,p):
+
+        def get_type_filter(q, p):
             if subclassing:
                 return {'like': '{}%'.format(q)}
             else:
                 return {'==': p}
 
-        
         tag = self._get_tag_from_specification(tagspec)
         if isinstance(query_type_string, list):
             # A list was maybe passed to append, this propagates to a list being passed
             # as a query type string
-            node_type_filter = {'or':[]}
+            node_type_filter = {'or': []}
             for i, (q, p) in enumerate(zip(query_type_string, plugin_type_string)):
-                node_type_filter['or'].append(get_type_filter(q,p))
+                node_type_filter['or'].append(get_type_filter(q, p))
         else:
-            node_type_filter=get_type_filter(query_type_string,  plugin_type_string)
+            node_type_filter = get_type_filter(query_type_string, plugin_type_string)
 
-        self.add_filter(tagspec, {'type':node_type_filter})
+        self.add_filter(tagspec, {'type': node_type_filter})
 
     def add_projection(self, tag_spec, projection_spec):
         """

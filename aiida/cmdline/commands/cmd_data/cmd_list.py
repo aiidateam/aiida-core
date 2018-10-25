@@ -40,7 +40,7 @@ def query(datatype, project, past_days, group_pks, all_users):
 
     from aiida.orm.implementation import Group
     from aiida.orm.user import User
-    from aiida.orm.backend import construct_backend
+    from aiida.orm.backends import construct_backend
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.utils import timezone
 

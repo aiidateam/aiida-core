@@ -33,7 +33,7 @@ from . import utils
 class Group(AbstractGroup):
     def __init__(self, **kwargs):
         from aiida.backends.djsite.db.models import DbGroup
-        from aiida.orm.backend import construct_backend
+        from aiida.orm.backends import construct_backend
 
         self._backend = construct_backend()
 

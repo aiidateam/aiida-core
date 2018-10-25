@@ -43,7 +43,7 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
     from aiida.orm.calculation import Calculation
     from aiida.orm.data import Data
     from aiida.orm import load_node
-    from aiida.orm.backend import construct_backend
+    from aiida.orm.backends import construct_backend
     from aiida.backends.utils import delete_nodes_and_connections
 
     backend = construct_backend()

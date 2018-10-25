@@ -10,9 +10,10 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from aiida.orm.backend import Backend
+from aiida.orm.implementation.backends import Backend
 
 from aiida.backends.djsite.queries import DjangoQueryManager
+from aiida.backends.djsite.querybuilder_django.querybuilder_django import QueryBuilderImplDjango
 from . import authinfo
 from . import computer
 from . import log
@@ -22,9 +23,9 @@ from . import user
 class DjangoBackend(Backend):
 
     def __init__(self):
-        self._logs = log.DjangoLogCollection(self)
-        self._users = user.DjangoUserCollection(self)
-        self._authinfos = authinfo.DjangoAuthInfoCollection(self)
+        self._logs = log.DjangoLogCollection(self, log.DjangoLog)
+        self._users = user.DjangoUserCollection(self, user.DjangoUser)
+        self._authinfos = authinfo.DjangoAuthInfoCollection(self, authinfo.DjangoAuthInfo)
         self._computers = computer.DjangoComputerCollection(self)
         self._query_manager = DjangoQueryManager(self)
 
@@ -48,9 +49,5 @@ class DjangoBackend(Backend):
     def query_manager(self):
         return self._query_manager
 
-    def query_builder(self):
-        # For now this doesn't select the Django one because that's
-        # done in the constructor of QueryBuilder but ideally this
-        # should be reworked so the Django version subclasses QueryBuilder
-        from aiida.orm.querybuilder import QueryBuilder
-        return QueryBuilder()
+    def query(self):
+        return QueryBuilderImplDjango()

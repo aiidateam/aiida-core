@@ -121,7 +121,7 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
         return expr
 
     def get_filter_expr(self, operator, value, attr_key, is_attribute,
-            alias=None, column=None, column_name=None):
+                        alias=None, column=None, column_name=None):
         """
         Applies a filter on the alias given.
         Expects the alias of the ORM-class on which to filter, and filter_spec.
@@ -390,12 +390,12 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
             expressions = []
             for dtype, castas in types_n_casts:
                 attr_column, additional_type_constraint = get_attribute_db_column(
-                                mapped_class, dtype, castas=castas)
+                    mapped_class, dtype, castas=castas)
                 expression_this_typ_cas = self.get_filter_expr(
-                            operator, value, attr_key=[],
-                            column=attr_column,
-                            is_attribute=False
-                        )
+                    operator, value, attr_key=[],
+                    column=attr_column,
+                    is_attribute=False
+                )
                 if additional_type_constraint is not None:
                     expression_this_typ_cas = and_(
                         expression_this_typ_cas, additional_type_constraint)
@@ -498,7 +498,6 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
         else:
             returnval = res
         return returnval
-
 
     def yield_per(self, query, batch_size):
         """

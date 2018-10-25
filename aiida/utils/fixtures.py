@@ -140,7 +140,7 @@ class FixtureManager(object):
         """
         if self.__backend is None:
             # Lazy load the backend so we don't do it too early (i.e. before load_dbenv())
-            from aiida.orm.backend import construct_backend
+            from aiida.orm.backends import construct_backend
             self.__backend = construct_backend()
         return self.__backend
 
@@ -444,7 +444,7 @@ class PluginTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        from aiida.orm.backend import construct_backend
+        from aiida.orm.backends import construct_backend
 
         cls.fixture_manager = _GLOBAL_FIXTURE_MANAGER
         if not cls.fixture_manager.has_profile_open():

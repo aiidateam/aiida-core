@@ -52,7 +52,7 @@ class Workflow(AbstractWorkflow):
         :raise: NotExistent: if there is no entry of the desired workflow kind with
                              the given uuid.
         """
-        from aiida.orm.backend import construct_backend
+        from aiida.orm.backends import construct_backend
 
         self._backend = construct_backend()
 
@@ -634,7 +634,7 @@ class Workflow(AbstractWorkflow):
 
                 # self.get_steps(wrapped_method).set_nextcall(wf_exit_call)
 
-            user = self._backend.users.get_automatic_user()
+            user = self.backend.users.get_automatic_user()
             method_step, created = self.dbworkflowinstance._get_or_create_step(name=wrapped_method,
                                                                                user=user.dbuser)
 
@@ -738,7 +738,7 @@ class Workflow(AbstractWorkflow):
 
 
 def kill_all():
-    from aiida.orm.backend import construct_backend
+    from aiida.orm.backends import construct_backend
     backend = construct_backend()
     automatic_user = backend.users.get_automatic_user()
     w_list = DbWorkflow.query.filter(

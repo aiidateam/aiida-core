@@ -15,7 +15,8 @@ import six
 
 from aiida.transport import TransportFactory
 from aiida.common.exceptions import (ConfigurationError, MissingPluginError)
-from .backend import Collection, CollectionEntry
+from .backends import CollectionEntry
+from aiida.orm.entities import Collection
 
 __all__ = ['AuthInfo', 'AuthInfoCollection']
 

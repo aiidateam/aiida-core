@@ -20,13 +20,14 @@ import six
 
 from aiida.common.hashing import is_password_usable
 from aiida.common import exceptions
-from .backend import Collection, CollectionEntry
+from .backends import CollectionEntry
+from . import entities
 
 __all__ = ['User', 'UserCollection']
 
 
 @six.add_metaclass(abc.ABCMeta)
-class UserCollection(Collection):
+class UserCollection(entities.Collection):
     """
     The collection of users stored in a backend
     """

@@ -30,7 +30,7 @@ class UserParamType(click.ParamType):
 
     @with_dbenv()
     def convert(self, value, param, ctx):
-        from aiida.orm.backend import construct_backend
+        from aiida.orm.backends import construct_backend
 
         backend = construct_backend()
         results = backend.users.find(email=value)
@@ -52,7 +52,7 @@ class UserParamType(click.ParamType):
 
         :returns: list of tuples of valid entry points (matching incomplete) and a description
         """
-        from aiida.orm.backend import construct_backend
+        from aiida.orm.backends import construct_backend
 
         backend = construct_backend()
         users = backend.users.find()

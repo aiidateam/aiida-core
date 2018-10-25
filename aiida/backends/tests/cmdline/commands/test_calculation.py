@@ -38,7 +38,7 @@ class TestVerdiCalculation(AiidaTestCase):
         from aiida.orm.data.parameter import ParameterData
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.work.processes import ProcessState
-        from aiida.orm.backend import construct_backend
+        from aiida.orm.backends import construct_backend
         backend = construct_backend()
 
         cls.computer = backend.computers.create(name='comp', hostname='localhost', transport_type='local',

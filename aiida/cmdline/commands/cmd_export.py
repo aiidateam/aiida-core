@@ -12,11 +12,14 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import click
+import tabulate
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments
 from aiida.cmdline.params import options
+from aiida.cmdline.utils import decorators
 from aiida.cmdline.utils import echo
 from aiida.common.exceptions import DanglingLinkError
 
@@ -25,6 +28,35 @@ from aiida.common.exceptions import DanglingLinkError
 def verdi_export():
     """Create and manage export archives."""
     pass
+
+
+@verdi_export.command('inspect')
+@click.argument('archive', nargs=1, type=click.Path(exists=True, readable=True))
+@click.option('-v', '--version', is_flag=True, help='Print the archive format version and exit.')
+@click.option('-d', '--data', is_flag=True, help='Print the data contents and exit.')
+@click.option('-m', '--meta-data', is_flag=True, help='Print the meta data contents and exit.')
+@decorators.with_dbenv()
+def inspect(archive, version, data, meta_data):
+    """
+    Inspect the contents of an exported archive without importing the content.
+
+    By default a summary of the archive contents will be printed. The various options can be used to
+    change exactly what information is displayed.
+    """
+    from aiida.common.archive import Archive
+
+    with Archive(archive) as archive_object:
+        if version:
+            echo.echo(archive_object.version_format)
+        elif data:
+            echo.echo_dictionary(archive_object.data)
+        elif meta_data:
+            echo.echo_dictionary(archive_object.meta_data)
+        else:
+            info = archive_object.get_info()
+            data = sorted([(k.capitalize(), v) for k, v in info.items()])
+            data.extend(sorted([(k.capitalize(), v) for k, v in archive_object.get_data_statistics().items()]))
+            echo.echo(tabulate.tabulate(data))
 
 
 @verdi_export.command('create')

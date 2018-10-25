@@ -257,3 +257,27 @@ class TestVerdiExport(AiidaTestCase):
                     self.assertTrue(tarfile.is_tarfile(filename_output))
                 finally:
                     delete_temporary_file(filename_output)
+
+    def test_inspect(self):
+        """Test the functionality of `verdi export inspect`."""
+        archives = [
+            ('export_v0.1.aiida', '0.1'),
+            ('export_v0.2.aiida', '0.2'),
+            ('export_v0.3.aiida', '0.3'),
+        ]
+
+        for archive, version_number in archives:
+
+            filename_input = get_archive_file(archive)
+
+            # Testing the options that will print the meta data and data respectively
+            for option in ['-m', '-d']:
+                options = [option, filename_input]
+                result = self.cli_runner.invoke(cmd_export.inspect, options)
+                self.assertIsNone(result.exception)
+
+            # Test the --version option which should print the archive format version
+            options = ['--version', filename_input]
+            result = self.cli_runner.invoke(cmd_export.inspect, options)
+            self.assertIsNone(result.exception)
+            self.assertEquals(result.output.strip(), version_number)

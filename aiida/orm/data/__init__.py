@@ -50,8 +50,7 @@ class Data(Node):
     according to its method. This is done independently in order to allow
     cross-validation of plugins.
     """
-    _source_attributes = ['db_name', 'db_uri', 'uri', 'id', 'version',
-                          'extras', 'source_md5', 'description', 'license']
+    _source_attributes = ['db_name', 'db_uri', 'uri', 'id', 'version', 'extras', 'source_md5', 'description', 'license']
 
     # Replace this with a dictionary in each subclass that, given a file
     # extension, returns the corresponding fileformat string.
@@ -130,8 +129,7 @@ class Data(Node):
             raise ValueError("Source must be supplied as a dictionary")
         unknown_attrs = tuple(set(source.keys()) - set(self._source_attributes))
         if unknown_attrs:
-            raise KeyError("Unknown source parameters: "
-                           "{}".format(", ".join(unknown_attrs)))
+            raise KeyError("Unknown source parameters: " "{}".format(", ".join(unknown_attrs)))
 
         self._set_attr('source', source)
 
@@ -158,8 +156,7 @@ class Data(Node):
             raise ValueError("At most one CREATE node can enter a data node")
 
         if not isinstance(src, Calculation):
-            raise ValueError(
-                "Links entering a data object can only be of type calculation")
+            raise ValueError("Links entering a data object can only be of type calculation")
 
         return super(Data, self).add_link_from(src, label, link_type)
 
@@ -172,8 +169,7 @@ class Data(Node):
         """
         from aiida.orm.calculation import Calculation
         if not isinstance(dest, Calculation):
-            raise ValueError(
-                "The output of a data node can only be a calculation")
+            raise ValueError("The output of a data node can only be a calculation")
 
         return super(Data, self)._linking_as_output(dest, link_type)
 
@@ -205,13 +201,11 @@ class Data(Node):
         except KeyError:
             if len(exporters.keys()) > 0:
                 raise ValueError("The format {} is not implemented for {}. "
-                                 "Currently implemented are: {}.".format(
-                    fileformat, self.__class__.__name__,
-                    ",".join(exporters.keys())))
+                                 "Currently implemented are: {}.".format(fileformat, self.__class__.__name__, ",".join(
+                                     exporters.keys())))
             else:
                 raise ValueError("The format {} is not implemented for {}. "
-                                 "No formats are implemented yet.".format(
-                    fileformat, self.__class__.__name__))
+                                 "No formats are implemented yet.".format(fileformat, self.__class__.__name__))
 
         return func(main_file_name=main_file_name, **kwargs)
 
@@ -241,8 +235,7 @@ class Data(Node):
             if extension.startswith(os.path.extsep):
                 extension = extension[len(os.path.extsep):]
             if not extension:
-                raise ValueError("Cannot recognized the fileformat from the "
-                                 "extension")
+                raise ValueError("Cannot recognized the fileformat from the " "extension")
 
             # Replace the fileformat using the replacements specified in the
             # _custom_export_format_replacements dictionary. If not found there,
@@ -257,20 +250,18 @@ class Data(Node):
         if not overwrite:
             for fname in extra_files:
                 if os.path.exists(fname):
-                    raise OSError("The file {} already exists, stopping.".format(
-                        fname))
+                    raise OSError("The file {} already exists, stopping.".format(fname))
 
             if os.path.exists(path):
-                raise OSError("The file {} already exists, stopping.".format(
-                    path))
+                raise OSError("The file {} already exists, stopping.".format(path))
 
         for additional_fname, additional_fcontent in extra_files.items():
             retlist.append(additional_fname)
-            with io.open(additional_fname, 'wb', encoding=None) as f:
-                f.write(additional_fcontent) #.encode('utf-8')) # This is up to each specific plugin
+            with io.open(additional_fname, 'wb', encoding=None) as fhandle:
+                fhandle.write(additional_fcontent)  # This is up to each specific plugin
         retlist.append(path)
-        with io.open(path, 'wb', encoding=None) as f:
-            f.write(filetext)
+        with io.open(path, 'wb', encoding=None) as fhandle:
+            fhandle.write(filetext)
 
         return retlist
 
@@ -284,8 +275,7 @@ class Data(Node):
         # _prepare_"" with the name of the new format
         exporter_prefix = '_prepare_'
         valid_format_names = self.get_export_formats()
-        valid_formats = {k: getattr(self, exporter_prefix + k)
-                         for k in valid_format_names}
+        valid_formats = {k: getattr(self, exporter_prefix + k) for k in valid_format_names}
         return valid_formats
 
     @classmethod
@@ -297,8 +287,8 @@ class Data(Node):
         """
         exporter_prefix = '_prepare_'
         method_names = dir(cls)  # get list of class methods names
-        valid_format_names = [i[len(exporter_prefix):] for i in method_names
-                              if i.startswith(exporter_prefix)]  # filter them
+        valid_format_names = [i[len(exporter_prefix):] for i in method_names if i.startswith(exporter_prefix)
+                             ]  # filter them
         return sorted(valid_format_names)
 
     def importstring(self, inputstring, fileformat, **kwargs):
@@ -315,13 +305,11 @@ class Data(Node):
         except KeyError:
             if len(importers.keys()) > 0:
                 raise ValueError("The format {} is not implemented for {}. "
-                                 "Currently implemented are: {}.".format(
-                    fileformat, self.__class__.__name__,
-                    ",".join(importers.keys())))
+                                 "Currently implemented are: {}.".format(fileformat, self.__class__.__name__, ",".join(
+                                     importers.keys())))
             else:
                 raise ValueError("The format {} is not implemented for {}. "
-                                 "No formats are implemented yet.".format(
-                    fileformat, self.__class__.__name__))
+                                 "No formats are implemented yet.".format(fileformat, self.__class__.__name__))
 
         # func is bound to self by getattr in _get_importers()
         func(inputstring, **kwargs)
@@ -336,8 +324,8 @@ class Data(Node):
         """
         if fileformat is None:
             fileformat = fname.split('.')[-1]
-        with io.open(fname, 'r', encoding='utf8') as f:  # reads in cwd, if fname is not absolute
-            self.importstring(f.read(), fileformat)
+        with io.open(fname, 'r', encoding='utf8') as fhandle:  # reads in cwd, if fname is not absolute
+            self.importstring(fhandle.read(), fileformat)
 
     def _get_importers(self):
         """
@@ -349,10 +337,9 @@ class Data(Node):
         # _parse_"" with the name of the new format
         importer_prefix = '_parse_'
         method_names = dir(self)  # get list of class methods names
-        valid_format_names = [i[len(importer_prefix):] for i in method_names
-                              if i.startswith(importer_prefix)]  # filter them
-        valid_formats = {k: getattr(self, importer_prefix + k)
-                         for k in valid_format_names}
+        valid_format_names = [i[len(importer_prefix):] for i in method_names if i.startswith(importer_prefix)
+                             ]  # filter them
+        valid_formats = {k: getattr(self, importer_prefix + k) for k in valid_format_names}
         return valid_formats
 
     def convert(self, object_format=None, *args):
@@ -372,15 +359,12 @@ class Data(Node):
             func = converters[object_format]
         except KeyError:
             if len(converters.keys()) > 0:
-                raise ValueError(
-                    "The format {} is not implemented for {}. "
-                    "Currently implemented are: {}.".format(
-                        object_format, self.__class__.__name__,
-                        ",".join(converters.keys())))
+                raise ValueError("The format {} is not implemented for {}. "
+                                 "Currently implemented are: {}.".format(object_format, self.__class__.__name__,
+                                                                         ",".join(converters.keys())))
             else:
                 raise ValueError("The format {} is not implemented for {}. "
-                                 "No formats are implemented yet.".format(
-                    object_format, self.__class__.__name__))
+                                 "No formats are implemented yet.".format(object_format, self.__class__.__name__))
 
         return func(*args)
 
@@ -394,10 +378,9 @@ class Data(Node):
         # _prepare_"" with the name of the new format
         exporter_prefix = '_get_object_'
         method_names = dir(self)  # get list of class methods names
-        valid_format_names = [i[len(exporter_prefix):] for i in method_names
-                              if i.startswith(exporter_prefix)]  # filter them
-        valid_formats = {k: getattr(self, exporter_prefix + k)
-                         for k in valid_format_names}
+        valid_format_names = [i[len(exporter_prefix):] for i in method_names if i.startswith(exporter_prefix)
+                             ]  # filter them
+        valid_formats = {k: getattr(self, exporter_prefix + k) for k in valid_format_names}
         return valid_formats
 
     def _validate(self):
@@ -422,7 +405,6 @@ class Data(Node):
         ##     raise ValidationError("License of the object ({}) requires "
         ##                           "attribution, while none is given in the "
         ##                           "description".format(self.source['license']))
-
 
 
 @six.add_metaclass(ABCMeta)

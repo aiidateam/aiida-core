@@ -91,9 +91,8 @@ class AbstractJobCalculation(AbstractCalculation):
     @classproperty
     def _updatable_attributes(cls):
         return super(AbstractJobCalculation, cls)._updatable_attributes + (
-            'job_id', 'scheduler_state', 'scheduler_lastchecktime', 'last_jobinfo', 'remote_workdir',
-            'retrieve_list', 'retrieve_temporary_list', 'retrieve_singlefile_list', 'state'
-        )
+            'job_id', 'scheduler_state', 'scheduler_lastchecktime', 'last_jobinfo', 'remote_workdir', 'retrieve_list',
+            'retrieve_temporary_list', 'retrieve_singlefile_list', 'state')
 
     @classproperty
     def _hash_ignored_attributes(cls):
@@ -108,10 +107,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
     def get_hash(self, ignore_errors=True, ignored_folder_content=('raw_input',), **kwargs):
         return super(AbstractJobCalculation, self).get_hash(
-            ignore_errors=ignore_errors,
-            ignored_folder_content=ignored_folder_content,
-            **kwargs
-        )
+            ignore_errors=ignore_errors, ignored_folder_content=ignored_folder_content, **kwargs)
 
     @classmethod
     def process(cls):
@@ -209,9 +205,7 @@ class AbstractJobCalculation(AbstractCalculation):
         """
         parent_dict = super(AbstractJobCalculation, self)._set_defaults
 
-        parent_dict.update({
-            "parser_name": self._default_parser,
-            "_linkname_retrieved": self._linkname_retrieved})
+        parent_dict.update({"parser_name": self._default_parser, "_linkname_retrieved": self._linkname_retrieved})
 
         return parent_dict
 
@@ -229,9 +223,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
     def _add_outputs_from_cache(self, cache_node):
         self._set_state(calc_states.PARSING)
-        super(AbstractJobCalculation, self)._add_outputs_from_cache(
-            cache_node=cache_node
-        )
+        super(AbstractJobCalculation, self)._add_outputs_from_cache(cache_node=cache_node)
         self._set_state(cache_node.get_state())
 
     def _validate(self):
@@ -248,17 +240,14 @@ class AbstractJobCalculation(AbstractCalculation):
             raise ValidationError("You did not specify a computer")
 
         if self.get_state() not in calc_states:
-            raise ValidationError("Calculation state '{}' is not valid".format(
-                self.get_state()))
+            raise ValidationError("Calculation state '{}' is not valid".format(self.get_state()))
 
         try:
             _ = self.get_parserclass()
         except MissingPluginError:
-            raise ValidationError(
-                "No valid class/implementation found for the parser '{}'. "
-                "Set the parser to None if you do not need an automatic "
-                "parser.".format(self.get_option('parser_name'))
-            )
+            raise ValidationError("No valid class/implementation found for the parser '{}'. "
+                                  "Set the parser to None if you do not need an automatic "
+                                  "parser.".format(self.get_option('parser_name')))
 
         computer = self.get_computer()
         s = computer.get_scheduler()
@@ -269,14 +258,11 @@ class AbstractJobCalculation(AbstractCalculation):
         try:
             _ = s.create_job_resource(**resources)
         except (TypeError, ValueError) as exc:
-            raise ValidationError("Invalid resources for the scheduler of the "
-                                  "specified computer: {}".format(exc))
+            raise ValidationError("Invalid resources for the scheduler of the " "specified computer: {}".format(exc))
 
         if not isinstance(self.get_option('withmpi', only_actually_set=False), bool):
-            raise ValidationError(
-                "withmpi property must be boolean! It in instead {}"
-                "".format(str(type(self.get_option('withmpi'))))
-            )
+            raise ValidationError("withmpi property must be boolean! It in instead {}"
+                                  "".format(str(type(self.get_option('withmpi')))))
 
     def _linking_as_output(self, dest, link_type):
         """
@@ -299,13 +285,11 @@ class AbstractJobCalculation(AbstractCalculation):
         ]
 
         if self.get_state() not in valid_states:
-            raise ModificationNotAllowed(
-                "Can add an output node to a calculation only if it is in one "
-                "of the following states: {}, it is instead {}".format(
-                    valid_states, self.get_state()))
+            raise ModificationNotAllowed("Can add an output node to a calculation only if it is in one "
+                                         "of the following states: {}, it is instead {}".format(
+                                             valid_states, self.get_state()))
 
-        return super(AbstractJobCalculation, self)._linking_as_output(dest,
-                                                                      link_type)
+        return super(AbstractJobCalculation, self)._linking_as_output(dest, link_type)
 
     def _store_raw_input_folder(self, folder_path):
         """
@@ -317,16 +301,12 @@ class AbstractJobCalculation(AbstractCalculation):
         """
         # This function can be called only if the state is TOSUBMIT
         if self.get_state() != calc_states.TOSUBMIT:
-            raise ModificationNotAllowed(
-                "The raw input folder can be stored only if the "
-                "state is TOSUBMIT, it is instead {}".format(
-                    self.get_state()))
+            raise ModificationNotAllowed("The raw input folder can be stored only if the "
+                                         "state is TOSUBMIT, it is instead {}".format(self.get_state()))
 
         # get subfolder and replace with copy
-        _raw_input_folder = self.folder.get_subfolder(
-            _input_subfolder, create=True)
-        _raw_input_folder.replace_with_folder(
-            folder_path, move=False, overwrite=True)
+        _raw_input_folder = self.folder.get_subfolder(_input_subfolder, create=True)
+        _raw_input_folder.replace_with_folder(folder_path, move=False, overwrite=True)
 
     @property
     def _raw_input_folder(self):
@@ -346,12 +326,15 @@ class AbstractJobCalculation(AbstractCalculation):
 
     options = {
         'resources': {
-            'attribute_key': 'jobresource_params',
-            'valid_type': dict,
+            'attribute_key':
+            'jobresource_params',
+            'valid_type':
+            dict,
             'default': {},
-            'help': 'Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '
-                    'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the '
-                    'scheduler for more details.'
+            'help':
+            'Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '
+            'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the '
+            'scheduler for more details.'
         },
         'max_wallclock_seconds': {
             'attribute_key': 'max_wallclock_seconds',
@@ -361,15 +344,21 @@ class AbstractJobCalculation(AbstractCalculation):
             'help': 'Set the wallclock in seconds asked to the scheduler',
         },
         'custom_scheduler_commands': {
-            'attribute_key': 'custom_scheduler_commands',
-            'valid_type': six.string_types,
-            'non_db': True,
-            'required': False,
-            'default': '',
-            'help': 'Set a (possibly multiline) string with the commands that the user wants to manually set for the '
-                    'scheduler. The difference of this option with respect to the `prepend_text` is the position in '
-                    'the scheduler submission file where such text is inserted: with this option, the string is '
-                    'inserted before any non-scheduler command',
+            'attribute_key':
+            'custom_scheduler_commands',
+            'valid_type':
+            six.string_types,
+            'non_db':
+            True,
+            'required':
+            False,
+            'default':
+            '',
+            'help':
+            'Set a (possibly multiline) string with the commands that the user wants to manually set for the '
+            'scheduler. The difference of this option with respect to the `prepend_text` is the position in '
+            'the scheduler submission file where such text is inserted: with this option, the string is '
+            'inserted before any non-scheduler command',
         },
         'queue_name': {
             'attribute_key': 'queue_name',
@@ -408,13 +397,17 @@ class AbstractJobCalculation(AbstractCalculation):
             'help': 'Set the calculation to use mpi',
         },
         'mpirun_extra_params': {
-            'attribute_key': 'mpirun_extra_params',
+            'attribute_key':
+            'mpirun_extra_params',
             'valid_type': (list, tuple),
-            'non_db': True,
-            'required': False,
+            'non_db':
+            True,
+            'required':
+            False,
             'default': [],
-            'help': 'Set the extra params to pass to the mpirun (or equivalent) command after the one provided in '
-                    'computer.mpirun_command. Example: mpirun -np 8 extra_params[0] extra_params[1] ... exec.x',
+            'help':
+            'Set the extra params to pass to the mpirun (or equivalent) command after the one provided in '
+            'computer.mpirun_command. Example: mpirun -np 8 extra_params[0] extra_params[1] ... exec.x',
         },
         'import_sys_environment': {
             'attribute_key': 'import_sys_environment',
@@ -447,22 +440,34 @@ class AbstractJobCalculation(AbstractCalculation):
             'help': 'Set the maximum memory (in KiloBytes) to be asked to the scheduler',
         },
         'prepend_text': {
-            'attribute_key': 'prepend_text',
-            'valid_type': six.string_types[0],
-            'non_db': True,
-            'required': False,
-            'default': '',
-            'help': 'Set the calculation-specific prepend text, which is going to be prepended in the scheduler-job '
-                    'script, just before the code execution',
+            'attribute_key':
+            'prepend_text',
+            'valid_type':
+            six.string_types[0],
+            'non_db':
+            True,
+            'required':
+            False,
+            'default':
+            '',
+            'help':
+            'Set the calculation-specific prepend text, which is going to be prepended in the scheduler-job '
+            'script, just before the code execution',
         },
         'append_text': {
-            'attribute_key': 'append_text',
-            'valid_type': six.string_types[0],
-            'non_db': True,
-            'required': False,
-            'default': '',
-            'help': 'Set the calculation-specific append text, which is going to be appended in the scheduler-job '
-                    'script, just after the code execution',
+            'attribute_key':
+            'append_text',
+            'valid_type':
+            six.string_types[0],
+            'non_db':
+            True,
+            'required':
+            False,
+            'default':
+            '',
+            'help':
+            'Set the calculation-specific append text, which is going to be appended in the scheduler-job '
+            'script, just after the code execution',
         },
         'parser_name': {
             'attribute_key': 'parser',
@@ -547,8 +552,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param str val: the queue name
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         if val is not None:
             self._set_attr('queue_name', six.text_type(val))
 
@@ -558,8 +563,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param str val: the account name
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         if val is not None:
             self._set_attr('account', six.text_type(val))
 
@@ -569,8 +574,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param str val: the quality of service
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         if val is not None:
             self._set_attr('qos', six.text_type(val))
 
@@ -581,8 +586,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param bool val: load the environment if True
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         self._set_attr('import_sys_environment', bool(val))
 
     def get_import_sys_environment(self):
@@ -592,8 +597,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :return: a boolean. If True the system environment will be load.
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         return self.get_attr('import_sys_environment', True)
 
     def set_environment_variables(self, env_vars_dict):
@@ -605,19 +610,16 @@ class AbstractJobCalculation(AbstractCalculation):
         In the remote-computer submission script, it's going to export
         variables as ``export 'keys'='values'``
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         if not isinstance(env_vars_dict, dict):
-            raise ValueError("You have to pass a "
-                             "dictionary to set_environment_variables")
+            raise ValueError("You have to pass a " "dictionary to set_environment_variables")
 
         for k, v in env_vars_dict.items():
             if not isinstance(k, six.string_types) or not isinstance(v, six.string_types):
-                raise ValueError(
-                    "Both the keys and the values of the "
-                    "dictionary passed to set_environment_variables must be "
-                    "strings."
-                )
+                raise ValueError("Both the keys and the values of the "
+                                 "dictionary passed to set_environment_variables must be "
+                                 "strings.")
 
         return self._set_attr('custom_environment_variables', env_vars_dict)
 
@@ -629,8 +631,8 @@ class AbstractJobCalculation(AbstractCalculation):
         Return an empty dictionary if no special environment variables have
         to be set for this calculation.
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         return self.get_attr('custom_environment_variables', {})
 
     def set_priority(self, val):
@@ -639,8 +641,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param val: the values of priority as accepted by the cluster scheduler.
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         self._set_attr('priority', six.text_type(val))
 
     def set_max_memory_kb(self, val):
@@ -649,8 +651,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param val: an integer. Default=None
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         self._set_attr('max_memory_kb', int(val))
 
     def get_max_memory_kb(self):
@@ -659,8 +661,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :return: an integer
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         return self.get_attr('max_memory_kb', None)
 
     def set_max_wallclock_seconds(self, val):
@@ -669,8 +671,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param val: An integer. Default=None
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         self._set_attr('max_wallclock_seconds', int(val))
 
     def get_max_wallclock_seconds(self):
@@ -680,8 +682,8 @@ class AbstractJobCalculation(AbstractCalculation):
         :return: an integer
         :rtype: int
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         return self.get_attr('max_wallclock_seconds', None)
 
     def set_resources(self, resources_dict):
@@ -693,8 +695,8 @@ class AbstractJobCalculation(AbstractCalculation):
         (scheduler type can be found with
         calc.get_computer().get_scheduler_type() )
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         # Note: for the time being, resources are only validated during the
         # 'store' because here we are not sure that a Computer has been set
         # yet (in particular, if both computer and resources are set together
@@ -707,8 +709,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param val: A boolean. Default=True
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         self._set_attr('withmpi', val)
 
     def get_withmpi(self):
@@ -717,8 +719,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :return: a boolean. Default=True.
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         return self.get_attr('withmpi', True)
 
     def get_resources(self, full=False):
@@ -730,16 +732,15 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :return: a dictionary
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         resources_dict = self.get_attr('jobresource_params', {})
 
         if full:
             computer = self.get_computer()
             def_cpus_machine = computer.get_default_mpiprocs_per_machine()
             if def_cpus_machine is not None:
-                resources_dict[
-                    'default_mpiprocs_per_machine'] = def_cpus_machine
+                resources_dict['default_mpiprocs_per_machine'] = def_cpus_machine
 
         return resources_dict
 
@@ -749,8 +750,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :return: a string or None.
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         return self.get_attr('queue_name', None)
 
     def get_account(self):
@@ -759,8 +760,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :return: a string or None.
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         return self.get_attr('account', None)
 
     def get_qos(self):
@@ -769,8 +770,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :return: a string or None.
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         return self.get_attr('qos', None)
 
     def get_priority(self):
@@ -779,8 +780,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :return: a string or None
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         return self.get_attr('priority', None)
 
     def get_prepend_text(self):
@@ -789,8 +790,8 @@ class AbstractJobCalculation(AbstractCalculation):
         which is going to be prepended in the scheduler-job script, just before
         the code execution.
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         return self.get_attr("prepend_text", "")
 
     def set_prepend_text(self, val):
@@ -803,8 +804,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param val: a (possibly multiline) string
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         self._set_attr("prepend_text", six.text_type(val))
 
     def get_append_text(self):
@@ -813,8 +814,8 @@ class AbstractJobCalculation(AbstractCalculation):
         which is going to be appended in the scheduler-job script, just after
         the code execution.
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         return self.get_attr("append_text", "")
 
     def set_append_text(self, val):
@@ -825,8 +826,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :param val: a (possibly multiline) string
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         self._set_attr("append_text", six.text_type(val))
 
     def set_custom_scheduler_commands(self, val):
@@ -839,8 +840,8 @@ class AbstractJobCalculation(AbstractCalculation):
         inserted: with this method, the string is inserted before any
         non-scheduler command.
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         self._set_attr("custom_scheduler_commands", six.text_type(val))
 
     def get_custom_scheduler_commands(self):
@@ -853,8 +854,8 @@ class AbstractJobCalculation(AbstractCalculation):
         :return: the custom scheduler command, or an empty string if no
           custom command was defined.
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         return self.get_attr("custom_scheduler_commands", "")
 
     def get_mpirun_extra_params(self):
@@ -866,8 +867,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         Return an empty list if no parameters have been defined.
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         return self.get_attr("mpirun_extra_params", [])
 
     def set_mpirun_extra_params(self, extra_params):
@@ -880,8 +881,8 @@ class AbstractJobCalculation(AbstractCalculation):
         :param extra_params: must be a list of strings, one for each
             extra parameter
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         if extra_params is None:
             try:
                 self._del_attr("mpirun_extra_params")
@@ -891,12 +892,10 @@ class AbstractJobCalculation(AbstractCalculation):
             return
 
         if not isinstance(extra_params, (list, tuple)):
-            raise ValueError("You must pass a list of strings to "
-                             "set_mpirun_extra_params")
+            raise ValueError("You must pass a list of strings to " "set_mpirun_extra_params")
         for param in extra_params:
             if not isinstance(param, six.string_types):
-                raise ValueError("You must pass a list of strings to "
-                                 "set_mpirun_extra_params")
+                raise ValueError("You must pass a list of strings to " "set_mpirun_extra_params")
 
         self._set_attr("mpirun_extra_params", list(extra_params))
 
@@ -908,8 +907,8 @@ class AbstractJobCalculation(AbstractCalculation):
         :param parser: a string identifying the module of the parser.
               Such module must be located within the folder 'aiida/parsers/plugins'
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
         self._set_attr('parser', parser)
 
     def get_parser_name(self):
@@ -920,8 +919,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
         :return: a string.
         """
-        warnings.warn(
-            'explicit option getter/setter methods are deprecated, use get_option and set_option', DeprecationWarning)
+        warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
+                      DeprecationWarning)
 
         return self.get_attr('parser', None)
 
@@ -942,13 +941,11 @@ class AbstractJobCalculation(AbstractCalculation):
         valid_states = [calc_states.NEW]
 
         if self.get_state() not in valid_states:
-            raise ModificationNotAllowed(
-                "Can add an input link to a JobCalculation only if it is in "
-                "one of the following states: {}, it is instead {}".format(
-                    valid_states, self.get_state()))
+            raise ModificationNotAllowed("Can add an input link to a JobCalculation only if it is in "
+                                         "one of the following states: {}, it is instead {}".format(
+                                             valid_states, self.get_state()))
 
-        return super(AbstractJobCalculation, self).add_link_from(src, label,
-                                                                 link_type)
+        return super(AbstractJobCalculation, self).add_link_from(src, label, link_type)
 
     def _replace_link_from(self, src, label, link_type=LinkType.INPUT):
         """
@@ -962,14 +959,11 @@ class AbstractJobCalculation(AbstractCalculation):
         valid_states = [calc_states.NEW]
 
         if self.get_state() not in valid_states:
-            raise ModificationNotAllowed(
-                "Can replace an input link to a Jobalculation only if it is in "
-                "one of the following states: {}, it is instead {}".format(
-                    valid_states, self.get_state()))
+            raise ModificationNotAllowed("Can replace an input link to a Jobalculation only if it is in "
+                                         "one of the following states: {}, it is instead {}".format(
+                                             valid_states, self.get_state()))
 
-        return super(AbstractJobCalculation, self)._replace_link_from(src,
-                                                                      label,
-                                                                      link_type)
+        return super(AbstractJobCalculation, self)._replace_link_from(src, label, link_type)
 
     def _remove_link_from(self, label):
         """
@@ -980,10 +974,9 @@ class AbstractJobCalculation(AbstractCalculation):
         valid_states = [calc_states.NEW]
 
         if self.get_state() not in valid_states:
-            raise ModificationNotAllowed(
-                "Can remove an input link to a calculation only if it is in one "
-                "of the following states:\n   {}\n it is instead {}".format(
-                    valid_states, self.get_state()))
+            raise ModificationNotAllowed("Can remove an input link to a calculation only if it is in one "
+                                         "of the following states:\n   {}\n it is instead {}".format(
+                                             valid_states, self.get_state()))
 
         return super(AbstractJobCalculation, self)._remove_link_from(label)
 
@@ -1059,12 +1052,8 @@ class AbstractJobCalculation(AbstractCalculation):
         :return: a boolean
         """
         return self.get_state() in [
-            calc_states.TOSUBMIT,
-            calc_states.SUBMITTING,
-            calc_states.WITHSCHEDULER,
-            calc_states.COMPUTED,
-            calc_states.RETRIEVING,
-            calc_states.PARSING
+            calc_states.TOSUBMIT, calc_states.SUBMITTING, calc_states.WITHSCHEDULER, calc_states.COMPUTED,
+            calc_states.RETRIEVING, calc_states.PARSING
         ]
 
     @property
@@ -1087,17 +1076,15 @@ class AbstractJobCalculation(AbstractCalculation):
         :return: True if the calculation has failed, False otherwise
         :rtype: bool
         """
-        return self.get_state() in [calc_states.SUBMISSIONFAILED,
-                                    calc_states.RETRIEVALFAILED,
-                                    calc_states.PARSINGFAILED,
-                                    calc_states.FAILED]
+        return self.get_state() in [
+            calc_states.SUBMISSIONFAILED, calc_states.RETRIEVALFAILED, calc_states.PARSINGFAILED, calc_states.FAILED
+        ]
 
     def _set_remote_workdir(self, remote_workdir):
         if self.get_state() != calc_states.SUBMITTING:
-            raise ModificationNotAllowed(
-                "Cannot set the remote workdir if you are not "
-                "submitting the calculation (current state is "
-                "{})".format(self.get_state()))
+            raise ModificationNotAllowed("Cannot set the remote workdir if you are not "
+                                         "submitting the calculation (current state is "
+                                         "{})".format(self.get_state()))
         self._set_attr('remote_workdir', remote_workdir)
 
     def _get_remote_workdir(self):
@@ -1111,9 +1098,8 @@ class AbstractJobCalculation(AbstractCalculation):
 
     def _set_retrieve_list(self, retrieve_list):
         if self.get_state() not in (calc_states.TOSUBMIT, calc_states.NEW):
-            raise ModificationNotAllowed(
-                "Cannot set the retrieve_list for a calculation that is neither "
-                "NEW nor TOSUBMIT (current state is {})".format(self.get_state()))
+            raise ModificationNotAllowed("Cannot set the retrieve_list for a calculation that is neither "
+                                         "NEW nor TOSUBMIT (current state is {})".format(self.get_state()))
 
         # accept format of: [ 'remotename',
         #                     ['remotepath','localpath',0] ]
@@ -1124,20 +1110,13 @@ class AbstractJobCalculation(AbstractCalculation):
             raise ValueError("You should pass a list/tuple")
         for item in retrieve_list:
             if not isinstance(item, six.string_types):
-                if (not (isinstance(item, (tuple, list))) or
-                        len(item) != 3):
-                    raise ValueError(
-                        "You should pass a list containing either "
-                        "strings or lists/tuples"
-                    )
-                if (not (isinstance(item[0], six.string_types)) or
-                        not (isinstance(item[1], six.string_types)) or
+                if (not (isinstance(item, (tuple, list))) or len(item) != 3):
+                    raise ValueError("You should pass a list containing either " "strings or lists/tuples")
+                if (not (isinstance(item[0], six.string_types)) or not (isinstance(item[1], six.string_types)) or
                         not (isinstance(item[2], int))):
-                    raise ValueError(
-                        "You have to pass a list (or tuple) of "
-                        "lists, with remotepath(string), "
-                        "localpath(string) and depth (integer)"
-                    )
+                    raise ValueError("You have to pass a list (or tuple) of "
+                                     "lists, with remotepath(string), "
+                                     "localpath(string) and depth (integer)")
 
         self._set_attr('retrieve_list', retrieve_list)
 
@@ -1156,9 +1135,8 @@ class AbstractJobCalculation(AbstractCalculation):
         as the parsing has been completed.
         """
         if self.get_state() not in (calc_states.TOSUBMIT, calc_states.NEW):
-            raise ModificationNotAllowed(
-                'Cannot set the retrieve_temporary_list for a calculation that is neither '
-                'NEW nor TOSUBMIT (current state is {})'.format(self.get_state()))
+            raise ModificationNotAllowed('Cannot set the retrieve_temporary_list for a calculation that is neither '
+                                         'NEW nor TOSUBMIT (current state is {})'.format(self.get_state()))
 
         if not (isinstance(retrieve_temporary_list, (tuple, list))):
             raise ValueError('You should pass a list/tuple')
@@ -1166,18 +1144,12 @@ class AbstractJobCalculation(AbstractCalculation):
         for item in retrieve_temporary_list:
             if not isinstance(item, six.string_types):
                 if (not (isinstance(item, (tuple, list))) or len(item) != 3):
-                    raise ValueError(
-                        'You should pass a list containing either '
-                        'strings or lists/tuples'
-                    )
+                    raise ValueError('You should pass a list containing either ' 'strings or lists/tuples')
 
-                if (not (isinstance(item[0], six.string_types)) or
-                        not (isinstance(item[1], six.string_types)) or
+                if (not (isinstance(item[0], six.string_types)) or not (isinstance(item[1], six.string_types)) or
                         not (isinstance(item[2], int))):
-                    raise ValueError(
-                        'You have to pass a list (or tuple) of lists, with remotepath(string), '
-                        'localpath(string) and depth (integer)'
-                    )
+                    raise ValueError('You have to pass a list (or tuple) of lists, with remotepath(string), '
+                                     'localpath(string) and depth (integer)')
 
         self._set_attr('retrieve_temporary_list', retrieve_temporary_list)
 
@@ -1195,16 +1167,13 @@ class AbstractJobCalculation(AbstractCalculation):
         Set the list of information for the retrieval of singlefiles
         """
         if self.get_state() not in (calc_states.TOSUBMIT, calc_states.NEW):
-            raise ModificationNotAllowed(
-                "Cannot set the retrieve_singlefile_list for a calculation that is neither "
-                "NEW nor TOSUBMIT (current state is {})".format(self.get_state()))
+            raise ModificationNotAllowed("Cannot set the retrieve_singlefile_list for a calculation that is neither "
+                                         "NEW nor TOSUBMIT (current state is {})".format(self.get_state()))
 
         if not isinstance(retrieve_singlefile_list, (tuple, list)):
-            raise ValueError("You have to pass a list (or tuple) of lists of "
-                             "strings as retrieve_singlefile_list")
+            raise ValueError("You have to pass a list (or tuple) of lists of " "strings as retrieve_singlefile_list")
         for j in retrieve_singlefile_list:
-            if (not (isinstance(j, (tuple, list))) or
-                    not (all(isinstance(i, six.string_types) for i in j))):
+            if (not (isinstance(j, (tuple, list))) or not (all(isinstance(i, six.string_types) for i in j))):
                 raise ValueError("You have to pass a list (or tuple) of lists "
                                  "of strings as retrieve_singlefile_list")
         self._set_attr('retrieve_singlefile_list', retrieve_singlefile_list)
@@ -1225,11 +1194,9 @@ class AbstractJobCalculation(AbstractCalculation):
         Always set as a string
         """
         if self.get_state() != calc_states.SUBMITTING:
-            raise ModificationNotAllowed(
-                "Cannot set the job id if you are not "
-                "submitting the calculation (current state is "
-                "{})".format(self.get_state())
-            )
+            raise ModificationNotAllowed("Cannot set the job id if you are not "
+                                         "submitting the calculation (current state is "
+                                         "{})".format(self.get_state()))
 
         return self._set_attr('job_id', six.text_type(job_id))
 
@@ -1310,11 +1277,19 @@ class AbstractJobCalculation(AbstractCalculation):
     }
 
     @classmethod
-    def _list_calculations(
-            cls, states=None, past_days=None, groups=None, all_users=False, pks=tuple(),
-            relative_ctime=True, with_scheduler_state=False, order_by=None, limit=None, filters=None,
-            projections=('pk', 'state', 'ctime', 'sched', 'computer', 'type'), raw=False
-    ):
+    def _list_calculations(cls,
+                           states=None,
+                           past_days=None,
+                           groups=None,
+                           all_users=False,
+                           pks=tuple(),
+                           relative_ctime=True,
+                           with_scheduler_state=False,
+                           order_by=None,
+                           limit=None,
+                           filters=None,
+                           projections=('pk', 'state', 'ctime', 'sched', 'computer', 'type'),
+                           raw=False):
         """
         Print a description of the AiiDA calculations.
 
@@ -1421,11 +1396,7 @@ class AbstractJobCalculation(AbstractCalculation):
         calc_list_header = [projection_label_dict[p] for p in projections]
 
         qb = QueryBuilder()
-        qb.append(
-            cls,
-            filters=calculation_filters,
-            tag='calculation'
-        )
+        qb.append(cls, filters=calculation_filters, tag='calculation')
         if group_filters is not None:
             qb.append(type='group', filters=group_filters, group_of='calculation')
 
@@ -1466,8 +1437,7 @@ class AbstractJobCalculation(AbstractCalculation):
                 for i in range(100):
                     res = next(results_generator)
 
-                    row = cls._get_calculation_info_row(
-                        res, projections, now if relative_ctime else None)
+                    row = cls._get_calculation_info_row(res, projections, now if relative_ctime else None)
 
                     # Build the row of information
                     calc_list_data.append(row)
@@ -1525,13 +1495,12 @@ class AbstractJobCalculation(AbstractCalculation):
                 time = d['calculation'][proj]
                 if times_since:
                     dt = timezone.delta(time, times_since)
-                    d['calculation'][proj] = str_timedelta(
-                        dt, negative_to_zero=True, max_num_fields=1)
+                    d['calculation'][proj] = str_timedelta(dt, negative_to_zero=True, max_num_fields=1)
                 else:
                     d['calculation'][proj] = " ".join([
                         timezone.localtime(time).isoformat().split('T')[0],
-                        timezone.localtime(time).isoformat().split('T')[
-                            1].split('.')[0].rsplit(":", 1)[0]])
+                        timezone.localtime(time).isoformat().split('T')[1].split('.')[0].rsplit(":", 1)[0]
+                    ])
             except (KeyError, ValueError):
                 pass
 
@@ -1570,11 +1539,13 @@ class AbstractJobCalculation(AbstractCalculation):
         return result
 
     @classmethod
-    def _get_all_with_state(
-            cls, state, computer=None, user=None,
-            only_computer_user_pairs=False,
-            only_enabled=True, limit=None
-    ):
+    def _get_all_with_state(cls,
+                            state,
+                            computer=None,
+                            user=None,
+                            only_computer_user_pairs=False,
+                            only_enabled=True,
+                            limit=None):
         """
         Filter all calculations with a given state.
 
@@ -1623,9 +1594,7 @@ class AbstractJobCalculation(AbstractCalculation):
             try:
                 computerfilter.update({'id': {'==': computer.id}})
             except AttributeError as e:
-                raise Exception(
-                    "{} is not a valid computer\n{}".format(computer, e)
-                )
+                raise Exception("{} is not a valid computer\n{}".format(computer, e))
 
         if user is None:
             pass
@@ -1641,8 +1610,7 @@ class AbstractJobCalculation(AbstractCalculation):
         qb = QueryBuilder()
         qb.append(type="computer", tag='computer', filters=computerfilter)
         qb.append(cls, filters=calcfilter, tag='calc', has_computer='computer')
-        qb.append(type="user", tag='user', filters=userfilter,
-                  creator_of="calc")
+        qb.append(type="user", tag='user', filters=userfilter, creator_of="calc")
 
         if only_computer_user_pairs:
             qb.add_projection("computer", "*")
@@ -1702,10 +1670,8 @@ class AbstractJobCalculation(AbstractCalculation):
         import warnings
         from aiida.work.job_processes import ContinueJobCalculation
         from aiida.work.launch import submit
-        warnings.warn(
-            'directly creating and submitting calculations is deprecated, use the {}\nSee:{}'.format(
-                'ProcessBuilder', DEPRECATION_DOCS_URL), DeprecationWarning
-        )
+        warnings.warn('directly creating and submitting calculations is deprecated, use the {}\nSee:{}'.format(
+            'ProcessBuilder', DEPRECATION_DOCS_URL), DeprecationWarning)
 
         submit(ContinueJobCalculation, _calc=self)
 
@@ -1766,14 +1732,13 @@ class AbstractJobCalculation(AbstractCalculation):
                 else:
                     raise MultipleObjectsError("More than one output node "
                                                "with label '{}' for calc with pk= {}".format(
-                        retrieved_linkname, self.pk))
+                                                   retrieved_linkname, self.pk))
 
         if retrieved_node is None:
             return None
 
         if not isinstance(retrieved_node, FolderData):
-            raise TypeError("The retrieved node of calc with pk= {} is not of "
-                            "type FolderData".format(self.pk))
+            raise TypeError("The retrieved node of calc with pk= {} is not of " "type FolderData".format(self.pk))
 
         return retrieved_node
 
@@ -1810,9 +1775,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
         from six.moves import cStringIO as StringIO
 
-        from aiida.common.exceptions import (NotExistent,
-                                             PluginInternalError,
-                                             ValidationError)
+        from aiida.common.exceptions import (NotExistent, PluginInternalError, ValidationError)
         from aiida.scheduler.datastructures import JobTemplate
         from aiida.common.utils import validate_list_of_string_tuples
         from aiida.orm.computer import Computer
@@ -1822,8 +1785,7 @@ class AbstractJobCalculation(AbstractCalculation):
         from aiida.orm.utils import load_node
 
         computer = self.get_computer()
-        inputdict = self.get_inputs_dict(
-            only_in_db=not use_unstored_links, link_type=LinkType.INPUT)
+        inputdict = self.get_inputs_dict(only_in_db=not use_unstored_links, link_type=LinkType.INPUT)
 
         codes = [_ for _ in inputdict.values() if isinstance(_, Code)]
 
@@ -1833,10 +1795,8 @@ class AbstractJobCalculation(AbstractCalculation):
         for code in codes:
             if code.is_local():
                 if code.get_local_executable() in folder.get_content_list():
-                    raise PluginInternalError(
-                        "The plugin created a file {} that is also "
-                        "the executable name!".format(
-                            code.get_local_executable()))
+                    raise PluginInternalError("The plugin created a file {} that is also "
+                                              "the executable name!".format(code.get_local_executable()))
 
         # I create the job template to pass to the scheduler
         job_tmpl = JobTemplate()
@@ -1855,21 +1815,16 @@ class AbstractJobCalculation(AbstractCalculation):
             job_tmpl.sched_join_files = False
 
         # Set retrieve path, add also scheduler STDOUT and STDERR
-        retrieve_list = (calcinfo.retrieve_list
-                         if calcinfo.retrieve_list is not None
-                         else [])
-        if (job_tmpl.sched_output_path is not None and
-                job_tmpl.sched_output_path not in retrieve_list):
+        retrieve_list = (calcinfo.retrieve_list if calcinfo.retrieve_list is not None else [])
+        if (job_tmpl.sched_output_path is not None and job_tmpl.sched_output_path not in retrieve_list):
             retrieve_list.append(job_tmpl.sched_output_path)
         if not job_tmpl.sched_join_files:
-            if (job_tmpl.sched_error_path is not None and
-                    job_tmpl.sched_error_path not in retrieve_list):
+            if (job_tmpl.sched_error_path is not None and job_tmpl.sched_error_path not in retrieve_list):
                 retrieve_list.append(job_tmpl.sched_error_path)
         self._set_retrieve_list(retrieve_list)
 
         retrieve_singlefile_list = (calcinfo.retrieve_singlefile_list
-                                    if calcinfo.retrieve_singlefile_list is not None
-                                    else [])
+                                    if calcinfo.retrieve_singlefile_list is not None else [])
         # a validation on the subclasses of retrieve_singlefile_list
         SinglefileData = DataFactory('singlefile')
         for _, subclassname, _ in retrieve_singlefile_list:
@@ -1877,13 +1832,12 @@ class AbstractJobCalculation(AbstractCalculation):
             if not issubclass(FileSubclass, SinglefileData):
                 raise PluginInternalError("[presubmission of calc {}] "
                                           "retrieve_singlefile_list subclass problem: "
-                                          "{} is not subclass of SinglefileData".format(
-                    self.pk, FileSubclass.__name__))
+                                          "{} is not subclass of SinglefileData".format(self.pk, FileSubclass.__name__))
         self._set_retrieve_singlefile_list(retrieve_singlefile_list)
 
         # Handle the retrieve_temporary_list
-        retrieve_temporary_list = (
-            calcinfo.retrieve_temporary_list if calcinfo.retrieve_temporary_list is not None else [])
+        retrieve_temporary_list = (calcinfo.retrieve_temporary_list
+                                   if calcinfo.retrieve_temporary_list is not None else [])
         self._set_retrieve_temporary_list(retrieve_temporary_list)
 
         # the if is done so that if the method returns None, this is
@@ -1892,17 +1846,15 @@ class AbstractJobCalculation(AbstractCalculation):
         # - most importantly, skips the cases in which one of the methods
         #   would return None, in which case the join method would raise
         #   an exception
-        job_tmpl.prepend_text = "\n\n".join(_ for _ in
-                                            [computer.get_prepend_text()] +
-                                            [code.get_prepend_text() for code in codes] +
-                                            [calcinfo.prepend_text,
-                                             self.get_option('prepend_text')] if _)
+        job_tmpl.prepend_text = "\n\n".join(
+            _ for _ in [computer.get_prepend_text()] + [code.get_prepend_text() for code in codes] +
+            [calcinfo.prepend_text, self.get_option('prepend_text')] if _)
 
-        job_tmpl.append_text = "\n\n".join(_ for _ in
-                                           [self.get_option('append_text'),
-                                            calcinfo.append_text,
-                                            code.get_append_text(),
-                                            computer.get_append_text()] if _)
+        job_tmpl.append_text = "\n\n".join(
+            _ for _ in
+            [self.get_option('append_text'), calcinfo.append_text,
+             code.get_append_text(),
+             computer.get_append_text()] if _)
 
         # Set resources, also with get_default_mpiprocs_per_machine
         resources = self.get_option('resources')
@@ -1911,26 +1863,22 @@ class AbstractJobCalculation(AbstractCalculation):
             resources['default_mpiprocs_per_machine'] = def_cpus_machine
         job_tmpl.job_resource = s.create_job_resource(**resources)
 
-        subst_dict = {'tot_num_mpiprocs':
-                          job_tmpl.job_resource.get_tot_num_mpiprocs()}
+        subst_dict = {'tot_num_mpiprocs': job_tmpl.job_resource.get_tot_num_mpiprocs()}
 
         for k, v in job_tmpl.job_resource.items():
             subst_dict[k] = v
         mpi_args = [arg.format(**subst_dict) for arg in computer.get_mpirun_command()]
         extra_mpirun_params = self.get_option('mpirun_extra_params')  # this is the same for all codes in the same calc
 
-
         # set the codes_info
         if not isinstance(calcinfo.codes_info, (list, tuple)):
-            raise PluginInternalError("codes_info passed to CalcInfo must be a "
-                                      "list of CalcInfo objects")
+            raise PluginInternalError("codes_info passed to CalcInfo must be a " "list of CalcInfo objects")
 
         codes_info = []
         for code_info in calcinfo.codes_info:
 
             if not isinstance(code_info, CodeInfo):
-                raise PluginInternalError("Invalid codes_info, must be a list "
-                                          "of CodeInfo objects")
+                raise PluginInternalError("Invalid codes_info, must be a list " "of CodeInfo objects")
 
             if code_info.code_uuid is None:
                 raise PluginInternalError("CalcInfo should have "
@@ -1948,14 +1896,11 @@ class AbstractJobCalculation(AbstractCalculation):
                     this_withmpi = self.get_option('withmpi')
 
             if this_withmpi:
-                this_argv = (mpi_args + extra_mpirun_params +
-                             [this_code.get_execname()] +
-                             (code_info.cmdline_params if
-                              code_info.cmdline_params is not None else []))
+                this_argv = (mpi_args + extra_mpirun_params + [this_code.get_execname()] +
+                             (code_info.cmdline_params if code_info.cmdline_params is not None else []))
             else:
-                this_argv = [this_code.get_execname()] + (
-                    code_info.cmdline_params if
-                    code_info.cmdline_params is not None else [])
+                this_argv = [this_code.get_execname()] + (code_info.cmdline_params
+                                                          if code_info.cmdline_params is not None else [])
 
             this_stdin_name = code_info.stdin_name
             this_stdout_name = code_info.stdout_name
@@ -1974,8 +1919,7 @@ class AbstractJobCalculation(AbstractCalculation):
             try:
                 job_tmpl.codes_run_mode = calcinfo.codes_run_mode
             except KeyError:
-                raise PluginInternalError("Need to set the order of the code "
-                                          "execution (parallel or serial?)")
+                raise PluginInternalError("Need to set the order of the code " "execution (parallel or serial?)")
         else:
             job_tmpl.codes_run_mode = code_run_modes.SERIAL
         ########################################################################
@@ -2029,38 +1973,30 @@ class AbstractJobCalculation(AbstractCalculation):
         this_pk = self.pk if self.pk is not None else "[UNSTORED]"
         local_copy_list = calcinfo.local_copy_list
         try:
-            validate_list_of_string_tuples(local_copy_list,
-                                           tuple_length=2)
+            validate_list_of_string_tuples(local_copy_list, tuple_length=2)
         except ValidationError as exc:
-            raise PluginInternalError(
-                "[presubmission of calc {}] "
-                "local_copy_list format problem: {}".format(this_pk, exc))
+            raise PluginInternalError("[presubmission of calc {}] "
+                                      "local_copy_list format problem: {}".format(this_pk, exc))
 
         remote_copy_list = calcinfo.remote_copy_list
         try:
-            validate_list_of_string_tuples(remote_copy_list,
-                                           tuple_length=3)
+            validate_list_of_string_tuples(remote_copy_list, tuple_length=3)
         except ValidationError as exc:
-            raise PluginInternalError(
-                "[presubmission of calc {}] "
-                "remote_copy_list format problem: {}".
-                    format(this_pk, exc))
+            raise PluginInternalError("[presubmission of calc {}] "
+                                      "remote_copy_list format problem: {}".format(this_pk, exc))
 
-        for (remote_computer_uuid, remote_abs_path,
-             dest_rel_path) in remote_copy_list:
+        for (remote_computer_uuid, remote_abs_path, dest_rel_path) in remote_copy_list:
             try:
                 remote_computer = self.backend.computers.get(uuid=remote_computer_uuid)
             except NotExistent:
-                raise PluginInternalError(
-                    "[presubmission of calc {}] "
-                    "The remote copy requires a computer with UUID={}"
-                    "but no such computer was found in the "
-                    "database".format(this_pk, remote_computer_uuid))
+                raise PluginInternalError("[presubmission of calc {}] "
+                                          "The remote copy requires a computer with UUID={}"
+                                          "but no such computer was found in the "
+                                          "database".format(this_pk, remote_computer_uuid))
             if os.path.isabs(dest_rel_path):
-                raise PluginInternalError(
-                    "[presubmission of calc {}] "
-                    "The destination path of the remote copy "
-                    "is absolute! ({})".format(this_pk, dest_rel_path))
+                raise PluginInternalError("[presubmission of calc {}] "
+                                          "The destination path of the remote copy "
+                                          "is absolute! ({})".format(this_pk, dest_rel_path))
 
         return calcinfo, script_filename
 
@@ -2105,8 +2041,7 @@ class AbstractJobCalculation(AbstractCalculation):
         folder.create()
 
         if subfolder_name is None:
-            subfolder_basename = timezone.localtime(timezone.now()).strftime(
-                '%Y%m%d')
+            subfolder_basename = timezone.localtime(timezone.now()).strftime('%Y%m%d')
         else:
             subfolder_basename = subfolder_name
 
@@ -2117,9 +2052,7 @@ class AbstractJobCalculation(AbstractCalculation):
         counter = 0
         while True:
             counter += 1
-            subfolder_path = os.path.join(folder.abspath,
-                                          "{}-{:05d}".format(subfolder_basename,
-                                                             counter))
+            subfolder_path = os.path.join(folder.abspath, "{}-{:05d}".format(subfolder_basename, counter))
             # This check just tried to avoid to try to create the folder
             # (hoping that a test of existence is faster than a
             # test and failure in directory creation)
@@ -2141,9 +2074,7 @@ class AbstractJobCalculation(AbstractCalculation):
                 # permissions
                 raise
 
-        subfolder = folder.get_subfolder(
-            os.path.relpath(subfolder_path, folder.abspath),
-            reset_limit=True)
+        subfolder = folder.get_subfolder(os.path.relpath(subfolder_path, folder.abspath), reset_limit=True)
 
         # I use the local transport where possible, to be as similar
         # as possible to a real submission
@@ -2151,8 +2082,7 @@ class AbstractJobCalculation(AbstractCalculation):
         with t:
             t.chdir(subfolder.abspath)
 
-            calcinfo, script_filename = self._presubmit(
-                subfolder, use_unstored_links=True)
+            calcinfo, script_filename = self._presubmit(subfolder, use_unstored_links=True)
 
             code = self.get_code()
 
@@ -2170,37 +2100,28 @@ class AbstractJobCalculation(AbstractCalculation):
                 t.put(src_abs_path, dest_rel_path)
 
             if remote_copy_list:
-                with io.open(os.path.join(subfolder.abspath,
-                                       '_aiida_remote_copy_list.txt'),
-                          'w', encoding='utf8') as f:
-                    for (remote_computer_uuid, remote_abs_path,
-                         dest_rel_path) in remote_copy_list:
+                with io.open(os.path.join(subfolder.abspath, '_aiida_remote_copy_list.txt'), 'w', encoding='utf8') as f:
+                    for (remote_computer_uuid, remote_abs_path, dest_rel_path) in remote_copy_list:
                         try:
                             remote_computer = self.backend.computers.get(uuid=remote_computer_uuid)
                         except NotExistent:
                             remote_computer = "[unknown]"
-                        f.write("* I WOULD REMOTELY COPY "
+                        f.write(u"* I WOULD REMOTELY COPY "
                                 "FILES/DIRS FROM COMPUTER {} (UUID {}) "
-                                "FROM {} TO {}\n".format(remote_computer.name,
-                                                         remote_computer_uuid,
-                                                         remote_abs_path,
+                                "FROM {} TO {}\n".format(remote_computer.name, remote_computer_uuid, remote_abs_path,
                                                          dest_rel_path))
 
             if remote_symlink_list:
-                with io.open(os.path.join(subfolder.abspath,
-                                       '_aiida_remote_symlink_list.txt'),
-                          'w', encoding='utf8') as f:
-                    for (remote_computer_uuid, remote_abs_path,
-                         dest_rel_path) in remote_symlink_list:
+                with io.open(
+                        os.path.join(subfolder.abspath, '_aiida_remote_symlink_list.txt'), 'w', encoding='utf8') as f:
+                    for (remote_computer_uuid, remote_abs_path, dest_rel_path) in remote_symlink_list:
                         try:
                             remote_computer = self.backend.computers.get(uuid=remote_computer_uuid)
                         except NotExistent:
                             remote_computer = "[unknown]"
-                        f.write("* I WOULD PUT SYMBOLIC LINKS FOR "
+                        f.write(u"* I WOULD PUT SYMBOLIC LINKS FOR "
                                 "FILES/DIRS FROM COMPUTER {} (UUID {}) "
-                                "FROM {} TO {}\n".format(remote_computer.name,
-                                                         remote_computer_uuid,
-                                                         remote_abs_path,
+                                "FROM {} TO {}\n".format(remote_computer.name, remote_computer_uuid, remote_abs_path,
                                                          dest_rel_path))
 
         return subfolder, script_filename
@@ -2224,8 +2145,7 @@ class AbstractJobCalculation(AbstractCalculation):
             return None
 
         try:
-            outfile_content = retrieved_node.get_file_content(
-                self._SCHED_OUTPUT_FILE)
+            outfile_content = retrieved_node.get_file_content(self._SCHED_OUTPUT_FILE)
         except (NotExistent):
             # Return None if no file is found
             return None
@@ -2251,8 +2171,7 @@ class AbstractJobCalculation(AbstractCalculation):
             return None
 
         try:
-            errfile_content = retrieved_node.get_file_content(
-                self._SCHED_ERROR_FILE)
+            errfile_content = retrieved_node.get_file_content(self._SCHED_ERROR_FILE)
         except (NotExistent):
             # Return None if no file is found
             return None
@@ -2332,8 +2251,8 @@ class CalculationResultManager(object):
         try:
             return self._parser.get_result(name)
         except AttributeError:
-            raise AttributeError("Parser '{}' did not provide a result '{}'"
-                                 .format(self._parser.__class__.__name__, name))
+            raise AttributeError("Parser '{}' did not provide a result '{}'".format(self._parser.__class__.__name__,
+                                                                                    name))
 
     def __getitem__(self, name):
         """
@@ -2344,5 +2263,4 @@ class CalculationResultManager(object):
         try:
             return self._parser.get_result(name)
         except AttributeError:
-            raise KeyError("Parser '{}' did not provide a result '{}'"
-                           .format(self._parser.__class__.__name__, name))
+            raise KeyError("Parser '{}' did not provide a result '{}'".format(self._parser.__class__.__name__, name))

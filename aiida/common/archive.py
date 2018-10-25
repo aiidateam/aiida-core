@@ -239,8 +239,7 @@ class Archive(object):
             return json.load(handle)
 
 
-def extract_zip(infile, folder, nodes_export_subfolder="nodes",
-                silent=False):
+def extract_zip(infile, folder, nodes_export_subfolder="nodes", silent=False):
     """
     Extract the nodes to be imported from a zip file.
 
@@ -261,10 +260,8 @@ def extract_zip(infile, folder, nodes_export_subfolder="nodes",
             if not zip.namelist():
                 raise ValueError("The zip file is empty.")
 
-            zip.extract(path=folder.abspath,
-                   member='metadata.json')
-            zip.extract(path=folder.abspath,
-                   member='data.json')
+            zip.extract(path=folder.abspath, member='metadata.json')
+            zip.extract(path=folder.abspath, member='data.json')
 
             if not silent:
                 print("EXTRACTING NODE DATA...")
@@ -274,16 +271,14 @@ def extract_zip(infile, folder, nodes_export_subfolder="nodes",
                 # the subfolder!
                 # TODO: better check such that there are no .. in the
                 # path; use probably the folder limit checks
-                if not membername.startswith(nodes_export_subfolder+os.sep):
+                if not membername.startswith(nodes_export_subfolder + os.sep):
                     continue
-                zip.extract(path=folder.abspath,
-                            member=membername)
+                zip.extract(path=folder.abspath, member=membername)
     except zipfile.BadZipfile:
-        raise ValueError("The input file format for import is not valid (not"
-                         " a zip file)")
+        raise ValueError("The input file format for import is not valid (not" " a zip file)")
 
-def extract_tar(infile, folder, nodes_export_subfolder="nodes",
-                silent=False):
+
+def extract_tar(infile, folder, nodes_export_subfolder="nodes", silent=False):
     """
     Extract the nodes to be imported from a (possibly zipped) tar file.
 
@@ -301,10 +296,8 @@ def extract_tar(infile, folder, nodes_export_subfolder="nodes",
     try:
         with tarfile.open(infile, "r:*", format=tarfile.PAX_FORMAT) as tar:
 
-            tar.extract(path=folder.abspath,
-                   member=tar.getmember('metadata.json'))
-            tar.extract(path=folder.abspath,
-                   member=tar.getmember('data.json'))
+            tar.extract(path=folder.abspath, member=tar.getmember('metadata.json'))
+            tar.extract(path=folder.abspath, member=tar.getmember('data.json'))
 
             if not silent:
                 print("EXTRACTING NODE DATA...")
@@ -312,25 +305,23 @@ def extract_tar(infile, folder, nodes_export_subfolder="nodes",
             for member in tar.getmembers():
                 if member.isdev():
                     # safety: skip if character device, block device or FIFO
-                    print("WARNING, device found inside the import file: {}"
-                          .format(member.name), file=sys.stderr)
+                    print("WARNING, device found inside the import file: {}".format(member.name), file=sys.stderr)
                     continue
                 if member.issym() or member.islnk():
                     # safety: in export, I set dereference=True therefore
                     # there should be no symbolic or hard links.
-                    print("WARNING, link found inside the import file: {}"
-                          .format(member.name), file=sys.stderr)
+                    print("WARNING, link found inside the import file: {}".format(member.name), file=sys.stderr)
                     continue
                 # Check that we are only exporting nodes within
                 # the subfolder!
                 # TODO: better check such that there are no .. in the
                 # path; use probably the folder limit checks
-                if not member.name.startswith(nodes_export_subfolder+os.sep):
+                if not member.name.startswith(nodes_export_subfolder + os.sep):
                     continue
-                tar.extract(path=folder.abspath,
-                            member=member)
+                tar.extract(path=folder.abspath, member=member)
     except tarfile.ReadError:
         raise ValueError("The input file format for import is not valid (1)")
+
 
 def extract_tree(infile, folder, silent=False):
     """
@@ -342,27 +333,25 @@ def extract_tree(infile, folder, silent=False):
     """
     import os
 
-    def add_files(args,path,files):
+    def add_files(args, path, files):
         folder = args['folder']
         root = args['root']
         for f in files:
-            fullpath = os.path.join(path,f)
-            relpath = os.path.relpath(fullpath,root)
+            fullpath = os.path.join(path, f)
+            relpath = os.path.relpath(fullpath, root)
             if os.path.isdir(fullpath):
                 if os.path.dirname(relpath) != '':
-                    folder.get_subfolder(os.path.dirname(relpath) +
-                                         os.sep, create=True)
+                    folder.get_subfolder(os.path.dirname(relpath) + os.sep, create=True)
             elif not os.path.isfile(fullpath):
                 continue
             if os.path.dirname(relpath) != '':
-                folder.get_subfolder(os.path.dirname(relpath)+os.sep,
-                                     create=True)
-            folder.insert_path(os.path.abspath(fullpath),relpath)
+                folder.get_subfolder(os.path.dirname(relpath) + os.sep, create=True)
+            folder.insert_path(os.path.abspath(fullpath), relpath)
 
-    os.path.walk(infile,add_files,{'folder': folder, 'root': infile})
+    os.path.walk(infile, add_files, {'folder': folder, 'root': infile})
 
-def extract_cif(infile, folder, nodes_export_subfolder="nodes",
-                aiida_export_subfolder="aiida", silent=False):
+
+def extract_cif(infile, folder, nodes_export_subfolder="nodes", aiida_export_subfolder="aiida", silent=False):
     """
     Extract the nodes to be imported from a TCOD CIF file. TCOD CIFs,
     exported by AiiDA, may contain an importable subset of AiiDA database,
@@ -384,16 +373,16 @@ def extract_cif(infile, folder, nodes_export_subfolder="nodes",
     from aiida.tools.dbexporters.tcod import decode_textfield
 
     values = CifFile.ReadCif(infile)
-    values = values[list(values.keys())[0]] # taking the first datablock in CIF
+    values = values[list(values.keys())[0]]  # taking the first datablock in CIF
 
-    for i in range(len(values['_tcod_file_id'])-1):
+    for i in range(len(values['_tcod_file_id']) - 1):
         name = values['_tcod_file_name'][i]
-        if not name.startswith(aiida_export_subfolder+os.sep):
+        if not name.startswith(aiida_export_subfolder + os.sep):
             continue
-        dest_path = os.path.relpath(name,aiida_export_subfolder)
+        dest_path = os.path.relpath(name, aiida_export_subfolder)
         if name.endswith(os.sep):
             if not os.path.exists(folder.get_abs_path(dest_path)):
-                folder.get_subfolder(folder.get_abs_path(dest_path),create=True)
+                folder.get_subfolder(folder.get_abs_path(dest_path), create=True)
             continue
         contents = values['_tcod_file_contents'][i]
         if contents == '?' or contents == '.':
@@ -403,13 +392,13 @@ def extract_cif(infile, folder, nodes_export_subfolder="nodes",
         encoding = values['_tcod_file_content_encoding'][i]
         if encoding == '.':
             encoding = None
-        contents = decode_textfield(contents,encoding)
+        contents = decode_textfield(contents, encoding)
         if os.path.dirname(dest_path) != '':
-            folder.get_subfolder(os.path.dirname(dest_path)+os.sep,create=True)
-        with io.open(folder.get_abs_path(dest_path),'w', encoding='utf8') as f:
-            f.write(contents)
-            f.flush()
-        md5  = values['_tcod_file_md5sum'][i]
+            folder.get_subfolder(os.path.dirname(dest_path) + os.sep, create=True)
+        with io.open(folder.get_abs_path(dest_path), 'w', encoding='utf8') as fhandle:
+            fhandle.write(contents)
+            fhandle.flush()
+        md5 = values['_tcod_file_md5sum'][i]
         if md5 is not None:
             if md5_file(folder.get_abs_path(dest_path)) != md5:
                 raise ValidationError("MD5 sum for extracted file '{}' is "

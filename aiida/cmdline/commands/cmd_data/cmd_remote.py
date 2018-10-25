@@ -64,8 +64,8 @@ def remote_cat(datum, path):
         with tempfile.NamedTemporaryFile(delete=False) as tmpf:
             tmpf.close()
             datum.getfile(path, tmpf.name)
-            with io.open(tmpf.name, encoding='utf8') as fobj:
-                sys.stdout.write(fobj.read())
+            with io.open(tmpf.name, encoding='utf8') as fhandle:
+                sys.stdout.write(fhandle.read())
     except IOError as err:
         echo.echo_critical('{}: {}'.format(err.errno, str(err)))
 

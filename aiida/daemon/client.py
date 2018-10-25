@@ -7,6 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+Controls the daemon
+"""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -146,8 +149,8 @@ class DaemonClient(object):
                 raise RuntimeError('daemon is running so port file should have been there but could not read it')
         else:
             port = self.get_available_port()
-            with io.open(self.circus_port_file, 'w', encoding='utf8') as handle:
-                handle.write(str(port))
+            with io.open(self.circus_port_file, 'w', encoding='utf8') as fhandle:
+                fhandle.write(six.text_type(port))
 
             return port
 
@@ -175,14 +178,14 @@ class DaemonClient(object):
         else:
 
             # The SOCKET_DIRECTORY is already set, a temporary directory was already created and the same should be used
-            if self._SOCKET_DIRECTORY is not None:
-                return self._SOCKET_DIRECTORY
+            if self._socket_directory is not None:
+                return self._socket_directory
 
             socket_dir_path = tempfile.mkdtemp()
-            with io.open(self.circus_socket_file, 'w', encoding='utf8') as handle:
-                handle.write(socket_dir_path)
+            with io.open(self.circus_socket_file, 'w', encoding='utf8') as fhandle:
+                fhandle.write(six.text_type(socket_dir_path))
 
-            self._SOCKET_DIRECTORY = socket_dir_path
+            self._socket_directory = socket_dir_path
             return socket_dir_path
 
     def get_daemon_pid(self):
@@ -223,7 +226,8 @@ class DaemonClient(object):
             else:
                 raise
 
-    def get_available_port(self):
+    @classmethod
+    def get_available_port(cls):
         """
         Get an available port from the operating system
 
@@ -321,7 +325,7 @@ class DaemonClient(object):
         :return: CircucClient instance
         """
         from circus.client import CircusClient
-        return CircusClient(endpoint=self.get_controller_endpoint(), timeout=self._DAEMON_TIMEOUT)
+        return CircusClient(endpoint=self.get_controller_endpoint(), timeout=self._daemon_timeout)
 
     def call_client(self, command):
         """
@@ -353,12 +357,7 @@ class DaemonClient(object):
 
         :return: the client call response
         """
-        command = {
-            'command': 'status',
-            'properties': {
-                'name': self.daemon_name
-            }
-        }
+        command = {'command': 'status', 'properties': {'name': self.daemon_name}}
 
         return self.call_client(command)
 
@@ -368,12 +367,7 @@ class DaemonClient(object):
 
         :return: the client call response
         """
-        command = {
-            'command': 'stats',
-            'properties': {
-                'name': self.daemon_name
-            }
-        }
+        command = {'command': 'stats', 'properties': {'name': self.daemon_name}}
 
         return self.call_client(command)
 
@@ -383,10 +377,7 @@ class DaemonClient(object):
 
         :return: the client call response
         """
-        command = {
-            'command': 'dstats',
-            'properties': {}
-        }
+        command = {'command': 'dstats', 'properties': {}}
 
         return self.call_client(command)
 
@@ -397,13 +388,7 @@ class DaemonClient(object):
         :param number: the number of workers to add
         :return: the client call response
         """
-        command = {
-            'command': 'incr',
-            'properties': {
-                'name': self.daemon_name,
-                'nb': number
-            }
-        }
+        command = {'command': 'incr', 'properties': {'name': self.daemon_name, 'nb': number}}
 
         return self.call_client(command)
 
@@ -414,13 +399,7 @@ class DaemonClient(object):
         :param number: the number of workers to remove
         :return: the client call response
         """
-        command = {
-            'command': 'decr',
-            'properties': {
-                'name': self.daemon_name,
-                'nb': number
-            }
-        }
+        command = {'command': 'decr', 'properties': {'name': self.daemon_name, 'nb': number}}
 
         return self.call_client(command)
 
@@ -431,12 +410,7 @@ class DaemonClient(object):
         :param wait: boolean to indicate whether to wait for the result of the command
         :return: the client call response
         """
-        command = {
-            'command': 'quit',
-            'properties': {
-                'waiting': wait
-            }
-        }
+        command = {'command': 'quit', 'properties': {'waiting': wait}}
 
         result = self.call_client(command)
 
@@ -452,12 +426,6 @@ class DaemonClient(object):
         :param wait: boolean to indicate whether to wait for the result of the command
         :return: the client call response
         """
-        command = {
-            'command': 'restart',
-            'properties': {
-                'name': self.daemon_name,
-                'waiting': wait
-            }
-        }
+        command = {'command': 'restart', 'properties': {'name': self.daemon_name, 'waiting': wait}}
 
         return self.call_client(command)

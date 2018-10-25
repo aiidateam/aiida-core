@@ -38,8 +38,8 @@ class TestRemoteData(AiidaTestCase):
         self.remote = RemoteData(computer=self.computer)
         self.remote.set_remote_path(self.tmp_path)
 
-        with io.open(os.path.join(self.tmp_path, 'file.txt'), 'w', encoding='utf8') as handle:
-            handle.write('test string')
+        with io.open(os.path.join(self.tmp_path, 'file.txt'), 'w', encoding='utf8') as fhandle:
+            fhandle.write(u'test string')
 
         self.remote.set_computer(self.computer)
         self.remote.store()

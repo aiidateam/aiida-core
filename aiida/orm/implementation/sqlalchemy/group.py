@@ -30,7 +30,7 @@ from . import utils
 
 class Group(AbstractGroup):
     def __init__(self, **kwargs):
-        from aiida.orm.backend import construct_backend
+        from aiida.orm.backends import construct_backend
         super(Group, self).__init__()
 
         self._backend = construct_backend()

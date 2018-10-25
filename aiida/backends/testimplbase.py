@@ -15,6 +15,7 @@ from abc import ABCMeta, abstractmethod
 import six
 
 from aiida.common.exceptions import InternalError
+from aiida.orm import Computer
 
 
 @six.add_metaclass(ABCMeta)
@@ -76,13 +77,14 @@ class AiidaTestImplementation(object):
         """
         This method inserts default data into the database.
         """
-        self.computer = self.backend.computers.create(
+        self.computer = Computer(
             name='localhost',
             hostname='localhost',
             transport_type='local',
             scheduler_type='pbspro',
-            workdir='/tmp/aiida')
-        self.computer.store()
+            workdir='/tmp/aiida',
+            backend=self.backend
+        ).store()
 
     def get_computer(self):
         """

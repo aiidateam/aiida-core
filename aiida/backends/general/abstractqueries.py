@@ -20,7 +20,7 @@ class AbstractQueryManager(object):
     def __init__(self, backend):
         """
         :param backend: The AiiDA backend
-        :type backend: :class:`aiida.orm.Backend`
+        :type backend: :class:`aiida.orm.implementation.backends.Backend`
         """
         self._backend = backend
 
@@ -235,7 +235,7 @@ class AbstractQueryManager(object):
         from aiida.orm.data.array.bands import BandsData
         from aiida.orm.data.structure import StructureData
         from aiida.orm.user import User
-        from aiida.orm.backend import construct_backend
+        from aiida.orm.backends import construct_backend
 
         backend = construct_backend()
 

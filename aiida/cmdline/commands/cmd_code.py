@@ -252,7 +252,7 @@ def rename(ctx, code, label):
 @with_dbenv()
 def code_list(computer, input_plugin, all_entries, all_users, show_owner):
     """List the codes in the database."""
-    from aiida.orm.backend import construct_backend
+    from aiida.orm.backends import construct_backend
     backend = construct_backend()
 
     from aiida.orm.querybuilder import QueryBuilder

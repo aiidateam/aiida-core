@@ -115,7 +115,7 @@ def user_list(color):
     """
     from aiida.common.utils import get_configured_user_email
     from aiida.common.exceptions import ConfigurationError
-    from aiida.orm.backend import construct_backend
+    from aiida.orm.backends import construct_backend
 
     backend = construct_backend()
 

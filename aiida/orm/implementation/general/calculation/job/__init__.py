@@ -1317,7 +1317,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
         from aiida.orm.querybuilder import QueryBuilder
         from tabulate import tabulate
-        from aiida.orm.backend import construct_backend
+        from aiida.orm.backends import construct_backend
 
         projection_label_dict = {
             'pk': 'PK',

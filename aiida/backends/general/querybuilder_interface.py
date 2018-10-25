@@ -13,12 +13,9 @@ from __future__ import absolute_import
 from abc import abstractmethod, ABCMeta
 import six
 
+
 @six.add_metaclass(ABCMeta)
 class QueryBuilderInterface:
-    @abstractmethod
-    def __init__(self, *args, **kwargs):
-        pass
-
     @abstractmethod
     def Node(self):
         """
@@ -128,11 +125,13 @@ class QueryBuilderInterface:
         :returns: An instance of sqlalchemy.sql.elements.BinaryExpression
         """
         pass
+
     @abstractmethod
     def get_projectable_attribute(
             self, alias, column_name, attrpath,
             cast=None, **kwargs):
         pass
+
     @abstractmethod
     def get_aiida_res(self, key, res):
         """
@@ -145,8 +144,6 @@ class QueryBuilderInterface:
         :returns: an aiida-compatible instance
         """
         pass
-
-
 
     @abstractmethod
     def yield_per(self, batch_size):
@@ -175,6 +172,7 @@ class QueryBuilderInterface:
         """
 
         pass
+
     @abstractmethod
     def iterall(self, batch_size=100):
         """
@@ -188,5 +186,3 @@ class QueryBuilderInterface:
         :returns: An iterator over all the results of a list of dictionaries.
         """
         pass
-
-

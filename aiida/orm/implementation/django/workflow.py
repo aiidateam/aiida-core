@@ -51,7 +51,7 @@ class Workflow(AbstractWorkflow):
                              the given uuid.
         """
         from aiida.backends.djsite.db.models import DbWorkflow
-        from aiida.orm.backend import construct_backend
+        from aiida.orm.backends import construct_backend
 
         self._backend = construct_backend()
         self._to_be_stored = True
@@ -579,7 +579,7 @@ class Workflow(AbstractWorkflow):
 
 def kill_all():
     from aiida.backends.djsite.db.models import DbWorkflow
-    from aiida.orm.backend import construct_backend
+    from aiida.orm.backends import construct_backend
     backend = construct_backend()
 
     q_object = Q(user=backend.users.get_automatic_user().id)

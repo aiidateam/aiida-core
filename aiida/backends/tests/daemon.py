@@ -26,7 +26,7 @@ class TestDaemonBasic(AiidaTestCase):
 
     def test_workflow_fast_kill(self):
         from aiida.cmdline.commands.workflow import Workflow as WfCmd
-        from aiida.orm.backend import construct_backend
+        from aiida.orm.backends import construct_backend
 
         backend = construct_backend()
 

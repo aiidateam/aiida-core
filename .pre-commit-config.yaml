@@ -143,6 +143,7 @@
         aiida/backends/tests/orm/utils/loaders.py|
         aiida/backends/tests/parsers.py|
         aiida/backends/tests/query.py|
+        aiida/restapi/common/utils.py|
         aiida/backends/tests/tcodexporter.py|
         aiida/backends/tests/test_caching_config.py|
         aiida/backends/tests/test_plugin_loader.py|

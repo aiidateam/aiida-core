@@ -29,14 +29,16 @@ UUID_REF = 'd55082b6-76dc-426b-af89-0e08b59524d2'
 
 ########################## Classes #####################
 class CustomJSONEncoder(JSONEncoder):
+
     """
     Custom json encoder for serialization.
     This has to be provided to the Flask app in order to replace the default
     encoder.
     """
 
-    # pylink: disable=arguments-differ,method-hidden
     def default(self, obj):
+        # pylink: disable=arguments-differ,method-hidden
+
         """
         Override default method from JSONEncoder to change serializer
         :param obj: Object e.g. dict, list that will be serialized
@@ -63,7 +65,7 @@ class CustomJSONEncoder(JSONEncoder):
         return JSONEncoder.default(self, obj)
 
 
-class DatetimePrecision():
+class DatetimePrecision(object):
     # pylint: disable=too-few-public-methods
     """
     A simple class which stores a datetime object with its precision. No
@@ -76,6 +78,7 @@ class DatetimePrecision():
     """
 
     def __init__(self, dtobj, precision):
+        """ Constructor to check valid datetime object and precision """
 
         if not isinstance(dtobj, datetime):
             raise TypeError("dtobj argument has to be a datetime object")
@@ -152,7 +155,9 @@ class Utils(object):
         return [f for f in path.split('/') if f]
 
     def parse_path(self, path_string, parse_pk_uuid=None):
-        # pylint: disable=inconsistent-return-statements,too-many-return-statements,too-many-branches
+        # pylint: disable=too-many-return-statements,too-many-branches
+        # pylint: disable=inconsistent-return-statements
+
         """
         Takes the path and parse it checking its validity. Does not parse "io",
         "content" fields. I do not check the validity of the path, since I assume
@@ -247,7 +252,7 @@ class Utils(object):
                          page=None,
                          query_type=None,
                          is_querystring_defined=False):
-        # pylint: disable=fixme,no-self-use,too-many-arguments
+        # pylint: disable=fixme,no-self-use,too-many-arguments,too-many-branches
         """
         Performs various checks on the consistency of the request.
         Add here all the checks that you want to do, except validity of the page

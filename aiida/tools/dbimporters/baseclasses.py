@@ -191,7 +191,7 @@ class DbEntry(object):
     _license = None
 
     def __init__(self, db_name=None, db_uri=None, id=None,
-                 version=None, lic=None, extras={}, uri=None):
+                 version=None, extras={}, uri=None):
         """
         Sets the basic parameters for the database entry:
 
@@ -212,7 +212,7 @@ class DbEntry(object):
             'extras': extras,
             'uri': uri,
             'source_md5': None,
-            'license': lic,
+            'license': self._license,
         }
         self._contents = None
 

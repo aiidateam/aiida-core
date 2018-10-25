@@ -33,7 +33,6 @@ class MatProjImporter(DbImporter):
         :param api_key: the API key to be used to access MAPI
         """
         self.setup_db(api_key=api_key)
-        self._mpr = MPRester(self._api_key)
 
     def setup_db(self, **kwargs):
         """
@@ -51,6 +50,7 @@ class MatProjImporter(DbImporter):
                                  'or set the environment variable PMG_MAPI_KEY to your API key.')
         self._api_key = api_key
         self._verify_api_key()
+        self._mpr = MPRester(self._api_key)
 
     def _verify_api_key(self):
         """
@@ -116,7 +116,7 @@ class MatProjImporter(DbImporter):
             raise ValueError('Unsupported properties: {}'.format(properties))
 
         results = []
-        properties_list = ['structure', 'material_id', 'cif']
+        properties_list = ['material_id', 'cif']
         for entry in self.find(query, properties_list):
             results.append(entry)
         search_results = MatProjSearchResults(results, return_class=MatProjCifEntry)
@@ -137,6 +137,8 @@ class MatProjCifEntry(CifEntry, DbEntry):  # pylint: disable=abstract-method
     """
     A Materials Project entry class which extends the DbEntry class with a CifEntry class.
     """
+
+    _license = 'Materials Project'
 
     def __init__(self, url, **kwargs):
         """
@@ -160,7 +162,6 @@ class MatProjSearchResults(DbSearchResults):  # pylint: disable=abstract-method
     _db_name = 'Materials Project'
     _db_uri = 'https://materialsproject.org'
     _material_base_url = 'https://materialsproject.org/materials/'
-    _license = 'Unknown'
     _version = str(datetime.datetime.now())
     _return_class = MatProjCifEntry
 
@@ -179,7 +180,6 @@ class MatProjSearchResults(DbSearchResults):  # pylint: disable=abstract-method
             'db_name': self._db_name,
             'db_uri': self._db_uri,
             'id': result_dict['material_id'],
-            'lic': self._license,
             'uri': self._get_url(result_dict),
             'version': self._version,
         }

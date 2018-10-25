@@ -107,7 +107,7 @@ extras_require = {
         'sqlalchemy-diff==0.1.3',
         'coverage==4.5.1',
         'codecov==2.0.15',
-        'futures==3.2.0',
+        'futures; python_version=="2.7"',
     ],
     'dev_precommit': [
         'pre-commit==1.8.2',

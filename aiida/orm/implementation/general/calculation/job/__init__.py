@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 import abc
@@ -1934,7 +1935,7 @@ class AbstractJobCalculation(AbstractCalculation):
                 raise PluginInternalError("CalcInfo should have "
                                           "the information of the code "
                                           "to be launched")
-            this_code = load_node(code_info.code_uuid, sub_class=Code)
+            this_code = load_node(code_info.code_uuid, sub_classes=(Code,))
 
             this_withmpi = code_info.withmpi  # to decide better how to set the default
             if this_withmpi is None:

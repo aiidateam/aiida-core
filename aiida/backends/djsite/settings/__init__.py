@@ -13,5 +13,8 @@ This module contains all settings for the server instance of aiida,
 and modules used by the server.
 
 """
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 
 

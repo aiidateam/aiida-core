@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 from aiida.tools.dbimporters.plugins.cod import (CodDbImporter,
                                                  CodSearchResults, CodEntry)

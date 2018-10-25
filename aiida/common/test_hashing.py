@@ -11,6 +11,8 @@
 Unittests for aiida.common.hashing:make_hash with hardcoded hash values
 """
 
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 import unittest
 from datetime import datetime

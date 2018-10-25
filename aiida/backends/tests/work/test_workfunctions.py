@@ -7,6 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 from aiida.common.links import LinkType
 from aiida.backends.testbase import AiidaTestCase
@@ -141,6 +143,7 @@ class TestWf(AiidaTestCase):
         """
         Simple workfunction that defines a positional argument and keyword arguments
         """
+        INPUT = 1
         ARGS_INPUT = (Int(DEFAULT_INT),)
         KWARGS_INPUT = {'b': Int(INPUT)}
 

@@ -7,7 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""The computer backend abstract classes"""
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
+
 import abc
 import logging
 import os
@@ -25,8 +29,15 @@ class ComputerCollection(Collection):
     """The collection of Computer entries."""
 
     @abc.abstractmethod
-    def create(self, name, hostname, description='', transport_type='', scheduler_type='', workdir=None,
+    def create(self,
+               name,
+               hostname,
+               description='',
+               transport_type='',
+               scheduler_type='',
+               workdir=None,
                enabled_state=True):
+        # pylint: disable=too-many-arguments
         """
         Create new a computer
 
@@ -35,7 +46,7 @@ class ComputerCollection(Collection):
         """
         pass
 
-    def get(self, id=None, name=None, uuid=None):
+    def get(self, id=None, name=None, uuid=None):  # pylint: disable=redefined-builtin, invalid-name
         """
         Get a computer from one of it's unique identifiers
 
@@ -46,9 +57,7 @@ class ComputerCollection(Collection):
         :return: the corresponding computer
         :rtype: :class:`aiida.orm.Computer`
         """
-        from .querybuilder import QueryBuilder
-
-        qb = QueryBuilder()
+        query = self.backend.query_builder()
         filters = {}
         if id is not None:
             filters['id'] = {'==': id}
@@ -57,8 +66,8 @@ class ComputerCollection(Collection):
         if uuid is not None:
             filters['uuid'] = {'==': uuid}
 
-        qb.append(Computer, filters=filters)
-        res = [_[0] for _ in qb.all()]
+        query.append(Computer, filters=filters)
+        res = [_[0] for _ in query.all()]
         if not res:
             raise exceptions.NotExistent("No computer with filter '{}' found".format(filters))
         if len(res) > 1:
@@ -74,7 +83,7 @@ class ComputerCollection(Collection):
         pass
 
     @abc.abstractmethod
-    def delete(self, id):
+    def delete(self, id):  # pylint: disable=invalid-name, redefined-builtin
         """ Delete the computer with the given id """
         pass
 
@@ -94,7 +103,12 @@ class Computer(CollectionEntry):
 
     In the plugin, also set the _plugin_type_string, to be set in the DB in the 'type' field.
     """
+    # pylint: disable=too-many-public-methods
+
     _logger = logging.getLogger(__name__)
+
+    PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL = 'minimum_scheduler_poll_interval'  # pylint: disable=invalid-name
+    PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL__DEFAULT = 10.  # pylint: disable=invalid-name
 
     @staticmethod
     def get_schema():
@@ -154,7 +168,9 @@ class Computer(CollectionEntry):
                         "doc": "Subclass to support the PBSPro scheduler"
                     },
                     "sge": {
-                        "doc": "Support for the Sun Grid Engine scheduler and its variants/forks (Son of Grid Engine, Oracle Grid Engine, ...)"
+                        "doc":
+                        "Support for the Sun Grid Engine scheduler and its variants/forks (Son of Grid Engine, "
+                        "Oracle Grid Engine, ...)"
                     },
                     "slurm": {
                         "doc": "Support for the SLURM scheduler (http://slurm.schedmd.com/)."
@@ -177,10 +193,13 @@ class Computer(CollectionEntry):
                 "type": "str",
                 "valid_choices": {
                     "local": {
-                        "doc": "Support copy and command execution on the same host on which AiiDA is running via direct file copy and execution commands."
+                        "doc":
+                        "Support copy and command execution on the same host on which AiiDA is running via direct file "
+                        "copy and execution commands."
                     },
                     "ssh": {
-                        "doc": "Support connection, command execution and data transfer to remote computers via SSH+SFTP."
+                        "doc":
+                        "Support connection, command execution and data transfer to remote computers via SSH+SFTP."
                     }
                 }
             },
@@ -206,7 +225,7 @@ class Computer(CollectionEntry):
         pass
 
     @abc.abstractproperty
-    def id(self):
+    def id(self):  # pylint: disable=invalid-name
         """
         Return the ID in the DB.
         """
@@ -260,9 +279,8 @@ class Computer(CollectionEntry):
         Validates the hostname.
         """
         if not isinstance(enabled_state, bool):
-            raise exceptions.ValidationError(
-                "Invalid value '{}' for the enabled state, must "
-                "be a boolean".format(str(enabled_state)))
+            raise exceptions.ValidationError("Invalid value '{}' for the enabled state, must "
+                                             "be a boolean".format(str(enabled_state)))
 
     @classmethod
     def _description_validator(cls, description):
@@ -315,8 +333,7 @@ class Computer(CollectionEntry):
         try:
             convertedwd = workdir.format(username="test")
         except KeyError as exc:
-            raise exceptions.ValidationError(
-                "In workdir there is an unknown replacement field {}".format(exc.args[0]))
+            raise exceptions.ValidationError("In workdir there is an unknown replacement field {}".format(exc.args[0]))
         except ValueError as exc:
             raise exceptions.ValidationError("Error in the string: '{}'".format(exc))
 
@@ -328,8 +345,7 @@ class Computer(CollectionEntry):
         Validates the mpirun_command variable. MUST be called after properly
         checking for a valid scheduler.
         """
-        if not isinstance(mpirun_cmd, (tuple, list)) or not (
-                all(isinstance(i, six.string_types) for i in mpirun_cmd)):
+        if not isinstance(mpirun_cmd, (tuple, list)) or not all(isinstance(i, six.string_types) for i in mpirun_cmd):
             raise exceptions.ValidationError("the mpirun_command must be a list of strings")
 
         try:
@@ -344,8 +360,7 @@ class Computer(CollectionEntry):
             for arg in mpirun_cmd:
                 arg.format(**subst)
         except KeyError as exc:
-            raise exceptions.ValidationError(
-                "In workdir there is an unknown replacement field {}".format(exc.args[0]))
+            raise exceptions.ValidationError("In workdir there is an unknown replacement field {}".format(exc.args[0]))
         except ValueError as exc:
             raise exceptions.ValidationError("Error in the string: '{}'".format(exc))
 
@@ -387,11 +402,10 @@ class Computer(CollectionEntry):
             return
 
         if not isinstance(def_cpus_per_machine, six.integer_types) or def_cpus_per_machine <= 0:
-            raise exceptions.ValidationError(
-                "Invalid value for default_mpiprocs_per_machine, "
-                "must be a positive integer, or an empty "
-                "string if you do not want to provide a "
-                "default value.")
+            raise exceptions.ValidationError("Invalid value for default_mpiprocs_per_machine, "
+                                             "must be a positive integer, or an empty "
+                                             "string if you do not want to provide a "
+                                             "default value.")
 
     @abc.abstractmethod
     def copy(self):
@@ -451,32 +465,51 @@ class Computer(CollectionEntry):
         """
         pass
 
-    def _del_property(self, k, raise_exception=True):
+    def _del_property(self, name, raise_exception=True):
+        """
+        Delete a property from this computer
+
+        :param name: the name of the property
+        :param raise_exception: if True raise if the property does not exist, otherwise return None
+        """
         olddata = self._get_metadata()
         try:
-            del olddata[k]
+            del olddata[name]
         except KeyError:
             if raise_exception:
-                raise AttributeError("'{}' property not found".format(k))
+                raise AttributeError("'{}' property not found".format(name))
             else:
                 # Do not reset the metadata, it is not necessary
                 return
         self._set_metadata(olddata)
 
-    def _set_property(self, k, v):
+    def _set_property(self, name, value):
+        """
+        Set a property on this computer
+
+        :param name: the property name
+        :param value: the new value
+        """
         olddata = self._get_metadata()
-        olddata[k] = v
+        olddata[name] = value
         self._set_metadata(olddata)
 
-    def _get_property(self, k, *args):
+    def _get_property(self, name, *args):
+        """
+        Get a property of this computer
+
+        :param name: the property name
+        :param args: additional arguments
+        :return: the property value
+        """
         if len(args) > 1:
             raise TypeError("_get_property expected at most 2 arguments")
         olddata = self._get_metadata()
         try:
-            return olddata[k]
+            return olddata[name]
         except KeyError:
-            if len(args) == 0:
-                raise AttributeError("'{}' property not found".format(k))
+            if not args:
+                raise AttributeError("'{}' property not found".format(name))
             elif len(args) == 1:
                 return args[0]
 
@@ -499,16 +532,14 @@ class Computer(CollectionEntry):
 
         I also provide a sensible default that may be ok in many cases.
         """
-        return self._get_property("mpirun_command",
-                                  ["mpirun", "-np", "{tot_num_mpiprocs}"])
+        return self._get_property("mpirun_command", ["mpirun", "-np", "{tot_num_mpiprocs}"])
 
     def set_mpirun_command(self, val):
         """
         Set the mpirun command. It must be a list of strings (you can use
         string.split() if you have a single, space-separated string).
         """
-        if not isinstance(val, (tuple, list)) or not (
-                all(isinstance(i, six.string_types) for i in val)):
+        if not isinstance(val, (tuple, list)) or not all(isinstance(i, six.string_types) for i in val):
             raise TypeError("the mpirun_command must be a list of strings")
         self._set_property("mpirun_command", val)
 
@@ -530,6 +561,27 @@ class Computer(CollectionEntry):
             if not isinstance(def_cpus_per_machine, six.integer_types):
                 raise TypeError("def_cpus_per_machine must be an integer (or None)")
         self._set_property("default_mpiprocs_per_machine", def_cpus_per_machine)
+
+    def get_minimum_job_poll_interval(self):
+        """
+        Get the minimum interval between subsequent requests to update the list
+        of jobs currently running on this computer.
+
+        :return: The minimum interval (in seconds)
+        :rtype: float
+        """
+        return self._get_property(self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL,
+                                  self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL__DEFAULT)
+
+    def set_minimum_job_poll_interval(self, interval):
+        """
+        Set the minimum interval between subsequent requests to update the list
+        of jobs currently running on this computer.
+
+        :param interval: The minimum interval in seconds
+        :type interval: float
+        """
+        self._set_property(self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL, interval)
 
     @abc.abstractmethod
     def get_transport_params(self):
@@ -564,9 +616,8 @@ class Computer(CollectionEntry):
             authinfo = backend.authinfos.get(self, backend.users.get_automatic_user())
         else:
             authinfo = backend.authinfos.get(self, user)
-        transport = authinfo.get_transport()
 
-        return transport
+        return authinfo.get_transport()
 
     @abc.abstractmethod
     def get_workdir(self):
@@ -623,18 +674,41 @@ class Computer(CollectionEntry):
 
     @abc.abstractmethod
     def get_description(self):
+        """
+        Get the description for this computer
+
+        :return: the description
+        :rtype: str
+        """
         pass
 
     @abc.abstractmethod
     def set_description(self, val):
+        """
+        Set the description for this computer
+
+        :param val: the new description
+        :type val: str
+        """
         pass
 
     @abc.abstractmethod
     def get_calculations_on_computer(self):
+        """
+        Get the calculations corresponding to this computer
+
+        :return: a list of calculations on this computer
+        """
         pass
 
     @abc.abstractmethod
     def is_enabled(self):
+        """
+        Is the computer enabled
+
+        :return: True if enabled, False otherwise
+        :rtype: bool
+        """
         pass
 
     def get_authinfo(self, user):
@@ -651,6 +725,12 @@ class Computer(CollectionEntry):
         return self.backend.authinfos.get(computer=self, user=user)
 
     def is_user_configured(self, user):
+        """
+        Check if the user is configured on this computer
+
+        :param user: the user to check
+        :return: True if enabled, False otherwise
+        """
         try:
             self.get_authinfo(user)
             return True
@@ -658,6 +738,12 @@ class Computer(CollectionEntry):
             return False
 
     def is_user_enabled(self, user):
+        """
+        Check if a user is enabled to run on this computer
+
+        :param user: the user to check
+        :return: True if enabled, False otherwise
+        """
         try:
             authinfo = self.get_authinfo(user)
             return authinfo.enabled
@@ -668,25 +754,57 @@ class Computer(CollectionEntry):
 
     @abc.abstractmethod
     def set_enabled_state(self, enabled):
-        pass
+        """
+        Set the enable state for this computer
+
+        :param enabled: True if enabled, False otherwise
+        """
 
     @abc.abstractmethod
     def get_scheduler_type(self):
+        """
+        Get the scheduler type for this computer
+
+        :return: the scheduler ype
+        :rtype: str
+        """
         pass
 
     @abc.abstractmethod
     def set_scheduler_type(self, val):
+        """
+        Set the scheduler type for this computer
+
+        :param val: the new scheduler type
+        :type val: str
+        """
         pass
 
     @abc.abstractmethod
     def get_transport_type(self):
-        pass
+        """
+        Get the transport type for this computer
+
+        :return: the transport type
+        :rtype: str
+        """
 
     @abc.abstractmethod
     def set_transport_type(self, val):
+        """
+        Set the transport type for this computer
+
+        :param val: the new transport type
+        :type val: str
+        """
         pass
 
     def get_transport_class(self):
+        """
+        Get the transport class for this computer.  Can be used to instantiate a transport instance.
+
+        :return: the transport class
+        """
         try:
             # I return the class, not an instance
             return transport.TransportFactory(self.get_transport_type())
@@ -695,6 +813,11 @@ class Computer(CollectionEntry):
                 self.name, self.get_transport_type(), exc))
 
     def get_scheduler(self):
+        """
+        Get the scheduler instance for this computer
+
+        :return: the scheduler
+        """
         try:
             scheduler_class = scheduler.SchedulerFactory(self.get_scheduler_type())
             # I call the init without any parameter
@@ -762,8 +885,6 @@ class Computer(CollectionEntry):
 
     def __str__(self):
         if self.is_enabled():
-            return "{} ({}), pk: {}".format(self.name, self.hostname,
-                                            self.pk)
-        else:
-            return "{} ({}) [DISABLED], pk: {}".format(self.name, self.hostname,
-                                                       self.pk)
+            return "{} ({}), pk: {}".format(self.name, self.hostname, self.pk)
+
+        return "{} ({}) [DISABLED], pk: {}".format(self.name, self.hostname, self.pk)

@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """A utility module with a factory of standard QueryBuilder instances for Calculation nodes."""
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 from aiida.common.utils import classproperty
 from aiida.cmdline.utils.query.mapping import CalculationProjectionMapper

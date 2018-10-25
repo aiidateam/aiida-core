@@ -7,6 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 import errno
 import os
@@ -49,7 +51,7 @@ class TestRemoteData(AiidaTestCase):
             if exception.errno == errno.ENOENT:
                 pass
             elif exception.errno == errno.ENOTDIR:
-                os.remove(the_path)
+                os.remove(self.tmp_path)
             else:
                 raise IOError(exception)
 

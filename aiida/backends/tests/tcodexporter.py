@@ -10,6 +10,8 @@
 """
 Tests for TestTcodDbExporter
 """
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 import unittest
 
@@ -219,7 +221,7 @@ class TestTcodDbExporter(AiidaTestCase):
             calc.add_link_from(cif, "cif")
 
         calc.store()
-        calc._set_state(calc_states.SUBMITTING)
+        calc._set_state(calc_states.TOSUBMIT)
         with SandboxFolder() as f:
             calc._store_raw_input_folder(f.abspath)
 
@@ -235,6 +237,7 @@ class TestTcodDbExporter(AiidaTestCase):
             f.flush()
 
         fd.store()
+        calc._set_state(calc_states.PARSING)
         fd.add_link_from(calc, calc._get_linkname_retrieved(), LinkType.CREATE)
 
         pd.add_link_from(calc, "calc", LinkType.CREATE)
@@ -358,7 +361,7 @@ class TestTcodDbExporter(AiidaTestCase):
         s = a._get_aiida_structure(store=True)
         val = export_values(s)
         script = val.first_block()['_tcod_file_contents'][1]
-        function = '_get_aiida_structure_ase_inline'
+        function = '_get_aiida_structure_pymatgen_inline'
         self.assertNotEqual(script.find(function), script.rfind(function))
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")

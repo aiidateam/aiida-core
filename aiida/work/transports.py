@@ -8,15 +8,14 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """A transport queue to batch process multiple tasks that require a Transport."""
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 from collections import namedtuple
 import contextlib
 import logging
 import traceback
-import tornado.gen
-import tornado.concurrent
-import tornado.ioloop
-import tornado.locks
+from tornado import concurrent, gen, ioloop
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,7 +26,7 @@ class TransportRequest(object):
     # pylint: disable=too-few-public-methods
     def __init__(self):
         super(TransportRequest, self).__init__()
-        self.future = tornado.concurrent.Future()
+        self.future = concurrent.Future()
         self.count = 0
 
 
@@ -46,9 +45,10 @@ class TransportQueue(object):
 
     def __init__(self, loop=None):
         """
-        :param loop: The event loop to use, will use tornado.ioloop.IOLoop.current() if not supplied
+        :param loop: The event loop to use, will use `tornado.ioloop.IOLoop.current()` if not supplied
+        :type loop: :class:`tornado.ioloop.IOLoop`
         """
-        self._loop = loop if loop is not None else tornado.ioloop.IOLoop.current()
+        self._loop = loop if loop is not None else ioloop.IOLoop.current()
         self._transport_requests = {}
 
     def loop(self):
@@ -75,7 +75,7 @@ class TransportQueue(object):
         transport_request = self._transport_requests.get(authinfo.id, None)
 
         if transport_request is None:
-
+            # There is no existing request for this transport (i.e. on this authinfo)
             transport_request = TransportRequest()
             self._transport_requests[authinfo.id] = transport_request
 
@@ -104,7 +104,7 @@ class TransportQueue(object):
         try:
             transport_request.count += 1
             yield transport_request.future
-        except tornado.gen.Return:
+        except gen.Return:
             # Have to have this special case so tornado returns are propagated up to the loop
             raise
         except Exception:
@@ -112,7 +112,7 @@ class TransportQueue(object):
             raise
         finally:
             transport_request.count -= 1
-            assert transport_request.count >= 0, "Transport request count dropped blow 0!"
+            assert transport_request.count >= 0, "Transport request count dropped below 0!"
             # Check if there are no longer any users that want the transport
             if transport_request.count == 0:
                 if transport_request.future.done():

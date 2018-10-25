@@ -7,9 +7,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.expression import FunctionElement
+from aiida.common.exceptions import InputValidationError
 
 class jsonb_array_length(FunctionElement):
     name = 'jsonb_array_len'

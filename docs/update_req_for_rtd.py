@@ -12,6 +12,9 @@
 Whenever the requirements in ../setup_requirements.py are updated,
 run also this script to update the requirements for Read the Docs.
 """
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 import sys
 import os
 import click

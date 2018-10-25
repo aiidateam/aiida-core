@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the 'verdi code' command."""
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 import os
 import subprocess as sp

@@ -8,6 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """The command line interface of AiiDA."""
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 
 # Default execname; can be substituted later in the call from exec_from_cmdline
 EXECNAME = 'verdi'

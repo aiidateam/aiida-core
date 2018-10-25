@@ -7,7 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
+import abc
 from abc import abstractproperty, ABCMeta
 import six
 
@@ -44,11 +47,11 @@ def construct_backend(backend_type=None):
         raise ValueError("The specified backend {} is currently not implemented".format(backend_type))
 
 
-@six.add_metaclass(ABCMeta)
+@six.add_metaclass(abc.ABCMeta)
 class Backend(object):
     """The public interface that defines a backend factory that creates backend specific concrete objects."""
 
-    @abstractproperty
+    @abc.abstractproperty
     def logs(self):
         """
         Return the collection of log entries
@@ -57,7 +60,7 @@ class Backend(object):
         :rtype: :class:`aiida.orm.log.Log`
         """
 
-    @abstractproperty
+    @abc.abstractproperty
     def users(self):
         """
         Return the collection of users
@@ -66,7 +69,7 @@ class Backend(object):
         :rtype: :class:`aiida.orm.user.UserCollection`
         """
 
-    @abstractproperty
+    @abc.abstractproperty
     def authinfos(self):
         """
         Return the collection of authorisation information objects
@@ -75,7 +78,7 @@ class Backend(object):
         :rtype: :class:`aiida.orm.authinfo.AuthInfoCollection`
         """
 
-    @abstractproperty
+    @abc.abstractproperty
     def computers(self):
         """
         Return the collection of computer objects
@@ -84,13 +87,20 @@ class Backend(object):
         :rtype: :class:`aiida.orm.computer.ComputerCollection`
         """
 
-    @abstractproperty
+    @abc.abstractproperty
     def query_manager(self):
         """
         Return the query manager for the objects stored in the backend
 
-        :return: The query manger
+        :return: the query manger
         :rtype: :class:`aiida.backends.general.abstractqueries.AbstractQueryManager`
+        """
+
+    @abc.abstractmethod
+    def query_builder(self):
+        """
+        Construct a new instance of a QueryBuilder for this backend
+        :return: the new query builder
         """
 
 

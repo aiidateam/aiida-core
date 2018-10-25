@@ -186,7 +186,6 @@
         aiida/common/extendeddicts.py|
         aiida/common/folders.py|
         aiida/common/graph.py|
-        aiida/common/hashing.py|
         aiida/common/__init__.py|
         aiida/common/ipython/__init__.py|
         aiida/common/ipython/ipython_magics.py|

@@ -300,12 +300,12 @@ class TestSimple(AiidaTestCase):
                 tar.extractall(unpack_tmp_folder)
 
             with io.open(os.path.join(unpack_tmp_folder,
-                                   'metadata.json'), 'r', encoding='utf8') as f:
-                metadata = json.load(f)
+                                   'metadata.json'), 'r', encoding='utf8') as fhandle:
+                metadata = json.load(fhandle)
             metadata['export_version'] = 0.0
             with io.open(os.path.join(unpack_tmp_folder,
-                                   'metadata.json', encoding='utf8'), 'w') as f:
-                json.dump(metadata, f)
+                                   'metadata.json'), 'wb', encoding=None) as fhandle:
+                json.dump(metadata, fhandle)
 
             with tarfile.open(filename, "w:gz", format=tarfile.PAX_FORMAT) as tar:
                 tar.add(unpack_tmp_folder, arcname="")
@@ -351,15 +351,15 @@ class TestSimple(AiidaTestCase):
                     filename, "r:gz", format=tarfile.PAX_FORMAT) as tar:
                 tar.extractall(unpack.abspath)
 
-            with io.open(unpack.get_abs_path('data.json'), 'r', encoding='utf8') as f:
-                metadata = json.load(f)
+            with io.open(unpack.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
+                metadata = json.load(fhandle)
             metadata['links_uuid'].append({
                 'output': sd.uuid,
                 'input': 'non-existing-uuid',
                 'label': 'parent'
             })
-            with io.open(unpack.get_abs_path('data.json'), 'w', encoding='utf8') as f:
-                json.dump(metadata, f)
+            with io.open(unpack.get_abs_path('data.json'), 'wb', encoding=None) as fhandle:
+                json.dump(metadata, fhandle)
 
             with tarfile.open(
                     filename, "w:gz", format=tarfile.PAX_FORMAT) as tar:

@@ -219,7 +219,7 @@ class BackupSetup(object):
             backup_variables = self.construct_backup_variables(
                 file_backup_folder_abs)
 
-            with io.open(final_conf_filepath, 'w', encoding='utf8') as backup_info_file:
+            with io.open(final_conf_filepath, 'wb', encoding=None) as backup_info_file:
                 json.dump(backup_variables, backup_info_file)
         # If the backup parameters are configured manually
         else:
@@ -246,7 +246,7 @@ class BackupSetup(object):
             raise BackupError("Following backend is unknown: ".format(BACKEND))
 
         script_content = \
-"""#!/usr/bin/env python
+u"""#!/usr/bin/env python
 import logging
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 

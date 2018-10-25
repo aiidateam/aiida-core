@@ -109,8 +109,8 @@ def output_test(pk, testname, skip_uuids_from_inputs=[]):
     export_tree(to_export, folder=folder, also_parents=False, also_calc_outputs=False)
 
     # Create an empty checks file
-    with io.open(os.path.join(outfolder, '_aiida_checks.json', encoding='utf8'), 'w') as fhandle:
-        json.dump({}, f)
+    with io.open(os.path.join(outfolder, '_aiida_checks.json'), 'w', encoding=None) as fhandle:
+        json.dump({}, fhandle)
 
     for path, dirlist, filelist in os.walk(outfolder):
         if len(dirlist) == 0 and len(filelist) == 0:

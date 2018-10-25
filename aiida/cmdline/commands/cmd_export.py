@@ -191,11 +191,11 @@ def migrate(input_file, output_file, force, silent, archive_format):
 
         new_version = verify_metadata_version(metadata)
 
-        with io.open(folder.get_abs_path('data.json'), 'w', encoding='utf8') as handle:
-            json.dump(data, handle)
+        with io.open(folder.get_abs_path('data.json'), 'wb', encoding=None) as fhandle:
+            json.dump(data, fhandle)
 
-        with io.open(folder.get_abs_path('metadata.json'), 'w', encoding='utf8') as handle:
-            json.dump(metadata, handle)
+        with io.open(folder.get_abs_path('metadata.json'), 'wb', encoding=None) as fhandle:
+            json.dump(metadata, fhandle)
 
         if archive_format == 'zip' or archive_format == 'zip-uncompressed':
             compression = zipfile.ZIP_DEFLATED if archive_format == 'zip' else zipfile.ZIP_STORED

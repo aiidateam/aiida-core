@@ -215,7 +215,7 @@ def encode_textfield_quoted_printable(content):
             postfix = m.group('postfix')
         h = hex(ord(m.group('chr')))[2:].upper()
         if len(h) == 1:
-            h = "0%s" % h
+            h = "0{}".format(h)
         return b"%s=%s%s" % (prefix, h.encode('utf-8'), postfix)
 
     content = re.sub(b'^(?P<chr>;)', match2qp, content)

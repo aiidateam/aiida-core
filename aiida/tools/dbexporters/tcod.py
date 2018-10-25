@@ -12,10 +12,10 @@ from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
 
+from six import int2byte
 from six.moves import range
 
 import io
-import six
 
 from aiida.orm import DataFactory
 from aiida.orm.data.parameter import ParameterData
@@ -275,19 +275,13 @@ def decode_textfield_ncr(content):
     def match2str(m):
         """
         Function returns a byte with a value of the first group of regular
-        expression. Different methods to convert int -> byte are used for
-        Python 2 and Python 3 as there seems to be no common way to do so.
-        chr() in Python 3 returns value in Unicode format which is incompatible
-        with the requested return value of bytes format.
+        expression.
 
         :param match: match result of re.sub
         :return: a single byte having a value of the first group in re.sub
         """
         byte_value = int(m.group(1))
-        if six.PY2:
-            return chr(byte_value)
-        else:
-            return bytes([byte_value])
+        return int2byte(byte_value)
 
     return re.sub(b'&#(\d+);', match2str, content)
 

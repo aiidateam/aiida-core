@@ -26,7 +26,7 @@ from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError,
 from aiida.orm.implementation.django.node import Node
 from aiida.common.utils import type_check
 
-from . import user as users
+from . import backend
 from . import utils
 from aiida.orm import users as orm_users
 
@@ -65,7 +65,7 @@ class Group(AbstractGroup):
             description = kwargs.pop('description', "")
             self._dbgroup = utils.ModelWrapper(
                 DbGroup(name=name, description=description,
-                        user=user.dbuser, type=group_type))
+                        user=user.backend_entity.dbuser, type=group_type))
             if kwargs:
                 raise ValueError(
                     "Too many parameters passed to Group, the "
@@ -105,8 +105,8 @@ class Group(AbstractGroup):
 
     @user.setter
     def user(self, new_user):
-        type_check(new_user, users.DjangoUser)
-        self._dbgroup.user = new_user.dbuser
+        assert isinstance(new_user.backend, backend.DjangoBackend)
+        self._dbgroup.user = new_user.backend_entity.dbuser
 
     @property
     def dbgroup(self):

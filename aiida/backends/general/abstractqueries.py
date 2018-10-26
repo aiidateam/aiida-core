@@ -81,7 +81,7 @@ class AbstractQueryManager(object):
         """
         # I assume that calc_states are strings. If this changes in the future,
         # update the filter below from dbattributes__tval to the correct field.
-        from aiida.orm.computer import Computer
+        from aiida.orm.computers import Computer
         from aiida.orm.calculation.job import JobCalculation
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.common.exceptions import InputValidationError
@@ -234,17 +234,14 @@ class AbstractQueryManager(object):
         from aiida.orm.data.structure import (get_formula, get_symbols_string)
         from aiida.orm.data.array.bands import BandsData
         from aiida.orm.data.structure import StructureData
-        from aiida.orm.users import User
-        from aiida.orm.backends import construct_backend
-
-        backend = construct_backend()
+        from aiida import orm
 
         qb = QueryBuilder()
         if args.all_users is False:
-            user = backend.users.get_default()
-            qb.append(User, tag="creator", filters={"email": user.email})
+            user = orm.User.objects.get_default()
+            qb.append(orm.User, tag="creator", filters={"email": user.email})
         else:
-            qb.append(User, tag="creator")
+            qb.append(orm.User, tag="creator")
 
         bdata_filters = {}
         if args.past_days is not None:

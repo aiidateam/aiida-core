@@ -15,8 +15,6 @@ from __future__ import absolute_import
 import abc
 import six
 
-from aiida.common import exceptions
-
 __all__ = ('Backend', 'BackendEntity', 'BackendCollection')
 
 
@@ -39,7 +37,7 @@ class Backend(object):
         Return the collection of users
 
         :return: the users collection
-        :rtype: :class:`aiida.orm.user.UserCollection`
+        :rtype: :class:`aiida.orm.implementation.BackendUserCollection`
         """
 
     @abc.abstractproperty
@@ -48,7 +46,7 @@ class Backend(object):
         Return the collection of authorisation information objects
 
         :return: the authinfo collection
-        :rtype: :class:`aiida.orm.authinfo.AuthInfoCollection`
+        :rtype: :class:`aiida.orm.implementation.BackendAuthInfoCollection`
         """
 
     @abc.abstractproperty
@@ -57,7 +55,7 @@ class Backend(object):
         Return the collection of computer objects
 
         :return: the computers collection
-        :rtype: :class:`aiida.orm.computer.ComputerCollection`
+        :rtype: :class:`aiida.orm.implementation.BackendComputerCollection`
         """
 
     @abc.abstractproperty
@@ -75,7 +73,7 @@ class Backend(object):
         Return an instance of a query builder implementation for this backend
 
         :return: a new query builder instance
-        :rtype: :class:`aiida.backends.general.querybuilder_interface.QueryBuilderInterface`
+        :rtype: :class:`aiida.orm.implementation.BackendQueryBuilder`
         """
 
 
@@ -93,15 +91,6 @@ class BackendEntity(object):
         for a particular backend
 
         :return: the entity id
-        """
-
-    @abc.abstractproperty
-    def uuid(self):
-        """
-        Get the UUID for this entity.  This is unique across all entities types and backends
-
-        :return: the entity uuid
-        :rtype: :class:`uuid.UUID`
         """
 
     @property
@@ -174,28 +163,3 @@ class BackendCollection(object):
         query = self.backend.query()
         query.append(self.ENTRY_TYPE)
         return query
-
-    def get(self, id=None, uuid=None):  # pylint: disable=invalid-name, redefined-builtin
-        """
-        Get a collection entry from an id or a UUID
-
-        :param id: the id of the entry to get
-        :param uuid: the uuid of the entry to get
-        :return: the entry
-        """
-        query = self.query()
-        filters = {}
-        if id is not None:
-            filters['id'] = {'==': id}
-        if uuid is not None:
-            filters['uuid'] = {'==': uuid}
-
-        query.append(filters=filters)
-        res = [_[0] for _ in query.all()]
-        if not res:
-            raise exceptions.NotExistent("No {} with filter '{}' found".format(self.ENTRY_TYPE.__name__, filters))
-        if len(res) > 1:
-            raise exceptions.MultipleObjectsError("Multiple {}s found with the same id '{}'".format(
-                self.ENTRY_TYPE.__name__, id))
-
-        return res[0]

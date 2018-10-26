@@ -14,8 +14,10 @@ from __future__ import absolute_import
 from __future__ import print_function
 from six.moves import zip, input
 
+from aiida.orm import User
 
-def delete_nodes(pks, follow_calls=False, follow_returns=False, 
+
+def delete_nodes(pks, follow_calls=False, follow_returns=False,
                  dry_run=False, force=False, disable_checks=False, verbosity=0):
     """
     Delete nodes by a list of pks
@@ -46,8 +48,7 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
     from aiida.orm.backends import construct_backend
     from aiida.backends.utils import delete_nodes_and_connections
 
-    backend = construct_backend()
-    user_email = backend.users.get_default().email
+    user_email = User.objects.get_default().email
 
     if not pks:
         # If I was passed an empty list, I don't to anything
@@ -98,7 +99,6 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
                 except IndexError:
                     short_type_string = type_string
                 print("   {} {} {} {}".format(uuid, pk, short_type_string, label))
-
 
     # Here I am checking whether I am deleting
     ## A data instance without also deleting the creator, which brakes relationship between a calculation and its data
@@ -187,4 +187,3 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
     # I can now delete the folders
     for f in folders:
         f.erase()
-

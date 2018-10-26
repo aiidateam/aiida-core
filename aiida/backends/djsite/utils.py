@@ -19,6 +19,8 @@ import os
 import django
 from aiida.common.log import get_dblogger_extra
 
+# pylint: disable=no-name-in-module, no-member, import-error
+
 
 def load_dbenv(profile=None):
     """

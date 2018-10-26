@@ -23,10 +23,10 @@ class UserTranslator(BaseTranslator):
     # A label associated to the present class (coincides with the resource name)
     __label__ = "users"
     # The AiiDA class one-to-one associated to the present class
-    from aiida.orm.users import User
+    from aiida.orm import User
     _aiida_class = User
     # The string name of the AiiDA class
-    _aiida_type = "user.User"
+    _aiida_type = "User"
     # The string associated to the AiiDA class in the query builder lexicon
     _qb_type = 'user'
 

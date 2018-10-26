@@ -910,10 +910,14 @@ class AbstractNode(object):
 
         :param computer: the computer object
         """
+        from aiida import orm
+
         if self._to_be_stored:
             if not computer.is_stored:
                 raise ValueError("The computer instance has not yet been stored")
-            self._set_db_computer(computer.backend_entity)
+            if isinstance(computer, orm.Computer):
+                computer = computer.backend_entity
+            self._set_db_computer(computer)
         else:
             raise ModificationNotAllowed(
                 "Node with uuid={} was already stored".format(self.uuid))

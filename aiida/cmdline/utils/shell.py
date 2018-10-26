@@ -12,6 +12,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 DEFAULT_MODULES_LIST = [
     ('aiida.orm', 'Node', 'Node'),
     ('aiida.orm', 'Calculation', 'Calculation'),
@@ -21,11 +22,11 @@ DEFAULT_MODULES_LIST = [
     ('aiida.orm', 'CalculationFactory', 'CalculationFactory'),
     ('aiida.orm', 'DataFactory', 'DataFactory'),
     ('aiida.orm', 'WorkflowFactory', 'WorkflowFactory'),
-    ('aiida.orm.code', 'Code', 'Code'),
-    ('aiida.orm.computer', 'Computer', 'Computer'),
-    ('aiida.orm.group', 'Group', 'Group'),
+    ('aiida.orm', 'Code', 'Code'),
+    ('aiida.orm', 'Computer', 'Computer'),
+    ('aiida.orm', 'Group', 'Group'),
     ('aiida.orm.workflow', 'Workflow', 'Workflow'),
-    ('aiida.orm.querybuilder', 'QueryBuilder', 'QueryBuilder'),
+    ('aiida.orm', 'QueryBuilder', 'QueryBuilder'),
     ('aiida.orm.utils', 'load_node', 'load_node'),
 ]
 

@@ -16,6 +16,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.node import Node
+from aiida import orm
 
 
 class TestTransitiveClosureDeletionSQLA(AiidaTestCase):
@@ -310,7 +311,7 @@ class TestNodeBasicSQLA(AiidaTestCase):
         import aiida.backends.sqlalchemy
 
         # Get the automatic user
-        dbuser = self.backend.users.get_default().dbuser
+        dbuser = orm.User.objects(self.backend).get_default().backend_entity.dbuser
         # Create a new node but don't add it to the session
         node_uuid = get_new_uuid()
         DbNode(user=dbuser, uuid=node_uuid, type=None)
@@ -333,7 +334,7 @@ class TestNodeBasicSQLA(AiidaTestCase):
                                       "UUID in the session/DB.")
 
         # Get the automatic user
-        dbuser = self.backend.users.get_default().dbuser
+        dbuser = orm.User.objects(self.backend).get_default().backend_entity.dbuser
         # Create a new node but now add it to the session
         node_uuid = get_new_uuid()
         node = DbNode(user=dbuser, uuid=node_uuid, type=None)

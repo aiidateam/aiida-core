@@ -16,7 +16,7 @@ import os
 import sys
 
 from aiida.orm import DataFactory
-from aiida.orm.computer import Computer
+from aiida.orm.computers import Computer
 from aiida.orm.implementation.sqlalchemy.code import Code
 
 ParameterData = DataFactory('parameter')

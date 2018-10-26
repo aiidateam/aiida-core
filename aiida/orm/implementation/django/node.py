@@ -25,12 +25,10 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
 from aiida.common.folders import RepositoryFolder
 from aiida.common.links import LinkType
 from aiida.common.utils import get_new_uuid, type_check
-from aiida import orm
 from aiida.orm.implementation.general.node import AbstractNode, _HASH_EXTRA_KEY
-
+from . import backend
 from . import computer as computers
-from . import user as users
-from aiida.orm import users as orm_users
+
 
 class Node(AbstractNode):
 
@@ -83,6 +81,7 @@ class Node(AbstractNode):
 
     def __init__(self, **kwargs):
         from aiida.backends.djsite.db.models import DbNode
+        from aiida import orm
 
         super(Node, self).__init__()
 
@@ -126,7 +125,7 @@ class Node(AbstractNode):
         #                    uuid, self.__class__.__name__, e.message))
         else:
             # TODO: allow to get the user from the parameters
-            user = orm_users.User.objects(backend=self._backend).get_default()
+            user = orm.User.objects(backend=self._backend).get_default().backend_entity
             self._dbnode = DbNode(user=user.dbuser,
                                   uuid=get_new_uuid(),
                                   type=self._plugin_type_string)
@@ -312,11 +311,13 @@ class Node(AbstractNode):
 
         :return: the Computer object or None.
         """
+        from aiida import orm
+
         if self._dbnode.dbcomputer is None:
             return None
-        else:
-            return orm.Computer.from_bakend_entity(
-                self._backend.computers.from_dbmodel(self._dbnode.dbcomputer))
+
+        return orm.Computer.from_backend_entity(
+            self._backend.computers.from_dbmodel(self._dbnode.dbcomputer))
 
     def _set_db_computer(self, computer):
         type_check(computer, computers.DjangoComputer)
@@ -398,16 +399,17 @@ class Node(AbstractNode):
 
     def add_comment(self, content, user=None):
         from aiida.backends.djsite.db.models import DbComment
+        from aiida import orm
 
         if not self.is_stored:
             raise ModificationNotAllowed("Comments can be added only after "
                                          "storing the node")
 
         if user is None:
-            user = self.backend.users.get_default()
+            user = orm.User.objects(self.backend).get_default()
 
         return DbComment.objects.create(dbnode=self._dbnode,
-                                        user=user.dbuser,
+                                        user=user.backend_entity.dbuser,
                                         content=content).id
 
     def get_comment_obj(self, comment_id=None, user=None):
@@ -422,7 +424,7 @@ class Node(AbstractNode):
 
         # If a user is specified then we add it to the query
         if user is not None:
-            query_list.append(Q(user=user))
+            query_list.append(Q(user=user.backend_entity.dbuser))
 
         dbcomments = DbComment.objects.filter(
             reduce(operator.and_, query_list))
@@ -542,11 +544,15 @@ class Node(AbstractNode):
         return self
 
     def get_user(self):
-        return self._backend.users.from_dbmodel(self._dbnode.user)
+        import aiida.orm.utils.convert
+
+        return aiida.orm.utils.convert.aiida_from_backend_entity(
+            self._backend.users.from_dbmodel(self._dbnode.user)
+        )
 
     def set_user(self, user):
-        type_check(user, users.DjangoUser)
-        self._dbnode.user = user.dbuser
+        assert isinstance(user.backend, backend.DjangoBackend)
+        self._dbnode.user = user.backend_entity.dbuser
 
     def _store_cached_input_links(self, with_transaction=True):
         """
@@ -622,7 +628,6 @@ class Node(AbstractNode):
         from aiida.common.utils import EmptyContextManager
         from aiida.common.exceptions import ValidationError
         from aiida.backends.djsite.db.models import DbAttribute
-        import aiida.orm.autogroup
 
         if with_transaction:
             context_man = transaction.atomic()

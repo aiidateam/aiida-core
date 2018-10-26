@@ -13,11 +13,11 @@ Generic tests that need the be specific to sqlalchemy
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import unittest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.node import Node
 from aiida.common import exceptions
+from aiida import orm
 
 
 class TestComputer(AiidaTestCase):
@@ -30,9 +30,11 @@ class TestComputer(AiidaTestCase):
         from aiida.common.exceptions import InvalidOperation
         import aiida.backends.sqlalchemy
 
-        newcomputer = self.backend.computers.create(name="testdeletioncomputer", hostname='localhost',
-                                                    transport_type='local', scheduler_type='pbspro',
-                                                    workdir='/tmp/aiida').store()
+        newcomputer = self.backend.computers.create(
+            name="testdeletioncomputer",
+            hostname='localhost',
+            transport_type='local',
+            scheduler_type='pbspro').store()
 
         # # This should be possible, because nothing is using this computer
         self.backend.computers.delete(newcomputer.id)
@@ -66,16 +68,15 @@ class TestGroupsSqla(AiidaTestCase):
         """
         Test if queries are working
         """
-        from aiida.orm.group import Group
         from aiida.common.exceptions import NotExistent, MultipleObjectsError
         from aiida.backends.sqlalchemy.models.user import DbUser
         from aiida.orm.backends import construct_backend
 
         backend = construct_backend()
 
-        g1 = Group(name='testquery1').store()
+        g1 = orm.Group(name='testquery1').store()
         self.addCleanup(g1.delete)
-        g2 = Group(name='testquery2').store()
+        g2 = orm.Group(name='testquery2').store()
         self.addCleanup(g2.delete)
 
         n1 = Node().store()
@@ -87,40 +88,40 @@ class TestGroupsSqla(AiidaTestCase):
         g2.add_nodes([n1, n3])
 
         newuser = DbUser(email='test@email.xx', password='').get_aiida_class()
-        g3 = Group(name='testquery3', user=newuser).store()
+        g3 = orm.Group(name='testquery3', user=newuser).store()
 
         # I should find it
-        g1copy = Group.get(uuid=g1.uuid)
+        g1copy = orm.Group.get(uuid=g1.uuid)
         self.assertEquals(g1.pk, g1copy.pk)
 
         # Try queries
-        res = Group.query(nodes=n4)
+        res = orm.Group.query(nodes=n4)
         self.assertEquals([_.pk for _ in res], [])
 
-        res = Group.query(nodes=n1)
+        res = orm.Group.query(nodes=n1)
         self.assertEquals([_.pk for _ in res], [_.pk for _ in [g1, g2]])
 
-        res = Group.query(nodes=n2)
+        res = orm.Group.query(nodes=n2)
         self.assertEquals([_.pk for _ in res], [_.pk for _ in [g1]])
 
         # I try to use 'get' with zero or multiple results
         with self.assertRaises(NotExistent):
-            Group.get(nodes=n4)
+            orm.Group.get(nodes=n4)
         with self.assertRaises(MultipleObjectsError):
-            Group.get(nodes=n1)
+            orm.Group.get(nodes=n1)
 
-        self.assertEquals(Group.get(nodes=n2).pk, g1.pk)
+        self.assertEquals(orm.Group.get(nodes=n2).pk, g1.pk)
 
         # Query by user
-        res = Group.query(user=newuser)
+        res = orm.Group.query(user=newuser)
         self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g3]))
 
         # Same query, but using a string (the username=email) instead of
         # a DbUser object
-        res = Group.query(user=newuser.email)
+        res = orm.Group.query(user=newuser)
         self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g3]))
 
-        res = Group.query(user=backend.users.get_default())
+        res = orm.Group.query(user=orm.User.objects(backend).get_default())
 
         self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g1, g2]))
 
@@ -129,18 +130,17 @@ class TestGroupsSqla(AiidaTestCase):
         Test that renaming to an already existing name is not permitted
         """
         from aiida.backends.sqlalchemy import get_scoped_session
-        from aiida.orm.group import Group
 
         name_group_a = 'group_a'
         name_group_b = 'group_b'
         name_group_c = 'group_c'
 
-        group_a = Group(name=name_group_a, description='I am the Original G')
+        group_a = orm.Group(name=name_group_a, description='I am the Original G')
         group_a.store()
 
         # Before storing everything should be fine
-        group_b = Group(name=name_group_a, description='They will try to rename me')
-        group_c = Group(name=name_group_c, description='They will try to rename me')
+        group_b = orm.Group(name=name_group_a, description='They will try to rename me')
+        group_c = orm.Group(name=name_group_c, description='They will try to rename me')
 
         session = get_scoped_session()
 

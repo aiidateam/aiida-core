@@ -371,9 +371,10 @@ class FixtureManager(object):
         """Clean database for sqlalchemy backend"""
         from aiida.backends.sqlalchemy.tests.testbase import SqlAlchemyTests
         from aiida.backends.sqlalchemy import get_scoped_session
+        from aiida import orm
 
-        user = self._backend.users.get(email=self.email)
-        new_user = self._backend.users.create(email=user.email)
+        user = orm.User.objects(self._backend).get(email=self.email)
+        new_user = orm.User(email=user.email, backend=self._backend)
         new_user.first_name = user.first_name
         new_user.last_name = user.last_name
         new_user.institution = user.institution

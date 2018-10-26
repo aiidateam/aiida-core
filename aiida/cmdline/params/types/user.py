@@ -30,14 +30,13 @@ class UserParamType(click.ParamType):
 
     @with_dbenv()
     def convert(self, value, param, ctx):
-        from aiida.orm.backends import construct_backend
+        from aiida import orm
 
-        backend = construct_backend()
-        results = backend.users.find(email=value)
+        results = orm.User.objects.find(email=value)
 
         if not results:
             if self._create:
-                return backend.users.create(email=value)
+                return orm.User(email=value)
             else:
                 self.fail("User '{}' not found".format(value), param, ctx)
         elif len(results) > 1:
@@ -52,9 +51,8 @@ class UserParamType(click.ParamType):
 
         :returns: list of tuples of valid entry points (matching incomplete) and a description
         """
-        from aiida.orm.backends import construct_backend
+        from aiida import orm
 
-        backend = construct_backend()
-        users = backend.users.find()
+        users = orm.User.objects.find()
 
         return [(user.email, '') for user in users if user.email.startswith(incomplete)]

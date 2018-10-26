@@ -13,10 +13,11 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.common import exceptions
-from aiida.common.utils import classproperty
+from aiida.common.utils import classproperty, type_check
+
 from . import backends
 
-__all__ = ('Entity',)
+__all__ = ('Entity', 'Collection')
 
 
 class Collection(object):
@@ -63,22 +64,33 @@ class Collection(object):
         query.append(self._entity_type, project='*')
         return query
 
-    def get(self, id=None, uuid=None):
+    def get(self, **kwargs):
         """
-        Get a collection entry from an id or a UUID
+        Get a collection entry using keyword parameter filters
 
-        :param id: the id of the entry to get
-        :param uuid: the uuid of the entry to get
+        :param kwargs: the filters identifying the object to get
         :return: the entry
         """
-        # pylint: disable=redefined-builtin, invalid-name
         query = self.query()
-        filters = {}
-        if id is not None:
-            filters['id'] = {'==': id}
-        if uuid is not None:
-            filters['uuid'] = {'==': uuid}
+        query.add_filter(self.entity_type, kwargs)
+        res = [_[0] for _ in query.all()]
+        if not res:
+            raise exceptions.NotExistent("No {} with filter '{}' found".format(self.entity_type.__name__, kwargs))
+        if len(res) > 1:
+            raise exceptions.MultipleObjectsError("Multiple {}s found with the same id '{}'".format(
+                self.entity_type.__name__, id))
 
+        return res[0]
+
+    def find(self, **filters):
+        """
+        Find entries matching the given filters
+
+        :param filters: the keyword value pair filters to match
+        :return: a list of resulting matches
+        :rtype: list
+        """
+        query = self.query()
         query.add_filter(self.entity_type, filters)
         res = [_[0] for _ in query.all()]
         if not res:
@@ -87,7 +99,15 @@ class Collection(object):
             raise exceptions.MultipleObjectsError("Multiple {}s found with the same id '{}'".format(
                 self.entity_type.__name__, id))
 
-        return res[0]
+        return res
+
+    def all(self):
+        """
+        Get all entities in this collection
+
+        :return: A collection of users matching the criteria
+        """
+        return [_[0] for _ in self.query().all()]
 
 
 class Entity(object):
@@ -111,11 +131,33 @@ class Entity(object):
         return cls.Collection(backend, cls)
 
     @classmethod
-    def get(cls, id=None, uuid=None):
+    def get(cls, **kwargs):
         # pylint: disable=redefined-builtin, invalid-name
-        return cls.objects.get(id=id, uuid=uuid)  # pylint: disable=no-member
+        return cls.objects.get(**kwargs)  # pylint: disable=no-member
+
+    @classmethod
+    def from_backend_entity(cls, backend_entity):
+        """
+        Construct an entity from a backend entity instance
+
+        :param backend_entity: the backend entity
+        :return: an AiiDA entity instance
+        """
+        from . import implementation
+
+        type_check(backend_entity, implementation.BackendEntity)
+        computer = cls.__new__(cls)
+        computer.init_from_backend(backend_entity)
+        return computer
 
     def __init__(self, backend_entity):
+        """
+        :param backend_entity: the backend model supporting this entity
+        :type backend_entity: :class:`aiida.orm.implementation.BackendEntity`
+        """
+        self._backend_entity = backend_entity
+
+    def init_from_backend(self, backend_entity):
         """
         :param backend_entity: the backend model supporting this entity
         :type backend_entity: :class:`aiida.orm.implementation.BackendEntity`
@@ -136,7 +178,7 @@ class Entity(object):
     @property
     def pk(self):
         """
-        Get the principal key for this entity
+        Get the primary key for this entity
 
         .. note:: Deprecated because the backend need not be a database and so principle key doesn't
             always make sense.  Use `id()` instead.
@@ -149,7 +191,8 @@ class Entity(object):
     def uuid(self):
         """
         Get the UUID for this entity.  This is unique across all entities types and backends
-        :return: the eneity uuid
+
+        :return: the entity uuid
         :rtype: :class:`uuid.UUID`
         """
         return self._backend_entity.uuid

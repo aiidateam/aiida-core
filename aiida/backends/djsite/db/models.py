@@ -1450,6 +1450,12 @@ class DbAuthInfo(m.Model):
         else:
             return "DB authorization info for {} on {} [DISABLED]".format(self.aiidauser.email, self.dbcomputer.name)
 
+    def get_aiida_class(self):
+        from aiida.orm.implementation.django.authinfo import DjangoAuthInfo
+        from aiida.orm.backends import construct_backend
+        return DjangoAuthInfo.from_dbmodel(self, construct_backend())
+
+
 
 @python_2_unicode_compatible
 class DbComment(m.Model):

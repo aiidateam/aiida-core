@@ -29,7 +29,6 @@ from aiida.orm.implementation.django.calculation.job import JobCalculation
 from aiida.orm.implementation.general.workflow import AbstractWorkflow
 from aiida.utils import timezone
 
-
 logger = aiidalogger.getChild('Workflow')
 
 
@@ -51,6 +50,7 @@ class Workflow(AbstractWorkflow):
                              the given uuid.
         """
         from aiida.backends.djsite.db.models import DbWorkflow
+        from aiida import orm
         from aiida.orm.backends import construct_backend
 
         self._backend = construct_backend()
@@ -122,7 +122,8 @@ class Workflow(AbstractWorkflow):
 
             # This stores the MD5 as well, to test in case the workflow has
             # been modified after the launch
-            self._dbworkflowinstance = DbWorkflow(user=self._backend.users.get_default().dbuser,
+            dbuser = orm.User.objects(self._backend).get_default().backend_entity.dbuser
+            self._dbworkflowinstance = DbWorkflow(user=dbuser,
                                                   module=self.caller_module,
                                                   module_class=self.caller_module_class,
                                                   script_path=self.caller_file,
@@ -479,6 +480,8 @@ class Workflow(AbstractWorkflow):
         :raise: ObjectDoesNotExist: if there is no step with the specific name.
         :return: a DbWorkflowStep object.
         """
+        from aiida import orm
+
         if isinstance(step_method, six.string_types):
             step_method_name = step_method
         else:
@@ -492,7 +495,7 @@ class Workflow(AbstractWorkflow):
             raise InternalError("Cannot query a step with name {0}, reserved string".format(step_method_name))
 
         try:
-            user = self._backend.users.get_default()
+            user = orm.User.objects(self._backend).get_default().backend_entity
             step = self.dbworkflowinstance.steps.get(name=step_method_name, user=user.dbuser)
             return step
         except ObjectDoesNotExist:
@@ -579,10 +582,9 @@ class Workflow(AbstractWorkflow):
 
 def kill_all():
     from aiida.backends.djsite.db.models import DbWorkflow
-    from aiida.orm.backends import construct_backend
-    backend = construct_backend()
+    from aiida import orm
 
-    q_object = Q(user=backend.users.get_default().id)
+    q_object = Q(user=orm.User.objects.get_default().id)
     q_object.add(~Q(state=wf_states.FINISHED), Q.AND)
     w_list = DbWorkflow.objects.filter(q_object)
 

@@ -14,8 +14,7 @@ from __future__ import absolute_import
 import functools
 from aiida.orm.implementation.general.calculation.inline import InlineCalculation
 
-
-__all__ = ['InlineCalculation', 'make_inline', 'optional_inline']
+__all__ = 'InlineCalculation', 'make_inline', 'optional_inline'
 
 
 def make_inline(func):

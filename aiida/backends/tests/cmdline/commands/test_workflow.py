@@ -76,8 +76,8 @@ class TestVerdiLegacyWorkflow(AiidaTestCase):
         for result in results:
             self.assertIsNone(result.exception, msg=debug_msg(result))
 
-        self.assertTrue(len(results[0].output) < len(results[1].output))
-        self.assertTrue(len(results[1].output) < len(results[2].output))
+        self.assertLess(len(results[0].output), len(results[1].output))
+        self.assertLess(len(results[1].output), len(results[2].output))
 
     def test_workflow_report(self):
         result = self.cli_runner.invoke(workflow_report, [str(self.super_workflow.uuid)])

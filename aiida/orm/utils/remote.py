@@ -55,19 +55,18 @@ def get_calculation_remote_paths(calculation_pks=None, past_days=None, older_tha
     """
     from datetime import timedelta
 
-    from aiida.orm.backends import construct_backend
-    from aiida.orm.computer import Computer as OrmComputer
+    from aiida.orm.computers import Computer as OrmComputer
     from aiida.orm.users import User as OrmUser
     from aiida.orm.calculation import Calculation as OrmCalculation
     from aiida.orm.querybuilder import QueryBuilder
+    from aiida import orm
     from aiida.utils import timezone
 
     filters_calc = {}
     filters_computer = {}
 
     if user is None:
-        backend = construct_backend()
-        user = backend.users.get_default()
+        user = orm.User.objects.get_default()
 
     if computers is not None:
         filters_computer['id'] = {'in': [computer.pk for computer in computers]}

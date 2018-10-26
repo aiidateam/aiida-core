@@ -21,7 +21,6 @@ import subprocess as sp
 
 from click.testing import CliRunner
 
-from aiida.cmdline.utils import echo
 from aiida.orm.group import Group
 from aiida.orm.data.array import ArrayData
 from aiida.orm.data.array.bands import BandsData
@@ -32,7 +31,6 @@ from aiida.orm.data.remote import RemoteData
 from aiida.orm.data.structure import StructureData
 from aiida.orm.data.array.trajectory import TrajectoryData
 
-from aiida.orm.backend import construct_backend
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands.cmd_data import cmd_array
 from aiida.cmdline.commands.cmd_data import cmd_bands
@@ -439,9 +437,10 @@ class TestVerdiDataRemote(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls):
+        from aiida import orm
         super(TestVerdiDataRemote, cls).setUpClass()
-        user = cls.backend.users.get_automatic_user()
-        authinfo = cls.backend.authinfos.create(cls.computer, user)
+        user = orm.User.objects(cls.backend).get_default()
+        authinfo = orm.AuthInfo(cls.computer, user)
         authinfo.store()
 
     def setUp(self):
@@ -561,10 +560,14 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable, TestVerdiDat
 
     @classmethod
     def setUpClass(cls):
+        from aiida import orm
         super(TestVerdiDataTrajectory, cls).setUpClass()
-        new_comp = cls.backend.computers.create(
-            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida')
-        new_comp.store()
+        orm.Computer(
+            name='comp',
+            hostname='localhost',
+            transport_type='local',
+            scheduler_type='direct',
+            workdir='/tmp/aiida').store()
         cls.ids = cls.create_trajectory_data()
 
     def setUp(self):
@@ -655,10 +658,15 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable, TestVerdiData
 
     @classmethod
     def setUpClass(cls):
+        from aiida import orm
+
         super(TestVerdiDataStructure, cls).setUpClass()
-        new_comp = cls.backend.computers.create(
-            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida')
-        new_comp.store()
+        orm.Computer(
+            name='comp',
+            hostname='localhost',
+            transport_type='local',
+            scheduler_type='direct',
+            workdir='/tmp/aiida').store()
         cls.ids = cls.create_structure_data()
 
     def setUp(self):
@@ -770,11 +778,14 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExport
 
     @classmethod
     def setUpClass(cls):
+        from aiida import orm
         super(TestVerdiDataCif, cls).setUpClass()
-        new_comp = cls.backend.computers.create(
-            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida')
-        new_comp.store()
-
+        orm.Computer(
+            name='comp',
+            hostname='localhost',
+            transport_type='local',
+            scheduler_type='direct',
+            workdir='/tmp/aiida').store()
         cls.ids = cls.create_cif_data()
 
     def setUp(self):

@@ -13,11 +13,13 @@ from __future__ import print_function
 from __future__ import absolute_import
 import os
 import subprocess as sp
+import traceback
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands.cmd_code import (setup_code, delete, hide, reveal, relabel, code_list, show, code_duplicate)
 from aiida.common.exceptions import NotExistent
+from aiida import orm
 
 
 # pylint: disable=missing-docstring
@@ -27,12 +29,16 @@ class TestVerdiCodeSetup(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         super(TestVerdiCodeSetup, cls).setUpClass(*args, **kwargs)
-        new_comp = cls.backend.computers.create(name='comp', hostname='localhost', transport_type='local',
-                                                scheduler_type='direct', workdir='/tmp/aiida')
-        new_comp.store()
+        orm.Computer(
+            name='comp',
+            hostname='localhost',
+            transport_type='local',
+            scheduler_type='direct',
+            workdir='/tmp/aiida',
+            backend=cls.backend).store()
 
     def setUp(self):
-        self.comp = self.backend.computers.get(name='comp')
+        self.comp = orm.Computer.objects(self.backend).get(name='comp')
 
         self.cli_runner = CliRunner()
         self.this_folder = os.path.dirname(__file__)
@@ -53,7 +59,7 @@ class TestVerdiCodeSetup(AiidaTestCase):
         user_input = '\n'.join(
             [label, 'description', 'simpleplugins.arithmetic.add', 'yes', self.comp.name, '/remote/abs/path'])
         result = self.cli_runner.invoke(setup_code, input=user_input)
-        self.assertIsNone(result.exception, msg="There was an unexpected exception. Output: {}".format(result.output))
+        self.assertIsNone(result.exception, "".join(traceback.format_exception(*result.exc_info)))
         self.assertIsInstance(Code.get_from_string('{}@{}'.format(label, self.comp.name)), Code)
 
     def test_interactive_upload(self):
@@ -76,7 +82,7 @@ class TestVerdiCodeSetup(AiidaTestCase):
             '--remote-abs-path=/remote/abs/path'
         ]
         result = self.cli_runner.invoke(setup_code, options)
-        self.assertIsNone(result.exception, result.output[-1000:])
+        self.assertIsNone(result.exception, "".join(traceback.format_exception(*result.exc_info)))
         self.assertIsInstance(Code.get_from_string('{}@{}'.format(label, self.comp.name)), Code)
 
     def test_noninteractive_upload(self):
@@ -97,7 +103,7 @@ class TestVerdiCodeSetup(AiidaTestCase):
         options = ['--description=description', '--on-computer', '--remote-abs-path=/remote/abs/path']
         user_input = '\n'.join([label, 'simpleplugins.arithmetic.add', self.comp.name])
         result = self.cli_runner.invoke(setup_code, options, input=user_input)
-        self.assertIsNone(result.exception, result.output[-1000:])
+        self.assertIsNone(result.exception, "".join(traceback.format_exception(*result.exc_info)))
         self.assertIsInstance(Code.get_from_string('{}@{}'.format(label, self.comp.name)), Code)
 
 
@@ -109,19 +115,25 @@ class TestVerdiCodeCommands(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
+        from aiida import orm
+
         super(TestVerdiCodeCommands, cls).setUpClass(*args, **kwargs)
-        new_comp = cls.backend.computers.create(name='comp', hostname='localhost', transport_type='local',
-                                                scheduler_type='direct', workdir='/tmp/aiida')
-        new_comp.store()
+        orm.Computer(
+            name='comp',
+            hostname='localhost',
+            transport_type='local',
+            scheduler_type='direct',
+            workdir='/tmp/aiida',
+            backend=cls.backend).store()
 
     def setUp(self):
-        from aiida.orm import Code
-        self.comp = self.backend.computers.get(name='comp')
+        from aiida import orm
+        self.comp = orm.Computer.objects(self.backend).get(name='comp')
 
         try:
-            code = Code.get_from_string('code')
+            code = orm.Code.get_from_string('code')
         except NotExistent:
-            code = Code(
+            code = orm.Code(
                 input_plugin_name='simpleplugins.arithmetic.add',
                 remote_computer_exec=[self.comp, '/remote/abs/path'],
             )

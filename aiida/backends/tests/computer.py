@@ -16,7 +16,8 @@ from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import NotExistent
 
-from aiida.orm import Computer, User
+from aiida.orm import Computer, User, AuthInfo
+from aiida import orm
 
 
 class TestComputer(AiidaTestCase):
@@ -27,7 +28,7 @@ class TestComputer(AiidaTestCase):
         """
         import tempfile
 
-        new_comp = Computer(
+        new_comp = orm.Computer(
             name='bbb',
             hostname='localhost',
             transport_type='local',
@@ -35,7 +36,7 @@ class TestComputer(AiidaTestCase):
             workdir='/tmp/aiida').store()
 
         # Configure the computer - no parameters for local transport
-        authinfo = self.backend.authinfos.create(computer=new_comp, user=User.objects.get_default())
+        authinfo = orm.AuthInfo(computer=new_comp, user=User.objects.get_default())
         authinfo.store()
 
         transport = new_comp.get_transport()
@@ -48,7 +49,7 @@ class TestComputer(AiidaTestCase):
             self.assertEquals(transport.isfile(f.name), False)
 
     def test_delete(self):
-        new_comp = Computer(
+        new_comp = orm.Computer(
             name='aaa',
             hostname='aaa',
             transport_type='local',
@@ -58,13 +59,13 @@ class TestComputer(AiidaTestCase):
 
         comp_pk = new_comp.pk
 
-        check_computer = Computer.objects.get(comp_pk)
+        check_computer = orm.Computer.objects(self.backend).get(id=comp_pk)
         self.assertEquals(comp_pk, check_computer.pk)
 
         Computer.objects.delete(comp_pk)
 
         with self.assertRaises(NotExistent):
-            Computer.get(comp_pk)
+            orm.Computer.objects(self.backend).get(id=comp_pk)
 
 
 class TestComputerConfigure(AiidaTestCase):

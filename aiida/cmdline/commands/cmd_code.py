@@ -252,17 +252,12 @@ def rename(ctx, code, label):
 @with_dbenv()
 def code_list(computer, input_plugin, all_entries, all_users, show_owner):
     """List the codes in the database."""
-    from aiida.orm.backends import construct_backend
-    backend = construct_backend()
-
-    from aiida.orm.querybuilder import QueryBuilder
     from aiida.orm.code import Code  # pylint: disable=redefined-outer-name
-    from aiida.orm.computer import Computer
-    from aiida.orm.users import User
+    from aiida import orm
 
     qb_user_filters = dict()
     if not all_users:
-        user = backend.users.get_default()
+        user = orm.User.objects.get_default()
         qb_user_filters['email'] = user.email
 
     qb_computer_filters = dict()
@@ -290,16 +285,16 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
 
     # pylint: disable=invalid-name
     if computer is not None:
-        qb = QueryBuilder()
+        qb = orm.QueryBuilder()
         qb.append(Code, tag="code", filters=qb_code_filters, project=["id", "label"])
         # We have a user assigned to the code so we can ask for the
         # presence of a user even if there is no user filter
-        qb.append(User, creator_of="code", project=["email"], filters=qb_user_filters)
+        qb.append(orm.User, creator_of="code", project=["email"], filters=qb_user_filters)
         # We also add the filter on computer. This will automatically
         # return codes that have a computer (and of course satisfy the
         # other filters). The codes that have a computer attached are the
         # remote codes.
-        qb.append(Computer, computer_of="code", project=["name"], filters=qb_computer_filters)
+        qb.append(orm.Computer, computer_of="code", project=["name"], filters=qb_computer_filters)
         qb.order_by({Code: {'id': 'asc'}})
         print_list_res(qb, show_owner)
 
@@ -307,18 +302,18 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
     else:
         # Print all codes that have a computer assigned to them
         # (these are the remote codes)
-        qb = QueryBuilder()
+        qb = orm.QueryBuilder()
         qb.append(Code, tag="code", filters=qb_code_filters, project=["id", "label"])
         # We have a user assigned to the code so we can ask for the
         # presence of a user even if there is no user filter
-        qb.append(User, creator_of="code", project=["email"], filters=qb_user_filters)
-        qb.append(Computer, computer_of="code", project=["name"])
+        qb.append(orm.User, creator_of="code", project=["email"], filters=qb_user_filters)
+        qb.append(orm.Computer, computer_of="code", project=["name"])
         qb.order_by({Code: {'id': 'asc'}})
         print_list_res(qb, show_owner)
 
         # Now print all the local codes. To get the local codes we ask
         # the dbcomputer_id variable to be None.
-        qb = QueryBuilder()
+        qb = orm.QueryBuilder()
         comp_non_existence = {"dbcomputer_id": {"==": None}}
         if not qb_code_filters:
             qb_code_filters = comp_non_existence
@@ -328,7 +323,7 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
         qb.append(Code, tag="code", filters=qb_code_filters, project=["id", "label"])
         # We have a user assigned to the code so we can ask for the
         # presence of a user even if there is no user filter
-        qb.append(User, creator_of="code", project=["email"], filters=qb_user_filters)
+        qb.append(orm.User, creator_of="code", project=["email"], filters=qb_user_filters)
         qb.order_by({Code: {'id': 'asc'}})
         print_list_res(qb, show_owner)
 

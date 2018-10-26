@@ -19,7 +19,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 from aiida.orm import DataFactory
 from aiida.orm.calculation import Calculation
-from aiida.orm.computer import Computer
+from aiida.orm.computers import Computer
 from aiida.orm.data import Data
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.restapi.api import App, AiidaApi
@@ -46,6 +46,7 @@ class RESTApiTestCase(AiidaTestCase):
         Basides the standard setup we need to add few more objects in the
         database to be able to explore different requests/filters/orderings etc.
         """
+        from aiida import orm
 
         # call parent setUpClass method
         super(RESTApiTestCase, cls).setUpClass()
@@ -113,7 +114,7 @@ class RESTApiTestCase(AiidaTestCase):
         }]
 
         for dummy_computer in dummy_computers:
-            computer = cls.backend.computers.create(**dummy_computer)
+            computer = orm.Computer(backend=cls.backend, **dummy_computer)
             computer.store()
 
         # Prepare typical REST responses
@@ -133,7 +134,7 @@ class RESTApiTestCase(AiidaTestCase):
         RESTapi and puts them into class attributes
 
         """
-        #TODO: Storing the different nodes as lists and accessing them
+        # TODO: Storing the different nodes as lists and accessing them
         # by their list index is very fragile and a pain to debug.
         # Please change this!
         computer_projections = ["id", "uuid", "name", "hostname", "transport_type", "scheduler_type"]

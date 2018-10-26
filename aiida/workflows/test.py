@@ -117,12 +117,13 @@ class WFTestSimpleWithSubWF(Workflow):
 
 
 def generate_calc(workflow):
+    from aiida import orm
     from aiida.orm import CalculationFactory
     from aiida.common.datastructures import calc_states
 
     CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
 
-    computer = workflow.backend.computers.get(name='localhost')
+    computer = orm.Computer.objects(workflow._backend).get(name='localhost')
 
     calc = CustomCalc(computer=computer, withmpi=True)
     calc.set_option('resources',

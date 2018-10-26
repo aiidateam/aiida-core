@@ -61,7 +61,7 @@ class DbComputer(Base):
         Return a DbComputer from its name (or from another Computer or DbComputer instance)
         """
 
-        from aiida.orm.computer import Computer
+        from aiida.orm.computers import Computer
         if isinstance(computer, six.string_types):
             try:
                 dbcomputer = cls.session.query(cls).filter(cls.name == computer).one()

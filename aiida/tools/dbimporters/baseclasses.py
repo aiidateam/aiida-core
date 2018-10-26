@@ -209,7 +209,6 @@ class DbEntry(object):
         :param extras: a dictionary with some extra parameters
             (e.g. database ID number)
         :param uri: URI of the structure (should be permanent)
-        :param lic: the license
         """
         self.source = {
             'db_name': db_name,

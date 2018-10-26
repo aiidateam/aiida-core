@@ -14,8 +14,9 @@ from __future__ import absolute_import
 import os
 import datetime
 import requests
+from six import raise_from
 from pymatgen import MPRester
-from aiida.tools.dbimporters.baseclasses import CifEntry, DbEntry, DbImporter, DbSearchResults
+from aiida.tools.dbimporters.baseclasses import CifEntry, DbImporter, DbSearchResults
 
 
 class MaterialsProjectImporter(DbImporter):
@@ -26,28 +27,29 @@ class MaterialsProjectImporter(DbImporter):
     _properties = 'structure'
     _supported_keywords = None
 
-    def __init__(self, api_key=None):
+    def __init__(self, **kwargs):
         """
-        Instantiate the MaterialsProjectImporter by setting up the Materials API (MAPI) connection details
-
-        :param api_key: the API key to be used to access MAPI
+        Instantiate the MaterialsProjectImporter by setting up the Materials API (MAPI)
+        connection details.
         """
-        self.setup_db(api_key=api_key)
+        self.setup_db(**kwargs)
 
     def setup_db(self, **kwargs):
         """
         Setup the required parameters to the REST API
-
-        :param api_key: the API key to be used to access MAPI
         """
-        api_key = kwargs['api_key']
-        if api_key is None:
+        try:
+            api_key = kwargs['api_key']
+        except KeyError:
             try:
                 api_key = os.environ['PMG_MAPI_KEY']
-            except KeyError:
-                raise ValueError('API key not supplied and PMG_MAPI_KEY environment '
-                                 'variable not set. Either pass it when initializing the class, '
-                                 'or set the environment variable PMG_MAPI_KEY to your API key.')
+            except KeyError as exc:
+                raise_from(
+                    KeyError('API key not supplied and PMG_MAPI_KEY environment '
+                             'variable not set. Either pass it when initializing the class, '
+                             'or set the environment variable PMG_MAPI_KEY to your API key.'), exc)
+            api_key = None
+
         self._api_key = api_key
         self._verify_api_key()
         self._mpr = MPRester(self._api_key)
@@ -117,13 +119,13 @@ class MaterialsProjectImporter(DbImporter):
 
         results = []
         properties_list = ['material_id', 'cif']
-        for entry in self.find(query, properties_list):
+        for entry in self._find(query, properties_list):
             results.append(entry)
         search_results = MaterialsProjectSearchResults(results, return_class=MaterialsProjectCifEntry)
 
         return search_results
 
-    def find(self, query, properties):
+    def _find(self, query, properties):
         """
         Query the database with a given dictionary of query parameters
 
@@ -133,9 +135,10 @@ class MaterialsProjectImporter(DbImporter):
             yield entry
 
 
-class MaterialsProjectCifEntry(CifEntry, DbEntry):  # pylint: disable=abstract-method
+class MaterialsProjectCifEntry(CifEntry):  # pylint: disable=abstract-method
     """
     A Materials Project entry class which extends the DbEntry class with a CifEntry class.
+
     """
 
     _license = 'Materials Project'
@@ -157,17 +160,18 @@ class MaterialsProjectCifEntry(CifEntry, DbEntry):  # pylint: disable=abstract-m
 class MaterialsProjectSearchResults(DbSearchResults):  # pylint: disable=abstract-method
     """
     A collection of MaterialsProjectEntry query result entries.
+
+    :param results: query result entry dictionary
+    :return_class: the class associated with each
     """
 
     _db_name = 'Materials Project'
     _db_uri = 'https://materialsproject.org'
     _material_base_url = 'https://materialsproject.org/materials/'
     _version = str(datetime.datetime.now())
-    _return_class = MaterialsProjectCifEntry
 
-    def __init__(self, results, return_class=None):
-        if return_class is not None:
-            self._return_class = return_class
+    def __init__(self, results, return_class):
+        self._return_class = return_class
         super(MaterialsProjectSearchResults, self).__init__(results)
 
     def _get_source_dict(self, result_dict):

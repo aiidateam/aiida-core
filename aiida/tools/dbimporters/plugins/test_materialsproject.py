@@ -18,15 +18,24 @@ from aiida.tools.dbimporters import DbImporterFactory
 from aiida.backends.testbase import AiidaTestCase
 
 
+def run_materialsproject_api_tests():
+    from aiida.settings import profile_conf
+    return profile_conf.get('run_materialsproject_api_tests', False)
+
+
 class TestMaterialsProject(AiidaTestCase):
     """
     Contains the tests to verify the functionality of the Materials Project importer
     functions.
     """
 
+    import unittest
+
+    @unittest.skipIf(not run_materialsproject_api_tests(), "MaterialsProject API tests not enabled")
     def test_invalid_api_key(self):  # pylint: disable=no-self-use
         """
         Test if Materials Project rejects an invalid API key and that we catch the error.
+        Please enable the test in the profile configurator.
         """
         importer_class = DbImporterFactory('materialsproject')
         importer_parameters = {'api_key': 'thisisawrongkey'}

@@ -10,7 +10,6 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from abc import abstractmethod, ABCMeta
 from collections import namedtuple
 
 import six
@@ -28,9 +27,8 @@ OrderSpecifier = namedtuple("OrderSpecifier", ['field', 'direction'])
 __all_ = ['Log']
 
 
-@six.add_metaclass(ABCMeta)
 class Log(entities.Entity):
-    class Collection(entities.Collection):
+    class Collection(entities.Entity.Collection):
         """
         This class represents the collection of logs and can be used to create
         and retrieve logs.

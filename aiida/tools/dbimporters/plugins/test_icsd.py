@@ -10,14 +10,16 @@
 """
 Tests for IcsdDbImporter
 """
+
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from django.utils import unittest
+
+import unittest
+
 from aiida.backends.testbase import AiidaTestCase
 
-import aiida.tools.dbimporters.plugins.icsd
-
+from . import icsd
 
 
 def has_mysqldb():
@@ -25,7 +27,7 @@ def has_mysqldb():
     :return: True if the ase module can be imported, False otherwise.
     """
     try:
-        import MySQLdb
+        import MySQLdb  # pylint: disable=unused-variable
     except ImportError:
         try:
             import pymysql as MySQLdb
@@ -33,65 +35,76 @@ def has_mysqldb():
             return False
     return True
 
-server = None
-host = None
 
-#define appropriate server and host to make the tests run.
-#server = "http://localhost:8001/"
-#host = "127.0.0.1"
+def has_icsd_config():
+    """
+    :return: True if the currently loaded profile has a ICSD configuration
+    """
+
+    from aiida.settings import profile_conf
+
+    required_keywords = {
+        'ICSD_SERVER_URL', 'ICSD_MYSQL_HOST', 'ICSD_MYSQL_USER', 'ICSD_MYSQL_PASSWORD', 'ICSD_MYSQL_DB'
+    }
+
+    return required_keywords <= set(profile_conf.keys())
 
 
-@unittest.skipIf(server is None, "Server name required")
+@unittest.skipUnless(has_mysqldb() and has_icsd_config(), "ICSD configuration in profile required")
 class TestIcsd(AiidaTestCase):
-
-
-
+    """
+    Tests for the ICSD importer
+    """
 
     def setUp(self):
         """
         Set up IcsdDbImporter for web and mysql db query.
         """
+        from aiida.settings import profile_conf
 
-        self.server = server
-        self.host = host
+        self.server = profile_conf['ICSD_SERVER_URL']
+        self.host = profile_conf['ICSD_MYSQL_HOST']
+        self.user = profile_conf['ICSD_MYSQL_USER']
+        self.password = profile_conf['ICSD_MYSQL_PASSWORD']
+        self.dbname = profile_conf['ICSD_MYSQL_DB']
+        self.dbport = profile_conf.get('ICSD_MYSQL_PORT', 3306)
 
-
-        self.importerdb = aiida.tools.dbimporters.plugins.icsd.IcsdDbImporter(server=self.server, host= self.host)
-        self.importerweb = aiida.tools.dbimporters.plugins.icsd.IcsdDbImporter(server=self.server, host= self.host, querydb = False)
-
+        self.importerdb = icsd.IcsdDbImporter(server=self.server, host=self.host)
+        self.importerweb = icsd.IcsdDbImporter(server=self.server, host=self.host, querydb=False)
 
     def test_server(self):
         """
         Test Icsd intranet webinterface
         """
         from six.moves import urllib
-        html = urllib.request.urlopen(self.server + "icsd/").read()
+        urllib.request.urlopen(self.server + "icsd/").read()
 
-    @unittest.skipIf(host is None or not has_mysqldb(), "host required to query mysql db or unable to import MySQLdb")
     def test_mysqldb(self):
         """
         Test connection to Icsd mysql database.
         """
-        import MySQLdb
-        db = MySQLdb.connect(host = self.host, user ="dba", passwd = "sql", db = "icsd", port=3306)
+        try:
+            import MySQLdb
+        except ImportError:
+            import pymysql as MySQLdb
 
-        cursor = db.cursor()
+        mydb = MySQLdb.connect(host=self.host, user=self.user, passwd=self.password, db=self.dbname, port=self.dbport)
+        mydb.cursor()
 
     def test_web_zero_results(self):
         """
         No results should be obtained from year 3000.
         """
-        with self.assertRaises(aiida.tools.dbimporters.plugins.icsd.NoResultsWebExp):
-            self.noresults = self.importerweb.query(year="3000")
+        with self.assertRaises(icsd.NoResultsWebExp):
+            self.importerweb.query(year="3000")
 
-
-    def test_web_COLLCODE_155006(self):
+    def test_web_collcode_155006(self):
         """
         Query for the CIF code 155006, should return 1 result.
         """
 
-        queryresults =  self.importerweb.query(id="155006")
-        self.assertEqual(queryresults.number_of_results,1)
+        queryresults = self.importerweb.query(id="155006")
+        self.assertEqual(queryresults.number_of_results, 1)
 
         with self.assertRaises(StopIteration):
             next(queryresults)
@@ -100,27 +113,17 @@ class TestIcsd(AiidaTestCase):
         with self.assertRaises(IndexError):
             queryresults.at(10)
 
-
-    @unittest.skipIf(host is None or not has_mysqldb(), "host required to query mysql db or unable to import MySQLdb")
     def test_dbquery_zero_results(self):
-        import aiida.tools.dbimporters.plugins.icsd
-        self.importer = aiida.tools.dbimporters.plugins.icsd.IcsdDbImporter(server=self.server, host= self.host)
-        self.noresults = self.importer.query(year="3000") # which should work at least for the next 85 years..
-        self.assertEqual(self.noresults.number_of_results, 0)
+        """
+        check handling a zero result case
+        """
+
+        importer = icsd.IcsdDbImporter(server=self.server, host=self.host)
+        noresults = importer.query(year="3000")  # which should work at least for the next 85 years..
+        self.assertEqual(noresults.number_of_results, 0)
 
         with self.assertRaises(StopIteration):
-            next(self.noresults)
+            next(noresults)
 
         with self.assertRaises(IndexError):
-            self.noresults.at(0)
-
-
-if __name__ == '__main__':
-    from aiida import load_dbenv
-    load_dbenv()
-    unittest.main()
-
-
-
-
-
+            noresults.at(0)

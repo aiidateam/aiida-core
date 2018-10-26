@@ -186,7 +186,6 @@
         aiida/common/extendeddicts.py|
         aiida/common/folders.py|
         aiida/common/graph.py|
-        aiida/common/hashing.py|
         aiida/common/__init__.py|
         aiida/common/ipython/__init__.py|
         aiida/common/ipython/ipython_magics.py|
@@ -370,7 +369,6 @@
         aiida/tools/dbimporters/plugins/oqmd.py|
         aiida/tools/dbimporters/plugins/pcod.py|
         aiida/tools/dbimporters/plugins/tcod.py|
-        aiida/tools/dbimporters/plugins/test_icsd.py|
         aiida/tools/__init__.py|
         aiida/transport/plugins/ssh.py|
         aiida/transport/plugins/test_all_plugins.py|

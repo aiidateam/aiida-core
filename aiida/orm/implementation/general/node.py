@@ -16,6 +16,8 @@ import os
 import logging
 import importlib
 import collections
+import numbers
+import math
 
 import six
 
@@ -51,13 +53,20 @@ def clean_value(value):
     # Must be imported in here to avoid recursive imports
     from aiida.orm.data import BaseType
 
+    def clean_builtin(val):
+        if isinstance(val, numbers.Real) and (math.isnan(val) or math.isinf(val)):
+            # see https://www.postgresql.org/docs/current/static/datatype-json.html#JSON-TYPE-MAPPING-TABLE
+            raise ValidationError("nan and inf/-inf can not be serialized to the database")
+
+        return val
+
     if isinstance(value, BaseType):
-        return value.value
-    elif isinstance(value, dict):
+        return clean_builtin(value.value)
+
+    if isinstance(value, dict):
         # Check dictionary before iterables
         return {k: clean_value(v) for k, v in value.items()}
-    elif (isinstance(value, collections.Iterable) and
-          not isinstance(value, six.string_types)):
+    if (isinstance(value, collections.Iterable) and not isinstance(value, six.string_types)):
         # list, tuple, ... but not a string
         # This should also properly take care of dealing with the
         # basedatatypes.List object
@@ -67,7 +76,8 @@ def clean_value(value):
     # itself - it's not super robust, but relies on duck typing
     # (e.g. if there is something that behaves like an integer
     # but is not an integer, I still accept it)
-    return value
+
+    return clean_builtin(value)
 
 
 class _AbstractNodeMeta(ABCMeta):

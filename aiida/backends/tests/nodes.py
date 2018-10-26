@@ -613,17 +613,17 @@ class TestNodeBasic(AiidaTestCase):
         file_content = 'some text ABCDE'
         file_content_different = 'other values 12345'
 
-        with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
-            fhandle.write(file_content)
-            fhandle.flush()
-            a.add_path(f.name, 'file1.txt')
-            a.add_path(f.name, 'file2.txt')
+        with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
+            tmpf.write(file_content)
+            tmpf.flush()
+            a.add_path(tmpf.name, 'file1.txt')
+            a.add_path(tmpf.name, 'file2.txt')
 
         self.assertEquals(set(a.get_folder_list()), set(['file1.txt', 'file2.txt']))
         with io.open(a.get_abs_path('file1.txt'), encoding='utf8') as fhandle:
-            self.assertEquals(f.read(), file_content)
+            self.assertEquals(fhandle.read(), file_content)
         with io.open(a.get_abs_path('file2.txt'), encoding='utf8') as fhandle:
-            self.assertEquals(f.read(), file_content)
+            self.assertEquals(fhandle.read(), file_content)
 
         b = a.clone()
         self.assertNotEquals(a.uuid, b.uuid)
@@ -631,30 +631,30 @@ class TestNodeBasic(AiidaTestCase):
         # Check that the content is there
         self.assertEquals(set(b.get_folder_list()), set(['file1.txt', 'file2.txt']))
         with io.open(b.get_abs_path('file1.txt'), encoding='utf8') as fhandle:
-            self.assertEquals(f.read(), file_content)
+            self.assertEquals(fhandle.read(), file_content)
         with io.open(b.get_abs_path('file2.txt'), encoding='utf8') as fhandle:
-            self.assertEquals(f.read(), file_content)
+            self.assertEquals(fhandle.read(), file_content)
 
         # I overwrite a file and create a new one in the clone only
-        with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
-            fhandle.write(file_content_different)
-            fhandle.flush()
-            b.add_path(f.name, 'file2.txt')
-            b.add_path(f.name, 'file3.txt')
+        with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
+            tmpf.write(file_content_different)
+            tmpf.flush()
+            b.add_path(tmpf.name, 'file2.txt')
+            b.add_path(tmpf.name, 'file3.txt')
 
         # I check the new content, and that the old one has not changed
         self.assertEquals(set(a.get_folder_list()), set(['file1.txt', 'file2.txt']))
         with io.open(a.get_abs_path('file1.txt'), encoding='utf8') as fhandle:
-            self.assertEquals(f.read(), file_content)
+            self.assertEquals(fhandle.read(), file_content)
         with io.open(a.get_abs_path('file2.txt'), encoding='utf8') as fhandle:
-            self.assertEquals(f.read(), file_content)
+            self.assertEquals(fhandle.read(), file_content)
         self.assertEquals(set(b.get_folder_list()), set(['file1.txt', 'file2.txt', 'file3.txt']))
         with io.open(b.get_abs_path('file1.txt'), encoding='utf8') as fhandle:
-            self.assertEquals(f.read(), file_content)
+            self.assertEquals(fhandle.read(), file_content)
         with io.open(b.get_abs_path('file2.txt'), encoding='utf8') as fhandle:
-            self.assertEquals(f.read(), file_content_different)
+            self.assertEquals(fhandle.read(), file_content_different)
         with io.open(b.get_abs_path('file3.txt'), encoding='utf8') as fhandle:
-            self.assertEquals(f.read(), file_content_different)
+            self.assertEquals(fhandle.read(), file_content_different)
 
         # This should in principle change the location of the files,
         # so I recheck
@@ -663,25 +663,25 @@ class TestNodeBasic(AiidaTestCase):
         # I now clone after storing
         c = a.clone()
         # I overwrite a file and create a new one in the clone only
-        with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
-            fhandle.write(file_content_different)
-            fhandle.flush()
-            c.add_path(f.name, 'file1.txt')
-            c.add_path(f.name, 'file4.txt')
+        with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
+            tmpf.write(file_content_different)
+            tmpf.flush()
+            c.add_path(tmpf.name, 'file1.txt')
+            c.add_path(tmpf.name, 'file4.txt')
 
         self.assertEquals(set(a.get_folder_list()), set(['file1.txt', 'file2.txt']))
         with io.open(a.get_abs_path('file1.txt'), encoding='utf8') as fhandle:
-            self.assertEquals(f.read(), file_content)
+            self.assertEquals(fhandle.read(), file_content)
         with io.open(a.get_abs_path('file2.txt'), encoding='utf8') as fhandle:
-            self.assertEquals(f.read(), file_content)
+            self.assertEquals(fhandle.read(), file_content)
 
         self.assertEquals(set(c.get_folder_list()), set(['file1.txt', 'file2.txt', 'file4.txt']))
         with io.open(c.get_abs_path('file1.txt'), encoding='utf8') as fhandle:
-            self.assertEquals(f.read(), file_content_different)
+            self.assertEquals(fhandle.read(), file_content_different)
         with io.open(c.get_abs_path('file2.txt'), encoding='utf8') as fhandle:
-            self.assertEquals(f.read(), file_content)
+            self.assertEquals(fhandle.read(), file_content)
         with io.open(c.get_abs_path('file4.txt'), encoding='utf8') as fhandle:
-            self.assertEquals(f.read(), file_content_different)
+            self.assertEquals(fhandle.read(), file_content_different)
 
     def test_folders(self):
         """
@@ -707,8 +707,8 @@ class TestNodeBasic(AiidaTestCase):
         # create a folder structure to copy around
         tree_1 = os.path.join(directory, 'tree_1')
         os.makedirs(tree_1)
-        file_content = 'some text ABCDE'
-        file_content_different = 'other values 12345'
+        file_content = u'some text ABCDE'
+        file_content_different = u'other values 12345'
         with io.open(os.path.join(tree_1, 'file1.txt'), 'w', encoding='utf8') as fhandle:
             fhandle.write(file_content)
         os.mkdir(os.path.join(tree_1, 'dir1'))
@@ -726,9 +726,9 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(set(a.get_folder_list('tree_1')), set(['file1.txt', 'dir1']))
         self.assertEquals(set(a.get_folder_list(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
         with io.open(a.get_abs_path(os.path.join('tree_1', 'file1.txt')), encoding='utf8') as fhandle:
-            self.assertEquals(f.read(), file_content)
+            self.assertEquals(fhandle.read(), file_content)
         with io.open(a.get_abs_path(os.path.join('tree_1', 'dir1', 'file2.txt')), encoding='utf8') as fhandle:
-            self.assertEquals(f.read(), file_content)
+            self.assertEquals(fhandle.read(), file_content)
 
         # try to exit from the folder
         with self.assertRaises(ValueError):
@@ -743,9 +743,9 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(set(b.get_folder_list('tree_1')), set(['file1.txt', 'dir1']))
         self.assertEquals(set(b.get_folder_list(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
         with io.open(b.get_abs_path(os.path.join('tree_1', 'file1.txt')), encoding='utf8') as fhandle:
-            self.assertEquals(f.read(), file_content)
+            self.assertEquals(fhandle.read(), file_content)
         with io.open(b.get_abs_path(os.path.join('tree_1', 'dir1', 'file2.txt')), encoding='utf8') as fhandle:
-            self.assertEquals(f.read(), file_content)
+            self.assertEquals(fhandle.read(), file_content)
 
         # I overwrite a file and create a new one in the copy only
         dir3 = os.path.join(directory, 'dir3')
@@ -756,10 +756,10 @@ class TestNodeBasic(AiidaTestCase):
         with self.assertRaises(ValueError):
             b.add_path('dir3', os.path.join('tree_1', 'dir3'))
 
-        with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
-            fhandle.write(file_content_different)
-            fhandle.flush()
-            b.add_path(f.name, 'file3.txt')
+        with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
+            tmpf.write(file_content_different)
+            tmpf.flush()
+            b.add_path(tmpf.name, 'file3.txt')
 
         # I check the new content, and that the old one has not changed
         # old
@@ -767,17 +767,17 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(set(a.get_folder_list('tree_1')), set(['file1.txt', 'dir1']))
         self.assertEquals(set(a.get_folder_list(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
         with io.open(a.get_abs_path(os.path.join('tree_1', 'file1.txt')), encoding='utf8') as fhandle:
-            self.assertEquals(f.read(), file_content)
+            self.assertEquals(fhandle.read(), file_content)
         with io.open(a.get_abs_path(os.path.join('tree_1', 'dir1', 'file2.txt')), encoding='utf8') as fhandle:
-            self.assertEquals(f.read(), file_content)
+            self.assertEquals(fhandle.read(), file_content)
         # new
         self.assertEquals(set(b.get_folder_list('.')), set(['tree_1', 'file3.txt']))
         self.assertEquals(set(b.get_folder_list('tree_1')), set(['file1.txt', 'dir1', 'dir3']))
         self.assertEquals(set(b.get_folder_list(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
         with io.open(b.get_abs_path(os.path.join('tree_1', 'file1.txt')), encoding='utf8') as fhandle:
-            self.assertEquals(f.read(), file_content)
+            self.assertEquals(fhandle.read(), file_content)
         with io.open(b.get_abs_path(os.path.join('tree_1', 'dir1', 'file2.txt')), encoding='utf8') as fhandle:
-            self.assertEquals(f.read(), file_content)
+            self.assertEquals(fhandle.read(), file_content)
 
         # This should in principle change the location of the files,
         # so I recheck
@@ -787,11 +787,11 @@ class TestNodeBasic(AiidaTestCase):
         c = a.clone()
         # I overwrite a file, create a new one and remove a directory
         # in the copy only
-        with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
-            fhandle.write(file_content_different)
-            fhandle.flush()
-            c.add_path(f.name, os.path.join('tree_1', 'file1.txt'))
-            c.add_path(f.name, os.path.join('tree_1', 'dir1', 'file4.txt'))
+        with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
+            tmpf.write(file_content_different)
+            tmpf.flush()
+            c.add_path(tmpf.name, os.path.join('tree_1', 'file1.txt'))
+            c.add_path(tmpf.name, os.path.join('tree_1', 'dir1', 'file4.txt'))
         c.remove_path(os.path.join('tree_1', 'dir1', 'dir2'))
 
         # check old
@@ -799,18 +799,18 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(set(a.get_folder_list('tree_1')), set(['file1.txt', 'dir1']))
         self.assertEquals(set(a.get_folder_list(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
         with io.open(a.get_abs_path(os.path.join('tree_1', 'file1.txt')), encoding='utf8') as fhandle:
-            self.assertEquals(f.read(), file_content)
+            self.assertEquals(fhandle.read(), file_content)
         with io.open(a.get_abs_path(os.path.join('tree_1', 'dir1', 'file2.txt')), encoding='utf8') as fhandle:
-            self.assertEquals(f.read(), file_content)
+            self.assertEquals(fhandle.read(), file_content)
 
         # check new
         self.assertEquals(set(c.get_folder_list('.')), set(['tree_1']))
         self.assertEquals(set(c.get_folder_list('tree_1')), set(['file1.txt', 'dir1']))
         self.assertEquals(set(c.get_folder_list(os.path.join('tree_1', 'dir1'))), set(['file2.txt', 'file4.txt']))
         with io.open(c.get_abs_path(os.path.join('tree_1', 'file1.txt'))) as fhandle:
-            self.assertEquals(f.read(), file_content_different)
+            self.assertEquals(fhandle.read(), file_content_different)
         with io.open(c.get_abs_path(os.path.join('tree_1', 'dir1', 'file2.txt')), encoding='utf8') as fhandle:
-            self.assertEquals(f.read(), file_content)
+            self.assertEquals(fhandle.read(), file_content)
 
         # garbage cleaning
         shutil.rmtree(directory)
@@ -1865,8 +1865,8 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
         # I create some objects
         d1 = Data().store()
-        with tempfile.NamedTemporaryFile('w+') as fhandle:
-            d2 = SinglefileData(file=f.name).store()
+        with tempfile.NamedTemporaryFile('w+') as tmpf:
+            d2 = SinglefileData(file=tmpf.name).store()
 
         code = Code()
         code._set_remote()

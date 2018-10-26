@@ -167,12 +167,12 @@ def migrate(input_file, output_file, force, silent, archive_format):
             echo.echo_critical('invalid file format, expected either a zip archive or gzipped tarball')
 
         try:
-            with io.open(folder.get_abs_path('data.json'), encoding='utf8') as handle:
-                data = json.load(handle)
-            with io.open(folder.get_abs_path('metadata.json'), encoding='utf8') as handle:
-                metadata = json.load(handle)
+            with io.open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
+                data = json.load(fhandle)
+            with io.open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
+                metadata = json.load(fhandle)
         except IOError:
-            echo.echo_critical('export archive does not contain the required file {}'.format(handle.filename))
+            echo.echo_critical('export archive does not contain the required file {}'.format(fhandle.filename))
 
         old_version = verify_metadata_version(metadata)
 

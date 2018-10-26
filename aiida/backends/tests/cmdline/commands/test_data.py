@@ -685,7 +685,7 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable, TestVerdiData
             fhandle.write(xyzcontent)
             fhandle.flush()
             options = [
-                f.name,
+                fhandle.name,
                 '--format',
                 'xyz',
                 '--vacuum-factor',
@@ -817,7 +817,7 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExport
         with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
             fhandle.write(self.valid_sample_cif_str)
             fhandle.flush()
-            options = [f.name]
+            options = [fhandle.name]
             res = self.cli_runner.invoke(cmd_cif.cif_import, options, catch_exceptions=False)
             self.assertIn(b'imported uuid', res.output_bytes, 'The string "imported uuid" was not found in the output'
                           ' of verdi data import.')

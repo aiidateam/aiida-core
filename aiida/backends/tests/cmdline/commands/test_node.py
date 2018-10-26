@@ -130,9 +130,9 @@ class TestVerdiNodeRepo(AiidaTestCase):
         file_content = '''file-with-contents'''
 
         with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
-            handle.write(file_content)
-            handle.flush()
-            node = SinglefileData(file=f.name)
+            fhandle.write(file_content)
+            fhandle.flush()
+            node = SinglefileData(file=fhandle.name)
             node.store()
 
         self.node = node

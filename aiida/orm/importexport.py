@@ -2352,14 +2352,14 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     if not silent:
         print("STORING DATA...")
 
-    with folder.open('data.json', 'wb') as fhandle:
-        json.dump({
+    with folder.open('data.json', "w", encoding='utf-8') as fhandle:
+        fhandle.write(six.text_type(json.dumps({
             'node_attributes': node_attributes,
             'node_attributes_conversion': node_attributes_conversion,
             'export_data': export_data,
             'links_uuid': links_uuid,
             'groups_uuid': groups_uuid,
-        }, fhandle, ensure_ascii=False)
+        }, ensure_ascii=False)))
 
     # Add proper signature to unique identifiers & all_fields_info
     # Ignore if a key doesn't exist in any of the two dictionaries
@@ -2371,8 +2371,9 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
         'unique_identifiers': unique_identifiers,
     }
 
-    with folder.open('metadata.json', 'wb') as fhandle:
-        json.dump(metadata, fhandle, ensure_ascii=False)
+    with folder.open('metadata.json', "w", encoding='utf-8') as fhandle:
+        fhandle.write(six.text_type(json.dumps(
+            metadata, ensure_ascii=False)))
 
     if silent is not True:
         print("STORING FILES...")

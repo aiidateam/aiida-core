@@ -21,6 +21,7 @@ from six.moves import range, zip
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.importexport import import_data
 
+
 class TestSpecificImport(AiidaTestCase):
 
     def setUp(self):
@@ -176,6 +177,7 @@ class TestSpecificImport(AiidaTestCase):
             qb.append(Calculation, output_of='remote')
             self.assertGreater(len(qb.all()), 0)
 
+
 class TestSimple(AiidaTestCase):
 
     def setUp(self):
@@ -303,9 +305,11 @@ class TestSimple(AiidaTestCase):
                                    'metadata.json'), 'r', encoding='utf8') as fhandle:
                 metadata = json.load(fhandle)
             metadata['export_version'] = 0.0
-            with io.open(os.path.join(unpack_tmp_folder,
-                                   'metadata.json'), 'wb', encoding=None) as fhandle:
-                json.dump(metadata, fhandle, ensure_ascii=False)
+
+            with io.open(os.path.join(unpack_tmp_folder, 'metadata.json'),
+                         'w', encoding='utf-8') as fhandle:
+                fhandle.write(six.text_type(json.dumps(
+                    metadata, ensure_ascii=False)))
 
             with tarfile.open(filename, "w:gz", format=tarfile.PAX_FORMAT) as tar:
                 tar.add(unpack_tmp_folder, arcname="")
@@ -358,8 +362,11 @@ class TestSimple(AiidaTestCase):
                 'input': 'non-existing-uuid',
                 'label': 'parent'
             })
-            with io.open(unpack.get_abs_path('data.json'), 'wb', encoding=None) as fhandle:
-                json.dump(metadata, fhandle, ensure_ascii=False)
+
+            with io.open(unpack.get_abs_path('data.json'), 'w',
+                             encoding='utf-8') as fhandle:
+                fhandle.write(six.text_type(json.dumps(
+                    metadata, ensure_ascii=False)))
 
             with tarfile.open(
                     filename, "w:gz", format=tarfile.PAX_FORMAT) as tar:

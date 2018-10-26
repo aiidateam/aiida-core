@@ -117,7 +117,7 @@ class MpdsDbImporter(DbImporter):
         return self._structures
 
     @property
-    def supported_keywords(self):
+    def get_supported_keywords(self):
         """
         Returns the list of all supported query keywords
 

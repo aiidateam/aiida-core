@@ -14,8 +14,8 @@ Defines reStructuredText directives to simplify documenting AiiDA and its plugin
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-__version__ = '0.1.0'
 
+import aiida
 from . import workchain
 
 
@@ -25,4 +25,4 @@ def setup(app):
     """
     workchain.setup_aiida_workchain(app)
 
-    return {'version': __version__, 'parallel_read_safe': True}
+    return {'version': aiida.__version__, 'parallel_read_safe': True}

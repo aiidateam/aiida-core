@@ -13,7 +13,6 @@ from __future__ import absolute_import
 from aiida.backends.sqlalchemy.models.user import DbUser
 from aiida.common.utils import type_check
 from aiida.orm.implementation import users
-from aiida.utils.email import normalize_email
 
 from . import utils
 
@@ -27,7 +26,7 @@ class SqlaUserCollection(users.BackendUserCollection):
         :return: A new user object
         :rtype: :class:`aiida.orm.User`
         """
-        return SqlaUser(self.backend, normalize_email(email), first_name, last_name, institution)
+        return SqlaUser(self.backend, email, first_name, last_name, institution)
 
     def find(self, email=None, id=None):
         # Constructing the default query

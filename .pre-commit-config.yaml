@@ -357,7 +357,6 @@
         aiida/utils/cli/options.py|
         aiida/utils/cli/validators.py|
         aiida/utils/delete_nodes.py|
-        aiida/utils/email.py|
         aiida/utils/error_accumulator.py|
         aiida/utils/find_folder.py|
         aiida/utils/__init__.py|

@@ -14,7 +14,6 @@ from __future__ import absolute_import
 from functools import reduce
 
 from aiida.backends.djsite.db.models import DbUser
-from aiida.utils.email import normalize_email
 from aiida.common.utils import type_check
 from aiida.orm.implementation import users
 from . import utils
@@ -30,7 +29,7 @@ class DjangoUserCollection(users.BackendUserCollection):
         :rtype: :class:`aiida.orm.User`
         """
         return DjangoUser(self.backend,
-                          email=normalize_email(email),
+                          email=email,
                           first_name=first_name,
                           last_name=last_name,
                           institution=institution)

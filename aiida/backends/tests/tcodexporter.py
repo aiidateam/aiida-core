@@ -43,9 +43,11 @@ class TestTcodDbExporter(AiidaTestCase):
                           (b'line\n=3Bline', 'quoted-printable'))
         self.assertEquals(cif_encode_contents(b'tabbed\ttext'),
                           (b'tabbed=09text', 'quoted-printable'))
+
         # Angstrom symbol 'Å' will be encoded as two bytes, thus encoding it
         # for CIF will produce two quoted-printable entities, '=C3' and '=85',
         # one for each byte.
+
         self.assertEquals(cif_encode_contents(u'angstrom Å'.encode('utf-8')),
                           (b'angstrom =C3=85', 'quoted-printable'))
         self.assertEquals(cif_encode_contents(b'.'),

@@ -143,7 +143,6 @@
         aiida/backends/tests/orm/utils/loaders.py|
         aiida/backends/tests/parsers.py|
         aiida/backends/tests/query.py|
-        aiida/backends/tests/restapi.py|
         aiida/backends/tests/tcodexporter.py|
         aiida/backends/tests/test_caching_config.py|
         aiida/backends/tests/test_plugin_loader.py|
@@ -310,26 +309,6 @@
         aiida/plugins/loader.py|
         aiida/plugins/registry.py|
         aiida/plugins/utils.py|
-        aiida/restapi/__init__.py|
-        aiida/restapi/api.py|
-        aiida/restapi/common/config.py|
-        aiida/restapi/common/__init__.py|
-        aiida/restapi/common/exceptions.py|
-        aiida/restapi/common/utils.py|
-        aiida/restapi/run_api.py|
-        aiida/restapi/translator/base.py|
-        aiida/restapi/translator/calculation/__init__.py|
-        aiida/restapi/translator/code.py|
-        aiida/restapi/translator/computer.py|
-        aiida/restapi/translator/data/bands.py|
-        aiida/restapi/translator/data/__init__.py|
-        aiida/restapi/translator/data/kpoints.py|
-        aiida/restapi/translator/data/structure.py|
-        aiida/restapi/translator/data/upf.py|
-        aiida/restapi/translator/group.py|
-        aiida/restapi/translator/__init__.py|
-        aiida/restapi/translator/node.py|
-        aiida/restapi/translator/user.py|
         aiida/scheduler/datastructures.py|
         aiida/scheduler/__init__.py|
         aiida/scheduler/plugins/direct.py|

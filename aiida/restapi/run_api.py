@@ -8,6 +8,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+It defines the method with all required parameters to run restapi locally.
+"""
 
 from __future__ import division
 from __future__ import print_function
@@ -21,13 +24,14 @@ from flask_cors import CORS
 from aiida.backends.utils import load_dbenv
 
 
-def run_api(App, Api, *args, **kwargs):
+# pylint: disable=inconsistent-return-statements,too-many-locals
+def run_api(flask_app, flask_api, *args, **kwargs):
     """
     Takes a flask.Flask instance and runs it. Parses
     command-line flags to configure the app.
 
-    App: Class inheriting from Flask app class  
-    Api = flask_restful API class to be used to wrap the app
+    flask_app: Class inheriting from Flask app class
+    flask_api = flask_restful API class to be used to wrap the app
 
     args: required by argparse
 
@@ -69,9 +73,7 @@ def run_api(App, Api, *args, **kwargs):
     hookup = kwargs['hookup'] if 'hookup' in kwargs else False
 
     # Set up the command-line options
-    parser = argparse.ArgumentParser(prog=prog_name,
-                                     description='Hook up the AiiDA '
-                                                 'RESTful API')
+    parser = argparse.ArgumentParser(prog=prog_name, description='Hook up the AiiDA ' 'RESTful API')
 
     parser.add_argument("-H", "--host",
                         help="Hostname of the Flask app " + \
@@ -91,53 +93,47 @@ def run_api(App, Api, *args, **kwargs):
 
     # This one is included only if necessary
     if parse_aiida_profile:
-        parser.add_argument("-p", "--aiida-profile",
-                            help="AiiDA profile to expose through the RESTful "
-                                 "API [default: the default AiiDA profile]",
-                            dest="aiida_profile",
-                            default=None)
+        parser.add_argument(
+            "-p",
+            "--aiida-profile",
+            help="AiiDA profile to expose through the RESTful "
+            "API [default: the default AiiDA profile]",
+            dest="aiida_profile",
+            default=None)
 
     # Two options useful for debugging purposes, but
     # a bit dangerous so not exposed in the help message.
-    parser.add_argument("-d", "--debug",
-                        action="store_true", dest="debug",
-                        help=argparse.SUPPRESS)
-    parser.add_argument("-w", "--wsgi-profile",
-                        action="store_true", dest="wsgi_profile",
-                        help=argparse.SUPPRESS)
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", help=argparse.SUPPRESS)
+    parser.add_argument("-w", "--wsgi-profile", action="store_true", dest="wsgi_profile", help=argparse.SUPPRESS)
 
     parsed_args = parser.parse_args(args)
 
     # Import the right configuration file
-    confs = imp.load_source(os.path.join(parsed_args.config_dir, 'config'),
-                            os.path.join(parsed_args.config_dir,
-                                         'config.py')
-                            )
+    confs = imp.load_source(
+        os.path.join(parsed_args.config_dir, 'config'), os.path.join(parsed_args.config_dir, 'config.py'))
 
     import aiida.backends.settings as settings
 
-    """
-    Set aiida profile
+    # Set aiida profile
+    #
+    # General logic:
+    #
+    # if aiida_profile is parsed the following cases exist:
+    #
+    # aiida_profile:
+    #    "default"    --> default profile set in .aiida/config.json
+    #    <profile>    --> corresponding profile in .aiida/config.json
+    #    None         --> default restapi profile set in <config_dir>/config,py
+    #
+    # if aiida_profile is not parsed we assume
+    #
+    # default restapi profile set in <config_dir>/config.py
 
-    General logic:
-
-    if aiida_profile is parsed the following cases exist:
-
-    aiida_profile:
-        "default"    --> default profile set in .aiida/config.json
-        <profile>    --> corresponding profile in .aiida/config.json
-        None         --> default restapi profile set in <config_dir>/config,py
-
-    if aiida_profile is not parsed we assume
-
-    default restapi profile set in <config_dir>/config.py
-
-    """
     if parse_aiida_profile and parsed_args.aiida_profile is not None:
         aiida_profile = parsed_args.aiida_profile
 
-    elif confs.default_aiida_profile is not None:
-        aiida_profile = confs.default_aiida_profile
+    elif confs.DEFAULT_AIIDA_PROFILE is not None:
+        aiida_profile = confs.DEFAULT_AIIDA_PROFILE
 
     else:
         aiida_profile = "default"
@@ -154,14 +150,14 @@ def run_api(App, Api, *args, **kwargs):
 
     # Instantiate an app
     app_kwargs = dict(catch_internal_server=catch_internal_server)
-    app = App(__name__, **app_kwargs)
+    app = flask_app(__name__, **app_kwargs)
 
     # Config the app
     app.config.update(**confs.APP_CONFIG)
 
     # cors
     cors_prefix = os.path.join(confs.PREFIX, "*")
-    cors = CORS(app, resources={r"" + cors_prefix: {"origins": "*"}})
+    CORS(app, resources={r"" + cors_prefix: {"origins": "*"}})
 
     # Config the serializer used by the app
     if confs.SERIALIZER_CONFIG:
@@ -174,23 +170,15 @@ def run_api(App, Api, *args, **kwargs):
         from werkzeug.contrib.profiler import ProfilerMiddleware
 
         app.config['PROFILE'] = True
-        app.wsgi_app = ProfilerMiddleware(app.wsgi_app,
-                                          restrictions=[30])
+        app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[30])
 
     # Instantiate an Api by associating its app
-    api_kwargs = dict(PREFIX=confs.PREFIX,
-                      PERPAGE_DEFAULT=confs.PERPAGE_DEFAULT,
-                      LIMIT_DEFAULT=confs.LIMIT_DEFAULT)
-    api = Api(app, **api_kwargs)
+    api_kwargs = dict(PREFIX=confs.PREFIX, PERPAGE_DEFAULT=confs.PERPAGE_DEFAULT, LIMIT_DEFAULT=confs.LIMIT_DEFAULT)
+    api = flask_api(app, **api_kwargs)
 
     # Check if the app has to be hooked-up or just returned
     if hookup:
-        api.app.run(
-            debug=parsed_args.debug,
-            host=parsed_args.host,
-            port=int(parsed_args.port),
-            threaded=True
-        )
+        api.app.run(debug=parsed_args.debug, host=parsed_args.host, port=int(parsed_args.port), threaded=True)
 
     else:
         # here we return the app, and the api with no specifications on debug
@@ -203,24 +191,20 @@ def run_api(App, Api, *args, **kwargs):
 
 # Standard boilerplate to run the api
 if __name__ == '__main__':
-    """
-    I run the app via a wrapper that accepts arguments such as host and port
-    e.g. python api.py --host=127.0.0.2 --port=6000 --config-dir=~/.restapi
-    Default address is 127.0.0.1:5000, default config directory is
-    <aiida_path>/aiida/restapi/common
 
-    Start the app by sliding the argvs to flaskrun, choose to take as an
-    argument also whether to parse the aiida profile or not (in verdi
-    restapi this would not be the case)
+    # I run the app via a wrapper that accepts arguments such as host and port
+    # e.g. python api.py --host=127.0.0.2 --port=6000 --config-dir=~/.restapi
+    # Default address is 127.0.0.1:5000, default config directory is
+    # <aiida_path>/aiida/restapi/common
+    #
+    # Start the app by sliding the argvs to flaskrun, choose to take as an
+    # argument also whether to parse the aiida profile or not (in verdi
+    # restapi this would not be the case)
 
-    """
     import sys
     from aiida.restapi.api import AiidaApi, App
 
-    """
-    Or, equivalently, (useful starting point for derived apps)
-    import the app object and the Api class that you want to combine.
-    """
+    #Or, equivalently, (useful starting point for derived apps)
+    #import the app object and the Api class that you want to combine.
 
-    run_api(App, AiidaApi, *sys.argv[1:], parse_aiida_profile=True,
-            hookup=True, catch_internal_server=True)
+    run_api(App, AiidaApi, *sys.argv[1:], parse_aiida_profile=True, hookup=True, catch_internal_server=True)

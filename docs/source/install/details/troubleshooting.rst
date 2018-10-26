@@ -92,42 +92,36 @@ Configuring remote SSH computers
 
 .. _ContinuumIO/anaconda-issues#686: https://github.com/ContinuumIO/anaconda-issues/issues/686
 
-* [**.bashrc and .bash_profile behavior on remote computers**] When connecting
+* [**.bashrc and .bash_profile behavior on remote computers**] 
+  (**NOTE** This applies also to a computer configured via a ``local`` transport!)
+  
+  When connecting
   to remote computers, AiiDA (like other codes as ``sftp``) might get very confused
   if you have code in your ``.bashrc`` or ``.bash_profile`` producing output
   or e.g. running commands like ``clean`` that require a terminal.
 
-  For instance, if you add a ``echo "a"`` in your .bashrc and then try to SFTP
+  For instance, if you add a ``echo "a"`` in your ``.bashrc`` and then try to SFTP
   a file from it, you will get an error like ``Received message too long 1091174400``.
 
   If you still want to have code that needs an interactive shell (``echo``, 
-  ``clean``, ...), but you want to disable it for non-interactive shells, put your
-  code in a guard like this::
+  ``clean``, ...), but you want to disable it for non-interactive shells, put 
+  at the top of your file a guard like this::
 
-    case $- in
-    *i*)
-       ## Put here code that can only work on interactive shells
-       clear
-       echo "Hi! This is a new shell"
-       ;;
-    esac
+    if [[ $- != *i* ]] ; then
+      # Shell is non-interactive.  Be done now!
+      return
+    fi
 
-  Also, if you need to have some environment variables set (e.g. the path
-  to an executable), make sure that this is set in the ``.bashrc`` file 
-  (and not only in the ``.bash_profile`` or equivalent files that are only
-  loaded for login shells; see e.g. this `StackExchange thread`_ for the difference 
-  - as suggested in one of the answers, you might want to put the PATH definitions
-  in ``.bashrc``, and source it from ``.bash_profile``).
+  Everything below this will not be executed in a non-interactive shell.
+  **Note**: Still, you might want to have some code on top, like e.g. setting the PATH or 
+  similar, if this needs to be run also in the case of non-interactive shells.
 
-  To test if a command works in a non-interactive shell, you can run::
+  To test if a the computer does not produce spurious output, run (after 
+  configuring)::
 
-     ssh <MACHINENAME> <COMMAND>
+     verdi computer test <COMPUTERNAME>
 
-  (this is equivalent to what AiiDA does) and check, e.g., that the executable
-  is found, that there is no spurious output, etc.
-
-  **Notes**: The fact that there is no spurious output is checked by
-  ``verdi computer test``, which suggests how to solve the problem.
+  which checks and, in case of problems, suggests how to solve the problem.
   You can track the discussion on this issue in `aiidateam/aiida_core#1890`_.
 
 .. _aiidateam/aiida_core#1890: https://github.com/aiidateam/aiida_core/issues/1890

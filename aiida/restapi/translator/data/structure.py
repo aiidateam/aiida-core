@@ -45,16 +45,13 @@ class StructureDataTranslator(DataTranslator):
         super(StructureDataTranslator, self).__init__(Class=self.__class__, **kwargs)
 
     @staticmethod
-    def get_visualization_data(node, visformat=None):
+    def get_visualization_data(node, visformat='xsf'):
         """
         Returns: data in specified format. If visformat is not specified returns data
         in xsf format in order to visualize the structure with JSmol.
         """
         response = {}
         response["str_viz_info"] = {}
-
-        if visformat is None:
-            visformat = 'xsf'
 
         if visformat in node.get_export_formats():
             try:
@@ -74,7 +71,7 @@ class StructureDataTranslator(DataTranslator):
         return response
 
     @staticmethod
-    def get_downloadable_data(node, download_format=None):
+    def get_downloadable_data(node, download_format="cif"):
         """
         Generic function extented for structure data
 
@@ -84,9 +81,6 @@ class StructureDataTranslator(DataTranslator):
         """
 
         response = {}
-
-        if download_format is None:
-            download_format = "cif"
 
         if download_format in node.get_export_formats():
             try:

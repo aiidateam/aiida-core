@@ -29,40 +29,38 @@ UUID_REF = 'd55082b6-76dc-426b-af89-0e08b59524d2'
 
 ########################## Classes #####################
 class CustomJSONEncoder(JSONEncoder):
-
     """
     Custom json encoder for serialization.
     This has to be provided to the Flask app in order to replace the default
     encoder.
     """
 
-    def default(self, obj):
-        # pylink: disable=arguments-differ,method-hidden
-
+    def default(self, o):
+        # pylint: disable=method-hidden
         """
         Override default method from JSONEncoder to change serializer
-        :param obj: Object e.g. dict, list that will be serialized
+        :param o: Object e.g. dict, list that will be serialized
         :return: serialized object
         """
 
         from aiida.restapi.common.config import SERIALIZER_CONFIG
 
         # Treat the datetime objects
-        if isinstance(obj, datetime):
+        if isinstance(o, datetime):
             if 'datetime_format' in SERIALIZER_CONFIG.keys() and \
                             SERIALIZER_CONFIG[
                                 'datetime_format'] != 'default':
                 if SERIALIZER_CONFIG['datetime_format'] == 'asinput':
-                    if obj.utcoffset() is not None:
-                        obj = obj - obj.utcoffset()
-                        return '-'.join([str(obj.year), str(obj.month).zfill(2),
-                                         str(obj.day).zfill(2)]) + 'T' + \
+                    if o.utcoffset() is not None:
+                        o = o - o.utcoffset()
+                        return '-'.join([str(o.year), str(o.month).zfill(2),
+                                         str(o.day).zfill(2)]) + 'T' + \
                                ':'.join([str(
-                                   obj.hour).zfill(2), str(obj.minute).zfill(2),
-                                         str(obj.second).zfill(2)])
+                                   o.hour).zfill(2), str(o.minute).zfill(2),
+                                         str(o.second).zfill(2)])
 
         # If not returned yet, do it in the default way
-        return JSONEncoder.default(self, obj)
+        return JSONEncoder.default(self, o)
 
 
 class DatetimePrecision(object):
@@ -144,8 +142,8 @@ class Utils(object):
         else:
             raise ValidationError('path has to start with {}'.format(self.prefix))
 
-    def split_path(self, path):
-        # pylint: disable=no-self-use
+    @staticmethod
+    def split_path(path):
         """
         :param path: entire path contained in flask request
         :return: list of each element separated by '/'
@@ -156,8 +154,6 @@ class Utils(object):
 
     def parse_path(self, path_string, parse_pk_uuid=None):
         # pylint: disable=too-many-return-statements,too-many-branches
-        # pylint: disable=inconsistent-return-statements
-
         """
         Takes the path and parse it checking its validity. Does not parse "io",
         "content" fields. I do not check the validity of the path, since I assume
@@ -243,7 +239,8 @@ class Utils(object):
                 page = 1
                 return (resource_type, page, node_id, query_type)
             page = int(path.pop(0))
-            return (resource_type, page, node_id, query_type)
+
+        return (resource_type, page, node_id, query_type)
 
     def validate_request(self,
                          limit=None,
@@ -277,7 +274,6 @@ class Utils(object):
             raise RestInputValidationError("schema requests do not allow " "specifying a query string")
 
     def paginate(self, page, perpage, total_count):
-        # pylint disable=too-many-branches
         """
         Calculates limit and offset for the reults of a query,
         given the page and the number of restuls per page.
@@ -326,17 +322,16 @@ class Utils(object):
         if page > last_page or page < 1:
             raise RestInputValidationError("Non existent page requested. The "
                                            "page range is [{} : {}]".format(first_page, last_page))
-        else:
-            limit = perpage
-            offset = (page - 1) * perpage
-            if page > 1:
-                prev_page = page - 1
-            else:
-                prev_page = None
-            if page < last_page:
-                next_page = page + 1
-            else:
-                next_page = None
+
+        limit = perpage
+        offset = (page - 1) * perpage
+        prev_page = None
+        if page > 1:
+            prev_page = page - 1
+
+        next_page = None
+        if page < last_page:
+            next_page = page + 1
 
         rel_pages = dict(prev=prev_page, next=next_page, first=first_page, last=last_page)
 
@@ -418,8 +413,8 @@ class Utils(object):
 
         return headers
 
-    def build_response(self, status=200, headers=None, data=None):
-        # pylint: disable=no-self-use
+    @staticmethod
+    def build_response(status=200, headers=None, data=None):
         """
         Build the response
 
@@ -456,8 +451,8 @@ class Utils(object):
 
         return response
 
-    def build_datetime_filter(self, dtobj):
-        # pylint: disable=no-self-use
+    @staticmethod
+    def build_datetime_filter(dtobj):
         """
         This function constructs a filter for a datetime object to be in a
         certain datetime interval according to the precision.

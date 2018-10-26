@@ -48,7 +48,7 @@ class App(Flask):
 
             @self.errorhandler(Exception)
             def error_handler(error):
-                #  pylint: disable=unused-variable
+                # pylint: disable=unused-variable
                 """Error handler to return customized error messages from rest api"""
 
                 if isinstance(error, RestValidationError):

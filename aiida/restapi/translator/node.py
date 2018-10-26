@@ -472,8 +472,8 @@ class NodeTranslator(BaseTranslator):
 
         return downloadable_data
 
-    def get_retrieved_inputs(self, node, filename=None, rtype=None):
-        # pylint: disable=no-self-use
+    @staticmethod
+    def get_retrieved_inputs(node, filename=None, rtype=None):
         """
         Generic function to return output of calc inputls verdi command.
         Actual definition is in child classes as the content to be
@@ -489,8 +489,8 @@ class NodeTranslator(BaseTranslator):
             return CalculationTranslator.get_retrieved_inputs(node, filename=filename, rtype=rtype)
         return []
 
-    def get_retrieved_outputs(self, node, filename=None, rtype=None):
-        # pylint: disable=no-self-use
+    @staticmethod
+    def get_retrieved_outputs(node, filename=None, rtype=None):
         """
         Generic function to return output of calc outputls verdi command.
         Actual definition is in child classes as the content to be

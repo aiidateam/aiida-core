@@ -7,12 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+Translator for structure data
+"""
+
 from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
-
-from six.moves import range
-import numpy as np
 
 from aiida.restapi.translator.data import DataTranslator
 from aiida.restapi.common.exceptions import RestInputValidationError
@@ -41,31 +42,26 @@ class StructureDataTranslator(DataTranslator):
         Initialise the parameters.
         Create the basic query_help
         """
-        super(StructureDataTranslator, self).__init__(Class=self.__class__,
-                                                      **kwargs)
-
+        super(StructureDataTranslator, self).__init__(Class=self.__class__, **kwargs)
 
     @staticmethod
-    def get_visualization_data(node, format=None):
+    def get_visualization_data(node, visformat='xsf'):
         """
-        Returns: data in specified format. If format is not specified returns data
+        Returns: data in specified format. If visformat is not specified returns data
         in xsf format in order to visualize the structure with JSmol.
         """
         response = {}
         response["str_viz_info"] = {}
 
-        if format is None:
-            format = 'xsf'
-
-        if format in node.get_export_formats():
+        if visformat in node.get_export_formats():
             try:
-                response["str_viz_info"]["data"] = node._exportcontent(format)[0]
-                response["str_viz_info"]["format"] = format
+                response["str_viz_info"]["data"] = node._exportcontent(visformat)[0].decode('utf-8')  # pylint: disable=protected-access
+                response["str_viz_info"]["format"] = visformat
             except LicensingException as exc:
                 response = str(exc)
 
         else:
-            raise RestInputValidationError("The format {} is not supported.".format(format))
+            raise RestInputValidationError("The format {} is not supported.".format(visformat))
 
         # Add extra information
         response["dimensionality"] = node.get_dimensionality()
@@ -74,30 +70,25 @@ class StructureDataTranslator(DataTranslator):
 
         return response
 
-
     @staticmethod
-    def get_downloadable_data(node, format=None):
+    def get_downloadable_data(node, download_format="cif"):
         """
         Generic function extented for structure data
 
         :param node: node object that has to be visualized
-        :param format: file extension format
+        :param download_format: file extension format
         :returns: data in selected format to download
         """
 
         response = {}
 
-        if format is None:
-            format = "cif"
-
-        if format in node.get_export_formats():
+        if download_format in node.get_export_formats():
             try:
-                response["data"] = node._exportcontent(format)[0]
+                response["data"] = node._exportcontent(download_format)[0]  # pylint: disable=protected-access
                 response["status"] = 200
-                response["filename"] = node.uuid + "_structure." + format
+                response["filename"] = node.uuid + "_structure." + download_format
             except LicensingException as exc:
                 response["status"] = 500
                 response["data"] = str(exc)
 
         return response
-

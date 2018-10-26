@@ -41,7 +41,7 @@ class CifDataTranslator(DataTranslator):
 
     #pylint: disable=arguments-differ,redefined-builtin,protected-access
     @staticmethod
-    def get_visualization_data(node, format=None):
+    def get_visualization_data(node, visformat=None):
         """
         Returns: data in specified format. If format is not specified returns data
         in a format required by chemdoodle to visualize a structure.
@@ -49,13 +49,13 @@ class CifDataTranslator(DataTranslator):
         response = {}
         response["str_viz_info"] = {}
 
-        if format is None:
-            format = 'cif'
+        if visformat is None:
+            visformat = 'cif'
 
-        if format in node.get_export_formats():
+        if visformat in node.get_export_formats():
             try:
-                response["str_viz_info"]["data"] = node._exportcontent(format)[0]
-                response["str_viz_info"]["format"] = format
+                response["str_viz_info"]["data"] = node._exportcontent(format)[0]  # pylint: disable=protected-access
+                response["str_viz_info"]["format"] = visformat
             except LicensingException as exc:
                 response = str(exc)
 
@@ -68,7 +68,7 @@ class CifDataTranslator(DataTranslator):
 
     #pylint: disable=arguments-differ,redefined-builtin,protected-access
     @staticmethod
-    def get_downloadable_data(node, format=None):
+    def get_downloadable_data(node, download_format=None):
         """
         Return cif string for download
 
@@ -78,11 +78,11 @@ class CifDataTranslator(DataTranslator):
 
         response = {}
 
-        format = 'cif'
+        download_format = 'cif'
         try:
-            response["data"] = node._exportcontent(format)[0]
+            response["data"] = node._exportcontent(download_format)[0]  # pylint: disable=protected-access
             response["status"] = 200
-            response["filename"] = node.uuid + "." + format
+            response["filename"] = node.uuid + "." + download_format
         except LicensingException as exc:
             response["status"] = 500
             response["data"] = str(exc)

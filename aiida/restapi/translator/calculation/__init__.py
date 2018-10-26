@@ -7,15 +7,18 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
-
+"""
+Translator for calculation node
+"""
 
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+import os
+
 from aiida.restapi.translator.node import NodeTranslator
 from aiida.restapi.common.exceptions import RestInputValidationError
-import os
+
 
 class CalculationTranslator(NodeTranslator):
     """
@@ -40,43 +43,63 @@ class CalculationTranslator(NodeTranslator):
         Create the basic query_help
         """
         # basic query_help object
-        super(CalculationTranslator, self).__init__(
-            Class=self.__class__, **kwargs)
+        super(CalculationTranslator, self).__init__(Class=self.__class__, **kwargs)
 
         ## calculation schema
         # All the values from column_order must present in additional info dict
         # Note: final schema will contain details for only the fields present in column order
         self._schema_projections = {
             "column_order": [
-                "id",
-                "label",
-                "type",
-                "ctime",
-                "mtime",
-                "uuid",
-                "user_id",
-                "user_email",
-                "attributes.state",
-                "attributes",
-                "extras"
+                "id", "label", "type", "ctime", "mtime", "uuid", "user_id", "user_email", "attributes.state",
+                "attributes", "extras"
             ],
             "additional_info": {
-                "id": {"is_display": True},
-                "label": {"is_display": False},
-                "type": {"is_display": True},
-                "ctime": {"is_display": True},
-                "mtime": {"is_display": True},
-                "uuid": {"is_display": False},
-                "user_id": {"is_display": False},
-                "user_email": {"is_display": True},
-                "attributes.state": {"is_display": True},
-                "attributes": {"is_display": False},
-                "extras": {"is_display": False}
+                "id": {
+                    "is_display": True
+                },
+                "label": {
+                    "is_display": False
+                },
+                "type": {
+                    "is_display": True
+                },
+                "ctime": {
+                    "is_display": True
+                },
+                "mtime": {
+                    "is_display": True
+                },
+                "uuid": {
+                    "is_display": False
+                },
+                "user_id": {
+                    "is_display": False
+                },
+                "user_email": {
+                    "is_display": True
+                },
+                "attributes.state": {
+                    "is_display": True
+                },
+                "attributes": {
+                    "is_display": False
+                },
+                "extras": {
+                    "is_display": False
+                }
             }
         }
 
     @staticmethod
     def get_files_list(dirobj, files=None, prefix=None):
+        """
+        Get list of all files present in given directory.
+
+        :param dirobj: Directory in which files will be searched
+        :param files: list of files if any
+        :param prefix: file name prefix if any
+        :return:
+        """
         if files is None:
             files = []
         if prefix is None:
@@ -89,7 +112,6 @@ class CalculationTranslator(NodeTranslator):
                 CalculationTranslator.get_files_list(dirobj.get_subfolder(fname), files, prefix + [fname])
         return files
 
-
     @staticmethod
     def get_retrieved_inputs(node, filename=None, rtype=None):
         """
@@ -100,7 +122,7 @@ class CalculationTranslator(NodeTranslator):
 
         if node.type.startswith("calculation.job."):
 
-            input_folder = node._raw_input_folder
+            input_folder = node._raw_input_folder  # pylint: disable=protected-access
 
             if filename is not None:
                 response = {}
@@ -111,9 +133,9 @@ class CalculationTranslator(NodeTranslator):
                 if rtype == "download":
                     try:
                         content = NodeTranslator.get_file_content(input_folder, filename)
-                    except IOError as e:
+                    except IOError:
                         error = "Error in getting {} content".format(filename)
-                        raise RestInputValidationError (error)
+                        raise RestInputValidationError(error)
 
                     response["status"] = 200
                     response["data"] = content
@@ -148,10 +170,9 @@ class CalculationTranslator(NodeTranslator):
                 response["data"] = "This node does not have retrieved folder"
                 return response
 
-            output_folder = retrieved_folder._get_folder_pathsubfolder
+            output_folder = retrieved_folder._get_folder_pathsubfolder  # pylint: disable=protected-access
 
             if filename is not None:
-
 
                 if rtype is None:
                     rtype = "download"
@@ -159,16 +180,16 @@ class CalculationTranslator(NodeTranslator):
                 if rtype == "download":
                     try:
                         content = NodeTranslator.get_file_content(output_folder, filename)
-                    except IOError as e:
+                    except IOError:
                         error = "Error in getting {} content".format(filename)
-                        raise RestInputValidationError (error)
+                        raise RestInputValidationError(error)
 
                     response["status"] = 200
                     response["data"] = content
                     response["filename"] = filename.replace("/", "_")
 
                 else:
-                    raise RestInputValidationError ("rtype is not supported")
+                    raise RestInputValidationError("rtype is not supported")
 
                 return response
 
@@ -177,5 +198,3 @@ class CalculationTranslator(NodeTranslator):
             return retrieved
 
         return []
-
-

@@ -108,6 +108,7 @@ def cif_encode_contents(content, gzip=False, gzip_threshold=1024):
 
     :param content: the content to be encoded in bytes
     :return content: encoded content in bytes
+
     :return encoding: a string specifying used encoding (None, 'base64',
         'ncr', 'quoted-printable', 'gzip+base64')
     """
@@ -214,6 +215,7 @@ def encode_textfield_quoted_printable(content):
         if len(h) == 1:
             h = "0{}".format(h)
         return b"%s=%s" % (prefix, h.encode('utf-8'))
+
 
     content = re.sub(b'^(?P<chr>;)', match2qp, content)
     content = re.sub(b'(?P<chr>[\t\r])', match2qp, content)

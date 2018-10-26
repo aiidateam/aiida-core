@@ -7,11 +7,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+Translator for group
+"""
 
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from aiida.restapi.translator.base import BaseTranslator
+
 
 class GroupTranslator(BaseTranslator):
     """
@@ -37,26 +41,31 @@ class GroupTranslator(BaseTranslator):
     # All the values from column_order must present in additional info dict
     # Note: final schema will contain details for only the fields present in column order
     _schema_projections = {
-        "column_order": [
-            "id",
-            "name",
-            "type",
-            "description",
-            "user_id",
-            "user_email",
-            "uuid"
-        ],
+        "column_order": ["id", "name", "type", "description", "user_id", "user_email", "uuid"],
         "additional_info": {
-            "id": {"is_display": True},
-            "name": {"is_display": True},
-            "type": {"is_display": True},
-            "description": {"is_display": False},
-            "user_id": {"is_display": False},
-            "user_email": {"is_display": True},
-            "uuid": {"is_display": False}
+            "id": {
+                "is_display": True
+            },
+            "name": {
+                "is_display": True
+            },
+            "type": {
+                "is_display": True
+            },
+            "description": {
+                "is_display": False
+            },
+            "user_id": {
+                "is_display": False
+            },
+            "user_email": {
+                "is_display": True
+            },
+            "uuid": {
+                "is_display": False
+            }
         }
     }
-
 
     def __init__(self, **kwargs):
         """
@@ -64,4 +73,3 @@ class GroupTranslator(BaseTranslator):
         Create the basic query_help
         """
         super(GroupTranslator, self).__init__(Class=self.__class__, **kwargs)
-

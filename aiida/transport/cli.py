@@ -41,7 +41,7 @@ def configure_computer_main(computer, user, **kwargs):
     from aiida.orm.backends import construct_backend
     from aiida.common.utils import get_configured_user_email
     backend = construct_backend()
-    user = user or backend.users.get_automatic_user()
+    user = user or backend.users.get_default()
 
     echo.echo_info('Configuring computer {} for user {}.'.format(computer.name, user.email))
     if user.email != get_configured_user_email():
@@ -82,7 +82,7 @@ def interactive_default(transport_type, key, also_noninteractive=False):
         """Determine the default value from the context."""
         from aiida.orm.backends import construct_backend
         backend = construct_backend()
-        user = ctx.params['user'] or backend.users.get_automatic_user()
+        user = ctx.params['user'] or backend.users.get_default()
         computer = ctx.params['computer']
         try:
             authinfo = backend.authinfos.get(computer=computer, user=user)

@@ -117,7 +117,7 @@ def workflow_list(short, all_states, depth, past_days, workflows):
     tab_size = 2
 
     backend = construct_backend()
-    current_user = backend.users.get_automatic_user()
+    current_user = backend.users.get_default()
 
     wf_list = get_workflow_list(
         [workflow.pk for workflow in workflows], user=current_user, all_states=all_states, n_days_ago=past_days)

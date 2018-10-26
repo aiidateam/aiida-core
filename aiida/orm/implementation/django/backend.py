@@ -24,7 +24,7 @@ class DjangoBackend(Backend):
 
     def __init__(self):
         self._logs = log.DjangoLogCollection(self, log.DjangoLog)
-        self._users = user.DjangoUserCollection(self, user.DjangoUser)
+        self._users = user.DjangoUserCollection(self)
         self._authinfos = authinfo.DjangoAuthInfoCollection(self, authinfo.DjangoAuthInfo)
         self._computers = computer.DjangoComputerCollection(self)
         self._query_manager = DjangoQueryManager(self)

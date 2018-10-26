@@ -210,7 +210,7 @@ class DjangoQueryManager(AbstractQueryManager):
         query_group_size = 100
         q_object = None
         if args.all_users is False:
-            q_object = Q(user__id=backend.users.get_automatic_user().id)
+            q_object = Q(user__id=backend.users.get_default().id)
         else:
             q_object = Q()
 

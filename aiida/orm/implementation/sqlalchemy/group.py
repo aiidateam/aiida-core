@@ -26,6 +26,7 @@ from aiida.orm.implementation.general.group import AbstractGroup
 
 from . import user as users
 from . import utils
+from aiida.orm import users as orm_users
 
 
 class Group(AbstractGroup):
@@ -62,7 +63,7 @@ class Group(AbstractGroup):
                                     "")  # By default, an user group
 
             # Get the user and extract the dbuser instance
-            user = kwargs.pop('user', self._backend.users.get_automatic_user())
+            user = kwargs.pop('user', orm_users.User.objects.get_default())
             user = user.dbuser
 
             description = kwargs.pop('description', "")

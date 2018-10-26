@@ -258,11 +258,11 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.orm.code import Code  # pylint: disable=redefined-outer-name
     from aiida.orm.computer import Computer
-    from aiida.orm.user import User
+    from aiida.orm.users import User
 
     qb_user_filters = dict()
     if not all_users:
-        user = backend.users.get_automatic_user()
+        user = backend.users.get_default()
         qb_user_filters['email'] = user.email
 
     qb_computer_filters = dict()

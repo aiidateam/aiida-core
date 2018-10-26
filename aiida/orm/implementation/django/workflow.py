@@ -122,7 +122,7 @@ class Workflow(AbstractWorkflow):
 
             # This stores the MD5 as well, to test in case the workflow has
             # been modified after the launch
-            self._dbworkflowinstance = DbWorkflow(user=self._backend.users.get_automatic_user().dbuser,
+            self._dbworkflowinstance = DbWorkflow(user=self._backend.users.get_default().dbuser,
                                                   module=self.caller_module,
                                                   module_class=self.caller_module_class,
                                                   script_path=self.caller_file,
@@ -492,7 +492,7 @@ class Workflow(AbstractWorkflow):
             raise InternalError("Cannot query a step with name {0}, reserved string".format(step_method_name))
 
         try:
-            user = self._backend.users.get_automatic_user()
+            user = self._backend.users.get_default()
             step = self.dbworkflowinstance.steps.get(name=step_method_name, user=user.dbuser)
             return step
         except ObjectDoesNotExist:
@@ -582,7 +582,7 @@ def kill_all():
     from aiida.orm.backends import construct_backend
     backend = construct_backend()
 
-    q_object = Q(user=backend.users.get_automatic_user().id)
+    q_object = Q(user=backend.users.get_default().id)
     q_object.add(~Q(state=wf_states.FINISHED), Q.AND)
     w_list = DbWorkflow.objects.filter(q_object)
 

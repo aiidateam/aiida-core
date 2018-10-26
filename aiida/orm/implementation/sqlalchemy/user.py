@@ -12,13 +12,13 @@ from __future__ import print_function
 from __future__ import absolute_import
 from aiida.backends.sqlalchemy.models.user import DbUser
 from aiida.common.utils import type_check
-from aiida.orm.user import User, UserCollection
+from aiida.orm.implementation import users
 from aiida.utils.email import normalize_email
 
 from . import utils
 
 
-class SqlaUserCollection(UserCollection):
+class SqlaUserCollection(users.BackendUserCollection):
 
     def create(self, email, first_name='', last_name='', institution=''):
         """
@@ -51,7 +51,7 @@ class SqlaUserCollection(UserCollection):
         return SqlaUser.from_dbmodel(dbmodel, self.backend)
 
 
-class SqlaUser(User):
+class SqlaUser(users.BackendUser):
 
     @classmethod
     def from_dbmodel(cls, dbmodel, backend):
@@ -93,13 +93,13 @@ class SqlaUser(User):
         return self._dbuser.email
 
     @email.setter
-    def email(self, val):
-        self._dbuser.email = val
+    def email(self, email):
+        self._dbuser.email = email
 
-    def _set_password(self, val):
+    def set_password(self, val):
         self._dbuser.password = val
 
-    def _get_password(self):
+    def get_password(self):
         return self._dbuser.password
 
     @property
@@ -107,45 +107,45 @@ class SqlaUser(User):
         return self._dbuser.first_name
 
     @first_name.setter
-    def first_name(self, val):
-        self._dbuser.first_name = val
+    def first_name(self, first_name):
+        self._dbuser.first_name = first_name
 
     @property
     def last_name(self):
         return self._dbuser.last_name
 
     @last_name.setter
-    def last_name(self, val):
-        self._dbuser.last_name = val
+    def last_name(self, last_name):
+        self._dbuser.last_name = last_name
 
     @property
     def institution(self):
         return self._dbuser.institution
 
     @institution.setter
-    def institution(self, val):
-        self._dbuser.institution = val
+    def institution(self, institution):
+        self._dbuser.institution = institution
 
     @property
     def is_active(self):
         return self._dbuser.is_active
 
     @is_active.setter
-    def is_active(self, val):
-        self._dbuser.is_active = val
+    def is_active(self, active):
+        self._dbuser.is_active = active
 
     @property
     def last_login(self):
         return self._dbuser.last_login
 
     @last_login.setter
-    def last_login(self, val):
-        self._dbuser.last_login = val
+    def last_login(self, last_login):
+        self._dbuser.last_login = last_login
 
     @property
     def date_joined(self):
         return self._dbuser.date_joined
 
     @date_joined.setter
-    def date_joined(self, val):
-        self._dbuser.date_joined = val
+    def date_joined(self, date_joined):
+        self._dbuser.date_joined = date_joined

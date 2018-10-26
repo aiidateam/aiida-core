@@ -237,7 +237,7 @@ def group_list(all_users, user_email, group_type, with_description, count, past_
             user = user_email
         else:
             # By default: only groups of this user
-            user = backend.users.get_automatic_user()
+            user = backend.users.get_default()
 
     type_string = ""
     if group_type is not None:

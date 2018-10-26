@@ -23,7 +23,7 @@ class UserTranslator(BaseTranslator):
     # A label associated to the present class (coincides with the resource name)
     __label__ = "users"
     # The AiiDA class one-to-one associated to the present class
-    from aiida.orm.user import User
+    from aiida.orm.users import User
     _aiida_class = User
     # The string name of the AiiDA class
     _aiida_type = "user.User"

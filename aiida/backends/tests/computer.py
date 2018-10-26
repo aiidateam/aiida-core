@@ -16,7 +16,7 @@ from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import NotExistent
 
-from aiida.orm import Computer
+from aiida.orm import Computer, User
 
 
 class TestComputer(AiidaTestCase):
@@ -35,9 +35,7 @@ class TestComputer(AiidaTestCase):
             workdir='/tmp/aiida').store()
 
         # Configure the computer - no parameters for local transport
-        authinfo = self.backend.authinfos.create(
-            computer=new_comp,
-            user=self.backend.users.get_automatic_user())
+        authinfo = self.backend.authinfos.create(computer=new_comp, user=User.objects.get_default())
         authinfo.store()
 
         transport = new_comp.get_transport()
@@ -85,7 +83,7 @@ class TestComputerConfigure(AiidaTestCase):
         self.comp_builder.mpiprocs_per_machine = 8
         self.comp_builder.mpirun_command = 'mpirun'
         self.comp_builder.shebang = '#!xonsh'
-        self.user = backend.users.get_automatic_user()
+        self.user = User.objects.get_default()
 
     def test_configure_local(self):
         """Configure a computer for local transport and check it is configured."""

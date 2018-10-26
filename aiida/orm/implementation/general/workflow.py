@@ -584,7 +584,7 @@ class AbstractWorkflow(object):
 
                 # self.get_steps(wrapped_method).set_nextcall(wf_exit_call)
 
-            automatic_user = self.backend.users.get_automatic_user()
+            automatic_user = self.backend.users.get_default()
             method_step, created = self.dbworkflowinstance.steps.get_or_create(
                 name=wrapped_method, user=automatic_user.dbuser)
             try:
@@ -660,7 +660,7 @@ class AbstractWorkflow(object):
 
         # Retrieve the caller method
         method_step = self.dbworkflowinstance.steps.get(name=caller_method,
-                                                        user=self._backend.users.get_automatic_user())
+                                                        user=self._backend.users.get_default())
 
         # Attach calculations
         if caller_method in self.attach_calc_lazy_storage:

@@ -354,8 +354,8 @@ class TestVerdiComputerConfigure(AiidaTestCase):
         from aiida.orm.backends import construct_backend
         from aiida.control.computer import ComputerBuilder
         self.backend = construct_backend()
-        self.user = self.backend.users.get_automatic_user()
         self.cli_runner = CliRunner()
+        self.user = self.backend.users.get_default()
         self.comp_builder = ComputerBuilder(label='test_comp_setup')
         self.comp_builder.hostname = 'localhost'
         self.comp_builder.description = 'Test Computer'
@@ -513,7 +513,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
         """
         Prepare the computer and user
         """
-        self.user = self.backend.users.get_automatic_user()
+        self.user = self.backend.users.get_default()
 
         # I need to configure the computer here; being 'local',
         # there should not be any options asked here

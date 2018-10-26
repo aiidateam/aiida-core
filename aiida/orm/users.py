@@ -17,6 +17,9 @@ from __future__ import absolute_import
 
 from aiida.common.hashing import is_password_usable
 from aiida.common import exceptions
+from aiida.utils.email import normalize_email
+
+from . import backends
 from . import entities
 
 __all__ = ['User']
@@ -120,6 +123,12 @@ class User(entities.Entity):
             return [_[0] for _ in query.all()]
 
     REQUIRED_FIELDS = ['first_name', 'last_name', 'institution']
+
+    def __init__(self, email, first_name='', last_name='', institution='', backend=None):
+        backend = backend or backends.construct_backend()
+        email = normalize_email(email)
+        backend_entity = backend.users.create(email, first_name, last_name, institution)
+        super(User, self).__init__(backend_entity)
 
     def __str__(self):
         return self.email

@@ -30,7 +30,7 @@ from aiida.orm.implementation.general.node import AbstractNode, _HASH_EXTRA_KEY
 
 from . import computer as computers
 from . import user as users
-
+from aiida.orm import users as orm_users
 
 class Node(AbstractNode):
 
@@ -126,7 +126,7 @@ class Node(AbstractNode):
         #                    uuid, self.__class__.__name__, e.message))
         else:
             # TODO: allow to get the user from the parameters
-            user = self._backend.users.get_automatic_user()
+            user = orm_users.User.objects(backend=self._backend).get_default()
             self._dbnode = DbNode(user=user.dbuser,
                                   uuid=get_new_uuid(),
                                   type=self._plugin_type_string)
@@ -404,7 +404,7 @@ class Node(AbstractNode):
                                          "storing the node")
 
         if user is None:
-            user = self.backend.users.get_automatic_user()
+            user = self.backend.users.get_default()
 
         return DbComment.objects.create(dbnode=self._dbnode,
                                         user=user.dbuser,

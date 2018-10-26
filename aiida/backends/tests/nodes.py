@@ -1285,13 +1285,13 @@ class TestNodeBasic(AiidaTestCase):
 
         a = Node()
         with self.assertRaises(ModificationNotAllowed):
-            a.add_comment('text', user=backend.users.get_automatic_user())
+            a.add_comment('text', user=backend.users.get_default())
         a.store()
         self.assertEquals(a.get_comments(), [])
         before = timezone.now()
         time.sleep(1)  # I wait 1 second because MySql time precision is 1 sec
-        a.add_comment('text', user=backend.users.get_automatic_user())
-        a.add_comment('text2', user=backend.users.get_automatic_user())
+        a.add_comment('text', user=backend.users.get_default())
+        a.add_comment('text2', user=backend.users.get_default())
         time.sleep(1)
         after = timezone.now()
 

@@ -17,7 +17,7 @@ import re
 
 import six
 
-import aiida.orm.user
+import aiida.orm.users
 from aiida.orm.data.singlefile import SinglefileData
 from aiida.common.utils import classproperty
 
@@ -155,7 +155,7 @@ def upload_upf_family(folder, group_name, group_description,
 
     nfiles = len(files)
 
-    automatic_user = backend.users.get_automatic_user()
+    automatic_user = backend.users.get_default()
     try:
         group = Group.get(name=group_name, type_string=UPFGROUP_TYPE)
         group_created = False

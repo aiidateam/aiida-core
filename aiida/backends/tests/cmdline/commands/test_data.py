@@ -476,7 +476,7 @@ class TestVerdiDataRemote(AiidaTestCase):
     @classmethod
     def setUpClass(cls):
         super(TestVerdiDataRemote, cls).setUpClass()
-        user = cls.backend.users.get_automatic_user()
+        user = cls.backend.users.get_default()
         authinfo = cls.backend.authinfos.create(cls.computer, user)
         authinfo.store()
 

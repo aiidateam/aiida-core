@@ -1404,7 +1404,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
             # Filter on the users, if not all users
             if not all_users:
-                user_id = backend.users.get_automatic_user().id
+                user_id = backend.users.get_default().id
                 calculation_filters['user_id'] = {'==': user_id}
 
             if past_days is not None:

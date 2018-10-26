@@ -21,7 +21,7 @@ from aiida.common.utils import (export_shard_uuid, get_class_string,
 from aiida.orm.computer import Computer
 from aiida.orm.group import Group
 from aiida.orm.node import Node
-from aiida.orm.user import User
+from aiida.orm.users import User
 
 
 IMPORTGROUP_TYPE = 'aiida.import'

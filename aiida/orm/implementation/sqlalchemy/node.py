@@ -34,6 +34,7 @@ from aiida import orm
 
 from . import computer as computers
 from . import user as users
+from aiida.orm import users as orm_users
 
 
 class Node(AbstractNode):
@@ -69,7 +70,7 @@ class Node(AbstractNode):
             self._repo_folder = RepositoryFolder(section=self._section_name, uuid=self.uuid)
 
         else:
-            user = self._backend.users.get_automatic_user()
+            user = orm_users.User.objects(backend=self._backend).get_default()
             if user is None:
                 raise RuntimeError("Could not find a default user")
 
@@ -440,7 +441,7 @@ class Node(AbstractNode):
             raise ModificationNotAllowed("Comments can be added only after " "storing the node")
 
         if user is None:
-            user = self.backend.users.get_automatic_user()
+            user = self.backend.users.get_default()
 
         comment = DbComment(dbnode=self._dbnode, user=user.dbuser, content=content)
         session.add(comment)

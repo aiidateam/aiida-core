@@ -723,7 +723,7 @@ class QueryBuilderJoinsTests(AiidaTestCase):
             ).count(), number_students)
 
     def test_joins3_user_group(self):
-        from aiida.orm.user import User
+        from aiida.orm.users import User
         from aiida.orm.querybuilder import QueryBuilder
 
         # Create another user

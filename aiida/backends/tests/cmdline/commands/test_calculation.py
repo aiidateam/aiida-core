@@ -56,7 +56,7 @@ class TestVerdiCalculation(AiidaTestCase):
         cls.node = Node().store()
         cls.calcs = []
 
-        authinfo = backend.authinfos.create(computer=cls.computer, user=backend.users.get_automatic_user())
+        authinfo = backend.authinfos.create(computer=cls.computer, user=backend.users.get_default())
         authinfo.store()
 
         # Create 13 JobCalculations (one for each CalculationState)

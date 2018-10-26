@@ -234,14 +234,14 @@ class AbstractQueryManager(object):
         from aiida.orm.data.structure import (get_formula, get_symbols_string)
         from aiida.orm.data.array.bands import BandsData
         from aiida.orm.data.structure import StructureData
-        from aiida.orm.user import User
+        from aiida.orm.users import User
         from aiida.orm.backends import construct_backend
 
         backend = construct_backend()
 
         qb = QueryBuilder()
         if args.all_users is False:
-            user = backend.users.get_automatic_user()
+            user = backend.users.get_default()
             qb.append(User, tag="creator", filters={"email": user.email})
         else:
             qb.append(User, tag="creator")

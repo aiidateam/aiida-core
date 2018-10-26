@@ -38,7 +38,7 @@ def add(comment, nodes):
     from aiida.orm.backends import construct_backend
 
     backend = construct_backend()
-    user = backend.users.get_automatic_user()
+    user = backend.users.get_default()
 
     if not comment:
         comment = multi_line_input.edit_comment()
@@ -107,7 +107,7 @@ def remove(remove_all, force, node, comment_id):
     from aiida.orm.backends import construct_backend
 
     backend = construct_backend()
-    user = backend.users.get_automatic_user()
+    user = backend.users.get_default()
 
     if comment_id is None and not remove_all:
         echo.echo_error("One argument between -a and ID must be provided")
@@ -148,7 +148,7 @@ def update(comment, node, comment_id):
     """
     from aiida.orm.backends import construct_backend
     backend = construct_backend()
-    user = backend.users.get_automatic_user()
+    user = backend.users.get_default()
 
     # read the comment from terminal if it is not on command line
     if comment is None:

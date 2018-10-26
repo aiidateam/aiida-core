@@ -10,7 +10,6 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import abc
 import logging
 import os
 import six
@@ -21,11 +20,11 @@ from aiida.common import exceptions
 from .backends import construct_backend
 from . import entities
 from . import implementation
+from . import users
 
 __all__ = ['Computer']
 
 
-@six.add_metaclass(abc.ABCMeta)
 class Computer(entities.Entity):
     """
     Base class to map a node in the DB + its permanent repository counterpart.
@@ -184,7 +183,7 @@ class Computer(entities.Entity):
         return computer
 
     def set(self, **kwargs):
-        self._model.set(**kwargs)
+        self._backend_entity.set(**kwargs)
 
     @property
     def full_text_info(self):
@@ -230,16 +229,6 @@ class Computer(entities.Entity):
             ret_lines.append("   # No append text.")
 
         return "\n".join(ret_lines)
-
-    @property
-    def is_stored(self):
-        """
-        Is the computer stored?
-
-        :return: True if stored, False otherwise
-        :rtype: bool
-        """
-        return self._model.is_stored
 
     @property
     def logger(self):
@@ -408,7 +397,7 @@ class Computer(entities.Entity):
         """
         Return a copy of the current object to work with, not stored yet.
         """
-        return Computer.from_bakend_entity(self._model.copy())
+        return Computer.from_bakend_entity(self._backend_entity.copy())
 
     def store(self):
         """
@@ -418,12 +407,11 @@ class Computer(entities.Entity):
         are to be changed (e.g. a new mpirun command, etc.)
         """
         self.validate()
-        self._model.store()
-        return self
+        return super(Computer, self).store()
 
     @property
     def name(self):
-        return self._model.name
+        return self._backend_entity.name
 
     @property
     def label(self):
@@ -447,14 +435,14 @@ class Computer(entities.Entity):
         :return: the description
         :rtype: str
         """
-        return self._model.description
+        return self._backend_entity.description
 
     @property
     def hostname(self):
-        return self._model.hostname
+        return self._backend_entity.hostname
 
     def _get_metadata(self):
-        return self._model.get_metadata()
+        return self._backend_entity.get_metadata()
 
     def _set_metadata(self, metadata_dict):
         """
@@ -464,7 +452,7 @@ class Computer(entities.Entity):
            data to the database! (The store method can be called multiple
            times, differently from AiiDA Node objects).
         """
-        self._model.set_metadata(metadata_dict)
+        self._backend_entity.set_metadata(metadata_dict)
 
     def _del_property(self, k, raise_exception=True):
         olddata = self._get_metadata()
@@ -547,10 +535,10 @@ class Computer(entities.Entity):
         self._set_property("default_mpiprocs_per_machine", def_cpus_per_machine)
 
     def get_transport_params(self):
-        return self._model.get_transport_params()
+        return self._backend_entity.get_transport_params()
 
     def set_transport_params(self, val):
-        self._model.set_transport_params(val)
+        self._backend_entity.set_transport_params(val)
 
     def get_transport(self, user=None):
         """
@@ -574,7 +562,7 @@ class Computer(entities.Entity):
         from aiida.orm.backends import construct_backend
         backend = construct_backend()
         if user is None:
-            authinfo = backend.authinfos.get(self, backend.users.get_automatic_user())
+            authinfo = backend.authinfos.get(self, users.User.objects.get_default())
         else:
             authinfo = backend.authinfos.get(self, user)
         transport = authinfo.get_transport()
@@ -608,17 +596,17 @@ class Computer(entities.Entity):
         self._set_metadata(metadata)
 
     def get_name(self):
-        return self._model.get_name()
+        return self._backend_entity.get_name()
 
     def set_name(self, val):
-        self._model.set_name(val)
+        self._backend_entity.set_name(val)
 
     def get_hostname(self):
         """
         Get this computer hostname
         :rtype: str
         """
-        return self._model.get_hostname()
+        return self._backend_entity.get_hostname()
 
     def set_hostname(self, val):
         """
@@ -626,16 +614,16 @@ class Computer(entities.Entity):
         :param val: The new hostname
         :type val: str
         """
-        self._model.set_hostname(val)
+        self._backend_entity.set_hostname(val)
 
     def get_description(self):
         pass
 
     def set_description(self, val):
-        self._model.set_description(val)
+        self._backend_entity.set_description(val)
 
     def is_enabled(self):
-        return self._model.is_enabled()
+        return self._backend_entity.is_enabled()
 
     def get_authinfo(self, user):
         """
@@ -667,14 +655,14 @@ class Computer(entities.Entity):
             return False
 
     def set_enabled_state(self, enabled):
-        self._model.set_enabled_state(enabled)
+        self._backend_entity.set_enabled_state(enabled)
 
     def get_scheduler_type(self):
         """
         :return: the scheduler type
         :rtype: str
         """
-        return self._model.get_scheduler_type()
+        return self._backend_entity.get_scheduler_type()
 
     def set_scheduler_type(self, scheduler_type):
         """
@@ -682,13 +670,13 @@ class Computer(entities.Entity):
         :return: 
         """
         self._scheduler_type_validator(scheduler_type)
-        self._model.set_scheduler_type(scheduler_type)
+        self._backend_entity.set_scheduler_type(scheduler_type)
 
     def get_transport_type(self):
-        return self._model.get_transport_type()
+        return self._backend_entity.get_transport_type()
 
     def set_transport_type(self, val):
-        self._model.set_transport_type(val)
+        self._backend_entity.set_transport_type(val)
 
     def get_transport_class(self):
         try:
@@ -719,7 +707,7 @@ class Computer(entities.Entity):
 
         transport_cls = self.get_transport_class()
         backend = self.backend
-        user = user or backend.users.get_automatic_user()
+        user = user or users.User.objects.get_default()
 
         try:
             authinfo = self.get_authinfo(user)
@@ -750,7 +738,7 @@ class Computer(entities.Entity):
         """
 
         backend = self.backend
-        user = user or backend.users.get_automatic_user()
+        user = user or backend.users.get_default()
 
         config = {}
         try:

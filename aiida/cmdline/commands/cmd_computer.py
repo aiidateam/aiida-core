@@ -277,7 +277,7 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
         echo.echo_success('Computer<{}> {} created'.format(computer.pk, computer.name))
 
     backend = construct_backend()
-    is_configured = computer.is_user_configured(backend.users.get_automatic_user())
+    is_configured = computer.is_user_configured(backend.users.get_default())
 
     if not is_configured:
         echo.echo_info('Note: before the computer can be used, it has to be configured with the command:')
@@ -361,8 +361,8 @@ def computer_list(all_entries, raw):
         for name in sorted(computer_names):
             computer = backend.computers.get(name=name)
 
-            is_configured = computer.is_user_configured(backend.users.get_automatic_user())
-            is_user_enabled = computer.is_user_enabled(backend.users.get_automatic_user())
+            is_configured = computer.is_user_configured(backend.users.get_default())
+            is_user_enabled = computer.is_user_enabled(backend.users.get_default())
 
             if not all_entries:
                 if not is_configured or not is_user_enabled or not computer.is_enabled():
@@ -475,7 +475,7 @@ def computer_test(user, print_traceback, computer):
 
     # Set a user automatically if one is not specified in the command line
     if user is None:
-        user = backend.users.get_automatic_user()
+        user = backend.users.get_default()
 
     echo.echo("Testing computer '{}' for user {}...".format(computer.get_name(), user.email))
     try:

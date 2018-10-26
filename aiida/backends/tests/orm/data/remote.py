@@ -19,6 +19,8 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.backends import construct_backend
 from aiida.orm.data.remote import RemoteData
 
+from aiida.orm import User
+
 
 class TestRemoteData(AiidaTestCase):
     """Test for the RemoteData class."""
@@ -27,7 +29,7 @@ class TestRemoteData(AiidaTestCase):
     def setUpClass(cls):
         super(TestRemoteData, cls).setUpClass()
         backend = construct_backend()
-        user = backend.users.get_automatic_user()
+        user = User.objects.get_default()
         authinfo = backend.authinfos.create(cls.computer, user)
         authinfo.store()
 

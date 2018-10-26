@@ -419,7 +419,7 @@ def calculation_cleanworkdir(calculations, past_days, older_than, computers, for
         click.confirm(warning, abort=True)
 
     backend = construct_backend()
-    user = backend.users.get_automatic_user()
+    user = backend.users.get_default()
 
     for computer_uuid, paths in path_mapping.items():
 

@@ -27,6 +27,19 @@ class Collection(object):
         self._backend = backend
         self._entity_type = entity_class
 
+    def __call__(self, backend):
+        """
+        Create a new objects collection using a different backend
+
+        :param backend: the backend to use
+        :return: a new collection with the different backend
+        """
+        if backend is self._backend:
+            # Special case if they actually want the same collection
+            return self
+
+        return self.__class__(backend, self._entity_type)
+
     @property
     def backend(self):
         """Return the backend."""
@@ -47,7 +60,7 @@ class Collection(object):
         from . import querybuilder
 
         query = querybuilder.QueryBuilder()
-        # TODO: Figure out how to limit to only classes of self.entity_type
+        query.append(self._entity_type, project='*')
         return query
 
     def get(self, id=None, uuid=None):
@@ -66,7 +79,7 @@ class Collection(object):
         if uuid is not None:
             filters['uuid'] = {'==': uuid}
 
-        query.append(cls=self.entity_type, filters=filters)
+        query.add_filter(self.entity_type, filters)
         res = [_[0] for _ in query.all()]
         if not res:
             raise exceptions.NotExistent("No {} with filter '{}' found".format(self.entity_type.__name__, filters))
@@ -102,12 +115,12 @@ class Entity(object):
         # pylint: disable=redefined-builtin, invalid-name
         return cls.objects.get(id=id, uuid=uuid)  # pylint: disable=no-member
 
-    def __init__(self, model):
+    def __init__(self, backend_entity):
         """
-        :param model: the backend model supporting this entity
-        :type model: :class:`aiida.orm.implementation.BackendEntity`
+        :param backend_entity: the backend model supporting this entity
+        :type backend_entity: :class:`aiida.orm.implementation.BackendEntity`
         """
-        self._model = model
+        self._backend_entity = backend_entity
 
     @property
     def id(self):
@@ -118,7 +131,7 @@ class Entity(object):
         :return: the entity id
         """
         # pylint: disable=redefined-builtin, invalid-name
-        return self._model.id
+        return self._backend_entity.id
 
     @property
     def pk(self):
@@ -139,7 +152,24 @@ class Entity(object):
         :return: the eneity uuid
         :rtype: :class:`uuid.UUID`
         """
-        return self._model.uuid
+        return self._backend_entity.uuid
+
+    def store(self):
+        """
+        Store the entity.
+        """
+        self._backend_entity.store()
+        return self
+
+    @property
+    def is_stored(self):
+        """
+        Is the computer stored?
+
+        :return: True if stored, False otherwise
+        :rtype: bool
+        """
+        return self._backend_entity.is_stored
 
     @property
     def backend(self):
@@ -147,7 +177,7 @@ class Entity(object):
         Get the backend for this entity
         :return: the backend instance
         """
-        return self._model.backend
+        return self._backend_entity.backend
 
     @property
     def backend_entity(self):
@@ -156,4 +186,4 @@ class Entity(object):
 
         :return: the class model
         """
-        return self._model
+        return self._backend_entity

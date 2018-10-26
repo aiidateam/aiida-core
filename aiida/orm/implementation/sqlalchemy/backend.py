@@ -24,7 +24,7 @@ class SqlaBackend(Backend):
 
     def __init__(self):
         self._logs = log.SqlaLogCollection(self, log.SqlaLog)
-        self._users = user.SqlaUserCollection(self, user.SqlaUser)
+        self._users = user.SqlaUserCollection(self)
         self._authinfos = authinfo.SqlaAuthInfoCollection(self, authinfo.SqlaAuthInfo)
         self._computers = computer.SqlaComputerCollection(self)
         self._query_manager = SqlaQueryManager(self)

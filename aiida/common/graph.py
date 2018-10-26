@@ -192,7 +192,7 @@ def draw_graph(origin_node,
             fhandle.write(u"    {}\n".format(n_values))
         for n_name, n_values in additional_nodes.items():
             fhandle.write(u"    {}\n".format(n_values))
-        fhandle.write("}\n")
+        fhandle.write(u"}\n")
 
     # Now I am producing the output file
     output_file_name = "{0}.{format}".format(origin_node.pk, format=format)

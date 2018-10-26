@@ -726,7 +726,7 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable, TestVerdiData
 
 @unittest.skipUnless(has_pycifrw(), "Unable to import PyCifRW")
 class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExportable):
-    valid_sample_cif_str = '''
+    valid_sample_cif_str = u'''
         data_test
         _cell_length_a    10
         _cell_length_b    10

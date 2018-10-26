@@ -751,8 +751,8 @@ class Utils(object):
                                                "MM] "
                                                "given with "
                                                "respect to UTC")
-            if dtobj.tzinfo is not None:
-                tzoffset_minutes = int(dtobj.tzinfo.utcoffset(None).total_seconds() // 60)
+            if dtobj.tzinfo is not None and dtobj.utcoffset() is not None:
+                tzoffset_minutes = int(dtobj.utcoffset().total_seconds() // 60)
                 return DatetimePrecision(
                     dtobj.replace(tzinfo=FixedOffsetTimezone(offset=tzoffset_minutes, name=None)), precision)
 

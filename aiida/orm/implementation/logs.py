@@ -34,6 +34,8 @@ class BackendLogCollection(backends.BackendCollection):
     and retrieve logs.
     """
 
+    ENTRY_TYPE = BackendLog
+
     @abstractmethod
     def create_entry(self, time, loggername, levelname, objname,
                      objpk=None, message="", metadata=None):

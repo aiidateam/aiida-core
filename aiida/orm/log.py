@@ -10,7 +10,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from abc import abstractmethod, abstractproperty, ABCMeta
+from abc import abstractmethod, ABCMeta
 from collections import namedtuple
 
 import six
@@ -198,7 +198,6 @@ class Log(entities.Entity):
         """
         return self._backend_entity.metadata
 
-    @abstractmethod
     def save(self):
         """
         Persist the log entry to the database
@@ -206,4 +205,4 @@ class Log(entities.Entity):
         :return: reference of self
         :rtype: :class: Log
         """
-        pass
+        return self._backend_entity.save()

@@ -22,37 +22,6 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 
 
-def has_nwchem_plugin():
-    from aiida.common.exceptions import MissingEntryPointError
-    from aiida.plugins.entry_point import load_entry_point
-    from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator
-
-    try:
-        load_entry_point('aiida.tools.dbexporters.tcod_plugins', 'nwchem.nwcpymatgen')
-    except MissingEntryPointError:
-        return False
-
-    return True
-
-
-class FakeObject(object):
-    """
-    A wrapper for dictionary, which can be used instead of object.
-    Example use case: fake Calculation object ``calc``, having keys
-    ``inp`` and ``out`` to access also fake NodeInputManager and
-    NodeOutputManager.
-    """
-
-    def __init__(self, dictionary):
-        self._dictionary = dictionary
-
-    def __getattr__(self, name):
-        if isinstance(self._dictionary[name], dict):
-            return FakeObject(self._dictionary[name])
-        else:
-            return self._dictionary[name]
-
-
 class TestTcodDbExporter(AiidaTestCase):
     """Tests for TcodDbExporter class."""
     from aiida.orm.data.structure import has_ase, has_spglib
@@ -254,77 +223,6 @@ class TestTcodDbExporter(AiidaTestCase):
         self.assertEquals(values['_tcod_computation_command'],
                           ['cd 1; ./_aiidasubmit.sh'])
 
-
-    @unittest.skipIf(not has_nwchem_plugin(), "NWChem plugin is not installed")
-    def test_nwcpymatgen_translation(self):
-        from .tcodexporter import FakeObject
-        from aiida.orm.data.parameter import ParameterData
-        from aiida.plugins.entry_point import load_entry_point
-        from aiida.tools.dbexporters.tcod import translate_calculation_specific_values
-
-        nwchem_plugin = load_entry_point('aiida.tools.dbexporters.tcod_plugins', 'nwchem.nwcpymatgen')
-
-        calc = FakeObject({
-            "out": {"output":
-                ParameterData(dict={
-                    "basis_set": {
-                        "H": {
-                            "description": "6-31g",
-                            "functions": "2",
-                            "shells": "2",
-                            "types": "2s"
-                        },
-                        "O": {
-                            "description": "6-31g",
-                            "functions": "9",
-                            "shells": "5",
-                            "types": "3s2p"
-                        }
-                    },
-                    "corrections": {},
-                    "energies": [
-                        -2057.99011937535
-                    ],
-                    "errors": [],
-                    "frequencies": None,
-                    "has_error": False,
-                    "job_type": "NWChem SCF Module"
-                }),
-                "job_info": ParameterData(dict={
-                    "0 permanent": ".",
-                    "0 scratch": ".",
-                    "argument  1": "aiida.in",
-                    "compiled": "Sun_Dec_22_04:02:59_2013",
-                    "data base": "./aiida.db",
-                    "date": "Mon May 11 17:10:07 2015",
-                    "ga revision": "10379",
-                    "global": "200.0 Mbytes (distinct from heap & stack)",
-                    "hardfail": "no",
-                    "heap": "100.0 Mbytes",
-                    "hostname": "theospc11",
-                    "input": "aiida.in",
-                    "nproc": "6",
-                    "nwchem branch": "6.3",
-                    "nwchem revision": "24277",
-                    "prefix": "aiida.",
-                    "program": "/usr/bin/nwchem",
-                    "source": "/build/buildd/nwchem-6.3+r1",
-                    "stack": "100.0 Mbytes",
-                    "status": "startup",
-                    "time left": "-1s",
-                    "total": "400.0 Mbytes",
-                    "verify": "yes",
-                })
-            }})
-        res = translate_calculation_specific_values(calc, nwchem_plugin)
-        self.assertEquals(res, {
-            '_tcod_software_package': 'NWChem',
-            '_tcod_software_package_version': '6.3',
-            '_tcod_software_package_compilation_date': '2013-12-22T04:02:59',
-            '_atom_type_symbol': ['H', 'O'],
-            '_dft_atom_basisset': ['6-31g', '6-31g'],
-            '_dft_atom_type_valence_configuration': ['2s', '3s2p'],
-        })
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_spglib(), "Unable to import spglib")

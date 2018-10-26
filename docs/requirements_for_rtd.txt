@@ -33,6 +33,7 @@ ecdsa==0.13
 enum34==1.1.6; python_version<"3.5"
 ete3==3.1.1
 flask-marshmallow==0.9.0
+futures; python_version=="2.7"
 ipython>=4.0,<6.0
 itsdangerous==0.24
 kiwipy==0.2.1
@@ -47,6 +48,7 @@ pgtest==1.1.0
 pika==0.12.0
 plumpy==0.10.6
 psutil==5.4.5
+pyblake2==1.1.2; python_version<"3.6"
 pymatgen==2018.4.20
 pyparsing==2.2.0
 pytest-cov==2.5.1
@@ -68,5 +70,6 @@ tabulate==0.8.2
 tornado==4.5.3
 tzlocal==1.5.1
 ujson==1.35
+unittest2==1.1.0; python_version<"3.5"
 uritools==2.1.0
 validate-email==1.3

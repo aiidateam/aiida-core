@@ -38,7 +38,6 @@ class ServerInfo(Resource):
 
         ## Decode url parts
         path = unquote(request.path)
-        query_string = unquote(request.query_string.decode('utf-8'))
         url = unquote(request.url)
         url_root = unquote(request.url_root)
 

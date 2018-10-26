@@ -7,36 +7,44 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+Common password and hash generation functions.
+"""
 
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import hashlib
+try:  # Python3
+    from hashlib import blake2b
+except ImportError:  # Python2
+    from pyblake2 import blake2b
 import numbers
 import random
 import time
 import uuid
+import struct
+import sys
 from datetime import datetime
+from operator import itemgetter
+from itertools import chain
 
 import six
 from six.moves import range
 from passlib.context import CryptContext
+import pytz
 
-try: # Python3
+try:  # Python3
     from functools import singledispatch
-    from collections import abc
-except ImportError: # Python2
+    from collections import abc, OrderedDict
+except ImportError:  # Python2
     from singledispatch import singledispatch
     import collections as abc
+    from collections import OrderedDict
 
 import numpy as np
 
 from .folders import Folder
-
-"""
-Here we define a single password hashing instance for the full AiiDA.
-"""
-
 
 # The prefix of the hashed using pbkdf2_sha256 algorithm in Django
 HASHING_PREFIX_DJANGO = "pbkdf2_sha256"
@@ -44,29 +52,30 @@ HASHING_PREFIX_DJANGO = "pbkdf2_sha256"
 HASHING_PREFIX_PBKDF2_SHA256 = "$pbkdf2-sha256"
 
 # This will never be a valid encoded hash
-UNUSABLE_PASSWORD_PREFIX = '!'
+UNUSABLE_PASSWORD_PREFIX = '!'  # noqa
 # Number of random chars to add after UNUSABLE_PASSWORD_PREFIX
 UNUSABLE_PASSWORD_SUFFIX_LENGTH = 40
 
-HASHING_KEY="HashingKey"
+HASHING_KEY = "HashingKey"
 
-pwd_context = CryptContext(
+pwd_context = CryptContext(  # pylint: disable=invalid-name
     # The list of hashes that we support
-    schemes=["pbkdf2_sha256", "des_crypt"],
+    schemes=["argon2", "pbkdf2_sha256", "des_crypt"],
     # The default hashing mechanism
     default="pbkdf2_sha256",
 
     # We set the number of rounds that should be used...
     pbkdf2_sha256__default_rounds=8000,
-    )
+)
 
 
 def create_unusable_pass():
-    return UNUSABLE_PASSWORD_PREFIX + get_random_string(
-        UNUSABLE_PASSWORD_SUFFIX_LENGTH)
+    return UNUSABLE_PASSWORD_PREFIX + get_random_string(UNUSABLE_PASSWORD_SUFFIX_LENGTH)
 
 
 def is_password_usable(enc_pass):
+    """check whether the passed password string is a valid hashed password"""
+
     if enc_pass is None or enc_pass.startswith(UNUSABLE_PASSWORD_PREFIX):
         return False
 
@@ -75,12 +84,12 @@ def is_password_usable(enc_pass):
 
     # Backward compatibility for old Django hashing
     if enc_pass.startswith(HASHING_PREFIX_DJANGO):
-        enc_pass = enc_pass.replace(HASHING_PREFIX_DJANGO,
-                                    HASHING_PREFIX_PBKDF2_SHA256, 1)
+        enc_pass = enc_pass.replace(HASHING_PREFIX_DJANGO, HASHING_PREFIX_PBKDF2_SHA256, 1)
         if pwd_context.identify(enc_pass) is not None:
             return True
 
     return False
+
 
 ###################################################################
 # THE FOLLOWING WAS TAKEN FROM DJANGO BUT IT CAN BE EASILY REPLACED
@@ -88,18 +97,17 @@ def is_password_usable(enc_pass):
 
 # Use the system PRNG if possible
 try:
+    # pylint: disable=invalid-name
     random = random.SystemRandom()
     using_sysrandom = True
 except NotImplementedError:
     import warnings
     warnings.warn('A secure pseudo-random number generator is not available '
                   'on your system. Falling back to Mersenne Twister.')
-    using_sysrandom = False
+    using_sysrandom = False  # pylint: disable=invalid-name
 
 
-def get_random_string(length=12,
-                      allowed_chars='abcdefghijklmnopqrstuvwxyz'
-                                    'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'):
+def get_random_string(length=12, allowed_chars='abcdefghijklmnopqrstuvwxyz' 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'):
     """
     Returns a securely generated random string.
 
@@ -113,31 +121,18 @@ def get_random_string(length=12,
         # time a random string is required. This may change the
         # properties of the chosen random sequence slightly, but this
         # is better than absolute predictability.
-        random.seed(
-            hashlib.sha256(
-                ("%s%s%s" % (
-                    random.getstate(),
-                    time.time(),
-                    HASHING_KEY)).encode('utf-8')
-            ).digest())
-    return ''.join(random.choice(allowed_chars) for i in range(length))
+        random.seed(hashlib.sha256(("%s%s%s" % (random.getstate(), time.time(), HASHING_KEY)).encode('utf-8')).digest())
+    return u''.join(random.choice(allowed_chars) for i in range(length))
 
 
-def make_hash_with_type(type_chr, string_to_hash):
-    """
-    get a hash digest for a given enumerated type and its content
+BLAKE2B_OPTIONS = {
+    'fanout': 0,  # unlimited fanout/depth mode
+    'depth': 2,  # has fixed depth of 2
+    'digest_size': 32,  # we do not need a cryptographically relevant digest
+    'inner_size': 64,  # ... but still use 64 as the inner size
+}
 
-    :param type_chr: a single char, lower case for simple datatypes, upper case for composite datatypes
-    :param string_to_hash: an encoded string (a `str` in Python 2, latin1-encoded `bytes` in Python 3)
 
-    We don't check anything for speed efficiency.
-
-    The `latin1` here is not an error. Since this was introduced in Python 2 and no proper care was
-    taken to properly encode/decode strings, the default was used, which was `latin1` at that time.
-    """
-    return hashlib.sha224(type_chr.encode('latin1') + string_to_hash).hexdigest()
-
-@singledispatch
 def make_hash(object_to_hash, **kwargs):
     """
     Makes a hash from a dictionary, list, tuple or set to any level, that contains
@@ -156,192 +151,216 @@ def make_hash(object_to_hash, **kwargs):
     dictionary.
 
     This function avoids this by recursing through nonhashable items and
-    hashing iteratively.
-    Uses python's sorted function to sort unsorted sets and dictionaries
-    and hashlib.sha224 to hash the value.
-    We make an example with two dictionaries that should produce the
-    same hash because only the order of the keys is different::
-
-        aa = {
-            '3':4,
-            3:4,
-            'a':{
-                '1':'hello', 2:'goodbye', 1:'here'
-            },
-            'b':4,
-            'c': set([2, '5','a', 'b', 5])
-        }
-        bb = {
-            'c': set([2, 'b', 5, 'a', '5']),
-            'b':4, 'a':{2:'goodbye', 1:'here', '1':'hello'},
-            '3':4, 3:4
-        }
-
-        print(str(aa) == str(bb))
-        print(aa == bb)
-        print()
-        print(hashlib.sha224(str(aa)).hexdigest())
-        print(hashlib.sha224(str(bb)).hexdigest())
-        print(hashlib.sha224(str(aa)).hexdigest(
-            ) == hashlib.sha224(str(bb)).hexdigest())
-        print()
-        print(make_hash(aa))
-        print(make_hash(bb))
-        print(make_hash(aa) == make_hash(bb))
-
-    produces the output::
-
-        False
-        True
-
-        0f6f0cc1e3256f6486e998e934d07cb192ea78d3ce75595267b4c665
-        86877298dfb629201055e8bc410b5a2157ce65cf246677c54316723a
-        False
-
-        696cdf26b46d7abc5d6fdfb2244829dad9dd2b0100afd1e2f20a8002
-        696cdf26b46d7abc5d6fdfb2244829dad9dd2b0100afd1e2f20a8002
-        True
-
-    We can conclude that using simple hashfunctions operating on
-    the string of dictionary do not suffice if we want to check for equality
-    of dictionaries using hashes.
+    hashing iteratively. Uses python's sorted function to sort unsorted
+    sets and dictionaries by sorting the hashed keys.
     """
-    raise ValueError("Value of type {} cannot be hashed".format(
-        type(object_to_hash))
-    )
 
-@make_hash.register(abc.Sequence)
-def _(sequence, **kwargs):
-    hashes = tuple([
-        make_hash(x, **kwargs) for x in sequence
-    ])
-    return make_hash_with_type('L', ",".join(hashes).encode('latin1'))
+    hashes = _make_hash(object_to_hash, **kwargs)  # pylint: disable=assignment-from-no-return
 
-@make_hash.register(abc.Set)
-def _(object_to_hash, **kwargs):
-    hashes = tuple([
-            make_hash(x, **kwargs)
-            for x
-            in sorted(object_to_hash)
-        ])
-    return make_hash_with_type('S', ",".join(hashes).encode('latin1'))
+    # use the Unlimited fanout hashing protocol outlined in
+    #   https://blake2.net/blake2_20130129.pdf
+    final_hash = blake2b(node_depth=1, last_node=True, **BLAKE2B_OPTIONS)
 
-@make_hash.register(abc.Mapping)
+    for sub in hashes:
+        final_hash.update(sub)
+
+    # add an empty last leaf node
+    final_hash.update(blake2b(node_depth=0, last_node=True, **BLAKE2B_OPTIONS).digest())
+
+    return final_hash.hexdigest()
+
+
+@singledispatch
+def _make_hash(object_to_hash, **_):
+    """
+    Implementation of the ``make_hash`` function. The hash is created as a
+    28 byte integer, and only later converted to a string.
+    """
+    raise ValueError("Value of type {} cannot be hashed".format(type(object_to_hash)))
+
+
+def _single_digest(obj_type, obj_bytes=b''):
+    return blake2b(obj_bytes, person=obj_type.encode('ascii'), node_depth=0, **BLAKE2B_OPTIONS).digest()
+
+
+_END_DIGEST = _single_digest(')')
+
+
+@_make_hash.register(six.binary_type)
+def _(bytes_obj, **kwargs):
+    """
+    Hash arbitrary binary strings (str in Python 2, bytes in Python 3).
+    For compat reason between Python 2 and 3, this gets the same hash-type
+    as for unicode in Python 2, resp. str in Python 3."""
+    return [_single_digest('str', bytes_obj)]
+
+
+@_make_hash.register(six.text_type)
+def _(val, **kwargs):
+    """
+    If the type is unicode in Python 2 or a str in Python 3, convert it
+    to a str in Python 2 and bytes in Python 3 using the utf-8 encoding.
+    """
+    return [_single_digest('str', val.encode('utf-8'))]
+
+
+@_make_hash.register(abc.Sequence)
+def _(sequence_obj, **kwargs):
+    # unpack the list and use the elements
+    return [_single_digest('list(')] + list(chain.from_iterable(
+        _make_hash(i, **kwargs) for i in sequence_obj)) + [_END_DIGEST]
+
+
+@_make_hash.register(abc.Set)
+def _(set_obj, **kwargs):
+    # turn the set objects into a list of hashes which are always sortable,
+    # then return a flattened list of the hashes
+    return [_single_digest('set(')] + list(chain.from_iterable(sorted(
+        _make_hash(i, **kwargs) for i in set_obj))) + [_END_DIGEST]
+
+
+@_make_hash.register(abc.Mapping)
 def _(mapping, **kwargs):
-    hashed_dictionary = {
-        k: make_hash(v, **kwargs)
-        for k,v
-        in mapping.items()
-    }
-    return make_hash_with_type(
-        'D',
-        make_hash(sorted(hashed_dictionary.items()), **kwargs).encode('latin1')
-    )
+    """Hashing arbitrary mapping containers (dict, OrderedDict) by first sorting by hashed keys"""
 
-@make_hash.register(numbers.Real)
-def _(object_to_hash, **kwargs):
-    return make_hash_with_type(
-            'f',
-            truncate_float64(object_to_hash).tobytes()
-        )
+    def hashed_key_mapping():
+        for key, value in mapping.items():
+            yield (_make_hash(key, **kwargs), value)
 
-@make_hash.register(numbers.Complex)
-def _(object_to_hash, **kwargs):
-    return make_hash_with_type(
-        'c',
-        ','.join([
-            make_hash(object_to_hash.real, **kwargs),
-            make_hash(object_to_hash.imag, **kwargs)
-        ]).encode('latin1')
-    )
-
-@make_hash.register(numbers.Integral)
-def _(object_to_hash, **kwargs):
-    return make_hash_with_type('i', str(object_to_hash).encode('latin1'))
-
-# if the type is unicode in Python 2 or a str in Python 3, convert it
-# to a str in Python 2 and bytes in Python 3 using the default Python 2 encoding.
-# This should emulate what the hashlib has been doing internally: converting
-# unicode strings to latin1 bytes representation before hashing.
-@make_hash.register(six.text_type)
-def _(object_to_hash, **kwargs):
-    return make_hash_with_type('s', object_to_hash.encode('latin1'))
-
-# for str in Python 2 and bytes in Python 3, simply forward them to
-# the hashing function, without trying to encode them
-@make_hash.register(six.binary_type)
-def _(object_to_hash, **kwargs):
-    return make_hash_with_type('s', object_to_hash)
-
-@make_hash.register(bool)
-def _(object_to_hash, **kwargs):
-    return make_hash_with_type('b', str(object_to_hash).encode('latin1'))
-
-@make_hash.register(type(None))
-def _(object_to_hash, **kwargs):
-    return make_hash_with_type('n', str(object_to_hash).encode('latin1'))
-
-@make_hash.register(datetime)
-def _(object_to_hash, **kwargs):
-    return make_hash_with_type('d', str(object_to_hash).encode('latin1'))
-
-@make_hash.register(uuid.UUID)
-def _(object_to_hash, **kwargs):
-    return make_hash_with_type('u', str(object_to_hash).encode('latin1'))
+    return [_single_digest('dict(')] + list(
+        chain.from_iterable((k_digest + _make_hash(val, **kwargs))
+                            for k_digest, val in sorted(hashed_key_mapping(), key=itemgetter(0)))) + [_END_DIGEST]
 
 
-@make_hash.register(Folder)
+@_make_hash.register(OrderedDict)
+def _(mapping, **kwargs):
+    """
+    Hashing of OrderedDicts
+
+    :param odict_as_unordered: hash OrderedDicts as normal dicts (mostly for testing)
+    """
+
+    if kwargs.get('odict_as_unordered', False):
+        return _make_hash.registry[abc.Mapping](mapping)
+
+    return ([_single_digest('odict(')] + list(
+        chain.from_iterable(
+            (_make_hash(key, **kwargs) + _make_hash(val, **kwargs)) for key, val in mapping.items())) + [_END_DIGEST])
+
+
+@_make_hash.register(numbers.Real)
+def _(val, **kwargs):
+    return [_single_digest('float', struct.pack("<d", truncate_float64(val)))]
+
+
+@_make_hash.register(numbers.Complex)
+def _(val, **kwargs):
+    return [_single_digest('complex', struct.pack("<dd", truncate_float64(val.real), truncate_float64(val.imag)))]
+
+
+@_make_hash.register(numbers.Integral)
+def _(val, **kwargs):
+    """get the hash of the little-endian signed long long representation of the integer"""
+    return [_single_digest('int', struct.pack("<q", val))]
+
+
+@_make_hash.register(bool)
+def _(val, **kwargs):
+    return [_single_digest('bool', b'\x01' if val else b'\x00')]
+
+
+@_make_hash.register(type(None))
+def _(val, **kwargs):
+    return [_single_digest('none')]
+
+
+@_make_hash.register(datetime)
+def _(val, **kwargs):
+    """hashes the little-endian rep of the float <epoch-seconds>.<subseconds>"""
+
+    # see also https://stackoverflow.com/a/8778548 for an excellent elaboration
+
+    if six.PY2:
+        if val.tzinfo is not None and val.utcoffset() is not None:
+            val = val.replace(tzinfo=None) - val.utcoffset()
+        timestamp = (val - datetime(1970, 1, 1)).total_seconds()
+    else:
+        if val.tzinfo is None or val.utcoffset() is None:
+            val = val.replace(tzinfo=pytz.utc)
+        timestamp = val.timestamp()
+
+    return [_single_digest('datetime', struct.pack("<d", timestamp))]
+
+
+@_make_hash.register(uuid.UUID)
+def _(val, **kwargs):
+    return [_single_digest('uuid', val.bytes)]
+
+
+@_make_hash.register(Folder)
 def _(folder, **kwargs):
-    # make sure file is closed after being read
-    def _read_file(folder, name):
-        with folder.open(name, mode='rb') as f:
-            return f.read()
+    """
+    Hash the content of a Folder object. The name of the folder itself is actually ignored
+    :param ignored_folder_content: list of filenames to be ignored for the hashing
+    """
 
     ignored_folder_content = kwargs.get('ignored_folder_content', [])
 
-    return make_hash_with_type(
-        'pd',
-        make_hash([
-            (
-                name,
-                folder.get_subfolder(name) if folder.isdir(name) else
-                make_hash_with_type('pf', _read_file(folder, name))
-            )
-            for name in sorted(folder.get_content_list())
-            if name not in ignored_folder_content
-        ], **kwargs).encode('latin1')
-    )
+    def folder_digests(subfolder):
+        """traverses the given folder and yields digests for the contained objects"""
+        for name, isfile in sorted(subfolder.get_content_list(only_paths=False), key=itemgetter(0)):
+            if name in ignored_folder_content:
+                continue
 
-@make_hash.register(np.ndarray)
-def _(object_to_hash, **kwargs):
-    if object_to_hash.dtype == np.float64:
-        return make_hash_with_type(
-            'af',
-            make_hash(truncate_array64(object_to_hash).tobytes(), **kwargs).encode('latin1')
-        )
-    elif object_to_hash.dtype == np.complex128:
-        return make_hash_with_type(
-            'ac',
-            make_hash([
-                object_to_hash.real,
-                object_to_hash.imag
-            ], **kwargs).encode('latin1')
-        )
-    else:
-        return make_hash_with_type(
-            'ao',
-            make_hash(object_to_hash.tobytes(), **kwargs).encode('latin1')
-        )
+            if isfile:
+                yield _single_digest('fname', name.encode('utf-8'))
+                with subfolder.open(name, mode='rb') as fhandle:
+                    yield _single_digest('fcontent', fhandle.read())
+            else:
+                yield _single_digest('dir(', name.encode('utf-8'))
+                for digest in folder_digests(subfolder.get_subfolder(name)):
+                    yield digest
+                yield _END_DIGEST
 
-def truncate_float64(x, num_bits=4):
+    return [_single_digest('folder')] + [d for d in folder_digests(folder)]
+
+
+@_make_hash.register(np.ndarray)
+def _(arr, **kwargs):
+    """Hashing for Numpy arrays"""
+
+    def little_endian_array(array):
+        if sys.byteorder == 'little':
+            return array
+        return array.byteswap()
+
+    if arr.dtype == np.float64:
+        return [_single_digest('arr.float', little_endian_array(truncate_array64(arr)).tobytes())]
+
+    if arr.dtype == np.complex128:
+        return [
+            _single_digest('arr.complex'),
+            little_endian_array(truncate_array64(arr.real)).tobytes() + little_endian_array(truncate_array64(
+                arr.imag)).tobytes()
+        ]
+
+    return [_single_digest('arr.*', little_endian_array(arr).tobytes())]
+
+
+def truncate_float64(value, num_bits=4):
+    """
+    reduce the number of bits making it into the hash to avoid rehashing due to
+    possible truncation in float->str->float roundtrips
+    """
     mask = ~(2**num_bits - 1)
-    int_repr = np.float64(x).view(np.int64)
+    int_repr = np.float64(value).view(np.int64)  # pylint: disable=no-member
     masked_int = int_repr & mask
-    truncated_x = masked_int.view(np.float64)
-    return truncated_x
+    truncated_value = masked_int.view(np.float64)
+    return truncated_value
 
-def truncate_array64(x, num_bits=4):
+
+def truncate_array64(value, num_bits=4):
     mask = ~(2**num_bits - 1)
-    int_array = np.array(x, dtype=np.float64).view(np.int64)
+    int_array = np.array(value, dtype=np.float64).view(np.int64)
     masked_array = int_array & mask
     return masked_array.view(np.float64)

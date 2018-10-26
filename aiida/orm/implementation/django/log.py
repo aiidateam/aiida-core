@@ -11,12 +11,11 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import json
-from aiida.orm.log import LogCollection, Log
+from aiida.orm.implementation.logs import BackendLogCollection, BackendLog
 from aiida.orm.log import ASCENDING
 from aiida.backends.djsite.db.models import DbLog
 
-
-class DjangoLogCollection(LogCollection):
+class DjangoLogCollection(BackendLogCollection):
 
     def create_entry(self, time, loggername, levelname, objname, objpk=None, message="", metadata=None):
         """
@@ -83,7 +82,7 @@ class DjangoLogCollection(LogCollection):
                 "currently supported")
 
 
-class DjangoLog(Log):
+class DjangoLog(BackendLog):
 
     def __init__(self, model):
         """

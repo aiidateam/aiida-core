@@ -19,18 +19,28 @@ from aiida.orm.querybuilder import QueryBuilder
 from aiida.orm.workflow import Workflow
 from aiida.orm.group import Group
 
+from .authinfos import *
 from .calculation import *
-from .utils import *
-from .authinfo import *
+from .computers import *
+from .log import *
+from .node import *
 from .backends import *
-from .computer import *
 from .users import *
+from .utils import *
+from .querybuilder import *
 
+# For legacy reasons support the singulars as well
+authinfo = authinfos
+computer = computers
 user = users
 
-__all__ = [
-              'JobCalculation', 'WorkCalculation', 'Code', 'CalculationFactory', 'DataFactory', 'WorkflowFactory',
-              'QueryBuilder',
-              'Workflow', 'Group', 'user'
-          ] + calculation.__all__ + utils.__all__ + users.__all__ + authinfo.__all__ + computer.__all__ + \
-          backends.__all__
+_local = 'JobCalculation', 'WorkCalculation', 'Code', 'CalculationFactory', 'DataFactory', 'WorkflowFactory', \
+         'Workflow', 'Group', 'user', 'Computer'
+
+__all__ = (_local +
+           calculation.__all__ +
+           utils.__all__ +
+           users.__all__ +
+           authinfos.__all__ +
+           backends.__all__ +
+           querybuilder.__all__)

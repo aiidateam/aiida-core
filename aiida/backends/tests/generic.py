@@ -16,7 +16,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed
-from aiida.orm.node import Node
+from aiida import orm
 
 
 class TestCode(AiidaTestCase):
@@ -86,7 +86,7 @@ class TestCode(AiidaTestCase):
         self.assertEquals(code.get_execname(), '/bin/ls')
 
         self.assertTrue(code.can_run_on(self.computer))
-        othercomputer = self.backend.computers.create(
+        othercomputer = orm.Computer(
             name='another_localhost',
             hostname='localhost',
             transport_type='local',
@@ -162,8 +162,8 @@ class TestGroups(AiidaTestCase):
     def test_creation(self):
         from aiida.orm.group import Group
 
-        n = Node()
-        stored_n = Node().store()
+        n = orm.Node()
+        stored_n = orm.Node().store()
 
         with self.assertRaises(ValueError):
             # No name specified
@@ -205,7 +205,7 @@ class TestGroups(AiidaTestCase):
         """
         from aiida.orm.group import Group
 
-        n = Node().store()
+        n = orm.Node().store()
 
         g1 = Group(name='testgroupdescription1', description="g1").store()
         g1.add_nodes(n)
@@ -244,14 +244,14 @@ class TestGroups(AiidaTestCase):
         """
         from aiida.orm.group import Group
 
-        n1 = Node().store()
-        n2 = Node().store()
-        n3 = Node().store()
-        n4 = Node().store()
-        n5 = Node().store()
-        n6 = Node().store()
-        n7 = Node().store()
-        n8 = Node().store()
+        n1 = orm.Node().store()
+        n2 = orm.Node().store()
+        n3 = orm.Node().store()
+        n4 = orm.Node().store()
+        n5 = orm.Node().store()
+        n6 = orm.Node().store()
+        n7 = orm.Node().store()
+        n8 = orm.Node().store()
 
         g = Group(name='test_adding_nodes')
         g.store()
@@ -263,7 +263,7 @@ class TestGroups(AiidaTestCase):
         g.add_nodes(n4.dbnode)
         # List of DbNodes
         g.add_nodes([n5.dbnode, n6.dbnode])
-        # List of Nodes and DbNodes
+        # List of orm.Nodes and DbNodes
         g.add_nodes([n7, n8.dbnode])
 
         # Check
@@ -282,15 +282,15 @@ class TestGroups(AiidaTestCase):
         """
         from aiida.orm.group import Group
 
-        n1 = Node().store()
-        n2 = Node().store()
-        n3 = Node().store()
-        n4 = Node().store()
-        n5 = Node().store()
-        n6 = Node().store()
-        n7 = Node().store()
-        n8 = Node().store()
-        n_out = Node().store()
+        n1 = orm.Node().store()
+        n2 = orm.Node().store()
+        n3 = orm.Node().store()
+        n4 = orm.Node().store()
+        n5 = orm.Node().store()
+        n6 = orm.Node().store()
+        n7 = orm.Node().store()
+        n8 = orm.Node().store()
+        n_out = orm.Node().store()
 
         g = Group(name='test_remove_nodes').store()
 
@@ -305,7 +305,7 @@ class TestGroups(AiidaTestCase):
         # Re-check
         self.assertEquals(set([_.pk for _ in [n1, n2, n3, n4, n5, n6, n7, n8]]), set([_.pk for _ in g.nodes]))
 
-        # Remove one Node and check
+        # Remove one orm.Node and check
         g.remove_nodes(n4)
         self.assertEquals(set([_.pk for _ in [n1, n2, n3, n5, n6, n7, n8]]), set([_.pk for _ in g.nodes]))
         # Remove one DbNode and check
@@ -321,7 +321,7 @@ class TestGroups(AiidaTestCase):
         g.remove_nodes([n2.dbnode, n5.dbnode])
         self.assertEquals(set([_.pk for _ in [n3, n6]]), set([_.pk for _ in g.nodes]))
 
-        # Remove a mixed list of Nodes and DbNodes and check
+        # Remove a mixed list of orm.Nodes and DbNodes and check
         g.remove_nodes([n3, n6.dbnode])
         self.assertEquals(set(), set([_.pk for _ in g.nodes]))
 
@@ -331,7 +331,7 @@ class TestGroups(AiidaTestCase):
     def test_creation_from_dbgroup(self):
         from aiida.orm.group import Group
 
-        n = Node().store()
+        n = orm.Node().store()
 
         g = Group(name='testgroup_from_dbgroup')
         g.store()
@@ -372,7 +372,7 @@ class TestGroups(AiidaTestCase):
         from aiida.orm.group import Group
         from aiida.common.exceptions import NotExistent
 
-        n = Node().store()
+        n = orm.Node().store()
 
         g = Group(name='testgroup3', description='some other desc')
         g.store()

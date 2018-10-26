@@ -22,7 +22,7 @@ from aiida.utils.email import normalize_email
 from . import backends
 from . import entities
 
-__all__ = ['User']
+__all__ = ('User',)
 
 
 class User(entities.Entity):
@@ -63,33 +63,19 @@ class User(entities.Entity):
 
             return res
 
-        def get(self, email):
-            """
-            Get a user using the email address
-            :param email: The user's email address
-            :return: The corresponding user object
-            :raises: :class:`aiida.common.exceptions.MultipleObjectsError`, :class:`aiida.common.exceptions.NotExistent`
-            """
-            results = self.find(email=email)
-            if not results:
-                raise exceptions.NotExistent()
-            else:
-                if len(results) > 1:
-                    raise exceptions.MultipleObjectsError()
-                else:
-                    return results[0]
-
-        def get_or_create(self, email):
+        def get_or_create(self, **kwargs):
             """
             Get the existing user with a given email address or create an unstored one
-            :param email: The user's email address
+
+            :param kwargs: The properties of the user to get or create
             :return: The corresponding user object
+            :rtype: :class:`aiida.orm.User`
             :raises: :class:`aiida.common.exceptions.MultipleObjectsError`, :class:`aiida.common.exceptions.NotExistent`
             """
             try:
-                return False, self.get(email)
+                return False, self.get(**kwargs)
             except exceptions.NotExistent:
-                return True, self.create(email)
+                return True, User(backend=self.backend, **kwargs)
 
         def get_default(self):
             """
@@ -105,22 +91,9 @@ class User(entities.Entity):
                 return None
 
             try:
-                return self.get(email)
+                return self.get(email=email)
             except (exceptions.MultipleObjectsError, exceptions.NotExistent):
                 return None
-
-        def all(self):
-            """
-            Get all users
-
-            :return: A collection of users matching the criteria
-            """
-            # pylint: disable=no-self-use
-            from .querybuilder import QueryBuilder
-
-            query = QueryBuilder()
-            query.append(User)
-            return [_[0] for _ in query.all()]
 
     REQUIRED_FIELDS = ['first_name', 'last_name', 'institution']
 

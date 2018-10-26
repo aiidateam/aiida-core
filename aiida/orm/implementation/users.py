@@ -14,7 +14,7 @@ import six
 
 from . import backends
 
-__all__ = ('BackendUser',)
+__all__ = 'BackendUser', 'BackendUserCollection'
 
 
 @six.add_metaclass(abc.ABCMeta)

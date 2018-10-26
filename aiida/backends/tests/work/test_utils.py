@@ -17,6 +17,7 @@ from tornado.gen import coroutine
 from aiida.backends.testbase import AiidaTestCase
 import aiida.work as work
 from aiida.work.utils import exponential_backoff_retry
+from aiida import orm
 
 ITERATION = 0
 MAX_ITERATIONS = 3
@@ -29,9 +30,10 @@ class TestExponentialBackoffRetry(AiidaTestCase):
     def setUpClass(cls, *args, **kwargs):
         """Set up a simple authinfo and for later use."""
         super(TestExponentialBackoffRetry, cls).setUpClass(*args, **kwargs)
-        cls.authinfo = cls.backend.authinfos.create(
+        cls.authinfo = orm.AuthInfo(
             computer=cls.computer,
-            user=cls.backend.users.get_default())
+            user=orm.User.objects(cls.backend).get_default(),
+            backend=cls.backend)
         cls.authinfo.store()
 
     def test_exponential_backoff_success(self):
@@ -65,11 +67,7 @@ class TestExponentialBackoffRetry(AiidaTestCase):
 
         max_attempts = MAX_ITERATIONS - 1
         with self.assertRaises(RuntimeError):
-            try:
-                loop.run_sync(lambda: exponential_backoff_retry(coro, initial_interval=0.1, max_attempts=max_attempts))
-            except Exception as e:
-                print(e)
-                raise
+            loop.run_sync(lambda: exponential_backoff_retry(coro, initial_interval=0.1, max_attempts=max_attempts))
 
 
 class RefObjectsStore(unittest.TestCase):

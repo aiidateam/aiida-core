@@ -38,10 +38,10 @@ def match_comp_transport(ctx, param, computer, transport_type):
 @with_dbenv()
 def configure_computer_main(computer, user, **kwargs):
     """Configure a computer via the CLI."""
-    from aiida.orm.backends import construct_backend
     from aiida.common.utils import get_configured_user_email
-    backend = construct_backend()
-    user = user or backend.users.get_default()
+    from aiida import orm
+
+    user = user or orm.User.objects.get_default()
 
     echo.echo_info('Configuring computer {} for user {}.'.format(computer.name, user.email))
     if user.email != get_configured_user_email():
@@ -80,14 +80,14 @@ def interactive_default(transport_type, key, also_noninteractive=False):
     @with_dbenv()
     def get_default(ctx):
         """Determine the default value from the context."""
-        from aiida.orm.backends import construct_backend
-        backend = construct_backend()
-        user = ctx.params['user'] or backend.users.get_default()
+        from aiida import orm
+
+        user = ctx.params['user'] or orm.User.objects.get_default()
         computer = ctx.params['computer']
         try:
-            authinfo = backend.authinfos.get(computer=computer, user=user)
+            authinfo = orm.AuthInfo.objects.get(dbcomputer_id=computer.id, aiidauser_id=user.id)
         except NotExistent:
-            authinfo = backend.authinfos.create(computer=computer, user=user)
+            authinfo = orm.AuthInfo(computer=computer, user=user)
         non_interactive = ctx.params['non_interactive']
         old_authparams = authinfo.get_auth_params()
         if not also_noninteractive and non_interactive:

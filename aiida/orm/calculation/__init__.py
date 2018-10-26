@@ -16,4 +16,6 @@ from .inline import *
 from .work import WorkCalculation
 from .function import FunctionCalculation
 
-__all__ = ['Calculation', 'JobCalculation', 'WorkCalculation', 'FunctionCalculation'] + inline.__all__
+_local = 'Calculation', 'JobCalculation', 'WorkCalculation', 'FunctionCalculation'
+
+__all__ = _local + inline.__all__

@@ -14,7 +14,7 @@ Some generic methods of the module aiida.orm.utils
 Computer
 ++++++++
 
-.. automodule:: aiida.orm.computer
+.. automodule:: aiida.orm.computers
    :members:
    :noindex:
    :private-members:
@@ -30,7 +30,7 @@ Group
 User
 ++++
 
-.. automodule:: aiida.orm.user
+.. automodule:: aiida.orm.users
    :members:
    :noindex:
    :private-members:

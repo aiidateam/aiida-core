@@ -113,11 +113,10 @@ def workflow_list(short, all_states, depth, past_days, workflows):
     """List legacy workflows"""
     from aiida.backends.utils import get_workflow_list
     from aiida.orm.workflow import get_workflow_info
-    from aiida.orm.backends import construct_backend  # pylint: disable=no-name-in-module
+    from aiida import orm
     tab_size = 2
 
-    backend = construct_backend()
-    current_user = backend.users.get_default()
+    current_user = orm.User.objects.get_default()
 
     wf_list = get_workflow_list(
         [workflow.pk for workflow in workflows], user=current_user, all_states=all_states, n_days_ago=past_days)

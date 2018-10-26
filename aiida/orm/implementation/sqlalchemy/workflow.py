@@ -52,6 +52,7 @@ class Workflow(AbstractWorkflow):
         :raise: NotExistent: if there is no entry of the desired workflow kind with
                              the given uuid.
         """
+        from aiida import orm
         from aiida.orm.backends import construct_backend
 
         self._backend = construct_backend()
@@ -121,7 +122,7 @@ class Workflow(AbstractWorkflow):
                 if isinstance(params, dict):
                     self.set_params(params)
 
-            user = self._backend.users.get_default()
+            user = orm.User.objects(self._backend).get_default().backend_entity
 
             # This stores the MD5 as well, to test in case the workflow has
             # been modified after the launch
@@ -458,6 +459,8 @@ class Workflow(AbstractWorkflow):
         :raise: ObjectDoesNotExist: if there is no step with the specific name.
         :return: a DbWorkflowStep object.
         """
+        from aiida import orm
+
         if isinstance(step_method, six.string_types):
             step_method_name = step_method
         else:
@@ -470,7 +473,7 @@ class Workflow(AbstractWorkflow):
             raise InternalError("Cannot query a step with name {0}, reserved string".format(step_method_name))
 
         step_list = self.dbworkflowinstance.steps
-        automatic_user = self._backend.users.get_default()
+        automatic_user = orm.User.objects(self._backend).get_default().backend_entity
         step = [_ for _ in step_list if _.name == step_method_name and _.user == automatic_user.dbuser]
         try:
             return step[0]
@@ -596,6 +599,8 @@ class Workflow(AbstractWorkflow):
         :return: the wrapped methods,
         """
         import sys, traceback
+        from aiida import orm
+
         wrapped_method = fun.__name__
 
         # This function gets called only if the method is launched with the execution brackets ()
@@ -634,7 +639,7 @@ class Workflow(AbstractWorkflow):
 
                 # self.get_steps(wrapped_method).set_nextcall(wf_exit_call)
 
-            user = self.backend.users.get_default()
+            user = orm.User.objects(self._backend).get_default().backend_entity
             method_step, created = self.dbworkflowinstance._get_or_create_step(name=wrapped_method,
                                                                                user=user.dbuser)
 
@@ -672,6 +677,7 @@ class Workflow(AbstractWorkflow):
         :raise: AiidaException: in case the caller method cannot be found or validated
         :return: the wrapped methods, decorated with the correct step name
         """
+        from aiida import orm
 
         md5 = self.dbworkflowinstance.script_md5
         script_path = self.dbworkflowinstance.script_path
@@ -709,7 +715,7 @@ class Workflow(AbstractWorkflow):
         # with particular filters, in order to avoid repetition of all the code
         # arround
 
-        automatic_user = self._backend.users.get_default()
+        automatic_user = orm.User.objects(self._backend).get_default().backend_entity
 
         # Retrieve the caller method
         method_step, _ = self.dbworkflowinstance._get_or_create_step(name=caller_method, user=automatic_user.dbuser)
@@ -738,9 +744,9 @@ class Workflow(AbstractWorkflow):
 
 
 def kill_all():
-    from aiida.orm.backends import construct_backend
-    backend = construct_backend()
-    automatic_user = backend.users.get_default()
+    from aiida import orm
+
+    automatic_user = orm.User.objects.get_default().backend_entity
     w_list = DbWorkflow.query.filter(
         DbWorkflow.user == automatic_user.dbuser,
         DbWorkflow.state != wf_states.FINISHED

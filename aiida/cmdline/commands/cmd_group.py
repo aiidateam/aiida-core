@@ -222,13 +222,11 @@ def group_list(all_users, user_email, group_type, with_description, count, past_
     import datetime
     from aiida.utils import timezone
     from aiida.orm.group import get_group_type_mapping
-    from aiida.orm.backends import construct_backend
+    from aiida import orm
     from tabulate import tabulate
 
     if all_users and user_email is not None:
         echo.echo_critical("argument -A/--all-users: not allowed with argument -u/--user")
-
-    backend = construct_backend()
 
     if all_users:
         user = None
@@ -237,7 +235,7 @@ def group_list(all_users, user_email, group_type, with_description, count, past_
             user = user_email
         else:
             # By default: only groups of this user
-            user = backend.users.get_default()
+            user = orm.User.objects.get_default()
 
     type_string = ""
     if group_type is not None:

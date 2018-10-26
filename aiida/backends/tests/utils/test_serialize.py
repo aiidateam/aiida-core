@@ -12,7 +12,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from aiida.orm import Group, Node
+from aiida import orm
 from aiida.utils import serialize
 from aiida.backends.testbase import AiidaTestCase
 
@@ -26,8 +26,8 @@ class TestSerialize(AiidaTestCase):
         Test the serialization of a dictionary with Nodes in various data structure
         Also make sure that the serialized data is json-serializable
         """
-        node_a = Node().store()
-        node_b = Node().store()
+        node_a = orm.Node().store()
+        node_b = orm.Node().store()
 
         data = {'test': 1, 'list': [1, 2, 3, node_a], 'dict': {('Si',): node_b, 'foo': 'bar'}, 'baz': 'aar'}
 
@@ -48,7 +48,7 @@ class TestSerialize(AiidaTestCase):
         Also make sure that the serialized data is json-serializable
         """
         group_name = 'groupie'
-        group_a = Group(name=group_name).store()
+        group_a = orm.Group(name=group_name).store()
 
         data = {'group': group_a}
 
@@ -60,13 +60,13 @@ class TestSerialize(AiidaTestCase):
 
     def test_serialize_node_round_trip(self):
         """Test you can serialize and deserialize a node"""
-        node = Node().store()
+        node = orm.Node().store()
         deserialized = serialize.deserialize(serialize.serialize(node))
         self.assertEqual(node.uuid, deserialized.uuid)
 
     def test_serialize_group_round_trip(self):
         """Test you can serialize and deserialize a group"""
-        group = Group(name='test_serialize_group_round_trip').store()
+        group = orm.Group(name='test_serialize_group_round_trip').store()
         deserialized = serialize.deserialize(serialize.serialize(group))
 
         self.assertEqual(group.uuid, deserialized.uuid)
@@ -83,21 +83,21 @@ class TestSerialize(AiidaTestCase):
 
     def test_serialize_unstored_node(self):
         """Test that you can't serialize an unstored node"""
-        node = Node()
+        node = orm.Node()
 
         with self.assertRaises(ValueError):
             serialize.serialize(node)
 
     def test_serialize_unstored_group(self):
         """Test that you can't serialize an unstored group"""
-        group = Group(name='test_serialize_unstored_group')
+        group = orm.Group(name='test_serialize_unstored_group')
 
         with self.assertRaises(ValueError):
             serialize.serialize(group)
 
     def test_serialize_unstored_computer(self):
         """Test that you can't serialize an unstored node"""
-        computer = self.backend.computers.create('test_computer', 'test_host')
+        computer = orm.Computer('test_computer', 'test_host')
 
         with self.assertRaises(ValueError):
             serialize.serialize(computer)

@@ -155,12 +155,11 @@ def setup_profile(profile, only_config, set_default=False, non_interactive=False
             load_dbenv()
 
     from aiida.common.setup import DEFAULT_AIIDA_USER
-    from aiida.orm.backends import construct_backend
+    from aiida import orm
 
-    backend = construct_backend()
-    if not backend.users.find(email=DEFAULT_AIIDA_USER):
+    if not orm.User.objects.find(email=DEFAULT_AIIDA_USER):
         echo.echo("Installing default AiiDA user...")
-        nuser = backend.users.create(email=DEFAULT_AIIDA_USER, first_name="AiiDA", last_name="Daemon")
+        nuser = orm.User(email=DEFAULT_AIIDA_USER, first_name="AiiDA", last_name="Daemon")
         nuser.is_active = True
         nuser.store()
 

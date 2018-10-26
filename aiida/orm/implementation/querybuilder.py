@@ -7,53 +7,69 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Backend query implementation classes"""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from abc import abstractmethod, ABCMeta
+import abc
 import six
 
+from aiida.common.utils import abstractclassmethod
 
-@six.add_metaclass(ABCMeta)
-class QueryBuilderInterface:
-    @abstractmethod
+__all__ = ('BackendQueryBuilder',)
+
+
+@six.add_metaclass(abc.ABCMeta)
+class BackendQueryBuilder(object):
+    """Backend query builder interface"""
+
+    # pylint: disable=invalid-name
+
+    @abc.abstractmethod
     def Node(self):
         """
         Decorated as a property, returns the implementation for DbNode.
-        It needs to return a subclass of sqlalchemy.Base, which means that for different ORM's 
+        It needs to return a subclass of sqlalchemy.Base, which means that for different ORM's
         a corresponding dummy-model  must be written.
         """
         pass
 
-    @abstractmethod
+    @abc.abstractmethod
     def Link(self):
         """
         A property, decorated with @property. Returns the implementation for the DbLink
         """
         pass
 
-    @abstractmethod
+    @abc.abstractmethod
     def Computer(self):
         """
         A property, decorated with @property. Returns the implementation for the Computer
         """
         pass
 
-    @abstractmethod
+    @abc.abstractmethod
     def User(self):
         """
         A property, decorated with @property. Returns the implementation for the User
         """
         pass
 
-    @abstractmethod
+    @abc.abstractmethod
     def Group(self):
         """
         A property, decorated with @property. Returns the implementation for the Group
         """
         pass
 
-    @abstractmethod
+    @abc.abstractmethod
+    def AuthInfo(self):
+        """
+        A property, decorated with @property. Returns the implementation for the Group
+        """
+        pass
+
+    @abc.abstractmethod
     def table_groups_nodes(self):
         """
         A property, decorated with @property. Returns the implementation for the many-to-many
@@ -61,42 +77,28 @@ class QueryBuilderInterface:
         """
         pass
 
-    @abstractmethod
+    @abc.abstractmethod
     def AiidaNode(self):
         """
         A property, decorated with @property. Returns the implementation for the AiiDA-class for Node
         """
         pass
 
-    @abstractmethod
+    @abc.abstractmethod
     def AiidaGroup(self):
         """
         A property, decorated with @property. Returns the implementation for the AiiDA-class for Group
         """
         pass
 
-    @abstractmethod
-    def AiidaUser(self):
-        """
-        A property, decorated with @property. Returns the implementation for the AiiDA-class for User
-        """
-        pass
-
-    @abstractmethod
-    def AiidaComputer(self):
-        """
-        A property, decorated with @property. Returns the implementation for the AiiDA-class for Computer
-        """
-        pass
-
-    @abstractmethod
+    @abc.abstractmethod
     def get_session(self):
         """
         :returns: a valid session, an instance of sqlalchemy.orm.session.Session
         """
         pass
 
-    @abstractmethod
+    @abc.abstractmethod
     def modify_expansions(self, alias, expansions):
         """
         Modify names of projections if ** was specified.
@@ -104,16 +106,14 @@ class QueryBuilderInterface:
         """
         pass
 
-    @abstractmethod
-    def get_filter_expr_from_attributes(
-            cls, operator, value, attr_key,
-            column=None, column_name=None, alias=None):
+    @abstractclassmethod
+    def get_filter_expr_from_attributes(cls, operator, value, attr_key, column=None, column_name=None, alias=None):  # pylint: disable=too-many-arguments
         """
         A classmethod that returns an valid SQLAlchemy expression.
 
         :param operator: The operator provided by the user ('==',  '>', ...)
         :param value: The value to compare with, e.g. (5.0, 'foo', ['a','b'])
-        :param str attr_key: 
+        :param str attr_key:
             The path to that attribute as a tuple of values.
             I.e. if that attribute I want to filter by is the 2nd element in a list stored under the
             key 'mylist', this is ('mylist', '2').
@@ -126,13 +126,11 @@ class QueryBuilderInterface:
         """
         pass
 
-    @abstractmethod
-    def get_projectable_attribute(
-            self, alias, column_name, attrpath,
-            cast=None, **kwargs):
+    @abc.abstractmethod
+    def get_projectable_attribute(self, alias, column_name, attrpath, cast=None, **kwargs):
         pass
 
-    @abstractmethod
+    @abc.abstractmethod
     def get_aiida_res(self, key, res):
         """
         Some instance returned by ORM (django or SA) need to be converted
@@ -145,8 +143,8 @@ class QueryBuilderInterface:
         """
         pass
 
-    @abstractmethod
-    def yield_per(self, batch_size):
+    @abc.abstractmethod
+    def yield_per(self, query, batch_size):
         """
         :param int batch_size: Number of rows to yield per step
 
@@ -156,15 +154,15 @@ class QueryBuilderInterface:
         """
         pass
 
-    @abstractmethod
-    def count(self):
+    @abc.abstractmethod
+    def count(self, query):
         """
         :returns: the number of results
         """
         pass
 
-    @abstractmethod
-    def first(self):
+    @abc.abstractmethod
+    def first(self, query):
         """
         Executes query in the backend asking for one instance.
 
@@ -173,15 +171,15 @@ class QueryBuilderInterface:
 
         pass
 
-    @abstractmethod
-    def iterall(self, batch_size=100):
+    @abc.abstractmethod
+    def iterall(self, query, batch_size, tag_to_index_dict):
         """
         :returns: An iterator over all the results of a list of lists.
         """
         pass
 
-    @abstractmethod
-    def iterdict(self, batch_size=100):
+    @abc.abstractmethod
+    def iterdict(self, query, batch_size, tag_to_projected_entity_dict):
         """
         :returns: An iterator over all the results of a list of dictionaries.
         """

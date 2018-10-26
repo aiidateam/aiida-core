@@ -13,11 +13,10 @@ from __future__ import print_function
 from __future__ import absolute_import
 import os
 
-from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.common.exceptions import InvalidOperation
 from aiida.orm.implementation.general.code import AbstractCode
-
-from aiida import orm
+from aiida.common.utils import type_check
+from .computer import SqlaComputer
 
 
 class Code(AbstractCode):
@@ -46,6 +45,7 @@ class Code(AbstractCode):
               remote_exec_path is the absolute path of the main executable on
               remote computer.
         """
+        from aiida import orm
 
         if (not isinstance(remote_computer_exec, (list, tuple))
                 or len(remote_computer_exec) != 2):
@@ -58,8 +58,9 @@ class Code(AbstractCode):
         if not os.path.isabs(remote_exec_path):
             raise ValueError("exec_path must be an absolute path (on the remote machine)")
 
-        if not isinstance(computer, orm.Computer):
-            raise TypeError("Computer must be of type Computer, got '{}'".format(type(computer)))
+        if isinstance(computer, orm.Computer):
+            computer = computer.backend_entity
+        type_check(computer, SqlaComputer)
 
         self._set_remote()
         self.set_computer(computer)
@@ -89,17 +90,13 @@ class Code(AbstractCode):
 
         TODO: add filters to mask the remote machines on which a local code can run.
         """
+        from aiida import orm
+        
         if self.is_local():
             return True
         else:
-            dbcomputer = computer
-            if isinstance(dbcomputer, orm.Computer):
-                dbcomputer = dbcomputer.dbcomputer
-            if not isinstance(dbcomputer, DbComputer):
-                raise ValueError("computer must be either a Computer or DbComputer object")
-            dbcomputer = DbComputer.get_dbcomputer(computer)
-            return (dbcomputer.id ==
-                    self.get_remote_computer().dbcomputer.id)
+            type_check(computer, orm.Computer)
+            return computer.id == self.get_remote_computer().id
 
 
 def delete_code(code):

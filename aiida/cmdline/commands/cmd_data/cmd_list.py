@@ -38,20 +38,15 @@ def query(datatype, project, past_days, group_pks, all_users):
     """
     import datetime
 
-    from aiida.orm.implementation import Group
-    from aiida.orm.users import User
-    from aiida.orm.backends import construct_backend
-    from aiida.orm.querybuilder import QueryBuilder
+    from aiida import orm
     from aiida.utils import timezone
 
-    backend = construct_backend()
-
-    qbl = QueryBuilder()
+    qbl = orm.QueryBuilder()
     if all_users is False:
-        user = backend.users.get_default()
-        qbl.append(User, tag="creator", filters={"email": user.email})
+        user = orm.User.objects.get_default()
+        qbl.append(orm.User, tag="creator", filters={"email": user.email})
     else:
-        qbl.append(User, tag="creator")
+        qbl.append(orm.User, tag="creator")
 
     # If there is a time restriction
     data_filters = {}
@@ -66,7 +61,7 @@ def query(datatype, project, past_days, group_pks, all_users):
     if group_pks is not None:
         group_filters = dict()
         group_filters.update({"id": {"in": group_pks}})
-        qbl.append(Group, tag="group", filters=group_filters, group_of="data")
+        qbl.append(orm.Group, tag="group", filters=group_filters, group_of="data")
 
     qbl.order_by({datatype: {'ctime': 'asc'}})
 

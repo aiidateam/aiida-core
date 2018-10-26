@@ -13,7 +13,7 @@ from __future__ import absolute_import
 from aiida.orm.implementation.backends import Backend
 
 from aiida.backends.djsite.queries import DjangoQueryManager
-from aiida.backends.djsite.querybuilder_django.querybuilder_django import QueryBuilderImplDjango
+from aiida.orm.implementation.django.querybuilder import DjangoQueryBuilder
 from . import authinfo
 from . import computer
 from . import log
@@ -25,7 +25,7 @@ class DjangoBackend(Backend):
     def __init__(self):
         self._logs = log.DjangoLogCollection(self, log.DjangoLog)
         self._users = user.DjangoUserCollection(self)
-        self._authinfos = authinfo.DjangoAuthInfoCollection(self, authinfo.DjangoAuthInfo)
+        self._authinfos = authinfo.DjangoAuthInfoCollection(self)
         self._computers = computer.DjangoComputerCollection(self)
         self._query_manager = DjangoQueryManager(self)
 
@@ -50,4 +50,4 @@ class DjangoBackend(Backend):
         return self._query_manager
 
     def query(self):
-        return QueryBuilderImplDjango()
+        return DjangoQueryBuilder()

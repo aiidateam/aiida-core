@@ -22,7 +22,6 @@ from aiida.backends.sqlalchemy.models.node import DbNode, DbLink
 from aiida.backends.sqlalchemy.models.comment import DbComment
 from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.backends.sqlalchemy.utils import flag_modified
-
 from aiida.common.utils import get_new_uuid
 from aiida.common.folders import RepositoryFolder
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed, NotExistent, UniquenessError)
@@ -30,11 +29,8 @@ from aiida.common.links import LinkType
 from aiida.common.utils import type_check
 from aiida.orm.implementation.general.node import AbstractNode, _HASH_EXTRA_KEY
 from aiida.orm.implementation.sqlalchemy.utils import get_attr
-from aiida import orm
 
 from . import computer as computers
-from . import user as users
-from aiida.orm import users as orm_users
 
 
 class Node(AbstractNode):
@@ -44,6 +40,8 @@ class Node(AbstractNode):
     _plugin_type_string = None
 
     def __init__(self, **kwargs):
+        from aiida import orm
+
         super(Node, self).__init__()
 
         self._temp_folder = None
@@ -70,7 +68,7 @@ class Node(AbstractNode):
             self._repo_folder = RepositoryFolder(section=self._section_name, uuid=self.uuid)
 
         else:
-            user = orm_users.User.objects(backend=self._backend).get_default()
+            user = orm.User.objects(backend=self._backend).get_default().backend_entity
             if user is None:
                 raise RuntimeError("Could not find a default user")
 
@@ -173,12 +171,18 @@ class Node(AbstractNode):
 
         :return: an aiida user model object
         """
+        from aiida import orm
+
         self._ensure_model_uptodate(attribute_names=['user'])
-        return self._backend.users.from_dbmodel(self._dbnode.user)
+        backend_user = self._backend.users.from_dbmodel(self._dbnode.user)
+        return orm.User.from_backend_entity(backend_user)
 
     def set_user(self, user):
-        type_check(user, users.SqlaUser)
-        self._dbnode.user = user.dbuser
+        from aiida import orm
+
+        type_check(user, orm.User)
+        backend_user = user.backend_entity
+        self._dbnode.user = backend_user.dbuser
 
     def get_computer(self):
         """
@@ -186,11 +190,13 @@ class Node(AbstractNode):
 
         :return: the Computer object or None.
         """
+        from aiida import orm
+
         self._ensure_model_uptodate(attribute_names=['dbcomputer'])
         if self._dbnode.dbcomputer is None:
             return None
 
-        return orm.Computer.from_bakend_entity(
+        return orm.Computer.from_backend_entity(
             self.backend.computers.from_dbmodel(self._dbnode.dbcomputer))
 
     def _get_db_label_field(self):
@@ -434,16 +440,18 @@ class Node(AbstractNode):
             yield key
 
     def add_comment(self, content, user=None):
+        from aiida import orm
         from aiida.backends.sqlalchemy import get_scoped_session
+
         session = get_scoped_session()
 
         if self._to_be_stored:
             raise ModificationNotAllowed("Comments can be added only after " "storing the node")
 
         if user is None:
-            user = self.backend.users.get_default()
+            user = orm.User.objects(self.backend).get_default()
 
-        comment = DbComment(dbnode=self._dbnode, user=user.dbuser, content=content)
+        comment = DbComment(dbnode=self._dbnode, user=user.backend_entity.dbuser, content=content)
         session.add(comment)
         try:
             session.commit()
@@ -463,11 +471,15 @@ class Node(AbstractNode):
         :param user: Filter for a particular user
         :return: A list of comment model instances
         """
+        from aiida import orm
+
         query = DbComment.query.filter_by(dbnode=self._dbnode)
 
         if comment_id is not None:
             query = query.filter_by(id=comment_id)
         if user is not None:
+            if isinstance(user, orm.User):
+                user = user.backend_entity
             query = query.filter_by(user=user.dbuser)
 
         dbcomments = query.all()

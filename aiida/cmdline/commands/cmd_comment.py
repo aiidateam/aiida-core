@@ -35,10 +35,9 @@ def add(comment, nodes):
     """
     Add comment to one or more nodes in the database
     """
-    from aiida.orm.backends import construct_backend
+    from aiida import orm
 
-    backend = construct_backend()
-    user = backend.users.get_default()
+    user = orm.User.objects.get_default()
 
     if not comment:
         comment = multi_line_input.edit_comment()
@@ -104,10 +103,9 @@ def remove(remove_all, force, node, comment_id):
     id = #ID of the comment to be removed from node #PK
     """
     # Note: in fact, the user can still manually delete any comment
-    from aiida.orm.backends import construct_backend
+    from aiida import orm
 
-    backend = construct_backend()
-    user = backend.users.get_default()
+    user = orm.User.objects.get_default()
 
     if comment_id is None and not remove_all:
         echo.echo_error("One argument between -a and ID must be provided")
@@ -146,9 +144,9 @@ def update(comment, node, comment_id):
     id      = The id of the comment
     comment = The comment (a string) to be added to the node(s)
     """
-    from aiida.orm.backends import construct_backend
-    backend = construct_backend()
-    user = backend.users.get_default()
+    from aiida import orm
+
+    user = orm.User.objects.get_default()
 
     # read the comment from terminal if it is not on command line
     if comment is None:

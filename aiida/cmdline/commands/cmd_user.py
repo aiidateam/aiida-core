@@ -115,9 +115,7 @@ def user_list(color):
     """
     from aiida.common.utils import get_configured_user_email
     from aiida.common.exceptions import ConfigurationError
-    from aiida.orm.backends import construct_backend
-
-    backend = construct_backend()
+    from aiida import orm
 
     try:
         current_user = get_configured_user_email()
@@ -129,7 +127,7 @@ def user_list(color):
     else:
         click.echo("### No default user configured yet, run 'verdi install'! ###", err=True)
 
-    for user in backend.users.all():
+    for user in orm.User.objects.all():
         name_pieces = []
         if user.first_name:
             name_pieces.append(user.first_name)

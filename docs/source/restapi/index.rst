@@ -116,7 +116,7 @@ AiiDA object(s) you want to request. The following resources are available:
 +============================================================================================+===================+
 | :py:class:`Calculation <aiida.orm.implementation.general.calculation.AbstractCalculation>` | ``/calculations`` |
 +--------------------------------------------------------------------------------------------+-------------------+
-| :py:class:`Computer <aiida.orm.computer.Computer>`                                         | ``/computers``    |
+| :py:class:`Computer <aiida.orm.Computer>`                                                  | ``/computers``    |
 +--------------------------------------------------------------------------------------------+-------------------+
 | :py:class:`Data <aiida.orm.data.Data>`                                                     | ``/data``         |
 +--------------------------------------------------------------------------------------------+-------------------+

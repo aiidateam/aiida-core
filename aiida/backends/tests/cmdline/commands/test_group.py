@@ -15,9 +15,10 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from click.testing import CliRunner
+import traceback
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands.cmd_group import (group_list, group_create, group_delete, group_rename, group_description,
-                                          group_addnodes, group_removenodes, group_show)
+                                              group_addnodes, group_removenodes, group_show)
 
 
 class TestVerdiGroupSetup(AiidaTestCase):
@@ -114,7 +115,7 @@ class TestVerdiGroupSetup(AiidaTestCase):
 
         ## check if removed group is not present in list
         result = self.cli_runner.invoke(group_list)
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, "".join(traceback.format_exception(*result.exc_info)))
         self.assertNotIn("dummygroup3", result.output)
 
     def test_show(self):
@@ -124,7 +125,7 @@ class TestVerdiGroupSetup(AiidaTestCase):
         result = self.cli_runner.invoke(group_show, ["dummygroup1"])
         self.assertIsNone(result.exception)
         for grpline in [
-                "Group name", "dummygroup1", "Group type", "<user-defined>", "Group description", "<no description>"
+            "Group name", "dummygroup1", "Group type", "<user-defined>", "Group description", "<no description>"
         ]:
             self.assertIn(grpline, result.output)
 
@@ -136,7 +137,7 @@ class TestVerdiGroupSetup(AiidaTestCase):
         self.assertIsNone(result.exception)
 
         result = self.cli_runner.invoke(group_show, ["dummygroup2"])
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, "".join(traceback.format_exception(*result.exc_info)))
         self.assertIn("Group description", result.output)
         self.assertNotIn("<no description>", result.output)
         self.assertIn("It is a new description", result.output)
@@ -168,7 +169,7 @@ class TestVerdiGroupSetup(AiidaTestCase):
         self.assertIsNone(result.exception)
         # check if node is added in group using group show command
         result = self.cli_runner.invoke(group_show, ["dummygroup1"])
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, "".join(traceback.format_exception(*result.exc_info)))
         self.assertIn("Calculation", result.output)
         self.assertIn(str(calc.pk), result.output)
 

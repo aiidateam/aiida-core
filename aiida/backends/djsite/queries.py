@@ -129,7 +129,7 @@ class DjangoQueryManager(AbstractQueryManager):
             an integer with the number of nodes created that day.
         """
         import sqlalchemy as sa
-        from aiida.backends.djsite.querybuilder_django import dummy_model
+        from aiida.orm.implementation.django import dummy_model
 
         # Get the session (uses internally aldjemy - so, sqlalchemy) also for the Djsite backend
         s = dummy_model.get_aldjemy_session()
@@ -201,16 +201,16 @@ class DjangoQueryManager(AbstractQueryManager):
         from django.db.models import Q
         from aiida.common.utils import grouper
         from aiida.backends.djsite.db import models
-        from aiida.orm.backends import construct_backend
         from aiida.orm.data.structure import (get_formula, get_symbols_string)
         from aiida.orm.data.array.bands import BandsData
+        from aiida import orm
 
-        backend = construct_backend()
+        user = orm.User.objects.get_default()
 
         query_group_size = 100
         q_object = None
         if args.all_users is False:
-            q_object = Q(user__id=backend.users.get_default().id)
+            q_object = Q(user__id=user.id)
         else:
             q_object = Q()
 

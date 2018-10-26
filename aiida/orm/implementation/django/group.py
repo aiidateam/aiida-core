@@ -28,6 +28,7 @@ from aiida.common.utils import type_check
 
 from . import user as users
 from . import utils
+from aiida.orm import users as orm_users
 
 
 class Group(AbstractGroup):
@@ -59,7 +60,7 @@ class Group(AbstractGroup):
             group_type = kwargs.pop('type_string', "")  # By default, a user group
 
             # Get the user and extract dbuser instance
-            user = kwargs.pop('user', self._backend.users.get_automatic_user())
+            user = kwargs.pop('user', orm_users.User.objects.get_default())
 
             description = kwargs.pop('description', "")
             self._dbgroup = utils.ModelWrapper(

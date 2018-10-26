@@ -24,11 +24,13 @@ from .utils import *
 from .authinfo import *
 from .backends import *
 from .computer import *
-from .user import *
+from .users import *
+
+user = users
 
 __all__ = [
               'JobCalculation', 'WorkCalculation', 'Code', 'CalculationFactory', 'DataFactory', 'WorkflowFactory',
               'QueryBuilder',
-              'Workflow', 'Group'
-          ] + calculation.__all__ + utils.__all__ + user.__all__ + authinfo.__all__ + computer.__all__ + \
+              'Workflow', 'Group', 'user'
+          ] + calculation.__all__ + utils.__all__ + users.__all__ + authinfo.__all__ + computer.__all__ + \
           backends.__all__

@@ -121,7 +121,7 @@ class Workflow(AbstractWorkflow):
                 if isinstance(params, dict):
                     self.set_params(params)
 
-            user = self._backend.users.get_automatic_user()
+            user = self._backend.users.get_default()
 
             # This stores the MD5 as well, to test in case the workflow has
             # been modified after the launch
@@ -470,7 +470,7 @@ class Workflow(AbstractWorkflow):
             raise InternalError("Cannot query a step with name {0}, reserved string".format(step_method_name))
 
         step_list = self.dbworkflowinstance.steps
-        automatic_user = self._backend.users.get_automatic_user()
+        automatic_user = self._backend.users.get_default()
         step = [_ for _ in step_list if _.name == step_method_name and _.user == automatic_user.dbuser]
         try:
             return step[0]
@@ -634,7 +634,7 @@ class Workflow(AbstractWorkflow):
 
                 # self.get_steps(wrapped_method).set_nextcall(wf_exit_call)
 
-            user = self.backend.users.get_automatic_user()
+            user = self.backend.users.get_default()
             method_step, created = self.dbworkflowinstance._get_or_create_step(name=wrapped_method,
                                                                                user=user.dbuser)
 
@@ -709,7 +709,7 @@ class Workflow(AbstractWorkflow):
         # with particular filters, in order to avoid repetition of all the code
         # arround
 
-        automatic_user = self._backend.users.get_automatic_user()
+        automatic_user = self._backend.users.get_default()
 
         # Retrieve the caller method
         method_step, _ = self.dbworkflowinstance._get_or_create_step(name=caller_method, user=automatic_user.dbuser)
@@ -740,7 +740,7 @@ class Workflow(AbstractWorkflow):
 def kill_all():
     from aiida.orm.backends import construct_backend
     backend = construct_backend()
-    automatic_user = backend.users.get_automatic_user()
+    automatic_user = backend.users.get_default()
     w_list = DbWorkflow.query.filter(
         DbWorkflow.user == automatic_user.dbuser,
         DbWorkflow.state != wf_states.FINISHED

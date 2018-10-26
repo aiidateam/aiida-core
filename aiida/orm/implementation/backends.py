@@ -123,11 +123,14 @@ class BackendEntity(object):
         pass
 
     @abc.abstractmethod
-    def copy(self):
+    def is_stored(self):
         """
+        Is the object stored?
 
-        :return:
+        :return: True if stored, False otherwise
+        :rtype: bool
         """
+        pass
 
 
 @six.add_metaclass(abc.ABCMeta)

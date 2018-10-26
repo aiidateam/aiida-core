@@ -39,7 +39,7 @@ def query(datatype, project, past_days, group_pks, all_users):
     import datetime
 
     from aiida.orm.implementation import Group
-    from aiida.orm.user import User
+    from aiida.orm.users import User
     from aiida.orm.backends import construct_backend
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.utils import timezone
@@ -48,7 +48,7 @@ def query(datatype, project, past_days, group_pks, all_users):
 
     qbl = QueryBuilder()
     if all_users is False:
-        user = backend.users.get_automatic_user()
+        user = backend.users.get_default()
         qbl.append(User, tag="creator", filters={"email": user.email})
     else:
         qbl.append(User, tag="creator")

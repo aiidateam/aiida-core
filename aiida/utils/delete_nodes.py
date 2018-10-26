@@ -47,7 +47,7 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
     from aiida.backends.utils import delete_nodes_and_connections
 
     backend = construct_backend()
-    user_email = backend.users.get_automatic_user().email
+    user_email = backend.users.get_default().email
 
     if not pks:
         # If I was passed an empty list, I don't to anything

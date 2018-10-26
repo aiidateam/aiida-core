@@ -26,7 +26,7 @@ class TestTransportQueue(AiidaTestCase):
         super(TestTransportQueue, self).setUp(*args, **kwargs)
         self.authinfo = self.backend.authinfos.create(
             computer=self.computer,
-            user=self.backend.users.get_automatic_user())
+            user=self.backend.users.get_default())
         self.authinfo.store()
 
     def tearDown(self, *args, **kwargs):

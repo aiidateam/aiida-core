@@ -109,7 +109,7 @@ class TestGroupsDjango(AiidaTestCase):
         res = Group.query(user=newuser.email)
         self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g3]))
 
-        res = Group.query(user=self.backend.users.get_automatic_user())
+        res = Group.query(user=self.backend.users.get_default())
         self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g1, g2]))
 
     def test_rename_existing(self):

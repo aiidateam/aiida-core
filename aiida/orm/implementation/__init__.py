@@ -18,9 +18,11 @@ from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 
 from .backends import *
 from .computers import *
+from .import computers
+from .import users
 
 __all__ = ('Node', 'Group', 'Workflow', 'kill_all', 'get_all_running_steps',
-           'get_workflow_info', 'Code', 'delete_code', 'Comment')
+           'get_workflow_info', 'Code', 'delete_code', 'Comment') + computers.__all__ + users.__all__
 
 if BACKEND == BACKEND_SQLA:
     from aiida.orm.implementation.sqlalchemy.node import Node

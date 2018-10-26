@@ -131,7 +131,7 @@ def echo_deprecated(message, bold=False, nl=True, err=True, exit=False):
         sys.exit(ExitCode.DEPRECATED.value)
 
 
-def echo_dictionary(dictionary, fmt):
+def echo_dictionary(dictionary, fmt='json+date'):
     """
     Print the given dictionary to stdout in the given format
 
@@ -162,7 +162,7 @@ def _format_dictionary_json_date(dictionary):
 
         raise TypeError(repr(data) + ' is not JSON serializable')
 
-    return json.dumps(dictionary, indent=2, sort_keys=True, default=default_jsondump)
+    return json.dumps(dictionary, indent=4, sort_keys=True, default=default_jsondump)
 
 
 def is_stdout_redirected():

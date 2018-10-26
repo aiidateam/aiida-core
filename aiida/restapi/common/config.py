@@ -7,6 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+Constants used in rest api
+"""
+
 ## Pagination defaults
 from __future__ import division
 from __future__ import print_function
@@ -15,9 +19,7 @@ LIMIT_DEFAULT = 400
 PERPAGE_DEFAULT = 20
 
 ##Version prefix for all the URLs
-PREFIX="/api/v2"
-
-
+PREFIX = "/api/v2"
 """
 Flask app configs.
 
@@ -29,11 +31,9 @@ generic 500: Internal Server Error exception)
 
 """
 APP_CONFIG = {
-              'DEBUG': False,
-              'PROPAGATE_EXCEPTIONS': True,
-              }
-
-
+    'DEBUG': False,
+    'PROPAGATE_EXCEPTIONS': True,
+}
 """
 JSON serialization config. Leave this dictionary empty if default Flask
 serializer is desired.
@@ -45,13 +45,12 @@ DATETIME_FORMAT: allowed values are 'asinput' and 'default'.
 
 """
 SERIALIZER_CONFIG = {'datetime_format': 'default'}
-
 """
 Caching configuration
 
 memcached: backend caching system
 """
-cache_config={'CACHE_TYPE': 'memcached'}
+CACHE_CONFIG = {'CACHE_TYPE': 'memcached'}
 CACHING_TIMEOUTS = { #Caching TIMEOUTS (in seconds)
     'nodes': 10,
     'users': 10,
@@ -64,7 +63,6 @@ CACHING_TIMEOUTS = { #Caching TIMEOUTS (in seconds)
 
 # IO tree
 MAX_TREE_DEPTH = 5
-
 """
 Aiida profile used by the REST api when no profile is specified (ex. by
 --aiida-profile flag).
@@ -74,4 +72,4 @@ In case you want to use the default stored in
 .aiida/config.json, set this varibale to "default"
 
 """
-default_aiida_profile = None
+DEFAULT_AIIDA_PROFILE = None

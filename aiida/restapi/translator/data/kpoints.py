@@ -7,10 +7,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+Translator for kpoints data
+"""
+
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from aiida.restapi.translator.data import DataTranslator
+
 
 class KpointsDataTranslator(DataTranslator):
     """
@@ -34,19 +39,16 @@ class KpointsDataTranslator(DataTranslator):
         Initialise the parameters.
         Create the basic query_help
         """
-        super(KpointsDataTranslator, self).__init__(Class=self.__class__,
-                                                    **kwargs)
+        super(KpointsDataTranslator, self).__init__(Class=self.__class__, **kwargs)
 
     @staticmethod
-    def get_visualization_data(node, format=None):
+    def get_visualization_data(node, visformat=None):
+        # pylint: disable=too-many-locals,too-many-statements,too-many-branches
         """
 
         Returns: data in a format required by dr.js to visualize a 2D plot
         with multiple data series.
 
-        """
-
-        """
         Strategy: For the time being rely on the function implemented in
         seekpath to calculate brillouin zone faces, and triangulate them. The
         other fielsd of the response are retrieved
@@ -64,7 +66,6 @@ class KpointsDataTranslator(DataTranslator):
             has_cell = False
         else:
             has_cell = True
-
 
         # Then, check whether kpoint node has an explicit list including b
         # vectors
@@ -85,8 +86,6 @@ class KpointsDataTranslator(DataTranslator):
             has_mesh = True
             explicit_kpoints_rel = node.get_kpoints_mesh(print_list=True)
 
-
-
         # Initialize response
         json_visualization = {}
 
@@ -99,22 +98,21 @@ class KpointsDataTranslator(DataTranslator):
         # construct BZ and return an explicit list of kpoint coordinates
         if has_cell:
             # Retrieve b1, b2, b3 and add them to the json
-            (b1, b2, b3) = (cell[0], cell[1], cell[2])
+            (coords1, coords2, coords3) = (cell[0], cell[1], cell[2])
 
-            json_visualization['b1'] = b1.tolist()
-            json_visualization['b2'] = b2.tolist()
-            json_visualization['b3'] = b3.tolist()
+            json_visualization['b1'] = coords1.tolist()
+            json_visualization['b2'] = coords2.tolist()
+            json_visualization['b3'] = coords3.tolist()
 
             json_visualization['reciprocal_vectors_unit'] = u'1/\u212b'
 
             # Get BZ facesa and add them to the json. Fields: faces,
             # triangles, triangle_vertices. Most probably only faces is needed.
             from seekpath.brillouinzone.brillouinzone import get_BZ
-            json_visualization['faces_data'] = get_BZ(b1, b2, b3)
+            json_visualization['faces_data'] = get_BZ(coords1, coords2, coords3)
 
             # Provide kpoints cooridnates in absolute units ...
-            explicit_kpoints_abs = np.dot(explicit_kpoints_rel,
-                                          cell)
+            explicit_kpoints_abs = np.dot(explicit_kpoints_rel, cell)
             json_visualization['explicit_kpoints_abs'] = \
                 explicit_kpoints_abs.tolist()
 
@@ -122,13 +120,12 @@ class KpointsDataTranslator(DataTranslator):
             json_visualization['kpoints_abs_unit'] = u'1/\u212b'
 
         # Add labels field
-        has_labels=False
+        has_labels = False
         if explicit_kpoints:
-
 
             if node.labels is not None:
 
-                has_labels=True
+                has_labels = True
                 high_symm_rel = {}
                 path = []
                 old_label = None
@@ -136,7 +133,7 @@ class KpointsDataTranslator(DataTranslator):
                 for idx, label in node.labels:
                     high_symm_rel[label] = explicit_kpoints_rel[idx].tolist()
 
-                    if idx>0:
+                    if idx > 0:
                         path.append([old_label, label])
                     old_label = label
 
@@ -148,8 +145,7 @@ class KpointsDataTranslator(DataTranslator):
                     high_symm_abs = {}
 
                     for idx, label in node.labels:
-                        high_symm_abs[label] = explicit_kpoints_abs[
-                            idx].tolist()
+                        high_symm_abs[label] = explicit_kpoints_abs[idx].tolist()
 
                     json_visualization['kpoints'] = high_symm_abs
 
@@ -158,19 +154,14 @@ class KpointsDataTranslator(DataTranslator):
             json_visualization['mesh'] = mesh
             json_visualization['offset'] = offset
 
-        """
         # Populate json content with booleans to make it easy to determine
-        how to visualize the node.
+        # how to visualize the node.
 
-        plot_bz: whether to make the plot (BZ, cell vectors, and explicit
-        kpoints)
-        tab_mesh: whether to include a table with the mesh and offsets
-        """
-        bool_fields = dict(
-            has_cell=has_cell,
-            has_mesh=has_mesh,
-            has_labels=has_labels
-        )
+        # plot_bz: whether to make the plot (BZ, cell vectors, and explicit
+        # kpoints)
+        # tab_mesh: whether to include a table with the mesh and offsets
+
+        bool_fields = dict(has_cell=has_cell, has_mesh=has_mesh, has_labels=has_labels)
 
         json_visualization.update(bool_fields)
 
@@ -178,13 +169,13 @@ class KpointsDataTranslator(DataTranslator):
         return json_visualization
 
     @staticmethod
-    def get_downloadable_data(node, format=None):
+    def get_downloadable_data(node, download_format=None):
         """
         Generic function extented for kpoints data. Currently
         it is not implemented.
 
         :param node: node object that has to be visualized
-        :param format: file extension format
+        :param download_format: file extension format
         :returns: raise RestFeatureNotAvailable exception
         """
 

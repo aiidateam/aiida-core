@@ -79,7 +79,7 @@ class ServerInfo(Resource):
             url=url,
             url_root=url_root,
             path=path,
-            query_string=query_string,
+            query_string=request.query_string.decode('utf-8'),
             resource_type="Info",
             data=response)
         return self.utils.build_response(status=200, headers=headers, data=data)
@@ -170,7 +170,7 @@ class BaseResource(Resource):
             url_root=url_root,
             path=request.path,
             id=node_id,
-            query_string=query_string,
+            query_string=request.query_string.decode('utf-8'),
             resource_type=resource_type,
             data=results)
 
@@ -330,7 +330,7 @@ class Node(Resource):
             url_root=url_root,
             path=path,
             id=node_id,
-            query_string=query_string,
+            query_string=request.query_string.decode('utf-8'),
             resource_type=resource_type,
             data=results)
 

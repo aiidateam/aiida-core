@@ -18,6 +18,7 @@ import six
 from aiida.utils import timezone
 from .backends import CollectionEntry
 from aiida.orm.entities import Collection
+from . import entities
 
 ASCENDING = 1
 DESCENDING = -1
@@ -110,8 +111,7 @@ class LogCollection(Collection):
         pass
 
 
-@six.add_metaclass(ABCMeta)
-class Log(CollectionEntry):
+class Log(entities.Entity):
     @abstractproperty
     def id(self):
         """

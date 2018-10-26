@@ -34,30 +34,8 @@ class Log(entities.Entity):
         and retrieve logs.
         """
 
-        @abstractmethod
-        def create_entry(self, time, loggername, levelname, objname,
-                         objpk=None, message="", metadata=None):
-            """
-            Create a log entry.
-
-            :param time: The time of creation for the entry
-            :type time: :class:`!datetime.datetime`
-            :param loggername: The name of the logger that generated the entry
-            :type loggername: basestring
-            :param levelname: The log level
-            :type levelname: basestring
-            :param objname: The object name (if any) that emitted the entry
-            :type objname: basestring
-            :param objpk: The object id that emitted the entry
-            :type objpk: int
-            :param message: The message to log
-            :type message: basestring
-            :param metadata: Any (optional) metadata, should be JSON serializable dictionary
-            :type metadata: :class:`dict`
-            :return: An object implementing the log entry interface
-            :rtype: :class:`aiida.orm.log.Log`
-            """
-            pass
+        def create_entry(self, **kwargs):
+            return self._backend.log.create_entry(**kwargs)
 
         def create_entry_from_record(self, record):
             """

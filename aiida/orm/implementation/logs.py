@@ -11,21 +11,13 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from abc import abstractmethod, abstractproperty, ABCMeta
-from collections import namedtuple
 
 import six
 
 from . import backends
-from aiida.utils import timezone
-from .backends import CollectionEntry
-from aiida.orm.entities import Collection
-
-ASCENDING = 1
-DESCENDING = -1
-
-OrderSpecifier = namedtuple("OrderSpecifier", ['field', 'direction'])
 
 __all__ = ('BackendLogCollection', 'BackendLog')
+
 
 @six.add_metaclass(ABCMeta)
 class BackendLogCollection(backends.BackendCollection):
@@ -61,6 +53,7 @@ class BackendLogCollection(backends.BackendCollection):
         """
         pass
 
+    @abstractmethod
     def create_entry_from_record(self, record):
         """
         Helper function to create a log entry from a record created as by the
@@ -71,24 +64,7 @@ class BackendLogCollection(backends.BackendCollection):
         :return: An object implementing the log entry interface
         :rtype: :class:`aiida.orm.log.Log`
         """
-        from datetime import datetime
-
-        objpk = record.__dict__.get('objpk', None)
-        objname = record.__dict__.get('objname', None)
-
-        # Do not store if objpk and objname are not set
-        if objpk is None or objname is None:
-            return None
-
-        return self.create_entry(
-            time=timezone.make_aware(datetime.fromtimestamp(record.created)),
-            loggername=record.name,
-            levelname=record.levelname,
-            objname=objname,
-            objpk=objpk,
-            message=record.getMessage(),
-            metadata=record.__dict__
-        )
+        pass
 
     @abstractmethod
     def find(self, filter_by=None, order_by=None, limit=None):

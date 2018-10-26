@@ -143,6 +143,7 @@ if __name__ == '__main__':
                 'icsd = aiida.tools.dbimporters.plugins.icsd:IcsdDbImporter',
                 'mpod = aiida.tools.dbimporters.plugins.mpod:MpodDbImporter',
                 'mpds = aiida.tools.dbimporters.plugins.mpds:MpdsDbImporter',
+                'materialsproject = aiida.tools.dbimporters.plugins.materialsproject:MaterialsProjectImporter',
                 'nninc = aiida.tools.dbimporters.plugins.nninc:NnincDbImporter',
                 'oqmd = aiida.tools.dbimporters.plugins.oqmd:OqmdDbImporter',
                 'pcod = aiida.tools.dbimporters.plugins.pcod:PcodDbImporter',

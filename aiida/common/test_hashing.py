@@ -17,6 +17,7 @@ from __future__ import absolute_import
 import itertools
 import collections
 import uuid
+import math
 from datetime import datetime
 
 import numpy as np
@@ -27,7 +28,7 @@ try:
 except ImportError:
     import unittest
 
-from aiida.common.hashing import make_hash, create_unusable_pass, is_password_usable
+from aiida.common.hashing import make_hash, create_unusable_pass, is_password_usable, truncate_float64
 from aiida.common.folders import SandboxFolder
 
 
@@ -44,6 +45,22 @@ class PasswordFunctions(unittest.TestCase):
         self.assertFalse(is_password_usable(None))
         self.assertFalse(is_password_usable('!foo'))
         self.assertFalse(is_password_usable('random string without hash identification'))
+
+
+class TruncationTest(unittest.TestCase):
+    """
+    Tests for the truncate_* methods
+    """
+
+    def test_nan(self):
+        self.assertTrue(math.isnan(truncate_float64(np.nan)))
+
+    def test_inf(self):
+        self.assertTrue(math.isinf(truncate_float64(np.inf)))
+        self.assertTrue(math.isinf(truncate_float64(-np.inf)))
+
+    def test_subnormal(self):
+        self.assertTrue(np.isclose(truncate_float64(1.0e-308), 1.0e-308, atol=1.0e-309))
 
 
 class MakeHashTest(unittest.TestCase):

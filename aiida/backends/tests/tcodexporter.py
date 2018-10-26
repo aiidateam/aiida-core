@@ -258,7 +258,6 @@ class TestTcodDbExporter(AiidaTestCase):
 
 
     @unittest.skipIf(not has_nwchem_plugin(), "NWChem plugin is not installed")
-    @unittest.skipIf(six.PY3, "Broken on Python 3")
     def test_nwcpymatgen_translation(self):
         from .tcodexporter import FakeObject
         from aiida.orm.data.parameter import ParameterData
@@ -366,7 +365,6 @@ class TestTcodDbExporter(AiidaTestCase):
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
-    @unittest.skipIf(six.PY3, "Broken on Python 3")
     def test_symmetry_reduction(self):
         from aiida.orm.data.structure import StructureData
         from aiida.tools.dbexporters.tcod import export_values
@@ -418,7 +416,6 @@ class TestTcodDbExporter(AiidaTestCase):
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
-    @unittest.skipIf(six.PY3, "Broken on Python 3")
     def test_export_trajectory(self):
         from aiida.orm.data.structure import StructureData
         from aiida.orm.data.array.trajectory import TrajectoryData
@@ -523,7 +520,6 @@ class TestTcodDbExporter(AiidaTestCase):
         self.assertEqual(sorted(v['0'].keys()),
                          expected_tags)
 
-    @unittest.skipIf(six.PY3, "Broken on Python 3")
     def test_contents_encoding_2(self):
         """
         Testing the logic of choosing the encoding and the process of

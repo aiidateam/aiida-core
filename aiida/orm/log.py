@@ -118,6 +118,86 @@ class Log(entities.Entity):
         model = backend.logs.create()
         super(Log, self).__init__(model)
 
+    @property
+    def id(self):
+        """
+        Get the primary key of the entry
+
+        :return: The entry primary key
+        :rtype: int
+        """
+        return self._backend_entity.id
+
+    @property
+    def time(self):
+        """
+        Get the time corresponding to the entry
+
+        :return: The entry timestamp
+        :rtype: :class:`!datetime.datetime`
+        """
+        return self._backend_entity.time
+
+    @property
+    def loggername(self):
+        """
+        The name of the logger that created this entry
+
+        :return: The entry loggername
+        :rtype: basestring
+        """
+        return self._backend_entity.loggername
+
+    @property
+    def levelname(self):
+        """
+        The name of the log level
+
+        :return: The entry log level name
+        :rtype: basestring
+        """
+        return self._backend_entity.levelname
+
+    @property
+    def objpk(self):
+        """
+        Get the id of the object that created the log entry
+
+        :return: The entry timestamp
+        :rtype: int
+        """
+        return self._backend_entity.objpk
+
+    @property
+    def objname(self):
+        """
+        Get the name of the object that created the log entry
+
+        :return: The entry object name
+        :rtype: basestring
+        """
+        return self._backend_entity.objname
+
+    @property
+    def message(self):
+        """
+        Get the message corresponding to the entry
+
+        :return: The entry message
+        :rtype: basestring
+        """
+        return self._backend_entity.message
+
+    @property
+    def metadata(self):
+        """
+        Get the metadata corresponding to the entry
+
+        :return: The entry metadata
+        :rtype: :class:`!json.json`
+        """
+        return self._backend_entity.metadata
+
     @abstractmethod
     def save(self):
         """

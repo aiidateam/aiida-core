@@ -16,8 +16,8 @@ from collections import namedtuple
 import six
 
 from aiida.utils import timezone
-from .backends import CollectionEntry
 from aiida.orm.entities import Collection
+from .backends import construct_backend
 from . import entities
 
 ASCENDING = 1
@@ -112,6 +112,11 @@ class LogCollection(Collection):
 
 
 class Log(entities.Entity):
+    def __init__(self, backend=None):
+        backend = backend or construct_backend()
+        model = backend.logs.create()
+        super(Log, self).__init__(model)
+
     @abstractmethod
     def save(self):
         """

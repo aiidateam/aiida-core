@@ -10,7 +10,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from aiida.orm.log import LogCollection, Log
+from aiida.orm.implementation.logs import BackendLogCollection, BackendLog
 from aiida.orm.log import ASCENDING
 from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models.log import DbLog
@@ -18,7 +18,7 @@ from aiida.backends.sqlalchemy.models.log import DbLog
 session = get_scoped_session()
 
 
-class SqlaLogCollection(LogCollection):
+class SqlaLogCollection(BackendLogCollection):
 
     def create_entry(self, time, loggername, levelname, objname, objpk=None, message="", metadata=None):
         """
@@ -92,7 +92,7 @@ class SqlaLogCollection(LogCollection):
                 "currently supported")
 
 
-class SqlaLog(Log):
+class SqlaLog(BackendLog):
 
     def __init__(self, model):
         """

@@ -53,8 +53,14 @@ if __name__ == '__main__':
         include_package_data=True, # puts non-code files into the distribution, reads list from MANIFEST.in
         classifiers=[
             'License :: OSI Approved :: MIT License',
+            'Operating System :: POSIX :: Linux',
+            'Operating System :: MacOS :: MacOS X',
             'Programming Language :: Python',
             'Programming Language :: Python :: 2',
+            'Programming Language :: Python :: 2.7',
+            'Programming Language :: Python :: 3',
+            'Programming Language :: Python :: 3.6',
+            'Topic :: Scientific/Engineering',
         ],
         version=aiida_version,
         install_requires=install_requires,
@@ -65,7 +71,6 @@ if __name__ == '__main__':
         entry_points={
             'console_scripts': [
                 'verdi=aiida.cmdline.commands.cmd_verdi:verdi',
-                'verdi-plug = aiida.cmdline.verdi_plug:verdi_plug'
             ],
             # following are AiiDA plugin entry points:
             'aiida.calculations': [

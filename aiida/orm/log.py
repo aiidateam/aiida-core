@@ -72,9 +72,9 @@ class Log(entities.Entity):
         def delete_many(self, filter):
             return self._backend.log.delete_many(filter)
 
-    def __init__(self, backend=None):
+    def __init__(self, backend=None, **kwargs):
         backend = backend or construct_backend()
-        model = backend.logs.create()
+        model = backend.logs.create(**kwargs)
         super(Log, self).__init__(model)
 
     @property

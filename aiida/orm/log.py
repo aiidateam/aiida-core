@@ -88,28 +88,11 @@ class Log(entities.Entity):
                 metadata=record.__dict__
             )
 
-        @abstractmethod
-        def find(self, filter_by=None, order_by=None, limit=None):
-            """
-            Find all entries in the Log collection that conforms to the filter and
-            optionally sort and/or apply a limit.
+        def find(self, **kwargs):
+            return self._backend.log.find(**kwargs)
 
-            :param filter_by: A dictionary of key value pairs where the entries have
-                to match all the criteria (i.e. an AND operation)
-            :type filter_by: :class:`dict`
-            :param order_by: A list of tuples of type :class:`OrderSpecifier`
-            :type order_by: list
-            :param limit: The number of entries to retrieve
-            :return: An iterable of the matching entries
-            """
-            pass
-
-        @abstractmethod
         def delete_many(self, filter):
-            """
-            Delete all the log entries matching the given filter
-            """
-            pass
+            return self._backend.log.delete_many(filter)
 
     def __init__(self, backend=None):
         backend = backend or construct_backend()

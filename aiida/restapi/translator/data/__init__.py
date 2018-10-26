@@ -7,14 +7,16 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
-
+"""
+Translator for data node
+"""
 
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from aiida.restapi.translator.node import NodeTranslator
 import aiida
+
 
 class DataTranslator(NodeTranslator):
     """
@@ -32,7 +34,7 @@ class DataTranslator(NodeTranslator):
 
     _result_type = __label__
 
-    def __init__(self,Class=None, **kwargs):
+    def __init__(self, Class=None, **kwargs):
         """
         Initialise the parameters.
         Create the basic query_help

@@ -68,6 +68,58 @@ def _computer_test_get_jobs(transport, scheduler, authinfo):  # pylint: disable=
     return True
 
 
+def _computer_test_no_unexpected_output(transport, scheduler, authinfo):  # pylint: disable=unused-argument
+    """
+    Test that there is no unexpected output from the connection.
+
+    This can happen if e.g. there is some spurious command in the
+    .bashrc or .bash_profile that is not guarded in case of non-interactive
+    shells.
+
+    :param transport: an open transport
+    :param scheduler: the corresponding scheduler class
+    :param authinfo: the AuthInfo object (from which one can get computer and aiidauser)
+    :return: True if the test succeeds, False if it fails.
+    """
+    # Execute a command that should not return any error
+    echo.echo("> Checking that no spurious output is present...")
+    retval, stdout, stderr = transport.exec_command_wait('echo -n')
+    if retval != 0:
+        echo.echo_error("* ERROR! The command 'echo -n' returned a " "non-zero return code ({})!".format(retval))
+        return False
+    if stdout:
+        echo.echo_error(u"""* ERROR! There is some spurious output in the standard output,
+that we report below between the === signs:
+=========================================================
+{}
+=========================================================
+Please check that you don't have code producing output in
+your ~/.bash_profile (or ~/.bashrc). If you don't want to
+remove the code, but just to disable it for non-interactive
+shells, see comments in issue #1980 on GitHub:
+https://github.com/aiidateam/aiida_core/issues/1890
+(and in the AiiDA documentation, linked from that issue)
+""".format(stdout))
+        return False
+    if stderr:
+        echo.echo_error(u"""* ERROR! There is some spurious output in the stderr,
+that we report below between the === signs:
+=========================================================
+{}
+=========================================================
+Please check that you don't have code producing output in
+your ~/.bash_profile (or ~/.bashrc). If you don't want to
+remove the code, but just to disable it for non-interactive
+shells, see comments in issue #1980 on GitHub:
+https://github.com/aiidateam/aiida_core/issues/1890
+(and in the AiiDA documentation, linked from that issue)
+""".format(stderr))
+        return False
+
+    echo.echo("      [OK]")
+    return True
+
+
 def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disable=unused-argument
     """
     Internal test to check if it is possible to create a temporary file
@@ -506,7 +558,7 @@ def computer_test(user, print_traceback, computer):
         with trans:
             sched.set_transport(trans)
             num_tests += 1
-            for test in [_computer_test_get_jobs, _computer_create_temp_file]:
+            for test in [_computer_test_no_unexpected_output, _computer_test_get_jobs, _computer_create_temp_file]:
                 num_tests += 1
                 try:
                     succeeded = test(transport=trans, scheduler=sched, authinfo=authinfo)

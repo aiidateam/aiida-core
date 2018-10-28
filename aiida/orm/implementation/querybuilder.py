@@ -14,6 +14,7 @@ from __future__ import absolute_import
 import abc
 import six
 
+from aiida.common import exceptions
 from aiida.common.utils import abstractclassmethod
 from aiida.common.exceptions import InputValidationError
 
@@ -25,6 +26,9 @@ class BackendQueryBuilder(object):
     """Backend query builder interface"""
 
     # pylint: disable=invalid-name
+
+    def __init__(self, backend):
+        self._backend = backend
 
     @abc.abstractmethod
     def Node(self):
@@ -86,13 +90,6 @@ class BackendQueryBuilder(object):
         pass
 
     @abc.abstractmethod
-    def AiidaGroup(self):
-        """
-        A property, decorated with @property. Returns the implementation for the AiiDA-class for Group
-        """
-        pass
-
-    @abc.abstractmethod
     def get_session(self):
         """
         :returns: a valid session, an instance of sqlalchemy.orm.session.Session
@@ -110,7 +107,7 @@ class BackendQueryBuilder(object):
     @abstractclassmethod
     def get_filter_expr_from_attributes(cls, operator, value, attr_key, column=None, column_name=None, alias=None):  # pylint: disable=too-many-arguments
         """
-        A classmethod that returns an valid SQLAlchemy expression.
+        Returns an valid SQLAlchemy expression.
 
         :param operator: The operator provided by the user ('==',  '>', ...)
         :param value: The value to compare with, e.g. (5.0, 'foo', ['a','b'])
@@ -121,7 +118,6 @@ class BackendQueryBuilder(object):
         :param column: Optional, an instance of sqlalchemy.orm.attributes.InstrumentedAttribute or
         :param str column_name: The name of the column, and the backend should get the InstrumentedAttribute.
         :param alias: The aliased class.
-
 
         :returns: An instance of sqlalchemy.sql.elements.BinaryExpression
         """
@@ -221,7 +217,7 @@ class BackendQueryBuilder(object):
     @abc.abstractmethod
     def iterall(self, query, batch_size, tag_to_index_dict):
         """
-        :returns: An iterator over all the results of a list of lists.
+        :return: An iterator over all the results of a list of lists.
         """
         pass
 
@@ -231,3 +227,18 @@ class BackendQueryBuilder(object):
         :returns: An iterator over all the results of a list of dictionaries.
         """
         pass
+
+    def get_column(self, colname, alias):  # pylint: disable=no-self-use
+        """
+        Return the column for a given projection.
+        """
+        try:
+            return getattr(alias, colname)
+        except AttributeError:
+            raise exceptions.InputValidationError("{} is not a column of {}\n"
+                                                  "Valid columns are:\n"
+                                                  "{}".format(
+                                                      colname,
+                                                      alias,
+                                                      '\n'.join(alias._sa_class_manager.mapper.c.keys())  # pylint: disable=protected-access
+                                                  ))

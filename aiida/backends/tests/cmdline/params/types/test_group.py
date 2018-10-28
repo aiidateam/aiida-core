@@ -29,9 +29,9 @@ class TestGroupParamType(AiidaTestCase):
         super(TestGroupParamType, cls).setUpClass()
 
         cls.param = GroupParamType()
-        cls.entity_01 = Group.create(name='group_01')
-        cls.entity_02 = Group.create(name=str(cls.entity_01.pk))
-        cls.entity_03 = Group.create(name=str(cls.entity_01.uuid))
+        cls.entity_01 = Group(name='group_01', backend=cls.backend).store()
+        cls.entity_02 = Group(name=str(cls.entity_01.pk), backend=cls.backend).store()
+        cls.entity_03 = Group(name=str(cls.entity_01.uuid), backend=cls.backend).store()
 
     def test_get_by_id(self):
         """

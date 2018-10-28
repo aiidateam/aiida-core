@@ -24,16 +24,16 @@ from aiida.common.log import get_dblogger_extra
 
 def get_group_list(user, type_string, n_days_ago=None,
                    name_filters={}):
-    from aiida.orm.implementation.django.group import Group
+    from aiida.orm.implementation.django.groups import DjangoGroup
 
     name_filters = {"name__" + k: v for (k, v) in name_filters.items() if v}
 
     if n_days_ago:
         n_days_ago = timezone.now() - datetime.timedelta(days=n_days_ago)
 
-    groups = Group.query(user=user, type_string=type_string,
-                         past_days=n_days_ago,
-                         **name_filters)
+    groups = DjangoGroup.query(user=user, type_string=type_string,
+                               past_days=n_days_ago,
+                               **name_filters)
 
     return tuple([
         (str(g.pk), g.name, len(g.nodes), g.user.email.strip(),

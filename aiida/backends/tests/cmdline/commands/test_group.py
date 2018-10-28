@@ -90,11 +90,12 @@ class TestVerdiGroupSetup(AiidaTestCase):
         Test group create command
         """
         result = self.cli_runner.invoke(group_create, ["dummygroup5"])
-        self.assertIsNone(result.exception, result.output)
+        self.assertClickResultNoException(result)
 
-        ## check if newly added group in present in list
+        # check if newly added group in present in list
         result = self.cli_runner.invoke(group_list)
-        self.assertIsNone(result.exception, result.output)
+        self.assertClickResultNoException(result)
+
         self.assertIn("dummygroup5", result.output)
 
     def test_list(self):
@@ -102,7 +103,8 @@ class TestVerdiGroupSetup(AiidaTestCase):
         Test group list command
         """
         result = self.cli_runner.invoke(group_list)
-        self.assertIsNone(result.exception, result.output)
+        self.assertClickResultNoException(result)
+
         for grp in ["dummygroup1", "dummygroup2"]:
             self.assertIn(grp, result.output)
 
@@ -111,11 +113,11 @@ class TestVerdiGroupSetup(AiidaTestCase):
         Test group delete command
         """
         result = self.cli_runner.invoke(group_delete, ["--force", "dummygroup3"])
-        self.assertIsNone(result.exception, result.output)
+        self.assertClickResultNoException(result)
 
-        ## check if removed group is not present in list
+        # check if removed group is not present in list
         result = self.cli_runner.invoke(group_list)
-        self.assertIsNone(result.exception, "".join(traceback.format_exception(*result.exc_info)))
+        self.assertClickResultNoException(result)
         self.assertNotIn("dummygroup3", result.output)
 
     def test_show(self):
@@ -123,7 +125,8 @@ class TestVerdiGroupSetup(AiidaTestCase):
         Test group show command
         """
         result = self.cli_runner.invoke(group_show, ["dummygroup1"])
-        self.assertIsNone(result.exception, result.output)
+        self.assertClickResultNoException(result)
+
         for grpline in [
             "Group name", "dummygroup1", "Group type", "<user-defined>", "Group description", "<no description>"
         ]:
@@ -149,9 +152,9 @@ class TestVerdiGroupSetup(AiidaTestCase):
         result = self.cli_runner.invoke(group_rename, ["dummygroup4", "renamedgroup"])
         self.assertIsNone(result.exception, result.output)
 
-        ## check if group list command shows changed group name
+        # check if group list command shows changed group name
         result = self.cli_runner.invoke(group_list)
-        self.assertIsNone(result.exception, result.output)
+        self.assertClickResultNoException(result)
         self.assertNotIn("dummygroup4", result.output)
         self.assertIn("renamedgroup", result.output)
 
@@ -170,11 +173,11 @@ class TestVerdiGroupSetup(AiidaTestCase):
         self.assertIsNone(result.exception, result.output)
         # check if node is added in group using group show command
         result = self.cli_runner.invoke(group_show, ['dummygroup1'])
-        self.assertIsNone(result.exception, ''.join(traceback.format_exception(*result.exc_info)))
+        self.assertClickResultNoException(result)
         self.assertIn('ProcessNode', result.output)
         self.assertIn(str(node.pk), result.output)
 
-        ## remove same node
+        # remove same node
         result = self.cli_runner.invoke(group_removenodes, ['--force', '--group=dummygroup1', node.uuid])
         self.assertIsNone(result.exception, result.output)
         # check if node is added in group using group show command
@@ -182,3 +185,6 @@ class TestVerdiGroupSetup(AiidaTestCase):
         self.assertIsNone(result.exception, result.output)
         self.assertNotIn('ProcessNode', result.output)
         self.assertNotIn(str(node.pk), result.output)
+
+    def assertClickResultNoException(self, cli_result):
+        self.assertIsNone(cli_result.exception, ''.join(traceback.format_exception(*cli_result.exc_info)))

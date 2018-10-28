@@ -12,7 +12,6 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import datetime
 from datetime import datetime
 from json import loads as json_loads
 import six
@@ -27,7 +26,6 @@ from aiida.orm.implementation.querybuilder import BackendQueryBuilder
 from aiida.common.exceptions import InputValidationError
 from aiida.orm.implementation.django import dummy_model
 from aiida.backends.djsite.db.models import DbAttribute, DbExtra, ObjectDoesNotExist
-from aiida.backends.utils import get_column
 
 
 class DjangoQueryBuilder(BackendQueryBuilder):
@@ -67,22 +65,6 @@ class DjangoQueryBuilder(BackendQueryBuilder):
     def AiidaNode(self):
         import aiida.orm.implementation.django.node
         return aiida.orm.implementation.django.node.Node
-
-    @property
-    def AiidaGroup(self):
-        import aiida.orm.implementation.django.group
-        return aiida.orm.implementation.django.group.Group
-
-    @property
-    def AiidaUser(self):  # pylint: disable=invalid-name
-        import aiida.orm
-        return aiida.orm.User
-
-    @property
-    def AiidaComputer(self):  # pylint: disable=invalid-name
-
-        import aiida.orm
-        return aiida.orm.Computer
 
     def get_filter_expr(self, operator, value, attr_key, is_attribute, alias=None, column=None, column_name=None):
         """
@@ -208,8 +190,8 @@ class DjangoQueryBuilder(BackendQueryBuilder):
             else:
                 if column is None:
                     if (alias is None) and (column_name is None):
-                        raise Exception("I need to get the column but do not know \n" "the alias and the column name")
-                    column = get_column(column_name, alias)
+                        raise Exception("I need to get the column but do not know the alias and the column name")
+                    column = self.get_column(column_name, alias)
                 expr = self.get_filter_expr_from_column(operator, value, column)
         if negation:
             return not_(expr)
@@ -221,10 +203,8 @@ class DjangoQueryBuilder(BackendQueryBuilder):
 
     def modify_expansions(self, alias, expansions):
         """
-        For the Django schema, we have as additioanl expansions 'attributes'
-        and 'extras'
+        For the Django schema, we have as additional expansions 'attributes' and 'extras'
         """
-
         if issubclass(alias._sa_class_manager.class_, self.Node):  # pylint: disable=protected-access
             expansions.append("attributes")
             expansions.append("extras")
@@ -378,8 +358,7 @@ class DjangoQueryBuilder(BackendQueryBuilder):
 
     def get_aiida_res(self, key, res):
         """
-        Some instance returned by ORM (django or SA) need to be converted
-        to Aiida instances (eg nodes)
+        Some instance returned by ORM (django or SA) need to be converted to Aiida instances (eg nodes)
 
         :param res: the result returned by the query
         :param key: the key that this entry would be return with
@@ -455,7 +434,7 @@ class DjangoQueryBuilder(BackendQueryBuilder):
             results = query.yield_per(batch_size)
 
             if len(tag_to_index_dict) == 1:
-                # Sqlalchemy, for some strange reason, does not return a list of lsits
+                # Sqlalchemy, for some strange reason, does not return a list of lists
                 # if you have provided an ormclass
 
                 if list(tag_to_index_dict.values()) == ['*']:

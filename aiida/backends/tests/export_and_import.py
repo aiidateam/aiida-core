@@ -677,7 +677,7 @@ class TestSimple(AiidaTestCase):
             jc1._set_state(calc_states.PARSING)
 
             # Create a group and add the data inside
-            from aiida.orm.group import Group
+            from aiida.orm.groups import Group
             g1 = Group(name="node_group")
             g1.store()
             g1.add_nodes([sd1, jc1])
@@ -733,7 +733,7 @@ class TestSimple(AiidaTestCase):
             sd1.store()
 
             # Create a group and add the data inside
-            from aiida.orm.group import Group
+            from aiida.orm.groups import Group
             g1 = Group(name="node_group")
             g1.store()
             g1.add_nodes([sd1])
@@ -1691,7 +1691,7 @@ class TestLinks(AiidaTestCase):
             calc._set_state(calc_states.PARSING)
             data_output.add_link_from(calc, 'create', link_type=LinkType.CREATE)
 
-            group = Group.create(name='test_group')
+            group = orm.Group(name='test_group').store()
             group.add_nodes(data_output)
 
             export_file = os.path.join(tmp_folder, 'export.tar.gz')

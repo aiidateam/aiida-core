@@ -183,9 +183,8 @@ class DbGroup(Base):
         return '<DbGroup [user-defined] "{}">'.format(self.name)
 
     def get_aiida_class(self):
-        from aiida.orm.implementation.django.group import Group as DjangoAiidaGroup
         from aiida.backends.djsite.db.models import DbGroup as DjangoSchemaDbGroup
-        dbgroup = DjangoSchemaDbGroup(
+        return DjangoSchemaDbGroup(
             id=self.id,
             type=self.type,
             uuid=self.uuid,
@@ -193,9 +192,7 @@ class DbGroup(Base):
             time=self.time,
             description=self.description,
             user_id=self.user_id,
-        )
-
-        return DjangoAiidaGroup(dbgroup=dbgroup)
+        ).get_aiida_class()
 
 
 class DbNode(Base):

@@ -16,11 +16,6 @@ from django.utils import timezone
 from aiida.common.log import get_dblogger_extra
 
 
-def get_group_list(user, type_string, n_days_ago=None,
-                   name_filters={}):
-    pass
-
-
 def get_workflow_list(pk_list=tuple(), user=None, all_states=False,
                       n_days_ago=None):
     """
@@ -76,5 +71,3 @@ def get_log_messages(obj):
         log_messages.append(updated_val_dict)
 
     return log_messages
-
-

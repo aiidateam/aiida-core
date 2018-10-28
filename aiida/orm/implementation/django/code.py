@@ -10,7 +10,6 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import os
 
 from django.db import transaction
 
@@ -21,6 +20,7 @@ from aiida.common.utils import type_check
 def delete_code(code):
     """
     Delete a code from the DB.
+
     Check before that there are no output nodes.
 
     NOTE! Not thread safe... Do not use with many users accessing the DB

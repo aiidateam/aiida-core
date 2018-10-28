@@ -588,7 +588,7 @@ class AbstractWorkflow(object):
 
             automatic_user = orm.User.objects(self._backend).get_default().backend_entity
             method_step, created = self.dbworkflowinstance.steps.get_or_create(
-                name=wrapped_method, user=automatic_user.dbuser)
+                name=wrapped_method, user=automatic_user.dbmodel)
             try:
                 fun(self)
             except:
@@ -662,7 +662,7 @@ class AbstractWorkflow(object):
         # arround
 
         # Retrieve the caller method
-        user = orm.User.objects(self._backend).get_default().backend_entity.dbuser
+        user = orm.User.objects(self._backend).get_default().backend_entity.dbmodel
         method_step = self.dbworkflowinstance.steps.get(name=caller_method, user=user)
 
         # Attach calculations
@@ -1017,7 +1017,6 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
     # Note: pre_string becomes larger at each call of get_workflow_info on the
     #       subworkflows: pre_string -> pre_string + "|" + " "*(tab_size-1))
     # TODO SP: abstract the dependence on DbWorkflow
-
     from aiida.backends.djsite.db.models import DbWorkflow
 
     if tab_size < 2:

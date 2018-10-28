@@ -24,7 +24,7 @@ class RemoteData(Data):
     """
 
     def get_dbcomputer(self):
-        return self.dbnode.dbcomputer
+        return self.dbnode.dbmodel
 
     def get_computer_name(self):
         return self.get_computer().name
@@ -188,4 +188,4 @@ class RemoteData(Data):
             raise ValidationError("Remote computer not set.")
 
     def _get_authinfo(self):
-        return AuthInfo.objects(backend=self._backend).find(self.get_computer(), self.get_user())[0]
+        return AuthInfo.objects(backend=self._backend).get(dbcomputer=self.get_computer(), aiidauser=self.get_user())

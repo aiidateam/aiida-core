@@ -919,22 +919,32 @@ def are_dir_trees_equal(dir1, dir2):
         there were no errors while accessing the directories or files,
         False otherwise.
     """
+
+    # Directory comparison
     dirs_cmp = filecmp.dircmp(dir1, dir2)
     if dirs_cmp.left_only or dirs_cmp.right_only or dirs_cmp.funny_files:
-        return False
+        return (False, "Left directory: {}, right directory: {}, files only "
+                "in left directory: {}, files only in right directory: "
+                "{}, not comparable files: {}".format(dir1, dir2, dirs_cmp.left_only, dirs_cmp.right_only,
+                                                      dirs_cmp.funny_files))
 
+    # If the directories contain the same files, compare the common files
     (_, mismatch, errors) = filecmp.cmpfiles(dir1, dir2, dirs_cmp.common_files, shallow=False)
-
-    if mismatch or errors:
-        return False
+    if mismatch:
+        return (False, "The following files in the directories {} and {} "
+                "don't match: {}".format(dir1, dir2, mismatch))
+    if errors:
+        return (False, "The following files in the directories {} and {} "
+                "aren't regular: {}".format(dir1, dir2, errors))
 
     for common_dir in dirs_cmp.common_dirs:
         new_dir1 = os.path.join(dir1, common_dir)
         new_dir2 = os.path.join(dir2, common_dir)
-        if not are_dir_trees_equal(new_dir1, new_dir2):
-            return False
+        res, msg = are_dir_trees_equal(new_dir1, new_dir2)
+        if not res:
+            return False, msg
 
-    return True
+    return True, "The given directories ({} and {}) are equal".format(dir1, dir2)
 
 
 def indent(txt, spaces=4):

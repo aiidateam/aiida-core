@@ -1960,8 +1960,8 @@ class AbstractJobCalculation(AbstractCalculation):
         folder.create_file_from_filelike(StringIO(script_content), script_filename)
 
         subfolder = folder.get_subfolder('.aiida', create=True)
-        subfolder.create_file_from_filelike(StringIO(json.dumps(job_tmpl)), 'job_tmpl.json')
-        subfolder.create_file_from_filelike(StringIO(json.dumps(calcinfo)), 'calcinfo.json')
+        subfolder.create_file_from_filelike(StringIO(six.text_type(json.dumps(job_tmpl)), 'job_tmpl.json'))
+        subfolder.create_file_from_filelike(StringIO(six.text_type(json.dumps(calcinfo)), 'calcinfo.json'))
 
         if calcinfo.local_copy_list is None:
             calcinfo.local_copy_list = []

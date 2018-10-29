@@ -483,10 +483,7 @@ class NodeTranslator(BaseTranslator):
         :param node: node object
         :returns: list of calc inputls command
         """
-
-        if node.type.startswith("calculation"):
-            from aiida.restapi.translator.calculation import CalculationTranslator
-            return CalculationTranslator.get_retrieved_inputs(node, filename=filename, rtype=rtype)
+        # pylint: disable=unused-argument
         return []
 
     @staticmethod
@@ -500,10 +497,7 @@ class NodeTranslator(BaseTranslator):
         :param node: node object
         :returns: list of calc outputls command
         """
-
-        if node.type.startswith("calculation"):
-            from aiida.restapi.translator.calculation import CalculationTranslator
-            return CalculationTranslator.get_retrieved_outputs(node, filename=filename, rtype=rtype)
+        # pylint: disable=unused-argument
         return []
 
     @staticmethod

@@ -597,7 +597,8 @@ def xyz_parser_iterator(xyz_string):
             """
             return self.__next__()
 
-    pos_regex = re.compile(r"""
+    pos_regex = re.compile(
+        r"""
 ^                                                                             # Linestart
 [ \t]*                                                                        # Optional white space
 (?P<sym>[A-Za-z]+[A-Za-z0-9]*)\s+                                             # get the symbol
@@ -605,7 +606,8 @@ def xyz_parser_iterator(xyz_string):
 (?P<y> [\+\-]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([Ee][\+\-]?\d+)? ) [ \t]+     # Get y
 (?P<z> [\+\-]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([Ee][\+\-]?\d+)? )            # Get z
 """, re.X | re.M)
-    pos_block_regex = re.compile(r"""
+    pos_block_regex = re.compile(
+        r"""
                                                             # First line contains an integer
                                                             # and only an integer: the number of atoms
 ^[ \t]* (?P<natoms> [0-9]+) [ \t]*[\n]                      # End first line

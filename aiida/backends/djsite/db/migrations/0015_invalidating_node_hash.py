@@ -15,7 +15,7 @@ from __future__ import absolute_import
 from django.db import migrations
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
 
-from aiida.orm.implementation.general.node import _HASH_EXTRA_KEY
+from aiida.common.hashing import _HASH_EXTRA_KEY
 from aiida.cmdline.utils.echo import echo_warning
 
 REVISION = '1.0.15'

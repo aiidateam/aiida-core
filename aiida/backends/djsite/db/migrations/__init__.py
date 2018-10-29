@@ -11,7 +11,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-LATEST_MIGRATION = '0014_add_node_uuid_unique_constraint'
+LATEST_MIGRATION = '0015_invalidating_node_hash'
 
 
 def _update_schema_version(version, apps, schema_editor):

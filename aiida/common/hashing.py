@@ -58,6 +58,9 @@ UNUSABLE_PASSWORD_SUFFIX_LENGTH = 40
 
 HASHING_KEY = "HashingKey"
 
+# The key that is used to store the hash in the node extras
+_HASH_EXTRA_KEY = '_aiida_hash'
+
 pwd_context = CryptContext(  # pylint: disable=invalid-name
     # The list of hashes that we support
     schemes=["argon2", "pbkdf2_sha256", "des_crypt"],

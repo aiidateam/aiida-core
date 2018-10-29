@@ -8,7 +8,7 @@ Create Date: 2018-10-26 17:14:33.566670
 from __future__ import absolute_import
 from alembic import op
 from sqlalchemy.sql import text
-from aiida.orm.implementation.general.node import _HASH_EXTRA_KEY
+from aiida.common.hashing import _HASH_EXTRA_KEY
 from aiida.cmdline.utils.echo import echo_warning
 
 # revision identifiers, used by Alembic.

@@ -1250,9 +1250,19 @@ class HiddenPrints(object):  # pylint: disable=too-few-public-methods
         self._original_stdout = None
 
     def __enter__(self):
+        """
+        Keep track of the original sdtout location and redirect stdout
+        to /dev/null
+        """
         from os import devnull
+
         self._original_stdout = sys.stdout
-        sys.stdout = io.open(devnull, 'w', encoding='utf8')
+
+        # N.B. Here we don't use io.open as we may need to swallow byte streams.
+        # In this instance, as we're just redirecting the output to dev null we
+        # don't need to worry about encoding and so we use regular system open.
+        # This will work in Python 2 or Python 3.
+        sys.stdout = open(devnull, 'w')
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         sys.stdout = self._original_stdout

@@ -78,7 +78,7 @@ class TestTcodDbExporter(AiidaTestCase):
         """Testing the collection of files from file tree."""
         from aiida.tools.dbexporters.tcod import _collect_files
         from aiida.common.folders import SandboxFolder
-        from six.moves import cStringIO as StringIO
+        from six.moves import StringIO as StringIO
 
         sf = SandboxFolder()
         sf.get_subfolder('out', create=True)
@@ -87,17 +87,17 @@ class TestTcodDbExporter(AiidaTestCase):
         sf.get_subfolder('save/1', create=True)
         sf.get_subfolder('save/2', create=True)
 
-        f = StringIO("test")
+        f = StringIO(u"test")
         sf.create_file_from_filelike(f, 'aiida.in')
-        f = StringIO("test")
+        f = StringIO(u"test")
         sf.create_file_from_filelike(f, 'aiida.out')
-        f = StringIO("test")
+        f = StringIO(u"test")
         sf.create_file_from_filelike(f, '_aiidasubmit.sh')
-        f = StringIO("test")
+        f = StringIO(u"test")
         sf.create_file_from_filelike(f, '_.out')
-        f = StringIO("test")
+        f = StringIO(u"test")
         sf.create_file_from_filelike(f, 'out/out')
-        f = StringIO("test")
+        f = StringIO(u"test")
         sf.create_file_from_filelike(f, 'save/1/log.log')
 
         md5 = '098f6bcd4621d373cade4e832627b4f6'

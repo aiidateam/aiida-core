@@ -746,7 +746,7 @@ _tag   {}
             default2 = CifData(file=tmpf.name, scan_type='standard')
             self.assertEquals(default._prepare_cif(), default2._prepare_cif())
 
-            flex = CifData(file=f.name, scan_type='flex')
+            flex = CifData(file=tmpf.name, scan_type='flex')
             self.assertEquals(default._prepare_cif(), flex._prepare_cif())
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")

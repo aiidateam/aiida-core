@@ -24,7 +24,6 @@ from aiida.orm.group import Group
 from aiida.orm.node import Node
 from aiida.orm.user import User
 
-
 IMPORTGROUP_TYPE = 'aiida.import'
 COMP_DUPL_SUFFIX = ' (Imported #{})'
 
@@ -2351,8 +2350,9 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
 
     if not silent:
         print("STORING DATA...")
-
-    with folder.open('data.json', "w", encoding='utf-8') as fhandle:
+    
+    # N.B. We're really calling zipfolder.open
+    with folder.open('data.json', mode='w') as fhandle:
         fhandle.write(six.text_type(json.dumps({
             'node_attributes': node_attributes,
             'node_attributes_conversion': node_attributes_conversion,
@@ -2371,7 +2371,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
         'unique_identifiers': unique_identifiers,
     }
 
-    with folder.open('metadata.json', "w", encoding='utf-8') as fhandle:
+    with folder.open('metadata.json', "w") as fhandle:
         fhandle.write(six.text_type(json.dumps(
             metadata, ensure_ascii=False)))
 
@@ -2471,7 +2471,7 @@ class MyWritingZipFile(object):
         self._buffer = None
 
     def open(self):
-        from six.moves import cStringIO as StringIO
+        from six.moves import StringIO as StringIO
 
         if self._buffer is not None:
             raise IOError("Cannot open again!")

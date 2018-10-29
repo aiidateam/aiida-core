@@ -1773,7 +1773,7 @@ class AbstractJobCalculation(AbstractCalculation):
         import os
         import json
 
-        from six.moves import cStringIO as StringIO
+        from six.moves import StringIO as StringIO
 
         from aiida.common.exceptions import (NotExistent, PluginInternalError, ValidationError)
         from aiida.scheduler.datastructures import JobTemplate

@@ -143,7 +143,7 @@ def store_config(confs):
     old_umask = os.umask(DEFAULT_UMASK)
     try:
         with io.open(conf_file, 'wb', encoding=None) as json_file:
-            json.dump(confs, json_file, indent=CONFIG_INDENT_SIZE, ensure_ascii=False)
+            json.dump(confs, json_file, indent=CONFIG_INDENT_SIZE)
     finally:
         os.umask(old_umask)
 

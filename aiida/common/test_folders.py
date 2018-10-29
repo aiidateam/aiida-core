@@ -54,4 +54,4 @@ class FoldersTest(unittest.TestCase):
 
         folder = Folder('/tmp')
         # Should not raise any exception
-        self.assertEquals(folder.get_abs_path('test_file.txt'), '/tmp/test_file.txt')
+        self.assertEqual(folder.get_abs_path('test_file.txt'), '/tmp/test_file.txt')

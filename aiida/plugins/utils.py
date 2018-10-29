@@ -15,12 +15,11 @@ utilities for:
 * pickling to the registry cache folder
 """
 from __future__ import absolute_import
-import io
-
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+import io
+
 def registry_cache_folder_name():
     """
     return the name of the subfolder of aiida_dir where registry caches are stored.

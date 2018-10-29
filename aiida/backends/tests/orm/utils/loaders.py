@@ -85,11 +85,11 @@ class TestOrmUtils(AiidaTestCase):
         loaded_code = load_code(pk=code.pk)
         self.assertEquals(loaded_code.uuid, code.uuid)
 
-        # Load through partial uuid
-        loaded_code = load_code(uuid=code.uuid[:2])
+        # Load through partial uuid without a dash
+        loaded_code = load_code(uuid=code.uuid[:8])
         self.assertEquals(loaded_code.uuid, code.uuid)
 
-        # Load through partial uuid
+        # Load through partial uuid including a dash
         loaded_code = load_code(uuid=code.uuid[:10])
         self.assertEquals(loaded_code.uuid, code.uuid)
 
@@ -124,11 +124,11 @@ class TestOrmUtils(AiidaTestCase):
         loaded_computer = load_computer(pk=computer.pk)
         self.assertEquals(loaded_computer.uuid, computer.uuid)
 
-        # Load through partial uuid
-        loaded_computer = load_computer(uuid=computer.uuid[:2])
+        # Load through partial uuid without a dash
+        loaded_computer = load_computer(uuid=computer.uuid[:8])
         self.assertEquals(loaded_computer.uuid, computer.uuid)
 
-        # Load through partial uuid
+        # Load through partial uuid including a dash
         loaded_computer = load_computer(uuid=computer.uuid[:10])
         self.assertEquals(loaded_computer.uuid, computer.uuid)
 
@@ -164,11 +164,11 @@ class TestOrmUtils(AiidaTestCase):
         loaded_group = load_group(pk=group.pk)
         self.assertEquals(loaded_group.uuid, group.uuid)
 
-        # Load through partial uuid
-        loaded_group = load_group(uuid=group.uuid[:2])
+        # Load through partial uuid without a dash
+        loaded_group = load_group(uuid=group.uuid[:8])
         self.assertEquals(loaded_group.uuid, group.uuid)
 
-        # Load through partial uuid
+        # Load through partial uuid including a dash
         loaded_group = load_group(uuid=group.uuid[:10])
         self.assertEquals(loaded_group.uuid, group.uuid)
 
@@ -195,11 +195,11 @@ class TestOrmUtils(AiidaTestCase):
         loaded_node = load_node(pk=node.pk)
         self.assertEquals(loaded_node.uuid, node.uuid)
 
-        # Load through partial uuid
-        loaded_node = load_node(uuid=node.uuid[:2])
+        # Load through partial uuid without a dash
+        loaded_node = load_node(uuid=node.uuid[:8])
         self.assertEquals(loaded_node.uuid, node.uuid)
 
-        # Load through partial uuid
+        # Load through partial uuid including a dashs
         loaded_node = load_node(uuid=node.uuid[:10])
         self.assertEquals(loaded_node.uuid, node.uuid)
 

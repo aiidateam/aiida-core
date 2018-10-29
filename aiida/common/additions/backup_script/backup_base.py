@@ -258,8 +258,8 @@ class AbstractBackup(object):
         given filename.
         """
         backup_variables = self._dictionarize_backup_info()
-        with io.open(backup_info_file_name, 'wb', encoding=None) as backup_info_file:
-            json.dump(backup_variables, backup_info_file, ensure_ascii=False)
+        with io.open(backup_info_file_name, 'w', encoding='utf8') as backup_info_file:
+            backup_info_file.write(six.text_type(json.dumps(backup_variables, backup_info_file, ensure_ascii=False)))
 
     def _find_files_to_backup(self):
         """

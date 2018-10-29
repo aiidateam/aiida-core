@@ -12,7 +12,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import contextlib
-import io
 import os
 import sys
 
@@ -98,7 +97,8 @@ def run(scriptname, varargs, group, group_name, exclude, excludesubclasses, incl
     handle = None
 
     try:
-        handle = io.open(scriptname, encoding='utf8')
+        # Here we use a standard open and not io.open, as exec will later fail if passed a unicode type string.
+        handle = open(scriptname, 'r')
     except IOError:
         echo.echo_critical("Unable to load file '{}'".format(scriptname))
     else:

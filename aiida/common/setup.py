@@ -142,8 +142,8 @@ def store_config(confs):
     conf_file = os.path.join(aiida_dir, CONFIG_FNAME)
     old_umask = os.umask(DEFAULT_UMASK)
     try:
-        with io.open(conf_file, 'wb', encoding=None) as json_file:
-            json.dump(confs, json_file, indent=CONFIG_INDENT_SIZE)
+        with io.open(conf_file, 'w', encoding='utf8') as json_file:
+            json_file.write(six.text_type(json.dumps(confs, indent=CONFIG_INDENT_SIZE, ensure_ascii=False)))
     finally:
         os.umask(old_umask)
 

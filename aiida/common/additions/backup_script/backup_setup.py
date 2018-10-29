@@ -20,6 +20,8 @@ import stat
 import sys
 from os.path import expanduser
 
+import six
+
 from aiida.backends.profile import BACKEND_DJANGO
 from aiida.backends.profile import BACKEND_SQLA
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
@@ -219,8 +221,8 @@ class BackupSetup(object):
             backup_variables = self.construct_backup_variables(
                 file_backup_folder_abs)
 
-            with io.open(final_conf_filepath, 'wb', encoding=None) as backup_info_file:
-                json.dump(backup_variables, backup_info_file, ensure_ascii=False)
+            with io.open(final_conf_filepath, 'w', encoding='utf8') as backup_info_file:
+                backup_info_file.write(six.text_type(json.dumps(backup_variables, ensure_ascii=False)))
         # If the backup parameters are configured manually
         else:
             sys.stdout.write(

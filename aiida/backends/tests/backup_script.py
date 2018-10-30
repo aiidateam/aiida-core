@@ -337,8 +337,8 @@ class TestBackupScriptIntegration(AiidaTestCase):
                                     self._bs_instance._file_backup_folder_rel,
                                     self._repo_rel_path)
             res, msg = are_dir_trees_equal(source_dir, dest_dir)
-            self.assertTrue(res, "The backed-up repository has differences "
-                                 "to the original one. " + msg)
+            self.assertTrue(res, "The backed-up repository has differences to the original one. " + str(msg)
+                             + ". If the test fails, report it in issue #2134.")
         finally:
             shutil.rmtree(temp_folder, ignore_errors=True)
 

@@ -39,7 +39,7 @@ class CacheConfigTest(unittest.TestCase):
             }
         }
         with tempfile.NamedTemporaryFile() as tmpf:
-            yaml.dump(self.config_reference, tmpf)
+            yaml.dump(self.config_reference, tmpf, encoding='utf-8')
             configure(config_file=tmpf.name)
 
     def tearDown(self):

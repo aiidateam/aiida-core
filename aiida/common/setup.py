@@ -355,9 +355,6 @@ def get_profile_config(profile, conf_dict=None):
     :param conf_dict: if passed, use the provided dictionary rather than reading
         it from file.
     """
-    import sys
-    import tempfile
-
     from aiida.common.exceptions import ConfigurationError, ProfileConfigurationError
 
     if conf_dict is None:

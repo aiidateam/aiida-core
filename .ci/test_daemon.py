@@ -19,7 +19,7 @@ from six.moves import range
 
 from aiida.common.exceptions import NotExistent
 from aiida.common.caching import enable_caching
-from aiida.daemon.client import DaemonClient
+from aiida.daemon.client import get_daemon_client
 from aiida.orm import Code, CalculationFactory, DataFactory
 from aiida.orm.data.int import Int
 from aiida.orm.data.str import Str
@@ -43,7 +43,7 @@ number_workchains = 8 # Number of workchains to submit
 
 
 def print_daemon_log():
-    daemon_client = DaemonClient()
+    daemon_client = get_daemon_client()
     daemon_log = daemon_client.daemon_log_file
 
     print("Output of 'cat {}':".format(daemon_log))

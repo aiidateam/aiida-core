@@ -38,29 +38,52 @@ def get_current_profile_name():
     return settings.AIIDADB_PROFILE or setup.get_default_profile_name()
 
 
-def get_current_profile_config():
+def get_profile_config(name=None):
     """
     Return the configuration of the currently active profile or if not set, the default profile
+
+    :param name: the profile name whose configuration to return
+    :return: the dictionary containing the profile configuration
+    :raises MissingConfigurationError: if the configuration file cannot be found
+    :raises ProfileConfigurationError: if the name is not found in the configuration file
     """
-    return setup.get_profile_config(get_current_profile_name())
+    from aiida.common.exceptions import MissingConfigurationError, ProfileConfigurationError
+    from aiida.common.setup import get_config
+
+    if name is None:
+        name = get_current_profile_name()
+
+    try:
+        config = get_config()
+    except MissingConfigurationError:
+        raise MissingConfigurationError('could not load the configuration file')
+
+    try:
+        profile = config['profiles'][name]
+    except KeyError:
+        raise ProfileConfigurationError('invalid profile name "{}"'.format(name))
+
+    return profile
 
 
-class Profile(dict):
+def get_profile(name=None):
+    """
+    Return the profile for the given name or the default one if not specified.
 
-    def __init__(self, *args, **kwargs):
-        self._name = kwargs.pop('name', None)
-        super(Profile, self).__init__(*args, **kwargs)
+    :param name: the profile name, will use the default profile if None
+    :return: the profile
+    :rtype: :class:`aiida.common.profile.Profile`
+    :raises MissingConfigurationError: if the configuration file cannot be found
+    :raises ProfileConfigurationError: if the name is not found in the configuration file
+    """
+    if name is None:
+        name = get_current_profile_name()
 
-    @property
-    def name(self):
-        return self._name
-
-    @name.setter
-    def name(self, value):
-        self._name = value
+    config = get_profile_config(name)
+    return Profile(name, config)
 
 
-class ProfileConfig(object):
+class Profile(object):
     """
     Convenience class that loads the current profile name and corresponding configuration and
     can subsequently provide profile specific information
@@ -68,42 +91,52 @@ class ProfileConfig(object):
 
     _RMQ_PREFIX = 'aiida-{uuid}'
 
-    def __init__(self, profile_name=None):
-        """
-        Construct the ProfileConfig for the given profile_name or retrieve it from
-        the backend settings
-        """
-        if not profile_name:
-            self.profile_name = get_current_profile_name()
-            self.profile_config = get_current_profile_config()
+    def __init__(self, name, config):
+        self._name = name
+        self._config = config
+
+        # Currently, whether a profile is a test profile is solely determined by its name starting with 'test_'
+        if self.name.startswith('test_'):
+            self._test_profile = True
         else:
-            self.profile_name = profile_name
-            self.profile_config = setup.get_profile_config(profile_name)
+            self._test_profile = False
 
     @property
-    def profile_uuid(self):
-        return self.profile_config[setup.PROFILE_UUID_KEY]
+    def config(self):
+        return self._config
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def uuid(self):
+        return self.config[setup.PROFILE_UUID_KEY]
 
     @property
     def rmq_prefix(self):
-        return self._RMQ_PREFIX.format(uuid=self.profile_uuid)
+        return self._RMQ_PREFIX.format(uuid=self.uuid)
+
+    @property
+    def is_test_profile(self):
+        return self._test_profile
 
     @property
     def filepaths(self):
         return {
             'circus': {
-                'log': CIRCUS_LOG_FILE_TEMPLATE.format(self.profile_name),
-                'pid': CIRCUS_PID_FILE_TEMPLATE.format(self.profile_name),
-                'port': CIRCUS_PORT_FILE_TEMPLATE.format(self.profile_name),
+                'log': CIRCUS_LOG_FILE_TEMPLATE.format(self.name),
+                'pid': CIRCUS_PID_FILE_TEMPLATE.format(self.name),
+                'port': CIRCUS_PORT_FILE_TEMPLATE.format(self.name),
                 'socket': {
-                    'file': CIRCUS_SOCKET_FILE_TEMPATE.format(self.profile_name),
+                    'file': CIRCUS_SOCKET_FILE_TEMPATE.format(self.name),
                     'controller': CIRCUS_CONTROLLER_SOCKET_TEMPLATE,
                     'pubsub': CIRCUS_PUBSUB_SOCKET_TEMPLATE,
                     'stats': CIRCUS_STATS_SOCKET_TEMPLATE,
                 }
             },
             'daemon': {
-                'log': DAEMON_LOG_FILE_TEMPLATE.format(self.profile_name),
-                'pid': DAEMON_PID_FILE_TEMPLATE.format(self.profile_name),
+                'log': DAEMON_LOG_FILE_TEMPLATE.format(self.name),
+                'pid': DAEMON_PID_FILE_TEMPLATE.format(self.name),
             }
         }

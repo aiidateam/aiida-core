@@ -198,12 +198,10 @@ class TestTcodDbExporter(AiidaTestCase):
         with io.open(fd._get_folder_pathsubfolder.get_abs_path(
                 calc._SCHED_OUTPUT_FILE), 'w', encoding='utf8') as fhandle:
             fhandle.write(u"standard output")
-            fhandle.flush()
 
         with io.open(fd._get_folder_pathsubfolder.get_abs_path(
                 calc._SCHED_ERROR_FILE), 'w', encoding='utf8') as fhandle:
             fhandle.write(u"standard error")
-            fhandle.flush()
 
         fd.store()
         calc._set_state(calc_states.PARSING)

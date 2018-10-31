@@ -38,7 +38,7 @@ def dumps(data, **kwargs):
     as this improves the readability of the json and reduces the file size.
     When writing to file, use io.open(filename, 'w', encoding='utf8')
     """
-    simplejson.dumps(data, ensure_ascii=False, encoding='utf8', **kwargs)
+    return simplejson.dumps(data, ensure_ascii=False, encoding='utf8', **kwargs)
 
 
 def load(fhandle, **kwargs):

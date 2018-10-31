@@ -1771,7 +1771,6 @@ class AbstractJobCalculation(AbstractCalculation):
             needed by the daemon to handle operations.
         """
         import os
-        import json
 
         from six.moves import StringIO as StringIO
 
@@ -1783,6 +1782,7 @@ class AbstractJobCalculation(AbstractCalculation):
         from aiida.common.datastructures import CodeInfo, code_run_modes
         from aiida.orm.code import Code
         from aiida.orm.utils import load_node
+        import aiida.utils.json as json
 
         computer = self.get_computer()
         inputdict = self.get_inputs_dict(only_in_db=not use_unstored_links, link_type=LinkType.INPUT)
@@ -1960,8 +1960,8 @@ class AbstractJobCalculation(AbstractCalculation):
         folder.create_file_from_filelike(StringIO(script_content), script_filename)
 
         subfolder = folder.get_subfolder('.aiida', create=True)
-        subfolder.create_file_from_filelike(StringIO(six.text_type(json.dumps(job_tmpl))), 'job_tmpl.json')
-        subfolder.create_file_from_filelike(StringIO(six.text_type(json.dumps(calcinfo))), 'calcinfo.json')
+        subfolder.create_file_from_filelike(StringIO(json.dumps(job_tmpl)), 'job_tmpl.json')
+        subfolder.create_file_from_filelike(StringIO(json.dumps(calcinfo)), 'calcinfo.json')
 
         if calcinfo.local_copy_list is None:
             calcinfo.local_copy_list = []

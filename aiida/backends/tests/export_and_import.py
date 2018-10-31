@@ -277,7 +277,6 @@ class TestSimple(AiidaTestCase):
         """
         Test the check for the export format version.
         """
-        import json
         import tarfile
         import os
         import shutil
@@ -286,6 +285,8 @@ class TestSimple(AiidaTestCase):
         from aiida.common import exceptions
         from aiida.orm import DataFactory
         from aiida.orm.importexport import export
+        import aiida.utils.json as json
+
 
         # Creating a folder for the import/export files
         export_file_tmp_folder = tempfile.mkdtemp()
@@ -307,9 +308,8 @@ class TestSimple(AiidaTestCase):
             metadata['export_version'] = 0.0
 
             with io.open(os.path.join(unpack_tmp_folder, 'metadata.json'),
-                         'w', encoding='utf-8') as fhandle:
-                fhandle.write(six.text_type(json.dumps(
-                    metadata, ensure_ascii=False)))
+                         'wb') as fhandle:
+                json.dump(metadata, fhandle)
 
             with tarfile.open(filename, "w:gz", format=tarfile.PAX_FORMAT) as tar:
                 tar.add(unpack_tmp_folder, arcname="")
@@ -328,7 +328,6 @@ class TestSimple(AiidaTestCase):
         """
         Test importing of nodes, that have links to unknown nodes.
         """
-        import json
         import tarfile
         import os
         import shutil
@@ -338,6 +337,7 @@ class TestSimple(AiidaTestCase):
         from aiida.common.folders import SandboxFolder
         from aiida.orm.data.structure import StructureData
         from aiida.orm import load_node
+        import aiida.utils.json as json
 
         # Creating a folder for the import/export files
         temp_folder = tempfile.mkdtemp()
@@ -363,10 +363,8 @@ class TestSimple(AiidaTestCase):
                 'label': 'parent'
             })
 
-            with io.open(unpack.get_abs_path('data.json'), 'w',
-                             encoding='utf-8') as fhandle:
-                fhandle.write(six.text_type(json.dumps(
-                    metadata, ensure_ascii=False)))
+            with io.open(unpack.get_abs_path('data.json'), 'wb') as fhandle:
+                json.dump(metadata, fhandle)
 
             with tarfile.open(
                     filename, "w:gz", format=tarfile.PAX_FORMAT) as tar:

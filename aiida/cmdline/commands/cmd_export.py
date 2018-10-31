@@ -16,7 +16,6 @@ from __future__ import absolute_import
 import io
 
 import click
-import six
 import tabulate
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -150,11 +149,12 @@ def migrate(input_file, output_file, force, silent, archive_format):
     Migrate an existing export archive file to the most recent version of the export format
     """
     import os
-    import json
     import tarfile
     import zipfile
+
     from aiida.common.folders import SandboxFolder
     from aiida.common.archive import extract_zip, extract_tar
+    import aiida.utils.json as json
 
     if os.path.exists(output_file) and not force:
         echo.echo_critical('the output file already exists')
@@ -193,11 +193,11 @@ def migrate(input_file, output_file, force, silent, archive_format):
 
         new_version = verify_metadata_version(metadata)
 
-        with io.open(folder.get_abs_path('data.json'), 'w', encoding='utf8') as fhandle:
-            fhandle.write(six.text_type(json.dumps(data, ensure_ascii=False)))
+        with io.open(folder.get_abs_path('data.json'), 'wb') as fhandle:
+            json.dump(data, fhandle)
 
-        with io.open(folder.get_abs_path('metadata.json'), 'w', encoding='utf8') as fhandle:
-            fhandle.write(six.text_type(json.dumps(metadata, ensure_ascii=False)))
+        with io.open(folder.get_abs_path('metadata.json'), 'wb') as fhandle:
+            json.dump(metadata, fhandle)
 
         if archive_format == 'zip' or archive_format == 'zip-uncompressed':
             compression = zipfile.ZIP_DEFLATED if archive_format == 'zip' else zipfile.ZIP_STORED

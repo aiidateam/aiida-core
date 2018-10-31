@@ -860,7 +860,7 @@ class BandsData(KpointsData):
         For the possible parameters, see documentation of
         :py:meth:`~aiida.orm.data.array.bands.BandsData._matplotlib_get_dict`
         """
-        import json
+        import aiida.utils.json as json
 
         all_data = self._matplotlib_get_dict(*args, **kwargs)
 
@@ -882,8 +882,9 @@ class BandsData(KpointsData):
         For the possible parameters, see documentation of
         :py:meth:`~aiida.orm.data.array.bands.BandsData._matplotlib_get_dict`
         """
-        import json
         import os
+       
+        import aiida.utils.json as json
 
         all_data = self._matplotlib_get_dict(*args, main_file_name=main_file_name, **kwargs)
 
@@ -1017,11 +1018,12 @@ class BandsData(KpointsData):
         For the possible parameters, see documentation of
         :py:meth:`~aiida.orm.data.array.bands.BandsData._matplotlib_get_dict`
         """
-        import json
         import os
         import tempfile
         import subprocess
         import sys
+
+        import aiida.utils.json as json
 
         all_data = self._matplotlib_get_dict(*args, **kwargs)
 
@@ -1280,8 +1282,8 @@ class BandsData(KpointsData):
         :param comments: if True, print comments (if it makes sense for the given
             format)
         """
-        import json
         from aiida import get_file_header
+        import aiida.utils.json as json
 
         json_dict = self._get_band_segments(cartesian=True)
         json_dict['original_uuid'] = self.uuid

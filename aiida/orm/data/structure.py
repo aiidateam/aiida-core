@@ -1042,7 +1042,8 @@ class StructureData(Data):
         """
         import numpy as np
         from itertools import product
-        import json
+        
+        import aiida.utils.json as json
 
         supercell_factors=[1, 1, 1]
 

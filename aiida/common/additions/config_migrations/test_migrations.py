@@ -13,7 +13,6 @@ from __future__ import absolute_import
 import io
 import os
 import uuid
-import json
 import unittest
 try:
     from unittest import mock
@@ -22,6 +21,8 @@ except ImportError:
 
 from ._utils import check_and_migrate_config
 from ._migrations import _MIGRATION_LOOKUP
+import aiida.utils.json as json
+
 
 
 def load_config_sample(filename):

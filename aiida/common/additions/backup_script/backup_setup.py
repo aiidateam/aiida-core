@@ -12,7 +12,6 @@ from __future__ import print_function
 from __future__ import absolute_import
 import datetime
 import io
-import json
 import logging
 import os
 import shutil
@@ -28,6 +27,7 @@ from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.common import utils
 from aiida.common.additions.backup_script.backup_base import AbstractBackup, BackupError
 from aiida.common.setup import AIIDA_CONFIG_FOLDER
+import aiida.utils.json as json
 
 if not is_dbenv_loaded():
     load_dbenv()
@@ -221,8 +221,8 @@ class BackupSetup(object):
             backup_variables = self.construct_backup_variables(
                 file_backup_folder_abs)
 
-            with io.open(final_conf_filepath, 'w', encoding='utf8') as backup_info_file:
-                backup_info_file.write(six.text_type(json.dumps(backup_variables, ensure_ascii=False)))
+            with io.open(final_conf_filepath, 'wb') as backup_info_file:
+                json.dump(backup_variables, backup_info_file)
         # If the backup parameters are configured manually
         else:
             sys.stdout.write(

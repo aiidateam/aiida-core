@@ -13,14 +13,13 @@ from __future__ import print_function
 from __future__ import absolute_import
 import copy
 import enum
-import json
 import os
 
 from six.moves import range
 import requests
 
 from aiida.tools.dbimporters.baseclasses import CifEntry, DbEntry, DbImporter, DbSearchResults
-
+import aiida.utils.json as json
 
 
 class ApiFormat(enum.Enum):

@@ -11,18 +11,18 @@ from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
 import io
-import json
 import datetime
 import shutil
 import os
 import logging
 
 from abc import abstractmethod, ABCMeta
-
 import six
 from dateutil.parser import parse
-from aiida.utils import timezone as dtimezone
 from pytz import timezone as ptimezone
+
+from aiida.utils import timezone as dtimezone
+import aiida.utils.json as json
 
 
 @six.add_metaclass(ABCMeta)
@@ -258,8 +258,8 @@ class AbstractBackup(object):
         given filename.
         """
         backup_variables = self._dictionarize_backup_info()
-        with io.open(backup_info_file_name, 'w', encoding='utf8') as backup_info_file:
-            backup_info_file.write(six.text_type(json.dumps(backup_variables, ensure_ascii=False)))
+        with io.open(backup_info_file_name, 'wb') as backup_info_file:
+            json.dump(backup_variables, backup_info_file)
 
     def _find_files_to_backup(self):
         """

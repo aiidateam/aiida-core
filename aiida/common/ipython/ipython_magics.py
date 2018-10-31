@@ -36,11 +36,12 @@ Usage
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import json
+
 import IPython
 import six
 from IPython.core.magic import magics_class, line_magic, Magics, needs_local_scope
 
+import aiida.utils.json as json
 
 def add_to_ns(local_ns, name, obj):
     """

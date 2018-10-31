@@ -12,7 +12,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import io
-import json
 import shutil
 import tempfile
 import os
@@ -21,7 +20,7 @@ from aiida.common import utils
 from aiida.common.additions.backup_script import backup_setup
 from aiida.common.additions.backup_script.backup_base import AbstractBackup
 from aiida.backends.testbase import AiidaTestCase
-
+import aiida.utils.json as json
 
 
 class TestBackupSetupScriptUnit(AiidaTestCase):

@@ -580,7 +580,7 @@ def _collect_files(base, path=''):
         files = []
         files.append(get_dict(name=path, full_path=os.path.join(base, path)))
 
-        import json
+        import aiida.utils.json as json
         with open(os.path.join(base,path)) as f:
             calcinfo = json.load(f)
         if 'local_copy_list' in calcinfo:
@@ -678,8 +678,10 @@ def _collect_tags(node, calc,parameters=None,
     and prepare it to be saved in TCOD CIF.
     """
     from aiida.common.links import LinkType
-    import os, json
+    import os 
     import aiida
+    import aiida.utils.json as json
+
     tags = { '_audit_creation_method': "AiiDA version {}".format(aiida.__version__) }
 
     # Recording the dictionaries (if any)
@@ -738,10 +740,10 @@ def _collect_tags(node, calc,parameters=None,
     # Creating importable AiiDA database dump in CIF tags
 
     if dump_aiida_database and node.is_stored:
-        import json
         from aiida.common.exceptions import LicensingException
         from aiida.common.folders import SandboxFolder
         from aiida.orm.importexport import export_tree
+        import aiida.utils.json as json
 
         with SandboxFolder() as folder:
             try:

@@ -185,9 +185,9 @@ def calculation_logshow(calculations):
 @decorators.with_dbenv()
 def calculation_plugins(entry_point):
     """Print a list of registered calculation plugins or details of a specific calculation plugin."""
-    import json
     from aiida.common.exceptions import LoadingPluginFailed, MissingPluginError
     from aiida.plugins.entry_point import get_entry_point_names, load_entry_point
+    import aiida.utils.json as json
 
     if entry_point:
         try:

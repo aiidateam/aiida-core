@@ -14,7 +14,8 @@ import io
 import os
 import uuid
 import logging
-import json
+import aiida.utils.json as json
+
 
 import six
 from six.moves import input
@@ -100,9 +101,9 @@ def _load_config():
     """
     Return the current configurations, without checking their version.
     """
-    import json
     from aiida.common.exceptions import MissingConfigurationError
     from aiida.backends.settings import IN_RT_DOC_MODE, DUMMY_CONF_FILE
+    import aiida.utils.json as json
 
     if IN_RT_DOC_MODE:
         return DUMMY_CONF_FILE
@@ -136,14 +137,14 @@ def store_config(confs):
     from aiida.backends.settings import IN_RT_DOC_MODE
     if IN_RT_DOC_MODE:
         return
+    import aiida.utils.json as json
 
-    import json
     aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
     conf_file = os.path.join(aiida_dir, CONFIG_FNAME)
     old_umask = os.umask(DEFAULT_UMASK)
     try:
-        with io.open(conf_file, 'w', encoding='utf8') as json_file:
-            json_file.write(six.text_type(json.dumps(confs, indent=CONFIG_INDENT_SIZE, ensure_ascii=False)))
+        with io.open(conf_file, 'wb') as json_file:
+            json.dump(confs, json_file, indent=CONFIG_INDENT_SIZE)
     finally:
         os.umask(old_umask)
 

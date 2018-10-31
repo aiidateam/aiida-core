@@ -13,7 +13,6 @@ from __future__ import print_function
 
 import contextlib
 import io
-import json
 import os
 import tarfile
 import sys
@@ -24,6 +23,7 @@ from six.moves import range
 
 from aiida.common.exceptions import ContentNotExistent, InvalidOperation
 from aiida.common.folders import SandboxFolder
+import aiida.utils.json as json
 
 
 class Archive(object):
@@ -235,8 +235,8 @@ class Archive(object):
         :param filename: the filename relative to the sandbox folder
         :return: a dictionary with the loaded JSON content
         """
-        with open(self.folder.get_abs_path(filename), 'r') as handle:
-            return json.load(handle)
+        with io.open(self.folder.get_abs_path(filename), 'r', encoding='utf8') as fhandle:
+            return json.load(fhandle)
 
 
 def extract_zip(infile, folder, nodes_export_subfolder="nodes", silent=False):

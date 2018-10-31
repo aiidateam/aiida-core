@@ -14,7 +14,6 @@ Unittests for REST API
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import json
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
@@ -24,6 +23,7 @@ from aiida.orm.computer import Computer
 from aiida.orm.data import Data
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.restapi.api import App, AiidaApi
+import aiida.utils.json as json
 
 StructureData = DataFactory('structure')  # pylint: disable=invalid-name
 CifData = DataFactory('cif')  # pylint: disable=invalid-name

@@ -20,6 +20,8 @@ import shutil
 import socket
 import tempfile
 
+import six
+
 from aiida.common.profile import get_profile
 from aiida.common.setup import get_property
 from aiida.utils.which import which
@@ -29,7 +31,7 @@ VERDI_BIN = which('verdi')
 VIRTUALENV = os.environ.get('VIRTUAL_ENV', None)
 
 
-class ControllerProtocol(enum.Enum):
+class ControllerProtocol(enum.Enum):  #pylint: disable=too-few-public-methods
     """
     The protocol to use to for the controller of the Circus daemon
     """
@@ -51,7 +53,7 @@ def get_daemon_client(profile_name=None):
     return DaemonClient(get_profile(profile_name))
 
 
-class DaemonClient(object):
+class DaemonClient(object):  #pylint: disable=too-many-public-methods
     """
     Extension of the Profile which also provides handles to retrieve profile specific
     properties related to the daemon client
@@ -71,8 +73,8 @@ class DaemonClient(object):
         :param profile: the profile instance :class:`aiida.common.profile.Profile`
         """
         self._profile = profile
-        self._SOCKET_DIRECTORY = None
-        self._DAEMON_TIMEOUT = get_property('daemon.timeout')
+        self._SOCKET_DIRECTORY = None  #pylint: disable=invalid-name
+        self._DAEMON_TIMEOUT = get_property('daemon.timeout')  #pylint: disable=invalid-name
 
     @property
     def profile(self):
@@ -93,7 +95,7 @@ class DaemonClient(object):
         from aiida.common.exceptions import ConfigurationError
         if VERDI_BIN is None:
             raise ConfigurationError("Unable to find 'verdi' in the path. Make sure that you are working "
-                "in a virtual environment, or that at least the 'verdi' executable is on the PATH")
+                                     "in a virtual environment, or that at least the 'verdi' executable is on the PATH")
         return '{} -p {} devel run_daemon'.format(VERDI_BIN, self.profile.name)
 
     @property
@@ -178,14 +180,14 @@ class DaemonClient(object):
         else:
 
             # The SOCKET_DIRECTORY is already set, a temporary directory was already created and the same should be used
-            if self._socket_directory is not None:
-                return self._socket_directory
+            if self._SOCKET_DIRECTORY is not None:
+                return self._SOCKET_DIRECTORY
 
             socket_dir_path = tempfile.mkdtemp()
             with io.open(self.circus_socket_file, 'w', encoding='utf8') as fhandle:
                 fhandle.write(six.text_type(socket_dir_path))
 
-            self._socket_directory = socket_dir_path
+            self._SOCKET_DIRECTORY = socket_dir_path
             return socket_dir_path
 
     def get_daemon_pid(self):
@@ -325,7 +327,7 @@ class DaemonClient(object):
         :return: CircucClient instance
         """
         from circus.client import CircusClient
-        return CircusClient(endpoint=self.get_controller_endpoint(), timeout=self._daemon_timeout)
+        return CircusClient(endpoint=self.get_controller_endpoint(), timeout=self._DAEMON_TIMEOUT)
 
     def call_client(self, command):
         """

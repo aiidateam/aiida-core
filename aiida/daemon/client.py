@@ -14,16 +14,16 @@ import enum
 import os
 import shutil
 import socket
-import sys
 import tempfile
 
-from aiida.common.profile import ProfileConfig
+from aiida.common.profile import get_profile
 from aiida.common.setup import get_property
 from aiida.utils.which import which
 
 VERDI_BIN = which('verdi')
 # Recent versions of virtualenv create the environment variable VIRTUAL_ENV
 VIRTUALENV = os.environ.get('VIRTUAL_ENV', None)
+
 
 class ControllerProtocol(enum.Enum):
     """
@@ -34,9 +34,22 @@ class ControllerProtocol(enum.Enum):
     TCP = 1
 
 
-class DaemonClient(ProfileConfig):
+def get_daemon_client(profile_name=None):
     """
-    Extension of the ProfileConfig which also provides handles to retrieve profile specific
+    Return the daemon client for the given profile or the default profile if not specified.
+
+    :param profile_name: the profile name, will use the default profile if None
+    :return: the daemon client
+    :rtype: :class:`aiida.daemon.client.DaemonClient`
+    :raises MissingConfigurationError: if the configuration file cannot be found
+    :raises ProfileConfigurationError: if the name is not found in the configuration file
+    """
+    return DaemonClient(get_profile(profile_name))
+
+
+class DaemonClient(object):
+    """
+    Extension of the Profile which also provides handles to retrieve profile specific
     properties related to the daemon client
     """
 
@@ -47,18 +60,26 @@ class DaemonClient(ProfileConfig):
     _DEFAULT_LOGLEVEL = 'INFO'
     _ENDPOINT_PROTOCOL = ControllerProtocol.IPC
 
+    def __init__(self, profile):
+        """
+        Construct a DaemonClient instance for a given profile
 
-    def __init__(self, profile_name=None):
-        super(DaemonClient, self).__init__(profile_name)
+        :param profile: the profile instance :class:`aiida.common.profile.Profile`
+        """
+        self._profile = profile
         self._SOCKET_DIRECTORY = None
         self._DAEMON_TIMEOUT = get_property('daemon.timeout')
+
+    @property
+    def profile(self):
+        return self._profile
 
     @property
     def daemon_name(self):
         """
         Get the daemon name which is tied to the profile name
         """
-        return self._DAEMON_NAME.format(name=self.profile_name)
+        return self._DAEMON_NAME.format(name=self.profile.name)
 
     @property
     def cmd_string(self):
@@ -69,7 +90,7 @@ class DaemonClient(ProfileConfig):
         if VERDI_BIN is None:
             raise ConfigurationError("Unable to find 'verdi' in the path. Make sure that you are working "
                 "in a virtual environment, or that at least the 'verdi' executable is on the PATH")
-        return '{} -p {} devel run_daemon'.format(VERDI_BIN, self.profile_name)
+        return '{} -p {} devel run_daemon'.format(VERDI_BIN, self.profile.name)
 
     @property
     def loglevel(self):
@@ -81,35 +102,35 @@ class DaemonClient(ProfileConfig):
 
     @property
     def circus_log_file(self):
-        return self.filepaths['circus']['log']
+        return self.profile.filepaths['circus']['log']
 
     @property
     def circus_pid_file(self):
-        return self.filepaths['circus']['pid']
+        return self.profile.filepaths['circus']['pid']
 
     @property
     def circus_port_file(self):
-        return self.filepaths['circus']['port']
+        return self.profile.filepaths['circus']['port']
 
     @property
     def circus_socket_file(self):
-        return self.filepaths['circus']['socket']['file']
+        return self.profile.filepaths['circus']['socket']['file']
 
     @property
     def circus_socket_endpoints(self):
-        return self.filepaths['circus']['socket']
+        return self.profile.filepaths['circus']['socket']
 
     @property
     def daemon_log_file(self):
-        return self.filepaths['daemon']['log']
+        return self.profile.filepaths['daemon']['log']
 
     @property
     def daemon_pid_file(self):
-        return self.filepaths['daemon']['pid']
+        return self.profile.filepaths['daemon']['pid']
 
     def get_circus_port(self):
         """
-        Retrieve the port for the circus controller, which should be written to the circus port file. If the 
+        Retrieve the port for the circus controller, which should be written to the circus port file. If the
         daemon is running, the port file should exist and contain the port to which the controller is connected.
         If it cannot be read, a RuntimeError will be thrown. If the daemon is not running, an available port
         will be requested from the operating system, written to the port file and returned
@@ -221,7 +242,7 @@ class DaemonClient(ProfileConfig):
         """
         if self._ENDPOINT_PROTOCOL == ControllerProtocol.IPC:
             endpoint = self.get_ipc_endpoint('controller')
-        elif  self._ENDPOINT_PROTOCOL == ControllerProtocol.TCP:
+        elif self._ENDPOINT_PROTOCOL == ControllerProtocol.TCP:
             endpoint = self.get_tcp_endpoint(self.get_circus_port())
         else:
             raise ValueError('invalid controller protocol {}'.format(self._ENDPOINT_PROTOCOL))
@@ -237,7 +258,7 @@ class DaemonClient(ProfileConfig):
         """
         if self._ENDPOINT_PROTOCOL == ControllerProtocol.IPC:
             endpoint = self.get_ipc_endpoint('pubsub')
-        elif  self._ENDPOINT_PROTOCOL == ControllerProtocol.TCP:
+        elif self._ENDPOINT_PROTOCOL == ControllerProtocol.TCP:
             endpoint = self.get_tcp_endpoint()
         else:
             raise ValueError('invalid controller protocol {}'.format(self._ENDPOINT_PROTOCOL))
@@ -253,7 +274,7 @@ class DaemonClient(ProfileConfig):
         """
         if self._ENDPOINT_PROTOCOL == ControllerProtocol.IPC:
             endpoint = self.get_ipc_endpoint('stats')
-        elif  self._ENDPOINT_PROTOCOL == ControllerProtocol.TCP:
+        elif self._ENDPOINT_PROTOCOL == ControllerProtocol.TCP:
             endpoint = self.get_tcp_endpoint()
         else:
             raise ValueError('invalid controller protocol {}'.format(self._ENDPOINT_PROTOCOL))

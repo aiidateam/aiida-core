@@ -55,12 +55,12 @@ def print_last_process_state_change(process_type=None):
         Valid process types are either 'calculation' or 'work'.
     """
     from aiida.cmdline.utils.echo import echo_info, echo_warning
-    from aiida.daemon.client import DaemonClient
+    from aiida.daemon.client import get_daemon_client
     from aiida.utils import timezone
     from aiida.common.utils import str_timedelta
     from aiida.work.utils import get_process_state_change_timestamp
 
-    client = DaemonClient()
+    client = get_daemon_client()
 
     timestamp = get_process_state_change_timestamp(process_type)
 

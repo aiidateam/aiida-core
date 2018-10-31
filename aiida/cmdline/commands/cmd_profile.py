@@ -64,7 +64,7 @@ def profile_show(profile):
     import tabulate
 
     headers = ('Attribute', 'Value')
-    data = sorted([(k.lower(), v) for k, v in profile.items()])
+    data = sorted([(k.lower(), v) for k, v in profile.config.items()])
     echo.echo(tabulate.tabulate(data, headers=headers))
 
 

@@ -12,7 +12,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 import zmq
 from aiida.backends.testbase import AiidaTestCase
-from aiida.daemon.client import DaemonClient
+from aiida.daemon.client import get_daemon_client
 
 
 class TestBackendLog(AiidaTestCase):
@@ -27,7 +27,7 @@ class TestBackendLog(AiidaTestCase):
 
         See issue #1317 and pull request #1403 for the discussion
         """
-        daemon_client = DaemonClient()
+        daemon_client = get_daemon_client()
 
         controller_endpoint = daemon_client.get_controller_endpoint()
         pubsub_endpoint = daemon_client.get_pubsub_endpoint()

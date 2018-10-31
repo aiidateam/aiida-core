@@ -21,21 +21,15 @@ class ProfileParamType(click.ParamType):
 
     def convert(self, value, param, ctx):
         """Attempt to match the given value to a valid profile."""
-        from aiida.common.exceptions import MissingConfigurationError
-        from aiida.common.profile import Profile
-        from aiida.common.setup import get_config
+        from aiida.common.exceptions import MissingConfigurationError, ProfileConfigurationError
+        from aiida.common.profile import get_profile
 
         try:
-            profiles = get_config()
-        except MissingConfigurationError:
-            self.fail('could not load the configuration file')
+            profile = get_profile(name=value)
+        except (MissingConfigurationError, ProfileConfigurationError) as exception:
+            self.fail(str(exception))
 
-        try:
-            profile = profiles['profiles'][value]
-        except KeyError:
-            self.fail('invalid profile name {}'.format(value))
-
-        return Profile(name=value, **profile)
+        return profile
 
     def complete(self, ctx, incomplete):  # pylint: disable=unused-argument,no-self-use
         """

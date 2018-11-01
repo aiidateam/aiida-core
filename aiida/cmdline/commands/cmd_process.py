@@ -69,11 +69,9 @@ def process_list(all_entries, process_state, exit_status, failed, past_days, lim
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_kill(processes, timeout, wait):
     """Kill running processes."""
-    from aiida.work import create_communicator, create_controller
+    from aiida.work.utils import get_process_controller
 
-    with create_communicator() as communicator:
-
-        controller = create_controller(communicator=communicator)
+    with get_process_controller() as controller:
 
         futures = {}
 
@@ -100,13 +98,10 @@ def process_kill(processes, timeout, wait):
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_pause(processes, timeout, wait):
     """Pause running processes."""
-    from aiida.work import create_communicator, create_controller
+    from aiida.work.utils import get_process_controller
 
-    with create_communicator() as communicator:
+    with get_process_controller() as controller:
 
-        controller = create_controller(communicator=communicator)
-
-        # Keep track of the relation between the future and process
         futures = {}
 
         for process in processes:
@@ -132,11 +127,10 @@ def process_pause(processes, timeout, wait):
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_play(processes, timeout, wait):
     """Play paused processes."""
-    from aiida.work import create_communicator, create_controller
+    from aiida.work.utils import get_process_controller
 
-    with create_communicator() as communicator:
+    with get_process_controller() as controller:
 
-        controller = create_controller(communicator=communicator)
         futures = {}
 
         for process in processes:
@@ -158,7 +152,7 @@ def process_play(processes, timeout, wait):
 def process_watch(processes):
     """Watch the state transitions for a process."""
     from kiwipy import BroadcastFilter
-    from aiida.work.rmq import create_communicator
+    from aiida.work.communication.communicators import create_communicator
     import concurrent.futures
 
     def _print(body, sender, subject, correlation_id):

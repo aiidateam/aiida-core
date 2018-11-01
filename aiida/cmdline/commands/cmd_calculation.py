@@ -358,14 +358,13 @@ def calculation_outputls(calculation, path, color):
 def calculation_kill(calculations, force):
     """Kill one or multiple running calculations."""
     from aiida import work
+    from aiida.work.utils import get_process_controller
 
     if not force:
         warning = 'Are you sure you want to kill {} calculations?'.format(len(calculations))
         click.confirm(warning, abort=True)
 
-    with work.create_communicator() as communicator:
-
-        controller = work.create_controller(communicator=communicator)
+    with get_process_controller() as controller:
 
         futures = []
         for calculation in calculations:

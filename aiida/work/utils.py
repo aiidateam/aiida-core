@@ -31,6 +31,23 @@ PROCESS_STATE_CHANGE_DESCRIPTION = 'The last time a process of type {}, changed 
 PROCESS_CALC_TYPES = (WorkCalculation, FunctionCalculation)
 
 
+@contextlib.contextmanager
+def get_process_controller():
+    """
+    Context manager to create a process controller with the default communicator, that will be stopped at closing
+
+    :return: process controller
+    """
+    from aiida.work.communication import communicators, controllers
+
+    try:
+        communicator = communicators.create_communicator()
+        controller = controllers.create_controller(communicator)
+        yield controller
+    finally:
+        communicator.stop()
+
+
 class InterruptableFuture(concurrent.Future):
     """A future that can be interrupted by calling `interrupt`."""
 

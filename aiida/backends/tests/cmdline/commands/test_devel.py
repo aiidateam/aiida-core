@@ -70,7 +70,7 @@ class TestVerdiDevel(AiidaTestCase):
             shutil.rmtree(cls._new_aiida_config_folder)
 
     def setUp(self):
-        self.runner = CliRunner()
+        self.cli_runner = CliRunner()
 
     def tearDown(self):
         """Delete any properties that were set."""
@@ -80,7 +80,7 @@ class TestVerdiDevel(AiidaTestCase):
 
     def test_describe_properties(self):
         """Test the `verdi devel describeproperties` command"""
-        result = self.runner.invoke(cmd_devel.devel_describeproperties, [])
+        result = self.cli_runner.invoke(cmd_devel.devel_describeproperties, [])
 
         self.assertIsNone(result.exception)
         self.assertTrue(len(get_result_lines(result)) > 0)
@@ -93,7 +93,7 @@ class TestVerdiDevel(AiidaTestCase):
 
         # Since dummy configuration does not have explicit properties set, with default options the result is empty
         options = []
-        result = self.runner.invoke(cmd_devel.devel_listproperties, options)
+        result = self.cli_runner.invoke(cmd_devel.devel_listproperties, options)
         self.assertIsNone(result.exception)
         self.assertTrue(len(get_result_lines(result)) == 0)
 
@@ -101,7 +101,7 @@ class TestVerdiDevel(AiidaTestCase):
         for flag in ['-a', '--all']:
 
             options = [flag]
-            result = self.runner.invoke(cmd_devel.devel_listproperties, options)
+            result = self.cli_runner.invoke(cmd_devel.devel_listproperties, options)
             self.assertIsNone(result.exception)
             self.assertTrue(len(get_result_lines(result)) > 0)
 
@@ -115,7 +115,7 @@ class TestVerdiDevel(AiidaTestCase):
 
         for property_value in property_values:
             options = [property_name, str(property_value)]
-            result = self.runner.invoke(cmd_devel.devel_setproperty, options)
+            result = self.cli_runner.invoke(cmd_devel.devel_setproperty, options)
 
             self.assertIsNone(result.exception)
             self.assertEquals(get_property(property_name), property_value)
@@ -126,10 +126,10 @@ class TestVerdiDevel(AiidaTestCase):
         property_value = 30
 
         options = [property_name, str(property_value)]
-        result = self.runner.invoke(cmd_devel.devel_setproperty, options)
+        result = self.cli_runner.invoke(cmd_devel.devel_setproperty, options)
 
         options = [property_name]
-        result = self.runner.invoke(cmd_devel.devel_getproperty, options)
+        result = self.cli_runner.invoke(cmd_devel.devel_getproperty, options)
         self.assertIsNone(result.exception)
         self.assertEquals(str(property_value), result.output.strip())
 
@@ -139,10 +139,10 @@ class TestVerdiDevel(AiidaTestCase):
         property_value = 30
 
         options = [property_name, str(property_value)]
-        result = self.runner.invoke(cmd_devel.devel_setproperty, options)
+        result = self.cli_runner.invoke(cmd_devel.devel_setproperty, options)
 
         options = [property_name]
-        result = self.runner.invoke(cmd_devel.devel_delproperty, options)
+        result = self.cli_runner.invoke(cmd_devel.devel_delproperty, options)
         self.assertIsNone(result.exception)
         self.assertIn(property_name, result.output.strip())
         self.assertFalse(exists_property(property_name))

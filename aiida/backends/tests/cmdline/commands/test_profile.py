@@ -82,7 +82,7 @@ class TestVerdiProfileSetup(AiidaTestCase):
         """
         Create runner object to run tests
         """
-        self.runner = CliRunner()
+        self.cli_runner = CliRunner()
 
     def test_help(self):
         """
@@ -91,15 +91,15 @@ class TestVerdiProfileSetup(AiidaTestCase):
         options = ["--help"]
         from aiida.cmdline.commands.cmd_profile import (profile_list, profile_setdefault, profile_delete)
 
-        result = self.runner.invoke(profile_list, options)
+        result = self.cli_runner.invoke(profile_list, options)
         self.assertIsNone(result.exception)
         self.assertIn('Usage', result.output)
 
-        result = self.runner.invoke(profile_setdefault, options)
+        result = self.cli_runner.invoke(profile_setdefault, options)
         self.assertIsNone(result.exception)
         self.assertIn('Usage', result.output)
 
-        result = self.runner.invoke(profile_delete, options)
+        result = self.cli_runner.invoke(profile_delete, options)
         self.assertIsNone(result.exception)
         self.assertIn('Usage', result.output)
 
@@ -108,7 +108,7 @@ class TestVerdiProfileSetup(AiidaTestCase):
         Test for verdi profile list command
         """
         from aiida.cmdline.commands.cmd_profile import profile_list
-        result = self.runner.invoke(profile_list)
+        result = self.cli_runner.invoke(profile_list)
         self.assertIsNone(result.exception)
         self.assertIn('configuration folder: ' + self._new_aiida_config_folder, result.output)
         self.assertIn('* {}'.format(self.dummy_profile_list[0]), result.output)
@@ -119,11 +119,11 @@ class TestVerdiProfileSetup(AiidaTestCase):
         Test for verdi profile setdefault command
         """
         from aiida.cmdline.commands.cmd_profile import profile_setdefault
-        result = self.runner.invoke(profile_setdefault, [self.dummy_profile_list[1]])
+        result = self.cli_runner.invoke(profile_setdefault, [self.dummy_profile_list[1]])
         self.assertIsNone(result.exception)
 
         from aiida.cmdline.commands.cmd_profile import profile_list
-        result = self.runner.invoke(profile_list)
+        result = self.cli_runner.invoke(profile_list)
 
         self.assertIsNone(result.exception)
         self.assertIn('configuration folder: ' + self._new_aiida_config_folder, result.output)
@@ -142,7 +142,7 @@ class TestVerdiProfileSetup(AiidaTestCase):
         profile_name = self.dummy_profile_list[0]
         profile = profiles[profile_name]
 
-        result = self.runner.invoke(profile_show, [profile_name])
+        result = self.cli_runner.invoke(profile_show, [profile_name])
         self.assertIsNone(result.exception, result.output)
         for key, value in profile.items():
             self.assertIn(key.lower(), result.output)
@@ -155,20 +155,21 @@ class TestVerdiProfileSetup(AiidaTestCase):
         from aiida.cmdline.commands.cmd_profile import profile_delete, profile_list
 
         # delete single profile
-        result = self.runner.invoke(profile_delete, ["--force", self.dummy_profile_list[2]])
+        result = self.cli_runner.invoke(profile_delete, ["--force", self.dummy_profile_list[2]])
         self.assertIsNone(result.exception)
 
-        result = self.runner.invoke(profile_list)
+        result = self.cli_runner.invoke(profile_list)
         self.assertIsNone(result.exception)
 
         self.assertNotIn(self.dummy_profile_list[2], result.output)
         self.assertIsNone(result.exception)
 
         # delete multiple profile
-        result = self.runner.invoke(profile_delete, ["--force", self.dummy_profile_list[3], self.dummy_profile_list[4]])
+        result = self.cli_runner.invoke(profile_delete,
+                                        ["--force", self.dummy_profile_list[3], self.dummy_profile_list[4]])
         self.assertIsNone(result.exception)
 
-        result = self.runner.invoke(profile_list)
+        result = self.cli_runner.invoke(profile_list)
         self.assertIsNone(result.exception)
         self.assertNotIn(self.dummy_profile_list[3], result.output)
         self.assertNotIn(self.dummy_profile_list[4], result.output)

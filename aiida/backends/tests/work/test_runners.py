@@ -15,9 +15,9 @@ import plumpy
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida import work
-from aiida.workflows.wf_demo import WorkflowDemo
 from aiida.daemon.workflowmanager import execute_steps
-from . import utils
+from aiida.work import runners
+from aiida.workflows.wf_demo import WorkflowDemo
 
 
 class Proc(work.Process):
@@ -30,13 +30,15 @@ def the_hans_klok_comeback(loop):
 
 
 class TestWorkchain(AiidaTestCase):
+
     def setUp(self):
         super(TestWorkchain, self).setUp()
-        self.runner = utils.create_test_runner()
+        self.runner = runners.get_runner()
 
     def tearDown(self):
+        super(TestWorkchain, self).tearDown()
         self.runner.close()
-        self._runner = None
+        runners.set_runner(None)
 
     def test_call_on_calculation_finish(self):
         loop = self.runner.loop
@@ -82,15 +84,3 @@ class TestWorkchain(AiidaTestCase):
         loop = self.runner.loop
         loop.call_later(seconds, the_hans_klok_comeback, self.runner.loop)
         loop.start()
-
-
-class TestRunner(AiidaTestCase):
-    def setUp(self):
-        super(TestWorkchain, self).setUp()
-        self.runner = work.runners.new_runner(rmq_submit=True)
-
-    def tearDown(self):
-        super(TestWorkchain, self).tearDown()
-        self.runner.close()
-        self.runner = None
-        work.runners.set_runner(None)

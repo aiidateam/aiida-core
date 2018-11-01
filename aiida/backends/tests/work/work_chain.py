@@ -31,8 +31,7 @@ from aiida import work
 from aiida.work import ExitCode, Process
 from aiida.work.persistence import ObjectLoader
 from aiida.work.workchain import *
-
-from . import utils
+from aiida.work import runners
 
 
 def run_until_paused(proc):
@@ -308,12 +307,13 @@ class TestWorkchain(AiidaTestCase):
     def setUp(self):
         super(TestWorkchain, self).setUp()
         self.assertIsNone(Process.current())
-        self.runner = utils.create_test_runner()
+        self.runner = runners.get_runner()
 
     def tearDown(self):
         super(TestWorkchain, self).tearDown()
-        work.set_runner(None)
         self.assertIsNone(Process.current())
+        self.runner.close()
+        runners.set_runner(None)
 
     def test_run(self):
         A = Str('A')
@@ -640,7 +640,7 @@ class TestWorkchain(AiidaTestCase):
 
     def test_persisting(self):
         persister = plumpy.test_utils.TestPersister()
-        runner = work.new_runner(persister=persister)
+        runner = runners.create_runner(persister=persister)
         workchain = Wf(runner=runner)
         work.run(workchain)
 
@@ -722,18 +722,18 @@ class TestWorkchain(AiidaTestCase):
         proc = run_and_check_success(wf_class, **inputs)
         return proc.finished_steps
 
+
 class TestWorkchainWithOldWorkflows(AiidaTestCase):
     def setUp(self):
         super(TestWorkchainWithOldWorkflows, self).setUp()
         self.assertIsNone(Process.current())
-        self.runner = utils.create_test_runner()
+        self.runner = runners.get_runner()
 
     def tearDown(self):
         super(TestWorkchainWithOldWorkflows, self).tearDown()
-        work.set_runner(None)
-        self.runner.close()
-        self.runner = None
         self.assertIsNone(Process.current())
+        self.runner.close()
+        runners.set_runner(None)
 
     def test_call_old_wf(self):
         wf = WorkflowDemo()
@@ -786,12 +786,13 @@ class TestWorkChainAbort(AiidaTestCase):
     def setUp(self):
         super(TestWorkChainAbort, self).setUp()
         self.assertIsNone(Process.current())
-        self.runner = utils.create_test_runner()
+        self.runner = runners.get_runner()
 
     def tearDown(self):
         super(TestWorkChainAbort, self).tearDown()
-        work.set_runner(None)
         self.assertIsNone(Process.current())
+        self.runner.close()
+        runners.set_runner(None)
 
     class AbortableWorkChain(WorkChain):
         @classmethod
@@ -867,12 +868,13 @@ class TestWorkChainAbortChildren(AiidaTestCase):
     def setUp(self):
         super(TestWorkChainAbortChildren, self).setUp()
         self.assertIsNone(Process.current())
-        self.runner = utils.create_test_runner(with_communicator=True)
+        self.runner = runners.get_runner()
 
     def tearDown(self):
         super(TestWorkChainAbortChildren, self).tearDown()
-        work.set_runner(None)
         self.assertIsNone(Process.current())
+        self.runner.close()
+        runners.set_runner(None)
 
     class SubWorkChain(WorkChain):
         @classmethod
@@ -965,12 +967,13 @@ class TestImmutableInputWorkchain(AiidaTestCase):
     def setUp(self):
         super(TestImmutableInputWorkchain, self).setUp()
         self.assertIsNone(Process.current())
-        self.runner = utils.create_test_runner()
+        self.runner = runners.get_runner()
 
     def tearDown(self):
         super(TestImmutableInputWorkchain, self).tearDown()
-        work.set_runner(None)
         self.assertIsNone(Process.current())
+        self.runner.close()
+        runners.set_runner(None)
 
     def test_immutable_input(self):
         """
@@ -1069,12 +1072,13 @@ class TestSerializeWorkChain(AiidaTestCase):
     def setUp(self):
         super(TestSerializeWorkChain, self).setUp()
         self.assertIsNone(Process.current())
-        self.runner = utils.create_test_runner()
+        self.runner = runners.get_runner()
 
     def tearDown(self):
         super(TestSerializeWorkChain, self).tearDown()
-        work.set_runner(None)
         self.assertIsNone(Process.current())
+        self.runner.close()
+        runners.set_runner(None)
 
     def test_serialize(self):
         """
@@ -1227,14 +1231,13 @@ class TestWorkChainExpose(AiidaTestCase):
     def setUp(self):
         super(TestWorkChainExpose, self).setUp()
         self.assertIsNone(Process.current())
-        self.runner = utils.create_test_runner()
+        self.runner = runners.get_runner()
 
     def tearDown(self):
         super(TestWorkChainExpose, self).tearDown()
-        work.set_runner(None)
-        self.runner.close()
-        self.runner = None
         self.assertIsNone(Process.current())
+        self.runner.close()
+        runners.set_runner(None)
 
     def test_expose(self):
         res = work.run(

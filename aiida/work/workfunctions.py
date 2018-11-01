@@ -54,7 +54,7 @@ def workfunction(func, calc_node_class=None):
         :param kwargs: input keyword arguments to construct the FunctionProcess
         :return: tuple of the outputs of the process and the calculation node
         """
-        runner = runners.Runner(rmq_config=None, rmq_submit=False, enable_persistence=False)
+        runner = runners.Runner(enable_persistence=False)
         inputs = process_class.create_inputs(*args, **kwargs)
 
         # Remove all the known inputs from the kwargs

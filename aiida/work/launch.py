@@ -11,23 +11,13 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
+from . import communication
 from . import processes
 from . import runners
+from . import utils
 
 __all__ = ['run', 'run_get_pid', 'run_get_node', 'submit']
-
-
-def submit(process, **inputs):
-    """
-    Submit the process with the supplied inputs to the daemon runner immediately returning control to
-    the interpreter. The return value will be the calculation node of the submitted process
-
-    :param process: the process class to submit
-    :param inputs: the inputs to be passed to the process
-    :return: the calculation node of the process
-    """
-    runner = runners.new_runner(rmq_submit=True)
-    return runner.submit(process, **inputs)
 
 
 def run(process, *args, **inputs):
@@ -43,6 +33,7 @@ def run(process, *args, **inputs):
         runner = process.runner
     else:
         runner = runners.get_runner()
+
     return runner.run(process, *args, **inputs)
 
 
@@ -59,11 +50,8 @@ def run_get_node(process, *args, **inputs):
         runner = process.runner
     else:
         runner = runners.get_runner()
+
     return runner.run_get_node(process, *args, **inputs)
-
-
-# Allow user to also use run.get_node as a convenience (one less import)
-run.get_node = run_get_node
 
 
 def run_get_pid(process, *args, **inputs):
@@ -79,4 +67,34 @@ def run_get_pid(process, *args, **inputs):
         runner = process.runner
     else:
         runner = runners.get_runner()
+
     return runner.run_get_pid(process, *args, **inputs)
+
+
+def submit(process, **inputs):
+    """
+    Submit the process with the supplied inputs to the daemon runners immediately returning control to
+    the interpreter. The return value will be the calculation node of the submitted process.
+
+    :param process: the process class to submit
+    :param inputs: the inputs to be passed to the process
+    :return: the calculation node of the process
+    """
+    assert not utils.is_workfunction(process), 'Cannot submit a workfunction'
+
+    runner = runners.get_runner()
+    controller = communication.controllers.get_controller()
+
+    process = processes.instantiate_process(runner, process, **inputs)
+    runner.persister.save_checkpoint(process)
+    process.close()
+
+    # Do not wait for the future's result, because in the case of a single worker this would cock-block itself
+    controller.continue_process(process.pid, nowait=False, no_reply=True)
+
+    return process.calc
+
+
+# Allow one to also use run.get_node and run.get_pid as a shortcut, without having to import the functions themselves
+run.get_node = run_get_node
+run.get_pid = run_get_pid

@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=cyclic-import
 """The AiiDA process class"""
 
 from __future__ import division
@@ -40,6 +41,46 @@ from aiida.work.process_builder import ProcessBuilder
 from . import utils
 
 __all__ = ['Process', 'ProcessState', 'FunctionProcess']
+
+
+def instantiate_process(runner, process, *args, **inputs):
+    """
+    Return an instance of the process with the given inputs. The function can deal with various types
+    of the `process`:
+
+        * Process instance: will simply return the instance
+        * JobCalculation class: will construct the JobProcess and instantiate it
+        * ProcessBuilder instance: will instantiate the Process from the class and inputs defined within it
+        * Process class: will instantiate with the specified inputs
+
+    If anything else is passed, a ValueError will be raised
+
+    :param process: Process instance or class, JobCalculation class or ProcessBuilder instance
+    :param inputs: the inputs for the process to be instantiated with
+    """
+    from aiida.orm.calculation.job import JobCalculation
+
+    if isinstance(process, Process):
+        assert not args
+        assert not inputs
+        assert runner is process.runner
+        return process
+
+    if isinstance(process, ProcessBuilder):
+        builder = process
+        process_class = builder.process_class
+        inputs.update(**builder)
+    elif issubclass(process, JobCalculation):
+        process_class = process.process()
+    elif issubclass(process, Process):
+        process_class = process
+    else:
+        raise ValueError('invalid process {}, needs to be Process, JobCalculation or ProcessBuilder'.format(
+            type(process)))
+
+    process = process_class(runner=runner, inputs=inputs)
+
+    return process
 
 
 @plumpy.auto_persist('_parent_pid', '_enable_persistence')
@@ -316,10 +357,6 @@ class Process(plumpy.Process):
         """
         super(Process, self).set_status(status)
         self.calc._set_process_status(status)  # pylint: disable=protected-access
-
-    def run_process(self, process, *args, **inputs):
-        with self.runner.child_runner() as runner:
-            return runner.run(process, *args, **inputs)
 
     def submit(self, process, *args, **kwargs):
         return self.runner.submit(process, *args, **kwargs)

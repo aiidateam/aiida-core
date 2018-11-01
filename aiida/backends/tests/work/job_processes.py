@@ -14,7 +14,6 @@ from __future__ import absolute_import
 
 import six
 
-from aiida import work
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.utils import classproperty
 from aiida.orm.data.int import Int
@@ -23,8 +22,6 @@ from aiida.work.persistence import ObjectLoader
 from aiida.work.job_processes import JobProcess
 from aiida.work.process_builder import JobProcessBuilder
 from aiida.work import Process
-
-from . import utils
 
 
 class AdditionalParameterCalculation(TemplatereplacerCalculation):
@@ -39,7 +36,7 @@ class AdditionalParameterCalculation(TemplatereplacerCalculation):
         retdict.update({
             'pseudo': {
                 'valid_types': Int,
-                'additional_parameter': "kind",
+                'additional_parameter': 'kind',
                 'linkname': cls._get_linkname_pseudo,
                 'docstring': (''),
             },
@@ -66,14 +63,10 @@ class TestJobProcess(AiidaTestCase):
     def setUp(self):
         super(TestJobProcess, self).setUp()
         self.assertIsNone(Process.current())
-        self.runner = utils.create_test_runner()
 
     def tearDown(self):
         super(TestJobProcess, self).tearDown()
         self.assertIsNone(Process.current())
-        self.runner.close()
-        self.runner = None
-        work.set_runner(None)
 
     def test_job_calculation_process(self):
         """Verify that JobCalculation.process returns a sub class of JobProcess with correct calculation class."""
@@ -158,14 +151,10 @@ class TestAdditionalParameterJobProcess(AiidaTestCase):
     def setUp(self):
         super(TestAdditionalParameterJobProcess, self).setUp()
         self.assertIsNone(Process.current())
-        self.runner = utils.create_test_runner()
 
     def tearDown(self):
         super(TestAdditionalParameterJobProcess, self).tearDown()
         self.assertIsNone(Process.current())
-        self.runner.close()
-        self.runner = None
-        work.set_runner(None)
 
     def test_class_loader(self):
         cl = ObjectLoader()

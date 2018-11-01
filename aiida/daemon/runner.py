@@ -17,8 +17,8 @@ from functools import partial
 
 from aiida.common.log import configure_logging
 from aiida.daemon.client import get_daemon_client
-from aiida.work.rmq import get_rmq_config
-from aiida.work import DaemonRunner, set_runner
+from aiida.work import Runner, set_runner
+from aiida.work.communication import communicators
 
 
 logger = logging.getLogger(__name__)
@@ -33,8 +33,10 @@ def start_daemon():
     daemon_client = get_daemon_client()
     configure_logging(daemon=True, daemon_log_file=daemon_client.daemon_log_file)
 
+    communicator = communicators.create_communicator()
+
     try:
-        runner = DaemonRunner(rmq_config=get_rmq_config(), rmq_submit=False)
+        runner = Runner(communicator=communicator, daemon=True)
     except Exception as exception:
         logger.exception('daemon runner failed to start')
         raise
@@ -65,7 +67,7 @@ def tick_legacy_workflows(runner, interval=DAEMON_LEGACY_WORKFLOW_INTERVAL):
     Function that will call the legacy workflow stepper and ask the runner to call the
     same function back after a certain interval, essentially polling the worklow stepper
 
-    :param runner: the DaemonRunner instance to perform the callback
+    :param runner: the Runner instance to perform the callback
     :param interval: the number of seconds to wait between callbacks
     """
     logger.debug('Ticking the legacy workflows')

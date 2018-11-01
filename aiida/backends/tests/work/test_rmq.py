@@ -10,7 +10,6 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import uuid
 import datetime
 
 import plumpy
@@ -18,7 +17,8 @@ from tornado import gen
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.data.int import Int
-from aiida.work import runners, rmq, test_utils
+from aiida.work import runners, test_utils
+from aiida.work.communication import communicators
 
 
 class TestProcessControl(AiidaTestCase):
@@ -31,22 +31,22 @@ class TestProcessControl(AiidaTestCase):
     def setUp(self):
         super(TestProcessControl, self).setUp()
 
-        prefix = '{}.{}'.format(self.__class__.__name__, uuid.uuid4())
-        rmq_config = rmq.get_rmq_config(prefix)
+        self.communicator = communicators.create_communicator()
+        communicators.set_communicator(self.communicator)
 
         # These two need to share a common event loop otherwise the first will never send
         # the message while the daemon is running listening to intercept
-        self.runner = runners.Runner(rmq_config=rmq_config, poll_interval=0., testing_mode=True)
-        self.daemon_runner = runners.DaemonRunner(
-            rmq_config=rmq_config,
+        self.runner = runners.Runner(communicator=self.communicator)
+        self.daemon_runner = runners.Runner(
+            communicator=self.communicator,
             rmq_submit=True,
-            poll_interval=0.,
-            loop=self.runner.loop,
-            testing_mode=True)
+            daemon=True,
+            loop=self.runner.loop,)
 
     def tearDown(self):
-        self.daemon_runner.close()
+        self.communicator.stop()
         self.runner.close()
+        self.daemon_runner.close()
         super(TestProcessControl, self).tearDown()
 
     def test_submit_simple(self):

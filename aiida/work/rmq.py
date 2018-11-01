@@ -13,10 +13,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import collections
-import functools
 
 from tornado import gen
-import kiwipy.rmq
 from kiwipy import communications
 
 import plumpy
@@ -24,10 +22,7 @@ import plumpy
 from aiida.utils import serialize
 from aiida.work.exceptions import PastException
 
-__all__ = [
-    'RemoteException', 'CommunicationTimeout', 'DeliveryFailed', 'ProcessLauncher', 'create_controller',
-    'create_communicator'
-]
+__all__ = ['RemoteException', 'CommunicationTimeout', 'DeliveryFailed', 'ProcessLauncher']
 
 RemoteException = plumpy.RemoteException
 DeliveryFailed = plumpy.DeliveryFailed
@@ -188,57 +183,3 @@ class ProcessLauncher(plumpy.ProcessLauncher):
         serialized = serialize.serialize(result)
 
         raise gen.Return(serialized)
-
-
-def create_controller(communicator=None):
-    """
-    Create a RemoteProcessThreadController
-
-    :param communicator: a :class:`~kiwipy.Communicator`
-    :return: a :class:`~plumpy.RemoteProcessThreadController` instance
-    """
-    if communicator is None:
-        communicator = create_communicator()
-
-    return plumpy.RemoteProcessThreadController(communicator=communicator)
-
-
-def create_communicator(url=None, prefix=None, task_prefetch_count=_RMQ_TASK_PREFETCH_COUNT, testing_mode=False):
-    """
-    Create a Communicator
-
-    :param prefix: optionally a specific prefix to use for the RMQ connection
-    :param testing_mode: whether to create a communicator in testing mode
-    :type testing_mode: bool
-    :return: the communicator instance
-    :rtype: :class:`kiwipy.Communicator`
-    """
-    from aiida.common.profile import get_profile
-
-    profile = get_profile()
-
-    if url is None:
-        url = get_rmq_url()
-
-    if prefix is None:
-        prefix = get_rmq_prefix()
-
-    # This needs to be here, because the verdi commands will call this function and when called in unit tests the
-    # testing_mode cannot be set.
-    if profile.is_test_profile:
-        testing_mode = True
-
-    message_exchange = get_message_exchange_name(prefix)
-    task_exchange = get_task_exchange_name(prefix)
-    task_queue = get_launch_queue_name(prefix)
-
-    return kiwipy.rmq.RmqThreadCommunicator.connect(
-        connection_params={'url': get_rmq_url()},
-        message_exchange=message_exchange,
-        encoder=functools.partial(serialize.serialize, encoding='utf-8'),
-        decoder=serialize.deserialize,
-        task_exchange=task_exchange,
-        task_queue=task_queue,
-        task_prefetch_count=task_prefetch_count,
-        testing_mode=testing_mode,
-    )

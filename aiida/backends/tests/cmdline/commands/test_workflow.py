@@ -22,10 +22,6 @@ def debug_msg(result):
     return ''.join(format_exception(*result.exc_info))
 
 
-def format_pk(workflow):
-    return '(pk: {})'.format(workflow.pk)
-
-
 def format_wf_for_list(workflow):
     return '{} {}'.format(workflow.__class__.__name__, format_pk(workflow))
 
@@ -37,7 +33,7 @@ class TestVerdiLegacyWorkflow(AiidaTestCase):
         from aiida.workflows.test import WFTestEmpty, WFTestSimpleWithSubWF
 
         super(TestVerdiLegacyWorkflow, cls).setUpClass()
-        cls.runner = CliRunner()
+        cls.cli_runner = CliRunner()
 
         cls.workflow = WFTestEmpty()
         cls.workflow.store()
@@ -51,21 +47,21 @@ class TestVerdiLegacyWorkflow(AiidaTestCase):
         cls.super_workflow.start()
 
     def test_workflow_list_default(self):
-        result = self.runner.invoke(workflow_list, [])
+        result = self.cli_runner.invoke(workflow_list, [])
         self.assertIsNone(result.exception, msg=debug_msg(result))
         self.assertIn(format_wf_for_list(self.workflow), result.output)
         self.assertIn(format_wf_for_list(self.other_workflow), result.output)
         self.assertNotIn(format_wf_for_list(self.done_workflow), result.output)
 
     def test_workflow_list_workflows(self):
-        result = self.runner.invoke(workflow_list, ['--workflows={}'.format(self.workflow.pk)])
+        result = self.cli_runner.invoke(workflow_list, ['--workflows={}'.format(self.workflow.pk)])
         self.assertIsNone(result.exception, msg=debug_msg(result))
         self.assertIn(format_wf_for_list(self.workflow), result.output)
         self.assertNotIn(format_wf_for_list(self.other_workflow), result.output)
         self.assertNotIn(format_wf_for_list(self.done_workflow), result.output)
 
     def test_workflow_list_states(self):
-        result = self.runner.invoke(workflow_list, ['--all-states'])
+        result = self.cli_runner.invoke(workflow_list, ['--all-states'])
         self.assertIsNone(result.exception, msg=debug_msg(result))
         self.assertIn(format_wf_for_list(self.workflow), result.output)
         self.assertIn(format_wf_for_list(self.other_workflow), result.output)
@@ -73,9 +69,9 @@ class TestVerdiLegacyWorkflow(AiidaTestCase):
 
     def test_workflow_list_depth(self):
         results = []
-        results.append(self.runner.invoke(workflow_list, ['--depth=0']))
-        results.append(self.runner.invoke(workflow_list, ['--depth=1']))
-        results.append(self.runner.invoke(workflow_list, ['--depth=2']))
+        results.append(self.cli_runner.invoke(workflow_list, ['--depth=0']))
+        results.append(self.cli_runner.invoke(workflow_list, ['--depth=1']))
+        results.append(self.cli_runner.invoke(workflow_list, ['--depth=2']))
 
         for result in results:
             self.assertIsNone(result.exception, msg=debug_msg(result))
@@ -84,7 +80,7 @@ class TestVerdiLegacyWorkflow(AiidaTestCase):
         self.assertTrue(len(results[1].output) < len(results[2].output))
 
     def test_workflow_report(self):
-        result = self.runner.invoke(workflow_report, [str(self.super_workflow.uuid)])
+        result = self.cli_runner.invoke(workflow_report, [str(self.super_workflow.uuid)])
         self.assertIsNone(result.exception, msg=debug_msg(result))
         self.assertIn(format_pk(self.super_workflow), result.output)
 
@@ -92,19 +88,19 @@ class TestVerdiLegacyWorkflow(AiidaTestCase):
         from aiida.workflows.test import WFTestEmpty
         running_workflow = WFTestEmpty()
         running_workflow.store()
-        result = self.runner.invoke(workflow_kill, [str(running_workflow.uuid)], input='y\n')
+        result = self.cli_runner.invoke(workflow_kill, [str(running_workflow.uuid)], input='y\n')
         self.assertIsNone(result.exception)
         self.assertNotIn('WorkflowKillError', result.output)
         self.assertNotIn('WorkflowUnkillable', result.output)
         self.assertEqual(running_workflow.get_state(), 'FINISHED')
 
         self.assertEqual(self.done_workflow.get_state(), 'FINISHED')
-        result = self.runner.invoke(workflow_kill, [str(self.done_workflow.pk)], input='y\n')
+        result = self.cli_runner.invoke(workflow_kill, [str(self.done_workflow.pk)], input='y\n')
         self.assertIsNone(result.exception)
         self.assertIn('WorkflowUnkillable', result.output)
         self.assertEqual(self.done_workflow.get_state(), 'FINISHED')
 
     def test_workflow_logshow(self):
-        result = self.runner.invoke(workflow_logshow, [str(self.super_workflow.pk)])
+        result = self.cli_runner.invoke(workflow_logshow, [str(self.super_workflow.pk)])
         self.assertIsNone(result.exception, msg=debug_msg(result))
         self.assertIn(format_pk(self.super_workflow), result.output)

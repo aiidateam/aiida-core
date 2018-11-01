@@ -620,20 +620,18 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable,
 
     def setUp(self):
         self.comp = self.computer
-        self.runner = CliRunner()
         self.this_folder = os.path.dirname(__file__)
         self.this_file = os.path.basename(__file__)
-
         self.cli_runner = CliRunner()
 
     def test_deposithelp(self):
-        res = self.runner.invoke(cmd_trajectory.trajectory_deposit, ['--help'])
+        res = self.cli_runner.invoke(cmd_trajectory.trajectory_deposit, ['--help'])
         self.assertIn(b'Usage:', res.output_bytes,
                       'The string "Usage: " was not found in the output'
                       ' of verdi data trajectory deposit --help')
 
     def test_showhelp(self):
-        res = self.runner.invoke(cmd_trajectory.trajectory_show, ['--help'])
+        res = self.cli_runner.invoke(cmd_trajectory.trajectory_show, ['--help'])
         self.assertIn(b'Usage:', res.output_bytes,
                       'The string "Usage: " was not found in the output'
                       ' of verdi data trajecotry show --help')
@@ -708,14 +706,12 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable, TestVerdiData
 
     def setUp(self):
         self.comp = self.computer
-        self.runner = CliRunner()
         self.this_folder = os.path.dirname(__file__)
         self.this_file = os.path.basename(__file__)
-
         self.cli_runner = CliRunner()
 
     def test_importhelp(self):
-        res = self.runner.invoke(cmd_structure.structure_import, ['--help'])
+        res = self.cli_runner.invoke(cmd_structure.structure_import, ['--help'])
         self.assertIn(b'Usage:', res.output_bytes,
                       'The string "Usage: " was not found in the output'
                       ' of verdi data import --help')
@@ -749,13 +745,13 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable, TestVerdiData
                           ' of verdi data structure import.')
 
     def test_showhelp(self):
-        res = self.runner.invoke(cmd_structure.structure_import, ['--help'])
+        res = self.cli_runner.invoke(cmd_structure.structure_import, ['--help'])
         self.assertIn(b'Usage:', res.output_bytes,
                       'The string "Usage: " was not found in the output'
                       ' of verdi data show --help')
 
     def test_deposithelp(self):
-        res = self.runner.invoke(cmd_structure.structure_import, ['--help'])
+        res = self.cli_runner.invoke(cmd_structure.structure_import, ['--help'])
         self.assertIn(b'Usage:', res.output_bytes,
                       'The string "Usage: " was not found in the output'
                       ' of verdi data show --help')
@@ -832,10 +828,8 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable,
     def setUp(self):
         super(TestVerdiDataCif, self).setUp()
         self.comp = self.computer
-        self.runner = CliRunner()
         self.this_folder = os.path.dirname(__file__)
         self.this_file = os.path.basename(__file__)
-
         self.cli_runner = CliRunner()
 
     def test_list(self):
@@ -904,7 +898,6 @@ class TestVerdiDataUpf(AiidaTestCase):
         self.this_folder = os.path.dirname(__file__)
         self.this_file = os.path.basename(__file__)
         self.pseudos_dir = "../../../../../examples/testdata/qepseudos/"
-
         self.cli_runner = CliRunner()
 
     def upload_family(self):

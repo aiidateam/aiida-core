@@ -10,14 +10,12 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import os
-import subprocess as sp
-import click
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 from aiida.cmdline.commands.cmd_node import node_delete, node_label, node_description, show, tree, repo_ls, repo_cat
+
 
 class TestVerdiNode(AiidaTestCase):
 
@@ -27,8 +25,7 @@ class TestVerdiNode(AiidaTestCase):
         """Sets up a few nodes to play around with."""
         from aiida.orm import Node
 
-        nodes = { key : Node().store() for key in self.node_labels }
-
+        nodes = {key: Node().store() for key in self.node_labels}
         nodes['wf'].add_link_from(nodes['in1'], link_type=LinkType.INPUT)
         nodes['slave1'].add_link_from(nodes['in1'], link_type=LinkType.INPUT)
         nodes['slave1'].add_link_from(nodes['in2'], link_type=LinkType.INPUT)
@@ -42,16 +39,16 @@ class TestVerdiNode(AiidaTestCase):
         nodes['outp4'].add_link_from(nodes['wf'], link_type=LinkType.RETURN)
         self.nodes = nodes
 
-        self.runner = CliRunner()
+        self.cli_runner = CliRunner()
 
     def test_node_delete(self):
         """Test it deletes nodes down the provenance.
-        
+
         See also backends/tests/nodes.py."""
         nodes = self.nodes
         options = [str(nodes['in1'].pk), '-v']
         user_input = '\n'.join(['Y'])
-        result = self.runner.invoke(node_delete, options, input=user_input)
+        result = self.cli_runner.invoke(node_delete, options, input=user_input)
         self.assertIsNone(result.exception)
 
         for label in ['in1', 'wf', 'slave1', 'outp1', 'outp3']:
@@ -60,17 +57,17 @@ class TestVerdiNode(AiidaTestCase):
 
     def test_node_delete_non_interactive(self):
         """Test it deletes nodes down the provenance.
-        
+
         See also backends/tests/nodes.py."""
         nodes = self.nodes
         options = [str(nodes['in1'].pk), '-v', '--non-interactive']
-        result = self.runner.invoke(node_delete, options)
+        result = self.cli_runner.invoke(node_delete, options)
         self.assertIsNone(result.exception)
 
     def test_node_show(self):
         nodes = self.nodes
         options = [str(nodes['in1'].pk), '--print-groups']
-        result = self.runner.invoke(show, options)
+        result = self.cli_runner.invoke(show, options)
         self.assertIsNone(result.exception)
 
         self.assertTrue(str(nodes['in1'].uuid) in result.output)
@@ -78,7 +75,7 @@ class TestVerdiNode(AiidaTestCase):
     def test_node_tree(self):
         nodes = self.nodes
         options = [str(nodes['in1'].pk), '-d', 3]
-        result = self.runner.invoke(tree, options)
+        result = self.cli_runner.invoke(tree, options)
         self.assertIsNone(result.exception)
 
         self.assertTrue(str(nodes['in1'].uuid) in result.output)
@@ -90,17 +87,17 @@ class TestVerdiNode(AiidaTestCase):
         label = u"my label"
         node.label = label
         node.store()
-        
+
         # read existing label
         options = [str(node.pk), '--raw']
-        result = self.runner.invoke(node_label, options)
+        result = self.cli_runner.invoke(node_label, options)
         self.assertIsNone(result.exception)
-        self.assertEquals(result.output, label+'\n')
+        self.assertEquals(result.output, label + '\n')
 
         # set new label
         new_label = "my new label"
         options = [str(node.pk), '--label', new_label, '--force']
-        result = self.runner.invoke(node_label, options)
+        result = self.cli_runner.invoke(node_label, options)
         self.assertIsNone(result.exception)
 
         from aiida.orm import load_node
@@ -112,11 +109,11 @@ class TestVerdiNode(AiidaTestCase):
         description = u"my desc\nover two lines"
         node.description = description
         node.store()
-        
+
         options = [str(node.pk), '--raw']
-        result = self.runner.invoke(node_description, options)
+        result = self.cli_runner.invoke(node_description, options)
         self.assertIsNone(result.exception)
-        self.assertEquals(result.output, description+'\n')
+        self.assertEquals(result.output, description + '\n')
 
 
 class TestVerdiNodeRepo(AiidaTestCase):
@@ -137,19 +134,19 @@ class TestVerdiNodeRepo(AiidaTestCase):
         self.node = node
         self.file_content = file_content
 
-        self.runner = CliRunner()
+        self.cli_runner = CliRunner()
 
     def test_node_repo_ls(self):
         options = [str(self.node.pk)]
-        result = self.runner.invoke(repo_ls, options)
+        result = self.cli_runner.invoke(repo_ls, options)
         self.assertIsNone(result.exception)
 
         options = [str(self.node.pk), 'non-existent-path']
-        result = self.runner.invoke(repo_ls, options)
+        result = self.cli_runner.invoke(repo_ls, options)
         self.assertIsNotNone(result.exception)
 
     def test_node_repo_cat(self):
         options = [str(self.node.pk), "path/" + self.node.filename]
-        result = self.runner.invoke(repo_cat, options)
+        result = self.cli_runner.invoke(repo_cat, options)
         self.assertIsNone(result.exception)
         self.assertEquals(self.file_content, result.output)

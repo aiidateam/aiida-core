@@ -240,8 +240,13 @@ class Folder(object):
         # go beyond the folder limits
         dest_abs_path = self.get_abs_path(filename)
 
+        # Treat the incoming src_filelike like it's UTF-8 encoded.
+        import codecs
+        utf8reader = codecs.getreader('utf8')
+        wrapped_src_filelike = utf8reader(src_filelike)
+
         with io.open(dest_abs_path, 'w', encoding='utf8') as dest_fhandle:
-            shutil.copyfileobj(src_filelike, dest_fhandle)
+            shutil.copyfileobj(wrapped_src_filelike, dest_fhandle)
 
         # Set the mode
         os.chmod(dest_abs_path, self.mode_file)

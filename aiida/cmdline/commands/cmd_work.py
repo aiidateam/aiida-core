@@ -221,11 +221,10 @@ def work_kill(calculations):
     """
     Kill work calculations
     """
-    from aiida.work import RemoteException, DeliveryFailed, CommunicationTimeout, create_communicator, create_controller
+    from aiida.work import RemoteException, DeliveryFailed, CommunicationTimeout
+    from aiida.work.utils import get_process_controller
 
-    with create_communicator() as communicator:
-
-        controller = create_controller(communicator=communicator)
+    with get_process_controller() as controller:
 
         for calculation in calculations:
 
@@ -255,11 +254,10 @@ def work_pause(calculations):
     """
     Pause running work calculations
     """
-    from aiida.work import RemoteException, DeliveryFailed, CommunicationTimeout, create_communicator, create_controller
+    from aiida.work import RemoteException, DeliveryFailed, CommunicationTimeout
+    from aiida.work.utils import get_process_controller
 
-    with create_communicator() as communicator:
-
-        controller = create_controller(communicator=communicator)
+    with get_process_controller() as controller:
 
         for calculation in calculations:
 
@@ -286,11 +284,10 @@ def work_play(calculations):
     """
     Play paused work calculations
     """
-    from aiida.work import RemoteException, DeliveryFailed, CommunicationTimeout, create_communicator, create_controller
+    from aiida.work import RemoteException, DeliveryFailed, CommunicationTimeout
+    from aiida.work.utils import get_process_controller
 
-    with create_communicator() as communicator:
-
-        controller = create_controller(communicator=communicator)
+    with get_process_controller() as controller:
 
         for calculation in calculations:
 
@@ -318,13 +315,13 @@ def work_watch(calculations):
     Watch the state transitions for work calculations
     """
     from kiwipy import BroadcastFilter
-    from aiida.work.rmq import create_communicator
+    from aiida.work.rmq import get_communicator
     import concurrent.futures
 
     def _print(body, sender, subject, correlation_id):
         echo.echo('pk={}, subject={}, body={}, correlation_id={}'.format(sender, subject, body, correlation_id))
 
-    communicator = create_communicator()
+    communicator = get_communicator()
 
     for process in calculations:
 

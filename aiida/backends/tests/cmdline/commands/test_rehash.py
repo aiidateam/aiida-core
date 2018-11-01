@@ -35,13 +35,13 @@ class TestVerdiRehash(AiidaTestCase):
         cls.node_int = Int(1).store()
 
     def setUp(self):
-        self.runner = CliRunner()
+        self.cli_runner = CliRunner()
 
     def test_rehash(self):
         """Passing no options to the command will rehash all 5 nodes."""
         expected_node_count = 5
         options = []
-        result = self.runner.invoke(cmd_rehash.rehash, options)
+        result = self.cli_runner.invoke(cmd_rehash.rehash, options)
         self.assertTrue('{} nodes'.format(expected_node_count) in result.output)
         self.assertIsNone(result.exception)
 
@@ -49,7 +49,7 @@ class TestVerdiRehash(AiidaTestCase):
         """Limiting the queryset by defining an entry point, in this case bool, should limit nodes to 2."""
         expected_node_count = 2
         options = ['-e', 'aiida.data:bool']
-        result = self.runner.invoke(cmd_rehash.rehash, options)
+        result = self.cli_runner.invoke(cmd_rehash.rehash, options)
         self.assertTrue('{} nodes'.format(expected_node_count) in result.output)
         self.assertIsNone(result.exception)
 
@@ -57,7 +57,7 @@ class TestVerdiRehash(AiidaTestCase):
         """Limiting the queryset by defining an entry point, in this case float, should limit nodes to 1."""
         expected_node_count = 1
         options = ['-e', 'aiida.data:float']
-        result = self.runner.invoke(cmd_rehash.rehash, options)
+        result = self.cli_runner.invoke(cmd_rehash.rehash, options)
         self.assertTrue('{} nodes'.format(expected_node_count) in result.output)
         self.assertIsNone(result.exception)
 
@@ -65,7 +65,7 @@ class TestVerdiRehash(AiidaTestCase):
         """Limiting the queryset by defining an entry point, in this case int, should limit nodes to 1."""
         expected_node_count = 1
         options = ['-e', 'aiida.data:int']
-        result = self.runner.invoke(cmd_rehash.rehash, options)
+        result = self.cli_runner.invoke(cmd_rehash.rehash, options)
         self.assertTrue('{} nodes'.format(expected_node_count) in result.output)
         self.assertIsNone(result.exception)
 
@@ -73,7 +73,7 @@ class TestVerdiRehash(AiidaTestCase):
         """Limiting the queryset by defining explicit identifiers, should limit nodes to 2 in this example."""
         expected_node_count = 2
         options = [str(self.node_bool_true.pk), str(self.node_float.uuid)]
-        result = self.runner.invoke(cmd_rehash.rehash, options)
+        result = self.cli_runner.invoke(cmd_rehash.rehash, options)
         self.assertTrue('{} nodes'.format(expected_node_count) in result.output)
         self.assertIsNone(result.exception)
 
@@ -81,14 +81,14 @@ class TestVerdiRehash(AiidaTestCase):
         """Limiting the queryset by defining explicit identifiers and entry point, should limit nodes to 1."""
         expected_node_count = 1
         options = ['-e', 'aiida.data:bool', str(self.node_bool_true.pk), str(self.node_float.uuid)]
-        result = self.runner.invoke(cmd_rehash.rehash, options)
+        result = self.cli_runner.invoke(cmd_rehash.rehash, options)
         self.assertTrue('{} nodes'.format(expected_node_count) in result.output)
         self.assertIsNone(result.exception)
 
     def test_rehash_entry_point_no_matches(self):
         """Limiting the queryset by defining explicit entry point, with no nodes should exit with non-zero status."""
         options = ['-e', 'aiida.data:structure']
-        result = self.runner.invoke(cmd_rehash.rehash, options)
+        result = self.cli_runner.invoke(cmd_rehash.rehash, options)
         self.assertIsNotNone(result.exception)
 
     def test_rehash_invalid_entry_point(self):
@@ -96,15 +96,15 @@ class TestVerdiRehash(AiidaTestCase):
 
         # Incorrect entry point group
         options = ['-e', 'data:structure']
-        result = self.runner.invoke(cmd_rehash.rehash, options)
+        result = self.cli_runner.invoke(cmd_rehash.rehash, options)
         self.assertIsNotNone(result.exception)
 
         # Non-existent entry point name
         options = ['-e', 'aiida.data:inexistant']
-        result = self.runner.invoke(cmd_rehash.rehash, options)
+        result = self.cli_runner.invoke(cmd_rehash.rehash, options)
         self.assertIsNotNone(result.exception)
 
         # Incorrect syntax, no colon to join entry point group and name
         options = ['-e', 'aiida.data.structure']
-        result = self.runner.invoke(cmd_rehash.rehash, options)
+        result = self.cli_runner.invoke(cmd_rehash.rehash, options)
         self.assertIsNotNone(result.exception)

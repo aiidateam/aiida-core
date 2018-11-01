@@ -86,7 +86,6 @@ class TestProcess(AiidaTestCase):
 
     def setUp(self):
         super(TestProcess, self).setUp()
-        work.runners.set_runner(None)
         self.assertIsNone(Process.current())
 
     def tearDown(self):

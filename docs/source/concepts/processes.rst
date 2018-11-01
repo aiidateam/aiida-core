@@ -7,7 +7,7 @@ Processes
 Anything that runs in AiiDA is an instance of the :py:class:`~aiida.work.processes.Process` class.
 The ``Process`` class contains all the information and logic to tell, whoever is handling it, how to run it to completion.
 Typically the one responsible for running the processes is an instance of a :py:class:`~aiida.work.runners.Runner`.
-This can be a local runner or the :py:class:`~aiida.work.runners.DaemonRunner` in case of the daemon running the process.
+This can be a local runner or one of the daemon runners in case of the daemon running the process.
 
 A good example of a process is the :py:class:`~aiida.work.workchain.WorkChain` class, which is in fact a sub class of the :py:class:`~aiida.work.processes.Process` class.
 In the :ref:`workflows and workchains section <workchains_workfunctions>` you can see how the ``WorkChain`` defines how it needs to be run.

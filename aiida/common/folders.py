@@ -239,7 +239,7 @@ class Folder(object):
         # I get the full path of the filename, checking also that I don't
         # go beyond the folder limits
         dest_abs_path = self.get_abs_path(filename)
-            
+
         with io.open(dest_abs_path, 'w', encoding='utf8') as dest_fhandle:
             shutil.copyfileobj(src_filelike, dest_fhandle)
 

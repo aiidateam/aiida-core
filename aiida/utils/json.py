@@ -9,6 +9,9 @@
 ###########################################################################
 """
 Abstracts JSON usage to ensure compatibility with Python2 and Python3.
+
+Use this module prefentially over standard json to ensure compatibility.
+Also note the conventions for using io.open for dump and dumps.
 """
 from __future__ import absolute_import
 import simplejson
@@ -33,7 +36,7 @@ def dumps(data, **kwargs):
     """
     Write JSON encoded 'data' to a string.
     simplejson is useful here as it always returns unicode if ensure_ascii=False is used,
-    unlike the standard library json.
+    unlike the standard library json, rather than being dependant on the input.
     We use also ensure_ascii=False to write unicode characters specifically
     as this improves the readability of the json and reduces the file size.
     When writing to file, use io.open(filename, 'w', encoding='utf8')

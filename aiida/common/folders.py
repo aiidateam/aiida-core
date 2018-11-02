@@ -240,13 +240,25 @@ class Folder(object):
         # go beyond the folder limits
         dest_abs_path = self.get_abs_path(filename)
 
-        # Treat the incoming src_filelike like it's UTF-8 encoded.
+        # Wrapper to decode ncoming src_filelike like it's UTF-8 encoded.
         import codecs
-        utf8reader = codecs.getreader('utf8')
-        wrapped_src_filelike = utf8reader(src_filelike)
+        utf8wrapper = codecs.getreader('utf8')
+
+        # If Py2, the incoming filelike may contain a unicode or string type.
+        # We want to write explicity with UTF8 encoding, so io.open requires
+        # a unicode type. First we try and use a UTF8 reader to decode the 
+        # incoming str type to unicode. If it is already unicode, this 
+        # will fail, so instead we try to write to file directly.
+        # In Py3 we can assume that the incoming text will be unicode.
 
         with io.open(dest_abs_path, 'w', encoding='utf8') as dest_fhandle:
-            shutil.copyfileobj(wrapped_src_filelike, dest_fhandle)
+            if six.PY2:  
+                try: 
+                    shutil.copyfileobj(utf8wrapper(src_filelike), dest_fhandle)
+                except UnicodeEncodeError as e:
+                    shutil.copyfileobj(src_filelike, dest_fhandle)
+            else:  
+                shutil.copyfileobj(src_filelike, dest_fhandle)
 
         # Set the mode
         os.chmod(dest_abs_path, self.mode_file)

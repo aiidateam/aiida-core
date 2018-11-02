@@ -240,16 +240,19 @@ class Folder(object):
         # go beyond the folder limits
         dest_abs_path = self.get_abs_path(filename)
 
-        # Wrapper to decode ncoming src_filelike like it's UTF-8 encoded.
-        import codecs
-        utf8wrapper = codecs.getreader('utf8')
-
         # If Py2, the incoming filelike may contain a unicode or string type.
         # We want to write explicity with UTF8 encoding, so io.open requires
-        # a unicode type. First we try and use a UTF8 reader to decode the 
-        # incoming str type to unicode. If it is already unicode, this 
-        # will fail, so instead we try to write to file directly.
-        # In Py3 we can assume that the incoming text will be unicode.
+        # a unicode type. 
+        # First we try and use a UTF8 stream reader wrapper to decode the characters 
+        # from the incoming filelike object as if they are UFT8 encoded. 
+        # If a unicode type is encountered, Python will attempt to convert to a str 
+        # type using the ASCII codec which will fail if any non ASCII chars are 
+        # present, raising a UnicodeEncodeError exception. In this case, as we already 
+        # have unicode type text, we can catch this and call shutil.copyfileobj without 
+        # the wrapper.
+        # In Py3, all str types are unicode, so we can avoid using the wrapper.
+        import codecs
+        utf8wrapper = codecs.getreader('utf8')
 
         with io.open(dest_abs_path, 'w', encoding='utf8') as dest_fhandle:
             if six.PY2:  

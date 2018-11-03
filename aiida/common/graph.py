@@ -7,13 +7,23 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+Draw the provenance graphs
+"""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import os, tempfile
+import io
+import os
+import tempfile
 
-def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='dot',
-        include_calculation_inputs=False, include_calculation_outputs=False):
+
+def draw_graph(origin_node,
+               ancestor_depth=None,
+               descendant_depth=None,
+               format='dot',
+               include_calculation_inputs=False,
+               include_calculation_outputs=False):
     """
     The algorithm starts from the original node and goes both input-ward and output-ward via a breadth-first algorithm.
 
@@ -28,7 +38,7 @@ def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='
     ..note::
         If an invalid format is provided graphviz prints a helpful message, so this doesn't need to be implemented here.
     """
-    # 
+    #
     # until the connected part of the graph that contains the root_pk is fully explored.
     # TODO this command deserves to be improved, with options and further subcommands
 
@@ -53,8 +63,7 @@ def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='
         else:
             shape = "shape=ellipse"
         if kwargs:
-            additional_params = ",{}".format(
-                ",".join('{}="{}"'.format(k, v) for k, v in kwargs.items()))
+            additional_params = ",{}".format(",".join('{}="{}"'.format(k, v) for k, v in kwargs.items()))
         else:
             additional_params = ""
         if node.label:
@@ -63,36 +72,36 @@ def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='
         else:
             additional_string = "\n {}".format(node.get_desc())
             label_string = ""
-        labelstring = 'label="{} ({}){}{}"'.format(
-            node.__class__.__name__, node.pk, label_string,
-            additional_string)
-        return "N{} [{},{}{}];".format(node.pk, shape, labelstring,
-                                       additional_params)
+        labelstring = 'label="{} ({}){}{}"'.format(node.__class__.__name__, node.pk, label_string, additional_string)
+        return "N{} [{},{}{}];".format(node.pk, shape, labelstring, additional_params)
 
     def draw_link_settings(inp_id, out_id, link_label, link_type):
         if link_type in (LinkType.CREATE.value, LinkType.INPUT.value):
-            style='solid'  # Solid lines and black colors
-            color = "0.0 0.0 0.0" # for CREATE and INPUT (The provenance graph)
+            style = 'solid'  # Solid lines and black colors
+            color = "0.0 0.0 0.0"  # for CREATE and INPUT (The provenance graph)
         elif link_type == LinkType.RETURN.value:
-            style='dotted'  # Dotted  lines of
-            color = "0.0 0.0 0.0" # black color for Returns
+            style = 'dotted'  # Dotted  lines of
+            color = "0.0 0.0 0.0"  # black color for Returns
         elif link_type == LinkType.CALL.value:
-            style='bold' # Bold lines and
-            color = "0.0 1.0 1.0" # Bright red for calls
+            style = 'bold'  # Bold lines and
+            color = "0.0 1.0 1.0"  # Bright red for calls
         else:
-            style='solid'   # Solid and
-            color="0.0 0.0 0.5" #grey lines for unspecified links!
-        return '    {} -> {} [label="{}", color="{}", style="{}"];'.format("N{}".format(inp_id),  "N{}".format(out_id), link_label, color, style)
+            style = 'solid'  # Solid and
+            color = "0.0 0.0 0.5"  #grey lines for unspecified links!
+        return '    {} -> {} [label="{}", color="{}", style="{}"];'.format("N{}".format(inp_id), "N{}".format(out_id),
+                                                                           link_label, color, style)
 
     # Breadth-first search of all ancestors and descendant nodes of a given node
     links = {}  # Accumulate links here
-    nodes = {origin_node.pk: draw_node_settings(origin_node, style='filled', color='lightblue')} #Accumulate nodes specs here
+    nodes = {
+        origin_node.pk: draw_node_settings(origin_node, style='filled', color='lightblue')
+    }  #Accumulate nodes specs here
     # Additional nodes (the ones added with either one of  include_calculation_inputs or include_calculation_outputs
     # is set to true. I have to put them in a different dictionary because nodes is the one used for the recursion,
     # whereas these should not be used for the recursion:
     additional_nodes = {}
 
-    last_nodes = [origin_node] # Put the nodes whose links have not been scanned yet
+    last_nodes = [origin_node]  # Put the nodes whose links have not been scanned yet
 
     # Go through the graph on-ward (i.e. look at inputs)
     depth = 0
@@ -107,7 +116,7 @@ def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='
         for node in last_nodes:
             # This query gives me all the inputs of this node, and link labels and types!
             input_query = QueryBuilder()
-            input_query.append(Node, filters={'id':node.pk}, tag='n')
+            input_query.append(Node, filters={'id': node.pk}, tag='n')
             input_query.append(Node, input_of='n', edge_project=('id', 'label', 'type'), project='*', tag='inp')
             for inp, link_id, link_label, link_type in input_query.iterall():
                 # I removed this check, to me there is no way that this link was already referred to!
@@ -122,7 +131,7 @@ def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='
             if include_calculation_outputs and isinstance(node, Calculation):
                 # Query for the outputs, giving me also link labels and types:
                 output_query = QueryBuilder()
-                output_query.append(Node, filters={'id':node.pk}, tag='n')
+                output_query.append(Node, filters={'id': node.pk}, tag='n')
                 output_query.append(Node, output_of='n', edge_project=('id', 'label', 'type'), project='*', tag='out')
                 # Iterate through results
                 for out, link_id, link_label, link_type in output_query.iterall():
@@ -138,7 +147,6 @@ def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='
 
         last_nodes = new_nodes
 
-
     # Go through the graph down-ward (i.e. look at outputs)
     last_nodes = [origin_node]
     depth = 0
@@ -152,7 +160,7 @@ def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='
         for node in last_nodes:
             # Query for the outputs:
             output_query = QueryBuilder()
-            output_query.append(Node, filters={'id':node.pk}, tag='n')
+            output_query.append(Node, filters={'id': node.pk}, tag='n')
             output_query.append(Node, output_of='n', edge_project=('id', 'label', 'type'), project='*', tag='out')
 
             for out, link_id, link_label, link_type in output_query.iterall():
@@ -164,7 +172,7 @@ def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='
 
             if include_calculation_inputs and isinstance(node, Calculation):
                 input_query = QueryBuilder()
-                input_query.append(Node, filters={'id':node.pk}, tag='n')
+                input_query.append(Node, filters={'id': node.pk}, tag='n')
                 input_query.append(Node, input_of='n', edge_project=('id', 'label', 'type'), project='*', tag='inp')
                 for inp, link_id, link_label, link_type in input_query.iterall():
                     # Also here, maybe it's just better not to check?
@@ -176,15 +184,15 @@ def draw_graph(origin_node, ancestor_depth=None, descendant_depth=None, format='
 
     # Writing the graph to a temporary file
     fd, fname = tempfile.mkstemp(suffix='.dot')
-    with open(fname, 'w') as fout:
-        fout.write("digraph G {\n")
+    with io.open(fname, 'w', encoding='utf8') as fhandle:
+        fhandle.write(u"digraph G {\n")
         for l_name, l_values in links.items():
-            fout.write('    {}\n'.format(l_values))
+            fhandle.write(u'    {}\n'.format(l_values))
         for n_name, n_values in nodes.items():
-            fout.write("    {}\n".format(n_values))
+            fhandle.write(u"    {}\n".format(n_values))
         for n_name, n_values in additional_nodes.items():
-            fout.write("    {}\n".format(n_values))
-        fout.write("}\n")
+            fhandle.write(u"    {}\n".format(n_values))
+        fhandle.write(u"}\n")
 
     # Now I am producing the output file
     output_file_name = "{0}.{format}".format(origin_node.pk, format=format)

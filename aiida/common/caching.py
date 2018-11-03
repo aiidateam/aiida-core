@@ -12,6 +12,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+import io
 import os
 import copy
 from functools import wraps
@@ -47,7 +48,7 @@ DEFAULT_CONFIG = {
 
 def _get_config(config_file):
     try:
-        with open(config_file, 'r') as f:
+        with io.open(config_file, 'r', encoding='utf8') as f:
             config = yaml.load(f)[get_current_profile()]
     # no config file, or no config for this profile
     except (OSError, IOError, KeyError):

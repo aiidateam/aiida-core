@@ -13,6 +13,7 @@ Tests for subclasses of DbImporter, DbSearchResults and DbEntry
 from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
+import io
 import unittest
 
 import six
@@ -265,10 +266,10 @@ class TestNnincDbImporter(AiidaTestCase):
         results = NnincSearchResults([{'id': upf}])
         entry = results.at(0)
 
-        with open(os.path.join(
+        with io.open(os.path.join(
                 os.path.split(aiida.__file__)[0], os.pardir,
                 "examples", "testdata", "qepseudos", "{}.UPF".format(upf))
-                , 'r') as f:
+                , 'r', encoding='utf8') as f:
             entry._contents = f.read()
 
         upfnode = entry.get_upf_node()

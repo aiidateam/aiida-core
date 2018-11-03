@@ -11,7 +11,6 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import json
 
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship, backref
@@ -27,6 +26,7 @@ from aiida.backends.sqlalchemy.models.utils import uuid_func
 from aiida.common.datastructures import (wf_states, wf_data_types,
                                          wf_data_value_types, wf_default_call)
 from aiida.utils import timezone
+import aiida.utils.json as json
 
 
 

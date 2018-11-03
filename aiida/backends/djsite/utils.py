@@ -61,7 +61,7 @@ def get_log_messages(obj):
         which the log message was issued, as well as additional 'metadata'
     """
     from aiida.backends.djsite.db.models import DbLog
-    import json
+    import aiida.utils.json as json
 
     extra = get_dblogger_extra(obj)
 

@@ -20,6 +20,7 @@ import datetime
 import filecmp
 import functools
 import inspect
+import io
 import os.path
 import sys
 import numbers
@@ -335,7 +336,7 @@ def md5_file(filename, block_size_factor=128):
     import hashlib
 
     md5 = hashlib.md5()
-    with open(filename, 'rb') as fhandle:
+    with io.open(filename, 'rb', encoding=None) as fhandle:
         # I read 128 bytes at a time until it returns the empty string b''
         for chunk in iter(lambda: fhandle.read(block_size_factor * md5.block_size), b''):
             md5.update(chunk)
@@ -361,7 +362,7 @@ def sha1_file(filename, block_size_factor=128):
     import hashlib
 
     sha1 = hashlib.sha1()
-    with open(filename, 'rb') as fhandle:
+    with io.open(filename, 'rb', encoding=None) as fhandle:
         # I read 128 bytes at a time until it returns the empty string b''
         for chunk in iter(lambda: fhandle.read(block_size_factor * sha1.block_size), b''):
             sha1.update(chunk)
@@ -1251,8 +1252,18 @@ class HiddenPrints(object):  # pylint: disable=too-few-public-methods
         self._original_stdout = None
 
     def __enter__(self):
+        """
+        Keep track of the original sdtout location and redirect stdout
+        to /dev/null
+        """
         from os import devnull
+
         self._original_stdout = sys.stdout
+
+        # N.B. Here we don't use io.open as we may need to swallow byte streams.
+        # In this instance, as we're just redirecting the output to dev null we
+        # don't need to worry about encoding and so we use regular system open.
+        # This will work in Python 2 or Python 3.
         sys.stdout = open(devnull, 'w')
 
     def __exit__(self, exc_type, exc_val, exc_tb):

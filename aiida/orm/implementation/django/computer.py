@@ -11,7 +11,6 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import json
 import collections
 import six
 from django.db import IntegrityError, transaction
@@ -22,6 +21,8 @@ from aiida.common.exceptions import (NotExistent, ConfigurationError,
                                      InvalidOperation, DbContentError)
 from aiida.orm.computer import Computer, ComputerCollection
 from . import utils
+import aiida.utils.json as json
+
 
 
 class DjangoComputerCollection(ComputerCollection):

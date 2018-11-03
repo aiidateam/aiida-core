@@ -10,18 +10,19 @@
 from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
-import json
+import io
 import datetime
 import shutil
 import os
 import logging
 
 from abc import abstractmethod, ABCMeta
-
 import six
 from dateutil.parser import parse
-from aiida.utils import timezone as dtimezone
 from pytz import timezone as ptimezone
+
+from aiida.utils import timezone as dtimezone
+import aiida.utils.json as json
 
 
 @six.add_metaclass(ABCMeta)
@@ -93,7 +94,7 @@ class AbstractBackup(object):
         """
         backup_variables = None
 
-        with open(backup_info_file_name, 'r') as backup_info_file:
+        with io.open(backup_info_file_name, 'r', encoding='utf8') as backup_info_file:
             try:
                 backup_variables = json.load(backup_info_file)
             except ValueError:
@@ -257,7 +258,7 @@ class AbstractBackup(object):
         given filename.
         """
         backup_variables = self._dictionarize_backup_info()
-        with open(backup_info_file_name, 'w') as backup_info_file:
+        with io.open(backup_info_file_name, 'wb') as backup_info_file:
             json.dump(backup_variables, backup_info_file)
 
     def _find_files_to_backup(self):

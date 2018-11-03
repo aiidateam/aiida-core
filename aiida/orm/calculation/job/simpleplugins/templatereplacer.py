@@ -92,7 +92,7 @@ class TemplatereplacerCalculation(JobCalculation):
         :param inputdict: a dictionary with the input nodes, as they would
                 be returned by get_inputs_dict (with the Code!)
         """
-        from six.moves import cStringIO as StringIO
+        from six.moves import StringIO as StringIO
 
         from aiida.orm.data.singlefile import SinglefileData
         from aiida.orm.data.remote import RemoteData

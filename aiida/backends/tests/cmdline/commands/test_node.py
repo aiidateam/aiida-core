@@ -19,6 +19,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 from aiida.cmdline.commands.cmd_node import node_delete, node_label, node_description, show, tree, repo_ls, repo_cat
 
+
 class TestVerdiNode(AiidaTestCase):
 
     node_labels = ('in1', 'in2', 'wf', 'slave1', 'slave2', 'outp1', 'outp2', 'outp3', 'outp4')
@@ -27,7 +28,7 @@ class TestVerdiNode(AiidaTestCase):
         """Sets up a few nodes to play around with."""
         from aiida.orm import Node
 
-        nodes = { key : Node().store() for key in self.node_labels }
+        nodes = {key: Node().store() for key in self.node_labels}
 
         nodes['wf'].add_link_from(nodes['in1'], link_type=LinkType.INPUT)
         nodes['slave1'].add_link_from(nodes['in1'], link_type=LinkType.INPUT)
@@ -90,12 +91,12 @@ class TestVerdiNode(AiidaTestCase):
         label = u"my label"
         node.label = label
         node.store()
-        
+
         # read existing label
         options = [str(node.pk), '--raw']
         result = self.runner.invoke(node_label, options)
         self.assertIsNone(result.exception)
-        self.assertEquals(result.output, label+'\n')
+        self.assertEquals(result.output, label + '\n')
 
         # set new label
         new_label = "my new label"
@@ -112,11 +113,11 @@ class TestVerdiNode(AiidaTestCase):
         description = u"my desc\nover two lines"
         node.description = description
         node.store()
-        
+
         options = [str(node.pk), '--raw']
         result = self.runner.invoke(node_description, options)
         self.assertIsNone(result.exception)
-        self.assertEquals(result.output, description+'\n')
+        self.assertEquals(result.output, description + '\n')
 
 
 class TestVerdiNodeRepo(AiidaTestCase):
@@ -128,10 +129,10 @@ class TestVerdiNodeRepo(AiidaTestCase):
 
         file_content = '''file-with-contents'''
 
-        with tempfile.NamedTemporaryFile(mode='w+') as f:
-            f.write(file_content)
-            f.flush()
-            node = SinglefileData(file=f.name)
+        with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
+            fhandle.write(file_content)
+            fhandle.flush()
+            node = SinglefileData(file=fhandle.name)
             node.store()
 
         self.node = node

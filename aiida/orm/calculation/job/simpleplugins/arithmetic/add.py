@@ -10,6 +10,8 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+import io
+
 from aiida.common.utils import classproperty
 from aiida.common.exceptions import InputValidationError, ValidationError
 from aiida.common.datastructures import CalcInfo, CodeInfo
@@ -70,7 +72,7 @@ class ArithmeticAddCalculation(JobCalculation):
         else:
             return valid_types
 
-    def _prepare_for_submission(self, tempfolder, input_nodes_raw):        
+    def _prepare_for_submission(self, tempfolder, input_nodes_raw):
         """
         This method is called prior to job submission with a set of calculation input nodes.
         The inputs will be validated and sanitized, after which the necessary input files will
@@ -175,7 +177,8 @@ class ArithmeticAddCalculation(JobCalculation):
 
         # Any remaining input nodes are not recognized raise an input validation exception
         if input_nodes_raw:
-            raise InputValidationError('the following input nodes were not recognized: {}'.format(input_nodes_raw.keys()))
+            raise InputValidationError('the following input nodes were not recognized: {}'.format(
+                input_nodes_raw.keys()))
 
         return input_nodes
 
@@ -190,5 +193,5 @@ class ArithmeticAddCalculation(JobCalculation):
         """
         filename = tempfolder.get_abs_path(self._INPUT_FILE_NAME)
 
-        with open(filename, 'w') as handle:
-            handle.write('{} {}\n'.format(input_x.value, input_y.value))
+        with io.open(filename, 'w', encoding='utf8') as handle:
+            handle.write(u'{} {}\n'.format(input_x.value, input_y.value))

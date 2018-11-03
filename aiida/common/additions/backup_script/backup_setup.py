@@ -11,7 +11,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import datetime
-import json
+import io
 import logging
 import os
 import shutil
@@ -19,12 +19,15 @@ import stat
 import sys
 from os.path import expanduser
 
+import six
+
 from aiida.backends.profile import BACKEND_DJANGO
 from aiida.backends.profile import BACKEND_SQLA
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.common import utils
 from aiida.common.additions.backup_script.backup_base import AbstractBackup, BackupError
 from aiida.common.setup import AIIDA_CONFIG_FOLDER
+import aiida.utils.json as json
 
 if not is_dbenv_loaded():
     load_dbenv()
@@ -218,7 +221,7 @@ class BackupSetup(object):
             backup_variables = self.construct_backup_variables(
                 file_backup_folder_abs)
 
-            with open(final_conf_filepath, 'w') as backup_info_file:
+            with io.open(final_conf_filepath, 'wb') as backup_info_file:
                 json.dump(backup_variables, backup_info_file)
         # If the backup parameters are configured manually
         else:
@@ -245,7 +248,7 @@ class BackupSetup(object):
             raise BackupError("Following backend is unknown: ".format(BACKEND))
 
         script_content = \
-"""#!/usr/bin/env python
+u"""#!/usr/bin/env python
 import logging
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 
@@ -269,7 +272,7 @@ backup_inst.run()
                                    self._script_filename)
 
         # Write the contents to the script
-        with open(script_path, 'w') as script_file:
+        with io.open(script_path, 'w', encoding='utf8') as script_file:
             script_file.write(script_content)
 
         # Set the right permissions

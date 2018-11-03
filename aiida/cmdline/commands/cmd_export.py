@@ -13,6 +13,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+import io
+
 import click
 import tabulate
 
@@ -128,6 +130,7 @@ def create(output_file, codes, computers, groups, nodes, input_forward, create_r
 
     try:
         export_function(entities, outfile=output_file, **kwargs)
+
     except IOError as exception:
         echo.echo_critical('failed to write the export archive file: {}'.format(exception))
     else:
@@ -146,11 +149,12 @@ def migrate(input_file, output_file, force, silent, archive_format):
     Migrate an existing export archive file to the most recent version of the export format
     """
     import os
-    import json
     import tarfile
     import zipfile
+
     from aiida.common.folders import SandboxFolder
     from aiida.common.archive import extract_zip, extract_tar
+    import aiida.utils.json as json
 
     if os.path.exists(output_file) and not force:
         echo.echo_critical('the output file already exists')
@@ -165,12 +169,12 @@ def migrate(input_file, output_file, force, silent, archive_format):
             echo.echo_critical('invalid file format, expected either a zip archive or gzipped tarball')
 
         try:
-            with open(folder.get_abs_path('data.json')) as handle:
-                data = json.load(handle)
-            with open(folder.get_abs_path('metadata.json')) as handle:
-                metadata = json.load(handle)
+            with io.open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
+                data = json.load(fhandle)
+            with io.open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
+                metadata = json.load(fhandle)
         except IOError:
-            echo.echo_critical('export archive does not contain the required file {}'.format(handle.filename))
+            echo.echo_critical('export archive does not contain the required file {}'.format(fhandle.filename))
 
         old_version = verify_metadata_version(metadata)
 
@@ -189,11 +193,11 @@ def migrate(input_file, output_file, force, silent, archive_format):
 
         new_version = verify_metadata_version(metadata)
 
-        with open(folder.get_abs_path('data.json'), 'w') as handle:
-            json.dump(data, handle)
+        with io.open(folder.get_abs_path('data.json'), 'wb') as fhandle:
+            json.dump(data, fhandle)
 
-        with open(folder.get_abs_path('metadata.json'), 'w') as handle:
-            json.dump(metadata, handle)
+        with io.open(folder.get_abs_path('metadata.json'), 'wb') as fhandle:
+            json.dump(metadata, fhandle)
 
         if archive_format == 'zip' or archive_format == 'zip-uncompressed':
             compression = zipfile.ZIP_DEFLATED if archive_format == 'zip' else zipfile.ZIP_STORED

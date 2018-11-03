@@ -109,7 +109,7 @@ def profile_delete(force, profiles):
         postgres.dbinfo["host"] = profile.get('AIIDADB_HOST')
         postgres.determine_setup()
 
-        import json
+        import aiida.utils.json as json
         echo.echo(json.dumps(postgres.dbinfo, indent=4))
 
         db_name = profile.get('AIIDADB_NAME', '')

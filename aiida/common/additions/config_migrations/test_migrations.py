@@ -10,9 +10,9 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+import io
 import os
 import uuid
-import json
 import unittest
 try:
     from unittest import mock
@@ -21,12 +21,14 @@ except ImportError:
 
 from ._utils import check_and_migrate_config
 from ._migrations import _MIGRATION_LOOKUP
+import aiida.utils.json as json
+
 
 
 def load_config_sample(filename):
     currdir = os.path.dirname(os.path.abspath(__file__))
     filepath = os.path.join(currdir, 'test_samples', filename)
-    with open(filepath, 'r') as f:
+    with io.open(filepath, 'r', encoding='utf8') as f:
         return json.load(f)
 
 

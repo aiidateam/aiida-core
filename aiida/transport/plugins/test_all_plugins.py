@@ -22,6 +22,7 @@ Plugin specific tests will be written in the plugin itself.
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
+import io
 import unittest
 
 from six.moves import range
@@ -46,7 +47,7 @@ def get_all_custom_transports():
     thisdir, thisfname = os.path.split(this_full_fname)
 
     test_modules = [
-        os.path.split(f)[1][:-3] for f in os.listdir(thisdir) if f.endswith('.py') and f.startswith('test_')
+        os.path.split(fname)[1][:-3] for fname in os.listdir(thisdir) if fname.endswith('.py') and fname.startswith('test_')
     ]
 
     # Remove this module: note that I should be careful because __file__, from
@@ -218,9 +219,9 @@ class TestDirectoryManipulation(unittest.TestCase):
             # also tests that it works with a single file
             # create file
             local_file_name = 'file.txt'
-            text = 'Viva Verdi\n'
-            with open(os.path.join(t.getcwd(), local_file_name), 'w') as f:
-                f.write(text)
+            text = u'Viva Verdi\n'
+            with io.open(os.path.join(t.getcwd(), local_file_name), 'w', encoding='utf8') as fhandle:
+                fhandle.write(text)
             # remove it
             t.rmtree(local_file_name)
             # verify the removal
@@ -240,43 +241,43 @@ class TestDirectoryManipulation(unittest.TestCase):
         import string
         import os
 
-        with custom_transport as t:
+        with custom_transport as trans:
             # We cannot use tempfile.mkdtemp because we're on a remote folder
-            location = t.normalize(os.path.join('/', 'tmp'))
+            location = trans.normalize(os.path.join('/', 'tmp'))
             directory = 'temp_dir_test'
-            t.chdir(location)
+            trans.chdir(location)
 
-            self.assertEquals(location, t.getcwd())
-            while t.isdir(directory):
+            self.assertEquals(location, trans.getcwd())
+            while trans.isdir(directory):
                 # I append a random letter/number until it is unique
                 directory += random.choice(string.ascii_uppercase + string.digits)
-            t.mkdir(directory)
-            t.chdir(directory)
+            trans.mkdir(directory)
+            trans.chdir(directory)
             list_of_dir = ['1', '-f a&', 'as', 'a2', 'a4f']
             list_of_files = ['a', 'b']
             for this_dir in list_of_dir:
-                t.mkdir(this_dir)
+                trans.mkdir(this_dir)
             for fname in list_of_files:
-                with tempfile.NamedTemporaryFile() as f:
+                with tempfile.NamedTemporaryFile() as tmpf:
                     # Just put an empty file there at the right file name
-                    t.putfile(f.name, fname)
+                    trans.putfile(tmpf.name, fname)
 
-            list_found = t.listdir('.')
+            list_found = trans.listdir('.')
 
             self.assertTrue(sorted(list_found) == sorted(list_of_dir + list_of_files))
 
-            self.assertTrue(sorted(t.listdir('.', 'a*')), sorted(['as', 'a2', 'a4f']))
-            self.assertTrue(sorted(t.listdir('.', 'a?')), sorted(['as', 'a2']))
-            self.assertTrue(sorted(t.listdir('.', 'a[2-4]*')), sorted(['a2', 'a4f']))
+            self.assertTrue(sorted(trans.listdir('.', 'a*')), sorted(['as', 'a2', 'a4f']))
+            self.assertTrue(sorted(trans.listdir('.', 'a?')), sorted(['as', 'a2']))
+            self.assertTrue(sorted(trans.listdir('.', 'a[2-4]*')), sorted(['a2', 'a4f']))
 
             for this_dir in list_of_dir:
-                t.rmdir(this_dir)
+                trans.rmdir(this_dir)
 
             for this_file in list_of_files:
-                t.remove(this_file)
+                trans.remove(this_file)
 
-            t.chdir('..')
-            t.rmdir(directory)
+            trans.chdir('..')
+            trans.rmdir(directory)
 
     @run_for_all_plugins
     def test_listdir_withattributes(self, custom_transport):
@@ -299,50 +300,50 @@ class TestDirectoryManipulation(unittest.TestCase):
             """
             return {_['name']: _['isdir'] for _ in data}
 
-        with custom_transport as t:
+        with custom_transport as trans:
             # We cannot use tempfile.mkdtemp because we're on a remote folder
-            location = t.normalize(os.path.join('/', 'tmp'))
+            location = trans.normalize(os.path.join('/', 'tmp'))
             directory = 'temp_dir_test'
-            t.chdir(location)
+            trans.chdir(location)
 
-            self.assertEquals(location, t.getcwd())
-            while t.isdir(directory):
+            self.assertEquals(location, trans.getcwd())
+            while trans.isdir(directory):
                 # I append a random letter/number until it is unique
                 directory += random.choice(string.ascii_uppercase + string.digits)
-            t.mkdir(directory)
-            t.chdir(directory)
+            trans.mkdir(directory)
+            trans.chdir(directory)
             list_of_dir = ['1', '-f a&', 'as', 'a2', 'a4f']
             list_of_files = ['a', 'b']
             for this_dir in list_of_dir:
-                t.mkdir(this_dir)
+                trans.mkdir(this_dir)
             for fname in list_of_files:
-                with tempfile.NamedTemporaryFile() as f:
+                with tempfile.NamedTemporaryFile() as tmpf:
                     # Just put an empty file there at the right file name
-                    t.putfile(f.name, fname)
+                    trans.putfile(tmpf.name, fname)
 
             comparison_list = {k: True for k in list_of_dir}
             for k in list_of_files:
                 comparison_list[k] = False
-            self.assertTrue(simplify_attributes(t.listdir_withattributes('.')), comparison_list)
+            self.assertTrue(simplify_attributes(trans.listdir_withattributes('.')), comparison_list)
 
             self.assertTrue(
-                simplify_attributes(t.listdir_withattributes('.', 'a*')), {
+                simplify_attributes(trans.listdir_withattributes('.', 'a*')), {
                     'as': True,
                     'a2': True,
                     'a4f': True,
                     'a': False
                 })
-            self.assertTrue(simplify_attributes(t.listdir_withattributes('.', 'a?')), {'as': True, 'a2': True})
-            self.assertTrue(simplify_attributes(t.listdir_withattributes('.', 'a[2-4]*')), {'a2': True, 'a4f': True})
+            self.assertTrue(simplify_attributes(trans.listdir_withattributes('.', 'a?')), {'as': True, 'a2': True})
+            self.assertTrue(simplify_attributes(trans.listdir_withattributes('.', 'a[2-4]*')), {'a2': True, 'a4f': True})
 
             for this_dir in list_of_dir:
-                t.rmdir(this_dir)
+                trans.rmdir(this_dir)
 
             for this_file in list_of_files:
-                t.remove(this_file)
+                trans.remove(this_file)
 
-            t.chdir('..')
-            t.rmdir(directory)
+            trans.chdir('..')
+            trans.rmdir(directory)
 
     @run_for_all_plugins
     def test_dir_creation_deletion(self, custom_transport):
@@ -581,9 +582,9 @@ class TestPutGetFile(unittest.TestCase):
             remote_file_name = 'file_remote.txt'
             retrieved_file_name = os.path.join(local_dir, directory, 'file_retrieved.txt')
 
-            text = 'Viva Verdi\n'
-            with open(local_file_name, 'w') as f:
-                f.write(text)
+            text = u'Viva Verdi\n'
+            with io.open(local_file_name, 'w', encoding='utf8') as fhandle:
+                fhandle.write(text)
 
             # here use full path in src and dst
             t.put(local_file_name, remote_file_name)
@@ -632,8 +633,8 @@ class TestPutGetFile(unittest.TestCase):
             remote_file_name = 'file_remote.txt'
             retrieved_file_name = os.path.join(local_dir, directory, 'file_retrieved.txt')
 
-            f = open(local_file_name, 'w')
-            f.close()
+            fhandle = io.open(local_file_name, 'w', encoding='utf8')
+            fhandle.close()
 
             # partial_file_name is not an abs path
             with self.assertRaises(ValueError):
@@ -695,9 +696,9 @@ class TestPutGetFile(unittest.TestCase):
             remote_file_name = 'file_remote.txt'
             retrieved_file_name = os.path.join(local_dir, directory, 'file_retrieved.txt')
 
-            text = 'Viva Verdi\n'
-            with open(local_file_name, 'w') as f:
-                f.write(text)
+            text = u'Viva Verdi\n'
+            with io.open(local_file_name, 'w', encoding='utf8') as fhandle:
+                fhandle.write(text)
 
             # localpath is an empty string
             # ValueError because it is not an abs path
@@ -783,9 +784,9 @@ class TestPutGetTree(unittest.TestCase):
 
             local_file_name = os.path.join(local_subfolder, 'file.txt')
 
-            text = 'Viva Verdi\n'
-            with open(local_file_name, 'w') as f:
-                f.write(text)
+            text = u'Viva Verdi\n'
+            with io.open(local_file_name, 'w', encoding='utf8') as fhandle:
+                fhandle.write(text)
 
             # here use full path in src and dst
             for i in range(2):
@@ -848,9 +849,9 @@ class TestPutGetTree(unittest.TestCase):
 
             local_file_name = os.path.join(local_subfolder, 'file.txt')
 
-            text = 'Viva Verdi\n'
-            with open(local_file_name, 'w') as f:
-                f.write(text)
+            text = u'Viva Verdi\n'
+            with io.open(local_file_name, 'w', encoding='utf8') as fhandle:
+                fhandle.write(text)
 
             t.put(local_subfolder, remote_subfolder)
             t.get(remote_subfolder, retrieved_subfolder)
@@ -903,10 +904,10 @@ class TestPutGetTree(unittest.TestCase):
             file_1 = os.path.join(local_base_dir, 'a.txt')
             file_2 = os.path.join(local_base_dir, 'b.tmp')
             file_3 = os.path.join(local_base_dir, 'c.txt')
-            text = 'Viva Verdi\n'
+            text = u'Viva Verdi\n'
             for filename in [file_1, file_2, file_3]:
-                with open(filename, 'w') as f:
-                    f.write(text)
+                with io.open(filename, 'w', encoding='utf8') as fhandle:
+                    fhandle.write(text)
 
             # first test the copy. Copy of two files matching patterns, into a folder
             t.copy(os.path.join('local', '*.txt'), '.')
@@ -976,10 +977,10 @@ class TestPutGetTree(unittest.TestCase):
             file_1 = os.path.join(local_base_dir, 'a.txt')
             file_2 = os.path.join(local_base_dir, 'b.tmp')
             file_3 = os.path.join(local_base_dir, 'c.txt')
-            text = 'Viva Verdi\n'
+            text = u'Viva Verdi\n'
             for filename in [file_1, file_2, file_3]:
-                with open(filename, 'w') as f:
-                    f.write(text)
+                with io.open(filename, 'w', encoding='utf8') as fhandle:
+                    fhandle.write(text)
 
             # first test put. Copy of two files matching patterns, into a folder
             t.put(os.path.join(local_base_dir, '*.txt'), '.')
@@ -1007,8 +1008,8 @@ class TestPutGetTree(unittest.TestCase):
             with self.assertRaises(OSError):
                 t.put(os.path.join(local_base_dir, '*.txt'), 'prova')
             # copy of folder into file
-            with open(os.path.join(local_dir, directory, 'existing.txt'), 'w') as f:
-                f.write(text)
+            with io.open(os.path.join(local_dir, directory, 'existing.txt'), 'w', encoding='utf8') as fhandle:
+                fhandle.write(text)
             with self.assertRaises(OSError):
                 t.put(os.path.join(local_base_dir), 'existing.txt')
             t.remove('existing.txt')
@@ -1056,10 +1057,10 @@ class TestPutGetTree(unittest.TestCase):
             file_1 = os.path.join(local_base_dir, 'a.txt')
             file_2 = os.path.join(local_base_dir, 'b.tmp')
             file_3 = os.path.join(local_base_dir, 'c.txt')
-            text = 'Viva Verdi\n'
+            text = u'Viva Verdi\n'
             for filename in [file_1, file_2, file_3]:
-                with open(filename, 'w') as f:
-                    f.write(text)
+                with io.open(filename, 'w', encoding='utf8') as fhandle:
+                    fhandle.write(text)
 
             # first test put. Copy of two files matching patterns, into a folder
             t.get(os.path.join('local', '*.txt'), local_destination)
@@ -1089,8 +1090,8 @@ class TestPutGetTree(unittest.TestCase):
             with self.assertRaises(OSError):
                 t.get(os.path.join('local', '*.txt'), os.path.join(local_destination, 'prova'))
             # copy of folder into file
-            with open(os.path.join(local_destination, 'existing.txt'), 'w') as f:
-                f.write(text)
+            with io.open(os.path.join(local_destination, 'existing.txt'), 'w', encoding='utf8') as fhandle:
+                fhandle.write(text)
             with self.assertRaises(OSError):
                 t.get('local', os.path.join(local_destination, 'existing.txt'))
             os.remove(os.path.join(local_destination, 'existing.txt'))
@@ -1138,8 +1139,8 @@ class TestPutGetTree(unittest.TestCase):
             t.chdir(directory)
             local_file_name = os.path.join(local_subfolder, 'file.txt')
 
-            f = open(local_file_name, 'w')
-            f.close()
+            fhandle = io.open(local_file_name, 'w', encoding='utf8')
+            fhandle.close()
 
             # 'tmp1' is not an abs path
             with self.assertRaises(ValueError):
@@ -1213,9 +1214,9 @@ class TestPutGetTree(unittest.TestCase):
             t.chdir(directory)
             local_file_name = os.path.join(local_subfolder, 'file.txt')
 
-            text = 'Viva Verdi\n'
-            with open(local_file_name, 'w') as f:
-                f.write(text)
+            text = u'Viva Verdi\n'
+            with io.open(local_file_name, 'w', encoding='utf8') as fhandle:
+                fhandle.write(text)
 
             # localpath is an empty string
             # ValueError because it is not an abs path

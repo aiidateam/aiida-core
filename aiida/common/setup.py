@@ -10,19 +10,20 @@
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
+import io
 import os
 import uuid
-import aiida
 import logging
-import json
+import aiida.utils.json as json
+
 
 import six
 from six.moves import input
 
+import aiida
 from aiida.common.exceptions import ConfigurationError
 from aiida.utils.find_folder import find_path
 from .additions.config_migrations import check_and_migrate_config, add_config_version
-
 
 USE_TZ = True
 DEFAULT_AIIDA_USER = 'aiida@localhost'
@@ -100,9 +101,9 @@ def _load_config():
     """
     Return the current configurations, without checking their version.
     """
-    import json
     from aiida.common.exceptions import MissingConfigurationError
     from aiida.backends.settings import IN_RT_DOC_MODE, DUMMY_CONF_FILE
+    import aiida.utils.json as json
 
     if IN_RT_DOC_MODE:
         return DUMMY_CONF_FILE
@@ -110,11 +111,12 @@ def _load_config():
     aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
     conf_file = os.path.join(aiida_dir, CONFIG_FNAME)
     try:
-        with open(conf_file, 'r') as json_file:
+        with io.open(conf_file, 'r', encoding='utf8') as json_file:
             return json.load(json_file)
     except IOError:
         # No configuration file
         raise MissingConfigurationError("No configuration file found")
+
 
 def get_or_create_config():
     from aiida.common.exceptions import MissingConfigurationError
@@ -135,13 +137,13 @@ def store_config(confs):
     from aiida.backends.settings import IN_RT_DOC_MODE
     if IN_RT_DOC_MODE:
         return
+    import aiida.utils.json as json
 
-    import json
     aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
     conf_file = os.path.join(aiida_dir, CONFIG_FNAME)
     old_umask = os.umask(DEFAULT_UMASK)
     try:
-        with open(conf_file, 'w') as json_file:
+        with io.open(conf_file, 'wb') as json_file:
             json.dump(confs, json_file, indent=CONFIG_INDENT_SIZE)
     finally:
         os.umask(old_umask)
@@ -172,14 +174,14 @@ def try_create_secret_key():
 
     if os.path.exists(secret_key_full_name):
         # If for some reason the file is empty, regenerate it
-        with open(secret_key_full_name) as f:
-            if f.read().strip():
+        with io.open(secret_key_full_name, encoding='utf8') as fhandle:
+            if fhandle.read().strip():
                 return
 
     old_umask = os.umask(DEFAULT_UMASK)
     try:
-        with open(secret_key_full_name, 'w') as f:
-            f.write(generate_random_secret_key())
+        with io.open(secret_key_full_name, 'w', encoding='utf8') as fhandle:
+            fhandle.write(six.text_type(generate_random_secret_key()))
     finally:
         os.umask(old_umask)
 
@@ -203,9 +205,8 @@ def create_htaccess_file():
 
     old_umask = os.umask(DEFAULT_UMASK)
     try:
-        with open(htaccess_full_name, 'w') as f:
-            f.write(
-                """#### No one should read this folder!
+        with io.open(htaccess_full_name, 'w', encoding='utf8') as fhandle:
+            fhandle.write(u"""#### No one should read this folder!
                 ## Please double check, though, that your Apache configuration honors
                 ## the .htaccess files.
                 deny from all
@@ -230,8 +231,8 @@ def get_secret_key():
     secret_key_full_name = os.path.join(aiida_dir, SECRET_KEY_FNAME)
 
     try:
-        with open(secret_key_full_name) as f:
-            secret_key = f.read()
+        with io.open(secret_key_full_name, encoding='utf8') as fhandle:
+            secret_key = fhandle.read()
     except (OSError, IOError):
         raise ConfigurationError("Unable to find the secret key file "
                                  "(or to read from it): did you run "
@@ -365,9 +366,8 @@ def get_profile_config(profile, conf_dict=None):
     try:
         profile_info = confs['profiles'][profile]
     except KeyError:
-        raise ProfileConfigurationError(
-            "No profile configuration found for {}, allowed values are: {}.".format(
-                profile, ', '.join(get_profiles_list())))
+        raise ProfileConfigurationError("No profile configuration found for {}, allowed values are: {}.".format(
+            profile, ', '.join(get_profiles_list())))
 
     return profile_info
 
@@ -438,10 +438,8 @@ def create_config_noninteractive(profile='default', force_overwrite=False, dry_r
     :return: The populated profile that was also stored
     '''
     if profile_exists(profile) and not force_overwrite:
-        raise ValueError(
-            ('profile {profile} exists! '
-             'Cannot non-interactively edit a profile.').format(profile=profile)
-        )
+        raise ValueError(('profile {profile} exists! '
+                          'Cannot non-interactively edit a profile.').format(profile=profile))
 
     new_profile = {}
 
@@ -451,9 +449,7 @@ def create_config_noninteractive(profile='default', force_overwrite=False, dry_r
     if backend_v in backend_possibilities:
         new_profile['AIIDADB_BACKEND'] = backend_v
     else:
-        raise ValueError(
-            '{} is not a valid backend choice.'.format(
-                backend_v))
+        raise ValueError('{} is not a valid backend choice.'.format(backend_v))
 
     # Setting email
     from validate_email import validate_email
@@ -461,9 +457,7 @@ def create_config_noninteractive(profile='default', force_overwrite=False, dry_r
     if validate_email(email_v):
         new_profile[DEFAULT_USER_CONFIG_FIELD] = email_v
     else:
-        raise ValueError(
-            '{} is not a valid email address.'.format(
-                email_v))
+        raise ValueError('{} is not a valid email address.'.format(email_v))
 
     # setting up db
     new_profile['AIIDADB_ENGINE'] = 'postgresql_psycopg2'
@@ -551,8 +545,7 @@ def create_configuration(profile='default'):
     # to modify it.
     updating_existing_prof = False
     if this_existing_confs:
-        print("The following configuration found corresponding to "
-              "profile {}.".format(profile))
+        print("The following configuration found corresponding to " "profile {}.".format(profile))
         for k, v in this_existing_confs.items():
             if k in key_explanation:
                 print("{}: {}".format(key_explanation.get(k), v))
@@ -581,27 +574,22 @@ def create_configuration(profile='default'):
 
                 valid_aiida_backend = False
                 while not valid_aiida_backend:
-                    backend_ans = input(
-                        'AiiDA backend (available: {} - sqlalchemy is in beta mode): '
-                            .format(', '.join(backend_possibilities)))
+                    backend_ans = input('AiiDA backend (available: {} - sqlalchemy is in beta mode): '.format(
+                        ', '.join(backend_possibilities)))
                     if backend_ans in backend_possibilities:
                         valid_aiida_backend = True
                     else:
                         print("* ERROR! Invalid backend inserted.")
-                        print("*        The available middlewares are {}"
-                              .format(', '.join(backend_possibilities)))
+                        print("*        The available middlewares are {}".format(', '.join(backend_possibilities)))
                 this_new_confs['AIIDADB_BACKEND'] = backend_ans
                 aiida_backend = backend_ans
 
         # Setting the email
         valid_email = False
-        readline.set_startup_hook(lambda: readline.insert_text(
-            this_existing_confs.get(DEFAULT_AIIDA_USER)))
+        readline.set_startup_hook(lambda: readline.insert_text(this_existing_confs.get(DEFAULT_AIIDA_USER)))
         while not valid_email:
-            this_new_confs[DEFAULT_USER_CONFIG_FIELD] = input(
-                'Default user email: ')
-            valid_email = validate_email(
-                this_new_confs[DEFAULT_USER_CONFIG_FIELD])
+            this_new_confs[DEFAULT_USER_CONFIG_FIELD] = input('Default user email: ')
+            valid_email = validate_email(this_new_confs[DEFAULT_USER_CONFIG_FIELD])
             if not valid_email:
                 print("** Invalid email provided!")
 
@@ -613,20 +601,17 @@ def create_configuration(profile='default'):
             db_possibilities.extend(['postgresql_psycopg2'])
         if len(db_possibilities) > 0:
             db_engine = this_existing_confs.get('AIIDADB_ENGINE', db_possibilities[0])
-            readline.set_startup_hook(lambda: readline.insert_text(
-                db_engine))
+            readline.set_startup_hook(lambda: readline.insert_text(db_engine))
 
             valid_db_engine = False
             while not valid_db_engine:
-                db_engine_ans = input(
-                    'Database engine (available: {} - mysql is deprecated): '
-                        .format(', '.join(db_possibilities)))
+                db_engine_ans = input('Database engine (available: {} - mysql is deprecated): '.format(
+                    ', '.join(db_possibilities)))
                 if db_engine_ans in db_possibilities:
                     valid_db_engine = True
                 else:
                     print("* ERROR! Invalid database engine inserted.")
-                    print("*        The available engines are {}"
-                          .format(', '.join(db_possibilities)))
+                    print("*        The available engines are {}".format(', '.join(db_possibilities)))
             this_new_confs['AIIDADB_ENGINE'] = db_engine_ans
 
         if 'postgresql_psycopg2' in this_new_confs['AIIDADB_ENGINE']:
@@ -635,41 +620,34 @@ def create_configuration(profile='default'):
             old_host = this_existing_confs.get('AIIDADB_HOST', 'localhost')
             if not old_host:
                 old_host = 'localhost'
-            readline.set_startup_hook(lambda: readline.insert_text(
-                old_host))
+            readline.set_startup_hook(lambda: readline.insert_text(old_host))
             this_new_confs['AIIDADB_HOST'] = input('PostgreSQL host: ')
 
             old_port = this_existing_confs.get('AIIDADB_PORT', '5432')
             if not old_port:
                 old_port = '5432'
-            readline.set_startup_hook(lambda: readline.insert_text(
-                old_port))
+            readline.set_startup_hook(lambda: readline.insert_text(old_port))
             this_new_confs['AIIDADB_PORT'] = input('PostgreSQL port: ')
 
-            readline.set_startup_hook(lambda: readline.insert_text(
-                this_existing_confs.get('AIIDADB_NAME')))
+            readline.set_startup_hook(lambda: readline.insert_text(this_existing_confs.get('AIIDADB_NAME')))
             db_name = ''
             while True:
                 db_name = input('AiiDA Database name: ')
                 if is_test_profile and db_name.startswith(TEST_KEYWORD):
                     break
-                if (not is_test_profile and not
-                db_name.startswith(TEST_KEYWORD)):
+                if (not is_test_profile and not db_name.startswith(TEST_KEYWORD)):
                     break
                 print("The test databases should start with the prefix {} and "
-                      "the non-test databases should not have this prefix."
-                      .format(TEST_KEYWORD))
+                      "the non-test databases should not have this prefix.".format(TEST_KEYWORD))
             this_new_confs['AIIDADB_NAME'] = db_name
 
             old_user = this_existing_confs.get('AIIDADB_USER', 'aiida')
             if not old_user:
                 old_user = 'aiida'
-            readline.set_startup_hook(lambda: readline.insert_text(
-                old_user))
+            readline.set_startup_hook(lambda: readline.insert_text(old_user))
             this_new_confs['AIIDADB_USER'] = input('AiiDA Database user: ')
 
-            readline.set_startup_hook(lambda: readline.insert_text(
-                this_existing_confs.get('AIIDADB_PASS')))
+            readline.set_startup_hook(lambda: readline.insert_text(this_existing_confs.get('AIIDADB_PASS')))
             this_new_confs['AIIDADB_PASS'] = input('AiiDA Database password: ')
 
         elif 'mysql' in this_new_confs['AIIDADB_ENGINE']:
@@ -678,45 +656,37 @@ def create_configuration(profile='default'):
             old_host = this_existing_confs.get('AIIDADB_HOST', 'localhost')
             if not old_host:
                 old_host = 'localhost'
-            readline.set_startup_hook(lambda: readline.insert_text(
-                old_host))
+            readline.set_startup_hook(lambda: readline.insert_text(old_host))
             this_new_confs['AIIDADB_HOST'] = input('mySQL host: ')
 
             old_port = this_existing_confs.get('AIIDADB_PORT', '3306')
             if not old_port:
                 old_port = '3306'
-            readline.set_startup_hook(lambda: readline.insert_text(
-                old_port))
+            readline.set_startup_hook(lambda: readline.insert_text(old_port))
             this_new_confs['AIIDADB_PORT'] = input('mySQL port: ')
 
-            readline.set_startup_hook(lambda: readline.insert_text(
-                this_existing_confs.get('AIIDADB_NAME')))
+            readline.set_startup_hook(lambda: readline.insert_text(this_existing_confs.get('AIIDADB_NAME')))
             db_name = ''
             while True:
                 db_name = input('AiiDA Database name: ')
                 if is_test_profile and db_name.startswith(TEST_KEYWORD):
                     break
-                if (not is_test_profile and not
-                db_name.startswith(TEST_KEYWORD)):
+                if (not is_test_profile and not db_name.startswith(TEST_KEYWORD)):
                     break
                 print("The test databases should start with the prefix {} and "
-                      "the non-test databases should not have this prefix."
-                      .format(TEST_KEYWORD))
+                      "the non-test databases should not have this prefix.".format(TEST_KEYWORD))
             this_new_confs['AIIDADB_NAME'] = db_name
 
             old_user = this_existing_confs.get('AIIDADB_USER', 'aiida')
             if not old_user:
                 old_user = 'aiida'
-            readline.set_startup_hook(lambda: readline.insert_text(
-                old_user))
+            readline.set_startup_hook(lambda: readline.insert_text(old_user))
             this_new_confs['AIIDADB_USER'] = input('AiiDA Database user: ')
 
-            readline.set_startup_hook(lambda: readline.insert_text(
-                this_existing_confs.get('AIIDADB_PASS')))
+            readline.set_startup_hook(lambda: readline.insert_text(this_existing_confs.get('AIIDADB_PASS')))
             this_new_confs['AIIDADB_PASS'] = input('AiiDA Database password: ')
         else:
-            raise ValueError("You have to specify a valid database "
-                             "(valid choices are 'mysql', 'postgres')")
+            raise ValueError("You have to specify a valid database " "(valid choices are 'mysql', 'postgres')")
 
         # This part for the time being is a bit oddly written
         # it should change in the future to add the possibility of having a
@@ -737,18 +707,16 @@ def create_configuration(profile='default'):
         # Check if the new repository is a test repository and if it already exists.
         if is_test_profile:
             if TEST_KEYWORD not in os.path.basename(new_repo_path.rstrip('/')):
-                raise ValueError(
-                    "The repository directory for test profiles should "
-                    "contain the test keyword '{}'".format(TEST_KEYWORD))
+                raise ValueError("The repository directory for test profiles should "
+                                 "contain the test keyword '{}'".format(TEST_KEYWORD))
 
             if os.path.isdir(new_repo_path):
                 print("The repository {} already exists. It will be used for "
                       "tests. Any content may be deleted.".format(new_repo_path))
         else:
             if TEST_KEYWORD in os.path.basename(new_repo_path):
-                raise ValueError(
-                    "The repository directory for non-test profiles cannot "
-                    "contain the test keyword '{}'".format(TEST_KEYWORD))
+                raise ValueError("The repository directory for non-test profiles cannot "
+                                 "contain the test keyword '{}'".format(TEST_KEYWORD))
 
         if not os.path.isdir(new_repo_path):
             print("The repository {} will be created.".format(new_repo_path))
@@ -786,6 +754,7 @@ def create_configuration(profile='default'):
 # - the fourth entry is the default value. Use _NoDefaultValue() if you want
 #   an exception to be raised if no property is found.
 
+
 class _NoDefaultValue(object):
     pass
 
@@ -800,122 +769,54 @@ class _NoDefaultValue(object):
 # 4. The default value, if no setting is found
 # 5. A list of valid values, or None if no such list makes sense
 _property_table = {
-    "daemon.timeout": (
-        "daemon_timeout",
-        "int",
-        "The timeout in seconds for calls to the circus client",
-        DEFAULT_DAEMON_TIMEOUT,
-        None),
-    "verdishell.modules": (
-        "modules_for_verdi_shell",
-        "string",
-        "Additional modules/functions/classes to be automaticaly loaded in the "
-        "verdi shell (but not in the runaiida environment); it should be a "
-        "string with the full paths for each module,"
-        " function or class, separated by colons, e.g. "
-        "'aiida.backends.djsite.db.models:aiida.orm.querytool.Querytool'",
-        "",
-        None),
-    "verdishell.calculation_list": (
-        "projections_for_calculation_list",
-        "list_of_str",
-        "A list of the projections that should be shown by default "
-        "when typing 'verdi calculation list'. "
-        "Set by passing the projections space separated as a string, for example: "
-        "verdi devel setproperty verdishell.calculation_list 'pk time state'",
-        ('pk', 'ctime', 'state', 'type', 'computer', 'job_state'),
-        None),
-    "logging.aiida_loglevel": (
-        "logging_aiida_log_level",
-        "string",
-        "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
-        "and to the DbLog table for the 'aiida' logger; for the DbLog, see "
-        "also the logging.db_loglevel variable to further filter messages going "
-        "to the database",
-        "REPORT",
-        ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
-    "logging.tornado_loglevel": (
-        "logging_tornado_log_level",
-        "string",
-        "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
-        "for the 'tornado' loggers",
-        "WARNING",
-        ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
-    "logging.plumpy_loglevel": (
-        "logging_plumpy_log_level",
-        "string",
-        "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
-        "for the 'plumpy' logger",
-        "WARNING",
-        ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
-    "logging.paramiko_loglevel": (
-        "logging_paramiko_log_level",
-        "string",
-        "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
-        "for the 'paramiko' logger",
-        "WARNING",
-        ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
-    "logging.alembic_loglevel": (
-        "logging_alembic_log_level",
-        "string",
-        "Minimum level to log to the console",
-        "WARNING",
-        ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
-    "logging.sqlalchemy_loglevel": (
-        "logging_sqlalchemy_loglevel",
-        "string",
-        "Minimum level to log to the console",
-        "WARNING",
-        ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
-    "logging.circus_loglevel": (
-        "logging_circus_log_level",
-        "string",
-        "Minimum level to log to the circus daemon log file"
-        "for the 'circus' logger",
-        "INFO",
-        ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
-    "logging.db_loglevel": (
-        "logging_db_log_level",
-        "string",
-        "Minimum level to log to the DbLog table",
-        "REPORT",
-        ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
-    "tcod.depositor_username": (
-        "tcod_depositor_username",
-        "string",
-        "Username for TCOD deposition",
-        None,
-        None),
-    "tcod.depositor_password": (
-        "tcod_depositor_password",
-        "string",
-        "Password for TCOD deposition",
-        None,
-        None),
-    "tcod.depositor_email": (
-        "tcod_depositor_email",
-        "string",
-        "E-mail address for TCOD deposition",
-        None,
-        None),
-    "tcod.depositor_author_name": (
-        "tcod_depositor_author_name",
-        "string",
-        "Author name for TCOD depositions",
-        None,
-        None),
-    "tcod.depositor_author_email": (
-        "tcod_depositor_author_email",
-        "string",
-        "E-mail address for TCOD depositions",
-        None,
-        None),
-    "warnings.showdeprecations": (
-        "show_deprecations",
-        "bool",
-        "Boolean whether to print deprecation warnings",
-        False,
-        None)
+    "daemon.timeout": ("daemon_timeout", "int", "The timeout in seconds for calls to the circus client",
+                       DEFAULT_DAEMON_TIMEOUT, None),
+    "verdishell.modules": ("modules_for_verdi_shell", "string",
+                           "Additional modules/functions/classes to be automaticaly loaded in the "
+                           "verdi shell (but not in the runaiida environment); it should be a "
+                           "string with the full paths for each module,"
+                           " function or class, separated by colons, e.g. "
+                           "'aiida.backends.djsite.db.models:aiida.orm.querytool.Querytool'", "", None),
+    "verdishell.calculation_list": ("projections_for_calculation_list", "list_of_str",
+                                    "A list of the projections that should be shown by default "
+                                    "when typing 'verdi calculation list'. "
+                                    "Set by passing the projections space separated as a string, for example: "
+                                    "verdi devel setproperty verdishell.calculation_list 'pk time state'",
+                                    ('pk', 'ctime', 'state', 'type', 'computer', 'job_state'), None),
+    "logging.aiida_loglevel": ("logging_aiida_log_level", "string",
+                               "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
+                               "and to the DbLog table for the 'aiida' logger; for the DbLog, see "
+                               "also the logging.db_loglevel variable to further filter messages going "
+                               "to the database", "REPORT", ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO",
+                                                             "DEBUG"]),
+    "logging.tornado_loglevel":
+    ("logging_tornado_log_level", "string", "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
+     "for the 'tornado' loggers", "WARNING", ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
+    "logging.plumpy_loglevel":
+    ("logging_plumpy_log_level", "string", "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
+     "for the 'plumpy' logger", "WARNING", ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
+    "logging.paramiko_loglevel":
+    ("logging_paramiko_log_level", "string", "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
+     "for the 'paramiko' logger", "WARNING", ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
+    "logging.alembic_loglevel": ("logging_alembic_log_level", "string", "Minimum level to log to the console",
+                                 "WARNING", ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
+    "logging.sqlalchemy_loglevel": ("logging_sqlalchemy_loglevel", "string", "Minimum level to log to the console",
+                                    "WARNING", ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
+    "logging.circus_loglevel": ("logging_circus_log_level", "string",
+                                "Minimum level to log to the circus daemon log file"
+                                "for the 'circus' logger", "INFO",
+                                ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
+    "logging.db_loglevel": ("logging_db_log_level", "string", "Minimum level to log to the DbLog table", "REPORT",
+                            ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
+    "tcod.depositor_username": ("tcod_depositor_username", "string", "Username for TCOD deposition", None, None),
+    "tcod.depositor_password": ("tcod_depositor_password", "string", "Password for TCOD deposition", None, None),
+    "tcod.depositor_email": ("tcod_depositor_email", "string", "E-mail address for TCOD deposition", None, None),
+    "tcod.depositor_author_name": ("tcod_depositor_author_name", "string", "Author name for TCOD depositions", None,
+                                   None),
+    "tcod.depositor_author_email": ("tcod_depositor_author_email", "string", "E-mail address for TCOD depositions",
+                                    None, None),
+    "warnings.showdeprecations": ("show_deprecations", "bool", "Boolean whether to print deprecation warnings", False,
+                                  None)
 }
 
 
@@ -1057,8 +958,7 @@ def set_property(name, value):
         actual_value = value.split()
     else:
         # Implement here other data types
-        raise NotImplementedError("Type string '{}' not implemented yet".format(
-            type_string))
+        raise NotImplementedError("Type string '{}' not implemented yet".format(type_string))
 
     if valid_values is not None:
         if actual_value not in valid_values:
@@ -1088,8 +988,7 @@ def parse_repository_uri(repository_uri):
     parts = uritools.urisplit(repository_uri)
 
     if parts.scheme != u'file':
-        raise ConfigurationError("The current AiiDA version supports only a "
-                                 "local repository")
+        raise ConfigurationError("The current AiiDA version supports only a " "local repository")
 
     if parts.scheme == u'file':
         if not os.path.isabs(parts.path):

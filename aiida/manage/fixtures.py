@@ -170,9 +170,6 @@ class FixtureManager(object):  # pylint: disable=too-many-public-methods,useless
         self.postgres.create_db(self.db_user, self.db_name)
         self.__is_running_on_test_db = True
 
-    def create_root_dir(self):
-        self.root_dir = tempfile.mkdtemp()
-
     def create_profile(self):
         """
         Set AiiDA to use the test config dir and create a default profile there
@@ -187,7 +184,7 @@ class FixtureManager(object):  # pylint: disable=too-many-public-methods,useless
         from aiida.manage.configuration import settings as configuration_settings
         from aiida.manage.configuration.setup import setup_profile
         if not self.root_dir:
-            self.create_root_dir()
+            self.root_dir = tempfile.mkdtemp()
         configuration.CONFIG = None
         configuration_settings.AIIDA_CONFIG_FOLDER = self.config_dir
         backend_settings.AIIDADB_PROFILE = None

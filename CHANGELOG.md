@@ -1,9 +1,10 @@
 ## v1.0.0
 
 ### General
-- Code has been made python 3 compatible. [[#804]](https://github.com/aiidateam/aiida_core/pull/804)
+- Code has been made python 3 compatible. [[#804]](https://github.com/aiidateam/aiida_core/pull/804)[[#2136]](https://github.com/aiidateam/aiida_core/pull/2136)[[#2125]](https://github.com/aiidateam/aiida_core/pull/2125)[[#2117]](https://github.com/aiidateam/aiida_core/pull/2117)[[#2110]](https://github.com/aiidateam/aiida_core/pull/2110)[[#2100]](https://github.com/aiidateam/aiida_core/pull/2100)[[#2094]](https://github.com/aiidateam/aiida_core/pull/2094)[[#2092]](https://github.com/aiidateam/aiida_core/pull/2092)
+- All files written by AiiDA. [[#2107]](https://github.com/aiidateam/aiida_core/pull/2107)
 - All calculations now go through the `Process` layer, homogenizing the state of work and job calculations [[#1125]](https://github.com/aiidateam/aiida_core/pull/1125)
-- Implement the concept of a "finish status" for all calculations, allowing a programmatic definition of success or failure for all processes [[#1189]](https://github.com/aiidateam/aiida_core/pull/1189)
+- Implement the concept of an "exit status" for all calculations, allowing a programmatic definition of success or failure for all processes [[#1189]](https://github.com/aiidateam/aiida_core/pull/1189)
 - Implementation of the `AuthInfo` class which will allow custom configuration per configured computer [[#1184]](https://github.com/aiidateam/aiida_core/pull/1184)
 - Add utility functions based on the `click` library to simplify writing command line interface scripts [[#1194]](https://github.com/aiidateam/aiida_core/pull/1194)
 - Implemented the `DbImporter` for the Materials Platform of Data Science API, which exposed the content of the Pauling file [[#1238]](https://github.com/aiidateam/aiida_core/pull/1238)
@@ -79,6 +80,7 @@
 - Added section on the concept of the `Process` [[#1395]](https://github.com/aiidateam/aiida_core/pull/1395)
 - Added section on advance concepts of the `WorkChain` class, as well as best-practices on designing/writing workchains [[#1459]](https://github.com/aiidateam/aiida_core/pull/1459)
 - Remove outdated or duplicated docs for legacy and new workflow system [[#1718]](https://github.com/aiidateam/aiida_core/pull/1718)
+- Added entry of potential issues for transports that enter bash login shells that write spurious output [[#2132]](https://github.com/aiidateam/aiida_core/pull/2132)
 
 ### Bug fixes
 - Fix leaking of SSH processes when using a proxy command for a computer using SSH transport [[#2019]](https://github.com/aiidateam/aiida_core/pull/2019)
@@ -95,7 +97,6 @@
 - Differentiate `quicksetup` profile settings based on project folder [[#1901]](https://github.com/aiidateam/aiida_core/pull/1901)
 - Ensure `WorkChain` does not exit unless stepper returns non-zero value [[#1945]](https://github.com/aiidateam/aiida_core/pull/1945)
 - Fix variable `virtual_memory_kb` in direct scheduler. [[#2050]](https://github.com/aiidateam/aiida_core/pull/2050)
-- Fixed a bug when using bash login shells in transports that write spurious output [[#2132]](https://github.com/aiidateam/aiida_core/pull/2132)
 
 ### Developers
 - Enable tab-completion for `verdi devel tests` [[#1809]](https://github.com/aiidateam/aiida_core/pull/1809)

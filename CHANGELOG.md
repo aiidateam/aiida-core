@@ -1,8 +1,10 @@
 ## v1.0.0
 
 ### General
+- Code has been made python 3 compatible. [[#804]](https://github.com/aiidateam/aiida_core/pull/804)[[#2136]](https://github.com/aiidateam/aiida_core/pull/2136)[[#2125]](https://github.com/aiidateam/aiida_core/pull/2125)[[#2117]](https://github.com/aiidateam/aiida_core/pull/2117)[[#2110]](https://github.com/aiidateam/aiida_core/pull/2110)[[#2100]](https://github.com/aiidateam/aiida_core/pull/2100)[[#2094]](https://github.com/aiidateam/aiida_core/pull/2094)[[#2092]](https://github.com/aiidateam/aiida_core/pull/2092)
+- AiiDA now enforces UTF-8 encoding for text output in its files and databases. [[#2107]](https://github.com/aiidateam/aiida_core/pull/2107)
 - All calculations now go through the `Process` layer, homogenizing the state of work and job calculations [[#1125]](https://github.com/aiidateam/aiida_core/pull/1125)
-- Implement the concept of a "finish status" for all calculations, allowing a programmatic definition of success or failure for all processes [[#1189]](https://github.com/aiidateam/aiida_core/pull/1189)
+- Implement the concept of an "exit status" for all calculations, allowing a programmatic definition of success or failure for all processes [[#1189]](https://github.com/aiidateam/aiida_core/pull/1189)
 - Implementation of the `AuthInfo` class which will allow custom configuration per configured computer [[#1184]](https://github.com/aiidateam/aiida_core/pull/1184)
 - Add utility functions based on the `click` library to simplify writing command line interface scripts [[#1194]](https://github.com/aiidateam/aiida_core/pull/1194)
 - Implemented the `DbImporter` for the Materials Platform of Data Science API, which exposed the content of the Pauling file [[#1238]](https://github.com/aiidateam/aiida_core/pull/1238)
@@ -22,6 +24,7 @@
 - Implement exponential backoff retry mechanism for transport tasks [[#1837]](https://github.com/aiidateam/aiida_core/pull/1837)
 - Pause `JobProcess` when transport task falls through exponential backoff [[#1903]](https://github.com/aiidateam/aiida_core/pull/1903)
 - Separate `JobProcess` submit task in folder upload and scheduler submit [[#1946]](https://github.com/aiidateam/aiida_core/pull/1946)
+- Each daemon worker now respects an optional minimum scheduler polling interval [[#1929]](https://github.com/aiidateam/aiida_core/pull/1929)
 
 ### Workflows
 - `InlineCalculations` have been ported to use the new `Process` infrastructure, while maintaining full backwards compatibility [[#1124]](https://github.com/aiidateam/aiida_core/pull/1124)
@@ -45,6 +48,7 @@
 - Added new command `verdi computer duplicate` [[#1937]](https://github.com/aiidateam/aiida_core/pull/1937)
 - Added new command `verdi profile show` [[#2028]](https://github.com/aiidateam/aiida_core/pull/2028)
 - Added new command `verdi work show` [[#1816]](https://github.com/aiidateam/aiida_core/pull/1816)
+- Added new command `verdi export inspect` [[#2128]](https://github.com/aiidateam/aiida_core/pull/2128)
 - Homogenize the interface of `verdi quicksetup` and `verdi setup` [[#1797]](https://github.com/aiidateam/aiida_core/pull/1797)
 - The output of `verdi calculation list` and `verdi work list` has been homogenized [[#1197]](https://github.com/aiidateam/aiida_core/pull/1197)
 - Determine active nodes in `verdi calculation list` based on process state [[#1873]](https://github.com/aiidateam/aiida_core/pull/1873)
@@ -65,6 +69,9 @@
 - Renamed `aiida.daemon.execmanager.job_states` to `JOB_STATES`, conforming to python conventions [[#1799]](https://github.com/aiidateam/aiida_core/pull/1799)
 - Abstract method `aiida.scheduler.Scheduler._get_detailed_jobinfo_command()` raises `aiida.common.exceptions.FeatureNotAvailable` (was `NotImplemented`).
 
+### Importers
+- Added an importer class for the Materials Project API [[#2097]](https://github.com/aiidateam/aiida_core/pull/2097)
+
 ### Documentation
 - Big reorganization of the documentation structure [[#1299]](https://github.com/aiidateam/aiida_core/pull/1299)
 - Added section on the basics of workchains and workfunctions [[#1384]](https://github.com/aiidateam/aiida_core/pull/1384)
@@ -73,6 +80,7 @@
 - Added section on the concept of the `Process` [[#1395]](https://github.com/aiidateam/aiida_core/pull/1395)
 - Added section on advance concepts of the `WorkChain` class, as well as best-practices on designing/writing workchains [[#1459]](https://github.com/aiidateam/aiida_core/pull/1459)
 - Remove outdated or duplicated docs for legacy and new workflow system [[#1718]](https://github.com/aiidateam/aiida_core/pull/1718)
+- Added entry of potential issues for transports that enter bash login shells that write spurious output [[#2132]](https://github.com/aiidateam/aiida_core/pull/2132)
 
 ### Bug fixes
 - Fix leaking of SSH processes when using a proxy command for a computer using SSH transport [[#2019]](https://github.com/aiidateam/aiida_core/pull/2019)

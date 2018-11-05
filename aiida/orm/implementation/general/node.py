@@ -30,10 +30,9 @@ from aiida.common.links import LinkType
 from aiida.common.utils import abstractclassmethod
 from aiida.common.utils import combomethod, classproperty
 from aiida.plugins.loader import get_query_type_from_type_string, get_type_string_from_class
+from aiida.common.hashing import _HASH_EXTRA_KEY
 
 _NO_DEFAULT = tuple()
-_HASH_EXTRA_KEY = '_aiida_hash'
-
 
 def clean_value(value):
     """

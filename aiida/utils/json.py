@@ -13,6 +13,8 @@ Abstracts JSON usage to ensure compatibility with Python2 and Python3.
 Use this module prefentially over standard json to ensure compatibility.
 Also note the conventions for using io.open for dump and dumps.
 """
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 import simplejson
 

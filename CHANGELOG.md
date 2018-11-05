@@ -1,6 +1,7 @@
 ## v1.0.0
 
 ### General
+- Code has been made python 3 compatible. [[#804]](https://github.com/aiidateam/aiida_core/pull/804)
 - All calculations now go through the `Process` layer, homogenizing the state of work and job calculations [[#1125]](https://github.com/aiidateam/aiida_core/pull/1125)
 - Implement the concept of a "finish status" for all calculations, allowing a programmatic definition of success or failure for all processes [[#1189]](https://github.com/aiidateam/aiida_core/pull/1189)
 - Implementation of the `AuthInfo` class which will allow custom configuration per configured computer [[#1184]](https://github.com/aiidateam/aiida_core/pull/1184)
@@ -22,6 +23,7 @@
 - Implement exponential backoff retry mechanism for transport tasks [[#1837]](https://github.com/aiidateam/aiida_core/pull/1837)
 - Pause `JobProcess` when transport task falls through exponential backoff [[#1903]](https://github.com/aiidateam/aiida_core/pull/1903)
 - Separate `JobProcess` submit task in folder upload and scheduler submit [[#1946]](https://github.com/aiidateam/aiida_core/pull/1946)
+- Each daemon worker now respects an optional minimum scheduler polling interval [[#1929]](https://github.com/aiidateam/aiida_core/pull/1929)
 
 ### Workflows
 - `InlineCalculations` have been ported to use the new `Process` infrastructure, while maintaining full backwards compatibility [[#1124]](https://github.com/aiidateam/aiida_core/pull/1124)
@@ -45,6 +47,7 @@
 - Added new command `verdi computer duplicate` [[#1937]](https://github.com/aiidateam/aiida_core/pull/1937)
 - Added new command `verdi profile show` [[#2028]](https://github.com/aiidateam/aiida_core/pull/2028)
 - Added new command `verdi work show` [[#1816]](https://github.com/aiidateam/aiida_core/pull/1816)
+- Added new command `verdi export inspect` [[#2128]](https://github.com/aiidateam/aiida_core/pull/2128)
 - Homogenize the interface of `verdi quicksetup` and `verdi setup` [[#1797]](https://github.com/aiidateam/aiida_core/pull/1797)
 - The output of `verdi calculation list` and `verdi work list` has been homogenized [[#1197]](https://github.com/aiidateam/aiida_core/pull/1197)
 - Determine active nodes in `verdi calculation list` based on process state [[#1873]](https://github.com/aiidateam/aiida_core/pull/1873)
@@ -64,6 +67,9 @@
 ### Schedulers
 - Renamed `aiida.daemon.execmanager.job_states` to `JOB_STATES`, conforming to python conventions [[#1799]](https://github.com/aiidateam/aiida_core/pull/1799)
 - Abstract method `aiida.scheduler.Scheduler._get_detailed_jobinfo_command()` raises `aiida.common.exceptions.FeatureNotAvailable` (was `NotImplemented`).
+
+### Importers
+- Added an importer class for the Materials Project API [[#2097]](https://github.com/aiidateam/aiida_core/pull/2097)
 
 ### Documentation
 - Big reorganization of the documentation structure [[#1299]](https://github.com/aiidateam/aiida_core/pull/1299)
@@ -89,6 +95,7 @@
 - Differentiate `quicksetup` profile settings based on project folder [[#1901]](https://github.com/aiidateam/aiida_core/pull/1901)
 - Ensure `WorkChain` does not exit unless stepper returns non-zero value [[#1945]](https://github.com/aiidateam/aiida_core/pull/1945)
 - Fix variable `virtual_memory_kb` in direct scheduler. [[#2050]](https://github.com/aiidateam/aiida_core/pull/2050)
+- Fixed a bug when using bash login shells in transports that write spurious output [[#2132]](https://github.com/aiidateam/aiida_core/pull/2132)
 
 ### Developers
 - Enable tab-completion for `verdi devel tests` [[#1809]](https://github.com/aiidateam/aiida_core/pull/1809)

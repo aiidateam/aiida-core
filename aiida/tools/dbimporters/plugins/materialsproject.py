@@ -10,6 +10,8 @@
 """Module that contains the class definitions necessary to offer support for
 queries to Materials Project."""
 
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 import os
 import datetime

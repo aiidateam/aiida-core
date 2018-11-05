@@ -12,19 +12,19 @@ from __future__ import print_function
 from __future__ import absolute_import
 import datetime
 import importlib
-import json
 import shutil
 import sys
 import tempfile
 
 from dateutil.parser import parse
 
-from aiida.common import utils
-from aiida.common.additions.backup_script import backup_setup
-from aiida.orm.node import Node
 from aiida.backends.utils import is_dbenv_loaded, load_dbenv, BACKEND_SQLA, BACKEND_DJANGO
 from aiida.backends.settings import BACKEND
 from aiida.backends.testbase import AiidaTestCase
+from aiida.common import utils
+from aiida.common.additions.backup_script import backup_setup
+from aiida.orm.node import Node
+import aiida.utils.json as json
 
 
 if not is_dbenv_loaded():
@@ -336,9 +336,9 @@ class TestBackupScriptIntegration(AiidaTestCase):
             dest_dir = os.path.join(backup_full_path,
                                     self._bs_instance._file_backup_folder_rel,
                                     self._repo_rel_path)
-            self.assertTrue(are_dir_trees_equal(source_dir, dest_dir),
-                            "The backed-up repository has differences "
-                            "to the original one.")
+            res, msg = are_dir_trees_equal(source_dir, dest_dir)
+            self.assertTrue(res, "The backed-up repository has differences to the original one. " + str(msg)
+                             + ". If the test fails, report it in issue #2134.")
         finally:
             shutil.rmtree(temp_folder, ignore_errors=True)
 

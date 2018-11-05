@@ -14,12 +14,13 @@ Tests for the export and import routines.
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-
+import io
 import six
 from six.moves import range, zip
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.importexport import import_data
+
 
 class TestSpecificImport(AiidaTestCase):
 
@@ -176,6 +177,7 @@ class TestSpecificImport(AiidaTestCase):
             qb.append(Calculation, output_of='remote')
             self.assertGreater(len(qb.all()), 0)
 
+
 class TestSimple(AiidaTestCase):
 
     def setUp(self):
@@ -275,7 +277,6 @@ class TestSimple(AiidaTestCase):
         """
         Test the check for the export format version.
         """
-        import json
         import tarfile
         import os
         import shutil
@@ -284,6 +285,8 @@ class TestSimple(AiidaTestCase):
         from aiida.common import exceptions
         from aiida.orm import DataFactory
         from aiida.orm.importexport import export
+        import aiida.utils.json as json
+
 
         # Creating a folder for the import/export files
         export_file_tmp_folder = tempfile.mkdtemp()
@@ -299,13 +302,14 @@ class TestSimple(AiidaTestCase):
             with tarfile.open(filename, "r:gz", format=tarfile.PAX_FORMAT) as tar:
                 tar.extractall(unpack_tmp_folder)
 
-            with open(os.path.join(unpack_tmp_folder,
-                                   'metadata.json'), 'r') as f:
-                metadata = json.load(f)
+            with io.open(os.path.join(unpack_tmp_folder,
+                                   'metadata.json'), 'r', encoding='utf8') as fhandle:
+                metadata = json.load(fhandle)
             metadata['export_version'] = 0.0
-            with open(os.path.join(unpack_tmp_folder,
-                                   'metadata.json'), 'w') as f:
-                json.dump(metadata, f)
+
+            with io.open(os.path.join(unpack_tmp_folder, 'metadata.json'),
+                         'wb') as fhandle:
+                json.dump(metadata, fhandle)
 
             with tarfile.open(filename, "w:gz", format=tarfile.PAX_FORMAT) as tar:
                 tar.add(unpack_tmp_folder, arcname="")
@@ -324,7 +328,6 @@ class TestSimple(AiidaTestCase):
         """
         Test importing of nodes, that have links to unknown nodes.
         """
-        import json
         import tarfile
         import os
         import shutil
@@ -334,6 +337,7 @@ class TestSimple(AiidaTestCase):
         from aiida.common.folders import SandboxFolder
         from aiida.orm.data.structure import StructureData
         from aiida.orm import load_node
+        import aiida.utils.json as json
 
         # Creating a folder for the import/export files
         temp_folder = tempfile.mkdtemp()
@@ -351,15 +355,16 @@ class TestSimple(AiidaTestCase):
                     filename, "r:gz", format=tarfile.PAX_FORMAT) as tar:
                 tar.extractall(unpack.abspath)
 
-            with open(unpack.get_abs_path('data.json'), 'r') as f:
-                metadata = json.load(f)
+            with io.open(unpack.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
+                metadata = json.load(fhandle)
             metadata['links_uuid'].append({
                 'output': sd.uuid,
                 'input': 'non-existing-uuid',
                 'label': 'parent'
             })
-            with open(unpack.get_abs_path('data.json'), 'w') as f:
-                json.dump(metadata, f)
+
+            with io.open(unpack.get_abs_path('data.json'), 'wb') as fhandle:
+                json.dump(metadata, fhandle)
 
             with tarfile.open(
                     filename, "w:gz", format=tarfile.PAX_FORMAT) as tar:

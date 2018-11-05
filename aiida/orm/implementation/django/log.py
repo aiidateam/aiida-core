@@ -10,11 +10,11 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import json
+
 from aiida.orm.log import LogCollection, Log
 from aiida.orm.log import ASCENDING
 from aiida.backends.djsite.db.models import DbLog
-
+import aiida.utils.json as json
 
 class DjangoLogCollection(LogCollection):
 

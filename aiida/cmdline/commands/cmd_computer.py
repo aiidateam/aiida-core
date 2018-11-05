@@ -12,6 +12,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+import io
 import sys
 from functools import partial
 from six.moves import zip
@@ -169,7 +170,7 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
     os.close(handle)
     try:
         transport.getfile(remote_file_path, destfile)
-        with open(destfile) as dfile:
+        with io.open(destfile, encoding='utf8') as dfile:
             read_string = dfile.read()
         echo.echo("      [Retrieved]")
         if read_string != file_content:

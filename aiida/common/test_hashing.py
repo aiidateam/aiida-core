@@ -204,7 +204,7 @@ class MakeHashTest(unittest.TestCase):
         with SandboxFolder(sandbox_in_repo=False) as folder:
             folder.open('file1', 'a').close()
             fhandle = folder.open('file2', 'w')
-            fhandle.write("hello there!\n")
+            fhandle.write(u"hello there!\n")
             fhandle.close()
 
             folder_hash = make_hash(folder)

@@ -551,11 +551,11 @@ class CifData(SinglefileData):
         """
         import tempfile
         cif = cif_from_ase(aseatoms)
-        with tempfile.NamedTemporaryFile(mode='w+') as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             with HiddenPrints():
-                f.write(pycifrw_from_cif(cif, loops=ase_loops).WriteOut())
-            f.flush()
-            self.set_file(f.name)
+                tmpf.write(pycifrw_from_cif(cif, loops=ase_loops).WriteOut())
+            tmpf.flush()
+            self.set_file(tmpf.name)
 
     @ase.setter
     def ase(self, aseatoms):
@@ -589,11 +589,11 @@ class CifData(SinglefileData):
         .. note:: requires PyCifRW module.
         """
         import tempfile
-        with tempfile.NamedTemporaryFile(mode='w+') as f:
+        with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             with HiddenPrints():
-                f.write(values.WriteOut())
-            f.flush()
-            self.set_file(f.name)
+                tmpf.write(values.WriteOut())
+            tmpf.flush()
+            self.set_file(tmpf.name)
 
         self._values = values
 

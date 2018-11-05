@@ -14,11 +14,12 @@ utilities for:
 * downloading json files
 * pickling to the registry cache folder
 """
-
-
+from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+import io
+
 def registry_cache_folder_name():
     """
     return the name of the subfolder of aiida_dir where registry caches are stored.
@@ -65,7 +66,7 @@ def pickle_to_registry_cache_folder(obj, fname):
     safe_create_registry_cache_folder()
     cache_dir = registry_cache_folder_path()
     fpath = osp.join(cache_dir, fname)
-    with open(fpath, 'w') as cache_file:
+    with io.open(fpath, 'w', encoding='utf8') as cache_file:
         pdump(obj, cache_file)
 
 
@@ -77,7 +78,7 @@ def unpickle_from_registry_cache_folder(fname):
     from os import path as osp
     cache_dir = registry_cache_folder_path()
     fpath = osp.join(cache_dir, fname)
-    with open(fpath, 'r') as cache:
+    with io.open(fpath, 'r', encoding='utf8') as cache:
         return pload(cache)
 
 

@@ -35,10 +35,10 @@ class TestCode(AiidaTestCase):
             # No file with name test.sh
             code.store()
 
-        with tempfile.NamedTemporaryFile(mode='w+') as f:
-            f.write("#/bin/bash\n\necho test run\n")
-            f.flush()
-            code.add_path(f.name, 'test.sh')
+        with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
+            fhandle.write("#/bin/bash\n\necho test run\n")
+            fhandle.flush()
+            code.add_path(fhandle.name, 'test.sh')
 
         code.store()
         self.assertTrue(code.can_run_on(self.computer))
@@ -68,10 +68,10 @@ class TestCode(AiidaTestCase):
             _ = Code(remote_computer_exec=('localhost', '/bin/ls'))
 
         code = Code(remote_computer_exec=(self.computer, '/bin/ls'))
-        with tempfile.NamedTemporaryFile(mode='w+') as f:
-            f.write("#/bin/bash\n\necho test run\n")
-            f.flush()
-            code.add_path(f.name, 'test.sh')
+        with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
+            fhandle.write("#/bin/bash\n\necho test run\n")
+            fhandle.flush()
+            code.add_path(fhandle.name, 'test.sh')
 
         with self.assertRaises(ValidationError):
             # There are files inside
@@ -86,9 +86,12 @@ class TestCode(AiidaTestCase):
         self.assertEquals(code.get_execname(), '/bin/ls')
 
         self.assertTrue(code.can_run_on(self.computer))
-        othercomputer = self.backend.computers.create(name='another_localhost', hostname='localhost',
-                                                      transport_type='local', scheduler_type='pbspro',
-                                                      workdir='/tmp/aiida').store()
+        othercomputer = self.backend.computers.create(
+            name='another_localhost',
+            hostname='localhost',
+            transport_type='local',
+            scheduler_type='pbspro',
+            workdir='/tmp/aiida').store()
         self.assertFalse(code.can_run_on(othercomputer))
 
 
@@ -138,14 +141,12 @@ class TestGroupHashing(AiidaTestCase):
 
         # Search for the UUID of the stored group
         qb = QueryBuilder()
-        qb.append(Group, project=['uuid'],
-                  filters={'name': {'==': 'test_group'}})
+        qb.append(Group, project=['uuid'], filters={'name': {'==': 'test_group'}})
         [uuid] = qb.first()
 
         # Look the node with the previously returned UUID
         qb = QueryBuilder()
-        qb.append(Group, project=['id'],
-                  filters={'uuid': {'==': uuid}})
+        qb.append(Group, project=['id'], filters={'uuid': {'==': uuid}})
         # Check that the query doesn't fail
         qb.all()
         # And that the results are correct
@@ -266,13 +267,11 @@ class TestGroups(AiidaTestCase):
         g.add_nodes([n7, n8.dbnode])
 
         # Check
-        self.assertEquals(set([_.pk for _ in [n1, n2, n3, n4, n5, n6, n7, n8]]),
-                          set([_.pk for _ in g.nodes]))
+        self.assertEquals(set([_.pk for _ in [n1, n2, n3, n4, n5, n6, n7, n8]]), set([_.pk for _ in g.nodes]))
 
         # Try to add a node that is already present: there should be no problem
         g.add_nodes(n1)
-        self.assertEquals(set([_.pk for _ in [n1, n2, n3, n4, n5, n6, n7, n8]]),
-                          set([_.pk for _ in g.nodes]))
+        self.assertEquals(set([_.pk for _ in [n1, n2, n3, n4, n5, n6, n7, n8]]), set([_.pk for _ in g.nodes]))
 
         # Cleanup
         g.delete()
@@ -298,41 +297,33 @@ class TestGroups(AiidaTestCase):
         # Add initial nodes
         g.add_nodes([n1, n2, n3, n4, n5, n6, n7, n8])
         # Check
-        self.assertEquals(set([_.pk for _ in [n1, n2, n3, n4, n5, n6, n7, n8]]),
-                          set([_.pk for _ in g.nodes]))
+        self.assertEquals(set([_.pk for _ in [n1, n2, n3, n4, n5, n6, n7, n8]]), set([_.pk for _ in g.nodes]))
 
         # Remove a node that is not in the group: nothing should happen
         # (same behavior of Django)
         g.remove_nodes(n_out)
         # Re-check
-        self.assertEquals(set([_.pk for _ in [n1, n2, n3, n4, n5, n6, n7, n8]]),
-                          set([_.pk for _ in g.nodes]))
+        self.assertEquals(set([_.pk for _ in [n1, n2, n3, n4, n5, n6, n7, n8]]), set([_.pk for _ in g.nodes]))
 
         # Remove one Node and check
         g.remove_nodes(n4)
-        self.assertEquals(set([_.pk for _ in [n1, n2, n3, n5, n6, n7, n8]]),
-                          set([_.pk for _ in g.nodes]))
+        self.assertEquals(set([_.pk for _ in [n1, n2, n3, n5, n6, n7, n8]]), set([_.pk for _ in g.nodes]))
         # Remove one DbNode and check
         g.remove_nodes(n7.dbnode)
-        self.assertEquals(set([_.pk for _ in [n1, n2, n3, n5, n6, n8]]),
-                          set([_.pk for _ in g.nodes]))
+        self.assertEquals(set([_.pk for _ in [n1, n2, n3, n5, n6, n8]]), set([_.pk for _ in g.nodes]))
         # Remove a list of Nodes and check
         g.remove_nodes([n1, n8])
-        self.assertEquals(set([_.pk for _ in [n2, n3, n5, n6]]),
-                          set([_.pk for _ in g.nodes]))
+        self.assertEquals(set([_.pk for _ in [n2, n3, n5, n6]]), set([_.pk for _ in g.nodes]))
         # Remove a list of Nodes and check
         g.remove_nodes([n1, n8])
-        self.assertEquals(set([_.pk for _ in [n2, n3, n5, n6]]),
-                          set([_.pk for _ in g.nodes]))
+        self.assertEquals(set([_.pk for _ in [n2, n3, n5, n6]]), set([_.pk for _ in g.nodes]))
         # Remove a list of DbNodes and check
         g.remove_nodes([n2.dbnode, n5.dbnode])
-        self.assertEquals(set([_.pk for _ in [n3, n6]]),
-                          set([_.pk for _ in g.nodes]))
+        self.assertEquals(set([_.pk for _ in [n3, n6]]), set([_.pk for _ in g.nodes]))
 
         # Remove a mixed list of Nodes and DbNodes and check
         g.remove_nodes([n3, n6.dbnode])
-        self.assertEquals(set(),
-                          set([_.pk for _ in g.nodes]))
+        self.assertEquals(set(), set([_.pk for _ in g.nodes]))
 
         # Cleanup
         g.delete()
@@ -447,6 +438,7 @@ class TestDbExtras(AiidaTestCase):
 
 
 class TestBool(AiidaTestCase):
+
     def test_bool_conversion(self):
         from aiida.orm.data.bool import Bool
         for val in [True, False]:

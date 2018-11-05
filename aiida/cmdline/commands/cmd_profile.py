@@ -64,7 +64,7 @@ def profile_show(profile):
     import tabulate
 
     headers = ('Attribute', 'Value')
-    data = sorted([(k.lower(), v) for k, v in profile.items()])
+    data = sorted([(k.lower(), v) for k, v in profile.config.items()])
     echo.echo(tabulate.tabulate(data, headers=headers))
 
 
@@ -109,7 +109,7 @@ def profile_delete(force, profiles):
         postgres.dbinfo["host"] = profile.get('AIIDADB_HOST')
         postgres.determine_setup()
 
-        import json
+        import aiida.utils.json as json
         echo.echo(json.dumps(postgres.dbinfo, indent=4))
 
         db_name = profile.get('AIIDADB_NAME', '')

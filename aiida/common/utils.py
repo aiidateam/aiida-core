@@ -20,6 +20,7 @@ import datetime
 import filecmp
 import functools
 import inspect
+import io
 import os.path
 import sys
 import numbers
@@ -335,7 +336,7 @@ def md5_file(filename, block_size_factor=128):
     import hashlib
 
     md5 = hashlib.md5()
-    with open(filename, 'rb') as fhandle:
+    with io.open(filename, 'rb', encoding=None) as fhandle:
         # I read 128 bytes at a time until it returns the empty string b''
         for chunk in iter(lambda: fhandle.read(block_size_factor * md5.block_size), b''):
             md5.update(chunk)
@@ -361,7 +362,7 @@ def sha1_file(filename, block_size_factor=128):
     import hashlib
 
     sha1 = hashlib.sha1()
-    with open(filename, 'rb') as fhandle:
+    with io.open(filename, 'rb', encoding=None) as fhandle:
         # I read 128 bytes at a time until it returns the empty string b''
         for chunk in iter(lambda: fhandle.read(block_size_factor * sha1.block_size), b''):
             sha1.update(chunk)
@@ -919,22 +920,32 @@ def are_dir_trees_equal(dir1, dir2):
         there were no errors while accessing the directories or files,
         False otherwise.
     """
+
+    # Directory comparison
     dirs_cmp = filecmp.dircmp(dir1, dir2)
     if dirs_cmp.left_only or dirs_cmp.right_only or dirs_cmp.funny_files:
-        return False
+        return (False, "Left directory: {}, right directory: {}, files only "
+                "in left directory: {}, files only in right directory: "
+                "{}, not comparable files: {}".format(dir1, dir2, dirs_cmp.left_only, dirs_cmp.right_only,
+                                                      dirs_cmp.funny_files))
 
+    # If the directories contain the same files, compare the common files
     (_, mismatch, errors) = filecmp.cmpfiles(dir1, dir2, dirs_cmp.common_files, shallow=False)
-
-    if mismatch or errors:
-        return False
+    if mismatch:
+        return (False, "The following files in the directories {} and {} "
+                "don't match: {}".format(dir1, dir2, mismatch))
+    if errors:
+        return (False, "The following files in the directories {} and {} "
+                "aren't regular: {}".format(dir1, dir2, errors))
 
     for common_dir in dirs_cmp.common_dirs:
         new_dir1 = os.path.join(dir1, common_dir)
         new_dir2 = os.path.join(dir2, common_dir)
-        if not are_dir_trees_equal(new_dir1, new_dir2):
-            return False
+        res, msg = are_dir_trees_equal(new_dir1, new_dir2)
+        if not res:
+            return False, msg
 
-    return True
+    return True, "The given directories ({} and {}) are equal".format(dir1, dir2)
 
 
 def indent(txt, spaces=4):
@@ -1241,8 +1252,18 @@ class HiddenPrints(object):  # pylint: disable=too-few-public-methods
         self._original_stdout = None
 
     def __enter__(self):
+        """
+        Keep track of the original sdtout location and redirect stdout
+        to /dev/null
+        """
         from os import devnull
+
         self._original_stdout = sys.stdout
+
+        # N.B. Here we don't use io.open as we may need to swallow byte streams.
+        # In this instance, as we're just redirecting the output to dev null we
+        # don't need to worry about encoding and so we use regular system open.
+        # This will work in Python 2 or Python 3.
         sys.stdout = open(devnull, 'w')
 
     def __exit__(self, exc_type, exc_val, exc_tb):

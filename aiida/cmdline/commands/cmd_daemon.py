@@ -24,7 +24,7 @@ from aiida.cmdline.utils.common import get_env_with_venv_bin
 from aiida.cmdline.utils.daemon import get_daemon_status, print_client_response_status
 from aiida.common.profile import get_current_profile_name
 from aiida.common.setup import get_profiles_list
-from aiida.daemon.client import DaemonClient
+from aiida.daemon.client import get_daemon_client
 
 
 @verdi.group('daemon')
@@ -41,14 +41,14 @@ def start(foreground):
     """
     Start the daemon
     """
-    client = DaemonClient()
+    client = get_daemon_client()
 
     echo.echo('Starting the daemon... ', nl=False)
 
     if foreground:
-        command = ['verdi', '-p', client.profile_name, 'daemon', '_start_circus', '--foreground']
+        command = ['verdi', '-p', client.profile.name, 'daemon', '_start_circus', '--foreground']
     else:
-        command = ['verdi', '-p', client.profile_name, 'daemon', '_start_circus']
+        command = ['verdi', '-p', client.profile.name, 'daemon', '_start_circus']
 
     try:
         currenv = get_env_with_venv_bin()
@@ -76,7 +76,7 @@ def status(all_profiles):
         profiles = [get_current_profile_name()]
 
     for profile_name in profiles:
-        client = DaemonClient(profile_name)
+        client = get_daemon_client(profile_name)
         click.secho('Profile: ', fg='red', bold=True, nl=False)
         click.secho('{}'.format(profile_name), bold=True)
         result = get_daemon_status(client)
@@ -90,7 +90,7 @@ def incr(number):
     """
     Add NUMBER [default=1] workers to the running daemon
     """
-    client = DaemonClient()
+    client = get_daemon_client()
     response = client.increase_workers(number)
     print_client_response_status(response)
 
@@ -102,7 +102,7 @@ def decr(number):
     """
     Remove NUMBER [default=1] workers from the running daemon
     """
-    client = DaemonClient()
+    client = get_daemon_client()
     response = client.decrease_workers(number)
     print_client_response_status(response)
 
@@ -112,7 +112,7 @@ def logshow():
     """
     Show the log of the daemon, press CTRL+C to quit
     """
-    client = DaemonClient()
+    client = get_daemon_client()
 
     try:
         currenv = get_env_with_venv_bin()
@@ -136,7 +136,7 @@ def stop(no_wait, all_profiles):
 
     for profile_name in profiles:
 
-        client = DaemonClient(profile_name)
+        client = get_daemon_client(profile_name)
 
         click.secho('Profile: ', fg='red', bold=True, nl=False)
         click.secho('{}'.format(profile_name), bold=True)
@@ -171,7 +171,7 @@ def restart(ctx, reset, no_wait):
     is passed, however, the full circus daemon will be stopped and restarted with just
     a single worker
     """
-    client = DaemonClient()
+    client = get_daemon_client()
 
     wait = not no_wait
 
@@ -208,7 +208,7 @@ def _start_circus(foreground):
     from circus.pidfile import Pidfile
     from circus.util import check_future_exception_and_log, configure_logger
 
-    client = DaemonClient()
+    client = get_daemon_client()
 
     loglevel = client.loglevel
     logoutput = '-'

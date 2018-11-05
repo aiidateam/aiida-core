@@ -15,6 +15,7 @@ in a Brillouin zone, and how to operate on them.
 from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
+import io
 from string import Template
 
 import six
@@ -859,7 +860,7 @@ class BandsData(KpointsData):
         For the possible parameters, see documentation of
         :py:meth:`~aiida.orm.data.array.bands.BandsData._matplotlib_get_dict`
         """
-        import json
+        import aiida.utils.json as json
 
         all_data = self._matplotlib_get_dict(*args, **kwargs)
 
@@ -881,8 +882,9 @@ class BandsData(KpointsData):
         For the possible parameters, see documentation of
         :py:meth:`~aiida.orm.data.array.bands.BandsData._matplotlib_get_dict`
         """
-        import json
         import os
+       
+        import aiida.utils.json as json
 
         all_data = self._matplotlib_get_dict(*args, main_file_name=main_file_name, **kwargs)
 
@@ -1016,11 +1018,12 @@ class BandsData(KpointsData):
         For the possible parameters, see documentation of
         :py:meth:`~aiida.orm.data.array.bands.BandsData._matplotlib_get_dict`
         """
-        import json
         import os
         import tempfile
         import subprocess
         import sys
+
+        import aiida.utils.json as json
 
         all_data = self._matplotlib_get_dict(*args, **kwargs)
 
@@ -1057,7 +1060,7 @@ class BandsData(KpointsData):
         if not os.path.exists(filename):
             raise RuntimeError("Unable to generate the PDF...")
 
-        with open(filename, 'rb') as f:
+        with io.open(filename, 'rb', encoding=None) as f:
             imgdata = f.read()
         os.remove(filename)
 
@@ -1113,7 +1116,7 @@ class BandsData(KpointsData):
         if not os.path.exists(filename):
             raise RuntimeError("Unable to generate the PNG...")
 
-        with open(filename, 'rb') as f:
+        with io.open(filename, 'rb', encoding=None) as f:
             imgdata = f.read()
         os.remove(filename)
 
@@ -1279,8 +1282,8 @@ class BandsData(KpointsData):
         :param comments: if True, print comments (if it makes sense for the given
             format)
         """
-        import json
         from aiida import get_file_header
+        import aiida.utils.json as json
 
         json_dict = self._get_band_segments(cartesian=True)
         json_dict['original_uuid'] = self.uuid
@@ -1715,7 +1718,7 @@ matplotlib_import_data_inline_template = Template(
 ''')
 
 matplotlib_import_data_fromfile_template = Template(
-    '''with open("$json_fname") as f:
+    '''with io.open("$json_fname", encoding='utf8') as f:
     all_data_str = f.read()
 ''')
 

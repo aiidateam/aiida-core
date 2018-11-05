@@ -7,17 +7,22 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+Controls the daemon
+"""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import enum
+import io
 import os
 import shutil
 import socket
-import sys
 import tempfile
 
-from aiida.common.profile import ProfileConfig
+import six
+
+from aiida.common.profile import get_profile
 from aiida.common.setup import get_property
 from aiida.utils.which import which
 
@@ -25,7 +30,8 @@ VERDI_BIN = which('verdi')
 # Recent versions of virtualenv create the environment variable VIRTUAL_ENV
 VIRTUALENV = os.environ.get('VIRTUAL_ENV', None)
 
-class ControllerProtocol(enum.Enum):
+
+class ControllerProtocol(enum.Enum):  #pylint: disable=too-few-public-methods
     """
     The protocol to use to for the controller of the Circus daemon
     """
@@ -34,9 +40,22 @@ class ControllerProtocol(enum.Enum):
     TCP = 1
 
 
-class DaemonClient(ProfileConfig):
+def get_daemon_client(profile_name=None):
     """
-    Extension of the ProfileConfig which also provides handles to retrieve profile specific
+    Return the daemon client for the given profile or the default profile if not specified.
+
+    :param profile_name: the profile name, will use the default profile if None
+    :return: the daemon client
+    :rtype: :class:`aiida.daemon.client.DaemonClient`
+    :raises MissingConfigurationError: if the configuration file cannot be found
+    :raises ProfileConfigurationError: if the name is not found in the configuration file
+    """
+    return DaemonClient(get_profile(profile_name))
+
+
+class DaemonClient(object):  #pylint: disable=too-many-public-methods
+    """
+    Extension of the Profile which also provides handles to retrieve profile specific
     properties related to the daemon client
     """
 
@@ -47,18 +66,26 @@ class DaemonClient(ProfileConfig):
     _DEFAULT_LOGLEVEL = 'INFO'
     _ENDPOINT_PROTOCOL = ControllerProtocol.IPC
 
+    def __init__(self, profile):
+        """
+        Construct a DaemonClient instance for a given profile
 
-    def __init__(self, profile_name=None):
-        super(DaemonClient, self).__init__(profile_name)
-        self._SOCKET_DIRECTORY = None
-        self._DAEMON_TIMEOUT = get_property('daemon.timeout')
+        :param profile: the profile instance :class:`aiida.common.profile.Profile`
+        """
+        self._profile = profile
+        self._SOCKET_DIRECTORY = None  #pylint: disable=invalid-name
+        self._DAEMON_TIMEOUT = get_property('daemon.timeout')  #pylint: disable=invalid-name
+
+    @property
+    def profile(self):
+        return self._profile
 
     @property
     def daemon_name(self):
         """
         Get the daemon name which is tied to the profile name
         """
-        return self._DAEMON_NAME.format(name=self.profile_name)
+        return self._DAEMON_NAME.format(name=self.profile.name)
 
     @property
     def cmd_string(self):
@@ -68,8 +95,8 @@ class DaemonClient(ProfileConfig):
         from aiida.common.exceptions import ConfigurationError
         if VERDI_BIN is None:
             raise ConfigurationError("Unable to find 'verdi' in the path. Make sure that you are working "
-                "in a virtual environment, or that at least the 'verdi' executable is on the PATH")
-        return '{} -p {} devel run_daemon'.format(VERDI_BIN, self.profile_name)
+                                     "in a virtual environment, or that at least the 'verdi' executable is on the PATH")
+        return '{} -p {} devel run_daemon'.format(VERDI_BIN, self.profile.name)
 
     @property
     def loglevel(self):
@@ -81,35 +108,35 @@ class DaemonClient(ProfileConfig):
 
     @property
     def circus_log_file(self):
-        return self.filepaths['circus']['log']
+        return self.profile.filepaths['circus']['log']
 
     @property
     def circus_pid_file(self):
-        return self.filepaths['circus']['pid']
+        return self.profile.filepaths['circus']['pid']
 
     @property
     def circus_port_file(self):
-        return self.filepaths['circus']['port']
+        return self.profile.filepaths['circus']['port']
 
     @property
     def circus_socket_file(self):
-        return self.filepaths['circus']['socket']['file']
+        return self.profile.filepaths['circus']['socket']['file']
 
     @property
     def circus_socket_endpoints(self):
-        return self.filepaths['circus']['socket']
+        return self.profile.filepaths['circus']['socket']
 
     @property
     def daemon_log_file(self):
-        return self.filepaths['daemon']['log']
+        return self.profile.filepaths['daemon']['log']
 
     @property
     def daemon_pid_file(self):
-        return self.filepaths['daemon']['pid']
+        return self.profile.filepaths['daemon']['pid']
 
     def get_circus_port(self):
         """
-        Retrieve the port for the circus controller, which should be written to the circus port file. If the 
+        Retrieve the port for the circus controller, which should be written to the circus port file. If the
         daemon is running, the port file should exist and contain the port to which the controller is connected.
         If it cannot be read, a RuntimeError will be thrown. If the daemon is not running, an available port
         will be requested from the operating system, written to the port file and returned
@@ -118,14 +145,14 @@ class DaemonClient(ProfileConfig):
         """
         if self.is_daemon_running:
             try:
-                with open(self.circus_port_file, 'r') as fhandle:
+                with io.open(self.circus_port_file, 'r', encoding='utf8') as fhandle:
                     return int(fhandle.read().strip())
             except (ValueError, IOError):
                 raise RuntimeError('daemon is running so port file should have been there but could not read it')
         else:
             port = self.get_available_port()
-            with open(self.circus_port_file, 'w') as handle:
-                handle.write(str(port))
+            with io.open(self.circus_port_file, 'w', encoding='utf8') as fhandle:
+                fhandle.write(six.text_type(port))
 
             return port
 
@@ -147,7 +174,7 @@ class DaemonClient(ProfileConfig):
         """
         if self.is_daemon_running:
             try:
-                return open(self.circus_socket_file, 'r').read().strip()
+                return io.open(self.circus_socket_file, 'r', encoding='utf8').read().strip()
             except (ValueError, IOError):
                 raise RuntimeError('daemon is running so sockets file should have been there but could not read it')
         else:
@@ -157,8 +184,8 @@ class DaemonClient(ProfileConfig):
                 return self._SOCKET_DIRECTORY
 
             socket_dir_path = tempfile.mkdtemp()
-            with open(self.circus_socket_file, 'w') as handle:
-                handle.write(socket_dir_path)
+            with io.open(self.circus_socket_file, 'w', encoding='utf8') as fhandle:
+                fhandle.write(six.text_type(socket_dir_path))
 
             self._SOCKET_DIRECTORY = socket_dir_path
             return socket_dir_path
@@ -171,7 +198,7 @@ class DaemonClient(ProfileConfig):
         """
         if os.path.isfile(self.circus_pid_file):
             try:
-                return int(open(self.circus_pid_file, 'r').read().strip())
+                return int(io.open(self.circus_pid_file, 'r', encoding='utf8').read().strip())
             except (ValueError, IOError):
                 return None
         else:
@@ -201,7 +228,8 @@ class DaemonClient(ProfileConfig):
             else:
                 raise
 
-    def get_available_port(self):
+    @classmethod
+    def get_available_port(cls):
         """
         Get an available port from the operating system
 
@@ -221,7 +249,7 @@ class DaemonClient(ProfileConfig):
         """
         if self._ENDPOINT_PROTOCOL == ControllerProtocol.IPC:
             endpoint = self.get_ipc_endpoint('controller')
-        elif  self._ENDPOINT_PROTOCOL == ControllerProtocol.TCP:
+        elif self._ENDPOINT_PROTOCOL == ControllerProtocol.TCP:
             endpoint = self.get_tcp_endpoint(self.get_circus_port())
         else:
             raise ValueError('invalid controller protocol {}'.format(self._ENDPOINT_PROTOCOL))
@@ -237,7 +265,7 @@ class DaemonClient(ProfileConfig):
         """
         if self._ENDPOINT_PROTOCOL == ControllerProtocol.IPC:
             endpoint = self.get_ipc_endpoint('pubsub')
-        elif  self._ENDPOINT_PROTOCOL == ControllerProtocol.TCP:
+        elif self._ENDPOINT_PROTOCOL == ControllerProtocol.TCP:
             endpoint = self.get_tcp_endpoint()
         else:
             raise ValueError('invalid controller protocol {}'.format(self._ENDPOINT_PROTOCOL))
@@ -253,7 +281,7 @@ class DaemonClient(ProfileConfig):
         """
         if self._ENDPOINT_PROTOCOL == ControllerProtocol.IPC:
             endpoint = self.get_ipc_endpoint('stats')
-        elif  self._ENDPOINT_PROTOCOL == ControllerProtocol.TCP:
+        elif self._ENDPOINT_PROTOCOL == ControllerProtocol.TCP:
             endpoint = self.get_tcp_endpoint()
         else:
             raise ValueError('invalid controller protocol {}'.format(self._ENDPOINT_PROTOCOL))
@@ -331,12 +359,7 @@ class DaemonClient(ProfileConfig):
 
         :return: the client call response
         """
-        command = {
-            'command': 'status',
-            'properties': {
-                'name': self.daemon_name
-            }
-        }
+        command = {'command': 'status', 'properties': {'name': self.daemon_name}}
 
         return self.call_client(command)
 
@@ -346,12 +369,7 @@ class DaemonClient(ProfileConfig):
 
         :return: the client call response
         """
-        command = {
-            'command': 'stats',
-            'properties': {
-                'name': self.daemon_name
-            }
-        }
+        command = {'command': 'stats', 'properties': {'name': self.daemon_name}}
 
         return self.call_client(command)
 
@@ -361,10 +379,7 @@ class DaemonClient(ProfileConfig):
 
         :return: the client call response
         """
-        command = {
-            'command': 'dstats',
-            'properties': {}
-        }
+        command = {'command': 'dstats', 'properties': {}}
 
         return self.call_client(command)
 
@@ -375,13 +390,7 @@ class DaemonClient(ProfileConfig):
         :param number: the number of workers to add
         :return: the client call response
         """
-        command = {
-            'command': 'incr',
-            'properties': {
-                'name': self.daemon_name,
-                'nb': number
-            }
-        }
+        command = {'command': 'incr', 'properties': {'name': self.daemon_name, 'nb': number}}
 
         return self.call_client(command)
 
@@ -392,13 +401,7 @@ class DaemonClient(ProfileConfig):
         :param number: the number of workers to remove
         :return: the client call response
         """
-        command = {
-            'command': 'decr',
-            'properties': {
-                'name': self.daemon_name,
-                'nb': number
-            }
-        }
+        command = {'command': 'decr', 'properties': {'name': self.daemon_name, 'nb': number}}
 
         return self.call_client(command)
 
@@ -409,12 +412,7 @@ class DaemonClient(ProfileConfig):
         :param wait: boolean to indicate whether to wait for the result of the command
         :return: the client call response
         """
-        command = {
-            'command': 'quit',
-            'properties': {
-                'waiting': wait
-            }
-        }
+        command = {'command': 'quit', 'properties': {'waiting': wait}}
 
         result = self.call_client(command)
 
@@ -430,12 +428,6 @@ class DaemonClient(ProfileConfig):
         :param wait: boolean to indicate whether to wait for the result of the command
         :return: the client call response
         """
-        command = {
-            'command': 'restart',
-            'properties': {
-                'name': self.daemon_name,
-                'waiting': wait
-            }
-        }
+        command = {'command': 'restart', 'properties': {'name': self.daemon_name, 'waiting': wait}}
 
         return self.call_client(command)

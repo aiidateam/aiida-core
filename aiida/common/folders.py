@@ -14,6 +14,7 @@ import os
 import shutil
 import fnmatch
 import tempfile
+import io
 
 import six
 
@@ -239,8 +240,28 @@ class Folder(object):
         # go beyond the folder limits
         dest_abs_path = self.get_abs_path(filename)
 
-        with open(dest_abs_path, 'w') as f:
-            shutil.copyfileobj(src_filelike, f)
+        # If Py2, the incoming filelike may contain a unicode or string type.
+        # We want to write explicity with UTF8 encoding, so io.open requires
+        # a unicode type. 
+        # First we try and use a UTF8 stream reader wrapper to decode the characters 
+        # from the incoming filelike object as if they are UFT8 encoded. 
+        # If a unicode type is encountered, Python will attempt to convert to a str 
+        # type using the ASCII codec which will fail if any non ASCII chars are 
+        # present, raising a UnicodeEncodeError exception. In this case, as we already 
+        # have unicode type text, we can catch this and call shutil.copyfileobj without 
+        # the wrapper.
+        # In Py3, all str types are unicode, so we can avoid using the wrapper.
+        import codecs
+        utf8wrapper = codecs.getreader('utf8')
+
+        with io.open(dest_abs_path, 'w', encoding='utf8') as dest_fhandle:
+            if six.PY2:  
+                try: 
+                    shutil.copyfileobj(utf8wrapper(src_filelike), dest_fhandle)
+                except UnicodeEncodeError as e:
+                    shutil.copyfileobj(src_filelike, dest_fhandle)
+            else:  
+                shutil.copyfileobj(src_filelike, dest_fhandle)
 
         # Set the mode
         os.chmod(dest_abs_path, self.mode_file)
@@ -291,12 +312,15 @@ class Folder(object):
 
         return dest_abs_path
 
-    def open(self, name, mode='r'):
+    def open(self, name, mode='r', encoding='utf8'):
         """
         Open a file in the current folder and return the corresponding
         file object.
         """
-        return open(self.get_abs_path(name), mode)
+        if 'b' in mode:
+            encoding=None
+        
+        return io.open(self.get_abs_path(name), mode, encoding=encoding)
 
     @property
     def abspath(self):

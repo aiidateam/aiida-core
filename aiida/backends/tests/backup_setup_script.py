@@ -11,7 +11,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import json
+import io
 import shutil
 import tempfile
 import os
@@ -20,7 +20,7 @@ from aiida.common import utils
 from aiida.common.additions.backup_script import backup_setup
 from aiida.common.additions.backup_script.backup_base import AbstractBackup
 from aiida.backends.testbase import AiidaTestCase
-
+import aiida.utils.json as json
 
 
 class TestBackupSetupScriptUnit(AiidaTestCase):
@@ -120,7 +120,7 @@ class TestBackupSetupScriptIntegration(AiidaTestCase):
                             "It contains: {}.".format(backup_conf_records))
 
             # Check the content of the main backup configuration file
-            with open(os.path.join(temp_aiida_folder, "backup_info.json")
+            with io.open(os.path.join(temp_aiida_folder, "backup_info.json"), encoding='utf8'
                       ) as conf_jfile:
                 conf_cont = json.load(conf_jfile)
                 self.assertEqual(conf_cont[AbstractBackup.OLDEST_OBJECT_BK_KEY],

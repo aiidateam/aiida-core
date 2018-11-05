@@ -11,7 +11,6 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import json
 from copy import copy
 import six
 from sqlalchemy.exc import SQLAlchemyError
@@ -24,6 +23,7 @@ from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.common.exceptions import (ConfigurationError, InvalidOperation)
 from aiida.common.lang import override
 from . import utils
+import aiida.utils.json as json
 
 
 class SqlaComputerCollection(ComputerCollection):

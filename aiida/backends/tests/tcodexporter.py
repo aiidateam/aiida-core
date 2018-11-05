@@ -13,6 +13,7 @@ Tests for TestTcodDbExporter
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+import io
 import unittest
 
 import six
@@ -77,7 +78,7 @@ class TestTcodDbExporter(AiidaTestCase):
         """Testing the collection of files from file tree."""
         from aiida.tools.dbexporters.tcod import _collect_files
         from aiida.common.folders import SandboxFolder
-        from six.moves import cStringIO as StringIO
+        from six.moves import StringIO as StringIO
 
         sf = SandboxFolder()
         sf.get_subfolder('out', create=True)
@@ -86,17 +87,17 @@ class TestTcodDbExporter(AiidaTestCase):
         sf.get_subfolder('save/1', create=True)
         sf.get_subfolder('save/2', create=True)
 
-        f = StringIO("test")
+        f = StringIO(u"test")
         sf.create_file_from_filelike(f, 'aiida.in')
-        f = StringIO("test")
+        f = StringIO(u"test")
         sf.create_file_from_filelike(f, 'aiida.out')
-        f = StringIO("test")
+        f = StringIO(u"test")
         sf.create_file_from_filelike(f, '_aiidasubmit.sh')
-        f = StringIO("test")
+        f = StringIO(u"test")
         sf.create_file_from_filelike(f, '_.out')
-        f = StringIO("test")
+        f = StringIO(u"test")
         sf.create_file_from_filelike(f, 'out/out')
-        f = StringIO("test")
+        f = StringIO(u"test")
         sf.create_file_from_filelike(f, 'save/1/log.log')
 
         md5 = '098f6bcd4621d373cade4e832627b4f6'
@@ -136,8 +137,8 @@ class TestTcodDbExporter(AiidaTestCase):
         from aiida.common.datastructures import calc_states
         import tempfile
 
-        with tempfile.NamedTemporaryFile(mode='w+') as f:
-            f.write('''
+        with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
+            tmpf.write('''
                 data_test
                 _cell_length_a    10
                 _cell_length_b    10
@@ -153,18 +154,18 @@ class TestTcodDbExporter(AiidaTestCase):
                 C 0 0 0
                 O 0.5 0.5 0.5
             ''')
-            f.flush()
-            a = CifData(file=f.name)
+            tmpf.flush()
+            a = CifData(file=tmpf.name)
 
         c = a._get_aiida_structure()
         c.store()
         pd = ParameterData()
 
         code = Code(local_executable='test.sh')
-        with tempfile.NamedTemporaryFile(mode='w+') as f:
-            f.write("#/bin/bash\n\necho test run\n")
-            f.flush()
-            code.add_path(f.name, 'test.sh')
+        with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
+            tmpf.write("#/bin/bash\n\necho test run\n")
+            tmpf.flush()
+            code.add_path(tmpf.name, 'test.sh')
 
         code.store()
 
@@ -174,35 +175,33 @@ class TestTcodDbExporter(AiidaTestCase):
         calc.add_link_from(code, "code")
         calc.set_option('environment_variables', {'PATH': '/dev/null', 'USER': 'unknown'})
 
-        with tempfile.NamedTemporaryFile(mode='w+', prefix="Fe") as f:
-            f.write("<UPF version=\"2.0.1\">\nelement=\"Fe\"\n")
-            f.flush()
-            upf = UpfData(file=f.name)
+        with tempfile.NamedTemporaryFile(mode='w+', prefix="Fe") as tmpf:
+            tmpf.write("<UPF version=\"2.0.1\">\nelement=\"Fe\"\n")
+            tmpf.flush()
+            upf = UpfData(file=tmpf.name)
             upf.store()
             calc.add_link_from(upf, "upf")
 
-        with tempfile.NamedTemporaryFile(mode='w+') as f:
-            f.write("data_test")
-            f.flush()
-            cif = CifData(file=f.name)
+        with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
+            tmpf.write("data_test")
+            tmpf.flush()
+            cif = CifData(file=tmpf.name)
             cif.store()
             calc.add_link_from(cif, "cif")
 
         calc.store()
         calc._set_state(calc_states.TOSUBMIT)
-        with SandboxFolder() as f:
-            calc._store_raw_input_folder(f.abspath)
+        with SandboxFolder() as fhandle:
+            calc._store_raw_input_folder(fhandle.abspath)
 
         fd = FolderData()
-        with open(fd._get_folder_pathsubfolder.get_abs_path(
-                calc._SCHED_OUTPUT_FILE), 'w') as f:
-            f.write("standard output")
-            f.flush()
+        with io.open(fd._get_folder_pathsubfolder.get_abs_path(
+                calc._SCHED_OUTPUT_FILE), 'w', encoding='utf8') as fhandle:
+            fhandle.write(u"standard output")
 
-        with open(fd._get_folder_pathsubfolder.get_abs_path(
-                calc._SCHED_ERROR_FILE), 'w') as f:
-            f.write("standard error")
-            f.flush()
+        with io.open(fd._get_folder_pathsubfolder.get_abs_path(
+                calc._SCHED_ERROR_FILE), 'w', encoding='utf8') as fhandle:
+            fhandle.write(u"standard error")
 
         fd.store()
         calc._set_state(calc_states.PARSING)
@@ -234,8 +233,8 @@ class TestTcodDbExporter(AiidaTestCase):
         from aiida.tools.dbexporters.tcod import export_values
         import tempfile
 
-        with tempfile.NamedTemporaryFile(mode='w+') as f:
-            f.write('''
+        with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
+            tmpf.write('''
                 data_test
                 _cell_length_a    10
                 _cell_length_b    10
@@ -251,8 +250,8 @@ class TestTcodDbExporter(AiidaTestCase):
                 C 0 0 0
                 O 0.5 0.5 0.5
             ''')
-            f.flush()
-            a = CifData(file=f.name)
+            tmpf.flush()
+            a = CifData(file=tmpf.name)
 
         s = a._get_aiida_structure(store=True)
         val = export_values(s)

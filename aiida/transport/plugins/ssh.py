@@ -11,6 +11,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from stat import S_ISDIR, S_ISREG
+import io
 import os
 import click
 import glob
@@ -38,7 +39,7 @@ def parse_sshconfig(computername):
     import paramiko
     config = paramiko.SSHConfig()
     try:
-        config.parse(open(os.path.expanduser('~/.ssh/config')))
+        config.parse(io.open(os.path.expanduser('~/.ssh/config'), encoding='utf8'))
     except IOError:
         # No file found, so empty configuration
         pass

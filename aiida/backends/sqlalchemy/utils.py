@@ -21,7 +21,7 @@ try:
     json_dumps = partial(json.dumps, double_precision=15)
     json_loads = partial(json.loads, precise_float=True)
 except ImportError:
-    import json
+    import aiida.utils.json as json
 
     json_dumps = json.dumps
     json_loads = json.loads

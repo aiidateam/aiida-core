@@ -10,6 +10,7 @@
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
+import io
 import sys
 
 import six
@@ -22,7 +23,6 @@ from aiida.orm.computer import Computer
 from aiida.orm.group import Group
 from aiida.orm.node import Node
 from aiida.orm.user import User
-
 
 IMPORTGROUP_TYPE = 'aiida.import'
 COMP_DUPL_SUFFIX = ' (Imported #{})'
@@ -337,7 +337,6 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
 
     :param in_path: the path to a file or folder that can be imported in AiiDA
     """
-    import json
     import os
     import tarfile
     import zipfile
@@ -354,6 +353,7 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
     from aiida.backends.djsite.db import models
     from aiida.common.utils import get_class_string, get_object_from_string
     from aiida.common.datastructures import calc_states
+    import aiida.utils.json as json
 
     # This is the export version expected by this function
     expected_export_version = '0.3'
@@ -396,11 +396,11 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
             raise ContentNotExistent("The provided file/folder ({}) is empty"
                                      .format(in_path))
         try:
-            with open(folder.get_abs_path('metadata.json')) as f:
-                metadata = json.load(f)
+            with io.open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
+                metadata = json.load(fhandle)
 
-            with open(folder.get_abs_path('data.json')) as f:
-                data = json.load(f)
+            with io.open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
+                data = json.load(fhandle)
         except IOError as e:
             raise ValueError("Unable to find the file {} in the import "
                              "file or folder".format(e.filename))
@@ -863,7 +863,6 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
     :param in_path: the path to a file or folder that can be imported in AiiDA
     """
-    import json
     import os
     import tarfile
     import zipfile
@@ -878,6 +877,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
     from aiida.common.datastructures import calc_states
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.common.links import LinkType
+    import aiida.utils.json as json
 
     # Backend specific imports
     from aiida.backends.sqlalchemy.models.node import DbCalcState
@@ -918,11 +918,11 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
             raise ContentNotExistent("The provided file/folder ({}) is empty"
                                      .format(in_path))
         try:
-            with open(folder.get_abs_path('metadata.json')) as f:
-                metadata = json.load(f)
+            with io.open(folder.get_abs_path('metadata.json'), encoding='utf8') as fhandle:
+                metadata = json.load(fhandle)
 
-            with open(folder.get_abs_path('data.json')) as f:
-                data = json.load(f)
+            with io.open(folder.get_abs_path('data.json'), encoding='utf8') as fhandle:
+                data = json.load(fhandle)
         except IOError as e:
             raise ValueError("Unable to find the file {} in the import "
                              "file or folder".format(e.filename))
@@ -1713,13 +1713,13 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     :raises LicensingException: if any node is licensed under forbidden
     license
     """
-    import json
     import aiida
-
     from aiida.orm import Node, Calculation, Data, Group, Code
     from aiida.common.links import LinkType
     from aiida.common.folders import RepositoryFolder
     from aiida.orm.querybuilder import QueryBuilder
+    import aiida.utils.json as json
+
     if not silent:
         print("STARTING EXPORT...")
 
@@ -2350,15 +2350,20 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
 
     if not silent:
         print("STORING DATA...")
+    
 
-    with folder.open('data.json', 'w') as f:
-        json.dump({
-            'node_attributes': node_attributes,
-            'node_attributes_conversion': node_attributes_conversion,
-            'export_data': export_data,
-            'links_uuid': links_uuid,
-            'groups_uuid': groups_uuid,
-        }, f)
+    data = {
+        'node_attributes': node_attributes,
+        'node_attributes_conversion': node_attributes_conversion,
+        'export_data': export_data,
+        'links_uuid': links_uuid,
+        'groups_uuid': groups_uuid,
+    }
+
+
+    # N.B. We're really calling zipfolder.open
+    with folder.open('data.json', mode='w') as fhandle:
+        fhandle.write(json.dumps(data))
 
     # Add proper signature to unique identifiers & all_fields_info
     # Ignore if a key doesn't exist in any of the two dictionaries
@@ -2370,8 +2375,8 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
         'unique_identifiers': unique_identifiers,
     }
 
-    with folder.open('metadata.json', 'w') as f:
-        json.dump(metadata, f)
+    with folder.open('metadata.json', "w") as fhandle:
+        fhandle.write(json.dumps(metadata))
 
     if silent is not True:
         print("STORING FILES...")
@@ -2469,7 +2474,7 @@ class MyWritingZipFile(object):
         self._buffer = None
 
     def open(self):
-        from six.moves import cStringIO as StringIO
+        from six.moves import StringIO as StringIO
 
         if self._buffer is not None:
             raise IOError("Cannot open again!")

@@ -14,16 +14,16 @@ from __future__ import absolute_import
 
 from django.db import migrations
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
-
-from aiida.common.hashing import _HASH_EXTRA_KEY
 from aiida.cmdline.utils.echo import echo_warning
 
 REVISION = '1.0.15'
 DOWN_REVISION = '1.0.14'
 
+# Currently valid hash key
+_HASH_EXTRA_KEY = '_aiida_hash'
 
 def notify_user(apps, schema_editor):
-    echo_warning("Invalidating all the hashes of all the nodes. Please " "run verdi rehash", bold=True)
+    echo_warning("Invalidating all the hashes of all the nodes. Please run verdi rehash", bold=True)
 
 
 class Migration(migrations.Migration):

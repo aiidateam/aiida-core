@@ -2,7 +2,7 @@
 
 ### General
 - Code has been made python 3 compatible. [[#804]](https://github.com/aiidateam/aiida_core/pull/804)[[#2136]](https://github.com/aiidateam/aiida_core/pull/2136)[[#2125]](https://github.com/aiidateam/aiida_core/pull/2125)[[#2117]](https://github.com/aiidateam/aiida_core/pull/2117)[[#2110]](https://github.com/aiidateam/aiida_core/pull/2110)[[#2100]](https://github.com/aiidateam/aiida_core/pull/2100)[[#2094]](https://github.com/aiidateam/aiida_core/pull/2094)[[#2092]](https://github.com/aiidateam/aiida_core/pull/2092)
-- All files written by AiiDA. [[#2107]](https://github.com/aiidateam/aiida_core/pull/2107)
+- AiiDA now enforces UTF-8 encoding for text output in its files and databases. [[#2107]](https://github.com/aiidateam/aiida_core/pull/2107)
 - All calculations now go through the `Process` layer, homogenizing the state of work and job calculations [[#1125]](https://github.com/aiidateam/aiida_core/pull/1125)
 - Implement the concept of an "exit status" for all calculations, allowing a programmatic definition of success or failure for all processes [[#1189]](https://github.com/aiidateam/aiida_core/pull/1189)
 - Implementation of the `AuthInfo` class which will allow custom configuration per configured computer [[#1184]](https://github.com/aiidateam/aiida_core/pull/1184)

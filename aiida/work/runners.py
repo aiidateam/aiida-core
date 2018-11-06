@@ -33,6 +33,7 @@ ResultAndNode = namedtuple('ResultAndNode', ['result', 'node'])
 ResultAndPid = namedtuple('ResultAndPid', ['result', 'pid'])
 
 RUNNER = None
+POLL_INTERVAL_DEFAULT = 30.
 
 
 def new_runner(**kwargs):
@@ -81,7 +82,7 @@ class Runner(object):
     # pylint: disable=too-many-arguments
     def __init__(self,
                  rmq_config=None,
-                 poll_interval=0.,
+                 poll_interval=POLL_INTERVAL_DEFAULT,
                  loop=None,
                  rmq_submit=False,
                  enable_persistence=True,

@@ -43,8 +43,8 @@ CommunicationTimeout = communications.TimeoutError  # pylint: disable=invalid-na
 # know how to avoid warnings. For more info see
 # https://github.com/aiidateam/aiida_core/issues/1142
 _RMQ_URL = 'amqp://127.0.0.1'
-_RMQ_TASK_PREFETCH_COUNT = 20
-_RMQ_HEARTBEAT_TIMEOUT = 600
+_RMQ_TASK_PREFETCH_COUNT = 100  # This value should become configurable per profile at some point
+_RMQ_HEARTBEAT_TIMEOUT = 600  # Maximum that can be set by client, with default RabbitMQ server configuration
 _LAUNCH_QUEUE = 'process.queue'
 _MESSAGE_EXCHANGE = 'messages'
 _TASK_EXCHANGE = 'tasks'

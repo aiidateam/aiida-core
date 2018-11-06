@@ -11,7 +11,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import logging
-import unittest
 
 from six.moves import range
 
@@ -24,6 +23,7 @@ from aiida.backends.testbase import AiidaTestCase
 
 
 class TestBackendLog(AiidaTestCase):
+
     def setUp(self):
         super(TestBackendLog, self).setUp()
         self._backend = construct_backend()
@@ -44,12 +44,6 @@ class TestBackendLog(AiidaTestCase):
         super(TestBackendLog, self).tearDown()
         self._backend.logs.delete_many({})
 
-    def test_create_backend(self):
-        """
-        Test creating the backend specific backend instance
-        """
-        backend = construct_backend()
-
     def test_delete_many(self):
         """
         Test deleting all log entries
@@ -66,7 +60,7 @@ class TestBackendLog(AiidaTestCase):
 
     def test_create_log_message(self):
         """
-        Test the manual creation of a log entry 
+        Test the manual creation of a log entry
         """
         record = self._record
         entry = self._backend.logs.create_entry(
@@ -86,6 +80,9 @@ class TestBackendLog(AiidaTestCase):
         self.assertEquals(entry.objpk, record['objpk'])
         self.assertEquals(entry.message, record['message'])
         self.assertEquals(entry.metadata, record['metadata'])
+
+        # Regression test for #2155
+        self.assertEquals(entry.id, entry._model.id)
 
     def test_find_orderby(self):
         """

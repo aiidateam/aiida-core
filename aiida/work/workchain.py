@@ -11,6 +11,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+import collections
 import functools
 import six
 
@@ -20,6 +21,7 @@ from aiida.common.exceptions import MultipleObjectsError, NotExistent
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import override
 from aiida.common.utils import classproperty
+from aiida.orm import Node
 from aiida.orm.utils import load_node, load_workflow
 
 from .awaitable import AwaitableTarget, AwaitableAction, construct_awaitable
@@ -177,6 +179,36 @@ class WorkChain(Process):
                 return Wait(self._do_step, 'Waiting before next step')
 
             return Continue(self._do_step)
+
+    def _store_nodes(self, data):
+        """
+        Recurse through a data structure and store any unstored nodes that are found along the way
+
+        :param data: a data structure potentially containing unstored nodes
+        """
+        if isinstance(data, Node) and not data.is_stored:
+            data.store()
+        elif isinstance(data, collections.Mapping):
+            for _, value in data.items():
+                self._store_nodes(value)
+        elif isinstance(data, collections.Sequence) and not isinstance(data, six.string_types):
+            for value in data:
+                self._store_nodes(value)
+
+    @override
+    def on_exiting(self):
+        """
+        Ensure that any unstored nodes in the context are stored, before the state is exited
+
+        After the state is exited the next state will be entered and if persistence is enabled, a checkpoint will
+        be saved. If the context contains unstored nodes, the serialization necessary for checkpointing will fail.
+        """
+        super(WorkChain, self).on_exiting()
+        try:
+            self._store_nodes(self.ctx)
+        except Exception:  # pylint: disable=broad-except
+            # An uncaught exception here will have bizarre and disastrous consequences
+            self.logger.exception('exception in _store_nodes called in on_exiting')
 
     def on_wait(self, awaitables):
         super(WorkChain, self).on_wait(awaitables)

@@ -14,6 +14,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 import collections
 import functools
+import logging
 
 from tornado import gen
 import kiwipy.rmq
@@ -28,6 +29,8 @@ __all__ = [
     'RemoteException', 'CommunicationTimeout', 'DeliveryFailed', 'ProcessLauncher', 'create_controller',
     'create_communicator'
 ]
+
+LOGGER = logging.getLogger(__name__)
 
 RemoteException = plumpy.RemoteException
 DeliveryFailed = plumpy.DeliveryFailed
@@ -167,9 +170,12 @@ class ProcessLauncher(plumpy.ProcessLauncher):
         try:
             node = load_node(pk=pid)
         except (exceptions.MultipleObjectsError, exceptions.NotExistent) as exception:
+            LOGGER.exception('Cannot continue process<%d>', pid)
             raise plumpy.TaskRejected('Cannot continue process: {}'.format(exception))
 
         if node.is_terminated:
+
+            LOGGER.info('not continuing process<%d> which is already terminated with state %s', pid, node.process_state)
 
             future = communicator.create_future()
 
@@ -185,7 +191,11 @@ class ProcessLauncher(plumpy.ProcessLauncher):
         result = yield super(ProcessLauncher, self)._continue(communicator, pid, nowait, tag)
 
         # Ensure that the result is serialized such that communication thread won't have to do database operations
-        serialized = serialize.serialize(result)
+        try:
+            serialized = serialize.serialize(result)
+        except Exception:
+            LOGGER.exception('failed to serialize the result for process<%d>', pid)
+            raise
 
         raise gen.Return(serialized)
 

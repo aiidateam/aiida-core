@@ -795,6 +795,9 @@ _property_table = {
     "logging.plumpy_loglevel":
     ("logging_plumpy_log_level", "string", "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
      "for the 'plumpy' logger", "WARNING", ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
+    "logging.kiwipy_loglevel":
+    ("logging_kiwipy_log_level", "string", "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
+     "for the 'kiwipy' logger", "WARNING", ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
     "logging.paramiko_loglevel":
     ("logging_paramiko_log_level", "string", "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
      "for the 'paramiko' logger", "WARNING", ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),

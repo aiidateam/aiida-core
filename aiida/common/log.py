@@ -131,6 +131,11 @@ LOGGING = {
             'level': setup.get_property('logging.plumpy_loglevel'),
             'propagate': False,
         },
+        'kiwipy': {
+            'handlers': ['console'],
+            'level': setup.get_property('logging.kiwipy_loglevel'),
+            'propagate': False,
+        },
         'paramiko': {
             'handlers': ['console'],
             'level': setup.get_property('logging.paramiko_loglevel'),

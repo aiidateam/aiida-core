@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=global-statement
+# pylint: disable=cyclic-import,global-statement
 """Runners that can run and submit processes."""
 from __future__ import division
 from __future__ import print_function

@@ -411,6 +411,27 @@ class TestWorkchain(AiidaTestCase):
 
         run_and_check_success(Wf)
 
+    def test_unstored_nodes_in_context(self):
+
+        class TestWorkChain(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super(TestWorkChain, cls).define(spec)
+                spec.outline(
+                    cls.setup_context,
+                    cls.read_context
+                )
+
+            def setup_context(self):
+                self.ctx['some_string'] = 'Verify that strings in the context do not cause infinite recursions'
+                self.ctx['node'] = Int(1)
+
+            def read_context(self):
+                assert self.ctx['node'].is_stored, 'the node in the context was not stored during step transition'
+
+        run_and_check_success(TestWorkChain)
+
     def test_str(self):
         self.assertIsInstance(str(Wf.spec()), six.string_types)
 

@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -15,14 +14,10 @@ from __future__ import absolute_import
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.schema import Column, UniqueConstraint
-from sqlalchemy.types import Integer, Boolean, Text
+from sqlalchemy.types import Integer, Boolean
 from sqlalchemy.dialects.postgresql import JSONB
 
-from aiida.transport import TransportFactory
 from aiida.backends.sqlalchemy.models.base import Base
-from aiida.common.exceptions import (DbContentError, MissingPluginError,
-                                     ConfigurationError)
-from sqlalchemy.orm.attributes import flag_modified
 
 
 class DbAuthInfo(Base):

@@ -7,8 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
-
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
@@ -40,11 +38,27 @@ from sqlalchemy.orm import scoped_session
 from sqlalchemy.orm import sessionmaker
 
 from aiida.backends import sqlalchemy as sa, settings
-from aiida.common.exceptions import ConfigurationError
 from aiida.common.setup import (get_profile_config)
 
 ALEMBIC_FILENAME = "alembic.ini"
 ALEMBIC_REL_PATH = "migrations"
+
+
+def flag_modified(instance, key):
+    """Wrapper around `sqlalchemy.orm.attributes.flag_modified` to correctly dereference utils.ModelWrapper
+
+    Since SqlAlchemy 1.2.12 (and maybe earlier but not in 1.0.19) the flag_modified function will check that the
+    key is actually present in the instance or it will except. If we pass a model instance, wrapped in the ModelWrapper
+    the call will raise an InvalidRequestError. In this function that wraps the flag_modified of SqlAlchemy, we
+    derefence the model instance if the passed instance is actually wrapped in the ModelWrapper.
+    """
+    from sqlalchemy.orm.attributes import flag_modified as flag_modified_sqla
+    from aiida.orm.implementation.sqlalchemy.utils import ModelWrapper
+
+    if isinstance(instance, ModelWrapper):
+        instance = instance._model
+
+    flag_modified_sqla(instance, key)
 
 
 def recreate_after_fork(engine):

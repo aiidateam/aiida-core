@@ -15,11 +15,11 @@ from copy import copy
 import six
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.session import make_transient
-from sqlalchemy.orm.attributes import flag_modified
 
 from aiida.common.utils import type_check
 from aiida.orm.computer import Computer, ComputerCollection
 from aiida.backends.sqlalchemy.models.computer import DbComputer
+from aiida.backends.sqlalchemy.utils import flag_modified
 from aiida.common.exceptions import (ConfigurationError, InvalidOperation)
 from aiida.common.lang import override
 from . import utils

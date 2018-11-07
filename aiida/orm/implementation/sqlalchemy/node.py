@@ -17,11 +17,11 @@ from __future__ import absolute_import
 import six
 
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm.attributes import flag_modified
 
 from aiida.backends.sqlalchemy.models.node import DbNode, DbLink
 from aiida.backends.sqlalchemy.models.comment import DbComment
 from aiida.backends.sqlalchemy.models.computer import DbComputer
+from aiida.backends.sqlalchemy.utils import flag_modified
 
 from aiida.common.utils import get_new_uuid
 from aiida.common.folders import RepositoryFolder
@@ -29,7 +29,6 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed, NotE
 from aiida.common.links import LinkType
 from aiida.common.utils import type_check
 from aiida.orm.implementation.general.node import AbstractNode, _HASH_EXTRA_KEY
-from aiida.orm.implementation.sqlalchemy.computer import Computer
 from aiida.orm.implementation.sqlalchemy.utils import get_attr
 
 from . import user as users

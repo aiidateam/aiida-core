@@ -24,7 +24,6 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql.json import JSON
 from sqlalchemy.engine import reflection
 from sqlalchemy.orm import relationship, subqueryload, load_only
-from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.schema import Column
 from sqlalchemy.sql.expression import func
 from sqlalchemy.types import Integer, String, Boolean, DateTime, Text, Float
@@ -34,6 +33,7 @@ from aiida import is_dbenv_loaded
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.profile import BACKEND_SQLA
 from aiida.backends.sqlalchemy.models.base import Base
+from aiida.backends.sqlalchemy.utils import flag_modified
 from aiida.common.utils import query_yes_no
 
 

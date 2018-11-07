@@ -159,7 +159,6 @@ class Wf(work.WorkChain):
 
 
 class PotentialFailureWorkChain(WorkChain):
-
     EXIT_STATUS = 1
     EXIT_MESSAGE = 'Well you did ask for it'
     OUTPUT_LABEL = 'optional_output'
@@ -235,7 +234,8 @@ class TestExitStatus(AiidaTestCase):
         self.assertEquals(node.is_finished_ok, True)
         self.assertEquals(node.is_failed, False)
         self.assertIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outputs_dict())
-        self.assertEquals(node.get_outputs_dict()[PotentialFailureWorkChain.OUTPUT_LABEL], PotentialFailureWorkChain.OUTPUT_VALUE)
+        self.assertEquals(node.get_outputs_dict()[PotentialFailureWorkChain.OUTPUT_LABEL],
+                          PotentialFailureWorkChain.OUTPUT_VALUE)
 
     def test_successful_workchain_through_exit_code(self):
         result, node = work.run_get_node(PotentialFailureWorkChain, success=Bool(True), through_exit_code=Bool(True))
@@ -244,7 +244,8 @@ class TestExitStatus(AiidaTestCase):
         self.assertEquals(node.is_finished_ok, True)
         self.assertEquals(node.is_failed, False)
         self.assertIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outputs_dict())
-        self.assertEquals(node.get_outputs_dict()[PotentialFailureWorkChain.OUTPUT_LABEL], PotentialFailureWorkChain.OUTPUT_VALUE)
+        self.assertEquals(node.get_outputs_dict()[PotentialFailureWorkChain.OUTPUT_LABEL],
+                          PotentialFailureWorkChain.OUTPUT_VALUE)
 
     def test_return_out_of_outline(self):
         result, node = work.run_get_node(PotentialFailureWorkChain, success=Bool(True), through_return=Bool(True))
@@ -307,13 +308,10 @@ class TestWorkchain(AiidaTestCase):
     def setUp(self):
         super(TestWorkchain, self).setUp()
         self.assertIsNone(Process.current())
-        self.runner = runners.get_runner()
 
     def tearDown(self):
         super(TestWorkchain, self).tearDown()
         self.assertIsNone(Process.current())
-        self.runner.close()
-        runners.set_runner(None)
 
     def test_run(self):
         A = Str('A')
@@ -557,8 +555,9 @@ class TestWorkchain(AiidaTestCase):
         """
         This test was created to capture issue #902
         """
+        runner = work.AiiDAManager.get_runner()
         wc = IfTest()
-        self.runner.loop.add_callback(wc.step_until_terminated)
+        runner.schedule(wc)
 
         @gen.coroutine
         def run_async(workchain):
@@ -582,7 +581,7 @@ class TestWorkchain(AiidaTestCase):
             self.assertTrue(workchain.ctx.s1)
             self.assertTrue(workchain.ctx.s2)
 
-        self.runner.loop.run_sync(lambda: run_async(wc))
+        runner.loop.run_sync(lambda: run_async(wc))
 
     def test_report_dbloghandler(self):
         """
@@ -640,7 +639,7 @@ class TestWorkchain(AiidaTestCase):
 
     def test_persisting(self):
         persister = plumpy.test_utils.TestPersister()
-        runner = runners.create_runner(persister=persister)
+        runner = work.AiiDAManager.get_runner()
         workchain = Wf(runner=runner)
         work.run(workchain)
 
@@ -727,13 +726,10 @@ class TestWorkchainWithOldWorkflows(AiidaTestCase):
     def setUp(self):
         super(TestWorkchainWithOldWorkflows, self).setUp()
         self.assertIsNone(Process.current())
-        self.runner = runners.get_runner()
 
     def tearDown(self):
         super(TestWorkchainWithOldWorkflows, self).tearDown()
         self.assertIsNone(Process.current())
-        self.runner.close()
-        runners.set_runner(None)
 
     def test_call_old_wf(self):
         wf = WorkflowDemo()
@@ -786,13 +782,10 @@ class TestWorkChainAbort(AiidaTestCase):
     def setUp(self):
         super(TestWorkChainAbort, self).setUp()
         self.assertIsNone(Process.current())
-        self.runner = runners.get_runner()
 
     def tearDown(self):
         super(TestWorkChainAbort, self).tearDown()
         self.assertIsNone(Process.current())
-        self.runner.close()
-        runners.set_runner(None)
 
     class AbortableWorkChain(WorkChain):
         @classmethod
@@ -814,6 +807,7 @@ class TestWorkChainAbort(AiidaTestCase):
         Run the workchain which should hit the exception and therefore end
         up in the EXCEPTED state
         """
+        runner = work.AiiDAManager.get_runner()
         process = TestWorkChainAbort.AbortableWorkChain()
 
         @gen.coroutine
@@ -826,8 +820,8 @@ class TestWorkChainAbort(AiidaTestCase):
                 with self.assertRaises(RuntimeError):
                     result = yield process.future()
 
-        self.runner.loop.add_callback(process.step_until_terminated)
-        self.runner.loop.run_sync(lambda: run_async())
+        runner.schedule(process)
+        runner.loop.run_sync(lambda: run_async())
 
         self.assertEquals(process.calc.is_finished_ok, False)
         self.assertEquals(process.calc.is_excepted, True)
@@ -839,6 +833,7 @@ class TestWorkChainAbort(AiidaTestCase):
         on the workchain itself. This should have the workchain end up
         in the KILLED state.
         """
+        runner = work.AiiDAManager.get_runner()
         process = TestWorkChainAbort.AbortableWorkChain()
 
         @gen.coroutine
@@ -851,8 +846,8 @@ class TestWorkChainAbort(AiidaTestCase):
             with self.assertRaises(plumpy.KilledError):
                 work.run(process)
 
-        self.runner.loop.add_callback(process.step_until_terminated)
-        self.runner.loop.run_sync(lambda: run_async())
+        runner.schedule(process)
+        runner.loop.run_sync(lambda: run_async())
 
         self.assertEquals(process.calc.is_finished_ok, False)
         self.assertEquals(process.calc.is_excepted, False)
@@ -868,13 +863,10 @@ class TestWorkChainAbortChildren(AiidaTestCase):
     def setUp(self):
         super(TestWorkChainAbortChildren, self).setUp()
         self.assertIsNone(Process.current())
-        self.runner = runners.get_runner()
 
     def tearDown(self):
         super(TestWorkChainAbortChildren, self).tearDown()
         self.assertIsNone(Process.current())
-        self.runner.close()
-        runners.set_runner(None)
 
     class SubWorkChain(WorkChain):
         @classmethod
@@ -934,8 +926,8 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         Run the workchain for one step and then kill it. This should have the
         workchain and its children end up in the KILLED state.
         """
+        runner = work.AiiDAManager.get_runner()
         process = TestWorkChainAbortChildren.MainWorkChain(inputs={'kill': Bool(True)})
-        # process.add_on_waiting_callback(lambda _: process.pause())
 
         @gen.coroutine
         def run_async():
@@ -946,8 +938,8 @@ class TestWorkChainAbortChildren(AiidaTestCase):
             with self.assertRaises(plumpy.KilledError):
                 result = yield process.future()
 
-        self.runner.loop.add_callback(process.step_until_terminated)
-        self.runner.loop.run_sync(lambda: run_async())
+        runner.schedule(process)
+        runner.loop.run_sync(lambda: run_async())
 
         child = process.calc.get_outputs(link_type=LinkType.CALL)[0]
         self.assertEquals(child.is_finished_ok, False)
@@ -967,13 +959,10 @@ class TestImmutableInputWorkchain(AiidaTestCase):
     def setUp(self):
         super(TestImmutableInputWorkchain, self).setUp()
         self.assertIsNone(Process.current())
-        self.runner = runners.get_runner()
 
     def tearDown(self):
         super(TestImmutableInputWorkchain, self).tearDown()
         self.assertIsNone(Process.current())
-        self.runner.close()
-        runners.set_runner(None)
 
     def test_immutable_input(self):
         """
@@ -1065,20 +1054,19 @@ class SerializeWorkChain(WorkChain):
         assert isinstance(self.inputs.test, Str)
         assert self.inputs.test == self.inputs.reference
 
+
 class TestSerializeWorkChain(AiidaTestCase):
     """
     Test workchains with serialized input / output.
     """
+
     def setUp(self):
         super(TestSerializeWorkChain, self).setUp()
         self.assertIsNone(Process.current())
-        self.runner = runners.get_runner()
 
     def tearDown(self):
         super(TestSerializeWorkChain, self).tearDown()
         self.assertIsNone(Process.current())
-        self.runner.close()
-        runners.set_runner(None)
 
     def test_serialize(self):
         """
@@ -1228,17 +1216,6 @@ class TestWorkChainExpose(AiidaTestCase):
     Test the expose inputs / outputs functionality
     """
 
-    def setUp(self):
-        super(TestWorkChainExpose, self).setUp()
-        self.assertIsNone(Process.current())
-        self.runner = runners.get_runner()
-
-    def tearDown(self):
-        super(TestWorkChainExpose, self).tearDown()
-        self.assertIsNone(Process.current())
-        self.runner.close()
-        runners.set_runner(None)
-
     def test_expose(self):
         res = work.run(
             ParentExposeWorkChain,
@@ -1277,7 +1254,6 @@ class TestWorkChainExpose(AiidaTestCase):
 
 
 class TestWorkChainReturnDict(AiidaTestCase):
-
     class PointlessWorkChain(WorkChain):
 
         @classmethod
@@ -1337,7 +1313,7 @@ class TestDefaultUniqueness(AiidaTestCase):
             'child_one': {},
             'child_two': {}
         }
-        result, node = work.run_get_node(TestDefaultUniqueness.Parent, **inputs)
+        result, node = work.run.get_node(TestDefaultUniqueness.Parent, **inputs)
 
         nodes = [n for n in node.get_inputs()]
         uuids = set([n.uuid for n in node.get_inputs()])
@@ -1345,4 +1321,5 @@ class TestDefaultUniqueness(AiidaTestCase):
         # Trying to load one of the inputs through the UUID should fail,
         # as both `child_one.a` and `child_two.a` should have the same UUID.
         node = load_node(uuid=node.get_inputs_dict()['child_one_a'].uuid)
-        self.assertEquals(len(uuids), len(nodes), 'Only {} unique UUIDS for {} input nodes'.format(len(uuids), len(nodes)))
+        self.assertEquals(len(uuids), len(nodes),
+                          'Only {} unique UUIDS for {} input nodes'.format(len(uuids), len(nodes)))

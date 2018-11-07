@@ -26,8 +26,8 @@ import plumpy
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_process
-from aiida.work import runners, test_utils
-from aiida.work.communication import communicators
+from aiida.work import test_utils
+from aiida import work
 
 
 class TestVerdiProcess(AiidaTestCase):
@@ -41,11 +41,10 @@ class TestVerdiProcess(AiidaTestCase):
         from aiida.daemon.client import DaemonClient
 
         profile = get_profile()
-        communicator = communicators.create_communicator()
         self.daemon_client = DaemonClient(profile)
         self.daemon_pid = subprocess.Popen(
             self.daemon_client.cmd_string.split(), stderr=sys.stderr, stdout=sys.stdout).pid
-        self.runner = runners.Runner(communicator=communicator, rmq_submit=True, poll_interval=0.)
+        self.runner = work.AiiDAManager.get_runner()
         self.cli_runner = CliRunner()
 
     def tearDown(self):
@@ -53,8 +52,6 @@ class TestVerdiProcess(AiidaTestCase):
         import signal
 
         os.kill(self.daemon_pid, signal.SIGTERM)
-        self.runner.close()
-        runners.set_runner(None)
         super(TestVerdiProcess, self).tearDown()
 
     @unittest.skip('until issue #2154 has been addressed')

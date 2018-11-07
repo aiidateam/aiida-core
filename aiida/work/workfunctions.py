@@ -12,10 +12,10 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import functools
+from . import manager
 from . import processes
-from . import runners
 
-__all__ = ['workfunction']
+__all__ = ('workfunction',)
 
 
 def workfunction(func, calc_node_class=None):
@@ -54,7 +54,7 @@ def workfunction(func, calc_node_class=None):
         :param kwargs: input keyword arguments to construct the FunctionProcess
         :return: tuple of the outputs of the process and the calculation node
         """
-        runner = runners.Runner(enable_persistence=False)
+        runner = manager.AiiDAManager.create_runner(with_persistence=False)
         inputs = process_class.create_inputs(*args, **kwargs)
 
         # Remove all the known inputs from the kwargs

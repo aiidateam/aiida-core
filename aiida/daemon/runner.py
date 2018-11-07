@@ -17,8 +17,7 @@ from functools import partial
 
 from aiida.common.log import configure_logging
 from aiida.daemon.client import get_daemon_client
-from aiida.work import Runner, set_runner
-from aiida.work.communication import communicators
+from aiida import work
 
 
 logger = logging.getLogger(__name__)
@@ -33,10 +32,8 @@ def start_daemon():
     daemon_client = get_daemon_client()
     configure_logging(daemon=True, daemon_log_file=daemon_client.daemon_log_file)
 
-    communicator = communicators.create_communicator()
-
     try:
-        runner = Runner(communicator=communicator, daemon=True)
+        runner = work.AiiDAManager.create_daemon_runner()
     except Exception as exception:
         logger.exception('daemon runner failed to start')
         raise
@@ -50,7 +47,6 @@ def start_daemon():
 
     logger.info('Starting a daemon runner')
 
-    set_runner(runner)
     tick_legacy_workflows(runner)
 
     try:

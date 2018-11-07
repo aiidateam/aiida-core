@@ -387,7 +387,7 @@ key_explanation = {
 
 
 def profile_exists(profile):
-    '''return True if profile exists, else return False'''
+    """return True if profile exists, else return False"""
     config = get_or_create_config()
     profiles = config.get('profiles', {})
     return profile in profiles
@@ -410,14 +410,14 @@ def update_config(settings, write=True):
 
 
 def update_profile(profile, updates, write=True):
-    '''
+    """
     back up the config file, create or changes profile
 
     :param profile: name of the profile
     :param updates: dictionary with the new or changed profile
     :param write: if False, do not touch the config file (dryrun)
     :return: the new / changed profile
-    '''
+    """
     config = get_or_create_config()
     config['profiles'] = config.get('profiles', {})
     profiles = config['profiles']
@@ -429,14 +429,14 @@ def update_profile(profile, updates, write=True):
 
 
 def create_config_noninteractive(profile='default', force_overwrite=False, dry_run=False, **kwargs):
-    '''
+    """
     Non-interactively creates a profile.
     :raises: a ValueError if the profile exists.
     :raises: a ValueError if one of the values not a valid input
     :param profile: The profile to be configured
     :param values: The configuration inputs
     :return: The populated profile that was also stored
-    '''
+    """
     if profile_exists(profile) and not force_overwrite:
         raise ValueError(('profile {profile} exists! '
                           'Cannot non-interactively edit a profile.').format(profile=profile))

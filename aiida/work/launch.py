@@ -12,12 +12,11 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from . import communication
+from . import manager
 from . import processes
-from . import runners
 from . import utils
 
-__all__ = ['run', 'run_get_pid', 'run_get_node', 'submit']
+__all__ = 'run', 'run_get_pid', 'run_get_node', 'submit'
 
 
 def run(process, *args, **inputs):
@@ -32,7 +31,7 @@ def run(process, *args, **inputs):
     if isinstance(process, processes.Process):
         runner = process.runner
     else:
-        runner = runners.get_runner()
+        runner = manager.AiiDAManager.get_runner()
 
     return runner.run(process, *args, **inputs)
 
@@ -49,7 +48,7 @@ def run_get_node(process, *args, **inputs):
     if isinstance(process, processes.Process):
         runner = process.runner
     else:
-        runner = runners.get_runner()
+        runner = manager.AiiDAManager.get_runner()
 
     return runner.run_get_node(process, *args, **inputs)
 
@@ -66,7 +65,7 @@ def run_get_pid(process, *args, **inputs):
     if isinstance(process, processes.Process):
         runner = process.runner
     else:
-        runner = runners.get_runner()
+        runner = manager.AiiDAManager.get_runner()
 
     return runner.run_get_pid(process, *args, **inputs)
 
@@ -82,8 +81,8 @@ def submit(process, **inputs):
     """
     assert not utils.is_workfunction(process), 'Cannot submit a workfunction'
 
-    runner = runners.get_runner()
-    controller = communication.controllers.get_controller()
+    runner = manager.AiiDAManager.get_runner()
+    controller = manager.AiiDAManager.get_process_controller()
 
     process = processes.instantiate_process(runner, process, **inputs)
     runner.persister.save_checkpoint(process)

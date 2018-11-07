@@ -17,7 +17,7 @@ import tornado.gen
 import plumpy
 import kiwipy
 
-__all__ = ['CalculationFuture']
+__all__ = ('CalculationFuture',)
 
 
 class CalculationFuture(plumpy.Future):

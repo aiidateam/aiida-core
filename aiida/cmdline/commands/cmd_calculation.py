@@ -358,28 +358,27 @@ def calculation_outputls(calculation, path, color):
 def calculation_kill(calculations, force):
     """Kill one or multiple running calculations."""
     from aiida import work
-    from aiida.work.utils import get_process_controller
 
     if not force:
         warning = 'Are you sure you want to kill {} calculations?'.format(len(calculations))
         click.confirm(warning, abort=True)
 
-    with get_process_controller() as controller:
+    controller = work.AiiDAManager.get_process_controller()
 
-        futures = []
-        for calculation in calculations:
-            try:
-                future = controller.kill_process(calculation)
-                futures.append((calculation, future))
-            except (work.RemoteException, work.DeliveryFailed) as exc:
-                echo.echo_error('Calculation<{}> killing failed {}'.format(calculation, exc))
+    futures = []
+    for calculation in calculations:
+        try:
+            future = controller.kill_process(calculation)
+            futures.append((calculation, future))
+        except (work.RemoteException, work.DeliveryFailed) as exc:
+            echo.echo_error('Calculation<{}> killing failed {}'.format(calculation, exc))
 
-        for future in futures:
-            result = future.result()
-            if result:
-                echo.echo_success('Calculation<{}> successfully killed'.format(future[0]))
-            else:
-                echo.echo_error('Calculation<{}> killing failed {}'.format(future[0], result))
+    for future in futures:
+        result = future.result()
+        if result:
+            echo.echo_success('Calculation<{}> successfully killed'.format(future[0]))
+        else:
+            echo.echo_error('Calculation<{}> killing failed {}'.format(future[0], result))
 
 
 @verdi_calculation.command('cleanworkdir')

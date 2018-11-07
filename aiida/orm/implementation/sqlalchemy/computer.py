@@ -19,7 +19,6 @@ from sqlalchemy.orm.session import make_transient
 from aiida.common.utils import type_check
 from aiida.orm.computer import Computer, ComputerCollection
 from aiida.backends.sqlalchemy.models.computer import DbComputer
-from aiida.backends.sqlalchemy.utils import flag_modified
 from aiida.common.exceptions import (ConfigurationError, InvalidOperation)
 from aiida.common.lang import override
 from . import utils
@@ -96,17 +95,11 @@ class SqlaComputer(Computer):
 
     def set(self, **kwargs):
 
-        is_modified = False
-
         for key, val in kwargs.items():
             if hasattr(self._dbcomputer, key):
                 setattr(self._dbcomputer, key, val)
             else:
                 self._dbcomputer._metadata[key] = val
-                is_modified = True
-
-        if is_modified:
-            flag_modified(self._dbcomputer, "_metadata")
 
     @property
     def full_text_info(self):
@@ -202,7 +195,6 @@ class SqlaComputer(Computer):
 
     def _set_metadata(self, metadata_dict):
         self._dbcomputer._metadata = metadata_dict
-        flag_modified(self._dbcomputer, "_metadata")
 
     def get_transport_params(self):
         """

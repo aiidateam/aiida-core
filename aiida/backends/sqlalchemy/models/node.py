@@ -14,7 +14,7 @@ from __future__ import absolute_import
 from sqlalchemy import ForeignKey, select, func, join, case
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.schema import Column, UniqueConstraint
+from sqlalchemy.schema import Column, UniqueConstraint, Index
 from sqlalchemy.types import Integer, String, Boolean, DateTime, Text
 # Specific to PGSQL. If needed to be agnostic
 # http://docs.sqlalchemy.org/en/rel_0_9/core/custom_types.html?highlight=guid#backend-agnostic-guid-type
@@ -89,7 +89,7 @@ class DbNode(Base):
         nullable=True
     )
 
-    # This should have the same ondelet behaviour as db_computer_id, right?
+    # This should have the same ondelete behaviour as db_computer_id, right?
     user_id = Column(
         Integer,
         ForeignKey(

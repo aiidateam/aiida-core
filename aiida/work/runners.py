@@ -33,7 +33,7 @@ ResultAndNode = namedtuple('ResultAndNode', ['result', 'node'])
 ResultAndPid = namedtuple('ResultAndPid', ['result', 'pid'])
 
 RUNNER = None
-POLL_INTERVAL_DEFAULT = 30.
+POLL_INTERVAL_DEFAULT = 1.
 
 
 def new_runner(**kwargs):

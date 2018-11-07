@@ -34,7 +34,7 @@ from aiida.work.utils import exponential_backoff_retry, interruptable_task
 from . import persistence
 from . import processes
 
-__all__ = ['JobProcess']
+__all__ = ('JobProcess',)
 
 UPLOAD_COMMAND = 'upload'
 SUBMIT_COMMAND = 'submit'

@@ -69,22 +69,21 @@ def process_list(all_entries, process_state, exit_status, failed, past_days, lim
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_kill(processes, timeout, wait):
     """Kill running processes."""
-    from aiida.work.utils import get_process_controller
+    from aiida import work
 
-    with get_process_controller() as controller:
+    controller = work.AiiDAManager.get_process_controller()
 
-        futures = {}
+    futures = {}
+    for process in processes:
 
-        for process in processes:
+        if process.is_terminated:
+            echo.echo_error('Process<{}> is already terminated'.format(process.pk))
+            continue
 
-            if process.is_terminated:
-                echo.echo_error('Process<{}> is already terminated'.format(process.pk))
-                continue
+        future = controller.kill_process(process.pk, msg='Killed through `verdi process kill`')
+        futures[future] = process
 
-            future = controller.kill_process(process.pk, msg='Killed through `verdi process kill`')
-            futures[future] = process
-
-        process_actions(futures, 'kill', 'killing', 'killed', wait, timeout)
+    process_actions(futures, 'kill', 'killing', 'killed', wait, timeout)
 
 
 @verdi_process.command('pause')
@@ -98,22 +97,21 @@ def process_kill(processes, timeout, wait):
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_pause(processes, timeout, wait):
     """Pause running processes."""
-    from aiida.work.utils import get_process_controller
+    from aiida import work
 
-    with get_process_controller() as controller:
+    controller = work.AiiDAManager.get_process_controller()
 
-        futures = {}
+    futures = {}
+    for process in processes:
 
-        for process in processes:
+        if process.is_terminated:
+            echo.echo_error('Process<{}> is already terminated'.format(process.pk))
+            continue
 
-            if process.is_terminated:
-                echo.echo_error('Process<{}> is already terminated'.format(process.pk))
-                continue
+        future = controller.pause_process(process.pk, msg='Paused through `verdi process pause`')
+        futures[future] = process
 
-            future = controller.pause_process(process.pk, msg='Paused through `verdi process pause`')
-            futures[future] = process
-
-        process_actions(futures, 'pause', 'pausing', 'paused', wait, timeout)
+    process_actions(futures, 'pause', 'pausing', 'paused', wait, timeout)
 
 
 @verdi_process.command('play')
@@ -127,22 +125,21 @@ def process_pause(processes, timeout, wait):
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_play(processes, timeout, wait):
     """Play paused processes."""
-    from aiida.work.utils import get_process_controller
+    from aiida import work
 
-    with get_process_controller() as controller:
+    controller = work.AiiDAManager.get_process_controller()
 
-        futures = {}
+    futures = {}
+    for process in processes:
 
-        for process in processes:
+        if process.is_terminated:
+            echo.echo_error('Process<{}> is already terminated'.format(process.pk))
+            continue
 
-            if process.is_terminated:
-                echo.echo_error('Process<{}> is already terminated'.format(process.pk))
-                continue
+        future = controller.play_process(process.pk)
+        futures[future] = process
 
-            future = controller.play_process(process.pk)
-            futures[future] = process
-
-        process_actions(futures, 'play', 'playing', 'played', wait, timeout)
+    process_actions(futures, 'play', 'playing', 'played', wait, timeout)
 
 
 @verdi_process.command('watch')
@@ -152,13 +149,13 @@ def process_play(processes, timeout, wait):
 def process_watch(processes):
     """Watch the state transitions for a process."""
     from kiwipy import BroadcastFilter
-    from aiida.work.communication.communicators import create_communicator
+    from aiida import work
     import concurrent.futures
 
     def _print(body, sender, subject, correlation_id):
         echo.echo('pk={}, subject={}, body={}, correlation_id={}'.format(sender, subject, body, correlation_id))
 
-    communicator = create_communicator()
+    communicator = work.AiiDAManager.get_communicator()
 
     for process in processes:
 

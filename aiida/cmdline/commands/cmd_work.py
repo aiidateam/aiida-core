@@ -221,29 +221,28 @@ def work_kill(calculations):
     """
     Kill work calculations
     """
+    from aiida import work
     from aiida.work import RemoteException, DeliveryFailed, CommunicationTimeout
-    from aiida.work.utils import get_process_controller
 
-    with get_process_controller() as controller:
+    controller = work.AiiDAManager.get_process_controller()
+    for calculation in calculations:
 
-        for calculation in calculations:
+        if calculation.is_terminated:
+            echo.echo_error('Process<{}> is already terminated'.format(calculation.pk))
+            continue
 
-            if calculation.is_terminated:
-                echo.echo_error('Process<{}> is already terminated'.format(calculation.pk))
-                continue
+        try:
+            future = controller.kill_process(calculation.pk, msg='Killed through `verdi work kill`')
+            result = future.result()
 
-            try:
-                future = controller.kill_process(calculation.pk, msg='Killed through `verdi work kill`')
-                result = future.result()
-
-                if result:
-                    echo.echo_success('killed Process<{}>'.format(calculation.pk))
-                else:
-                    echo.echo_error('problem killing Process<{}>'.format(calculation.pk))
-            except CommunicationTimeout:
-                echo.echo_error('call to kill Process<{}> timed out'.format(calculation.pk))
-            except (RemoteException, DeliveryFailed) as exception:
-                echo.echo_error('failed to kill Process<{}>: {}'.format(calculation.pk, exception))
+            if result:
+                echo.echo_success('killed Process<{}>'.format(calculation.pk))
+            else:
+                echo.echo_error('problem killing Process<{}>'.format(calculation.pk))
+        except CommunicationTimeout:
+            echo.echo_error('call to kill Process<{}> timed out'.format(calculation.pk))
+        except (RemoteException, DeliveryFailed) as exception:
+            echo.echo_error('failed to kill Process<{}>: {}'.format(calculation.pk, exception))
 
 
 @verdi_work.command('pause')
@@ -254,26 +253,25 @@ def work_pause(calculations):
     """
     Pause running work calculations
     """
+    from aiida import work
     from aiida.work import RemoteException, DeliveryFailed, CommunicationTimeout
-    from aiida.work.utils import get_process_controller
 
-    with get_process_controller() as controller:
+    controller = work.AiiDAManager.get_process_controller()
+    for calculation in calculations:
 
-        for calculation in calculations:
+        if calculation.is_terminated:
+            echo.echo_error('Calculation<{}> is already terminated'.format(calculation.pk))
+            continue
 
-            if calculation.is_terminated:
-                echo.echo_error('Calculation<{}> is already terminated'.format(calculation.pk))
-                continue
-
-            try:
-                if controller.pause_process(calculation.pk):
-                    echo.echo_success('paused Calculation<{}>'.format(calculation.pk))
-                else:
-                    echo.echo_error('problem pausing Calculation<{}>'.format(calculation.pk))
-            except CommunicationTimeout:
-                echo.echo_error('call to pause Process<{}> timed out'.format(calculation.pk))
-            except (RemoteException, DeliveryFailed) as exception:
-                echo.echo_error('failed to pause Calculation<{}>: {}'.format(calculation.pk, exception))
+        try:
+            if controller.pause_process(calculation.pk):
+                echo.echo_success('paused Calculation<{}>'.format(calculation.pk))
+            else:
+                echo.echo_error('problem pausing Calculation<{}>'.format(calculation.pk))
+        except CommunicationTimeout:
+            echo.echo_error('call to pause Process<{}> timed out'.format(calculation.pk))
+        except (RemoteException, DeliveryFailed) as exception:
+            echo.echo_error('failed to pause Calculation<{}>: {}'.format(calculation.pk, exception))
 
 
 @verdi_work.command('play')
@@ -285,25 +283,24 @@ def work_play(calculations):
     Play paused work calculations
     """
     from aiida.work import RemoteException, DeliveryFailed, CommunicationTimeout
-    from aiida.work.utils import get_process_controller
+    from aiida import work
 
-    with get_process_controller() as controller:
+    controller = work.AiiDAManager.get_process_controller()
+    for calculation in calculations:
 
-        for calculation in calculations:
+        if calculation.is_terminated:
+            echo.echo_error('Calculation<{}> is already terminated'.format(calculation.pk))
+            continue
 
-            if calculation.is_terminated:
-                echo.echo_error('Calculation<{}> is already terminated'.format(calculation.pk))
-                continue
-
-            try:
-                if controller.play_process(calculation.pk):
-                    echo.echo_success('played Calculation<{}>'.format(calculation.pk))
-                else:
-                    echo.echo_critical('problem playing Calculation<{}>'.format(calculation.pk))
-            except CommunicationTimeout:
-                echo.echo_error('call to play Process<{}> timed out'.format(calculation.pk))
-            except (RemoteException, DeliveryFailed) as exception:
-                echo.echo_critical('failed to play Calculation<{}>: {}'.format(calculation.pk, exception))
+        try:
+            if controller.play_process(calculation.pk):
+                echo.echo_success('played Calculation<{}>'.format(calculation.pk))
+            else:
+                echo.echo_critical('problem playing Calculation<{}>'.format(calculation.pk))
+        except CommunicationTimeout:
+            echo.echo_error('call to play Process<{}> timed out'.format(calculation.pk))
+        except (RemoteException, DeliveryFailed) as exception:
+            echo.echo_critical('failed to play Calculation<{}>: {}'.format(calculation.pk, exception))
 
 
 @verdi_work.command('watch')
@@ -315,14 +312,13 @@ def work_watch(calculations):
     Watch the state transitions for work calculations
     """
     from kiwipy import BroadcastFilter
-    from aiida.work.rmq import get_communicator
+    from aiida import work
     import concurrent.futures
 
     def _print(body, sender, subject, correlation_id):
         echo.echo('pk={}, subject={}, body={}, correlation_id={}'.format(sender, subject, body, correlation_id))
 
-    communicator = get_communicator()
-
+    communicator = work.AiiDAManager.get_communicator()
     for process in calculations:
 
         if process.is_terminated:

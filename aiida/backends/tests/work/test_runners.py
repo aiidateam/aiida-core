@@ -33,12 +33,10 @@ class TestWorkchain(AiidaTestCase):
 
     def setUp(self):
         super(TestWorkchain, self).setUp()
-        self.runner = runners.get_runner()
+        self.runner = work.AiiDAManager.get_runner()
 
     def tearDown(self):
         super(TestWorkchain, self).tearDown()
-        self.runner.close()
-        runners.set_runner(None)
 
     def test_call_on_calculation_finish(self):
         loop = self.runner.loop

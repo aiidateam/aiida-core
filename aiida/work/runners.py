@@ -15,66 +15,25 @@ from __future__ import print_function
 from __future__ import absolute_import
 from collections import namedtuple
 import logging
+import plumpy
 import tornado.ioloop
 
-import plumpy
-
 from aiida.orm import load_node, load_workflow
-from aiida.work.communication import controllers
 from aiida.work.processes import instantiate_process
 from . import job_calcs
 from . import futures
-from . import persistence
-from . import rmq
 from . import transports
 from . import utils
 
-__all__ = ['Runner', 'create_runner', 'set_runner', 'get_runner']
+__all__ = ('Runner',)
+
+_LOGGER = logging.getLogger(__name__)
 
 ResultAndNode = namedtuple('ResultAndNode', ['result', 'node'])
 ResultAndPid = namedtuple('ResultAndPid', ['result', 'pid'])
 
 RUNNER = None
 POLL_INTERVAL_DEFAULT = 1.
-
-
-def create_runner(**kwargs):
-    """
-    Create a default runner optionally passing keyword arguments
-
-    :param kwargs: arguments to be passed to Runner constructor
-    :return: a new runner instance
-    """
-    from aiida.work.communication import communicators
-
-    if 'communicator' not in kwargs:
-        kwargs['communicator'] = communicators.get_communicator()
-
-    return Runner(**kwargs)
-
-
-def get_runner():
-    """
-    Get the global runner instance
-
-    :returns: the global runner
-    """
-    global RUNNER
-
-    if RUNNER is None or RUNNER.is_closed():
-        RUNNER = create_runner()
-
-    return RUNNER
-
-
-def set_runner(runner):
-    """
-    Set the global runner instance
-
-    :param runner: the runner instance to set as the global runner
-    """
-    global RUNNER
-    RUNNER = runner
 
 
 class Runner(object):
@@ -86,51 +45,39 @@ class Runner(object):
     _closed = False
 
     def __init__(self,
-                 << << << < HEAD
-                 rmq_config=None,
                  poll_interval=POLL_INTERVAL_DEFAULT,
-                 == == == =
-                 poll_interval=0.,
-                 >> >> >> > Refactor the creation of communicators and controllers
                  loop=None,
                  communicator=None,
                  rmq_submit=False,
-                 enable_persistence=True,
-                 persister=None,
-                 daemon=False):
-        # pylint: disable=too-many-arguments
+                 persister=None):
+        """
+        Construct a new runner
+
+        :param poll_interval:
+        :param loop: an event loop to use, if none is suppled a new one will be created
+        :type loop: :class:`tornado.ioloop.IOLoop`
+        :param communicator: the communicator to use
+        :type communicator: :class:`kiwipy.Communicator`
+        :param rmq_submit:
+        :param persister: the persister to use to persist processes
+        :type persister: :class:`plumpy.Persister`
+        """
+        assert not (rmq_submit and persister is None), \
+            'Must supply a persister if you want to submit using communicator'
+
         self._loop = loop if loop is not None else tornado.ioloop.IOLoop()
         self._poll_interval = poll_interval
         self._rmq_submit = rmq_submit
         self._transport = transports.TransportQueue(self._loop)
         self._job_manager = job_calcs.JobManager(self._transport)
-
-        if enable_persistence:
-            self._persister = persister if persister is not None else persistence.AiiDAPersister()
-
-        if daemon:
-            assert communicator is not None, 'a daemon runner needs a communicator'
-            communicator = plumpy.wrap_communicator(communicator, self._loop)
+        self._persister = persister
 
         if communicator is not None:
             self._communicator = communicator
-            self._controller = controllers.create_controller(communicator)
+            self._controller = plumpy.RemoteProcessThreadController(communicator)
         elif self._rmq_submit:
-            logger = logging.getLogger(__name__)
-            logger.warning('Disabling RabbitMQ submission, no communicator provided')
+            _LOGGER.warning('Disabling RabbitMQ submission, no communicator provided')
             self._rmq_submit = False
-
-        if daemon:
-            # Create a context for loading new processes
-            load_context = plumpy.LoadSaveContext(runner=self)
-
-            # Listen for incoming launch requests
-            task_receiver = rmq.ProcessLauncher(
-                loop=self.loop,
-                persister=self.persister,
-                load_context=load_context,
-                loader=persistence.get_object_loader())
-            self.communicator.add_task_subscriber(task_receiver)
 
     def __enter__(self):
         return self
@@ -140,6 +87,12 @@ class Runner(object):
 
     @property
     def loop(self):
+        """
+        Get the event loop of this runner
+
+        :return: the event loop
+        :rtype: :class:`tornado.ioloop.IOLoop`
+        """
         return self._loop
 
     @property
@@ -152,6 +105,12 @@ class Runner(object):
 
     @property
     def communicator(self):
+        """
+        Get the communicator used by this runner
+
+        :return: the communicator
+        :rtype: :class:`kiwipy.Communicator`
+        """
         return self._communicator
 
     @property
@@ -205,6 +164,21 @@ class Runner(object):
         else:
             self.loop.add_callback(process.step_until_terminated)
 
+        return process.calc
+
+    def schedule(self, process, *args, **inputs):
+        """
+        Schedule a process to be executed by this runner
+
+        :param process: the process class to submit
+        :param inputs: the inputs to be passed to the process
+        :return: the calculation node of the process
+        """
+        assert not utils.is_workfunction(process), 'Cannot submit a workfunction'
+        assert not self._closed
+
+        process = instantiate_process(self, process, *args, **inputs)
+        self.loop.add_callback(process.step_until_terminated)
         return process.calc
 
     def _run(self, process, *args, **inputs):

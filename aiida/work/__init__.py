@@ -25,8 +25,22 @@ from .runners import *
 from .utils import *
 from .workfunctions import *
 from .workchain import *
+from .manager import *
 
-__all__ = (exceptions.__all__ + exit_code.__all__ + processes.__all__ + runners.__all__ + utils.__all__ +
-           workchain.__all__ + launch.__all__ + workfunctions.__all__ +
-           ['ProcessState'] + job_processes.__all__ +
-           rmq.__all__ + futures.__all__ + persistence.__all__)
+_local = ('ProcessState',)
+
+__all__ = (
+        exceptions.__all__ +
+        exit_code.__all__ +
+        processes.__all__ +
+        runners.__all__ +
+        utils.__all__ +
+        workchain.__all__ +
+        launch.__all__ +
+        workfunctions.__all__ +
+        job_processes.__all__ +
+        rmq.__all__ +
+        futures.__all__ +
+        persistence.__all__ +
+        manager.__all__ +  # TODO: To be moved later
+        _local)

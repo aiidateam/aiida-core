@@ -14,7 +14,7 @@ from __future__ import absolute_import
 from collections import namedtuple
 from aiida.common.extendeddicts import AttributeDict
 
-__all__ = ['ExitCode', 'ExitCodesNamespace']
+__all__ = 'ExitCode', 'ExitCodesNamespace'
 
 ExitCode = namedtuple('ExitCode', 'status message')
 ExitCode.__new__.__defaults__ = (0, None)

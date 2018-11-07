@@ -23,7 +23,7 @@ import plumpy
 from aiida.utils import serialize
 from aiida.work.exceptions import PastException
 
-__all__ = ['RemoteException', 'CommunicationTimeout', 'DeliveryFailed', 'ProcessLauncher']
+__all__ = 'RemoteException', 'CommunicationTimeout', 'DeliveryFailed', 'ProcessLauncher'
 
 LOGGER = logging.getLogger(__name__)
 

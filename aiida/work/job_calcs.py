@@ -23,7 +23,9 @@ from tornado import concurrent, gen
 
 from aiida import scheduler as schedulers
 from aiida.common import exceptions
-from . import utils
+from .utils import RefObjectStore
+
+__all__ = tuple()
 
 
 class JobsList(object):
@@ -225,7 +227,7 @@ class JobManager(object):
 
     def __init__(self, transport_queue):
         self._transport_queue = transport_queue
-        self._job_lists = utils.RefObjectStore()
+        self._job_lists = RefObjectStore()
 
     @contextlib.contextmanager
     def request_job_info_update(self, authinfo, job_id):

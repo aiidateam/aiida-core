@@ -30,7 +30,7 @@ from .exit_code import ExitCode
 from .process_spec import ProcessSpec
 from .processes import Process, ProcessState
 
-__all__ = ['WorkChain', 'assign_', 'append_', 'if_', 'while_', 'return_', 'ToContext', '_WorkChainSpec']
+__all__ = 'WorkChain', 'assign_', 'append_', 'if_', 'while_', 'return_', 'ToContext', '_WorkChainSpec'
 
 
 class _WorkChainSpec(ProcessSpec, WorkChainSpec):

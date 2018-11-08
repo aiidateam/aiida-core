@@ -769,6 +769,8 @@ class _NoDefaultValue(object):
 # 4. The default value, if no setting is found
 # 5. A list of valid values, or None if no such list makes sense
 _property_table = {
+    "runner.poll.interval": ("runner_poll_interval", "int", "The polling interval in seconds to be used by process runners",
+                       1, None),
     "daemon.timeout": ("daemon_timeout", "int", "The timeout in seconds for calls to the circus client",
                        DEFAULT_DAEMON_TIMEOUT, None),
     "verdishell.modules": ("modules_for_verdi_shell", "string",

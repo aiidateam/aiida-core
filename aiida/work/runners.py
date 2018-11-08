@@ -31,8 +31,6 @@ LOGGER = logging.getLogger(__name__)
 ResultAndNode = namedtuple('ResultAndNode', ['result', 'node'])
 ResultAndPid = namedtuple('ResultAndPid', ['result', 'pid'])
 
-POLL_INTERVAL_DEFAULT = 1.
-
 
 class Runner(object):
     """Class that can launch processes by running in the current interpreter or by submitting them to the daemon."""
@@ -42,12 +40,7 @@ class Runner(object):
     _controller = None
     _closed = False
 
-    def __init__(self,
-                 poll_interval=POLL_INTERVAL_DEFAULT,
-                 loop=None,
-                 communicator=None,
-                 rmq_submit=False,
-                 persister=None):
+    def __init__(self, poll_interval=0, loop=None, communicator=None, rmq_submit=False, persister=None):
         """
         Construct a new runner
 

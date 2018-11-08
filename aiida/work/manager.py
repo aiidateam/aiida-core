@@ -170,11 +170,15 @@ class AiiDAManager(object):
         :rtype: :class:`aiida.work.Runner`
         """
         profile = cls.get_profile()
-        settings = {'rmq_submit': False, 'poll_interval': 0.0 if profile.is_test_profile else 30.}
+        poll_interval = 0.0 if profile.is_test_profile else profile.get_option('runner.poll.interval')
+
+        settings = {'rmq_submit': False, 'poll_interval': poll_interval}
         settings.update(kwargs)
+
         if 'communicator' not in settings:
             # Only call get_communicator if we have to as it will lazily create
             settings['communicator'] = cls.get_communicator()
+
         if with_persistence and 'persister' not in settings:
             settings['persister'] = cls.get_persister()
 

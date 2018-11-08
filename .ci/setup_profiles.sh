@@ -21,4 +21,7 @@ then
 
     # Maybe not needed, but set this profile to be the default one
     verdi profile setdefault $TEST_AIIDA_BACKEND
+
+    # Set the polling interval to 0 otherwise the tests take too long
+    verdi devel setproperty runner.poll.interval 0
 fi

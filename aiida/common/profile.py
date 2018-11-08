@@ -101,6 +101,11 @@ class Profile(object):
         else:
             self._test_profile = False
 
+    def get_option(self, option):
+        """Return the value of an option of this profile."""
+        from aiida.common.setup import get_property
+        return get_property(option)
+
     @property
     def config(self):
         return self._config

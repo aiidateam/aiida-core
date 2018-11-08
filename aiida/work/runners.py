@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=cyclic-import,global-statement
-# pylint: disable=global-statement,cyclic-import
 """Runners that can run and submit processes."""
 from __future__ import division
 from __future__ import print_function
@@ -27,12 +26,11 @@ from . import utils
 
 __all__ = ('Runner',)
 
-_LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 ResultAndNode = namedtuple('ResultAndNode', ['result', 'node'])
 ResultAndPid = namedtuple('ResultAndPid', ['result', 'pid'])
 
-RUNNER = None
 POLL_INTERVAL_DEFAULT = 1.
 
 
@@ -53,12 +51,12 @@ class Runner(object):
         """
         Construct a new runner
 
-        :param poll_interval:
+        :param poll_interval: interval in seconds between polling for status of active calculations
         :param loop: an event loop to use, if none is suppled a new one will be created
         :type loop: :class:`tornado.ioloop.IOLoop`
         :param communicator: the communicator to use
         :type communicator: :class:`kiwipy.Communicator`
-        :param rmq_submit:
+        :param rmq_submit: if True, processes will be submitted to RabbitMQ, otherwise they will be scheduled here
         :param persister: the persister to use to persist processes
         :type persister: :class:`plumpy.Persister`
         """
@@ -76,7 +74,7 @@ class Runner(object):
             self._communicator = communicator
             self._controller = plumpy.RemoteProcessThreadController(communicator)
         elif self._rmq_submit:
-            _LOGGER.warning('Disabling RabbitMQ submission, no communicator provided')
+            LOGGER.warning('Disabling RabbitMQ submission, no communicator provided')
             self._rmq_submit = False
 
     def __enter__(self):

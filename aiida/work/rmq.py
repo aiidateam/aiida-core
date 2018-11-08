@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-few-public-methods
 """Components to communicate tasks to RabbitMQ."""
 from __future__ import division
 from __future__ import print_function
@@ -136,6 +135,7 @@ def _store_inputs(inputs):
 
 
 class ProcessLauncher(plumpy.ProcessLauncher):
+    # pylint: disable=too-few-public-methods
     """
     A sub class of plumpy.ProcessLauncher to launch a Process
 

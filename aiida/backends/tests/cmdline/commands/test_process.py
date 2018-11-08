@@ -13,9 +13,8 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import datetime
-import sys
 import subprocess
-import unittest
+import sys
 import time
 from concurrent.futures import Future
 
@@ -33,7 +32,7 @@ from aiida import work
 class TestVerdiProcess(AiidaTestCase):
     """Tests for `verdi process`."""
 
-    TEST_TIMEOUT = 10.
+    TEST_TIMEOUT = 5.
 
     def setUp(self):
         super(TestVerdiProcess, self).setUp()
@@ -44,7 +43,7 @@ class TestVerdiProcess(AiidaTestCase):
         self.daemon_client = DaemonClient(profile)
         self.daemon_pid = subprocess.Popen(
             self.daemon_client.cmd_string.split(), stderr=sys.stderr, stdout=sys.stdout).pid
-        self.runner = work.AiiDAManager.get_runner()
+        self.runner = work.AiiDAManager.create_runner(rmq_submit=True)
         self.cli_runner = CliRunner()
 
     def tearDown(self):
@@ -54,7 +53,6 @@ class TestVerdiProcess(AiidaTestCase):
         os.kill(self.daemon_pid, signal.SIGTERM)
         super(TestVerdiProcess, self).tearDown()
 
-    @unittest.skip('until issue #2154 has been addressed')
     def test_pause_play_kill(self):
         """
         Test the pause/play/kill commands
@@ -65,7 +63,7 @@ class TestVerdiProcess(AiidaTestCase):
         start_time = time.time()
         while calc.process_state is not plumpy.ProcessState.WAITING:
             if time.time() - start_time >= self.TEST_TIMEOUT:
-                self.fail("Timed out waiting for process to enter waiting state")
+                self.fail('Timed out waiting for process to enter waiting state')
 
         self.assertFalse(calc.paused)
         result = self.cli_runner.invoke(cmd_process.process_pause, [str(calc.pk)])

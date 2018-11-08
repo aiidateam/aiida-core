@@ -51,6 +51,12 @@ class TestMigrations(AiidaTestCase):
 
         self.apps = executor.loader.project_state(self.migrate_to).apps
 
+    def tearDown(self):
+        from ..migrations import LATEST_MIGRATION
+        self.migrate_to = [(self.app, LATEST_MIGRATION)]
+        executor = MigrationExecutor(connection)
+        executor.migrate(self.migrate_to)
+
     def setUpBeforeMigration(self, apps):
         pass
 

@@ -18,7 +18,6 @@ import plumpy
 
 from aiida.work import rmq
 from aiida import utils
-from aiida import common
 from . import persistence
 from . import runners
 
@@ -30,7 +29,7 @@ class AiiDAManager(object):
     Manager singleton to provide global versions of commonly used profile/settings related objects
     and methods to facilitate their construction.
 
-    In AiiDA the settings of many objects are tied to optioned defined in the current profile.  This
+    In AiiDA the settings of many objects are tied to options defined in the current profile.  This
     means that certain objects should be constructed in a way that depends on the profile.  Instead of
     having disparate parts of the code accessing the profile we put together here the profile and methods
     to create objects based on the current settings.
@@ -47,11 +46,15 @@ class AiiDAManager(object):
     @classmethod
     def get_profile(cls):
         """
-        Get the current profile instance
-        :return:
+        Get the current profile
+
+        :return: current loaded profile instance
+        :rtype: :class:`~aiida.common.profile.Profile`
         """
+        from aiida.common import profile
+
         if cls._PROFILE is None:
-            cls._PROFILE = common.profile.get_profile()
+            cls._PROFILE = profile.get_profile()
 
         return cls._PROFILE
 

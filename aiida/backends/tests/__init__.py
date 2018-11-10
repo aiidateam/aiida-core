@@ -70,6 +70,7 @@ db_test_list = {
         'cmdline.commands.process': ['aiida.backends.tests.cmdline.commands.test_process'],
         'cmdline.commands.profile': ['aiida.backends.tests.cmdline.commands.test_profile'],
         'cmdline.commands.rehash': ['aiida.backends.tests.cmdline.commands.test_rehash'],
+        'cmdline.commands.run': ['aiida.backends.tests.cmdline.commands.test_run'],
         'cmdline.commands.user': ['aiida.backends.tests.cmdline.commands.test_user'],
         'cmdline.commands.work': ['aiida.backends.tests.cmdline.commands.test_work'],
         'cmdline.commands.workflow': ['aiida.backends.tests.cmdline.commands.test_workflow'],

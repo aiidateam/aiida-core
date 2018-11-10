@@ -19,7 +19,7 @@ install_requires = [
     'django-extensions==1.5.0',
     'tzlocal==1.5.1',
     'pytz==2018.4',
-    'PyYAML==3.12',
+    'PyYAML==3.13',
     'six==1.11.0',
     'anyjson==0.3.3',
     'psutil==5.4.5',

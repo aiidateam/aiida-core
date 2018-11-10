@@ -20,11 +20,10 @@ import aiida.backends.sqlalchemy
 from sqlalchemy import and_, or_, not_
 from sqlalchemy.types import Integer, Float, Boolean, DateTime, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.sql.expression import cast, ColumnClause
-from sqlalchemy.orm.attributes import InstrumentedAttribute
+from sqlalchemy.sql.expression import cast, case, ColumnClause
+from sqlalchemy.orm.attributes import InstrumentedAttribute, QueryableAttribute
 from sqlalchemy.sql.elements import Cast, Label
 from sqlalchemy_utils.types.choice import Choice
-from sqlalchemy.sql.elements import Cast
 from sqlalchemy.sql.expression import FunctionElement
 from sqlalchemy.ext.compiler import compiles
 
@@ -299,10 +298,9 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
             else:
                 if column is None:
                     if (alias is None) and (column_name is None):
-                        raise Exception(
+                        raise RuntimeError(
                             "I need to get the column but do not know \n"
-                            "the alias and the column name"
-                        )
+                            "the alias and the column name")
                     column = _get_column(column_name, alias)
                 expr = self._get_filter_expr_from_column(operator, value, column)
         if negation:
@@ -310,10 +308,9 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
         return expr
 
     def _get_filter_expr_from_column(self, operator, value, column):
-
         # Label is used because it is what is returned for the
         # 'state' column by the hybrid_column construct
-        if not isinstance(column, (Cast, InstrumentedAttribute, Label, ColumnClause)):
+        if not isinstance(column, (Cast, InstrumentedAttribute, Label, QueryableAttribute, ColumnClause)):
             raise TypeError(
                 'column ({}) {} is not a valid column'.format(
                     type(column), column
@@ -352,22 +349,22 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
         def cast_according_to_type(path_in_json, value):
             if isinstance(value, bool):
                 type_filter = jsonb_typeof(path_in_json) == 'boolean'
-                casted_entity = path_in_json.cast(Boolean)
+                casted_entity = path_in_json.astext.cast(Boolean)
             elif isinstance(value, (int, float)):
                 type_filter = jsonb_typeof(path_in_json) == 'number'
-                casted_entity = path_in_json.cast(Float)
+                casted_entity = path_in_json.astext.cast(Float)
             elif isinstance(value, dict) or value is None:
                 type_filter = jsonb_typeof(path_in_json) == 'object'
-                casted_entity = path_in_json.cast(JSONB)  # BOOLEANS?
+                casted_entity = path_in_json.astext.cast(JSONB)  # BOOLEANS?
             elif isinstance(value, dict):
                 type_filter = jsonb_typeof(path_in_json) == 'array'
-                casted_entity = path_in_json.cast(JSONB)  # BOOLEANS?
+                casted_entity = path_in_json.astext.cast(JSONB)  # BOOLEANS?
             elif isinstance(value, six.string_types):
                 type_filter = jsonb_typeof(path_in_json) == 'string'
                 casted_entity = path_in_json.astext
             elif value is None:
                 type_filter = jsonb_typeof(path_in_json) == 'null'
-                casted_entity = path_in_json.cast(JSONB)  # BOOLEANS?
+                casted_entity = path_in_json.astext.cast(JSONB)  # BOOLEANS?
             elif isinstance(value, datetime):
                 # type filter here is filter whether this attributes stores
                 # a string and a filter whether this string
@@ -382,7 +379,7 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
                 type_filter = and_(type_filter, regex_filter)
                 casted_entity = path_in_json.cast(DateTime)
             else:
-                raise Exception('Unknown type {}'.format(type(value)))
+                raise TypeError('Unknown type {}'.format(type(value)))
             return type_filter, casted_entity
 
         if column is None:
@@ -391,19 +388,19 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
         database_entity = column[tuple(attr_key)]
         if operator == '==':
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
-            expr = and_(type_filter, casted_entity == value)
+            expr = case([(type_filter, casted_entity == value)], else_=False)
         elif operator == '>':
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
-            expr = and_(type_filter, casted_entity > value)
+            expr = case([(type_filter, casted_entity > value)], else_=False)
         elif operator == '<':
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
-            expr = and_(type_filter, casted_entity < value)
+            expr = case([(type_filter, casted_entity < value)], else_=False)
         elif operator in ('>=', '=>'):
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
-            expr = and_(type_filter, casted_entity >= value)
+            expr = case([(type_filter, casted_entity >= value)], else_=False)
         elif operator in ('<=', '=<'):
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
-            expr = and_(type_filter, casted_entity <= value)
+            expr = case([(type_filter, casted_entity <= value)], else_=False)
         elif operator == 'of_type':
             # http://www.postgresql.org/docs/9.5/static/functions-json.html
             #  Possible types are object, array, string, number, boolean, and null.
@@ -416,32 +413,31 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
             expr = jsonb_typeof(database_entity) == value
         elif operator == 'like':
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
-            expr = and_(type_filter, casted_entity.like(value))
+            expr = case([(type_filter, casted_entity.like(value))], else_=False)
         elif operator == 'ilike':
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
-            expr = and_(type_filter, casted_entity.ilike(value))
+            expr = case([(type_filter, casted_entity.ilike(value))], else_=False)
         elif operator == 'in':
             type_filter, casted_entity = cast_according_to_type(database_entity, value[0])
-            expr = and_(type_filter, casted_entity.in_(value))
+            expr = case([(type_filter, casted_entity.in_(value))], else_=False)
         elif operator == 'contains':
             expr = database_entity.cast(JSONB).contains(value)
         elif operator == 'has_key':
             expr = database_entity.cast(JSONB).has_key(value)  # noqa
         elif operator == 'of_length':
-            expr = and_(
+            expr = case([(
                 jsonb_typeof(database_entity) == 'array',
-                jsonb_array_length(database_entity.cast(JSONB)) == value
-            )
+                jsonb_array_length(database_entity.cast(JSONB)) == value)], else_=False)
+
         elif operator == 'longer':
-            expr = and_(
+            expr = case([(
                 jsonb_typeof(database_entity) == 'array',
-                jsonb_array_length(database_entity.cast(JSONB)) > value
-            )
+                jsonb_array_length(database_entity.cast(JSONB)) > value)], else_=False)
+
         elif operator == 'shorter':
-            expr = and_(
+            expr = case([(
                 jsonb_typeof(database_entity) == 'array',
-                jsonb_array_length(database_entity.cast(JSONB)) < value
-            )
+                jsonb_array_length(database_entity.cast(JSONB)) < value)], else_=False)
         else:
             raise InputValidationError(
                 "Unknown operator {} for filters in JSON field".format(operator)
@@ -460,17 +456,17 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
         if cast is None:
             entity = entity
         elif cast == 'f':
-            entity = entity.cast(Float)
+            entity = entity.astext.cast(Float)
         elif cast == 'i':
-            entity = entity.cast(Integer)
+            entity = entity.astext.cast(Integer)
         elif cast == 'b':
-            entity = entity.cast(Boolean)
+            entity = entity.astext.cast(Boolean)
         elif cast == 't':
             entity = entity.astext
         elif cast == 'j':
-            entity = entity.cast(JSONB)
+            entity = entity.astext.cast(JSONB)
         elif cast == 'd':
-            entity = entity.cast(DateTime)
+            entity = entity.astext.cast(DateTime)
         else:
             raise InputValidationError(
                 "Unkown casting key {}".format(cast)
@@ -557,6 +553,8 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
                         for colindex, rowitem
                         in enumerate(resultrow)
                     ]
+            else:
+                raise ValueError("Got an empty dictionary")
         except Exception:
             self.get_session().rollback()
             raise
@@ -566,7 +564,7 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
         nr_items = sum(len(v) for v in tag_to_projected_entity_dict.values())
 
         if not nr_items:
-            raise Exception("Got an empty dictionary")
+            raise ValueError("Got an empty dictionary")
 
         # Wrapping everything in an atomic transaction:
         try:
@@ -605,6 +603,8 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
                             }
                             for tag, projected_entities_dict in tag_to_projected_entity_dict.items()
                         }
+            else:
+                raise ValueError("Got an empty dictionary")
         except Exception as e:
             self.get_session().rollback()
             raise e

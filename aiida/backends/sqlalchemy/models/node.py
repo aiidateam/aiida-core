@@ -11,14 +11,10 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from sqlalchemy import ForeignKey, select, func, join, and_, case
-from sqlalchemy.orm import (
-    relationship, backref, Query, mapper,
-    foreign, aliased
-)
+from sqlalchemy import ForeignKey, select, func, join, case
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm.attributes import flag_modified
-from sqlalchemy.schema import Column, UniqueConstraint
+from sqlalchemy.schema import Column, UniqueConstraint, Index
 from sqlalchemy.types import Integer, String, Boolean, DateTime, Text
 # Specific to PGSQL. If needed to be agnostic
 # http://docs.sqlalchemy.org/en/rel_0_9/core/custom_types.html?highlight=guid#backend-agnostic-guid-type
@@ -29,9 +25,9 @@ from sqlalchemy_utils.types.choice import ChoiceType
 from aiida.utils import timezone
 from aiida.backends.sqlalchemy.models.base import Base, _QueryProperty, _AiidaQuery
 from aiida.backends.sqlalchemy.models.utils import uuid_func
+from aiida.backends.sqlalchemy.utils import flag_modified
 
-from aiida.common import aiidalogger
-from aiida.common.exceptions import DbContentError, MissingPluginError
+from aiida.common.exceptions import DbContentError
 from aiida.common.datastructures import calc_states, _sorted_datastates, sort_states
 
 from aiida.backends.sqlalchemy.models.user import DbUser
@@ -93,7 +89,7 @@ class DbNode(Base):
         nullable=True
     )
 
-    # This should have the same ondelet behaviour as db_computer_id, right?
+    # This should have the same ondelete behaviour as db_computer_id, right?
     user_id = Column(
         Integer,
         ForeignKey(
@@ -270,8 +266,7 @@ class DbNode(Base):
     @computer_name.expression
     def computer_name(cls):
         """
-        Returns: the name of the computer at a class level (i.e. in the 
-        database)
+        Returns: the name of the computer at a class level (i.e. in the database)
         """
         return select([DbComputer.name]).where(DbComputer.id ==
                                                cls.dbcomputer_id).label(

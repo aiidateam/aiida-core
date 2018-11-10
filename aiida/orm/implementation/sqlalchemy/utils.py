@@ -160,7 +160,7 @@ def django_filter(cls_query, **kwargs):
     # Pass the query object you want to use.
     # This also assume a AND between each arguments
 
-    cls = inspect(cls_query)._entity_zero().type
+    cls = inspect(cls_query)._entity_zero().class_
     q = cls_query
 
     # We regroup all the filter on a relationship at the same place, so that

@@ -32,7 +32,7 @@ class TestVerdiRun(AiidaTestCase):
         """
         import tempfile
         from aiida.orm import load_node
-        from aiida.orm.calculation.function import FunctionCalculation
+        from aiida.orm.node.process import WorkFunctionNode
 
         script_content = """
 #!/usr/bin/env python
@@ -63,6 +63,6 @@ if __name__ == '__main__':
             node = load_node(pk)
 
             # Verify that the node has the correct function name and content
-            self.assertTrue(isinstance(node, FunctionCalculation))
+            self.assertTrue(isinstance(node, WorkFunctionNode))
             self.assertEqual(node.function_name, 'wf')
             self.assertEqual(open(node.function_source_file, 'r').read(), script_content)

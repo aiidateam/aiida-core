@@ -403,6 +403,10 @@ def parse_formula(formula):
     contents = {}
     for part in re.split(r'\s+', formula):
         m = re.match(r'(\D+)([\.\d]+)?', part)
+
+        if m is None:
+            continue
+
         specie = m.group(1)
         quantity = m.group(2)
         if quantity is None:

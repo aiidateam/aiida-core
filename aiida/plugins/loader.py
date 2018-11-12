@@ -49,25 +49,30 @@ def load_plugin(plugin_type, safe=False):
     except ValueError:
         raise MissingPluginError
 
-    type_string_to_entry_point_type_map = OrderedDict({
-        'calculation.job.': EntryPoint('aiida.calculations', JobCalculation),
-        'calculation.': EntryPoint('aiida.calculations', Calculation),
-        'code.': EntryPoint('aiida.code', Code),
-        'data.': EntryPoint('aiida.data', Data),
-        'node.process.workflow.': EntryPoint('aiida.node', WorkflowNode),
-        'node.process.calculation.': EntryPoint('aiida.node', CalculationNode),
-        'node.': EntryPoint('aiida.node', Node),
-    })
+    type_string_to_entry_point_type_map = OrderedDict([
+        ('calculation.job.', EntryPoint('aiida.calculations', JobCalculation)),
+        ('calculation.', EntryPoint('aiida.calculations', Calculation)),
+        ('code.', EntryPoint('aiida.code', Code)),
+        ('data.', EntryPoint('aiida.data', Data)),
+        ('node.process.workflow.', EntryPoint('aiida.node', WorkflowNode)),
+        ('node.process.calculation.', EntryPoint('aiida.node', CalculationNode)),
+        ('node.', EntryPoint('aiida.node', Node)),
+    ])
 
     if base_path.count('.') == 0:
         base_path = '{}.{}'.format(base_path, base_path)
 
     for prefix, entry_point_type in type_string_to_entry_point_type_map.items():
         if base_path.startswith(prefix):
-            entry_point = strip_prefix(base_path, prefix)
+
+            if entry_point_type.group == 'aiida.node' and base_path.startswith('node.process'):
+                entry_point = strip_prefix(base_path, 'node.')
+            else:
+                entry_point = strip_prefix(base_path, prefix)
+
             try:
                 plugin = load_entry_point(entry_point_type.group, entry_point)
-            except (MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError):
+            except (MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError) as exception:
                 base_class = entry_point_type.base_class
             finally:
                 break

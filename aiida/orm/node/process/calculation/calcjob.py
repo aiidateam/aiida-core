@@ -10,7 +10,6 @@ from six.moves import zip
 import abc
 import copy
 import datetime
-import enum
 import io
 import six
 import warnings
@@ -19,9 +18,10 @@ from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
 from aiida.common.links import LinkType
 from aiida.common.utils import classproperty
+from aiida.common.utils import str_timedelta
 from aiida.plugins.loader import get_plugin_type_from_type_string
-from aiida.common.utils import str_timedelta, classproperty
-from aiida.orm.computer import Computer
+from aiida.orm import Node
+from aiida.orm.computers import Computer
 from aiida.orm.implementation.general.calculation import AbstractCalculation
 from aiida.orm.implementation.general.calculation.job import JobCalculationExitStatus
 from aiida.orm.mixins import Sealable
@@ -1691,7 +1691,7 @@ class CalcJobNode(CalculationNode):
         """
         # I assume that calc_states are strings. If this changes in the future,
         # update the filter below from dbattributes__tval to the correct field.
-        from aiida.orm.computer import Computer
+        from aiida.orm.computers import Computer
         from aiida.orm.querybuilder import QueryBuilder
 
         if state not in calc_states:
@@ -1897,7 +1897,7 @@ class CalcJobNode(CalculationNode):
         from aiida.common.exceptions import (NotExistent, PluginInternalError, ValidationError)
         from aiida.scheduler.datastructures import JobTemplate
         from aiida.common.utils import validate_list_of_string_tuples
-        from aiida.orm.computer import Computer
+        from aiida.orm.computers import Computer
         from aiida.orm import DataFactory
         from aiida.common.datastructures import CodeInfo, code_run_modes
         from aiida.orm.code import Code
@@ -2148,7 +2148,6 @@ class CalcJobNode(CalculationNode):
         from aiida.utils import timezone
 
         from aiida.transport.plugins.local import LocalTransport
-        from aiida.orm.computer import Computer
         from aiida.common.folders import Folder
         from aiida.common.exceptions import NotExistent
 
@@ -2163,8 +2162,8 @@ class CalcJobNode(CalculationNode):
         else:
             subfolder_basename = subfolder_name
 
-        ## Find a new subfolder.
-        ## I do not user tempfile.mkdtemp, because it puts random characters
+        # Find a new subfolder.
+        # I do not user tempfile.mkdtemp, because it puts random characters
         # at the end of the directory name, therefore making difficult to
         # understand the order in which directories where stored
         counter = 0

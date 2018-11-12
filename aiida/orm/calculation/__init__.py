@@ -14,8 +14,7 @@ from __future__ import absolute_import
 from aiida.orm.implementation.calculation import Calculation, JobCalculation
 from .inline import *
 from .work import WorkCalculation
-from .function import FunctionCalculation
 
-_local = 'Calculation', 'JobCalculation', 'WorkCalculation', 'FunctionCalculation'
+_local = 'Calculation', 'JobCalculation', 'WorkCalculation'
 
 __all__ = _local + inline.__all__

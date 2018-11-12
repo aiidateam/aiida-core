@@ -20,7 +20,8 @@ import tornado.ioloop
 from tornado import concurrent, gen
 
 from aiida.common.links import LinkType
-from aiida.orm.calculation import Calculation, WorkCalculation, FunctionCalculation
+from aiida.orm.calculation import Calculation, WorkCalculation
+from aiida.orm.node.process import WorkFunctionNode
 from aiida.orm.data.frozendict import FrozenDict
 
 __all__ = 'RefObjectStore', 'interruptable_task', 'InterruptableFuture'
@@ -28,7 +29,7 @@ __all__ = 'RefObjectStore', 'interruptable_task', 'InterruptableFuture'
 LOGGER = logging.getLogger(__name__)
 PROCESS_STATE_CHANGE_KEY = 'process|state_change|{}'
 PROCESS_STATE_CHANGE_DESCRIPTION = 'The last time a process of type {}, changed state'
-PROCESS_CALC_TYPES = (WorkCalculation, FunctionCalculation)
+PROCESS_CALC_TYPES = (WorkCalculation, WorkFunctionNode)
 
 
 class InterruptableFuture(concurrent.Future):
@@ -169,7 +170,7 @@ def is_work_calc_type(calc_node):
         1. JobCalculation
         2. InlineCalculation
         3. WorkCalculation
-        4. FunctionCalculation
+        4. WorkFunctionNode
 
     1 & 2 can be considered the 'old' way of doing things, even though they are still
     in use while 3 & 4 are the 'new' way.  In loose terms the main difference is that
@@ -201,7 +202,9 @@ def get_or_create_output_group(calculation):
 
     :param calculation: Calculation
     """
-    if not isinstance(calculation, Calculation):
+    from aiida.orm.node.process import ProcessNode
+
+    if not isinstance(calculation, (Calculation, ProcessNode)):
         raise TypeError("Can only create output groups for type Calculation")
 
     outputs = calculation.get_outputs_dict(link_type=LinkType.CREATE)

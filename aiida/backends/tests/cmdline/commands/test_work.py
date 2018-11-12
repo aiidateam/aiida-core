@@ -18,7 +18,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_work
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
-from aiida.orm.calculation.function import FunctionCalculation
+from aiida.orm.node.process import WorkFunctionNode
 from aiida.orm.calculation.work import WorkCalculation
 
 
@@ -50,13 +50,13 @@ class TestVerdiWork(AiidaTestCase):
 
         calcs = []
 
-        # Create 6 FunctionCalculations and WorkCalculations (one for each ProcessState)
+        # Create 6 WorkFunctionNodes and WorkCalculations (one for each ProcessState)
         for state in ProcessState:
 
-            calc = FunctionCalculation()
+            calc = WorkFunctionNode()
             calc._set_process_state(state)
 
-            # Set the FunctionCalculation as successful
+            # Set the WorkFunctionNode as successful
             if state == ProcessState.FINISHED:
                 calc._set_exit_status(0)
 

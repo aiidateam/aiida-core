@@ -23,14 +23,14 @@ A good thing to remember is that while it is running, we are dealing with the ``
 The ``WorkChain`` is not the only process in AiiDA and each process uses a different node class as its database record.
 The following table describes which processes exist in AiiDA and what node type they use as a database record. 
 
-===================   =======================   =====================
-Process               Database record           Used for
-===================   =======================   =====================
-``WorkChain``         ``WorkCalculation``       Workchain
-``JobProcess``        ``JobCalculation``        Calculation
-``FunctionProcess``   ``FunctionCalculation``   Workfunction
-``FunctionProcess``   ``InlineCalculation``     Inline calculation
-===================   =======================   =====================
+===================   =======================       =====================
+Process               Database record               Used for
+===================   =======================       =====================
+``WorkChain``         ``WorkCalculation``           Workchain
+``JobProcess``        ``JobCalculation``            Calculation
+``FunctionProcess``   ``WorkFunctionNode``          Workfunction
+``FunctionProcess``   ``InlineCalculation``         Inline calculation
+===================   =======================       =====================
 
 .. note::
     The concept of the ``Process`` is a later addition to AiiDA and in the beginning this division of 'how to run something` and 'serving as a record of what happened', did not exist.

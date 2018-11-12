@@ -89,6 +89,7 @@ class CalculationQueryBuilder(object):
         import datetime
 
         from aiida.orm.calculation import Calculation
+        from aiida.orm.node.process import ProcessNode
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.utils import timezone
 
@@ -101,7 +102,7 @@ class CalculationQueryBuilder(object):
             filters['ctime'] = {'>': timezone.now() - datetime.timedelta(days=past_days)}
 
         builder = QueryBuilder()
-        builder.append(cls=Calculation, filters=filters, project=projected_attributes, tag='calculation')
+        builder.append(cls=(Calculation, ProcessNode), filters=filters, project=projected_attributes, tag='calculation')
 
         if order_by is not None:
             builder.order_by({'calculation': order_by})

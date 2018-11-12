@@ -159,7 +159,7 @@ def _ctime(node):
 
 
 def calc_info(calc_node):
-    from aiida.orm.calculation.function import FunctionCalculation
+    from aiida.orm.node.process import WorkFunctionNode
     from aiida.orm.calculation.inline import InlineCalculation
     from aiida.orm.calculation.job import JobCalculation
     from aiida.orm.calculation.work import WorkCalculation
@@ -179,7 +179,7 @@ def calc_info(calc_node):
         clabel = type(calc_node).__name__
         cstate = str(calc_node.get_state())
         s = u'{} <pk={}> [{}]'.format(clabel, calc_node.pk, cstate)
-    elif isinstance(calc_node, (FunctionCalculation, InlineCalculation)):
+    elif isinstance(calc_node, (WorkFunctionNode, InlineCalculation)):
         plabel = calc_node.process_label
         pstate = calc_node.process_state
         s = u'{} <pk={}> [{}]'.format(plabel, calc_node.pk, pstate)

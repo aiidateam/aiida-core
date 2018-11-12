@@ -32,7 +32,7 @@ from aiida.common.lang import override, protected
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida import orm
-from aiida.orm.calculation.function import FunctionCalculation
+from aiida.orm.node.process import ProcessNode, WorkFunctionNode
 from aiida.orm.calculation.work import WorkCalculation
 from aiida.utils import serialize
 from aiida.work.ports import InputPort, PortNamespace
@@ -110,7 +110,7 @@ class Process(plumpy.Process):
         spec.input('store_provenance', valid_type=bool, default=True, non_db=True)
         spec.input('description', valid_type=six.string_types[0], required=False, non_db=True)
         spec.input('label', valid_type=six.string_types[0], required=False, non_db=True)
-        spec.inputs.valid_type = (orm.Data, orm.Calculation)
+        spec.inputs.valid_type = (orm.Data, orm.Calculation, ProcessNode)
         spec.outputs.valid_type = (orm.Data,)
 
     @classmethod
@@ -508,7 +508,7 @@ class Process(plumpy.Process):
 
         for name, input_value in self._flat_inputs().items():
 
-            if isinstance(input_value, orm.Calculation):
+            if isinstance(input_value, (orm.Calculation, ProcessNode)):
                 input_value = utils.get_or_create_output_group(input_value)
 
             if not input_value.is_stored:
@@ -669,7 +669,7 @@ class Process(plumpy.Process):
 class FunctionProcess(Process):
     """Function process class used for turning functions into a Process"""
     _func_args = None
-    _calc_node_class = FunctionCalculation
+    _calc_node_class = WorkFunctionNode
 
     @staticmethod
     def _func(*_args, **_kwargs):
@@ -699,7 +699,7 @@ class FunctionProcess(Process):
         first_default_pos = nargs - ndefaults
 
         if calc_node_class is None:
-            calc_node_class = FunctionCalculation
+            calc_node_class = WorkFunctionNode
 
         if varargs is not None:
             raise ValueError('variadic arguments are not supported')

@@ -14,6 +14,5 @@ from __future__ import absolute_import
 from aiida.orm.implementation.calculation import Calculation, JobCalculation
 from .inline import *
 from .work import WorkCalculation
-from .function import FunctionCalculation
 
-__all__ = ['Calculation', 'JobCalculation', 'WorkCalculation', 'FunctionCalculation'] + inline.__all__
+__all__ = ['Calculation', 'JobCalculation', 'WorkCalculation'] + inline.__all__

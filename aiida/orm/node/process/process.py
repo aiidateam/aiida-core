@@ -408,11 +408,13 @@ class ProcessNode(Sealable, Node):
         :param dest: a `Node` instance
         :raise: ValueError if a link from self to `dest` is not allowed.
         """
+        from aiida.orm.calculation import Calculation
+
         if link_type is LinkType.CREATE or link_type is LinkType.RETURN:
             if not isinstance(dest, Data):
                 raise ValueError('The output of a process node can only be a data node')
         elif link_type is LinkType.CALL:
-            if not isinstance(dest, ProcessNode):
+            if not isinstance(dest, (Calculation, ProcessNode)):
                 raise ValueError('Call links can only link two process nodes: {}'.format(type(dest)))
         else:
             raise ValueError('a process node cannot have links of type {} as output'.format(link_type))
@@ -430,11 +432,13 @@ class ProcessNode(Sealable, Node):
         :param str label: name of the link, default is None
         :param link_type: the type of link, must be one of the enum values form :class:`~aiida.common.links.LinkType`
         """
+        from aiida.orm.calculation import Calculation
+
         if link_type is LinkType.INPUT:
             if not isinstance(src, (Data, Code)):
                 raise ValueError('Nodes entering processes as input link can only be of type data or code')
         elif link_type is LinkType.CALL:
-            if not isinstance(src, ProcessNode):
+            if not isinstance(src, (Calculation, ProcessNode)):
                 raise ValueError('Call links can only link two process nodes: {}'.format(type(src)))
         else:
             raise ValueError('Process node cannot have links of type {} as input'.format(link_type))

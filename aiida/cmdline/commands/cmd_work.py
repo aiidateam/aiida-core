@@ -42,10 +42,10 @@ def work_list(all_entries, process_state, exit_status, failed, past_days, limit,
     """Show a list of work calculations that are still running."""
     from tabulate import tabulate
     from aiida.cmdline.utils.common import print_last_process_state_change
-    from aiida.orm.calculation.function import FunctionCalculation
+    from aiida.orm.node.process import WorkFunctionNode
     from aiida.orm.calculation.work import WorkCalculation
 
-    node_types = (WorkCalculation, FunctionCalculation)
+    node_types = (WorkCalculation, WorkFunctionNode)
 
     builder = CalculationQueryBuilder()
     filters = builder.get_filters(all_entries, process_state, exit_status, failed, node_types=node_types)

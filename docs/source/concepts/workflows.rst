@@ -803,7 +803,7 @@ Consider the following example:
         return ExitCode(418, 'I am a teapot')
 
 The execution of the workfunction will be immediately terminated as soon as the tuple is returned, and the exit status and message will be set to ``418`` and ``I am a teapot``, respectively.
-Since no output nodes are returned, the ``FunctionCalculation`` node will have no outputs and the value returned from the function call will be an empty dictionary.
+Since no output nodes are returned, the ``WorkFunctionNode`` node will have no outputs and the value returned from the function call will be an empty dictionary.
 
 Modular workflow design
 -----------------------

@@ -543,12 +543,13 @@ class AbstractCalculation(Sealable):
         :raise: ValueError if a link from self to dest is not allowed.
         """
         from aiida.orm.data import Data
+        from aiida.orm.node.process import ProcessNode
 
         if link_type is LinkType.CREATE or link_type is LinkType.RETURN:
             if not isinstance(dest, Data):
                 raise ValueError('The output of a calculation node can only be a data node')
         elif link_type is LinkType.CALL:
-            if not isinstance(dest, AbstractCalculation):
+            if not isinstance(dest, (AbstractCalculation, ProcessNode)):
                 raise ValueError('Call links can only link two calculations')
         else:
             raise ValueError('Calculation cannot have links of type {} as output'.format(link_type))
@@ -569,12 +570,13 @@ class AbstractCalculation(Sealable):
         """
         from aiida.orm.code import Code
         from aiida.orm.data import Data
+        from aiida.orm.node.process import ProcessNode
 
         if link_type is LinkType.INPUT:
             if not isinstance(src, (Data, Code)):
                 raise ValueError('Nodes entering calculation as input link can only be of type data or code')
         elif link_type is LinkType.CALL:
-            if not isinstance(src, AbstractCalculation):
+            if not isinstance(src, (AbstractCalculation, ProcessNode)):
                 raise ValueError('Call links can only link two calculations')
         else:
             raise ValueError('Calculation cannot have links of type {} as input'.format(link_type))

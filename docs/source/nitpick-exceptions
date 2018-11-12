@@ -180,6 +180,7 @@ py:class  tuple
 py:class  staticmethod
 
 
+py:class  django.contrib.auth.base_user.AbstractBaseUser
 py:class  django.contrib.auth.models.AbstractBaseUser
 py:class  django.contrib.auth.models.BaseUserManager
 py:class  django.contrib.auth.models.PermissionsMixin

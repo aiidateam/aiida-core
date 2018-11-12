@@ -8,6 +8,7 @@ from __future__ import absolute_import
 
 from django.db import migrations, models
 import aiida.common.utils
+from aiida.backends.djsite.db.migrations import upgrade_schema_version
 
 REVISION = '1.0.16'
 DOWN_REVISION = '1.0.15'
@@ -58,4 +59,5 @@ class Migration(migrations.Migration):
             name='uuid',
             field=models.UUIDField(default=aiida.common.utils.get_new_uuid),
         ),
+        upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

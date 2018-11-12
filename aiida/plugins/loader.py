@@ -36,6 +36,7 @@ def load_plugin(plugin_type, safe=False):
     from aiida.orm.calculation.job import JobCalculation
     from aiida.orm.data import Data
     from aiida.orm.node import Node
+    from aiida.orm.node.process import CalculationNode, WorkflowNode
 
     plugin = None
     base_class = Node
@@ -53,6 +54,8 @@ def load_plugin(plugin_type, safe=False):
         'calculation.': EntryPoint('aiida.calculations', Calculation),
         'code.': EntryPoint('aiida.code', Code),
         'data.': EntryPoint('aiida.data', Data),
+        'node.process.workflow.': EntryPoint('aiida.node', WorkflowNode),
+        'node.process.calculation.': EntryPoint('aiida.node', CalculationNode),
         'node.': EntryPoint('aiida.node', Node),
     })
 

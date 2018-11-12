@@ -26,11 +26,13 @@ from aiida.orm.implementation.general.group import AbstractGroup
 
 from . import user as users
 from . import utils
+from aiida.orm import users as orm_users
 
 
 class Group(AbstractGroup):
     def __init__(self, **kwargs):
-        from aiida.orm.backend import construct_backend
+        from aiida import orm
+        from aiida.orm.backends import construct_backend
         super(Group, self).__init__()
 
         self._backend = construct_backend()
@@ -62,7 +64,9 @@ class Group(AbstractGroup):
                                     "")  # By default, an user group
 
             # Get the user and extract the dbuser instance
-            user = kwargs.pop('user', self._backend.users.get_automatic_user())
+            user = kwargs.pop('user', orm_users.User.objects.get_default())
+            if isinstance(user, orm.User):
+                user = user.backend_entity
             user = user.dbuser
 
             description = kwargs.pop('description', "")
@@ -120,6 +124,10 @@ class Group(AbstractGroup):
 
     @user.setter
     def user(self, new_user):
+        from aiida import orm
+
+        if isinstance(new_user, orm.User):
+            new_user = new_user.backend_entity
         type_check(new_user, users.SqlaUser)
         self._dbgroup.user = new_user.dbuser
 
@@ -277,6 +285,7 @@ class Group(AbstractGroup):
     def query(cls, name=None, type_string="", pk=None, uuid=None, nodes=None,
               user=None, node_attributes=None, past_days=None,
               name_filters=None, **kwargs):
+        from aiida import orm
         from aiida.orm.implementation.sqlalchemy.node import Node
 
         session = sa.get_scoped_session()
@@ -313,9 +322,11 @@ class Group(AbstractGroup):
             filters.append(sub_query)
         if user:
             if isinstance(user, six.string_types):
-                filters.append(DbGroup.user.has(email=user))
+                filters.append(DbGroup.user.has(email=user.email))
             else:
-                # This should be a DbUser
+                if isinstance(user, orm.User):
+                    user = user.backend_entity
+                type_check(user, users.SqlaUser)
                 filters.append(DbGroup.user == user.dbuser)
 
         if name_filters:

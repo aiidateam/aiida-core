@@ -18,10 +18,9 @@ import re
 
 import six
 
-import aiida.orm.user
+import aiida.orm.users
 from aiida.orm.data.singlefile import SinglefileData
 from aiida.common.utils import classproperty
-
 
 UPFGROUP_TYPE = 'data.upf.family'
 
@@ -138,14 +137,10 @@ def upload_upf_family(folder, group_name, group_description,
 
     import aiida.common
     from aiida.common import aiidalogger
-    from aiida.orm import Group
+    from aiida import orm
     from aiida.common.exceptions import UniquenessError, NotExistent
-    from aiida.orm.backend import construct_backend
-    from aiida.orm.querybuilder import QueryBuilder
     if not os.path.isdir(folder):
         raise ValueError("folder must be a directory")
-
-    backend = construct_backend()
 
     # only files, and only those ending with .upf or .UPF;
     # go to the real file if it is a symlink
@@ -156,12 +151,12 @@ def upload_upf_family(folder, group_name, group_description,
 
     nfiles = len(files)
 
-    automatic_user = backend.users.get_automatic_user()
+    automatic_user = orm.User.objects.get_default()
     try:
-        group = Group.get(name=group_name, type_string=UPFGROUP_TYPE)
+        group = orm.Group.get(name=group_name, type_string=UPFGROUP_TYPE)
         group_created = False
     except NotExistent:
-        group = Group(name=group_name, type_string=UPFGROUP_TYPE, user=automatic_user)
+        group = orm.Group(name=group_name, type_string=UPFGROUP_TYPE, user=automatic_user)
         group_created = True
 
     if group.user.email != automatic_user.email:
@@ -179,12 +174,12 @@ def upload_upf_family(folder, group_name, group_description,
 
     for f in files:
         md5sum = aiida.common.utils.md5_file(f)
-        qb = QueryBuilder()
-        qb.append(UpfData, filters={'attributes.md5':{'==':md5sum}})
+        qb = orm.QueryBuilder()
+        qb.append(UpfData, filters={'attributes.md5': {'==': md5sum}})
         existing_upf = qb.first()
 
-        #~ existing_upf = UpfData.query(dbattributes__key="md5",
-                                     #~ dbattributes__tval=md5sum)
+        # ~ existing_upf = UpfData.query(dbattributes__key="md5",
+        # ~ dbattributes__tval=md5sum)
 
         if existing_upf is None:
             # return the upfdata instances, not stored
@@ -196,10 +191,10 @@ def upload_upf_family(folder, group_name, group_description,
         else:
             if stop_if_existing:
                 raise ValueError(
-                        "A UPF with identical MD5 to "
-                        " {} cannot be added with stop_if_existing"
-                        "".format(f)
-                    )
+                    "A UPF with identical MD5 to "
+                    " {} cannot be added with stop_if_existing"
+                    "".format(f)
+                )
             existing_upf = existing_upf[0]
             pseudo_and_created.append((existing_upf, False))
 
@@ -402,7 +397,6 @@ class UpfData(SinglefileData):
 
         return super(UpfData, self).store(*args, **kwargs)
 
-
     @classmethod
     def from_md5(cls, md5):
         """
@@ -497,7 +491,6 @@ class UpfData(SinglefileData):
                                   "parsed instead.".format(
                 attr_md5, md5))
 
-
     @classmethod
     def get_upf_group(cls, group_name):
         """
@@ -506,7 +499,6 @@ class UpfData(SinglefileData):
         from aiida.orm import Group
 
         return Group.get(name=group_name, type_string=cls.upffamily_type_string)
-
 
     @classmethod
     def get_upf_groups(cls, filter_elements=None, user=None):
@@ -544,4 +536,3 @@ class UpfData(SinglefileData):
         groups.sort()
         # Return the groups, without name
         return [_[1] for _ in groups]
-

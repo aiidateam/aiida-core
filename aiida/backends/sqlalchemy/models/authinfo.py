@@ -52,3 +52,7 @@ class DbAuthInfo(Base):
             return "DB authorization info for {} on {}".format(self.aiidauser.email, self.dbcomputer.name)
         else:
             return "DB authorization info for {} on {} [DISABLED]".format(self.aiidauser.email, self.dbcomputer.name)
+
+    def get_aiida_class(self):
+        from aiida.orm.implementation.sqlalchemy.authinfo import SqlaAuthInfo
+        return SqlaAuthInfo.from_dbmodel(dbmodel=self)

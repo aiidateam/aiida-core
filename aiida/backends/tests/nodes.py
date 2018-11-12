@@ -24,9 +24,7 @@ from sqlalchemy.exc import StatementError
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
 from aiida.common.links import LinkType
-from aiida.orm.calculation import Calculation
-from aiida.orm.data import Data
-from aiida.orm.node import Node
+from aiida.orm import User, Data, Node, Calculation
 from aiida.orm.utils import load_node
 from aiida.utils.capturing import Capturing
 from aiida.utils.delete_nodes import delete_nodes
@@ -1207,20 +1205,20 @@ class TestNodeBasic(AiidaTestCase):
         # of directly loading datetime.datetime.now(), or you can get a
         # "can't compare offset-naive and offset-aware datetimes" error
         from aiida.utils import timezone
-        from aiida.orm.backend import construct_backend
+        from aiida.orm.backends import construct_backend
         import time
 
-        backend = construct_backend()
+        user = User.objects(self.backend).get_default()
 
         a = Node()
         with self.assertRaises(ModificationNotAllowed):
-            a.add_comment('text', user=backend.users.get_automatic_user())
+            a.add_comment('text', user=user)
         a.store()
         self.assertEquals(a.get_comments(), [])
         before = timezone.now()
         time.sleep(1)  # I wait 1 second because MySql time precision is 1 sec
-        a.add_comment('text', user=backend.users.get_automatic_user())
-        a.add_comment('text2', user=backend.users.get_automatic_user())
+        a.add_comment('text', user=user)
+        a.add_comment('text2', user=user)
         time.sleep(1)
         after = timezone.now()
 

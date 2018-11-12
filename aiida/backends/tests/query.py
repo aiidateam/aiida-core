@@ -409,7 +409,7 @@ class TestQueryBuilder(AiidaTestCase):
         from aiida.orm.calculation import Calculation
         from aiida.orm.data.structure import StructureData
         from aiida.orm.data.parameter import ParameterData
-        from aiida.orm.computer import Computer
+        from aiida.orm.computers import Computer
         qb = QueryBuilder()
         qb.append(Node, tag='n1')
         qb.append(Node, tag='n2', edge_tag='e1', output_of='n1')
@@ -450,7 +450,7 @@ class TestQueryHelp(AiidaTestCase):
         from aiida.orm.data import Data
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.group import Group
-        from aiida.orm.computer import Computer
+        from aiida.orm.computers import Computer
         g = Group(name='helloworld').store()
         for cls in (StructureData, ParameterData, Data):
             obj = cls()
@@ -782,13 +782,12 @@ class QueryBuilderJoinsTests(AiidaTestCase):
             ).count(), number_students)
 
     def test_joins3_user_group(self):
-        from aiida.orm.user import User
+        from aiida.orm.users import User
         from aiida.orm.querybuilder import QueryBuilder
 
         # Create another user
         new_email = "newuser@new.n"
-        user = self.backend.users.create(email=new_email)
-        user.store()
+        user = User(email=new_email, backend=self.backend).store()
 
         # Create a group that belongs to that user
         from aiida.orm.group import Group

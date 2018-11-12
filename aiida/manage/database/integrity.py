@@ -33,7 +33,7 @@ def get_duplicate_node_uuids():
 
     :return: list of tuples of (pk, uuid) of nodes with duplicate UUIDs
     """
-    from aiida.orm.backend import construct_backend
+    from aiida.orm.backends import construct_backend
 
     backend = construct_backend()
     duplicates = backend.query_manager.get_duplicate_node_uuids()

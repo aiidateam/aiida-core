@@ -81,7 +81,7 @@ def work_report(calculations, levelname, indent_size, max_depth):
     Return a list of recorded log messages for the WorkChain with pk=PK
     """
     import itertools
-    from aiida.orm.backend import construct_backend
+    from aiida.orm.backends import construct_backend
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.orm.calculation.work import WorkCalculation
 

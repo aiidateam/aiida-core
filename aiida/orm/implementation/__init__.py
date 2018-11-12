@@ -16,8 +16,21 @@ from aiida.common.exceptions import ConfigurationError
 from aiida.orm.implementation.general.group import get_group_type_mapping
 from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 
-__all__ = ['Node', 'Group', 'Workflow', 'kill_all', 'get_all_running_steps',
-           'get_workflow_info', 'Code', 'delete_code', 'Comment']
+from .authinfos import *
+from .backends import *
+from .computers import *
+from .querybuilder import *
+from .users import *
+
+_local = 'Node', 'Group', 'Workflow', 'kill_all', 'get_all_running_steps', 'get_workflow_info', 'Code', 'delete_code', \
+         'Comment',
+
+__all__ = (_local +
+           computers.__all__ +
+           users.__all__ +
+           authinfos.__all__ +
+           backends.__all__ +
+           querybuilder.__all__)
 
 if BACKEND == BACKEND_SQLA:
     from aiida.orm.implementation.sqlalchemy.node import Node

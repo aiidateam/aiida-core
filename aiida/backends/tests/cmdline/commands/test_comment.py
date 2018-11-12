@@ -15,6 +15,7 @@ from six.moves import range
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
+from aiida import orm
 
 COMMENT = u'Well I never...'
 
@@ -35,9 +36,8 @@ class TestVerdiUserCommand(AiidaTestCase):
     def test_comment_show(self):
         """ Test showing an existing comment """
         from aiida.cmdline.commands.cmd_comment import show
-        from aiida.orm import Node
 
-        node = Node()
+        node = orm.Node()
         node.store()
         node.add_comment(COMMENT)
 
@@ -48,9 +48,8 @@ class TestVerdiUserCommand(AiidaTestCase):
     def test_comment_add(self):
         """ Test adding a comment """
         from aiida.cmdline.commands.cmd_comment import add
-        from aiida.orm import Node
 
-        node = Node()
+        node = orm.Node()
         node.store()
 
         result = CliRunner().invoke(add, ['-c{}'.format(COMMENT), str(node.pk)], catch_exceptions=False)
@@ -63,9 +62,8 @@ class TestVerdiUserCommand(AiidaTestCase):
     def test_comment_remove(self):
         """ Test removing a comment """
         from aiida.cmdline.commands.cmd_comment import remove
-        from aiida.orm import Node
 
-        node = Node()
+        node = orm.Node()
         node.store()
         comment_id = node.add_comment(COMMENT)
 
@@ -79,9 +77,8 @@ class TestVerdiUserCommand(AiidaTestCase):
     def test_comment_remove_all(self):
         """ Test removing all comments from a node """
         from aiida.cmdline.commands.cmd_comment import remove
-        from aiida.orm import Node
 
-        node = Node()
+        node = orm.Node()
         node.store()
         for _ in range(10):
             node.add_comment(COMMENT)
@@ -92,4 +89,3 @@ class TestVerdiUserCommand(AiidaTestCase):
         self.assertEqual(result.exit_code, 0)
 
         self.assertEqual(len(node.get_comments()), 0)
-

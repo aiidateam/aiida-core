@@ -155,7 +155,7 @@ class AbstractCode(Node):
         from aiida.common.exceptions import (NotExistent, MultipleObjectsError,
                                              InputValidationError)
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm.computer import Computer
+        from aiida.orm.computers import Computer
 
         qb = QueryBuilder()
         qb.append(cls, filters={'label': {'==': label}},

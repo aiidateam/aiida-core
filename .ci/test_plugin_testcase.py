@@ -57,25 +57,28 @@ class PluginTestCase1(PluginTestCase):
         """
         Create and store a new computer, and return it
         """
-        computer = cls.backend.computers.create(
+        from aiida import orm
+
+        computer = orm.Computer(
             name='localhost',
             hostname='localhost',
             description='my computer',
             transport_type='local',
             scheduler_type='direct',
             workdir=temp_dir,
-            enabled_state=True)
-        computer.store()
+            enabled_state=True,
+            backend=cls.backend).store()
         return computer
 
     def test_data_loaded(self):
         """
         Check that the data is indeed in the DB when calling load_node
         """
-        from aiida.orm.utils import load_node
+        from aiida import orm
+
         self.assertTrue(is_dbenv_loaded())
-        self.assertEqual(load_node(self.data_pk).uuid, self.data.uuid)
-        self.assertEqual(self.backend.computers.get(name='localhost').uuid, self.computer.uuid)
+        self.assertEqual(orm.load_node(self.data_pk).uuid, self.data.uuid)
+        self.assertEqual(orm.Computer.objects(self.backend).get(name='localhost').uuid, self.computer.uuid)
 
     def test_tear_down(self):
         """

@@ -7,89 +7,27 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""The computer backend abstract classes"""
+"""Module for Computer entities"""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-import abc
 import logging
 import os
 import six
 
+# pylint: disable=cyclic-import
+
 from aiida import transport, scheduler
 from aiida.common import exceptions
-from .backend import Collection, CollectionEntry
+from . import backends
+from . import entities
+from . import users
 
-__all__ = ['Computer', 'ComputerCollection']
-
-
-@six.add_metaclass(abc.ABCMeta)
-class ComputerCollection(Collection):
-    """The collection of Computer entries."""
-
-    @abc.abstractmethod
-    def create(self,
-               name,
-               hostname,
-               description='',
-               transport_type='',
-               scheduler_type='',
-               workdir=None,
-               enabled_state=True):
-        # pylint: disable=too-many-arguments
-        """
-        Create new a computer
-
-        :return: the newly created computer
-        :rtype: :class:`aiida.orm.Computer`
-        """
-        pass
-
-    def get(self, id=None, name=None, uuid=None):  # pylint: disable=redefined-builtin, invalid-name
-        """
-        Get a computer from one of it's unique identifiers
-
-        :param id: the computer's id
-        :param name: the name of the computer
-        :type name: str
-        :param uuid: the uuid of the computer
-        :return: the corresponding computer
-        :rtype: :class:`aiida.orm.Computer`
-        """
-        query = self.backend.query_builder()
-        filters = {}
-        if id is not None:
-            filters['id'] = {'==': id}
-        if name is not None:
-            filters['name'] = {'==': name}
-        if uuid is not None:
-            filters['uuid'] = {'==': uuid}
-
-        query.append(Computer, filters=filters)
-        res = [_[0] for _ in query.all()]
-        if not res:
-            raise exceptions.NotExistent("No computer with filter '{}' found".format(filters))
-        if len(res) > 1:
-            raise exceptions.MultipleObjectsError("Multiple computers found with the same id '{}'".format(id))
-
-        return res[0]
-
-    @abc.abstractmethod
-    def list_names(self):
-        """
-        Return a list with all the names of the computers in the DB.
-        """
-        pass
-
-    @abc.abstractmethod
-    def delete(self, id):  # pylint: disable=invalid-name, redefined-builtin
-        """ Delete the computer with the given id """
-        pass
+__all__ = ('Computer',)
 
 
-@six.add_metaclass(abc.ABCMeta)
-class Computer(CollectionEntry):
+class Computer(entities.Entity):
     """
     Base class to map a node in the DB + its permanent repository counterpart.
 
@@ -109,6 +47,21 @@ class Computer(CollectionEntry):
 
     PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL = 'minimum_scheduler_poll_interval'  # pylint: disable=invalid-name
     PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL__DEFAULT = 10.  # pylint: disable=invalid-name
+    PROPERTY_WORKDIR = 'workdir'
+    PROPERTY_SHEBANG = 'shebang'
+
+    class Collection(entities.Collection):
+        """The collection of Computer entries."""
+
+        def list_names(self):
+            """
+            Return a list with all the names of the computers in the DB.
+            """
+            return self._backend.computers.list_names()
+
+        def delete(self, id):  # pylint: disable=redefined-builtin, invalid-name
+            """Delete the computer with the given id"""
+            return self._backend.computers.delete(id)
 
     @staticmethod
     def get_schema():
@@ -211,51 +164,87 @@ class Computer(CollectionEntry):
             }
         }
 
-    def pk(self):
-        """
-        Return the principal key in the DB.
-        """
-        return self.id
+    def __init__(self,
+                 name,
+                 hostname,
+                 description='',
+                 transport_type='',
+                 scheduler_type='',
+                 workdir=None,
+                 enabled_state=True,
+                 backend=None):
+        """Construct a new computer"""
+        # pylint: disable=too-many-arguments
+        backend = backend or backends.construct_backend()
+        model = backend.computers.create(
+            name=name,
+            hostname=hostname,
+            description=description,
+            transport_type=transport_type,
+            scheduler_type=scheduler_type,
+            enabled=enabled_state)
+        super(Computer, self).__init__(model)
+        if workdir is not None:
+            self.set_workdir(workdir)
 
-    @abc.abstractproperty
-    def uuid(self):
-        """
-        Return the UUID in the DB.
-        """
-        pass
+    def __repr__(self):
+        return '<{}: {}>'.format(self.__class__.__name__, str(self))
 
-    @abc.abstractproperty
-    def id(self):  # pylint: disable=invalid-name
-        """
-        Return the ID in the DB.
-        """
-        pass
+    def __str__(self):
+        if self.is_enabled():
+            return "{} ({}), pk: {}".format(self.name, self.hostname, self.pk)
 
-    @abc.abstractmethod
+        return "{} ({}) [DISABLED], pk: {}".format(self.name, self.hostname, self.pk)
+
     def set(self, **kwargs):
-        pass
+        self._backend_entity.set(**kwargs)
 
-    @abc.abstractproperty
+    @property
     def full_text_info(self):
         """
         Return a (multiline) string with a human-readable detailed information on this computer.
 
         :rypte: str
         """
-        pass
+        ret_lines = []
+        ret_lines.append("Computer name:     {}".format(self.name))
+        ret_lines.append(" * PK:             {}".format(self.pk))
+        ret_lines.append(" * UUID:           {}".format(self.uuid))
+        ret_lines.append(" * Description:    {}".format(self.description))
+        ret_lines.append(" * Hostname:       {}".format(self.hostname))
+        ret_lines.append(" * Enabled:        {}".format("True" if self.is_enabled() else "False"))
+        ret_lines.append(" * Transport type: {}".format(self.get_transport_type()))
+        ret_lines.append(" * Scheduler type: {}".format(self.get_scheduler_type()))
+        ret_lines.append(" * Work directory: {}".format(self.get_workdir()))
+        ret_lines.append(" * Shebang:        {}".format(self.get_shebang()))
+        ret_lines.append(" * mpirun command: {}".format(" ".join(self.get_mpirun_command())))
+        def_cpus_machine = self.get_default_mpiprocs_per_machine()
+        if def_cpus_machine is not None:
+            ret_lines.append(" * Default number of cpus per machine: {}".format(def_cpus_machine))
+        # pylint: disable=fixme
+        # TODO: Put back following line when we port Node to new backend system
+        # ret_lines.append(" * Used by:        {} nodes".format(len(self._dbcomputer.dbnodes.all())))
 
-    @abc.abstractproperty
-    def is_stored(self):
-        """
-        Is the computer stored?
+        ret_lines.append(" * prepend text:")
+        if self.get_prepend_text().strip():
+            for line in self.get_prepend_text().split('\n'):
+                ret_lines.append("   {}".format(line))
+        else:
+            ret_lines.append("   # No prepend text.")
+        ret_lines.append(" * append text:")
+        if self.get_append_text().strip():
+            for line in self.get_append_text().split('\n'):
+                ret_lines.append("   {}".format(line))
+        else:
+            ret_lines.append("   # No append text.")
 
-        :return: True if stored, False otherwise
-        :rtype: bool
-        """
+        return "\n".join(ret_lines)
 
     @property
     def logger(self):
         return self._logger
+
+    # region validation
 
     @classmethod
     def _name_validator(cls, name):
@@ -407,14 +396,14 @@ class Computer(CollectionEntry):
                                              "string if you do not want to provide a "
                                              "default value.")
 
-    @abc.abstractmethod
+    # endregion
+
     def copy(self):
         """
         Return a copy of the current object to work with, not stored yet.
         """
-        pass
+        return Computer.from_backend_entity(self._backend_entity.copy())
 
-    @abc.abstractmethod
     def store(self):
         """
         Store the computer in the DB.
@@ -422,11 +411,12 @@ class Computer(CollectionEntry):
         Differently from Nodes, a computer can be re-stored if its properties
         are to be changed (e.g. a new mpirun command, etc.)
         """
-        pass
+        self.validate()
+        return super(Computer, self).store()
 
-    @abc.abstractproperty
+    @property
     def name(self):
-        pass
+        return self._backend_entity.name
 
     @property
     def label(self):
@@ -442,19 +432,23 @@ class Computer(CollectionEntry):
         """
         self.set_name(value)
 
-    @abc.abstractproperty
+    @property
     def description(self):
-        pass
+        """
+        Get a description of the computer
 
-    @abc.abstractproperty
+        :return: the description
+        :rtype: str
+        """
+        return self._backend_entity.description
+
+    @property
     def hostname(self):
-        pass
+        return self._backend_entity.hostname
 
-    @abc.abstractmethod
     def _get_metadata(self):
-        pass
+        return self._backend_entity.get_metadata()
 
-    @abc.abstractmethod
     def _set_metadata(self, metadata_dict):
         """
         Set the metadata.
@@ -463,7 +457,7 @@ class Computer(CollectionEntry):
            data to the database! (The store method can be called multiple
            times, differently from AiiDA Node objects).
         """
-        pass
+        self._backend_entity.set_metadata(metadata_dict)
 
     def _del_property(self, name, raise_exception=True):
         """
@@ -475,13 +469,10 @@ class Computer(CollectionEntry):
         olddata = self._get_metadata()
         try:
             del olddata[name]
+            self._set_metadata(olddata)
         except KeyError:
             if raise_exception:
                 raise AttributeError("'{}' property not found".format(name))
-            else:
-                # Do not reset the metadata, it is not necessary
-                return
-        self._set_metadata(olddata)
 
     def _set_property(self, name, value):
         """
@@ -510,8 +501,7 @@ class Computer(CollectionEntry):
         except KeyError:
             if not args:
                 raise AttributeError("'{}' property not found".format(name))
-            elif len(args) == 1:
-                return args[0]
+            return args[0]
 
     def get_prepend_text(self):
         return self._get_property("prepend_text", "")
@@ -583,19 +573,17 @@ class Computer(CollectionEntry):
         """
         self._set_property(self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL, interval)
 
-    @abc.abstractmethod
     def get_transport_params(self):
-        pass
+        return self._backend_entity.get_transport_params()
 
-    @abc.abstractmethod
     def set_transport_params(self, val):
-        pass
+        self._backend_entity.set_transport_params(val)
 
     def get_transport(self, user=None):
         """
-        Return a Tranport class, configured with all correct parameters.
+        Return a Transport class, configured with all correct parameters.
         The Transport is closed (meaning that if you want to run any operation with
-        it, you have to open it first (i.e., e.g. for a SSH tranport, you have
+        it, you have to open it first (i.e., e.g. for a SSH transport, you have
         to open a connection). To do this you can call ``transport.open()``, or simply
         run within a ``with`` statement::
 
@@ -610,31 +598,25 @@ class Computer(CollectionEntry):
             parameters to the supercomputer, as configured with ``verdi computer configure``
             for the user specified as a parameter ``user``.
         """
-        from aiida.orm.backend import construct_backend
-        backend = construct_backend()
-        if user is None:
-            authinfo = backend.authinfos.get(self, backend.users.get_automatic_user())
-        else:
-            authinfo = backend.authinfos.get(self, user)
+        from . import authinfos
 
+        user = user or users.User.objects(self.backend).get_default()
+        authinfo = authinfos.AuthInfo.objects(self.backend).find(computer=self, user=user)[0]
         return authinfo.get_transport()
 
-    @abc.abstractmethod
     def get_workdir(self):
         """
         Get the working directory for this computer
         :return: The currently configured working directory
         :rtype: str
         """
-        pass
+        return self._get_property(self.PROPERTY_WORKDIR, "/scratch/{username}/aiida_run/")
 
-    @abc.abstractmethod
-    def get_shebang(self):
-        pass
-
-    @abc.abstractmethod
     def set_workdir(self, val):
-        pass
+        self._set_property(self.PROPERTY_WORKDIR, val)
+
+    def get_shebang(self):
+        return self._get_property(self.PROPERTY_SHEBANG, "#!/bin/bash")
 
     def set_shebang(self, val):
         """
@@ -648,31 +630,27 @@ class Computer(CollectionEntry):
         metadata['shebang'] = val
         self._set_metadata(metadata)
 
-    @abc.abstractmethod
     def get_name(self):
-        pass
+        return self._backend_entity.get_name()
 
-    @abc.abstractmethod
     def set_name(self, val):
-        pass
+        self._backend_entity.set_name(val)
 
     def get_hostname(self):
         """
         Get this computer hostname
         :rtype: str
         """
-        pass
+        return self._backend_entity.get_hostname()
 
-    @abc.abstractmethod
     def set_hostname(self, val):
         """
         Set the hostname of this computer
         :param val: The new hostname
         :type val: str
         """
-        pass
+        self._backend_entity.set_hostname(val)
 
-    @abc.abstractmethod
     def get_description(self):
         """
         Get the description for this computer
@@ -682,7 +660,6 @@ class Computer(CollectionEntry):
         """
         pass
 
-    @abc.abstractmethod
     def set_description(self, val):
         """
         Set the description for this computer
@@ -690,26 +667,10 @@ class Computer(CollectionEntry):
         :param val: the new description
         :type val: str
         """
-        pass
+        self._backend_entity.set_description(val)
 
-    @abc.abstractmethod
-    def get_calculations_on_computer(self):
-        """
-        Get the calculations corresponding to this computer
-
-        :return: a list of calculations on this computer
-        """
-        pass
-
-    @abc.abstractmethod
     def is_enabled(self):
-        """
-        Is the computer enabled
-
-        :return: True if enabled, False otherwise
-        :rtype: bool
-        """
-        pass
+        return self._backend_entity.is_enabled()
 
     def get_authinfo(self, user):
         """
@@ -722,14 +683,17 @@ class Computer(CollectionEntry):
         :raise NotExistent: if the computer is not configured for the given
             user.
         """
-        return self.backend.authinfos.get(computer=self, user=user)
+        from . import authinfos
+
+        return authinfos.AuthInfo.objects(self.backend).get(dbcomputer_id=self.id, aiidauser_id=user.id)
 
     def is_user_configured(self, user):
         """
-        Check if the user is configured on this computer
+        Is the user configured on this computer?
 
         :param user: the user to check
-        :return: True if enabled, False otherwise
+        :return: True if configured, False otherwise
+        :rtype: bool
         """
         try:
             self.get_authinfo(user)
@@ -739,10 +703,11 @@ class Computer(CollectionEntry):
 
     def is_user_enabled(self, user):
         """
-        Check if a user is enabled to run on this computer
+        Is the given user enabled to run on this computer?
 
         :param user: the user to check
         :return: True if enabled, False otherwise
+        :rtype: bool
         """
         try:
             authinfo = self.get_authinfo(user)
@@ -752,52 +717,47 @@ class Computer(CollectionEntry):
             # it is disabled for that user)
             return False
 
-    @abc.abstractmethod
     def set_enabled_state(self, enabled):
         """
         Set the enable state for this computer
 
         :param enabled: True if enabled, False otherwise
         """
+        self._backend_entity.set_enabled_state(enabled)
 
-    @abc.abstractmethod
     def get_scheduler_type(self):
         """
         Get the scheduler type for this computer
 
-        :return: the scheduler ype
+        :return: the scheduler type
         :rtype: str
         """
-        pass
+        return self._backend_entity.get_scheduler_type()
 
-    @abc.abstractmethod
-    def set_scheduler_type(self, val):
+    def set_scheduler_type(self, scheduler_type):
         """
-        Set the scheduler type for this computer
-
-        :param val: the new scheduler type
-        :type val: str
+        :param scheduler_type: the new scheduler type
         """
-        pass
+        self._scheduler_type_validator(scheduler_type)
+        self._backend_entity.set_scheduler_type(scheduler_type)
 
-    @abc.abstractmethod
     def get_transport_type(self):
         """
-        Get the transport type for this computer
+        Get the current transport type for this computer
 
         :return: the transport type
         :rtype: str
         """
+        return self._backend_entity.get_transport_type()
 
-    @abc.abstractmethod
-    def set_transport_type(self, val):
+    def set_transport_type(self, transport_type):
         """
         Set the transport type for this computer
 
-        :param val: the new transport type
-        :type val: str
+        :param transport_type: the new transport type
+        :type transport_type: str
         """
-        pass
+        self._backend_entity.set_transport_type(transport_type)
 
     def get_transport_class(self):
         """
@@ -814,9 +774,10 @@ class Computer(CollectionEntry):
 
     def get_scheduler(self):
         """
-        Get the scheduler instance for this computer
+        Get a scheduler instance for this computer
 
-        :return: the scheduler
+        :return: the scheduler instance
+        :rtype: :class:`aiida.scheduler.Scheduler`
         """
         try:
             scheduler_class = scheduler.SchedulerFactory(self.get_scheduler_type())
@@ -835,15 +796,15 @@ class Computer(CollectionEntry):
         :return: the authinfo object for the configured user
         :rtype: :class:`aiida.orm.AuthInfo`
         """
+        from . import authinfos
 
         transport_cls = self.get_transport_class()
-        backend = self.backend
-        user = user or backend.users.get_automatic_user()
+        user = user or users.User.objects(self.backend).get_default()
 
         try:
             authinfo = self.get_authinfo(user)
         except exceptions.NotExistent:
-            authinfo = backend.authinfos.create(self, user)
+            authinfo = authinfos.AuthInfo(self, user)
 
         auth_params = authinfo.get_auth_params()
         valid_keys = set(transport_cls.get_valid_auth_params())
@@ -869,7 +830,7 @@ class Computer(CollectionEntry):
         """
 
         backend = self.backend
-        user = user or backend.users.get_automatic_user()
+        user = user or users.User.objects(self.backend).get_default()
 
         config = {}
         try:
@@ -879,12 +840,3 @@ class Computer(CollectionEntry):
             pass
 
         return config
-
-    def __repr__(self):
-        return '<{}: {}>'.format(self.__class__.__name__, str(self))
-
-    def __str__(self):
-        if self.is_enabled():
-            return "{} ({}), pk: {}".format(self.name, self.hostname, self.pk)
-
-        return "{} ({}) [DISABLED], pk: {}".format(self.name, self.hostname, self.pk)

@@ -63,19 +63,16 @@ def upf_listfamilies(elements, with_description):
     """
     Print on screen the list of upf families installed
     """
-    from aiida.orm import DataFactory
+    from aiida import orm
     from aiida.orm.data.upf import UPFGROUP_TYPE
 
-    # pylint: disable=invalid-name
-    UpfData = DataFactory('upf')
-    from aiida.orm.querybuilder import QueryBuilder
-    from aiida.orm.group import Group
-    qb = QueryBuilder()
-    qb.append(UpfData, tag='upfdata')
+    UpfData = orm.DataFactory('upf')  # pylint: disable=invalid-name
+    query = orm.QueryBuilder()
+    query.append(UpfData, tag='upfdata')
     if elements is not None:
-        qb.add_filter(UpfData, {'attributes.element': {'in': elements}})
-    qb.append(
-        Group,
+        query.add_filter(UpfData, {'attributes.element': {'in': elements}})
+    query.append(
+        orm.Group,
         group_of='upfdata',
         tag='group',
         project=["name", "description"],
@@ -83,21 +80,21 @@ def upf_listfamilies(elements, with_description):
             '==': UPFGROUP_TYPE
         }})
 
-    qb.distinct()
-    if qb.count() > 0:
-        for res in qb.dict():
+    query.distinct()
+    if query.count() > 0:
+        for res in query.dict():
             group_name = res.get("group").get("name")
             group_desc = res.get("group").get("description")
-            qb = QueryBuilder()
-            qb.append(Group, tag='thisgroup', filters={"name": {'like': group_name}})
-            qb.append(UpfData, project=["id"], member_of='thisgroup')
+            query = orm.QueryBuilder()
+            query.append(orm.Group, tag='thisgroup', filters={"name": {'like': group_name}})
+            query.append(UpfData, project=["id"], member_of='thisgroup')
 
             if with_description:
                 description_string = ": {}".format(group_desc)
             else:
                 description_string = ""
 
-            echo.echo_success("* {} [{} pseudos]{}".format(group_name, qb.count(), description_string))
+            echo.echo_success("* {} [{} pseudos]{}".format(group_name, query.count(), description_string))
 
     else:
         echo.echo_warning("No valid UPF pseudopotential family found.")

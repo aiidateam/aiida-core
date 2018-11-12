@@ -14,8 +14,10 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
-from aiida.transport import TransportFactory
 from aiida.common.exceptions import NotExistent
+
+from aiida.orm import Computer, User, AuthInfo
+from aiida import orm
 
 
 class TestComputer(AiidaTestCase):
@@ -26,14 +28,15 @@ class TestComputer(AiidaTestCase):
         """
         import tempfile
 
-        new_comp = self.backend.computers.create(name='bbb', hostname='localhost', transport_type='local',
-                                                 scheduler_type='direct', workdir='/tmp/aiida')
-        new_comp.store()
+        new_comp = orm.Computer(
+            name='bbb',
+            hostname='localhost',
+            transport_type='local',
+            scheduler_type='direct',
+            workdir='/tmp/aiida').store()
 
         # Configure the computer - no parameters for local transport
-        authinfo = self.backend.authinfos.create(
-            computer=new_comp,
-            user=self.backend.users.get_automatic_user())
+        authinfo = orm.AuthInfo(computer=new_comp, user=User.objects.get_default())
         authinfo.store()
 
         transport = new_comp.get_transport()
@@ -46,19 +49,23 @@ class TestComputer(AiidaTestCase):
             self.assertEquals(transport.isfile(f.name), False)
 
     def test_delete(self):
-        new_comp = self.backend.computers.create(name='aaa', hostname='aaa', transport_type='local',
-                                                 scheduler_type='pbspro', workdir='/tmp/aiida')
-        new_comp.store()
+        new_comp = orm.Computer(
+            name='aaa',
+            hostname='aaa',
+            transport_type='local',
+            scheduler_type='pbspro',
+            workdir='/tmp/aiida',
+            backend=self.backend).store()
 
         comp_pk = new_comp.pk
 
-        check_computer = self.backend.computers.get(comp_pk)
+        check_computer = orm.Computer.objects(self.backend).get(id=comp_pk)
         self.assertEquals(comp_pk, check_computer.pk)
 
-        self.backend.computers.delete(comp_pk)
+        Computer.objects.delete(comp_pk)
 
         with self.assertRaises(NotExistent):
-            self.backend.computers.get(comp_pk)
+            orm.Computer.objects(self.backend).get(id=comp_pk)
 
 
 class TestComputerConfigure(AiidaTestCase):
@@ -68,7 +75,8 @@ class TestComputerConfigure(AiidaTestCase):
         from aiida.control.computer import ComputerBuilder
 
         backend = self.backend
-        self.comp_builder = ComputerBuilder(label='test', description='Test Computer', enabled=True, hostname='localhost')
+        self.comp_builder = ComputerBuilder(label='test', description='Test Computer', enabled=True,
+                                            hostname='localhost')
         self.comp_builder.scheduler = 'direct'
         self.comp_builder.work_dir = '/tmp/aiida'
         self.comp_builder.prepend_text = ''
@@ -76,7 +84,7 @@ class TestComputerConfigure(AiidaTestCase):
         self.comp_builder.mpiprocs_per_machine = 8
         self.comp_builder.mpirun_command = 'mpirun'
         self.comp_builder.shebang = '#!xonsh'
-        self.user = backend.users.get_automatic_user()
+        self.user = User.objects.get_default()
 
     def test_configure_local(self):
         """Configure a computer for local transport and check it is configured."""

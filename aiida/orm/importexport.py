@@ -1714,7 +1714,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     license
     """
     import aiida
-    from aiida.orm import Node, Calculation, Data, Group, Code
+    from aiida.orm import Node, Calculation, Data, Group
     from aiida.orm.node.process import ProcessNode, CalculationNode
     from aiida.common.links import LinkType
     from aiida.common.folders import RepositoryFolder
@@ -1748,8 +1748,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             given_group_entry_ids.add(entry.pk)
             given_groups.add(entry)
         elif issubclass(entry.__class__, Node):
-            # The Code node should be treated as a Data node
-            if (issubclass(entry.__class__, Data) or issubclass(entry.__class__, Code)):
+            if issubclass(entry.__class__, Data):
                 given_data_entry_ids.add(entry.pk)
             elif issubclass(entry.__class__, (Calculation, ProcessNode)):
                 given_calculation_entry_ids.add(entry.pk)
@@ -1761,8 +1760,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     # Add all the nodes contained within the specified groups
     for group in given_groups:
         for entry in group.nodes:
-            # The Code node should be treated as a Data nodes
-            if (issubclass(entry.__class__, Data) or issubclass(entry.__class__, Code)):
+            if issubclass(entry.__class__, Data):
                 given_data_entry_ids.add(entry.pk)
             elif issubclass(entry.__class__, Calculation):
                 given_calculation_entry_ids.add(entry.pk)
@@ -1793,17 +1791,6 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                               '==': LinkType.INPUT.value}})
             res = {_[0] for _ in qb.all()}
             given_data_entry_ids.update(res - to_be_exported)
-            # The same until Code becomes a subclass of Data
-            qb = QueryBuilder()
-            qb.append(Code, tag='predecessor', project=['id'])
-            qb.append((Calculation, ProcessNode), output_of='predecessor',
-                      filters={'id': {'==': curr_node_id}},
-                      edge_filters={
-                          'type': {
-                              '==': LinkType.INPUT.value}})
-            res = {_[0] for _ in qb.all()}
-            given_data_entry_ids.update(res - to_be_exported)
-
 
             # INPUT(Data, Calculation) - Forward
             if input_forward:
@@ -1816,17 +1803,6 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                                   '==': LinkType.INPUT.value}})
                 res = {_[0] for _ in qb.all()}
                 given_data_entry_ids.update(res - to_be_exported)
-                # The same until Code becomes a subclass of Data
-                qb = QueryBuilder()
-                qb.append(Code, tag='predecessor', project=['id'],
-                          filters={'id': {'==': curr_node_id}})
-                qb.append((Calculation, ProcessNode), output_of='predecessor',
-                          edge_filters={
-                              'type': {
-                                  '==': LinkType.INPUT.value}})
-                res = {_[0] for _ in qb.all()}
-                given_data_entry_ids.update(res - to_be_exported)
-
 
             # CREATE/RETURN(Calculation, Data) - Forward
             qb = QueryBuilder()
@@ -1839,18 +1815,6 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                                      LinkType.RETURN.value]}})
             res = {_[0] for _ in qb.all()}
             given_data_entry_ids.update(res - to_be_exported)
-            # The same until Code becomes a subclass of Data
-            qb = QueryBuilder()
-            qb.append((Calculation, ProcessNode), tag='predecessor',
-                      filters={'id': {'==': curr_node_id}})
-            qb.append(Code, output_of='predecessor', project=['id'],
-                      edge_filters={
-                          'type': {
-                              'in': [LinkType.CREATE.value,
-                                     LinkType.RETURN.value]}})
-            res = {_[0] for _ in qb.all()}
-            given_data_entry_ids.update(res - to_be_exported)
-
 
             # CREATE(Calculation, Data) - Reversed
             if create_reversed:
@@ -1863,33 +1827,12 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                                   'in': [LinkType.CREATE.value]}})
                 res = {_[0] for _ in qb.all()}
                 given_data_entry_ids.update(res - to_be_exported)
-                # The same until Code becomes a subclass of Data
-                qb = QueryBuilder()
-                qb.append((Calculation, ProcessNode), tag='predecessor')
-                qb.append(Code, output_of='predecessor', project=['id'],
-                          filters={'id': {'==': curr_node_id}},
-                          edge_filters={
-                              'type': {
-                                  'in': [LinkType.CREATE.value]}})
-                res = {_[0] for _ in qb.all()}
-                given_data_entry_ids.update(res - to_be_exported)
-
 
             # RETURN(Calculation, Data) - Reversed
             if return_reversed:
                 qb = QueryBuilder()
                 qb.append((Calculation, ProcessNode), tag='predecessor')
                 qb.append(Data, output_of='predecessor', project=['id'],
-                          filters={'id': {'==': curr_node_id}},
-                          edge_filters={
-                              'type': {
-                                  'in': [LinkType.RETURN.value]}})
-                res = {_[0] for _ in qb.all()}
-                given_data_entry_ids.update(res - to_be_exported)
-                # The same until Code becomes a subclass of Data
-                qb = QueryBuilder()
-                qb.append((Calculation, ProcessNode), tag='predecessor')
-                qb.append(Code, output_of='predecessor', project=['id'],
                           filters={'id': {'==': curr_node_id}},
                           edge_filters={
                               'type': {
@@ -1907,7 +1850,6 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                               '==': LinkType.CALL.value}})
             res = {_[0] for _ in qb.all()}
             given_calculation_entry_ids.update(res - to_be_exported)
-
 
             # CALL(Calculation, Calculation) - Reversed
             if call_reversed:
@@ -1938,16 +1880,6 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 qb = QueryBuilder()
                 qb.append((Calculation, ProcessNode), tag='predecessor', project=['id'])
                 qb.append(Data, output_of='predecessor',
-                          filters={'id': {'==': curr_node_id}},
-                          edge_filters={
-                              'type': {
-                                  '==': LinkType.CREATE.value}})
-                res = {_[0] for _ in qb.all()}
-                given_calculation_entry_ids.update(res - to_be_exported)
-                # The same until Code becomes a subclass of Data
-                qb = QueryBuilder()
-                qb.append((Calculation, ProcessNode), tag='predecessor', project=['id'])
-                qb.append(Code, output_of='predecessor',
                           filters={'id': {'==': curr_node_id}},
                           edge_filters={
                               'type': {
@@ -2106,24 +2038,6 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                     'type':str(link_type)
                 }
                 links_uuid_dict[frozenset(val.items())] = val
-            # INPUT (Code, Calculation)
-            # The same as above until Code becomes a subclass of Data
-            links_qb = QueryBuilder()
-            links_qb.append(Code,
-                            project=['uuid'], tag='input',
-                            filters = {'id': {'in': all_nodes_pk}})
-            links_qb.append((Calculation, ProcessNode),
-                            project=['uuid'], tag='output',
-                            edge_filters={'type':{'==':LinkType.INPUT.value}},
-                            edge_project=['label', 'type'], output_of='input')
-            for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-                val = {
-                    'input': str(input_uuid),
-                    'output': str(output_uuid),
-                    'label': str(link_label),
-                    'type':str(link_type)
-                }
-                links_uuid_dict[frozenset(val.items())] = val
 
         # INPUT (Data, Calculation) - Backward, by the Calculation node
         links_qb = QueryBuilder()
@@ -2140,25 +2054,6 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 'output': str(output_uuid),
                 'label': str(link_label),
                 'type':str(link_type)
-            }
-            links_uuid_dict[frozenset(val.items())] = val
-        # INPUT (Data, Calculation) - Backward, by the Calculation node
-        # The same as above until Code becomes a subclass of Data
-        links_qb = QueryBuilder()
-        links_qb.append(Code,
-                        project=['uuid'], tag='input')
-        links_qb.append((Calculation, ProcessNode),
-                        project=['uuid'], tag='output',
-                        filters={'id': {'in': all_nodes_pk}},
-                        edge_filters={
-                            'type': {'==': LinkType.INPUT.value}},
-                        edge_project=['label', 'type'], output_of='input')
-        for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-            val = {
-                'input': str(input_uuid),
-                'output': str(output_uuid),
-                'label': str(link_label),
-                'type': str(link_type)
             }
             links_uuid_dict[frozenset(val.items())] = val
 
@@ -2179,50 +2074,8 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 'type':str(link_type)
             }
             links_uuid_dict[frozenset(val.items())] = val
-        # CREATE (Calculation, Code) - Forward, by the Calculation node
-        # The same as above until Code becomes a subclass of Data
-        # This case will not happen (with the current setup - a code is not
-        # created by a calculation) but it is addded for completeness
-        links_qb = QueryBuilder()
-        links_qb.append((Calculation, ProcessNode),
-                        project=['uuid'], tag='input',
-                        filters={'id': {'in': all_nodes_pk}})
-        links_qb.append(Code,
-                        project=['uuid'], tag='output',
-                        edge_filters={'type': {'==': LinkType.CREATE.value}},
-                        edge_project=['label', 'type'], output_of='input')
-        for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-            val = {
-                'input': str(input_uuid),
-                'output': str(output_uuid),
-                'label': str(link_label),
-                'type': str(link_type)
-            }
-            links_uuid_dict[frozenset(val.items())] = val
-
 
         # CREATE (Calculation, Data) - Backward, by the Data node
-        if create_reversed:
-            links_qb = QueryBuilder()
-            links_qb.append((Calculation, ProcessNode),
-                            project=['uuid'], tag='input',
-                            filters={'id': {'in': all_nodes_pk}})
-            links_qb.append(Data,
-                            project=['uuid'], tag='output',
-                            edge_filters={'type': {'==': LinkType.CREATE.value}},
-                            edge_project=['label', 'type'], output_of='input')
-            for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-                val = {
-                    'input': str(input_uuid),
-                    'output': str(output_uuid),
-                    'label': str(link_label),
-                    'type':str(link_type)
-                }
-                links_uuid_dict[frozenset(val.items())] = val
-        # CREATE (Calculation, Code) - Backward, by the Code node
-        # The same as above until Code becomes a subclass of Data
-        # This case will not happen (with the current setup - a code is not
-        # created by a calculation) but it is addded for completeness
         if create_reversed:
             links_qb = QueryBuilder()
             links_qb.append((Calculation, ProcessNode),

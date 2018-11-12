@@ -375,11 +375,10 @@ class CalcJobNode(CalculationNode):
         :param src: a node of the database. It cannot be a Calculation object.
         :param str label: Name of the link.
         """
-        from aiida.orm.code import Code
         from aiida.orm.data import Data
 
-        if not isinstance(src, (Data, Code)):
-            raise ValueError('Nodes entering in calculation can only be of type data or code')
+        if not isinstance(src, Data):
+            raise ValueError('Nodes entering in calculation can only be of type data')
 
         return super(AbstractCalculation, self)._replace_link_from(src, label, link_type)
 

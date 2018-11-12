@@ -15,7 +15,7 @@ from abc import abstractmethod
 
 import six
 
-from aiida.orm.implementation import Node
+from aiida.orm.data import Data
 from aiida.common.exceptions import (ValidationError, MissingPluginError, InputValidationError)
 from aiida.common.links import LinkType
 from aiida.common.utils import abstractclassmethod
@@ -24,7 +24,7 @@ from aiida.common.utils import abstractclassmethod
 DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/concepts/processes.html#the-process-builder'
 
 
-class AbstractCode(Node):
+class AbstractCode(Data):
     """
     A code entity.
     It can either be 'local', or 'remote'.

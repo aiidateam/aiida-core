@@ -569,12 +569,11 @@ class AbstractCalculation(Sealable):
           :class:`~aiida.common.links.LinkType`
         """
         from aiida.orm.code import Code
-        from aiida.orm.data import Data
         from aiida.orm.node.process import ProcessNode
 
         if link_type is LinkType.INPUT:
-            if not isinstance(src, (Data, Code)):
-                raise ValueError('Nodes entering calculation as input link can only be of type data or code')
+            if not isinstance(src, Code):
+                raise ValueError('Nodes entering calculation as input link can only be of type code')
         elif link_type is LinkType.CALL:
             if not isinstance(src, (AbstractCalculation, ProcessNode)):
                 raise ValueError('Call links can only link two calculations')
@@ -603,8 +602,8 @@ class AbstractCalculation(Sealable):
         from aiida.orm.code import Code
         from aiida.orm.data import Data
 
-        if not isinstance(src, (Data, Code)):
-            raise ValueError('Nodes entering in calculation can only be of type data or code')
+        if not isinstance(src, Data):
+            raise ValueError('Nodes entering in calculation can only be of type Data')
 
         return super(AbstractCalculation, self)._replace_link_from(src, label, link_type)
 

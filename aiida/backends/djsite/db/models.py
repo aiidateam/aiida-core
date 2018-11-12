@@ -15,7 +15,7 @@ import sys
 import six
 from six.moves import zip, range
 from django.db import models as m
-from django_extensions.db.fields import UUIDField
+from django.db.models import UUIDField
 from django.contrib.auth.models import (
     AbstractBaseUser, BaseUserManager, PermissionsMixin)
 from django.utils.encoding import python_2_unicode_compatible
@@ -23,10 +23,10 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.query import QuerySet
 
 from aiida.utils import timezone
+from aiida.common.utils import get_new_uuid
 from aiida.common.exceptions import (
     ConfigurationError, DbContentError, MissingPluginError)
 
-from aiida.backends.settings import AIIDANODES_UUID_VERSION
 from aiida.backends.djsite.settings.settings import AUTH_USER_MODEL
 import aiida.backends.djsite.db.migrations as migrations
 from aiida.backends.utils import AIIDA_ATTRIBUTE_SEP
@@ -131,7 +131,7 @@ class DbNode(m.Model):
        in the DbAttribute field). Moreover, Attributes define uniquely the
        Node so should be immutable
     """
-    uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION, unique=True)
+    uuid = UUIDField(default=get_new_uuid, unique=True)
     # in the form data.upffile., data.structure., calculation., ...
     # Note that there is always a final dot, to allow to do queries of the
     # type (type__startswith="calculation.") and avoid problems with classes
@@ -1293,7 +1293,7 @@ class DbGroup(m.Model):
     pseudopotential families - if no two pseudos are included for the same
     atomic element).
     """
-    uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION)
+    uuid = UUIDField(default=get_new_uuid)
     # max_length is required by MySql to have indexes and unique constraints
     name = m.CharField(max_length=255, db_index=True)
     # The type of group: a user group, a pseudopotential group,...
@@ -1354,7 +1354,7 @@ class DbComputer(m.Model):
     """
     # TODO: understand if we want that this becomes simply another type of dbnode.
 
-    uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION)
+    uuid = UUIDField(default=get_new_uuid)
     name = m.CharField(max_length=255, unique=True, blank=False)
     hostname = m.CharField(max_length=255)
     description = m.TextField(blank=True)
@@ -1462,7 +1462,7 @@ class DbAuthInfo(m.Model):
 
 @python_2_unicode_compatible
 class DbComment(m.Model):
-    uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION)
+    uuid = UUIDField(default=get_new_uuid)
     # Delete comments if the node is removed
     dbnode = m.ForeignKey(DbNode, related_name='dbcomments', on_delete=m.CASCADE)
     ctime = m.DateTimeField(default=timezone.now, editable=False)
@@ -1500,7 +1500,7 @@ class DbLog(m.Model):
 class DbWorkflow(m.Model):
     from aiida.common.datastructures import wf_states
 
-    uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION)
+    uuid = UUIDField(default=get_new_uuid)
     ctime = m.DateTimeField(default=timezone.now, editable=False)
     mtime = m.DateTimeField(auto_now=True, editable=False)
     user = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.PROTECT)

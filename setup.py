@@ -113,7 +113,14 @@ if __name__ == '__main__':
                 'orbital = aiida.orm.data.orbital:OrbitalData',
             ],
             'aiida.node': [
-                'node = aiida.orm.node:Node'
+                'node = aiida.orm.node:Node',
+                'process = aiida.orm.node.process.process:ProcessNode',
+                'process.calculation = aiida.orm.node.process.calculation.calculation:CalculationNode',
+                'process.workflow = aiida.orm.node.process.workflow.workflow:WorkflowNode',
+                'process.calculation.calcfunction = aiida.orm.node.process.calculation.calcfunction:CalcFunctionNode',
+                'process.calculation.calcjob = aiida.orm.node.process.calculation.calcjob:CalcJobNode',
+                'process.workflow.workchain = aiida.orm.node.process.workflow.workchain:WorkChainNode',
+                'process.workflow.workfunction = aiida.orm.node.process.workflow.workfunction:WorkFunctionNode',
             ],
             'aiida.cmdline': [],
             'aiida.parsers': [

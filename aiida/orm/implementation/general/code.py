@@ -308,8 +308,9 @@ class AbstractCode(Node):
         An output of a code can only be a calculation
         """
         from aiida.orm.calculation import Calculation
+        from aiida.orm.node.process import ProcessNode
 
-        if not isinstance(dest, Calculation):
+        if not isinstance(dest, (Calculation, ProcessNode)):
             raise ValueError(
                 "The output of a code node can only be a calculation")
 

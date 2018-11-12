@@ -22,6 +22,7 @@ from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import override
 from aiida.common.utils import classproperty
 from aiida.orm import Node
+from aiida.orm.node.process import WorkChainNode
 from aiida.orm.utils import load_node, load_workflow
 
 from .awaitable import AwaitableTarget, AwaitableAction, construct_awaitable
@@ -42,6 +43,7 @@ class WorkChain(Process):
     """
     A WorkChain, the base class for AiiDA workflows.
     """
+    _calc_class = WorkChainNode
     _spec_type = _WorkChainSpec
     _STEPPER_STATE = 'stepper_state'
     _CONTEXT = 'CONTEXT'
@@ -226,8 +228,8 @@ class WorkChain(Process):
         call it when the target is completed
         """
         for awaitable in self._awaitables:
-            if awaitable.target == AwaitableTarget.CALCULATION:
-                callback = functools.partial(self._run_task, self.on_calculation_finished, awaitable)
+            if awaitable.target == AwaitableTarget.PROCESS:
+                callback = functools.partial(self._run_task, self.on_process_finished, awaitable)
                 self.runner.call_on_calculation_finish(awaitable.pk, callback)
             elif awaitable.target == AwaitableTarget.WORKFLOW:
                 callback = functools.partial(self._run_task, self.on_legacy_workflow_finished, awaitable)
@@ -235,9 +237,9 @@ class WorkChain(Process):
             else:
                 assert "invalid awaitable target '{}'".format(awaitable.target)
 
-    def on_calculation_finished(self, awaitable, pk):
+    def on_process_finished(self, awaitable, pk):
         """
-        Callback function called by the runner when the calculation instance identified by pk
+        Callback function called by the runner when the process instance identified by pk
         is completed. The awaitable will be effectuated on the context of the workchain and
         removed from the internal list. If all awaitables have been dealt with, the workchain
         process is resumed

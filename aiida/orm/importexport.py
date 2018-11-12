@@ -1715,7 +1715,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     """
     import aiida
     from aiida.orm import Node, Calculation, Data, Group, Code
-    from aiida.orm.node.process import ProcessNode, WorkflowNode, CalculationNode
+    from aiida.orm.node.process import ProcessNode, CalculationNode
     from aiida.common.links import LinkType
     from aiida.common.folders import RepositoryFolder
     from aiida.orm.querybuilder import QueryBuilder
@@ -1751,7 +1751,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             # The Code node should be treated as a Data node
             if (issubclass(entry.__class__, Data) or issubclass(entry.__class__, Code)):
                 given_data_entry_ids.add(entry.pk)
-            elif issubclass(entry.__class__, Calculation):
+            elif issubclass(entry.__class__, (Calculation, ProcessNode)):
                 given_calculation_entry_ids.add(entry.pk)
         elif issubclass(entry.__class__, Computer):
             given_computer_entry_ids.add(entry.pk)

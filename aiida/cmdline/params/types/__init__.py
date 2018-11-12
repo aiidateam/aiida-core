@@ -22,16 +22,18 @@ from .identifier import IdentifierParamType
 from .legacy_workflow import LegacyWorkflowParamType
 from .multiple import MultipleValueParamType
 from .node import NodeParamType
+from .process import ProcessParamType
 from .nonemptystring import NonEmptyStringParamType
 from .path import AbsolutePathParamType
 from .plugin import PluginParamType
 from .profile import ProfileParamType
 from .user import UserParamType
 from .test_module import TestModuleParamType
+from .workflow import WorkflowParamType
 
 __all__ = [
     'LazyChoice', 'IdentifierParamType', 'CalculationParamType', 'CodeParamType', 'ComputerParamType', 'DataParamType',
     'GroupParamType', 'NodeParamType', 'MpirunCommandParamType', 'MultipleValueParamType', 'NonEmptyStringParamType',
     'PluginParamType', 'AbsolutePathParamType', 'ShebangParamType', 'LegacyWorkflowParamType', 'UserParamType',
-    'TestModuleParamType', 'ProfileParamType'
+    'TestModuleParamType', 'ProfileParamType', 'WorkflowParamType', 'ProcessParamType'
 ]

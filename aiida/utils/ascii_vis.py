@@ -162,10 +162,10 @@ def calc_info(calc_node):
     from aiida.orm.node.process import WorkFunctionNode
     from aiida.orm.calculation.inline import InlineCalculation
     from aiida.orm.calculation.job import JobCalculation
-    from aiida.orm.calculation.work import WorkCalculation
+    from aiida.orm.node.process import WorkChainNode
     from aiida.work.processes import ProcessState
 
-    if isinstance(calc_node, WorkCalculation):
+    if isinstance(calc_node, WorkChainNode):
         plabel = calc_node.process_label
         pstate = calc_node.process_state
         winfo = calc_node.stepper_state_info

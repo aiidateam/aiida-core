@@ -442,8 +442,8 @@ def _collect_calculation_data(calc):
     from aiida.orm.data import Data
     from aiida.orm.calculation import Calculation
     from aiida.orm.calculation.job import JobCalculation
-    from aiida.orm.calculation.work import WorkCalculation
     from aiida.orm.calculation.inline import InlineCalculation
+    from aiida.orm.node.process import WorkflowNode
     import hashlib
     import os
     calcs_now = []
@@ -513,8 +513,8 @@ def _collect_calculation_data(calc):
             'sha1'    : hashlib.sha1(shell_script).hexdigest(),
             'type'    : 'file',
             })
-    elif isinstance(calc, WorkCalculation):
-        # We do not know how to recreate a WorkCalculation so we pass
+    elif isinstance(calc, WorkflowNode):
+        # We do not know how to recreate a WorkflowNode so we pass
         pass
     else:
         raise ValueError('calculation is of an unexpected type {}'.format(type(calc)))

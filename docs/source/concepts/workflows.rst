@@ -176,7 +176,7 @@ If you would also like to get a reference of the node that represents the ``Work
 .. include:: include/snippets/workflows/workchains/run_workchain_get_node_pid.py
     :code: python
 
-For the former, the ``node`` will be the ``WorkCalculation`` node that is used to represent the workchain in the database, whereas for the latter, the ``pid`` is the pk of that same node.
+For the former, the ``node`` will be the ``WorkChainNode`` node that is used to represent the workchain in the database, whereas for the latter, the ``pid`` is the pk of that same node.
 The ``run`` based functions can actually also be used for ``workfunctions``.
 Calling ``run`` with a workfunction, does exactly the same as running the workfunction directly as a normal python function and so doesn't gain anything new.
 However, if you are interested in also getting the calculation node or the pid of the process, in addition to the result of the function, calling the workfunction through ``run_get_node`` or ``run_get_pid`` is the correct solution.
@@ -248,7 +248,7 @@ When you have launched workflows, be it workfunctions or workchains, you may wan
 verdi work list
 ---------------
 Your first point of entry will be the ``verdi`` command ``verdi work list``.
-This command will print a list of all active ``WorkCalculation`` nodes, which are the database objects used by ``WorkChains`` and ``workfunctions`` to store the details of their execution in the database.
+This command will print a list of all active ``WorkflowNode`` nodes, which are the database objects used by ``WorkChains`` and ``workfunctions`` to store the details of their execution in the database.
 A typical example may look something like the following:
 
 .. code-block:: bash
@@ -261,8 +261,8 @@ A typical example may look something like the following:
 
     Total results: 2
 
-The 'State' column is a concatenation of the ``process_state`` and the ``exit_status`` of the ``WorkCalculation``.
-By default, the command will only show active items, i.e. ``WorkCalculations`` that have not yet reached a terminal state.
+The 'State' column is a concatenation of the ``process_state`` and the ``exit_status`` of the ``WorkflowNode``.
+By default, the command will only show active items, i.e. ``WorkflowNodes`` that have not yet reached a terminal state.
 If you want to also show the nodes in a terminal states, you can use the ``-a`` flag and call ``verdi work list -a``:
 
 .. code-block:: bash
@@ -347,17 +347,16 @@ In addition to the call tree, each node also shows its current process state and
 This tool can be very useful to inspect while a workchain is running at which step in the outline it currently is, as well as the status of all the children calculations it called.
 
 
-verdi calculation show
+verdi work show
 ----------------------
-Finally, there is a command that displays detailed information about the ``WorkCalculation``, such as its inputs, outputs and the calculations it called and was called by.
-Since the ``WorkCalculation`` is a sub class of the ``Calculation`` class, we can use the same command ``verdi calculation show`` that one would use to inspect the details of a ``JobCalculation``.
+Finally, there is a command that displays detailed information about the ``WorkflowNode``, such as its inputs, outputs and the calculations it called and was called by.
 An example output for a ``PwBaseWorkChain`` would look like the following:
 
 .. code-block:: bash
 
     Property       Value
     -------------  ------------------------------------
-    type           WorkCalculation
+    type           WorkChainNode
     pk             164
     uuid           08bc5a3c-da7d-44e0-a91c-dda9ddcb638b
     label
@@ -641,7 +640,7 @@ It takes a single argument, a string, that is the message that needs to be repor
         self.report('here we will submit a calculation')
 
 This will send that message to the internal logger of python, which will cause it to be picked up by the default AiiDA logger, but it will also trigger the database log handler, which will store the message in the database and link it to the node of the workchain.
-This allows the ``verdi work report`` command to retrieve all those messages that were fired using the ``report`` method for a specifc ``WorkCalculation`` node.
+This allows the ``verdi work report`` command to retrieve all those messages that were fired using the ``report`` method for a specific ``WorkflowNode``.
 Note that the report method, in addition to the pk of the workchain, will also automatically record the name of the workchain and the name of the outline step in which the report message was fired.
 This information will show up in the output of ``verdi work report``, so you never have to explicitly reference the workchain name, outline step name or date and time in the message itself.
 

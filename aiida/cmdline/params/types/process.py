@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """
-Module for the calculation parameter type
+Module for the process node parameter type
 """
 
 from __future__ import division
@@ -17,12 +17,12 @@ from __future__ import absolute_import
 from .identifier import IdentifierParamType
 
 
-class CalculationParamType(IdentifierParamType):
+class ProcessParamType(IdentifierParamType):
     """
-    The ParamType for identifying Calculation entities or its subclasses
+    The ParamType for identifying ProcessNode entities or its subclasses
     """
 
-    name = 'Calculation'
+    name = 'Process'
 
     @property
     def orm_class_loader(self):
@@ -32,5 +32,5 @@ class CalculationParamType(IdentifierParamType):
 
         :return: the orm entity loader class for this ParamType
         """
-        from aiida.orm.utils.loaders import CalculationEntityLoader
-        return CalculationEntityLoader
+        from aiida.orm.utils.loaders import ProcessEntityLoader
+        return ProcessEntityLoader

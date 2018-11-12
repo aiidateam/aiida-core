@@ -26,7 +26,7 @@ The following table describes which processes exist in AiiDA and what node type 
 ===================   =======================       =====================
 Process               Database record               Used for
 ===================   =======================       =====================
-``WorkChain``         ``WorkCalculation``           Workchain
+``WorkChain``         ``WorkChainNode``             Workchain
 ``JobProcess``        ``JobCalculation``            Calculation
 ``FunctionProcess``   ``WorkFunctionNode``          Workfunction
 ``FunctionProcess``   ``InlineCalculation``         Inline calculation

@@ -34,7 +34,7 @@ authinfo = authinfos
 computer = computers
 user = users
 
-_local = 'JobCalculation', 'WorkCalculation', 'Code', 'CalculationFactory', 'DataFactory', 'WorkflowFactory', \
+_local = 'JobCalculation', 'Code', 'CalculationFactory', 'DataFactory', 'WorkflowFactory', \
          'Workflow', 'Group', 'user', 'Computer'
 
 __all__ = (_local +

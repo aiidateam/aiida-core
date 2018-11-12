@@ -20,8 +20,7 @@ import tornado.ioloop
 from tornado import concurrent, gen
 
 from aiida.common.links import LinkType
-from aiida.orm.calculation import Calculation, WorkCalculation
-from aiida.orm.node.process import WorkFunctionNode
+from aiida.orm.calculation import Calculation
 from aiida.orm.data.frozendict import FrozenDict
 
 __all__ = 'RefObjectStore', 'interruptable_task', 'InterruptableFuture'
@@ -29,7 +28,6 @@ __all__ = 'RefObjectStore', 'interruptable_task', 'InterruptableFuture'
 LOGGER = logging.getLogger(__name__)
 PROCESS_STATE_CHANGE_KEY = 'process|state_change|{}'
 PROCESS_STATE_CHANGE_DESCRIPTION = 'The last time a process of type {}, changed state'
-PROCESS_CALC_TYPES = (WorkCalculation, WorkFunctionNode)
 
 
 class InterruptableFuture(concurrent.Future):
@@ -162,26 +160,6 @@ def exponential_backoff_retry(fct, initial_interval=10.0, max_attempts=5, logger
     raise gen.Return(result)
 
 
-def is_work_calc_type(calc_node):
-    """
-    Check if the given calculation node is of the new type.
-    Currently in AiiDA we have a hierarchy of 'Calculation' nodes with the following subclasses:
-
-        1. JobCalculation
-        2. InlineCalculation
-        3. WorkCalculation
-        4. WorkFunctionNode
-
-    1 & 2 can be considered the 'old' way of doing things, even though they are still
-    in use while 3 & 4 are the 'new' way.  In loose terms the main difference is that
-    the old way don't support RETURN and CALL links.
-
-    :param calc_node: The calculation node to test
-    :return: True if of the new type, False otherwise.
-    """
-    return isinstance(calc_node, PROCESS_CALC_TYPES)
-
-
 def is_workfunction(function):
     """
     Return whether the given function is a workfunction
@@ -242,12 +220,16 @@ def set_process_state_change_timestamp(process):
     from aiida.common.exceptions import UniquenessError
     from aiida.orm.calculation.inline import InlineCalculation
     from aiida.orm.calculation.job import JobCalculation
+    from aiida.orm.node.process import ProcessNode, WorkflowNode
     from aiida.utils import timezone
 
     if isinstance(process.calc, (JobCalculation, InlineCalculation)):
         process_type = 'calculation'
-    elif is_work_calc_type(process.calc):
+    elif isinstance(process.calc, WorkflowNode):
         process_type = 'work'
+    elif isinstance(process.calc, ProcessNode):
+        # This will only occur for testing, as in general users cannot launch plain Process classes
+        return
     else:
         raise ValueError('unsupported calculation node type {}'.format(type(process.calc)))
 

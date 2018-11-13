@@ -32,8 +32,7 @@ from aiida.common.lang import override, protected
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida import orm
-from aiida.orm.node.process import ProcessNode, WorkFunctionNode
-from aiida.orm.calculation.work import WorkCalculation
+from aiida.orm.node.process import ProcessNode, WorkflowNode, WorkFunctionNode
 from aiida.utils import serialize
 from aiida.work.ports import InputPort, PortNamespace
 from aiida.work.process_spec import ProcessSpec, ExitCode
@@ -93,7 +92,7 @@ class Process(plumpy.Process):
     # pylint: disable=too-many-public-methods
 
     _spec_type = ProcessSpec
-    _calc_class = WorkCalculation
+    _calc_class = ProcessNode
 
     SINGLE_RETURN_LINKNAME = 'result'
 
@@ -457,7 +456,7 @@ class Process(plumpy.Process):
 
             value.store()
 
-            if utils.is_work_calc_type(self.calc):
+            if isinstance(self.calc, WorkflowNode):
                 value.add_link_from(self.calc, label, LinkType.RETURN)
 
     @property

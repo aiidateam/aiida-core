@@ -808,7 +808,7 @@ class TestSimple(AiidaTestCase):
     def test_workcalculation_2(self):
         import shutil, os, tempfile
 
-        from aiida.orm.calculation.work import WorkCalculation
+        from aiida.orm.node.process import WorkChainNode
         from aiida.orm.data.float import Float
         from aiida.orm.data.int import Int
         from aiida.orm import load_node
@@ -820,8 +820,8 @@ class TestSimple(AiidaTestCase):
         temp_folder = tempfile.mkdtemp()
 
         try:
-            master = WorkCalculation().store()
-            slave = WorkCalculation().store()
+            master = WorkChainNode().store()
+            slave = WorkChainNode().store()
 
             input_1 = Int(3).store()
             input_2 = Int(5).store()
@@ -1548,13 +1548,13 @@ class TestLinks(AiidaTestCase):
 
         from aiida.orm.data.int import Int
         from aiida.orm.importexport import export
-        from aiida.orm.calculation.work import WorkCalculation
+        from aiida.orm.node.process import WorkChainNode
         from aiida.common.links import LinkType
 
         tmp_folder = tempfile.mkdtemp()
 
         try:
-            node_work = WorkCalculation().store()
+            node_work = WorkChainNode().store()
             node_input = Int(1).store()
             node_output = Int(2).store()
 
@@ -1588,7 +1588,7 @@ class TestLinks(AiidaTestCase):
         """
         from aiida.orm.data.base import Int
         from aiida.orm.calculation.job import JobCalculation
-        from aiida.orm.calculation.work import WorkCalculation
+        from aiida.orm.node.process import WorkChainNode
         from aiida.common.datastructures import calc_states
         from aiida.common.links import LinkType
 
@@ -1598,8 +1598,8 @@ class TestLinks(AiidaTestCase):
         # Node creation
         d1 = Int(1).store()
         d2 = Int(1).store()
-        wc1 = WorkCalculation().store()
-        wc2 = WorkCalculation().store()
+        wc1 = WorkChainNode().store()
+        wc2 = WorkChainNode().store()
 
         pw1 = JobCalculation()
         pw1.set_computer(self.computer)
@@ -1811,14 +1811,14 @@ class TestLinks(AiidaTestCase):
         from aiida.orm.data.base import Int
         from aiida.orm.importexport import export
         from aiida.orm.calculation.inline import InlineCalculation
-        from aiida.orm.calculation.work import WorkCalculation
+        from aiida.orm.node.process import WorkChainNode
         from aiida.common.links import LinkType
         from aiida.orm.querybuilder import QueryBuilder
         tmp_folder = tempfile.mkdtemp()
 
         try:
-            wc2 = WorkCalculation().store()
-            wc1 = WorkCalculation().store()
+            wc2 = WorkChainNode().store()
+            wc1 = WorkChainNode().store()
             c1 = InlineCalculation().store()
             ni1 = Int(1).store()
             ni2 = Int(2).store()
@@ -1901,13 +1901,13 @@ class TestLinks(AiidaTestCase):
 
         from aiida.orm.data.base import Int
         from aiida.orm.importexport import export
-        from aiida.orm.calculation.work import WorkCalculation
+        from aiida.orm.node.process import WorkChainNode
         from aiida.common.links import LinkType
         tmp_folder = tempfile.mkdtemp()
 
         try:
-            w1 = WorkCalculation().store()
-            w2 = WorkCalculation().store()
+            w1 = WorkChainNode().store()
+            w2 = WorkChainNode().store()
             i1 = Int(1).store()
             o1 = Int(2).store()
 
@@ -1952,7 +1952,7 @@ class TestLinks(AiidaTestCase):
 
         from aiida.orm.data.base import Int
         from aiida.orm.importexport import export
-        from aiida.orm.calculation.work import WorkCalculation
+        from aiida.orm.node.process import WorkChainNode
         from aiida.common.links import LinkType
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.node import Node
@@ -1960,8 +1960,8 @@ class TestLinks(AiidaTestCase):
         tmp_folder = tempfile.mkdtemp()
 
         try:
-            w1 = WorkCalculation().store()
-            w2 = WorkCalculation().store()
+            w1 = WorkChainNode().store()
+            w2 = WorkChainNode().store()
             i1 = Int(1).store()
             o1 = Int(2).store()
 

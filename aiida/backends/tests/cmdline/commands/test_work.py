@@ -18,8 +18,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_work
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
-from aiida.orm.node.process import WorkFunctionNode
-from aiida.orm.calculation.work import WorkCalculation
+from aiida.orm.node.process import WorkChainNode, WorkFunctionNode
 
 
 def get_result_lines(result):
@@ -35,7 +34,7 @@ class TestVerdiWork(AiidaTestCase):
 
     def test_status(self):
         """Test the status command."""
-        calc = WorkCalculation().store()
+        calc = WorkChainNode().store()
         result = self.cli_runner.invoke(cmd_work.work_status, [str(calc.pk)])
         self.assertIsNone(result.exception)
 
@@ -50,7 +49,7 @@ class TestVerdiWork(AiidaTestCase):
 
         calcs = []
 
-        # Create 6 WorkFunctionNodes and WorkCalculations (one for each ProcessState)
+        # Create 6 WorkFunctionNodes and WorkChainNodes (one for each ProcessState)
         for state in ProcessState:
 
             calc = WorkFunctionNode()
@@ -63,10 +62,10 @@ class TestVerdiWork(AiidaTestCase):
             calc.store()
             calcs.append(calc)
 
-            calc = WorkCalculation()
+            calc = WorkChainNode()
             calc._set_process_state(state)
 
-            # Set the WorkCalculation as failed
+            # Set the WorkChainNode as failed
             if state == ProcessState.FINISHED:
                 calc._set_exit_status(1)
 
@@ -121,9 +120,9 @@ class TestVerdiWork(AiidaTestCase):
 
     def test_report(self):
         """Test the report command."""
-        grandparent = WorkCalculation().store()
-        parent = WorkCalculation().store()
-        child = WorkCalculation().store()
+        grandparent = WorkChainNode().store()
+        parent = WorkChainNode().store()
+        child = WorkChainNode().store()
 
         parent.add_link_from(grandparent, link_type=LinkType.CALL)
         child.add_link_from(parent, link_type=LinkType.CALL)
@@ -156,7 +155,7 @@ class TestVerdiWork(AiidaTestCase):
             result = self.cli_runner.invoke(cmd_work.work_report, [str(grandparent.pk), flag, 'WARNING'])
             self.assertIsNone(result.exception)
             self.assertEquals(len(get_result_lines(result)), 1)
-            self.assertEquals(get_result_lines(result)[0], 'No log messages recorded for this work calculation')
+            self.assertEquals(get_result_lines(result)[0], 'No log messages recorded for this entry')
 
     def test_plugins(self):
         """Test the plugins command. As of writing there are no default plugins defined for aiida-core."""
@@ -165,8 +164,8 @@ class TestVerdiWork(AiidaTestCase):
 
     def test_work_show(self):
         """Test verdi work show"""
-        workchain_one = WorkCalculation().store()
-        workchain_two = WorkCalculation().store()
+        workchain_one = WorkChainNode().store()
+        workchain_two = WorkChainNode().store()
         workchains = [workchain_one, workchain_two]
 
         # Running without identifiers should not except and not print anything

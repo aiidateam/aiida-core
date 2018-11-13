@@ -58,7 +58,7 @@ However, they have to be of the same ORM-type (I.e. all have to be subclasses of
 
     from aiida.orm.querybuilder import QueryBuilder
     qb = QueryBuilder()       # Instantiating instance. One instance -> one query
-    qb.append([JobCalculation, WorkCalculation]) # Setting first vertice of path, either Work or Job.
+    qb.append([JobCalculation, WorkChainNode]) # Setting first vertice of path, either WorkChainNode or Job.
 
 
 Retrieving results

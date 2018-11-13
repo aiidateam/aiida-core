@@ -1,9 +1,9 @@
 Node classes
 ------------
-There are two *Node* sub-classes, *Data* and *Calculation*. The *Code* nodes
+There are two *Node* sub-classes, *Data* and *ProcessNode*. The *Code* nodes
 can be considered as sub-classes of *Data* nodes. *JobCalculations*,
-*InlineCalulations* and the *WorkCalculations* are subclasses of the
-*Calculation* class.
+*InlineCalulations*, *WorkChainNode* and the *WorkFunctionNode* are subclasses of the
+*ProcessNode* class.
 
 AiIDA graph
 -----------
@@ -53,11 +53,11 @@ and **CALL**.
   implied with the conditions of a **RETURN** link (the implementation will be
   corrected to comply shortly).
 
-* The **CALL** link is always from a *Calculation* to another *Calculation*
-  node. A given *Calculation* node cannot be called by more than one
-  *Calculation* node. In practice, the caller cannot be a *JobCalculation* but
-  it is always a *WorkCalculation*. Instead called calculations can be of any
-  subclass of *Calculation*.
+* The **CALL** link is always from a *ProcessNode* to another *ProcessNode*
+  node. A given *ProcessNode* node cannot be called by more than one
+  *ProcessNode* node. In practice, the caller cannot be a *JobCalculation* but
+  it is always a *WorkflowNode*. Instead called calculations can be of any
+  subclass of *ProcessNode*.
 
 Graph navigation
 ----------------

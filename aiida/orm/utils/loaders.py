@@ -287,6 +287,38 @@ class OrmEntityLoader(object):
         return identifier, identifier_type
 
 
+class ProcessEntityLoader(OrmEntityLoader):
+
+    @classproperty
+    def orm_base_class(cls):
+        """
+        Return the orm base class to which loaded entities should be mapped. Actual queries to load an entity
+        may further narrow the query set by defining a more specific set of orm classes, as long as each of
+        those is a strict sub class of the orm base class.
+
+        :returns: the orm base class
+        """
+        from aiida.orm.node.process import ProcessNode
+        return ProcessNode
+
+    @classmethod
+    def _get_query_builder_label_identifier(cls, identifier, classes):
+        """
+        Return the query builder instance that attempts to map the identifier onto an entity of the orm class,
+        defined for this loader class, interpreting the identifier as a LABEL like identifier
+
+        :param identifier: the LABEL identifier
+        :param classes: a tuple of orm classes to which the identifier should be mapped
+        :returns: the query builder instance that should retrieve the entity corresponding to the identifier
+        :raises ValueError: if the identifier is invalid
+        :raises NotExistent: if the orm base class does not support a LABEL like identifier
+        """
+        qb = QueryBuilder()
+        qb.append(cls=classes, tag='process', project=['*'], filters={'label': {'==': identifier}})
+
+        return qb
+
+
 class CalculationEntityLoader(OrmEntityLoader):
 
     @classproperty
@@ -315,6 +347,38 @@ class CalculationEntityLoader(OrmEntityLoader):
         """
         qb = QueryBuilder()
         qb.append(cls=classes, tag='calculation', project=['*'], filters={'label': {'==': identifier}})
+
+        return qb
+
+
+class WorkflowEntityLoader(OrmEntityLoader):
+
+    @classproperty
+    def orm_base_class(cls):
+        """
+        Return the orm base class to which loaded entities should be mapped. Actual queries to load an entity
+        may further narrow the query set by defining a more specific set of orm classes, as long as each of
+        those is a strict sub class of the orm base class.
+
+        :returns: the orm base class
+        """
+        from aiida.orm.node.process import WorkflowNode
+        return WorkflowNode
+
+    @classmethod
+    def _get_query_builder_label_identifier(cls, identifier, classes):
+        """
+        Return the query builder instance that attempts to map the identifier onto an entity of the orm class,
+        defined for this loader class, interpreting the identifier as a LABEL like identifier
+
+        :param identifier: the LABEL identifier
+        :param classes: a tuple of orm classes to which the identifier should be mapped
+        :returns: the query builder instance that should retrieve the entity corresponding to the identifier
+        :raises ValueError: if the identifier is invalid
+        :raises NotExistent: if the orm base class does not support a LABEL like identifier
+        """
+        qb = QueryBuilder()
+        qb.append(cls=classes, tag='workflow', project=['*'], filters={'label': {'==': identifier}})
 
         return qb
 

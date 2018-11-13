@@ -61,7 +61,7 @@ Workflow
 
 Code
 ++++
-.. automodule:: aiida.orm.implementation.general.code
+.. automodule:: aiida.orm.data.code
    :members:
    :noindex:
    :special-members: __init__

@@ -85,13 +85,11 @@ if __name__ == '__main__':
                 'ssh = aiida.transport.plugins.ssh:CONFIGURE_SSH_CMD',
                 'local = aiida.transport.plugins.local:CONFIGURE_LOCAL_CMD',
             ],
-            'aiida.code': [
-                'code = aiida.orm.code:Code'
-            ],
             'aiida.data': [
                 'bool = aiida.orm.data.bool:Bool',
                 'float = aiida.orm.data.float:Float',
                 'int = aiida.orm.data.int:Int',
+                'code = aiida.orm.data.code:Code',
                 'list = aiida.orm.data.list:List',
                 'str = aiida.orm.data.str:Str',
                 'frozendict = aiida.orm.data.frozendict:FrozenDict',

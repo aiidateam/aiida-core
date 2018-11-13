@@ -11,20 +11,17 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import os
-from abc import abstractmethod
 
 import six
 
 from aiida.orm.data import Data
 from aiida.common.exceptions import (ValidationError, MissingPluginError, InputValidationError)
 from aiida.common.links import LinkType
-from aiida.common.utils import abstractclassmethod
-
 
 DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/concepts/processes.html#the-process-builder'
 
 
-class AbstractCode(Data):
+class Code(Data):
     """
     A code entity.
     It can either be 'local', or 'remote'.
@@ -86,10 +83,7 @@ class AbstractCode(Data):
     def __str__(self):
         local_str = "Local" if self.is_local() else "Remote"
         computer_str = self.get_computer_name()
-        return "{} code '{}' on {}, pk: {}, uuid: {}".format(local_str,
-                                                             self.label,
-                                                             computer_str,
-                                                             self.pk, self.uuid)
+        return "{} code '{}' on {}, pk: {}, uuid: {}".format(local_str, self.label, computer_str, self.pk, self.uuid)
 
     def get_computer_name(self):
         """Get name of this code's computer."""
@@ -132,7 +126,6 @@ class AbstractCode(Data):
 
         self.label = new_label
 
-
     def get_desc(self):
         """
         Returns a string with infos retrieved from  PwCalculation node's 
@@ -152,33 +145,27 @@ class AbstractCode(Data):
         :raise MultipleObjectsError: if the string cannot identify uniquely
             a code
         """
-        from aiida.common.exceptions import (NotExistent, MultipleObjectsError,
-                                             InputValidationError)
+        from aiida.common.exceptions import (NotExistent, MultipleObjectsError, InputValidationError)
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.computers import Computer
 
         qb = QueryBuilder()
-        qb.append(cls, filters={'label': {'==': label}},
-                  project=['*'], tag='code')
+        qb.append(cls, filters={'label': {'==': label}}, project=['*'], tag='code')
         if machinename:
-            qb.append(Computer, filters={'name': {'==': machinename}},
-                  computer_of='code')
+            qb.append(Computer, filters={'name': {'==': machinename}}, computer_of='code')
 
         if qb.count() == 0:
-            raise NotExistent("'{}' is not a valid code "
-                              "name.".format(label))
+            raise NotExistent("'{}' is not a valid code " "name.".format(label))
         elif qb.count() > 1:
             codes = [_ for [_] in qb.all()]
-            retstr = ("There are multiple codes with label '{}', "
-                      "having IDs: ".format(label))
+            retstr = ("There are multiple codes with label '{}', " "having IDs: ".format(label))
             retstr += ", ".join(sorted([str(c.pk) for c in codes])) + ".\n"
-            retstr += ("Relabel them (using their ID), or refer to them "
-                       "with their ID.")
+            retstr += ("Relabel them (using their ID), or refer to them " "with their ID.")
             raise MultipleObjectsError(retstr)
         else:
             return qb.first()[0]
 
-    @abstractclassmethod
+    @classmethod
     def get(cls, pk=None, label=None, machinename=None):
         """
         Get a Computer object with given identifier string, that can either be
@@ -193,29 +180,26 @@ class AbstractCode(Data):
             a code
         :raise InputValidationError: if neither a pk nor a label was passed in
         """
-        from aiida.common.exceptions import (NotExistent, MultipleObjectsError,
-                                             InputValidationError)
+        from aiida.common.exceptions import (NotExistent, MultipleObjectsError, InputValidationError)
 
         # first check if code pk is provided
-        if(pk):
+        if (pk):
             code_int = int(pk)
             try:
                 return cls.get_subclass_from_pk(code_int)
             except NotExistent:
                 raise ValueError("{} is not valid code pk".format(pk))
             except MultipleObjectsError:
-                raise MultipleObjectsError("More than one code in the DB "
-                                           "with pk='{}'!".format(pk))
+                raise MultipleObjectsError("More than one code in the DB " "with pk='{}'!".format(pk))
 
         # check if label (and machinename) is provided
-        elif(label != None):
+        elif (label != None):
             return cls.get_code_helper(label, machinename)
 
         else:
             raise InputValidationError("Pass either pk or code label (and machinename)")
 
-
-    @abstractclassmethod
+    @classmethod
     def get_from_string(cls, code_string):
         """
         Get a Computer object with given identifier string in the format
@@ -249,8 +233,7 @@ class AbstractCode(Data):
         except MultipleObjectsError:
             raise MultipleObjectsError("{} could not be uniquely resolved".format(code_string))
 
-
-    @abstractclassmethod
+    @classmethod
     def list_for_plugin(cls, plugin, labels=True):
         """
         Return a list of valid code strings for a given plugin.
@@ -272,27 +255,22 @@ class AbstractCode(Data):
             return [c.pk for c in valid_codes]
 
     def _validate(self):
-
-        super(AbstractCode, self)._validate()
+        super(Code, self)._validate()
 
         if self.is_local() is None:
-            raise ValidationError("You did not set whether the code is local "
-                                  "or remote")
+            raise ValidationError("You did not set whether the code is local " "or remote")
 
         if self.is_local():
             if not self.get_local_executable():
-                raise ValidationError(
-                    "You have to set which file is the local executable "
-                    "using the set_exec_filename() method")
+                raise ValidationError("You have to set which file is the local executable "
+                                      "using the set_exec_filename() method")
                 # c[1] is True if the element is a file
             if self.get_local_executable() not in self.get_folder_list():
-                raise ValidationError(
-                    "The local executable '{}' is not in the list of "
-                    "files of this code".format(self.get_local_executable()))
+                raise ValidationError("The local executable '{}' is not in the list of "
+                                      "files of this code".format(self.get_local_executable()))
         else:
             if self.get_folder_list():
-                raise ValidationError(
-                    "The code is remote but it has files inside")
+                raise ValidationError("The code is remote but it has files inside")
             if not self.get_remote_computer():
                 raise ValidationError("You did not specify a remote computer")
             if not self.get_remote_exec_path():
@@ -311,10 +289,9 @@ class AbstractCode(Data):
         from aiida.orm.node.process import ProcessNode
 
         if not isinstance(dest, (Calculation, ProcessNode)):
-            raise ValueError(
-                "The output of a code node can only be a calculation")
+            raise ValueError("The output of a code node can only be a calculation")
 
-        return super(AbstractCode, self)._linking_as_output(dest, link_type)
+        return super(Code, self)._linking_as_output(dest, link_type)
 
     def set_prepend_text(self, code):
         """
@@ -371,7 +348,6 @@ class AbstractCode(Data):
     def get_local_executable(self):
         return self.get_attr('local_executable', u"")
 
-    @abstractmethod
     def set_remote_computer_exec(self, remote_computer_exec):
         """
         Set the code as remote, and pass the computer on which it resides
@@ -384,7 +360,27 @@ class AbstractCode(Data):
               remote_exec_path is the absolute path of the main executable on
               remote computer.
         """
-        pass
+        from aiida import orm
+        from aiida.orm.implementation.computers import BackendComputer
+        from aiida.common.utils import type_check
+
+        if (not isinstance(remote_computer_exec, (list, tuple)) or len(remote_computer_exec) != 2):
+            raise ValueError("remote_computer_exec must be a list or tuple "
+                             "of length 2, with machine and executable "
+                             "name")
+
+        computer, remote_exec_path = tuple(remote_computer_exec)
+
+        if not os.path.isabs(remote_exec_path):
+            raise ValueError("exec_path must be an absolute path (on the remote machine)")
+
+        if isinstance(computer, orm.Computer):
+            computer = computer.backend_entity
+        type_check(computer, BackendComputer)
+
+        self._set_remote()
+        self.set_computer(computer)
+        self._set_attr('remote_exec_path', remote_exec_path)
 
     def get_remote_exec_path(self):
         if self.is_local():
@@ -397,7 +393,6 @@ class AbstractCode(Data):
 
         return self.get_computer()
 
-    @abstractmethod
     def _set_local(self):
         """
         Set the code as a 'local' code, meaning that all the files belonging to the code
@@ -406,7 +401,12 @@ class AbstractCode(Data):
 
         It also deletes the flags related to the local case (if any)
         """
-        pass
+        self._set_attr('is_local', True)
+        self.dbnode.dbcomputer = None
+        try:
+            self._del_attr('remote_exec_path')
+        except AttributeError:
+            pass
 
     def _set_remote(self):
         """
@@ -429,7 +429,6 @@ class AbstractCode(Data):
         """
         return self.get_attr('is_local', None)
 
-    @abstractmethod
     def can_run_on(self, computer):
         """
         Return True if this code can run on the given computer, False otherwise.
@@ -439,7 +438,14 @@ class AbstractCode(Data):
 
         TODO: add filters to mask the remote machines on which a local code can run.
         """
-        pass
+        from aiida import orm
+        from aiida.common.utils import type_check
+
+        if self.is_local():
+            return True
+
+        type_check(computer, orm.Computer)
+        return computer.id == self.get_remote_computer().id
 
     def get_execname(self):
         """
@@ -468,14 +474,12 @@ class AbstractCode(Data):
         import warnings
         warnings.warn(
             'directly creating and submitting calculations is deprecated, use the {}\nSee:{}'.format(
-            'ProcessBuilder', DEPRECATION_DOCS_URL), DeprecationWarning
-        )
+                'ProcessBuilder', DEPRECATION_DOCS_URL), DeprecationWarning)
 
         from aiida.orm.utils import CalculationFactory
         plugin_name = self.get_input_plugin_name()
         if plugin_name is None:
-            raise ValueError("You did not specify an input plugin "
-                             "for this code")
+            raise ValueError("You did not specify an input plugin " "for this code")
 
         try:
             C = CalculationFactory(plugin_name)
@@ -511,15 +515,13 @@ class AbstractCode(Data):
         from aiida.orm.utils import CalculationFactory
         plugin_name = self.get_input_plugin_name()
         if plugin_name is None:
-            raise ValueError(
-                "You did not specify a default input plugin for this code")
+            raise ValueError("You did not specify a default input plugin for this code")
         try:
             C = CalculationFactory(plugin_name)
         except MissingPluginError:
-            raise MissingPluginError(
-                "The input_plugin name for this code is "
-                "'{}', but it is not an existing plugin"
-                "name".format(plugin_name))
+            raise MissingPluginError("The input_plugin name for this code is "
+                                     "'{}', but it is not an existing plugin"
+                                     "name".format(plugin_name))
 
         builder = C.get_builder()
         # Setup the code already
@@ -580,11 +582,8 @@ class AbstractCode(Data):
         try:
             code.store()
         except ValidationError as exc:
-            raise ValidationError(
-                "Unable to store the computer: {}.".format(exc))
+            raise ValidationError("Unable to store the computer: {}.".format(exc))
         return code
-
-
 
 
 def delete_code(code):

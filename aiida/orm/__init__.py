@@ -14,7 +14,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from aiida.orm.data import *
-from aiida.orm.code import Code
+from aiida.orm.data.code import Code
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.orm.workflow import Workflow
 from aiida.orm.group import Group

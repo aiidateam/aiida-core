@@ -52,7 +52,6 @@ def load_plugin(plugin_type, safe=False):
     type_string_to_entry_point_type_map = OrderedDict([
         ('calculation.job.', EntryPoint('aiida.calculations', JobCalculation)),
         ('calculation.', EntryPoint('aiida.calculations', Calculation)),
-        ('code.', EntryPoint('aiida.code', Code)),
         ('data.', EntryPoint('aiida.data', Data)),
         ('node.process.workflow.', EntryPoint('aiida.node', WorkflowNode)),
         ('node.process.calculation.', EntryPoint('aiida.node', CalculationNode)),

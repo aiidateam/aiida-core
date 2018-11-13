@@ -558,7 +558,7 @@ class AbstractCalculation(Sealable):
 
     def add_link_from(self, src, label=None, link_type=LinkType.INPUT):
         """
-        Add a link with a code as destination.
+        Add a link with a data as the source.
 
         You can use the parameters of the base Node class, in particular the
         label parameter to label the link.
@@ -568,11 +568,11 @@ class AbstractCalculation(Sealable):
         :param link_type: The type of link, must be one of the enum values form
           :class:`~aiida.common.links.LinkType`
         """
-        from aiida.orm.code import Code
+        from aiida.orm.data import Data
         from aiida.orm.node.process import ProcessNode
 
         if link_type is LinkType.INPUT:
-            if not isinstance(src, Code):
+            if not isinstance(src, Data):
                 raise ValueError('Nodes entering calculation as input link can only be of type code')
         elif link_type is LinkType.CALL:
             if not isinstance(src, (AbstractCalculation, ProcessNode)):

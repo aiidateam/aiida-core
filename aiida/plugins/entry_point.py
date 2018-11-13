@@ -51,7 +51,6 @@ class EntryPointFormat(enum.Enum):
 
 entry_point_group_to_module_path_map = {
     'aiida.calculations': 'aiida.orm.calculation.job',
-    'aiida.code': 'aiida.orm.code',
     'aiida.data': 'aiida.orm.data',
     'aiida.node': 'aiida.orm.node',
     'aiida.parsers': 'aiida.parsers',

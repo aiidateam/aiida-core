@@ -11,7 +11,7 @@ from plumpy import ProcessState
 from aiida.common.links import LinkType
 from aiida.common.log import get_dblogger_extra
 from aiida.common.utils import classproperty
-from aiida.orm.code import Code
+from aiida.orm.data.code import Code
 from aiida.orm.data import Data
 from aiida.orm.mixins import Sealable
 from aiida.plugins.entry_point import get_entry_point_string_from_class

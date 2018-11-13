@@ -19,7 +19,7 @@ Setup
 To be able to export data to TCOD, one has to
 :ref:`install the atomic_tools dependencies to enable CIF manipulation <install_optional_dependencies>`
 as well as the `aiida-codtools <https://github.com/aiidateam/aiida-codtools>`_ plugin, and set up an
-AiiDA :py:class:`Code <aiida.orm.implementation.general.code.AbstractCode>` for ``cif_cod_deposit`` script
+AiiDA :py:class:`Code <aiida.orm.data.code.Code>` for ``cif_cod_deposit`` script
 from **cod-tools**.
 
 How to deposit a structure
@@ -56,7 +56,7 @@ Where:
 * ``TITLE`` -- the title of the publication, where the exported data
   is/will be published; in case of personal communication, the title
   should be chosen so as to reflect the exported dataset the best;
-* ``CODE_LABEL`` -- label of AiiDA :py:class:`Code <aiida.orm.implementation.general.code.AbstractCode>`,
+* ``CODE_LABEL`` -- label of AiiDA :py:class:`Code <aiida.orm.data.code.Code>`,
   associated with *cif_cod_deposit*;
 * ``COMPUTER_NAME`` -- name of AiiDA
   :py:class:`Computer <aiida.orm.Computer>`, where

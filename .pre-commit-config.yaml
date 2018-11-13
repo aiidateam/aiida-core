@@ -29,6 +29,7 @@
         aiida/backends/djsite/db/migrations/0013_django_1_8.py|
         aiida/backends/djsite/db/migrations/0014_add_node_uuid_unique_constraint.py|
         aiida/backends/djsite/db/migrations/0015_invalidating_node_hash.py|
+        aiida/backends/djsite/db/migrations/0016_code_sub_class_of_data.py|
         aiida/backends/djsite/db/migrations/__init__.py|
         aiida/backends/djsite/db/models.py|
         aiida/backends/djsite/db/subtests/djangomigrations.py|
@@ -67,6 +68,7 @@
         aiida/backends/sqlalchemy/migrations/versions/f9a69de76a9a_delete_kombu_tables.py|
         aiida/backends/sqlalchemy/migrations/versions/62fe0d36de90_add_node_uuid_unique_constraint.py|
         aiida/backends/sqlalchemy/migrations/versions/5d4d844852b6_invalidating_node_hash.py|
+        aiida/backends/sqlalchemy/migrations/versions/a603da2cc809_code_sub_class_of_data.py|
         aiida/backends/sqlalchemy/models/authinfo.py|
         aiida/backends/sqlalchemy/models/base.py|
         aiida/backends/sqlalchemy/models/comment.py|
@@ -228,6 +230,7 @@
         aiida/orm/data/__init__.py|
         aiida/orm/data/int.py|
         aiida/orm/data/list.py|
+        aiida/orm/data/code.py|
         aiida/orm/data/numeric.py|
         aiida/orm/data/orbital.py|
         aiida/orm/data/parameter.py|

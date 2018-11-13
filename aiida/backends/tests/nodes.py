@@ -1954,13 +1954,9 @@ class TestSubNodesAndLinks(AiidaTestCase):
             calc_a.use_code(code)
 
         calculation_inputs = calc.get_inputs()
-        inputs_type_data = [i for i in calculation_inputs if isinstance(i, Data)]
-        inputs_type_code = [i for i in calculation_inputs if isinstance(i, Code)]
 
         # This calculation has three inputs (2 data and one code)
         self.assertEquals(len(calculation_inputs), 3)
-        self.assertEquals(len(inputs_type_data), 2)
-        self.assertEquals(len(inputs_type_code), 1)
 
     def test_check_single_calc_source(self):
         """

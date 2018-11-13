@@ -14,13 +14,14 @@ from __future__ import absolute_import
 import io
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.caching import enable_caching
-from aiida.orm.calculation.inline import make_inline, InlineCalculation
+from aiida.orm.calculation.inline import make_inline
+from aiida.orm.node.process import CalcFunctionNode
 from aiida.orm.data.int import Int
 
 
-class TestInlineCalculation(AiidaTestCase):
+class TestCalcFunctionNode(AiidaTestCase):
     """
-    Tests for the InlineCalculation calculations.
+    Tests for the CalcFunctionNode calculations.
     """
 
     def setUp(self):
@@ -46,7 +47,7 @@ class TestInlineCalculation(AiidaTestCase):
 
     def test_exit_status(self):
         """
-        If an InlineCalculation reaches the FINISHED process state, it has to have been successful
+        If an CalcFunctionNode reaches the FINISHED process state, it has to have been successful
         which means that the exit status always has to be 0
         """
         calculation, result = self.incr_inline(inp=Int(11))
@@ -64,14 +65,14 @@ class TestInlineCalculation(AiidaTestCase):
             self.assertEqual(res['res'].value, i + 1)
 
     def test_caching(self):
-        with enable_caching(InlineCalculation):
+        with enable_caching(CalcFunctionNode):
             calc1, res1 = self.incr_inline(inp=Int(11))
             calc2, res2 = self.incr_inline(inp=Int(11))
             self.assertEquals(res1['res'].value, res2['res'].value, 12)
             self.assertEquals(calc1.get_extra('_aiida_cached_from', calc1.uuid), calc2.get_extra('_aiida_cached_from'))
 
     def test_caching_change_code(self):
-        with enable_caching(InlineCalculation):
+        with enable_caching(CalcFunctionNode):
             calc1, res1 = self.incr_inline(inp=Int(11))
 
             @make_inline

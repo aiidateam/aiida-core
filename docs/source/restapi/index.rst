@@ -591,7 +591,7 @@ Nodes
                 "label": "",
                 "mtime": "Fri, 29 Apr 2016 19:24:13 GMT",
                 "state": null,
-                "type": "calculation.inline.InlineCalculation.",
+                "type": "node.process.calculation.CalcFunctionNode.",
                 "uuid": "68d2ed6c-6f51-4546-8d10-7fe063525ab8"
               },
               {

@@ -1810,8 +1810,7 @@ class TestLinks(AiidaTestCase):
         from aiida.orm import Node
         from aiida.orm.data.base import Int
         from aiida.orm.importexport import export
-        from aiida.orm.calculation.inline import InlineCalculation
-        from aiida.orm.node.process import WorkChainNode
+        from aiida.orm.node.process import CalcFunctionNode, WorkChainNode
         from aiida.common.links import LinkType
         from aiida.orm.querybuilder import QueryBuilder
         tmp_folder = tempfile.mkdtemp()
@@ -1819,7 +1818,7 @@ class TestLinks(AiidaTestCase):
         try:
             wc2 = WorkChainNode().store()
             wc1 = WorkChainNode().store()
-            c1 = InlineCalculation().store()
+            c1 = CalcFunctionNode().store()
             ni1 = Int(1).store()
             ni2 = Int(2).store()
             no1 = Int(1).store()

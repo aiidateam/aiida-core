@@ -12,4 +12,5 @@ __all__ = ('CalcFunctionNode',)
 class CalcFunctionNode(FunctionCalculationMixin, CalculationNode):
     """ORM class for all nodes representing the execution of a calcfunction."""
     # pylint: disable=too-few-public-methods
-    pass
+
+    _cacheable = True

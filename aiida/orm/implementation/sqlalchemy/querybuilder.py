@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+"""Sqla query builder implementation"""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -15,85 +15,68 @@ from datetime import datetime
 
 import six
 
-import aiida.backends.sqlalchemy
-
+# pylint: disable=no-name-in-module, import-error
+from sqlalchemy_utils.types.choice import Choice
 from sqlalchemy import and_, or_, not_
 from sqlalchemy.types import Integer, Float, Boolean, DateTime, String
-from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.sql.expression import cast, case, ColumnClause
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.sql.expression import case, ColumnClause, FunctionElement
+from sqlalchemy.sql.elements import Label, Cast
 from sqlalchemy.orm.attributes import InstrumentedAttribute, QueryableAttribute
-from sqlalchemy.sql.elements import Cast, Label
-from sqlalchemy_utils.types.choice import Choice
-from sqlalchemy.sql.expression import FunctionElement
 from sqlalchemy.ext.compiler import compiles
 
-from aiida.common.exceptions import (
-    InputValidationError, DbContentError,
-    MissingPluginError, ConfigurationError
-)
+import aiida.backends.sqlalchemy
 from aiida.common.exceptions import InputValidationError
-from aiida.backends.general.querybuilder_interface import QueryBuilderInterface
-from aiida.backends.utils import _get_column
+from aiida.orm.implementation.querybuilder import BackendQueryBuilder
+from aiida.backends.utils import get_column
 
 
-class jsonb_array_length(FunctionElement):
+class jsonb_array_length(FunctionElement):  # pylint: disable=invalid-name
+    # pylint: disable=too-few-public-methods
     name = 'jsonb_array_len'
 
 
 @compiles(jsonb_array_length)
-def compile(element, compiler, **kw):
+def compile(element, compiler, **_kw):  # pylint: disable=function-redefined, redefined-builtin
     """
     Get length of array defined in a JSONB column
     """
     return "jsonb_array_length(%s)" % compiler.process(element.clauses)
 
 
-class array_length(FunctionElement):
+class array_length(FunctionElement):  # pylint: disable=invalid-name
+    # pylint: disable=too-few-public-methods
     name = 'array_len'
 
 
 @compiles(array_length)
-def compile(element, compiler, **kw):
+def compile(element, compiler, **_kw):  # pylint: disable=function-redefined
     """
     Get length of array defined in a JSONB column
     """
     return "array_length(%s)" % compiler.process(element.clauses)
 
 
-class jsonb_typeof(FunctionElement):
+class jsonb_typeof(FunctionElement):  # pylint: disable=invalid-name
+    # pylint: disable=too-few-public-methods
     name = 'jsonb_typeof'
 
 
 @compiles(jsonb_typeof)
-def compile(element, compiler, **kw):
+def compile(element, compiler, **_kw):  # pylint: disable=function-redefined
     """
     Get length of array defined in a JSONB column
     """
     return "jsonb_typeof(%s)" % compiler.process(element.clauses)
 
 
-class QueryBuilderImplSQLA(QueryBuilderInterface):
+class SqlaQueryBuilder(BackendQueryBuilder):
     """
     QueryBuilder to use with SQLAlchemy-backend and
     schema defined in backends.sqlalchemy.models
     """
 
-    def __init__(self, *args, **kwargs):
-        # ~ from aiida.orm.implementation.sqlalchemy.node import Node as AiidaNode
-        # ~ from aiida.orm.implementation.sqlalchemy.group import Group as AiidaGroup
-        # ~ from aiida.orm.implementation.sqlalchemy.computer import Computer as AiidaComputer
-        # ~ from aiida.orm.implementation.sqlalchemy.user import User as AiidaUser
-        # ~ self.Link               = DbLink
-        # ~ self.Node               = DbNode
-        # ~ self.Computer           = DbComputer
-        # ~ self.User               = DbUser
-        # ~ self.Group              = DbGroup
-        # ~ self.table_groups_nodes = table_groups_nodes
-        # ~ self.AiidaNode          = AiidaNode
-        # ~ self.AiidaGroup         = AiidaGroup
-        # ~ self.AiidaComputer      = AiidaComputer
-        # ~ self.AiidaUser          = AiidaUser
-        super(QueryBuilderImplSQLA, self).__init__(*args, **kwargs)
+    # pylint: disable=redefined-outer-name, too-many-public-methods
 
     @property
     def Node(self):
@@ -121,6 +104,11 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
         return aiida.backends.sqlalchemy.models.group.DbGroup
 
     @property
+    def AuthInfo(self):
+        import aiida.backends.sqlalchemy.models.authinfo
+        return aiida.backends.sqlalchemy.models.authinfo.DbAuthInfo
+
+    @property
     def table_groups_nodes(self):
         import aiida.backends.sqlalchemy.models.group
         return aiida.backends.sqlalchemy.models.group.table_groups_nodes
@@ -135,16 +123,6 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
         import aiida.orm.implementation.sqlalchemy.group
         return aiida.orm.implementation.sqlalchemy.group.Group
 
-    @property
-    def AiidaUser(self):
-        import aiida.orm.user
-        return aiida.orm.user.User
-
-    @property
-    def AiidaComputer(self):
-        import aiida.orm.computer
-        return aiida.orm.computer.Computer
-
     def get_session(self):
         return aiida.backends.sqlalchemy.get_scoped_session()
 
@@ -153,7 +131,7 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
         For sqlalchemy, there are no additional expansions for now, so
         I am returning an empty list
         """
-        if issubclass(alias._sa_class_manager.class_, self.Computer):
+        if issubclass(alias._sa_class_manager.class_, self.Computer):  # pylint: disable=protected-access
             try:
                 expansions.remove('metadata')
                 expansions.append('_metadata')
@@ -162,10 +140,7 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
 
         return expansions
 
-    def get_filter_expr(
-            self, operator, value, attr_key, is_attribute,
-            alias=None, column=None, column_name=None
-    ):
+    def get_filter_expr(self, operator, value, attr_key, is_attribute, alias=None, column=None, column_name=None):
         """
         Applies a filter on the alias given.
         Expects the alias of the ORM-class on which to filter, and filter_spec.
@@ -240,7 +215,7 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
                 }
             } # id is not 2
         """
-
+        # pylint: disable=too-many-arguments, too-many-branches
         expr = None
         if operator.startswith('~'):
             negation = True
@@ -252,38 +227,31 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
             negation = False
         if operator in ('longer', 'shorter', 'of_length'):
             if not isinstance(value, int):
-                raise InputValidationError(
-                    "You have to give an integer when comparing to a length"
-                )
+                raise InputValidationError("You have to give an integer when comparing to a length")
         elif operator in ('like', 'ilike'):
             if not isinstance(value, six.string_types):
-                raise InputValidationError(
-                    "Value for operator {} has to be a string (you gave {})"
-                    "".format(operator, value)
-                )
+                raise InputValidationError("Value for operator {} has to be a string (you gave {})"
+                                           "".format(operator, value))
 
         elif operator == 'in':
             value_type_set = set([type(i) for i in value])
             if len(value_type_set) > 1:
-                raise InputValidationError(
-                    '{}  contains more than one type'.format(value)
-                )
-            elif len(value_type_set) == 0:
-                raise InputValidationError(
-                    '{}  contains is an empty list'.format(value)
-                )
+                raise InputValidationError('{}  contains more than one type'.format(value))
+            elif not value_type_set:
+                raise InputValidationError('{}  contains is an empty list'.format(value))
         elif operator in ('and', 'or'):
             expressions_for_this_path = []
             for filter_operation_dict in value:
                 for newoperator, newvalue in filter_operation_dict.items():
                     expressions_for_this_path.append(
                         self.get_filter_expr(
-                            newoperator, newvalue,
-                            attr_key=attr_key, is_attribute=is_attribute,
-                            alias=alias, column=column,
-                            column_name=column_name
-                        )
-                    )
+                            newoperator,
+                            newvalue,
+                            attr_key=attr_key,
+                            is_attribute=is_attribute,
+                            alias=alias,
+                            column=column,
+                            column_name=column_name))
             if operator == 'and':
                 expr = and_(*expressions_for_this_path)
             elif operator == 'or':
@@ -292,30 +260,26 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
         if expr is None:
             if is_attribute:
                 expr = self.get_filter_expr_from_attributes(
-                    operator, value, attr_key,
-                    column=column, column_name=column_name, alias=alias
-                )
+                    operator, value, attr_key, column=column, column_name=column_name, alias=alias)
             else:
                 if column is None:
                     if (alias is None) and (column_name is None):
-                        raise RuntimeError(
-                            "I need to get the column but do not know \n"
-                            "the alias and the column name")
-                    column = _get_column(column_name, alias)
+                        raise RuntimeError("I need to get the column but do not know \n"
+                                           "the alias and the column name")
+                    column = get_column(column_name, alias)
                 expr = self._get_filter_expr_from_column(operator, value, column)
         if negation:
             return not_(expr)
         return expr
 
-    def _get_filter_expr_from_column(self, operator, value, column):
+    @staticmethod
+    def _get_filter_expr_from_column(operator, value, column):
+        """Get the filter expression based on the column"""
+
         # Label is used because it is what is returned for the
         # 'state' column by the hybrid_column construct
         if not isinstance(column, (Cast, InstrumentedAttribute, Label, QueryableAttribute, ColumnClause)):
-            raise TypeError(
-                'column ({}) {} is not a valid column'.format(
-                    type(column), column
-                )
-            )
+            raise TypeError('column ({}) {} is not a valid column'.format(type(column), column))
         database_entity = column
         if operator == '==':
             expr = database_entity == value
@@ -336,17 +300,16 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
         elif operator == 'in':
             expr = database_entity.in_(value)
         else:
-            raise InputValidationError(
-                'Unknown operator {} for filters on columns'.format(operator)
-            )
+            raise InputValidationError('Unknown operator {} for filters on columns'.format(operator))
         return expr
 
-    def get_filter_expr_from_attributes(
-            self, operator, value, attr_key,
-            column=None, column_name=None,
-            alias=None):
+    @classmethod
+    def get_filter_expr_from_attributes(cls, operator, value, attr_key, column=None, column_name=None, alias=None):
+        # Too many everything!
+        # pylint: disable=too-many-branches, too-many-arguments, too-many-statements
 
         def cast_according_to_type(path_in_json, value):
+            """Cast the value according to the type"""
             if isinstance(value, bool):
                 type_filter = jsonb_typeof(path_in_json) == 'boolean'
                 casted_entity = path_in_json.astext.cast(Boolean)
@@ -373,9 +336,8 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
                 #  - Different ways to represent the timezone
 
                 type_filter = jsonb_typeof(path_in_json) == 'string'
-                regex_filter = path_in_json.astext.op(
-                    "SIMILAR TO"
-                )("\d\d\d\d-[0-1]\d-[0-3]\dT[0-2]\d:[0-5]\d:\d\d\.\d+((\+|\-)\d\d:\d\d)?")
+                regex_filter = path_in_json.astext.op("SIMILAR TO")(
+                    "\d\d\d\d-[0-1]\d-[0-3]\dT[0-2]\d:[0-5]\d:\d\d\.\d+((\+|\-)\d\d:\d\d)?")  # pylint: disable=anomalous-backslash-in-string
                 type_filter = and_(type_filter, regex_filter)
                 casted_entity = path_in_json.cast(DateTime)
             else:
@@ -383,7 +345,7 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
             return type_filter, casted_entity
 
         if column is None:
-            column = _get_column(column_name, alias)
+            column = get_column(column_name, alias)
 
         database_entity = column[tuple(attr_key)]
         if operator == '==':
@@ -406,10 +368,8 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
             #  Possible types are object, array, string, number, boolean, and null.
             valid_types = ('object', 'array', 'string', 'number', 'boolean', 'null')
             if value not in valid_types:
-                raise InputValidationError(
-                    "value {} for of_type is not among valid types\n"
-                    "{}".format(value, valid_types)
-                )
+                raise InputValidationError("value {} for of_type is not among valid types\n"
+                                           "{}".format(value, valid_types))
             expr = jsonb_typeof(database_entity) == value
         elif operator == 'like':
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
@@ -425,34 +385,28 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
         elif operator == 'has_key':
             expr = database_entity.cast(JSONB).has_key(value)  # noqa
         elif operator == 'of_length':
-            expr = case([(
-                jsonb_typeof(database_entity) == 'array',
-                jsonb_array_length(database_entity.cast(JSONB)) == value)], else_=False)
+            expr = case(
+                [(jsonb_typeof(database_entity) == 'array', jsonb_array_length(database_entity.cast(JSONB)) == value)],
+                else_=False)
 
         elif operator == 'longer':
-            expr = case([(
-                jsonb_typeof(database_entity) == 'array',
-                jsonb_array_length(database_entity.cast(JSONB)) > value)], else_=False)
-
+            expr = case(
+                [(jsonb_typeof(database_entity) == 'array', jsonb_array_length(database_entity.cast(JSONB)) > value)],
+                else_=False)
         elif operator == 'shorter':
-            expr = case([(
-                jsonb_typeof(database_entity) == 'array',
-                jsonb_array_length(database_entity.cast(JSONB)) < value)], else_=False)
+            expr = case(
+                [(jsonb_typeof(database_entity) == 'array', jsonb_array_length(database_entity.cast(JSONB)) < value)],
+                else_=False)
         else:
-            raise InputValidationError(
-                "Unknown operator {} for filters in JSON field".format(operator)
-            )
+            raise InputValidationError("Unknown operator {} for filters in JSON field".format(operator))
         return expr
 
-    def get_projectable_attribute(
-            self, alias, column_name, attrpath,
-            cast=None, **kwargs
-    ):
+    def get_projectable_attribute(self, alias, column_name, attrpath, cast=None, **kwargs):
         """
         :returns: An attribute store in a JSON field of the give column
         """
 
-        entity = _get_column(column_name, alias)[(attrpath)]
+        entity = get_column(column_name, alias)[(attrpath)]
         if cast is None:
             entity = entity
         elif cast == 'f':
@@ -468,9 +422,7 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
         elif cast == 'd':
             entity = entity.astext.cast(DateTime)
         else:
-            raise InputValidationError(
-                "Unkown casting key {}".format(cast)
-            )
+            raise InputValidationError("Unkown casting key {}".format(cast))
         return entity
 
     def get_aiida_res(self, key, res):
@@ -484,7 +436,7 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
 
         :returns: an aiida-compatible instance
         """
-        if isinstance(res, (self.Group, self.Node, self.Computer, self.User)):
+        if isinstance(res, (self.Group, self.Node, self.Computer, self.User, self.AuthInfo)):
             returnval = res.get_aiida_class()
         elif isinstance(res, Choice):
             returnval = res.value
@@ -502,19 +454,18 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
         """
         try:
             return query.yield_per(batch_size)
-        except Exception as e:
+        except Exception:
             # exception was raised. Rollback the session
             self.get_session().rollback()
-            raise e
+            raise
 
     def count(self, query):
-
         try:
             return query.count()
-        except Exception as e:
+        except Exception:
             # exception was raised. Rollback the session
             self.get_session().rollback()
-            raise e
+            raise
 
     def first(self, query):
         """
@@ -524,10 +475,10 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
         """
         try:
             return query.first()
-        except Exception as e:
+        except Exception:
             # exception was raised. Rollback the session
             self.get_session().rollback()
-            raise e
+            raise
 
     def iterall(self, query, batch_size, tag_to_index_dict):
         if not tag_to_index_dict:
@@ -550,8 +501,7 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
                 for resultrow in results:
                     yield [
                         self.get_aiida_res(tag_to_index_dict[colindex], rowitem)
-                        for colindex, rowitem
-                        in enumerate(resultrow)
+                        for colindex, rowitem in enumerate(resultrow)
                     ]
             else:
                 raise ValueError("Got an empty dictionary")
@@ -573,14 +523,9 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
                 for this_result in results:
                     yield {
                         tag: {
-                            attrkey: self.get_aiida_res(
-                                attrkey, this_result[index_in_sql_result]
-                            )
-                            for attrkey, index_in_sql_result
-                            in projected_entities_dict.items()
-                        }
-                        for tag, projected_entities_dict
-                        in tag_to_projected_entity_dict.items()
+                            attrkey: self.get_aiida_res(attrkey, this_result[index_in_sql_result])
+                            for attrkey, index_in_sql_result in projected_entities_dict.items()
+                        } for tag, projected_entities_dict in tag_to_projected_entity_dict.items()
                     }
             elif nr_items == 1:
                 # I this case, sql returns a  list, where each listitem is the result
@@ -591,8 +536,7 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
                             tag: {
                                 attrkey: self.get_aiida_res(attrkey, this_result)
                                 for attrkey, position in projected_entities_dict.items()
-                            }
-                            for tag, projected_entities_dict in tag_to_projected_entity_dict.items()
+                            } for tag, projected_entities_dict in tag_to_projected_entity_dict.items()
                         }
                 else:
                     for this_result, in results:
@@ -600,11 +544,10 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
                             tag: {
                                 attrkey: self.get_aiida_res(attrkey, this_result)
                                 for attrkey, position in projected_entities_dict.items()
-                            }
-                            for tag, projected_entities_dict in tag_to_projected_entity_dict.items()
+                            } for tag, projected_entities_dict in tag_to_projected_entity_dict.items()
                         }
             else:
                 raise ValueError("Got an empty dictionary")
-        except Exception as e:
+        except Exception:
             self.get_session().rollback()
-            raise e
+            raise

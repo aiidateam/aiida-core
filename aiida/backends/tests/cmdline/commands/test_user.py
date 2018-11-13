@@ -14,6 +14,7 @@ from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_user
+from aiida import orm
 
 # User #1
 user_1 = {
@@ -36,12 +37,12 @@ class TestVerdiUserCommand(AiidaTestCase):
     def setUp(self):
         super(TestVerdiUserCommand, self).setUp()
 
-        created, user = self.backend.users.get_or_create(email=user_1['email'])
+        created, user = orm.User.objects(self.backend).get_or_create(email=user_1['email'])
         for key, value in user_1.items():
             if key != 'email':
                 setattr(user, key, user_1[key])
         if created:
-            self.backend.users.create(**user_1).store()
+            orm.User(backend=self.backend, **user_1).store()
         self.cli_runner = CliRunner()
 
     def test_user_list(self):
@@ -71,7 +72,7 @@ class TestVerdiUserCommand(AiidaTestCase):
         self.assertTrue(user_2['email'] in result.output)
         self.assertTrue("is already present" not in result.output)
 
-        user_obj = self.backend.users.get(email=user_2['email'])
+        user_obj = orm.User.objects(self.backend).get(email=user_2['email'])
         for key, val in user_2.items():
             self.assertEqual(val, getattr(user_obj, key))
 
@@ -92,7 +93,7 @@ class TestVerdiUserCommand(AiidaTestCase):
         result = CliRunner().invoke(cmd_user.configure, cli_options, catch_exceptions=False)
         self.assertTrue(email in result.output)
 
-        user_model = self.backend.users.find(email=email)[0]
+        user_model = orm.User.objects(self.backend).get(email=email)
 
         # Check it's all been changed to user2's attributes except the email
         for key, value in user_2.items():

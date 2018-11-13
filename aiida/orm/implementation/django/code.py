@@ -17,7 +17,6 @@ from django.db import transaction
 
 from aiida.orm.implementation.general.code import AbstractCode
 from aiida.common.exceptions import InvalidOperation
-from aiida.orm.computer import Computer
 from aiida.common.utils import type_check
 
 
@@ -64,6 +63,8 @@ class Code(AbstractCode):
               remote computer.
         """
         from aiida.backends.djsite.db.models import DbComputer
+        from aiida import orm
+
         if (not isinstance(remote_computer_exec, (list, tuple))
                 or len(remote_computer_exec) != 2):
             raise ValueError("remote_computer_exec must be a list or tuple "
@@ -76,12 +77,9 @@ class Code(AbstractCode):
             raise ValueError(
                 "exec_path must be an absolute path (on the remote machine)")
 
-        remote_dbcomputer = computer
-        if isinstance(remote_dbcomputer, Computer):
-            remote_dbcomputer = remote_dbcomputer.dbcomputer
-        if not (isinstance(remote_dbcomputer, DbComputer)):
-            raise TypeError(
-                "computer must be either a Computer or DbComputer object")
+        type_check(computer, orm.Computer)
+        remote_dbcomputer = computer.backend_entity.dbcomputer
+        type_check(remote_dbcomputer, DbComputer)
 
         self._set_remote()
 
@@ -112,11 +110,13 @@ class Code(AbstractCode):
 
         TODO: add filters to mask the remote machines on which a local code can run.
         """
+        from aiida import orm
+
         if self.is_local():
             return True
-        else:
-            type_check(computer, Computer)
-            return computer.id == self.get_remote_computer().id
+
+        type_check(computer, orm.Computer)
+        return computer.id == self.get_remote_computer().id
 
 
 def delete_code(code):
@@ -131,8 +131,7 @@ def delete_code(code):
     needed to set the internal state of the object after calling
     computer.delete().
     """
-    if not isinstance(code, Code):
-        raise TypeError('code must be an instance of aiida.orm.computer.Code')
+    type_check(code, Code)
 
     existing_outputs = code.get_outputs()
 

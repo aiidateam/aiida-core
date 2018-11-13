@@ -397,9 +397,9 @@ def calculation_cleanworkdir(calculations, past_days, older_than, computers, for
     If both are specified, a logical AND is done between the two, i.e. the calculations that will be cleaned have been
     modified AFTER [-p option] days from now, but BEFORE [-o option] days from now.
     """
-    from aiida.orm.backend import construct_backend
     from aiida.orm.utils.loaders import ComputerEntityLoader, IdentifierType
     from aiida.orm.utils.remote import clean_remote, get_calculation_remote_paths
+    from aiida import orm
 
     if calculations:
         if (past_days is not None and older_than is not None):
@@ -419,14 +419,13 @@ def calculation_cleanworkdir(calculations, past_days, older_than, computers, for
         warning = 'Are you sure you want to clean the work directory of {} calculations?'.format(path_count)
         click.confirm(warning, abort=True)
 
-    backend = construct_backend()
-    user = backend.users.get_automatic_user()
+    user = orm.User.objects.get_default()
 
     for computer_uuid, paths in path_mapping.items():
 
         counter = 0
         computer = ComputerEntityLoader.load_entity(computer_uuid, identifier_type=IdentifierType.UUID)
-        transport = backend.authinfos.get(computer, user).get_transport()
+        transport = orm.AuthInfo.objects.get(dbcomputer_id=computer.id, aiidauser_id=user.id).get_transport()
 
         with transport:
             for path in paths:

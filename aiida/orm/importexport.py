@@ -19,10 +19,10 @@ from six.moves.html_parser import HTMLParser
 from aiida.common import exceptions
 from aiida.common.utils import (export_shard_uuid, get_class_string,
                                 get_object_from_string, grouper)
-from aiida.orm.computer import Computer
+from aiida.orm.computers import Computer
 from aiida.orm.group import Group
 from aiida.orm.node import Node
-from aiida.orm.user import User
+from aiida.orm.users import User
 
 IMPORTGROUP_TYPE = 'aiida.import'
 COMP_DUPL_SUFFIX = ' (Imported #{})'

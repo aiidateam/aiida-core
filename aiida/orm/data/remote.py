@@ -10,10 +10,10 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import errno
 import os
 
 from aiida.orm import Data
+from aiida.orm import AuthInfo
 
 
 class RemoteData(Data):
@@ -48,16 +48,16 @@ class RemoteData(Data):
         Check if remote folder is empty
         """
         authinfo = self._get_authinfo()
-        t = authinfo.get_transport()
+        transport = authinfo.get_transport()
 
-        with t:
+        with transport:
             try:
-                t.chdir(self.get_remote_path())
+                transport.chdir(self.get_remote_path())
             except IOError:
                 # If the transport IOError the directory no longer exists and was deleted
                 return True
 
-            return not t.listdir()
+            return not transport.listdir()
 
     def getfile(self, relpath, destpath):
         """
@@ -188,4 +188,4 @@ class RemoteData(Data):
             raise ValidationError("Remote computer not set.")
 
     def _get_authinfo(self):
-        return self.backend.authinfos.get(self.get_computer(), self.get_user())
+        return AuthInfo.objects(backend=self._backend).find(self.get_computer(), self.get_user())[0]

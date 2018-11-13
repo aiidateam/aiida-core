@@ -60,14 +60,19 @@ class TestVerdiExport(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         super(TestVerdiExport, cls).setUpClass(*args, **kwargs)
-        from aiida.orm import Code, Group, Node
+        from aiida import orm
 
-        cls.computer = cls.backend.computers.create(name='comp', hostname='localhost', transport_type='local',
-                                                    scheduler_type='direct', workdir='/tmp/aiida').store()
+        cls.computer = orm.Computer(
+            name='comp',
+            hostname='localhost',
+            transport_type='local',
+            scheduler_type='direct',
+            workdir='/tmp/aiida',
+            backend=cls.backend).store()
 
-        cls.code = Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
-        cls.group = Group(name='test_group').store()
-        cls.node = Node().store()
+        cls.code = orm.Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
+        cls.group = orm.Group(name='test_group').store()
+        cls.node = orm.Node().store()
 
         # some of the export tests write in the current directory,
         # make sure it is writeable and we don't pollute the current one
@@ -205,7 +210,6 @@ class TestVerdiExport(AiidaTestCase):
                 self.assertIsNotNone(result.exception)
 
             for option in ['-f', '--force']:
-
                 # Using the context manager will create the file, but we pass the force flag so it should work
                 with tempfile.NamedTemporaryFile() as file_output:
                     filename_output = file_output.name

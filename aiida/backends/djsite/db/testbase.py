@@ -52,7 +52,7 @@ class DjangoTests(AiidaTestImplementation):
         """
         Insert default data into the DB.
         """
-        from django.core.exceptions import ObjectDoesNotExist
+        from django.core.exceptions import ObjectDoesNotExist  # pylint: disable=import-error, no-name-in-module
 
         from aiida.backends.djsite.db.models import DbUser
         from aiida.common.utils import get_configured_user_email

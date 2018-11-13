@@ -345,7 +345,7 @@ class CodeEntityLoader(OrmEntityLoader):
         :raises ValueError: if the identifier is invalid
         :raises NotExistent: if the orm base class does not support a LABEL like identifier
         """
-        from aiida.orm.computer import Computer
+        from aiida.orm.computers import Computer
 
         try:
             label, sep, machinename = identifier.partition('@')
@@ -372,7 +372,7 @@ class ComputerEntityLoader(OrmEntityLoader):
 
         :returns: the orm base class
         """
-        from aiida.orm.computer import Computer
+        from aiida.orm.computers import Computer
         return Computer
 
     @classmethod

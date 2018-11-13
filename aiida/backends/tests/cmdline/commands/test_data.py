@@ -32,7 +32,7 @@ from aiida.orm.data.remote import RemoteData
 from aiida.orm.data.structure import StructureData
 from aiida.orm.data.array.trajectory import TrajectoryData
 
-from aiida.orm.backend import construct_backend
+from aiida.orm.backends import construct_backend
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands.cmd_data import cmd_array
 from aiida.cmdline.commands.cmd_data import cmd_bands
@@ -50,12 +50,11 @@ if get_backend_type() == 'sqlalchemy':
 else:
     from aiida.backends.djsite.db.models import DbAuthInfo
 
-from unittest import skip
-
 from aiida.work.workfunctions import workfunction as wf
 
 from contextlib import contextmanager
 from six.moves import cStringIO as StringIO
+from aiida import orm
 
 
 @contextmanager
@@ -440,9 +439,8 @@ class TestVerdiDataRemote(AiidaTestCase):
     @classmethod
     def setUpClass(cls):
         super(TestVerdiDataRemote, cls).setUpClass()
-        user = cls.backend.users.get_automatic_user()
-        authinfo = cls.backend.authinfos.create(cls.computer, user)
-        authinfo.store()
+        user = orm.User.objects(cls.backend).get_default()
+        orm.AuthInfo(cls.computer, user, backend=cls.backend).store()
 
     def setUp(self):
         comp = self.computer
@@ -562,9 +560,13 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable, TestVerdiDat
     @classmethod
     def setUpClass(cls):
         super(TestVerdiDataTrajectory, cls).setUpClass()
-        new_comp = cls.backend.computers.create(
-            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida')
-        new_comp.store()
+        orm.Computer(
+            name='comp',
+            hostname='localhost',
+            transport_type='local',
+            scheduler_type='direct',
+            workdir='/tmp/aiida',
+            backend=cls.backend).store()
         cls.ids = cls.create_trajectory_data()
 
     def setUp(self):
@@ -656,9 +658,12 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable, TestVerdiData
     @classmethod
     def setUpClass(cls):
         super(TestVerdiDataStructure, cls).setUpClass()
-        new_comp = cls.backend.computers.create(
-            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida')
-        new_comp.store()
+        orm.Computer(name='comp',
+                     hostname='localhost',
+                     transport_type='local',
+                     scheduler_type='direct',
+                     workdir='/tmp/aiida',
+                     backend=cls.backend).store()
         cls.ids = cls.create_structure_data()
 
     def setUp(self):
@@ -771,9 +776,13 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExport
     @classmethod
     def setUpClass(cls):
         super(TestVerdiDataCif, cls).setUpClass()
-        new_comp = cls.backend.computers.create(
-            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida')
-        new_comp.store()
+        orm.Computer(
+            name='comp',
+            hostname='localhost',
+            transport_type='local',
+            scheduler_type='direct',
+            workdir='/tmp/aiida',
+            backend=cls.backend).store()
 
         cls.ids = cls.create_cif_data()
 

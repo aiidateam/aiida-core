@@ -24,7 +24,7 @@ from aiida.common.datastructures import (wf_states, wf_exit_call,
 from aiida.common.utils import str_timedelta
 from aiida.common import aiidalogger
 from aiida.orm.implementation.calculation import JobCalculation
-from aiida.orm.backend import construct_backend
+from aiida.orm.backends import construct_backend
 from aiida.utils import timezone
 from aiida.common.log import get_dblogger_extra
 from aiida.common.utils import abstractclassmethod
@@ -546,6 +546,8 @@ class AbstractWorkflow(object):
         :raise: AiidaException: in case the workflow state doesn't allow the execution
         :return: the wrapped methods,
         """
+        from aiida import orm
+
         wrapped_method = fun.__name__
 
         # This function gets called only if the method is launched with the execution brackets ()
@@ -584,7 +586,7 @@ class AbstractWorkflow(object):
 
                 # self.get_steps(wrapped_method).set_nextcall(wf_exit_call)
 
-            automatic_user = self._backend.users.get_automatic_user()
+            automatic_user = orm.User.objects(self._backend).get_default().backend_entity
             method_step, created = self.dbworkflowinstance.steps.get_or_create(
                 name=wrapped_method, user=automatic_user.dbuser)
             try:
@@ -621,6 +623,7 @@ class AbstractWorkflow(object):
         :raise: AiidaException: in case the caller method cannot be found or validated
         :return: the wrapped methods, decorated with the correct step name
         """
+        from aiida import orm
 
         md5 = self.dbworkflowinstance.script_md5
         script_path = self.dbworkflowinstance.script_path
@@ -659,8 +662,8 @@ class AbstractWorkflow(object):
         # arround
 
         # Retrieve the caller method
-        method_step = self.dbworkflowinstance.steps.get(name=caller_method,
-                                                        user=self._backend.users.get_automatic_user())
+        user = orm.User.objects(self._backend).get_default().backend_entity.dbuser
+        method_step = self.dbworkflowinstance.steps.get(name=caller_method, user=user)
 
         # Attach calculations
         if caller_method in self.attach_calc_lazy_storage:

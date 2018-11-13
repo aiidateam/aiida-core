@@ -17,8 +17,9 @@ import shutil
 import tempfile
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm.backend import construct_backend
 from aiida.orm.data.remote import RemoteData
+
+from aiida.orm import User, AuthInfo
 
 
 class TestRemoteData(AiidaTestCase):
@@ -27,9 +28,8 @@ class TestRemoteData(AiidaTestCase):
     @classmethod
     def setUpClass(cls):
         super(TestRemoteData, cls).setUpClass()
-        backend = construct_backend()
-        user = backend.users.get_automatic_user()
-        authinfo = backend.authinfos.create(cls.computer, user)
+        user = User.objects.get_default()
+        authinfo = AuthInfo(cls.computer, user)
         authinfo.store()
 
     def setUp(self):

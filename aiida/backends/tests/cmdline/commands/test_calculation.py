@@ -34,22 +34,26 @@ class TestVerdiCalculation(AiidaTestCase):
         from aiida.backends.tests.utils.fixtures import import_archive_fixture
         from aiida.common.exceptions import ModificationNotAllowed
         from aiida.common.links import LinkType
-        from aiida.orm import Code, Group, Node, JobCalculation, CalculationFactory
+        from aiida.orm import Node, JobCalculation, CalculationFactory
         from aiida.orm.data.parameter import ParameterData
-        from aiida.orm.querybuilder import QueryBuilder
         from aiida.work.processes import ProcessState
-        from aiida.orm.backend import construct_backend
-        backend = construct_backend()
+        from aiida import orm
 
-        cls.computer = backend.computers.create(name='comp', hostname='localhost', transport_type='local',
-                                                scheduler_type='direct', workdir='/tmp/aiida').store()
+        cls.computer = orm.Computer(
+            name='comp',
+            hostname='localhost',
+            transport_type='local',
+            scheduler_type='direct',
+            workdir='/tmp/aiida',
+            backend=cls.backend).store()
 
-        cls.code = Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
-        cls.group = Group(name='test_group').store()
+        cls.code = orm.Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
+        cls.group = orm.Group(name='test_group').store()
         cls.node = Node().store()
         cls.calcs = []
 
-        authinfo = backend.authinfos.create(computer=cls.computer, user=backend.users.get_automatic_user())
+        user = orm.User.objects(cls.backend).get_default()
+        authinfo = orm.AuthInfo(computer=cls.computer, user=user, backend=cls.backend)
         authinfo.store()
 
         # Create 13 JobCalculations (one for each CalculationState)
@@ -104,7 +108,7 @@ class TestVerdiCalculation(AiidaTestCase):
 
         # Get the imported ArithmeticAddCalculation node
         ArithmeticAddCalculation = CalculationFactory('simpleplugins.arithmetic.add')
-        calculations = QueryBuilder().append(ArithmeticAddCalculation).all()[0]
+        calculations = orm.QueryBuilder(backend=cls.backend).append(ArithmeticAddCalculation).all()[0]
         cls.arithmetic_job = calculations[0]
 
     def setUp(self):

@@ -50,5 +50,5 @@ class DbUser(Base):
 
     def get_aiida_class(self):
         from aiida.orm.implementation.sqlalchemy.user import SqlaUser
-        from aiida.orm.backend import construct_backend
+        from aiida.orm.backends import construct_backend
         return SqlaUser.from_dbmodel(self, construct_backend())

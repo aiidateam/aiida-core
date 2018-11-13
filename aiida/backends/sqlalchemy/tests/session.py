@@ -72,8 +72,7 @@ class TestSessionSqla(AiidaTestCase):
         defaults = dict(name='localhost',
                         hostname='localhost',
                         transport_type='local',
-                        scheduler_type='pbspro',
-                        workdir='/tmp/aiida')
+                        scheduler_type='pbspro')
         computer = self.backend.computers.create(**defaults)
         session.add(computer._dbcomputer)
         session.commit()
@@ -104,8 +103,7 @@ class TestSessionSqla(AiidaTestCase):
         defaults = dict(name='localhost',
                         hostname='localhost',
                         transport_type='local',
-                        scheduler_type='pbspro',
-                        workdir='/tmp/aiida')
+                        scheduler_type='pbspro')
         computer = self.backend.computers.create(**defaults)
         computer.store()
 
@@ -133,8 +131,7 @@ class TestSessionSqla(AiidaTestCase):
         defaults = dict(name='localhost',
                         hostname='localhost',
                         transport_type='local',
-                        scheduler_type='pbspro',
-                        workdir='/tmp/aiida')
+                        scheduler_type='pbspro')
         computer = self.backend.computers.create(**defaults)
         session.add(computer._dbcomputer)
         session.commit()
@@ -164,8 +161,7 @@ class TestSessionSqla(AiidaTestCase):
         defaults = dict(name='localhost',
                         hostname='localhost',
                         transport_type='local',
-                        scheduler_type='pbspro',
-                        workdir='/tmp/aiida')
+                        scheduler_type='pbspro')
         computer = self.backend.computers.create(**defaults)
         computer.store()
 

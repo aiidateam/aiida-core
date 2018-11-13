@@ -207,7 +207,7 @@ def delete_nodes_and_connections(pks):
     delete_nodes_backend(pks)
 
 
-def _get_column(colname, alias):
+def get_column(colname, alias):
     """
     Return the column for a given projection. Needed by the QueryBuilder
     """

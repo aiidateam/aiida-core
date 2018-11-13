@@ -25,7 +25,7 @@ from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
 from aiida.common.links import LinkType
 from aiida.plugins.loader import get_plugin_type_from_type_string
 from aiida.common.utils import str_timedelta, classproperty
-from aiida.orm.computer import Computer
+from aiida.orm.computers import Computer
 from aiida.orm.implementation.general.calculation import AbstractCalculation
 from aiida.orm.mixins import Sealable
 from aiida.utils import timezone
@@ -287,7 +287,7 @@ class AbstractJobCalculation(AbstractCalculation):
         if self.get_state() not in valid_states:
             raise ModificationNotAllowed("Can add an output node to a calculation only if it is in one "
                                          "of the following states: {}, it is instead {}".format(
-                                             valid_states, self.get_state()))
+                valid_states, self.get_state()))
 
         return super(AbstractJobCalculation, self)._linking_as_output(dest, link_type)
 
@@ -327,14 +327,14 @@ class AbstractJobCalculation(AbstractCalculation):
     options = {
         'resources': {
             'attribute_key':
-            'jobresource_params',
+                'jobresource_params',
             'valid_type':
-            dict,
+                dict,
             'default': {},
             'help':
-            'Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '
-            'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the '
-            'scheduler for more details.'
+                'Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '
+                'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the '
+                'scheduler for more details.'
         },
         'max_wallclock_seconds': {
             'attribute_key': 'max_wallclock_seconds',
@@ -345,20 +345,20 @@ class AbstractJobCalculation(AbstractCalculation):
         },
         'custom_scheduler_commands': {
             'attribute_key':
-            'custom_scheduler_commands',
+                'custom_scheduler_commands',
             'valid_type':
-            six.string_types,
+                six.string_types,
             'non_db':
-            True,
+                True,
             'required':
-            False,
+                False,
             'default':
-            '',
+                '',
             'help':
-            'Set a (possibly multiline) string with the commands that the user wants to manually set for the '
-            'scheduler. The difference of this option with respect to the `prepend_text` is the position in '
-            'the scheduler submission file where such text is inserted: with this option, the string is '
-            'inserted before any non-scheduler command',
+                'Set a (possibly multiline) string with the commands that the user wants to manually set for the '
+                'scheduler. The difference of this option with respect to the `prepend_text` is the position in '
+                'the scheduler submission file where such text is inserted: with this option, the string is '
+                'inserted before any non-scheduler command',
         },
         'queue_name': {
             'attribute_key': 'queue_name',
@@ -398,16 +398,16 @@ class AbstractJobCalculation(AbstractCalculation):
         },
         'mpirun_extra_params': {
             'attribute_key':
-            'mpirun_extra_params',
+                'mpirun_extra_params',
             'valid_type': (list, tuple),
             'non_db':
-            True,
+                True,
             'required':
-            False,
+                False,
             'default': [],
             'help':
-            'Set the extra params to pass to the mpirun (or equivalent) command after the one provided in '
-            'computer.mpirun_command. Example: mpirun -np 8 extra_params[0] extra_params[1] ... exec.x',
+                'Set the extra params to pass to the mpirun (or equivalent) command after the one provided in '
+                'computer.mpirun_command. Example: mpirun -np 8 extra_params[0] extra_params[1] ... exec.x',
         },
         'import_sys_environment': {
             'attribute_key': 'import_sys_environment',
@@ -441,33 +441,33 @@ class AbstractJobCalculation(AbstractCalculation):
         },
         'prepend_text': {
             'attribute_key':
-            'prepend_text',
+                'prepend_text',
             'valid_type':
-            six.string_types[0],
+                six.string_types[0],
             'non_db':
-            True,
+                True,
             'required':
-            False,
+                False,
             'default':
-            '',
+                '',
             'help':
-            'Set the calculation-specific prepend text, which is going to be prepended in the scheduler-job '
-            'script, just before the code execution',
+                'Set the calculation-specific prepend text, which is going to be prepended in the scheduler-job '
+                'script, just before the code execution',
         },
         'append_text': {
             'attribute_key':
-            'append_text',
+                'append_text',
             'valid_type':
-            six.string_types[0],
+                six.string_types[0],
             'non_db':
-            True,
+                True,
             'required':
-            False,
+                False,
             'default':
-            '',
+                '',
             'help':
-            'Set the calculation-specific append text, which is going to be appended in the scheduler-job '
-            'script, just after the code execution',
+                'Set the calculation-specific append text, which is going to be appended in the scheduler-job '
+                'script, just after the code execution',
         },
         'parser_name': {
             'attribute_key': 'parser',
@@ -943,7 +943,7 @@ class AbstractJobCalculation(AbstractCalculation):
         if self.get_state() not in valid_states:
             raise ModificationNotAllowed("Can add an input link to a JobCalculation only if it is in "
                                          "one of the following states: {}, it is instead {}".format(
-                                             valid_states, self.get_state()))
+                valid_states, self.get_state()))
 
         return super(AbstractJobCalculation, self).add_link_from(src, label, link_type)
 
@@ -961,7 +961,7 @@ class AbstractJobCalculation(AbstractCalculation):
         if self.get_state() not in valid_states:
             raise ModificationNotAllowed("Can replace an input link to a Jobalculation only if it is in "
                                          "one of the following states: {}, it is instead {}".format(
-                                             valid_states, self.get_state()))
+                valid_states, self.get_state()))
 
         return super(AbstractJobCalculation, self)._replace_link_from(src, label, link_type)
 
@@ -976,7 +976,7 @@ class AbstractJobCalculation(AbstractCalculation):
         if self.get_state() not in valid_states:
             raise ModificationNotAllowed("Can remove an input link to a calculation only if it is in one "
                                          "of the following states:\n   {}\n it is instead {}".format(
-                                             valid_states, self.get_state()))
+                valid_states, self.get_state()))
 
         return super(AbstractJobCalculation, self)._remove_link_from(label)
 
@@ -1317,7 +1317,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
         from aiida.orm.querybuilder import QueryBuilder
         from tabulate import tabulate
-        from aiida.orm.backend import construct_backend
+        from aiida import orm
 
         projection_label_dict = {
             'pk': 'PK',
@@ -1339,8 +1339,6 @@ class AbstractJobCalculation(AbstractCalculation):
         }
 
         now = timezone.now()
-
-        backend = construct_backend()
 
         # Let's check the states:
         if states:
@@ -1380,7 +1378,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
             # Filter on the users, if not all users
             if not all_users:
-                user_id = backend.users.get_automatic_user().id
+                user_id = orm.User.objects.get_default().id
                 calculation_filters['user_id'] = {'==': user_id}
 
             if past_days is not None:
@@ -1395,8 +1393,9 @@ class AbstractJobCalculation(AbstractCalculation):
 
         calc_list_header = [projection_label_dict[p] for p in projections]
 
-        qb = QueryBuilder()
+        qb = orm.QueryBuilder()
         qb.append(cls, filters=calculation_filters, tag='calculation')
+
         if group_filters is not None:
             qb.append(type='group', filters=group_filters, group_of='calculation')
 
@@ -1572,7 +1571,7 @@ class AbstractJobCalculation(AbstractCalculation):
         """
         # I assume that calc_states are strings. If this changes in the future,
         # update the filter below from dbattributes__tval to the correct field.
-        from aiida.orm.computer import Computer
+        from aiida.orm.computers import Computer
         from aiida.orm.querybuilder import QueryBuilder
 
         if state not in calc_states:
@@ -1732,7 +1731,7 @@ class AbstractJobCalculation(AbstractCalculation):
                 else:
                     raise MultipleObjectsError("More than one output node "
                                                "with label '{}' for calc with pk= {}".format(
-                                                   retrieved_linkname, self.pk))
+                        retrieved_linkname, self.pk))
 
         if retrieved_node is None:
             return None
@@ -1777,7 +1776,7 @@ class AbstractJobCalculation(AbstractCalculation):
         from aiida.common.exceptions import (NotExistent, PluginInternalError, ValidationError)
         from aiida.scheduler.datastructures import JobTemplate
         from aiida.common.utils import validate_list_of_string_tuples
-        from aiida.orm.computer import Computer
+        from aiida.orm.computers import Computer
         from aiida.orm import DataFactory
         from aiida.common.datastructures import CodeInfo, code_run_modes
         from aiida.orm.code import Code
@@ -2030,7 +2029,7 @@ class AbstractJobCalculation(AbstractCalculation):
         from aiida.utils import timezone
 
         from aiida.transport.plugins.local import LocalTransport
-        from aiida.orm.computer import Computer
+        from aiida.orm.computers import Computer
         from aiida.common.folders import Folder
         from aiida.common.exceptions import NotExistent
 

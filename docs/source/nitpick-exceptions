@@ -104,6 +104,8 @@ py:obj bool
 # as types or rtypes without actually being imported
 py:class  abc.ABCMeta
 
+py:class  JobCalculationExitStatus
+
 py:exc    click.BadParameter
 py:class  click.ParamType
 py:class  click.core.Group

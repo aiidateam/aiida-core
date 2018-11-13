@@ -11,7 +11,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-LATEST_MIGRATION = '0016_code_sub_class_of_data'
+LATEST_MIGRATION = '0017_drop_dbcalcstate'
 
 
 def _update_schema_version(version, apps, schema_editor):

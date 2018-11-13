@@ -34,36 +34,6 @@ from aiida.backends.sqlalchemy.models.user import DbUser
 from aiida.backends.sqlalchemy.models.computer import DbComputer
 
 
-class DbCalcState(Base):
-    __tablename__ = "db_dbcalcstate"
-
-    id = Column(Integer, primary_key=True)
-
-    dbnode_id = Column(
-        Integer,
-        ForeignKey(
-            'db_dbnode.id', ondelete="CASCADE",
-            deferrable=True, initially="DEFERRED"
-        )
-    )
-    dbnode = relationship(
-        'DbNode', backref=backref('dbstates', passive_deletes=True),
-    )
-
-    # Note: this is suboptimal: calc_states is not sorted
-    # therefore the order is not the expected one. If we
-    # were to use the correct order here, we could directly sort
-    # without specifying a custom order. This is probably faster,
-    # but requires a schema migration at this point
-    state = Column(ChoiceType((_, _) for _ in calc_states), index=True)
-
-    time = Column(DateTime(timezone=True), default=timezone.now)
-
-    __table_args__ = (
-        UniqueConstraint('dbnode_id', 'state'),
-    )
-
-
 class DbNode(Base):
     __tablename__ = "db_dbnode"
 
@@ -271,74 +241,6 @@ class DbNode(Base):
         return select([DbComputer.name]).where(DbComputer.id ==
                                                cls.dbcomputer_id).label(
             'computer_name')
-
-    @hybrid_property
-    def state(self):
-        """
-        Return the most recent state from DbCalcState
-        """
-        if not self.id:
-            return None
-        all_states = DbCalcState.query.filter(DbCalcState.dbnode_id == self.id).all()
-        if all_states:
-            # return max((st.time, st.state) for st in all_states)[1]
-            return sort_states(((dbcalcstate.state, dbcalcstate.state.value)
-                                for dbcalcstate in all_states),
-                               use_key=True)[0]
-        else:
-            return None
-
-    @state.expression
-    def state(cls):
-        """
-        Return the expression to get the 'latest' state from DbCalcState,
-        to be used in queries, where 'latest' is defined using the state order
-        defined in _sorted_datastates.
-        """
-        # Sort first the latest states
-        whens = {
-            v: idx for idx, v
-            in enumerate(_sorted_datastates[::-1], start=1)}
-        custom_sort_order = case(value=DbCalcState.state,
-                                 whens=whens,
-                                 else_=100)  # else: high value to put it at the bottom
-
-        # Add numerical state to string, to allow to sort them
-        states_with_num = select([
-            DbCalcState.id.label('id'),
-            DbCalcState.dbnode_id.label('dbnode_id'),
-            DbCalcState.state.label('state_string'),
-            custom_sort_order.label('num_state')
-        ]).select_from(DbCalcState).alias()
-
-        # Get the most 'recent' state (using the state ordering, and the min function) for
-        # each calc
-        calc_state_num = select([
-            states_with_num.c.dbnode_id.label('dbnode_id'),
-            func.min(states_with_num.c.num_state).label('recent_state')
-        ]).group_by(states_with_num.c.dbnode_id).alias()
-
-        # Join the most-recent-state table with the DbCalcState table
-        all_states_q = select([
-            DbCalcState.dbnode_id.label('dbnode_id'),
-            DbCalcState.state.label('state_string'),
-            calc_state_num.c.recent_state.label('recent_state'),
-            custom_sort_order.label('num_state'),
-        ]).select_from(  # DbCalcState).alias().join(
-            join(DbCalcState, calc_state_num, DbCalcState.dbnode_id == calc_state_num.c.dbnode_id)).alias()
-
-        # Get the association between each calc and only its corresponding most-recent-state row
-        subq = select([
-            all_states_q.c.dbnode_id.label('dbnode_id'),
-            all_states_q.c.state_string.label('state')
-        ]).select_from(all_states_q).where(all_states_q.c.num_state == all_states_q.c.recent_state).alias()
-
-        # Final filtering for the actual query
-        return select([subq.c.state]). \
-            where(
-            subq.c.dbnode_id == cls.id,
-        ). \
-            label('laststate')
 
 
 class DbLink(Base):

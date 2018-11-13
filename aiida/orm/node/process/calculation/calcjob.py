@@ -22,7 +22,7 @@ from aiida.common.utils import str_timedelta
 from aiida.plugins.loader import get_plugin_type_from_type_string
 from aiida.orm import Node
 from aiida.orm.computers import Computer
-from aiida.orm.implementation.general.calculation import AbstractCalculation
+from aiida.orm.node.process import ProcessNode
 from aiida.orm.implementation.general.calculation.job import JobCalculationExitStatus
 from aiida.orm.mixins import Sealable
 from aiida.utils import timezone
@@ -34,8 +34,8 @@ __all__ = ('CalcJobNode',)
 SEALED_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
 CALCULATION_STATE_KEY = 'state'
 SCHEDULER_STATE_KEY = 'attributes.scheduler_state'
-PROCESS_STATE_KEY = 'attributes.{}'.format(AbstractCalculation.PROCESS_STATE_KEY)
-EXIT_STATUS_KEY = 'attributes.{}'.format(AbstractCalculation.EXIT_STATUS_KEY)
+PROCESS_STATE_KEY = 'attributes.{}'.format(ProcessNode.PROCESS_STATE_KEY)
+EXIT_STATUS_KEY = 'attributes.{}'.format(ProcessNode.EXIT_STATUS_KEY)
 DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/process/index.html#the-process-builder'
 
 _input_subfolder = 'raw_input'
@@ -160,13 +160,13 @@ class CalcJobNode(CalculationNode):
 
     @classproperty
     def _updatable_attributes(cls):
-        return super(AbstractJobCalculation, cls)._updatable_attributes + (
+        return super(CalcJobNode, cls)._updatable_attributes + (
             'job_id', 'scheduler_state', 'scheduler_lastchecktime', 'last_jobinfo', 'remote_workdir', 'retrieve_list',
             'retrieve_temporary_list', 'retrieve_singlefile_list', 'state')
 
     @classproperty
     def _hash_ignored_attributes(cls):
-        return super(AbstractJobCalculation, cls)._hash_ignored_attributes + (
+        return super(CalcJobNode, cls)._hash_ignored_attributes + (
             'queue_name',
             'account',
             'qos',
@@ -176,7 +176,7 @@ class CalcJobNode(CalculationNode):
         )
 
     def get_hash(self, ignore_errors=True, ignored_folder_content=('raw_input',), **kwargs):
-        return super(AbstractJobCalculation, self).get_hash(
+        return super(CalcJobNode, self).get_hash(
             ignore_errors=ignore_errors, ignored_folder_content=ignored_folder_content, **kwargs)
 
     @classmethod
@@ -273,7 +273,7 @@ class CalcJobNode(CalculationNode):
           parser_name is taken from the actual subclass of calculation,
           and not from the parent Calculation class
         """
-        parent_dict = super(AbstractJobCalculation, self)._set_defaults
+        parent_dict = super(CalcJobNode, self)._set_defaults
 
         parent_dict.update({"parser_name": self._default_parser, "_linkname_retrieved": self._linkname_retrieved})
 
@@ -284,7 +284,7 @@ class CalcJobNode(CalculationNode):
         Override the store() method to store also the calculation in the NEW
         state as soon as this is stored for the first time.
         """
-        super(AbstractJobCalculation, self).store(*args, **kwargs)
+        super(CalcJobNode, self).store(*args, **kwargs)
 
         if self.get_state() is None:
             self._set_state(calc_states.NEW)
@@ -293,7 +293,7 @@ class CalcJobNode(CalculationNode):
 
     def _add_outputs_from_cache(self, cache_node):
         self._set_state(calc_states.PARSING)
-        super(AbstractJobCalculation, self)._add_outputs_from_cache(cache_node=cache_node)
+        super(CalcJobNode, self)._add_outputs_from_cache(cache_node=cache_node)
         self._set_state(cache_node.get_state())
 
     def _validate(self):
@@ -304,7 +304,7 @@ class CalcJobNode(CalculationNode):
         """
         from aiida.common.exceptions import MissingPluginError, ValidationError
 
-        super(AbstractJobCalculation, self)._validate()
+        super(CalcJobNode, self)._validate()
 
         if self.get_computer() is None:
             raise ValidationError("You did not specify a computer")
@@ -380,7 +380,7 @@ class CalcJobNode(CalculationNode):
         if not isinstance(src, Data):
             raise ValueError('Nodes entering in calculation can only be of type data')
 
-        return super(AbstractCalculation, self)._replace_link_from(src, label, link_type)
+        return super(CalculationJobNode, self)._replace_link_from(src, label, link_type)
 
     def _linking_as_output(self, dest, link_type):
         """
@@ -407,7 +407,7 @@ class CalcJobNode(CalculationNode):
                                          "of the following states: {}, it is instead {}".format(
                                              valid_states, self.get_state()))
 
-        return super(AbstractJobCalculation, self)._linking_as_output(dest, link_type)
+        return super(CalcJobNode, self)._linking_as_output(dest, link_type)
 
     def _store_raw_input_folder(self, folder_path):
         """
@@ -1063,7 +1063,7 @@ class CalcJobNode(CalculationNode):
                                          "one of the following states: {}, it is instead {}".format(
                                              valid_states, self.get_state()))
 
-        return super(AbstractJobCalculation, self).add_link_from(src, label, link_type)
+        return super(CalcJobNode, self).add_link_from(src, label, link_type)
 
     def _replace_link_from(self, src, label, link_type=LinkType.INPUT):
         """
@@ -1081,7 +1081,7 @@ class CalcJobNode(CalculationNode):
                                          "one of the following states: {}, it is instead {}".format(
                                              valid_states, self.get_state()))
 
-        return super(AbstractJobCalculation, self)._replace_link_from(src, label, link_type)
+        return super(CalcJobNode, self)._replace_link_from(src, label, link_type)
 
     def _remove_link_from(self, label):
         """
@@ -1096,7 +1096,7 @@ class CalcJobNode(CalculationNode):
                                          "of the following states:\n   {}\n it is instead {}".format(
                                              valid_states, self.get_state()))
 
-        return super(AbstractJobCalculation, self)._remove_link_from(label)
+        return super(CalcJobNode, self)._remove_link_from(label)
 
     @abc.abstractmethod
     def _set_state(self, state):

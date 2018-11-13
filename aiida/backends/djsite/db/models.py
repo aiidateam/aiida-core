@@ -1263,26 +1263,6 @@ class DbExtra(DbAttributeBaseClass):
     pass
 
 
-class DbCalcState(m.Model):
-    """
-    Store the state of calculations.
-
-    The advantage of a table (with uniqueness constraints) is that this
-    disallows entering twice in the same state (e.g., retrieving twice).
-    """
-    from aiida.common.datastructures import calc_states
-    # Delete states when deleting the calc, does not make sense to keep them
-    dbnode = m.ForeignKey(DbNode, on_delete=m.CASCADE,
-                          related_name='dbstates')
-    state = m.CharField(max_length=25,
-                        choices=tuple((_, _) for _ in calc_states),
-                        db_index=True)
-    time = m.DateTimeField(default=timezone.now, editable=False)
-
-    class Meta:
-        unique_together = (("dbnode", "state"))
-
-
 @python_2_unicode_compatible
 class DbGroup(m.Model):
     """

@@ -641,18 +641,6 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                     **{"{}__in".format(unique_identifier):
                            import_entry_ids.keys()}).values_list(unique_identifier, 'pk'))
 
-                imported_states = []
-                if model_name == NODE_ENTITY_NAME:
-                    if not silent:
-                        print("SETTING THE IMPORTED STATES FOR NEW NODES...")
-                    # I set for all nodes, even if I should set it only
-                    # for calculations
-                    for unique_id, new_pk in just_saved.items():
-                        imported_states.append(
-                            models.DbCalcState(dbnode_id=new_pk,
-                                               state=calc_states.IMPORTED))
-                    models.DbCalcState.objects.bulk_create(imported_states)
-
                 # Now I have the PKs, print the info
                 # Moreover, set the foreing_ids_reverse_mappings
                 for unique_id, new_pk in just_saved.items():
@@ -878,9 +866,6 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.common.links import LinkType
     import aiida.utils.json as json
-
-    # Backend specific imports
-    from aiida.backends.sqlalchemy.models.node import DbCalcState
 
     # This is the export version expected by this function
     expected_export_version = '0.3'
@@ -1264,22 +1249,6 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                     just_saved = {v[0]: v[1] for v in qb.all()}
                 else:
                     just_saved = dict()
-
-                imported_states = []
-                if entity_sig == entity_names_to_signatures[NODE_ENTITY_NAME]:
-                    ################################################
-                    # Needs more from here and below
-                    ################################################
-                    if not silent:
-                        print("SETTING THE IMPORTED STATES FOR NEW NODES...")
-                    # I set for all nodes, even if I should set it only
-                    # for calculations
-                    for unique_id, new_pk in just_saved.items():
-                        imported_states.append(
-                            DbCalcState(dbnode_id=new_pk,
-                                        state=calc_states.IMPORTED))
-
-                    session.add_all(imported_states)
 
                 # Now I have the PKs, print the info
                 # Moreover, set the foreing_ids_reverse_mappings

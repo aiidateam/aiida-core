@@ -58,51 +58,6 @@ def simplify(string):
     return "\n".join(s.strip() for s in string.split())
 
 
-class TestCalcStatus(AiidaTestCase):
-    """
-    Test the functionality of calculation states.
-    """
-
-    def test_state(self):
-        from aiida.orm import JobCalculation
-        from aiida.common.datastructures import calc_states
-
-        # Use the AiidaTestCase test computer
-
-        c = JobCalculation(computer=self.computer, resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1})
-        # Should be in the NEW state before storing
-        self.assertEquals(c.get_state(), calc_states.NEW)
-
-        with self.assertRaises(ModificationNotAllowed):
-            c._set_state(calc_states.TOSUBMIT)
-
-        c.store()
-        # Should be in the NEW state right after storing
-        self.assertEquals(c.get_state(), calc_states.NEW)
-
-        # Set a different state and check
-        c._set_state(calc_states.TOSUBMIT)
-        self.assertEquals(c.get_state(), calc_states.TOSUBMIT)
-
-        # Set a different state and check
-        c._set_state(calc_states.SUBMITTING)
-        self.assertEquals(c.get_state(), calc_states.SUBMITTING)
-
-        # Try to reset a state and check that the proper exception is raised
-        with self.assertRaises(ModificationNotAllowed):
-            c._set_state(calc_states.SUBMITTING)
-
-        # Set a different state and check
-        c._set_state(calc_states.FINISHED)
-        self.assertEquals(c.get_state(), calc_states.FINISHED)
-
-        # Try to set a previous state (that is, going backward from
-        # FINISHED to WITHSCHEDULER, for instance)
-        # and check that this is not allowed
-        with self.assertRaises(ModificationNotAllowed):
-            c._set_state(calc_states.WITHSCHEDULER)
-
-
 class TestSinglefileData(AiidaTestCase):
     """
     Test the SinglefileData class.

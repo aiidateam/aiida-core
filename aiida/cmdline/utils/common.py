@@ -84,7 +84,7 @@ def get_node_summary(node):
     :return: a string summary of the node
     """
     from plumpy import ProcessState
-    from aiida.orm.implementation.general.calculation import AbstractCalculation
+    from aiida.orm.implementation.general.calculation import Calculation
 
     table_headers = ['Property', 'Value']
     table = []
@@ -96,7 +96,7 @@ def get_node_summary(node):
     table.append(['ctime', node.ctime])
     table.append(['mtime', node.mtime])
 
-    if issubclass(node.__class__, AbstractCalculation):
+    if issubclass(node.__class__, Calculation):
         try:
             process_state = node.process_state
         except AttributeError:

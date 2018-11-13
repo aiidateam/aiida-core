@@ -17,7 +17,7 @@ from click.testing import CliRunner
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_calculation as command
 from aiida.common.datastructures import calc_states
-from aiida.orm.calculation.job import JobCalculationExitStatus
+from aiida.orm.implementation.general.calculation.job import JobCalculationExitStatus
 from aiida.work import runners, rmq
 
 

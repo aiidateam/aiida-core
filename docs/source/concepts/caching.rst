@@ -86,7 +86,7 @@ In the case of calculations, the hashes of the inputs are also included. When de
 * To ignore specific attributes, a ``Node`` subclass can have a ``_hash_ignored_attributes`` attribute. This is a list of attribute names which are ignored when creating the hash.
 * For calculations, the ``_hash_ignored_inputs`` attribute lists inputs that should be ignored when creating the hash.
 * To add things which should be considered in the hash, you can override the :meth:`_get_objects_to_hash <.AbstractNode._get_objects_to_hash>` method. Note that doing so overrides the behavior described above, so you should make sure to use the ``super()`` method.
-* Pass a keyword argument to :meth:`.get_hash <.AbstractNode.get_hash>`. These are passed on to ``aiida.common.hashing.make_hash``. For example, the ``ignored_folder_content`` keyword is used by the :class:`JobCalculation <.AbstractJobCalculation>` to ignore the ``raw_input`` subfolder of its repository folder.
+* Pass a keyword argument to :meth:`.get_hash <.AbstractNode.get_hash>`. These are passed on to ``aiida.common.hashing.make_hash``. For example, the ``ignored_folder_content`` keyword is used by the :class:`JobCalculation <aiida.orm.implementation.general.calculation.job.JobCalculation>` to ignore the ``raw_input`` subfolder of its repository folder.
 
 Additionally, there are two methods you can use to disable caching for particular nodes:
 

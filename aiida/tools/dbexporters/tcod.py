@@ -349,11 +349,16 @@ def _get_calculation(node):
         attached.
     """
     from aiida.common.exceptions import MultipleObjectsError
-    from aiida.orm.calculation import Calculation
     from aiida.common.links import LinkType
-    if len(node.get_inputs(node_type=Calculation, link_type=LinkType.CREATE)) == 1:
-        return node.get_inputs(node_type=Calculation, link_type=LinkType.CREATE)[0]
-    elif len(node.get_inputs(node_type=Calculation, link_type=LinkType.CREATE)) == 0:
+    from aiida.orm.calculation import Calculation
+    from aiida.orm.node.process import ProcessNode
+
+    parent_calculations = node.get_inputs(node_type=Calculation, link_type=LinkType.CREATE) + \
+                          node.get_inputs(node_type=ProcessNode, link_type=LinkType.CREATE)
+
+    if len(parent_calculations) == 1:
+        return parent_calculations[0]
+    elif len(parent_calculations) == 0:
         return None
     else:
         raise MultipleObjectsError("Node {} seems to have more than one "
@@ -442,8 +447,7 @@ def _collect_calculation_data(calc):
     from aiida.orm.data import Data
     from aiida.orm.calculation import Calculation
     from aiida.orm.calculation.job import JobCalculation
-    from aiida.orm.calculation.inline import InlineCalculation
-    from aiida.orm.node.process import WorkflowNode
+    from aiida.orm.node.process import CalcFunctionNode, WorkflowNode
     import hashlib
     import os
     calcs_now = []
@@ -493,8 +497,8 @@ def _collect_calculation_data(calc):
                 'type'    : 'file',
                 })
             this_calc['stderr'] = stderr_name
-    elif isinstance(calc, InlineCalculation):
-        # Calculation is InlineCalculation
+    elif isinstance(calc, CalcFunctionNode):
+        # Calculation is CalcFunctionNode
         # Contents of scripts are converted to bytes as file contents have to be bytes.
         python_script = _inline_to_standalone_script(calc).encode('utf-8')
         files_in.append({

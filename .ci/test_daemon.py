@@ -29,7 +29,7 @@ from aiida.orm.calculation import JobCalculation
 from aiida.work.launch import run_get_node, submit
 from aiida.work.persistence import ObjectLoader
 from workchains import (
-    NestedWorkChain, DynamicNonDbInput, DynamicDbInput, DynamicMixedInput, ListEcho, InlineCalcRunnerWorkChain,
+    NestedWorkChain, DynamicNonDbInput, DynamicDbInput, DynamicMixedInput, ListEcho, CalcFunctionRunnerWorkChain,
     WorkFunctionRunnerWorkChain, NestedInputNamespace, SerializeWorkChain
 )
 
@@ -362,9 +362,9 @@ def main():
     pk = submit(WorkFunctionRunnerWorkChain, input=value).pk
     expected_results_workchains[pk] = value
 
-    print("Submitting a WorkChain which contains an InlineCalculation.")
+    print("Submitting a WorkChain which contains an calcfunction.")
     value = Str('test_string')
-    pk = submit(InlineCalcRunnerWorkChain, input=value).pk
+    pk = submit(CalcFunctionRunnerWorkChain, input=value).pk
     expected_results_workchains[pk] = value
 
     calculation_pks = sorted(expected_results_calculations.keys())

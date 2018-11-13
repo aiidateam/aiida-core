@@ -29,15 +29,14 @@ Process               Database record               Used for
 ``WorkChain``         ``WorkChainNode``             Workchain
 ``JobProcess``        ``JobCalculation``            Calculation
 ``FunctionProcess``   ``WorkFunctionNode``          Workfunction
-``FunctionProcess``   ``InlineCalculation``         Inline calculation
+``FunctionProcess``   ``CalcFunctionNode``          Calcfunction
 ===================   =======================       =====================
 
 .. note::
     The concept of the ``Process`` is a later addition to AiiDA and in the beginning this division of 'how to run something` and 'serving as a record of what happened', did not exist.
     For example, historically speaking, the ``JobCalculation`` class fulfilled both of those tasks.
-    To not break the functionality of the historic ``JobCalculation`` and ``InlineCalculation``, their implementation was kept and ``Process`` wrappers were developed in the form of the ``JobProcess`` and the ``FunctionProcess``, respectively.
-    When a function, decorated with the ``make_inline`` decorator, is run, it is automatically wrapped into a ``FunctionProcess`` to make sure that is a process and gets all the necessary methods for the ``Runner`` to run it.
-    Similarly, the ``process()`` class method was implemented for the ``JobCalculation`` class, in order to automatically create a process wrapper for the calculation.
+    To not break the functionality of the historic ``JobCalculation``, its implementation was kept and a ``Process`` wrapper was developed in the form of the ``JobProcess``.
+    The ``process()`` class method was implemented for the ``JobCalculation`` class, in order to automatically create a process wrapper for the calculation.
 
 The good thing about this unification is that everything that is run in AiiDA has the same attributes concerning its running state.
 The most important attribute is the process state.

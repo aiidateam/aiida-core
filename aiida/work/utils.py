@@ -218,12 +218,12 @@ def set_process_state_change_timestamp(process):
     """
     from aiida.backends.utils import set_global_setting
     from aiida.common.exceptions import UniquenessError
-    from aiida.orm.calculation.inline import InlineCalculation
+    from aiida.orm.node.process import CalcFunctionNode
     from aiida.orm.calculation.job import JobCalculation
     from aiida.orm.node.process import ProcessNode, WorkflowNode
     from aiida.utils import timezone
 
-    if isinstance(process.calc, (JobCalculation, InlineCalculation)):
+    if isinstance(process.calc, (JobCalculation, CalcFunctionNode)):
         process_type = 'calculation'
     elif isinstance(process.calc, WorkflowNode):
         process_type = 'work'

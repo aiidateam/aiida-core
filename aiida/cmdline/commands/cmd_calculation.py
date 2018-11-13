@@ -34,7 +34,7 @@ def verdi_calculation():
 
 @verdi_calculation.command('gotocomputer')
 @arguments.CALCULATION(
-    type=types.CalculationParamType(sub_classes=('aiida.calculations:job', 'aiida.calculations:inline')))
+    type=types.NodeParamType(sub_classes=('aiida.calculations:job', 'aiida.node:process.calculation.calcfunction')))
 def calculation_gotocomputer(calculation):
     """
     Open a shell and go to the calculation folder on the computer
@@ -61,7 +61,7 @@ def calculation_gotocomputer(calculation):
 
 @verdi_calculation.command('list')
 @arguments.CALCULATIONS(
-    type=types.CalculationParamType(sub_classes=('aiida.calculations:job', 'aiida.calculations:inline')))
+    type=types.NodeParamType(sub_classes=('aiida.calculations:job', 'aiida.node:process.calculation.calcfunction')))
 @options.CALCULATION_STATE()
 @options.PROCESS_STATE()
 @options.EXIT_STATUS()
@@ -135,7 +135,7 @@ def calculation_list(calculations, past_days, groups, all_entries, calculation_s
 
 @verdi_calculation.command('res')
 @arguments.CALCULATION(
-    type=types.CalculationParamType(sub_classes=('aiida.calculations:job', 'aiida.calculations:inline')))
+    type=types.NodeParamType(sub_classes=('aiida.calculations:job', 'aiida.node:process.calculation.calcfunction')))
 @click.option('-f', '--format', 'fmt', type=click.STRING, default='json+date', help='format for the output')
 @click.option('-k', '--keys', 'keys', type=click.STRING, cls=options.MultipleValueOption, help='show only these keys')
 @decorators.with_dbenv()
@@ -158,7 +158,7 @@ def calculation_res(calculation, fmt, keys):
 
 @verdi_calculation.command('show')
 @arguments.CALCULATIONS(
-    type=types.CalculationParamType(sub_classes=('aiida.calculations:job', 'aiida.calculations:inline')))
+    type=types.NodeParamType(sub_classes=('aiida.calculations:job', 'aiida.node:process.calculation.calcfunction')))
 @decorators.with_dbenv()
 def calculation_show(calculations):
     """Show a summary for one or multiple calculations."""
@@ -170,7 +170,7 @@ def calculation_show(calculations):
 
 @verdi_calculation.command('logshow')
 @arguments.CALCULATIONS(
-    type=types.CalculationParamType(sub_classes=('aiida.calculations:job', 'aiida.calculations:inline')))
+    type=types.NodeParamType(sub_classes=('aiida.calculations:job', 'aiida.node:process.calculation.calcfunction')))
 @decorators.with_dbenv()
 def calculation_logshow(calculations):
     """Show the log for one or multiple calculations."""
@@ -214,7 +214,7 @@ def calculation_plugins(entry_point):
 
 @verdi_calculation.command('inputcat')
 @arguments.CALCULATION(
-    type=types.CalculationParamType(sub_classes=('aiida.calculations:job', 'aiida.calculations:inline')))
+    type=types.NodeParamType(sub_classes=('aiida.calculations:job', 'aiida.node:process.calculation.calcfunction')))
 @click.argument('path', type=click.STRING, required=False)
 @decorators.with_dbenv()
 def calculation_inputcat(calculation, path):
@@ -251,7 +251,7 @@ def calculation_inputcat(calculation, path):
 
 @verdi_calculation.command('outputcat')
 @arguments.CALCULATION(
-    type=types.CalculationParamType(sub_classes=('aiida.calculations:job', 'aiida.calculations:inline')))
+    type=types.NodeParamType(sub_classes=('aiida.calculations:job', 'aiida.node:process.calculation.calcfunction')))
 @click.argument('path', type=click.STRING, required=False)
 @decorators.with_dbenv()
 def calculation_outputcat(calculation, path):
@@ -295,7 +295,7 @@ def calculation_outputcat(calculation, path):
 @verdi_calculation.command('inputls')
 @decorators.with_dbenv()
 @arguments.CALCULATION(
-    type=types.CalculationParamType(sub_classes=('aiida.calculations:job', 'aiida.calculations:inline')))
+    type=types.NodeParamType(sub_classes=('aiida.calculations:job', 'aiida.node:process.calculation.calcfunction')))
 @click.argument('path', type=click.STRING, required=False)
 @click.option('-c', '--color', 'color', is_flag=True, default=False, help='color folders with a different color')
 def calculation_inputls(calculation, path, color):
@@ -321,7 +321,7 @@ def calculation_inputls(calculation, path, color):
 @verdi_calculation.command('outputls')
 @decorators.with_dbenv()
 @arguments.CALCULATION(
-    type=types.CalculationParamType(sub_classes=('aiida.calculations:job', 'aiida.calculations:inline')))
+    type=types.NodeParamType(sub_classes=('aiida.calculations:job', 'aiida.node:process.calculation.calcfunction')))
 @click.argument('path', type=click.STRING, required=False)
 @click.option('-c', '--color', 'color', is_flag=True, default=False, help='color folders with a different color')
 def calculation_outputls(calculation, path, color):
@@ -352,7 +352,7 @@ def calculation_outputls(calculation, path, color):
 @verdi_calculation.command('kill')
 @decorators.with_dbenv()
 @arguments.CALCULATIONS(
-    type=types.CalculationParamType(sub_classes=('aiida.calculations:job', 'aiida.calculations:inline')))
+    type=types.NodeParamType(sub_classes=('aiida.calculations:job', 'aiida.node:process.calculation.calcfunction')))
 @options.FORCE()
 @decorators.deprecated_command("This command will be removed in a future release. Use 'verdi process kill' instead.")
 def calculation_kill(calculations, force):
@@ -384,7 +384,7 @@ def calculation_kill(calculations, force):
 @verdi_calculation.command('cleanworkdir')
 @decorators.with_dbenv()
 @arguments.CALCULATIONS(
-    type=types.CalculationParamType(sub_classes=('aiida.calculations:job', 'aiida.calculations:inline')))
+    type=types.NodeParamType(sub_classes=('aiida.calculations:job', 'aiida.node:process.calculation.calcfunction')))
 @options.PAST_DAYS(default=None)
 @options.OLDER_THAN(default=None)
 @options.COMPUTERS(help='include only calculations that were ran on these computers')

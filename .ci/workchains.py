@@ -139,13 +139,13 @@ class DynamicMixedInput(WorkChain):
         assert isinstance(input_db, Int)
         self.out('output', input_db + input_non_db)
 
-class InlineCalcRunnerWorkChain(WorkChain):
+class CalcFunctionRunnerWorkChain(WorkChain):
     """
     WorkChain which calls an InlineCalculation in its step.
     """
     @classmethod
     def define(cls, spec):
-        super(InlineCalcRunnerWorkChain, cls).define(spec)
+        super(CalcFunctionRunnerWorkChain, cls).define(spec)
 
         spec.input('input', valid_type=Str)
         spec.output('output', valid_type=Str)

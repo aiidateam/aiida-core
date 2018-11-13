@@ -76,7 +76,6 @@ if __name__ == '__main__':
             'aiida.calculations': [
                 'calculation = aiida.orm.calculation:Calculation',
                 'function = aiida.orm.calculation.function:FunctionCalculation',
-                'inline = aiida.orm.calculation.inline:InlineCalculation',
                 'job = aiida.orm.calculation.job:JobCalculation',
                 'work = aiida.orm.calculation.work:WorkCalculation',
                 'simpleplugins.arithmetic.add = aiida.orm.calculation.job.simpleplugins.arithmetic.add:ArithmeticAddCalculation',

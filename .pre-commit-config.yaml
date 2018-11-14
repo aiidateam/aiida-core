@@ -45,7 +45,6 @@
         aiida/backends/djsite/queries.py|
         aiida/backends/djsite/settings/__init__.py|
         aiida/backends/djsite/settings/settings_profile.py|
-        aiida/backends/djsite/settings/settings.py|
         aiida/backends/djsite/settings/wsgi.py|
         aiida/backends/general/abstractqueries.py|
         aiida/backends/__init__.py|
@@ -192,7 +191,6 @@
         aiida/common/orbital/__init__.py|
         aiida/common/orbital/realhydrogen.py|
         aiida/common/profile.py|
-        aiida/common/setup.py|
         aiida/common/test_extendeddicts.py|
         aiida/common/test_logging.py|
         aiida/common/test_utils.py|
@@ -201,7 +199,6 @@
         aiida/daemon/runner.py|
         aiida/daemon/timestamps.py|
         aiida/daemon/workflowmanager.py|
-        aiida/__init__.py|
         aiida/orm/authinfo.py|
         aiida/orm/autogroup.py|
         aiida/orm/backend.py|
@@ -214,7 +211,6 @@
         aiida/orm/data/array/__init__.py|
         aiida/orm/data/array/kpoints.py|
         aiida/orm/data/array/projection.py|
-        aiida/orm/data/array/trajectory.py|
         aiida/orm/data/array/xy.py|
         aiida/orm/data/base.py|
         aiida/orm/data/bool.py|

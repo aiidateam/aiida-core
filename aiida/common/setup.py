@@ -16,7 +16,6 @@ import uuid
 import logging
 import aiida.utils.json as json
 
-
 import six
 from six.moves import input
 
@@ -43,7 +42,7 @@ else:
 CONFIG_FNAME = 'config.json'
 CONFIG_INDENT_SIZE = 4
 
-SECRET_KEY_FNAME = 'secret_key.dat'
+SECRET_KEY_FNAME = 'secret_key.dat'  # noqa
 
 WORKFLOWS_SUBDIR = 'workflows'
 
@@ -769,8 +768,8 @@ class _NoDefaultValue(object):
 # 4. The default value, if no setting is found
 # 5. A list of valid values, or None if no such list makes sense
 _property_table = {
-    "runner.poll.interval": ("runner_poll_interval", "int", "The polling interval in seconds to be used by process runners",
-                       1, None),
+    "runner.poll.interval": ("runner_poll_interval", "int",
+                             "The polling interval in seconds to be used by process runners", 1, None),
     "daemon.timeout": ("daemon_timeout", "int", "The timeout in seconds for calls to the circus client",
                        DEFAULT_DAEMON_TIMEOUT, None),
     "verdishell.modules": ("modules_for_verdi_shell", "string",
@@ -800,9 +799,10 @@ _property_table = {
     "logging.kiwipy_loglevel":
     ("logging_kiwipy_log_level", "string", "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
      "for the 'kiwipy' logger", "WARNING", ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
-    "logging.paramiko_loglevel":
-    ("logging_paramiko_log_level", "string", "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
-     "for the 'paramiko' logger", "WARNING", ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
+    "logging.paramiko_loglevel": ("logging_paramiko_log_level", "string",
+                                  "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
+                                  "for the 'paramiko' logger", "WARNING",
+                                  ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
     "logging.alembic_loglevel": ("logging_alembic_log_level", "string", "Minimum level to log to the console",
                                  "WARNING", ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
     "logging.sqlalchemy_loglevel": ("logging_sqlalchemy_loglevel", "string", "Minimum level to log to the console",
@@ -820,8 +820,8 @@ _property_table = {
                                    None),
     "tcod.depositor_author_email": ("tcod_depositor_author_email", "string", "E-mail address for TCOD depositions",
                                     None, None),
-    "warnings.showdeprecations": ("show_deprecations", "bool", "Boolean whether to print deprecation warnings", False,
-                                  None)
+    "warnings.showdeprecations": ("show_deprecations", "bool", "Boolean whether to print AiiDA deprecation warnings",
+                                  True, None)
 }
 
 

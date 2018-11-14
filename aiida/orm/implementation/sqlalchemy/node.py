@@ -142,7 +142,8 @@ class Node(AbstractNode):
 
     @classmethod
     def query(cls, *args, **kwargs):
-        raise NotImplementedError("The node query method is not supported in " "SQLAlchemy. Please use QueryBuilder.")
+        from aiida.common.exceptions import FeatureNotAvailable
+        raise FeatureNotAvailable("The node query method is not supported in " "SQLAlchemy. Please use QueryBuilder.")
 
     @property
     def type(self):

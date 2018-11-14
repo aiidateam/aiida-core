@@ -7,7 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# Django settings for the AiiDA project.
+"""
+Django settings for the AiiDA project.
+"""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -16,32 +18,27 @@ import os
 
 from aiida.common.exceptions import ConfigurationError, MissingConfigurationError
 
-# get_property is used to read properties stored in the config json
-from aiida.common.setup import (get_config, get_secret_key, get_property,
-                                get_profile_config, parse_repository_uri)
+from aiida.common.setup import (get_config, get_secret_key, get_profile_config, parse_repository_uri)
 from aiida.backends import settings
 from aiida.utils.timezone import get_current_timezone
 
 # Assumes that parent directory of aiida is root for
 # things like templates/, SQL/ etc.  If not, change what follows...
 
-
 AIIDA_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.split(AIIDA_DIR)[0]
 sys.path = [BASE_DIR] + sys.path
 
 try:
-    confs = get_config()
+    CONFS = get_config()
 except MissingConfigurationError:
-    raise MissingConfigurationError(
-        "Please run the AiiDA Installation, no config found")
+    raise MissingConfigurationError("Please run the AiiDA Installation, no config found")
 
 if settings.AIIDADB_PROFILE is None:
-    raise ConfigurationError(
-        "settings.AIIDADB_PROFILE not defined, did you load django"
-        "through the AiiDA load_dbenv()?")
+    raise ConfigurationError("settings.AIIDADB_PROFILE not defined, did you load django"
+                             "through the AiiDA load_dbenv()?")
 
-PROFILE_CONF = get_profile_config(settings.AIIDADB_PROFILE, conf_dict=confs)
+PROFILE_CONF = get_profile_config(settings.AIIDADB_PROFILE, conf_dict=CONFS)
 
 DATABASES = {
     'default': {
@@ -59,9 +56,8 @@ DATABASES = {
 try:
     REPOSITORY_URI = PROFILE_CONF['AIIDADB_REPOSITORY_URI']
 except KeyError:
-    raise ConfigurationError(
-        "Please setup correctly the REPOSITORY_URI variable to "
-        "a suitable directory on which you have write permissions.")
+    raise ConfigurationError("Please setup correctly the REPOSITORY_URI variable to "
+                             "a suitable directory on which you have write permissions.")
 
 # Note: this variable might disappear in the future
 REPOSITORY_PROTOCOL, REPOSITORY_PATH = parse_repository_uri(REPOSITORY_URI)
@@ -77,10 +73,9 @@ elif REPOSITORY_PROTOCOL == 'file':
             os.makedirs(REPOSITORY_PATH)
         except OSError:
             # Possibly here due to permission problems
-            raise ConfigurationError(
-                "Please setup correctly the REPOSITORY_PATH variable to "
-                "a suitable directory on which you have write permissions. "
-                "(I was not able to create the directory.)")
+            raise ConfigurationError("Please setup correctly the REPOSITORY_PATH variable to "
+                                     "a suitable directory on which you have write permissions. "
+                                     "(I was not able to create the directory.)")
 else:
     raise ConfigurationError("Only file protocol supported")
 
@@ -114,7 +109,6 @@ LANGUAGE_CODE = 'en-us'
 # Local time zone for this installation. Always choose the system timezone
 TIME_ZONE = get_current_timezone().zone
 
-
 SITE_ID = 1
 
 # If you set this to False, Django will make some optimizations so as not
@@ -141,7 +135,8 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
-            'debug': DEBUG,
+            'debug':
+            DEBUG,
         },
     },
 ]

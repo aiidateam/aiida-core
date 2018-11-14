@@ -1476,7 +1476,8 @@ class QueryBuilder(object):
 
     def _get_function_map(self):
         d = {
-            'input_of': self._join_inputs,
+            'with_incoming': self._join_outputs,
+            'input_of': deprecate(self._join_inputs, xxx),
             'output_of': self._join_outputs,
             'slave_of': self._join_slaves,  # not implemented
             'master_of': self._join_masters,  # not implemented
@@ -1494,6 +1495,11 @@ class QueryBuilder(object):
         }
         return d
 
+    def deprecate(f, xxx):
+        import warning
+        warning.warn()
+        return f
+    
     def _get_connecting_node(self, index, joining_keyword=None, joining_value=None, **kwargs):
         """
         :param querydict:

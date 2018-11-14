@@ -637,9 +637,11 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                 Model.objects.bulk_create(objects_to_create)
 
                 # Get back the just-saved entries
-                just_saved = dict(Model.objects.filter(
+                just_saved_queryset = Model.objects.filter(
                     **{"{}__in".format(unique_identifier):
-                           import_entry_ids.keys()}).values_list(unique_identifier, 'pk'))
+                           import_entry_ids.keys()}).values_list(unique_identifier, 'pk')
+                # note: convert uuids from type UUID to strings
+                just_saved = { str(k) : v for k,v in just_saved_queryset }
 
                 imported_states = []
                 if model_name == NODE_ENTITY_NAME:

@@ -302,44 +302,11 @@ class QueryBuilderImplSQLA(QueryBuilderInterface):
                             "I need to get the column but do not know \n"
                             "the alias and the column name")
                     column = _get_column(column_name, alias)
-                expr = self._get_filter_expr_from_column(operator, value, column)
+                expr = self.get_filter_expr_from_column(operator, value, column)
         if negation:
             return not_(expr)
         return expr
 
-    def _get_filter_expr_from_column(self, operator, value, column):
-        # Label is used because it is what is returned for the
-        # 'state' column by the hybrid_column construct
-        if not isinstance(column, (Cast, InstrumentedAttribute, Label, QueryableAttribute, ColumnClause)):
-            raise TypeError(
-                'column ({}) {} is not a valid column'.format(
-                    type(column), column
-                )
-            )
-        database_entity = column
-        if operator == '==':
-            expr = database_entity == value
-        elif operator == '>':
-            expr = database_entity > value
-        elif operator == '<':
-            expr = database_entity < value
-        elif operator == '>=':
-            expr = database_entity >= value
-        elif operator == '<=':
-            expr = database_entity <= value
-        elif operator == 'like':
-            # This operator can only exist for strings, so I cast to avoid problems
-            # as they occured for the UUID, which does not support the like operator
-            expr = database_entity.cast(String).like(value)
-        elif operator == 'ilike':
-            expr = database_entity.cast(String).ilike(value)
-        elif operator == 'in':
-            expr = database_entity.in_(value)
-        else:
-            raise InputValidationError(
-                'Unknown operator {} for filters on columns'.format(operator)
-            )
-        return expr
 
     def get_filter_expr_from_attributes(
             self, operator, value, attr_key,

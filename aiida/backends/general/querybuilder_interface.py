@@ -128,6 +128,56 @@ class QueryBuilderInterface:
         :returns: An instance of sqlalchemy.sql.elements.BinaryExpression
         """
         pass
+
+    def get_filter_expr_from_column(self, operator, value, column):
+        """
+        A method that returns an valid SQLAlchemy expression.
+
+        :param operator: The operator provided by the user ('==',  '>', ...)
+        :param value: The value to compare with, e.g. (5.0, 'foo', ['a','b'])
+        :param column: an instance of sqlalchemy.orm.attributes.InstrumentedAttribute or
+
+        :returns: An instance of sqlalchemy.sql.elements.BinaryExpression
+        """
+        # Label is used because it is what is returned for the
+        # 'state' column by the hybrid_column construct
+        from sqlalchemy.sql.elements import Cast, Label
+        from sqlalchemy.orm.attributes import InstrumentedAttribute, QueryableAttribute
+        from sqlalchemy.sql.expression import ColumnClause
+        from sqlalchemy.types import String
+
+        if not isinstance(column, (Cast, InstrumentedAttribute, QueryableAttribute, Label, ColumnClause)):
+            raise TypeError(
+                'column ({}) {} is not a valid column'.format(
+                    type(column), column
+                )
+            )
+        database_entity = column
+        if operator == '==':
+            expr = database_entity == value
+        elif operator == '>':
+            expr = database_entity > value
+        elif operator == '<':
+            expr = database_entity < value
+        elif operator == '>=':
+            expr = database_entity >= value
+        elif operator == '<=':
+            expr = database_entity <= value
+        elif operator == 'like':
+             # the like operator expects a string, so we cast to avoid problems
+            # with fields like UUID, which don't support the like operator
+            expr = database_entity.cast(String).like(value)
+        elif operator == 'ilike':
+            expr = database_entity.ilike(value)
+        elif operator == 'in':
+            expr = database_entity.in_(value)
+        else:
+            raise InputValidationError(
+                'Unknown operator {} for filters on columns'.format(operator)
+            )
+        return expr
+
+
     @abstractmethod
     def get_projectable_attribute(
             self, alias, column_name, attrpath,

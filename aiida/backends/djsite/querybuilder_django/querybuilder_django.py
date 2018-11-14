@@ -87,38 +87,6 @@ class QueryBuilderImplDjango(QueryBuilderInterface):
         import aiida.orm
         return aiida.orm.Computer
 
-    def get_filter_expr_from_column(self, operator, value, column):
-
-        # Label is used because it is what is returned for the
-        # 'state' column by the hybrid_column construct
-        if not isinstance(column, (Cast, InstrumentedAttribute, QueryableAttribute, Label, ColumnClause)):
-            raise TypeError(
-                'column ({}) {} is not a valid column'.format(
-                    type(column), column
-                )
-            )
-        database_entity = column
-        if operator == '==':
-            expr = database_entity == value
-        elif operator == '>':
-            expr = database_entity > value
-        elif operator == '<':
-            expr = database_entity < value
-        elif operator == '>=':
-            expr = database_entity >= value
-        elif operator == '<=':
-            expr = database_entity <= value
-        elif operator == 'like':
-            expr = database_entity.like(value)
-        elif operator == 'ilike':
-            expr = database_entity.ilike(value)
-        elif operator == 'in':
-            expr = database_entity.in_(value)
-        else:
-            raise InputValidationError(
-                'Unknown operator {} for filters on columns'.format(operator)
-            )
-        return expr
 
     def get_filter_expr(self, operator, value, attr_key, is_attribute,
             alias=None, column=None, column_name=None):

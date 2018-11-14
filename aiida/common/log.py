@@ -46,7 +46,6 @@ class NotInTestingFilter(logging.Filter):
         return not settings.TESTING_MODE
 
 
-# A logging handler that will store the log record in the database DbLog table
 class DBLogHandler(logging.Handler):
     """A custom db log handler for writing logs tot he database"""
 
@@ -79,7 +78,7 @@ class DBLogHandler(logging.Handler):
             # Django settings module loaded. Then,
             # This ignore should be a no-op.
             pass
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             # To avoid loops with the error handler, I just print.
             # Hopefully, though, this should not happen!
             import traceback
@@ -165,6 +164,9 @@ LOGGING = {
             'handlers': ['console'],
             'level': 'ERROR',
             'propagate': False,
+        },
+        'py.warnings': {
+            'handlers': ['console'],
         },
     },
 }

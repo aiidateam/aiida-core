@@ -469,7 +469,7 @@ class QueryBuilder(object):
         :param bool subclassing:
             Whether to include subclasses of the given class
             (default **True**).
-            E.g. Specifying a  ProcessNode as cls will include JobCalculations, WorkChainNode, CalcFunctionNode, etc..
+            E.g. Specifying a  ProcessNode as cls will include CalcJobNode, WorkChainNode, CalcFunctionNode, etc..
         :param bool outerjoin:
             If True, (default is False), will do a left outerjoin
             instead of an inner join

@@ -25,7 +25,7 @@ from aiida.orm.data.int import Int
 from aiida.orm.data.str import Str
 from aiida.orm.data.list import List
 from aiida.orm.data.structure import StructureData
-from aiida.orm.calculation import JobCalculation
+from aiida.orm.node.process import CalcJobNode
 from aiida.work.launch import run_get_node, submit
 from aiida.work.persistence import ObjectLoader
 from workchains import (
@@ -164,7 +164,7 @@ def validate_cached(cached_calcs):
             print_logshow(calc.pk)
             valid = False
 
-        if isinstance(calc, JobCalculation):
+        if isinstance(calc, CalcJobNode):
             if 'raw_input' not in calc.folder.get_content_list():
                 print("Cached calculation <{}> does not have a 'raw_input' folder".format(calc.pk))
                 print_logshow(calc.pk)
@@ -197,7 +197,7 @@ def create_calculation(code, counter, inputval, use_cache=False):
     calc.set_option('max_wallclock_seconds', 5 * 60)  # 5 min
     calc.set_option('resources', {"num_machines": 1})
     calc.set_option('withmpi', False)
-    calc.set_option('parser_name', 'simpleplugins.templatereplacer.doubler')
+    calc.set_option('parser_name', 'templatereplacer.doubler')
 
     calc.use_parameters(parameters)
     calc.use_template(template)
@@ -242,7 +242,7 @@ def create_calculation_process(code, inputval):
     """
     Create the process and inputs for a submitting / running a calculation.
     """
-    TemplatereplacerCalculation = CalculationFactory('simpleplugins.templatereplacer')
+    TemplatereplacerCalculation = CalculationFactory('templatereplacer')
     process = TemplatereplacerCalculation.process()
 
     parameters = ParameterData(dict={'value': inputval})
@@ -265,7 +265,7 @@ def create_calculation_process(code, inputval):
         },
         'max_wallclock_seconds': 5 * 60,
         'withmpi': False,
-        'parser_name': 'simpleplugins.templatereplacer.doubler',
+        'parser_name': 'templatereplacer.doubler',
     }
 
     expected_result = {

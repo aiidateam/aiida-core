@@ -190,7 +190,7 @@ class TestProcess(AiidaTestCase):
             'options': options,
         }
 
-        entry_point = 'simpleplugins.templatereplacer'
+        entry_point = 'templatereplacer'
         calculation = CalculationFactory(entry_point)
         job_process = calculation.process()
         process = job_process(inputs=inputs)

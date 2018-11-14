@@ -16,7 +16,8 @@ from aiida.orm import CalculationFactory
 from aiida.parsers.parser import Parser
 from aiida.orm.data.parameter import ParameterData
 
-TemplatereplacerCalculation = CalculationFactory('simpleplugins.templatereplacer')
+TemplatereplacerCalculation = CalculationFactory('templatereplacer')
+
 
 class TemplatereplacerDoublerParser(Parser):
 
@@ -55,13 +56,11 @@ class TemplatereplacerDoublerParser(Parser):
         try:
             parsed_value = int(retrieved_folder.get_file_content(output_file).strip())
         except (AttributeError, IOError, ValueError) as e:
-            self.logger.error("* UNABLE TO RETRIEVE VALUE for calc pk={}: I got {}: {}".format(self._calc.pk, type(e), e))
+            self.logger.error("* UNABLE TO RETRIEVE VALUE for calc pk={}: I got {}: {}".format(
+                self._calc.pk, type(e), e))
             return False, ()
 
-        output_dict = {
-            'value': parsed_value,
-            'retrieved_temporary_files': []
-        }
+        output_dict = {'value': parsed_value, 'retrieved_temporary_files': []}
 
         try:
             retrieve_temporary_files = self._calc.inp.template.get_dict()['retrieve_temporary_files']
@@ -82,8 +81,8 @@ class TemplatereplacerDoublerParser(Parser):
                 file_path = os.path.join(retrieved_temporary_folder, retrieved_file)
 
                 if not os.path.isfile(file_path):
-                    self.logger.error('the file {} was not found in the temporary retrieved folder {}'
-                        .format(retrieved_file, retrieved_temporary_folder))
+                    self.logger.error('the file {} was not found in the temporary retrieved folder {}'.format(
+                        retrieved_file, retrieved_temporary_folder))
                     return False, ()
 
                 with io.open(file_path, 'r', encoding='utf8') as handle:

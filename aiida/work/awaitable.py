@@ -14,7 +14,6 @@ from __future__ import print_function
 from __future__ import absolute_import
 from enum import Enum
 from plumpy.utils import AttributesDict
-from aiida.orm import Calculation
 from aiida.orm.node.process import ProcessNode
 from aiida.orm.workflow import Workflow
 
@@ -62,7 +61,7 @@ def construct_awaitable(target):
     if isinstance(target, Awaitable):
         return target
 
-    if isinstance(target, (Calculation, ProcessNode)):
+    if isinstance(target, ProcessNode):
         awaitable_target = AwaitableTarget.PROCESS
     elif isinstance(target, Workflow):
         awaitable_target = AwaitableTarget.WORKFLOW

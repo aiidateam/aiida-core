@@ -17,8 +17,7 @@ from aiida.parsers.parser import Parser
 from aiida.orm.data.int import Int
 from aiida.orm.data.parameter import ParameterData
 
-
-ArithmeticAddCalculation = CalculationFactory('simpleplugins.arithmetic.add')
+ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
 
 
 class ArithmeticAddParser(Parser):

@@ -285,10 +285,9 @@ class Code(Data):
 
         An output of a code can only be a calculation
         """
-        from aiida.orm.calculation import Calculation
         from aiida.orm.node.process import ProcessNode
 
-        if not isinstance(dest, (Calculation, ProcessNode)):
+        if not isinstance(dest, ProcessNode):
             raise ValueError("The output of a code node can only be a calculation")
 
         return super(Code, self)._linking_as_output(dest, link_type)

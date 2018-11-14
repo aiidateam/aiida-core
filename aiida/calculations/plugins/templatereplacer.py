@@ -10,14 +10,15 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from aiida.common.exceptions import InputValidationError
 from aiida.common.datastructures import CalcInfo, CodeInfo
 from aiida.common.utils import classproperty
-from aiida.orm.calculation.job import JobCalculation
+from aiida.orm.node.process import CalcJobNode
 from aiida.orm.data.parameter import ParameterData
 
 
-class TemplatereplacerCalculation(JobCalculation):
+class TemplatereplacerCalculation(CalcJobNode):
     """
     Simple stub of a plugin that can be used to replace some text in a given template.
     Can be used for many different codes, or as a starting point to develop a new plugin.
@@ -65,7 +66,7 @@ class TemplatereplacerCalculation(JobCalculation):
 
     @classproperty
     def _use_methods(cls):
-        retdict = JobCalculation._use_methods
+        retdict = CalcJobNode._use_methods
         retdict.update({
             'template': {
                 'valid_types': ParameterData,
@@ -137,13 +138,12 @@ class TemplatereplacerCalculation(JobCalculation):
             if isinstance(fileobj, SinglefileData):
                 local_copy_list.append((fileobj.get_file_abs_path(), dest_rel_path))
             elif isinstance(fileobj, RemoteData):  # can be a folder
-                remote_copy_list.append(
-                    (fileobj.get_computer().uuid, fileobj.get_remote_path(), dest_rel_path)
-                )
+                remote_copy_list.append((fileobj.get_computer().uuid, fileobj.get_remote_path(), dest_rel_path))
             else:
-                raise InputValidationError("If you ask to copy a file link {}, "
-                                           "it must be either a SinglefileData or a RemoteData; it is instead of type {}".format(
-                    link_name, fileobj.__class__.__name__))
+                raise InputValidationError(
+                    "If you ask to copy a file link {}, "
+                    "it must be either a SinglefileData or a RemoteData; it is instead of type {}".format(
+                        link_name, fileobj.__class__.__name__))
 
         code = inputdict.pop('code', None)
         if code is None:
@@ -154,12 +154,10 @@ class TemplatereplacerCalculation(JobCalculation):
                                        "used by the templatereplacer plugin: {}".format(inputdict.keys()))
 
         if input_file_name is not None and not input_file_template:
-            raise InputValidationError("If you give an input_file_name, you "
-                                       "must also specify a input_file_template")
+            raise InputValidationError("If you give an input_file_name, you " "must also specify a input_file_template")
 
         if input_through_stdin and input_file_name is None:
-            raise InputValidationError("If you ask for input_through_stdin you have to "
-                                       "specify a input_file_name")
+            raise InputValidationError("If you ask for input_through_stdin you have to " "specify a input_file_name")
 
         input_file = StringIO(input_file_template.format(**parameters))
         if input_file_name:

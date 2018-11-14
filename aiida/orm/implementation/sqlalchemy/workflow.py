@@ -862,7 +862,6 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
         workflow_mapping = {_.id: _ for _ in wflows}
 
         # get all calculations for all steps
-        # calcs = JobCalculation.query(workflow_step__in=steps_pk)  #.order_by('ctime')
         calcs_ids = [_[2] for _ in steps_and_subwf_pks if _[2] is not None]  # extremely inefficient!
         calcs = [load_node(_) for _ in calcs_ids]
         # dictionary mapping pks into calculations

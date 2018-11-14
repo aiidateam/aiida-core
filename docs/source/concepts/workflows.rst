@@ -58,7 +58,7 @@ To summarize: to write a workflow that automatically stores the provenance, one 
 Workchains
 ----------
 Now that we have demonstrated how easily ``workfunctions`` can be used to write your workflow that automatically keeps the provenance, it is time to confess that workfunctions are not perfect and have their shortcomings.
-In the simple example of adding and multiplying numbers, the time to execute the functions is very short, but imagine that you are performing a more costly calculation, e.g. you want to run an actual ``JobCalculation`` that will be submitted to the scheduler and may run for a long time.
+In the simple example of adding and multiplying numbers, the time to execute the functions is very short, but imagine that you are performing a more costly calculation, e.g. you want to run an actual ``CalcJob`` that will be submitted to the scheduler and may run for a long time.
 If anywhere during the chain, the workflow is interrupted, for whatever reason, all progress is lost.
 There are no 'checkpoints', so to speak, by simply chaining workfunctions together.
 
@@ -136,7 +136,7 @@ When to use which
 -----------------
 Now that we know how the two workflow components, workflows and workchains, work in AiiDA, you might wonder: when should I use which one?
 For simple operations that do not take long, the simplicity of the workfunction may be all you need, so by all means use it.
-However, a good rule of thumb is that as soon as the code is expected to take longer, for example when you want to launch a ``JobCalculation``, it is always best to go for the ``WorkChain``.
+However, a good rule of thumb is that as soon as the code is expected to take longer, for example when you want to launch a ``CalcJob``, it is always best to go for the ``WorkChain``.
 The automatic checkpointing, which guarantess that work between steps is saved, becomes very important.
 The workchain offers a lot more features than checkpointing that may make it more preferable over the workfunction, which you can read about in the :ref:`workflow development <workflow_development>` section.
 
@@ -227,7 +227,7 @@ For more details, please refer to the advanced section on :ref:`submitting calcu
 
 Process builder
 ---------------
-There is one final way of launching a process, whether it be a ``WorkChain`` or a ``JobCalculation``.
+There is one final way of launching a process, whether it be a ``WorkChain`` or a ``CalcJob``.
 Each process has a method called ``get_builder`` which will return an instance of the ``ProcessBuilder`` customised for that particular ``Process`` class.
 The builder knows exactly which inputs the process takes and expects and is therefore ideal for interactive usage.
 For details on how to instantiate and populate a ``ProcessBuilder`` instance please refer to :ref:`the process builder section<process_builder>`.
@@ -332,7 +332,7 @@ In general they can be very useful for a user to understand what has happened du
 
 verdi work status
 -----------------
-One of the more powerful aspect of workchains, is that they can call ``JobCalculations`` and other ``WorkChains`` to create a nested call hierarchy.
+One of the more powerful aspect of workchains, is that they can call ``CalcJobs`` and other ``WorkChains`` to create a nested call hierarchy.
 If you want to inspect the status of a workchain and all the children that it called, ``verdi work status`` is the go-to tool.
 An example output is the following:
 
@@ -675,8 +675,8 @@ How this is accomplished, we will show in the next section.
 
 Submitting calculations and workchains
 --------------------------------------
-One of the main tasks of a ``WorkChain`` will be to launch a ``JobCalculation`` or even another ``WorkChain``.
-An example in the section on :ref:`running workflows<running_workflows>` already showed that the ``WorkChain`` class provides the :meth:`~aiida.work.processes.Process.submit` method, to submit another ``WorkChain`` or ``JobCalculation`` to the daemon.
+One of the main tasks of a ``WorkChain`` will be to launch a ``CalcJob`` or even another ``WorkChain``.
+An example in the section on :ref:`running workflows<running_workflows>` already showed that the ``WorkChain`` class provides the :meth:`~aiida.work.processes.Process.submit` method, to submit another ``WorkChain`` or ``CalcJob`` to the daemon.
 However, that is not enough to complete the process.
 When the ``submit`` method is called, the process is created and submitted to the daemon, but at that point it is not yet done.
 So the value that is returned by the ``submit`` call is not the result of the submitted process, but rather it is a *future*.
@@ -760,7 +760,7 @@ In the event that the calculation did not finish successfully, the following sni
 
     def submit_calculation(self):
         inputs = {'code': code}
-        future = self.submit(SomeJobCalculation, **inputs)
+        future = self.submit(SomeCalcJob, **inputs)
         return ToContext(calculation=future)
 
     def inspect_calculation(self):
@@ -905,8 +905,8 @@ In doing so a few minor changes were introduced that break workchains that were 
 However, these workchains can be updated with just a few minor updates that we will list here:
 
 * The free function ``submit`` in any ``WorkChain`` should be replaced with ``self.submit``.
-* The ``_options`` input for ``JobCalculation`` is now ``options``, simply removed the leading underscore.
-* The ``label`` and ``description`` inputs for ``JobCalculation`` or a ``WorkChain`` have also lost the underscore.
+* The ``_options`` input for ``CalcJob`` is now ``options``, simply removed the leading underscore.
+* The ``label`` and ``description`` inputs for ``CalcJob`` or a ``WorkChain`` have also lost the underscore.
 * The free functions from ``aiida.work.run`` have been moved to ``aiida.work.launch``, even though for the time being the old import will still work.
 * The future returned by ``submit`` no longer has the ``pid`` attribute but rather ``pk``.
 * The ``get_inputs_template class`` method has been replaced by ``get_builder``. See the section on the :ref:`process builder<process_builder>` on how to use it.

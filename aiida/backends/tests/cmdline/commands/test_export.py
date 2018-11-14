@@ -103,11 +103,11 @@ class TestVerdiExport(AiidaTestCase):
         with tempfile.NamedTemporaryFile() as handle:
             options = ['-f', handle.name]
             result = self.cli_runner.invoke(cmd_export.create, options)
-            self.assertIsNone(result.exception)
+            self.assertIsNone(result.exception, result.output)
 
             options = ['--force', handle.name]
             result = self.cli_runner.invoke(cmd_export.create, options)
-            self.assertIsNone(result.exception)
+            self.assertIsNone(result.exception, result.output)
 
     def test_create_zip(self):
         """Test that creating an archive for a set of various ORM entities works with the zip format."""
@@ -118,7 +118,7 @@ class TestVerdiExport(AiidaTestCase):
                 filename
             ]
             result = self.cli_runner.invoke(cmd_export.create, options)
-            self.assertIsNone(result.exception)
+            self.assertIsNone(result.exception, result.output)
             self.assertTrue(os.path.isfile(filename))
             self.assertFalse(zipfile.ZipFile(filename).testzip(), None)
         finally:
@@ -133,7 +133,7 @@ class TestVerdiExport(AiidaTestCase):
                 'zip-uncompressed', filename
             ]
             result = self.cli_runner.invoke(cmd_export.create, options)
-            self.assertIsNone(result.exception)
+            self.assertIsNone(result.exception, result.output)
             self.assertTrue(os.path.isfile(filename))
             self.assertFalse(zipfile.ZipFile(filename).testzip(), None)
         finally:
@@ -148,7 +148,7 @@ class TestVerdiExport(AiidaTestCase):
                 filename
             ]
             result = self.cli_runner.invoke(cmd_export.create, options)
-            self.assertIsNone(result.exception)
+            self.assertIsNone(result.exception, result.output)
             self.assertTrue(os.path.isfile(filename))
             self.assertTrue(tarfile.is_tarfile(filename))
         finally:
@@ -169,7 +169,7 @@ class TestVerdiExport(AiidaTestCase):
             try:
                 options = [filename_input, filename_output]
                 result = self.cli_runner.invoke(cmd_export.migrate, options)
-                self.assertIsNone(result.exception)
+                self.assertIsNone(result.exception, result.output)
                 self.assertTrue(os.path.isfile(filename_output))
                 self.assertEquals(zipfile.ZipFile(filename_output).testzip(), None)
             finally:
@@ -215,7 +215,7 @@ class TestVerdiExport(AiidaTestCase):
                     filename_output = file_output.name
                     options = [option, filename_input, filename_output]
                     result = self.cli_runner.invoke(cmd_export.migrate, options)
-                    self.assertIsNone(result.exception)
+                    self.assertIsNone(result.exception, result.output)
                     self.assertTrue(os.path.isfile(filename_output))
                     self.assertEquals(zipfile.ZipFile(filename_output).testzip(), None)
 
@@ -235,7 +235,7 @@ class TestVerdiExport(AiidaTestCase):
                     options = [option, filename_input, filename_output]
                     result = self.cli_runner.invoke(cmd_export.migrate, options)
                     self.assertEquals(result.output, '')
-                    self.assertIsNone(result.exception)
+                    self.assertIsNone(result.exception, result.output)
                     self.assertTrue(os.path.isfile(filename_output))
                     self.assertEquals(zipfile.ZipFile(filename_output).testzip(), None)
                 finally:
@@ -256,7 +256,7 @@ class TestVerdiExport(AiidaTestCase):
                 try:
                     options = [option, 'tar.gz', filename_input, filename_output]
                     result = self.cli_runner.invoke(cmd_export.migrate, options)
-                    self.assertIsNone(result.exception)
+                    self.assertIsNone(result.exception, result.output)
                     self.assertTrue(os.path.isfile(filename_output))
                     self.assertTrue(tarfile.is_tarfile(filename_output))
                 finally:
@@ -278,10 +278,10 @@ class TestVerdiExport(AiidaTestCase):
             for option in ['-m', '-d']:
                 options = [option, filename_input]
                 result = self.cli_runner.invoke(cmd_export.inspect, options)
-                self.assertIsNone(result.exception)
+                self.assertIsNone(result.exception, result.output)
 
             # Test the --version option which should print the archive format version
             options = ['--version', filename_input]
             result = self.cli_runner.invoke(cmd_export.inspect, options)
-            self.assertIsNone(result.exception)
+            self.assertIsNone(result.exception, result.output)
             self.assertEquals(result.output.strip(), version_number)

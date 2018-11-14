@@ -79,13 +79,13 @@ class TestSpecificImport(AiidaTestCase):
 
     def test_cycle_structure_data(self):
         """
-        Create an export with some Calculation and Data nodes and import it after having
+        Create an export with some CalculationNode and Data nodes and import it after having
         cleaned the database. Verify that the nodes and their attributes are restored
         properly after importing the created export archive
         """
         import tempfile
         from aiida.common.links import LinkType
-        from aiida.orm.calculation import Calculation
+        from aiida.orm.node.process import CalculationNode
         from aiida.orm.data.structure import StructureData
         from aiida.orm.data.remote import RemoteData
         from aiida.orm.importexport import export, import_data
@@ -119,21 +119,21 @@ class TestSpecificImport(AiidaTestCase):
         structure.label = test_label
         structure.store()
 
-        parent_calculation = Calculation()
-        parent_calculation._set_attr('key', 'value')
-        parent_calculation.store()
-        child_calculation = Calculation()
+        parent_process = CalculationNode()
+        parent_process._set_attr('key', 'value')
+        parent_process.store()
+        child_calculation = CalculationNode()
         child_calculation._set_attr('key', 'value')
         child_calculation.store()
         remote_folder = RemoteData(computer=self.computer, remote_path='/').store()
 
-        remote_folder.add_link_from(parent_calculation, link_type=LinkType.CREATE)
+        remote_folder.add_link_from(parent_process, link_type=LinkType.CREATE)
         child_calculation.add_link_from(remote_folder, link_type=LinkType.INPUT)
         structure.add_link_from(child_calculation, link_type=LinkType.CREATE)
 
         with tempfile.NamedTemporaryFile() as handle:
 
-            nodes = [structure, child_calculation, parent_calculation, remote_folder]
+            nodes = [structure, child_calculation, parent_process, remote_folder]
             export(nodes, outfile=handle.name, overwrite=True, silent=True)
 
             # Check that we have the expected number of nodes in the database
@@ -147,8 +147,8 @@ class TestSpecificImport(AiidaTestCase):
             import_data(handle.name, silent=True)
             self.assertEquals(QueryBuilder().append(Node).count(), len(nodes))
 
-            # Verify that Calculations have non-empty attribute dictionaries
-            qb = QueryBuilder().append(Calculation)
+            # Verify that CalculationNodes have non-empty attribute dictionaries
+            qb = QueryBuilder().append(CalculationNode)
             for [calculation] in qb.iterall():
                 self.assertIsInstance(calculation.get_attrs(), dict)
                 self.assertNotEquals(len(calculation.get_attrs()), 0)
@@ -165,17 +165,17 @@ class TestSpecificImport(AiidaTestCase):
                 for kind in kinds:
                     self.assertIn(kind, test_kinds)
 
-            # Check that there is a StructureData that is an output of a Calculation
+            # Check that there is a StructureData that is an output of a CalculationNode
             qb = QueryBuilder()
-            qb.append(Calculation, project=['uuid'], tag='calculation')
+            qb.append(CalculationNode, project=['uuid'], tag='calculation')
             qb.append(StructureData, output_of='calculation')
             self.assertGreater(len(qb.all()), 0)
 
-            # Check that there is a RemoteData that is a child and parent of a Calculation
+            # Check that there is a RemoteData that is a child and parent of a CalculationNode
             qb = QueryBuilder()
-            qb.append(Calculation, tag='parent')
+            qb.append(CalculationNode, tag='parent')
             qb.append(RemoteData, project=['uuid'], output_of='parent', tag='remote')
-            qb.append(Calculation, output_of='remote')
+            qb.append(CalculationNode, output_of='remote')
             self.assertGreater(len(qb.all()), 0)
 
 
@@ -228,7 +228,7 @@ class TestSimple(AiidaTestCase):
 
         from aiida.orm import DataFactory
         from aiida.orm import load_node
-        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.node.process import CalcJobNode
         from aiida.orm.importexport import export
 
         # Creating a folder for the import/export files
@@ -238,7 +238,7 @@ class TestSimple(AiidaTestCase):
             sd = StructureData()
             sd.store()
 
-            calc = JobCalculation()
+            calc = CalcJobNode()
             calc.set_computer(self.computer)
             calc.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             calc.store()
@@ -459,7 +459,7 @@ class TestSimple(AiidaTestCase):
         import tempfile
 
         from aiida.orm import load_node
-        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.node.process import CalcJobNode
         from aiida.orm.data.structure import StructureData
         from aiida.orm.importexport import export
         from aiida.common.datastructures import calc_states
@@ -479,7 +479,7 @@ class TestSimple(AiidaTestCase):
             sd1.label = 'sd1'
             sd1.store()
 
-            jc1 = JobCalculation()
+            jc1 = CalcJobNode()
             jc1.set_computer(self.computer)
             jc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             jc1.set_user(user)
@@ -495,7 +495,7 @@ class TestSimple(AiidaTestCase):
             sd2.store()
             sd2.add_link_from(jc1, label='l1', link_type=LinkType.CREATE)  # I assume jc1 CREATED sd2
 
-            jc2 = JobCalculation()
+            jc2 = CalcJobNode()
             jc2.set_computer(self.computer)
             jc2.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             jc2.label = 'jc2'
@@ -542,7 +542,7 @@ class TestSimple(AiidaTestCase):
         import tempfile
 
         from aiida.orm import load_node
-        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.node.process import CalcJobNode
         from aiida.orm.data.structure import StructureData
         from aiida.orm.importexport import export
         from aiida.common.datastructures import calc_states
@@ -562,7 +562,7 @@ class TestSimple(AiidaTestCase):
             sd1.label = 'sd1'
             sd1.store()
 
-            jc1 = JobCalculation()
+            jc1 = CalcJobNode()
             jc1.set_computer(self.computer)
             jc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             jc1.set_user(user)
@@ -598,7 +598,7 @@ class TestSimple(AiidaTestCase):
             # data
             sd2_imp = load_node(sd2.uuid)
 
-            jc2 = JobCalculation()
+            jc2 = CalcJobNode()
             jc2.set_computer(self.computer)
             jc2.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             jc2.label = 'jc2'
@@ -646,7 +646,7 @@ class TestSimple(AiidaTestCase):
         import tempfile
 
         from aiida.orm import load_node
-        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.node.process import CalcJobNode
         from aiida.orm.data.structure import StructureData
         from aiida.orm.importexport import export
         from aiida.common.datastructures import calc_states
@@ -666,7 +666,7 @@ class TestSimple(AiidaTestCase):
             sd1.label = 'sd1'
             sd1.store()
 
-            jc1 = JobCalculation()
+            jc1 = CalcJobNode()
             jc1.set_computer(self.computer)
             jc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             jc1.set_user(user)
@@ -860,9 +860,10 @@ class TestSimple(AiidaTestCase):
         import os, shutil, tempfile, numpy as np, string, random
         from datetime import datetime
 
-        from aiida.orm import Calculation, load_node, Group
+        from aiida.orm import load_node, Group
         from aiida.orm.data.array import ArrayData
         from aiida.orm.data.parameter import ParameterData
+        from aiida.orm.node.process import CalculationNode
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.importexport import export
         from aiida.common.hashing import make_hash
@@ -870,7 +871,7 @@ class TestSimple(AiidaTestCase):
         def get_hash_from_db_content(groupname):
             qb = QueryBuilder()
             qb.append(ParameterData, tag='p', project='*')
-            qb.append(Calculation, tag='c', project='*', edge_tag='p2c', edge_project=('label', 'type'))
+            qb.append(CalculationNode, tag='c', project='*', edge_tag='p2c', edge_project=('label', 'type'))
             qb.append(ArrayData, tag='a', project='*', edge_tag='c2a', edge_project=('label', 'type'))
             qb.append(Group, filters={'name': groupname}, project='*', tag='g', group_of='a')
             # I want the query to contain something!
@@ -923,7 +924,7 @@ class TestSimple(AiidaTestCase):
             p.label = str(datetime.now())
             p.description = 'd_' + str(datetime.now())
             p.store()
-            c = Calculation()
+            c = CalculationNode()
             # setting also trial dict as attributes, but randomizing the keys)
             (c._set_attr(str(int(k) + np.random.randint(10)), v) for k, v in trial_dict.items())
             c.store()
@@ -980,7 +981,7 @@ class TestComplex(AiidaTestCase):
         import shutil
         import os
 
-        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.node.process import CalcJobNode
         from aiida.orm.data.folder import FolderData
         from aiida.orm.data.parameter import ParameterData
         from aiida.orm.data.remote import RemoteData
@@ -991,7 +992,7 @@ class TestComplex(AiidaTestCase):
 
         temp_folder = tempfile.mkdtemp()
         try:
-            calc1 = JobCalculation()
+            calc1 = CalcJobNode()
             calc1.set_computer(self.computer)
             calc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             calc1.label = "calc1"
@@ -1013,7 +1014,7 @@ class TestComplex(AiidaTestCase):
             rd1.store()
             rd1.add_link_from(calc1, link_type=LinkType.CREATE)
 
-            calc2 = JobCalculation()
+            calc2 = CalcJobNode()
             calc2.set_computer(self.computer)
             calc2.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             calc2.label = "calc2"
@@ -1077,7 +1078,7 @@ class TestComputer(AiidaTestCase):
         from aiida.orm.importexport import export
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.computers import Computer
-        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.node.process import CalcJobNode
 
         # Creating a folder for the import/export files
         export_file_tmp_folder = tempfile.mkdtemp()
@@ -1086,7 +1087,7 @@ class TestComputer(AiidaTestCase):
         try:
             # Store two job calculation related to the same computer
             calc1_label = "calc1"
-            calc1 = JobCalculation()
+            calc1 = CalcJobNode()
             calc1.set_computer(self.computer)
             calc1.set_option('resources', {"num_machines": 1,
                                            "num_mpiprocs_per_machine": 1})
@@ -1095,7 +1096,7 @@ class TestComputer(AiidaTestCase):
             calc1._set_state(u'RETRIEVING')
 
             calc2_label = "calc2"
-            calc2 = JobCalculation()
+            calc2 = CalcJobNode()
             calc2.set_computer(self.computer)
             calc2.set_option('resources', {"num_machines": 2,
                                            "num_mpiprocs_per_machine": 2})
@@ -1126,7 +1127,7 @@ class TestComputer(AiidaTestCase):
 
             # Check that there are no calculations
             qb = QueryBuilder()
-            qb.append(JobCalculation, project=['*'])
+            qb.append(CalcJobNode, project=['*'])
             self.assertEqual(qb.count(), 0, "There should not be any "
                                             "calculations in the database at "
                                             "this point.")
@@ -1136,7 +1137,7 @@ class TestComputer(AiidaTestCase):
 
             # Check that the calculation computer is imported correctly.
             qb = QueryBuilder()
-            qb.append(JobCalculation, project=['label'])
+            qb.append(CalcJobNode, project=['label'])
             self.assertEqual(qb.count(), 1, "Only one calculation should be "
                                             "found.")
             self.assertEqual(six.text_type(qb.first()[0]), calc1_label,
@@ -1175,7 +1176,7 @@ class TestComputer(AiidaTestCase):
             # computer.
             qb = QueryBuilder()
             qb.append(Computer, tag='comp')
-            qb.append(JobCalculation, has_computer='comp', project=['label'])
+            qb.append(CalcJobNode, has_computer='comp', project=['label'])
             self.assertEqual(qb.count(), 2, "Two calculations should be "
                                             "found.")
             ret_labels = set(_ for [_] in qb.all())
@@ -1201,7 +1202,7 @@ class TestComputer(AiidaTestCase):
         from aiida.orm.importexport import export
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.computers import Computer
-        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.node.process import CalcJobNode
 
         # Creating a folder for the import/export files
         export_file_tmp_folder = tempfile.mkdtemp()
@@ -1210,7 +1211,7 @@ class TestComputer(AiidaTestCase):
         try:
             # Store a calculation
             calc1_label = "calc1"
-            calc1 = JobCalculation()
+            calc1 = CalcJobNode()
             calc1.set_computer(self.computer)
             calc1.set_option('resources', {"num_machines": 1,
                                            "num_mpiprocs_per_machine": 1})
@@ -1230,7 +1231,7 @@ class TestComputer(AiidaTestCase):
 
             # Store a second calculation
             calc2_label = "calc2"
-            calc2 = JobCalculation()
+            calc2 = CalcJobNode()
             calc2.set_computer(self.computer)
             calc2.set_option('resources', {"num_machines": 2,
                                            "num_mpiprocs_per_machine": 2})
@@ -1253,7 +1254,7 @@ class TestComputer(AiidaTestCase):
 
             # Check that there are no calculations
             qb = QueryBuilder()
-            qb.append(JobCalculation, project=['*'])
+            qb.append(CalcJobNode, project=['*'])
             self.assertEqual(qb.count(), 0, "There should not be any "
                                             "calculations in the database at "
                                             "this point.")
@@ -1263,7 +1264,7 @@ class TestComputer(AiidaTestCase):
 
             # Check that the calculation computer is imported correctly.
             qb = QueryBuilder()
-            qb.append(JobCalculation, project=['label'])
+            qb.append(CalcJobNode, project=['label'])
             self.assertEqual(qb.count(), 1, "Only one calculation should be "
                                             "found.")
             self.assertEqual(six.text_type(qb.first()[0]), calc1_label,
@@ -1306,7 +1307,7 @@ class TestComputer(AiidaTestCase):
         from aiida.orm.importexport import export
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.computers import Computer
-        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.node.process import CalcJobNode
         from aiida.orm.importexport import COMP_DUPL_SUFFIX
 
         # Creating a folder for the import/export files
@@ -1320,7 +1321,7 @@ class TestComputer(AiidaTestCase):
 
             # Store a calculation
             calc1_label = "calc1"
-            calc1 = JobCalculation()
+            calc1 = CalcJobNode()
             calc1.set_computer(self.computer)
             calc1.set_option('resources', {"num_machines": 1,
                                            "num_mpiprocs_per_machine": 1})
@@ -1341,7 +1342,7 @@ class TestComputer(AiidaTestCase):
 
             # Store a second calculation
             calc2_label = "calc2"
-            calc2 = JobCalculation()
+            calc2 = CalcJobNode()
             calc2.set_computer(self.computer)
             calc2.set_option('resources', {"num_machines": 2,
                                            "num_mpiprocs_per_machine": 2})
@@ -1362,7 +1363,7 @@ class TestComputer(AiidaTestCase):
 
             # Store a third calculation
             calc3_label = "calc3"
-            calc3 = JobCalculation()
+            calc3 = CalcJobNode()
             calc3.set_computer(self.computer)
             calc3.set_option('resources', {"num_machines": 2,
                                            "num_mpiprocs_per_machine": 2})
@@ -1385,7 +1386,7 @@ class TestComputer(AiidaTestCase):
 
             # Check that there are no calculations
             qb = QueryBuilder()
-            qb.append(JobCalculation, project=['*'])
+            qb.append(CalcJobNode, project=['*'])
             self.assertEqual(qb.count(), 0, "There should not be any "
                                             "calculations in the database at "
                                             "this point.")
@@ -1397,7 +1398,7 @@ class TestComputer(AiidaTestCase):
 
             # Retrieve the calculation-computer pairs
             qb = QueryBuilder()
-            qb.append(JobCalculation, project=['label'], tag='jcalc')
+            qb.append(CalcJobNode, project=['label'], tag='jcalc')
             qb.append(Computer, project=['name'],
                       computer_of='jcalc')
             self.assertEqual(qb.count(), 3, "Three combinations expected.")
@@ -1427,7 +1428,7 @@ class TestComputer(AiidaTestCase):
         from aiida.orm.importexport import export
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.computers import Computer
-        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.node.process import CalcJobNode
 
         # Creating a folder for the import/export files
         export_file_tmp_folder = tempfile.mkdtemp()
@@ -1449,7 +1450,7 @@ class TestComputer(AiidaTestCase):
 
             # Store a calculation
             calc1_label = "calc1"
-            calc1 = JobCalculation()
+            calc1 = CalcJobNode()
             calc1.set_computer(self.computer)
             calc1.set_option('resources', {"num_machines": 1,
                                            "num_mpiprocs_per_machine": 1})
@@ -1587,7 +1588,7 @@ class TestLinks(AiidaTestCase):
         predecessors, desuccessors).
         """
         from aiida.orm.data.base import Int
-        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.node.process import CalcJobNode
         from aiida.orm.node.process import WorkChainNode
         from aiida.common.datastructures import calc_states
         from aiida.common.links import LinkType
@@ -1601,7 +1602,7 @@ class TestLinks(AiidaTestCase):
         wc1 = WorkChainNode().store()
         wc2 = WorkChainNode().store()
 
-        pw1 = JobCalculation()
+        pw1 = CalcJobNode()
         pw1.set_computer(self.computer)
         pw1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
         pw1.store()
@@ -1609,7 +1610,7 @@ class TestLinks(AiidaTestCase):
         d3 = Int(1).store()
         d4 = Int(1).store()
 
-        pw2 = JobCalculation()
+        pw2 = CalcJobNode()
         pw2.set_computer(self.computer)
         pw2.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
         pw2.store()
@@ -1669,7 +1670,7 @@ class TestLinks(AiidaTestCase):
         from aiida.common.datastructures import calc_states
         from aiida.orm import Data, Group
         from aiida.orm.data.base import Int
-        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.node.process import CalcJobNode
         from aiida.orm.importexport import export
         from aiida.common.links import LinkType
         from aiida.orm.querybuilder import QueryBuilder
@@ -1680,7 +1681,7 @@ class TestLinks(AiidaTestCase):
             data_input = Int(1).store()
             data_output = Int(2).store()
 
-            calc = JobCalculation()
+            calc = CalcJobNode()
             calc.set_computer(self.computer)
             calc.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             calc.store()
@@ -1706,7 +1707,7 @@ class TestLinks(AiidaTestCase):
             self.assertEqual(builder.all()[0][0].uuid, data_output.uuid)
 
             builder = QueryBuilder()
-            builder.append(JobCalculation)
+            builder.append(CalcJobNode)
             self.assertEqual(builder.count(), 0, 'Expected no Calculation nodes')
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)
@@ -1715,7 +1716,7 @@ class TestLinks(AiidaTestCase):
         """
         This test checks that all the needed links are correctly exported and
         imported. More precisely, it checks that INPUT, CREATE, RETURN and CALL
-        links connecting Data nodes, JobCalculations and WorkCalculations are
+        links connecting Data nodes, CalcJobNodes and WorkCalculations are
         exported and imported correctly.
         """
         import os, shutil, tempfile
@@ -2039,7 +2040,7 @@ class TestLinks(AiidaTestCase):
         from aiida.orm.utils import load_node
         from aiida.orm.importexport import export
         from aiida.common.links import LinkType
-        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.node.process import CalcJobNode
         from aiida.orm.code import Code
         from aiida.orm.querybuilder import QueryBuilder
 
@@ -2055,7 +2056,7 @@ class TestLinks(AiidaTestCase):
 
             code_uuid = code.uuid
 
-            jc = JobCalculation()
+            jc = CalcJobNode()
             jc.set_computer(self.computer)
             jc.set_option('resources',
                           {"num_machines": 1, "num_mpiprocs_per_machine": 1})
@@ -2076,7 +2077,7 @@ class TestLinks(AiidaTestCase):
             # Check that the link is in place
             qb = QueryBuilder()
             qb.append(Code, project='uuid')
-            qb.append(JobCalculation, project='uuid',
+            qb.append(CalcJobNode, project='uuid',
                       edge_project=['label', 'type'],
                       edge_filters={'type': {'==': LinkType.INPUT.value}})
             self.assertEquals(qb.count(), 1,

@@ -11,13 +11,13 @@ from aiida.work.workchain import WorkChain, if_, while_, append_, ToContext
 from aiida.work.workfunctions import workfunction
 
 
-ArithmeticAddCalculation = CalculationFactory('simpleplugins.arithmetic.add')
+ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
 
 
 def get_default_options(num_machines=1, max_wallclock_seconds=1800):
     """
     Return an instance of the options dictionary with the minimally required parameters
-    for a JobCalculation and set to default values unless overriden
+    for a CalcJobs and set to default values unless overriden
 
     :param num_machines: set the number of nodes, default=1
     :param max_wallclock_seconds: set the maximum number of wallclock seconds, default=1800

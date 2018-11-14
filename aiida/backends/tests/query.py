@@ -93,8 +93,8 @@ class TestQueryBuilder(AiidaTestCase):
         Testing a simple query
         """
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm.calculation.job import JobCalculation
-        from aiida.orm import Node, Data, Calculation
+        from aiida.orm import Node, Data
+        from aiida.orm.node.process import ProcessNode
         from datetime import datetime
         from aiida.common.links import LinkType
 
@@ -103,7 +103,7 @@ class TestQueryBuilder(AiidaTestCase):
         n1._set_attr('foo', ['hello', 'goodbye'])
         n1.store()
 
-        n2 = Calculation()
+        n2 = ProcessNode()
         n2.label = 'node2'
         n2._set_attr('foo', 1)
         n2.store()
@@ -113,7 +113,7 @@ class TestQueryBuilder(AiidaTestCase):
         n3._set_attr('foo', 1.0000)  # Stored as fval
         n3.store()
 
-        n4 = Calculation()
+        n4 = ProcessNode()
         n4.label = 'node4'
         n4._set_attr('foo', 'bar')
         n4.store()
@@ -148,13 +148,13 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(qb3.count(), 4)
 
         qb4 = QueryBuilder()
-        qb4.append(Calculation, tag='node1')
+        qb4.append(ProcessNode, tag='node1')
         qb4.append(Data, tag='node2')
         self.assertEqual(qb4.count(), 2)
 
         qb5 = QueryBuilder()
         qb5.append(Data, tag='node1')
-        qb5.append(Calculation, tag='node2')
+        qb5.append(ProcessNode, tag='node2')
         self.assertEqual(qb5.count(), 2)
 
         qb6 = QueryBuilder()
@@ -366,7 +366,7 @@ class TestQueryBuilder(AiidaTestCase):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.data.structure import StructureData
         from aiida.common.exceptions import InputValidationError
-        from aiida.orm import Calculation
+        from aiida.orm.node.process import ProcessNode
 
         # So here I am giving two times the same tag
         with self.assertRaises(InputValidationError):
@@ -380,10 +380,10 @@ class TestQueryBuilder(AiidaTestCase):
 
         # here I am giving a nonsensical projection for the edge:
         with self.assertRaises(InputValidationError):
-            QueryBuilder().append(Calculation).append(StructureData, edge_tag='t').add_projection('t', True)
+            QueryBuilder().append(ProcessNode).append(StructureData, edge_tag='t').add_projection('t', True)
         # Giving a nonsensical limit
         with self.assertRaises(InputValidationError):
-            QueryBuilder().append(Calculation).limit(2.3)
+            QueryBuilder().append(ProcessNode).limit(2.3)
         # Giving a nonsensical offset
         with self.assertRaises(InputValidationError):
             QueryBuilder(offset=2.3)
@@ -406,7 +406,7 @@ class TestQueryBuilder(AiidaTestCase):
     def test_tags(self):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.node import Node
-        from aiida.orm.calculation import Calculation
+        from aiida.orm.node.process import ProcessNode
         from aiida.orm.data.structure import StructureData
         from aiida.orm.data.parameter import ParameterData
         from aiida.orm.computers import Computer
@@ -418,23 +418,23 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(qb.get_used_tags(), ['n1', 'n2', 'e1', 'n3', 'e2', 'c1', 'nonsense'])
 
         # Now I am testing the default tags,
-        qb = QueryBuilder().append(StructureData).append(Calculation).append(
+        qb = QueryBuilder().append(StructureData).append(ProcessNode).append(
             StructureData).append(
-            ParameterData, input_of=Calculation)
+            ParameterData, input_of=ProcessNode)
         self.assertEqual(qb.get_used_tags(), [
-            'StructureData_1', 'Calculation_1',
-            'StructureData_1--Calculation_1', 'StructureData_2',
-            'Calculation_1--StructureData_2', 'ParameterData_1',
-            'Calculation_1--ParameterData_1'
+            'StructureData_1', 'ProcessNode_1',
+            'StructureData_1--ProcessNode_1', 'StructureData_2',
+            'ProcessNode_1--StructureData_2', 'ParameterData_1',
+            'ProcessNode_1--ParameterData_1'
         ])
         self.assertEqual(qb.get_used_tags(edges=False), [
-            'StructureData_1', 'Calculation_1',
+            'StructureData_1', 'ProcessNode_1',
             'StructureData_2', 'ParameterData_1',
         ])
         self.assertEqual(qb.get_used_tags(vertices=False), [
-            'StructureData_1--Calculation_1',
-            'Calculation_1--StructureData_2',
-            'Calculation_1--ParameterData_1'
+            'StructureData_1--ProcessNode_1',
+            'ProcessNode_1--StructureData_2',
+            'ProcessNode_1--ParameterData_1'
         ])
 
 
@@ -506,11 +506,11 @@ class TestQueryBuilderCornerCases(AiidaTestCase):
         decoding of a None value leads to an exception (this was the case
         under Django).
         """
+        from aiida.orm import Node, Data, Computer
+        from aiida.orm.node.process import ProcessNode
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm import Node, Data, Calculation
-        from aiida.orm import Computer
 
-        n1 = Calculation()
+        n1 = ProcessNode()
         n1.label = 'node2'
         n1._set_attr('foo', 1)
         n1.store()
@@ -518,7 +518,7 @@ class TestQueryBuilderCornerCases(AiidaTestCase):
         # Checking the correct retrieval of transport_params which is
         # a JSON field (in both backends).
         qb = QueryBuilder()
-        qb.append(Calculation, project=['id'], tag='calc')
+        qb.append(ProcessNode, project=['id'], tag='calc')
         qb.append(Computer, project=['id', 'transport_params'],
                   outerjoin=True, computer_of='calc')
         qb.all()
@@ -526,7 +526,7 @@ class TestQueryBuilderCornerCases(AiidaTestCase):
         # Checking the correct retrieval of _metadata which is
         # a JSON field (in both backends).
         qb = QueryBuilder()
-        qb.append(Calculation, project=['id'], tag='calc')
+        qb.append(ProcessNode, project=['id'], tag='calc')
         qb.append(Computer, project=['id', '_metadata'],
                   outerjoin=True, computer_of='calc')
         qb.all()
@@ -704,7 +704,7 @@ class QueryBuilderLimitOffsetsTest(AiidaTestCase):
 
 class QueryBuilderJoinsTests(AiidaTestCase):
     def test_joins1(self):
-        from aiida.orm import Node, Data, Calculation
+        from aiida.orm import Node, Data
         from aiida.orm.querybuilder import QueryBuilder
         # Creating n1, who will be a parent:
         parent = Node()
@@ -739,7 +739,7 @@ class QueryBuilderJoinsTests(AiidaTestCase):
         self.assertEqual(qb.count(), 1)
 
     def test_joins2(self):
-        from aiida.orm import Node, Data, Calculation
+        from aiida.orm import Node, Data
         from aiida.orm.querybuilder import QueryBuilder
         # Creating n1, who will be a parent:
 
@@ -1007,7 +1007,8 @@ class TestManager(AiidaTestCase):
 
         I try to implement it in a way that does not depend on the past state.
         """
-        from aiida.orm import Node, DataFactory, Calculation
+        from aiida.orm import Node, DataFactory
+        from aiida.orm.node.process import ProcessNode
         from collections import defaultdict
 
         def store_and_add(n, statistics):
@@ -1034,7 +1035,7 @@ class TestManager(AiidaTestCase):
         store_and_add(Node(), expected_db_statistics)
         store_and_add(ParameterData(), expected_db_statistics)
         store_and_add(ParameterData(), expected_db_statistics)
-        store_and_add(Calculation(), expected_db_statistics)
+        store_and_add(ProcessNode(), expected_db_statistics)
 
         new_db_statistics = qmanager.get_creation_statistics()
         # I only check a few fields
@@ -1051,7 +1052,8 @@ class TestManager(AiidaTestCase):
 
         I try to implement it in a way that does not depend on the past state.
         """
-        from aiida.orm import Node, DataFactory, Calculation
+        from aiida.orm import Node, DataFactory
+        from aiida.orm.node.process import ProcessNode
         from collections import defaultdict
 
         def store_and_add(n, statistics):
@@ -1077,7 +1079,7 @@ class TestManager(AiidaTestCase):
         store_and_add(Node(), expected_db_statistics)
         store_and_add(ParameterData(), expected_db_statistics)
         store_and_add(ParameterData(), expected_db_statistics)
-        store_and_add(Calculation(), expected_db_statistics)
+        store_and_add(ProcessNode(), expected_db_statistics)
 
         new_db_statistics = self.backend.query_manager.get_creation_statistics()
         # I only check a few fields

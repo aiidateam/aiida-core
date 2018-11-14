@@ -15,12 +15,12 @@ import io
 from aiida.common.utils import classproperty
 from aiida.common.exceptions import InputValidationError, ValidationError
 from aiida.common.datastructures import CalcInfo, CodeInfo
-from aiida.orm.calculation.job import JobCalculation
+from aiida.orm.node.process import CalcJobNode
 from aiida.orm.data.float import Float
 from aiida.orm.data.int import Int
 
 
-class ArithmeticAddCalculation(JobCalculation):
+class ArithmeticAddCalculation(CalcJobNode):
     """
     Basic arithmetic dummy calculation to add two numbers
     """
@@ -32,7 +32,7 @@ class ArithmeticAddCalculation(JobCalculation):
         self._INPUT_FILE_NAME = 'aiida.in'
         self._OUTPUT_FILE_NAME = 'aiida.out'
 
-        self._default_parser = 'simpleplugins.arithmetic.add'
+        self._default_parser = 'arithmetic.add'
         self._required_inputs = ['code', 'x', 'y']
         self._optional_inputs = []
 
@@ -44,7 +44,7 @@ class ArithmeticAddCalculation(JobCalculation):
         """
         Define and return the available use_methods
         """
-        methods = JobCalculation._use_methods
+        methods = CalcJobNode._use_methods
         methods.update({
             'x': {
                 'valid_types': (Int, Float),

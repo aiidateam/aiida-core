@@ -57,7 +57,7 @@ def get_calculation_remote_paths(calculation_pks=None, past_days=None, older_tha
 
     from aiida.orm.computers import Computer as OrmComputer
     from aiida.orm.users import User as OrmUser
-    from aiida.orm.calculation import Calculation as OrmCalculation
+    from aiida.orm.node.process import CalculationNode
     from aiida.orm.querybuilder import QueryBuilder
     from aiida import orm
     from aiida.utils import timezone
@@ -81,7 +81,7 @@ def get_calculation_remote_paths(calculation_pks=None, past_days=None, older_tha
         filters_calc['id'] = {'in': calculation_pks}
 
     qb = QueryBuilder()
-    qb.append(OrmCalculation, tag='calc', project=['attributes.remote_workdir'], filters=filters_calc)
+    qb.append(CalculationNode, tag='calc', project=['attributes.remote_workdir'], filters=filters_calc)
     qb.append(OrmComputer, computer_of='calc', tag='computer', project=['*'], filters=filters_computer)
     qb.append(OrmUser, creator_of='calc', filters={'email': user.email})
 

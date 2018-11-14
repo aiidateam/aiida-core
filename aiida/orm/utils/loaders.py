@@ -330,8 +330,8 @@ class CalculationEntityLoader(OrmEntityLoader):
 
         :returns: the orm base class
         """
-        from aiida.orm.calculation import Calculation
-        return Calculation
+        from aiida.orm.node.process import CalculationNode
+        return CalculationNode
 
     @classmethod
     def _get_query_builder_label_identifier(cls, identifier, classes):

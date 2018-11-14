@@ -167,6 +167,9 @@
         aiida/backends/tests/work/utils.py|
         aiida/backends/tests/work/work_chain.py|
         aiida/backends/utils.py|
+        aiida/calculations/plugins/arithmetic/add.py|
+        aiida/calculations/plugins/__init__.py|
+        aiida/calculations/plugins/templatereplacer.py|
         aiida/common/additions/backup_script/backup_base.py|
         aiida/common/additions/backup_script/backup_django.py|
         aiida/common/additions/backup_script/backup_setup.py|
@@ -208,14 +211,9 @@
         aiida/orm/autogroup.py|
         aiida/orm/backend.py|
         aiida/orm/querybuilder.py|
-        aiida/orm/calculation/function.py|
         aiida/orm/calculation/__init__.py|
         aiida/orm/calculation/inline.py|
         aiida/orm/calculation/job/__init__.py|
-        aiida/orm/calculation/job/simpleplugins/arithmetic/add.py|
-        aiida/orm/calculation/job/simpleplugins/__init__.py|
-        aiida/orm/calculation/job/simpleplugins/templatereplacer.py|
-        aiida/orm/calculation/work.py|
         aiida/orm/code.py|
         aiida/orm/data/array/bands.py|
         aiida/orm/data/array/__init__.py|
@@ -245,8 +243,6 @@
         aiida/orm/implementation/calculation.py|
         aiida/orm/implementation/django/authinfo.py|
         aiida/orm/implementation/django/backend.py|
-        aiida/orm/implementation/django/calculation/__init__.py|
-        aiida/orm/implementation/django/calculation/job/__init__.py|
         aiida/orm/implementation/django/code.py|
         aiida/orm/implementation/django/comment.py|
         aiida/orm/implementation/django/computer.py|
@@ -273,8 +269,6 @@
         aiida/orm/implementation/__init__.py|
         aiida/orm/implementation/sqlalchemy/authinfo.py|
         aiida/orm/implementation/sqlalchemy/backend.py|
-        aiida/orm/implementation/sqlalchemy/calculation/__init__.py|
-        aiida/orm/implementation/sqlalchemy/calculation/job/__init__.py|
         aiida/orm/implementation/sqlalchemy/code.py|
         aiida/orm/implementation/sqlalchemy/comment.py|
         aiida/orm/implementation/sqlalchemy/computer.py|
@@ -299,9 +293,9 @@
         aiida/parsers/exceptions.py|
         aiida/parsers/__init__.py|
         aiida/parsers/parser.py|
-        aiida/parsers/simpleplugins/arithmetic/add.py|
-        aiida/parsers/simpleplugins/templatereplacer/doubler.py|
-        aiida/parsers/simpleplugins/templatereplacer/__init__.py|
+        aiida/parsers/plugins/arithmetic/add.py|
+        aiida/parsers/plugins/templatereplacer/doubler.py|
+        aiida/parsers/plugins/templatereplacer/__init__.py|
         aiida/plugins/entry_point.py|
         aiida/plugins/entry.py|
         aiida/plugins/factory.py|

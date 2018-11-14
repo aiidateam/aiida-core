@@ -42,7 +42,7 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.common.links import LinkType
     from aiida.orm.node import Node
-    from aiida.orm.calculation import Calculation
+    from aiida.orm.node.process import ProcessNode
     from aiida.orm.data import Data
     from aiida.orm import load_node
     from aiida.orm.backends import construct_backend
@@ -106,8 +106,8 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
 
     if not disable_checks:
         called_qb = QueryBuilder()
-        called_qb.append(Calculation, filters={'id': {'!in': pks_set_to_delete}}, project='id')
-        called_qb.append(Calculation, project='type', edge_project='label',
+        called_qb.append(ProcessNode, filters={'id': {'!in': pks_set_to_delete}}, project='id')
+        called_qb.append(ProcessNode, project='type', edge_project='label',
                          filters={'id': {'in': pks_set_to_delete}},
                          edge_filters={'type': {'==': LinkType.CALL.value}})
         caller_to_called2delete = called_qb.all()
@@ -125,7 +125,7 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
                     print('  ', load_node(calc_losing_called_pk))
 
         created_qb = QueryBuilder()
-        created_qb.append(Calculation, filters={'id': {'!in': pks_set_to_delete}}, project='id')
+        created_qb.append(ProcessNode, filters={'id': {'!in': pks_set_to_delete}}, project='id')
         created_qb.append(Data, project='type', edge_project='label',
                           filters={'id': {'in': pks_set_to_delete}},
                           edge_filters={'type': {'==': LinkType.CREATE.value}})

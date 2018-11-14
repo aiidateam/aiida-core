@@ -159,8 +159,7 @@ def _ctime(node):
 
 
 def calc_info(calc_node):
-    from aiida.orm.node.process import CalcFunctionNode, WorkFunctionNode
-    from aiida.orm.calculation.job import JobCalculation
+    from aiida.orm.node.process import CalcFunctionNode, CalcJobNode, WorkFunctionNode, WorkChainNode
     from aiida.orm.node.process import WorkChainNode
     from aiida.work.processes import ProcessState
 
@@ -174,7 +173,7 @@ def calc_info(calc_node):
         else:
             s = u'{} <pk={}> [{}] [{}]'.format(plabel, calc_node.pk, pstate, winfo)
 
-    elif isinstance(calc_node, JobCalculation):
+    elif isinstance(calc_node, CalcJobNode):
         clabel = type(calc_node).__name__
         cstate = str(calc_node.get_state())
         s = u'{} <pk={}> [{}]'.format(clabel, calc_node.pk, cstate)

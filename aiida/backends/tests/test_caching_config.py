@@ -21,7 +21,7 @@ from aiida.common.caching import configure, get_use_cache, enable_caching, disab
 from aiida.orm.data.bool import Bool
 from aiida.orm.data.float import Float
 from aiida.orm.data.int import Int
-from aiida.orm.calculation.job.simpleplugins.templatereplacer import TemplatereplacerCalculation
+from aiida.calculations.plugins.templatereplacer import TemplatereplacerCalculation
 
 class CacheConfigTest(unittest.TestCase):
     """
@@ -35,7 +35,7 @@ class CacheConfigTest(unittest.TestCase):
             get_current_profile(): {
                 'default': True,
                 'enabled': ['aiida.orm.data.bool.Bool', 'aiida.orm.data.float.Float'],
-                'disabled': ['aiida.orm.calculation.job.simpleplugins.templatereplacer.TemplatereplacerCalculation', 'aiida.orm.data.bool.Bool']
+                'disabled': ['aiida.calculations.plugins.templatereplacer.TemplatereplacerCalculation', 'aiida.orm.data.bool.Bool']
             }
         }
         with tempfile.NamedTemporaryFile() as tmpf:

@@ -1164,8 +1164,8 @@ class TestComputer(AiidaTestCase):
             # did not change.
             qb = QueryBuilder()
             qb.append(Computer, project=['name', 'uuid', 'id'])
-            self.assertEqual(qb.count(), 1, "Only one computer should be "
-                                            "found.")
+            self.assertEqual(qb.count(), 1, "Found {} computers"
+                "but only one computer should be found.".format(qb.count()))
             self.assertEqual(six.text_type(qb.first()[0]), comp_name,
                              "The computer name is not correct.")
             self.assertEqual(six.text_type(qb.first()[1]), comp_uuid,
@@ -1286,8 +1286,8 @@ class TestComputer(AiidaTestCase):
             # did not change.
             qb = QueryBuilder()
             qb.append(Computer, project=['name'])
-            self.assertEqual(qb.count(), 1, "Only one computer should be "
-                                            "found.")
+            self.assertEqual(qb.count(), 1, "Found {} computers"
+                "but only one computer should be found.".format(qb.count()))
             self.assertEqual(six.text_type(qb.first()[0]), comp1_name,
                              "The computer name is not correct.")
 

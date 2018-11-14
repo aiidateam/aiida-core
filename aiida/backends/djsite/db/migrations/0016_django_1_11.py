@@ -25,17 +25,17 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='dbcomment',
             name='uuid',
-            field=models.UUIDField(default=aiida.common.utils.get_new_uuid),
+            field=models.UUIDField(unique=True, default=aiida.common.utils.get_new_uuid),
         ),
         migrations.AlterField(
             model_name='dbcomputer',
             name='uuid',
-            field=models.UUIDField(default=aiida.common.utils.get_new_uuid),
+            field=models.UUIDField(unique=True, default=aiida.common.utils.get_new_uuid),
         ),
         migrations.AlterField(
             model_name='dbgroup',
             name='uuid',
-            field=models.UUIDField(default=aiida.common.utils.get_new_uuid),
+            field=models.UUIDField(unique=True, default=aiida.common.utils.get_new_uuid),
         ),
         migrations.AlterField(
             model_name='dbuser',
@@ -57,7 +57,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='dbworkflow',
             name='uuid',
-            field=models.UUIDField(default=aiida.common.utils.get_new_uuid),
+            field=models.UUIDField(unique=True, default=aiida.common.utils.get_new_uuid),
         ),
         upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

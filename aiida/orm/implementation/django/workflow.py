@@ -25,7 +25,7 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      AiidaException)
 from aiida.common.folders import RepositoryFolder, SandboxFolder
 from aiida.common.utils import md5_file, str_timedelta
-from aiida.orm.implementation.django.calculation.job import JobCalculation
+from aiida.orm.implementation.general.calculation.job import JobCalculation
 from aiida.orm.implementation.general.workflow import AbstractWorkflow
 from aiida.utils import timezone
 

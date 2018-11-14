@@ -64,7 +64,7 @@ class DjangoQueryManager(AbstractQueryManager):
         # I assume that calc_states are strings. If this changes in the future,
         # update the filter below from dbattributes__tval to the correct field.
         from aiida.common.exceptions import InputValidationError
-        from aiida.orm.implementation.django.calculation.job import JobCalculation
+        from aiida.orm.implementation.calculation.job import JobCalculation
         from aiida.common.datastructures import calc_states
         from aiida.backends.djsite.db.models import DbUser
 

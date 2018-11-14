@@ -1074,10 +1074,10 @@ def deposit(what, type, author_name=None, author_email=None, url=None,
             replace=None, message=None, **kwargs):
     """
     Launches a
-    :py:class:`aiida.orm.implementation.general.calculation.job.AbstractJobCalculation`
+    :py:class:`aiida.orm.implementation.general.calculation.job.JobCalculation`
     to deposit data node to \*COD-type database.
 
-    :return: launched :py:class:`aiida.orm.implementation.general.calculation.job.AbstractJobCalculation`
+    :return: launched :py:class:`aiida.orm.implementation.general.calculation.job.JobCalculation`
         instance.
     :raises ValueError: if any of the required parameters are not given.
     """
@@ -1224,11 +1224,11 @@ def deposition_cmdline_parameters(parser, expclass="Data"):
 def translate_calculation_specific_values(calc, translator, **kwargs):
     """
     Translates calculation-specific values from
-    :py:class:`aiida.orm.implementation.general.calculation.job.AbstractJobCalculation` subclass to
+    :py:class:`aiida.orm.implementation.general.calculation.job.JobCalculation` subclass to
     appropriate TCOD CIF tags.
 
     :param calc: an instance of
-        :py:class:`aiida.orm.implementation.general.calculation.job.AbstractJobCalculation` subclass.
+        :py:class:`aiida.orm.implementation.general.calculation.job.JobCalculation` subclass.
     :param translator: class, derived from
         :py:class:`aiida.tools.dbexporters.tcod_plugins.BaseTcodtranslator`.
     :raises ValueError: if **translator** is not derived from proper class.

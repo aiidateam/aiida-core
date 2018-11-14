@@ -22,12 +22,11 @@ DOWN_REVISION = '1.0.1'
 
 
 def fix_calc_states(apps, schema_editor):
-    from aiida.backends.djsite.db.models import DbCalcState
-    # from aiida.orm import load_node
     from aiida.orm.utils import load_node
 
     # These states should never exist in the database but we'll play it safe
     # and deal with them if they do
+    DbCalcState = apps.get_model('db', 'DbCalcState')
     for calc_state in DbCalcState.objects.filter(
             state__in=[b'UNDETERMINED', b'NOTFOUND']):
         old_state = calc_state.state
@@ -39,6 +38,7 @@ def fix_calc_states(apps, schema_editor):
             "Job state {} found for calculation {} which should never be in "
             "the database. Changed state to FAILED.".format(
                 old_state, calc_state.dbnode.pk))
+
 
 class Migration(migrations.Migration):
     dependencies = [

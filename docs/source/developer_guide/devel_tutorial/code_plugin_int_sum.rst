@@ -197,7 +197,7 @@ using ``CalculationFactory``.
 
 .. note:: The base ``Calculation`` class should only be used as the abstract
   base class. Any calculation that needs to run on a remote scheduler must
-  inherit from  :class:`~aiida.orm.implementation.general.calculation.job.AbstractJobCalculation`, that
+  inherit from  :class:`~aiida.orm.implementation.general.calculation.job.JobCalculation`, that
   contains all the methods to run on a remote scheduler, get the calculation
   state, copy files remotely and retrieve them, ...
 

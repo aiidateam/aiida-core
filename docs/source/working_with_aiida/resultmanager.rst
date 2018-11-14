@@ -12,7 +12,7 @@ Prerequisites
 -------------
 
 Before getting the calculation results, we need a correctly finished and parsed
-:class:`JobCalculation<aiida.orm.implementation.general.calculation.job.AbstractJobCalculation>`.
+:class:`JobCalculation<aiida.orm.implementation.general.calculation.job.JobCalculation>`.
 For example this can be a Quantum ESPRESSO ``pw.x`` calculation.
 You can load such a calculation -- we'll call it ``calc`` -- with the command
 
@@ -27,7 +27,7 @@ either in ``verdi shell``, or in a python script (as described :doc:`here <../wo
 Using the CalculationResultManager instance
 -------------------------------------------
 
-Each :class:`JobCalculation<aiida.orm.implementation.general.calculation.job.AbstractJobCalculation>` has a ``res`` attribute that is a 
+Each :class:`JobCalculation<aiida.orm.implementation.general.calculation.job.JobCalculation>` has a ``res`` attribute that is a 
 :class:`.CalculationResultManager` instance and
 gives direct access to parsed data. You can access it as
 ::
@@ -62,7 +62,7 @@ Similarly, you can get any other parsed value, for any code that
 provides a parser.
 
 .. hint:: 
-    The :class:`.CalculationResultManager` is also integrated with the iPython/verdi shell completion mechanism: if ``calc`` is a valid :class:`JobCalculation<aiida.orm.implementation.general.calculation.job.AbstractJobCalculation>`, you can type
+    The :class:`.CalculationResultManager` is also integrated with the iPython/verdi shell completion mechanism: if ``calc`` is a valid :class:`JobCalculation<aiida.orm.implementation.general.calculation.job.JobCalculation>`, you can type
     ::
 
         calc.res.

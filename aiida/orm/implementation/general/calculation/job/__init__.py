@@ -20,13 +20,13 @@ import warnings
 import six
 from six.moves import range, zip
 
-from aiida.common.datastructures import calc_states
+from aiida.common.datastructures import sort_states, calc_states
 from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
 from aiida.common.links import LinkType
 from aiida.plugins.loader import get_plugin_type_from_type_string
 from aiida.common.utils import str_timedelta, classproperty
 from aiida.orm.computers import Computer
-from aiida.orm.implementation.general.calculation import AbstractCalculation
+from aiida.orm.implementation.general.calculation import Calculation
 from aiida.orm.mixins import Sealable
 from aiida.utils import timezone
 
@@ -38,10 +38,10 @@ from aiida.utils import timezone
 # 'resourceLimits',
 
 SEALED_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
-CALCULATION_STATE_KEY = 'state'
+CALCULATION_STATE_KEY = 'attributes.state'
 SCHEDULER_STATE_KEY = 'attributes.scheduler_state'
-PROCESS_STATE_KEY = 'attributes.{}'.format(AbstractCalculation.PROCESS_STATE_KEY)
-EXIT_STATUS_KEY = 'attributes.{}'.format(AbstractCalculation.EXIT_STATUS_KEY)
+PROCESS_STATE_KEY = 'attributes.{}'.format(Calculation.PROCESS_STATE_KEY)
+EXIT_STATUS_KEY = 'attributes.{}'.format(Calculation.EXIT_STATUS_KEY)
 DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/process/index.html#the-process-builder'
 
 _input_subfolder = 'raw_input'
@@ -52,7 +52,7 @@ class JobCalculationExitStatus(enum.Enum):
     This enumeration maps specific calculation states to an integer. This integer can
     then be used to set the exit status of a JobCalculation node. The values defined
     here map directly on the failed calculation states, but the idea is that sub classes
-    of AbstractJobCalculation can extend this enum with additional error codes
+    of JobCalculation can extend this enum with additional error codes
     """
     FINISHED = 0
     SUBMISSIONFAILED = 100
@@ -61,11 +61,14 @@ class JobCalculationExitStatus(enum.Enum):
     FAILED = 400
 
 
-class AbstractJobCalculation(AbstractCalculation):
+class JobCalculation(Calculation):
     """
     This class provides the definition of an AiiDA calculation that is run
     remotely on a job scheduler.
     """
+
+    JOB_STATE_KEY = 'state'
+    JOB_STATE_ATTRIBUTE_KEY = 'attributes.{}'.format(JOB_STATE_KEY)
 
     @classproperty
     def exit_status_enum(cls):
@@ -90,13 +93,13 @@ class AbstractJobCalculation(AbstractCalculation):
 
     @classproperty
     def _updatable_attributes(cls):
-        return super(AbstractJobCalculation, cls)._updatable_attributes + (
+        return super(JobCalculation, cls)._updatable_attributes + (
             'job_id', 'scheduler_state', 'scheduler_lastchecktime', 'last_jobinfo', 'remote_workdir', 'retrieve_list',
-            'retrieve_temporary_list', 'retrieve_singlefile_list', 'state')
+            'retrieve_temporary_list', 'retrieve_singlefile_list', cls.JOB_STATE_KEY)
 
     @classproperty
     def _hash_ignored_attributes(cls):
-        return super(AbstractJobCalculation, cls)._hash_ignored_attributes + (
+        return super(JobCalculation, cls)._hash_ignored_attributes + (
             'queue_name',
             'account',
             'qos',
@@ -106,7 +109,7 @@ class AbstractJobCalculation(AbstractCalculation):
         )
 
     def get_hash(self, ignore_errors=True, ignored_folder_content=('raw_input',), **kwargs):
-        return super(AbstractJobCalculation, self).get_hash(
+        return super(JobCalculation, self).get_hash(
             ignore_errors=ignore_errors, ignored_folder_content=ignored_folder_content, **kwargs)
 
     @classmethod
@@ -203,7 +206,7 @@ class AbstractJobCalculation(AbstractCalculation):
           parser_name is taken from the actual subclass of calculation,
           and not from the parent Calculation class
         """
-        parent_dict = super(AbstractJobCalculation, self)._set_defaults
+        parent_dict = super(JobCalculation, self)._set_defaults
 
         parent_dict.update({"parser_name": self._default_parser, "_linkname_retrieved": self._linkname_retrieved})
 
@@ -214,7 +217,7 @@ class AbstractJobCalculation(AbstractCalculation):
         Override the store() method to store also the calculation in the NEW
         state as soon as this is stored for the first time.
         """
-        super(AbstractJobCalculation, self).store(*args, **kwargs)
+        super(JobCalculation, self).store(*args, **kwargs)
 
         if self.get_state() is None:
             self._set_state(calc_states.NEW)
@@ -223,7 +226,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
     def _add_outputs_from_cache(self, cache_node):
         self._set_state(calc_states.PARSING)
-        super(AbstractJobCalculation, self)._add_outputs_from_cache(cache_node=cache_node)
+        super(JobCalculation, self)._add_outputs_from_cache(cache_node=cache_node)
         self._set_state(cache_node.get_state())
 
     def _validate(self):
@@ -234,7 +237,7 @@ class AbstractJobCalculation(AbstractCalculation):
         """
         from aiida.common.exceptions import MissingPluginError, ValidationError
 
-        super(AbstractJobCalculation, self)._validate()
+        super(JobCalculation, self)._validate()
 
         if self.get_computer() is None:
             raise ValidationError("You did not specify a computer")
@@ -289,7 +292,7 @@ class AbstractJobCalculation(AbstractCalculation):
                                          "of the following states: {}, it is instead {}".format(
                 valid_states, self.get_state()))
 
-        return super(AbstractJobCalculation, self)._linking_as_output(dest, link_type)
+        return super(JobCalculation, self)._linking_as_output(dest, link_type)
 
     def _store_raw_input_folder(self, folder_path):
         """
@@ -945,7 +948,7 @@ class AbstractJobCalculation(AbstractCalculation):
                                          "one of the following states: {}, it is instead {}".format(
                 valid_states, self.get_state()))
 
-        return super(AbstractJobCalculation, self).add_link_from(src, label, link_type)
+        return super(JobCalculation, self).add_link_from(src, label, link_type)
 
     def _replace_link_from(self, src, label, link_type=LinkType.INPUT):
         """
@@ -963,7 +966,7 @@ class AbstractJobCalculation(AbstractCalculation):
                                          "one of the following states: {}, it is instead {}".format(
                 valid_states, self.get_state()))
 
-        return super(AbstractJobCalculation, self)._replace_link_from(src, label, link_type)
+        return super(JobCalculation, self)._replace_link_from(src, label, link_type)
 
     def _remove_link_from(self, label):
         """
@@ -978,47 +981,30 @@ class AbstractJobCalculation(AbstractCalculation):
                                          "of the following states:\n   {}\n it is instead {}".format(
                 valid_states, self.get_state()))
 
-        return super(AbstractJobCalculation, self)._remove_link_from(label)
+        return super(JobCalculation, self)._remove_link_from(label)
 
-    @abc.abstractmethod
     def _set_state(self, state):
         """
-        Set the state of the calculation.
+        Set the state of the calculation job.
 
-        Set it in the DbCalcState to have also the uniqueness check.
-        Moreover (except for the IMPORTED state) also store in the 'state'
-        attribute, useful to know it also after importing, and for faster
-        querying.
-
-        .. todo:: Add further checks to enforce that the states are set
-           in order?
-
-        :param state: a string with the state. This must be a valid string,
-          from ``aiida.common.datastructures.calc_states``.
-        :raise: ModificationNotAllowed if the given state was already set.
+        :param state: a string with the state from ``aiida.common.datastructures.calc_states``.
+        :raise: ValueError if state is invalid
         """
-        pass
+        if state not in calc_states:
+            raise ValueError("'{}' is not a valid calculation status".format(state))
 
-    @abc.abstractmethod
-    def get_state(self, from_attribute=False):
+        self._set_attr(self.JOB_STATE_KEY, state)
+
+    def get_state(self):
         """
-        Get the state of the calculation.
+        Return the state of the calculation job.
 
-        .. note:: the 'most recent' state is obtained using the logic in the
-          ``aiida.common.datastructures.sort_states`` function.
-
-        .. todo:: Understand if the state returned when no state entry is found
-          in the DB is the best choice.
-
-        :param from_attribute: if set to True, read it from the attributes
-          (the attribute is also set with set_state, unless the state is set
-          to IMPORTED; in this way we can also see the state before storing).
-
-        :return: a string. If from_attribute is True and no attribute is found,
-          return None. If from_attribute is False and no entry is found in the
-          DB, also return None.
+        :return: the calculation job state
         """
-        pass
+        if not self.is_stored:
+            return calc_states.NEW
+
+        return self.get_attr(self.JOB_STATE_KEY, None)
 
     def _get_state_string(self):
         """
@@ -1273,7 +1259,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
     compound_projection_map = {
         'state': ('calculation', (PROCESS_STATE_KEY, EXIT_STATUS_KEY)),
-        'job_state': ('calculation', ('state', SCHEDULER_STATE_KEY))
+        'job_state': ('calculation', (CALCULATION_STATE_KEY, SCHEDULER_STATE_KEY))
     }
 
     @classmethod
@@ -1374,7 +1360,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
             # filter for states:
             if states:
-                calculation_filters['state'] = {'in': states}
+                calculation_filters['attributes.{}'.format(cls.JOB_STATE_KEY)] = {'in': states}
 
             # Filter on the users, if not all users
             if not all_users:

@@ -26,7 +26,6 @@ db_test_list = {
     BACKEND_DJANGO: {
         'generic': ['aiida.backends.djsite.db.subtests.generic'],
         'nodes': ['aiida.backends.djsite.db.subtests.nodes'],
-        'djangomigrations': ['aiida.backends.djsite.db.subtests.djangomigrations'],
         'migrations': ['aiida.backends.djsite.db.subtests.migrations'],
         'query': ['aiida.backends.djsite.db.subtests.query'],
     },

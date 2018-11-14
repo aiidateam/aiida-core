@@ -22,10 +22,11 @@ from aiida.common.links import LinkType
 from aiida.common.log import get_dblogger_extra
 from aiida.common.utils import classproperty
 from aiida.orm.mixins import Sealable
+from aiida.orm.implementation import Node
 from aiida.plugins.entry_point import get_entry_point_string_from_class
 
 
-class AbstractCalculation(Sealable):
+class Calculation(Sealable, Node):
     """
     This class provides the definition of an "abstract" AiiDA calculation.
     A calculation in this sense is any computation that converts data into data.
@@ -49,7 +50,7 @@ class AbstractCalculation(Sealable):
 
     @classproperty
     def _updatable_attributes(cls):
-        return super(AbstractCalculation, cls)._updatable_attributes + (
+        return super(Calculation, cls)._updatable_attributes + (
             cls.PROCESS_PAUSED_KEY,
             cls.CHECKPOINT_KEY,
             cls.EXCEPTION_KEY,
@@ -549,12 +550,12 @@ class AbstractCalculation(Sealable):
             if not isinstance(dest, Data):
                 raise ValueError('The output of a calculation node can only be a data node')
         elif link_type is LinkType.CALL:
-            if not isinstance(dest, (AbstractCalculation, ProcessNode)):
+            if not isinstance(dest, (Calculation, ProcessNode)):
                 raise ValueError('Call links can only link two calculations')
         else:
             raise ValueError('Calculation cannot have links of type {} as output'.format(link_type))
 
-        return super(AbstractCalculation, self)._linking_as_output(dest, link_type)
+        return super(Calculation, self)._linking_as_output(dest, link_type)
 
     def add_link_from(self, src, label=None, link_type=LinkType.INPUT):
         """
@@ -575,12 +576,12 @@ class AbstractCalculation(Sealable):
             if not isinstance(src, Data):
                 raise ValueError('Nodes entering calculation as input link can only be of type code')
         elif link_type is LinkType.CALL:
-            if not isinstance(src, (AbstractCalculation, ProcessNode)):
+            if not isinstance(src, (Calculation, ProcessNode)):
                 raise ValueError('Call links can only link two calculations')
         else:
             raise ValueError('Calculation cannot have links of type {} as input'.format(link_type))
 
-        return super(AbstractCalculation, self).add_link_from( src, label, link_type)
+        return super(Calculation, self).add_link_from( src, label, link_type)
 
     def get_code(self):
         """
@@ -605,7 +606,7 @@ class AbstractCalculation(Sealable):
         if not isinstance(src, Data):
             raise ValueError('Nodes entering in calculation can only be of type Data')
 
-        return super(AbstractCalculation, self)._replace_link_from(src, label, link_type)
+        return super(Calculation, self)._replace_link_from(src, label, link_type)
 
     def _is_valid_cache(self):
         """
@@ -613,13 +614,13 @@ class AbstractCalculation(Sealable):
 
         :returns: True if Calculation is valid to be used for caching, False otherwise
         """
-        return super(AbstractCalculation, self)._is_valid_cache() and self.is_finished_ok
+        return super(Calculation, self)._is_valid_cache() and self.is_finished_ok
 
     def _get_objects_to_hash(self):
         """
         Return a list of objects which should be included in the hash.
         """
-        res = super(AbstractCalculation, self)._get_objects_to_hash()
+        res = super(Calculation, self)._get_objects_to_hash()
         res.append({
             key: value.get_hash()
             for key, value in self.get_inputs_dict(link_type=LinkType.INPUT).items()

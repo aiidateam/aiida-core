@@ -72,7 +72,7 @@ Note that this does not automatically mean that the result of the process can al
 To distinghuis between a successful and a failed execution, we have introduced the 'exit status'.
 This is another attribute that is stored in the node of the process and is an integer that can be set by the process.
 A zero means that the result of the process was successful, and a non-zero value indicates a failure.
-All the calculation nodes used by the various processes are a sub class of :py:class:`~aiida.orm.implementation.general.calculation.AbstractCalculation`, which defines handy properties to query the process state and exit status.
+All the calculation nodes used by the various processes are a sub class of :py:class:`~aiida.orm.implementation.general.calculation.Calculation`, which defines handy properties to query the process state and exit status.
 
 ===================   ============================================================================================
 Method                Explanation

@@ -518,14 +518,16 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                 # Not necessarily all models are exported
                 if model_name in data['export_data']:
 
+                    # skip nodes that are already present in the DB
                     if unique_identifier is not None:
                         import_unique_ids = set(v[unique_identifier] for v in
                                                 data['export_data'][model_name].values())
 
-                        relevant_db_entries = {getattr(n, unique_identifier): n
-                                               for n in Model.objects.filter(
-                            **{'{}__in'.format(unique_identifier):
-                                   import_unique_ids})}
+                        relevant_db_entries_result = Model.objects.filter(
+                            **{'{}__in'.format(unique_identifier): import_unique_ids})
+                        # Note: uuids need to be converted to strings
+                        relevant_db_entries = { str(getattr(n, unique_identifier)): 
+                                n for n in relevant_db_entries_result }
 
                         foreign_ids_reverse_mappings[model_name] = {
                             k: v.pk for k, v in relevant_db_entries.items()}

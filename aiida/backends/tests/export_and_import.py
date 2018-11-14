@@ -20,6 +20,7 @@ from six.moves import range, zip
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.importexport import import_data
+from aiida.common.utils import get_new_uuid
 
 
 class TestSpecificImport(AiidaTestCase):
@@ -359,7 +360,8 @@ class TestSimple(AiidaTestCase):
                 metadata = json.load(fhandle)
             metadata['links_uuid'].append({
                 'output': sd.uuid,
-                'input': 'non-existing-uuid',
+                # note: this uuid is supposed to not be in the DB
+                'input': get_new_uuid(),
                 'label': 'parent'
             })
 

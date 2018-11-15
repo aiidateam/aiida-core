@@ -145,8 +145,11 @@ def make_inline(func):
         are not catched.
 
     .. deprecated:: 1.0.0
+       Use the ``@calcfunction`` decorator instead.
     """
     import warnings
+    # If we call this DeprecationWarning, pycharm will properly strike out the function
+    from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
     warnings.warn('this function has been deprecated, use `aiida.work.calcfunction` instead', DeprecationWarning)
 
     from aiida.work import workfunction
@@ -196,8 +199,11 @@ def optional_inline(func):
     In any way the ``copy_inline`` will return the same results.
 
     .. deprecated:: 1.0.0
+       Use the ``@calcfunction`` decorator instead
     """
     import warnings
+    # If we call this DeprecationWarning, pycharm will properly strike out the function
+    from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
     warnings.warn('this function has been deprecated, use `aiida.work.calcfunction` instead', DeprecationWarning)
 
     def wrapped_function(*args, **kwargs):

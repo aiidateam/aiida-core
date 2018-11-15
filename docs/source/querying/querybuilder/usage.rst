@@ -273,7 +273,7 @@ Let's join a node to its output, e.g. StructureData and CalcJobNode (as output):
 
     qb = QueryBuilder()
     qb.append(StructureData, tag='structure')
-    qb.append(CalcJobNode, output_of='structure')
+    qb.append(CalcJobNode, with_incoming='structure')
 
 In above example we are querying structures and calculations, with the predicate that the
 calculation is an output of the structure (the same as saying that the structure is an input to the calculation)
@@ -285,33 +285,33 @@ to a previous entity by using one of the keywords in the above table
 and as a value the tag of the vertice that it has a relationship with.
 There are several relationships that entities in Aiida can have:
 
-+------------------+---------------+------------------+-------------------------------------------------+
-| **Entity from**  | **Entity to** | **Relationship** | **Explanation**                                 |
-+==================+===============+==================+=================================================+
-| Node             | Node          | *input_of*       | One node as input of another node               |
-+------------------+---------------+------------------+-------------------------------------------------+
-| Node             | Node          | *output_of*      | One node as output of another node              |
-+------------------+---------------+------------------+-------------------------------------------------+
-| Node             | Node          | *ancestor_of*    | One node as the ancestor of another node (Path) |
-+------------------+---------------+------------------+-------------------------------------------------+
-| Node             | Node          | *descendant_of*  | One node as descendant of another node (Path)   |
-+------------------+---------------+------------------+-------------------------------------------------+
-| Node             | Group         | *group_of*       | The group of a node                             |
-+------------------+---------------+------------------+-------------------------------------------------+
-| Group            | Node          | *member_of*      | The node is a member of a group                 |
-+------------------+---------------+------------------+-------------------------------------------------+
-| Node             | Computer      | *computer_of*    | The computer of a node                          |
-+------------------+---------------+------------------+-------------------------------------------------+
-| Computer         | Node          | *has_computer*   | The node of a computer                          |
-+------------------+---------------+------------------+-------------------------------------------------+
-| Node             | User          | *creator_of*     | The creator of a node is a user                 |
-+------------------+---------------+------------------+-------------------------------------------------+
-| User             | Node          | *created_by*     | The node was created by a user                  |
-+------------------+---------------+------------------+-------------------------------------------------+
-| User             | Group         | *belongs_to*     | The node was created by a user                  |
-+------------------+---------------+------------------+-------------------------------------------------+
-| Group            | User          | *owner_of*       | The node was created by a user                  |
-+------------------+---------------+------------------+-------------------------------------------------+
++------------------+---------------+------------------+-----------------------------+-------------------------------------------------+
+| **Entity from**  | **Entity to** | **Relationship** | **Deprecated Relationship** | **Explanation**                                 |
++==================+===============+==================+=============================+=================================================+
+| Node             | Node          | *with_outgoing*  | *input_of*                  | One node as input of another node               |
++------------------+---------------+------------------+-----------------------------+-------------------------------------------------+
+| Node             | Node          | *with_incoming*  | *output_of*                 | One node as output of another node              |
++------------------+---------------+------------------+-----------------------------+-------------------------------------------------+
+| Node             | Node          | *ancestor_of*    |                             | One node as the ancestor of another node (Path) |
++------------------+---------------+------------------+-----------------------------+-------------------------------------------------+
+| Node             | Node          | *descendant_of*  |                             | One node as descendant of another node (Path)   |
++------------------+---------------+------------------+-----------------------------+-------------------------------------------------+
+| Node             | Group         | *with_node*      | *group_of*                  | The group of a node                             |
++------------------+---------------+------------------+-----------------------------+-------------------------------------------------+
+| Group            | Node          | *with_group*     | *member_of*                 | The node is a member of a group                 |
++------------------+---------------+------------------+-----------------------------+-------------------------------------------------+
+| Node             | Computer      | *with_node*      | *computer_of*               | The computer of a node                          |
++------------------+---------------+------------------+-----------------------------+-------------------------------------------------+
+| Computer         | Node          | *with_computer*  | *has_computer*              | The node of a computer                          |
++------------------+---------------+------------------+-----------------------------+-------------------------------------------------+
+| Node             | User          | *with_node*      | *creator_of*                | The creator of a node is a user                 |
++------------------+---------------+------------------+-----------------------------+-------------------------------------------------+
+| User             | Node          | *with_user*      | *created_by*                | The node was created by a user                  |
++------------------+---------------+------------------+-----------------------------+-------------------------------------------------+
+| User             | Group         | *with_user*      | *belongs_to*                | The node was created by a user                  |
++------------------+---------------+------------------+-----------------------------+-------------------------------------------------+
+| Group            | User          | *with_group*     | *owner_of*                  | The node was created by a user                  |
++------------------+---------------+------------------+-----------------------------+-------------------------------------------------+
 
 
 Some more examples::
@@ -319,18 +319,18 @@ Some more examples::
     # StructureData as an input of a job calculation
     qb = QueryBuilder()
     qb.append(CalcJobNode, tag='calc')
-    qb.append(StructureData, input_of='calc')
+    qb.append(StructureData, with_outgoing='calc')
 
     # StructureData and ParameterData as inputs to a calculation
     qb = QueryBuilder()
     qb.append(CalcJobNode, tag='calc')
-    qb.append(StructureData, input_of='calc')
-    qb.append(ParameterDataData, input_of='calc')
+    qb.append(StructureData, with_outgoing='calc')
+    qb.append(ParameterDataData, with_outgoing='calc')
 
     # Filtering the remote data instance by the computer it ran on (name)
     qb = QueryBuilder()
     qb.append(RemoteData, tag='remote')
-    qb.append(Computer, computer_of='remote', filters={'name':{'==':'mycomputer'}})
+    qb.append(Computer, with_node='remote', filters={'name':{'==':'mycomputer'}})
 
     # Find all descendants of a structure with a certain uuid
     qb = QueryBuilder()
@@ -524,7 +524,7 @@ for the wavefunctions has a value above 30.0 Ry::
     qb.append(PwCalculation, project=['*'], tag='calc')
     qb.append(
         ParameterData,
-        input_of='calc',
+        with_outgoing='calc',
         filters={'attributes.SYSTEM.ecutwfc':{'>':30.0}},
         project=[
             'attributes.SYSTEM.ecutwfc',
@@ -567,14 +567,14 @@ You need to tell the QueryBuilder that::
     )
     qb.append(
         PwCalculation,
-        output_of='strucure',
+        with_incoming='strucure',
         project=['*'],
         tag='calc'
     )
     qb.append(
         ParameterData,
         filters={'attributes.SYSTEM.ecutwfc':{'>':30.0}},
-        input_of='calc',
+        with_outgoing='calc',
         tag='params'
     )
 
@@ -587,7 +587,7 @@ Cheats
 A few cheats to save some typing:
 
 *   The default edge specification, if no keyword is provided, is always
-    *output_of* the previous vertice.
+    *with_incoming* the previous vertice.
 *   Equality filters ('==') can be shortened, as will be shown below.
 *   Tags are not necessary, you can simply use the class as a label.
     This works as long as the same Aiida-class is not used again
@@ -606,7 +606,7 @@ A shorter version of the previous example::
     qb.append(
         ParameterData,
         filters={'attributes.SYSTEM.ecutwfc':{'>':30.0}},
-        input_of=PwCalculation
+        with_outgoing=PwCalculation
     )
 
 
@@ -722,8 +722,7 @@ Working with edges
 Another feature that had to be added are projections, filters and labels on
 the edges of the graphs, that is to say links or paths between nodes.
 It works the same way, just that the keyword is preceeded by '*link*'.
-Let's take the above example, but put a filter on the label of the link,
-project the label and label::
+Let's take the above example, but put a filter on the label of the link and project the link label::
 
     qb = QueryBuilder()
     qb.append(
@@ -864,16 +863,16 @@ What do you have to specify:
         of the path with tag "struc1"::
 
             edge_specification = queryhelp['path'][3]
-            edge_specification['output_of'] = 2
-            edge_specification['output_of'] = StructureData
-            edge_specification['output_of'] = 'struc1'
-            edge_specification['input_of']  = 2
-            edge_specification['input_of']  = StructureData
-            edge_specification['input_of']  = 'struc1'
+            edge_specification['with_incoming'] = 2
+            edge_specification['with_incoming'] = StructureData
+            edge_specification['with_incoming'] = 'struc1'
+            edge_specification['with_outgoing']  = 2
+            edge_specification['with_outgoing']  = StructureData
+            edge_specification['with_outgoing']  = 'struc1'
 
     *   queryhelp_item['direction'] = integer
 
-        If any of the above specs ("input_of", "output_of")
+        If any of the above specs ("with_outgoing", "with_incoming")
         were not specified, the key "direction" is looked for.
         Directions are defined as distances in the tree.
         1 is defined as one step down the tree along a link.
@@ -915,7 +914,7 @@ What do you have to specify:
                     },
                     {
                         'cls':ParameterData,
-                        'input_of':PwCalculation
+                        'with_outgoing':PwCalculation
                     }
                 ]
             }
@@ -1035,9 +1034,9 @@ What do you have to specify:
 .. ~             ParameterData,
 .. ~             {'cls':PwCalculation, 'tag':'md'},
 .. ~             {'cls':Trajectory},
-.. ~             {'cls':StructureData, 'input_of':'md'},
-.. ~             {'cls':Relax, 'input_of':StructureData},
-.. ~             {'cls':StructureData,'tag':'struc2','input_of':Relax}
+.. ~             {'cls':StructureData, 'with_outgoing':'md'},
+.. ~             {'cls':Relax, 'with_outgoing':StructureData},
+.. ~             {'cls':StructureData,'tag':'struc2','with_outgoing':Relax}
 .. ~         ],
 .. ~         'project':{
 .. ~             ParameterData:{'attributes.IONS.tempw':{'cast':'f'}},
@@ -1119,14 +1118,14 @@ Let's take an example that we had and add a few filters on the link::
         }
     }
 
-Notice that the label for the link, by default, is the labels of the two connecting
+Notice that the tag for the link, by default, is the tag of the two connecting
 nodes delimited by two dashes '--'.
 The order does not matter, the following queryhelp would results in the same query::
 
     queryhelp = {
         'path':[
-            {'cls':Relax, 'label':'relax'},         # Relaxation with structure as output
-            {'cls':StructureData, 'label':'structure'}
+            {'cls':Relax, 'tag':'relax'},         # Relaxation with structure as output
+            {'cls':StructureData, 'tag':'structure'}
         ],
         'filters':{
             'structure':{
@@ -1145,8 +1144,8 @@ The order does not matter, the following queryhelp would results in the same que
         }
     }
 
-If you dislike that way to label the link, you can choose the linklabel in the
-path when definining the entity to join::
+If you dislike that way to tag the link, you can choose the tag for the edge in the
+path when definining the entity to join using ``edge_tag``::
 
     queryhelp = {
         'path':[
@@ -1154,7 +1153,7 @@ path when definining the entity to join::
             {
                 'cls':StructureData,
                 'label':'structure',
-                'edge_tag':'ThisIsMyLinkLabel'     # Definining the linklabel
+                'edge_tag':'ThisIsMyLinkTag'     # Definining the link tag
             }
         ],
         'filters':{
@@ -1162,13 +1161,13 @@ path when definining the entity to join::
                 'time':{'>': t},
                 'id':{'>': 50}
             },
-            'ThisIsMyLinkLabel':{                  # Using this linklabel
+            'ThisIsMyLinkTag':{                  # Using this link tag
                 'time':{'>': t},
                 'label':{'like':'output_%'},
             }
         },
         'project':{
-            'ThisIsMyLinkLabel':['label'],
+            'ThisIsMyLinkTag':['label'],
             'structure':['label'],
             'relax':['label', 'state'],
         }

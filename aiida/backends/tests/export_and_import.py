@@ -168,14 +168,14 @@ class TestSpecificImport(AiidaTestCase):
             # Check that there is a StructureData that is an output of a CalculationNode
             qb = QueryBuilder()
             qb.append(CalculationNode, project=['uuid'], tag='calculation')
-            qb.append(StructureData, output_of='calculation')
+            qb.append(StructureData, with_incoming='calculation')
             self.assertGreater(len(qb.all()), 0)
 
             # Check that there is a RemoteData that is a child and parent of a CalculationNode
             qb = QueryBuilder()
             qb.append(CalculationNode, tag='parent')
-            qb.append(RemoteData, project=['uuid'], output_of='parent', tag='remote')
-            qb.append(CalculationNode, output_of='remote')
+            qb.append(RemoteData, project=['uuid'], with_incoming='parent', tag='remote')
+            qb.append(CalculationNode, with_incoming='remote')
             self.assertGreater(len(qb.all()), 0)
 
 
@@ -874,7 +874,7 @@ class TestSimple(AiidaTestCase):
             qb.append(ParameterData, tag='p', project='*')
             qb.append(CalculationNode, tag='c', project='*', edge_tag='p2c', edge_project=('label', 'type'))
             qb.append(ArrayData, tag='a', project='*', edge_tag='c2a', edge_project=('label', 'type'))
-            qb.append(Group, filters={'name': groupname}, project='*', tag='g', group_of='a')
+            qb.append(Group, filters={'name': groupname}, project='*', tag='g', with_node='a')
             # I want the query to contain something!
             self.assertTrue(qb.count() > 0)
             # The hash is given from the preservable entries in an export-import cycle,
@@ -1177,7 +1177,7 @@ class TestComputer(AiidaTestCase):
             # computer.
             qb = QueryBuilder()
             qb.append(Computer, tag='comp')
-            qb.append(CalcJobNode, has_computer='comp', project=['label'])
+            qb.append(CalcJobNode, with_computer='comp', project=['label'])
             self.assertEqual(qb.count(), 2, "Two calculations should be "
                                             "found.")
             ret_labels = set(_ for [_] in qb.all())
@@ -1401,7 +1401,7 @@ class TestComputer(AiidaTestCase):
             qb = QueryBuilder()
             qb.append(CalcJobNode, project=['label'], tag='jcalc')
             qb.append(Computer, project=['name'],
-                      computer_of='jcalc')
+                      with_node='jcalc')
             self.assertEqual(qb.count(), 3, "Three combinations expected.")
             res = qb.all()
             self.assertIn([calc1_label, comp1_name], res,
@@ -1538,7 +1538,7 @@ class TestLinks(AiidaTestCase):
         qb = QueryBuilder()
         qb.append(Node, project='uuid', tag='input')
         qb.append(Node, project='uuid', tag='output',
-                  edge_project=['label', 'type'], output_of='input')
+                  edge_project=['label', 'type'], with_incoming='input')
         return qb.all()
 
     def test_input_and_create_links(self):

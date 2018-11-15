@@ -1603,19 +1603,19 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str,
 
     relationship_dic = {
         "Node": {
-            "Computer": "has_computer",
-            "Group": "member_of",
-            "User": "created_by"
+            "Computer": "with_computer",
+            "Group": "with_group",
+            "User": "with_user"
         },
         "Group": {
-            "Node": "group_of"
+            "Node": "with_node"
         },
         "Computer": {
-            "Node": "computer_of"
+            "Node": "with_node"
         },
         "User": {
-            "Node": "creator_of",
-            "Group": "owner_of"
+            "Node": "with_node",
+            "Group": "with_group"
         }
     }
 
@@ -1757,7 +1757,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             # INPUT(Data, ProcessNode) - Reversed
             qb = QueryBuilder()
             qb.append(Data, tag='predecessor', project=['id'])
-            qb.append(ProcessNode, output_of='predecessor',
+            qb.append(ProcessNode, with_incoming='predecessor',
                       filters={'id': {'==': curr_node_id}},
                       edge_filters={
                           'type': {
@@ -1770,7 +1770,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 qb = QueryBuilder()
                 qb.append(Data, tag='predecessor', project=['id'],
                           filters={'id': {'==': curr_node_id}})
-                qb.append(ProcessNode, output_of='predecessor',
+                qb.append(ProcessNode, with_incoming='predecessor',
                           edge_filters={
                               'type': {
                                   '==': LinkType.INPUT.value}})
@@ -1781,7 +1781,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             qb = QueryBuilder()
             qb.append(ProcessNode, tag='predecessor',
                       filters={'id': {'==': curr_node_id}})
-            qb.append(Data, output_of='predecessor', project=['id'],
+            qb.append(Data, with_incoming='predecessor', project=['id'],
                       edge_filters={
                           'type': {
                               'in': [LinkType.CREATE.value,
@@ -1793,7 +1793,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             if create_reversed:
                 qb = QueryBuilder()
                 qb.append(ProcessNode, tag='predecessor')
-                qb.append(Data, output_of='predecessor', project=['id'],
+                qb.append(Data, with_incoming='predecessor', project=['id'],
                           filters={'id': {'==': curr_node_id}},
                           edge_filters={
                               'type': {
@@ -1805,7 +1805,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             if return_reversed:
                 qb = QueryBuilder()
                 qb.append(ProcessNode, tag='predecessor')
-                qb.append(Data, output_of='predecessor', project=['id'],
+                qb.append(Data, with_incoming='predecessor', project=['id'],
                           filters={'id': {'==': curr_node_id}},
                           edge_filters={
                               'type': {
@@ -1817,7 +1817,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             qb = QueryBuilder()
             qb.append(ProcessNode, tag='predecessor',
                       filters={'id': {'==': curr_node_id}})
-            qb.append(ProcessNode, output_of='predecessor', project=['id'],
+            qb.append(ProcessNode, with_incoming='predecessor', project=['id'],
                       edge_filters={
                           'type': {
                               '==': LinkType.CALL.value}})
@@ -1828,7 +1828,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             if call_reversed:
                 qb = QueryBuilder()
                 qb.append(ProcessNode, tag='predecessor')
-                qb.append(ProcessNode, output_of='predecessor', project=['id'],
+                qb.append(ProcessNode, with_incoming='predecessor', project=['id'],
                           filters={'id': {'==': curr_node_id}},
                           edge_filters={
                               'type': {
@@ -1852,7 +1852,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             if create_reversed:
                 qb = QueryBuilder()
                 qb.append(ProcessNode, tag='predecessor', project=['id'])
-                qb.append(Data, output_of='predecessor',
+                qb.append(Data, with_incoming='predecessor',
                           filters={'id': {'==': curr_node_id}},
                           edge_filters={
                               'type': {
@@ -2002,7 +2002,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             links_qb.append(ProcessNode,
                             project=['uuid'], tag='output',
                             edge_filters={'type':{'==':LinkType.INPUT.value}},
-                            edge_project=['label', 'type'], output_of='input')
+                            edge_project=['label', 'type'], with_incoming='input')
             for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
                 val = {
                     'input': str(input_uuid),
@@ -2020,7 +2020,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                         project=['uuid'], tag='output',
                         filters={'id': {'in': all_nodes_pk}},
                         edge_filters={'type':{'==':LinkType.INPUT.value}},
-                        edge_project=['label', 'type'], output_of='input')
+                        edge_project=['label', 'type'], with_incoming='input')
         for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
             val = {
                 'input': str(input_uuid),
@@ -2038,7 +2038,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
         links_qb.append(Data,
                         project=['uuid'], tag='output',
                         edge_filters={'type': {'==': LinkType.CREATE.value}},
-                        edge_project=['label', 'type'], output_of='input')
+                        edge_project=['label', 'type'], with_incoming='input')
         for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
             val = {
                 'input': str(input_uuid),
@@ -2057,7 +2057,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             links_qb.append(Data,
                             project=['uuid'], tag='output',
                             edge_filters={'type': {'==': LinkType.CREATE.value}},
-                            edge_project=['label', 'type'], output_of='input')
+                            edge_project=['label', 'type'], with_incoming='input')
             for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
                 val = {
                     'input': str(input_uuid),
@@ -2075,7 +2075,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
         links_qb.append(Data,
                         project=['uuid'], tag='output',
                         edge_filters={'type': {'==': LinkType.RETURN.value}},
-                        edge_project=['label', 'type'], output_of='input')
+                        edge_project=['label', 'type'], with_incoming='input')
         for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
             val = {
                 'input': str(input_uuid),
@@ -2094,7 +2094,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                             project=['uuid'], tag='output',
                             filters={'id': {'in': all_nodes_pk}},
                             edge_filters={'type': {'==': LinkType.RETURN.value}},
-                            edge_project=['label', 'type'], output_of='input')
+                            edge_project=['label', 'type'], with_incoming='input')
             for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
                 val = {
                     'input': str(input_uuid),
@@ -2113,7 +2113,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
         links_qb.append(ProcessNode,
                         project=['uuid'], tag='output',
                         edge_filters={'type': {'==': LinkType.CALL.value}},
-                        edge_project=['label', 'type'], output_of='input')
+                        edge_project=['label', 'type'], with_incoming='input')
         for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
             val = {
                 'input': str(input_uuid),
@@ -2133,7 +2133,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                             project=['uuid'], tag='output',
                             filters={'id': {'in': all_nodes_pk}},
                             edge_filters={'type': {'==': LinkType.CALL.value}},
-                            edge_project=['label', 'type'], output_of='input')
+                            edge_project=['label', 'type'], with_incoming='input')
             for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
                 val = {
                     'input': str(input_uuid),
@@ -2156,7 +2156,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                                  filters={'id': {'==': curr_group}},
                                  project=['uuid'], tag='group')
             group_uuid_qb.append(entity_names_to_entities[NODE_ENTITY_NAME],
-                                 project=['uuid'], member_of='group')
+                                 project=['uuid'], with_group='group')
             for res in group_uuid_qb.iterall():
                 if str(res[0]) in groups_uuid:
                     groups_uuid[str(res[0])].append(str(res[1]))

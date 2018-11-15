@@ -19,33 +19,29 @@ An instance of one of the implementation classes becomes a member of the :func:`
 when instantiated by the user.
 """
 
-# Warnings are issued for deprecations:
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
-import warnings
 # Checking for correct input with the inspect module
 from inspect import isclass as inspect_isclass
 import copy
 import logging
 import six
 from six.moves import range, zip
-
-from aiida.orm.node import Node
-
-# The SQLAlchemy functionalities:
 from sqlalchemy import and_, or_, not_, func as sa_func, select, join
 from sqlalchemy.types import Integer
 from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import cast
 from sqlalchemy.dialects.postgresql import array
-## AIIDA modules:
-# For exception handling
-from aiida.common.exceptions import InputValidationError, ConfigurationError
+
+from aiida.common.exceptions import InputValidationError
 # The way I get column as a an attribute to the orm class
 from aiida.common.links import LinkType
-
-from . import backends
+from aiida.orm.node import Node
+from aiida.orm import backends
+from aiida.orm import computers
+from aiida.orm import users
+from aiida.orm import authinfos
 from aiida.orm.utils import convert
 
 from . import authinfos
@@ -183,8 +179,8 @@ def get_querybuilder_classifiers_from_type(ormclasstype, obj):
 
 class QueryBuilder(object):
     """
-    The class to query the AiiDA database. 
-    
+    The class to query the AiiDA database.
+
     Usage::
 
         from aiida.orm.querybuilder import QueryBuilder
@@ -259,7 +255,7 @@ class QueryBuilder(object):
 
         # qb = QueryBuilder()
         # qb.append(PwCalculation)
-        # qb.append(StructureData, input_of=PwCalculation)
+        # qb.append(StructureData, with_outgoing=PwCalculation)
 
         # The cls_to_tag_map in this case would be:
         # {PwCalculation:'PwCalculation', StructureData:'StructureData'}
@@ -510,7 +506,7 @@ class QueryBuilder(object):
             # the structure joined as an input
             qb.append(
                 cls=PwCalculation,
-                output_of=StructureData
+                with_incoming=StructureData
             )
 
         :return: self
@@ -545,27 +541,11 @@ class QueryBuilder(object):
                 if not isinstance(type, six.string_types):
                     raise InputValidationError("{} was passed as type, but is not a string".format(type))
 
-        if kwargs.pop('link_tag', None) is not None:
-            raise DeprecationWarning("link_tag is deprecated, use edge_tag instead")
-        if kwargs.pop('autotag', None) is not None:
-            raise DeprecationWarning("autotag=True is now the default behavior, this keyword is deprecated")
 
         ormclass, ormclasstype, query_type_string = self._get_ormclass(cls, type)
 
         # TAG #################################
         # Let's get a tag
-        label = kwargs.pop('label', None)
-        if label is not None:
-            if tag is None:
-                warnings.warn(
-                    "Use of the keyword 'label' will be deprecated soon\n"
-                    "Please use 'tag' instead",
-                    DeprecationWarning,
-                )
-                tag = label
-            else:
-                raise InputValidationError("Both label and tag specified")
-
         if tag:
             if self._EDGE_TAG_DELIM in tag:
                 raise InputValidationError("tag cannot contain {}\n"
@@ -662,7 +642,11 @@ class QueryBuilder(object):
         # JOINING #####################################
         try:
             # Get the functions that are implemented:
-            spec_to_function_map = list(self._get_function_map().keys())
+            spec_to_function_map = []
+            for secondary_dict in self._get_function_map().values():
+                for key in secondary_dict.keys():
+                    if key not in spec_to_function_map:
+                        spec_to_function_map.append(key)
             joining_keyword = kwargs.pop('joining_keyword', None)
             joining_value = kwargs.pop('joining_value', None)
 
@@ -681,9 +665,9 @@ class QueryBuilder(object):
                 else:
                     joining_keyword = key
                     joining_value = self._get_tag_from_specification(val)
-            # the default is that this vertex is 'output_of' the previous one
+            # the default is that this vertice is 'with_incoming' as the previous one
             if joining_keyword is None and len(self._path) > 0:
-                joining_keyword = 'output_of'
+                joining_keyword = 'with_incoming'
                 joining_value = self._path[-1]['tag']
 
             if joining_keyword == 'direction':
@@ -691,9 +675,9 @@ class QueryBuilder(object):
                     raise InputValidationError("direction=n expects n to be an integer")
                 try:
                     if joining_value < 0:
-                        joining_keyword = 'input_of'
+                        joining_keyword = 'with_outgoing'
                     elif joining_value > 0:
-                        joining_keyword = 'output_of'
+                        joining_keyword = 'with_incoming'
                     else:
                         raise InputValidationError("direction=0 is not valid")
                     joining_value = self._path[-abs(joining_value)]['tag']
@@ -1216,32 +1200,14 @@ class QueryBuilder(object):
                                            " - {} as entity joined (expected {})\n"
                                            " - {} as entity to join (expected {})\n"
                                            "\n".format(
-                    entities_cls_joined[0],
-                    relationship,
-                    entities_cls_to_join[0],
-                    entities_cls_joined[0]._sa_class_manager.class_,
-                    entities_cls_joined[1],
-                    entities_cls_to_join[0]._sa_class_manager.class_,
-                    entities_cls_to_join[1],
-                ))
-
-    def _join_slaves(self, joined_entity, entity_to_join):
-        raise NotImplementedError("Master - slave relationships are not implemented")
-        # ~ call = aliased(Call)
-        # ~ self._query = self._query.join(call,  call.caller_id == joined_entity.id)
-        # ~ self._query = self._query.join(
-        # ~ entity_to_join,
-        # ~ call.called_id == entity_to_join.id
-        # ~ )
-
-    def _join_masters(self, joined_entity, entity_to_join):
-        raise NotImplementedError("Master - slave relationships are not implemented")
-        # ~ call = aliased(Call)
-        # ~ self._query = self._query.join(call,  call.called_id == joined_entity.id)
-        # ~ self._query = self._query.join(
-        # ~ entity_to_join,
-        # ~ call.caller_id == entity_to_join.id
-        # ~ )
+                                               entities_cls_joined[0].__name__,
+                                               relationship,
+                                               entities_cls_to_join[0].__name__,
+                                               entities_cls_joined[0]._sa_class_manager.class_.__name__,
+                                               entities_cls_joined[1].__name__,
+                                               entities_cls_to_join[0]._sa_class_manager.class_.__name__,
+                                               entities_cls_to_join[1].__name__,
+                                           ))
 
     def _join_outputs(self, joined_entity, entity_to_join, isouterjoin):
         """
@@ -1250,14 +1216,14 @@ class QueryBuilder(object):
 
         **joined_entity** and **entity_to_join** are joined with a link
         from **joined_entity** as input to **enitity_to_join** as output
-        (**enitity_to_join** is an *output_of* **joined_entity**)
+        (**enitity_to_join** is *with_incoming* **joined_entity**)
         """
-        self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.Node), 'output_of')
+        self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.Node), 'with_incoming')
 
         aliased_edge = aliased(self._impl.Link)
         self._query = self._query.join(
             aliased_edge, aliased_edge.input_id == joined_entity.id, isouter=isouterjoin).join(
-            entity_to_join, aliased_edge.output_id == entity_to_join.id, isouter=isouterjoin)
+                entity_to_join, aliased_edge.output_id == entity_to_join.id, isouter=isouterjoin)
         return aliased_edge
 
     def _join_inputs(self, joined_entity, entity_to_join, isouterjoin):
@@ -1267,10 +1233,11 @@ class QueryBuilder(object):
 
         **joined_entity** and **entity_to_join** are joined with a link
         from **joined_entity** as output to **enitity_to_join** as input
-        (**enitity_to_join** is an *input_of* **joined_entity**)
+        (**enitity_to_join** is *with_outgoing* **joined_entity**)
+
         """
 
-        self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.Node), 'input_of')
+        self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.Node), 'with_outgoing')
         aliased_edge = aliased(self._impl.Link)
         self._query = self._query.join(
             aliased_edge,
@@ -1328,9 +1295,9 @@ class QueryBuilder(object):
 
         self._query = self._query.join(descendants_recursive,
                                        descendants_recursive.c.ancestor_id == joined_entity.id).join(
-            entity_to_join,
-            descendants_recursive.c.descendant_id == entity_to_join.id,
-            isouter=isouterjoin)
+                                           entity_to_join,
+                                           descendants_recursive.c.descendant_id == entity_to_join.id,
+                                           isouter=isouterjoin)
         return descendants_recursive.c
 
     def _join_ancestors_recursive(self, joined_entity, entity_to_join, isouterjoin, filter_dict, expand_path=False):
@@ -1383,9 +1350,9 @@ class QueryBuilder(object):
 
         self._query = self._query.join(ancestors_recursive,
                                        ancestors_recursive.c.descendant_id == joined_entity.id).join(
-            entity_to_join,
-            ancestors_recursive.c.ancestor_id == entity_to_join.id,
-            isouter=isouterjoin)
+                                           entity_to_join,
+                                           ancestors_recursive.c.ancestor_id == entity_to_join.id,
+                                           isouter=isouterjoin)
         return ancestors_recursive.c
 
     def _join_group_members(self, joined_entity, entity_to_join, isouterjoin):
@@ -1399,9 +1366,9 @@ class QueryBuilder(object):
         **joined_entity** and **entity_to_join**
         are joined via the table_groups_nodes table.
         from **joined_entity** as group to **enitity_to_join** as node.
-        (**enitity_to_join** is an *member_of* **joined_entity**)
+        (**enitity_to_join** is *with_group* **joined_entity**)
         """
-        self._check_dbentities((joined_entity, self._impl.Group), (entity_to_join, self._impl.Node), 'member_of')
+        self._check_dbentities((joined_entity, self._impl.Group), (entity_to_join, self._impl.Node), 'with_group')
         aliased_group_nodes = aliased(self._impl.table_groups_nodes)
         self._query = self._query.join(aliased_group_nodes, aliased_group_nodes.c.dbgroup_id == joined_entity.id).join(
             entity_to_join, entity_to_join.id == aliased_group_nodes.c.dbnode_id, isouter=isouterjoin)
@@ -1415,9 +1382,9 @@ class QueryBuilder(object):
         **joined_entity** and **entity_to_join** are
         joined via the table_groups_nodes table.
         from **joined_entity** as node to **enitity_to_join** as group.
-        (**enitity_to_join** is an *group_of* **joined_entity**)
+        (**enitity_to_join** is a group *with_node* **joined_entity**)
         """
-        self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.Group), 'group_of')
+        self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.Group), 'with_node')
         aliased_group_nodes = aliased(self._impl.table_groups_nodes)
         self._query = self._query.join(aliased_group_nodes, aliased_group_nodes.c.dbnode_id == joined_entity.id).join(
             entity_to_join, entity_to_join.id == aliased_group_nodes.c.dbgroup_id, isouter=isouterjoin)
@@ -1428,7 +1395,7 @@ class QueryBuilder(object):
         :param joined_entity: the aliased node
         :param entity_to_join: the aliased user to join to that node
         """
-        self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.User), 'creator_of')
+        self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.User), 'with_node')
         self._query = self._query.join(entity_to_join, entity_to_join.id == joined_entity.user_id, isouter=isouterjoin)
 
     def _join_created_by(self, joined_entity, entity_to_join, isouterjoin):
@@ -1436,7 +1403,7 @@ class QueryBuilder(object):
         :param joined_entity: the aliased user you want to join to
         :param entity_to_join: the (aliased) node or group in the DB to join with
         """
-        self._check_dbentities((joined_entity, self._impl.User), (entity_to_join, self._impl.Node), 'created_by')
+        self._check_dbentities((joined_entity, self._impl.User), (entity_to_join, self._impl.Node), 'with_user')
         self._query = self._query.join(entity_to_join, entity_to_join.user_id == joined_entity.id, isouter=isouterjoin)
 
     def _join_to_computer_used(self, joined_entity, entity_to_join, isouterjoin):
@@ -1445,7 +1412,7 @@ class QueryBuilder(object):
         :param entity_to_join: the (aliased) node entity
 
         """
-        self._check_dbentities((joined_entity, self._impl.Computer), (entity_to_join, self._impl.Node), 'has_computer')
+        self._check_dbentities((joined_entity, self._impl.Computer), (entity_to_join, self._impl.Node), 'with_computer')
         self._query = self._query.join(
             entity_to_join, entity_to_join.dbcomputer_id == joined_entity.id, isouter=isouterjoin)
 
@@ -1454,7 +1421,7 @@ class QueryBuilder(object):
         :param joined_entity: An entity that can use a computer (eg a node)
         :param entity_to_join: aliased dbcomputer entity
         """
-        self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.Computer), 'computer_of')
+        self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.Computer), 'with_node')
         self._query = self._query.join(
             entity_to_join, joined_entity.dbcomputer_id == entity_to_join.id, isouter=isouterjoin)
 
@@ -1463,7 +1430,7 @@ class QueryBuilder(object):
         :param joined_entity: An aliased dbgroup
         :param entity_to_join: aliased dbuser
         """
-        self._check_dbentities((joined_entity, self._impl.Group), (entity_to_join, self._impl.User), 'computer_of')
+        self._check_dbentities((joined_entity, self._impl.Group), (entity_to_join, self._impl.User), 'with_group')
         self._query = self._query.join(entity_to_join, joined_entity.user_id == entity_to_join.id, isouter=isouterjoin)
 
     def _join_user_group(self, joined_entity, entity_to_join, isouterjoin):
@@ -1471,63 +1438,70 @@ class QueryBuilder(object):
         :param joined_entity: An aliased user
         :param entity_to_join: aliased group
         """
-        self._check_dbentities((joined_entity, self._impl.User), (entity_to_join, self._impl.Group), 'computer_of')
+        self._check_dbentities((joined_entity, self._impl.User), (entity_to_join, self._impl.Group), 'with_user')
         self._query = self._query.join(entity_to_join, joined_entity.id == entity_to_join.user_id, isouter=isouterjoin)
 
     def _get_function_map(self):
-        d = {
-            'with_incoming': self._join_outputs,
-            'input_of': deprecate(self._join_inputs, xxx),
-            'output_of': self._join_outputs,
-            'slave_of': self._join_slaves,  # not implemented
-            'master_of': self._join_masters,  # not implemented
-            'direction': None,
-            'group_of': self._join_groups,
-            'member_of': self._join_group_members,
-            'has_computer': self._join_to_computer_used,
-            'computer_of': self._join_computer,
-            'created_by': self._join_created_by,
-            'creator_of': self._join_creator_of,
-            'owner_of': self._join_group_user,
-            'belongs_to': self._join_user_group,
-            'ancestor_of': self._join_ancestors_recursive,
-            'descendant_of': self._join_descendants_recursive
+        """
+        Map relationship type keywords to functions
+        The new mapping (since 1.0.0a5) is a two level dictionary. The first level defines the entity which has been passed to
+        the qb.append functon, and the second defines the relationship with respect to a given tag.
+        """
+        mapping = {
+            'node': {
+                'with_incoming': self._join_outputs,
+                'with_outgoing': self._join_inputs,
+                'ancestor_of': self._join_ancestors_recursive,
+                'descendant_of': self._join_descendants_recursive,
+                'with_computer': self._join_to_computer_used,
+                'with_user': self._join_created_by,
+                'with_group': self._join_group_members,
+                'direction': None,
+                'input_of': self._deprecate(self._join_inputs, 'input_of', 'with_outgoing'),
+                'output_of': self._deprecate(self._join_outputs, 'output_of', 'with_incoming'),
+                'has_computer': self._deprecate(self._join_to_computer_used, 'has_computer', 'with_computer'),
+                'created_by': self._deprecate(self._join_created_by, 'created_by', 'with_user'),
+                'member_of': self._deprecate(self._join_group_members, 'member_of', 'with_group')
+            },
+            'computer': {
+                'with_node': self._join_computer,
+                'direction': None,
+                'computer_of': self._deprecate(self._join_computer, 'computer_of', 'with_node')
+            },
+            'user': {
+                'with_node': self._join_creator_of,
+                'with_group': self._join_group_user,
+                'direction': None,
+                'creator_of': self._deprecate(self._join_creator_of, 'creator_of', 'with_node'),
+                'owner_of': self._deprecate(self._join_group_user, 'owner_of', 'with_group')
+            },
+            'group': {
+                'with_node': self._join_groups,
+                'with_user': self._join_user_group,
+                'direction': None,
+                'group_of': self._deprecate(self._join_groups, 'group_of', 'with_node'),
+                'belongs_to': self._deprecate(self._join_user_group, 'belongs_to', 'with_user')
+            },
         }
-        return d
 
-    def deprecate(f, xxx):
-        import warning
-        warning.warn()
-        return f
-    
+        return mapping
+
     def _get_connecting_node(self, index, joining_keyword=None, joining_value=None, **kwargs):
         """
         :param querydict:
             A dictionary specifying how the current node
             is linked to other nodes.
         :param index: Index of this node within the path specification
-
-        Valid (currently implemented) keys are:
-
-        *   *input_of*
-        *   *output_of*
-        *   *descendant_of*
-        *   *ancestor_of*
-        *   *direction*
-        *   *group_of*
-        *   *member_of*
-        *   *has_computer*
-        *   *computer_of*
-        *   *created_by*
-        *   *creator_of*
-        *   *owner_of*
-        *   *belongs_to*
-
-        Future:
-
-        *   *master_of*
-        *   *slave_of*
+        :param joining_keyword: the relation on which to join
+        :param joining_value: the tag of the nodes to be joined
         """
+        from aiida.cmdline.utils import echo
+
+        # Set the calling entity - to allow for the correct join relation to be set
+        if self._path[index]['type'] not in ['computer', 'user', 'group']:
+            calling_entity = 'node'
+        else:
+            calling_entity = self._path[index]['type']
 
         if joining_keyword == 'direction':
             if joining_value > 0:
@@ -1537,7 +1511,11 @@ class QueryBuilder(object):
             else:
                 raise Exception("Direction 0 is not valid")
         else:
-            func = self._get_function_map()[joining_keyword]
+            try:
+                func = self._get_function_map()[calling_entity][joining_keyword]
+            except KeyError:
+                echo.echo_critical("'{}' is not a valid joining keyword for a '{}' type entity".format(
+                    joining_keyword, calling_entity))
 
             if isinstance(joining_value, int):
                 returnval = (self._aliased_path[joining_value], func)
@@ -1547,8 +1525,8 @@ class QueryBuilder(object):
                 except KeyError:
                     raise InputValidationError('Key {} is unknown to the types I know about:\n'
                                                '{}'.format(
-                        self._get_tag_from_specification(joining_value),
-                        self._tag_to_alias_map.keys()))
+                                                   self._get_tag_from_specification(joining_value),
+                                                   self._tag_to_alias_map.keys()))
         return returnval
 
     def _get_json_compatible(self, inp):
@@ -1608,6 +1586,9 @@ class QueryBuilder(object):
         })
 
     def _build_order(self, alias, entitytag, entityspec):
+        """
+        Build the order parameter of the query
+        """
         column_name = entitytag.split('.')[0]
         attrpath = entitytag.split('.')[1:]
         if attrpath and 'cast' not in entityspec.keys():
@@ -1649,7 +1630,7 @@ class QueryBuilder(object):
             isouterjoin = verticespec.get('outerjoin')
             edge_tag = verticespec['edge_tag']
 
-            if (verticespec['joining_keyword'] in ('descendant_of', 'ancestor_of')):
+            if verticespec['joining_keyword'] in ('descendant_of', 'ancestor_of'):
                 # I treat those two cases in a special way.
                 # I give them a filter_dict, to help the recursive function find a good
                 # starting point. TODO: document this!
@@ -2079,16 +2060,6 @@ class QueryBuilder(object):
         """
         return list(self.iterdict(batch_size=batch_size))
 
-    def get_results_dict(self):
-        """
-        Deprecated, use :meth:`.dict` instead
-        """
-        warnings.warn(
-            "get_results_dict will be deprecated in the future"
-            "User iterdict for generator or dict for list", DeprecationWarning)
-
-        return self.dict()
-
     def inputs(self, **kwargs):
         """
         Join to inputs of previous vertice in path.
@@ -2097,7 +2068,7 @@ class QueryBuilder(object):
         """
         join_to = self._path[-1]['tag']
         cls = kwargs.pop('cls', Node)
-        self.append(cls=cls, input_of=join_to, autotag=True, **kwargs)
+        self.append(cls=cls, with_outgoing=join_to, autotag=True, **kwargs)
         return self
 
     def outputs(self, **kwargs):
@@ -2108,7 +2079,7 @@ class QueryBuilder(object):
         """
         join_to = self._path[-1]['tag']
         cls = kwargs.pop('cls', Node)
-        self.append(cls=cls, output_of=join_to, autotag=True, **kwargs)
+        self.append(cls=cls, with_incoming=join_to, autotag=True, **kwargs)
         return self
 
     def children(self, **kwargs):
@@ -2132,3 +2103,29 @@ class QueryBuilder(object):
         cls = kwargs.pop('cls', Node)
         self.append(cls=cls, ancestor_of=join_to, autotag=True, **kwargs)
         return self
+
+    def _deprecate(self, function, deprecated_name, preferred_name, version='1.0.0a5'):
+        """
+        Wrapper to return a decorated functon which will print a deprecation warning when 
+        it is called.
+        Specifically for when an  old relationship type is used.
+        Note that it is the way of calling the function which is deprecated, not the function itself
+
+        :param function: a deprecated function to call
+        :param deprecated_name: the name which is deprecated
+        :param preferred_name: the new name which is preferred
+        :param version: aiida version for which this takes effect.
+        """
+        def wrapper(*args, **kwargs):
+            """
+            Decorator to print a deprecation warning
+            """
+            import warnings
+            from aiida.common.warnings import AiidaDeprecationWarning
+            warnings.warn(
+                "The relationship name '{}' is deprecated from version {} onwards. Use '{}' instead.".format(
+                    deprecated_name, version, preferred_name),
+                AiidaDeprecationWarning,
+                stacklevel=2)
+            return function(*args, **kwargs)
+        return wrapper

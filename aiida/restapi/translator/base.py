@@ -93,7 +93,7 @@ class BaseTranslator(object):
         self._query_help = {
             "path": [{
                 "type": self._qb_type,
-                "label": self.__label__
+                "tag": self.__label__
             }],
             "filters": {},
             "project": {},
@@ -462,9 +462,9 @@ class BaseTranslator(object):
             results = [res[label] for res in self.qbobj.dict()]
 
         # TODO think how to make it less hardcoded
-        if self._result_type == 'input_of':
+        if self._result_type == 'with_outgoing':
             return {'inputs': results}
-        elif self._result_type == 'output_of':
+        elif self._result_type == 'with_incoming':
             return {'outputs': results}
 
         return {self.__label__: results}

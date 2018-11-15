@@ -1709,7 +1709,7 @@ class AbstractNode(object):
                 if current_autogroup.is_to_be_grouped(self):
                     group_name = current_autogroup.get_group_name()
                     if group_name is not None:
-                        g = Group.get_or_create(
+                        g = Group.objects.get_or_create(
                             name=group_name, type_string=VERDIAUTOGROUP_TYPE)[0]
                         g.add_nodes(self)
 

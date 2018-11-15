@@ -55,13 +55,13 @@ def query(datatype, project, past_days, group_pks, all_users):
         n_days_ago = now - datetime.timedelta(days=past_days)
         data_filters.update({"ctime": {'>=': n_days_ago}})
 
-    qbl.append(datatype, tag="data", created_by="creator", filters=data_filters, project=project)
+    qbl.append(datatype, tag="data", with_user="creator", filters=data_filters, project=project)
 
     # If there is a group restriction
     if group_pks is not None:
         group_filters = dict()
         group_filters.update({"id": {"in": group_pks}})
-        qbl.append(orm.Group, tag="group", filters=group_filters, group_of="data")
+        qbl.append(orm.Group, tag="group", filters=group_filters, with_node="data")
 
     qbl.order_by({datatype: {'ctime': 'asc'}})
 

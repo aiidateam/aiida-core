@@ -78,8 +78,8 @@ class TestDataNodeDjango(AiidaTestCase):
         self.assertEquals(len(going_out_from_a2_db), 2)
         self.assertTrue(isinstance(going_out_from_a2_db[0], DbNode))
         self.assertTrue(isinstance(going_out_from_a2_db[1], DbNode))
-        uuid_set_db = set([going_out_from_a2_db[0].uuid,
-                           going_out_from_a2_db[1].uuid])
+        uuid_set_db = set([str(going_out_from_a2_db[0].uuid),
+                           str(going_out_from_a2_db[1].uuid)])
 
         # I check that doing the query with a Node or DbNode instance,
         # I get the same nodes
@@ -96,8 +96,8 @@ class TestDataNodeDjango(AiidaTestCase):
         self.assertEquals(len(output_links_b), 2)
         self.assertTrue(isinstance(output_links_b[0], DbLink))
         self.assertTrue(isinstance(output_links_b[1], DbLink))
-        uuid_set_db_link = set([output_links_b[0].output.uuid,
-                                output_links_b[1].output.uuid])
+        uuid_set_db_link = set([str(output_links_b[0].output.uuid),
+                                str(output_links_b[1].output.uuid)])
         self.assertEquals(uuid_set, uuid_set_db_link)
 
         # Query for related fields using django syntax

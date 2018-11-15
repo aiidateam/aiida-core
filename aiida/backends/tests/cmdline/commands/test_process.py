@@ -29,6 +29,10 @@ from aiida.work import test_utils
 from aiida import work
 
 
+def get_result_lines(result):
+    return [e for e in result.output.split('\n') if e]
+
+
 class TestVerdiProcess(AiidaTestCase):
     """Tests for `verdi process`."""
 
@@ -38,6 +42,7 @@ class TestVerdiProcess(AiidaTestCase):
         super(TestVerdiProcess, self).setUp()
         from aiida.common.profile import get_profile
         from aiida.daemon.client import DaemonClient
+        from aiida.orm.node.process import ProcessNode
 
         profile = get_profile()
         self.daemon_client = DaemonClient(profile)
@@ -45,6 +50,7 @@ class TestVerdiProcess(AiidaTestCase):
             self.daemon_client.cmd_string.split(), stderr=sys.stderr, stdout=sys.stdout).pid
         self.runner = work.AiiDAManager.create_runner(rmq_submit=True)
         self.cli_runner = CliRunner()
+        self.nodes = [ProcessNode().store()]
 
     def tearDown(self):
         import os
@@ -52,6 +58,48 @@ class TestVerdiProcess(AiidaTestCase):
 
         os.kill(self.daemon_pid, signal.SIGTERM)
         super(TestVerdiProcess, self).tearDown()
+
+    def test_process_show(self):
+        """Test verdi process show"""
+
+        # Running without identifiers should not except and not print anything
+        options = []
+        result = self.cli_runner.invoke(cmd_process.process_show, options)
+        self.assertIsNone(result.exception, result.output)
+        self.assertEquals(len(get_result_lines(result)), 0)
+
+        # Giving a single identifier should print a non empty string message
+        options = [str(self.nodes[0].pk)]
+        result = self.cli_runner.invoke(cmd_process.process_show, options)
+        self.assertIsNone(result.exception, result.output)
+        self.assertTrue(len(get_result_lines(result)) > 0)
+
+        # Giving multiple identifiers should print a non empty string message
+        options = [str(calc.pk) for calc in self.nodes]
+        result = self.cli_runner.invoke(cmd_process.process_show, options)
+        self.assertIsNone(result.exception, result.output)
+        self.assertTrue(len(get_result_lines(result)) > 0)
+
+    def test_process_report(self):
+        """Test verdi process report"""
+
+        # Running without identifiers should not except and not print anything
+        options = []
+        result = self.cli_runner.invoke(cmd_process.process_report, options)
+        self.assertIsNone(result.exception, result.output)
+        self.assertEquals(len(get_result_lines(result)), 0)
+
+        # Giving a single identifier should print a non empty string message
+        options = [str(self.nodes[0].pk)]
+        result = self.cli_runner.invoke(cmd_process.process_report, options)
+        self.assertIsNone(result.exception, result.output)
+        self.assertTrue(len(get_result_lines(result)) > 0)
+
+        # Giving multiple identifiers should print a non empty string message
+        options = [str(calc.pk) for calc in self.nodes]
+        result = self.cli_runner.invoke(cmd_process.process_report, options)
+        self.assertIsNone(result.exception, result.output)
+        self.assertTrue(len(get_result_lines(result)) > 0)
 
     def test_pause_play_kill(self):
         """

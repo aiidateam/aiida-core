@@ -105,7 +105,7 @@ class TestVerdiCalculation(AiidaTestCase):
                 cls.group.add_nodes([calc])
 
         # Load the fixture containing a single ArithmeticAddCalculation node
-        import_archive_fixture('calculation/arithmetic.add.aiida')
+        import_archive_fixture('calcjob/arithmetic.add.aiida')
 
         # Get the imported ArithmeticAddCalculation node
         ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
@@ -165,7 +165,7 @@ class TestVerdiCalculation(AiidaTestCase):
             options = ['-r', flag]
             result = self.cli_runner.invoke(command.calculation_list, options)
             self.assertIsNone(result.exception, result.output)
-            self.assertEquals(len(get_result_lines(result)), 13)
+            self.assertEquals(len(get_result_lines(result)), 14, result.output)
 
     def test_calculation_list_limit(self):
         """Test verdi calculation list with the limit option"""
@@ -175,14 +175,6 @@ class TestVerdiCalculation(AiidaTestCase):
             result = self.cli_runner.invoke(command.calculation_list, options)
             self.assertIsNone(result.exception, result.output)
             self.assertEquals(len(get_result_lines(result)), limit)
-
-    def test_calculation_list_group(self):
-        """Test verdi calculation list with the group option"""
-        for flag in ['-G', '--groups']:
-            options = ['-r', '-a', flag, self.group.uuid]
-            result = self.cli_runner.invoke(command.calculation_list, options)
-            self.assertIsNone(result.exception, result.output)
-            self.assertEquals(len(get_result_lines(result)), 1)
 
     def test_calculation_list_project(self):
         """Test verdi calculation list with the project option"""
@@ -195,16 +187,6 @@ class TestVerdiCalculation(AiidaTestCase):
             for line in get_result_lines(result):
                 self.assertIn(int(line), valid_pks)
 
-    def test_calculation_list_calculation_state(self):
-        """Test verdi calculation list with the calculation state filter"""
-        for flag in ['-s', '--calculation-state']:
-            for state in calc_states:
-                # Each valid state should have exactly one entry
-                options = ['-r', flag, state]
-                result = self.cli_runner.invoke(command.calculation_list, options)
-                self.assertIsNone(result.exception, result.output)
-                self.assertEquals(len(get_result_lines(result)), 1)
-
     def test_calculation_list_process_state(self):
         """Test verdi calculation list with the process state filter"""
         for flag in ['-S', '--process-state']:
@@ -216,7 +198,7 @@ class TestVerdiCalculation(AiidaTestCase):
                 self.assertIsNone(result.exception, result.output)
 
                 if state == 'finished':
-                    self.assertEquals(len(get_result_lines(result)), 6, result.output)
+                    self.assertEquals(len(get_result_lines(result)), 7, result.output)
                 else:
                     self.assertEquals(len(get_result_lines(result)), 7, result.output)
 

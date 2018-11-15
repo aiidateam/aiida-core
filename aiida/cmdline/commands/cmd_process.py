@@ -58,6 +58,32 @@ def process_list(all_entries, process_state, exit_status, failed, past_days, lim
         print_last_process_state_change()
 
 
+@verdi_process.command('show')
+@arguments.PROCESSES()
+@decorators.with_dbenv()
+def process_show(processes):
+    """Show a summary for one or multiple processes."""
+    from aiida.cmdline.utils.common import get_node_info
+
+    for process in processes:
+        echo.echo(get_node_info(process))
+
+
+@verdi_process.command('report')
+@arguments.PROCESSES()
+@decorators.with_dbenv()
+def process_report(processes):
+    """Show the log report for one or multiple processes."""
+    from aiida.cmdline.utils.common import get_calculation_log_report
+    from aiida.orm.node.process import CalcJobNode
+
+    for process in processes:
+        if isinstance(process, CalcJobNode):
+            echo.echo(get_calculation_log_report(process))
+        else:
+            echo.echo('Nothing to show for node type {}'.format(process.__class__))
+
+
 @verdi_process.command('kill')
 @arguments.PROCESSES()
 @options.TIMEOUT()

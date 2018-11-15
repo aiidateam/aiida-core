@@ -13,6 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 from plumpy import Bundle
 from plumpy import ProcessState
+from .calcfunctions import *
 from .exceptions import *
 from .exit_code import *
 from .futures import *
@@ -30,6 +31,7 @@ from .manager import *
 _local = ('ProcessState',)
 
 __all__ = (
+        calcfunctions.__all__ +
         exceptions.__all__ +
         exit_code.__all__ +
         processes.__all__ +

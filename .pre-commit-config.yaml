@@ -135,7 +135,6 @@
         aiida/backends/tests/export_and_import.py|
         aiida/backends/tests/generic.py|
         aiida/backends/tests/__init__.py|
-        aiida/backends/tests/inline_calculation.py|
         aiida/backends/tests/nodes.py|
         aiida/backends/tests/orm/data/frozendict.py|
         aiida/backends/tests/orm/data/remote.py|
@@ -253,18 +252,10 @@
         aiida/orm/implementation/django/user.py|
         aiida/orm/implementation/django/utils.py|
         aiida/orm/implementation/django/workflow.py|
-        aiida/orm/implementation/general/calculation/function.py|
-        aiida/orm/implementation/general/calculation/__init__.py|
-        aiida/orm/implementation/general/calculation/inline.py|
-        aiida/orm/implementation/general/calculation/job/__init__.py|
-        aiida/orm/implementation/general/calculation/work.py|
-        aiida/orm/implementation/general/code.py|
         aiida/orm/implementation/general/comment.py|
-        aiida/orm/implementation/general/computer.py|
         aiida/orm/implementation/general/group.py|
         aiida/orm/implementation/general/__init__.py|
         aiida/orm/implementation/general/node.py|
-        aiida/orm/implementation/general/user.py|
         aiida/orm/implementation/general/workflow.py|
         aiida/orm/implementation/__init__.py|
         aiida/orm/implementation/sqlalchemy/authinfo.py|

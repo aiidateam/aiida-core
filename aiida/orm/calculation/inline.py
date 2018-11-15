@@ -143,7 +143,12 @@ def make_inline(func):
         stored.
     :raise Exception: All other exceptions from the wrapped function
         are not catched.
+
+    .. deprecated:: 1.0.0
     """
+    import warnings
+    warnings.warn('this function has been deprecated, use `aiida.work.calcfunction` instead', DeprecationWarning)
+
     from aiida.work import workfunction
 
     # Note: if you pass a lambda function, the name will be <lambda>; moreover
@@ -189,7 +194,11 @@ def optional_inline(func):
         copy_inline(source=node)
 
     In any way the ``copy_inline`` will return the same results.
+
+    .. deprecated:: 1.0.0
     """
+    import warnings
+    warnings.warn('this function has been deprecated, use `aiida.work.calcfunction` instead', DeprecationWarning)
 
     def wrapped_function(*args, **kwargs):
         """

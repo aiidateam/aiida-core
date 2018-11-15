@@ -20,6 +20,7 @@ import numbers
 import math
 
 import six
+from collections import namedtuple
 
 from aiida.backends.utils import validate_attribute_key
 from aiida.common.caching import get_use_cache
@@ -33,6 +34,8 @@ from aiida.plugins.loader import get_query_type_from_type_string, get_type_strin
 from aiida.common.hashing import _HASH_EXTRA_KEY
 
 _NO_DEFAULT = tuple()
+
+Neighbor = namedtuple('Neighbor', ['link_type', 'label', 'node'])
 
 def clean_value(value):
     """
@@ -799,7 +802,45 @@ class AbstractNode(object):
 
         return new_outputs
 
+    def get_incoming(self, node_type=None, link_type=None, link_label=None, only_in_db=False):
+
+        qb_obj = get_all_incoming_qbobj(self.id, node_type=node_type, link_type=link_type, link_label=link_label)
+        filtered_list = [Neighbor(i[2], i[1], i[0]) for i in qb_obj.all()]
+
+        if not only_in_db:
+            # Needed for the check
+            db_incoming_keys = set(incoming.label for incoming in filtered_list)
+
+            for label, v in self._inputlinks_cache.items():
+                src = v[0]
+                incoming_link_type = v[1]
+                if label in db_incoming_keys:
+                    raise InternalError("There exist a link with the same name '{}' both in the DB "
+                                        "and in the internal cache for node pk= {}!".format(label, self.pk))
+
+                if link_type is None or incoming_link_type == link_type:
+                    filtered_list.append(Neighbor(incoming_link_type, label, src))
+
+        return filtered_list
+
+    def get_incoming_one(self, node_type=None, link_type=None, link_label=None, only_in_db=False):
+        incomings = self.get_incoming(node_type=node_type, link_type=link_type, link_label=link_label,
+                                       only_in_db=only_in_db)
+        if incomings:
+            if len(incomings) > 1:
+                raise ValueError("More than one incoming link matches the specified filter: {}") # TODO add more details
+            return incomings[0]
+
+        raise ValueError("No incoming link matching {}") # TODO
+
     def get_inputs(self, node_type=None, also_labels=False, only_in_db=False, link_type=None):
+        all_links = self.get_incoming(node_type=node_type, link_type=link_type, only_in_db=only_in_db)
+        if also_labels:
+            return [(link.label, link.node) for link in all_links]
+        return [link.node for link in all_links]
+
+
+    def get_inputs1(self, node_type=None, also_labels=False, only_in_db=False, link_type=None):
         """
         Return a list of nodes that enter (directly) in this node
 
@@ -815,6 +856,7 @@ class AbstractNode(object):
         :param link_type: Only get inputs of this link type, if None then
             returns all inputs of all link types.
         """
+
         if link_type is not None and not isinstance(link_type, LinkType):
             raise TypeError('link_type should be a LinkType object')
 
@@ -2114,3 +2156,26 @@ class AttributeManager(object):
             return self._node.get_attr(name)
         except AttributeError as err:
             raise KeyError(str(err))
+
+def get_all_incoming_qbobj(node_id, node_type=None, link_type=None, link_label=None):
+    from aiida.orm.querybuilder import QueryBuilder
+    from aiida.orm.node import Node
+
+    filtered_node = Node
+    edge_filters = {}
+
+    if node_type:
+        filtered_node = node_type
+    if link_type:
+        if not isinstance(link_type, LinkType):
+            raise TypeError('link_type should be a LinkType object')
+        edge_filters["type"] = {"==": link_type.value}
+    if link_label:
+        edge_filters["label"] = {"like": link_label}
+
+    qb_obj = QueryBuilder()
+    qb_obj.append(Node, filters={"id": {"==": node_id}}, tag="main")
+    qb_obj.append(filtered_node, input_of="main", project=["*"], edge_project=["label", "type"], edge_filters=edge_filters)
+
+    return qb_obj
+

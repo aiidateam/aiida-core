@@ -20,7 +20,7 @@ from django.contrib.auth.models import (
     AbstractBaseUser, BaseUserManager, PermissionsMixin)
 from django.utils.encoding import python_2_unicode_compatible
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models.query import QuerySet
+from django.db.models.query import QuerySet, ModelIterable
 
 from aiida.utils import timezone
 from aiida.common.utils import get_new_uuid
@@ -42,11 +42,15 @@ from aiida.backends.utils import AIIDA_ATTRIBUTE_SEP
 # load_dbenv() function).
 SCHEMA_VERSION = migrations.current_schema_version()
 
-
 class AiidaQuerySet(QuerySet):
     def iterator(self):
         for obj in super(AiidaQuerySet, self).iterator():
             yield obj.get_aiida_class()
+
+    # Note: __getitem__ used to rely on the iterator in django 1.8 but does no longer in django 1.11
+    def __getitem__(self, key):
+        res = super(AiidaQuerySet, self).__getitem__(key)
+        return res.get_aiida_class()
 
 
 class AiidaObjectManager(m.Manager):

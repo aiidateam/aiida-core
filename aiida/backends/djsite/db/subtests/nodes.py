@@ -60,7 +60,8 @@ class TestDataNodeDjango(AiidaTestCase):
         b = Node.query(pk=a2)
         self.assertEquals(len(b), 1)
         # It is a aiida.orm.Node instance
-        self.assertTrue(isinstance(b[0], Node))
+        self.assertTrue(isinstance(b[0], Node),
+                "Expecting instance of {}, found {}".format(type(a4), type(b[0])))
         self.assertEquals(b[0].uuid, a2.uuid)
 
         going_out_from_a2 = Node.query(inputs__in=b)

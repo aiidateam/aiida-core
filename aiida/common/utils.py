@@ -112,6 +112,19 @@ def get_new_uuid():
     return six.text_type(the_uuid)
 
 
+def to_uuid(uuid_str):
+    """
+    Convert uuid string to UUID object
+
+    :param uuid_str: valid uuid string
+
+    Return a new UUID (typically to be used for new nodes).
+    """
+    import uuid
+
+    return uuid.UUID(uuid_str)
+
+
 # To speed up the process (os.path.abspath calls are slow)
 _repository_folder_cache = {}  # pylint: disable=invalid-name
 

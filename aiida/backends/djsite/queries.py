@@ -13,6 +13,7 @@ from __future__ import print_function
 import six
 from six.moves import zip
 from aiida.backends.general.abstractqueries import AbstractQueryManager
+from aiida.orm import QueryBuilder
 
 
 class DjangoQueryManager(AbstractQueryManager):
@@ -217,8 +218,8 @@ class DjangoQueryManager(AbstractQueryManager):
         self.query_past_days(q_object, args)
         self.query_group(q_object, args)
 
-        bands_list = BandsData.query(q_object).distinct().order_by('ctime')
-
+        bands_list = models.DbNode.objects.filter(type__startswith=BandsData.plugin_type_string)\
+                .filter(q_object).distinct().order_by('ctime')
         bands_list_data = bands_list.values_list('pk', 'label', 'ctime')
 
         # split data in chunks
@@ -369,8 +370,10 @@ def get_closest_parents(pks, *args, **kwargs):
         if print_progress:
             print("Dealing with chunk #", i)
         result_chunk_dict = {}
-        q_pks = Node.query(pk__in=chunk_pks).values_list('pk', flat=True)
+
+        q_pks = models.DbNode.objects.filter(pk__in=chunk_pks).values_list('pk', flat=True)
         # Now I am looking for parents (depth=0) of the nodes in the chunk:
+
         q_inputs = models.DbNode.objects.filter(outputs__pk__in=q_pks).distinct()
         depth = -1  # to be consistent with the DbPath depth (=0 for direct inputs)
         children_dict = dict([(k, v) for k, v in q_inputs.values_list('pk', 'outputs__pk')

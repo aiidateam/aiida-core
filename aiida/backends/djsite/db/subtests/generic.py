@@ -26,7 +26,7 @@ class TestComputer(AiidaTestCase):
     """
 
     def test_deletion(self):
-        from aiida.orm import JobCalculation
+        from aiida.orm.node.process import CalcJobNode
         from aiida.common.exceptions import InvalidOperation
 
         newcomputer = orm.Computer(name="testdeletioncomputer", hostname='localhost',
@@ -42,7 +42,7 @@ class TestComputer(AiidaTestCase):
                           'num_mpiprocs_per_machine': 1}
         }
 
-        _ = JobCalculation(**calc_params).store()
+        _ = CalcJobNode(**calc_params).store()
 
         # This should fail, because there is at least a calculation
         # using this computer (the one created just above)

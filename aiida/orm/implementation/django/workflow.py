@@ -25,7 +25,7 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      AiidaException)
 from aiida.common.folders import RepositoryFolder, SandboxFolder
 from aiida.common.utils import md5_file, str_timedelta
-from aiida.orm.implementation.general.calculation.job import JobCalculation
+from aiida.orm.node.process import CalcJobNode
 from aiida.orm.implementation.general.workflow import AbstractWorkflow
 from aiida.utils import timezone
 
@@ -673,7 +673,7 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
         workflow_mapping = {_.pk: _ for _ in wflows}
 
         # get all calculations for all steps
-        calcs = JobCalculation.query(workflow_step__in=steps_pk)  # .order_by('ctime')
+        calcs = CalcJobNode.query(workflow_step__in=steps_pk)  # .order_by('ctime')
         # dictionary mapping pks into calculations
         calc_mapping = {_.pk: _ for _ in calcs}
 

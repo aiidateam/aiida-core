@@ -42,8 +42,7 @@ def draw_graph(origin_node,
     # until the connected part of the graph that contains the root_pk is fully explored.
     # TODO this command deserves to be improved, with options and further subcommands
 
-    from aiida.orm.calculation import Calculation
-    from aiida.orm.calculation.job import JobCalculation
+    from aiida.orm.node.process import ProcessNode
     from aiida.orm.code import Code
     from aiida.orm.node import Node
     from aiida.common.links import LinkType
@@ -56,7 +55,7 @@ def draw_graph(origin_node,
         :param kwargs: Additional key-value pairs to be added to the returned string
         :return: a string
         """
-        if isinstance(node, Calculation):
+        if isinstance(node, ProcessNode):
             shape = "shape=polygon,sides=4"
         elif isinstance(node, Code):
             shape = "shape=diamond"
@@ -128,7 +127,7 @@ def draw_graph(origin_node,
                     new_nodes.append(inp)
 
             # Checking whether I also should include all the outputs of a calculation into the drawing:
-            if include_calculation_outputs and isinstance(node, Calculation):
+            if include_calculation_outputs and isinstance(node, ProcessNode):
                 # Query for the outputs, giving me also link labels and types:
                 output_query = QueryBuilder()
                 output_query.append(Node, filters={'id': node.pk}, tag='n')
@@ -170,7 +169,7 @@ def draw_graph(origin_node,
                     nodes[out.pk] = draw_node_settings(out)
                     new_nodes.append(out)
 
-            if include_calculation_inputs and isinstance(node, Calculation):
+            if include_calculation_inputs and isinstance(node, ProcessNode):
                 input_query = QueryBuilder()
                 input_query.append(Node, filters={'id': node.pk}, tag='n')
                 input_query.append(Node, input_of='n', edge_project=('id', 'label', 'type'), project='*', tag='inp')

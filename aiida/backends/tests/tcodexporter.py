@@ -128,7 +128,7 @@ class TestTcodDbExporter(AiidaTestCase):
     def test_cif_structure_roundtrip(self):
         from aiida.tools.dbexporters.tcod import export_cif, export_values
         from aiida.orm import Code
-        from aiida.orm import JobCalculation
+        from aiida.orm.node.process import CalcJobNode
         from aiida.orm.data.cif import CifData
         from aiida.orm.data.parameter import ParameterData
         from aiida.orm.data.upf import UpfData
@@ -169,7 +169,7 @@ class TestTcodDbExporter(AiidaTestCase):
 
         code.store()
 
-        calc = JobCalculation(computer=self.computer)
+        calc = CalcJobNode(computer=self.computer)
         calc.set_option('resources', {'num_machines': 1,
                             'num_mpiprocs_per_machine': 1})
         calc.add_link_from(code, "code")

@@ -26,7 +26,7 @@ from aiida.common.exceptions import TransportTaskException
 from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.daemon import execmanager
-from aiida.orm.calculation.job import JobCalculation
+from aiida.orm.node.process import CalcJobNode
 from aiida.scheduler.datastructures import JOB_STATES
 from aiida.work.process_builder import JobProcessBuilder
 from aiida.work.utils import exponential_backoff_retry, interruptable_task
@@ -60,8 +60,8 @@ def task_upload_job(node, transport_queue, calc_info, script_filename, cancellab
 
     :param node: the node that represents the job calculation
     :param transport_queue: the TransportQueue from which to request a Transport
-    :param calc_info: the calculation info datastructure returned by `JobCalculation._presubmit`
-    :param script_filename: the job launch script returned by `JobCalculation._presubmit`
+    :param calc_info: the calculation info datastructure returned by `CalcJobNode._presubmit`
+    :param script_filename: the job launch script returned by `CalcJobNode._presubmit`
     :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
     :type cancellable: :class:`aiida.work.utils.InterruptableFuture`
     :raises: Return if the tasks was successfully completed
@@ -112,8 +112,8 @@ def task_submit_job(node, transport_queue, calc_info, script_filename, cancellab
 
     :param node: the node that represents the job calculation
     :param transport_queue: the TransportQueue from which to request a Transport
-    :param calc_info: the calculation info datastructure returned by `JobCalculation._presubmit`
-    :param script_filename: the job launch script returned by `JobCalculation._presubmit`
+    :param calc_info: the calculation info datastructure returned by `CalcJobNode._presubmit`
+    :param script_filename: the job launch script returned by `CalcJobNode._presubmit`
     :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
     :type cancellable: :class:`aiida.work.utils.InterruptableFuture`
     :raises: Return if the tasks was successfully completed
@@ -162,7 +162,7 @@ def task_update_job(node, job_manager, cancellable):
     If all retries fail, the task will raise a TransportTaskException
 
     :param node: the node that represents the job calculation
-    :type node: :class:`aiida.orm.calculation.JobCalculation`
+    :type node: :class:`aiida.orm.calculation.CalcJobNode`
     :param job_manager: The job manager
     :type job_manager: :class:`aiida.work.job_calcs.JobManager`
     :param cancellable: A cancel flag
@@ -315,7 +315,7 @@ def task_kill_job(node, transport_queue, cancellable):
 
 class Waiting(plumpy.Waiting):
     """
-    The waiting state for the JobCalculation.
+    The waiting state for the CalcJobNode.
     """
 
     def __init__(self, process, done_callback, msg=None, data=None):
@@ -552,7 +552,7 @@ class JobProcess(processes.Process):
     @property
     def process_class(self):
         """
-        Return the class that represents this Process, for the JobProcess this is JobCalculation class it wraps.
+        Return the class that represents this Process, for the JobProcess this is CalcJobNode class it wraps.
 
         For a standard Process or sub class of Process, this is the class itself. However, for legacy reasons,
         the Process class is a wrapper around another class. This function returns that original class, i.e. the
@@ -566,7 +566,7 @@ class JobProcess(processes.Process):
         Create the links that connect the inputs to the calculation node that represents this Process
 
         For a JobProcess, the inputs also need to be mapped onto the `use_` and `set_` methods of the
-        legacy JobCalculation class. If a code is defined in the inputs and no computer has been set
+        legacy CalcJobNode class. If a code is defined in the inputs and no computer has been set
         yet for the calculation node, the computer configured for the code is used to set on the node.
         """
         for name, input_value in self.get_provenance_inputs_iterator():
@@ -592,7 +592,7 @@ class JobProcess(processes.Process):
                     except AttributeError:
                         raise AttributeError(
                             "You have provided for an input the key '{}' but"
-                            "the JobCalculation has no such use_{} method".format(name, name))
+                            "the CalcJobNode has no such use_{} method".format(name, name))
 
             else:
                 getattr(self.calc, 'use_{}'.format(name))(input_value)
@@ -672,18 +672,18 @@ class JobProcess(processes.Process):
         return exit_code
 
 
-class ContinueJobCalculation(JobProcess):
+class ContinueCalcJob(JobProcess):
 
     @classmethod
     def define(cls, spec):
-        super(ContinueJobCalculation, cls).define(spec)
-        spec.input('_calc', valid_type=JobCalculation, required=True, non_db=False)
+        super(ContinueCalcJob, cls).define(spec)
+        spec.input('_calc', valid_type=CalcJobNode, required=True, non_db=False)
 
     def run(self):
         state = self.calc.get_state()
 
         if state == calc_states.NEW:
-            return super(ContinueJobCalculation, self).run()
+            return super(ContinueCalcJob, self).run()
 
         if state in [calc_states.TOSUBMIT, calc_states.SUBMITTING]:
             return plumpy.Wait(msg='Waiting to submit', data=SUBMIT_COMMAND)
@@ -705,4 +705,4 @@ class ContinueJobCalculation(JobProcess):
     @override
     def _setup_db_record(self):
         self._calc_class = self.inputs._calc.__class__
-        super(ContinueJobCalculation, self)._setup_db_record()
+        super(ContinueCalcJob, self)._setup_db_record()

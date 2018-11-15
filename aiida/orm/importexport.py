@@ -1683,8 +1683,8 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     license
     """
     import aiida
-    from aiida.orm import Node, Calculation, Data, Group
-    from aiida.orm.node.process import ProcessNode, CalculationNode
+    from aiida.orm import Node, Data, Group
+    from aiida.orm.node.process import ProcessNode
     from aiida.common.links import LinkType
     from aiida.common.folders import RepositoryFolder
     from aiida.orm.querybuilder import QueryBuilder
@@ -1719,7 +1719,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
         elif issubclass(entry.__class__, Node):
             if issubclass(entry.__class__, Data):
                 given_data_entry_ids.add(entry.pk)
-            elif issubclass(entry.__class__, (Calculation, ProcessNode)):
+            elif issubclass(entry.__class__, ProcessNode):
                 given_calculation_entry_ids.add(entry.pk)
         elif issubclass(entry.__class__, Computer):
             given_computer_entry_ids.add(entry.pk)
@@ -1731,7 +1731,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
         for entry in group.nodes:
             if issubclass(entry.__class__, Data):
                 given_data_entry_ids.add(entry.pk)
-            elif issubclass(entry.__class__, Calculation):
+            elif issubclass(entry.__class__, ProcessNode):
                 given_calculation_entry_ids.add(entry.pk)
 
     # We will iteratively explore the AiiDA graph to find further nodes that
@@ -1750,10 +1750,10 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             else:
                 to_be_exported.add(curr_node_id)
 
-            # INPUT(Data, Calculation) - Reversed
+            # INPUT(Data, ProcessNode) - Reversed
             qb = QueryBuilder()
             qb.append(Data, tag='predecessor', project=['id'])
-            qb.append((Calculation, ProcessNode), output_of='predecessor',
+            qb.append(ProcessNode, output_of='predecessor',
                       filters={'id': {'==': curr_node_id}},
                       edge_filters={
                           'type': {
@@ -1761,21 +1761,21 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             res = {_[0] for _ in qb.all()}
             given_data_entry_ids.update(res - to_be_exported)
 
-            # INPUT(Data, Calculation) - Forward
+            # INPUT(Data, ProcessNode) - Forward
             if input_forward:
                 qb = QueryBuilder()
                 qb.append(Data, tag='predecessor', project=['id'],
                           filters={'id': {'==': curr_node_id}})
-                qb.append((Calculation, ProcessNode), output_of='predecessor',
+                qb.append(ProcessNode, output_of='predecessor',
                           edge_filters={
                               'type': {
                                   '==': LinkType.INPUT.value}})
                 res = {_[0] for _ in qb.all()}
                 given_data_entry_ids.update(res - to_be_exported)
 
-            # CREATE/RETURN(Calculation, Data) - Forward
+            # CREATE/RETURN(ProcessNode, Data) - Forward
             qb = QueryBuilder()
-            qb.append((Calculation, ProcessNode), tag='predecessor',
+            qb.append(ProcessNode, tag='predecessor',
                       filters={'id': {'==': curr_node_id}})
             qb.append(Data, output_of='predecessor', project=['id'],
                       edge_filters={
@@ -1785,10 +1785,10 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             res = {_[0] for _ in qb.all()}
             given_data_entry_ids.update(res - to_be_exported)
 
-            # CREATE(Calculation, Data) - Reversed
+            # CREATE(ProcessNode, Data) - Reversed
             if create_reversed:
                 qb = QueryBuilder()
-                qb.append((Calculation, ProcessNode), tag='predecessor')
+                qb.append(ProcessNode, tag='predecessor')
                 qb.append(Data, output_of='predecessor', project=['id'],
                           filters={'id': {'==': curr_node_id}},
                           edge_filters={
@@ -1797,10 +1797,10 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 res = {_[0] for _ in qb.all()}
                 given_data_entry_ids.update(res - to_be_exported)
 
-            # RETURN(Calculation, Data) - Reversed
+            # RETURN(ProcessNode, Data) - Reversed
             if return_reversed:
                 qb = QueryBuilder()
-                qb.append((Calculation, ProcessNode), tag='predecessor')
+                qb.append(ProcessNode, tag='predecessor')
                 qb.append(Data, output_of='predecessor', project=['id'],
                           filters={'id': {'==': curr_node_id}},
                           edge_filters={
@@ -1809,22 +1809,22 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 res = {_[0] for _ in qb.all()}
                 given_data_entry_ids.update(res - to_be_exported)
 
-            # CALL(Calculation, Calculation) - Forward
+            # CALL(ProcessNode, ProcessNode) - Forward
             qb = QueryBuilder()
-            qb.append((Calculation, ProcessNode), tag='predecessor',
+            qb.append(ProcessNode, tag='predecessor',
                       filters={'id': {'==': curr_node_id}})
-            qb.append((Calculation, ProcessNode), output_of='predecessor', project=['id'],
+            qb.append(ProcessNode, output_of='predecessor', project=['id'],
                       edge_filters={
                           'type': {
                               '==': LinkType.CALL.value}})
             res = {_[0] for _ in qb.all()}
             given_calculation_entry_ids.update(res - to_be_exported)
 
-            # CALL(Calculation, Calculation) - Reversed
+            # CALL(ProcessNode, ProcessNode) - Reversed
             if call_reversed:
                 qb = QueryBuilder()
-                qb.append((Calculation, ProcessNode), tag='predecessor')
-                qb.append((Calculation, ProcessNode), output_of='predecessor', project=['id'],
+                qb.append(ProcessNode, tag='predecessor')
+                qb.append(ProcessNode, output_of='predecessor', project=['id'],
                           filters={'id': {'==': curr_node_id}},
                           edge_filters={
                               'type': {
@@ -1844,10 +1844,10 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 to_be_exported.add(curr_node_id)
 
             # Case 2:
-            # CREATE(Calculation, Data) - Reversed
+            # CREATE(ProcessNode, Data) - Reversed
             if create_reversed:
                 qb = QueryBuilder()
-                qb.append((Calculation, ProcessNode), tag='predecessor', project=['id'])
+                qb.append(ProcessNode, tag='predecessor', project=['id'])
                 qb.append(Data, output_of='predecessor',
                           filters={'id': {'==': curr_node_id}},
                           edge_filters={
@@ -1988,14 +1988,14 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
 
     links_uuid_dict = dict()
     if len(all_nodes_pk) > 0:
-        # INPUT (Data, Calculation) - Forward, by the Calculation node
+        # INPUT (Data, ProcessNode) - Forward, by the ProcessNode node
         if input_forward:
-            # INPUT (Data, Calculation)
+            # INPUT (Data, ProcessNode)
             links_qb = QueryBuilder()
             links_qb.append(Data,
                             project=['uuid'], tag='input',
                             filters = {'id': {'in': all_nodes_pk}})
-            links_qb.append((Calculation, ProcessNode),
+            links_qb.append(ProcessNode,
                             project=['uuid'], tag='output',
                             edge_filters={'type':{'==':LinkType.INPUT.value}},
                             edge_project=['label', 'type'], output_of='input')
@@ -2008,11 +2008,11 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 }
                 links_uuid_dict[frozenset(val.items())] = val
 
-        # INPUT (Data, Calculation) - Backward, by the Calculation node
+        # INPUT (Data, ProcessNode) - Backward, by the ProcessNode node
         links_qb = QueryBuilder()
         links_qb.append(Data,
                         project=['uuid'], tag='input')
-        links_qb.append((Calculation, ProcessNode),
+        links_qb.append(ProcessNode,
                         project=['uuid'], tag='output',
                         filters={'id': {'in': all_nodes_pk}},
                         edge_filters={'type':{'==':LinkType.INPUT.value}},
@@ -2026,9 +2026,9 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             }
             links_uuid_dict[frozenset(val.items())] = val
 
-        # CREATE (Calculation, Data) - Forward, by the Calculation node
+        # CREATE (ProcessNode, Data) - Forward, by the ProcessNode node
         links_qb = QueryBuilder()
-        links_qb.append((Calculation, ProcessNode),
+        links_qb.append(ProcessNode,
                         project=['uuid'], tag='input',
                         filters={'id': {'in': all_nodes_pk}})
         links_qb.append(Data,
@@ -2044,10 +2044,10 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             }
             links_uuid_dict[frozenset(val.items())] = val
 
-        # CREATE (Calculation, Data) - Backward, by the Data node
+        # CREATE (ProcessNode, Data) - Backward, by the Data node
         if create_reversed:
             links_qb = QueryBuilder()
-            links_qb.append((Calculation, ProcessNode),
+            links_qb.append(ProcessNode,
                             project=['uuid'], tag='input',
                             filters={'id': {'in': all_nodes_pk}})
             links_qb.append(Data,
@@ -2063,9 +2063,9 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 }
                 links_uuid_dict[frozenset(val.items())] = val
 
-        # RETURN (Calculation, Data) - Forward, by the Calculation node
+        # RETURN (ProcessNode, Data) - Forward, by the ProcessNode node
         links_qb = QueryBuilder()
-        links_qb.append((Calculation, ProcessNode),
+        links_qb.append(ProcessNode,
                         project=['uuid'], tag='input',
                         filters={'id': {'in': all_nodes_pk}})
         links_qb.append(Data,
@@ -2081,10 +2081,10 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             }
             links_uuid_dict[frozenset(val.items())] = val
 
-        # RETURN (Calculation, Data) - Backward, by the Data node
+        # RETURN (ProcessNode, Data) - Backward, by the Data node
         if return_reversed:
             links_qb = QueryBuilder()
-            links_qb.append((Calculation, ProcessNode),
+            links_qb.append(ProcessNode,
                             project=['uuid'], tag='input')
             links_qb.append(Data,
                             project=['uuid'], tag='output',
@@ -2100,13 +2100,13 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 }
                 links_uuid_dict[frozenset(val.items())] = val
 
-        # CALL (Calculation [caller], Calculation [called]) - Forward, by
-        # the Calculation node
+        # CALL (ProcessNode [caller], ProcessNode [called]) - Forward, by
+        # the ProcessNode node
         links_qb = QueryBuilder()
-        links_qb.append((Calculation, ProcessNode),
+        links_qb.append(ProcessNode,
                         project=['uuid'], tag='input',
                         filters={'id': {'in': all_nodes_pk}})
-        links_qb.append((Calculation, ProcessNode),
+        links_qb.append(ProcessNode,
                         project=['uuid'], tag='output',
                         edge_filters={'type': {'==': LinkType.CALL.value}},
                         edge_project=['label', 'type'], output_of='input')
@@ -2119,13 +2119,13 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             }
             links_uuid_dict[frozenset(val.items())] = val
 
-        # CALL (Calculation [caller], Calculation [called]) - Backward,
-        # by the Calculation [called] node
+        # CALL (ProcessNode [caller], ProcessNode [called]) - Backward,
+        # by the ProcessNode [called] node
         if call_reversed:
             links_qb = QueryBuilder()
-            links_qb.append((Calculation, ProcessNode),
+            links_qb.append(ProcessNode,
                             project=['uuid'], tag='input')
-            links_qb.append((Calculation, ProcessNode),
+            links_qb.append(ProcessNode,
                             project=['uuid'], tag='output',
                             filters={'id': {'in': all_nodes_pk}},
                             edge_filters={'type': {'==': LinkType.CALL.value}},

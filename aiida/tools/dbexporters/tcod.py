@@ -344,17 +344,15 @@ def _get_calculation(node):
 
     :param node: an instance of subclass of :py:class:`aiida.orm.node.Node`
     :return: an instance of subclass of
-        :py:class:`aiida.orm.calculation.Calculation`
+        :py:class:`aiida.orm.node.process.process.ProcessNode`
     :raises MultipleObjectsError: if the node has more than one calculation
         attached.
     """
     from aiida.common.exceptions import MultipleObjectsError
     from aiida.common.links import LinkType
-    from aiida.orm.calculation import Calculation
     from aiida.orm.node.process import ProcessNode
 
-    parent_calculations = node.get_inputs(node_type=Calculation, link_type=LinkType.CREATE) + \
-                          node.get_inputs(node_type=ProcessNode, link_type=LinkType.CREATE)
+    parent_calculations = node.get_inputs(node_type=ProcessNode, link_type=LinkType.CREATE)
 
     if len(parent_calculations) == 1:
         return parent_calculations[0]
@@ -445,14 +443,12 @@ def _collect_calculation_data(calc):
     """
     from aiida.common.links import LinkType
     from aiida.orm.data import Data
-    from aiida.orm.calculation import Calculation
-    from aiida.orm.calculation.job import JobCalculation
-    from aiida.orm.node.process import CalcFunctionNode, WorkflowNode
+    from aiida.orm.node.process import CalculationNode, CalcJobNode, CalcFunctionNode, WorkflowNode
     import hashlib
     import os
     calcs_now = []
     for d in calc.get_inputs(node_type=Data, link_type=LinkType.INPUT):
-        for c in d.get_inputs(node_type=Calculation, link_type=LinkType.CREATE):
+        for c in d.get_inputs(node_type=CalculationNode, link_type=LinkType.CREATE):
             calcs = _collect_calculation_data(c)
             calcs_now.extend(calcs)
 
@@ -463,7 +459,7 @@ def _collect_calculation_data(calc):
         'files': [],
     }
 
-    if isinstance(calc, JobCalculation):
+    if isinstance(calc, CalcJobNode):
         retrieved_abspath = calc.get_retrieved_node().get_abs_path()
         files_in  = _collect_files(calc._raw_input_folder.abspath)
         files_out = _collect_files(os.path.join(retrieved_abspath, 'path'))
@@ -1074,10 +1070,10 @@ def deposit(what, type, author_name=None, author_email=None, url=None,
             replace=None, message=None, **kwargs):
     """
     Launches a
-    :py:class:`aiida.orm.implementation.general.calculation.job.JobCalculation`
+    :py:class:`aiida.orm.node.process.calculation.calcjob.CalcJobNode`
     to deposit data node to \*COD-type database.
 
-    :return: launched :py:class:`aiida.orm.implementation.general.calculation.job.JobCalculation`
+    :return: launched :py:class:`aiida.orm.node.process.calculation.calcjob.CalcJobNode`
         instance.
     :raises ValueError: if any of the required parameters are not given.
     """
@@ -1224,11 +1220,11 @@ def deposition_cmdline_parameters(parser, expclass="Data"):
 def translate_calculation_specific_values(calc, translator, **kwargs):
     """
     Translates calculation-specific values from
-    :py:class:`aiida.orm.implementation.general.calculation.job.JobCalculation` subclass to
+    :py:class:`aiida.orm.node.process.calculation.calcjob.CalcJobNode` subclass to
     appropriate TCOD CIF tags.
 
     :param calc: an instance of
-        :py:class:`aiida.orm.implementation.general.calculation.job.JobCalculation` subclass.
+        :py:class:`aiida.orm.node.process.calculation.calcjob.CalcJobNode` subclass.
     :param translator: class, derived from
         :py:class:`aiida.tools.dbexporters.tcod_plugins.BaseTcodtranslator`.
     :raises ValueError: if **translator** is not derived from proper class.

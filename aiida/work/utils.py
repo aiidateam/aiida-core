@@ -20,7 +20,6 @@ import tornado.ioloop
 from tornado import concurrent, gen
 
 from aiida.common.links import LinkType
-from aiida.orm.calculation import Calculation
 from aiida.orm.data.frozendict import FrozenDict
 
 __all__ = 'RefObjectStore', 'interruptable_task', 'InterruptableFuture'
@@ -173,20 +172,20 @@ def is_workfunction(function):
         return False
 
 
-def get_or_create_output_group(calculation):
+def get_or_create_output_group(node):
     """
-    For a given Calculation, get or create a new frozendict Data node that
-    has as its values all output Data nodes of the Calculation.
+    For a given ProcessNode, get or create a new frozendict Data node that
+    has as its values all output Data nodes of the ProcessNode.
 
-    :param calculation: Calculation
+    :param node: ProcessNode
     """
     from aiida.orm.node.process import ProcessNode
 
-    if not isinstance(calculation, (Calculation, ProcessNode)):
-        raise TypeError("Can only create output groups for type Calculation")
+    if not isinstance(node, ProcessNode):
+        raise TypeError("Can only create output groups for type ProcessNode")
 
-    outputs = calculation.get_outputs_dict(link_type=LinkType.CREATE)
-    outputs.update(calculation.get_outputs_dict(link_type=LinkType.RETURN))
+    outputs = node.get_outputs_dict(link_type=LinkType.CREATE)
+    outputs.update(node.get_outputs_dict(link_type=LinkType.RETURN))
 
     return FrozenDict(dict=outputs)
 
@@ -218,12 +217,10 @@ def set_process_state_change_timestamp(process):
     """
     from aiida.backends.utils import set_global_setting
     from aiida.common.exceptions import UniquenessError
-    from aiida.orm.node.process import CalcFunctionNode
-    from aiida.orm.calculation.job import JobCalculation
-    from aiida.orm.node.process import ProcessNode, WorkflowNode
+    from aiida.orm.node.process import ProcessNode, CalculationNode, WorkflowNode
     from aiida.utils import timezone
 
-    if isinstance(process.calc, (JobCalculation, CalcFunctionNode)):
+    if isinstance(process.calc, CalculationNode):
         process_type = 'calculation'
     elif isinstance(process.calc, WorkflowNode):
         process_type = 'work'

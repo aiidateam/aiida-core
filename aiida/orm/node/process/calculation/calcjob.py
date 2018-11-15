@@ -10,6 +10,7 @@ from six.moves import zip
 import abc
 import copy
 import datetime
+import enum
 import io
 import six
 import warnings
@@ -17,22 +18,19 @@ import warnings
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
 from aiida.common.links import LinkType
-from aiida.common.utils import classproperty
-from aiida.common.utils import str_timedelta
+from aiida.common.utils import classproperty, str_timedelta
 from aiida.plugins.loader import get_plugin_type_from_type_string
-from aiida.orm import Node
 from aiida.orm.computers import Computer
 from aiida.orm.node.process import ProcessNode
-from aiida.orm.implementation.general.calculation.job import JobCalculationExitStatus
 from aiida.orm.mixins import Sealable
 from aiida.utils import timezone
 
 from .calculation import CalculationNode
 
-__all__ = ('CalcJobNode',)
+__all__ = ('CalcJobNode', 'CalculationResultManager')
 
 SEALED_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
-CALCULATION_STATE_KEY = 'state'
+CALCULATION_STATE_KEY = 'attributes.state'
 SCHEDULER_STATE_KEY = 'attributes.scheduler_state'
 PROCESS_STATE_KEY = 'attributes.{}'.format(ProcessNode.PROCESS_STATE_KEY)
 EXIT_STATUS_KEY = 'attributes.{}'.format(ProcessNode.EXIT_STATUS_KEY)
@@ -41,32 +39,25 @@ DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/process/index
 _input_subfolder = 'raw_input'
 
 
+class CalcJobExitStatus(enum.Enum):
+    """
+    This enumeration maps specific calculation states to an integer. This integer can
+    then be used to set the exit status of a CalcJobNode node. The values defined
+    here map directly on the failed calculation states, but the idea is that sub classes
+    of CalcJobNode can extend this enum with additional error codes
+    """
+    FINISHED = 0
+    SUBMISSIONFAILED = 100
+    RETRIEVALFAILED = 200
+    PARSINGFAILED = 300
+    FAILED = 400
+
+
 class CalcJobNode(CalculationNode):
     """ORM class for all nodes representing the execution of a CalcJob."""
 
-    @staticmethod
-    def get_schema():
-        """
-        Every node property contains:
-
-            - display_name: display name of the property
-            - help text: short help text of the property
-            - is_foreign_key: is the property foreign key to other type of the node
-            - type: type of the property. e.g. str, dict, int
-
-        :return: get schema of the node
-        """
-        schema = Node.get_schema()
-
-        # Extend it for a ProcessNode
-        schema['attributes.state'] = {
-            'display_name': 'State',
-            'help_text': 'AiiDA state of the calculation',
-            'is_foreign_key': False,
-            'type': ''
-        }
-
-        return schema
+    JOB_STATE_KEY = 'state'
+    JOB_STATE_ATTRIBUTE_KEY = 'attributes.{}'.format(JOB_STATE_KEY)
 
     def __dir__(self):
         """
@@ -108,8 +99,7 @@ class CalcJobNode(CalculationNode):
                 additional_parameter = _parse_single_arg(
                     function_name='use_{}'.format(self.actual_name),
                     additional_parameter=self.data['additional_parameter'],
-                    args=args,
-                    kwargs=kwargs)
+                    args=args, kwargs=kwargs)
 
                 # Type check
                 if not isinstance(parent_node, self.data['valid_types']):
@@ -118,9 +108,10 @@ class CalcJobNode(CalculationNode):
                     else:
                         valid_types_string = self.data['valid_types'].__name__
 
-                    raise TypeError('The given node is not of the valid type for use_{}.'
-                                    'Valid types are: {}, while you provided {}'.format(
-                                        self.actual_name, valid_types_string, parent_node.__class__.__name__))
+                    raise TypeError(
+                        'The given node is not of the valid type for use_{}.'
+                        'Valid types are: {}, while you provided {}'.format(
+                            self.actual_name, valid_types_string, parent_node.__class__.__name__))
 
                 # Get actual link name
                 actual_linkname = self.node.get_linkname(actual_name, *args, **kwargs)
@@ -138,8 +129,76 @@ class CalcJobNode(CalculationNode):
             raise AttributeError("'{}' object has no attribute '{}'".format(self.__class__.__name__, name))
 
     @classproperty
+    def _use_methods(cls):
+        """
+        Return the list of valid input nodes that can be set using the
+        use_* method.
+
+        For each key KEY of the return dictionary, the 'use_KEY' method is
+        exposed.
+        Each value must be a dictionary, defining the following keys:
+        * valid_types: a class, or tuple of classes, that will be used to
+          validate the parameter using the isinstance() method
+        * additional_parameter: None, if no additional parameters can be passed
+          to the use_KEY method beside the node, or the name of the additional
+          parameter (a string)
+        * linkname: the name of the link to create (a string if
+          additional_parameter is None, or a callable if additional_parameter is
+          a string. The value of the additional parameter will be passed to the
+          callable, and it should return a string.
+        * docstring: a docstring for the function
+
+        .. note:: in subclasses, always extend the parent class, do not
+          substitute it!
+        """
+        from aiida.orm.data.code import Code
+        return {
+            'code': {
+                'valid_types': Code,
+                'additional_parameter': None,
+                'linkname': 'code',
+                'docstring': 'Choose the code to use',
+            },
+        }
+
+    def get_linkname(self, link, *args, **kwargs):
+        """
+        Return the linkname used for a given input link
+        Pass as parameter "NAME" if you would call the use_NAME method.
+        If the use_NAME method requires a further parameter, pass that
+        parameter as the second parameter.
+        """
+        try:
+            data = self._use_methods[link]
+        except KeyError:
+            raise ValueError("No '{}' link is defined for this calculation".format(link))
+
+        # Raises if the wrong # of parameters is passed
+        additional_parameter = _parse_single_arg(
+            function_name='get_linkname',
+            additional_parameter=data['additional_parameter'],
+            args=args, kwargs=kwargs)
+
+        if data['additional_parameter'] is not None:
+            # Call the callable to get the proper linkname
+            actual_linkname = data['linkname'](additional_parameter)
+        else:
+            actual_linkname = data['linkname']
+
+        return actual_linkname
+
+    def get_code(self):
+        """
+        Return the code for this calculation, or None if the code was not set.
+        """
+        from aiida.orm.data.code import Code
+
+        return dict(self.get_inputs(node_type=Code, also_labels=True)).get(
+        self._use_methods['code']['linkname'], None)
+
+    @classproperty
     def exit_status_enum(cls):
-        return JobCalculationExitStatus
+        return CalcJobExitStatus
 
     @property
     def exit_status_label(self):
@@ -162,7 +221,7 @@ class CalcJobNode(CalculationNode):
     def _updatable_attributes(cls):
         return super(CalcJobNode, cls)._updatable_attributes + (
             'job_id', 'scheduler_state', 'scheduler_lastchecktime', 'last_jobinfo', 'remote_workdir', 'retrieve_list',
-            'retrieve_temporary_list', 'retrieve_singlefile_list', 'state')
+            'retrieve_temporary_list', 'retrieve_singlefile_list', cls.JOB_STATE_KEY)
 
     @classproperty
     def _hash_ignored_attributes(cls):
@@ -194,7 +253,7 @@ class CalcJobNode(CalculationNode):
         """
         Return a JobProcessBuilder instance, tailored for this calculation class
 
-        This builder is a mapping of the inputs of the JobCalculation class, supports tab-completion, automatic
+        This builder is a mapping of the inputs of the CalcJobNode class, supports tab-completion, automatic
         validation when settings values as well as automated docstrings for each input
 
         :return: JobProcessBuilder instance
@@ -205,7 +264,7 @@ class CalcJobNode(CalculationNode):
         """
         Return a JobProcessBuilder instance, tailored for this calculation instance
 
-        This builder is a mapping of the inputs of the JobCalculation class, supports tab-completion, automatic
+        This builder is a mapping of the inputs of the CalcJobNode class, supports tab-completion, automatic
         validation when settings values as well as automated docstrings for each input.
 
         The fields of the builder will be pre-populated with all the inputs recorded for this instance as well as
@@ -334,57 +393,9 @@ class CalcJobNode(CalculationNode):
             raise ValidationError("withmpi property must be boolean! It in instead {}"
                                   "".format(str(type(self.get_option('withmpi')))))
 
-    def get_linkname(self, link, *args, **kwargs):
-        """
-        Return the linkname used for a given input link
-
-        Pass as parameter "NAME" if you would call the use_NAME method.
-        If the use_NAME method requires a further parameter, pass that
-        parameter as the second parameter.
-        """
-        try:
-            data = self._use_methods[link]
-        except KeyError:
-            raise ValueError("No '{}' link is defined for this calculation".format(link))
-
-        # Raises if the wrong # of parameters is passed
-        additional_parameter = _parse_single_arg(
-            function_name='get_linkname', additional_parameter=data['additional_parameter'], args=args, kwargs=kwargs)
-
-        if data['additional_parameter'] is not None:
-            # Call the callable to get the proper linkname
-            actual_linkname = data['linkname'](additional_parameter)
-        else:
-            actual_linkname = data['linkname']
-
-        return actual_linkname
-
-    def get_code(self):
-        """
-        Return the code for this calculation, or None if the code
-        was not set.
-        """
-        from aiida.orm.code import Code
-
-        return dict(self.get_inputs(node_type=Code, also_labels=True)).get(self._use_methods['code']['linkname'], None)
-
-    def _replace_link_from(self, src, label, link_type=LinkType.INPUT):
-        """
-        Replace a link.
-
-        :param src: a node of the database. It cannot be a Calculation object.
-        :param str label: Name of the link.
-        """
-        from aiida.orm.data import Data
-
-        if not isinstance(src, Data):
-            raise ValueError('Nodes entering in calculation can only be of type data')
-
-        return super(CalculationJobNode, self)._replace_link_from(src, label, link_type)
-
     def _linking_as_output(self, dest, link_type):
         """
-        An output of a JobCalculation can only be set
+        An output of a CalcJobNode can only be set
         when the calculation is in the SUBMITTING or RETRIEVING or
         PARSING state.
         (during SUBMITTING, the execmanager adds a link to the remote folder;
@@ -405,7 +416,7 @@ class CalcJobNode(CalculationNode):
         if self.get_state() not in valid_states:
             raise ModificationNotAllowed("Can add an output node to a calculation only if it is in one "
                                          "of the following states: {}, it is instead {}".format(
-                                             valid_states, self.get_state()))
+                valid_states, self.get_state()))
 
         return super(CalcJobNode, self)._linking_as_output(dest, link_type)
 
@@ -445,14 +456,14 @@ class CalcJobNode(CalculationNode):
     options = {
         'resources': {
             'attribute_key':
-            'jobresource_params',
+                'jobresource_params',
             'valid_type':
-            dict,
+                dict,
             'default': {},
             'help':
-            'Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '
-            'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the '
-            'scheduler for more details.'
+                'Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '
+                'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the '
+                'scheduler for more details.'
         },
         'max_wallclock_seconds': {
             'attribute_key': 'max_wallclock_seconds',
@@ -463,20 +474,20 @@ class CalcJobNode(CalculationNode):
         },
         'custom_scheduler_commands': {
             'attribute_key':
-            'custom_scheduler_commands',
+                'custom_scheduler_commands',
             'valid_type':
-            six.string_types,
+                six.string_types,
             'non_db':
-            True,
+                True,
             'required':
-            False,
+                False,
             'default':
-            '',
+                '',
             'help':
-            'Set a (possibly multiline) string with the commands that the user wants to manually set for the '
-            'scheduler. The difference of this option with respect to the `prepend_text` is the position in '
-            'the scheduler submission file where such text is inserted: with this option, the string is '
-            'inserted before any non-scheduler command',
+                'Set a (possibly multiline) string with the commands that the user wants to manually set for the '
+                'scheduler. The difference of this option with respect to the `prepend_text` is the position in '
+                'the scheduler submission file where such text is inserted: with this option, the string is '
+                'inserted before any non-scheduler command',
         },
         'queue_name': {
             'attribute_key': 'queue_name',
@@ -516,16 +527,16 @@ class CalcJobNode(CalculationNode):
         },
         'mpirun_extra_params': {
             'attribute_key':
-            'mpirun_extra_params',
+                'mpirun_extra_params',
             'valid_type': (list, tuple),
             'non_db':
-            True,
+                True,
             'required':
-            False,
+                False,
             'default': [],
             'help':
-            'Set the extra params to pass to the mpirun (or equivalent) command after the one provided in '
-            'computer.mpirun_command. Example: mpirun -np 8 extra_params[0] extra_params[1] ... exec.x',
+                'Set the extra params to pass to the mpirun (or equivalent) command after the one provided in '
+                'computer.mpirun_command. Example: mpirun -np 8 extra_params[0] extra_params[1] ... exec.x',
         },
         'import_sys_environment': {
             'attribute_key': 'import_sys_environment',
@@ -559,33 +570,33 @@ class CalcJobNode(CalculationNode):
         },
         'prepend_text': {
             'attribute_key':
-            'prepend_text',
+                'prepend_text',
             'valid_type':
-            six.string_types[0],
+                six.string_types[0],
             'non_db':
-            True,
+                True,
             'required':
-            False,
+                False,
             'default':
-            '',
+                '',
             'help':
-            'Set the calculation-specific prepend text, which is going to be prepended in the scheduler-job '
-            'script, just before the code execution',
+                'Set the calculation-specific prepend text, which is going to be prepended in the scheduler-job '
+                'script, just before the code execution',
         },
         'append_text': {
             'attribute_key':
-            'append_text',
+                'append_text',
             'valid_type':
-            six.string_types[0],
+                six.string_types[0],
             'non_db':
-            True,
+                True,
             'required':
-            False,
+                False,
             'default':
-            '',
+                '',
             'help':
-            'Set the calculation-specific append text, which is going to be appended in the scheduler-job '
-            'script, just after the code execution',
+                'Set the calculation-specific append text, which is going to be appended in the scheduler-job '
+                'script, just after the code execution',
         },
         'parser_name': {
             'attribute_key': 'parser',
@@ -598,7 +609,7 @@ class CalcJobNode(CalculationNode):
 
     def get_option(self, name, only_actually_set=False):
         """
-        Retun the value of an option that was set for this JobCalculation
+        Retun the value of an option that was set for this CalcJobNode
 
         :param name: the option name
         :param only_actually_set: when False will return the default value even when option had not been explicitly set
@@ -642,7 +653,7 @@ class CalcJobNode(CalculationNode):
 
     def get_options(self, only_actually_set=False):
         """
-        Return the dictionary of options set for this JobCalculation
+        Return the dictionary of options set for this CalcJobNode
 
         :param only_actually_set: when False will return the default value even when option had not been explicitly set
         :return: dictionary of the options and their values
@@ -657,7 +668,7 @@ class CalcJobNode(CalculationNode):
 
     def set_options(self, options):
         """
-        Set the options for this JobCalculation
+        Set the options for this CalcJobNode
 
         :param options: dictionary of option and their values to set
         """
@@ -1059,9 +1070,9 @@ class CalcJobNode(CalculationNode):
         valid_states = [calc_states.NEW]
 
         if self.get_state() not in valid_states:
-            raise ModificationNotAllowed("Can add an input link to a JobCalculation only if it is in "
+            raise ModificationNotAllowed("Can add an input link to a CalcJobNode only if it is in "
                                          "one of the following states: {}, it is instead {}".format(
-                                             valid_states, self.get_state()))
+                valid_states, self.get_state()))
 
         return super(CalcJobNode, self).add_link_from(src, label, link_type)
 
@@ -1079,7 +1090,7 @@ class CalcJobNode(CalculationNode):
         if self.get_state() not in valid_states:
             raise ModificationNotAllowed("Can replace an input link to a Jobalculation only if it is in "
                                          "one of the following states: {}, it is instead {}".format(
-                                             valid_states, self.get_state()))
+                valid_states, self.get_state()))
 
         return super(CalcJobNode, self)._replace_link_from(src, label, link_type)
 
@@ -1094,49 +1105,32 @@ class CalcJobNode(CalculationNode):
         if self.get_state() not in valid_states:
             raise ModificationNotAllowed("Can remove an input link to a calculation only if it is in one "
                                          "of the following states:\n   {}\n it is instead {}".format(
-                                             valid_states, self.get_state()))
+                valid_states, self.get_state()))
 
         return super(CalcJobNode, self)._remove_link_from(label)
 
-    @abc.abstractmethod
     def _set_state(self, state):
         """
-        Set the state of the calculation.
+        Set the state of the calculation job.
 
-        Set it in the DbCalcState to have also the uniqueness check.
-        Moreover (except for the IMPORTED state) also store in the 'state'
-        attribute, useful to know it also after importing, and for faster
-        querying.
-
-        .. todo:: Add further checks to enforce that the states are set
-           in order?
-
-        :param state: a string with the state. This must be a valid string,
-          from ``aiida.common.datastructures.calc_states``.
-        :raise: ModificationNotAllowed if the given state was already set.
+        :param state: a string with the state from ``aiida.common.datastructures.calc_states``.
+        :raise: ValueError if state is invalid
         """
-        pass
+        if state not in calc_states:
+            raise ValueError("'{}' is not a valid calculation status".format(state))
 
-    @abc.abstractmethod
-    def get_state(self, from_attribute=False):
+        self._set_attr(self.JOB_STATE_KEY, state)
+
+    def get_state(self):
         """
-        Get the state of the calculation.
+        Return the state of the calculation job.
 
-        .. note:: the 'most recent' state is obtained using the logic in the
-          ``aiida.common.datastructures.sort_states`` function.
-
-        .. todo:: Understand if the state returned when no state entry is found
-          in the DB is the best choice.
-
-        :param from_attribute: if set to True, read it from the attributes
-          (the attribute is also set with set_state, unless the state is set
-          to IMPORTED; in this way we can also see the state before storing).
-
-        :return: a string. If from_attribute is True and no attribute is found,
-          return None. If from_attribute is False and no entry is found in the
-          DB, also return None.
+        :return: the calculation job state
         """
-        pass
+        if not self.is_stored:
+            return calc_states.NEW
+
+        return self.get_attr(self.JOB_STATE_KEY, None)
 
     def _get_state_string(self):
         """
@@ -1391,7 +1385,7 @@ class CalcJobNode(CalculationNode):
 
     compound_projection_map = {
         'state': ('calculation', (PROCESS_STATE_KEY, EXIT_STATUS_KEY)),
-        'job_state': ('calculation', ('state', SCHEDULER_STATE_KEY))
+        'job_state': ('calculation', (CALCULATION_STATE_KEY, SCHEDULER_STATE_KEY))
     }
 
     @classmethod
@@ -1435,7 +1429,7 @@ class CalcJobNode(CalculationNode):
 
         from aiida.orm.querybuilder import QueryBuilder
         from tabulate import tabulate
-        from aiida.orm.backend import construct_backend
+        from aiida import orm
 
         projection_label_dict = {
             'pk': 'PK',
@@ -1457,8 +1451,6 @@ class CalcJobNode(CalculationNode):
         }
 
         now = timezone.now()
-
-        backend = construct_backend()
 
         # Let's check the states:
         if states:
@@ -1494,11 +1486,11 @@ class CalcJobNode(CalculationNode):
 
             # filter for states:
             if states:
-                calculation_filters['state'] = {'in': states}
+                calculation_filters['attributes.{}'.format(cls.JOB_STATE_KEY)] = {'in': states}
 
             # Filter on the users, if not all users
             if not all_users:
-                user_id = backend.users.get_automatic_user().id
+                user_id = orm.User.objects.get_default().id
                 calculation_filters['user_id'] = {'==': user_id}
 
             if past_days is not None:
@@ -1513,8 +1505,9 @@ class CalcJobNode(CalculationNode):
 
         calc_list_header = [projection_label_dict[p] for p in projections]
 
-        qb = QueryBuilder()
+        qb = orm.QueryBuilder()
         qb.append(cls, filters=calculation_filters, tag='calculation')
+
         if group_filters is not None:
             qb.append(type='group', filters=group_filters, group_of='calculation')
 
@@ -1563,19 +1556,19 @@ class CalcJobNode(CalculationNode):
                     counter += 1
 
                 if raw:
-                    print((tabulate(calc_list_data, tablefmt='plain')))
+                    print(tabulate(calc_list_data, tablefmt='plain'))
                 else:
-                    print((tabulate(calc_list_data, headers=calc_list_header)))
+                    print(tabulate(calc_list_data, headers=calc_list_header))
 
             except StopIteration:
                 if raw:
-                    print((tabulate(calc_list_data, tablefmt='plain')))
+                    print(tabulate(calc_list_data, tablefmt='plain'))
                 else:
-                    print((tabulate(calc_list_data, headers=calc_list_header)))
+                    print(tabulate(calc_list_data, headers=calc_list_header))
                 break
 
         if not raw:
-            print(("\nTotal results: {}\n".format(counter)))
+            print("\nTotal results: {}\n".format(counter))
 
     @classmethod
     def _get_calculation_info_row(cls, res, projections, times_since=None):
@@ -1593,14 +1586,14 @@ class CalcJobNode(CalculationNode):
         d = copy.deepcopy(res)
 
         try:
-            prefix = 'calculation.job.'
+            prefix = 'node.process.calculation.calcjob.'
             calculation_type = d['calculation']['type']
             calculation_class = get_plugin_type_from_type_string(calculation_type)
             module, class_name = calculation_class.rsplit('.', 1)
 
-            # For the base class 'calculation.job.JobCalculation' the module at this point equals 'calculation.job'
-            # For this case we should simply set the type to the base module calculation.job. Otherwise we need
-            # to strip the prefix to get the proper sub module
+            # For the base class 'mode.process.calculation.calcjob.CalcJobNode' the module at this point equals
+            # 'node.process.calculation.calcjob'. For this case we should simply set the type to the base module
+            # 'node.process.calculation.calcjob. Otherwise we need to strip the prefix to get the proper sub module
             if module == prefix.rstrip('.'):
                 d['calculation']['type'] = module[len(prefix):]
             else:
@@ -1739,7 +1732,7 @@ class CalcJobNode(CalculationNode):
             if limit is not None:
                 qb.limit(limit)
             returnresult = qb.all()
-            returnresult = next(list(zip(*returnresult)))
+            returnresult = next(zip(*returnresult))
         return returnresult
 
     def _prepare_for_submission(self, tempfolder, inputdict):
@@ -1780,19 +1773,18 @@ class CalcJobNode(CalculationNode):
 
     def submit(self):
         """
-        Creates a ContinueJobCalculation and submits it with the current calculation node as the database
+        Creates a ContinueCalcJob and submits it with the current calculation node as the database
         record. This will ensure that even when this legacy entry point is called, that the calculation is
         taken through the Process layer. Preferably this legacy method should not be used at all but rather
         a JobProcess should be used.
         """
         import warnings
-        from aiida.work.job_processes import ContinueJobCalculation
+        from aiida.work.job_processes import ContinueCalcJob
         from aiida.work.launch import submit
-        warnings.warn(
-            'directly creating and submitting calculations is deprecated, use the {}\nSee:{}'.format(
-                'ProcessBuilder', DEPRECATION_DOCS_URL), DeprecationWarning)
+        warnings.warn('directly creating and submitting calculations is deprecated, use the {}\nSee:{}'.format(
+            'ProcessBuilder', DEPRECATION_DOCS_URL), DeprecationWarning)
 
-        submit(ContinueJobCalculation, _calc=self)
+        submit(ContinueCalcJob, _calc=self)
 
     def get_parserclass(self):
         """
@@ -1851,7 +1843,7 @@ class CalcJobNode(CalculationNode):
                 else:
                     raise MultipleObjectsError("More than one output node "
                                                "with label '{}' for calc with pk= {}".format(
-                                                   retrieved_linkname, self.pk))
+                        retrieved_linkname, self.pk))
 
         if retrieved_node is None:
             return None
@@ -1920,7 +1912,7 @@ class CalcJobNode(CalculationNode):
         # I create the job template to pass to the scheduler
         job_tmpl = JobTemplate()
         job_tmpl.shebang = computer.get_shebang()
-        ## TODO: in the future, allow to customize the following variables
+        # TODO: in the future, allow to customize the following variables
         job_tmpl.submit_as_hold = False
         job_tmpl.rerunnable = False
         job_tmpl.job_environment = {}
@@ -2000,7 +1992,9 @@ class CalcJobNode(CalculationNode):
                 raise PluginInternalError("Invalid codes_info, must be a list " "of CodeInfo objects")
 
             if code_info.code_uuid is None:
-                raise PluginInternalError("CalcInfo should have " "the information of the code " "to be launched")
+                raise PluginInternalError("CalcInfo should have "
+                                          "the information of the code "
+                                          "to be launched")
             this_code = load_node(code_info.code_uuid, sub_classes=(Code,))
 
             this_withmpi = code_info.withmpi  # to decide better how to set the default
@@ -2147,6 +2141,7 @@ class CalcJobNode(CalculationNode):
         from aiida.utils import timezone
 
         from aiida.transport.plugins.local import LocalTransport
+        from aiida.orm.computers import Computer
         from aiida.common.folders import Folder
         from aiida.common.exceptions import NotExistent
 
@@ -2296,10 +2291,64 @@ class CalcJobNode(CalculationNode):
 
     def get_desc(self):
         """
-        Returns a string with infos retrieved from a JobCalculation node's
+        Returns a string with infos retrieved from a CalcJobNode node's
         properties.
         """
         return self.get_state(from_attribute=True)
+
+
+def _parse_single_arg(function_name, additional_parameter, args, kwargs):
+    """
+    Verifies that a single additional argument has been given (or no
+    additional argument, if additional_parameter is None). Also
+    verifies its name.
+    :param function_name: the name of the caller function, used for
+        the output messages
+    :param additional_parameter: None if no additional parameters
+        should be passed, or a string with the name of the parameter
+        if one additional parameter should be passed.
+    :return: None, if additional_parameter is None, or the value of
+        the additional parameter
+    :raise TypeError: on wrong number of inputs
+    """
+    # Here all the logic to check if the parameters are correct.
+    if additional_parameter is not None:
+        if len(args) == 1:
+            if kwargs:
+                raise TypeError("{}() received too many args".format(
+                    function_name))
+            additional_parameter_data = args[0]
+        elif len(args) == 0:
+            kwargs_copy = kwargs.copy()
+            try:
+                additional_parameter_data = kwargs_copy.pop(
+                    additional_parameter)
+            except KeyError:
+                if kwargs_copy:
+                    raise TypeError("{}() got an unexpected keyword "
+                                    "argument '{}'".format(
+                        function_name, kwargs_copy.keys()[0]))
+                else:
+                    raise TypeError("{}() requires more "
+                                    "arguments".format(function_name))
+            if kwargs_copy:
+                raise TypeError("{}() got an unexpected keyword "
+                                "argument '{}'".format(
+                    function_name, kwargs_copy.keys()[0]))
+        else:
+            raise TypeError("{}() received too many args".format(
+                function_name))
+        return additional_parameter_data
+    else:
+        if kwargs:
+            raise TypeError("{}() got an unexpected keyword "
+                            "argument '{}'".format(
+                function_name, kwargs.keys()[0]))
+        if len(args) != 0:
+            raise TypeError("{}() received too many args".format(
+                function_name))
+
+    return None
 
 
 class CalculationResultManager(object):
@@ -2380,52 +2429,3 @@ class CalculationResultManager(object):
             return self._parser.get_result(name)
         except AttributeError:
             raise KeyError("Parser '{}' did not provide a result '{}'".format(self._parser.__class__.__name__, name))
-
-
-def _parse_single_arg(function_name, additional_parameter, args, kwargs):
-    """
-    Verifies that a single additional argument has been given (or no
-    additional argument, if additional_parameter is None). Also
-    verifies its name.
-
-    :param function_name: the name of the caller function, used for
-        the output messages
-    :param additional_parameter: None if no additional parameters
-        should be passed, or a string with the name of the parameter
-        if one additional parameter should be passed.
-
-    :return: None, if additional_parameter is None, or the value of
-        the additional parameter
-    :raise TypeError: on wrong number of inputs
-    """
-    # Here all the logic to check if the parameters are correct.
-    if additional_parameter is not None:
-        if len(args) == 1:
-            if kwargs:
-                raise TypeError("{}() received too many args".format(function_name))
-            additional_parameter_data = args[0]
-        elif len(args) == 0:
-            kwargs_copy = kwargs.copy()
-            try:
-                additional_parameter_data = kwargs_copy.pop(additional_parameter)
-            except KeyError:
-                if kwargs_copy:
-                    raise TypeError("{}() got an unexpected keyword "
-                                    "argument '{}'".format(function_name,
-                                                           kwargs_copy.keys()[0]))
-                else:
-                    raise TypeError("{}() requires more " "arguments".format(function_name))
-            if kwargs_copy:
-                raise TypeError("{}() got an unexpected keyword "
-                                "argument '{}'".format(function_name,
-                                                       kwargs_copy.keys()[0]))
-        else:
-            raise TypeError("{}() received too many args".format(function_name))
-        return additional_parameter_data
-    else:
-        if kwargs:
-            raise TypeError("{}() got an unexpected keyword " "argument '{}'".format(function_name, kwargs.keys()[0]))
-        if len(args) != 0:
-            raise TypeError("{}() received too many args".format(function_name))
-
-        return None

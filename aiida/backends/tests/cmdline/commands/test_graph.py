@@ -72,7 +72,7 @@ class TestVerdiGraph(AiidaTestCase):
         options = [root_node]
         try:
             result = self.cli_runner.invoke(cmd_graph.generate, options)
-            self.assertIsNone(result.exception)
+            self.assertIsNone(result.exception, result.output)
             self.assertTrue(os.path.isfile(filename))
         finally:
             delete_temporary_file(filename)
@@ -129,7 +129,7 @@ class TestVerdiGraph(AiidaTestCase):
             options = [opt, None, root_node]
             try:
                 result = self.cli_runner.invoke(cmd_graph.generate, options)
-                self.assertIsNone(result.exception)
+                self.assertIsNone(result.exception, result.output)
                 self.assertTrue(os.path.isfile(filename))
             finally:
                 delete_temporary_file(filename)
@@ -140,7 +140,7 @@ class TestVerdiGraph(AiidaTestCase):
                 options = [opt, value, root_node]
                 try:
                     result = self.cli_runner.invoke(cmd_graph.generate, options)
-                    self.assertIsNone(result.exception)
+                    self.assertIsNone(result.exception, result.output)
                     self.assertTrue(os.path.isfile(filename))
                 finally:
                     delete_temporary_file(filename)
@@ -167,7 +167,7 @@ class TestVerdiGraph(AiidaTestCase):
             options = [flag, root_node]
             try:
                 result = self.cli_runner.invoke(cmd_graph.generate, options)
-                self.assertIsNone(result.exception)
+                self.assertIsNone(result.exception, result.output)
                 self.assertTrue(os.path.isfile(filename))
             finally:
                 delete_temporary_file(filename)
@@ -189,7 +189,7 @@ class TestVerdiGraph(AiidaTestCase):
                 options = [option, fileformat, root_node]
                 try:
                     result = self.cli_runner.invoke(cmd_graph.generate, options)
-                    self.assertIsNone(result.exception)
+                    self.assertIsNone(result.exception, result.output)
                     self.assertTrue(os.path.isfile(filename))
                 finally:
                     delete_temporary_file(filename)

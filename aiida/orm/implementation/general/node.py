@@ -94,8 +94,10 @@ class _AbstractNodeMeta(ABCMeta):
         else:
             newcls._logger = logging.getLogger('{:s}.{:s}'.format(attrs['__module__'], name))
 
-        # Set the plugin type string and query type string
+        # Set the plugin type string
         plugin_type_string = get_type_string_from_class(attrs['__module__'], name)
+
+        # Set the query type string based on the plugin type string
         query_type_string = get_query_type_from_type_string(plugin_type_string)
 
         newcls._plugin_type_string = plugin_type_string

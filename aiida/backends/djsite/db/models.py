@@ -1610,9 +1610,9 @@ class DbWorkflow(m.Model):
         self.save()
 
     def get_calculations(self):
-        from aiida.orm import JobCalculation
+        from aiida.orm.node.process import CalcJobNode
 
-        return JobCalculation.query(workflow_step=self.steps)
+        return CalcJobNode.query(workflow_step=self.steps)
 
     def get_sub_workflows(self):
         return DbWorkflow.objects.filter(parent_workflow_step=self.steps.all())
@@ -1715,9 +1715,9 @@ class DbWorkflowStep(m.Model):
         unique_together = (("parent", "name"))
 
     def add_calculation(self, step_calculation):
-        from aiida.orm import JobCalculation
+        from aiida.orm.node.process import CalcJobNode
 
-        if (not isinstance(step_calculation, JobCalculation)):
+        if (not isinstance(step_calculation, CalcJobNode)):
             raise ValueError("Cannot add a non-Calculation object to a workflow step")
 
         try:
@@ -1726,12 +1726,12 @@ class DbWorkflowStep(m.Model):
             raise ValueError("Error adding calculation to step")
 
     def get_calculations(self, state=None):
-        from aiida.orm import JobCalculation
+        from aiida.orm.node.process import CalcJobNode
 
         if (state == None):
-            return JobCalculation.query(workflow_step=self)
+            return CalcJobNode.query(workflow_step=self)
         else:
-            return JobCalculation.query(workflow_step=self).filter(
+            return CalcJobNode.query(workflow_step=self).filter(
                 dbattributes__key="state", dbattributes__tval=state)
 
     def remove_calculations(self):

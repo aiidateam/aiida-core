@@ -24,7 +24,8 @@ from sqlalchemy.exc import StatementError
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
 from aiida.common.links import LinkType
-from aiida.orm import User, Data, Node, Calculation
+from aiida.orm import User, Data, Node
+from aiida.orm.node.process import ProcessNode
 from aiida.orm.utils import load_node
 from aiida.utils.capturing import Capturing
 from aiida.utils.delete_nodes import delete_nodes
@@ -165,11 +166,11 @@ class TestNodeHashing(AiidaTestCase):
         """
         Tests that updatable attributes are ignored.
         """
-        from aiida.orm.calculation import Calculation
-        c = Calculation()
-        hash1 = c.get_hash()
-        c._set_process_state('finished')
-        hash2 = c.get_hash()
+        from aiida.orm.node.process import ProcessNode
+        node = ProcessNode()
+        hash1 = node.get_hash()
+        node._set_process_state('finished')
+        hash2 = node.get_hash()
         self.assertNotEquals(hash1, None)
         self.assertEquals(hash1, hash2)
 
@@ -201,15 +202,16 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
 
     def test_with_subclasses(self):
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm import (JobCalculation, CalculationFactory, DataFactory)
+        from aiida.orm import CalculationFactory, DataFactory
+        from aiida.orm.node.process import CalcJobNode
 
         extra_name = self.__class__.__name__ + "/test_with_subclasses"
         calc_params = {'computer': self.computer, 'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}}
 
-        TemplateReplacerCalc = CalculationFactory('simpleplugins.templatereplacer')
+        TemplateReplacerCalc = CalculationFactory('templatereplacer')
         ParameterData = DataFactory('parameter')
 
-        a1 = JobCalculation(**calc_params).store()
+        a1 = CalcJobNode(**calc_params).store()
         # To query only these nodes later
         a1.set_extra(extra_name, True)
         a2 = TemplateReplacerCalc(**calc_params).store()
@@ -223,16 +225,16 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         a5.set_extra(extra_name, True)
         # I don't set the extras, just to be sure that the filtering works
         # The filtering is needed because other tests will put stuff int he DB
-        a6 = JobCalculation(**calc_params)
+        a6 = CalcJobNode(**calc_params)
         a6.store()
         a7 = Node()
         a7.store()
 
         # Query by calculation
         qb = QueryBuilder()
-        qb.append(JobCalculation, filters={'extras': {'has_key': extra_name}})
+        qb.append(CalcJobNode, filters={'extras': {'has_key': extra_name}})
         results = [_ for [_] in qb.all()]
-        # a3, a4, a5 should not be found because they are not JobCalculations.
+        # a3, a4, a5 should not be found because they are not CalcJobNodes.
         # a6, a7 should not be found because they have not the attribute set.
         self.assertEquals(set([i.pk for i in results]), set([a1.pk, a2.pk]))
 
@@ -1489,28 +1491,30 @@ class TestNodeBasic(AiidaTestCase):
         Test that the loader will choose a common calculation ancestor for an unknown data type.
         For the case where, e.g., the user doesn't have the necessary plugin.
         """
-        from aiida.orm import (JobCalculation, CalculationFactory)
+        from aiida.orm import CalculationFactory
+        from aiida.orm.node.process import CalcJobNode
 
         ###### for calculation
         calc_params = {'computer': self.computer, 'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}}
 
-        TemplateReplacerCalc = CalculationFactory('simpleplugins.templatereplacer')
+        TemplateReplacerCalc = CalculationFactory('templatereplacer')
         testcalc = TemplateReplacerCalc(**calc_params).store()
 
         # compare if plugin exist
         obj = load_node(uuid=testcalc.uuid)
         self.assertEqual(type(testcalc), type(obj))
 
-        # Create a custom calculation type that inherits from JobCalculation but change the plugin type string
-        class TestCalculation(JobCalculation):
+        # Create a custom calculation type that inherits from CalcJobNode but change the plugin type string
+        class TestCalculation(CalcJobNode):
             pass
 
-        TestCalculation._plugin_type_string = 'calculation.job.simpleplugins_tmp.templatereplacer.TemplatereplacerCalculation.'
+        TestCalculation._plugin_type_string = 'node.process.calculation.calcjob.notexisting.TemplatereplacerCalculation.'
+        TestCalculation._query_type_string = 'node.process.calculation.calcjob.notexisting.TemplatereplacerCalculation'
 
-        jobcalc = JobCalculation(**calc_params).store()
+        jobcalc = CalcJobNode(**calc_params).store()
         testcalc = TestCalculation(**calc_params).store()
 
-        # changed node should return job calc as its plugin is not exist
+        # Changed node should return CalcJobNode type as its plugin does not exist
         obj = load_node(uuid=testcalc.uuid)
         self.assertEqual(type(jobcalc), type(obj))
 
@@ -1671,15 +1675,15 @@ class TestSubNodesAndLinks(AiidaTestCase):
         self.assertTrue(n2.has_parents, "It should be true since n1 is the " "parent of n2.")
 
     def test_use_code(self):
-        from aiida.orm import JobCalculation
+        from aiida.orm.node.process import CalcJobNode
         from aiida.orm.code import Code
 
         computer = self.computer
 
         code = Code(remote_computer_exec=(computer, '/bin/true'))  # .store()
 
-        unstoredcalc = JobCalculation(computer=computer, resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1})
-        calc = JobCalculation(computer=computer, resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
+        unstoredcalc = CalcJobNode(computer=computer, resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+        calc = CalcJobNode(computer=computer, resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
 
         # calc is not stored, and also code is not
         unstoredcalc.use_code(code)
@@ -1703,10 +1707,10 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
     # pylint: disable=unused-variable,no-member,no-self-use
     def test_calculation_load(self):
-        from aiida.orm import JobCalculation
+        from aiida.orm.node.process import CalcJobNode
 
         # I check with a string, with an object and with the computer pk/id
-        calc = JobCalculation(
+        calc = CalcJobNode(
             computer=self.computer, resources={
                 'num_machines': 1,
                 'num_mpiprocs_per_machine': 1
@@ -1714,7 +1718,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         with self.assertRaises(Exception):
             # I should get an error if I ask for a computer id/pk that doesn't
             # exist
-            _ = JobCalculation(
+            _ = CalcJobNode(
                 computer=self.computer.id + 100000, resources={
                     'num_machines': 2,
                     'num_mpiprocs_per_machine': 1
@@ -1855,7 +1859,8 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
     def test_valid_links(self):
         import tempfile
-        from aiida.orm import JobCalculation, DataFactory
+        from aiida.orm import DataFactory
+        from aiida.orm.node.process import CalcJobNode
         from aiida.orm.code import Code
         from aiida.common.datastructures import calc_states
 
@@ -1876,19 +1881,19 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
         with self.assertRaises(ValueError):
             # I need to save the localhost entry first
-            _ = JobCalculation(
+            _ = CalcJobNode(
                 computer=unsavedcomputer, resources={
                     'num_machines': 1,
                     'num_mpiprocs_per_machine': 1
                 }).store()
 
         # Load calculations with two different ways
-        calc = JobCalculation(
+        calc = CalcJobNode(
             computer=self.computer, resources={
                 'num_machines': 1,
                 'num_mpiprocs_per_machine': 1
             }).store()
-        calc2 = JobCalculation(
+        calc2 = CalcJobNode(
             computer=self.computer, resources={
                 'num_machines': 1,
                 'num_mpiprocs_per_machine': 1
@@ -1918,12 +1923,12 @@ class TestSubNodesAndLinks(AiidaTestCase):
         with self.assertRaises(ValueError):
             calc.add_link_from(calc2)
 
-        calc_a = JobCalculation(
+        calc_a = CalcJobNode(
             computer=self.computer, resources={
                 'num_machines': 1,
                 'num_mpiprocs_per_machine': 1
             }).store()
-        calc_b = JobCalculation(
+        calc_b = CalcJobNode(
             computer=self.computer, resources={
                 'num_machines': 1,
                 'num_mpiprocs_per_machine': 1
@@ -1962,17 +1967,17 @@ class TestSubNodesAndLinks(AiidaTestCase):
         """
         Each data node can only have one input calculation
         """
-        from aiida.orm import JobCalculation
+        from aiida.orm.node.process import CalcJobNode
         from aiida.common.datastructures import calc_states
 
         d1 = Data().store()
 
-        calc = JobCalculation(
+        calc = CalcJobNode(
             computer=self.computer, resources={
                 'num_machines': 1,
                 'num_mpiprocs_per_machine': 1
             }).store()
-        calc2 = JobCalculation(
+        calc2 = CalcJobNode(
             computer=self.computer, resources={
                 'num_machines': 1,
                 'num_mpiprocs_per_machine': 1
@@ -2209,10 +2214,10 @@ class TestNodeDeletion(AiidaTestCase):
 
     def test_delete_called_but_not_caller(self):
         """
-        Check that deleting a Calculation that was called by another Calculation which won't be
+        Check that deleting a ProcessNode that was called by another ProcessNode which won't be
         deleted works, even though it will raise a warning
         """
-        caller, called = [Calculation().store() for i in range(2)]
+        caller, called = [ProcessNode().store() for i in range(2)]
         called.add_link_from(caller, link_type=LinkType.CALL)
 
         uuids_check_existence = (caller.uuid,)

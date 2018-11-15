@@ -70,7 +70,7 @@ def format_outlines(outlines, use_calculations=False, use_workfunctions=False):
     string form of those workchain outlines
 
     :param outlines: the list of symbolic outline structures
-    :param use_calculations: use JobCalculations for the add operations
+    :param use_calculations: use CalcJobs for the add operations
     :param use_workfunctions: use workfunctions for the subtract operations
     :return: a list of outline strings
     """
@@ -101,7 +101,7 @@ def format_block(instruction, level=0, use_calculations=False, use_workfunctions
     """
     Format the instruction into its proper string form
 
-    :param use_calculations: use JobCalculations for the add operations
+    :param use_calculations: use CalcJobs for the add operations
     :param use_workfunctions: use workfunctions for the subtract operations
     :return: the string representation of the instruction
     """

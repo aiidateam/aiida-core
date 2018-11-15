@@ -27,7 +27,7 @@ No. Description                     Input                                       
 
 Type of each step's calculation
 (:py:class:`CalcFunctionNode <aiida.orm.node.process.CalcFunctionNode>`
-or :py:class:`JobCalculation <aiida.orm.implementation.general.calculation.job.JobCalculation>`)
+or :py:class:`CalcJobNode <aiida.orm.node.process.calculation.calcjob.CalcJobNode>`)
 defined in column *Type*. Each step is described in more detail below:
 
 * Conversion of the StructureData to CifData

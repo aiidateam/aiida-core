@@ -80,11 +80,11 @@ def output_test(pk, testname, skip_uuids_from_inputs=[]):
     import aiida.utils.json as json
 
     from aiida.common.folders import Folder
-    from aiida.orm import JobCalculation
+    from aiida.orm.node.process import CalcJobNode
     from aiida.orm.utils import load_node
     from aiida.orm.importexport import export_tree
     
-    c = load_node(pk, sub_classes=(JobCalculation,))
+    c = load_node(pk, sub_classes=(CalcJobNode,))
     outfolder = "test_{}_{}".format(
         c.get_option('parser_name').replace('.', '_'),
         testname)
@@ -175,7 +175,7 @@ class TestParsers(AiidaTestCase):
         import importlib
         import aiida.utils.json as json
 
-        from aiida.orm import JobCalculation
+        from aiida.orm.node.process import CalcJobNode
         from aiida.orm.utils import load_node
         from aiida.orm.importexport import import_data
 
@@ -184,7 +184,7 @@ class TestParsers(AiidaTestCase):
         calc = None
         for _, pk in imported['aiida.backends.djsite.db.models.DbNode']['new']:
             c = load_node(pk)
-            if issubclass(c.__class__, JobCalculation):
+            if issubclass(c.__class__, CalcJobNode):
                 calc = c
                 break
 

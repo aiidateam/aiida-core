@@ -13,7 +13,7 @@ from __future__ import absolute_import
 import aiida
 from aiida.work import Process
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm.calculation.job.simpleplugins.templatereplacer import TemplatereplacerCalculation
+from aiida.calculations.plugins.templatereplacer import TemplatereplacerCalculation
 
 
 class TestJobProcess(AiidaTestCase):

@@ -20,12 +20,12 @@ class TestSealable(AiidaTestCase):
         """
         Verify that a Sealable node can alter updatable attributes even after storing
         """
-        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.node.process import CalcJobNode
 
         resources = {'num_machines': 1, 'num_mpiprocs_per_machine': 1}
-        job = JobCalculation(computer=self.computer, resources=resources)
+        job = CalcJobNode(computer=self.computer, resources=resources)
         job.store()
 
-        for attr in JobCalculation._updatable_attributes:
+        for attr in CalcJobNode._updatable_attributes:
             if attr != Sealable.SEALED_KEY:
                 job._set_attr(attr, 'a')

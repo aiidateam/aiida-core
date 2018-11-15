@@ -18,7 +18,7 @@ from . import processes
 __all__ = ('workfunction',)
 
 
-def workfunction(func, calc_node_class=None):
+def workfunction(func, node_class=None):
     """
     A decorator to turn a standard python function into a workfunction.
     Example usage:
@@ -40,7 +40,7 @@ def workfunction(func, calc_node_class=None):
 
     """
     # Build the Process class with its ProcessSpec representing this function
-    process_class = processes.FunctionProcess.build(func, calc_node_class=calc_node_class)
+    process_class = processes.FunctionProcess.build(func, node_class=node_class)
 
     def run_get_node(*args, **kwargs):
         """

@@ -74,18 +74,16 @@ if __name__ == '__main__':
             ],
             # following are AiiDA plugin entry points:
             'aiida.calculations': [
-                'calculation = aiida.orm.calculation:Calculation',
-                'function = aiida.orm.calculation.function:FunctionCalculation',
-                'job = aiida.orm.calculation.job:JobCalculation',
-                'work = aiida.orm.calculation.work:WorkCalculation',
-                'simpleplugins.arithmetic.add = aiida.orm.calculation.job.simpleplugins.arithmetic.add:ArithmeticAddCalculation',
-                'simpleplugins.templatereplacer = aiida.orm.calculation.job.simpleplugins.templatereplacer:TemplatereplacerCalculation',
+                'arithmetic.add = aiida.calculations.plugins.arithmetic.add:ArithmeticAddCalculation',
+                'templatereplacer = aiida.calculations.plugins.templatereplacer:TemplatereplacerCalculation',
             ],
             'aiida.cmdline.computer.configure': [
                 'ssh = aiida.transport.plugins.ssh:CONFIGURE_SSH_CMD',
                 'local = aiida.transport.plugins.local:CONFIGURE_LOCAL_CMD',
             ],
             'aiida.data': [
+                'base = aiida.orm.data:BaseType',
+                'numeric = aiida.orm.data.numeric:NumericType',
                 'bool = aiida.orm.data.bool:Bool',
                 'float = aiida.orm.data.float:Float',
                 'int = aiida.orm.data.int:Int',
@@ -121,8 +119,8 @@ if __name__ == '__main__':
             ],
             'aiida.cmdline': [],
             'aiida.parsers': [
-                'simpleplugins.arithmetic.add = aiida.parsers.simpleplugins.arithmetic.add:ArithmeticAddParser',
-                'simpleplugins.templatereplacer.doubler = aiida.parsers.simpleplugins.templatereplacer.doubler:TemplatereplacerDoublerParser',
+                'arithmetic.add = aiida.parsers.plugins.arithmetic.add:ArithmeticAddParser',
+                'templatereplacer.doubler = aiida.parsers.plugins.templatereplacer.doubler:TemplatereplacerDoublerParser',
             ],
             'aiida.schedulers': [
                 'direct = aiida.scheduler.plugins.direct:DirectScheduler',

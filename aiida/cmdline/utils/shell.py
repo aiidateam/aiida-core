@@ -15,9 +15,14 @@ from __future__ import absolute_import
 
 DEFAULT_MODULES_LIST = [
     ('aiida.orm', 'Node', 'Node'),
-    ('aiida.orm', 'Calculation', 'Calculation'),
+    ('aiida.orm.node.process', 'ProcessNode', 'ProcessNode'),
+    ('aiida.orm.node.process', 'CalculationNode', 'CalculationNode'),
+    ('aiida.orm.node.process', 'CalcJobNode', 'CalcJobNode'),
+    ('aiida.orm.node.process', 'CalcFunctionNode', 'CalcFunctionNode'),
+    ('aiida.orm.node.process', 'WorkflowNode', 'WorkflowNode'),
+    ('aiida.orm.node.process', 'WorkChainNode', 'WorkChainNode'),
+    ('aiida.orm.node.process', 'WorkFunctionNode', 'WorkFunctionNode'),
     ('aiida.orm', 'load_workflow', 'load_workflow'),
-    ('aiida.orm', 'JobCalculation', 'JobCalculation'),
     ('aiida.orm', 'Data', 'Data'),
     ('aiida.orm', 'CalculationFactory', 'CalculationFactory'),
     ('aiida.orm', 'DataFactory', 'DataFactory'),

@@ -83,17 +83,17 @@ class CalculationProjectionMapper(ProjectionMapper):
 
     def __init__(self, projections, projection_labels=None, projection_attributes=None, projection_formatters=None):
         # pylint: disable=too-many-locals
-        from aiida.orm.calculation import Calculation
+        from aiida.orm.node.process import ProcessNode
         from aiida.orm.mixins import Sealable
 
         self._valid_projections = projections
 
         sealed_key = 'attributes.{}'.format(Sealable.SEALED_KEY)
-        process_paused_key = 'attributes.{}'.format(Calculation.PROCESS_PAUSED_KEY)
-        process_label_key = 'attributes.{}'.format(Calculation.PROCESS_LABEL_KEY)
-        process_state_key = 'attributes.{}'.format(Calculation.PROCESS_STATE_KEY)
-        process_status_key = 'attributes.{}'.format(Calculation.PROCESS_STATUS_KEY)
-        exit_status_key = 'attributes.{}'.format(Calculation.EXIT_STATUS_KEY)
+        process_paused_key = 'attributes.{}'.format(ProcessNode.PROCESS_PAUSED_KEY)
+        process_label_key = 'attributes.{}'.format(ProcessNode.PROCESS_LABEL_KEY)
+        process_state_key = 'attributes.{}'.format(ProcessNode.PROCESS_STATE_KEY)
+        process_status_key = 'attributes.{}'.format(ProcessNode.PROCESS_STATUS_KEY)
+        exit_status_key = 'attributes.{}'.format(ProcessNode.EXIT_STATUS_KEY)
 
         default_labels = {
             'pk': 'PK',

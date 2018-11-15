@@ -28,7 +28,7 @@ class WorkflowDemo(Workflow):
         from aiida.orm import Code, Computer, CalculationFactory
         from aiida.common.datastructures import calc_states
 
-        CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
+        CustomCalc = CalculationFactory('templatereplacer')
 
         computer = Computer.get("localhost")
 
@@ -86,7 +86,7 @@ class SubWorkflowDemo(Workflow):
         from aiida.orm import Code, Computer, CalculationFactory
         from aiida.common.datastructures import calc_states
 
-        CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
+        CustomCalc = CalculationFactory('templatereplacer')
 
         computer = Computer.get("localhost")
 
@@ -139,7 +139,7 @@ class BranchWorkflowDemo(Workflow):
         from aiida.orm import Code, Computer, CalculationFactory
         from aiida.common.datastructures import calc_states
 
-        CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
+        CustomCalc = CalculationFactory('templatereplacer')
 
         computer = Computer.get("localhost")
 
@@ -226,7 +226,7 @@ class LoopBranchWorkflowDemo(Workflow):
         from aiida.orm import Code, Computer, CalculationFactory
         from aiida.common.datastructures import calc_states
 
-        CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
+        CustomCalc = CalculationFactory('templatereplacer')
 
         computer = Computer.get("localhost")
 

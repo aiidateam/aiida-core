@@ -9,14 +9,11 @@ import six
 from plumpy import ProcessState
 
 from aiida.common.links import LinkType
-from aiida.common.log import get_dblogger_extra
 from aiida.common.utils import classproperty
-from aiida.orm.data.code import Code
-from aiida.orm.data import Data
 from aiida.orm.mixins import Sealable
 from aiida.plugins.entry_point import get_entry_point_string_from_class
 
-from .. import Node
+from aiida.orm.implementation import Node
 
 __all__ = ('ProcessNode',)
 
@@ -68,6 +65,7 @@ class ProcessNode(Sealable, Node):
 
         :return: LoggerAdapter object, that works like a logger, but also has the 'extra' embedded
         """
+        from aiida.common.log import get_dblogger_extra
         return logging.LoggerAdapter(logger=self._logger, extra=get_dblogger_extra(self))
 
     def _set_process_type(self, process_class):
@@ -408,13 +406,13 @@ class ProcessNode(Sealable, Node):
         :param dest: a `Node` instance
         :raise: ValueError if a link from self to `dest` is not allowed.
         """
-        from aiida.orm.calculation import Calculation
+        from aiida.orm.data import Data
 
         if link_type is LinkType.CREATE or link_type is LinkType.RETURN:
             if not isinstance(dest, Data):
                 raise ValueError('The output of a process node can only be a data node')
         elif link_type is LinkType.CALL:
-            if not isinstance(dest, (Calculation, ProcessNode)):
+            if not isinstance(dest, ProcessNode):
                 raise ValueError('Call links can only link two process nodes: {}'.format(type(dest)))
         else:
             raise ValueError('a process node cannot have links of type {} as output'.format(link_type))
@@ -423,22 +421,19 @@ class ProcessNode(Sealable, Node):
 
     def add_link_from(self, src, label=None, link_type=LinkType.INPUT):
         """
-        Add a link with a code as destination.
-
-        You can use the parameters of the base Node class, in particular the
-        label parameter to label the link.
+        Add a link from another node.
 
         :param src: node to add the link from
         :param str label: name of the link, default is None
         :param link_type: the type of link, must be one of the enum values form :class:`~aiida.common.links.LinkType`
         """
-        from aiida.orm.calculation import Calculation
+        from aiida.orm.data import Data
 
         if link_type is LinkType.INPUT:
-            if not isinstance(src, (Data, Code)):
-                raise ValueError('Nodes entering processes as input link can only be of type data or code')
+            if not isinstance(src, Data):
+                raise ValueError('Nodes entering processes as input link can only be of type data')
         elif link_type is LinkType.CALL:
-            if not isinstance(src, (Calculation, ProcessNode)):
+            if not isinstance(src, ProcessNode):
                 raise ValueError('Call links can only link two process nodes: {}'.format(type(src)))
         else:
             raise ValueError('Process node cannot have links of type {} as input'.format(link_type))

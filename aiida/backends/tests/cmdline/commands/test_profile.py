@@ -92,15 +92,15 @@ class TestVerdiProfileSetup(AiidaTestCase):
         from aiida.cmdline.commands.cmd_profile import (profile_list, profile_setdefault, profile_delete)
 
         result = self.cli_runner.invoke(profile_list, options)
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
         self.assertIn('Usage', result.output)
 
         result = self.cli_runner.invoke(profile_setdefault, options)
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
         self.assertIn('Usage', result.output)
 
         result = self.cli_runner.invoke(profile_delete, options)
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
         self.assertIn('Usage', result.output)
 
     def test_list(self):
@@ -109,7 +109,7 @@ class TestVerdiProfileSetup(AiidaTestCase):
         """
         from aiida.cmdline.commands.cmd_profile import profile_list
         result = self.cli_runner.invoke(profile_list)
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
         self.assertIn('configuration folder: ' + self._new_aiida_config_folder, result.output)
         self.assertIn('* {}'.format(self.dummy_profile_list[0]), result.output)
         self.assertIn(self.dummy_profile_list[1], result.output)
@@ -120,15 +120,15 @@ class TestVerdiProfileSetup(AiidaTestCase):
         """
         from aiida.cmdline.commands.cmd_profile import profile_setdefault
         result = self.cli_runner.invoke(profile_setdefault, [self.dummy_profile_list[1]])
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
 
         from aiida.cmdline.commands.cmd_profile import profile_list
         result = self.cli_runner.invoke(profile_list)
 
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
         self.assertIn('configuration folder: ' + self._new_aiida_config_folder, result.output)
         self.assertIn('* {}'.format(self.dummy_profile_list[1]), result.output)
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
 
     def test_show(self):
         """
@@ -156,24 +156,24 @@ class TestVerdiProfileSetup(AiidaTestCase):
 
         # delete single profile
         result = self.cli_runner.invoke(profile_delete, ["--force", self.dummy_profile_list[2]])
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
 
         result = self.cli_runner.invoke(profile_list)
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
 
         self.assertNotIn(self.dummy_profile_list[2], result.output)
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
 
         # delete multiple profile
         result = self.cli_runner.invoke(profile_delete,
                                         ["--force", self.dummy_profile_list[3], self.dummy_profile_list[4]])
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
 
         result = self.cli_runner.invoke(profile_list)
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
         self.assertNotIn(self.dummy_profile_list[3], result.output)
         self.assertNotIn(self.dummy_profile_list[4], result.output)
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
 
 
 def get_random_string(length):

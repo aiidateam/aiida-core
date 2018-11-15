@@ -115,7 +115,7 @@ Return values
 +++++++++++++
 
 The deposition process, which is of
-:py:class:`JobCalculation <aiida.orm.implementation.general.calculation.job.JobCalculation>`
+:py:class:`CalcJobNode <aiida.orm.node.process.calculation.calcjob.CalcJobNode>`
 type, returns the output of ``cif_cod_deposit``, wrapped in
 :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>`.
 

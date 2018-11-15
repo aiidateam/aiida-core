@@ -26,7 +26,7 @@ class TestComputer(AiidaTestCase):
     """
 
     def test_deletion(self):
-        from aiida.orm import JobCalculation
+        from aiida.orm.node.process import CalcJobNode
         from aiida.common.exceptions import InvalidOperation
         import aiida.backends.sqlalchemy
 
@@ -45,7 +45,7 @@ class TestComputer(AiidaTestCase):
                           'num_mpiprocs_per_machine': 1}
         }
 
-        _ = JobCalculation(**calc_params).store()
+        _ = CalcJobNode(**calc_params).store()
 
         session = aiida.backends.sqlalchemy.get_scoped_session()
 

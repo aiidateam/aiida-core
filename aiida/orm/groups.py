@@ -310,7 +310,8 @@ class Group(entities.Entity):
           in any case already stored) and created is a boolean saying
         """
         import warnings
-        warnings.warn('this method has been deprecated use Group.objects.get_or_create() instead', DeprecationWarning)
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        warnings.warn('this method has been deprecated use Group.objects.get_or_create() instead', DeprecationWarning)  # pylint: disable=no-member
 
         return cls.objects(backend).get_or_create(**kwargs)
 

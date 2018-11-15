@@ -7,11 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+AiiDA ORM data class storing (numpy) arrays
+"""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from aiida.orm import Data
-
 
 
 class ArrayData(Data):
@@ -42,13 +44,9 @@ class ArrayData(Data):
 
         :param name: The name of the array to delete from the node.
         """
-        import numpy
-
         fname = '{}.npy'.format(name)
         if fname not in self.get_folder_list():
-            raise KeyError(
-                "Array with name '{}' not found in node pk= {}".format(
-                    name, self.pk))
+            raise KeyError("Array with name '{}' not found in node pk= {}".format(name, self.pk))
 
         # remove both file and attribute
         self.remove_path(fname)
@@ -58,20 +56,6 @@ class ArrayData(Data):
             # Should not happen, but do not crash if for some reason the
             # property was not set.
             pass
-
-    def arraynames(self):
-        """
-        Return a list of all arrays stored in the node, listing the files (and
-        not relying on the properties).
-
-        .. deprecated:: 0.7
-           Use :meth:`get_arraynames` instead.
-        """
-        import warnings
-
-        warnings.warn("arraynames is deprecated, use get_arraynames instead",
-                      DeprecationWarning)
-        return self.get_arraynames()
 
     def get_arraynames(self):
         """
@@ -95,8 +79,7 @@ class ArrayData(Data):
         Return a list of all arrays stored in the node, listing the attributes
         starting with the correct prefix.
         """
-        return [i[len(self.array_prefix):] for i in
-                self.attrs() if i.startswith(self.array_prefix)]
+        return [i[len(self.array_prefix):] for i in self.attrs() if i.startswith(self.array_prefix)]
 
     def get_shape(self, name):
         """
@@ -125,11 +108,12 @@ class ArrayData(Data):
 
         # raw function used only internally
         def get_array_from_file(self, name):
+            """
+            Return the array stored in a .npy file
+            """
             fname = '{}.npy'.format(name)
             if fname not in self.get_folder_list():
-                raise KeyError(
-                    "Array with name '{}' not found in node pk= {}".format(
-                        name, self.pk))
+                raise KeyError("Array with name '{}' not found in node pk= {}".format(name, self.pk))
 
             array = numpy.load(self.get_abs_path(fname))
             return array
@@ -168,9 +152,8 @@ class ArrayData(Data):
 
         import numpy
 
-        if not (isinstance(array, numpy.ndarray)):
-            raise TypeError("ArrayData can only store numpy arrays. Convert "
-                            "the object to an array first")
+        if not isinstance(array, numpy.ndarray):
+            raise TypeError("ArrayData can only store numpy arrays. Convert " "the object to an array first")
 
         # Check if the name is valid
         if not (name) or re.sub('[0-9a-zA-Z_]', '', name):
@@ -179,17 +162,16 @@ class ArrayData(Data):
 
         fname = "{}.npy".format(name)
 
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile() as _file:
             # Store in a temporary file, and then add to the node
-            numpy.save(f, array)
-            f.flush()  # Important to flush here, otherwise the next copy command
+            numpy.save(_file, array)
+            _file.flush()  # Important to flush here, otherwise the next copy command
             # will just copy an empty file
-            self.add_path(f.name, fname)
+            self.add_path(_file.name, fname)
 
         # Mainly for convenience, for querying purposes (both stores the fact
         # that there is an array with that name, and its shape)
-        self._set_attr("{}{}".format(self.array_prefix, name),
-                       list(array.shape))
+        self._set_attr("{}{}".format(self.array_prefix, name), list(array.shape))
 
     def _validate(self):
         """
@@ -204,8 +186,6 @@ class ArrayData(Data):
         properties = self._arraynames_from_properties()
 
         if set(files) != set(properties):
-            raise ValidationError(
-                "Mismatch of files and properties for ArrayData"
-                " node (pk= {}): {} vs. {}".format(self.pk,
-                                                   files, properties))
+            raise ValidationError("Mismatch of files and properties for ArrayData"
+                                  " node (pk= {}): {} vs. {}".format(self.pk, files, properties))
         super(ArrayData, self)._validate()

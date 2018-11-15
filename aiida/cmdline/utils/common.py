@@ -287,7 +287,7 @@ def get_workchain_report(node, levelname, indent_size=4, max_depth=None):
             # In the future, we should specify here the type of link
             # for now, CALL links are the only ones allowing calc-calc
             # (we here really want instead to follow CALL links)
-            output_of='workcalculation',
+            with_incoming='workcalculation',
             tag='subworkchains')
         result = list(itertools.chain(*builder.distinct().all()))
 

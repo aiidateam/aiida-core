@@ -208,7 +208,6 @@
         aiida/orm/calculation/job/__init__.py|
         aiida/orm/code.py|
         aiida/orm/data/array/bands.py|
-        aiida/orm/data/array/__init__.py|
         aiida/orm/data/array/kpoints.py|
         aiida/orm/data/array/projection.py|
         aiida/orm/data/array/xy.py|

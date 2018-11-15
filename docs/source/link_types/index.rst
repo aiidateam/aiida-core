@@ -65,7 +65,7 @@ The links can be followed in both possible directions (forward & reverse) using
 the QueryBuilder. This requires to define additional “names” for each direction
 of the link, and they are documented at the
 :doc:`QueryBuilder section <../querying/querybuilder/usage>`. For example,
-if there is an **INPUT** link from data D to calculation C, D is the
-“input_of” C, or equivalently D is the “output_of” C. Currently, in the
-QueryBuilder, input_of and output_of refer to any link type, where C is the
-head of the arrow and D is the tail.
+if there is an **INPUT** link from data D to calculation C, D is “with_outgoing” C, 
+or equivalently C is "with_incoming” D. Currently, in the QueryBuilder, with_incoming 
+and with_outgoing refer to any link type, where C is the head of the arrow and 
+D is the tail.

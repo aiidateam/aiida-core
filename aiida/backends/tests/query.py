@@ -199,7 +199,7 @@ class TestQueryBuilder(AiidaTestCase):
                 {
                     'cls': Node,
                     'tag': 'n2',
-                    'output_of': 'n1'
+                    'with_incoming': 'n1'
                 }
             ],
             'filters': {
@@ -234,7 +234,7 @@ class TestQueryBuilder(AiidaTestCase):
                 {
                     'cls': Node,
                     'tag': 'n2',
-                    'output_of': 'n1'
+                    'with_incoming': 'n1'
                 }
             ],
             'filters': {
@@ -412,15 +412,15 @@ class TestQueryBuilder(AiidaTestCase):
         from aiida.orm.computers import Computer
         qb = QueryBuilder()
         qb.append(Node, tag='n1')
-        qb.append(Node, tag='n2', edge_tag='e1', output_of='n1')
-        qb.append(Node, tag='n3', edge_tag='e2', output_of='n2')
-        qb.append(Computer, computer_of='n3', tag='c1', edge_tag='nonsense')
+        qb.append(Node, tag='n2', edge_tag='e1', with_incoming='n1')
+        qb.append(Node, tag='n3', edge_tag='e2', with_incoming='n2')
+        qb.append(Computer, with_node='n3', tag='c1', edge_tag='nonsense')
         self.assertEqual(qb.get_used_tags(), ['n1', 'n2', 'e1', 'n3', 'e2', 'c1', 'nonsense'])
 
         # Now I am testing the default tags,
         qb = QueryBuilder().append(StructureData).append(ProcessNode).append(
             StructureData).append(
-            ParameterData, input_of=ProcessNode)
+            ParameterData, with_outgoing=ProcessNode)
         self.assertEqual(qb.get_used_tags(), [
             'StructureData_1', 'ProcessNode_1',
             'StructureData_1--ProcessNode_1', 'StructureData_2',
@@ -520,7 +520,7 @@ class TestQueryBuilderCornerCases(AiidaTestCase):
         qb = QueryBuilder()
         qb.append(ProcessNode, project=['id'], tag='calc')
         qb.append(Computer, project=['id', 'transport_params'],
-                  outerjoin=True, computer_of='calc')
+                  outerjoin=True, with_node='calc')
         qb.all()
 
         # Checking the correct retrieval of _metadata which is
@@ -528,7 +528,7 @@ class TestQueryBuilderCornerCases(AiidaTestCase):
         qb = QueryBuilder()
         qb.append(ProcessNode, project=['id'], tag='calc')
         qb.append(Computer, project=['id', '_metadata'],
-                  outerjoin=True, computer_of='calc')
+                  outerjoin=True, with_node='calc')
         qb.all()
 
 
@@ -797,7 +797,7 @@ class QueryBuilderJoinsTests(AiidaTestCase):
         # Search for the group of the user
         qb = orm.QueryBuilder()
         qb.append(orm.User, tag='user', filters={'id': {'==': user.id}})
-        qb.append(orm.Group, belongs_to='user',
+        qb.append(orm.Group, with_user='user',
                   filters={'id': {'==': group.id}})
         self.assertEquals(qb.count(), 1, "The expected group that belongs to "
                                          "the selected user was not found.")
@@ -805,7 +805,7 @@ class QueryBuilderJoinsTests(AiidaTestCase):
         # Search for the user that owns a group
         qb = orm.QueryBuilder()
         qb.append(orm.Group, tag='group', filters={'id': {'==': group.id}})
-        qb.append(orm.User, owner_of='group', filters={'id': {'==': user.id}})
+        qb.append(orm.User, with_group='group', filters={'id': {'==': user.id}})
 
         self.assertEquals(qb.count(), 1, "The expected user that owns the "
                                          "selected group was not found.")

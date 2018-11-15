@@ -73,7 +73,7 @@ def upf_listfamilies(elements, with_description):
         query.add_filter(UpfData, {'attributes.element': {'in': elements}})
     query.append(
         orm.Group,
-        group_of='upfdata',
+        with_node='upfdata',
         tag='group',
         project=["name", "description"],
         filters={"type": {
@@ -87,7 +87,7 @@ def upf_listfamilies(elements, with_description):
             group_desc = res.get("group").get("description")
             query = orm.QueryBuilder()
             query.append(orm.Group, tag='thisgroup', filters={"name": {'like': group_name}})
-            query.append(UpfData, project=["id"], member_of='thisgroup')
+            query.append(UpfData, project=["id"], with_group='thisgroup')
 
             if with_description:
                 description_string = ": {}".format(group_desc)

@@ -105,7 +105,7 @@ try:
     using_sysrandom = True
 except NotImplementedError:
     import warnings
-    warnings.warn('A secure pseudo-random number generator is not available '
+    warnings.warn('A secure pseudo-random number generator is not available '  # pylint: disable=no-member
                   'on your system. Falling back to Mersenne Twister.')
     using_sysrandom = False  # pylint: disable=invalid-name
 

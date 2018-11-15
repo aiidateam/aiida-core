@@ -30,6 +30,6 @@ def array_show(data):
 
     for node in data:
         the_dict = {}
-        for arrayname in node.arraynames():
+        for arrayname in node.get_arraynames():
             the_dict[arrayname] = node.get_array(arrayname).tolist()
         echo_dictionary(the_dict, 'json+date')

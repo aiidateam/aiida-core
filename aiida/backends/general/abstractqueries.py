@@ -116,7 +116,7 @@ class AbstractQueryManager(object):
         q.append(Node, project=['id', 'ctime', 'type'], tag='node')
 
         if user_pk is not None:
-            q.append(User, creator_of='node', project='email', filters={'pk': user_pk})
+            q.append(User, with_node='node', project='email', filters={'pk': user_pk})
         qb_res = q.all()
 
         # total count
@@ -156,7 +156,7 @@ class AbstractQueryManager(object):
             n_days_ago = now - datetime.timedelta(days=args.past_days)
             bdata_filters.update({"ctime": {'>=': n_days_ago}})
 
-        qb.append(BandsData, tag="bdata", created_by="creator",
+        qb.append(BandsData, tag="bdata", with_user="creator",
                   filters=bdata_filters,
                   project=["id", "label", "ctime"]
                   )

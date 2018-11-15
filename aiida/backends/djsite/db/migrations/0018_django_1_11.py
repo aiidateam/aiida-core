@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
     """Migration for upgrade to django 1.11"""
 
     dependencies = [
-        ('db', '0015_invalidating_node_hash'),
+        ('db', '0017_drop_dbcalcstate'),
     ]
 
     operations = [

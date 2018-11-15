@@ -142,7 +142,7 @@ class TestVerdiCalculation(AiidaTestCase):
         options = [self.arithmetic_job.uuid]
         result = self.cli_runner.invoke(command.calcjob_inputls, options)
         self.assertIsNone(result.exception, result.output)
-        self.assertEquals(len(get_result_lines(result)), 3)
+        self.assertEqual(len(get_result_lines(result)), 3)
         self.assertIn('.aiida', get_result_lines(result))
         self.assertIn('aiida.in', get_result_lines(result))
         self.assertIn('_aiidasubmit.sh', get_result_lines(result))
@@ -150,7 +150,7 @@ class TestVerdiCalculation(AiidaTestCase):
         options = [self.arithmetic_job.uuid, '.aiida']
         result = self.cli_runner.invoke(command.calcjob_inputls, options)
         self.assertIsNone(result.exception, result.output)
-        self.assertEquals(len(get_result_lines(result)), 2)
+        self.assertEqual(len(get_result_lines(result)), 2)
         self.assertIn('calcinfo.json', get_result_lines(result))
         self.assertIn('job_tmpl.json', get_result_lines(result))
 
@@ -163,7 +163,7 @@ class TestVerdiCalculation(AiidaTestCase):
         options = [self.arithmetic_job.uuid]
         result = self.cli_runner.invoke(command.calcjob_outputls, options)
         self.assertIsNone(result.exception, result.output)
-        self.assertEquals(len(get_result_lines(result)), 3)
+        self.assertEqual(len(get_result_lines(result)), 3)
         self.assertIn('_scheduler-stderr.txt', get_result_lines(result))
         self.assertIn('_scheduler-stdout.txt', get_result_lines(result))
         self.assertIn('aiida.out', get_result_lines(result))
@@ -171,7 +171,7 @@ class TestVerdiCalculation(AiidaTestCase):
         options = [self.arithmetic_job.uuid, 'aiida.out']
         result = self.cli_runner.invoke(command.calcjob_outputls, options)
         self.assertIsNone(result.exception, result.output)
-        self.assertEquals(len(get_result_lines(result)), 1)
+        self.assertEqual(len(get_result_lines(result)), 1)
         self.assertIn('aiida.out', get_result_lines(result))
 
     def test_calcjob_inputcat(self):
@@ -183,14 +183,14 @@ class TestVerdiCalculation(AiidaTestCase):
         options = [self.arithmetic_job.uuid]
         result = self.cli_runner.invoke(command.calcjob_inputcat, options)
         self.assertIsNone(result.exception, result.output)
-        self.assertEquals(len(get_result_lines(result)), 1)
-        self.assertEquals(get_result_lines(result)[0], '2 3')
+        self.assertEqual(len(get_result_lines(result)), 1)
+        self.assertEqual(get_result_lines(result)[0], '2 3')
 
         options = [self.arithmetic_job.uuid, 'aiida.in']
         result = self.cli_runner.invoke(command.calcjob_inputcat, options)
         self.assertIsNone(result.exception, result.output)
-        self.assertEquals(len(get_result_lines(result)), 1)
-        self.assertEquals(get_result_lines(result)[0], '2 3')
+        self.assertEqual(len(get_result_lines(result)), 1)
+        self.assertEqual(get_result_lines(result)[0], '2 3')
 
     def test_calcjob_outputcat(self):
         """Test verdi calcjob outputcat"""
@@ -201,14 +201,14 @@ class TestVerdiCalculation(AiidaTestCase):
         options = [self.arithmetic_job.uuid]
         result = self.cli_runner.invoke(command.calcjob_outputcat, options)
         self.assertIsNone(result.exception, result.output)
-        self.assertEquals(len(get_result_lines(result)), 1)
-        self.assertEquals(get_result_lines(result)[0], '5')
+        self.assertEqual(len(get_result_lines(result)), 1)
+        self.assertEqual(get_result_lines(result)[0], '5')
 
         options = [self.arithmetic_job.uuid, 'aiida.out']
         result = self.cli_runner.invoke(command.calcjob_outputcat, options)
         self.assertIsNone(result.exception, result.output)
-        self.assertEquals(len(get_result_lines(result)), 1)
-        self.assertEquals(get_result_lines(result)[0], '5')
+        self.assertEqual(len(get_result_lines(result)), 1)
+        self.assertEqual(get_result_lines(result)[0], '5')
 
     def test_calcjob_cleanworkdir(self):
         """Test verdi calcjob cleanworkdir"""

@@ -15,6 +15,7 @@ from __future__ import absolute_import
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
+from aiida.cmdline.commands.cmd_process import verdi_process
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
 from aiida.cmdline.utils.query.calculation import CalculationQueryBuilder
@@ -37,29 +38,20 @@ def verdi_work():
 @options.PAST_DAYS()
 @options.LIMIT()
 @options.RAW()
+@click.pass_context
 @decorators.with_dbenv()
-def work_list(all_entries, process_state, exit_status, failed, past_days, limit, project, raw):
+def work_list(ctx, all_entries, process_state, exit_status, failed, past_days, limit, project, raw):
     """Show a list of work calculations that are still running."""
-    from tabulate import tabulate
-    from aiida.cmdline.utils.common import print_last_process_state_change
-    from aiida.orm.node.process import WorkChainNode, WorkFunctionNode
-
-    builder = CalculationQueryBuilder()
-    filters = builder.get_filters(
-        all_entries, process_state, exit_status, failed, node_types=(WorkChainNode, WorkFunctionNode))
-    query_set = builder.get_query_set(filters=filters, past_days=past_days, limit=limit)
-    projected = builder.get_projected(query_set, projections=project)
-
-    headers = projected.pop(0)
-
-    if raw:
-        tabulated = tabulate(projected, tablefmt='plain')
-        echo.echo(tabulated)
-    else:
-        tabulated = tabulate(projected, headers=headers)
-        echo.echo(tabulated)
-        echo.echo('\nTotal results: {}\n'.format(len(projected)))
-        print_last_process_state_change(process_type='work')
+    ctx.invoke(
+        verdi_process.get_command(ctx, 'list'),
+        all_entries=all_entries,
+        process_state=process_state,
+        exit_status=exit_status,
+        failed=failed,
+        past_days=past_days,
+        limit=limit,
+        project=project,
+        raw=raw)
 
 
 @verdi_work.command('report')
@@ -72,109 +64,36 @@ def work_list(all_entries, process_state, exit_status, failed, past_days, limit,
     default='REPORT',
     help='filter the results by name of the log level')
 @click.option('-m', '--max-depth', 'max_depth', type=int, default=None, help='limit the number of levels to be printed')
-def work_report(workflows, levelname, indent_size, max_depth):
+@click.pass_context
+def work_report(ctx, workflows, levelname, indent_size, max_depth):
     # pylint: disable=too-many-locals
     """
     Return a list of recorded log messages for the WorkChain with pk=PK
     """
-    import itertools
-    from aiida.orm.backends import construct_backend
-    from aiida.orm.querybuilder import QueryBuilder
-    from aiida.orm.node.process import WorkChainNode
-
-    def get_report_messages(pk, depth, levelname):
-        """Return list of log messages with given levelname and their depth for a node with a given pk."""
-        backend = construct_backend()
-        filters = {
-            'objpk': pk,
-        }
-
-        entries = backend.logs.find(filter_by=filters)
-        entries = [entry for entry in entries if LOG_LEVELS[entry.levelname] >= LOG_LEVELS[levelname]]
-        return [(_, depth) for _ in entries]
-
-    def get_subtree(pk, level=0):
-        """Get a nested tree of work calculation nodes and their nesting level starting from this pk."""
-        builder = QueryBuilder()
-        builder.append(cls=WorkChainNode, filters={'id': pk}, tag='workcalculation')
-        builder.append(
-            cls=WorkChainNode,
-            project=['id'],
-            # In the future, we should specify here the type of link
-            # for now, CALL links are the only ones allowing calc-calc
-            # (we here really want instead to follow CALL links)
-            output_of='workcalculation',
-            tag='subworkchains')
-        result = list(itertools.chain(*builder.distinct().all()))
-
-        # This will return a single flat list of tuples, where the first element
-        # corresponds to the WorkChain pk and the second element is an integer
-        # that represents its level of nesting within the chain
-        return [(pk, level)] + list(itertools.chain(*[get_subtree(subpk, level=level + 1) for subpk in result]))
-
-    def print_subtree(tree, prepend=""):
-        echo.echo("{}{}".format(prepend, tree[0]))
-        for subtree in tree[1]:
-            print_subtree(subtree, prepend=prepend + "  ")
-
-    for workflow in workflows:
-
-        workchain_tree = get_subtree(workflow.pk)
-
-        if max_depth:
-            report_list = [
-                get_report_messages(pk, depth, levelname) for pk, depth in workchain_tree if depth < max_depth
-            ]
-        else:
-            report_list = [get_report_messages(pk, depth, levelname) for pk, depth in workchain_tree]
-
-        reports = list(itertools.chain(*report_list))
-        reports.sort(key=lambda r: r[0].time)
-
-        if not reports:
-            echo.echo("No log messages recorded for this entry")
-            return
-
-        object_ids = [entry[0].id for entry in reports]
-        levelnames = [len(entry[0].levelname) for entry in reports]
-        width_id = len(str(max(object_ids)))
-        width_levelname = max(levelnames)
-        for entry, depth in reports:
-            echo.echo('{time:%Y-%m-%d %H:%M:%S} [{id:<{width_id}} | {levelname:>{width_levelname}}]:{indent} {message}'.
-                      format(
-                          id=entry.id,
-                          levelname=entry.levelname,
-                          message=entry.message,
-                          time=entry.time,
-                          width_id=width_id,
-                          width_levelname=width_levelname,
-                          indent=' ' * (depth * indent_size)))
-
-    return
+    ctx.invoke(
+        verdi_process.get_command(ctx, 'report'),
+        processes=workflows,
+        levelname=levelname,
+        indent_size=indent_size,
+        max_depth=max_depth)
 
 
 @verdi_work.command('show')
 @arguments.WORKFLOWS()
+@click.pass_context
 @decorators.with_dbenv()
-def work_show(workflows):
+@decorators.deprecated_command("This command is deprecated. Use 'verdi process status' instead.")
+def work_show(ctx, workflows):
     """Show a summary for one or multiple workflows."""
-    from aiida.cmdline.utils.common import get_node_info
-
-    for workflow in workflows:
-        echo.echo(get_node_info(workflow))
+    ctx.invoke(verdi_process.get_command(ctx, 'show'), processes=workflows)
 
 
 @verdi_work.command('status')
 @arguments.WORKFLOWS()
-def work_status(workflows):
-    """
-    Print the status of work workflows
-    """
-    from aiida.utils.ascii_vis import format_call_graph
-
-    for workflow in workflows:
-        graph = format_call_graph(workflow)
-        echo.echo(graph)
+@click.pass_context
+def work_status(ctx, workflows):
+    """Print the status of work workflows."""
+    ctx.invoke(verdi_process.get_command(ctx, 'status'), processes=workflows)
 
 
 @verdi_work.command('plugins')
@@ -210,122 +129,35 @@ def work_plugins(entry_point):
 
 @verdi_work.command('kill')
 @arguments.WORKFLOWS()
-@decorators.deprecated_command("This command will be removed in a future release. Use 'verdi process kill' instead.")
-def work_kill(workflows):
-    """
-    Kill work workflows
-    """
-    from aiida import work
-    from aiida.work import RemoteException, DeliveryFailed, CommunicationTimeout
-
-    controller = work.AiiDAManager.get_process_controller()
-    for workflow in workflows:
-
-        if workflow.is_terminated:
-            echo.echo_error('Process<{}> is already terminated'.format(workflow.pk))
-            continue
-
-        try:
-            future = controller.kill_process(workflow.pk, msg='Killed through `verdi work kill`')
-            result = future.result()
-
-            if result:
-                echo.echo_success('killed Process<{}>'.format(workflow.pk))
-            else:
-                echo.echo_error('problem killing Process<{}>'.format(workflow.pk))
-        except CommunicationTimeout:
-            echo.echo_error('call to kill Process<{}> timed out'.format(workflow.pk))
-        except (RemoteException, DeliveryFailed) as exception:
-            echo.echo_error('failed to kill Process<{}>: {}'.format(workflow.pk, exception))
+@click.pass_context
+@decorators.deprecated_command("This command is deprecated. Use 'verdi process kill' instead.")
+def work_kill(ctx, workflows):
+    """Kill work workflows."""
+    ctx.invoke(verdi_process.process_kill, processes=workflows)
 
 
 @verdi_work.command('pause')
 @arguments.WORKFLOWS()
-@decorators.deprecated_command("This command will be removed in a future release. Use 'verdi process pause' instead.")
-def work_pause(workflows):
-    """
-    Pause running work workflows
-    """
-    from aiida import work
-    from aiida.work import RemoteException, DeliveryFailed, CommunicationTimeout
-
-    controller = work.AiiDAManager.get_process_controller()
-    for workflow in workflows:
-
-        if workflow.is_terminated:
-            echo.echo_error('Calculation<{}> is already terminated'.format(workflow.pk))
-            continue
-
-        try:
-            if controller.pause_process(workflow.pk):
-                echo.echo_success('paused Calculation<{}>'.format(workflow.pk))
-            else:
-                echo.echo_error('problem pausing Calculation<{}>'.format(workflow.pk))
-        except CommunicationTimeout:
-            echo.echo_error('call to pause Process<{}> timed out'.format(workflow.pk))
-        except (RemoteException, DeliveryFailed) as exception:
-            echo.echo_error('failed to pause Calculation<{}>: {}'.format(workflow.pk, exception))
+@click.pass_context
+@decorators.deprecated_command("This command is deprecated. Use 'verdi process pause' instead.")
+def work_pause(ctx, workflows):
+    """Pause running work workflows."""
+    ctx.invoke(verdi_process.process_kill, processes=workflows)
 
 
 @verdi_work.command('play')
 @arguments.WORKFLOWS()
-@decorators.deprecated_command("This command will be removed in a future release. Use 'verdi process play' instead.")
-def work_play(workflows):
-    """
-    Play paused work workflows
-    """
-    from aiida.work import RemoteException, DeliveryFailed, CommunicationTimeout
-    from aiida import work
-
-    controller = work.AiiDAManager.get_process_controller()
-    for workflow in workflows:
-
-        if workflow.is_terminated:
-            echo.echo_error('Calculation<{}> is already terminated'.format(workflow.pk))
-            continue
-
-        try:
-            if controller.play_process(workflow.pk):
-                echo.echo_success('played Calculation<{}>'.format(workflow.pk))
-            else:
-                echo.echo_critical('problem playing Calculation<{}>'.format(workflow.pk))
-        except CommunicationTimeout:
-            echo.echo_error('call to play Process<{}> timed out'.format(workflow.pk))
-        except (RemoteException, DeliveryFailed) as exception:
-            echo.echo_critical('failed to play Calculation<{}>: {}'.format(workflow.pk, exception))
+@click.pass_context
+@decorators.deprecated_command("This command is deprecated. Use 'verdi process play' instead.")
+def work_play(ctx, workflows):
+    """Play paused work workflows."""
+    ctx.invoke(verdi_process.process_kill, processes=workflows)
 
 
 @verdi_work.command('watch')
 @arguments.WORKFLOWS()
-@decorators.deprecated_command("This command will be removed in a future release. Use 'verdi process watch' instead.")
-def work_watch(workflows):
-    """
-    Watch the state transitions for work workflows
-    """
-    from kiwipy import BroadcastFilter
-    from aiida import work
-    import concurrent.futures
-
-    def _print(body, sender, subject, correlation_id):
-        echo.echo('pk={}, subject={}, body={}, correlation_id={}'.format(sender, subject, body, correlation_id))
-
-    communicator = work.AiiDAManager.get_communicator()
-    for process in workflows:
-
-        if process.is_terminated:
-            echo.echo_error('Process<{}> is already terminated'.format(process.pk))
-            continue
-
-        communicator.add_broadcast_subscriber(BroadcastFilter(_print, sender=process.pk))
-
-    try:
-        # Block this thread indefinitely
-        concurrent.futures.Future().result()
-    except (SystemExit, KeyboardInterrupt):
-        try:
-            communicator.stop()
-        except RuntimeError:
-            pass
-
-        # Reraise to trigger clicks builtin abort sequence
-        raise
+@click.pass_context
+@decorators.deprecated_command("This command is deprecated. Use 'verdi process watch' instead.")
+def work_watch(ctx, workflows):
+    """Watch the state transitions for work workflows."""
+    ctx.invoke(verdi_process.process_kill, processes=workflows)

@@ -12,20 +12,26 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 DEFAULT_MODULES_LIST = [
     ('aiida.orm', 'Node', 'Node'),
-    ('aiida.orm', 'Calculation', 'Calculation'),
+    ('aiida.orm.node.process', 'ProcessNode', 'ProcessNode'),
+    ('aiida.orm.node.process', 'CalculationNode', 'CalculationNode'),
+    ('aiida.orm.node.process', 'CalcJobNode', 'CalcJobNode'),
+    ('aiida.orm.node.process', 'CalcFunctionNode', 'CalcFunctionNode'),
+    ('aiida.orm.node.process', 'WorkflowNode', 'WorkflowNode'),
+    ('aiida.orm.node.process', 'WorkChainNode', 'WorkChainNode'),
+    ('aiida.orm.node.process', 'WorkFunctionNode', 'WorkFunctionNode'),
     ('aiida.orm', 'load_workflow', 'load_workflow'),
-    ('aiida.orm', 'JobCalculation', 'JobCalculation'),
     ('aiida.orm', 'Data', 'Data'),
     ('aiida.orm', 'CalculationFactory', 'CalculationFactory'),
     ('aiida.orm', 'DataFactory', 'DataFactory'),
     ('aiida.orm', 'WorkflowFactory', 'WorkflowFactory'),
-    ('aiida.orm.code', 'Code', 'Code'),
-    ('aiida.orm.computer', 'Computer', 'Computer'),
-    ('aiida.orm.group', 'Group', 'Group'),
+    ('aiida.orm', 'Code', 'Code'),
+    ('aiida.orm', 'Computer', 'Computer'),
+    ('aiida.orm', 'Group', 'Group'),
     ('aiida.orm.workflow', 'Workflow', 'Workflow'),
-    ('aiida.orm.querybuilder', 'QueryBuilder', 'QueryBuilder'),
+    ('aiida.orm', 'QueryBuilder', 'QueryBuilder'),
     ('aiida.orm.utils', 'load_node', 'load_node'),
 ]
 

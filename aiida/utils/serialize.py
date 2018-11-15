@@ -111,10 +111,8 @@ def computer_constructor(loader, computer):
     :return: the aiida computer
     :rtype: :class:`aiida.orm.Computer`
     """
-    from aiida.orm.backend import construct_backend
-    backend = construct_backend()
     yaml_node = loader.construct_scalar(computer)
-    return backend.computers.get(uuid=yaml_node)
+    return orm.Computer.get(uuid=yaml_node)
 
 
 class AiiDADumper(yaml.Dumper):

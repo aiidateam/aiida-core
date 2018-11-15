@@ -138,25 +138,25 @@ def validate_kpoint_mesh(callback_kwargs, ctx, param, value):
 @with_dbenv()
 def validate_calculation(callback_kwargs, ctx, param, value):
     """
-    Command line option validator for an AiiDA JobCalculation pk. It expects
+    Command line option validator for an AiiDA CalcJobNode pk. It expects
     an integer for the value and will try to load the corresponding node. it
-    will also check if successful if the node is a JobCalculation instance.
+    will also check if successful if the node is a CalcJobNode instance.
 
     Accepted callback_kwargs:
         * entry_point: a calculation entry point string to define the expected calculation class
             For example, 'quantumespresso.ph' will check that value is instance of PhCalculation
-            The default will simply check whether the value is an instance of JobCalculation.
+            The default will simply check whether the value is an instance of CalcJobNode.
             If the class cannot be loaded from the entry point a ValueError is thrown
 
     :param callback_kwargs: an optional dictionary with arguments for internal use in the validator
     :param ctx: internal context of the click.command
     :param param: the click Parameter, i.e. either the Option or Argument to which the validator is hooked up
-    :param value: a JobCalculation node pk
-    :returns: a JobCalculation instance
+    :param value: a CalcJobNode node pk
+    :returns: a CalcJobNode instance
     """
     from aiida.common.exceptions import NotExistent, LoadingPluginFailed, MissingPluginError
     from aiida.orm import load_node, CalculationFactory
-    from aiida.orm.calculation import JobCalculation
+    from aiida.orm.node.process import CalcJobNode
 
     if 'entry_point' in callback_kwargs:
         entry_point = callback_kwargs['entry_point']
@@ -165,7 +165,7 @@ def validate_calculation(callback_kwargs, ctx, param, value):
         except (LoadingPluginFailed, MissingPluginError):
             raise click.BadParameter("could not load calculation plugin for entry point '{}'".format(entry_point))
     else:
-        cls = JobCalculation
+        cls = CalcJobNode
 
     try:
         calculation = load_node(int(value))

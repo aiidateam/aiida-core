@@ -18,7 +18,7 @@ from . import processes
 __all__ = ('workfunction',)
 
 
-def workfunction(func, calc_node_class=None):
+def workfunction(func):
     """
     A decorator to turn a standard python function into a workfunction.
     Example usage:
@@ -34,13 +34,15 @@ def workfunction(func, calc_node_class=None):
     >>> print(r)
     9
     >>> r.get_inputs_dict() # doctest: +SKIP
-    {u'result': <FunctionCalculation: uuid: ce0c63b3-1c84-4bb8-ba64-7b70a36adf34 (pk: 3567)>}
+    {u'result': <WorkFunctionNode: uuid: ce0c63b3-1c84-4bb8-ba64-7b70a36adf34 (pk: 3567)>}
     >>> r.get_inputs_dict()['result'].get_inputs()
     [4, 5]
 
     """
+    from aiida.orm.node.process import WorkFunctionNode
+
     # Build the Process class with its ProcessSpec representing this function
-    process_class = processes.FunctionProcess.build(func, calc_node_class=calc_node_class)
+    process_class = processes.FunctionProcess.build(func, node_class=WorkFunctionNode)
 
     def run_get_node(*args, **kwargs):
         """
@@ -63,16 +65,14 @@ def workfunction(func, calc_node_class=None):
 
         # If any kwargs remain, the spec should be dynamic, so we raise if it isn't
         if kwargs and not process_class.spec().inputs.dynamic:
-            raise ValueError('{} does not support keyword arguments'.format(func.__name__))
+            raise ValueError('{} does not support these keyword arguments: {}'.format(func.__name__, kwargs.keys()))
 
         proc = process_class(inputs=inputs, runner=runner)
         return proc.execute(), proc.calc
 
     @functools.wraps(func)
     def wrapped_function(*args, **kwargs):
-        """
-        This wrapper function is the actual function that is called.
-        """
+        """This wrapper function is the actual function that is called."""
         result, _ = run_get_node(*args, **kwargs)
         return result
 

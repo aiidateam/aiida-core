@@ -293,7 +293,7 @@ def computer_setup(ctx, non_interactive, **kwargs):
 @with_dbenv()
 def computer_duplicate(ctx, computer, non_interactive, **kwargs):
     """Duplicate a Computer."""
-    from aiida.orm.backend import construct_backend
+    from aiida import orm
 
     if kwargs['label'] in get_computer_names():
         echo.echo_critical('A computer called {} already exists'.format(kwargs['label']))
@@ -329,8 +329,7 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
     else:
         echo.echo_success('Computer<{}> {} created'.format(computer.pk, computer.name))
 
-    backend = construct_backend()
-    is_configured = computer.is_user_configured(backend.users.get_automatic_user())
+    is_configured = computer.is_user_configured(orm.User.objects.get_default())
 
     if not is_configured:
         echo.echo_info('Note: before the computer can be used, it has to be configured with the command:')
@@ -401,9 +400,7 @@ def computer_disable(user, computer):
 @with_dbenv()
 def computer_list(all_entries, raw):
     """List available computers."""
-    from aiida.orm.backend import construct_backend
-
-    backend = construct_backend()
+    from aiida import orm
 
     computer_names = get_computer_names()
 
@@ -412,10 +409,11 @@ def computer_list(all_entries, raw):
         echo.echo_info("(use 'verdi computer show COMPUTERNAME' to see the details)")
     if computer_names:
         for name in sorted(computer_names):
-            computer = backend.computers.get(name=name)
+            computer = orm.Computer.objects.get(name=name)
 
-            is_configured = computer.is_user_configured(backend.users.get_automatic_user())
-            is_user_enabled = computer.is_user_enabled(backend.users.get_automatic_user())
+            user = orm.User.objects.get_default()
+            is_configured = computer.is_user_configured(user)
+            is_user_enabled = computer.is_user_enabled(user)
 
             if not all_entries:
                 if not is_configured or not is_user_enabled or not computer.is_enabled():
@@ -522,13 +520,11 @@ def computer_test(user, print_traceback, computer):
     """
     import traceback
     from aiida.common.exceptions import NotExistent
-    from aiida.orm.backend import construct_backend
-
-    backend = construct_backend()
+    from aiida import orm
 
     # Set a user automatically if one is not specified in the command line
     if user is None:
-        user = backend.users.get_automatic_user()
+        user = orm.User.objects.get_default()
 
     echo.echo("Testing computer '{}' for user {}...".format(computer.get_name(), user.email))
     try:
@@ -607,7 +603,7 @@ def computer_delete(computer):
     it.
     """
     from aiida.common.exceptions import InvalidOperation
-    from aiida.orm.backend import construct_backend
+    from aiida.orm.backends import construct_backend
 
     backend = construct_backend()
 

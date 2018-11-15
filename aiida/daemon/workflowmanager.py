@@ -27,7 +27,7 @@ def execute_steps():
     RUNNING steps, testing if all the calculation and subworkflows attached to 
     the step are FINISHED. In this case the step is set as FINISHED and the 
     workflow is advanced to the step's next method present in the db with 
-    ``advance_workflow``, otherwise if any step's JobCalculation is found in 
+    ``advance_workflow``, otherwise if any step's CalcJobNode is found in 
     NEW state the method will submit. If none of the previous conditions apply 
     the step is flagged as ERROR and cannot proceed anymore, blocking the future
     execution of the step and, connected, the workflow.
@@ -38,7 +38,7 @@ def execute_steps():
     stack is reported in the workflow report.
     """
 
-    from aiida.orm import JobCalculation
+    from aiida.orm.node.process import CalcJobNode
     from aiida.orm.implementation import get_all_running_steps
  
     logger.debug("Querying the worflow DB")
@@ -76,7 +76,7 @@ def execute_steps():
 
             for pk in s_calcs_new:
 
-                obj_calc = JobCalculation.get_subclass_from_pk(pk=pk)
+                obj_calc = CalcJobNode.get_subclass_from_pk(pk=pk)
                 try:
                     obj_calc.submit()
                     logger.info("[{0}] Step: {1} launched calculation {2}".format(w.pk, s.name, pk))

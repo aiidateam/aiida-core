@@ -84,7 +84,7 @@ def get_node_summary(node):
     :return: a string summary of the node
     """
     from plumpy import ProcessState
-    from aiida.orm.implementation.general.calculation import AbstractCalculation
+    from aiida.orm.node.process import ProcessNode
 
     table_headers = ['Property', 'Value']
     table = []
@@ -96,7 +96,7 @@ def get_node_summary(node):
     table.append(['ctime', node.ctime])
     table.append(['mtime', node.mtime])
 
-    if issubclass(node.__class__, AbstractCalculation):
+    if issubclass(node.__class__, ProcessNode):
         try:
             process_state = node.process_state
         except AttributeError:
@@ -141,7 +141,7 @@ def get_node_info(node, include_summary=True):
     """
     from aiida.backends.utils import get_log_messages
     from aiida.common.links import LinkType
-    from aiida.orm.calculation.work import WorkCalculation
+    from aiida.orm.node.process import WorkChainNode
 
     if include_summary:
         result = get_node_summary(node)
@@ -191,7 +191,7 @@ def get_node_info(node, include_summary=True):
         table = []
         table_headers = ['Log messages']
         table.append(['There are {} log messages for this calculation'.format(len(log_messages))])
-        if isinstance(node, WorkCalculation):
+        if isinstance(node, WorkChainNode):
             table.append(["Run 'verdi work report {}' to see them".format(node.pk)])
         else:
             table.append(["Run 'verdi calculation logshow {}' to see them".format(node.pk)])

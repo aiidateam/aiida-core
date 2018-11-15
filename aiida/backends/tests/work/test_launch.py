@@ -11,8 +11,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm.calculation.function import FunctionCalculation
-from aiida.orm.calculation.work import WorkCalculation
+from aiida.orm.node.process import WorkChainNode, WorkFunctionNode
 from aiida.orm.data.int import Int
 from aiida.work import run, run_get_node, run_get_pid, Process, WorkChain, workfunction
 
@@ -58,7 +57,7 @@ class TestLaunchers(AiidaTestCase):
     def test_workfunction_run_get_node(self):
         result, node = run_get_node(add, a=self.a, b=self.b)
         self.assertEquals(result, self.result)
-        self.assertTrue(isinstance(node, FunctionCalculation))
+        self.assertTrue(isinstance(node, WorkFunctionNode))
 
     def test_workfunction_run_get_pid(self):
         result, pid = run_get_pid(add, a=self.a, b=self.b)
@@ -72,7 +71,7 @@ class TestLaunchers(AiidaTestCase):
     def test_workchain_run_get_node(self):
         result, node = run_get_node(AddWorkChain, a=self.a, b=self.b)
         self.assertEquals(result['result'], self.result)
-        self.assertTrue(isinstance(node, WorkCalculation))
+        self.assertTrue(isinstance(node, WorkChainNode))
 
     def test_workchain_run_get_pid(self):
         result, pid = run_get_pid(AddWorkChain, a=self.a, b=self.b)
@@ -92,7 +91,7 @@ class TestLaunchers(AiidaTestCase):
         builder.b = self.b
         result, node = run_get_node(builder)
         self.assertEquals(result['result'], self.result)
-        self.assertTrue(isinstance(node, WorkCalculation))
+        self.assertTrue(isinstance(node, WorkChainNode))
 
     def test_workchain_builder_run_get_pid(self):
         builder = AddWorkChain.get_builder()

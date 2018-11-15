@@ -39,10 +39,10 @@ def upload_calculation(calculation, transport, calc_info, script_filename):
     """
     Upload a calculation
 
-    :param calculation: the instance of JobCalculation to submit.
+    :param calculation: the instance of CalcJobNode to submit.
     :param transport: an already opened transport to use to submit the calculation.
-    :param calc_info: the calculation info datastructure returned by `JobCalculation._presubmit`
-    :param script_filename: the job launch script returned by `JobCalculation._presubmit`
+    :param calc_info: the calculation info datastructure returned by `CalcJobNode._presubmit`
+    :param script_filename: the job launch script returned by `CalcJobNode._presubmit`
     """
     from aiida.orm import load_node, Code
     from aiida.orm.data.remote import RemoteData
@@ -68,7 +68,7 @@ def upload_calculation(calculation, transport, calc_info, script_filename):
     folder = calculation._raw_input_folder
 
     # NOTE: some logic is partially replicated in the 'test_submit'
-    # method of JobCalculation. If major logic changes are done
+    # method of CalcJobNode. If major logic changes are done
     # here, make sure to update also the test_submit routine
     remote_user = transport.whoami()
     # TODO Doc: {username} field
@@ -225,10 +225,10 @@ def submit_calculation(calculation, transport, calc_info, script_filename):
     """
     Submit a calculation
 
-    :param calculation: the instance of JobCalculation to submit.
+    :param calculation: the instance of CalcJobNode to submit.
     :param transport: an already opened transport to use to submit the calculation.
-    :param calc_info: the calculation info datastructure returned by `JobCalculation._presubmit`
-    :param script_filename: the job launch script returned by `JobCalculation._presubmit`
+    :param calc_info: the calculation info datastructure returned by `CalcJobNode._presubmit`
+    :param script_filename: the job launch script returned by `CalcJobNode._presubmit`
     """
     scheduler = calculation.get_computer().get_scheduler()
     scheduler.set_transport(transport)
@@ -245,7 +245,7 @@ def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
     If the job defined anything in the `retrieve_temporary_list`, those entries will be stored in the
     `retrieved_temporary_folder`. The caller is responsible for creating and destroying this folder.
 
-    :param calculation: the instance of JobCalculation to update.
+    :param calculation: the instance of CalcJobNode to update.
     :param transport: an already opened transport to use for the retrieval.
     :param retrieved_temporary_folder: the absolute path to a directory in which to store the files
         listed, if any, in the `retrieved_temporary_folder` of the jobs CalcInfo
@@ -304,7 +304,7 @@ def kill_calculation(calculation, transport):
     """
     Kill the calculation through the scheduler
 
-    :param calculation: the instance of JobCalculation to kill.
+    :param calculation: the instance of CalcJobNode to kill.
     :param transport: an already opened transport to use to address the scheduler
     """
     job_id = calculation.get_job_id()
@@ -333,11 +333,11 @@ def kill_calculation(calculation, transport):
 
 def parse_results(job, retrieved_temporary_folder=None):
     """
-    Parse the results for a given JobCalculation (job)
+    Parse the results for a given CalcJobNode (job)
 
     :returns: integer exit code, where 0 indicates success and non-zero failure
     """
-    from aiida.orm.calculation.job import JobCalculationExitStatus
+    from aiida.orm.node.process.calculation.calcjob import CalcJobExitStatus
     from aiida.work import ExitCode
 
     assert job.get_state() == calc_states.PARSING, 'the job should be in the PARSING state when calling this function'
@@ -369,11 +369,11 @@ def parse_results(job, retrieved_temporary_folder=None):
         # Some implementations of parse_from_calc may still return a plain boolean or integer for the exit_code.
         # In the case of a boolean: True should be mapped to the default ExitCode which corresponds to an exit
         # status of 0. False values are mapped to the value that is mapped onto the FAILED calculation state
-        # throught the JobCalculationExitStatus. Plain integers are directly used to construct an ExitCode tuple
+        # throught the CalcJobExitStatus. Plain integers are directly used to construct an ExitCode tuple
         if isinstance(exit_code, bool) and exit_code is True:
             exit_code = ExitCode(0)
         elif isinstance(exit_code, bool) and exit_code is False:
-            exit_code = ExitCode(JobCalculationExitStatus[calc_states.FAILED].value)
+            exit_code = ExitCode(CalcJobExitStatus[calc_states.FAILED].value)
         elif isinstance(exit_code, int):
             exit_code = ExitCode(exit_code)
         elif isinstance(exit_code, ExitCode):

@@ -23,8 +23,8 @@ from aiida.common.datastructures import (wf_states, wf_exit_call,
                                          wf_default_call, calc_states)
 from aiida.common.utils import str_timedelta
 from aiida.common import aiidalogger
-from aiida.orm.implementation.calculation import JobCalculation
-from aiida.orm.backend import construct_backend
+from aiida.orm.node.process import CalcJobNode
+from aiida.orm.backends import construct_backend
 from aiida.utils import timezone
 from aiida.common.log import get_dblogger_extra
 from aiida.common.utils import abstractclassmethod
@@ -546,6 +546,8 @@ class AbstractWorkflow(object):
         :raise: AiidaException: in case the workflow state doesn't allow the execution
         :return: the wrapped methods,
         """
+        from aiida import orm
+
         wrapped_method = fun.__name__
 
         # This function gets called only if the method is launched with the execution brackets ()
@@ -584,7 +586,7 @@ class AbstractWorkflow(object):
 
                 # self.get_steps(wrapped_method).set_nextcall(wf_exit_call)
 
-            automatic_user = self._backend.users.get_automatic_user()
+            automatic_user = orm.User.objects(self._backend).get_default().backend_entity
             method_step, created = self.dbworkflowinstance.steps.get_or_create(
                 name=wrapped_method, user=automatic_user.dbuser)
             try:
@@ -621,6 +623,7 @@ class AbstractWorkflow(object):
         :raise: AiidaException: in case the caller method cannot be found or validated
         :return: the wrapped methods, decorated with the correct step name
         """
+        from aiida import orm
 
         md5 = self.dbworkflowinstance.script_md5
         script_path = self.dbworkflowinstance.script_path
@@ -659,8 +662,8 @@ class AbstractWorkflow(object):
         # arround
 
         # Retrieve the caller method
-        method_step = self.dbworkflowinstance.steps.get(name=caller_method,
-                                                        user=self._backend.users.get_automatic_user())
+        user = orm.User.objects(self._backend).get_default().backend_entity.dbuser
+        method_step = self.dbworkflowinstance.steps.get(name=caller_method, user=user)
 
         # Attach calculations
         if caller_method in self.attach_calc_lazy_storage:
@@ -690,12 +693,12 @@ class AbstractWorkflow(object):
         calculations will be launched until the ``next`` method gets called. For a step to be
         completed all the calculations linked have to be in RETRIEVED state, after which the next
         method gets called from the workflow manager.
-        :param calc: a JobCalculation object
-        :raise: AiidaException: in case the input is not of JobCalculation type
+        :param calc: a CalcJobNode object
+        :raise: AiidaException: in case the input is not of CalcJobNode type
         """
 
-        if (not issubclass(calc.__class__, JobCalculation) and not isinstance(calc, JobCalculation)):
-            raise AiidaException("Cannot add a calculation not of type JobCalculation")
+        if (not issubclass(calc.__class__, CalcJobNode) and not isinstance(calc, CalcJobNode)):
+            raise AiidaException("Cannot add a calculation not of type CalcJobNode")
 
         for node in calc.get_inputs():
             if node.pk is None:
@@ -735,7 +738,7 @@ class AbstractWorkflow(object):
         is not existent it returns None, useful for simpler grammatic in the workflow definition.
         :param next_method: a Workflow step (decorated) method
         :param calc_state: a specific state to filter the calculations to retrieve
-        :return: a list of JobCalculations objects
+        :return: a list of CalcJobNodes objects
         """
         if not getattr(step_method, "is_wf_step"):
             raise AiidaException("Cannot get step calculations from a method not decorated as Workflow method")
@@ -835,11 +838,11 @@ class AbstractWorkflow(object):
             raise WorkflowUnkillable("Cannot kill a workflow in {} or {} state"
                                      "".format(wf_states.FINISHED, wf_states.ERROR))
 
-    def get_all_calcs(self, calc_class=JobCalculation, calc_state=None, depth=15):
+    def get_all_calcs(self, calc_class=CalcJobNode, calc_state=None, depth=15):
         """
         Get all calculations connected with this workflow and all its subworflows up to a given depth.
         The list of calculations can be restricted to a given calculation type and state
-        :param calc_class: the calculation class to which the calculations should belong (default: JobCalculation)
+        :param calc_class: the calculation class to which the calculations should belong (default: CalcJobNode)
 
         :param calc_state: a specific state to filter the calculations to retrieve
 
@@ -848,7 +851,7 @@ class AbstractWorkflow(object):
           into sub-workflows, 1 means we go down to one step level of
           the sub-workflows, etc.)
 
-        :return: a list of JobCalculation objects
+        :return: a list of CalcJobNode objects
         """
 
         all_calcs = []
@@ -1071,7 +1074,7 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
         workflow_mapping = {_.pk: _ for _ in wflows}
 
         # get all calculations for all steps
-        calcs = JobCalculation.query(workflow_step__in=steps_pk)  # .order_by('ctime')
+        calcs = CalcJobNode.query(workflow_step__in=steps_pk)  # .order_by('ctime')
         # dictionary mapping pks into calculations
         calc_mapping = {_.pk: _ for _ in calcs}
 

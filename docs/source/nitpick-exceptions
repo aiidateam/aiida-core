@@ -104,6 +104,8 @@ py:obj bool
 # as types or rtypes without actually being imported
 py:class  abc.ABCMeta
 
+py:class  CalcJobExitStatus
+
 py:exc    click.BadParameter
 py:class  click.ParamType
 py:class  click.core.Group
@@ -214,10 +216,11 @@ py:meth   aiida.orm.group.Group.get_from_string
 
 py:mod    click
 py:class  click.Choice
-
 py:func   click.Option.get_default
 
 py:class yaml.Dumper
 py:class yaml.Loader
 py:class yaml.dumper.Dumper
 py:class yaml.loader.Loader
+
+py:class uuid.UUID

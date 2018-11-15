@@ -159,13 +159,11 @@ def _ctime(node):
 
 
 def calc_info(calc_node):
-    from aiida.orm.calculation.function import FunctionCalculation
-    from aiida.orm.calculation.inline import InlineCalculation
-    from aiida.orm.calculation.job import JobCalculation
-    from aiida.orm.calculation.work import WorkCalculation
+    from aiida.orm.node.process import CalcFunctionNode, CalcJobNode, WorkFunctionNode, WorkChainNode
+    from aiida.orm.node.process import WorkChainNode
     from aiida.work.processes import ProcessState
 
-    if isinstance(calc_node, WorkCalculation):
+    if isinstance(calc_node, WorkChainNode):
         plabel = calc_node.process_label
         pstate = calc_node.process_state
         winfo = calc_node.stepper_state_info
@@ -175,11 +173,11 @@ def calc_info(calc_node):
         else:
             s = u'{} <pk={}> [{}] [{}]'.format(plabel, calc_node.pk, pstate, winfo)
 
-    elif isinstance(calc_node, JobCalculation):
+    elif isinstance(calc_node, CalcJobNode):
         clabel = type(calc_node).__name__
         cstate = str(calc_node.get_state())
         s = u'{} <pk={}> [{}]'.format(clabel, calc_node.pk, cstate)
-    elif isinstance(calc_node, (FunctionCalculation, InlineCalculation)):
+    elif isinstance(calc_node, (WorkFunctionNode, CalcFunctionNode)):
         plabel = calc_node.process_label
         pstate = calc_node.process_state
         s = u'{} <pk={}> [{}]'.format(plabel, calc_node.pk, pstate)

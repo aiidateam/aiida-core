@@ -16,7 +16,7 @@ from click.testing import CliRunner
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.params import options
 from aiida.cmdline.params.types import CalculationParamType
-from aiida.orm import Calculation, FunctionCalculation, InlineCalculation, JobCalculation, WorkCalculation
+from aiida.orm.node.process import CalculationNode, CalcFunctionNode, CalcJobNode, WorkChainNode, WorkFunctionNode
 from aiida.orm.utils.loaders import OrmEntityLoader
 
 
@@ -33,13 +33,13 @@ class TestCalculationParamType(AiidaTestCase):
         super(TestCalculationParamType, cls).setUpClass()
 
         cls.param = CalculationParamType()
-        cls.entity_01 = Calculation().store()
-        cls.entity_02 = Calculation().store()
-        cls.entity_03 = Calculation().store()
-        cls.entity_04 = FunctionCalculation()
-        cls.entity_05 = InlineCalculation()
-        cls.entity_06 = JobCalculation()
-        cls.entity_07 = WorkCalculation()
+        cls.entity_01 = CalculationNode().store()
+        cls.entity_02 = CalculationNode().store()
+        cls.entity_03 = CalculationNode().store()
+        cls.entity_04 = WorkFunctionNode()
+        cls.entity_05 = CalcFunctionNode()
+        cls.entity_06 = CalcJobNode()
+        cls.entity_07 = WorkChainNode()
 
         cls.entity_01.label = 'calculation_01'
         cls.entity_02.label = str(cls.entity_01.pk)

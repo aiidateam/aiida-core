@@ -58,7 +58,7 @@ To summarize: to write a workflow that automatically stores the provenance, one 
 Workchains
 ----------
 Now that we have demonstrated how easily ``workfunctions`` can be used to write your workflow that automatically keeps the provenance, it is time to confess that workfunctions are not perfect and have their shortcomings.
-In the simple example of adding and multiplying numbers, the time to execute the functions is very short, but imagine that you are performing a more costly calculation, e.g. you want to run an actual ``JobCalculation`` that will be submitted to the scheduler and may run for a long time.
+In the simple example of adding and multiplying numbers, the time to execute the functions is very short, but imagine that you are performing a more costly calculation, e.g. you want to run an actual ``CalcJob`` that will be submitted to the scheduler and may run for a long time.
 If anywhere during the chain, the workflow is interrupted, for whatever reason, all progress is lost.
 There are no 'checkpoints', so to speak, by simply chaining workfunctions together.
 
@@ -136,7 +136,7 @@ When to use which
 -----------------
 Now that we know how the two workflow components, workflows and workchains, work in AiiDA, you might wonder: when should I use which one?
 For simple operations that do not take long, the simplicity of the workfunction may be all you need, so by all means use it.
-However, a good rule of thumb is that as soon as the code is expected to take longer, for example when you want to launch a ``JobCalculation``, it is always best to go for the ``WorkChain``.
+However, a good rule of thumb is that as soon as the code is expected to take longer, for example when you want to launch a ``CalcJob``, it is always best to go for the ``WorkChain``.
 The automatic checkpointing, which guarantess that work between steps is saved, becomes very important.
 The workchain offers a lot more features than checkpointing that may make it more preferable over the workfunction, which you can read about in the :ref:`workflow development <workflow_development>` section.
 
@@ -176,7 +176,7 @@ If you would also like to get a reference of the node that represents the ``Work
 .. include:: include/snippets/workflows/workchains/run_workchain_get_node_pid.py
     :code: python
 
-For the former, the ``node`` will be the ``WorkCalculation`` node that is used to represent the workchain in the database, whereas for the latter, the ``pid`` is the pk of that same node.
+For the former, the ``node`` will be the ``WorkChainNode`` node that is used to represent the workchain in the database, whereas for the latter, the ``pid`` is the pk of that same node.
 The ``run`` based functions can actually also be used for ``workfunctions``.
 Calling ``run`` with a workfunction, does exactly the same as running the workfunction directly as a normal python function and so doesn't gain anything new.
 However, if you are interested in also getting the calculation node or the pid of the process, in addition to the result of the function, calling the workfunction through ``run_get_node`` or ``run_get_pid`` is the correct solution.
@@ -227,7 +227,7 @@ For more details, please refer to the advanced section on :ref:`submitting calcu
 
 Process builder
 ---------------
-There is one final way of launching a process, whether it be a ``WorkChain`` or a ``JobCalculation``.
+There is one final way of launching a process, whether it be a ``WorkChain`` or a ``CalcJob``.
 Each process has a method called ``get_builder`` which will return an instance of the ``ProcessBuilder`` customised for that particular ``Process`` class.
 The builder knows exactly which inputs the process takes and expects and is therefore ideal for interactive usage.
 For details on how to instantiate and populate a ``ProcessBuilder`` instance please refer to :ref:`the process builder section<process_builder>`.
@@ -248,7 +248,7 @@ When you have launched workflows, be it workfunctions or workchains, you may wan
 verdi work list
 ---------------
 Your first point of entry will be the ``verdi`` command ``verdi work list``.
-This command will print a list of all active ``WorkCalculation`` nodes, which are the database objects used by ``WorkChains`` and ``workfunctions`` to store the details of their execution in the database.
+This command will print a list of all active ``WorkflowNode`` nodes, which are the database objects used by ``WorkChains`` and ``workfunctions`` to store the details of their execution in the database.
 A typical example may look something like the following:
 
 .. code-block:: bash
@@ -261,8 +261,8 @@ A typical example may look something like the following:
 
     Total results: 2
 
-The 'State' column is a concatenation of the ``process_state`` and the ``exit_status`` of the ``WorkCalculation``.
-By default, the command will only show active items, i.e. ``WorkCalculations`` that have not yet reached a terminal state.
+The 'State' column is a concatenation of the ``process_state`` and the ``exit_status`` of the ``WorkflowNode``.
+By default, the command will only show active items, i.e. ``WorkflowNodes`` that have not yet reached a terminal state.
 If you want to also show the nodes in a terminal states, you can use the ``-a`` flag and call ``verdi work list -a``:
 
 .. code-block:: bash
@@ -332,7 +332,7 @@ In general they can be very useful for a user to understand what has happened du
 
 verdi work status
 -----------------
-One of the more powerful aspect of workchains, is that they can call ``JobCalculations`` and other ``WorkChains`` to create a nested call hierarchy.
+One of the more powerful aspect of workchains, is that they can call ``CalcJobs`` and other ``WorkChains`` to create a nested call hierarchy.
 If you want to inspect the status of a workchain and all the children that it called, ``verdi work status`` is the go-to tool.
 An example output is the following:
 
@@ -347,17 +347,16 @@ In addition to the call tree, each node also shows its current process state and
 This tool can be very useful to inspect while a workchain is running at which step in the outline it currently is, as well as the status of all the children calculations it called.
 
 
-verdi calculation show
+verdi work show
 ----------------------
-Finally, there is a command that displays detailed information about the ``WorkCalculation``, such as its inputs, outputs and the calculations it called and was called by.
-Since the ``WorkCalculation`` is a sub class of the ``Calculation`` class, we can use the same command ``verdi calculation show`` that one would use to inspect the details of a ``JobCalculation``.
+Finally, there is a command that displays detailed information about the ``WorkflowNode``, such as its inputs, outputs and the calculations it called and was called by.
 An example output for a ``PwBaseWorkChain`` would look like the following:
 
 .. code-block:: bash
 
     Property       Value
     -------------  ------------------------------------
-    type           WorkCalculation
+    type           WorkChainNode
     pk             164
     uuid           08bc5a3c-da7d-44e0-a91c-dda9ddcb638b
     label
@@ -641,7 +640,7 @@ It takes a single argument, a string, that is the message that needs to be repor
         self.report('here we will submit a calculation')
 
 This will send that message to the internal logger of python, which will cause it to be picked up by the default AiiDA logger, but it will also trigger the database log handler, which will store the message in the database and link it to the node of the workchain.
-This allows the ``verdi work report`` command to retrieve all those messages that were fired using the ``report`` method for a specifc ``WorkCalculation`` node.
+This allows the ``verdi work report`` command to retrieve all those messages that were fired using the ``report`` method for a specific ``WorkflowNode``.
 Note that the report method, in addition to the pk of the workchain, will also automatically record the name of the workchain and the name of the outline step in which the report message was fired.
 This information will show up in the output of ``verdi work report``, so you never have to explicitly reference the workchain name, outline step name or date and time in the message itself.
 
@@ -676,8 +675,8 @@ How this is accomplished, we will show in the next section.
 
 Submitting calculations and workchains
 --------------------------------------
-One of the main tasks of a ``WorkChain`` will be to launch a ``JobCalculation`` or even another ``WorkChain``.
-An example in the section on :ref:`running workflows<running_workflows>` already showed that the ``WorkChain`` class provides the :meth:`~aiida.work.processes.Process.submit` method, to submit another ``WorkChain`` or ``JobCalculation`` to the daemon.
+One of the main tasks of a ``WorkChain`` will be to launch a ``CalcJob`` or even another ``WorkChain``.
+An example in the section on :ref:`running workflows<running_workflows>` already showed that the ``WorkChain`` class provides the :meth:`~aiida.work.processes.Process.submit` method, to submit another ``WorkChain`` or ``CalcJob`` to the daemon.
 However, that is not enough to complete the process.
 When the ``submit`` method is called, the process is created and submitted to the daemon, but at that point it is not yet done.
 So the value that is returned by the ``submit`` call is not the result of the submitted process, but rather it is a *future*.
@@ -761,7 +760,7 @@ In the event that the calculation did not finish successfully, the following sni
 
     def submit_calculation(self):
         inputs = {'code': code}
-        future = self.submit(SomeJobCalculation, **inputs)
+        future = self.submit(SomeCalcJob, **inputs)
         return ToContext(calculation=future)
 
     def inspect_calculation(self):
@@ -803,7 +802,7 @@ Consider the following example:
         return ExitCode(418, 'I am a teapot')
 
 The execution of the workfunction will be immediately terminated as soon as the tuple is returned, and the exit status and message will be set to ``418`` and ``I am a teapot``, respectively.
-Since no output nodes are returned, the ``FunctionCalculation`` node will have no outputs and the value returned from the function call will be an empty dictionary.
+Since no output nodes are returned, the ``WorkFunctionNode`` node will have no outputs and the value returned from the function call will be an empty dictionary.
 
 Modular workflow design
 -----------------------
@@ -906,8 +905,8 @@ In doing so a few minor changes were introduced that break workchains that were 
 However, these workchains can be updated with just a few minor updates that we will list here:
 
 * The free function ``submit`` in any ``WorkChain`` should be replaced with ``self.submit``.
-* The ``_options`` input for ``JobCalculation`` is now ``options``, simply removed the leading underscore.
-* The ``label`` and ``description`` inputs for ``JobCalculation`` or a ``WorkChain`` have also lost the underscore.
+* The ``_options`` input for ``CalcJob`` is now ``options``, simply removed the leading underscore.
+* The ``label`` and ``description`` inputs for ``CalcJob`` or a ``WorkChain`` have also lost the underscore.
 * The free functions from ``aiida.work.run`` have been moved to ``aiida.work.launch``, even though for the time being the old import will still work.
 * The future returned by ``submit`` no longer has the ``pid`` attribute but rather ``pk``.
 * The ``get_inputs_template class`` method has been replaced by ``get_builder``. See the section on the :ref:`process builder<process_builder>` on how to use it.

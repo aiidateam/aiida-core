@@ -51,14 +51,14 @@ The first thing to know is how to chose entities that you want to query::
 
     from aiida.orm.querybuilder import QueryBuilder
     qb = QueryBuilder()       # Instantiating instance. One instance -> one query
-    qb.append(JobCalculation) # Setting first vertice of path
+    qb.append(CalcJobNode) # Setting first vertice of path
 
 You can also pass a tuple, list or set of classes, if you are interested in instances of different classes.
 However, they have to be of the same ORM-type (I.e. all have to be subclasses of Node::
 
     from aiida.orm.querybuilder import QueryBuilder
     qb = QueryBuilder()       # Instantiating instance. One instance -> one query
-    qb.append([JobCalculation, WorkCalculation]) # Setting first vertice of path, either Work or Job.
+    qb.append([CalcJobNode, WorkChainNode]) # Setting first vertice of path, either WorkChainNode or Job.
 
 
 Retrieving results
@@ -69,7 +69,7 @@ database). The question is how to get the results from the query::
 
     from aiida.orm.querybuilder import QueryBuilder
     qb = QueryBuilder()                 # Instantiating instance
-    qb.append(JobCalculation)           # Setting first vertice of path
+    qb.append(CalcJobNode)           # Setting first vertice of path
 
     first_row = qb.first()              # Returns a list (!)
                                         # of the results of the first row
@@ -99,12 +99,12 @@ Filtering
 
 
 Since we now know how to set an entity, we can start to filter by properties of that entity.
-Suppose we do not want to all JobCalculations, but only the ones in state
+Suppose we do not want to all CalcJobNodes, but only the ones in state
 'FINISHED'::
 
     qb = QueryBuilder()                 # An empty QueryBuilder instances
     qb.append(
-        JobCalculation,                 # I am appending a JobCalculation
+        CalcJobNode,                 # I am appending a CalcJobNode
         filters={                       # Specifying the filters:
             'state':{'==':'FINISHED'},  # the calculation has to have finished
         },
@@ -121,7 +121,7 @@ state 'FINISHED' and were created in the last *n* days::
 
     qb = QueryBuilder()                 # An empty QueryBuilder instances
     qb.append(
-        JobCalculation,                 # I am appending a JobCalculation
+        CalcJobNode,                 # I am appending a CalcJobNode
         filters={                       # Specifying the filters:
             'state':{'==':'FINISHED'},  # the calculation has to have finished AND
             'ctime':{'>':time_n_days_ago}     # created in the last n days
@@ -132,7 +132,7 @@ state 'FINISHED' and were created in the last *n* days::
 
 Let's go through the above example.
 We have instantiated QueryBuilder instance.
-We appended to its path a JobCalculation (a remote calculation),
+We appended to its path a CalcJobNode (a remote calculation),
 and specified that we are only interested in  calculations
 that have finished **and** that were created in the last *n* days.
 
@@ -141,7 +141,7 @@ What if we want calculations that have finished **or** were created in the last
 
     qb = QueryBuilder()
     qb.append(
-        JobCalculation,
+        CalcJobNode,
         filters={
             'or':[
                 {'state':{'==':'FINISHED'}},
@@ -159,7 +159,7 @@ This will be the next example::
 
     qb = QueryBuilder()
     qb.append(
-        JobCalculation,
+        CalcJobNode,
         filters={
             'state':{'in':['FINISHED', 'RETRIEVING']}
         },
@@ -172,7 +172,7 @@ So, to ask for all calculations that are not in 'FINISHED' or 'RETRIEVING'::
 
     qb = QueryBuilder()
     qb.append(
-        JobCalculation,
+        CalcJobNode,
         filters={
             'state':{'!in':['FINISHED', 'RETRIEVING']}
         },
@@ -269,11 +269,11 @@ Joining entities
 ++++++++++++++++
 
 But we sometimes need to query relationships in graph-like database.
-Let's join a node to its output, e.g. StructureData and JobCalculation (as output)::
+Let's join a node to its output, e.g. StructureData and CalcJobNode (as output)::
 
     qb = QueryBuilder()
     qb.append(StructureData, tag='structure')
-    qb.append(JobCalculation, output_of='structure')
+    qb.append(CalcJobNode, output_of='structure')
 
 In above example we are querying structures and calculations, with the predicate that the
 calculation is an output of the structure (the same as saying that the structure is an input to the calculation)
@@ -318,12 +318,12 @@ Some more examples::
 
     # StructureData as an input of a job calculation
     qb = QueryBuilder()
-    qb.append(JobCalculation, tag='calc')
+    qb.append(CalcJobNode, tag='calc')
     qb.append(StructureData, input_of='calc')
 
     # StructureData and ParameterData as inputs to a calculation
     qb = QueryBuilder()
-    qb.append(JobCalculation, tag='calc')
+    qb.append(CalcJobNode, tag='calc')
     qb.append(StructureData, input_of='calc')
     qb.append(ParameterDataData, input_of='calc')
 
@@ -637,7 +637,7 @@ you're in good shape to query the database, so you can skip the rest if you want
 .. ~
 .. ~     qb = QueryBuilder()
 .. ~     qb.append(
-.. ~             JobCalculation,
+.. ~             CalcJobNode,
 .. ~             filters={'ctime':{'>': now - timedelta(days=3)}}
 .. ~         )
 .. ~     qb.append(
@@ -663,7 +663,7 @@ you're in good shape to query the database, so you can skip the rest if you want
 .. ~
 .. ~     qb = QueryBuilder()
 .. ~     qb.append(
-.. ~             JobCalculation,
+.. ~             CalcJobNode,
 .. ~             filters={'ctime':{'>': now - timedelta(days=3)}}
 .. ~         )
 .. ~     qb.append(
@@ -682,7 +682,7 @@ you're in good shape to query the database, so you can skip the rest if you want
 .. ~
 .. ~     qb = QueryBuilder()
 .. ~     qb.append(
-.. ~             JobCalculation,
+.. ~             CalcJobNode,
 .. ~             filters={'ctime':{'>': now - timedelta(days=3)}}
 .. ~         )
 .. ~     qb.append(
@@ -703,7 +703,7 @@ you're in good shape to query the database, so you can skip the rest if you want
 .. ~
 .. ~     qb = QueryBuilder()
 .. ~     qb.append(
-.. ~             JobCalculation,
+.. ~             CalcJobNode,
 .. ~             filters={'ctime':{'>': now - timedelta(days=3)}},
 .. ~             project={'id':{'func':'count'}}
 .. ~         )
@@ -727,7 +727,7 @@ project the label and label::
 
     qb = QueryBuilder()
     qb.append(
-            JobCalculation,
+            CalcJobNode,
             filters={'ctime':{'>': now - timedelta(days=3)}},
             project={'id':{'func':'count'}}
         )
@@ -751,7 +751,7 @@ Assuming you want to order the above example by the time of the calculations::
 
     qb = QueryBuilder()
     qb.append(
-            JobCalculation,
+            CalcJobNode,
             project=['*']
         )
     qb.append(
@@ -759,7 +759,7 @@ Assuming you want to order the above example by the time of the calculations::
             filters={'attributes.energy':{'>':-5.0}},
          )
 
-    qb.order_by({JobCalculation:{'ctime':'asc'}}) # 'asc' or 'desc' (ascending/descending)
+    qb.order_by({CalcJobNode:{'ctime':'asc'}}) # 'asc' or 'desc' (ascending/descending)
 
 
 Limiting the number of results
@@ -769,7 +769,7 @@ You can also limit the number of rows returned with the method *limit*::
 
     qb = QueryBuilder()
     qb.append(
-        JobCalculation,
+        CalcJobNode,
         filters={'ctime':{'>': now - timedelta(days=3)}},
         project=['*']
     )
@@ -779,7 +779,7 @@ You can also limit the number of rows returned with the method *limit*::
      )
 
     # order by time descending
-    qb.order_by({JobCalculation:{'ctime':'desc'}})
+    qb.order_by({CalcJobNode:{'ctime':'desc'}})
 
     # Limit to results to the first 10 results:
     qb.limit(10)

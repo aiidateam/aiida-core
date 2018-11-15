@@ -21,9 +21,9 @@ from aiida.common.utils import classproperty
 
 class FunctionCalculationMixin(object):
     """
-    This mixin should be used for Calculation subclasses that are used to record the execution
-    of a python function. For example the Calculation nodes that are used for a function that
-    was wrapped by the `workfunction` or `make_inline` function decorators. The `store_source_info`
+    This mixin should be used for ProcessNode subclasses that are used to record the execution
+    of a python function. For example the process nodes that are used for a function that
+    was wrapped by the `workfunction` or `calcfunction` function decorators. The `store_source_info`
     method can then be called with the wrapped function to store information about that function
     in the calculation node through the inspect module. Various property getters are defined to
     later retrieve that information from the node

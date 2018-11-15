@@ -19,13 +19,13 @@ class TestQueryBuilderDjango(AiidaTestCase):
         """
         This tests the classifications of the QueryBuilder u. the django backend.
         """
-        from aiida.backends.djsite.querybuilder_django.dummy_model import (
+        from aiida.orm.implementation.django.dummy_model import (
             DbNode, DbUser, DbComputer,
             DbGroup,
         )
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.data.structure import StructureData
-        from aiida.orm import Group, Node, Computer, Data, Calculation
+        from aiida.orm import Group, Node, Computer, Data
         from aiida.common.exceptions import InputValidationError
         qb = QueryBuilder()
 

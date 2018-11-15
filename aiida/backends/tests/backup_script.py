@@ -343,7 +343,8 @@ class TestBackupScriptIntegration(AiidaTestCase):
             shutil.rmtree(temp_folder, ignore_errors=True)
 
     def fill_repo(self):
-        from aiida.orm import JobCalculation, CalculationFactory, Data, DataFactory
+        from aiida.orm import CalculationFactory, Data, DataFactory
+        from aiida.orm.node.process import CalcJobNode
 
         extra_name = self.__class__.__name__ + "/test_with_subclasses"
         calc_params = {
@@ -352,10 +353,10 @@ class TestBackupScriptIntegration(AiidaTestCase):
                           'num_mpiprocs_per_machine': 1}
         }
 
-        TemplateReplacerCalc = CalculationFactory('simpleplugins.templatereplacer')
+        TemplateReplacerCalc = CalculationFactory('templatereplacer')
         ParameterData = DataFactory('parameter')
 
-        a1 = JobCalculation(**calc_params).store()
+        a1 = CalcJobNode(**calc_params).store()
         # To query only these nodes later
         a1.set_extra(extra_name, True)
         a2 = TemplateReplacerCalc(**calc_params).store()
@@ -369,7 +370,7 @@ class TestBackupScriptIntegration(AiidaTestCase):
         a5.set_extra(extra_name, True)
         # I don't set the extras, just to be sure that the filtering works
         # The filtering is needed because other tests will put stuff int he DB
-        a6 = JobCalculation(**calc_params)
+        a6 = CalcJobNode(**calc_params)
         a6.store()
         a7 = Node()
         a7.store()

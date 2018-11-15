@@ -14,7 +14,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 from enum import Enum
 from plumpy.utils import AttributesDict
-from aiida.orm.calculation import Calculation
+from aiida.orm.node.process import ProcessNode
 from aiida.orm.workflow import Workflow
 
 __all__ = ['Awaitable', 'AwaitableTarget', 'AwaitableAction', 'construct_awaitable']
@@ -31,7 +31,7 @@ class AwaitableTarget(Enum):
     """
     Enum that describes the class of the target a given awaitable
     """
-    CALCULATION = 'calculation'
+    PROCESS = 'process'
     WORKFLOW = 'workflow'
 
 
@@ -55,14 +55,14 @@ def construct_awaitable(target):
         * action: the context action to be performed upon completion
         * outputs: a boolean that toggles whether the node itself
 
-    Currently the only awaitable classes are Calculation and Workflow
+    Currently the only awaitable classes are ProcessNode and Workflow
     The only awaitable actions are the Assign and Append operators
     """
     if isinstance(target, Awaitable):
         return target
 
-    if isinstance(target, Calculation):
-        awaitable_target = AwaitableTarget.CALCULATION
+    if isinstance(target, ProcessNode):
+        awaitable_target = AwaitableTarget.PROCESS
     elif isinstance(target, Workflow):
         awaitable_target = AwaitableTarget.WORKFLOW
     else:

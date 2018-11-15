@@ -149,13 +149,13 @@ class Data(Node):
 
     @override
     def add_link_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
-        from aiida.orm.calculation import Calculation
+        from aiida.orm.node.process import ProcessNode
 
         if link_type is LinkType.CREATE and \
                         len(self.get_inputs(link_type=LinkType.CREATE)) > 0:
             raise ValueError("At most one CREATE node can enter a data node")
 
-        if not isinstance(src, Calculation):
+        if not isinstance(src, ProcessNode):
             raise ValueError("Links entering a data object can only be of type calculation")
 
         return super(Data, self).add_link_from(src, label, link_type)
@@ -167,8 +167,9 @@ class Data(Node):
 
         An output of a data can only be a calculation
         """
-        from aiida.orm.calculation import Calculation
-        if not isinstance(dest, Calculation):
+        from aiida.orm.node.process import ProcessNode
+
+        if not isinstance(dest, ProcessNode):
             raise ValueError("The output of a data node can only be a calculation")
 
         return super(Data, self)._linking_as_output(dest, link_type)

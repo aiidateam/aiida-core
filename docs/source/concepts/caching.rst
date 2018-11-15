@@ -35,7 +35,7 @@ Caching is also implemented for Data nodes. This is not very useful in practice 
 
 As you can see, passing ``use_cache=True`` to the ``store`` method enables using the cache. The fact that ``n2`` was created from ``n1`` is stored in the ``_aiida_cached_from`` extra of ``n2``.
 
-When running a ``JobCalculation`` through the ``Process`` interface, you cannot directly set the ``use_cache`` flag when the calculation node is stored internally. Instead, you can pass the ``_use_cache`` flag to the ``run`` or ``submit`` method.
+When running a ``CalcJob`` through the ``Process`` interface, you cannot directly set the ``use_cache`` flag when the calculation node is stored internally. Instead, you can pass the ``_use_cache`` flag to the ``run`` or ``submit`` method.
 
 Caching is **not** implemented for workchains and workfunctions. Unlike calculations, they can not only create new data nodes, but also return exsting ones. When copying a cached workchain, it's not clear which node should be returned without actually running the workchain. This is explained in more detail in the section :ref:`caching_provenance`.
 
@@ -49,7 +49,7 @@ Of course, using caching would be quite tedious if you had to set ``use_cache`` 
     profile-name:
       default: False
       enabled:
-        - aiida.orm.calculation.job.simpleplugins.templatereplacer.TemplatereplacerCalculation
+        - aiida.calculations.plugins.templatereplacer.TemplatereplacerCalculation
         - aiida.orm.data.str.Str
       disabled:
         - aiida.orm.data.float.Float
@@ -86,7 +86,7 @@ In the case of calculations, the hashes of the inputs are also included. When de
 * To ignore specific attributes, a ``Node`` subclass can have a ``_hash_ignored_attributes`` attribute. This is a list of attribute names which are ignored when creating the hash.
 * For calculations, the ``_hash_ignored_inputs`` attribute lists inputs that should be ignored when creating the hash.
 * To add things which should be considered in the hash, you can override the :meth:`_get_objects_to_hash <.AbstractNode._get_objects_to_hash>` method. Note that doing so overrides the behavior described above, so you should make sure to use the ``super()`` method.
-* Pass a keyword argument to :meth:`.get_hash <.AbstractNode.get_hash>`. These are passed on to ``aiida.common.hashing.make_hash``. For example, the ``ignored_folder_content`` keyword is used by the :class:`JobCalculation <.AbstractJobCalculation>` to ignore the ``raw_input`` subfolder of its repository folder.
+* Pass a keyword argument to :meth:`.get_hash <.AbstractNode.get_hash>`. These are passed on to ``aiida.common.hashing.make_hash``. For example, the ``ignored_folder_content`` keyword is used by the :class:`JobCalculation <aiida.orm.node.process.calculation.calcjob.CalcJobNode>` to ignore the ``raw_input`` subfolder of its repository folder.
 
 Additionally, there are two methods you can use to disable caching for particular nodes:
 

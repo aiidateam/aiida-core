@@ -42,13 +42,11 @@ def work_list(all_entries, process_state, exit_status, failed, past_days, limit,
     """Show a list of work calculations that are still running."""
     from tabulate import tabulate
     from aiida.cmdline.utils.common import print_last_process_state_change
-    from aiida.orm.calculation.function import FunctionCalculation
-    from aiida.orm.calculation.work import WorkCalculation
-
-    node_types = (WorkCalculation, FunctionCalculation)
+    from aiida.orm.node.process import WorkChainNode, WorkFunctionNode
 
     builder = CalculationQueryBuilder()
-    filters = builder.get_filters(all_entries, process_state, exit_status, failed, node_types=node_types)
+    filters = builder.get_filters(
+        all_entries, process_state, exit_status, failed, node_types=(WorkChainNode, WorkFunctionNode))
     query_set = builder.get_query_set(filters=filters, past_days=past_days, limit=limit)
     projected = builder.get_projected(query_set, projections=project)
 
@@ -65,8 +63,7 @@ def work_list(all_entries, process_state, exit_status, failed, past_days, limit,
 
 
 @verdi_work.command('report')
-@arguments.CALCULATIONS(
-    type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
+@arguments.WORKFLOWS(type=types.WorkflowParamType(sub_classes=('aiida.node:process.workflow.workchain',)))
 @click.option('-i', '--indent-size', type=int, default=2, help='set the number of spaces to indent each level by')
 @click.option(
     '-l',
@@ -75,15 +72,15 @@ def work_list(all_entries, process_state, exit_status, failed, past_days, limit,
     default='REPORT',
     help='filter the results by name of the log level')
 @click.option('-m', '--max-depth', 'max_depth', type=int, default=None, help='limit the number of levels to be printed')
-def work_report(calculations, levelname, indent_size, max_depth):
+def work_report(workflows, levelname, indent_size, max_depth):
     # pylint: disable=too-many-locals
     """
     Return a list of recorded log messages for the WorkChain with pk=PK
     """
     import itertools
-    from aiida.orm.backend import construct_backend
+    from aiida.orm.backends import construct_backend
     from aiida.orm.querybuilder import QueryBuilder
-    from aiida.orm.calculation.work import WorkCalculation
+    from aiida.orm.node.process import WorkChainNode
 
     def get_report_messages(pk, depth, levelname):
         """Return list of log messages with given levelname and their depth for a node with a given pk."""
@@ -99,9 +96,9 @@ def work_report(calculations, levelname, indent_size, max_depth):
     def get_subtree(pk, level=0):
         """Get a nested tree of work calculation nodes and their nesting level starting from this pk."""
         builder = QueryBuilder()
-        builder.append(cls=WorkCalculation, filters={'id': pk}, tag='workcalculation')
+        builder.append(cls=WorkChainNode, filters={'id': pk}, tag='workcalculation')
         builder.append(
-            cls=WorkCalculation,
+            cls=WorkChainNode,
             project=['id'],
             # In the future, we should specify here the type of link
             # for now, CALL links are the only ones allowing calc-calc
@@ -120,9 +117,9 @@ def work_report(calculations, levelname, indent_size, max_depth):
         for subtree in tree[1]:
             print_subtree(subtree, prepend=prepend + "  ")
 
-    for calculation in calculations:
+    for workflow in workflows:
 
-        workchain_tree = get_subtree(calculation.pk)
+        workchain_tree = get_subtree(workflow.pk)
 
         if max_depth:
             report_list = [
@@ -135,7 +132,7 @@ def work_report(calculations, levelname, indent_size, max_depth):
         reports.sort(key=lambda r: r[0].time)
 
         if not reports:
-            echo.echo("No log messages recorded for this work calculation")
+            echo.echo("No log messages recorded for this entry")
             return
 
         object_ids = [entry[0].id for entry in reports]
@@ -157,28 +154,26 @@ def work_report(calculations, levelname, indent_size, max_depth):
 
 
 @verdi_work.command('show')
-@arguments.CALCULATIONS(
-    type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
+@arguments.WORKFLOWS()
 @decorators.with_dbenv()
-def work_show(calculations):
-    """Show a summary for one or multiple calculations."""
+def work_show(workflows):
+    """Show a summary for one or multiple workflows."""
     from aiida.cmdline.utils.common import get_node_info
 
-    for calculation in calculations:
-        echo.echo(get_node_info(calculation))
+    for workflow in workflows:
+        echo.echo(get_node_info(workflow))
 
 
 @verdi_work.command('status')
-@arguments.CALCULATIONS(
-    type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
-def work_status(calculations):
+@arguments.WORKFLOWS()
+def work_status(workflows):
     """
-    Print the status of work calculations
+    Print the status of work workflows
     """
     from aiida.utils.ascii_vis import format_call_graph
 
-    for calculation in calculations:
-        graph = format_call_graph(calculation)
+    for workflow in workflows:
+        graph = format_call_graph(workflow)
         echo.echo(graph)
 
 
@@ -214,102 +209,98 @@ def work_plugins(entry_point):
 
 
 @verdi_work.command('kill')
-@arguments.CALCULATIONS(
-    type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
+@arguments.WORKFLOWS()
 @decorators.deprecated_command("This command will be removed in a future release. Use 'verdi process kill' instead.")
-def work_kill(calculations):
+def work_kill(workflows):
     """
-    Kill work calculations
+    Kill work workflows
     """
     from aiida import work
     from aiida.work import RemoteException, DeliveryFailed, CommunicationTimeout
 
     controller = work.AiiDAManager.get_process_controller()
-    for calculation in calculations:
+    for workflow in workflows:
 
-        if calculation.is_terminated:
-            echo.echo_error('Process<{}> is already terminated'.format(calculation.pk))
+        if workflow.is_terminated:
+            echo.echo_error('Process<{}> is already terminated'.format(workflow.pk))
             continue
 
         try:
-            future = controller.kill_process(calculation.pk, msg='Killed through `verdi work kill`')
+            future = controller.kill_process(workflow.pk, msg='Killed through `verdi work kill`')
             result = future.result()
 
             if result:
-                echo.echo_success('killed Process<{}>'.format(calculation.pk))
+                echo.echo_success('killed Process<{}>'.format(workflow.pk))
             else:
-                echo.echo_error('problem killing Process<{}>'.format(calculation.pk))
+                echo.echo_error('problem killing Process<{}>'.format(workflow.pk))
         except CommunicationTimeout:
-            echo.echo_error('call to kill Process<{}> timed out'.format(calculation.pk))
+            echo.echo_error('call to kill Process<{}> timed out'.format(workflow.pk))
         except (RemoteException, DeliveryFailed) as exception:
-            echo.echo_error('failed to kill Process<{}>: {}'.format(calculation.pk, exception))
+            echo.echo_error('failed to kill Process<{}>: {}'.format(workflow.pk, exception))
 
 
 @verdi_work.command('pause')
-@arguments.CALCULATIONS(
-    type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
+@arguments.WORKFLOWS()
 @decorators.deprecated_command("This command will be removed in a future release. Use 'verdi process pause' instead.")
-def work_pause(calculations):
+def work_pause(workflows):
     """
-    Pause running work calculations
+    Pause running work workflows
     """
     from aiida import work
     from aiida.work import RemoteException, DeliveryFailed, CommunicationTimeout
 
     controller = work.AiiDAManager.get_process_controller()
-    for calculation in calculations:
+    for workflow in workflows:
 
-        if calculation.is_terminated:
-            echo.echo_error('Calculation<{}> is already terminated'.format(calculation.pk))
+        if workflow.is_terminated:
+            echo.echo_error('Calculation<{}> is already terminated'.format(workflow.pk))
             continue
 
         try:
-            if controller.pause_process(calculation.pk):
-                echo.echo_success('paused Calculation<{}>'.format(calculation.pk))
+            if controller.pause_process(workflow.pk):
+                echo.echo_success('paused Calculation<{}>'.format(workflow.pk))
             else:
-                echo.echo_error('problem pausing Calculation<{}>'.format(calculation.pk))
+                echo.echo_error('problem pausing Calculation<{}>'.format(workflow.pk))
         except CommunicationTimeout:
-            echo.echo_error('call to pause Process<{}> timed out'.format(calculation.pk))
+            echo.echo_error('call to pause Process<{}> timed out'.format(workflow.pk))
         except (RemoteException, DeliveryFailed) as exception:
-            echo.echo_error('failed to pause Calculation<{}>: {}'.format(calculation.pk, exception))
+            echo.echo_error('failed to pause Calculation<{}>: {}'.format(workflow.pk, exception))
 
 
 @verdi_work.command('play')
-@arguments.CALCULATIONS(
-    type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
+@arguments.WORKFLOWS()
 @decorators.deprecated_command("This command will be removed in a future release. Use 'verdi process play' instead.")
-def work_play(calculations):
+def work_play(workflows):
     """
-    Play paused work calculations
+    Play paused work workflows
     """
     from aiida.work import RemoteException, DeliveryFailed, CommunicationTimeout
     from aiida import work
 
     controller = work.AiiDAManager.get_process_controller()
-    for calculation in calculations:
+    for workflow in workflows:
 
-        if calculation.is_terminated:
-            echo.echo_error('Calculation<{}> is already terminated'.format(calculation.pk))
+        if workflow.is_terminated:
+            echo.echo_error('Calculation<{}> is already terminated'.format(workflow.pk))
             continue
 
         try:
-            if controller.play_process(calculation.pk):
-                echo.echo_success('played Calculation<{}>'.format(calculation.pk))
+            if controller.play_process(workflow.pk):
+                echo.echo_success('played Calculation<{}>'.format(workflow.pk))
             else:
-                echo.echo_critical('problem playing Calculation<{}>'.format(calculation.pk))
+                echo.echo_critical('problem playing Calculation<{}>'.format(workflow.pk))
         except CommunicationTimeout:
-            echo.echo_error('call to play Process<{}> timed out'.format(calculation.pk))
+            echo.echo_error('call to play Process<{}> timed out'.format(workflow.pk))
         except (RemoteException, DeliveryFailed) as exception:
-            echo.echo_critical('failed to play Calculation<{}>: {}'.format(calculation.pk, exception))
+            echo.echo_critical('failed to play Calculation<{}>: {}'.format(workflow.pk, exception))
 
 
 @verdi_work.command('watch')
-@arguments.CALCULATIONS(
-    type=types.CalculationParamType(sub_classes=('aiida.calculations:work', 'aiida.calculations:function')))
+@arguments.WORKFLOWS()
 @decorators.deprecated_command("This command will be removed in a future release. Use 'verdi process watch' instead.")
-def work_watch(calculations):
+def work_watch(workflows):
     """
-    Watch the state transitions for work calculations
+    Watch the state transitions for work workflows
     """
     from kiwipy import BroadcastFilter
     from aiida import work
@@ -319,7 +310,7 @@ def work_watch(calculations):
         echo.echo('pk={}, subject={}, body={}, correlation_id={}'.format(sender, subject, body, correlation_id))
 
     communicator = work.AiiDAManager.get_communicator()
-    for process in calculations:
+    for process in workflows:
 
         if process.is_terminated:
             echo.echo_error('Process<{}> is already terminated'.format(process.pk))

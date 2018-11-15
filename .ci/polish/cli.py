@@ -19,7 +19,7 @@ from aiida.utils.cli import options
 @command()
 @click.argument('expression', type=click.STRING, required=False)
 @options.daemon()
-@options.code(callback_kwargs={'entry_point': 'simpleplugins.arithmetic.add'}, required=False,
+@options.code(callback_kwargs={'entry_point': 'arithmetic.add'}, required=False,
     help='Code to perform the add operations with. Required if -C flag is specified')
 @click.option('-C', '--use-calculations', is_flag=True, default=False, show_default=True,
     help='Use job calculations to perform all additions')

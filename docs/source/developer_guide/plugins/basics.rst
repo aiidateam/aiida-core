@@ -22,7 +22,7 @@ Design guidelines
 ------------------
 
  * **Start simple.** Make use of existing classes like
-   :py:class:`JobCalculation <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation>`,
+   :py:class:`CalcJobNode <aiida.orm.node.process.calculation.calcjob.CalcJobNode>`,
    :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>`,
    :py:class:`SinglefileData <aiida.orm.data.singlefile.SinglefileData>`,
    ...

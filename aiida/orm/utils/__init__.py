@@ -15,10 +15,12 @@ import six
 
 from aiida.plugins.factory import CalculationFactory, DataFactory, WorkflowFactory
 
-__all__ = ['CalculationFactory', 'DataFactory', 'WorkflowFactory', 'load_code', 'load_computer', 'load_group', 'load_node', 'load_workflow']
+__all__ = 'CalculationFactory', 'DataFactory', 'WorkflowFactory', 'load_code', 'load_computer', 'load_group', \
+          'load_node', 'load_workflow'
 
 
-def load_entity(entity_loader=None, identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True):
+def load_entity(entity_loader=None, identifier=None, pk=None, uuid=None, label=None, sub_classes=None,
+                query_with_dashes=True):
     """
     Load a Code instance by one of its identifiers: pk, uuid or label
 
@@ -77,7 +79,8 @@ def load_entity(entity_loader=None, identifier=None, pk=None, uuid=None, label=N
         identifier = str(identifier)
         identifier_type = None
 
-    return entity_loader.load_entity(identifier, identifier_type, sub_classes=sub_classes, query_with_dashes=query_with_dashes)
+    return entity_loader.load_entity(identifier, identifier_type, sub_classes=sub_classes,
+                                     query_with_dashes=query_with_dashes)
 
 
 def load_code(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True):
@@ -101,7 +104,8 @@ def load_code(identifier=None, pk=None, uuid=None, label=None, sub_classes=None,
     :raise MultipleObjectsError: if more than one Code was found
     """
     from aiida.orm.utils.loaders import CodeEntityLoader
-    return load_entity(CodeEntityLoader, identifier=identifier, pk=pk, uuid=uuid, label=label, sub_classes=sub_classes, query_with_dashes=query_with_dashes)
+    return load_entity(CodeEntityLoader, identifier=identifier, pk=pk, uuid=uuid, label=label, sub_classes=sub_classes,
+                       query_with_dashes=query_with_dashes)
 
 
 def load_computer(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True):
@@ -125,7 +129,8 @@ def load_computer(identifier=None, pk=None, uuid=None, label=None, sub_classes=N
     :raise MultipleObjectsError: if more than one Computer was found
     """
     from aiida.orm.utils.loaders import ComputerEntityLoader
-    return load_entity(ComputerEntityLoader, identifier=identifier, pk=pk, uuid=uuid, label=label, sub_classes=sub_classes, query_with_dashes=query_with_dashes)
+    return load_entity(ComputerEntityLoader, identifier=identifier, pk=pk, uuid=uuid, label=label,
+                       sub_classes=sub_classes, query_with_dashes=query_with_dashes)
 
 
 def load_group(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True):
@@ -149,7 +154,8 @@ def load_group(identifier=None, pk=None, uuid=None, label=None, sub_classes=None
     :raise MultipleObjectsError: if more than one Group was found
     """
     from aiida.orm.utils.loaders import GroupEntityLoader
-    return load_entity(GroupEntityLoader, identifier=identifier, pk=pk, uuid=uuid, label=label, sub_classes=sub_classes, query_with_dashes=query_with_dashes)
+    return load_entity(GroupEntityLoader, identifier=identifier, pk=pk, uuid=uuid, label=label, sub_classes=sub_classes,
+                       query_with_dashes=query_with_dashes)
 
 
 def load_node(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True):
@@ -171,7 +177,8 @@ def load_node(identifier=None, pk=None, uuid=None, label=None, sub_classes=None,
     :raise MultipleObjectsError: if more than one Node was found
     """
     from aiida.orm.utils.loaders import NodeEntityLoader
-    return load_entity(NodeEntityLoader, identifier=identifier, pk=pk, uuid=uuid, label=label, sub_classes=sub_classes, query_with_dashes=query_with_dashes)
+    return load_entity(NodeEntityLoader, identifier=identifier, pk=pk, uuid=uuid, label=label, sub_classes=sub_classes,
+                       query_with_dashes=query_with_dashes)
 
 
 def load_workflow(wf_id=None, pk=None, uuid=None):

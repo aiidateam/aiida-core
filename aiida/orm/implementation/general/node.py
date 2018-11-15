@@ -94,8 +94,10 @@ class _AbstractNodeMeta(ABCMeta):
         else:
             newcls._logger = logging.getLogger('{:s}.{:s}'.format(attrs['__module__'], name))
 
-        # Set the plugin type string and query type string
+        # Set the plugin type string
         plugin_type_string = get_type_string_from_class(attrs['__module__'], name)
+
+        # Set the query type string based on the plugin type string
         query_type_string = get_query_type_from_type_string(plugin_type_string)
 
         newcls._plugin_type_string = plugin_type_string
@@ -298,7 +300,7 @@ class AbstractNode(object):
           loaded from the database.
           (It is not possible to assign a uuid to a new Node.)
         """
-        from aiida.orm.backend import construct_backend
+        from aiida.orm.backends import construct_backend
 
         self._to_be_stored = True
         # Empty cache of input links in any case
@@ -910,9 +912,13 @@ class AbstractNode(object):
 
         :param computer: the computer object
         """
+        from aiida import orm
+
         if self._to_be_stored:
             if not computer.is_stored:
                 raise ValueError("The computer instance has not yet been stored")
+            if isinstance(computer, orm.Computer):
+                computer = computer.backend_entity
             self._set_db_computer(computer)
         else:
             raise ModificationNotAllowed(

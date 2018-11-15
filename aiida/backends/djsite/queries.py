@@ -33,77 +33,6 @@ class DjangoQueryManager(AbstractQueryManager):
 
         return results
 
-    def query_jobcalculations_by_computer_user_state(
-            self, state, computer=None, user=None,
-            only_computer_user_pairs=False,
-            only_enabled=True, limit=None):
-        """
-        Overrides the implementation using the QueryBuilder
-
-        Filter all calculations with a given state.
-
-        Issue a warning if the state is not in the list of valid states.
-
-        :param state: The state to be used to filter (should be a string among
-                those defined in aiida.common.datastructures.calc_states)
-        :type state: str
-        :param computer: A Computer object or a string of the computer name
-        :param user: a Django entry (or its pk) of a user in the DbUser table;
-                if present, the results are restricted to calculations of that
-                specific user
-        :param bool only_computer_user_pairs: if False (default) return a queryset
-                where each element is a suitable instance of Node (it should
-                be an instance of Calculation, if everything goes right!)
-                If True, return only a list of tuples, where each tuple is
-                in the format
-                ('dbcomputer__id', 'user__id')
-                [where the IDs are the IDs of the respective tables]
-
-        :return: a list of calculation objects matching the filters.
-        """
-        # I assume that calc_states are strings. If this changes in the future,
-        # update the filter below from dbattributes__tval to the correct field.
-        from aiida.common.exceptions import InputValidationError
-        from aiida.orm.implementation.django.calculation.job import JobCalculation
-        from aiida.common.datastructures import calc_states
-        from aiida.backends.djsite.db.models import DbUser
-
-        if state not in calc_states:
-            raise InputValidationError("querying for calculation state='{}', but it "
-                                       "is not a valid calculation state".format(state))
-
-        kwargs = {}
-        if computer is not None:
-            if isinstance(computer, six.string_types):
-                computer = self._backend.computers.get(name=computer)
-
-            # Get the DbComputer
-            kwargs['dbcomputer'] = computer.dbcomputer
-
-        if user is not None:
-            kwargs['user'] = user
-        if only_enabled:
-            kwargs['dbcomputer__enabled'] = True
-
-        queryresults = JobCalculation.query(
-            dbattributes__key='state',
-            dbattributes__tval=state,
-            **kwargs)
-
-        if only_computer_user_pairs:
-            computer_users_ids = queryresults.values_list(
-                'dbcomputer__id', 'user__id').distinct()
-            computer_users = []
-            for computer_id, user_id in computer_users_ids:
-                comp = self._backend.computers.get(computer_id)
-                computer_users.append((comp, DbUser.objects.get(pk=user_id).get_aiida_class()))
-            return computer_users
-
-        elif limit is not None:
-            return queryresults[:limit]
-        else:
-            return queryresults
-
     def get_creation_statistics(
             self,
             user_pk=None
@@ -129,7 +58,7 @@ class DjangoQueryManager(AbstractQueryManager):
             an integer with the number of nodes created that day.
         """
         import sqlalchemy as sa
-        from aiida.backends.djsite.querybuilder_django import dummy_model
+        from aiida.orm.implementation.django import dummy_model
 
         # Get the session (uses internally aldjemy - so, sqlalchemy) also for the Djsite backend
         s = dummy_model.get_aldjemy_session()
@@ -201,16 +130,16 @@ class DjangoQueryManager(AbstractQueryManager):
         from django.db.models import Q
         from aiida.common.utils import grouper
         from aiida.backends.djsite.db import models
-        from aiida.orm.backend import construct_backend
         from aiida.orm.data.structure import (get_formula, get_symbols_string)
         from aiida.orm.data.array.bands import BandsData
+        from aiida import orm
 
-        backend = construct_backend()
+        user = orm.User.objects.get_default()
 
         query_group_size = 100
         q_object = None
         if args.all_users is False:
-            q_object = Q(user__id=backend.users.get_automatic_user().id)
+            q_object = Q(user__id=user.id)
         else:
             q_object = Q()
 

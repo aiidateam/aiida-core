@@ -17,6 +17,7 @@ from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
 from aiida.orm.node import Node
+from aiida import orm
 
 
 class TestComputer(AiidaTestCase):
@@ -25,12 +26,12 @@ class TestComputer(AiidaTestCase):
     """
 
     def test_deletion(self):
-        from aiida.orm import JobCalculation
+        from aiida.orm.node.process import CalcJobNode
         from aiida.common.exceptions import InvalidOperation
 
-        newcomputer = self.backend.computers.create(name="testdeletioncomputer", hostname='localhost',
-                                                    transport_type='local', scheduler_type='pbspro',
-                                                    workdir='/tmp/aiida').store()
+        newcomputer = orm.Computer(name="testdeletioncomputer", hostname='localhost',
+                                   transport_type='local', scheduler_type='pbspro',
+                                   workdir='/tmp/aiida').store()
 
         # # This should be possible, because nothing is using this computer
         self.backend.computers.delete(newcomputer.id)
@@ -41,7 +42,7 @@ class TestComputer(AiidaTestCase):
                           'num_mpiprocs_per_machine': 1}
         }
 
-        _ = JobCalculation(**calc_params).store()
+        _ = CalcJobNode(**calc_params).store()
 
         # This should fail, because there is at least a calculation
         # using this computer (the one created just above)
@@ -75,7 +76,7 @@ class TestGroupsDjango(AiidaTestCase):
         g1.add_nodes([n1, n2])
         g2.add_nodes([n1, n3])
 
-        newuser = self.backend.users.create(email='test@email.xx')
+        newuser = orm.User(email='test@email.xx')
         g3 = Group(name='testquery3', user=newuser).store()
 
         # I should find it
@@ -109,7 +110,8 @@ class TestGroupsDjango(AiidaTestCase):
         res = Group.query(user=newuser.email)
         self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g3]))
 
-        res = Group.query(user=self.backend.users.get_automatic_user())
+        default_user = orm.User.objects(self.backend).get_default()
+        res = Group.query(user=default_user.backend_entity)
         self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g1, g2]))
 
     def test_rename_existing(self):

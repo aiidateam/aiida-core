@@ -14,7 +14,7 @@ Moreover, by calling ``verdi shell``, you have the additional advantage that
 some classes and modules are automatically loaded. In particular the following
 modules/classes are already loaded and available::
   
-  from aiida.orm import (Node, Calculation, JobCalculation, Code, Data,
+  from aiida.orm import (Node, Code, Data,
       Computer, Group, DataFactory, CalculationFactory)
   from aiida.backends.djsite.db import models
 
@@ -45,7 +45,7 @@ If you want to have the same environment of the ``verdi shell`` interactive
 shell, you can also add (below the ``load_dbenv`` call) the following lines::
 
   
-  from aiida.orm import Calculation, Code, Computer, Data, Node
+  from aiida.orm import Code, Computer, Data, Node
   from aiida.orm import CalculationFactory, DataFactory
   from aiida.backends.djsite.db import models
   

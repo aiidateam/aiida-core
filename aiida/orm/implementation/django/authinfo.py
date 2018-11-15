@@ -14,15 +14,15 @@ from __future__ import absolute_import
 from aiida.backends.djsite.db.models import DbAuthInfo
 from aiida.common import exceptions
 from aiida.common.utils import type_check
-from aiida.orm.authinfo import AuthInfo, AuthInfoCollection
 import aiida.utils.json as json
 
+from ..authinfos import BackendAuthInfo, BackendAuthInfoCollection
 from . import computer as computers
 from . import user as users
 from . import utils
 
 
-class DjangoAuthInfoCollection(AuthInfoCollection):
+class DjangoAuthInfoCollection(BackendAuthInfoCollection):
 
     def create(self, computer, user):
         """
@@ -60,7 +60,7 @@ class DjangoAuthInfoCollection(AuthInfoCollection):
                 "computer {}! Only one configuration is allowed".format(
                     user.email, computer.name))
 
-    def remove(self, authinfo_id):
+    def delete(self, authinfo_id):
         from django.core.exceptions import ObjectDoesNotExist
         try:
             DbAuthInfo.objects.get(pk=authinfo_id).delete()
@@ -71,7 +71,7 @@ class DjangoAuthInfoCollection(AuthInfoCollection):
         return DjangoAuthInfo.from_dbmodel(dbmodel, self.backend)
 
 
-class DjangoAuthInfo(AuthInfo):
+class DjangoAuthInfo(BackendAuthInfo):
     """AuthInfo implementation for Django."""
 
     @classmethod
@@ -92,6 +92,7 @@ class DjangoAuthInfo(AuthInfo):
         """
         super(DjangoAuthInfo, self).__init__(backend)
         type_check(user, users.DjangoUser)
+        type_check(computer, computers.DjangoComputer)
         self._dbauthinfo = utils.ModelWrapper(DbAuthInfo(dbcomputer=computer.dbcomputer, aiidauser=user.dbuser))
 
     @property
@@ -116,8 +117,8 @@ class DjangoAuthInfo(AuthInfo):
         return self._dbauthinfo.enabled
 
     @enabled.setter
-    def enabled(self, value):
-        self._dbauthinfo.enabled = value
+    def enabled(self, enabled):
+        self._dbauthinfo.enabled = enabled
 
     @property
     def computer(self):

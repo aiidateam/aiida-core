@@ -18,8 +18,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_work
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
-from aiida.orm.calculation.function import FunctionCalculation
-from aiida.orm.calculation.work import WorkCalculation
+from aiida.orm.node.process import WorkChainNode, WorkFunctionNode
 
 
 def get_result_lines(result):
@@ -35,9 +34,9 @@ class TestVerdiWork(AiidaTestCase):
 
     def test_status(self):
         """Test the status command."""
-        calc = WorkCalculation().store()
+        calc = WorkChainNode().store()
         result = self.cli_runner.invoke(cmd_work.work_status, [str(calc.pk)])
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
 
     def test_list(self):
         """Test the list command."""
@@ -45,28 +44,28 @@ class TestVerdiWork(AiidaTestCase):
 
         # Number of output lines in -r/--raw format should be zero when there are no calculations yet
         result = self.cli_runner.invoke(cmd_work.work_list, ['-r'])
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
         self.assertEquals(len(get_result_lines(result)), 0)
 
         calcs = []
 
-        # Create 6 FunctionCalculations and WorkCalculations (one for each ProcessState)
+        # Create 6 WorkFunctionNodes and WorkChainNodes (one for each ProcessState)
         for state in ProcessState:
 
-            calc = FunctionCalculation()
+            calc = WorkFunctionNode()
             calc._set_process_state(state)
 
-            # Set the FunctionCalculation as successful
+            # Set the WorkFunctionNode as successful
             if state == ProcessState.FINISHED:
                 calc._set_exit_status(0)
 
             calc.store()
             calcs.append(calc)
 
-            calc = WorkCalculation()
+            calc = WorkChainNode()
             calc._set_process_state(state)
 
-            # Set the WorkCalculation as failed
+            # Set the WorkChainNode as failed
             if state == ProcessState.FINISHED:
                 calc._set_exit_status(1)
 
@@ -75,45 +74,45 @@ class TestVerdiWork(AiidaTestCase):
 
         # Default behavior should yield all active states (CREATED, RUNNING and WAITING) so six in total
         result = self.cli_runner.invoke(cmd_work.work_list, ['-r'])
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
         self.assertEquals(len(get_result_lines(result)), 6)
 
         # Adding the all option should return all entries regardless of process state
         for flag in ['-a', '--all']:
             result = self.cli_runner.invoke(cmd_work.work_list, ['-r', flag])
-            self.assertIsNone(result.exception)
+            self.assertIsNone(result.exception, result.output)
             self.assertEquals(len(get_result_lines(result)), 12)
 
         # Passing the limit option should limit the results
         for flag in ['-l', '--limit']:
             result = self.cli_runner.invoke(cmd_work.work_list, ['-r', flag, '6'])
-            self.assertIsNone(result.exception)
+            self.assertIsNone(result.exception, result.output)
             self.assertEquals(len(get_result_lines(result)), 6)
 
         # Filtering for a specific process state
         for flag in ['-S', '--process-state']:
             for flag_value in ['created', 'running', 'waiting', 'killed', 'excepted', 'finished']:
                 result = self.cli_runner.invoke(cmd_work.work_list, ['-r', flag, flag_value])
-                self.assertIsNone(result.exception)
+                self.assertIsNone(result.exception, result.output)
                 self.assertEquals(len(get_result_lines(result)), 2)
 
         # Filtering for exit status should only get us one
         for flag in ['-E', '--exit-status']:
             for exit_status in ['0', '1']:
                 result = self.cli_runner.invoke(cmd_work.work_list, ['-r', flag, exit_status])
-                self.assertIsNone(result.exception)
+                self.assertIsNone(result.exception, result.output)
                 self.assertEquals(len(get_result_lines(result)), 1)
 
         # Passing the failed flag as a shortcut for FINISHED + non-zero exit status
         for flag in ['-X', '--failed']:
             result = self.cli_runner.invoke(cmd_work.work_list, ['-r', flag])
-            self.assertIsNone(result.exception)
+            self.assertIsNone(result.exception, result.output)
             self.assertEquals(len(get_result_lines(result)), 1)
 
         # Projecting on pk should allow us to verify all the pks
         for flag in ['-P', '--project']:
             result = self.cli_runner.invoke(cmd_work.work_list, ['-r', flag, 'pk'])
-            self.assertIsNone(result.exception)
+            self.assertIsNone(result.exception, result.output)
             self.assertEquals(len(get_result_lines(result)), 6)
 
             for line in get_result_lines(result):
@@ -121,9 +120,9 @@ class TestVerdiWork(AiidaTestCase):
 
     def test_report(self):
         """Test the report command."""
-        grandparent = WorkCalculation().store()
-        parent = WorkCalculation().store()
-        child = WorkCalculation().store()
+        grandparent = WorkChainNode().store()
+        parent = WorkChainNode().store()
+        child = WorkChainNode().store()
 
         parent.add_link_from(grandparent, link_type=LinkType.CALL)
         child.add_link_from(parent, link_type=LinkType.CALL)
@@ -133,30 +132,30 @@ class TestVerdiWork(AiidaTestCase):
         child.logger.log(LOG_LEVEL_REPORT, 'child_message')
 
         result = self.cli_runner.invoke(cmd_work.work_report, [str(grandparent.pk)])
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
         self.assertEquals(len(get_result_lines(result)), 3)
 
         result = self.cli_runner.invoke(cmd_work.work_report, [str(parent.pk)])
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
         self.assertEquals(len(get_result_lines(result)), 2)
 
         result = self.cli_runner.invoke(cmd_work.work_report, [str(child.pk)])
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
         self.assertEquals(len(get_result_lines(result)), 1)
 
         # Max depth should limit nesting level
         for flag in ['-m', '--max-depth']:
             for flag_value in [1, 2]:
                 result = self.cli_runner.invoke(cmd_work.work_report, [str(grandparent.pk), flag, str(flag_value)])
-                self.assertIsNone(result.exception)
+                self.assertIsNone(result.exception, result.output)
                 self.assertEquals(len(get_result_lines(result)), flag_value)
 
         # Filtering for other level name such as WARNING should not have any hits and only print the no log message
         for flag in ['-l', '--levelname']:
             result = self.cli_runner.invoke(cmd_work.work_report, [str(grandparent.pk), flag, 'WARNING'])
-            self.assertIsNone(result.exception)
+            self.assertIsNone(result.exception, result.output)
             self.assertEquals(len(get_result_lines(result)), 1)
-            self.assertEquals(get_result_lines(result)[0], 'No log messages recorded for this work calculation')
+            self.assertEquals(get_result_lines(result)[0], 'No log messages recorded for this entry')
 
     def test_plugins(self):
         """Test the plugins command. As of writing there are no default plugins defined for aiida-core."""
@@ -165,24 +164,24 @@ class TestVerdiWork(AiidaTestCase):
 
     def test_work_show(self):
         """Test verdi work show"""
-        workchain_one = WorkCalculation().store()
-        workchain_two = WorkCalculation().store()
+        workchain_one = WorkChainNode().store()
+        workchain_two = WorkChainNode().store()
         workchains = [workchain_one, workchain_two]
 
         # Running without identifiers should not except and not print anything
         options = []
         result = self.cli_runner.invoke(cmd_work.work_show, options)
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
         self.assertEquals(len(get_result_lines(result)), 0)
 
         # Giving a single identifier should print a non empty string message
         options = [str(workchain_one.pk)]
         result = self.cli_runner.invoke(cmd_work.work_show, options)
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
         self.assertTrue(len(get_result_lines(result)) > 0)
 
         # Giving multiple identifiers should print a non empty string message
         options = [str(workchain.pk) for workchain in workchains]
         result = self.cli_runner.invoke(cmd_work.work_show, options)
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
         self.assertTrue(len(get_result_lines(result)) > 0)

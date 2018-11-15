@@ -121,7 +121,7 @@ class DbUser(AbstractBaseUser, PermissionsMixin):
 
     def get_aiida_class(self):
         from aiida.orm.implementation.django.user import DjangoUser
-        from aiida.orm.backend import construct_backend
+        from aiida.orm.backends import construct_backend
         return DjangoUser.from_dbmodel(self, construct_backend())
 
 
@@ -1279,26 +1279,6 @@ class DbExtra(DbAttributeBaseClass):
     pass
 
 
-class DbCalcState(m.Model):
-    """
-    Store the state of calculations.
-
-    The advantage of a table (with uniqueness constraints) is that this
-    disallows entering twice in the same state (e.g., retrieving twice).
-    """
-    from aiida.common.datastructures import calc_states
-    # Delete states when deleting the calc, does not make sense to keep them
-    dbnode = m.ForeignKey(DbNode, on_delete=m.CASCADE,
-                          related_name='dbstates')
-    state = m.CharField(max_length=25,
-                        choices=tuple((_, _) for _ in calc_states),
-                        db_index=True)
-    time = m.DateTimeField(default=timezone.now, editable=False)
-
-    class Meta:
-        unique_together = (("dbnode", "state"))
-
-
 @python_2_unicode_compatible
 class DbGroup(m.Model):
     """
@@ -1415,7 +1395,7 @@ class DbComputer(m.Model):
 
     def get_aiida_class(self):
         from aiida.orm.implementation.django.computer import DjangoComputer
-        from aiida.orm.backend import construct_backend
+        from aiida.orm.backends import construct_backend
         return DjangoComputer.from_dbmodel(self, construct_backend())
 
     def _get_val_from_metadata(self, key):
@@ -1430,15 +1410,6 @@ class DbComputer(m.Model):
             return metadata[key]
         except KeyError:
             raise ConfigurationError('No {} found for DbComputer {} '.format(key, self.name))
-
-    def get_workdir(self):
-        return self._get_val_from_metadata('workdir')
-
-    def get_shebang(self):
-        """
-        Return the shebang line
-        """
-        return self._get_val_from_metadata('shebang')
 
     def __str__(self):
         if self.enabled:
@@ -1474,6 +1445,12 @@ class DbAuthInfo(m.Model):
             return "DB authorization info for {} on {}".format(self.aiidauser.email, self.dbcomputer.name)
         else:
             return "DB authorization info for {} on {} [DISABLED]".format(self.aiidauser.email, self.dbcomputer.name)
+
+    def get_aiida_class(self):
+        from aiida.orm.implementation.django.authinfo import DjangoAuthInfo
+        from aiida.orm.backends import construct_backend
+        return DjangoAuthInfo.from_dbmodel(self, construct_backend())
+
 
 
 @python_2_unicode_compatible
@@ -1649,8 +1626,9 @@ class DbWorkflow(m.Model):
         self.save()
 
     def get_calculations(self):
-        from aiida.orm import JobCalculation
-        return JobCalculation.query(workflow_step=self.steps)
+        from aiida.orm.node.process import CalcJobNode
+
+        return CalcJobNode.query(workflow_step=self.steps)
 
     def get_sub_workflows(self):
         return DbWorkflow.objects.filter(parent_workflow_step=self.steps.all())
@@ -1753,9 +1731,9 @@ class DbWorkflowStep(m.Model):
         unique_together = (("parent", "name"))
 
     def add_calculation(self, step_calculation):
-        from aiida.orm import JobCalculation
+        from aiida.orm.node.process import CalcJobNode
 
-        if (not isinstance(step_calculation, JobCalculation)):
+        if (not isinstance(step_calculation, CalcJobNode)):
             raise ValueError("Cannot add a non-Calculation object to a workflow step")
 
         try:
@@ -1764,11 +1742,12 @@ class DbWorkflowStep(m.Model):
             raise ValueError("Error adding calculation to step")
 
     def get_calculations(self, state=None):
-        from aiida.orm import JobCalculation
+        from aiida.orm.node.process import CalcJobNode
+
         if (state == None):
-            return JobCalculation.query(workflow_step=self)
+            return CalcJobNode.query(workflow_step=self)
         else:
-            return JobCalculation.query(workflow_step=self).filter(
+            return CalcJobNode.query(workflow_step=self).filter(
                 dbattributes__key="state", dbattributes__tval=state)
 
     def remove_calculations(self):

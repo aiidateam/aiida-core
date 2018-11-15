@@ -17,7 +17,7 @@ import six
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.utils import classproperty
 from aiida.orm.data.int import Int
-from aiida.orm.calculation.job.simpleplugins.templatereplacer import TemplatereplacerCalculation
+from aiida.calculations.plugins.templatereplacer import TemplatereplacerCalculation
 from aiida.work.persistence import ObjectLoader
 from aiida.work.job_processes import JobProcess
 from aiida.work.process_builder import JobProcessBuilder
@@ -69,13 +69,13 @@ class TestJobProcess(AiidaTestCase):
         self.assertIsNone(Process.current())
 
     def test_job_calculation_process(self):
-        """Verify that JobCalculation.process returns a sub class of JobProcess with correct calculation class."""
+        """Verify that CalcJobNode.process returns a sub class of JobProcess with correct calculation class."""
         process = TemplatereplacerCalculation.process()
         self.assertTrue(issubclass(process, JobProcess))
         self.assertEqual(process._calc_class, TemplatereplacerCalculation)
 
     def test_job_calculation_get_builder(self):
-        """Verify that JobCalculation.get_builder() returns an instance of JobProcessBuilder."""
+        """Verify that CalcJobNode.get_builder() returns an instance of JobProcessBuilder."""
         process = TemplatereplacerCalculation.process()
         builder = TemplatereplacerCalculation.get_builder()
         self.assertTrue(isinstance(builder, JobProcessBuilder))

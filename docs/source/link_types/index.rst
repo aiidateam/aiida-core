@@ -1,9 +1,9 @@
 Node classes
 ------------
-There are two *Node* sub-classes, *Data* and *Calculation*. The *Code* nodes
-can be considered as sub-classes of *Data* nodes. *JobCalculations*,
-*InlineCalulations* and the *WorkCalculations* are subclasses of the
-*Calculation* class.
+There are two *Node* sub-classes, *Data* and *ProcessNode*. The *Code* nodes
+can be considered as sub-classes of *Data* nodes. *CalcJobNode*,
+*CalcFunctionNode*, *WorkChainNode* and the *WorkFunctionNode* are subclasses of the
+*ProcessNode* class.
 
 AiIDA graph
 -----------
@@ -49,15 +49,15 @@ and **CALL**.
   to a *Data* node (head of the link). The unique constraint means that a
   *Calculation* cannot return two or more *Data* nodes with the same label. Code
   implementation detail: For the moment there is always and only a **CREATE**
-  link from a *JobCalculation* to the generated *Data*. A **RETURN** link is
+  link from a *CalculationNode* to the generated *Data*. A **RETURN** link is
   implied with the conditions of a **RETURN** link (the implementation will be
   corrected to comply shortly).
 
-* The **CALL** link is always from a *Calculation* to another *Calculation*
-  node. A given *Calculation* node cannot be called by more than one
-  *Calculation* node. In practice, the caller cannot be a *JobCalculation* but
-  it is always a *WorkCalculation*. Instead called calculations can be of any
-  subclass of *Calculation*.
+* The **CALL** link is always from a *ProcessNode* to another *ProcessNode*
+  node. A given *ProcessNode* node cannot be called by more than one
+  *ProcessNode* node. In practice, the caller cannot be a *CalculationNode* but
+  it is always a *WorkflowNode*. Instead called calculations can be of any
+  subclass of *ProcessNode*.
 
 Graph navigation
 ----------------

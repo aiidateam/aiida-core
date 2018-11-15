@@ -20,6 +20,7 @@ from aiida.orm import load_node
 from aiida.orm.data.int import Int
 from aiida.orm.data.frozendict import FrozenDict
 from aiida.orm.data.parameter import ParameterData
+from aiida.orm.node.process import CalcFunctionNode
 from aiida.work import test_utils, Process
 
 
@@ -59,7 +60,7 @@ class TestProcessNamespace(AiidaTestCase):
         self.assertTrue(isinstance(input_node, Int))
         self.assertEquals(input_node.value, 5)
 
-        # Check that the link of the WorkCalculation node has the correct link name
+        # Check that the link of the process node has the correct link name
         self.assertTrue('some_name_space_a' in proc.calc.get_inputs_dict())
         self.assertEquals(proc.calc.get_inputs_dict()['some_name_space_a'], 5)
 
@@ -190,7 +191,7 @@ class TestProcess(AiidaTestCase):
             'options': options,
         }
 
-        entry_point = 'simpleplugins.templatereplacer'
+        entry_point = 'templatereplacer'
         calculation = CalculationFactory(entry_point)
         job_process = calculation.process()
         process = job_process(inputs=inputs)
@@ -223,7 +224,7 @@ class TestFunctionProcess(AiidaTestCase):
             return {'a': a, 'b': b, 'c': c}
 
         inputs = {'a': Int(4), 'b': Int(5), 'c': Int(6)}
-        function_process_class = work.FunctionProcess.build(wf)
+        function_process_class = work.FunctionProcess.build(wf, CalcFunctionNode)
         self.assertEqual(work.run(function_process_class, **inputs), inputs)
 
     def test_kwargs(self):
@@ -239,14 +240,14 @@ class TestFunctionProcess(AiidaTestCase):
         a = Int(4)
         inputs = {'a': a}
 
-        function_process_class = work.FunctionProcess.build(wf_with_kwargs)
+        function_process_class = work.FunctionProcess.build(wf_with_kwargs, CalcFunctionNode)
         outs = work.launch.run(function_process_class, **inputs)
         self.assertEqual(outs, inputs)
 
-        function_process_class = work.FunctionProcess.build(wf_without_kwargs)
+        function_process_class = work.FunctionProcess.build(wf_without_kwargs, CalcFunctionNode)
         with self.assertRaises(ValueError):
             work.launch.run(function_process_class, **inputs)
 
-        function_process_class = work.FunctionProcess.build(wf_fixed_args)
+        function_process_class = work.FunctionProcess.build(wf_fixed_args, CalcFunctionNode)
         outs = work.launch.run(function_process_class, **inputs)
         self.assertEqual(outs, inputs)

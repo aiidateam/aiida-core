@@ -114,7 +114,7 @@ extras_require = {
         'pre-commit==1.8.2',
         'yapf==0.23.0',
         'prospector==0.12.11',
-        'pylint==1.8.4',
+        'pylint==1.9.3',
         'pylint-django==0.11.1',
         'pep8-naming==0.3.3',
         'toml==0.9.4'

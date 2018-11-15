@@ -37,7 +37,7 @@ class TestProcessBuilder(AiidaTestCase):
     def setUp(self):
         super(TestProcessBuilder, self).setUp()
         self.assertIsNone(Process.current())
-        self.calculation_class = CalculationFactory('simpleplugins.templatereplacer')
+        self.calculation_class = CalculationFactory('templatereplacer')
         self.process_class = self.calculation_class.process()
         self.builder = self.process_class.get_builder()
 
@@ -114,11 +114,11 @@ class TestProcessBuilder(AiidaTestCase):
 
     def test_job_calculation_get_builder_restart(self):
         """
-        Test the get_builder_restart method of JobCalculation class
+        Test the get_builder_restart method of CalcJobNode class
         """
-        from aiida.orm.calculation.job import JobCalculation
+        from aiida.orm.node.process import CalcJobNode
 
-        original = JobCalculation()
+        original = CalcJobNode()
         original.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         original.set_option('max_wallclock_seconds', 1800)
         original.set_computer(self.computer)
@@ -140,7 +140,7 @@ class TestProcessBuilder(AiidaTestCase):
         # This also sets the code as a remote code
         code1.set_remote_computer_exec((self.computer, '/bin/true'))
         code1.label = 'test_code1'
-        code1.set_input_plugin_name('simpleplugins.templatereplacer')
+        code1.set_input_plugin_name('templatereplacer')
         code1.store()
 
         # Check that I can get a builder
@@ -155,7 +155,7 @@ class TestProcessBuilder(AiidaTestCase):
             builder.unknown_parameter = 3
 
         # Check that it complains if the type is not the correct one
-        # (for the simpleplugins.templatereplacer, it should be a
+        # (for the templatereplacer, it should be a
         # ParameterData)
         with self.assertRaises(ValueError):
             builder.parameters = Int(3)

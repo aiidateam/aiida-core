@@ -13,7 +13,7 @@ A good example of a process is the :py:class:`~aiida.work.workchain.WorkChain` c
 In the :ref:`workflows and workchains section <workchains_workfunctions>` you can see how the ``WorkChain`` defines how it needs to be run.
 In addition to those run instructions, the ``WorkChain`` needs some sort of record in the database to store what happened during its execution.
 For example it needs to record what its exact inputs were, the log messages that were reported and what the final outputs were.
-For this purpose, every process will utilize an instance of a sub class of the :py:class:`~aiida.orm.calculation.Calculation` class.
+For this purpose, every process will utilize an instance of a sub class of the :py:class:`~aiida.orm.node.process.process.ProcessNode` class.
 This ``Calculation`` class is a sub class of :py:class:`~aiida.orm.node.Node` and serves as the record of the process' execution in the database and by extension the provenance graph.
 
 It is very important to understand this division of labor.
@@ -23,21 +23,20 @@ A good thing to remember is that while it is running, we are dealing with the ``
 The ``WorkChain`` is not the only process in AiiDA and each process uses a different node class as its database record.
 The following table describes which processes exist in AiiDA and what node type they use as a database record. 
 
-===================   =======================   =====================
-Process               Database record           Used for
-===================   =======================   =====================
-``WorkChain``         ``WorkCalculation``       Workchain
-``JobProcess``        ``JobCalculation``        Calculation
-``FunctionProcess``   ``FunctionCalculation``   Workfunction
-``FunctionProcess``   ``InlineCalculation``     Inline calculation
-===================   =======================   =====================
+===================   =======================       =====================
+Process               Database record               Used for
+===================   =======================       =====================
+``WorkChain``         ``WorkChainNode``             Workchain
+``JobProcess``        ``CalcJobNode``               CalcJob
+``FunctionProcess``   ``WorkFunctionNode``          Workfunction
+``FunctionProcess``   ``CalcFunctionNode``          Calcfunction
+===================   =======================       =====================
 
 .. note::
     The concept of the ``Process`` is a later addition to AiiDA and in the beginning this division of 'how to run something` and 'serving as a record of what happened', did not exist.
-    For example, historically speaking, the ``JobCalculation`` class fulfilled both of those tasks.
-    To not break the functionality of the historic ``JobCalculation`` and ``InlineCalculation``, their implementation was kept and ``Process`` wrappers were developed in the form of the ``JobProcess`` and the ``FunctionProcess``, respectively.
-    When a function, decorated with the ``make_inline`` decorator, is run, it is automatically wrapped into a ``FunctionProcess`` to make sure that is a process and gets all the necessary methods for the ``Runner`` to run it.
-    Similarly, the ``process()`` class method was implemented for the ``JobCalculation`` class, in order to automatically create a process wrapper for the calculation.
+    For example, historically speaking, the ``CalcJobNode`` class fulfilled both of those tasks.
+    To not break the functionality of the historic ``CalcJobNode``, its implementation was kept and a ``Process`` wrapper was developed in the form of the ``JobProcess``.
+    The ``process()`` class method was implemented for the ``CalcJobNode`` class, in order to automatically create a process wrapper for the calculation.
 
 The good thing about this unification is that everything that is run in AiiDA has the same attributes concerning its running state.
 The most important attribute is the process state.
@@ -73,7 +72,7 @@ Note that this does not automatically mean that the result of the process can al
 To distinghuis between a successful and a failed execution, we have introduced the 'exit status'.
 This is another attribute that is stored in the node of the process and is an integer that can be set by the process.
 A zero means that the result of the process was successful, and a non-zero value indicates a failure.
-All the calculation nodes used by the various processes are a sub class of :py:class:`~aiida.orm.implementation.general.calculation.AbstractCalculation`, which defines handy properties to query the process state and exit status.
+All the calculation nodes used by the various processes are a sub class of :py:class:`~aiida.orm.node.process.process.ProcessNode`, which defines handy properties to query the process state and exit status.
 
 ===================   ============================================================================================
 Method                Explanation
@@ -98,12 +97,12 @@ The process builder
 ===================
 The process builder is essentially a tool that helps you build the object that you want to run.
 To get a *builder* for a ``Calculation`` or a ``Workflow`` all you need is the ``Calculation`` or ``WorkChain`` class itself, which can be loaded through the ``CalculationFactory`` and ``WorkflowFactory``, respectively.
-Let's take the :py:class:`~aiida.orm.calculation.job.simpleplugins.templatereplacer.TemplatereplacerCalculation` as an example::
+Let's take the :py:class:`~aiida.calculations.plugins.templatereplacer.TemplatereplacerCalculation` as an example::
 
-    TemplatereplacerCalculation = CalculationFactory('simpleplugins.templatereplacer')
+    TemplatereplacerCalculation = CalculationFactory('templatereplacer')
     builder = TemplatereplacerCalculation.get_builder()
 
-The string ``simpleplugins.templatereplacer`` is the entry point of the ``TemplatereplacerCalculation`` and passing it to the ``CalculationFactory`` will return the corresponding class.
+The string ``templatereplacer`` is the entry point of the ``TemplatereplacerCalculation`` and passing it to the ``CalculationFactory`` will return the corresponding class.
 Calling the ``get_builder`` method on that class will return an instance of the ``ProcessBuilder`` that is tailored for the ``TemplatereplacerCalculation``.
 The builder will help you in defining the inputs that the ``TemplatereplacerCalculation`` requires and has a few handy tools to simplify this process.
 
@@ -145,7 +144,7 @@ If you evaluate the ``builder`` instance, simply by typing the variable name and
 
 In this example, you can see the value that we just set for the ``description`` and the ``label``.
 In addition, it will also show any namespaces, as the inputs of processes support nested namespaces, such as the ``options`` namespace in this example.
-This namespace contains all the additional options for a ``JobCalculation`` that are not stored as input nodes, but rather have to do with how the calculation should be run.
+This namespace contains all the additional options for a ``CalcJobNode`` that are not stored as input nodes, but rather have to do with how the calculation should be run.
 Examples are the :ref:`job resources <job_resources>` that it should use or any other settings related to the scheduler.
 Note that these options are also all autocompleted, so you can use that to discover all the options that are available, including their description.
 
@@ -161,7 +160,7 @@ For more details please refer to the :ref:`process builder section <running_work
 
 Submit test
 -----------
-The ``ProcessBuilder`` of a ``JobCalculation`` has one additional feature.
+The ``ProcessBuilder`` of a ``CalcJobNode`` has one additional feature.
 It has the method :py:meth:`~aiida.work.process_builder.JobProcessBuilder.submit_test()`.
 When this method is called, provided that the inputs are valid, a directory will be created locally with all the inputs files and scripts that would be created if the builder were to be submitted for real.
 This gives you a chance to inspect the generated files before actually sending them to the remote computer.

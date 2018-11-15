@@ -12,16 +12,16 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import functools
-from aiida.orm.implementation.general.calculation.inline import InlineCalculation
 
+from aiida.orm.node.process import CalcFunctionNode
 
-__all__ = ['InlineCalculation', 'make_inline', 'optional_inline']
+__all__ = 'make_inline', 'optional_inline'
 
 
 def make_inline(func):
     """
     This make_inline wrapper/decorator takes a function with specific
-    requirements, runs it and stores the result as an InlineCalculation node.
+    requirements, runs it and stores the result as an CalcFunctionNode node.
     It will also store all other nodes, including any possibly unstored
     input node! The return value of the wrapped calculation will also be
     slightly changed, see below.
@@ -36,13 +36,13 @@ def make_inline(func):
     * checks that the result value is a dictionary, where the
       key are all strings and the values are all **unstored**
       data nodes
-    * creates an InlineCalculation node, links all the kwargs
+    * creates an CalcFunctionNode node, links all the kwargs
       as inputs and the returned nodes as outputs, using the
       keys as link labels
     * stores all the nodes (including, possibly, unstored input
       nodes given as kwargs)
     * returns a length-two tuple, where the first element is
-      the InlineCalculation node, and the second is the dictionary
+      the CalcFunctionNode node, and the second is the dictionary
       returned by the wrapped function
 
     To use this function, you can use it as a decorator of a
@@ -54,14 +54,14 @@ def make_inline(func):
 
     In this way, every time you call copy_inline, the wrapped version
     is actually called, and the return value will be a tuple with
-    the InlineCalculation instance, and the returned dictionary.
+    the CalcFunctionNode instance, and the returned dictionary.
     For instance, if ``s`` is a valid ``Data`` node, with the following
     lines::
 
         c, s_copy_dict = copy_inline(source=s)
         s_copy = s_copy_dict['copy']
 
-    ``c`` will contain the new ``InlineCalculation`` instance, ``s_copy`` the
+    ``c`` will contain the new ``CalcFunctionNode`` instance, ``s_copy`` the
     (stored) copy of ``s`` (with the side effect that, if ``s`` was not stored,
     after the function call it will be automatically stored).
 
@@ -80,7 +80,7 @@ def make_inline(func):
 
         s_copy_dict = copy_inline(s)
 
-    while if you want to wrap it, so that an ``InlineCalculation`` is created, and
+    while if you want to wrap it, so that an ``CalcFunctionNode`` is created, and
     everything is stored, you will run::
 
         c, s_copy_dict = make_inline(f)(s=s)
@@ -134,7 +134,7 @@ def make_inline(func):
 
     :param kwargs: all kwargs are passed to the wrapped function
     :return: a length-two tuple, where the first element is
-        the InlineCalculation node, and the second is the dictionary
+        the CalcFunctionNode node, and the second is the dictionary
         returned by the wrapped function. All nodes are stored.
     :raise TypeError: if the return value is not a dictionary, the
         keys are not strings, or the values
@@ -143,7 +143,12 @@ def make_inline(func):
         stored.
     :raise Exception: All other exceptions from the wrapped function
         are not catched.
+
+    .. deprecated:: 1.0.0
     """
+    import warnings
+    warnings.warn('this function has been deprecated, use `aiida.work.calcfunction` instead', DeprecationWarning)
+
     from aiida.work import workfunction
 
     # Note: if you pass a lambda function, the name will be <lambda>; moreover
@@ -155,7 +160,7 @@ def make_inline(func):
             "The function name that is wrapped must end "
             "with '_inline', while its name is '{}'".format(function_name))
 
-    wf = workfunction(func, InlineCalculation)
+    wf = workfunction(func, CalcFunctionNode)
 
     @functools.wraps(func)
     def swap_result(*args, **kwargs):
@@ -168,8 +173,8 @@ def make_inline(func):
 def optional_inline(func):
     """
     optional_inline wrapper/decorator takes a function, which can be called
-    either as wrapped in InlineCalculation or a simple function, depending
-    on 'store' keyworded argument (True stands for InlineCalculation, False
+    either as wrapped in CalcFunctionNode or a simple function, depending
+    on 'store' keyworded argument (True stands for CalcFunctionNode, False
     for simple function). The wrapped function has to adhere to the
     requirements by make_inline wrapper/decorator.
 
@@ -179,7 +184,7 @@ def optional_inline(func):
         def copy_inline(source=None):
             return {'copy': source.copy()}
 
-    Function ``copy_inline`` will be wrapped in InlineCalculation when
+    Function ``copy_inline`` will be wrapped in CalcFunctionNode when
     invoked in following way::
 
         copy_inline(source=node,store=True)
@@ -189,7 +194,11 @@ def optional_inline(func):
         copy_inline(source=node)
 
     In any way the ``copy_inline`` will return the same results.
+
+    .. deprecated:: 1.0.0
     """
+    import warnings
+    warnings.warn('this function has been deprecated, use `aiida.work.calcfunction` instead', DeprecationWarning)
 
     def wrapped_function(*args, **kwargs):
         """

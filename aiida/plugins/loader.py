@@ -31,11 +31,9 @@ def load_plugin(plugin_type, safe=False):
     :raises MissingPluginError: plugin_type could not be resolved to registered entry point
     :raises LoadingPluginFailed: the entry point matching the plugin_type could not be loaded
     """
-    from aiida.orm.code import Code
-    from aiida.orm.calculation import Calculation
-    from aiida.orm.calculation.job import JobCalculation
     from aiida.orm.data import Data
     from aiida.orm.node import Node
+    from aiida.orm.node.process import ProcessNode, CalculationNode, CalcJobNode, CalcFunctionNode, WorkChainNode, WorkFunctionNode, WorkflowNode
 
     plugin = None
     base_class = Node
@@ -48,23 +46,29 @@ def load_plugin(plugin_type, safe=False):
     except ValueError:
         raise MissingPluginError
 
-    type_string_to_entry_point_type_map = OrderedDict({
-        'calculation.job.': EntryPoint('aiida.calculations', JobCalculation),
-        'calculation.': EntryPoint('aiida.calculations', Calculation),
-        'code.': EntryPoint('aiida.code', Code),
-        'data.': EntryPoint('aiida.data', Data),
-        'node.': EntryPoint('aiida.node', Node),
-    })
+    type_string_to_entry_point_type_map = OrderedDict([
+        ('data.', EntryPoint('aiida.data', Data)),
+        ('node.process.calculation.calcjob.', EntryPoint('aiida.calculations', CalcJobNode)),
+        ('node.process.calculation.calcfunction.', EntryPoint('aiida.node', CalcFunctionNode)),
+        ('node.process.calculation.calculation.', EntryPoint('aiida.node', CalculationNode)),
+        ('node.process.workflow.workchain.', EntryPoint('aiida.node', WorkChainNode)),
+        ('node.process.workflow.workfunction', EntryPoint('aiida.node', WorkFunctionNode)),
+        ('node.process.workflow.workflow', EntryPoint('aiida.node', WorkflowNode)),
+        ('node.process.process', EntryPoint('aiida.node', ProcessNode)),
+        ('node.', EntryPoint('aiida.node', Node)),
+    ])
 
     if base_path.count('.') == 0:
         base_path = '{}.{}'.format(base_path, base_path)
 
     for prefix, entry_point_type in type_string_to_entry_point_type_map.items():
         if base_path.startswith(prefix):
+
             entry_point = strip_prefix(base_path, prefix)
+
             try:
                 plugin = load_entry_point(entry_point_type.group, entry_point)
-            except (MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError):
+            except (MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError) as exception:
                 base_class = entry_point_type.base_class
             finally:
                 break

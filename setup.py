@@ -74,25 +74,20 @@ if __name__ == '__main__':
             ],
             # following are AiiDA plugin entry points:
             'aiida.calculations': [
-                'calculation = aiida.orm.calculation:Calculation',
-                'function = aiida.orm.calculation.function:FunctionCalculation',
-                'inline = aiida.orm.calculation.inline:InlineCalculation',
-                'job = aiida.orm.calculation.job:JobCalculation',
-                'work = aiida.orm.calculation.work:WorkCalculation',
-                'simpleplugins.arithmetic.add = aiida.orm.calculation.job.simpleplugins.arithmetic.add:ArithmeticAddCalculation',
-                'simpleplugins.templatereplacer = aiida.orm.calculation.job.simpleplugins.templatereplacer:TemplatereplacerCalculation',
+                'arithmetic.add = aiida.calculations.plugins.arithmetic.add:ArithmeticAddCalculation',
+                'templatereplacer = aiida.calculations.plugins.templatereplacer:TemplatereplacerCalculation',
             ],
             'aiida.cmdline.computer.configure': [
                 'ssh = aiida.transport.plugins.ssh:CONFIGURE_SSH_CMD',
                 'local = aiida.transport.plugins.local:CONFIGURE_LOCAL_CMD',
             ],
-            'aiida.code': [
-                'code = aiida.orm.code:Code'
-            ],
             'aiida.data': [
+                'base = aiida.orm.data:BaseType',
+                'numeric = aiida.orm.data.numeric:NumericType',
                 'bool = aiida.orm.data.bool:Bool',
                 'float = aiida.orm.data.float:Float',
                 'int = aiida.orm.data.int:Int',
+                'code = aiida.orm.data.code:Code',
                 'list = aiida.orm.data.list:List',
                 'str = aiida.orm.data.str:Str',
                 'frozendict = aiida.orm.data.frozendict:FrozenDict',
@@ -113,12 +108,19 @@ if __name__ == '__main__':
                 'orbital = aiida.orm.data.orbital:OrbitalData',
             ],
             'aiida.node': [
-                'node = aiida.orm.node:Node'
+                'node = aiida.orm.node:Node',
+                'process = aiida.orm.node.process.process:ProcessNode',
+                'process.calculation = aiida.orm.node.process.calculation.calculation:CalculationNode',
+                'process.workflow = aiida.orm.node.process.workflow.workflow:WorkflowNode',
+                'process.calculation.calcfunction = aiida.orm.node.process.calculation.calcfunction:CalcFunctionNode',
+                'process.calculation.calcjob = aiida.orm.node.process.calculation.calcjob:CalcJobNode',
+                'process.workflow.workchain = aiida.orm.node.process.workflow.workchain:WorkChainNode',
+                'process.workflow.workfunction = aiida.orm.node.process.workflow.workfunction:WorkFunctionNode',
             ],
             'aiida.cmdline': [],
             'aiida.parsers': [
-                'simpleplugins.arithmetic.add = aiida.parsers.simpleplugins.arithmetic.add:ArithmeticAddParser',
-                'simpleplugins.templatereplacer.doubler = aiida.parsers.simpleplugins.templatereplacer.doubler:TemplatereplacerDoublerParser',
+                'arithmetic.add = aiida.parsers.plugins.arithmetic.add:ArithmeticAddParser',
+                'templatereplacer.doubler = aiida.parsers.plugins.templatereplacer.doubler:TemplatereplacerDoublerParser',
             ],
             'aiida.schedulers': [
                 'direct = aiida.scheduler.plugins.direct:DirectScheduler',

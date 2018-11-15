@@ -377,15 +377,23 @@ class TestWorkchain(AiidaTestCase):
 
         test_case = self
 
-        class ReturnA(work.Process):
-            def run(self):
-                self.out('res', A)
-                return
+        class ReturnA(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(ReturnA, cls).define(spec)
+                spec.outline(cls.result)
 
-        class ReturnB(work.Process):
-            def run(self):
+            def result(self):
+                self.out('res', A)
+
+        class ReturnB(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(ReturnB, cls).define(spec)
+                spec.outline(cls.result)
+
+            def result(self):
                 self.out('res', B)
-                return
 
         class Wf(WorkChain):
             @classmethod
@@ -599,7 +607,7 @@ class TestWorkchain(AiidaTestCase):
                 spec.outputs.dynamic = True
 
             def run(self):
-                from aiida.orm.backend import construct_backend
+                from aiida.orm.backends import construct_backend
                 self._backend = construct_backend()
                 self._backend.logs.delete_many({})
                 self.report("Testing the report function")
@@ -616,10 +624,14 @@ class TestWorkchain(AiidaTestCase):
 
         test_case = self
 
-        class SimpleWc(work.Process):
-            def run(self):
+        class SimpleWc(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(SimpleWc, cls).define(spec)
+                spec.outline(cls.result)
+
+            def result(self):
                 self.out('_return', val)
-                return
 
         class Workchain(WorkChain):
             @classmethod

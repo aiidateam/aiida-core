@@ -76,8 +76,8 @@ class TestVerdiLegacyWorkflow(AiidaTestCase):
         for result in results:
             self.assertIsNone(result.exception, msg=debug_msg(result))
 
-        self.assertTrue(len(results[0].output) < len(results[1].output))
-        self.assertTrue(len(results[1].output) < len(results[2].output))
+        self.assertLess(len(results[0].output), len(results[1].output))
+        self.assertLess(len(results[1].output), len(results[2].output))
 
     def test_workflow_report(self):
         result = self.cli_runner.invoke(workflow_report, [str(self.super_workflow.uuid)])
@@ -89,14 +89,14 @@ class TestVerdiLegacyWorkflow(AiidaTestCase):
         running_workflow = WFTestEmpty()
         running_workflow.store()
         result = self.cli_runner.invoke(workflow_kill, [str(running_workflow.uuid)], input='y\n')
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
         self.assertNotIn('WorkflowKillError', result.output)
         self.assertNotIn('WorkflowUnkillable', result.output)
         self.assertEqual(running_workflow.get_state(), 'FINISHED')
 
         self.assertEqual(self.done_workflow.get_state(), 'FINISHED')
         result = self.cli_runner.invoke(workflow_kill, [str(self.done_workflow.pk)], input='y\n')
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
         self.assertIn('WorkflowUnkillable', result.output)
         self.assertEqual(self.done_workflow.get_state(), 'FINISHED')
 

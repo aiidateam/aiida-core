@@ -18,8 +18,8 @@ from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 from aiida.orm import DataFactory
-from aiida.orm.calculation import Calculation
-from aiida.orm.computer import Computer
+from aiida.orm.node.process import ProcessNode
+from aiida.orm.computers import Computer
 from aiida.orm.data import Data
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.restapi.api import App, AiidaApi
@@ -46,6 +46,7 @@ class RESTApiTestCase(AiidaTestCase):
         Basides the standard setup we need to add few more objects in the
         database to be able to explore different requests/filters/orderings etc.
         """
+        from aiida import orm
 
         # call parent setUpClass method
         super(RESTApiTestCase, cls).setUpClass()
@@ -78,7 +79,7 @@ class RESTApiTestCase(AiidaTestCase):
         kpoint.set_kpoints_mesh([4, 4, 4])
         kpoint.store()
 
-        calc = Calculation()
+        calc = ProcessNode()
         calc._set_attr("attr1", "OK")  # pylint: disable=protected-access
         calc._set_attr("attr2", "OK")  # pylint: disable=protected-access
         calc.store()
@@ -87,7 +88,7 @@ class RESTApiTestCase(AiidaTestCase):
         calc.add_link_from(parameter1)
         kpoint.add_link_from(calc, link_type=LinkType.CREATE)
 
-        calc1 = Calculation()
+        calc1 = ProcessNode()
         calc1.store()
 
         dummy_computers = [{
@@ -113,7 +114,7 @@ class RESTApiTestCase(AiidaTestCase):
         }]
 
         for dummy_computer in dummy_computers:
-            computer = cls.backend.computers.create(**dummy_computer)
+            computer = orm.Computer(backend=cls.backend, **dummy_computer)
             computer.store()
 
         # Prepare typical REST responses
@@ -133,7 +134,7 @@ class RESTApiTestCase(AiidaTestCase):
         RESTapi and puts them into class attributes
 
         """
-        #TODO: Storing the different nodes as lists and accessing them
+        # TODO: Storing the different nodes as lists and accessing them
         # by their list index is very fragile and a pain to debug.
         # Please change this!
         computer_projections = ["id", "uuid", "name", "hostname", "transport_type", "scheduler_type"]
@@ -155,7 +156,7 @@ class RESTApiTestCase(AiidaTestCase):
 
         calculation_projections = ["id", "uuid", "user_id", "type"]
         calculations = QueryBuilder().append(
-            Calculation, tag="calc", project=calculation_projections).order_by({
+            ProcessNode, tag="calc", project=calculation_projections).order_by({
                 'calc': [{
                     'id': {
                         'order': 'desc'
@@ -739,6 +740,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
+            print(response)
             self.assertEqual(response["data"]["attributes"], {'attr2': 'OK', 'attr1': 'OK'})
             RESTApiTestCase.compare_extra_response_data(self, "calculations", url, response, uuid=node_uuid)
 

@@ -149,7 +149,7 @@ class BaseTranslator(object):
                     # TODO need to improve
                     field_parts = field.split("_")
                     if field_parts[0] == "user" and field != "user_id" and len(field_parts) > 1:
-                        from aiida.orm.user import User
+                        from aiida.orm.users import User
                         user_schema = User.get_schema()
                         if field_parts[1] in user_schema.keys():
                             schema[field] = user_schema[field_parts[1]]

@@ -26,14 +26,15 @@ from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError,
 from aiida.orm.implementation.django.node import Node
 from aiida.common.utils import type_check
 
-from . import user as users
+from . import backend
 from . import utils
+from aiida.orm import users as orm_users
 
 
 class Group(AbstractGroup):
     def __init__(self, **kwargs):
         from aiida.backends.djsite.db.models import DbGroup
-        from aiida.orm.backend import construct_backend
+        from aiida.orm.backends import construct_backend
 
         self._backend = construct_backend()
 
@@ -59,12 +60,12 @@ class Group(AbstractGroup):
             group_type = kwargs.pop('type_string', "")  # By default, a user group
 
             # Get the user and extract dbuser instance
-            user = kwargs.pop('user', self._backend.users.get_automatic_user())
+            user = kwargs.pop('user', orm_users.User.objects.get_default())
 
             description = kwargs.pop('description', "")
             self._dbgroup = utils.ModelWrapper(
                 DbGroup(name=name, description=description,
-                        user=user.dbuser, type=group_type))
+                        user=user.backend_entity.dbuser, type=group_type))
             if kwargs:
                 raise ValueError(
                     "Too many parameters passed to Group, the "
@@ -104,8 +105,8 @@ class Group(AbstractGroup):
 
     @user.setter
     def user(self, new_user):
-        type_check(new_user, users.DjangoUser)
-        self._dbgroup.user = new_user.dbuser
+        assert isinstance(new_user.backend, backend.DjangoBackend)
+        self._dbgroup.user = new_user.backend_entity.dbuser
 
     @property
     def dbgroup(self):

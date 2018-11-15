@@ -16,7 +16,7 @@ from aiida.orm.data.bool import get_true_node
 from aiida.orm.data.int import Int
 from aiida.orm.data.str import Str
 from aiida.orm import load_node
-from aiida.orm.calculation.function import FunctionCalculation
+from aiida.orm.node.process import WorkFunctionNode
 from aiida.work import run, run_get_node, submit, workfunction, Process, ExitCode
 
 DEFAULT_INT = 256
@@ -241,7 +241,7 @@ class TestWf(AiidaTestCase):
         result, node = run_get_node(self.wf_return_true)
         self.assertTrue(result)
         self.assertEqual(result, get_true_node())
-        self.assertTrue(isinstance(node, FunctionCalculation))
+        self.assertTrue(isinstance(node, WorkFunctionNode))
 
         with self.assertRaises(AssertionError):
             submit(self.wf_return_true)

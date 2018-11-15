@@ -1591,9 +1591,9 @@ class CalcJobNode(CalculationNode):
             calculation_class = get_plugin_type_from_type_string(calculation_type)
             module, class_name = calculation_class.rsplit('.', 1)
 
-            # For the base class 'calculation.job.CalcJobNode' the module at this point equals 'calculation.job'
-            # For this case we should simply set the type to the base module calculation.job. Otherwise we need
-            # to strip the prefix to get the proper sub module
+            # For the base class 'mode.process.calculation.calcjob.CalcJobNode' the module at this point equals
+            # 'node.process.calculation.calcjob'. For this case we should simply set the type to the base module
+            # 'node.process.calculation.calcjob. Otherwise we need to strip the prefix to get the proper sub module
             if module == prefix.rstrip('.'):
                 d['calculation']['type'] = module[len(prefix):]
             else:
@@ -1912,7 +1912,7 @@ class CalcJobNode(CalculationNode):
         # I create the job template to pass to the scheduler
         job_tmpl = JobTemplate()
         job_tmpl.shebang = computer.get_shebang()
-        ## TODO: in the future, allow to customize the following variables
+        # TODO: in the future, allow to customize the following variables
         job_tmpl.submit_as_hold = False
         job_tmpl.rerunnable = False
         job_tmpl.job_environment = {}
@@ -2156,8 +2156,8 @@ class CalcJobNode(CalculationNode):
         else:
             subfolder_basename = subfolder_name
 
-        ## Find a new subfolder.
-        ## I do not user tempfile.mkdtemp, because it puts random characters
+        # Find a new subfolder.
+        # I do not user tempfile.mkdtemp, because it puts random characters
         # at the end of the directory name, therefore making difficult to
         # understand the order in which directories where stored
         counter = 0

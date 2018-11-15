@@ -32,7 +32,7 @@ from aiida.common.lang import override, protected
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida import orm
-from aiida.orm.node.process import ProcessNode, WorkflowNode, WorkFunctionNode
+from aiida.orm.node.process import ProcessNode, WorkflowNode
 from aiida.utils import serialize
 from aiida.work.ports import InputPort, PortNamespace
 from aiida.work.process_spec import ProcessSpec, ExitCode
@@ -239,13 +239,9 @@ class Process(plumpy.Process):
     @override
     def out(self, output_port, value=None):
         if value is None:
-            # In this case assume that output_port is the actual value and there
-            # is just one return value
+            # In this case assume that output_port is the actual value and there is just one return value
             value = output_port
             output_port = self.SINGLE_RETURN_LINKNAME
-
-        if isinstance(value, orm.Node) and not value.is_stored:
-            value.store()
 
         return super(Process, self).out(output_port, value)
 
@@ -442,9 +438,12 @@ class Process(plumpy.Process):
         self.calc._set_process_state(state.LABEL)  # pylint: disable=protected-access
 
     def update_outputs(self):
-        """Attach any new outputs to the node since the last time this was called"""
-        # Link up any new outputs
+        """Attach any new outputs to the node since the last time this was called, if store provenance is True."""
+        if self.inputs.store_provenance is False:
+            return
+
         new_outputs = set(self.outputs.keys()) - set(self.calc.get_outputs_dict(link_type=LinkType.RETURN).keys())
+
         for label in new_outputs:
             value = self.outputs[label]
             # Try making us the creator
@@ -667,8 +666,8 @@ class Process(plumpy.Process):
 
 class FunctionProcess(Process):
     """Function process class used for turning functions into a Process"""
+
     _func_args = None
-    _calc_node_class = WorkFunctionNode
 
     @staticmethod
     def _func(*_args, **_kwargs):
@@ -679,7 +678,7 @@ class FunctionProcess(Process):
         return {}
 
     @staticmethod
-    def build(func, node_class=None):
+    def build(func, node_class):
         """
         Build a Process from the given function.
 
@@ -687,18 +686,21 @@ class FunctionProcess(Process):
         these will also become inputs.
 
         :param func: The function to build a process from
-        :param node_class: Provide a custom node class to be used, has to be constructable with no arguments
+        :param node_class: Provide a custom node class to be used, has to be constructable with no arguments. It has to
+            be a sub class of `ProcessNode` as well as mixin the :class:`~aiida.orm.mixins.FunctionCalculationMixin`.
         :type node_class: :class:`aiida.orm.node.process.ProcessNode`
         :return: A Process class that represents the function
         :rtype: :class:`FunctionProcess`
         """
+        from aiida.orm.mixins import FunctionCalculationMixin
+
+        if not issubclass(node_class, ProcessNode) or not issubclass(node_class, FunctionCalculationMixin):
+            raise TypeError('the node_class should be a sub class of `ProcessNode` and `FunctionCalculationMixin`')
+
         args, varargs, keywords, defaults = inspect.getargspec(func)  # pylint: disable=deprecated-method
         nargs = len(args)
         ndefaults = len(defaults) if defaults else 0
         first_default_pos = nargs - ndefaults
-
-        if node_class is None:
-            node_class = WorkFunctionNode
 
         if varargs is not None:
             raise ValueError('variadic arguments are not supported')
@@ -720,7 +722,7 @@ class FunctionProcess(Process):
             # If the function support kwargs then allow dynamic inputs, otherwise disallow
             spec.inputs.dynamic = keywords is not None
 
-            # Workfunctions return data types
+            # Function processes return data types
             spec.outputs.valid_type = orm.Data
 
         return type(
@@ -728,12 +730,12 @@ class FunctionProcess(Process):
                 '_func': staticmethod(func),
                 Process.define.__name__: classmethod(_define),
                 '_func_args': args,
-                '_calc_node_class': node_class
+                '_node_class': node_class
             })
 
     @classmethod
     def create_inputs(cls, *args, **kwargs):
-        """Create the input args for the JobProcess"""
+        """Create the input args for the FunctionProcess"""
         ins = {}
         if kwargs:
             ins.update(kwargs)
@@ -753,11 +755,11 @@ class FunctionProcess(Process):
 
     @classmethod
     def get_or_create_db_record(cls):
-        return cls._calc_node_class()
+        return cls._node_class()
 
     def __init__(self, *args, **kwargs):
         if kwargs.get('enable_persistence', False):
-            raise RuntimeError('Cannot persist a workfunction')
+            raise RuntimeError('Cannot persist a function process')
         super(FunctionProcess, self).__init__(enable_persistence=False, *args, **kwargs)
 
     @property
@@ -820,7 +822,7 @@ class FunctionProcess(Process):
             for name, value in result.items():
                 self.out(name, value)
         else:
-            raise TypeError("Workfunction returned unsupported type '{}'\n"
+            raise TypeError("Function process returned an output with unsupported type '{}'\n"
                             "Must be a orm.Data type or a Mapping of {{string: orm.Data}}".format(result.__class__))
 
         return ExitCode()

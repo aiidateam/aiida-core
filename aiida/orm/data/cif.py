@@ -16,7 +16,7 @@ from __future__ import division
 from six.moves import range
 
 from aiida.orm.data.singlefile import SinglefileData
-from aiida.orm.calculation.inline import optional_inline
+from aiida.work import calcfunction
 from aiida.common.utils import HiddenPrints
 
 
@@ -108,7 +108,7 @@ def symop_string_from_symop_matrix_tr(matrix, tr=(0, 0, 0), eps=0):
     return ",".join(parts)
 
 
-@optional_inline
+@calcfunction
 def _get_aiida_structure_ase_inline(cif, **kwargs):
     """
     Creates :py:class:`aiida.orm.data.structure.StructureData` using ASE.
@@ -133,7 +133,7 @@ def _get_aiida_structure_ase_inline(cif, **kwargs):
     return {'structure': StructureData(ase=cif.get_ase(**parameters))}
 
 
-@optional_inline
+@calcfunction
 def _get_aiida_structure_pymatgen_inline(cif, **kwargs):
     """
     Creates :py:class:`aiida.orm.data.structure.StructureData` using pymatgen.
@@ -332,7 +332,7 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
     return cif
 
 
-@optional_inline
+@calcfunction
 def refine_inline(node):
     """
     Refine (reduce) the cell of :py:class:`aiida.orm.data.cif.CifData`,
@@ -858,7 +858,7 @@ class CifData(SinglefileData):
         except AttributeError:
             raise ValueError("No such converter '{}' available".format(converter))
 
-        result = convert_function(cif=self, parameters=parameters, store=store)
+        result = convert_function(cif=self, parameters=parameters, store_provenance=store)
 
         return result['structure']
 

@@ -25,7 +25,7 @@ from six.moves import range, zip
 from aiida.orm import Data
 from aiida.common.exceptions import UnsupportedSpeciesError
 from aiida.common.utils import classproperty, xyz_parser_iterator
-from aiida.orm.calculation.inline import optional_inline
+from aiida.work import calcfunction
 
 # Threshold used to check if the mass of two different Site objects is the same.
 
@@ -689,7 +689,7 @@ def ase_refine_cell(aseatoms, **kwargs):
                           'translations': sym_dataset['translations']}
 
 
-@optional_inline
+@calcfunction
 def _get_cif_ase_inline(struct, parameters):
     """
     Creates :py:class:`aiida.orm.data.cif.CifData` using ASE.
@@ -1896,7 +1896,7 @@ class StructureData(Data):
         except AttributeError:
             raise ValueError(
                 "No such converter '{}' available".format(converter))
-        ret_dict = conv_f(struct=self, parameters=param, store=store)
+        ret_dict = conv_f(struct=self, parameters=param, store_provenance=store)
         return ret_dict['cif']
 
     def _get_object_phonopyatoms(self):

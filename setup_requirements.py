@@ -40,7 +40,7 @@ install_requires = [
     'tabulate==0.8.2',
     'ete3==3.1.1',
     'uritools==2.1.0',
-    'psycopg2-binary==2.7.4',
+    'psycopg2==2.7.6',
     'paramiko==2.4.2',
     'ecdsa==0.13',
     'ipython>=4.0,<6.0',  # Version of ipython non enforced, because some still prefer version 4 rather than the latest

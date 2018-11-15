@@ -17,9 +17,10 @@ import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.commands.cmd_calcjob import verdi_calcjob
+from aiida.cmdline.commands.cmd_plugin import verdi_plugin
 from aiida.cmdline.commands.cmd_process import verdi_process
 from aiida.cmdline.params import arguments, options
-from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils import decorators
 from aiida.common.setup import get_property
 
 LIST_CMDLINE_PROJECT_DEFAULT = get_property('verdishell.calculation_list')
@@ -121,35 +122,12 @@ def calculation_logshow(ctx, calculations):
 
 @verdi_calculation.command('plugins')
 @click.argument('entry_point', type=click.STRING, required=False)
+@click.pass_context
 @decorators.with_dbenv()
-@decorators.deprecated_command("This command is deprecated. Use 'verdi plugins' instead.")
-def calculation_plugins(entry_point):
-    """Print a list of registered calculation plugins or details of a specific calculation plugin."""
-    from aiida.common.exceptions import LoadingPluginFailed, MissingPluginError
-    from aiida.plugins.entry_point import get_entry_point_names, load_entry_point
-    import aiida.utils.json as json
-
-    if entry_point:
-        try:
-            plugin = load_entry_point('aiida.calculations', entry_point)
-        except (LoadingPluginFailed, MissingPluginError) as exception:
-            echo.echo_critical(str(exception))
-        else:
-            echo.echo_info(entry_point)
-            echo.echo_info(plugin.__doc__ if plugin.__doc__ else 'no docstring available')
-            echo.echo(json.dumps(plugin.process().get_description(), indent=4))
-
-    else:
-        entry_points = get_entry_point_names('aiida.calculations')
-        if entry_points:
-            echo.echo('Registered calculation entry points:')
-            for ep in entry_points:
-                echo.echo("* {}".format(ep))
-
-            echo.echo('')
-            echo.echo_info('Pass the entry point as an argument to display detailed information')
-        else:
-            echo.echo_error('No calculation plugins found')
+@decorators.deprecated_command("This command is deprecated. Use 'verdi plugin list' instead.")
+def calculation_plugins(ctx, entry_point):
+    """Print a list of registered calculations plugins or details of a specific calculations plugin."""
+    ctx.invoke(verdi_plugin.get_command(ctx, 'list'), entry_point_group='aiida.calculations', entry_point=entry_point)
 
 
 @verdi_calculation.command('inputcat')

@@ -15,9 +15,10 @@ from __future__ import absolute_import
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
+from aiida.cmdline.commands.cmd_plugin import verdi_plugin
 from aiida.cmdline.commands.cmd_process import verdi_process
 from aiida.cmdline.params import arguments, options, types
-from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils import decorators
 from aiida.cmdline.utils.query.calculation import CalculationQueryBuilder
 from aiida.common.log import LOG_LEVELS
 
@@ -98,33 +99,12 @@ def work_status(ctx, workflows):
 
 @verdi_work.command('plugins')
 @click.argument('entry_point', type=click.STRING, required=False)
+@click.pass_context
 @decorators.with_dbenv()
-def work_plugins(entry_point):
-    """
-    Print a list of registered workflow plugins or details of a specific workflow plugin
-    """
-    from aiida.common.exceptions import LoadingPluginFailed, MissingPluginError
-    from aiida.plugins.entry_point import get_entry_point_names, load_entry_point
-
-    if entry_point:
-        try:
-            plugin = load_entry_point('aiida.workflows', entry_point)
-        except (LoadingPluginFailed, MissingPluginError) as exception:
-            echo.echo_critical(exception)
-        else:
-            echo.echo_info(entry_point)
-            echo.echo(plugin.get_description())
-    else:
-        entry_points = get_entry_point_names('aiida.workflows')
-        if entry_points:
-            echo.echo('Registered workflow entry points:')
-            for registered_entry_point in entry_points:
-                echo.echo("* {}".format(registered_entry_point))
-
-            echo.echo('')
-            echo.echo_info('Pass the entry point as an argument to display detailed information')
-        else:
-            echo.echo_error('No workflow plugins found')
+@decorators.deprecated_command("This command is deprecated. Use 'verdi plugin list' instead.")
+def work_plugins(ctx, entry_point):
+    """Print a list of registered workflow plugins or details of a specific workflow plugin."""
+    ctx.invoke(verdi_plugin.get_command(ctx, 'list'), entry_point_group='aiida.workflows', entry_point=entry_point)
 
 
 @verdi_work.command('kill')

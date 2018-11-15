@@ -20,7 +20,7 @@ click_completion.init()
 # Import to populate the `verdi` sub commands
 from aiida.cmdline.commands import (
     cmd_calcjob, cmd_calculation, cmd_code, cmd_comment, cmd_completioncommand, cmd_computer, cmd_data, cmd_database,
-    cmd_daemon, cmd_devel, cmd_export, cmd_graph, cmd_group, cmd_import, cmd_node, cmd_process, cmd_profile,
+    cmd_daemon, cmd_devel, cmd_export, cmd_graph, cmd_group, cmd_import, cmd_node, cmd_plugin, cmd_process, cmd_profile,
     cmd_quicksetup, cmd_rehash, cmd_restapi, cmd_run, cmd_setup, cmd_shell, cmd_user, cmd_work, cmd_workflow)
 
 # Import to populate the `verdi data` sub commands

@@ -36,13 +36,13 @@ def get_result_lines(result):
     return [e for e in result.output.split('\n') if e]
 
 
-class TestVerdiProcess(AiidaTestCase):
-    """Tests for `verdi process`."""
+class TestVerdiProcessDaemon(AiidaTestCase):
+    """Tests for `verdi process` that require a running daemon."""
 
     TEST_TIMEOUT = 5.
 
     def setUp(self):
-        super(TestVerdiProcess, self).setUp()
+        super(TestVerdiProcessDaemon, self).setUp()
         from aiida.common.profile import get_profile
         from aiida.daemon.client import DaemonClient
 
@@ -58,7 +58,64 @@ class TestVerdiProcess(AiidaTestCase):
         import signal
 
         os.kill(self.daemon_pid, signal.SIGTERM)
-        super(TestVerdiProcess, self).tearDown()
+        super(TestVerdiProcessDaemon, self).tearDown()
+
+    def test_pause_play_kill(self):
+        """
+        Test the pause/play/kill commands
+        """
+        from aiida.orm import load_node
+
+        calc = self.runner.submit(test_utils.WaitProcess)
+        start_time = time.time()
+        while calc.process_state is not plumpy.ProcessState.WAITING:
+            if time.time() - start_time >= self.TEST_TIMEOUT:
+                self.fail('Timed out waiting for process to enter waiting state')
+
+        self.assertFalse(calc.paused)
+        result = self.cli_runner.invoke(cmd_process.process_pause, [str(calc.pk)])
+        self.assertIsNone(result.exception, result.output)
+
+        # We need to make sure that the process is picked up by the daemon and put in the Waiting state before we start
+        # running the CLI commands, so we add a broadcast subscriber for the state change, which when hit will set the
+        # future to True. This will be our signal that we can start testing
+        waiting_future = Future()
+        filters = kiwipy.BroadcastFilter(
+            lambda *args, **kwargs: waiting_future.set_result(True), sender=calc.pk, subject='state_changed.*.waiting')
+        self.runner.communicator.add_broadcast_subscriber(filters)
+
+        # The process may already have been picked up by the daemon and put in the waiting state, before the subscriber
+        # got the chance to attach itself, making it have missed the broadcast. That's why check if the state is already
+        # waiting, and if not, we run the loop of the runner to start waiting for the broadcast message. To make sure
+        # that we have the latest state of the node as it is in the database, we force refresh it by reloading it.
+        calc = load_node(calc.pk)
+        if calc.process_state != plumpy.ProcessState.WAITING:
+            self.runner.loop.run_sync(lambda: with_timeout(waiting_future))
+
+        # Here we now that the process is with the daemon runner and in the waiting state so we can starting running
+        # the `verdi process` commands that we want to test
+        result = self.cli_runner.invoke(cmd_process.process_pause, ['--wait', str(calc.pk)])
+        self.assertIsNone(result.exception, result.output)
+        self.assertTrue(calc.paused)
+
+        result = self.cli_runner.invoke(cmd_process.process_play, ['--wait', str(calc.pk)])
+        self.assertIsNone(result.exception, result.output)
+        self.assertFalse(calc.paused)
+
+        result = self.cli_runner.invoke(cmd_process.process_kill, ['--wait', str(calc.pk)])
+        self.assertIsNone(result.exception, result.output)
+        self.assertTrue(calc.is_terminated)
+        self.assertTrue(calc.is_killed)
+
+
+class TestVerdiProcess(AiidaTestCase):
+    """Tests for `verdi process`."""
+
+    TEST_TIMEOUT = 5.
+
+    def setUp(self):
+        super(TestVerdiProcess, self).setUp()
+        self.cli_runner = CliRunner()
 
     def test_list(self):
         """Test the list command."""
@@ -184,53 +241,6 @@ class TestVerdiProcess(AiidaTestCase):
         result = self.cli_runner.invoke(cmd_process.process_report, options)
         self.assertIsNone(result.exception, result.output)
         self.assertTrue(len(get_result_lines(result)) > 0)
-
-    def test_pause_play_kill(self):
-        """
-        Test the pause/play/kill commands
-        """
-        from aiida.orm import load_node
-
-        calc = self.runner.submit(test_utils.WaitProcess)
-        start_time = time.time()
-        while calc.process_state is not plumpy.ProcessState.WAITING:
-            if time.time() - start_time >= self.TEST_TIMEOUT:
-                self.fail('Timed out waiting for process to enter waiting state')
-
-        self.assertFalse(calc.paused)
-        result = self.cli_runner.invoke(cmd_process.process_pause, [str(calc.pk)])
-        self.assertIsNone(result.exception, result.output)
-
-        # We need to make sure that the process is picked up by the daemon and put in the Waiting state before we start
-        # running the CLI commands, so we add a broadcast subscriber for the state change, which when hit will set the
-        # future to True. This will be our signal that we can start testing
-        waiting_future = Future()
-        filters = kiwipy.BroadcastFilter(
-            lambda *args, **kwargs: waiting_future.set_result(True), sender=calc.pk, subject='state_changed.*.waiting')
-        self.runner.communicator.add_broadcast_subscriber(filters)
-
-        # The process may already have been picked up by the daemon and put in the waiting state, before the subscriber
-        # got the chance to attach itself, making it have missed the broadcast. That's why check if the state is already
-        # waiting, and if not, we run the loop of the runner to start waiting for the broadcast message. To make sure
-        # that we have the latest state of the node as it is in the database, we force refresh it by reloading it.
-        calc = load_node(calc.pk)
-        if calc.process_state != plumpy.ProcessState.WAITING:
-            self.runner.loop.run_sync(lambda: with_timeout(waiting_future))
-
-        # Here we now that the process is with the daemon runner and in the waiting state so we can starting running
-        # the `verdi process` commands that we want to test
-        result = self.cli_runner.invoke(cmd_process.process_pause, ['--wait', str(calc.pk)])
-        self.assertIsNone(result.exception, result.output)
-        self.assertTrue(calc.paused)
-
-        result = self.cli_runner.invoke(cmd_process.process_play, ['--wait', str(calc.pk)])
-        self.assertIsNone(result.exception, result.output)
-        self.assertFalse(calc.paused)
-
-        result = self.cli_runner.invoke(cmd_process.process_kill, ['--wait', str(calc.pk)])
-        self.assertIsNone(result.exception, result.output)
-        self.assertTrue(calc.is_terminated)
-        self.assertTrue(calc.is_killed)
 
     def test_report(self):
         """Test the report command."""

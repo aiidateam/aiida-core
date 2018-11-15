@@ -47,13 +47,20 @@ class AiidaQuerySet(QuerySet):
         for obj in super(AiidaQuerySet, self).iterator():
             yield obj.get_aiida_class()
 
-    # Note: __iter__ used to rely on the iterator in django 1.8 but does no longer in django 1.11
     def __iter__(self):
+        """Iterate for list comprehensions.
+
+        Note: used to rely on the iterator in django 1.8 but does no longer in django 1.11.
+        """
+
         return (x.get_aiida_class() for x in super(AiidaQuerySet, self).__iter__())
 
 
-    # Note: __getitem__ used to rely on the iterator in django 1.8 but does no longer in django 1.11
     def __getitem__(self, key):
+        """Get item for [] operator
+
+        Note: used to rely on the iterator in django 1.8 but does no longer in django 1.11.
+        """
         res = super(AiidaQuerySet, self).__getitem__(key)
         return res.get_aiida_class()
 

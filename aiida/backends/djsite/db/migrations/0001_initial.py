@@ -16,7 +16,6 @@ from django.db import models, migrations
 import django.db.models.deletion
 import django.utils.timezone
 from django.conf import settings
-import django_extensions.db.fields
 
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
 
@@ -120,7 +119,7 @@ class Migration(migrations.Migration):
             name='DbComment',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('uuid', django_extensions.db.fields.UUIDField(editable=False, blank=True)),
+                ('uuid', models.UUIDField(editable=False, blank=True)),
                 ('ctime', models.DateTimeField(default=django.utils.timezone.now, editable=False)),
                 ('mtime', models.DateTimeField(auto_now=True)),
                 ('content', models.TextField(blank=True)),
@@ -133,7 +132,7 @@ class Migration(migrations.Migration):
             name='DbComputer',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('uuid', django_extensions.db.fields.UUIDField(editable=False, blank=True)),
+                ('uuid', models.UUIDField(editable=False, blank=True)),
                 ('name', models.CharField(unique=True, max_length=255)),
                 ('hostname', models.CharField(max_length=255)),
                 ('description', models.TextField(blank=True)),
@@ -171,7 +170,7 @@ class Migration(migrations.Migration):
             name='DbGroup',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('uuid', django_extensions.db.fields.UUIDField(editable=False, blank=True)),
+                ('uuid', models.UUIDField(editable=False, blank=True)),
                 ('name', models.CharField(max_length=255, db_index=True)),
                 ('type', models.CharField(default=b'', max_length=255, db_index=True)),
                 ('time', models.DateTimeField(default=django.utils.timezone.now, editable=False)),
@@ -223,7 +222,7 @@ class Migration(migrations.Migration):
             name='DbNode',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('uuid', django_extensions.db.fields.UUIDField(editable=False, blank=True)),
+                ('uuid', models.UUIDField(editable=False, blank=True)),
                 ('type', models.CharField(max_length=255, db_index=True)),
                 ('label', models.CharField(db_index=True, max_length=255, blank=True)),
                 ('description', models.TextField(blank=True)),
@@ -277,7 +276,7 @@ class Migration(migrations.Migration):
             name='DbWorkflow',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('uuid', django_extensions.db.fields.UUIDField(editable=False, blank=True)),
+                ('uuid', models.UUIDField(editable=False, blank=True)),
                 ('ctime', models.DateTimeField(default=django.utils.timezone.now, editable=False)),
                 ('mtime', models.DateTimeField(auto_now=True)),
                 ('label', models.CharField(db_index=True, max_length=255, blank=True)),

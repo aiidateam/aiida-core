@@ -18,11 +18,9 @@ import six
 # pylint: disable=no-name-in-module, import-error
 from sqlalchemy_utils.types.choice import Choice
 from sqlalchemy import and_, or_, not_
-from sqlalchemy.types import Integer, Float, Boolean, DateTime, String
+from sqlalchemy.types import Integer, Float, Boolean, DateTime
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.sql.expression import case, ColumnClause, FunctionElement
-from sqlalchemy.sql.elements import Label, Cast
-from sqlalchemy.orm.attributes import InstrumentedAttribute, QueryableAttribute
+from sqlalchemy.sql.expression import case, FunctionElement
 from sqlalchemy.ext.compiler import compiles
 
 import aiida.backends.sqlalchemy
@@ -267,40 +265,9 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                         raise RuntimeError("I need to get the column but do not know \n"
                                            "the alias and the column name")
                     column = get_column(column_name, alias)
-                expr = self._get_filter_expr_from_column(operator, value, column)
+                expr = self.get_filter_expr_from_column(operator, value, column)
         if negation:
             return not_(expr)
-        return expr
-
-    @staticmethod
-    def _get_filter_expr_from_column(operator, value, column):
-        """Get the filter expression based on the column"""
-
-        # Label is used because it is what is returned for the
-        # 'state' column by the hybrid_column construct
-        if not isinstance(column, (Cast, InstrumentedAttribute, Label, QueryableAttribute, ColumnClause)):
-            raise TypeError('column ({}) {} is not a valid column'.format(type(column), column))
-        database_entity = column
-        if operator == '==':
-            expr = database_entity == value
-        elif operator == '>':
-            expr = database_entity > value
-        elif operator == '<':
-            expr = database_entity < value
-        elif operator == '>=':
-            expr = database_entity >= value
-        elif operator == '<=':
-            expr = database_entity <= value
-        elif operator == 'like':
-            # This operator can only exist for strings, so I cast to avoid problems
-            # as they occured for the UUID, which does not support the like operator
-            expr = database_entity.cast(String).like(value)
-        elif operator == 'ilike':
-            expr = database_entity.cast(String).ilike(value)
-        elif operator == 'in':
-            expr = database_entity.in_(value)
-        else:
-            raise InputValidationError('Unknown operator {} for filters on columns'.format(operator))
         return expr
 
     @classmethod

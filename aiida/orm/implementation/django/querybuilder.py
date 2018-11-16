@@ -17,13 +17,12 @@ from datetime import datetime
 from json import loads as json_loads
 import six
 
+# Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-name-in-module, import-error
 from sqlalchemy import and_, or_, not_, select, exists, case
 from sqlalchemy.types import Float, String
 from sqlalchemy.orm import aliased
-from sqlalchemy.orm.attributes import InstrumentedAttribute, QueryableAttribute
-from sqlalchemy.sql.expression import cast, ColumnClause
-from sqlalchemy.sql.elements import Cast, Label
+from sqlalchemy.sql.expression import cast
 from aiida.orm.implementation.querybuilder import BackendQueryBuilder
 from aiida.common.exceptions import InputValidationError
 from aiida.orm.implementation.django import dummy_model
@@ -74,34 +73,16 @@ class DjangoQueryBuilder(BackendQueryBuilder):
         import aiida.orm.implementation.django.group
         return aiida.orm.implementation.django.group.Group
 
-    @staticmethod
-    def get_filter_expr_from_column(operator, value, column):
-        """Get the filter expression for a particular column"""
+    @property
+    def AiidaUser(self):  # pylint: disable=invalid-name
+        import aiida.orm
+        return aiida.orm.User
 
-        # Label is used because it is what is returned for the
-        # 'state' column by the hybrid_column construct
-        if not isinstance(column, (Cast, InstrumentedAttribute, QueryableAttribute, Label, ColumnClause)):
-            raise TypeError('column ({}) {} is not a valid column'.format(type(column), column))
-        database_entity = column
-        if operator == '==':
-            expr = database_entity == value
-        elif operator == '>':
-            expr = database_entity > value
-        elif operator == '<':
-            expr = database_entity < value
-        elif operator == '>=':
-            expr = database_entity >= value
-        elif operator == '<=':
-            expr = database_entity <= value
-        elif operator == 'like':
-            expr = database_entity.like(value)
-        elif operator == 'ilike':
-            expr = database_entity.ilike(value)
-        elif operator == 'in':
-            expr = database_entity.in_(value)
-        else:
-            raise InputValidationError('Unknown operator {} for filters on columns'.format(operator))
-        return expr
+    @property
+    def AiidaComputer(self):  # pylint: disable=invalid-name
+
+        import aiida.orm
+        return aiida.orm.Computer
 
     def get_filter_expr(self, operator, value, attr_key, is_attribute, alias=None, column=None, column_name=None):
         """

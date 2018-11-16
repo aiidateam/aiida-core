@@ -15,8 +15,7 @@ install_requires = [
     'reentry==1.2.1',
     'python-dateutil==2.7.2',
     'python-mimeparse==1.6.0',
-    'django==1.8.19',
-    'django-extensions==1.5.0',
+    'django==1.11.16',
     'tzlocal==1.5.1',
     'pytz==2018.4',
     'PyYAML==3.12',
@@ -115,7 +114,7 @@ extras_require = {
         'pre-commit==1.8.2',
         'yapf==0.23.0',
         'prospector==0.12.11',
-        'pylint==1.8.4',
+        'pylint==1.9.3',
         'pylint-django==0.11.1',
         'pep8-naming==0.3.3',
         'toml==0.9.4'

@@ -89,6 +89,8 @@ class CalculationProjectionMapper(ProjectionMapper):
         self._valid_projections = projections
 
         sealed_key = 'attributes.{}'.format(Sealable.SEALED_KEY)
+        job_state_key = 'attributes.{}'.format('state')
+        scheduler_state_key = 'attributes.{}'.format('scheduler_state')
         process_paused_key = 'attributes.{}'.format(ProcessNode.PROCESS_PAUSED_KEY)
         process_label_key = 'attributes.{}'.format(ProcessNode.PROCESS_LABEL_KEY)
         process_state_key = 'attributes.{}'.format(ProcessNode.PROCESS_STATE_KEY)
@@ -104,6 +106,8 @@ class CalculationProjectionMapper(ProjectionMapper):
 
         default_attributes = {
             'pk': 'id',
+            'job_state': job_state_key,
+            'scheduler_state': scheduler_state_key,
             'sealed': sealed_key,
             'paused': process_paused_key,
             'process_label': process_label_key,

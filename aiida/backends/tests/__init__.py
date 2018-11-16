@@ -55,6 +55,7 @@ db_test_list = {
         'backup_setup_script': ['aiida.backends.tests.backup_setup_script'],
         'restapi': ['aiida.backends.tests.restapi'],
         'examplehelpers': ['aiida.backends.tests.example_helpers'],
+        'cmdline.commands.calcjob': ['aiida.backends.tests.cmdline.commands.test_calcjob'],
         'cmdline.commands.calculation': ['aiida.backends.tests.cmdline.commands.test_calculation'],
         'cmdline.commands.code': ['aiida.backends.tests.cmdline.commands.test_code'],
         'cmdline.commands.comment': ['aiida.backends.tests.cmdline.commands.test_comment'],

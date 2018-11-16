@@ -783,8 +783,8 @@ _property_table = {
                                     "A list of the projections that should be shown by default "
                                     "when typing 'verdi calculation list'. "
                                     "Set by passing the projections space separated as a string, for example: "
-                                    "verdi devel setproperty verdishell.calculation_list 'pk time state'",
-                                    ('pk', 'ctime', 'state', 'type', 'computer', 'job_state'), None),
+                                    "verdi devel setproperty verdishell.calculation_list 'pk time job_state'",
+                                    ('pk', 'ctime', 'process_state', 'type', 'job_state'), None),
     "logging.aiida_loglevel": ("logging_aiida_log_level", "string",
                                "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
                                "and to the DbLog table for the 'aiida' logger; for the DbLog, see "

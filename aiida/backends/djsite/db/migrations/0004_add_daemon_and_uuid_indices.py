@@ -42,7 +42,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='dbnode',
             name='uuid',
-            field=models.UUIDField(db_index=True,
+            field=models.CharField(max_length=36,db_index=True,
                                                         editable=False,
                                                         blank=True),
             preserve_default=True,

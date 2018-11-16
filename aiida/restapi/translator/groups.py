@@ -25,10 +25,10 @@ class GroupTranslator(BaseTranslator):
     # A label associated to the present class (coincides with the resource name)
     __label__ = "groups"
     # The AiiDA class one-to-one associated to the present class
-    from aiida.orm.group import Group
+    from aiida.orm import Group
     _aiida_class = Group
     # The string name of the AiiDA class
-    _aiida_type = "group.Group"
+    _aiida_type = "groups.Group"
     # The string associated to the AiiDA class in the query builder lexicon
     _qb_type = 'group'
 

@@ -10,23 +10,25 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from aiida.orm.implementation.backends import Backend
 
+from aiida.orm.implementation.backends import Backend
 from aiida.backends.djsite.queries import DjangoQueryManager
-from aiida.orm.implementation.django.querybuilder import DjangoQueryBuilder
 from . import authinfo
 from . import computer
+from . import groups
 from . import log
-from . import user
+from . import querybuilder
+from . import users
 
 
 class DjangoBackend(Backend):
 
     def __init__(self):
         self._logs = log.DjangoLogCollection(self, log.DjangoLog)
-        self._users = user.DjangoUserCollection(self)
+        self._users = users.DjangoUserCollection(self)
         self._authinfos = authinfo.DjangoAuthInfoCollection(self)
         self._computers = computer.DjangoComputerCollection(self)
+        self._groups = groups.DjangoGroupCollection(self)
         self._query_manager = DjangoQueryManager(self)
 
     @property
@@ -46,8 +48,13 @@ class DjangoBackend(Backend):
         return self._computers
 
     @property
+    def groups(self):
+        return self._groups
+
+    @property
     def query_manager(self):
         return self._query_manager
 
     def query(self):
-        return DjangoQueryBuilder()
+        return querybuilder.DjangoQueryBuilder(self)
+

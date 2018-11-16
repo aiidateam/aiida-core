@@ -16,8 +16,6 @@ import logging
 import os
 import six
 
-# pylint: disable=cyclic-import
-
 from aiida import transport, scheduler
 from aiida.common import exceptions
 from . import backends
@@ -195,9 +193,6 @@ class Computer(entities.Entity):
             return "{} ({}), pk: {}".format(self.name, self.hostname, self.pk)
 
         return "{} ({}) [DISABLED], pk: {}".format(self.name, self.hostname, self.pk)
-
-    def set(self, **kwargs):
-        self._backend_entity.set(**kwargs)
 
     @property
     def full_text_info(self):
@@ -598,10 +593,10 @@ class Computer(entities.Entity):
             parameters to the supercomputer, as configured with ``verdi computer configure``
             for the user specified as a parameter ``user``.
         """
-        from . import authinfos
+        from . import authinfos  # pylint: disable=cyclic-import
 
         user = user or users.User.objects(self.backend).get_default()
-        authinfo = authinfos.AuthInfo.objects(self.backend).find(computer=self, user=user)[0]
+        authinfo = authinfos.AuthInfo.objects(self.backend).get(dbcomputer=self, aiidauser=user)
         return authinfo.get_transport()
 
     def get_workdir(self):

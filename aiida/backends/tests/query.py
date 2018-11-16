@@ -449,7 +449,7 @@ class TestQueryHelp(AiidaTestCase):
         from aiida.orm.data.parameter import ParameterData
         from aiida.orm.data import Data
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm.group import Group
+        from aiida.orm.groups import Group
         from aiida.orm.computers import Computer
         g = Group(name='helloworld').store()
         for cls in (StructureData, ParameterData, Data):
@@ -782,31 +782,30 @@ class QueryBuilderJoinsTests(AiidaTestCase):
             ).count(), number_students)
 
     def test_joins3_user_group(self):
-        from aiida.orm.users import User
-        from aiida.orm.querybuilder import QueryBuilder
+        from aiida import orm
 
         # Create another user
         new_email = "newuser@new.n"
-        user = User(email=new_email, backend=self.backend).store()
+        user = orm.User(email=new_email, backend=self.backend).store()
 
         # Create a group that belongs to that user
-        from aiida.orm.group import Group
-        group = Group(name="node_group")
+        from aiida.orm.groups import Group
+        group = orm.Group(name="node_group")
         group.user = user
         group.store()
 
         # Search for the group of the user
-        qb = QueryBuilder()
-        qb.append(User, tag='user', filters={'id': {'==': user.id}})
-        qb.append(Group, belongs_to='user',
+        qb = orm.QueryBuilder()
+        qb.append(orm.User, tag='user', filters={'id': {'==': user.id}})
+        qb.append(orm.Group, belongs_to='user',
                   filters={'id': {'==': group.id}})
         self.assertEquals(qb.count(), 1, "The expected group that belongs to "
                                          "the selected user was not found.")
 
         # Search for the user that owns a group
-        qb = QueryBuilder()
-        qb.append(Group, tag='group', filters={'id': {'==': group.id}})
-        qb.append(User, owner_of='group', filters={'id': {'==': user.id}})
+        qb = orm.QueryBuilder()
+        qb.append(orm.Group, tag='group', filters={'id': {'==': group.id}})
+        qb.append(orm.User, owner_of='group', filters={'id': {'==': user.id}})
 
         self.assertEquals(qb.count(), 1, "The expected user that owns the "
                                          "selected group was not found.")

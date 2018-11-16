@@ -21,7 +21,7 @@ import subprocess as sp
 
 from click.testing import CliRunner
 
-from aiida.orm.group import Group
+from aiida import orm
 from aiida.orm.data.array import ArrayData
 from aiida.orm.data.array.bands import BandsData
 from aiida.orm.data.array.kpoints import KpointsData
@@ -355,11 +355,11 @@ class TestVerdiDataBands(AiidaTestCase, TestVerdiDataListable):
         b = connect_structure_bands(s)
 
         # Create 2 groups and add the data to one of them
-        g_ne = Group(name='non_empty_group')
+        g_ne = orm.Group(name='non_empty_group')
         g_ne.store()
         g_ne.add_nodes(b)
 
-        g_e = Group(name='empty_group')
+        g_e = orm.Group(name='empty_group')
         g_e.store()
 
         return {
@@ -498,7 +498,6 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable, TestVerdiDat
     @staticmethod
     def create_trajectory_data():
         from aiida.orm.data.array.trajectory import TrajectoryData
-        from aiida.orm.group import Group
         import numpy
 
         # Create a node with two arrays
@@ -545,11 +544,11 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable, TestVerdiDat
         n.store()
 
         # Create 2 groups and add the data to one of them
-        g_ne = Group(name='non_empty_group')
+        g_ne = orm.Group(name='non_empty_group')
         g_ne.store()
         g_ne.add_nodes(n)
 
-        g_e = Group(name='empty_group')
+        g_e = orm.Group(name='empty_group')
         g_e.store()
 
         return {
@@ -612,7 +611,6 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable, TestVerdiData
     @staticmethod
     def create_structure_data():
         from aiida.orm.data.structure import StructureData, Site, Kind
-        from aiida.orm.group import Group
 
         alat = 4.  # angstrom
         cell = [
@@ -643,11 +641,11 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable, TestVerdiData
         struc.store()
 
         # Create 2 groups and add the data to one of them
-        g_ne = Group(name='non_empty_group')
+        g_ne = orm.Group(name='non_empty_group')
         g_ne.store()
         g_ne.add_nodes(struc)
 
-        g_e = Group(name='empty_group')
+        g_e = orm.Group(name='empty_group')
         g_e.store()
 
         return {
@@ -763,11 +761,11 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExport
             a = CifData(file=filename, source={'version': '1234', 'db_name': 'COD', 'id': '0000001'})
             a.store()
 
-            g_ne = Group(name='non_empty_group')
+            g_ne = orm.Group(name='non_empty_group')
             g_ne.store()
             g_ne.add_nodes(a)
 
-            g_e = Group(name='empty_group')
+            g_e = orm.Group(name='empty_group')
             g_e.store()
 
         return {

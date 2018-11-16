@@ -55,4 +55,5 @@ class DbAuthInfo(Base):
 
     def get_aiida_class(self):
         from aiida.orm.implementation.sqlalchemy.authinfo import SqlaAuthInfo
-        return SqlaAuthInfo.from_dbmodel(dbmodel=self)
+        from aiida.orm.backends import construct_backend
+        return SqlaAuthInfo.from_dbmodel(dbmodel=self, backend=construct_backend())

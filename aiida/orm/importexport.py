@@ -20,7 +20,7 @@ from aiida.common import exceptions
 from aiida.common.utils import (export_shard_uuid, get_class_string,
                                 get_object_from_string, grouper)
 from aiida.orm.computers import Computer
-from aiida.orm.group import Group
+from aiida.orm.groups import Group
 from aiida.orm.node import Node
 from aiida.orm.users import User
 
@@ -1398,8 +1398,8 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                                   type_string=IMPORTGROUP_TYPE)
                     from aiida.backends.sqlalchemy.models.group import DbGroup
                     if session.query(DbGroup).filter(
-                            DbGroup.name == group._dbgroup.name).count() == 0:
-                        session.add(group._dbgroup)
+                            DbGroup.name == group.backend_entity._dbmodel.name).count() == 0:
+                        session.add(group.backend_entity._dbmodel)
                         created = True
                     else:
                         counter += 1
@@ -1718,7 +1718,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
         # Now a load the backend-independent name into entry_entity_name, e.g. Node!
         entry_entity_name = schema_to_entity_names(entry_class_string)
         if issubclass(entry.__class__, Group):
-            given_group_entry_ids.add(entry.pk)
+            given_group_entry_ids.add(entry.id)
             given_groups.add(entry)
         elif issubclass(entry.__class__, Node):
             if issubclass(entry.__class__, Data):
@@ -1728,7 +1728,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
         elif issubclass(entry.__class__, Computer):
             given_computer_entry_ids.add(entry.pk)
         else:
-            raise ValueError("I was given {}, which is not a DbNode or DbGroup instance".format(entry))
+            raise ValueError("I was given {} ({}), which is not a DbNode or DbGroup instance".format(entry, type(entry)))
 
     # Add all the nodes contained within the specified groups
     for group in given_groups:

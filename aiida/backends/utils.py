@@ -205,22 +205,3 @@ def delete_nodes_and_connections(pks):
         raise Exception("unknown backend {}".format(settings.BACKEND))
 
     delete_nodes_backend(pks)
-
-
-def get_column(colname, alias):
-    """
-    Return the column for a given projection. Needed by the QueryBuilder
-    """
-
-    try:
-        return getattr(alias, colname)
-    except:
-        from aiida.common.exceptions import InputValidationError
-        raise InputValidationError(
-            "\n{} is not a column of {}\n"
-            "Valid columns are:\n"
-            "{}".format(
-                colname, alias,
-                '\n'.join(alias._sa_class_manager.mapper.c.keys())
-            )
-        )

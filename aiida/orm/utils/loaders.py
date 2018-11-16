@@ -500,7 +500,7 @@ class GroupEntityLoader(OrmEntityLoader):
 
         :returns: the orm base class
         """
-        from aiida.orm.group import Group
+        from aiida.orm.groups import Group
         return Group
 
     @classmethod

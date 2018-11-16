@@ -38,46 +38,99 @@ class BackendUser(backends.BackendEntity):
 
     @abc.abstractproperty
     def email(self):
+        """
+        Get the email address of the user
+
+        :return: the email address
+        """
         pass
 
     @abc.abstractmethod
     @email.setter
     def email(self, val):
+        """
+        Set the email address of the user
+
+        :param val: the new email address
+        """
         pass
 
     @abc.abstractmethod
     def get_password(self):
+        """
+        Get the password for the user
+
+        :return: the password
+        """
         pass
 
     @abc.abstractmethod
     def set_password(self, new_pass):
+        """
+        Set the password of the user
+
+        :param new_pass: the new password
+        """
         pass
 
     @abc.abstractproperty
     def first_name(self):
+        """
+        Get the user's first name
+
+        :return: the first name
+        :rtype: str
+        """
         pass
 
     @abc.abstractmethod
     @first_name.setter
     def first_name(self, val):
+        """
+        Set the user's first name
+
+        :param val: the new first name
+        """
         pass
 
     @abc.abstractproperty
     def last_name(self):
+        """
+        Get the user's last name
+
+        :return: the last name
+        :rtype: str
+        """
         pass
 
     @abc.abstractmethod
     @last_name.setter
     def last_name(self, val):
-        pass
+        """
+        Set the user's last name
+
+        :param val: the new last name
+        :type val: str
+        """
 
     @abc.abstractproperty
     def institution(self):
+        """
+        Get the user's institution
+
+        :return: the institution
+        :rtype: str
+        """
         pass
 
     @abc.abstractmethod
     @institution.setter
     def institution(self, val):
+        """
+        Set the user's institution
+
+        :param val: the new institution
+        """
         pass
 
     @abc.abstractproperty
@@ -108,6 +161,7 @@ class BackendUser(backends.BackendEntity):
         pass
 
 
-class BackendUserCollection(backends.BackendCollection):
+class BackendUserCollection(backends.BackendCollection[BackendUser]):
     # pylint: disable=too-few-public-methods
-    ENTRY_TYPE = BackendUser
+
+    ENTITY_CLASS = BackendUser

@@ -127,34 +127,23 @@ class BackendAuthInfo(backends.BackendEntity):
         """
         pass
 
-    def _get_property(self, name):
+    def get_property(self, name):
         try:
             return self._get_metadata()[name]
         except KeyError:
             raise ValueError('Unknown property: {}'.format(name))
 
-    def _set_property(self, name, value):
+    def set_property(self, name, value):
         metadata = self._get_metadata()
         metadata[name] = value
         self._set_metadata(metadata)
 
-    def get_workdir(self):
-        """
-        Get the workdir; defaults to the value of the corresponding computer, if not explicitly set
-
-        :return: a string
-        """
-        try:
-            return self._get_property(self.METADATA_WORKDIR)
-        except ValueError:
-            return self.computer.get_workdir()
-
 
 @six.add_metaclass(abc.ABCMeta)
-class BackendAuthInfoCollection(backends.BackendCollection):
+class BackendAuthInfoCollection(backends.BackendCollection[BackendAuthInfo]):
     """The collection of AuthInfo entries."""
 
-    ENTRY_TYPE = BackendAuthInfo
+    ENTITY_CLASS = BackendAuthInfo
 
     @abc.abstractmethod
     def create(self, computer, user):

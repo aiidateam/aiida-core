@@ -120,7 +120,7 @@ class DbUser(AbstractBaseUser, PermissionsMixin):
     objects = DbUserManager()
 
     def get_aiida_class(self):
-        from aiida.orm.implementation.django.user import DjangoUser
+        from aiida.orm.implementation.django.users import DjangoUser
         from aiida.orm.backends import construct_backend
         return DjangoUser.from_dbmodel(self, construct_backend())
 
@@ -1313,6 +1313,11 @@ class DbGroup(m.Model):
             return '<DbGroup [type: {}] "{}">'.format(self.type, self.name)
         else:
             return '<DbGroup [user-defined] "{}">'.format(self.name)
+
+    def get_aiida_class(self):
+        from aiida.orm.implementation.django.groups import DjangoGroup
+        from aiida.orm.backends import construct_backend
+        return DjangoGroup.from_dbmodel(self, construct_backend())
 
 
 @python_2_unicode_compatible

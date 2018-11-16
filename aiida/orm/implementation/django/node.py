@@ -26,7 +26,6 @@ from aiida.common.folders import RepositoryFolder
 from aiida.common.links import LinkType
 from aiida.common.utils import get_new_uuid, type_check
 from aiida.orm.implementation.general.node import AbstractNode, _HASH_EXTRA_KEY
-from . import backend
 from . import computer as computers
 
 
@@ -126,7 +125,7 @@ class Node(AbstractNode):
         else:
             # TODO: allow to get the user from the parameters
             user = orm.User.objects(backend=self._backend).get_default().backend_entity
-            self._dbnode = DbNode(user=user.dbuser,
+            self._dbnode = DbNode(user=user.dbmodel,
                                   uuid=get_new_uuid(),
                                   type=self._plugin_type_string)
 
@@ -321,7 +320,7 @@ class Node(AbstractNode):
 
     def _set_db_computer(self, computer):
         type_check(computer, computers.DjangoComputer)
-        self._dbnode.dbcomputer = computer.dbcomputer
+        self._dbnode.dbcomputer = computer.dbmodel
 
     def _set_db_attr(self, key, value):
         """
@@ -409,7 +408,7 @@ class Node(AbstractNode):
             user = orm.User.objects(self.backend).get_default()
 
         return DbComment.objects.create(dbnode=self._dbnode,
-                                        user=user.backend_entity.dbuser,
+                                        user=user.backend_entity.dbmodel,
                                         content=content).id
 
     def get_comment_obj(self, comment_id=None, user=None):
@@ -424,7 +423,7 @@ class Node(AbstractNode):
 
         # If a user is specified then we add it to the query
         if user is not None:
-            query_list.append(Q(user=user.backend_entity.dbuser))
+            query_list.append(Q(user=user.backend_entity.dbmodel))
 
         dbcomments = DbComment.objects.filter(
             reduce(operator.and_, query_list))
@@ -551,8 +550,8 @@ class Node(AbstractNode):
         )
 
     def set_user(self, user):
-        assert isinstance(user.backend, backend.DjangoBackend)
-        self._dbnode.user = user.backend_entity.dbuser
+        assert user.backend == self.backend, "Passed user from different backend"
+        self._dbnode.user = user.backend_entity.dbmodel
 
     def _store_cached_input_links(self, with_transaction=True):
         """

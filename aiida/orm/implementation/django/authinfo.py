@@ -11,14 +11,16 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+from aiida.backends.djsite.db import models
 from aiida.backends.djsite.db.models import DbAuthInfo
 from aiida.common import exceptions
 from aiida.common.utils import type_check
 import aiida.utils.json as json
 
 from ..authinfos import BackendAuthInfo, BackendAuthInfoCollection
+from . import entities
 from . import computer as computers
-from . import user as users
+from . import users as users
 from . import utils
 
 
@@ -71,16 +73,17 @@ class DjangoAuthInfoCollection(BackendAuthInfoCollection):
         return DjangoAuthInfo.from_dbmodel(dbmodel, self.backend)
 
 
-class DjangoAuthInfo(BackendAuthInfo):
+class DjangoAuthInfo(entities.DjangoModelEntity[models.DbAuthInfo], BackendAuthInfo):
     """AuthInfo implementation for Django."""
 
+    MODEL_CLASS = models.DbAuthInfo
+
     @classmethod
-    def from_dbmodel(cls, dbmodel, backend):
-        type_check(dbmodel, DbAuthInfo)
-        authinfo = cls.__new__(cls)
-        super(DjangoAuthInfo, authinfo).__init__(backend)
-        authinfo._dbauthinfo = utils.ModelWrapper(dbmodel)
-        return authinfo
+    def get_dbmodel_attribute_name(cls, attr_name):
+        if attr_name == 'type_string':
+            return 'type'
+
+        return super(DjangoAuthInfo, cls).get_dbmodel_attribute_name(attr_name)
 
     def __init__(self, backend, computer, user):
         """
@@ -93,40 +96,23 @@ class DjangoAuthInfo(BackendAuthInfo):
         super(DjangoAuthInfo, self).__init__(backend)
         type_check(user, users.DjangoUser)
         type_check(computer, computers.DjangoComputer)
-        self._dbauthinfo = utils.ModelWrapper(DbAuthInfo(dbcomputer=computer.dbcomputer, aiidauser=user.dbuser))
-
-    @property
-    def dbauthinfo(self):
-        return self._dbauthinfo._model
-
-    @property
-    def is_stored(self):
-        """
-        Return whether the AuthInfo is stored
-
-        :return: True if stored, False otherwise
-        """
-        return self._dbauthinfo.is_saved()
-
-    @property
-    def id(self):
-        return self._dbauthinfo.id
+        self._dbmodel = utils.ModelWrapper(DbAuthInfo(dbcomputer=computer.dbmodel, aiidauser=user.dbmodel))
 
     @property
     def enabled(self):
-        return self._dbauthinfo.enabled
+        return self._dbmodel.enabled
 
     @enabled.setter
     def enabled(self, enabled):
-        self._dbauthinfo.enabled = enabled
+        self._dbmodel.enabled = enabled
 
     @property
     def computer(self):
-        return self.backend.computers.from_dbmodel(self._dbauthinfo.dbcomputer)
+        return self.backend.computers.from_dbmodel(self._dbmodel.dbcomputer)
 
     @property
     def user(self):
-        return self._backend.users.from_dbmodel(self._dbauthinfo.aiidauser)
+        return self._backend.users.from_dbmodel(self._dbmodel.aiidauser)
 
     def get_auth_params(self):
         """
@@ -135,10 +121,10 @@ class DjangoAuthInfo(BackendAuthInfo):
         :return: a dictionary
         """
         try:
-            return json.loads(self._dbauthinfo.auth_params)
+            return json.loads(self._dbmodel.auth_params)
         except ValueError:
-            email = self._dbauthinfo.aiidauser.email
-            hostname = self._dbauthinfo.dbcomputer.hostname
+            email = self._dbmodel.aiidauser.email
+            hostname = self._dbmodel.dbcomputer.hostname
             raise exceptions.DbContentError(
                 "Error while reading auth_params for dbauthinfo, aiidauser={}, computer={}".format(email, hostname))
 
@@ -149,7 +135,7 @@ class DjangoAuthInfo(BackendAuthInfo):
         import aiida.utils.json as json
 
         # Raises ValueError if data is not JSON-serializable
-        self._dbauthinfo.auth_params = json.dumps(auth_params)
+        self._dbmodel.auth_params = json.dumps(auth_params)
 
     def _get_metadata(self):
         """
@@ -160,7 +146,7 @@ class DjangoAuthInfo(BackendAuthInfo):
         import aiida.utils.json as json
 
         try:
-            return json.loads(self._dbauthinfo.metadata)
+            return json.loads(self._dbmodel.metadata)
         except ValueError:
             raise exceptions.DbContentError(
                 "Error while reading metadata for dbauthinfo, aiidauser={}, computer={}".format(
@@ -171,7 +157,7 @@ class DjangoAuthInfo(BackendAuthInfo):
         Replace the metadata dictionary in the DB with the provided dictionary
         """
         # Raises ValueError if data is not JSON-serializable
-        self._dbauthinfo.metadata = json.dumps(metadata)
+        self._dbmodel.metadata = json.dumps(metadata)
 
     def store(self):
         """
@@ -179,5 +165,5 @@ class DjangoAuthInfo(BackendAuthInfo):
 
         :return: the AuthInfo instance
         """
-        self._dbauthinfo.save()
+        self._dbmodel.save()
         return self

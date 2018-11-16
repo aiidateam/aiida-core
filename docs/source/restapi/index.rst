@@ -120,7 +120,7 @@ AiiDA object(s) you want to request. The following resources are available:
 +--------------------------------------------------------------------------------------------+-------------------+
 | :py:class:`Data <aiida.orm.data.Data>`                                                     | ``/data``         |
 +--------------------------------------------------------------------------------------------+-------------------+
-| :py:class:`Group <aiida.orm.implementation.general.group.AbstractGroup>`                   | ``/groups``       |
+| :py:class:`Group <aiida.orm.groups.Group>`                                                 | ``/groups``       |
 +--------------------------------------------------------------------------------------------+-------------------+
 | :py:class:`Node <aiida.orm.implementation.general.node.AbstractNode>`                      | ``/nodes``        |
 +--------------------------------------------------------------------------------------------+-------------------+

@@ -16,6 +16,7 @@ from aiida.orm.log import ASCENDING
 from aiida.backends.djsite.db.models import DbLog
 import aiida.utils.json as json
 
+
 class DjangoLogCollection(LogCollection):
 
     def create_entry(self, time, loggername, levelname, objname, objpk=None, message="", metadata=None):

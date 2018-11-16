@@ -18,6 +18,7 @@ from functools import partial
 from aiida.common.log import configure_logging
 from aiida.daemon.client import get_daemon_client
 from aiida import work
+from aiida.manage.manager import AiiDAManager
 
 
 logger = logging.getLogger(__name__)
@@ -33,7 +34,7 @@ def start_daemon():
     configure_logging(daemon=True, daemon_log_file=daemon_client.daemon_log_file)
 
     try:
-        runner = work.AiiDAManager.create_daemon_runner()
+        runner = AiiDAManager.create_daemon_runner()
     except Exception as exception:
         logger.exception('daemon runner failed to start')
         raise

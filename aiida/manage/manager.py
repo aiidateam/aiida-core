@@ -13,13 +13,9 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import functools
-import kiwipy.rmq
 import plumpy
 
-from aiida.work import rmq
 from aiida import utils
-from . import persistence
-from . import runners
 
 __all__ = ('AiiDAManager',)
 
@@ -35,13 +31,17 @@ class AiiDAManager(object):
     to create objects based on the current settings.
 
     It is also a useful place to put objects where there can be a single 'global' (per profile) instance.
+
+    Future plans:
+      * reset manager cache when loading a new profile
+      * move construct_backend() from orm.backends inside the AiiDAManager
     """
 
-    _PROFILE = None
-    _COMMUNICATOR = None  # type: kiwipy.rmq.RmqThreadCommunicator
-    _PROCESS_CONTROLLER = None  # type: plumpy.RemoteProcessThreadController
-    _PERSISTER = None  # type: aiida.work.AiiDAPersister
-    _RUNNER = None  # type: aiida.work.Runer
+    _profile = None  # type: aiida.common.profile.Profile
+    _communicator = None  # type: kiwipy.rmq.RmqThreadCommunicator
+    _process_controller = None  # type: plumpy.RemoteProcessThreadController
+    _persister = None  # type: aiida.work.AiiDAPersister
+    _runner = None  # type: aiida.work.Runner
 
     @classmethod
     def get_profile(cls):
@@ -53,10 +53,10 @@ class AiiDAManager(object):
         """
         from aiida.common import profile
 
-        if cls._PROFILE is None:
-            cls._PROFILE = profile.get_profile()
+        if cls._profile is None:
+            cls._profile = profile.get_profile()
 
-        return cls._PROFILE
+        return cls._profile
 
     @classmethod
     def get_persister(cls):
@@ -66,10 +66,12 @@ class AiiDAManager(object):
         :return: the current persister instance
         :rtype: :class:`plumpy.Persister`
         """
-        if cls._PERSISTER is None:
-            cls._PERSISTER = persistence.AiiDAPersister()
+        from aiida.work import persistence
 
-        return cls._PERSISTER
+        if cls._persister is None:
+            cls._persister = persistence.AiiDAPersister()
+
+        return cls._persister
 
     @classmethod
     def get_communicator(cls):
@@ -79,10 +81,10 @@ class AiiDAManager(object):
         :return: a global communicator instance
         :rtype: :class:`kiwipy.Communicator`
         """
-        if cls._COMMUNICATOR is None:
-            cls._COMMUNICATOR = cls.create_communicator()
+        if cls._communicator is None:
+            cls._communicator = cls.create_communicator()
 
-        return cls._COMMUNICATOR
+        return cls._communicator
 
     @classmethod
     def create_communicator(cls, task_prefetch_count=None):
@@ -93,6 +95,8 @@ class AiiDAManager(object):
         :return: the communicator instance
         :rtype: :class:`~kiwipy.rmq.communicator.RmqThreadCommunicator`
         """
+        from aiida.work import rmq
+        import kiwipy.rmq
         profile = cls.get_profile()
 
         if task_prefetch_count is None:
@@ -128,10 +132,10 @@ class AiiDAManager(object):
         :return: the process controller instance
         :rtype: :class:`plumpy.RemoteProcessThreadController`
         """
-        if cls._PROCESS_CONTROLLER is None:
-            cls._PROCESS_CONTROLLER = plumpy.RemoteProcessThreadController(cls.get_communicator())
+        if cls._process_controller is None:
+            cls._process_controller = plumpy.RemoteProcessThreadController(cls.get_communicator())
 
-        return cls._PROCESS_CONTROLLER
+        return cls._process_controller
 
     @classmethod
     def get_runner(cls):
@@ -141,10 +145,10 @@ class AiiDAManager(object):
         :return: the global runner
         :rtype: :class:`aiida.work.Runner`
         """
-        if cls._RUNNER is None:
-            cls._RUNNER = cls.create_runner()
+        if cls._runner is None:
+            cls._runner = cls.create_runner()
 
-        return cls._RUNNER
+        return cls._runner
 
     @classmethod
     def set_runner(cls, new_runner):
@@ -154,10 +158,10 @@ class AiiDAManager(object):
         :param new_runner: the new runner to use
         :type new_runner: :class:`aiida.work.Runner`
         """
-        if cls._RUNNER is not None:
-            cls._RUNNER.close()
+        if cls._runner is not None:
+            cls._runner.close()
 
-        cls._RUNNER = new_runner
+        cls._runner = new_runner
 
     @classmethod
     def create_runner(cls, with_persistence=True, **kwargs):
@@ -169,6 +173,8 @@ class AiiDAManager(object):
         :return: a new runner instance
         :rtype: :class:`aiida.work.Runner`
         """
+        from aiida.work import runners
+
         profile = cls.get_profile()
         poll_interval = 0.0 if profile.is_test_profile else profile.get_option('runner.poll.interval')
 
@@ -194,6 +200,7 @@ class AiiDAManager(object):
         :return: a runner configured to work in the daemon configuration
         :rtype: :class:`aiida.work.Runner`
         """
+        from aiida.work import rmq, persistence
         runner = cls.create_runner(rmq_submit=True, loop=loop)
         runner_loop = runner.loop
 
@@ -216,15 +223,16 @@ class AiiDAManager(object):
         """
         Reset the global settings entirely and release any global objects
         """
-        if cls._COMMUNICATOR is not None:
-            cls._COMMUNICATOR.stop()
-        if cls._RUNNER is not None:
-            cls._RUNNER.stop()
+        if cls._communicator is not None:
+            cls._communicator.stop()
+        if cls._runner is not None:
+            cls._runner.stop()
 
-        cls._PROFILE = None
-        cls._COMMUNICATOR = None
-        cls._PROCESS_CONTROLLER = None
-        cls._RUNNER = None
+        cls._profile = None
+        cls._persister = None
+        cls._communicator = None
+        cls._process_controller = None
+        cls._runner = None
 
     def __init__(self):
         """Can't instantiate this class"""

@@ -26,6 +26,7 @@ from aiida.common.links import LinkType
 from aiida.common.utils import get_new_uuid, type_check
 from aiida.orm.implementation.general.node import AbstractNode, _HASH_EXTRA_KEY
 from . import computer as computers
+from aiida.manage.manager import AiiDAManager
 
 
 class Node(AbstractNode):

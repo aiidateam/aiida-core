@@ -15,8 +15,10 @@ from __future__ import print_function
 from __future__ import absolute_import
 from aiida.common.extendeddicts import DefaultFieldsAttributeDict, Enumerate
 
+
 class CalcState(Enumerate):
     pass
+
 
 _sorted_datastates = (
     'NEW',  # just created
@@ -175,6 +177,7 @@ class CalcInfo(DefaultFieldsAttributeDict):
 class CodeRunmode(Enumerate):
     pass
 
+
 # these are the possible ways to execute more than one code in the same scheduling job
 # if parallel, the codes will be executed as something like:
 #   code1.x &
@@ -279,15 +282,38 @@ wf_start_call = "start"
 wf_exit_call = "exit"
 wf_default_call = "none"
 
-# TODO Improve/implement this!
-# class DynResourcesInfo(AttributeDict):
-#    """
-#    This object will contain a list of 'dynamical' resources to be
-#    passed from the code plugin to the ExecManager, containing
-#    things like
-#    * resources in the permanent repository, that will be simply
-#      linked locally (but copied remotely on the remote computer)
-#      to avoid a waste of permanent repository space
-#    * remote resources to be directly copied over only remotely
-#    """
-#    pass
+
+class LazyStore(object):
+    """
+    A container that provides a mapping to objects based on a key, if the object is not
+    found in the container when it is retrieved it will created using a provided factory
+    method
+    """
+
+    def __init__(self):
+        self._store = {}
+
+    def get(self, key, factory):
+        """
+        Get a value in the store based on the key, if it doesn't exist it will be created
+        using the factory method and returned
+
+        :param key: the key of the object to get
+        :param factory: the factory used to create the object if necessary
+        :return: the object
+        """
+        try:
+            return self._store[key]
+        except KeyError:
+            obj = factory()
+            self._store[key] = obj
+            return obj
+
+    def pop(self, key):
+        """
+        Pop an object from the store based on the given key
+
+        :param key: the object key
+        :return: the object that was popped
+        """
+        return self._store.pop(key)

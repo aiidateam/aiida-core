@@ -29,7 +29,7 @@ from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.orm.node.process import ProcessNode, WorkFunctionNode, WorkChainNode
 from aiida.work import test_utils
-from aiida import work
+from aiida.manage.manager import AiiDAManager
 
 
 def get_result_lines(result):
@@ -50,7 +50,7 @@ class TestVerdiProcessDaemon(AiidaTestCase):
         self.daemon_client = DaemonClient(profile)
         self.daemon_pid = subprocess.Popen(
             self.daemon_client.cmd_string.split(), stderr=sys.stderr, stdout=sys.stdout).pid
-        self.runner = work.AiiDAManager.create_runner(rmq_submit=True)
+        self.runner = AiiDAManager.create_runner(rmq_submit=True)
         self.cli_runner = CliRunner()
 
     def tearDown(self):

@@ -32,6 +32,7 @@ from aiida import work
 from aiida.work import ExitCode, Process
 from aiida.work.persistence import ObjectLoader
 from aiida.work.workchain import *
+from aiida.manage.manager import AiiDAManager
 
 
 def run_until_paused(proc):
@@ -563,7 +564,7 @@ class TestWorkchain(AiidaTestCase):
         """
         This test was created to capture issue #902
         """
-        runner = work.AiiDAManager.get_runner()
+        runner = AiiDAManager.get_runner()
         wc = IfTest()
         runner.schedule(wc)
 
@@ -649,7 +650,7 @@ class TestWorkchain(AiidaTestCase):
 
     def test_persisting(self):
         persister = plumpy.test_utils.TestPersister()
-        runner = work.AiiDAManager.get_runner()
+        runner = AiiDAManager.get_runner()
         workchain = Wf(runner=runner)
         work.run(workchain)
 
@@ -817,7 +818,7 @@ class TestWorkChainAbort(AiidaTestCase):
         Run the workchain which should hit the exception and therefore end
         up in the EXCEPTED state
         """
-        runner = work.AiiDAManager.get_runner()
+        runner = AiiDAManager.get_runner()
         process = TestWorkChainAbort.AbortableWorkChain()
 
         @gen.coroutine
@@ -843,7 +844,7 @@ class TestWorkChainAbort(AiidaTestCase):
         on the workchain itself. This should have the workchain end up
         in the KILLED state.
         """
-        runner = work.AiiDAManager.get_runner()
+        runner = AiiDAManager.get_runner()
         process = TestWorkChainAbort.AbortableWorkChain()
 
         @gen.coroutine
@@ -936,7 +937,7 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         Run the workchain for one step and then kill it. This should have the
         workchain and its children end up in the KILLED state.
         """
-        runner = work.AiiDAManager.get_runner()
+        runner = AiiDAManager.get_runner()
         process = TestWorkChainAbortChildren.MainWorkChain(inputs={'kill': Bool(True)})
 
         @gen.coroutine

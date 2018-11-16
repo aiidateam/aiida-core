@@ -17,8 +17,8 @@ from tornado import gen
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.data.int import Int
-from aiida.work import test_utils
 from aiida import work
+from aiida.manage.manager import AiiDAManager
 
 
 class TestProcessControl(AiidaTestCase):
@@ -33,8 +33,8 @@ class TestProcessControl(AiidaTestCase):
 
         # These two need to share a common event loop otherwise the first will never send
         # the message while the daemon is running listening to intercept
-        self.runner = work.AiiDAManager.get_runner()
-        self.daemon_runner = work.AiiDAManager.create_daemon_runner(loop=self.runner.loop)
+        self.runner = AiiDAManager.get_runner()
+        self.daemon_runner = AiiDAManager.create_daemon_runner(loop=self.runner.loop)
 
     def tearDown(self):
         self.daemon_runner.close()
@@ -44,7 +44,7 @@ class TestProcessControl(AiidaTestCase):
         # Launch the process
         @gen.coroutine
         def do_submit():
-            calc_node = work.submit(test_utils.DummyProcess)
+            calc_node = work.submit(work.test_utils.DummyProcess)
             yield self.wait_for_calc(calc_node)
 
             self.assertTrue(calc_node.is_finished_ok)
@@ -58,7 +58,7 @@ class TestProcessControl(AiidaTestCase):
             a = Int(5)
             b = Int(10)
 
-            calc_node = work.submit(test_utils.AddProcess, a=a, b=b)
+            calc_node = work.submit(work.test_utils.AddProcess, a=a, b=b)
             yield self.wait_for_calc(calc_node)
             self.assertTrue(calc_node.is_finished_ok)
             self.assertEqual(calc_node.process_state.value, plumpy.ProcessState.FINISHED.value)
@@ -67,12 +67,12 @@ class TestProcessControl(AiidaTestCase):
 
     def test_submit_bad_input(self):
         with self.assertRaises(ValueError):
-            work.submit(test_utils.AddProcess, a=Int(5))
+            work.submit(work.test_utils.AddProcess, a=Int(5))
 
     def test_exception_process(self):
         @gen.coroutine
         def do_exception():
-            calc_node = work.submit(test_utils.ExceptionProcess)
+            calc_node = work.submit(work.test_utils.ExceptionProcess)
             yield self.wait_for_calc(calc_node)
 
             self.assertFalse(calc_node.is_finished_ok)
@@ -83,11 +83,11 @@ class TestProcessControl(AiidaTestCase):
     def test_pause(self):
         """Testing sending a pause message to the process."""
 
-        controller = work.AiiDAManager.get_process_controller()
+        controller = AiiDAManager.get_process_controller()
 
         @gen.coroutine
         def do_pause():
-            calc_node = work.submit(test_utils.WaitProcess)
+            calc_node = work.submit(work.test_utils.WaitProcess)
             while calc_node.process_state != work.ProcessState.WAITING:
                 yield
 
@@ -103,11 +103,11 @@ class TestProcessControl(AiidaTestCase):
     def test_pause_play(self):
         """Test sending a pause and then a play message."""
 
-        controller = work.AiiDAManager.get_process_controller()
+        controller = AiiDAManager.get_process_controller()
 
         @gen.coroutine
         def do_pause_play():
-            calc_node = work.submit(test_utils.WaitProcess)
+            calc_node = work.submit(work.test_utils.WaitProcess)
             self.assertFalse(calc_node.paused)
             while calc_node.process_state != work.ProcessState.WAITING:
                 yield
@@ -129,11 +129,11 @@ class TestProcessControl(AiidaTestCase):
     def test_kill(self):
         """Test sending a kill message."""
 
-        controller = work.AiiDAManager.get_process_controller()
+        controller = AiiDAManager.get_process_controller()
 
         @gen.coroutine
         def do_kill():
-            calc_node = work.submit(test_utils.WaitProcess)
+            calc_node = work.submit(work.test_utils.WaitProcess)
             self.assertFalse(calc_node.is_killed)
             while calc_node.process_state != work.ProcessState.WAITING:
                 yield

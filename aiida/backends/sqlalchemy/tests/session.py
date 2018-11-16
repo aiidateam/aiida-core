@@ -74,7 +74,7 @@ class TestSessionSqla(AiidaTestCase):
                         transport_type='local',
                         scheduler_type='pbspro')
         computer = self.backend.computers.create(**defaults)
-        session.add(computer._dbmodel)
+        session.add(computer.dbmodel)
         session.commit()
 
         code = Code()

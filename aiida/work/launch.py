@@ -12,7 +12,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from . import manager
+from aiida.manage import manager
 from . import processes
 from . import utils
 

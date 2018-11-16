@@ -7,32 +7,24 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Test for general backend entities"""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from .exceptions import *
-from .exit_code import *
-from .futures import *
-from .job_processes import *
-from .launch import *
-from .persistence import *
-from .processes import *
-from .process_function import *
-from .rmq import *
-from .runners import *
-from .utils import *
-from .workchain import *
+from aiida.backends.testbase import AiidaTestCase
+from aiida import orm
 
-__all__ = (
-        exceptions.__all__ +
-        exit_code.__all__ +
-        futures.__all__ +
-        job_processes.__all__ +
-        launch.__all__ +
-        persistence.__all__ +
-        processes.__all__ +
-        rmq.__all__ +
-        runners.__all__ +
-        utils.__all__ +
-        workchain.__all__)
+
+class TestBackendEntitiesAndCollections(AiidaTestCase):
+    """Test backend entities and their collections"""
+
+    def test_collections_cache(self):
+        """Make sure that we're not recreating collections each time .objects is called"""
+        # Check directly
+        user_collection = orm.User.objects
+        self.assertIs(user_collection, orm.User.objects)
+
+        # Now check passing an explicit backend
+        backend = user_collection.backend
+        self.assertIs(user_collection, user_collection(backend))

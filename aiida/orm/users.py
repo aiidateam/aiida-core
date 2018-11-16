@@ -31,12 +31,16 @@ class User(entities.Entity):
     backend needs to provide a concrete version.
     """
 
-    # pylint: disable=invalid-name
-
     class Collection(entities.Collection):
         """
         The collection of users stored in a backend
         """
+        UNDEFINED = 'UNDEFINED'
+        _default_user = None  # type: aiida.orm.user.User
+
+        def __init__(self, *args, **kwargs):
+            super(User.Collection, self).__init__(*args, **kwargs)
+            self._default_user = self.UNDEFINED
 
         def get_or_create(self, **kwargs):
             """
@@ -59,16 +63,18 @@ class User(entities.Entity):
             :return: The default user
             :rtype: :class:`aiida.orm.User`
             """
-            from aiida.common.utils import get_configured_user_email
+            if self._default_user is self.UNDEFINED:
+                from aiida.common.utils import get_configured_user_email
+                email = get_configured_user_email()
+                if not email:
+                    self._default_user = None
 
-            email = get_configured_user_email()
-            if not email:
-                return None
+                try:
+                    self._default_user = self.get(email=email)
+                except (exceptions.MultipleObjectsError, exceptions.NotExistent):
+                    self._default_user = None
 
-            try:
-                return self.get(email=email)
-            except (exceptions.MultipleObjectsError, exceptions.NotExistent):
-                return None
+            return self._default_user
 
     REQUIRED_FIELDS = ['first_name', 'last_name', 'institution']
 

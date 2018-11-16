@@ -12,6 +12,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+from aiida.backends import settings
+
 __all__ = 'construct_backend', 'CollectionEntry'
 
 _DJANGO_BACKEND = None
@@ -27,7 +29,7 @@ def construct_backend(backend_type=None):
     """
     # pylint: disable=global-statement
     if backend_type is None:
-        from aiida.backends import settings
+
         backend_type = settings.BACKEND
 
     if backend_type == 'django':

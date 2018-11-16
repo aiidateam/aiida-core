@@ -46,10 +46,17 @@ class Migration(migrations.Migration):
             name='uuid',
             field=models.UUIDField(unique=True, default=aiida.common.utils.get_new_uuid),
         ),
+        # first: remove index
         migrations.AlterField(
             model_name='dbnode',
             name='uuid',
-            field=models.UUIDField(unique=True, default=aiida.common.utils.get_new_uuid),
+            field=models.CharField(max_length=36, default=aiida.common.utils.get_new_uuid, unique=False),
+        ),
+        # second: switch to UUIDField
+        migrations.AlterField(
+            model_name='dbnode',
+            name='uuid',
+            field=models.UUIDField(default=aiida.common.utils.get_new_uuid, unique=True),
         ),
         migrations.AlterField(
             model_name='dbuser',

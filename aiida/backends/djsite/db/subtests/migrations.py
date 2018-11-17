@@ -20,6 +20,7 @@ from django.db import connection
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import IntegrityError
 from aiida.manage.database.integrity import deduplicate_node_uuids, verify_node_uuid_uniqueness
+from aiida.utils.capturing import Capturing
 
 
 class TestMigrations(AiidaTestCase):
@@ -155,3 +156,16 @@ class TestUuidMigration(TestMigrations):
 
         n = load_node(self.node_id)
         self.assertEqual(self.node_uuid, n.uuid)
+
+
+class TestNoMigrations(AiidaTestCase):
+
+    def test_no_remaining_migrations(self):
+        """Verify that no django migrations remain.
+
+        Equivalent to python manage.py makemigrations --check
+        """
+        from django.core.management import call_command
+
+        # Raises SystemExit, if migrations remain
+        call_command("makemigrations", "--check", verbosity=0)

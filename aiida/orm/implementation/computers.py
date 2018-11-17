@@ -48,10 +48,6 @@ class BackendComputer(backends.BackendEntity):
         :rtype: bool
         """
 
-    @abc.abstractmethod
-    def set(self, **kwargs):
-        pass
-
     @abc.abstractproperty
     def name(self):
         pass
@@ -145,17 +141,10 @@ class BackendComputer(backends.BackendEntity):
 
 
 @six.add_metaclass(abc.ABCMeta)
-class BackendComputerCollection(backends.BackendCollection):
+class BackendComputerCollection(backends.BackendCollection[BackendComputer]):
     """The collection of Computer entries."""
 
-    ENTRY_TYPE = BackendComputer
-
-    @abc.abstractmethod
-    def list_names(self):
-        """
-        Return a list with all the names of the computers in the DB.
-        """
-        pass
+    ENTITY_CLASS = BackendComputer
 
     @abc.abstractmethod
     def delete(self, id):  # pylint: disable=redefined-builtin, invalid-name

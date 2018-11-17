@@ -138,7 +138,6 @@ class AbstractQueryManager(object):
         import datetime
         from aiida.utils import timezone
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm.implementation import Group
         from aiida.orm.data.structure import (get_formula, get_symbols_string)
         from aiida.orm.data.array.bands import BandsData
         from aiida.orm.data.structure import StructureData
@@ -169,7 +168,7 @@ class AbstractQueryManager(object):
         if args.group_pk is not None:
             group_filters.update({"id": {"in": args.group_pk}})
         if group_filters:
-            qb.append(Group, tag="group", filters=group_filters,
+            qb.append(orm.Group, tag="group", filters=group_filters,
                       group_of="bdata")
 
         qb.append(StructureData, tag="sdata", ancestor_of="bdata",

@@ -7,82 +7,56 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+"""SQLA groups"""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import collections
-from copy import copy
-
+import logging
 import six
-from sqlalchemy.orm.session import make_transient
 
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.group import DbGroup, table_groups_nodes
 from aiida.backends.sqlalchemy.models.node import DbNode
-from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError, NotExistent)
+from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError)
 from aiida.common.utils import type_check
-from aiida.orm.implementation.general.group import AbstractGroup
+from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
 
-from . import user as users
+from . import entities
+from . import users
 from . import utils
-from aiida.orm import users as orm_users
+
+__all__ = 'SqlaGroup', 'SqlaGroupCollection'
+
+_LOGGER = logging.getLogger(__name__)
 
 
-class Group(AbstractGroup):
-    def __init__(self, **kwargs):
-        from aiida import orm
-        from aiida.orm.backends import construct_backend
-        super(Group, self).__init__()
+# Unfortunately the linter doesn't seem to be able to pick up on the fact that the abstract property 'id'
+# of BackendGroup is actually implemented in SqlaModelEntity so disable the abstract check
+class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: disable=abstract-method
+    """The SQLAlchemy Group object"""
 
-        self._backend = construct_backend()
+    MODEL_CLASS = DbGroup
 
-        given_dbgroup = kwargs.pop('dbgroup', None)
+    def __init__(self, backend, name, user, description='', type_string=''):
+        """
+        Construct a new SQLA group
 
-        if given_dbgroup is not None:
+        :param backend: the backend to use
+        :param name: the group name
+        :param user: the owner of the group
+        :param description: an optional group description
+        :param type_string: an optional type for the group to contain
+        """
+        type_check(user, users.SqlaUser)
+        super(SqlaGroup, self).__init__(backend)
 
-            # Check that there is no other parameter passed besides dbgroup
-            if kwargs:
-                raise ValueError("If you pass a dbgroups, you cannot pass any "
-                                 "further parameter")
-
-            if isinstance(given_dbgroup, six.integer_types):
-                dbgroup_res = DbGroup.query.filter_by(id=given_dbgroup).first()
-                if not dbgroup_res:
-                    raise NotExistent("Group with pk={} does not exist".format(
-                        given_dbgroup))
-                dbgroup = dbgroup_res
-            elif isinstance(given_dbgroup, DbGroup):
-                dbgroup = given_dbgroup
-            else:
-                raise ValueError("Unrecognised inputs '{}'".format(kwargs))
-        else:
-            name = kwargs.pop('name', None)
-            if name is None:
-                raise ValueError("You have to specify a group name")
-            group_type = kwargs.pop('type_string',
-                                    "")  # By default, an user group
-
-            # Get the user and extract the dbuser instance
-            user = kwargs.pop('user', orm_users.User.objects.get_default())
-            if isinstance(user, orm.User):
-                user = user.backend_entity
-            user = user.dbuser
-
-            description = kwargs.pop('description', "")
-
-            if kwargs:
-                raise ValueError("Too many parameters passed to Group, the "
-                                 "unknown parameters are: {}".format(", ".join(kwargs.keys())))
-
-            dbgroup = DbGroup(name=name, description=description,
-                              user=user, type=group_type)
-
-        self._dbgroup = utils.ModelWrapper(dbgroup)
+        dbgroup = DbGroup(name=name, description=description, user=user.dbmodel, type=type_string)
+        self._dbmodel = utils.ModelWrapper(dbgroup)
 
     @property
     def name(self):
-        return self._dbgroup.name
+        return self._dbmodel.name
 
     @name.setter
     def name(self, name):
@@ -94,79 +68,66 @@ class Group(AbstractGroup):
         :param name: the new group name
         :raises UniquenessError: if another group of same type and name already exists
         """
-        self._dbgroup.name = name
+        self._dbmodel.name = name
 
         if self.is_stored:
             try:
-                self._dbgroup.save()
+                self._dbmodel.save()
             except Exception:
                 raise UniquenessError('a group of the same type with the name {} already exists'.format(name))
 
     @property
     def description(self):
-        return self._dbgroup.description
+        return self._dbmodel.description
 
     @description.setter
     def description(self, value):
-        self._dbgroup.description = value
+        self._dbmodel.description = value
 
         # Update the entry in the DB, if the group is already stored
         if self.is_stored:
-            self._dbgroup.save()
+            self._dbmodel.save()
 
     @property
     def type_string(self):
-        return self._dbgroup.type
+        return self._dbmodel.type
 
     @property
     def user(self):
-        return self._dbgroup.user.get_aiida_class()
+        return self._dbmodel.user.get_aiida_class()
 
     @user.setter
     def user(self, new_user):
-        from aiida import orm
-
-        if isinstance(new_user, orm.User):
-            new_user = new_user.backend_entity
         type_check(new_user, users.SqlaUser)
-        self._dbgroup.user = new_user.dbuser
-
-    @property
-    def dbgroup(self):
-        return self._dbgroup._model
+        self._dbmodel.user = new_user.dbmodel
 
     @property
     def pk(self):
-        return self._dbgroup.id
-
-    @property
-    def id(self):
-        return self._dbgroup.id
+        return self._dbmodel.id
 
     @property
     def uuid(self):
-        return six.text_type(self._dbgroup.uuid)
+        return six.text_type(self._dbmodel.uuid)
 
     def __int__(self):
         if not self.is_stored:
             return None
-        else:
-            return self._dbnode.id
+
+        return self._dbnode.id
 
     @property
     def is_stored(self):
         return self.pk is not None
 
     def store(self):
-        self._dbgroup.save()
+        self._dbmodel.save()
         return self
 
     def add_nodes(self, nodes):
-        from sqlalchemy.exc import IntegrityError
+        from sqlalchemy.exc import IntegrityError  # pylint: disable=import-error, no-name-in-module
 
         if not self.is_stored:
-            raise ModificationNotAllowed("Cannot add nodes to a group before "
-                                         "storing")
+            raise ModificationNotAllowed("Cannot add nodes to a group before " "storing")
         from aiida.orm.implementation.sqlalchemy.node import Node
         from aiida.backends.sqlalchemy import get_scoped_session
 
@@ -174,27 +135,23 @@ class Group(AbstractGroup):
         if isinstance(nodes, (Node, DbNode)):
             nodes = [nodes]
 
-        if isinstance(nodes, six.string_types) or not isinstance(
-                nodes, collections.Iterable):
+        if isinstance(nodes, six.string_types) or not isinstance(nodes, collections.Iterable):
             raise TypeError("Invalid type passed as the 'nodes' parameter to "
                             "add_nodes, can only be a Node, DbNode, or a list "
-                            "of such objects, it is instead {}".format(
-                str(type(nodes))))
+                            "of such objects, it is instead {}".format(str(type(nodes))))
 
         with utils.disable_expire_on_commit(get_scoped_session()) as session:
             # Get dbnodes here ONCE, otherwise each call to _dbgroup.dbnodes will
             # re-read the current value in the database
-            dbnodes = self._dbgroup.dbnodes
+            dbnodes = self._dbmodel.dbnodes
             for node in nodes:
                 if not isinstance(node, (Node, DbNode)):
                     raise TypeError("Invalid type of one of the elements passed "
                                     "to add_nodes, it should be either a Node or "
-                                    "a DbNode, it is instead {}".format(
-                        str(type(node))))
+                                    "a DbNode, it is instead {}".format(str(type(node))))
 
                 if node.id is None:
-                    raise ValueError("At least one of the provided nodes is "
-                                     "unstored, stopping...")
+                    raise ValueError("At least one of the provided nodes is " "unstored, stopping...")
                 if isinstance(node, Node):
                     to_add = node.dbnode
                 else:
@@ -215,15 +172,19 @@ class Group(AbstractGroup):
 
     @property
     def nodes(self):
-        class iterator(object):
+        """Get an iterator to all the nodes in the group"""
+
+        class Iterator(object):
+            """Nodes iterator"""
+
             def __init__(self, dbnodes):
                 self._dbnodes = dbnodes
                 self._iter = dbnodes.__iter__()
                 self.generator = self._genfunction()
 
             def _genfunction(self):
-                for n in self._iter:
-                    yield n.get_aiida_class()
+                for node in self._iter:
+                    yield node.get_aiida_class()
 
             def __iter__(self):
                 return self
@@ -238,20 +199,23 @@ class Group(AbstractGroup):
             def next(self):
                 return next(self.generator)
 
-        return iterator(self._dbgroup.dbnodes)
+        return Iterator(self._dbmodel.dbnodes)
 
     def remove_nodes(self, nodes):
+        """
+        Remove the given nodes from the group.  Can pass a single node or a collection of nodes
+
+        :param nodes: the nodes to remove
+        """
         if not self.is_stored:
-            raise ModificationNotAllowed("Cannot remove nodes from a group "
-                                         "before storing")
+            raise ModificationNotAllowed("Cannot remove nodes from a group " "before storing")
 
         from aiida.orm.implementation.sqlalchemy.node import Node
         # First convert to a list
         if isinstance(nodes, (Node, DbNode)):
             nodes = [nodes]
 
-        if isinstance(nodes, six.string_types) or not isinstance(
-                nodes, collections.Iterable):
+        if isinstance(nodes, six.string_types) or not isinstance(nodes, collections.Iterable):
             raise TypeError("Invalid type passed as the 'nodes' parameter to "
                             "remove_nodes, can only be a Node, DbNode, or a "
                             "list of such objects, it is instead {}".format(str(type(nodes))))
@@ -259,16 +223,14 @@ class Group(AbstractGroup):
         list_nodes = []
         # Have to save dbndoes here ONCE, otherwise it will be reloaded from
         # the database each time we access it through _dbgroup.dbnodes
-        dbnodes = self._dbgroup.dbnodes
+        dbnodes = self._dbmodel.dbnodes
         for node in nodes:
             if not isinstance(node, (Node, DbNode)):
                 raise TypeError("Invalid type of one of the elements passed "
                                 "to add_nodes, it should be either a Node or "
-                                "a DbNode, it is instead {}".format(
-                    str(type(node))))
+                                "a DbNode, it is instead {}".format(str(type(node))))
             if node.id is None:
-                raise ValueError("At least one of the provided nodes is "
-                                 "unstored, stopping...")
+                raise ValueError("At least one of the provided nodes is " "unstored, stopping...")
             if isinstance(node, Node):
                 node = node.dbnode
             # If we don't check first, SqlA might issue a DELETE statement for
@@ -281,11 +243,24 @@ class Group(AbstractGroup):
 
         sa.get_scoped_session().commit()
 
-    @classmethod
-    def query(cls, name=None, type_string="", pk=None, uuid=None, nodes=None,
-              user=None, node_attributes=None, past_days=None,
-              name_filters=None, **kwargs):
-        from aiida import orm
+
+class SqlaGroupCollection(BackendGroupCollection):
+    """The SLQA collection of groups"""
+
+    ENTITY_CLASS = SqlaGroup
+
+    def query(self,
+              name=None,
+              type_string=None,
+              pk=None,
+              uuid=None,
+              nodes=None,
+              user=None,
+              node_attributes=None,
+              past_days=None,
+              name_filters=None,
+              **kwargs):  # pylint: disable=too-many-arguments
+        # pylint: disable=too-many-branches
         from aiida.orm.implementation.sqlalchemy.node import Node
 
         session = sa.get_scoped_session()
@@ -314,51 +289,39 @@ class Group(AbstractGroup):
             # In the case of the Node orm from Sqlalchemy, there is an id
             # property on it.
             sub_query = (session.query(table_groups_nodes).filter(
-                table_groups_nodes.c["dbnode_id"].in_(
-                    [n.id for n in nodes]),
-                table_groups_nodes.c["dbgroup_id"] == DbGroup.id
-            ).exists())
+                table_groups_nodes.c["dbnode_id"].in_([n.id for n in nodes]),
+                table_groups_nodes.c["dbgroup_id"] == DbGroup.id).exists())
 
             filters.append(sub_query)
         if user:
             if isinstance(user, six.string_types):
                 filters.append(DbGroup.user.has(email=user.email))
             else:
-                if isinstance(user, orm.User):
-                    user = user.backend_entity
                 type_check(user, users.SqlaUser)
-                filters.append(DbGroup.user == user.dbuser)
+                filters.append(DbGroup.user == user.dbmodel)
 
         if name_filters:
-            for (k, v) in name_filters.items():
-                if not v:
+            for key, value in name_filters.items():
+                if not value:
                     continue
-                if k == "startswith":
-                    filters.append(DbGroup.name.like("{}%".format(v)))
-                elif k == "endswith":
-                    filters.append(DbGroup.name.like("%{}".format(v)))
-                elif k == "contains":
-                    filters.append(DbGroup.name.like("%{}%".format(v)))
+                if key == "startswith":
+                    filters.append(DbGroup.name.like("{}%".format(value)))
+                elif key == "endswith":
+                    filters.append(DbGroup.name.like("%{}".format(value)))
+                elif key == "contains":
+                    filters.append(DbGroup.name.like("%{}%".format(value)))
 
         if node_attributes:
-            # TODO SP: IMPLEMENT THIS
-            pass
+            _LOGGER.warning("SQLA query doesn't support node attribute filters, ignoring '%s'", node_attributes)
 
-        # TODO SP: handle **kwargs
-        groups = (session.query(DbGroup.id).filter(*filters)
-                  .order_by(DbGroup.id).distinct().all())
+        if kwargs:
+            _LOGGER.warning("SQLA query doesn't support additional filters, ignoring '%s'", kwargs)
+        groups = (session.query(DbGroup).filter(*filters).order_by(DbGroup.id).distinct().all())
 
-        return [cls(dbgroup=g[0]) for g in groups]
+        return [SqlaGroup.from_dbmodel(group, self._backend) for group in groups]
 
-    def delete(self):
-
+    def delete(self, id):  # pylint: disable=redefined-builtin
         session = sa.get_scoped_session()
 
-        if self.pk is not None:
-            session.delete(self._dbgroup)
-            session.commit()
-
-            new_group = copy(self._dbgroup)
-            make_transient(new_group)
-            new_group.id = None
-            self._dbgroup = new_group
+        session.query(DbGroup).get(id).delete()
+        session.commit()

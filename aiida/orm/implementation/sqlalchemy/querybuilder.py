@@ -26,7 +26,6 @@ from sqlalchemy.ext.compiler import compiles
 import aiida.backends.sqlalchemy
 from aiida.common.exceptions import InputValidationError
 from aiida.orm.implementation.querybuilder import BackendQueryBuilder
-from aiida.backends.utils import get_column
 
 
 class jsonb_array_length(FunctionElement):  # pylint: disable=invalid-name
@@ -115,11 +114,6 @@ class SqlaQueryBuilder(BackendQueryBuilder):
     def AiidaNode(self):
         import aiida.orm.implementation.sqlalchemy.node
         return aiida.orm.implementation.sqlalchemy.node.Node
-
-    @property
-    def AiidaGroup(self):
-        import aiida.orm.implementation.sqlalchemy.group
-        return aiida.orm.implementation.sqlalchemy.group.Group
 
     def get_session(self):
         return aiida.backends.sqlalchemy.get_scoped_session()
@@ -262,16 +256,15 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             else:
                 if column is None:
                     if (alias is None) and (column_name is None):
-                        raise RuntimeError("I need to get the column but do not know \n"
-                                           "the alias and the column name")
-                    column = get_column(column_name, alias)
+                        raise RuntimeError("I need to get the column but do not know the alias and the column name")
+                    column = self.get_column(column_name, alias)
                 expr = self.get_filter_expr_from_column(operator, value, column)
+
         if negation:
             return not_(expr)
         return expr
 
-    @classmethod
-    def get_filter_expr_from_attributes(cls, operator, value, attr_key, column=None, column_name=None, alias=None):
+    def get_filter_expr_from_attributes(self, operator, value, attr_key, column=None, column_name=None, alias=None):
         # Too many everything!
         # pylint: disable=too-many-branches, too-many-arguments, too-many-statements
 
@@ -312,7 +305,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             return type_filter, casted_entity
 
         if column is None:
-            column = get_column(column_name, alias)
+            column = self.get_column(column_name, alias)
 
         database_entity = column[tuple(attr_key)]
         if operator == '==':
@@ -372,8 +365,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         """
         :returns: An attribute store in a JSON field of the give column
         """
-
-        entity = get_column(column_name, alias)[(attrpath)]
+        entity = self.get_column(column_name, alias)[attrpath]
         if cast is None:
             entity = entity
         elif cast == 'f':

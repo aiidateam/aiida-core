@@ -14,8 +14,7 @@ from __future__ import absolute_import
 
 from aiida.transport import TransportFactory
 from aiida.common.exceptions import (ConfigurationError, MissingPluginError)
-from .backends import construct_backend
-from . import computers
+from . import backends
 from . import entities
 from . import users
 
@@ -29,22 +28,8 @@ class AuthInfo(entities.Entity):
     how often to check on a given computer etc.)
     """
 
-    class Collection(entities.Entity.Collection):
+    class Collection(entities.Collection):
         """The collection of AuthInfo entries."""
-
-        def find(self, computer, user):
-            """
-            Get an authinfo for a given computer and user combination
-
-            :param computer: the computer to get the authinfo for
-            :type computer: :class:`aiida.orm.Computer`
-            :param user: the user to ge the authinfo for
-            :type user: :class:`aiida.orm.User`
-            :rtype: :class:`aiida.orm.AuthInfo`
-            """
-            return [
-                AuthInfo.from_backend_entity(self._backend.authinfos.get(computer.backend_entity, user.backend_entity))
-            ]
 
         def delete(self, authinfo_id):
             """
@@ -52,6 +37,8 @@ class AuthInfo(entities.Entity):
             :param authinfo_id: The ID of the authinfo to delete
             """
             self._backend.authinfos.delete(authinfo_id)
+
+    PROPERTY_WORKDIR = 'workdir'
 
     def __init__(self, computer, user, backend=None):
         """
@@ -61,9 +48,15 @@ class AuthInfo(entities.Entity):
         :param user: a User instance
         :return: an AuthInfo object associated with the given computer and user
         """
-        backend = backend or construct_backend()
+        backend = backend or backends.construct_backend()
         model = backend.authinfos.create(computer=computer.backend_entity, user=user.backend_entity)
         super(AuthInfo, self).__init__(model)
+
+    def __str__(self):
+        if self.enabled:
+            return "AuthInfo for {} on {}".format(self.user.email, self.computer.name)
+
+        return "AuthInfo for {} on {} [DISABLED]".format(self.user.email, self.computer.name)
 
     @property
     def enabled(self):
@@ -83,6 +76,7 @@ class AuthInfo(entities.Entity):
 
     @property
     def computer(self):
+        from . import computers  # pylint: disable=cyclic-import
         return computers.Computer.from_backend_entity(self._backend_entity.computer)
 
     @property
@@ -113,38 +107,35 @@ class AuthInfo(entities.Entity):
         """
         self._backend_entity.set_auth_params(auth_params)
 
-    def get_metadata(self):
+    def get_property(self, name):
         """
-        Get the metadata dictionary
+        Get an authinfo property
 
-        :return: a dictionary
+        :param name: the property name
+        :return: the property value
         """
-        return self._backend_entity.get_metadata()
+        return self._backend_entity.get_property(name)
 
-    def set_metadata(self, metadata):
+    def set_property(self, name, value):
         """
-        Replace the metadata dictionary in the DB with the provided dictionary
+        Set an authinfo property
+
+        :param name: the property name
+        :param value: the property value
         """
-        self._backend_entity.set_metadata(metadata)
+        self._backend_entity.set_property(name, value)
 
     def get_workdir(self):
         """
         Get the workdir; defaults to the value of the corresponding computer, if not explicitly set
 
-        :return: a string
+        :return: the workdir
+        :rtype: str
         """
-        metadata = self.get_metadata()
-
         try:
-            return metadata['workdir']
-        except KeyError:
+            return self.get_property(self.PROPERTY_WORKDIR)
+        except ValueError:
             return self.computer.get_workdir()
-
-    def __str__(self):
-        if self.enabled:
-            return "AuthInfo for {} on {}".format(self.user.email, self.computer.name)
-
-        return "AuthInfo for {} on {} [DISABLED]".format(self.user.email, self.computer.name)
 
     def get_transport(self):
         """

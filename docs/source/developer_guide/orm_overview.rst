@@ -22,7 +22,7 @@ Computer
 Group
 +++++
 
-.. automodule:: aiida.orm.implementation.general.group
+.. automodule:: aiida.orm.groups
    :members:
    :noindex:
    :private-members:

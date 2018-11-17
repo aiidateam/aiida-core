@@ -122,7 +122,7 @@ class Workflow(AbstractWorkflow):
 
             # This stores the MD5 as well, to test in case the workflow has
             # been modified after the launch
-            dbuser = orm.User.objects(self._backend).get_default().backend_entity.dbuser
+            dbuser = orm.User.objects(self._backend).get_default().backend_entity.dbmodel
             self._dbworkflowinstance = DbWorkflow(user=dbuser,
                                                   module=self.caller_module,
                                                   module_class=self.caller_module_class,
@@ -496,7 +496,7 @@ class Workflow(AbstractWorkflow):
 
         try:
             user = orm.User.objects(self._backend).get_default().backend_entity
-            step = self.dbworkflowinstance.steps.get(name=step_method_name, user=user.dbuser)
+            step = self.dbworkflowinstance.steps.get(name=step_method_name, user=user.dbmodel)
             return step
         except ObjectDoesNotExist:
             return None
@@ -618,7 +618,6 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
     """
     # Note: pre_string becomes larger at each call of get_workflow_info on the
     #       subworkflows: pre_string -> pre_string + "|" + " "*(tab_size-1))
-
     from aiida.backends.djsite.db.models import DbWorkflow
     if tab_size < 2:
         raise ValueError("tab_size must be > 2")
@@ -721,7 +720,7 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
                                  "| Calculation ({}pk: {}) is {}{}".format(
                                      labelstring, calc_pk, calc_state, remote_state))
 
-            ## SubWorkflows
+            # SubWorkflows
             for subwf_pk in subwfs_of_steps[step_pk]['subwf_pks']:
                 subwf = workflow_mapping[subwf_pk]
                 lines.extend(get_workflow_info(subwf,

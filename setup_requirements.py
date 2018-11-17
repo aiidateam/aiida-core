@@ -51,7 +51,8 @@ install_requires = [
     'pathlib2; python_version<"3.5"',
     'singledispatch>=3.4.0.3; python_version<"3.5"',
     'enum34==1.1.6; python_version<"3.5"',
-    'simplejson==3.16.0'
+    'simplejson==3.16.0',
+    'typing==3.6.6; python_version<"3.5"',
 ]
 
 extras_require = {

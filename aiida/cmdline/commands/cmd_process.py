@@ -17,6 +17,7 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.utils import decorators, echo
 from aiida.cmdline.utils.query.calculation import CalculationQueryBuilder
+from aiida.common.log import LOG_LEVELS
 
 
 @verdi.group('process')
@@ -58,13 +59,61 @@ def process_list(all_entries, process_state, exit_status, failed, past_days, lim
         print_last_process_state_change()
 
 
+@verdi_process.command('show')
+@arguments.PROCESSES()
+@decorators.with_dbenv()
+def process_show(processes):
+    """Show a summary for one or multiple processes."""
+    from aiida.cmdline.utils.common import get_node_info
+
+    for process in processes:
+        echo.echo(get_node_info(process))
+
+
+@verdi_process.command('report')
+@arguments.PROCESSES()
+@click.option('-i', '--indent-size', type=int, default=2, help='Set the number of spaces to indent each level by.')
+@click.option(
+    '-l',
+    '--levelname',
+    type=click.Choice(LOG_LEVELS.keys()),
+    default='REPORT',
+    help='Filter the results by name of the log level.')
+@click.option(
+    '-m', '--max-depth', 'max_depth', type=int, default=None, help='Limit the number of levels to be printed.')
+@decorators.with_dbenv()
+def process_report(processes, levelname, indent_size, max_depth):
+    """Show the log report for one or multiple processes."""
+    from aiida.cmdline.utils.common import get_calcjob_report, get_workchain_report
+    from aiida.orm.node.process import CalcJobNode, WorkChainNode
+
+    for process in processes:
+        if isinstance(process, CalcJobNode):
+            echo.echo(get_calcjob_report(process))
+        if isinstance(process, WorkChainNode):
+            echo.echo(get_workchain_report(process, levelname, indent_size, max_depth))
+        else:
+            echo.echo('Nothing to show for node type {}'.format(process.__class__))
+
+
+@verdi_process.command('status')
+@arguments.PROCESSES()
+def process_status(processes):
+    """Print the status of the process."""
+    from aiida.utils.ascii_vis import format_call_graph
+
+    for process in processes:
+        graph = format_call_graph(process)
+        echo.echo(graph)
+
+
 @verdi_process.command('kill')
 @arguments.PROCESSES()
 @options.TIMEOUT()
 @click.option(
     '--wait/--no-wait',
     default=False,
-    help="wait for the action to be completed otherwise return as soon as it's scheduled")
+    help="Wait for the action to be completed otherwise return as soon as it's scheduled.")
 @decorators.with_dbenv()
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_kill(processes, timeout, wait):
@@ -92,7 +141,7 @@ def process_kill(processes, timeout, wait):
 @click.option(
     '--wait/--no-wait',
     default=False,
-    help="wait for the action to be completed otherwise return as soon as it's scheduled")
+    help="Wait for the action to be completed otherwise return as soon as it's scheduled.")
 @decorators.with_dbenv()
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_pause(processes, timeout, wait):
@@ -120,7 +169,7 @@ def process_pause(processes, timeout, wait):
 @click.option(
     '--wait/--no-wait',
     default=False,
-    help="wait for the action to be completed otherwise return as soon as it's scheduled")
+    help="Wait for the action to be completed otherwise return as soon as it's scheduled.")
 @decorators.with_dbenv()
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_play(processes, timeout, wait):

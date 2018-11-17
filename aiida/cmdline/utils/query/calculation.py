@@ -20,7 +20,8 @@ class CalculationQueryBuilder(object):
 
     _default_projections = ('pk', 'ctime', 'process_state', 'process_label', 'process_status')
     _valid_projections = ('pk', 'uuid', 'ctime', 'mtime', 'process_state', 'process_status', 'exit_status', 'sealed',
-                          'process_label', 'label', 'description', 'type', 'paused', 'process_type')
+                          'process_label', 'label', 'description', 'type', 'paused', 'process_type', 'job_state',
+                          'scheduler_state')
 
     def __init__(self, mapper=None):
         if mapper is None:

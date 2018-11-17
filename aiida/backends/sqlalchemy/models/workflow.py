@@ -36,7 +36,7 @@ class DbWorkflow(Base):
     aiida_query = _QueryProperty(_AiidaQuery)
 
     id = Column(Integer, primary_key=True)
-    uuid = Column(UUID(as_uuid=True), default=get_new_uuid)
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True)
 
     ctime = Column(DateTime(timezone=True), default=timezone.now)
     mtime = Column(DateTime(timezone=True), default=timezone.now)

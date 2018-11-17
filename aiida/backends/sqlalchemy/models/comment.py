@@ -27,7 +27,7 @@ class DbComment(Base):
 
     id = Column(Integer, primary_key=True)
 
-    uuid = Column(UUID(as_uuid=True), default=get_new_uuid)
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True)
     dbnode_id = Column(
         Integer,
         ForeignKey(

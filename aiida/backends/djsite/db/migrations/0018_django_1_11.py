@@ -15,6 +15,29 @@ from aiida.backends.djsite.db.migrations import upgrade_schema_version
 REVISION = '1.0.18'
 DOWN_REVISION = '1.0.17'
 
+tables = ['db_dbcomment', 'db_dbcomputer', 'db_dbgroup', 'db_dbworkflow']
+
+
+def _verify_uuid_uniqueness(apps, schema_editor):
+    """Check whether the respective tables contain rows with duplicate UUIDS.
+
+    Note that we have to redefine this method from aiida.manage.database.integrity
+    because the migrations.RunPython command that will invoke this function, will pass two arguments and therefore
+    this wrapper needs to have a different function signature.
+
+    :raises: IntegrityError if database contains rows with duplicate UUIDS.
+    """
+    # pylint: disable=unused-argument
+    from aiida.manage.database.integrity import verify_uuid_uniqueness
+
+    for table in tables:
+        verify_uuid_uniqueness(table=table)
+
+
+def reverse_code(apps, schema_editor):
+    # pylint: disable=unused-argument
+    pass
+
 
 class Migration(migrations.Migration):
     """Migration for upgrade to django 1.11
@@ -31,6 +54,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RunPython(_verify_uuid_uniqueness, reverse_code=reverse_code),
         migrations.AlterField(
             model_name='dbcomment',
             name='uuid',

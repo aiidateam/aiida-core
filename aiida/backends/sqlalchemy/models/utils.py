@@ -11,16 +11,11 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import uuid
 
 import six
 
-from aiida.backends.settings import AIIDANODES_UUID_VERSION
 from aiida.common.exceptions import ValidationError
 from aiida.common.exceptions import NotExistent
-
-
-uuid_func = getattr(uuid, "uuid" + str(AIIDANODES_UUID_VERSION))
 
 # The separator for sub-fields (for JSON stored values).Keys are not allowed
 # to contain the separator even if the

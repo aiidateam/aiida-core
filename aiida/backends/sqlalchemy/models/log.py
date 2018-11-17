@@ -11,16 +11,16 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from sqlalchemy.schema import Column
-from sqlalchemy.types import Integer, DateTime, String, Text
+from sqlalchemy import ForeignKey
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship, backref
-from sqlalchemy import ForeignKey
+from sqlalchemy.schema import Column
+from sqlalchemy.types import Integer, DateTime, String, Text
 
-from aiida.common import timezone
 from aiida.backends.sqlalchemy.models.base import Base
-
-from .utils import uuid_func
+from aiida.common import timezone
+from aiida.common.utils import get_new_uuid
+from aiida.common.exceptions import ValidationError
 
 
 class DbLog(Base):
@@ -28,7 +28,7 @@ class DbLog(Base):
     __tablename__ = 'db_dblog'
 
     id = Column(Integer, primary_key=True)
-    uuid = Column(UUID(as_uuid=True), default=uuid_func, unique=True)
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True)
     time = Column(DateTime(timezone=True), default=timezone.now)
     loggername = Column(String(255), index=True)
     levelname = Column(String(255), index=True)

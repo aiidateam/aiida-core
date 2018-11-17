@@ -31,14 +31,7 @@ depends_on = None
 
 
 def migrate_infer_calculation_entry_point():
-    """Check whether the database contains nodes with duplicate UUIDS.
-
-    Note that we have to redefine this method from aiida.manage.database.integrity.verify_node_uuid_uniqueness
-    because the migrations.RunPython command that will invoke this function, will pass two arguments and therefore
-    this wrapper needs to have a different function signature.
-
-    :raises: IntegrityError if database contains nodes with duplicate UUIDS.
-    """
+    """Set the process type for calculation nodes by inferring it from their type string."""
     from sqlalchemy.orm.session import Session
 
     from aiida.backends.sqlalchemy.models.node import DbNode
@@ -76,7 +69,7 @@ def migrate_infer_calculation_entry_point():
 
 
 def detect_unexpected_links():
-    """Scan the database for any links that are unexpected.from
+    """Scan the database for any links that are unexpected.
 
     The checks will verify that there are no outgoing `call` or `return` links from calculation nodes and that if a
     workflow node has a `create` link, it has at least an accompanying return link to the same data node, or it has a

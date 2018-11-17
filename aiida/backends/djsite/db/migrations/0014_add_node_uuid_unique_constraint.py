@@ -31,8 +31,8 @@ def verify_node_uuid_uniqueness(apps, schema_editor):
 
     :raises: IntegrityError if database contains nodes with duplicate UUIDS.
     """
-    from aiida.manage.database.integrity.duplicate_uuid import verify_node_uuid_uniqueness
-    verify_node_uuid_uniqueness()
+    from aiida.manage.database.integrity.duplicate_uuid import verify_uuid_uniqueness
+    verify_uuid_uniqueness(table='db_dbnode')
 
 
 def reverse_code(apps, schema_editor):
@@ -51,7 +51,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='dbnode',
             name='uuid',
-            field=models.CharField(max_length=36,default=get_new_uuid, unique=True),
+            field=models.CharField(max_length=36, default=get_new_uuid, unique=True),
         ),
         upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

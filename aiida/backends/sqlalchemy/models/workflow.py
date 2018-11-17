@@ -23,9 +23,9 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy_utils.types.choice import ChoiceType
 
 from aiida.backends.sqlalchemy.models.base import Base, _QueryProperty, _AiidaQuery
-from aiida.backends.sqlalchemy.models.utils import uuid_func
+from aiida.common import json
 from aiida.common import timezone
-import aiida.common.json as json
+from aiida.common.utils import get_new_uuid
 
 import six
 
@@ -91,7 +91,7 @@ class DbWorkflow(Base):
     aiida_query = _QueryProperty(_AiidaQuery)
 
     id = Column(Integer, primary_key=True)
-    uuid = Column(UUID(as_uuid=True), default=uuid_func)
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True)
 
     ctime = Column(DateTime(timezone=True), default=timezone.now)
     mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now)

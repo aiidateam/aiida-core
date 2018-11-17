@@ -11,7 +11,7 @@ from __future__ import absolute_import
 from alembic import op
 
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
-# pylint: disable=no-member
+# pylint: disable=no-member,no-name-in-module,import-error
 
 # revision identifiers, used by Alembic.
 revision = '37f3d4882837'

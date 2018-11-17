@@ -11,7 +11,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta
 import six
 
 
@@ -25,16 +25,20 @@ class AbstractQueryManager(object):
         """
         self._backend = backend
 
-    def get_duplicate_node_uuids(self):
+    def get_duplicate_uuids(self, table):
         """
-        Return a list of nodes that have an identical UUID
+        Return a list of rows with identical UUID
 
-        :return: list of tuples of (pk, uuid) of nodes with duplicate UUIDs
+        :param table: Database table with uuid column, e.g. 'db_dbnode'
+        :type str:
+
+        :return: list of tuples of (id, uuid) of rows with duplicate UUIDs
+        :rtype list:
         """
         query = """
-            SELECT s.id, s.uuid FROM (SELECT *, COUNT(*) OVER(PARTITION BY uuid) AS c FROM db_dbnode)
+            SELECT s.id, s.uuid FROM (SELECT *, COUNT(*) OVER(PARTITION BY uuid) AS c FROM {})
             AS s WHERE c > 1
-            """
+            """.format(table)
         return self._backend.execute_raw(query)
 
     def get_creation_statistics(

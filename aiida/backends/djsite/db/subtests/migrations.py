@@ -19,7 +19,7 @@ from django.db.migrations.executor import MigrationExecutor
 from django.db import connection
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import IntegrityError
-from aiida.manage.database.integrity.duplicate_uuid import deduplicate_node_uuids, verify_node_uuid_uniqueness
+from aiida.manage.database.integrity.duplicate_uuid import deduplicate_node_uuids, verify_uuid_uniqueness
 
 
 class TestMigrations(AiidaTestCase):
@@ -136,7 +136,7 @@ class TestDuplicateNodeUuidMigration(TestMigrations):
 
         # Verify that there are duplicate UUIDs by checking that the following function raises
         with self.assertRaises(IntegrityError):
-            verify_node_uuid_uniqueness()
+            verify_uuid_uniqueness(table='db_dbnode')
 
         # Now run the function responsible for solving duplicate UUIDs which would also be called by the user
         # through the `verdi database integrity detect-duplicate-node-uuid` command
@@ -147,7 +147,7 @@ class TestDuplicateNodeUuidMigration(TestMigrations):
         from aiida.orm import load_node
 
         # If the duplicate UUIDs were successfully fixed, the following should not raise.
-        verify_node_uuid_uniqueness()
+        verify_uuid_uniqueness(table='db_dbnode')
 
         # Reload the nodes by PK and check that all UUIDs are now unique
         nodes_boolean = [load_node(node.pk) for node in self.nodes_boolean]

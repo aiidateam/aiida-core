@@ -22,7 +22,7 @@ from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 
 from aiida.backends.sqlalchemy.models.base import Base
-from aiida.backends.sqlalchemy.models.utils import uuid_func
+from aiida.common.utils import get_new_uuid
 
 from aiida.common.exceptions import NotExistent, DbContentError, ConfigurationError
 
@@ -32,7 +32,7 @@ class DbComputer(Base):
 
     id = Column(Integer, primary_key=True)
 
-    uuid = Column(UUID(as_uuid=True), default=uuid_func)
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True)
     name = Column(String(255), unique=True, nullable=False)
     hostname = Column(String(255))
 

@@ -17,7 +17,14 @@ DOWN_REVISION = '1.0.17'
 
 
 class Migration(migrations.Migration):
-    """Migration for upgrade to django 1.11"""
+    """Migration for upgrade to django 1.11
+
+    This migration switches from the django_extensions UUID field to the
+    native UUIDField of django 1.11
+
+    It also introduces unique constraints on all uuid columns
+    (previously existed only on dbnode).
+    """
 
     dependencies = [
         ('db', '0017_drop_dbcalcstate'),
@@ -38,6 +45,18 @@ class Migration(migrations.Migration):
             model_name='dbgroup',
             name='uuid',
             field=models.UUIDField(unique=True, default=aiida.common.utils.get_new_uuid),
+        ),
+        # first: remove index
+        migrations.AlterField(
+            model_name='dbnode',
+            name='uuid',
+            field=models.CharField(max_length=36, default=aiida.common.utils.get_new_uuid, unique=False),
+        ),
+        # second: switch to UUIDField
+        migrations.AlterField(
+            model_name='dbnode',
+            name='uuid',
+            field=models.UUIDField(default=aiida.common.utils.get_new_uuid, unique=True),
         ),
         migrations.AlterField(
             model_name='dbuser',

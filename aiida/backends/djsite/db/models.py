@@ -15,7 +15,6 @@ import sys
 import six
 from six.moves import zip, range
 from django.db import models as m
-from django.db.models import UUIDField
 from django.contrib.auth.models import (
     AbstractBaseUser, BaseUserManager, PermissionsMixin)
 from django.utils.encoding import python_2_unicode_compatible
@@ -147,7 +146,7 @@ class DbNode(m.Model):
        in the DbAttribute field). Moreover, Attributes define uniquely the
        Node so should be immutable
     """
-    uuid = UUIDField(default=get_new_uuid, unique=True)
+    uuid = m.UUIDField(default=get_new_uuid, unique=True)
     # in the form data.upffile., data.structure., calculation., ...
     # Note that there is always a final dot, to allow to do queries of the
     # type (type__startswith="calculation.") and avoid problems with classes
@@ -1289,7 +1288,7 @@ class DbGroup(m.Model):
     pseudopotential families - if no two pseudos are included for the same
     atomic element).
     """
-    uuid = UUIDField(default=get_new_uuid)
+    uuid = m.UUIDField(default=get_new_uuid, unique=True)
     # max_length is required by MySql to have indexes and unique constraints
     name = m.CharField(max_length=255, db_index=True)
     # The type of group: a user group, a pseudopotential group,...
@@ -1355,7 +1354,7 @@ class DbComputer(m.Model):
     """
     # TODO: understand if we want that this becomes simply another type of dbnode.
 
-    uuid = UUIDField(default=get_new_uuid)
+    uuid = m.UUIDField(default=get_new_uuid, unique=True)
     name = m.CharField(max_length=255, unique=True, blank=False)
     hostname = m.CharField(max_length=255)
     description = m.TextField(blank=True)
@@ -1460,7 +1459,7 @@ class DbAuthInfo(m.Model):
 
 @python_2_unicode_compatible
 class DbComment(m.Model):
-    uuid = UUIDField(default=get_new_uuid)
+    uuid = m.UUIDField(default=get_new_uuid, unique=True)
     # Delete comments if the node is removed
     dbnode = m.ForeignKey(DbNode, related_name='dbcomments', on_delete=m.CASCADE)
     ctime = m.DateTimeField(default=timezone.now, editable=False)
@@ -1498,7 +1497,7 @@ class DbLog(m.Model):
 class DbWorkflow(m.Model):
     from aiida.common.datastructures import wf_states
 
-    uuid = UUIDField(default=get_new_uuid)
+    uuid = m.UUIDField(default=get_new_uuid, unique=True)
     ctime = m.DateTimeField(default=timezone.now, editable=False)
     mtime = m.DateTimeField(auto_now=True, editable=False)
     user = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.PROTECT)
@@ -1508,7 +1507,7 @@ class DbWorkflow(m.Model):
     nodeversion = m.IntegerField(default=1, editable=False)
     # to be implemented similarly to the DbNode class
     lastsyncedversion = m.IntegerField(default=0, editable=False)
-    state = m.CharField(max_length=255, choices=list(zip(list(wf_states), list(wf_states))),
+    state = m.CharField(max_length=255, choices=list(zip(sorted(wf_states), sorted(wf_states))),
                         default=wf_states.INITIALIZED)
     report = m.TextField(blank=True)
     # File variables, script is the complete dump of the workflow python script
@@ -1729,7 +1728,7 @@ class DbWorkflowStep(m.Model):
     sub_workflows = m.ManyToManyField(DbWorkflow, symmetrical=False,
                                       related_name="parent_workflow_step")
     state = m.CharField(max_length=255,
-                        choices=list(zip(list(wf_states), list(wf_states))),
+                        choices=list(zip(sorted(wf_states), sorted(wf_states))),
                         default=wf_states.CREATED)
 
     class Meta:

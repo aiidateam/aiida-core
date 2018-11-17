@@ -12,7 +12,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import datetime
-from django.utils import timezone
+from aiida.utils import timezone
 from aiida.common.log import get_dblogger_extra
 
 

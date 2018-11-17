@@ -39,7 +39,7 @@ from aiida.common.setup import get_profile_config
 from aiida.backends import settings
 
 # MISC
-from aiida.backends.sqlalchemy.models.utils import uuid_func
+from aiida.common.utils import get_new_uuid
 from aiida.utils import timezone
 
 Base = declarative_base()
@@ -89,7 +89,7 @@ class DbComputer(Base):
 
     id = Column(Integer, primary_key=True)
 
-    uuid = Column(UUID(as_uuid=True), default=uuid_func)
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid)
     name = Column(String(255), unique=True, nullable=False)
     hostname = Column(String(255))
 
@@ -161,7 +161,7 @@ class DbGroup(Base):
 
     id = Column(Integer, primary_key=True)
 
-    uuid = Column(UUID(as_uuid=True), default=uuid_func)
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid)
     name = Column(String(255), index=True)
 
     type = Column(String(255), default="", index=True)
@@ -198,7 +198,7 @@ class DbGroup(Base):
 class DbNode(Base):
     __tablename__ = "db_dbnode"
     id = Column(Integer, primary_key=True)
-    uuid = Column(UUID(as_uuid=True), default=uuid_func)
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid)
     type = Column(String(255), index=True)
     process_type = Column(String(255), index=True)
     label = Column(String(255), index=True, nullable=True)

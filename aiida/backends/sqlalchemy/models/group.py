@@ -20,7 +20,7 @@ from sqlalchemy.dialects.postgresql import UUID
 
 from aiida.utils import timezone
 from aiida.backends.sqlalchemy.models.base import Base
-from aiida.backends.sqlalchemy.models.utils import uuid_func
+from aiida.common.utils import get_new_uuid
 
 table_groups_nodes = Table(
     'db_dbgroup_dbnodes',
@@ -38,7 +38,7 @@ class DbGroup(Base):
 
     id = Column(Integer, primary_key=True)
 
-    uuid = Column(UUID(as_uuid=True), default=uuid_func)
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid)
     name = Column(String(255), index=True)
 
     type = Column(String(255), default="", index=True)

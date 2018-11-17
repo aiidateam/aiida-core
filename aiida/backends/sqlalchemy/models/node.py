@@ -24,7 +24,7 @@ from sqlalchemy_utils.types.choice import ChoiceType
 
 from aiida.utils import timezone
 from aiida.backends.sqlalchemy.models.base import Base, _QueryProperty, _AiidaQuery
-from aiida.backends.sqlalchemy.models.utils import uuid_func
+from aiida.common.utils import get_new_uuid
 from aiida.backends.sqlalchemy.utils import flag_modified
 
 from aiida.common.exceptions import DbContentError
@@ -40,7 +40,7 @@ class DbNode(Base):
     aiida_query = _QueryProperty(_AiidaQuery)
 
     id = Column(Integer, primary_key=True)
-    uuid = Column(UUID(as_uuid=True), default=uuid_func, unique=True)
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True)
     type = Column(String(255), index=True)
     process_type = Column(String(255), index=True)
     label = Column(String(255), index=True, nullable=True,

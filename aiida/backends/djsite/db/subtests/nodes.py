@@ -15,6 +15,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
+from aiida.common.links import LinkType
 from aiida.orm.node import Node
 
 
@@ -52,10 +53,10 @@ class TestDataNodeDjango(AiidaTestCase):
 
         a4 = Node().store()
 
-        a2.add_link_from(a)
-        a3.add_link_from(a2)
-        a4.add_link_from(a2)
-        a4.add_link_from(a3)
+        a2.add_link_from(a, link_type=LinkType.CREATE)
+        a3.add_link_from(a2, link_type=LinkType.CREATE)
+        a4.add_link_from(a2, link_type=LinkType.CREATE)
+        a4.add_link_from(a3, link_type=LinkType.CREATE)
 
         b = Node.query(pk=a2)
         self.assertEquals(len(b), 1)
@@ -148,7 +149,7 @@ class TestTransitiveClosureDeletionDjango(AiidaTestCase):
                 ).count(), 0
             )
 
-        n6.add_link_from(n5, link_type=LinkType.INPUT)
+        n6.add_link_from(n5, link_type=LinkType.INPUT_CALC)
 
         # Yet, now 2 links from 1 to 8
         self.assertEquals(
@@ -159,7 +160,7 @@ class TestTransitiveClosureDeletionDjango(AiidaTestCase):
             )
 
 
-        n7.add_link_from(n9, link_type=LinkType.INPUT)
+        n7.add_link_from(n9, link_type=LinkType.INPUT_CALC)
         # Still two links...
         self.assertEquals(
             QueryBuilder().append(
@@ -169,7 +170,7 @@ class TestTransitiveClosureDeletionDjango(AiidaTestCase):
             )
 
 
-        n9.add_link_from(n6, link_type=LinkType.INPUT)
+        n9.add_link_from(n6, link_type=LinkType.INPUT_CALC)
         # And now there should be 4 nodes
         self.assertEquals(
             QueryBuilder().append(
@@ -233,7 +234,7 @@ class TestTransitiveClosureDeletionDjango(AiidaTestCase):
 
         # Finally, I reconnect in a different way the two graphs and
         # check that 1 and 8 are again connected
-        n4.add_link_from(n3, link_type=LinkType.INPUT)
+        n4.add_link_from(n3, link_type=LinkType.INPUT_CALC)
 
         self.assertEquals(
             QueryBuilder().append(

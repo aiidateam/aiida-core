@@ -148,11 +148,13 @@ def get_node_info(node, include_summary=True):
     else:
         result = ''
 
-    nodes_input = node.get_incoming(link_type=LinkType.INPUT)
-    nodes_caller = node.get_incoming(link_type=LinkType.CALL)
+    nodes_input_calc = node.get_incoming(link_type=LinkType.INPUT_CALC).all()
+    nodes_input_work = node.get_incoming(link_type=LinkType.INPUT_WORK).all()
+    nodes_caller = node.get_incoming(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
     nodes_create = node.get_outgoing(link_type=LinkType.CREATE).all()
     nodes_return = node.get_outgoing(link_type=LinkType.RETURN).all()
-    nodes_called = node.get_outgoing(link_type=LinkType.CALL)
+    nodes_called = node.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
+    nodes_input = nodes_input_calc + nodes_input_work
     nodes_output = nodes_create + nodes_return
 
     if nodes_caller:

@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=abstract-method
 """ORM class for CalcJobNode."""
 from __future__ import absolute_import
 from __future__ import print_function
@@ -7,7 +6,6 @@ from __future__ import print_function
 from six.moves import range
 from six.moves import zip
 
-import abc
 import copy
 import datetime
 import enum
@@ -54,6 +52,7 @@ class CalcJobExitStatus(enum.Enum):
 
 class CalcJobNode(CalculationNode):
     """ORM class for all nodes representing the execution of a CalcJob."""
+    # pylint: disable=abstract-method
 
     JOB_STATE_KEY = 'state'
     JOB_STATE_ATTRIBUTE_KEY = 'attributes.{}'.format(JOB_STATE_KEY)
@@ -116,7 +115,7 @@ class CalcJobNode(CalculationNode):
                 actual_linkname = self.node.get_linkname(actual_name, *args, **kwargs)
 
                 # Here I do the real job
-                self.node._replace_link_from(parent_node, actual_linkname)
+                self.node._replace_link_from(parent_node, LinkType.INPUT_CALC, actual_linkname)
 
         prefix = 'use_'
         valid_use_methods = ['{}{}'.format(prefix, k) for k in self._use_methods.keys()]
@@ -397,32 +396,42 @@ class CalcJobNode(CalculationNode):
             raise ValidationError("withmpi property must be boolean! It in instead {}"
                                   "".format(str(type(self.get_option('withmpi')))))
 
-    def _linking_as_output(self, dest, link_type):
+    def validate_incoming(self, source, link_type, link_label=None):
         """
-        An output of a CalcJobNode can only be set
-        when the calculation is in the SUBMITTING or RETRIEVING or
-        PARSING state.
-        (during SUBMITTING, the execmanager adds a link to the remote folder;
-        all other links are added while in the retrieving phase).
+        Validate adding a link of the given type from a given node to ourself.
 
-        :note: Further checks, such as that the output data type is 'Data',
-          are done in the super() class.
-
-        :param dest: a Data object instance of the database
-        :raise: ValueError if a link from self to dest is not allowed.
+        :param source: the node from which the link is coming
+        :param link_type: the type of link
+        :param link_label: optional link label
+        :raise TypeError: if `source` is not a Node instance or `link_type` is not a `LinkType` enum
+        :raise ValueError: if the proposed link is invalid
         """
-        valid_states = [
-            calc_states.SUBMITTING,
-            calc_states.RETRIEVING,
-            calc_states.PARSING,
-        ]
+        super(CalcJobNode, self).validate_incoming(source, link_type, link_label)
 
-        if self.get_state() not in valid_states:
-            raise ModificationNotAllowed("Can add an output node to a calculation only if it is in one "
-                                         "of the following states: {}, it is instead {}".format(
-                valid_states, self.get_state()))
+        state = self.get_state()
+        valid_states = [calc_states.NEW]
+        if state not in valid_states:
+            raise ModificationNotAllowed('invalid link: CalcJobNode has to have state in {}, but is {}'.format(
+                valid_states, state))
 
-        return super(CalcJobNode, self)._linking_as_output(dest, link_type)
+    def validate_outgoing(self, target, link_type, link_label=None):
+        """
+        Validate adding a link of the given type from ourself to a given node.
+
+        :param target: the node to which the link is goming
+        :param link_type: the type of link
+        :param link_label: optional link label
+        :raise TypeError: if `target` is not a Node instance or `link_type` is not a `LinkType` enum
+        :raise ValueError: if the proposed link is invalid
+        """
+        super(CalcJobNode, self).validate_outgoing(target, link_type, link_label)
+
+        state = self.get_state()
+        valid_states = [calc_states.SUBMITTING, calc_states.RETRIEVING, calc_states.PARSING]
+
+        if state not in valid_states:
+            raise ModificationNotAllowed('invalid link: CalcJobNode has to have state in {}, but is {}'.format(
+                valid_states, state))
 
     def _store_raw_input_folder(self, folder_path):
         """
@@ -1065,62 +1074,6 @@ class CalcJobNode(CalculationNode):
                       DeprecationWarning)
 
         return self.get_attr('parser', None)
-
-    def add_link_from(self, src, label=None, link_type=LinkType.INPUT):
-        """
-        Add a link with a code as destination. Add the additional
-        contraint that this is only possible if the calculation
-        is in state NEW.
-
-        You can use the parameters of the base Node class, in particular the
-        label parameter to label the link.
-
-        :param src: a node of the database. It cannot be a Calculation object.
-        :param str label: Name of the link. Default=None
-        :param link_type: The type of link, must be one of the enum values form
-          :class:`~aiida.common.links.LinkType`
-        """
-        valid_states = [calc_states.NEW]
-
-        if self.get_state() not in valid_states:
-            raise ModificationNotAllowed("Can add an input link to a CalcJobNode only if it is in "
-                                         "one of the following states: {}, it is instead {}".format(
-                valid_states, self.get_state()))
-
-        return super(CalcJobNode, self).add_link_from(src, label, link_type)
-
-    def _replace_link_from(self, src, label, link_type=LinkType.INPUT):
-        """
-        Replace a link. Add the additional constraint that this is
-        only possible if the calculation is in state NEW.
-
-        :param src: a node of the database. It cannot be a Calculation object.
-        :param label: Name of the link.
-        :type label: str
-        """
-        valid_states = [calc_states.NEW]
-
-        if self.get_state() not in valid_states:
-            raise ModificationNotAllowed("Can replace an input link to a Jobalculation only if it is in "
-                                         "one of the following states: {}, it is instead {}".format(
-                valid_states, self.get_state()))
-
-        return super(CalcJobNode, self)._replace_link_from(src, label, link_type)
-
-    def _remove_link_from(self, label):
-        """
-        Remove a link. Only possible if the calculation is in state NEW.
-
-        :param str label: Name of the link to remove.
-        """
-        valid_states = [calc_states.NEW]
-
-        if self.get_state() not in valid_states:
-            raise ModificationNotAllowed("Can remove an input link to a calculation only if it is in one "
-                                         "of the following states:\n   {}\n it is instead {}".format(
-                valid_states, self.get_state()))
-
-        return super(CalcJobNode, self)._remove_link_from(label)
 
     def _set_state(self, state):
         """
@@ -1898,7 +1851,6 @@ class CalcJobNode(CalculationNode):
         from aiida.common.exceptions import (NotExistent, PluginInternalError, ValidationError)
         from aiida.scheduler.datastructures import JobTemplate
         from aiida.common.utils import validate_list_of_string_tuples
-        from aiida.orm.computers import Computer
         from aiida.orm import DataFactory
         from aiida.common.datastructures import CodeInfo, code_run_modes
         from aiida.orm.code import Code
@@ -1906,7 +1858,7 @@ class CalcJobNode(CalculationNode):
         import aiida.utils.json as json
 
         computer = self.get_computer()
-        inputs = self.get_incoming(link_type=LinkType.INPUT)
+        inputs = self.get_incoming(link_type=LinkType.INPUT_CALC)
 
         codes = [_ for _ in inputs.get_nodes() if isinstance(_, Code)]
 

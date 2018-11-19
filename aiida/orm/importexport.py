@@ -1759,9 +1759,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             qb.append(Data, tag='predecessor', project=['id'])
             qb.append(ProcessNode, with_incoming='predecessor',
                       filters={'id': {'==': curr_node_id}},
-                      edge_filters={
-                          'type': {
-                              '==': LinkType.INPUT.value}})
+                      edge_filters={'type': {'in': [LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value]}})
             res = {_[0] for _ in qb.all()}
             given_data_entry_ids.update(res - to_be_exported)
 
@@ -1771,9 +1769,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 qb.append(Data, tag='predecessor', project=['id'],
                           filters={'id': {'==': curr_node_id}})
                 qb.append(ProcessNode, with_incoming='predecessor',
-                          edge_filters={
-                              'type': {
-                                  '==': LinkType.INPUT.value}})
+                      edge_filters={'type': {'in': [LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value]}})
                 res = {_[0] for _ in qb.all()}
                 given_data_entry_ids.update(res - to_be_exported)
 
@@ -1818,9 +1814,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             qb.append(ProcessNode, tag='predecessor',
                       filters={'id': {'==': curr_node_id}})
             qb.append(ProcessNode, with_incoming='predecessor', project=['id'],
-                      edge_filters={
-                          'type': {
-                              '==': LinkType.CALL.value}})
+                edge_filters={'type': {'in': [LinkType.CALL_CALC.value, LinkType.CALL_WORK.value]}})
             res = {_[0] for _ in qb.all()}
             given_calculation_entry_ids.update(res - to_be_exported)
 
@@ -1829,10 +1823,8 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 qb = QueryBuilder()
                 qb.append(ProcessNode, tag='predecessor')
                 qb.append(ProcessNode, with_incoming='predecessor', project=['id'],
-                          filters={'id': {'==': curr_node_id}},
-                          edge_filters={
-                              'type': {
-                                  '==': LinkType.CALL.value}})
+                    filters={'id': {'==': curr_node_id}},
+                    edge_filters={'type': {'in': [LinkType.CALL_CALC.value, LinkType.CALL_WORK.value]}})
                 res = {_[0] for _ in qb.all()}
                 given_calculation_entry_ids.update(res - to_be_exported)
 
@@ -1856,7 +1848,20 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                           filters={'id': {'==': curr_node_id}},
                           edge_filters={
                               'type': {
-                                  '==': LinkType.CREATE.value}})
+                                  'in': [LinkType.CREATE.value]}})
+                res = {_[0] for _ in qb.all()}
+                given_calculation_entry_ids.update(res - to_be_exported)
+
+            # Case 3:
+            # RETURN(ProcessNode, Data) - Reversed
+            if return_reversed:
+                qb = QueryBuilder()
+                qb.append(ProcessNode, tag='predecessor', project=['id'])
+                qb.append(Data, output_of='predecessor',
+                          filters={'id': {'==': curr_node_id}},
+                          edge_filters={
+                              'type': {
+                                  'in': [LinkType.RETURN.value]}})
                 res = {_[0] for _ in qb.all()}
                 given_calculation_entry_ids.update(res - to_be_exported)
 
@@ -2001,7 +2006,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                             filters = {'id': {'in': all_nodes_pk}})
             links_qb.append(ProcessNode,
                             project=['uuid'], tag='output',
-                            edge_filters={'type':{'==':LinkType.INPUT.value}},
+                            edge_filters={'type': {'in': [LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value]}},
                             edge_project=['label', 'type'], with_incoming='input')
             for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
                 val = {
@@ -2019,7 +2024,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
         links_qb.append(ProcessNode,
                         project=['uuid'], tag='output',
                         filters={'id': {'in': all_nodes_pk}},
-                        edge_filters={'type':{'==':LinkType.INPUT.value}},
+                        edge_filters={'type': {'in': [LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value]}},
                         edge_project=['label', 'type'], with_incoming='input')
         for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
             val = {
@@ -2112,7 +2117,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                         filters={'id': {'in': all_nodes_pk}})
         links_qb.append(ProcessNode,
                         project=['uuid'], tag='output',
-                        edge_filters={'type': {'==': LinkType.CALL.value}},
+                        edge_filters={'type': {'in': [LinkType.CALL_CALC.value, LinkType.CALL_WORK.value]}},
                         edge_project=['label', 'type'], with_incoming='input')
         for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
             val = {
@@ -2132,7 +2137,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             links_qb.append(ProcessNode,
                             project=['uuid'], tag='output',
                             filters={'id': {'in': all_nodes_pk}},
-                            edge_filters={'type': {'==': LinkType.CALL.value}},
+                            edge_filters={'type': {'in': [LinkType.CALL_CALC.value, LinkType.CALL_WORK.value]}},
                             edge_project=['label', 'type'], with_incoming='input')
             for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
                 val = {

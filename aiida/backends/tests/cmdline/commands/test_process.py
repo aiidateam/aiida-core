@@ -248,8 +248,8 @@ class TestVerdiProcess(AiidaTestCase):
         parent = WorkChainNode().store()
         child = WorkChainNode().store()
 
-        parent.add_link_from(grandparent, link_type=LinkType.CALL)
-        child.add_link_from(parent, link_type=LinkType.CALL)
+        parent.add_link_from(grandparent, link_type=LinkType.CALL_WORK)
+        child.add_link_from(parent, link_type=LinkType.CALL_WORK)
 
         grandparent.logger.log(LOG_LEVEL_REPORT, 'grandparent_message')
         parent.logger.log(LOG_LEVEL_REPORT, 'parent_message')

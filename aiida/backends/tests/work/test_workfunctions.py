@@ -313,7 +313,6 @@ class TestWf(AiidaTestCase):
 
         result, calc = run.get_node(c)
 
-        self.assertIn(result.get_incoming(link_type=LinkType.CREATE).first().node.pk, [c.pk for c in calc.called])
         self.assertEqual(calc.get_outgoing(link_type=LinkType.RETURN).first().node.pk, result.pk)
 
     def test_hashes(self):

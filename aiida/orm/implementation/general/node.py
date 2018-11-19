@@ -25,7 +25,7 @@ from collections import namedtuple
 
 from aiida.backends.utils import validate_attribute_key
 from aiida.common.caching import get_use_cache
-from aiida.common.exceptions import InternalError, ModificationNotAllowed, UniquenessError, ValidationError, NotExistent
+from aiida.common.exceptions import InternalError, ModificationNotAllowed, UniquenessError, ValidationError, InvalidOperation, NotExistent
 from aiida.common.folders import SandboxFolder
 from aiida.common.hashing import _HASH_EXTRA_KEY
 from aiida.common.lang import override
@@ -37,6 +37,7 @@ from aiida.plugins.loader import get_query_type_from_type_string, get_type_strin
 _NO_DEFAULT = tuple()
 
 Neighbor = namedtuple('Neighbor', ['link_type', 'label', 'node'])
+
 
 def clean_value(value):
     """
@@ -327,11 +328,11 @@ class AbstractNode(object):
 
     def __copy__(self):
         """Copying a Node is not supported in general, but only for the Data sub class."""
-        raise NotImplementedError('copying a base Node is not supported')
+        raise InvalidOperation('copying a base Node is not supported')
 
     def __deepcopy__(self, memo):
         """Deep copying a Node is not supported in general, but only for the Data sub class."""
-        raise NotImplementedError('deep copying a base Node is not supported')
+        raise InvalidOperation('deep copying a base Node is not supported')
 
     @property
     def backend(self):
@@ -599,8 +600,68 @@ class AbstractNode(object):
         """
         return len(self._inputlinks_cache) != 0
 
-    # pylint: disable=protected-access
-    def add_link_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
+    def validate_incoming(self, source, link_type, link_label=None):
+        """
+        Validate adding a link of the given type from a given node to ourself.
+
+        This function will first validate the types of the inputs, followed by the node and link types and validate
+        whether in principle a link of that type between the nodes of these types is allowed.the
+
+        Subsequently, the validity of the "degree" of the proposed link is validated, which means validating the
+        number of links of the given type from the given node type is allowed.
+
+        :param source: the node from which the link is coming
+        :param link_type: the type of link
+        :param link_label: optional link label
+        :raise TypeError: if `source` is not a Node instance or `link_type` is not a `LinkType` enum
+        :raise ValueError: if the proposed link is invalid
+        """
+        if not isinstance(link_type, LinkType):
+            raise TypeError('the link_type should be a value from the LinkType enum')
+
+        if not isinstance(source, AbstractNode):
+            raise TypeError('the source should be a Node instance')
+
+    def validate_outgoing(self, target, link_type, link_label=None):
+        """
+        Validate adding a link of the given type from a given node to ourself.
+
+        The validity of the triple (source, link, target) should be validated in the `validate_incoming` call.
+        This method will be called afterwards and can be overriden by subclasses to add additional checks that are
+        specific to that subclass.
+
+        :param target: the node to which the link is going
+        :param link_type: the type of link
+        :param link_label: optional link label
+        :raise TypeError: if `target` is not a Node instance or `link_type` is not a `LinkType` enum
+        :raise ValueError: if the proposed link is invalid
+        """
+        if not isinstance(link_type, LinkType):
+            raise TypeError('the link_type should be a value from the LinkType enum')
+
+        if not isinstance(target, AbstractNode):
+            raise TypeError('the target should be a Node instance')
+
+    def add_incoming(self, source, link_type, link_label=None):
+        """
+        Add a link of the given type from a given node to ourself.
+
+        :param source: the node from which the link is coming
+        :param link_type: the type of link
+        :param link_label: optional link label
+        :return: True if the proposed link is allowed, False otherwise
+        :raise TypeError: if `source` is not a Node instance or `link_type` is not a `LinkType` enum
+        :raise ValueError: if the proposed link is invalid
+        """
+        self.validate_incoming(source, link_type, link_label)
+        source.validate_outgoing(self, link_type, link_label)
+
+        if self.is_stored and source.is_stored:
+            self._add_dblink_from(source, link_type, link_label)
+        else:
+            self._add_cachelink_from(source, link_type, link_label)
+
+    def add_link_from(self, src, link_type, label=None):
         """
         Add a link to the current node from the 'src' node.
         Both nodes must be a Node instance (or a subclass of Node)
@@ -613,28 +674,22 @@ class AbstractNode(object):
         :param link_type: The type of link, must be one of the enum values
                           from :class:`~aiida.common.links.LinkType`
         """
-        assert src is not None, "You must provide a valid Node to link"
+        self.validate_incoming(src, link_type, label)
+        src.validate_outgoing(self, link_type, label)
 
         # Check that the label does not already exist
-
         # This can happen also if both nodes are stored, e.g. if one first
-        # stores the output node and then the input node. Therefore I check
-        # it here.
+        # stores the output node and then the input node. Therefore I check it here.
         if label in self._inputlinks_cache:
-            raise UniquenessError("Input link with name '{}' already present "
-                                  "in the internal cache".format(label))
-
-        # Check if the source allows output links from this node
-        # (will raise ValueError if this is not the case)
-        src._linking_as_output(self, link_type)
+            raise UniquenessError("Input link with name '{}' already present in the internal cache".format(label))
 
         # If both are stored, write directly on the DB
         if self.is_stored and src.is_stored:
-            self._add_dblink_from(src, label, link_type)
+            self._add_dblink_from(src, link_type, label)
         else:  # at least one is not stored: add to the internal cache
-            self._add_cachelink_from(src, label, link_type)
+            self._add_cachelink_from(src, link_type, label)
 
-    def _add_cachelink_from(self, src, label, link_type):
+    def _add_cachelink_from(self, src, link_type, label):
         """
         Add a link in the cache.
         """
@@ -653,7 +708,7 @@ class AbstractNode(object):
 
         self._inputlinks_cache[label] = (src, link_type)
 
-    def _replace_link_from(self, src, label, link_type=LinkType.UNSPECIFIED):
+    def _replace_link_from(self, src, link_type, label):
         """
         Replace an input link with the given label, or simply creates it
         if it does not exist.
@@ -664,9 +719,12 @@ class AbstractNode(object):
         :param src: the source object
         :param str label: the name of the label to set the link from src.
         """
+        self.validate_incoming(src, link_type, label)
+        src.validate_outgoing(self, link_type, label)
+
         # If both are stored, write directly on the DB
         if self.is_stored and src.is_stored:
-            self._replace_dblink_from(src, label, link_type)
+            self._replace_dblink_from(src, link_type, label)
             # If the link was in the local cache, remove it
             # (this could happen if I first store the output node, then
             # the input node.
@@ -703,7 +761,7 @@ class AbstractNode(object):
             self._remove_dblink_from(label)
 
     @abstractmethod
-    def _replace_dblink_from(self, src, label, link_type):
+    def _replace_dblink_from(self, src, link_type, label):
         """
         Replace an input link with the given label and type, or simply creates
         it if it does not exist.
@@ -735,7 +793,7 @@ class AbstractNode(object):
         pass
 
     @abstractmethod
-    def _add_dblink_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
+    def _add_dblink_from(self, src, link_type, label=None):
         """
         Add a link to the current node from the 'src' node.
         Both nodes must be a Node instance (or a subclass of Node)
@@ -748,16 +806,6 @@ class AbstractNode(object):
                     Default = None.
         """
         pass
-
-    def _linking_as_output(self, dest, link_type):
-        """
-        Raise a ValueError if a link from self to dest is not allowed.
-        Implement in subclasses.
-
-        :param dest: the destination output Node
-        :return: a boolean (True)
-        """
-        return True
 
     def get_inputs_dict(self, only_in_db=False, link_type=None):
         """
@@ -1842,7 +1890,7 @@ class AbstractNode(object):
         # Add CREATE links
         for entry in cache_node.get_outgoing(link_type=LinkType.CREATE):
             new_node = entry.node.clone().store()
-            new_node.add_link_from(self, label=entry.label, link_type=LinkType.CREATE)
+            new_node.add_link_from(self, link_type=LinkType.CREATE, label=entry.label)
 
     @abstractmethod
     def _db_store(self, with_transaction=True):
@@ -1900,7 +1948,7 @@ class AbstractNode(object):
                 if (
                     key not in self._hash_ignored_attributes and
                     key not in getattr(self, '_updatable_attributes', tuple())
-            )
+                )
             },
             self.folder,
             computer.uuid if computer is not None else None

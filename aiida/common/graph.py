@@ -75,13 +75,13 @@ def draw_graph(origin_node,
         return "N{} [{},{}{}];".format(node.pk, shape, labelstring, additional_params)
 
     def draw_link_settings(inp_id, out_id, link_label, link_type):
-        if link_type in (LinkType.CREATE.value, LinkType.INPUT.value):
+        if link_type in (LinkType.CREATE.value, LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value):
             style = 'solid'  # Solid lines and black colors
             color = "0.0 0.0 0.0"  # for CREATE and INPUT (The provenance graph)
         elif link_type == LinkType.RETURN.value:
             style = 'dotted'  # Dotted  lines of
             color = "0.0 0.0 0.0"  # black color for Returns
-        elif link_type == LinkType.CALL.value:
+        elif link_type == (LinkType.CALL_CALC.value or LinkType.CALL_WORK.value):
             style = 'bold'  # Bold lines and
             color = "0.0 1.0 1.0"  # Bright red for calls
         else:

@@ -10,7 +10,6 @@
 """
 Unittests for REST API
 """
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -18,7 +17,7 @@ from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 from aiida.orm import DataFactory
-from aiida.orm.node.process import ProcessNode
+from aiida.orm.node.process import ProcessNode, CalculationNode
 from aiida.orm.computers import Computer
 from aiida.orm.data import Data
 from aiida.orm.querybuilder import QueryBuilder
@@ -79,16 +78,16 @@ class RESTApiTestCase(AiidaTestCase):
         kpoint.set_kpoints_mesh([4, 4, 4])
         kpoint.store()
 
-        calc = ProcessNode()
+        calc = CalculationNode()
         calc._set_attr("attr1", "OK")  # pylint: disable=protected-access
         calc._set_attr("attr2", "OK")  # pylint: disable=protected-access
         calc.store()
 
-        calc.add_link_from(structure)
-        calc.add_link_from(parameter1)
+        calc.add_link_from(structure, link_type=LinkType.INPUT_CALC)
+        calc.add_link_from(parameter1, link_type=LinkType.INPUT_CALC)
         kpoint.add_link_from(calc, link_type=LinkType.CREATE)
 
-        calc1 = ProcessNode()
+        calc1 = CalculationNode()
         calc1.store()
 
         dummy_computers = [{
@@ -742,7 +741,6 @@ class RESTApiTestSuite(RESTApiTestCase):
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
             self.assertNotIn('message', response)
-
             self.assertEqual(response["data"]["attributes"], {'attr2': 'OK', 'attr1': 'OK'})
             RESTApiTestCase.compare_extra_response_data(self, "calculations", url, response, uuid=node_uuid)
 

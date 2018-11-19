@@ -69,7 +69,12 @@ def workfunction(func):
             raise ValueError('{} does not support these keyword arguments: {}'.format(func.__name__, kwargs.keys()))
 
         proc = process_class(inputs=inputs, runner=runner)
-        return proc.execute(), proc.calc
+        result = proc.execute()
+
+        # Close the runner properly
+        runner.close()
+
+        return result, proc.calc
 
     @functools.wraps(func)
     def wrapped_function(*args, **kwargs):

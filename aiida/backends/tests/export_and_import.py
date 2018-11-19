@@ -128,7 +128,7 @@ class TestSpecificImport(AiidaTestCase):
         remote_folder = RemoteData(computer=self.computer, remote_path='/').store()
 
         remote_folder.add_link_from(parent_process, link_type=LinkType.CREATE)
-        child_calculation.add_link_from(remote_folder, link_type=LinkType.INPUT)
+        child_calculation.add_link_from(remote_folder, link_type=LinkType.INPUT_CALC)
         structure.add_link_from(child_calculation, link_type=LinkType.CREATE)
 
         with tempfile.NamedTemporaryFile() as handle:
@@ -226,6 +226,7 @@ class TestSimple(AiidaTestCase):
         import shutil
         import tempfile
 
+        from aiida.common.links import LinkType
         from aiida.orm import DataFactory
         from aiida.orm import load_node
         from aiida.orm.node.process import CalcJobNode
@@ -243,7 +244,7 @@ class TestSimple(AiidaTestCase):
             calc.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             calc.store()
 
-            calc.add_link_from(sd)
+            calc.add_link_from(sd, link_type=LinkType.INPUT_CALC)
 
             pks = [sd.pk, calc.pk]
 
@@ -486,7 +487,7 @@ class TestSimple(AiidaTestCase):
             jc1.set_user(user)
             jc1.label = 'jc1'
             jc1.store()
-            jc1.add_link_from(sd1)
+            jc1.add_link_from(sd1, link_type=LinkType.INPUT_CALC)
             jc1._set_state(calc_states.PARSING)
 
             # Create some nodes from a different user
@@ -494,20 +495,20 @@ class TestSimple(AiidaTestCase):
             sd2.set_user(user)
             sd2.label = 'sd2'
             sd2.store()
-            sd2.add_link_from(jc1, label='l1', link_type=LinkType.CREATE)  # I assume jc1 CREATED sd2
+            sd2.add_link_from(jc1, link_type=LinkType.CREATE, label='l1')  # I assume jc1 CREATED sd2
 
             jc2 = CalcJobNode()
             jc2.set_computer(self.computer)
             jc2.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             jc2.label = 'jc2'
             jc2.store()
-            jc2.add_link_from(sd2, label='l2')
+            jc2.add_link_from(sd2, link_type=LinkType.INPUT_CALC, label='l2')
             jc2._set_state(calc_states.PARSING)
 
             sd3 = StructureData()
             sd3.label = 'sd3'
             sd3.store()
-            sd3.add_link_from(jc2, label='l3', link_type=LinkType.CREATE)
+            sd3.add_link_from(jc2, link_type=LinkType.CREATE, label='l3')
 
             uuids_u1 = [sd1.uuid, jc1.uuid, sd2.uuid]
             uuids_u2 = [jc2.uuid, sd3.uuid]
@@ -569,7 +570,7 @@ class TestSimple(AiidaTestCase):
             jc1.set_user(user)
             jc1.label = 'jc1'
             jc1.store()
-            jc1.add_link_from(sd1)
+            jc1.add_link_from(sd1, link_type=LinkType.INPUT_CALC)
             jc1._set_state(calc_states.PARSING)
 
             # Create some nodes from a different user
@@ -577,7 +578,7 @@ class TestSimple(AiidaTestCase):
             sd2.set_user(user)
             sd2.label = 'sd2'
             sd2.store()
-            sd2.add_link_from(jc1, label='l1', link_type=LinkType.CREATE)
+            sd2.add_link_from(jc1, link_type=LinkType.CREATE, label='l1')
 
             # Set the jc1 to FINISHED
             jc1._set_state(calc_states.FINISHED)
@@ -604,13 +605,13 @@ class TestSimple(AiidaTestCase):
             jc2.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             jc2.label = 'jc2'
             jc2.store()
-            jc2.add_link_from(sd2_imp, label='l2')
+            jc2.add_link_from(sd2_imp, link_type=LinkType.INPUT_CALC, label='l2')
             jc2._set_state(calc_states.PARSING)
 
             sd3 = StructureData()
             sd3.label = 'sd3'
             sd3.store()
-            sd3.add_link_from(jc2, label='l3', link_type=LinkType.CREATE)
+            sd3.add_link_from(jc2, link_type=LinkType.CREATE, label='l3')
 
             # Set the jc2 to FINISHED
             jc2._set_state(calc_states.FINISHED)
@@ -646,6 +647,7 @@ class TestSimple(AiidaTestCase):
         import shutil
         import tempfile
 
+        from aiida.common.links import LinkType
         from aiida.orm import load_node
         from aiida.orm.node.process import CalcJobNode
         from aiida.orm.data.structure import StructureData
@@ -673,7 +675,7 @@ class TestSimple(AiidaTestCase):
             jc1.set_user(user)
             jc1.label = 'jc1'
             jc1.store()
-            jc1.add_link_from(sd1)
+            jc1.add_link_from(sd1, link_type=LinkType.INPUT_CALC)
             jc1._set_state(calc_states.PARSING)
 
             # Create a group and add the data inside
@@ -783,7 +785,7 @@ class TestSimple(AiidaTestCase):
 
         try:
             # I'm creating a bunch of nuimbers
-            a, b, c, d, e = (Float(i) for i in range(5))
+            a, b, c, d, e = (Float(i).store() for i in range(5))
             # this adds the maximum number between bcde to a.
             res = add(a=a, b=max_(b=b, c=c, d=d, e=e)['res'])['res']
             # These are the uuids that would be exported as well (as parents) if I wanted the final result
@@ -792,7 +794,7 @@ class TestSimple(AiidaTestCase):
             not_wanted_uuids = [v.uuid for v in (b, c, d)]
             # At this point we export the generated data
             filename1 = os.path.join(temp_folder, "export1.tar.gz")
-            export([res], outfile=filename1, silent=True)
+            export([res], outfile=filename1, silent=True, return_reversed=True)
             self.clean_db()
             self.insert_data()
             import_data(filename1, silent=True)
@@ -828,10 +830,10 @@ class TestSimple(AiidaTestCase):
             input_2 = Int(5).store()
             output_1 = Int(2).store()
 
-            master.add_link_from(input_1, 'input_1', link_type=LinkType.INPUT)
-            slave.add_link_from(master, 'CALL', link_type=LinkType.CALL)
-            slave.add_link_from(input_2, 'input_2', link_type=LinkType.INPUT)
-            output_1.add_link_from(master, 'CREATE', link_type=LinkType.CREATE)
+            master.add_link_from(input_1, LinkType.INPUT_WORK, 'input_1')
+            slave.add_link_from(master, LinkType.CALL_WORK, 'CALL')
+            slave.add_link_from(input_2, LinkType.INPUT_WORK, 'input_2')
+            output_1.add_link_from(master, LinkType.RETURN, 'RETURN')
 
             uuids_values = [(v.uuid, v.value) for v in (output_1,)]
             filename1 = os.path.join(temp_folder, "export1.tar.gz")
@@ -934,9 +936,9 @@ class TestSimple(AiidaTestCase):
             a.store()
             # LINKS
             # the calculation has input the parameters-instance
-            c.add_link_from(p, label='input_parameters', link_type=LinkType.INPUT)
+            c.add_link_from(p, link_type=LinkType.INPUT_CALC, label='input_parameters')
             # I want the array to be an output of the calculation
-            a.add_link_from(c, label='output_array', link_type=LinkType.CREATE)
+            a.add_link_from(c, link_type=LinkType.CREATE, label='output_array')
             g = Group(name='test-group')
             g.store()
             g.add_nodes(a)
@@ -1020,9 +1022,9 @@ class TestComplex(AiidaTestCase):
             calc2.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             calc2.label = "calc2"
             calc2.store()
-            calc2.add_link_from(pd1, link_type=LinkType.INPUT)
-            calc2.add_link_from(pd2, link_type=LinkType.INPUT)
-            calc2.add_link_from(rd1, link_type=LinkType.INPUT)
+            calc2.add_link_from(pd1, link_type=LinkType.INPUT_CALC)
+            calc2.add_link_from(pd2, link_type=LinkType.INPUT_CALC)
+            calc2.add_link_from(rd1, link_type=LinkType.INPUT_CALC)
             calc2._set_state(u'SUBMITTING')
 
             fd1 = FolderData()
@@ -1550,18 +1552,18 @@ class TestLinks(AiidaTestCase):
 
         from aiida.orm.data.int import Int
         from aiida.orm.importexport import export
-        from aiida.orm.node.process import WorkChainNode
+        from aiida.orm.node.process import CalculationNode
         from aiida.common.links import LinkType
 
         tmp_folder = tempfile.mkdtemp()
 
         try:
-            node_work = WorkChainNode().store()
+            node_work = CalculationNode().store()
             node_input = Int(1).store()
             node_output = Int(2).store()
 
-            node_work.add_link_from(node_input, 'input', link_type=LinkType.INPUT)
-            node_output.add_link_from(node_work, 'output', link_type=LinkType.CREATE)
+            node_work.add_link_from(node_input, LinkType.INPUT_CALC, 'input')
+            node_output.add_link_from(node_work, LinkType.CREATE, 'output')
 
             export_links = self.get_all_node_links()
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
@@ -1620,27 +1622,27 @@ class TestLinks(AiidaTestCase):
         d6 = Int(1).store()
 
         # Link creation
-        wc1.add_link_from(d1, 'input1', link_type=LinkType.INPUT)
-        wc1.add_link_from(d2, 'input2', link_type=LinkType.INPUT)
+        wc1.add_link_from(d1, LinkType.INPUT_WORK, 'input1')
+        wc1.add_link_from(d2, LinkType.INPUT_WORK, 'input2')
 
-        wc2.add_link_from(d1, 'input', link_type=LinkType.INPUT)
-        wc2.add_link_from(wc1, 'call', link_type=LinkType.CALL)
+        wc2.add_link_from(d1, LinkType.INPUT_WORK, 'input')
+        wc2.add_link_from(wc1, LinkType.CALL_WORK, 'call')
 
-        pw1.add_link_from(d1, 'input', link_type=LinkType.INPUT)
-        pw1.add_link_from(wc2, 'call', link_type=LinkType.CALL)
+        pw1.add_link_from(d1, LinkType.INPUT_CALC, 'input')
+        pw1.add_link_from(wc2, LinkType.CALL_CALC, 'call')
         pw1._set_state(calc_states.PARSING)
 
-        d3.add_link_from(pw1, 'create', link_type=LinkType.CREATE)
-        d3.add_link_from(wc2, 'return', link_type=LinkType.RETURN)
+        d3.add_link_from(pw1, LinkType.CREATE, 'create')
+        d3.add_link_from(wc2, LinkType.RETURN, 'return')
 
-        d4.add_link_from(pw1, 'create', link_type=LinkType.CREATE)
-        d4.add_link_from(wc2, 'return', link_type=LinkType.RETURN)
+        d4.add_link_from(pw1, LinkType.CREATE, 'create')
+        d4.add_link_from(wc2, LinkType.RETURN, 'return')
 
-        pw2.add_link_from(d4, 'input', link_type=LinkType.INPUT)
+        pw2.add_link_from(d4, LinkType.INPUT_CALC, 'input')
         pw2._set_state(calc_states.PARSING)
 
-        d5.add_link_from(pw2, 'create', link_type=LinkType.CREATE)
-        d6.add_link_from(pw2, 'create', link_type=LinkType.CREATE)
+        d5.add_link_from(pw2, LinkType.CREATE, 'create')
+        d6.add_link_from(pw2, LinkType.CREATE, 'create')
 
         # Return the generated nodes
         graph_nodes = [d1, d2, d3, d4, d5, d6, pw1, pw2, wc1, wc2]
@@ -1687,9 +1689,9 @@ class TestLinks(AiidaTestCase):
             calc.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             calc.store()
 
-            calc.add_link_from(data_input, 'input', link_type=LinkType.INPUT)
+            calc.add_link_from(data_input, LinkType.INPUT_CALC, 'input')
             calc._set_state(calc_states.PARSING)
-            data_output.add_link_from(calc, 'create', link_type=LinkType.CREATE)
+            data_output.add_link_from(calc, LinkType.CREATE, 'create')
 
             group = orm.Group(name='test_group').store()
             group.add_nodes(data_output)
@@ -1736,10 +1738,12 @@ class TestLinks(AiidaTestCase):
             qb.append(Node, project='uuid')
             qb.append(Node, project='uuid',
                       edge_project=['label', 'type'],
-                      edge_filters={'type': {'in': (LinkType.INPUT.value,
+                      edge_filters={'type': {'in': (LinkType.INPUT_CALC.value,
+                                                    LinkType.INPUT_WORK.value,
                                                     LinkType.CREATE.value,
                                                     LinkType.RETURN.value,
-                                                    LinkType.CALL.value)}})
+                                                    LinkType.CALL_CALC.value,
+                                                    LinkType.CALL_WORK.value)}})
             export_links = qb.all()
 
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
@@ -1827,42 +1831,36 @@ class TestLinks(AiidaTestCase):
             no2 = Int(2).store()
 
             # Create the connections between workcalculations and calculations
-            wc1.add_link_from(wc2, 'call', link_type=LinkType.CALL)
-            c1.add_link_from(wc1, 'call', link_type=LinkType.CALL)
+            wc1.add_link_from(wc2, LinkType.CALL_WORK, 'call')
+            c1.add_link_from(wc1, LinkType.CALL_CALC, 'call')
 
             # Connect the first data node to wc1 & c1
-            wc1.add_link_from(ni1, 'ni1-to-wc1',
-                              link_type=LinkType.INPUT)
-            c1.add_link_from(ni1, 'ni1-to-c1',
-                             link_type=LinkType.INPUT)
+            wc1.add_link_from(ni1, LinkType.INPUT_WORK, 'ni1-to-wc1')
+            c1.add_link_from(ni1, LinkType.INPUT_CALC, 'ni1-to-c1')
 
             # Connect the second data node to wc1 & c1
-            wc1.add_link_from(ni2, 'ni2-to-wc1',
-                              link_type=LinkType.INPUT)
-            c1.add_link_from(ni2, 'ni2-to-c1',
-                             link_type=LinkType.INPUT)
+            wc1.add_link_from(ni2, LinkType.INPUT_WORK, 'ni2-to-wc1')
+            c1.add_link_from(ni2, LinkType.INPUT_CALC, 'ni2-to-c1')
 
             # Connecting the first output node to wc1 & c1
-            no1.add_link_from(wc1, 'output',
-                              link_type=LinkType.RETURN)
-            no1.add_link_from(c1, 'output',
-                              link_type=LinkType.CREATE)
+            no1.add_link_from(wc1, LinkType.RETURN, 'output')
+            no1.add_link_from(c1, LinkType.CREATE, 'output')
 
             # Connecting the second output node to wc1 & c1
-            no2.add_link_from(wc1, 'output',
-                              link_type=LinkType.RETURN)
-            no2.add_link_from(c1, 'output',
-                              link_type=LinkType.CREATE)
+            no2.add_link_from(wc1, LinkType.RETURN, 'output')
+            no2.add_link_from(c1, LinkType.CREATE, 'output')
 
             # Getting the input, create, return and call links
             qb = QueryBuilder()
             qb.append(Node, project='uuid')
             qb.append(Node, project='uuid',
                       edge_project=['label', 'type'],
-                      edge_filters={'type': {'in': (LinkType.INPUT.value,
+                      edge_filters={'type': {'in': (LinkType.INPUT_CALC.value,
+                                                    LinkType.INPUT_WORK.value,
                                                     LinkType.CREATE.value,
                                                     LinkType.RETURN.value,
-                                                    LinkType.CALL.value)}})
+                                                    LinkType.CALL_CALC.value,
+                                                    LinkType.CALL_WORK.value)}})
             export_links = qb.all()
 
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
@@ -1912,20 +1910,19 @@ class TestLinks(AiidaTestCase):
             i1 = Int(1).store()
             o1 = Int(2).store()
 
-            w1.add_link_from(i1, 'input-i1', link_type=LinkType.INPUT)
-            w1.add_link_from(w2, 'call', link_type=LinkType.CALL)
-            o1.add_link_from(w1, 'output', link_type=LinkType.CREATE)
-            o1.add_link_from(w1, 'return', link_type=LinkType.RETURN)
+            w1.add_link_from(i1, LinkType.INPUT_WORK, 'input-i1')
+            w1.add_link_from(w2, LinkType.CALL_WORK, 'call')
+            o1.add_link_from(w1, LinkType.RETURN, 'return')
 
             links_wanted = [l for l in self.get_all_node_links() if l[3] in
                             (LinkType.CREATE.value,
-                             LinkType.INPUT.value,
+                             LinkType.INPUT_WORK.value,
                              LinkType.RETURN.value)]
 
             export_file_1 = os.path.join(tmp_folder, 'export-1.tar.gz')
             export_file_2 = os.path.join(tmp_folder, 'export-2.tar.gz')
-            export([o1], outfile=export_file_1, silent=True)
-            export([w1], outfile=export_file_2, silent=True)
+            export([o1], outfile=export_file_1, silent=True, return_reversed=True)
+            export([w1], outfile=export_file_2, silent=True, return_reversed=True)
 
             self.clean_db()
             self.insert_data()
@@ -1966,15 +1963,14 @@ class TestLinks(AiidaTestCase):
             i1 = Int(1).store()
             o1 = Int(2).store()
 
-            w1.add_link_from(i1, 'input-i1', link_type=LinkType.INPUT)
-            w1.add_link_from(w2, 'call', link_type=LinkType.CALL)
-            o1.add_link_from(w1, 'output', link_type=LinkType.CREATE)
-            o1.add_link_from(w1, 'return', link_type=LinkType.RETURN)
-            o1.add_link_from(w2, 'return', link_type=LinkType.RETURN)
+            w1.add_link_from(i1, LinkType.INPUT_WORK, 'input-i1')
+            w1.add_link_from(w2, LinkType.CALL_WORK, 'call')
+            o1.add_link_from(w1, LinkType.RETURN, 'return')
+            o1.add_link_from(w2, LinkType.RETURN, 'return')
 
             uuids_wanted = set(_.uuid for _ in (w1, o1, i1, w2))
             links_wanted = [l for l in self.get_all_node_links() if l[3] in (
-                'createlink', 'inputlink', 'returnlink', 'calllink')]
+                'create', 'input_calc', 'input_work', 'return', 'call_calc', 'call_work')]
 
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
             export([o1, w1, w2, i1],
@@ -2063,7 +2059,7 @@ class TestLinks(AiidaTestCase):
                           {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             jc.store()
 
-            jc.add_link_from(code, 'code', link_type=LinkType.INPUT)
+            jc.add_link_from(code, LinkType.INPUT_CALC, 'code')
 
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
             export([jc], outfile=export_file, silent=True)
@@ -2080,7 +2076,7 @@ class TestLinks(AiidaTestCase):
             qb.append(Code, project='uuid')
             qb.append(CalcJobNode, project='uuid',
                       edge_project=['label', 'type'],
-                      edge_filters={'type': {'==': LinkType.INPUT.value}})
+                      edge_filters={'type': {'==': LinkType.INPUT_CALC.value}})
             self.assertEquals(qb.count(), 1,
                               "Expected to find one and only one link from "
                               "code to the calculation node. {} found."

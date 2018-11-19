@@ -276,22 +276,6 @@ class Code(Data):
             if not self.get_remote_exec_path():
                 raise ValidationError("You did not specify a remote executable")
 
-    def add_link_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
-        raise ValueError("A code node cannot have any input nodes")
-
-    def _linking_as_output(self, dest, link_type):
-        """
-        Raise a ValueError if a link from self to dest is not allowed.
-
-        An output of a code can only be a calculation
-        """
-        from aiida.orm.node.process import ProcessNode
-
-        if not isinstance(dest, ProcessNode):
-            raise ValueError("The output of a code node can only be a calculation")
-
-        return super(Code, self)._linking_as_output(dest, link_type)
-
     def set_prepend_text(self, code):
         """
         Pass a string of code that will be put in the scheduler script before the

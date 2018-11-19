@@ -18,6 +18,7 @@ from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 from .authinfos import *
 from .backends import *
 from .computers import *
+from .logs import *
 from .querybuilder import *
 from .groups import *
 from .users import *
@@ -26,6 +27,7 @@ _local = 'Node', 'Workflow', 'kill_all', 'get_all_running_steps', 'get_workflow_
 
 __all__ = (_local +
            computers.__all__ +
+           logs.__all__ +
            users.__all__ +
            authinfos.__all__ +
            backends.__all__ +

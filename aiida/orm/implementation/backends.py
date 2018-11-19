@@ -31,7 +31,7 @@ class Backend(object):
         Return the collection of log entries
 
         :return: the log collection
-        :rtype: :class:`aiida.orm.log.LogCollection`
+        :rtype: :class:`aiida.orm.implementation.BackendLogCollection`
         """
 
     @abc.abstractproperty

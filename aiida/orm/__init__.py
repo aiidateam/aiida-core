@@ -20,8 +20,9 @@ from aiida.orm.workflow import Workflow
 from .authinfos import *
 from .calculation import *
 from .computers import *
+from .entities import *
 from .groups import *
-from .log import *
+from .logs import *
 from .node import *
 from .backends import *
 from .users import *
@@ -32,6 +33,7 @@ from .querybuilder import *
 authinfo = authinfos
 computer = computers
 group = groups
+log = logs
 user = users
 
 _local = 'Code', 'CalculationFactory', 'DataFactory', 'WorkflowFactory', \
@@ -41,6 +43,8 @@ __all__ = (_local +
            authinfos.__all__ +
            calculation.__all__ +
            computers.__all__ +
+           entities.__all__ +
+           logs.__all__ +
            utils.__all__ +
            users.__all__ +
            backends.__all__ +

@@ -20,7 +20,7 @@ import os
 
 from six.moves import zip
 
-from aiida.common import aiidalogger
+from aiida.common import AIIDA_LOGGER
 from aiida.common import exceptions
 from aiida.common.datastructures import calc_states
 from aiida.common.folders import SandboxFolder
@@ -32,7 +32,7 @@ from aiida.scheduler.datastructures import JOB_STATES
 
 REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
 
-execlogger = aiidalogger.getChild('execmanager')
+execlogger = AIIDA_LOGGER.getChild('execmanager')
 
 
 def upload_calculation(calculation, transport, calc_info, script_filename):

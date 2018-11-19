@@ -20,9 +20,9 @@ from __future__ import division
 from __future__ import absolute_import
 from aiida.common.extendeddicts import (DefaultFieldsAttributeDict, Enumerate)
 
-from aiida.common import aiidalogger
+from aiida.common import AIIDA_LOGGER
 
-SCHEDULER_LOGGER = aiidalogger.getChild('scheduler')
+SCHEDULER_LOGGER = AIIDA_LOGGER.getChild('scheduler')
 
 
 class JobState(Enumerate):

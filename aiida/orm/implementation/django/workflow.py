@@ -18,7 +18,7 @@ import six
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 
-from aiida.common import aiidalogger
+from aiida.common import AIIDA_LOGGER
 from aiida.common.datastructures import wf_states, wf_exit_call, calc_states
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, ValidationError,
@@ -29,7 +29,7 @@ from aiida.orm.node.process import CalcJobNode
 from aiida.orm.implementation.general.workflow import AbstractWorkflow
 from aiida.utils import timezone
 
-logger = aiidalogger.getChild('Workflow')
+logger = AIIDA_LOGGER.getChild('Workflow')
 
 
 class Workflow(AbstractWorkflow):
@@ -241,30 +241,6 @@ class Workflow(AbstractWorkflow):
         from aiida.backends.djsite.db.models import DbWorkflow
 
         return DbWorkflow.aiidaobjects.filter(*args, **kwargs)
-
-    # @property
-    # def logger(self):
-    #    """
-    #    Get the logger of the Workflow object.
-    #
-    #   :return: Logger object
-    #    """
-    #    return self._logger
-
-    @property
-    def logger(self):
-        """
-        Get the logger of the Workflow object, so that it also logs to the
-        DB.
-
-        :return: LoggerAdapter object, that works like a logger, but also has
-          the 'extra' embedded
-        """
-        import logging
-        from aiida.common.log import get_dblogger_extra
-
-        return logging.LoggerAdapter(logger=self._logger,
-                                     extra=get_dblogger_extra(self))
 
     def store(self):
         """

@@ -577,7 +577,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
         result = self.cli_runner.invoke(computer_enable,
                                         ['--user={}'.format(self.user_email),
                                          str(self.comp.label)])
-        self.assertIsNone(result.exception, msg="Error, output: {}".format(result.output))
+        self.assertClickResultNoException(result)
         self.assertTrue(self.comp.is_user_enabled(self.user))
         # enable and disable the computer globally as well
         enable_disable_globally_loop(self, self.user, user_enabled_state=True)
@@ -643,7 +643,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
         result = self.cli_runner.invoke(computer_show, ['comp_cli_test_computer'])
 
         # No exceptions should arise
-        self.assertIsNone(result.exception, "".join(traceback.format_exception(*result.exc_info)))
+        self.assertClickResultNoException(result)
         # Something should be printed to stdout
         self.assertIsNotNone(result.output)
 

@@ -108,19 +108,6 @@ def get_workflow_list(*args, **kwargs):
         raise ValueError("This method doesn't exist for this backend")
 
 
-def get_log_messages(*args, **kwargs):
-    if settings.BACKEND == BACKEND_SQLA:
-        from aiida.backends.sqlalchemy.cmdline import (
-            get_log_messages as get_log_messages_sqla)
-        return get_log_messages_sqla(*args, **kwargs)
-    elif settings.BACKEND == BACKEND_DJANGO:
-        from aiida.backends.djsite.cmdline import (
-            get_log_messages as get_log_messages_dj)
-        return get_log_messages_dj(*args, **kwargs)
-    else:
-        raise ValueError("This method doesn't exist for this backend")
-
-
 def get_global_setting(key):
     if settings.BACKEND == BACKEND_DJANGO:
         from aiida.backends.djsite.globalsettings import get_global_setting

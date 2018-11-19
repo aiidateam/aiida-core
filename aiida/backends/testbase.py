@@ -17,6 +17,7 @@ from unittest import (
     TestSuite, defaultTestLoader as test_loader)
 
 from tornado import ioloop
+import traceback
 
 from aiida.backends import settings
 from aiida.backends.tests import get_db_test_list
@@ -156,6 +157,9 @@ class AiidaTestCase(unittest.TestCase):
         check_if_tests_can_run()
         cls.__backend_instance.tearDownClass_method(*args, **kwargs)
 
+    def assertClickResultNoException(self, cli_result):
+        self.assertIsNone(cli_result.exception, ''.join(traceback.format_exception(*cli_result.exc_info)))
+
 
 def run_aiida_db_tests(tests_to_run, verbose=False):
     """
@@ -189,7 +193,6 @@ def run_aiida_db_tests(tests_to_run, verbose=False):
                 except AttributeError as exception:
                     try:
                         import importlib
-                        import traceback
                         importlib.import_module(modulename)
                     except ImportError as exception:
                         print("[CRITICAL] The module '{}' has an import error and the tests cannot be run:\n{}"

@@ -322,6 +322,34 @@ class DbAuthInfo(Base):
         return dbauthinfo.get_aiida_class()
 
 
+class DbLog(Base):
+    __tablename__ = "db_dblog"
+
+    id = Column(Integer, primary_key=True)
+
+    time = Column(DateTime(timezone=True), default=timezone.now)
+    loggername = Column(String(255), index=True)
+    levelname = Column(String(255), index=True)
+
+    objname = Column(String(255), index=True)
+    objpk = Column(Integer, index=True, nullable=True)
+
+    message = Column(Text(), nullable=True)
+    _metadata = Column('metadata', String(255), default="{}")
+
+    def get_aiida_class(self):
+        from aiida.backends.djsite.db.models import DbLog as DjangoDbLog
+        dblog = DjangoDbLog(
+            time=self.time,
+            loggername=self.loggername,
+            levelname=self.levelname,
+            objname=self.objname,
+            objpk=self.objpk,
+            message=self.message,
+            metadata=self._metadata)
+        return dblog.get_aiida_class()
+
+
 profile = get_profile_config(settings.AIIDADB_PROFILE)
 
 

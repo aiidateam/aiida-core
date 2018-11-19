@@ -26,7 +26,7 @@ from aiida.cmdline.params import options, arguments
 from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.params.types.path import AbsolutePathParamType
 from aiida.cmdline.utils import echo
-from aiida.common import aiidalogger
+from aiida.common import AIIDA_LOGGER
 from aiida.common.utils import escape_for_bash
 from aiida.common.exceptions import NotExistent
 

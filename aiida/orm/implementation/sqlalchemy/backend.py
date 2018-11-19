@@ -26,7 +26,7 @@ __all__ = ('SqlaBackend',)
 class SqlaBackend(Backend):
 
     def __init__(self):
-        self._logs = log.SqlaLogCollection(self, log.SqlaLog)
+        self._logs = log.SqlaLogCollection(self)
         self._users = users.SqlaUserCollection(self)
         self._authinfos = authinfo.SqlaAuthInfoCollection(self)
         self._groups = groups.SqlaGroupCollection(self)

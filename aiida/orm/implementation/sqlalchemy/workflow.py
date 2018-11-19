@@ -19,7 +19,7 @@ import six
 
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.workflow import DbWorkflow, DbWorkflowStep
-from aiida.common import aiidalogger
+from aiida.common import AIIDA_LOGGER
 from aiida.common.datastructures import (wf_states, wf_exit_call,
                                          wf_default_call)
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
@@ -30,9 +30,8 @@ from aiida.common.utils import md5_file, str_timedelta
 from aiida.orm.implementation.general.workflow import AbstractWorkflow
 from aiida.orm.implementation.sqlalchemy.utils import django_filter
 from aiida.utils import timezone
-from aiida.common.log import get_dblogger_extra
 
-logger = aiidalogger.getChild('Workflow')
+logger = AIIDA_LOGGER.getChild('Workflow')
 
 
 class Workflow(AbstractWorkflow):
@@ -230,19 +229,6 @@ class Workflow(AbstractWorkflow):
 
         q = django_filter(DbWorkflow.aiida_query, **kwargs)
         return q
-
-    @property
-    def logger(self):
-        """
-        Get the logger of the Workflow object, so that it also logs to the
-        DB.
-
-        :return: LoggerAdapter object, that works like a logger, but also has
-          the 'extra' embedded
-        """
-
-        return logging.LoggerAdapter(logger=self._logger,
-                                     extra=get_dblogger_extra(self))
 
     def store(self):
         """

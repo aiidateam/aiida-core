@@ -38,31 +38,6 @@ class User(entities.Entity):
         The collection of users stored in a backend
         """
 
-        def find(self, email=None, id=None):
-            """
-            Final all users matching the given criteria
-
-            :param email: An email address to search for
-            :return: A collection of users matching the criteria
-            """
-            # pylint: disable=no-self-use, invalid-name, redefined-builtin
-            from .querybuilder import QueryBuilder
-
-            qb = QueryBuilder()
-
-            filters = {}
-            if id is not None:
-                filters['id'] = {'==': id}
-            if email is not None:
-                filters['email'] = {'==': email}
-
-            qb.append(User, filters=filters)
-            res = [_[0] for _ in qb.all()]
-            if res is None:
-                return []
-
-            return res
-
         def get_or_create(self, **kwargs):
             """
             Get the existing user with a given email address or create an unstored one

@@ -56,7 +56,7 @@ if __name__ == '__main__':
 
             options = [fhandle.name]
             result = self.cli_runner.invoke(cmd_run.run, options)
-            self.assertIsNone(result.exception, result.output)
+            self.assertClickResultNoException(result)
 
             # Try to load the function calculation node from the printed pk in the output
             pk = int(result.output)

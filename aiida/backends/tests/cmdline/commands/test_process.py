@@ -211,7 +211,7 @@ class TestVerdiProcess(AiidaTestCase):
         # Giving a single identifier should print a non empty string message
         options = [str(node.pk)]
         result = self.cli_runner.invoke(cmd_process.process_show, options)
-        self.assertIsNone(result.exception, result.output)
+        self.assertClickResultNoException(result)
         self.assertTrue(len(get_result_lines(result)) > 0)
 
         # Giving multiple identifiers should print a non empty string message
@@ -256,7 +256,7 @@ class TestVerdiProcess(AiidaTestCase):
         child.logger.log(LOG_LEVEL_REPORT, 'child_message')
 
         result = self.cli_runner.invoke(cmd_process.process_report, [str(grandparent.pk)])
-        self.assertIsNone(result.exception, result.output)
+        self.assertClickResultNoException(result)
         self.assertEqual(len(get_result_lines(result)), 3)
 
         result = self.cli_runner.invoke(cmd_process.process_report, [str(parent.pk)])
@@ -297,7 +297,7 @@ class TestVerdiProcess(AiidaTestCase):
         # Giving a single identifier should print a non empty string message
         options = [str(workchain_one.pk)]
         result = self.cli_runner.invoke(cmd_process.process_show, options)
-        self.assertIsNone(result.exception, result.output)
+        self.assertClickResultNoException(result)
         self.assertTrue(len(get_result_lines(result)) > 0)
 
         # Giving multiple identifiers should print a non empty string message

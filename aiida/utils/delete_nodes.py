@@ -7,11 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
-
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
+
 from six.moves import zip, input
 
 from aiida.orm import User
@@ -45,7 +44,6 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
     from aiida.orm.node.process import ProcessNode
     from aiida.orm.data import Data
     from aiida.orm import load_node
-    from aiida.orm.backends import construct_backend
     from aiida.backends.utils import delete_nodes_and_connections
 
     user_email = User.objects.get_default().email
@@ -61,9 +59,10 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
     # Ideally, there should be a module to interface with, but this is the solution for now.
     # By only dealing with ids, and keeping track of what has been already
     # visited in the query, there's good performance and no infinite loops.
-    link_types_to_follow = [LinkType.CREATE.value, LinkType.INPUT.value]
+    link_types_to_follow = [LinkType.CREATE.value, LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value]
     if follow_calls:
-        link_types_to_follow.append(LinkType.CALL.value)
+        link_types_to_follow.append(LinkType.CALL_CALC.value)
+        link_types_to_follow.append(LinkType.CALL_WORK.value)
     if follow_returns:
         link_types_to_follow.append(LinkType.RETURN.value)
 
@@ -101,15 +100,16 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
                 print("   {} {} {} {}".format(uuid, pk, short_type_string, label))
 
     # Here I am checking whether I am deleting
-    ## A data instance without also deleting the creator, which brakes relationship between a calculation and its data
-    ## A calculation instance that was called, without also deleting the caller.
+    # A data instance without also deleting the creator, which brakes relationship between a calculation and its data
+    # A calculation instance that was called, without also deleting the caller.
 
     if not disable_checks:
+        link_types_to_follow = [LinkType.CALL_CALC.value, LinkType.CALL_WORK.value]
         called_qb = QueryBuilder()
         called_qb.append(ProcessNode, filters={'id': {'!in': pks_set_to_delete}}, project='id')
         called_qb.append(ProcessNode, project='type', edge_project='label',
                          filters={'id': {'in': pks_set_to_delete}},
-                         edge_filters={'type': {'==': LinkType.CALL.value}})
+                         edge_filters={'type': {'in': link_types_to_follow}})
         caller_to_called2delete = called_qb.all()
 
         if verbosity > 0 and caller_to_called2delete:
@@ -172,16 +172,14 @@ def delete_nodes(pks, follow_calls=False, follow_returns=False,
             calc.logger.warning("User {} deleted "
                                 "an instance of type {} "
                                 "called with the label {} "
-                                "by this calculation".format(
-                user_email, calc_type_string, link_label))
+                                "by this calculation".format(user_email, calc_type_string, link_label))
 
         for calc_pk, data_type_string, link_label in creator_to_created2delete:
             calc = load_node(calc_pk)
             calc.logger.warning("User {} deleted "
                                 "an instance of type {} "
                                 "created with the label {} "
-                                "by this calculation".format(
-                user_email, data_type_string, link_label))
+                                "by this calculation".format(user_email, data_type_string, link_label))
 
     # If we are here, we managed to delete the entries from the DB.
     # I can now delete the folders

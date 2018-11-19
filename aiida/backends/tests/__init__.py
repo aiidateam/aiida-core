@@ -93,6 +93,7 @@ db_test_list = {
         'orm.data.remote': ['aiida.backends.tests.orm.data.remote'],
         'orm.log': ['aiida.backends.tests.orm.log'],
         'orm.mixins': ['aiida.backends.tests.orm.mixins'],
+        'orm.node': ['aiida.backends.tests.orm.node.test_node'],
         'orm.utils.loaders': ['aiida.backends.tests.orm.utils.loaders'],
         'work.calcfunctions': ['aiida.backends.tests.work.test_calcfunctions'],
         'work.class_loader': ['aiida.backends.tests.work.class_loader'],

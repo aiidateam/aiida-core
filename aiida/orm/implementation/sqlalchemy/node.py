@@ -237,16 +237,16 @@ class Node(AbstractNode):
             session.add(self._dbnode)
             self._increment_version_number_db()
 
-    def _replace_dblink_from(self, src, label, link_type):
+    def _replace_dblink_from(self, src, link_type, label):
         from aiida.backends.sqlalchemy import get_scoped_session
         session = get_scoped_session()
         try:
-            self._add_dblink_from(src, label)
+            self._add_dblink_from(src, link_type, label)
         except UniquenessError:
             # I have to replace the link; I do it within a transaction
             try:
                 self._remove_dblink_from(label)
-                self._add_dblink_from(src, label, link_type)
+                self._add_dblink_from(src, link_type, label)
                 session.commit()
             except:
                 session.rollback()
@@ -259,7 +259,7 @@ class Node(AbstractNode):
         if link is not None:
             session.delete(link)
 
-    def _add_dblink_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
+    def _add_dblink_from(self, src, link_type, label=None):
         from aiida.backends.sqlalchemy import get_scoped_session
         from aiida.orm.querybuilder import QueryBuilder
         session = get_scoped_session()
@@ -280,7 +280,7 @@ class Node(AbstractNode):
         #
         # I am linking src->self; a loop would be created if a DbPath exists
         # already in the TC table from self to src
-        if link_type is LinkType.CREATE or link_type is LinkType.INPUT:
+        if link_type is LinkType.CREATE or link_type is LinkType.INPUT_CALC or link_type is LinkType.INPUT_WORK:
             if QueryBuilder().append(
                     Node, filters={
                         'id': self.pk
@@ -533,7 +533,7 @@ class Node(AbstractNode):
 
         for label in links_to_store:
             src, link_type = self._inputlinks_cache[label]
-            self._add_dblink_from(src, label, link_type)
+            self._add_dblink_from(src, link_type, label)
         # If everything went smoothly, clear the entries from the cache.
         # I do it here because I delete them all at once if no error
         # occurred; otherwise, links will not be stored and I

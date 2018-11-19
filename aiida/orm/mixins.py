@@ -143,7 +143,7 @@ class Sealable(object):
     def _updatable_attributes(cls):
         return (cls.SEALED_KEY,)
 
-    def add_link_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
+    def add_link_from(self, src, link_type, label=None):
         """
         Add a link from a node
 
@@ -158,7 +158,7 @@ class Sealable(object):
         if self.is_sealed:
             raise ModificationNotAllowed('Cannot add a link from a sealed node')
 
-        super(Sealable, self).add_link_from(src, label=label, link_type=link_type)
+        super(Sealable, self).add_link_from(src, link_type=link_type, label=label)
 
     @property
     def is_sealed(self):

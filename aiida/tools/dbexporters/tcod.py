@@ -446,7 +446,7 @@ def _collect_calculation_data(calc):
     import hashlib
     import os
     calcs_now = []
-    for d in calc.get_incoming(node_class=Data, link_type=LinkType.INPUT):
+    for d in calc.get_incoming(node_class=Data, link_type=LinkType.INPUT_CALC):
         for c in d.node.get_incoming(node_class=CalculationNode, link_type=LinkType.CREATE):
             calcs = _collect_calculation_data(c.node)
             calcs_now.extend(calcs)
@@ -841,7 +841,7 @@ def _collect_tags(node, calc,parameters=None,
 
     if calc is not None:
         from aiida.orm.data.array.kpoints import KpointsData
-        kpoints_list = calc.get_incoming(node_class=KpointsData, link_type=LinkType.INPUT).all()
+        kpoints_list = calc.get_incoming(node_class=KpointsData, link_type=LinkType.INPUT_CALC).all()
         # TODO: stop if more than one KpointsData is used?
         if len(kpoints_list) == 1:
             kpoints = kpoints_list[0]

@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=abstract-method
 """ORM class for CalcFunctionNode."""
 from __future__ import absolute_import
 
@@ -11,6 +10,5 @@ __all__ = ('CalcFunctionNode',)
 
 class CalcFunctionNode(FunctionCalculationMixin, CalculationNode):
     """ORM class for all nodes representing the execution of a calcfunction."""
-    # pylint: disable=too-few-public-methods
-
-    _cacheable = True
+    # pylint: disable=too-few-public-methods,abstract-method
+    pass

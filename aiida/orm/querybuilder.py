@@ -1283,7 +1283,7 @@ class QueryBuilder(object):
         walk = select(selection_walk_list).select_from(join(node1, link1, link1.input_id == node1.id)).where(
             and_(
                 in_recursive_filters,  # I apply filters for speed here
-                link1.type.in_((LinkType.CREATE.value, LinkType.INPUT.value))  # I follow input and create links
+                link1.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value))  # I follow input and create links
             )).cte(recursive=True)
 
         aliased_walk = aliased(walk)
@@ -1302,7 +1302,7 @@ class QueryBuilder(object):
                         aliased_walk,
                         link2,
                         link2.input_id == aliased_walk.c.descendant_id,
-                    )).where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT.value)))))  # .alias()
+                    )).where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value)))))  # .alias()
 
         self._query = self._query.join(descendants_recursive,
                                        descendants_recursive.c.ancestor_id == joined_entity.id).join(
@@ -1336,7 +1336,7 @@ class QueryBuilder(object):
 
         walk = select(selection_walk_list).select_from(join(node1, link1, link1.output_id == node1.id)).where(
             and_(in_recursive_filters, link1.type.in_((LinkType.CREATE.value,
-                                                       LinkType.INPUT.value)))).cte(recursive=True)
+                                                       LinkType.INPUT_CALC.value)))).cte(recursive=True)
 
         aliased_walk = aliased(walk)
 
@@ -1355,7 +1355,7 @@ class QueryBuilder(object):
                         aliased_walk,
                         link2,
                         link2.output_id == aliased_walk.c.ancestor_id,
-                    )).where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT.value)))
+                    )).where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value)))
                 # I can't follow RETURN or CALL links
             ))
 

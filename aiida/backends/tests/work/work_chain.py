@@ -946,12 +946,12 @@ class TestWorkChainAbortChildren(AiidaTestCase):
             process.kill()
 
             with self.assertRaises(plumpy.KilledError):
-                result = yield process.future()
+                yield process.future()
 
         runner.schedule(process)
         runner.loop.run_sync(lambda: run_async())
 
-        child = process.calc.get_outgoing(link_type=LinkType.CALL).first().node
+        child = process.calc.get_outgoing(link_type=LinkType.CALL_WORK).first().node
         self.assertEquals(child.is_finished_ok, False)
         self.assertEquals(child.is_excepted, False)
         self.assertEquals(child.is_killed, True)

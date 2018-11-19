@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=abstract-method
 """ORM class for WorkFunctionNode."""
 from __future__ import absolute_import
 
@@ -11,5 +10,5 @@ __all__ = ('WorkFunctionNode',)
 
 class WorkFunctionNode(FunctionCalculationMixin, WorkflowNode):
     """ORM class for all nodes representing the execution of a workfunction."""
-    # pylint: disable=too-few-public-methods
+    # pylint: disable=too-few-public-methods,abstract-method
     pass

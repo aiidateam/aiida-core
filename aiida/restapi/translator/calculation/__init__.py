@@ -120,7 +120,7 @@ class CalculationTranslator(NodeTranslator):
         :return: the retrieved input files for job calculation
         """
 
-        if node.type.startswith("calculation.job."):
+        if node.type.startswith("node.process.calculation."):
 
             input_folder = node._raw_input_folder  # pylint: disable=protected-access
 
@@ -160,7 +160,7 @@ class CalculationTranslator(NodeTranslator):
         :return: the retrieved output files for job calculation
         """
 
-        if node.type.startswith("calculation.job."):
+        if node.type.startswith("node.process.calculation."):
 
             retrieved_folder = node.out.retrieved
             response = {}

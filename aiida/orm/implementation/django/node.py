@@ -203,19 +203,19 @@ class Node(AbstractNode):
                 self._dbnode.save()
                 self._increment_version_number_db()
 
-    def _replace_dblink_from(self, src, label, link_type):
+    def _replace_dblink_from(self, src, link_type, label):
         try:
-            self._add_dblink_from(src, label, link_type)
+            self._add_dblink_from(src, link_type, label)
         except UniquenessError:
             # I have to replace the link; I do it within a transaction
             with transaction.atomic():
                 self._remove_dblink_from(label)
-                self._add_dblink_from(src, label, link_type)
+                self._add_dblink_from(src, link_type, label)
 
     def _remove_dblink_from(self, label):
         DbLink.objects.filter(output=self._dbnode, label=label).delete()
 
-    def _add_dblink_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
+    def _add_dblink_from(self, src, link_type, label=None):
         from aiida.orm.querybuilder import QueryBuilder
         if not isinstance(src, Node):
             raise ValueError("src must be a Node instance")
@@ -226,12 +226,8 @@ class Node(AbstractNode):
             raise ModificationNotAllowed(
                 "Cannot call the internal _add_dblink_from if the "
                 "destination node is not stored")
-        if src._to_be_stored:
-            raise ModificationNotAllowed(
-                "Cannot call the internal _add_dblink_from if the "
-                "source node is not stored")
 
-        if link_type is LinkType.CREATE or link_type is LinkType.INPUT:
+        if link_type is LinkType.CREATE or link_type is LinkType.INPUT_CALC or link_type is LinkType.INPUT_WORK:
             # Check for cycles. This works if the transitive closure is enabled; if it
             # isn't, this test will never fail, but then having a circular link is not
             # meaningful but does not pose a huge threat
@@ -505,7 +501,7 @@ class Node(AbstractNode):
 
             for label in links_to_store:
                 src, link_type = self._inputlinks_cache[label]
-                self._add_dblink_from(src, label, link_type)
+                self._add_dblink_from(src, link_type, label)
             # If everything went smoothly, clear the entries from the cache.
             # I do it here because I delete them all at once if no error
             # occurred; otherwise, links will not be stored and I

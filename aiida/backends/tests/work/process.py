@@ -20,11 +20,13 @@ from aiida.orm import load_node
 from aiida.orm.data.int import Int
 from aiida.orm.data.frozendict import FrozenDict
 from aiida.orm.data.parameter import ParameterData
-from aiida.orm.node.process import CalcFunctionNode
+from aiida.orm.node.process import CalcFunctionNode, WorkflowNode
 from aiida.work import test_utils, Process
 
 
 class NameSpacedProcess(work.Process):
+
+    _calc_class = WorkflowNode
 
     @classmethod
     def define(cls, spec):

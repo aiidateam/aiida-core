@@ -13,6 +13,8 @@ __all__ = ('WorkChainNode',)
 class WorkChainNode(WorkflowNode):
     """ORM class for all nodes representing the execution of a WorkChain."""
 
+    _cacheable = False
+
     STEPPER_STATE_INFO_KEY = 'stepper_state_info'
 
     @classproperty

@@ -215,7 +215,7 @@ def upload_calculation(calculation, transport, calc_info, script_filename):
                               "calculation {}".format(calculation.pk))
 
     remotedata = RemoteData(computer=computer, remote_path=workdir)
-    remotedata.add_link_from(calculation, label='remote_folder', link_type=LinkType.CREATE)
+    remotedata.add_link_from(calculation, link_type=LinkType.CREATE, label='remote_folder')
     remotedata.store()
 
     return calc_info, script_filename
@@ -261,9 +261,7 @@ def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
 
     # Create the FolderData node to attach everything to
     retrieved_files = FolderData()
-    retrieved_files.add_link_from(
-        calculation, label=calculation._get_linkname_retrieved(),
-        link_type=LinkType.CREATE)
+    retrieved_files.add_link_from(calculation, link_type=LinkType.CREATE, label=calculation._get_linkname_retrieved())
 
     with transport:
         transport.chdir(workdir)
@@ -383,7 +381,7 @@ def parse_results(job, retrieved_temporary_folder=None):
                              "return a boolean, integer or ExitCode instance".format(type(exit_code)))
 
         for label, n in new_nodes_tuple:
-            n.add_link_from(job, label=label, link_type=LinkType.CREATE)
+            n.add_link_from(job, link_type=LinkType.CREATE, label=label)
             n.store()
 
     try:
@@ -425,7 +423,7 @@ def _retrieve_singlefiles(job, transport, folder, retrieve_file_list, logger_ext
         SinglefileSubclass = DataFactory(subclassname)
         singlefile = SinglefileSubclass()
         singlefile.set_file(filename)
-        singlefile.add_link_from(job, label=linkname, link_type=LinkType.CREATE)
+        singlefile.add_link_from(job, link_type=LinkType.CREATE, label=linkname)
         singlefiles.append(singlefile)
 
     for fil in singlefiles:

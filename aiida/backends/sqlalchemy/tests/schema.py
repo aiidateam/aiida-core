@@ -46,8 +46,8 @@ class TestRelationshipsSQLA(AiidaTestCase):
         n3 = Node().store()
 
         # Create a link between these 2 nodes
-        n2.add_link_from(n1, link_type=LinkType.CREATE, label="N1")
-        n3.add_link_from(n2, link_type=LinkType.CREATE, label="N2")
+        n2.add_incoming(n1, link_type=LinkType.CREATE, link_label="N1")
+        n3.add_incoming(n2, link_type=LinkType.CREATE, link_label="N2")
 
         # Check that the result of outputs is a list
         self.assertIsInstance(n1.dbnode.outputs, list,
@@ -72,8 +72,8 @@ class TestRelationshipsSQLA(AiidaTestCase):
         n3 = Node().store()
 
         # Create a link between these 2 nodes
-        n2.add_link_from(n1, link_type=LinkType.CREATE, label="N1")
-        n3.add_link_from(n2, link_type=LinkType.CREATE, label="N2")
+        n2.add_incoming(n1, link_type=LinkType.CREATE, link_label="N1")
+        n3.add_incoming(n2, link_type=LinkType.CREATE, link_label="N2")
 
         # Check that the result of outputs is a list
         self.assertIsInstance(n1.dbnode.inputs, list,

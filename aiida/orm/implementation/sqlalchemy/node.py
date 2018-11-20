@@ -293,8 +293,8 @@ class Node(AbstractNode):
         if label is None:
             autolabel_idx = 1
 
-            existing_from_autolabels = session.query(DbLink.label).filter(DbLink.output_id == self._dbnode.id,
-                                                                          DbLink.label.like("link%"))
+            existing_from_autolabels = [_[0] for _ in session.query(DbLink.label).filter(DbLink.output_id == self._dbnode.id,
+                                                                          DbLink.label.like("link%")).all()]
 
             while "link_{}".format(autolabel_idx) in existing_from_autolabels:
                 autolabel_idx += 1

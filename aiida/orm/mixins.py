@@ -143,22 +143,21 @@ class Sealable(object):
     def _updatable_attributes(cls):
         return (cls.SEALED_KEY,)
 
-    def add_link_from(self, src, link_type, label=None):
+    def add_incoming(self, source, link_type, link_label=None):
         """
-        Add a link from a node
+        Add a link of the given type from a given node to ourself.
 
-        You can use the parameters of the base Node class, in particular the
-        label parameter to label the link.
-
-        :param src: the node to add a link from
-        :param str label: name of the link
-        :param link_type: type of the link, must be one of the enum values from
-          :class:`~aiida.common.links.LinkType`
+        :param source: the node from which the link is coming
+        :param link_type: the type of link
+        :param link_label: optional link label
+        :return: True if the proposed link is allowed, False otherwise
+        :raise TypeError: if `source` is not a Node instance or `link_type` is not a `LinkType` enum
+        :raise ValueError: if the proposed link is invalid
         """
         if self.is_sealed:
             raise ModificationNotAllowed('Cannot add a link from a sealed node')
 
-        super(Sealable, self).add_link_from(src, link_type=link_type, label=label)
+        super(Sealable, self).add_incoming(source, link_type=link_type, link_label=link_label)
 
     @property
     def is_sealed(self):

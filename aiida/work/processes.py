@@ -448,7 +448,7 @@ class Process(plumpy.Process):
             value = self.outputs[label]
             # Try making us the creator
             try:
-                value.add_link_from(self.calc, LinkType.CREATE, label)
+                value.add_incoming(self.calc, LinkType.CREATE, label)
             except ValueError:
                 # Must have already been created...nae dramas
                 pass
@@ -456,7 +456,7 @@ class Process(plumpy.Process):
             value.store()
 
             if isinstance(self.calc, WorkflowNode):
-                value.add_link_from(self.calc, LinkType.RETURN, label)
+                value.add_incoming(self.calc, LinkType.RETURN, label)
 
     @property
     def process_class(self):
@@ -494,10 +494,10 @@ class Process(plumpy.Process):
 
         if parent_calc:
             if isinstance(self.calc, CalculationNode):
-                self.calc.add_link_from(parent_calc, LinkType.CALL_CALC, 'CALL')
+                self.calc.add_incoming(parent_calc, LinkType.CALL_CALC, 'CALL_CALC')
 
             if isinstance(self.calc, WorkflowNode):
-                self.calc.add_link_from(parent_calc, LinkType.CALL_WORK, 'CALL')
+                self.calc.add_incoming(parent_calc, LinkType.CALL_WORK, 'CALL_WORK')
 
         self._setup_db_inputs()
         self._add_description_and_label()
@@ -506,30 +506,21 @@ class Process(plumpy.Process):
         """
         Create the links that connect the inputs to the calculation node that represents this Process
         """
-        parent_calc = self.get_parent_calc()
-
         for name, input_value in self._flat_inputs().items():
 
             if isinstance(input_value, ProcessNode):
                 input_value = utils.get_or_create_output_group(input_value)
 
-            if not input_value.is_stored:
-                # If the input isn't stored then assume our parent created it as long as it is a CalculationNode
-                if parent_calc and isinstance(self.calc, CalculationNode):
-                    input_value.add_link_from(parent_calc, LinkType.CREATE, 'CREATE')
-                if self.inputs.store_provenance:
-                    input_value.store()
-
             # Need this special case for tests that use ProcessNodes as classes
             if isinstance(self.calc, ProcessNode) and not isinstance(self.calc, (CalculationNode, WorkflowNode)):
-                self.calc.add_link_from(input_value, LinkType.INPUT_WORK, name)
+                self.calc.add_incoming(input_value, LinkType.INPUT_WORK, name)
                 continue
 
             if isinstance(self.calc, CalculationNode):
-                self.calc.add_link_from(input_value, LinkType.INPUT_CALC, name)
+                self.calc.add_incoming(input_value, LinkType.INPUT_CALC, name)
 
             if isinstance(self.calc, WorkflowNode):
-                self.calc.add_link_from(input_value, LinkType.INPUT_WORK, name)
+                self.calc.add_incoming(input_value, LinkType.INPUT_WORK, name)
 
     def _add_description_and_label(self):
         """Add the description and label to the calculation node"""

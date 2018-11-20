@@ -170,19 +170,6 @@ class Data(Node):
             return None
 
     @override
-    def add_link_from(self, src, link_type, label=None):
-        from aiida.orm.node.process import ProcessNode
-
-        if link_type is LinkType.CREATE and \
-                        len(self.get_incoming(link_type=LinkType.CREATE).all()) > 0:
-            raise ValueError("At most one CREATE node can enter a data node")
-
-        if not isinstance(src, ProcessNode):
-            raise ValueError("Links entering a data object can only be of type calculation")
-
-        return super(Data, self).add_link_from(src, link_type, label)
-
-    @override
     def _exportcontent(self, fileformat, main_file_name="", **kwargs):
         """
         Converts a Data node to one (or multiple) files.

@@ -593,13 +593,6 @@ class AbstractNode(object):
         """
         pass
 
-    def _has_cached_links(self):
-        """
-        Return True if there is at least one cached (input) link, that is a
-        link that is not stored yet in the database. False otherwise.
-        """
-        return len(self._inputlinks_cache) != 0
-
     def validate_incoming(self, source, link_type, link_label=None):
         """
         Validate adding a link of the given type from a given node to ourself.
@@ -660,34 +653,6 @@ class AbstractNode(object):
             self._add_dblink_from(source, link_type, link_label)
         else:
             self._add_cachelink_from(source, link_type, link_label)
-
-    def add_link_from(self, src, link_type, label=None):
-        """
-        Add a link to the current node from the 'src' node.
-        Both nodes must be a Node instance (or a subclass of Node)
-        :note: In subclasses, change only this. Moreover, remember to call
-        the super() method in order to properly use the caching logic!
-
-        :param src: the source object
-        :param str label: the name of the label to set the link from src.
-                          Default = None.
-        :param link_type: The type of link, must be one of the enum values
-                          from :class:`~aiida.common.links.LinkType`
-        """
-        self.validate_incoming(src, link_type, label)
-        src.validate_outgoing(self, link_type, label)
-
-        # Check that the label does not already exist
-        # This can happen also if both nodes are stored, e.g. if one first
-        # stores the output node and then the input node. Therefore I check it here.
-        if label in self._inputlinks_cache:
-            raise UniquenessError("Input link with name '{}' already present in the internal cache".format(label))
-
-        # If both are stored, write directly on the DB
-        if self.is_stored and src.is_stored:
-            self._add_dblink_from(src, link_type, label)
-        else:  # at least one is not stored: add to the internal cache
-            self._add_cachelink_from(src, link_type, label)
 
     def _add_cachelink_from(self, src, link_type, label):
         """
@@ -817,8 +782,7 @@ class AbstractNode(object):
                 returns all inputs of all link types.
         :return: a dictionary {label:object}
         """
-        from aiida.common.warnings import \
-            AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('get_inputs_dict method is deprecated, use get_incoming instead', DeprecationWarning)
 
         return dict(
@@ -836,8 +800,7 @@ class AbstractNode(object):
 
         :return: a dictionary {linkname:object}
         """
-        from aiida.common.warnings import \
-            AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('get_outputs_dict method is deprecated, use get_outgoing instead', DeprecationWarning)
 
         if link_type is not None and not isinstance(link_type, LinkType):
@@ -866,8 +829,7 @@ class AbstractNode(object):
 
         return new_outputs
 
-
-    def get_incoming(self, node_class=None, link_type=None, link_label_filter=None):
+    def get_incoming(self, node_class=None, link_type=(), link_label_filter=None):
         """
         Return a list of nodes that enter (directly) in this node
 
@@ -878,17 +840,19 @@ class AbstractNode(object):
         :param link_label_filter: filters the incoming nodes by its link label.
             Here wildcards (% and _) can be passed in link label filter as we are using "like" in QB.
         """
+        if not isinstance(link_type, tuple):
+            link_type = (link_type,)
 
         if self.is_stored:
-            qb_obj = _get_neighbors_qbobj(self.id, node_class=node_class, link_type=link_type,
-                                          link_label_filter=link_label_filter, link_direction="incoming")
-            filtered_list = [Neighbor(i[2], i[1], i[0]) for i in qb_obj.all()]
+            builder = self._get_neighbors_query_builder(self.id, node_class=node_class, link_type=link_type,
+                                                        link_label_filter=link_label_filter, link_direction='incoming')
+            filtered_list = [Neighbor(i[2], i[1], i[0]) for i in builder.all()]
         else:
             filtered_list = []
 
-        # get all cached links
         db_incoming_keys = set(incoming.label for incoming in filtered_list)
 
+        # Get all cached links
         for label, v in self._inputlinks_cache.items():
             src = v[0]
             incoming_link_type = v[1]
@@ -896,7 +860,7 @@ class AbstractNode(object):
                 raise InternalError("There exist a link with the same name '{}' and type '{}' both in the DB "
                                     "and in the internal cache for node pk= {}!".format(label, incoming_link_type, self.pk))
 
-            if link_type is None or incoming_link_type == link_type:
+            if not link_type or incoming_link_type in link_type:
                 if link_label_filter is not None:
                     if sql_string_match(string=label, pattern=link_label_filter):
                         filtered_list.append(Neighbor(incoming_link_type, label, src))
@@ -904,7 +868,6 @@ class AbstractNode(object):
                     filtered_list.append(Neighbor(incoming_link_type, label, src))
 
         return NeighborManager(filtered_list)
-
 
     def get_inputs(self, node_type=None, also_labels=False, only_in_db=False, link_type=None):
         """
@@ -922,10 +885,8 @@ class AbstractNode(object):
         :param link_type: Only get inputs of this link type, if None then
             returns all inputs of all link types.
         """
-        from aiida.common.warnings import \
-            AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
-        warnings.warn('get_inputs method is deprecated, use get_incoming instead',
-                      DeprecationWarning)
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        warnings.warn('get_inputs method is deprecated, use get_incoming instead', DeprecationWarning)
 
         if link_type is not None and not isinstance(link_type, LinkType):
             raise TypeError('link_type should be a LinkType object')
@@ -967,7 +928,7 @@ class AbstractNode(object):
         """
         pass
 
-    def get_outgoing(self, node_class=None, link_type=None, link_label_filter=None):
+    def get_outgoing(self, node_class=None, link_type=(), link_label_filter=None):
         """
         Return a list of nodes that enter (directly) in this node
 
@@ -978,13 +939,57 @@ class AbstractNode(object):
         :param link_label_filter: filters the outgoing nodes by its link label.
             Here wildcards (% and _) can be passed in link label filter as we are using "like" in QB.
         """
-
-        qb_obj = _get_neighbors_qbobj(self.id, node_class=node_class, link_type=link_type,
-                                          link_label_filter=link_label_filter, link_direction="outgoing")
-        filtered_list = [Neighbor(i[2], i[1], i[0]) for i in qb_obj.all()]
+        builder = self._get_neighbors_query_builder(self.id, node_class=node_class, link_type=link_type,
+                                                    link_label_filter=link_label_filter, link_direction='outgoing')
+        filtered_list = [Neighbor(i[2], i[1], i[0]) for i in builder.all()]
 
         return NeighborManager(filtered_list)
 
+    @staticmethod
+    def _get_neighbors_query_builder(node_id, node_class=None, link_type=(), link_label_filter=None, link_direction='incoming'):
+        """
+        Return a querybuilder object for a list of nodes that enter (directly) in this node
+
+        :param node_id: main node id for which incoming nodes are searched
+        :param node_class: If specified, should be a class, and it filters only
+            elements of that specific type (or a subclass of 'type')
+        :param link_type: Only get inputs of this link type, if None then
+            returns all inputs of all link types.
+        :param link_label_filter: filters the incoming nodes by its link label.
+            Here regex can be passed for link label filter as we are using "like" in QB.
+        :param link_direction: It is either incoming (get all incoming of the node) or
+            outgoing (get all outgoing of the node)
+        """
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.node import Node
+
+        if not isinstance(link_type, tuple):
+            link_type = (link_type,)
+
+        if link_type and not all([isinstance(t, LinkType) for t in link_type]):
+            raise TypeError('link_type should be a LinkType or tuple of LinkType: got {}'.format(link_type))
+
+        node_class = node_class or Node
+        node_filters = {'id': {'==': node_id}}
+        edge_filters = {}
+
+        if link_type:
+            edge_filters['type'] = {'in': [t.value for t in link_type]}
+
+        if link_label_filter:
+            edge_filters['label'] = {'like': link_label_filter}
+
+        builder = QueryBuilder()
+        builder.append(Node, filters=node_filters, tag='main')
+
+        if link_direction == 'outgoing':
+            builder.append(node_class, with_incoming='main', project=['*'],
+                edge_project=['label', 'type'], edge_filters=edge_filters)
+        else:
+            builder.append(node_class, with_outgoing='main', project=['*'],
+                edge_project=['label', 'type'], edge_filters=edge_filters)
+
+        return builder
 
     @override
     def get_outputs(self, node_type=None, also_labels=False, link_type=None):
@@ -999,8 +1004,7 @@ class AbstractNode(object):
             and Node a Node instance or subclass
         :param link_type: Only return outputs connected by links of this type.
         """
-        from aiida.common.warnings import \
-            AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('get_outputs method is deprecated, use get_outgoing instead', DeprecationWarning)
 
         if link_type is not None and not isinstance(link_type, LinkType):
@@ -1890,7 +1894,7 @@ class AbstractNode(object):
         # Add CREATE links
         for entry in cache_node.get_outgoing(link_type=LinkType.CREATE):
             new_node = entry.node.clone().store()
-            new_node.add_link_from(self, link_type=LinkType.CREATE, label=entry.label)
+            new_node.add_incoming(self, link_type=LinkType.CREATE, link_label=entry.label)
 
     @abstractmethod
     def _db_store(self, with_transaction=True):
@@ -1999,9 +2003,9 @@ class AbstractNode(object):
             return iter(())
 
         from aiida.orm.querybuilder import QueryBuilder
-        qb = QueryBuilder()
-        qb.append(self.__class__, filters={'extras._aiida_hash': hash_}, project='*', subclassing=False)
-        same_nodes = (n[0] for n in qb.iterall())
+        builder = QueryBuilder()
+        builder.append(self.__class__, filters={'extras._aiida_hash': hash_}, project='*', subclassing=False)
+        same_nodes = (n[0] for n in builder.iterall())
         return (n for n in same_nodes if n._is_valid_cache())
 
     def _is_valid_cache(self):
@@ -2259,52 +2263,6 @@ class AttributeManager(object):
             return self._node.get_attr(name)
         except AttributeError as err:
             raise KeyError(str(err))
-
-def _get_neighbors_qbobj(node_id, node_class=None, link_type=None, link_label_filter=None, link_direction="incoming"):
-    """
-    Return a querybuilder object for a list of nodes that enter (directly) in this node
-
-    :param node_id: main node id for which incoming nodes are searched
-    :param node_class: If specified, should be a class, and it filters only
-        elements of that specific type (or a subclass of 'type')
-    :param link_type: Only get inputs of this link type, if None then
-        returns all inputs of all link types.
-    :param link_label_filter: filters the incoming nodes by its link label.
-        Here regex can be passed for link label filter as we are using "like" in QB.
-    :param link_direction: It is either incoming (get all incoming of the node) or
-        outgoing (get all outgoing of the node)
-    """
-    from aiida.orm.querybuilder import QueryBuilder
-    from aiida.orm.node import Node
-
-    filtered_node = Node
-    edge_filters = {}
-
-    if node_class:
-        filtered_node = node_class
-    if link_type:
-        if not isinstance(link_type, tuple):
-            link_type = (link_type,)
-        link_type_values = []
-        for ltype in link_type:
-            if not isinstance(ltype, LinkType):
-                raise TypeError("link_type '{}' should be a LinkType object".format(ltype))
-            link_type_values.append(ltype.value)
-        edge_filters["type"] = {"in": link_type_values}
-    if link_label_filter:
-        edge_filters["label"] = {"like": link_label_filter}
-
-    qb_obj = QueryBuilder()
-    qb_obj.append(Node, filters={"id": {"==": node_id}}, tag="main")
-
-    if link_direction == "outgoing":
-        qb_obj.append(filtered_node, with_incoming="main", project=["*"], edge_project=["label", "type"],
-                      edge_filters=edge_filters)
-    else:
-        qb_obj.append(filtered_node, with_outgoing="main", project=["*"], edge_project=["label", "type"],
-                      edge_filters=edge_filters)
-
-    return qb_obj
 
 
 class NeighborManager(object):

@@ -109,7 +109,7 @@ def run(scriptname, varargs, group, group_name, exclude, excludesubclasses, incl
                 # Add local folder to sys.path
                 sys.path.insert(0, os.path.abspath(os.curdir))
                 # Compile the script for execution and pass it to exec with the globals_dict
-                exec(compile(handle.read(), scriptname, 'exec'), globals_dict)  # yapf: disable # pylint: disable=exec-used
+                exec(compile(handle.read(), scriptname, 'exec', dont_inherit=True), globals_dict)  # yapf: disable # pylint: disable=exec-used
         except SystemExit:
             # Script called sys.exit()
             # Re-raise the exception to have the error code properly returned at the end

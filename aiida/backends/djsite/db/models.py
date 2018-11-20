@@ -1456,7 +1456,6 @@ class DbAuthInfo(m.Model):
         return DjangoAuthInfo.from_dbmodel(self, construct_backend())
 
 
-
 @python_2_unicode_compatible
 class DbComment(m.Model):
     uuid = m.UUIDField(default=get_new_uuid, unique=True)

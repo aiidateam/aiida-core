@@ -234,7 +234,6 @@
         aiida/orm/implementation/django/authinfo.py|
         aiida/orm/implementation/django/backend.py|
         aiida/orm/implementation/django/code.py|
-        aiida/orm/implementation/django/comment.py|
         aiida/orm/implementation/django/computer.py|
         aiida/orm/implementation/django/group.py|
         aiida/orm/implementation/django/__init__.py|
@@ -242,7 +241,6 @@
         aiida/orm/implementation/django/user.py|
         aiida/orm/implementation/django/utils.py|
         aiida/orm/implementation/django/workflow.py|
-        aiida/orm/implementation/general/comment.py|
         aiida/orm/implementation/general/group.py|
         aiida/orm/implementation/general/__init__.py|
         aiida/orm/implementation/general/node.py|
@@ -251,7 +249,6 @@
         aiida/orm/implementation/sqlalchemy/authinfo.py|
         aiida/orm/implementation/sqlalchemy/backend.py|
         aiida/orm/implementation/sqlalchemy/code.py|
-        aiida/orm/implementation/sqlalchemy/comment.py|
         aiida/orm/implementation/sqlalchemy/computer.py|
         aiida/orm/implementation/sqlalchemy/group.py|
         aiida/orm/implementation/sqlalchemy/__init__.py|

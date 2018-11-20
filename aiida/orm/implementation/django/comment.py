@@ -7,126 +7,132 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+"""Django implementations for the Comment entity and collection."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from functools import reduce
 
 import six
 
-from aiida.backends.djsite.db.models import DbComment
-from aiida.orm.implementation.general.comment import AbstractComment
-from aiida.common.exceptions import NotExistent, MultipleObjectsError
+from aiida.backends.djsite.db import models
+from aiida.common import exceptions
+from aiida.common import utils
+
+from ..comments import BackendComment, BackendCommentCollection
+from .utils import ModelWrapper
+from . import entities
+from . import users
 
 
-class Comment(AbstractComment):
+class DjangoComment(entities.DjangoModelEntity[models.DbComment], BackendComment):
+    """Comment implementation for Django."""
 
-    def __init__(self, **kwargs):
+    MODEL_CLASS = models.DbComment
+    _auto_flush = ('mtime',)
 
-        # If no arguments are passed, then create a new DbComment
-        if not kwargs:
-            self.dbcomment = DbComment()
+    def __init__(self, backend, node, user, content=None):
+        """
+        Construct a DjangoComment.
 
-        # If a DbComment is passed as argument. Just use it and
-        # wrap it with a Comment object
-        elif 'dbcomment' in kwargs:
-            # When a dbcomment is passed as argument, then no other arguments
-            # should be passed.
-            if len(kwargs) > 1:
-                raise ValueError("When a DbComment is passed as argument, no"
-                                 "further arguments are accepted.")
-            dbcomment = kwargs.pop('dbcomment')
-            if not isinstance(dbcomment, DbComment):
-                raise ValueError("Expected a DbComment. Object of a different"
-                                 "class was given as argument.")
-            self.dbcomment = dbcomment
+        :param node: a Node instance
+        :param user: a User instance
+        :param content: the comment content
+        :return: a Comment object associated to the given node and user
+        """
+        super(DjangoComment, self).__init__(backend)
+        utils.type_check(user, users.DjangoUser)  # pylint: disable=no-member
+        self._dbmodel = ModelWrapper(
+            models.DbComment(dbnode=node.dbnode, user=user.dbmodel, content=content), auto_flush=self._auto_flush)
 
-        else:
-            id = kwargs.pop('id', None)
-            if id is None:
-                id = kwargs.pop('pk', None)
-            user = kwargs.pop('user', None)
-            dbnode = kwargs.pop('dbnode', None)
+    def store(self):
+        """Can only store if both the node and user are stored as well."""
+        if self._dbmodel.dbnode.id is None or self._dbmodel.user.id is None:
+            raise exceptions.ModificationNotAllowed('The corresponding node and/or user are not stored')
 
-            # Constructing the default query
-            import operator
-            from django.db.models import Q
-            query_list = []
-
-            # If an id is specified then we add it to the query
-            if id is not None:
-                query_list.append(Q(pk=id))
-
-            # If a user is specified then we add it to the query
-            if user is not None:
-                query_list.append(Q(user=user))
-
-            # If a dbnode is specified then we add it to the query
-            if dbnode is not None:
-                query_list.append(Q(dbnode=dbnode))
-
-            res = DbComment.objects.filter(reduce(operator.and_, query_list))
-            ccount = len(res)
-            if ccount > 1:
-                raise MultipleObjectsError(
-                    "The arguments that you specified were too vague. More "
-                    "than one comments with this data were found in the "
-                    "database")
-            elif ccount == 0:
-                raise NotExistent("No comments were found with the given "
-                                 "arguments")
-
-            self.dbcomment = res[0]
-
-    @property
-    def pk(self):
-        return self.dbnode.pk
-
-    @property
-    def id(self):
-        return self.dbnode.pk
-
-    @property
-    def to_be_stored(self):
-        return self.dbcomment.pk is None
+        super(DjangoComment, self).store()
 
     @property
     def uuid(self):
-        return six.text_type(self.dbcomment.uuid)
+        return six.text_type(self._dbmodel.uuid)
 
-    def get_ctime(self):
-        return self.dbcomment.ctime
+    @property
+    def ctime(self):
+        return self._dbmodel.ctime
 
-    def set_ctime(self, val):
-        self.dbcomment.ctime = val
-        if not self.to_be_stored:
-            self.dbcomment.save()
+    @property
+    def mtime(self):
+        return self._dbmodel.mtime
 
-    def get_mtime(self):
-        return self.dbcomment.mtime
+    def set_mtime(self, value):
+        self._dbmodel.mtime = value
 
-    def set_mtime(self, val):
-        self.dbcomment.mtime = val
-        if not self.to_be_stored:
-            self.dbcomment.save()
+    @property
+    def node(self):
+        from aiida.orm import Node
+        return Node(dbnode=self._dbmodel.dbnode)
 
-    def get_user(self):
-        return self.dbcomment.user
+    @property
+    def user(self):
+        return self._backend.users.from_dbmodel(self._dbmodel.user)
 
-    def set_user(self, val):
-        self.dbcomment.user = val
-        if not self.to_be_stored:
-            self.dbcomment.save()
+    def set_user(self, value):
+        self._dbmodel.user = value
 
-    def get_content(self):
-        return self.dbcomment.content
+    @property
+    def content(self):
+        return self._dbmodel.content
 
-    def set_content(self, val):
-        self.dbcomment.content = val
-        if not self.to_be_stored:
-            self.dbcomment.save()
+    def set_content(self, value):
+        self._dbmodel.content = value
+        # self._dbmodel.save()
 
-    def delete(self):
-        self.dbcomment.delete()
 
+class DjangoCommentCollection(BackendCommentCollection):
+    """Django implementation for the CommentCollection."""
+
+    def from_dbmodel(self, dbmodel):
+        return DjangoComment.from_dbmodel(dbmodel, self.backend)
+
+    def create(self, node, user, content=None):
+        """
+        Create a Comment for a given node and user
+
+        :param node: a Node instance
+        :param user: a User instance
+        :param content: the comment content
+        :return: a Comment object associated to the given node and user
+        """
+        return DjangoComment(self.backend, node, user, content)
+
+    def delete(self, comment):
+        """
+        Remove a Comment from the collection with the given id
+
+        :param comment: the id of the comment to delete
+        """
+        # pylint: disable=no-name-in-module,import-error
+        from django.core.exceptions import ObjectDoesNotExist
+        try:
+            models.DbComment.objects.get(pk=comment).delete()
+        except ObjectDoesNotExist:
+            raise exceptions.NotExistent("Comment with id '{}' not found".format(comment))
+
+    def get(self, comment):
+        """
+        Return a Comment given its id
+
+        :param comment: the id of the comment to retrieve
+        :return: the comment
+        :raise NotExistent: if the comment with the given id does not exist
+        :raise MultipleObjectsError: if the id cannot be uniquely resolved to a comment
+        """
+        # pylint: disable=no-name-in-module,import-error
+        from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
+
+        try:
+            comment = models.DbComment.objects.get(id=comment)
+            return self.from_dbmodel(comment)
+        except ObjectDoesNotExist:
+            raise exceptions.NotExistent('Could not find Comment<{}>'.format(comment))
+        except MultipleObjectsReturned:
+            raise exceptions.MultipleObjectsError('Found multiple Comments for pk<{}>'.format(comment))

@@ -95,7 +95,7 @@ class TestVerdiCalculation(AiidaTestCase):
                     cls.KEY_TWO: cls.VAL_TWO,
                 }).store()
 
-                output_parameters.add_link_from(calc, LinkType.CREATE, 'output_parameters')
+                output_parameters.add_incoming(calc, LinkType.CREATE, 'output_parameters')
 
                 # Create shortcut for easy dereferencing
                 cls.result_job = calc

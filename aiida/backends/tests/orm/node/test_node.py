@@ -133,3 +133,27 @@ class TestNodeLinks(AiidaTestCase):
         # From another source node or using another label is fine
         target.validate_incoming(source_one, LinkType.INPUT_WORK, 'other_label')
         target.validate_incoming(source_two, LinkType.INPUT_WORK, 'link_label')
+
+    def test_get_incoming(self):
+        """Test that `Node.get_incoming` will return stored and cached input links."""
+        source_one = Data().store()
+        source_two = Data()
+        target = CalculationNode().store()
+
+        target.add_incoming(source_one, LinkType.INPUT_CALC, 'link_one')
+        target.add_incoming(source_two, LinkType.INPUT_CALC, 'link_two')
+
+        # Without link type
+        incoming_nodes = target.get_incoming().all()
+        incoming_uuids = sorted([neighbor.node.uuid for neighbor in incoming_nodes])
+        self.assertEqual(incoming_uuids, sorted([source_one.uuid, source_two.uuid]))
+
+        # Using a single link type
+        incoming_nodes = target.get_incoming(link_type=LinkType.INPUT_CALC).all()
+        incoming_uuids = sorted([neighbor.node.uuid for neighbor in incoming_nodes])
+        self.assertEqual(incoming_uuids, sorted([source_one.uuid, source_two.uuid]))
+
+        # Using a link type tuple
+        incoming_nodes = target.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK)).all()
+        incoming_uuids = sorted([neighbor.node.uuid for neighbor in incoming_nodes])
+        self.assertEqual(incoming_uuids, sorted([source_one.uuid, source_two.uuid]))

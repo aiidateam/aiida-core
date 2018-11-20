@@ -53,10 +53,10 @@ class TestDataNodeDjango(AiidaTestCase):
 
         a4 = Node().store()
 
-        a2.add_link_from(a, link_type=LinkType.CREATE)
-        a3.add_link_from(a2, link_type=LinkType.CREATE)
-        a4.add_link_from(a2, link_type=LinkType.CREATE)
-        a4.add_link_from(a3, link_type=LinkType.CREATE)
+        a2.add_incoming(a, link_type=LinkType.CREATE)
+        a3.add_incoming(a2, link_type=LinkType.CREATE)
+        a4.add_incoming(a2, link_type=LinkType.CREATE)
+        a4.add_incoming(a3, link_type=LinkType.CREATE)
 
         b = Node.query(pk=a2)
         self.assertEquals(len(b), 1)
@@ -132,14 +132,14 @@ class TestTransitiveClosureDeletionDjango(AiidaTestCase):
         # I create a strange graph, inserting links in a order
         # such that I often have to create the transitive closure
         # between two graphs
-        n3.add_link_from(n2, link_type=LinkType.CREATE)
-        n2.add_link_from(n1, link_type=LinkType.CREATE)
-        n5.add_link_from(n3, link_type=LinkType.CREATE)
-        n5.add_link_from(n4, link_type=LinkType.CREATE)
-        n4.add_link_from(n2, link_type=LinkType.CREATE)
+        n3.add_incoming(n2, link_type=LinkType.CREATE)
+        n2.add_incoming(n1, link_type=LinkType.CREATE)
+        n5.add_incoming(n3, link_type=LinkType.CREATE)
+        n5.add_incoming(n4, link_type=LinkType.CREATE)
+        n4.add_incoming(n2, link_type=LinkType.CREATE)
 
-        n7.add_link_from(n6, link_type=LinkType.CREATE)
-        n8.add_link_from(n7, link_type=LinkType.CREATE)
+        n7.add_incoming(n6, link_type=LinkType.CREATE)
+        n8.add_incoming(n7, link_type=LinkType.CREATE)
 
         # Yet, no links from 1 to 8
         self.assertEquals(
@@ -149,7 +149,7 @@ class TestTransitiveClosureDeletionDjango(AiidaTestCase):
                 ).count(), 0
             )
 
-        n6.add_link_from(n5, link_type=LinkType.INPUT_CALC)
+        n6.add_incoming(n5, link_type=LinkType.INPUT_CALC)
 
         # Yet, now 2 links from 1 to 8
         self.assertEquals(
@@ -160,7 +160,7 @@ class TestTransitiveClosureDeletionDjango(AiidaTestCase):
             )
 
 
-        n7.add_link_from(n9, link_type=LinkType.INPUT_CALC)
+        n7.add_incoming(n9, link_type=LinkType.INPUT_CALC)
         # Still two links...
         self.assertEquals(
             QueryBuilder().append(
@@ -170,7 +170,7 @@ class TestTransitiveClosureDeletionDjango(AiidaTestCase):
             )
 
 
-        n9.add_link_from(n6, link_type=LinkType.INPUT_CALC)
+        n9.add_incoming(n6, link_type=LinkType.INPUT_CALC)
         # And now there should be 4 nodes
         self.assertEquals(
             QueryBuilder().append(
@@ -234,7 +234,7 @@ class TestTransitiveClosureDeletionDjango(AiidaTestCase):
 
         # Finally, I reconnect in a different way the two graphs and
         # check that 1 and 8 are again connected
-        n4.add_link_from(n3, link_type=LinkType.INPUT_CALC)
+        n4.add_incoming(n3, link_type=LinkType.INPUT_CALC)
 
         self.assertEquals(
             QueryBuilder().append(

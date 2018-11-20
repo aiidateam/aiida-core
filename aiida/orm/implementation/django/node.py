@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -222,6 +221,11 @@ class Node(AbstractNode):
         if self.uuid == src.uuid:
             raise ValueError("Cannot link to itself")
 
+        if not src.is_stored:
+            raise ModificationNotAllowed(
+                "Cannot call the internal _add_dblink_from if the "
+                "source node is not stored")
+
         if not self.is_stored:
             raise ModificationNotAllowed(
                 "Cannot call the internal _add_dblink_from if the "
@@ -246,6 +250,7 @@ class Node(AbstractNode):
             existing_from_autolabels = list(DbLink.objects.filter(
                 output=self._dbnode,
                 label__startswith="link_").values_list('label', flat=True))
+
             while "link_{}".format(autolabel_idx) in existing_from_autolabels:
                 autolabel_idx += 1
 

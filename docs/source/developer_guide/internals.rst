@@ -95,9 +95,9 @@ Link management methods
 =======================
 :py:class:`~aiida.orm.implementation.general.node.AbstractNode` objects and objects of its subclasses can have ancestors and descendants. These are connected with links. The following methods exist for the processing & management of these links.
 
-- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._has_cached_links` shows if there are cached links to other nodes.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.has_cached_links` shows if there are cached links to other nodes.
 
-- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.add_link_from` adds a link to the current node from the 'src' node with the given label. Depending on whether the nodes are stored or node, the linked are written to the database or to the cache.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.add_incoming` adds a link to the current node from the 'src' node with the given label. Depending on whether the nodes are stored or node, the linked are written to the database or to the cache.
 
 - :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._add_cachelink_from` adds a link to the cache.
 

@@ -39,7 +39,7 @@ class DbWorkflow(Base):
     uuid = Column(UUID(as_uuid=True), default=uuid_func)
 
     ctime = Column(DateTime(timezone=True), default=timezone.now)
-    mtime = Column(DateTime(timezone=True), default=timezone.now)
+    mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now)
 
     user_id = Column(Integer, ForeignKey('db_dbuser.id'))
     user = relationship('DbUser')

@@ -26,6 +26,7 @@ class DjangoModelEntity(typing.Generic[ModelType]):
 
     MODEL_CLASS = None
     _dbmodel = None
+    _auto_flush = ()
 
     @classmethod
     def _class_check(cls):
@@ -45,7 +46,7 @@ class DjangoModelEntity(typing.Generic[ModelType]):
         type_check(dbmodel, cls.MODEL_CLASS)
         entity = cls.__new__(cls)
         super(DjangoModelEntity, entity).__init__(backend)
-        entity._dbmodel = utils.ModelWrapper(dbmodel)  # pylint: disable=protected-access
+        entity._dbmodel = utils.ModelWrapper(dbmodel, auto_flush=cls._auto_flush)  # pylint: disable=protected-access
         return entity
 
     @classmethod

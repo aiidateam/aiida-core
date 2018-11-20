@@ -415,6 +415,7 @@ class Node(AbstractNode):
         from aiida.backends.djsite.db.models import DbComment
         import operator
         from django.db.models import Q
+        from aiida import orm
         query_list = []
 
         # If an id is specified then we add it to the query
@@ -428,9 +429,9 @@ class Node(AbstractNode):
         dbcomments = DbComment.objects.filter(
             reduce(operator.and_, query_list))
         comments = []
-        from aiida.orm.implementation.django.comment import Comment
+        from aiida.orm.implementation.django.comment import DjangoComment
         for dbcomment in dbcomments:
-            comments.append(Comment(dbcomment=dbcomment))
+            comments.append(DjangoComment.from_dbmodel(dbcomment, orm.construct_backend()))
         return comments
 
     def get_comments(self, pk=None):

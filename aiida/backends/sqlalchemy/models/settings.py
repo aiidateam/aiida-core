@@ -32,7 +32,7 @@ class DbSetting(Base):
 
     # I also add a description field for the variables
     description = Column(String(255), default='', nullable=False)
-    time = Column(DateTime(timezone=True), default=timezone.utc)
+    time = Column(DateTime(timezone=True), default=timezone.utc, onupdate=timezone.now)
 
     def __str__(self):
         return "'{}'={}".format(self.key, self.getvalue())

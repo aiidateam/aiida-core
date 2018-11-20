@@ -485,9 +485,9 @@ class Node(AbstractNode):
 
         dbcomments = query.all()
         comments = []
-        from aiida.orm.implementation.sqlalchemy.comment import Comment
+        from aiida.orm.implementation.sqlalchemy.comment import SqlaComment
         for dbcomment in dbcomments:
-            comments.append(Comment(dbcomment=dbcomment))
+            comments.append(SqlaComment.from_dbmodel(dbcomment, orm.construct_backend()))
         return comments
 
     def get_comments(self, pk=None):

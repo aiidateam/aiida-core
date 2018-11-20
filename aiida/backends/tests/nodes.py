@@ -1568,7 +1568,6 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # Try also reverse storage
         endnode.add_link_from(n2, "N2")
 
-        self.assertEqual(endnode.get_inputs(only_in_db=True), [])
         self.assertEqual(
             set([(i[0], i[1].uuid) for i in endnode.get_inputs(also_labels=True)]),
             set([("N1", n1.uuid), ("N2", n2.uuid)]))
@@ -1578,7 +1577,6 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # Try also reverse storage
         endnode.add_link_from(n4, "N4")
 
-        self.assertEqual(endnode.get_inputs(only_in_db=True), [])
         self.assertEqual(
             set([(i[0], i[1].uuid) for i in endnode.get_inputs(also_labels=True)]),
             set([("N1", n1.uuid), ("N2", n2.uuid), ("N3", n3.uuid), ("N4", n4.uuid)]))
@@ -1587,7 +1585,6 @@ class TestSubNodesAndLinks(AiidaTestCase):
         with self.assertRaises(ModificationNotAllowed):
             endnode.store()
 
-        self.assertEqual(set([(i[0], i[1].uuid) for i in endnode.get_inputs(only_in_db=True, also_labels=True)]), set())
         self.assertEqual(
             set([(i[0], i[1].uuid) for i in endnode.get_inputs(also_labels=True)]),
             set([("N1", n1.uuid), ("N2", n2.uuid), ("N3", n3.uuid), ("N4", n4.uuid)]))
@@ -1595,9 +1592,6 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # This will also store n1 and n2!
         endnode.store_all()
 
-        self.assertEqual(
-            set([(i[0], i[1].uuid) for i in endnode.get_inputs(only_in_db=True, also_labels=True)]),
-            set([("N1", n1.uuid), ("N2", n2.uuid), ("N3", n3.uuid), ("N4", n4.uuid)]))
         self.assertEqual(
             set([(i[0], i[1].uuid) for i in endnode.get_inputs(also_labels=True)]),
             set([("N1", n1.uuid), ("N2", n2.uuid), ("N3", n3.uuid), ("N4", n4.uuid)]))
@@ -1613,21 +1607,14 @@ class TestSubNodesAndLinks(AiidaTestCase):
         endnode.add_link_from(n1, "N1")
         endnode.add_link_from(n2, "N2")
 
-        self.assertEqual(endnode.get_inputs(only_in_db=True), [])
-
         # Some parent nodes are not stored yet
         with self.assertRaises(ModificationNotAllowed):
             endnode.store()
-
-        self.assertEqual(endnode.get_inputs(only_in_db=True), [])
 
         n1.store()
         # Now I can store
         endnode.store()
 
-        self.assertEqual(
-            set([(i[0], i[1].uuid) for i in endnode.get_inputs(only_in_db=True, also_labels=True)]),
-            set([("N1", n1.uuid), ("N2", n2.uuid)]))
         self.assertEqual(
             set([(i[0], i[1].uuid) for i in endnode.get_inputs(also_labels=True)]),
             set([("N1", n1.uuid), ("N2", n2.uuid)]))

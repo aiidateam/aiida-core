@@ -28,7 +28,7 @@ from aiida.common.exceptions import InternalError, ModificationNotAllowed, Uniqu
 from aiida.common.folders import SandboxFolder
 from aiida.common.lang import override
 from aiida.common.links import LinkType
-from aiida.common.utils import abstractclassmethod
+from aiida.common.utils import abstractclassmethod, sql_string_match
 from aiida.common.utils import combomethod, classproperty
 from aiida.plugins.loader import get_query_type_from_type_string, get_type_string_from_class
 from aiida.common.hashing import _HASH_EXTRA_KEY
@@ -356,6 +356,13 @@ class AbstractNode(object):
         Return the modification time of the node.
         """
         pass
+
+    def has_cached_links(self):
+        """
+        This function returns true if there are any links in cache and
+        not yet stored in db, otherwise false.
+        """
+        return bool(self._inputlinks_cache)
 
     def _init_internal_params(self):
         """
@@ -802,45 +809,43 @@ class AbstractNode(object):
 
         return new_outputs
 
-    def get_incoming(self, node_type=None, link_type=None, link_label=None, only_in_db=False):
 
-        qb_obj = get_all_incoming_qbobj(self.id, node_type=node_type, link_type=link_type, link_label=link_label)
-        filtered_list = [Neighbor(i[2], i[1], i[0]) for i in qb_obj.all()]
+    def get_incoming(self, node_class=None, link_type=None, link_label_filter=None):
+        """
+        Return a list of nodes that enter (directly) in this node
 
-        if not only_in_db:
-            # Needed for the check
-            db_incoming_keys = set(incoming.label for incoming in filtered_list)
+        :param node_class: If specified, should be a class or tuple of classes, and it filters only
+            elements of that specific type (or a subclass of 'type')
+        :param link_type: If specified should be a string or tuple to get the inputs of this
+            link type, if None then returns all inputs of all link types.
+        :param link_label_filter: filters the incoming nodes by its link label.
+            Here wildcards (% and _) can be passed in link label filter as we are using "like" in QB.
+        """
+        import re
 
-            for label, v in self._inputlinks_cache.items():
-                src = v[0]
-                incoming_link_type = v[1]
-                if label in db_incoming_keys:
-                    raise InternalError("There exist a link with the same name '{}' both in the DB "
-                                        "and in the internal cache for node pk= {}!".format(label, self.pk))
+        if self.is_stored:
+            qb_obj = get_all_incoming_qbobj(self.id, node_class=node_class, link_type=link_type, link_label_filter=link_label_filter)
+            filtered_list = [Neighbor(i[2], i[1], i[0]) for i in qb_obj.all()]
+        else:
+            filtered_list = []
 
-                if link_type is None or incoming_link_type == link_type:
-                    filtered_list.append(Neighbor(incoming_link_type, label, src))
+        # get all cached links
+        db_incoming_keys = set(incoming.label for incoming in filtered_list)
 
-        return filtered_list
+        for label, v in self._inputlinks_cache.items():
+            src = v[0]
+            incoming_link_type = v[1]
+            if label in db_incoming_keys:
+                raise InternalError("There exist a link with the same name '{}' and type '{}' both in the DB "
+                                    "and in the internal cache for node pk= {}!".format(label, incoming_link_type, self.pk))
 
-    def get_incoming_one(self, node_type=None, link_type=None, link_label=None, only_in_db=False):
-        incomings = self.get_incoming(node_type=node_type, link_type=link_type, link_label=link_label,
-                                       only_in_db=only_in_db)
-        if incomings:
-            if len(incomings) > 1:
-                raise ValueError("More than one incoming link matches the specified filter: {}") # TODO add more details
-            return incomings[0]
+            if (link_type is None or incoming_link_type == link_type) and sql_string_match(string=label, pattern=link_label_filter):
+                filtered_list.append(Neighbor(incoming_link_type, label, src))
 
-        raise ValueError("No incoming link matching {}") # TODO
+        return NeighborManager(filtered_list)
+        #return filtered_list
 
     def get_inputs(self, node_type=None, also_labels=False, only_in_db=False, link_type=None):
-        all_links = self.get_incoming(node_type=node_type, link_type=link_type, only_in_db=only_in_db)
-        if also_labels:
-            return [(link.label, link.node) for link in all_links]
-        return [link.node for link in all_links]
-
-
-    def get_inputs1(self, node_type=None, also_labels=False, only_in_db=False, link_type=None):
         """
         Return a list of nodes that enter (directly) in this node
 
@@ -856,35 +861,57 @@ class AbstractNode(object):
         :param link_type: Only get inputs of this link type, if None then
             returns all inputs of all link types.
         """
-
-        if link_type is not None and not isinstance(link_type, LinkType):
-            raise TypeError('link_type should be a LinkType object')
-
-        inputs_list = self._get_db_input_links(link_type=link_type)
-
-        if not only_in_db:
-            # Needed for the check
-            input_list_keys = [i[0] for i in inputs_list]
-
-            for label, v in self._inputlinks_cache.items():
-                src = v[0]
-                input_link_type = v[1]
-                if label in input_list_keys:
-                    raise InternalError("There exist a link with the same name '{}' both in the DB "
-                                        "and in the internal cache for node pk= {}!".format(label, self.pk))
-
-                if link_type is None or input_link_type is link_type:
-                    inputs_list.append((label, src))
-
-        if node_type is None:
-            filtered_list = inputs_list
-        else:
-            filtered_list = [i for i in inputs_list if isinstance(i[1], node_type)]
-
+        all_links = self.get_incoming(node_class=node_type, link_type=link_type, only_in_db=only_in_db)
         if also_labels:
-            return list(filtered_list)
+            return [(link.label, link.node) for link in all_links]
+        return [link.node for link in all_links]
 
-        return [i[1] for i in filtered_list]
+
+    # def get_inputs(self, node_type=None, also_labels=False, only_in_db=False, link_type=None):
+    #     """
+    #     Return a list of nodes that enter (directly) in this node
+    #
+    #     :param node_type: If specified, should be a class, and it filters only
+    #         elements of that specific type (or a subclass of 'type')
+    #     :param also_labels: If False (default) only return a list of input nodes.
+    #         If True, return a list of tuples, where each tuple has the
+    #         following format: ('label', Node), with 'label' the link label,
+    #         and Node a Node instance or subclass
+    #     :param only_in_db: Return only the inputs that are in the database,
+    #         ignoring those that are in the local cache. Otherwise, return
+    #         all links.
+    #     :param link_type: Only get inputs of this link type, if None then
+    #         returns all inputs of all link types.
+    #     """
+    #
+    #     if link_type is not None and not isinstance(link_type, LinkType):
+    #         raise TypeError('link_type should be a LinkType object')
+    #
+    #     inputs_list = self._get_db_input_links(link_type=link_type)
+    #
+    #     if not only_in_db:
+    #         # Needed for the check
+    #         input_list_keys = [i[0] for i in inputs_list]
+    #
+    #         for label, v in self._inputlinks_cache.items():
+    #             src = v[0]
+    #             input_link_type = v[1]
+    #             if label in input_list_keys:
+    #                 raise InternalError("There exist a link with the same name '{}' both in the DB "
+    #                                     "and in the internal cache for node pk= {}!".format(label, self.pk))
+    #
+    #             if link_type is None or input_link_type is link_type:
+    #                 inputs_list.append((label, src))
+    #
+    #     if node_type is None:
+    #         filtered_list = inputs_list
+    #     else:
+    #         filtered_list = [i for i in inputs_list if isinstance(i[1], node_type)]
+    #
+    #     if also_labels:
+    #         return list(filtered_list)
+    #
+    #     return [i[1] for i in filtered_list]
 
     @abstractclassmethod
     def _get_db_input_links(self, link_type):
@@ -2157,21 +2184,37 @@ class AttributeManager(object):
         except AttributeError as err:
             raise KeyError(str(err))
 
-def get_all_incoming_qbobj(node_id, node_type=None, link_type=None, link_label=None):
+def get_all_incoming_qbobj(node_id, node_class=None, link_type=None, link_label_filter=None):
+    """
+    Return a querybuilder object for a list of nodes that enter (directly) in this node
+
+    :param node_id: main node id for which incoming nodes are searched
+    :param node_class: If specified, should be a class, and it filters only
+        elements of that specific type (or a subclass of 'type')
+    :param link_type: Only get inputs of this link type, if None then
+        returns all inputs of all link types.
+    :param link_label_filter: filters the incoming nodes by its link label.
+        Here regex can be passed for link label filter as we are using "like" in QB.
+    """
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.orm.node import Node
 
     filtered_node = Node
     edge_filters = {}
 
-    if node_type:
-        filtered_node = node_type
+    if node_class:
+        filtered_node = node_class
     if link_type:
-        if not isinstance(link_type, LinkType):
-            raise TypeError('link_type should be a LinkType object')
-        edge_filters["type"] = {"==": link_type.value}
-    if link_label:
-        edge_filters["label"] = {"like": link_label}
+        if not isinstance(link_type, tuple):
+            link_type = (link_type,)
+        link_type_values = []
+        for ltype in link_type:
+            if not isinstance(ltype, LinkType):
+                raise TypeError("link_type '{}' should be a LinkType object".format(ltype))
+            link_type_values.append(ltype.value)
+        edge_filters["type"] = {"in": link_type_values}
+    if link_label_filter:
+        edge_filters["label"] = {"like": link_label_filter}
 
     qb_obj = QueryBuilder()
     qb_obj.append(Node, filters={"id": {"==": node_id}}, tag="main")
@@ -2179,3 +2222,49 @@ def get_all_incoming_qbobj(node_id, node_type=None, link_type=None, link_label=N
 
     return qb_obj
 
+
+class NeighborManager(object):
+    """
+    Class to convert neighbors list object into iterator object.
+    It defines methods like:
+    one(): returns one entry from list. The given entry needs to be unique in list otherwise it raises exception
+    first(): returns first entry from the list
+    all(): returns all entries from list
+    """
+    def __init__(self, neighbors):
+        """ Initialise the neighbors """
+        self.neighbors = neighbors
+
+    def __iter__(self):
+        """ Converts neighbors list to iterator """
+        return iter(self.neighbors)
+
+    def __next__(self):
+        """ Override iter next method """
+        for neighbor in self.neighbors:
+            yield neighbor
+
+    def next(self):
+        """ Calls private next method amd returns it """
+        return self.__next__()
+
+    def one(self):
+        """ returns one entry from list. The given entry needs to be
+        unique in list otherwise it raises exception """
+        if self.neighbors:
+            if len(self.neighbors) > 1:
+                raise ValueError("returns more than one links.")
+            return self.neighbors[0]
+
+        raise ValueError("No links available.")
+
+
+    def first(self):
+        """ returns first entry from the list """
+        if self.neighbors:
+            return self.neighbors[0]
+        raise ValueError("No links available.")
+
+    def all(self):
+        """ returns all entries from list """
+        return self.neighbors

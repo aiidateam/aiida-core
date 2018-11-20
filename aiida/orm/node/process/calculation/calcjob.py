@@ -1868,15 +1868,12 @@ class CalcJobNode(CalculationNode):
         """
         raise NotImplementedError("deprecated method: to kill a calculation go through 'verdi calculation kill'")
 
-    def _presubmit(self, folder, use_unstored_links=False):
+    def _presubmit(self, folder):
         """
         Prepares the calculation folder with all inputs, ready to be copied to the cluster.
 
         :param folder: a SandboxFolder, empty in input, that will be filled with
           calculation input files and the scheduling script.
-        :param use_unstored_links: if set to True, it will the presubmit will
-          try to launch the calculation using also unstored nodes linked to the
-          Calculation only in the cache.
 
         :return calcinfo: the CalcInfo object containing the information
             needed by the daemon to handle operations.
@@ -1896,7 +1893,7 @@ class CalcJobNode(CalculationNode):
         import aiida.utils.json as json
 
         computer = self.get_computer()
-        inputdict = self.get_inputs_dict(only_in_db=not use_unstored_links, link_type=LinkType.INPUT)
+        inputdict = self.get_inputs_dict(link_type=LinkType.INPUT)
 
         codes = [_ for _ in inputdict.values() if isinstance(_, Code)]
 
@@ -2193,7 +2190,7 @@ class CalcJobNode(CalculationNode):
         with t:
             t.chdir(subfolder.abspath)
 
-            calcinfo, script_filename = self._presubmit(subfolder, use_unstored_links=True)
+            calcinfo, script_filename = self._presubmit(subfolder)
 
             code = self.get_code()
 

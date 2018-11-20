@@ -629,7 +629,10 @@ class JobProcess(processes.Process):
 
         with SandboxFolder() as folder:
             computer = self.calc.get_computer()
-            calc_info, script_filename = self.calc._presubmit(folder, use_unstored_links=False)
+            if self.calc.has_cached_links():
+                raise exceptions.InvalidOperation("This calculation still has links in cache that "
+                                                  "are not stored in database yet")
+            calc_info, script_filename = self.calc._presubmit(folder)
             input_codes = [load_node(_.code_uuid, sub_classes=(Code,)) for _ in calc_info.codes_info]
 
             for code in input_codes:

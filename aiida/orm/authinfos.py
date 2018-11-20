@@ -119,7 +119,7 @@ class AuthInfo(entities.Entity):
 
         :return: a dictionary
         """
-        return self._backend_entity.get_metadata()
+        return self._backend_entity._get_metadata()
 
     def set_metadata(self, metadata):
         """

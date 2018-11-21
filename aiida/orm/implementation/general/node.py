@@ -24,7 +24,7 @@ from collections import namedtuple
 
 from aiida.backends.utils import validate_attribute_key
 from aiida.common.caching import get_use_cache
-from aiida.common.exceptions import InternalError, ModificationNotAllowed, UniquenessError, ValidationError
+from aiida.common.exceptions import InternalError, ModificationNotAllowed, UniquenessError, ValidationError, NotExistent
 from aiida.common.folders import SandboxFolder
 from aiida.common.lang import override
 from aiida.common.links import LinkType
@@ -2277,3 +2277,18 @@ class NeighborManager(object):
     def all(self):
         """ returns all entries from list """
         return self.neighbors
+
+    def get_node_by_label(self, label):
+        """ get the node object from list for given label """
+        for entry in self.neighbors:
+            if entry.label == label:
+                return entry.node
+        raise NotExistent("Neighbor with label '{}' is not present".format(label))
+
+    def get_labels(self):
+        """ returns list of labels """
+        return [entry.label for entry in self.neighbors]
+
+    def get_nodes(self):
+        """ eturns list of all nodes """
+        return [entry.node for entry in self.neighbors]

@@ -1327,11 +1327,11 @@ class TestDefaultUniqueness(AiidaTestCase):
         }
         result, node = work.run.get_node(TestDefaultUniqueness.Parent, **inputs)
 
-        nodes = [n for n in node.get_inputs()]
-        uuids = set([n.uuid for n in node.get_inputs()])
+        nodes = node.get_incoming().get_nodes()
+        uuids = set([n.uuid for n in nodes])
 
         # Trying to load one of the inputs through the UUID should fail,
         # as both `child_one.a` and `child_two.a` should have the same UUID.
-        node = load_node(uuid=node.get_inputs_dict()['child_one_a'].uuid)
+        node = load_node(uuid=node.get_incoming().get_node_by_label('child_one_a').uuid)
         self.assertEquals(len(uuids), len(nodes),
                           'Only {} unique UUIDS for {} input nodes'.format(len(uuids), len(nodes)))

@@ -352,7 +352,7 @@ def _get_calculation(node):
     from aiida.common.links import LinkType
     from aiida.orm.node.process import ProcessNode
 
-    parent_calculations = node.get_inputs(node_type=ProcessNode, link_type=LinkType.CREATE)
+    parent_calculations = node.get_incoming(node_type=ProcessNode, link_type=LinkType.CREATE).all()
 
     if len(parent_calculations) == 1:
         return parent_calculations[0]
@@ -406,8 +406,7 @@ def _inline_to_standalone_script(calc):
        ModificationNotAllowed exception, since the nodes, that are
        created by the ``\*_inline`` function, are already stored.
     """
-    input_dict = calc.get_inputs_dict()
-    args = ["{}=load_node('{}')".format(x, input_dict[x].uuid) for x in input_dict.keys()]
+    args = ["{}=load_node('{}')".format(entry.label, entry.node.uuid) for entry in calc.get_incoming()]
     args_string = ',\n    '.join(sorted(args))
 
     function_name = calc.function_name
@@ -447,9 +446,9 @@ def _collect_calculation_data(calc):
     import hashlib
     import os
     calcs_now = []
-    for d in calc.get_inputs(node_type=Data, link_type=LinkType.INPUT):
-        for c in d.get_inputs(node_type=CalculationNode, link_type=LinkType.CREATE):
-            calcs = _collect_calculation_data(c)
+    for d in calc.get_incoming(node_type=Data, link_type=LinkType.INPUT):
+        for c in d.get_incoming(node_type=CalculationNode, link_type=LinkType.CREATE):
+            calcs = _collect_calculation_data(c.node)
             calcs_now.extend(calcs)
 
     files_in = []
@@ -842,7 +841,7 @@ def _collect_tags(node, calc,parameters=None,
 
     if calc is not None:
         from aiida.orm.data.array.kpoints import KpointsData
-        kpoints_list = calc.get_inputs(KpointsData, link_type=LinkType.INPUT)
+        kpoints_list = calc.get_incoming(KpointsData, link_type=LinkType.INPUT).all()
         # TODO: stop if more than one KpointsData is used?
         if len(kpoints_list) == 1:
             kpoints = kpoints_list[0]
@@ -1014,7 +1013,7 @@ def export_cifnode(what, parameters=None, trajectory_index=None,
             raise ValueError("Supplied parameters are not an "
                              "instance of ParameterData")
     elif calc is not None:
-        params = calc.get_outputs(node_type=ParameterData, link_type=LinkType.CREATE)
+        params = calc.get_outgoing(node_type=ParameterData, link_type=LinkType.CREATE).one()
         if len(params) == 1:
             parameters = params[0]
         elif len(params) > 0:

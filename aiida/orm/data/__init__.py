@@ -141,9 +141,9 @@ class Data(Node):
 
     @property
     def created_by(self):
-        inputs = self.get_inputs(link_type=LinkType.CREATE)
+        inputs = self.get_incoming(link_type=LinkType.CREATE)
         if inputs:
-            return inputs[0]
+            return inputs.first()
         else:
             return None
 
@@ -152,7 +152,7 @@ class Data(Node):
         from aiida.orm.node.process import ProcessNode
 
         if link_type is LinkType.CREATE and \
-                        len(self.get_inputs(link_type=LinkType.CREATE)) > 0:
+                        len(self.get_incoming(link_type=LinkType.CREATE).all()) > 0:
             raise ValueError("At most one CREATE node can enter a data node")
 
         if not isinstance(src, ProcessNode):

@@ -61,8 +61,8 @@ class TestProcessNamespace(AiidaTestCase):
         self.assertEquals(input_node.value, 5)
 
         # Check that the link of the process node has the correct link name
-        self.assertTrue('some_name_space_a' in proc.calc.get_inputs_dict())
-        self.assertEquals(proc.calc.get_inputs_dict()['some_name_space_a'], 5)
+        self.assertTrue('some_name_space_a' in proc.calc.get_incomig().get_labels())
+        self.assertEquals(proc.calc.get_incoming().get_node_by_label('some_name_space_a'), 5)
 
 
 class ProcessStackTest(work.Process):
@@ -107,10 +107,10 @@ class TestProcess(AiidaTestCase):
         inputs['store_provenance'] = True
         p = test_utils.DummyProcess(inputs)
 
-        for label, value in p._calc.get_inputs_dict().items():
-            self.assertTrue(label in inputs)
-            self.assertEqual(int(label), int(value.value))
-            dummy_inputs.remove(label)
+        for entry in p._calc.get_incoming().all():
+            self.assertTrue(entry.label in inputs)
+            self.assertEqual(int(entry.label), int(entry.node.value))
+            dummy_inputs.remove(entry.label)
 
         # Make sure there are no other inputs
         self.assertFalse(dummy_inputs)
@@ -154,7 +154,7 @@ class TestProcess(AiidaTestCase):
         dp = test_utils.DummyProcess(inputs={'calc': calc})
         work.launch.run(dp)
 
-        input_calc = dp.calc.get_inputs_dict()['calc']
+        input_calc = dp.calc.get_incoming().get_node_by_label('calc')
         self.assertTrue(isinstance(input_calc, FrozenDict))
         self.assertEqual(input_calc['a'], outputs['a'])
 

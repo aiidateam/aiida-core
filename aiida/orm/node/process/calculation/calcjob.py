@@ -191,9 +191,14 @@ class CalcJobNode(CalculationNode):
         Return the code for this calculation, or None if the code was not set.
         """
         from aiida.orm.data.code import Code
+        from aiida.common.exceptions import NotExistent
 
-        return dict(self.get_inputs(node_type=Code, also_labels=True)).get(
-        self._use_methods['code']['linkname'], None)
+        node =  self.get_incoming(node_class=Code)
+        try:
+            return node.get_node_by_label(self._use_methods['code']['linkname'])
+        except NotExistent:
+            return None
+
 
     @classproperty
     def exit_status_enum(cls):
@@ -278,7 +283,7 @@ class CalcJobNode(CalculationNode):
         from aiida.work.job_processes import JobProcess
         from aiida.work.ports import PortNamespace
 
-        inputs = self.get_inputs_dict()
+        inputs = self.get_incoming()
         options = self.get_options(only_actually_set=True)
         builder = self.get_builder()
 
@@ -287,12 +292,12 @@ class CalcJobNode(CalculationNode):
                 setattr(builder, port_name, options)
             elif isinstance(port, PortNamespace):
                 namespace = port_name + '_'
-                sub = {link[len(namespace):]: node for link, node in inputs.items() if link.startswith(namespace)}
+                sub = {entry.label[len(namespace):]: entry.node for entry in inputs if entry.label.startswith(namespace)}
                 if sub:
                     setattr(builder, port_name, sub)
             else:
-                if port_name in inputs:
-                    setattr(builder, port_name, inputs[port_name])
+                if port_name in inputs.get_labels():
+                    setattr(builder, port_name, inputs.get_node_by_label(port_name))
 
         return builder
 
@@ -1723,8 +1728,7 @@ class CalcJobNode(CalculationNode):
                 the plugin should put all its files.
             inputdict: A dictionary where
                 each key is an input link name and each value an AiiDA
-                node, as it would be returned by the
-                self.get_inputs_dict() method (with the Code!).
+                node (with the Code!).
                 The advantage of having this explicitly passed is that this
                 allows to choose outside which nodes to use, and whether to
                 use also unstored nodes, e.g. in a test_submit phase.
@@ -1809,15 +1813,15 @@ class CalcJobNode(CalculationNode):
         from aiida.common.exceptions import MultipleObjectsError
         from aiida.orm.data.folder import FolderData
 
-        outputs = self.get_outputs(also_labels=True)
+        outputs = self.get_outgoing()
 
         retrieved_node = None
         retrieved_linkname = self._get_linkname_retrieved()
 
-        for label, node in outputs:
-            if label == retrieved_linkname:
+        for entry in outputs:
+            if entry.label == retrieved_linkname:
                 if retrieved_node is None:
-                    retrieved_node = node
+                    retrieved_node = entry.node
                 else:
                     raise MultipleObjectsError("More than one output node "
                                                "with label '{}' for calc with pk= {}".format(
@@ -1871,9 +1875,11 @@ class CalcJobNode(CalculationNode):
         import aiida.utils.json as json
 
         computer = self.get_computer()
-        inputdict = self.get_inputs_dict(link_type=LinkType.INPUT)
+        inputs = self.get_incoming(link_type=LinkType.INPUT)
 
-        codes = [_ for _ in inputdict.values() if isinstance(_, Code)]
+        codes = [_ for _ in inputs.get_nodes() if isinstance(_, Code)]
+
+        inputdict = {entry.label: entry.node for entry in inputs}
 
         calcinfo = self._prepare_for_submission(folder, inputdict)
         s = computer.get_scheduler()

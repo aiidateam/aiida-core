@@ -45,6 +45,7 @@ from aiida.orm import authinfos
 from aiida.orm.utils import convert
 
 from . import authinfos
+from . import comments
 from . import computers
 from . import entities
 from . import groups
@@ -114,6 +115,16 @@ def get_querybuilder_classifiers_from_cls(cls, obj):
         ormclasstype = 'authinfo'
         query_type_string = None
         ormclass = obj.AuthInfo
+
+    # Comment
+    elif issubclass(cls, obj.Comment):
+        ormclasstype = 'comment'
+        query_type_string = None
+        ormclass = cls
+    elif issubclass(cls, comments.Comment):
+        ormclasstype = 'comment'
+        query_type_string = None
+        ormclass = obj.Comment
 
     # Log
     elif issubclass(cls, obj.log_model_class):
@@ -1441,6 +1452,22 @@ class QueryBuilder(object):
         self._check_dbentities((joined_entity, self._impl.User), (entity_to_join, self._impl.Group), 'with_user')
         self._query = self._query.join(entity_to_join, joined_entity.id == entity_to_join.user_id, isouter=isouterjoin)
 
+    def _join_node_comment(self, joined_entity, entity_to_join, isouterjoin):
+        """
+        :param joined_entity: An aliased node
+        :param entity_to_join: aliased comment
+        """
+        self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.Comment), 'with_node')
+        self._query = self._query.join(entity_to_join, joined_entity.id == entity_to_join.dbnode_id, isouter=isouterjoin)
+
+    def _join_comment_node(self, joined_entity, entity_to_join, isouterjoin):
+        """
+        :param joined_entity: An aliased comment
+        :param entity_to_join: aliased node
+        """
+        self._check_dbentities((joined_entity, self._impl.Comment), (entity_to_join, self._impl.Node), 'with_comment')
+        self._query = self._query.join(entity_to_join, joined_entity.dbnode_id == entity_to_join.id, isouter=isouterjoin)
+
     def _get_function_map(self):
         """
         Map relationship type keywords to functions
@@ -1449,6 +1476,7 @@ class QueryBuilder(object):
         """
         mapping = {
             'node': {
+                'with_comment': self._join_comment_node,
                 'with_incoming': self._join_outputs,
                 'with_outgoing': self._join_inputs,
                 'ancestor_of': self._join_ancestors_recursive,
@@ -1482,6 +1510,10 @@ class QueryBuilder(object):
                 'group_of': self._deprecate(self._join_groups, 'group_of', 'with_node'),
                 'belongs_to': self._deprecate(self._join_user_group, 'belongs_to', 'with_user')
             },
+            'comment': {
+                'with_node': self._join_node_comment,
+                'direction': None,
+            },
         }
 
         return mapping
@@ -1495,10 +1527,8 @@ class QueryBuilder(object):
         :param joining_keyword: the relation on which to join
         :param joining_value: the tag of the nodes to be joined
         """
-        from aiida.cmdline.utils import echo
-
         # Set the calling entity - to allow for the correct join relation to be set
-        if self._path[index]['type'] not in ['computer', 'user', 'group']:
+        if self._path[index]['type'] not in ['computer', 'user', 'group', 'comment']:
             calling_entity = 'node'
         else:
             calling_entity = self._path[index]['type']
@@ -1514,7 +1544,7 @@ class QueryBuilder(object):
             try:
                 func = self._get_function_map()[calling_entity][joining_keyword]
             except KeyError:
-                echo.echo_critical("'{}' is not a valid joining keyword for a '{}' type entity".format(
+                raise InputValidationError("'{}' is not a valid joining keyword for a '{}' type entity".format(
                     joining_keyword, calling_entity))
 
             if isinstance(joining_value, int):

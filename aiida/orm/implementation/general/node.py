@@ -25,14 +25,15 @@ from aiida.backends.utils import validate_attribute_key
 from aiida.common.caching import get_use_cache
 from aiida.common.exceptions import InternalError, ModificationNotAllowed, UniquenessError, ValidationError
 from aiida.common.folders import SandboxFolder
+from aiida.common.hashing import _HASH_EXTRA_KEY
 from aiida.common.lang import override
 from aiida.common.links import LinkType
 from aiida.common.utils import abstractclassmethod
 from aiida.common.utils import combomethod, classproperty
 from aiida.plugins.loader import get_query_type_from_type_string, get_type_string_from_class
-from aiida.common.hashing import _HASH_EXTRA_KEY
 
 _NO_DEFAULT = tuple()
+
 
 def clean_value(value):
     """
@@ -1345,53 +1346,63 @@ class AbstractNode(object):
         """
         return dict(self.iterattrs())
 
-    @abstractmethod
     def add_comment(self, content, user=None):
         """
         Add a new comment.
 
         :param content: string with comment
-        :return: An ID for the newly added comment
+        :return: the newly created comment
         """
-        pass
+        from aiida import orm
+        from aiida.orm.comments import Comment
 
-    @abstractmethod
-    def get_comments(self, pk=None):
-        """
-        Return a sorted list of comment values, one for each comment associated
-        to the node.
+        if user is None:
+            user = orm.User.objects.get_default()
 
-        :param pk: integer or list of integers. If it is specified, returns the
-            comment values with desired pks. (pk refers to DbComment.pk)
-        :return: the list of comments, sorted by pk; each element of the
-            list is a dictionary, containing (pk, email, ctime, mtime, content)
-        """
-        pass
+        return Comment(node=self, user=user, content=content).store()
 
-    @abstractmethod
-    def _get_dbcomments(self, pk=None):
+    def get_comment(self, identifier):
         """
-        Return a sorted list of DbComment associated with the Node.
+        Return a comment corresponding to the given identifier.
 
-        :param pk: integer or list of integers. If it is specified, returns the
-            comment values with desired pks. (pk refers to DbComment.pk)
-        :return: the list of DbComment, sorted by pk.
+        :param identifier: the comment pk
+        :raise NotExistent: if the comment with the given id does not exist
+        :raise MultipleObjectsError: if the id cannot be uniquely resolved to a comment
+        :return: the comment
         """
-        pass
+        from aiida.orm.comments import Comment
+        return Comment.objects.get(comment=identifier)
 
-    @abstractmethod
-    def _update_comment(self, new_field, comment_pk, user):
+    def get_comments(self):
         """
-        Function called by verdi comment update
-        """
-        pass
+        Return a sorted list of comments for this node.
 
-    @abstractmethod
-    def _remove_comment(self, comment_pk, user):
+        :return: the list of comments, sorted by pk
         """
-        Function called by verdi comment remove
+        from aiida.orm.comments import Comment
+        return Comment.objects.find(filters={'dbnode_id': self.pk})
+
+    def update_comment(self, identifier, content):
         """
-        pass
+        Update the content of an existing comment.
+
+        :param identifier: the comment pk
+        :param content: the new comment content
+        :raise NotExistent: if the comment with the given id does not exist
+        :raise MultipleObjectsError: if the id cannot be uniquely resolved to a comment
+        """
+        from aiida.orm.comments import Comment
+        comment = Comment.objects.get(comment=identifier)
+        comment.set_content(content)
+
+    def remove_comment(self, identifier):
+        """
+        Delete an existing comment.
+
+        :param identifier: the comment pk
+        """
+        from aiida.orm.comments import Comment
+        Comment.objects.delete(comment=identifier)
 
     @abstractmethod
     def _increment_version_number_db(self):

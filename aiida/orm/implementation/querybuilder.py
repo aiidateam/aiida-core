@@ -75,6 +75,13 @@ class BackendQueryBuilder(object):
         pass
 
     @abc.abstractmethod
+    def Comment(self):
+        """
+        A property, decorated with @property. Returns the implementation for the Comment
+        """
+        pass
+
+    @abc.abstractmethod
     def log_model_class(self):
         """
         A property, decorated with @property. Returns the implementation for the Log

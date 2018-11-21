@@ -11,7 +11,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from six.moves import range
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
@@ -44,33 +43,21 @@ class TestVerdiUserCommand(AiidaTestCase):
 
     def test_comment_add(self):
         """Test adding a comment."""
-        options = ['-c{}'.format(COMMENT), str(self.node.pk)]
+        options = ['-N', str(self.node.pk), '--', '{}'.format(COMMENT)]
         result = self.cli_runner.invoke(cmd_comment.add, options, catch_exceptions=False)
         self.assertEqual(result.exit_code, 0)
 
         comment = self.node.get_comments()
         self.assertEquals(len(comment), 1)
-        self.assertEqual(comment[0]['content'], COMMENT)
+        self.assertEqual(comment[0].content, COMMENT)
 
     def test_comment_remove(self):
         """Test removing a comment."""
-        pk = self.node.add_comment(COMMENT)
+        comment = self.node.add_comment(COMMENT)
 
         self.assertEquals(len(self.node.get_comments()), 1)
 
-        options = [str(self.node.pk), str(pk), '--force']
+        options = [str(comment.pk), '--force']
         result = self.cli_runner.invoke(cmd_comment.remove, options, catch_exceptions=False)
-        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(result.exit_code, 0, result.output)
         self.assertEquals(len(self.node.get_comments()), 0)
-
-    def test_comment_remove_all(self):
-        """Test removing all comments from a self.node."""
-        for _ in range(10):
-            self.node.add_comment(COMMENT)
-
-        self.assertEqual(len(self.node.get_comments()), 10)
-
-        options = [str(self.node.pk), '--all', '--force']
-        result = self.cli_runner.invoke(cmd_comment.remove, options, catch_exceptions=False)
-        self.assertEqual(result.exit_code, 0)
-        self.assertEqual(len(self.node.get_comments()), 0)

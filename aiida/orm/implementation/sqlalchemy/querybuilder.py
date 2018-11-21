@@ -106,6 +106,11 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         return aiida.backends.sqlalchemy.models.authinfo.DbAuthInfo
 
     @property
+    def Comment(self):
+        import aiida.backends.sqlalchemy.models.comment
+        return aiida.backends.sqlalchemy.models.comment.DbComment
+
+    @property
     def log_model_class(self):
         import aiida.backends.sqlalchemy.models.log
         return aiida.backends.sqlalchemy.models.log.DbLog

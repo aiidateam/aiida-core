@@ -28,6 +28,12 @@ class TestComment(AiidaTestCase):
         self.content = 'Sometimes when I am freestyling, I lose confidence'
         self.comment = Comment(self.node, self.user, self.content).store()
 
+    def tearDown(self):
+        super(TestComment, self).tearDown()
+        comments = Comment.objects.all()
+        for comment in comments:
+            Comment.objects.delete(comment.id)
+
     def test_comment_content(self):
         """Test getting and setting content of a Comment."""
         content = 'Be more constructive with your feedback'
@@ -63,3 +69,34 @@ class TestComment(AiidaTestCase):
 
         with self.assertRaises(exceptions.NotExistent):
             Comment.objects.get(comment=comment_pk)
+
+    def test_comment_querybuilder(self):
+        """Test querying for comments by joining on nodes in the QueryBuilder."""
+        node_one = orm.Node().store()
+        comment_one = Comment(node_one, self.user, 'comment_one').store()
+
+        node_two = orm.Node().store()
+        comment_three = Comment(node_two, self.user, 'comment_three').store()
+        comment_four = Comment(node_two, self.user, 'comment_four').store()
+
+        # Retrieve a node by joining on a specific comment
+        nodes = orm.QueryBuilder().append(
+            Comment, tag='comment', filters={
+                'id': comment_one.id
+            }).append(
+                orm.Node, with_comment='comment', project=['uuid']).all()
+
+        self.assertEqual(len(nodes), 1)
+        for node in nodes:
+            self.assertIn(str(node[0]), [node_one.uuid])
+
+        # Retrieve a comment by joining on a specific node
+        comments = orm.QueryBuilder().append(
+            orm.Node, tag='node', filters={
+                'id': node_two.id
+            }).append(
+                Comment, with_node='node', project=['uuid']).all()
+
+        self.assertEqual(len(comments), 2)
+        for comment in comments:
+            self.assertIn(str(comment[0]), [comment_three.uuid, comment_four.uuid])

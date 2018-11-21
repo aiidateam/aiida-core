@@ -350,6 +350,35 @@ class DbLog(Base):
         return dblog.get_aiida_class()
 
 
+class DbComment(Base):
+    __tablename__ = "db_dbcomment"
+
+    id = Column(Integer, primary_key=True)
+    uuid = Column(UUID(as_uuid=True), default=uuid_func)
+    dbnode_id = Column(Integer, ForeignKey('db_dbnode.id', ondelete="CASCADE", deferrable=True, initially="DEFERRED"))
+
+    ctime = Column(DateTime(timezone=True), default=timezone.now)
+    mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now)
+
+    user_id = Column(Integer, ForeignKey('db_dbuser.id', ondelete="CASCADE", deferrable=True, initially="DEFERRED"))
+    content = Column(Text, nullable=True)
+
+    dbnode = relationship('DbNode', backref='dbcomments')
+    user = relationship("DbUser")
+
+    def get_aiida_class(self):
+        from aiida.backends.djsite.db.models import DbComment as DjangoDbComment
+        dbcomment = DjangoDbComment(
+            id=self.id,
+            uuid=self.uuid,
+            dbnode=self.dbnode_id,
+            ctime=self.ctime,
+            mtime=self.mtime,
+            user=self.user_id,
+            content=self.content)
+        return dbcomment.get_aiida_class()
+
+
 profile = get_profile_config(settings.AIIDADB_PROFILE)
 
 

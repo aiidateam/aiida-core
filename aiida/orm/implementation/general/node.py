@@ -848,6 +848,7 @@ class AbstractNode(object):
 
         return NeighborManager(filtered_list)
 
+
     def get_inputs(self, node_type=None, also_labels=False, only_in_db=False, link_type=None):
         """
         Return a list of nodes that enter (directly) in this node
@@ -864,56 +865,35 @@ class AbstractNode(object):
         :param link_type: Only get inputs of this link type, if None then
             returns all inputs of all link types.
         """
-        all_links = self.get_incoming(node_class=node_type, link_type=link_type)
-        if also_labels:
-            return [(link.label, link.node) for link in all_links]
-        return [link.node for link in all_links]
 
-    # def get_inputs(self, node_type=None, also_labels=False, only_in_db=False, link_type=None):
-    #     """
-    #     Return a list of nodes that enter (directly) in this node
-    #
-    #     :param node_type: If specified, should be a class, and it filters only
-    #         elements of that specific type (or a subclass of 'type')
-    #     :param also_labels: If False (default) only return a list of input nodes.
-    #         If True, return a list of tuples, where each tuple has the
-    #         following format: ('label', Node), with 'label' the link label,
-    #         and Node a Node instance or subclass
-    #     :param only_in_db: Return only the inputs that are in the database,
-    #         ignoring those that are in the local cache. Otherwise, return
-    #         all links.
-    #     :param link_type: Only get inputs of this link type, if None then
-    #         returns all inputs of all link types.
-    #     """
-    #
-    #     if link_type is not None and not isinstance(link_type, LinkType):
-    #         raise TypeError('link_type should be a LinkType object')
-    #
-    #     inputs_list = self._get_db_input_links(link_type=link_type)
-    #
-    #     if not only_in_db:
-    #         # Needed for the check
-    #         input_list_keys = [i[0] for i in inputs_list]
-    #
-    #         for label, v in self._inputlinks_cache.items():
-    #             src = v[0]
-    #             input_link_type = v[1]
-    #             if label in input_list_keys:
-    #                 raise InternalError("There exist a link with the same name '{}' both in the DB "
-    #                                     "and in the internal cache for node pk= {}!".format(label, self.pk))
-    #
-    #             if link_type is None or input_link_type is link_type:
-    #                 inputs_list.append((label, src))
-    #
-    #     if node_type is None:
-    #         filtered_list = inputs_list
-    #     else:
-    #         filtered_list = [i for i in inputs_list if isinstance(i[1], node_type)]
-    #
-    #     if also_labels:
-    #         return list(filtered_list)
-    #
-    #     return [i[1] for i in filtered_list]
+        if link_type is not None and not isinstance(link_type, LinkType):
+            raise TypeError('link_type should be a LinkType object')
+
+        inputs_list = self._get_db_input_links(link_type=link_type)
+
+        if not only_in_db:
+            # Needed for the check
+            input_list_keys = [i[0] for i in inputs_list]
+
+            for label, v in self._inputlinks_cache.items():
+                src = v[0]
+                input_link_type = v[1]
+                if label in input_list_keys:
+                    raise InternalError("There exist a link with the same name '{}' both in the DB "
+                                        "and in the internal cache for node pk= {}!".format(label, self.pk))
+
+                if link_type is None or input_link_type is link_type:
+                    inputs_list.append((label, src))
+
+        if node_type is None:
+            filtered_list = inputs_list
+        else:
+            filtered_list = [i for i in inputs_list if isinstance(i[1], node_type)]
+
+        if also_labels:
+            return list(filtered_list)
+
+        return [i[1] for i in filtered_list]
 
     @abstractclassmethod
     def _get_db_input_links(self, link_type):
@@ -944,6 +924,7 @@ class AbstractNode(object):
 
         return NeighborManager(filtered_list)
 
+
     @override
     def get_outputs(self, node_type=None, also_labels=False, link_type=None):
         """
@@ -957,39 +938,20 @@ class AbstractNode(object):
             and Node a Node instance or subclass
         :param link_type: Only return outputs connected by links of this type.
         """
-        all_links = self.get_outgoing(node_class=node_type, link_type=link_type)
+        if link_type is not None and not isinstance(link_type, LinkType):
+            raise TypeError('link_type should be a LinkType object')
+
+        outputs_list = self._get_db_output_links(link_type=link_type)
+
+        if node_type is None:
+            filtered_list = outputs_list
+        else:
+            filtered_list = (i for i in outputs_list if isinstance(i[1], node_type))
+
         if also_labels:
-            return [(link.label, link.node) for link in all_links]
-        return [link.node for link in all_links]
+            return list(filtered_list)
 
-
-    # @override
-    # def get_outputs(self, node_type=None, also_labels=False, link_type=None):
-    #     """
-    #     Return a list of nodes that exit (directly) from this node
-    #
-    #     :param node_type: if specified, should be a class, and it filters only
-    #         elements of that specific node_type (or a subclass of 'node_type')
-    #     :param also_labels: if False (default) only return a list of input nodes.
-    #         If True, return a list of tuples, where each tuple has the
-    #         following format: ('label', Node), with 'label' the link label,
-    #         and Node a Node instance or subclass
-    #     :param link_type: Only return outputs connected by links of this type.
-    #     """
-    #     if link_type is not None and not isinstance(link_type, LinkType):
-    #         raise TypeError('link_type should be a LinkType object')
-    #
-    #     outputs_list = self._get_db_output_links(link_type=link_type)
-    #
-    #     if node_type is None:
-    #         filtered_list = outputs_list
-    #     else:
-    #         filtered_list = (i for i in outputs_list if isinstance(i[1], node_type))
-    #
-    #     if also_labels:
-    #         return list(filtered_list)
-    #
-    #     return [i[1] for i in filtered_list]
+        return [i[1] for i in filtered_list]
 
     @abstractmethod
     def _get_db_output_links(self, link_type):

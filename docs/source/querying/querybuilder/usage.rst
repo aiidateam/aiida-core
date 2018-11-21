@@ -196,7 +196,10 @@ This is a list of all implemented operators:
 |            | integers,  |                                     |                                  |
 |            | dates      |                                     |                                  |
 +------------+------------+-------------------------------------+----------------------------------+
-| like       | Strings    | 'name':{'like':'lovely_calc%'}      | substring (% is wildcard)        |
+| like       | Strings    | 'name':{'like':'lovely_calc%'}      | substring                        |
+|            |            |                                     | (% and _ are wildcards. To use % |
+|            |            |                                     | and _ as part of the string      |
+|            |            |                                     | prepend it with \\)              |
 +------------+------------+-------------------------------------+----------------------------------+
 | ilike      | Strings    | 'name':{'like':'loVely_Calc%'}      | case insensitive 'like'          |
 +------------+------------+-------------------------------------+----------------------------------+

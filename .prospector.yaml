@@ -1,3 +1,5 @@
+max-line-length: 120
+
 ignore-paths:
     - doc
     - examples
@@ -5,7 +7,8 @@ ignore-paths:
     - utils
 
 pylint:
-    max-line-length: 120
+  run: true
+
 
 pyflakes:
   run: false

@@ -60,13 +60,16 @@ class TestGroupsDjango(AiidaTestCase):
         """
         Test if queries are working
         """
-        from aiida.orm.group import Group
         from aiida.common.exceptions import NotExistent, MultipleObjectsError
 
-        g1 = Group(name='testquery1').store()
-        self.addCleanup(g1.delete)
-        g2 = Group(name='testquery2').store()
-        self.addCleanup(g2.delete)
+        backend = self.backend
+
+        default_user = backend.users.create("{}@aiida.net".format(self.id())).store()
+
+        g1 = backend.groups.create(name='testquery1', user=default_user).store()
+        self.addCleanup(lambda: backend.groups.delete(g1.id))
+        g2 = backend.groups.create(name='testquery2', user=default_user).store()
+        self.addCleanup(lambda: backend.groups.delete(g2.id))
 
         n1 = Node().store()
         n2 = Node().store()
@@ -76,60 +79,64 @@ class TestGroupsDjango(AiidaTestCase):
         g1.add_nodes([n1, n2])
         g2.add_nodes([n1, n3])
 
-        newuser = orm.User(email='test@email.xx')
-        g3 = Group(name='testquery3', user=newuser).store()
+        newuser = backend.users.create(email='test@email.xx')
+        g3 = backend.groups.create(name='testquery3', user=newuser).store()
+        self.addCleanup(lambda: backend.groups.delete(g3.id))
 
         # I should find it
-        g1copy = Group.get(uuid=g1.uuid)
+        g1copy = backend.groups.get(uuid=g1.uuid)
         self.assertEquals(g1.pk, g1copy.pk)
 
+        # NOTE: Here we pass type_string='' to all query and get calls in the groups collection because
+        # otherwise run the risk that we will pick up autogroups as well when really we're just interested
+        # the the ones that we created in this test
         # Try queries
-        res = Group.query(nodes=n4)
-        self.assertEquals([_.pk for _ in res], [])
+        res = backend.groups.query(nodes=n4, type_string='')
+        self.assertListEqual([_.pk for _ in res], [])
 
-        res = Group.query(nodes=n1)
+        res = backend.groups.query(nodes=n1, type_string='')
         self.assertEquals([_.pk for _ in res], [_.pk for _ in [g1, g2]])
 
-        res = Group.query(nodes=n2)
+        res = backend.groups.query(nodes=n2, type_string='')
         self.assertEquals([_.pk for _ in res], [_.pk for _ in [g1]])
 
         # I try to use 'get' with zero or multiple results
         with self.assertRaises(NotExistent):
-            Group.get(nodes=n4)
+            backend.groups.get(nodes=n4, type_string='')
         with self.assertRaises(MultipleObjectsError):
-            Group.get(nodes=n1)
+            backend.groups.get(nodes=n1, type_string='')
 
-        self.assertEquals(Group.get(nodes=n2).pk, g1.pk)
+        self.assertEquals(backend.groups.get(nodes=n2, type_string='').pk, g1.pk)
 
         # Query by user
-        res = Group.query(user=newuser)
+        res = backend.groups.query(user=newuser, type_string='')
         self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g3]))
 
         # Same query, but using a string (the username=email) instead of
         # a DbUser object
-        res = Group.query(user=newuser.email)
+        res = backend.groups.query(user=newuser.email, type_string='')
         self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g3]))
 
-        default_user = orm.User.objects(self.backend).get_default()
-        res = Group.query(user=default_user.backend_entity)
+        res = backend.groups.query(user=default_user, type_string='')
         self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g1, g2]))
 
     def test_rename_existing(self):
         """
         Test that renaming to an already existing name is not permitted
         """
-        from aiida.orm.group import Group
+        backend = self.backend
 
         name_group_a = 'group_a'
-        name_group_b = 'group_b'
         name_group_c = 'group_c'
 
-        group_a = Group(name=name_group_a, description='I am the Original G')
-        group_a.store()
+        default_user = backend.users.create("{}@aiida.net".format(self.id())).store()
+
+        group_a = backend.groups.create(name=name_group_a, description='I am the Original G', user=default_user).store()
+        self.addCleanup(lambda: backend.groups.delete(group_a.id))
 
         # Before storing everything should be fine
-        group_b = Group(name=name_group_a, description='They will try to rename me')
-        group_c = Group(name=name_group_c, description='They will try to rename me')
+        group_b = backend.groups.create(name=name_group_a, description='They will try to rename me', user=default_user)
+        group_c = backend.groups.create(name=name_group_c, description='They will try to rename me', user=default_user)
 
         # Storing for duplicate group name should trigger UniquenessError
         with self.assertRaises(exceptions.IntegrityError):
@@ -141,10 +148,30 @@ class TestGroupsDjango(AiidaTestCase):
         # Reverting to unique name before storing
         group_c.name = name_group_c
         group_c.store()
+        self.addCleanup(lambda: backend.groups.delete(group_c.id))
 
         # After storing name change to existing should raise
         with self.assertRaises(exceptions.IntegrityError):
             group_c.name = name_group_a
+
+    def test_creation_from_dbgroup(self):
+        backend = self.backend
+
+        n = Node().store()
+
+        default_user = backend.users.create("{}@aiida.net".format(self.id())).store()
+
+        g = backend.groups.create(name='testgroup_from_dbgroup', user=default_user).store()
+        self.addCleanup(lambda: backend.groups.delete(g.id))
+
+        g.store()
+        g.add_nodes(n)
+
+        dbgroup = g.dbmodel
+        gcopy = backend.groups.from_dbmodel(dbgroup)
+
+        self.assertEquals(g.pk, gcopy.pk)
+        self.assertEquals(g.uuid, gcopy.uuid)
 
 
 class TestDbExtrasDjango(AiidaTestCase):

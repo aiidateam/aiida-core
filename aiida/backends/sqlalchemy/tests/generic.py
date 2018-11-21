@@ -17,7 +17,6 @@ from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.node import Node
 from aiida.common import exceptions
-from aiida import orm
 
 
 class TestComputer(AiidaTestCase):
@@ -64,20 +63,25 @@ class TestGroupsSqla(AiidaTestCase):
      Characterized functions
      """
 
+    def setUp(self):
+        from aiida.orm.implementation import sqlalchemy as sqla
+        super(TestGroupsSqla, self).setUp()
+        self.assertIsInstance(self.backend, sqla.SqlaBackend)
+
     def test_query(self):
         """
         Test if queries are working
         """
         from aiida.common.exceptions import NotExistent, MultipleObjectsError
-        from aiida.backends.sqlalchemy.models.user import DbUser
-        from aiida.orm.backends import construct_backend
 
-        backend = construct_backend()
+        backend = self.backend
 
-        g1 = orm.Group(name='testquery1').store()
-        self.addCleanup(g1.delete)
-        g2 = orm.Group(name='testquery2').store()
-        self.addCleanup(g2.delete)
+        simple_user = backend.users.create('simple@ton.com')
+
+        g1 = backend.groups.create(name='testquery1', user=simple_user).store()
+        self.addCleanup(lambda: backend.groups.delete(g1.id))
+        g2 = backend.groups.create(name='testquery2', user=simple_user).store()
+        self.addCleanup(lambda: backend.groups.delete(g2.id))
 
         n1 = Node().store()
         n2 = Node().store()
@@ -87,43 +91,45 @@ class TestGroupsSqla(AiidaTestCase):
         g1.add_nodes([n1, n2])
         g2.add_nodes([n1, n3])
 
-        newuser = DbUser(email='test@email.xx', password='').get_aiida_class()
-        g3 = orm.Group(name='testquery3', user=newuser).store()
+        # NOTE: Here we pass type_string to query and get calls so that these calls don't
+        # find the autogroups (otherwise the assertions will fail)
+        newuser = backend.users.create(email='test@email.xx')
+        g3 = backend.groups.create(name='testquery3', user=newuser).store()
 
         # I should find it
-        g1copy = orm.Group.get(uuid=g1.uuid)
+        g1copy = backend.groups.get(uuid=g1.uuid)
         self.assertEquals(g1.pk, g1copy.pk)
 
         # Try queries
-        res = orm.Group.query(nodes=n4)
+        res = backend.groups.query(nodes=n4, type_string='')
         self.assertEquals([_.pk for _ in res], [])
 
-        res = orm.Group.query(nodes=n1)
+        res = backend.groups.query(nodes=n1, type_string='')
         self.assertEquals([_.pk for _ in res], [_.pk for _ in [g1, g2]])
 
-        res = orm.Group.query(nodes=n2)
+        res = backend.groups.query(nodes=n2, type_string='')
         self.assertEquals([_.pk for _ in res], [_.pk for _ in [g1]])
 
         # I try to use 'get' with zero or multiple results
         with self.assertRaises(NotExistent):
-            orm.Group.get(nodes=n4)
+            backend.groups.get(nodes=n4, type_string='')
         with self.assertRaises(MultipleObjectsError):
-            orm.Group.get(nodes=n1)
+            backend.groups.get(nodes=n1, type_string='')
 
-        self.assertEquals(orm.Group.get(nodes=n2).pk, g1.pk)
+        self.assertEquals(backend.groups.get(nodes=n2, type_string='').pk, g1.pk)
 
         # Query by user
-        res = orm.Group.query(user=newuser)
-        self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g3]))
+        res = backend.groups.query(user=newuser, type_string='')
+        self.assertSetEqual(set(_.pk for _ in res), set(_.pk for _ in [g3]))
 
         # Same query, but using a string (the username=email) instead of
         # a DbUser object
-        res = orm.Group.query(user=newuser)
-        self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g3]))
+        res = backend.groups.query(user=newuser, type_string='')
+        self.assertSetEqual(set(_.pk for _ in res), set(_.pk for _ in [g3]))
 
-        res = orm.Group.query(user=orm.User.objects(backend).get_default())
+        res = backend.groups.query(user=simple_user, type_string='')
 
-        self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g1, g2]))
+        self.assertSetEqual(set(_.pk for _ in res), set(_.pk for _ in [g1, g2]))
 
     def test_rename_existing(self):
         """
@@ -131,16 +137,18 @@ class TestGroupsSqla(AiidaTestCase):
         """
         from aiida.backends.sqlalchemy import get_scoped_session
 
+        backend = self.backend
+        user = backend.users.create(email="{}@aiida.net".format(self.id())).store()
+
         name_group_a = 'group_a'
-        name_group_b = 'group_b'
         name_group_c = 'group_c'
 
-        group_a = orm.Group(name=name_group_a, description='I am the Original G')
+        group_a = backend.groups.create(name=name_group_a, description='I am the Original G', user=user)
         group_a.store()
 
         # Before storing everything should be fine
-        group_b = orm.Group(name=name_group_a, description='They will try to rename me')
-        group_c = orm.Group(name=name_group_c, description='They will try to rename me')
+        group_b = backend.groups.create(name=name_group_a, description='They will try to rename me', user=user)
+        group_c = backend.groups.create(name=name_group_c, description='They will try to rename me', user=user)
 
         session = get_scoped_session()
 

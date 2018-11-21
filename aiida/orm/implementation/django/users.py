@@ -7,37 +7,47 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+"""Django user module"""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from functools import reduce
 
+import functools
+
+from aiida.backends.djsite.db import models
 from aiida.backends.djsite.db.models import DbUser
-from aiida.common.utils import type_check
 from aiida.orm.implementation import users
+from . import entities
 from . import utils
+
+__all__ = 'DjangoUser', 'DjangoUserCollection'
 
 
 class DjangoUserCollection(users.BackendUserCollection):
+    """The Django collection of users"""
 
     def create(self, email, first_name='', last_name='', institution=''):
         """
         Create a user with the provided email address
 
         :return: A new user object
-        :rtype: :class:`aiida.orm.User`
+        :rtype: :class:`aiida.orm.implementation.django.DjangoUser`
         """
-        return DjangoUser(self.backend,
-                          email=email,
-                          first_name=first_name,
-                          last_name=last_name,
-                          institution=institution)
+        return DjangoUser(
+            self.backend, email=email, first_name=first_name, last_name=last_name, institution=institution)
 
-    def find(self, email=None, id=None):
+    def find(self, email=None, id=None):  # pylint: disable=redefined-builtin, invalid-name
+        """
+        Find users in this collection
+
+        :param email: optional email address filter
+        :param id: optional id filter
+        :return: a list of the found users
+        :rtype: list
+        """
         # Constructing the default query
         import operator
-        from django.db.models import Q
+        from django.db.models import Q  # pylint: disable=import-error, no-name-in-module
         query_list = []
 
         # If an id is specified then we add it to the query
@@ -51,122 +61,84 @@ class DjangoUserCollection(users.BackendUserCollection):
         if not query_list:
             dbusers = DbUser.objects.all()
         else:
-            dbusers = DbUser.objects.filter(reduce(operator.and_, query_list))
-        users = []
+            dbusers = DbUser.objects.filter(functools.reduce(operator.and_, query_list))
+        found_users = []
         for dbuser in dbusers:
-            users.append(self.from_dbmodel(dbuser))
-        return users
+            found_users.append(self.from_dbmodel(dbuser))
+        return found_users
 
     def from_dbmodel(self, dbmodel):
         return DjangoUser.from_dbmodel(dbmodel, self.backend)
 
 
-class DjangoUser(users.BackendUser):
+class DjangoUser(entities.DjangoModelEntity[models.DbUser], users.BackendUser):
+    """The Django user class"""
 
-    @classmethod
-    def from_dbmodel(cls, dbmodel, backend):
-        """
-        Create a DjangoUser from a dbmodel instance
-
-        :param backend: The backend
-        :type backend: :class:`DjangoUserCollection`
-        :param dbmodel: The dbmodel instance
-        :type dbmodel: :class:`aiida.backends.djsite.db.models.DbUser`
-        :return: A DjangoUser instance
-        :rtype: :class:`DjangoUser`
-        """
-        type_check(dbmodel, DbUser)
-        user = cls.__new__(cls)
-        super(DjangoUser, user).__init__(backend)
-        user._dbuser = utils.ModelWrapper(dbmodel)
-        return user
+    MODEL_CLASS = models.DbUser
 
     def __init__(self, backend, email, first_name, last_name, institution):
         super(DjangoUser, self).__init__(backend)
-        self._dbuser = utils.ModelWrapper(DbUser(
-            email=email,
-            first_name=first_name,
-            last_name=last_name,
-            institution=institution))
-
-    @property
-    def dbuser(self):
-        # We have to get the underlying model here rather than just the wrapper
-        return self._dbuser._model
-
-    @property
-    def pk(self):
-        return self._dbuser.pk
-
-    @property
-    def id(self):
-        return self._dbuser.pk
-
-    @property
-    def is_stored(self):
-        return self._dbuser.pk is not None
-
-    def store(self):
-        self._dbuser.save()
+        self._dbmodel = utils.ModelWrapper(
+            DbUser(email=email, first_name=first_name, last_name=last_name, institution=institution))
 
     @property
     def email(self):
-        return self._dbuser.email
+        return self._dbmodel.email
 
     @email.setter
     def email(self, email):
-        self._dbuser.email = email
+        self._dbmodel.email = email
 
-    def set_password(self, val):
-        self._dbuser.password = val
+    def set_password(self, new_pass):
+        self._dbmodel.password = new_pass
 
     def get_password(self):
-        return self._dbuser.password
+        return self._dbmodel.password
 
     @property
     def first_name(self):
-        return self._dbuser.first_name
+        return self._dbmodel.first_name
 
     @first_name.setter
     def first_name(self, first_name):
-        self._dbuser.first_name = first_name
+        self._dbmodel.first_name = first_name
 
     @property
     def last_name(self):
-        return self._dbuser.last_name
+        return self._dbmodel.last_name
 
     @last_name.setter
     def last_name(self, last_name):
-        self._dbuser.last_name = last_name
+        self._dbmodel.last_name = last_name
 
     @property
     def institution(self):
-        return self._dbuser.institution
+        return self._dbmodel.institution
 
     @institution.setter
     def institution(self, institution):
-        self._dbuser.institution = institution
+        self._dbmodel.institution = institution
 
     @property
     def is_active(self):
-        return self._dbuser.is_active
+        return self._dbmodel.is_active
 
     @is_active.setter
     def is_active(self, active):
-        self._dbuser.is_active = active
+        self._dbmodel.is_active = active
 
     @property
     def last_login(self):
-        return self._dbuser.last_login
+        return self._dbmodel.last_login
 
     @last_login.setter
     def last_login(self, last_login):
-        self._dbuser.last_login = last_login
+        self._dbmodel.last_login = last_login
 
     @property
     def date_joined(self):
-        return self._dbuser.date_joined
+        return self._dbmodel.date_joined
 
     @date_joined.setter
     def date_joined(self, date_joined):
-        self._dbuser.date_joined = date_joined
+        self._dbmodel.date_joined = date_joined

@@ -14,10 +14,9 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from __future__ import absolute_import
 
-from django.db import migrations
-from django_extensions.db.fields import UUIDField
+from django.db import migrations, models
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
-from aiida.backends.settings import AIIDANODES_UUID_VERSION
+from aiida.common.utils import get_new_uuid
 
 REVISION = '1.0.14'
 DOWN_REVISION = '1.0.13'
@@ -52,7 +51,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='dbnode',
             name='uuid',
-            field=UUIDField(auto=True, version=AIIDANODES_UUID_VERSION, unique=True),
+            field=models.CharField(max_length=36,default=get_new_uuid, unique=True),
         ),
         upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

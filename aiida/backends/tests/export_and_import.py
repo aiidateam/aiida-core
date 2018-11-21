@@ -20,8 +20,8 @@ from six.moves import range, zip
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.importexport import import_data
+from aiida.common.utils import get_new_uuid
 from aiida import orm
-
 
 
 class TestSpecificImport(AiidaTestCase):
@@ -360,7 +360,8 @@ class TestSimple(AiidaTestCase):
                 metadata = json.load(fhandle)
             metadata['links_uuid'].append({
                 'output': sd.uuid,
-                'input': 'non-existing-uuid',
+                # note: this uuid is supposed to not be in the DB
+                'input': get_new_uuid(),
                 'label': 'parent'
             })
 
@@ -676,7 +677,7 @@ class TestSimple(AiidaTestCase):
             jc1._set_state(calc_states.PARSING)
 
             # Create a group and add the data inside
-            from aiida.orm.group import Group
+            from aiida.orm.groups import Group
             g1 = Group(name="node_group")
             g1.store()
             g1.add_nodes([sd1, jc1])
@@ -732,7 +733,7 @@ class TestSimple(AiidaTestCase):
             sd1.store()
 
             # Create a group and add the data inside
-            from aiida.orm.group import Group
+            from aiida.orm.groups import Group
             g1 = Group(name="node_group")
             g1.store()
             g1.add_nodes([sd1])
@@ -1163,8 +1164,8 @@ class TestComputer(AiidaTestCase):
             # did not change.
             qb = QueryBuilder()
             qb.append(Computer, project=['name', 'uuid', 'id'])
-            self.assertEqual(qb.count(), 1, "Only one computer should be "
-                                            "found.")
+            self.assertEqual(qb.count(), 1, "Found {} computers"
+                "but only one computer should be found.".format(qb.count()))
             self.assertEqual(six.text_type(qb.first()[0]), comp_name,
                              "The computer name is not correct.")
             self.assertEqual(six.text_type(qb.first()[1]), comp_uuid,
@@ -1285,8 +1286,8 @@ class TestComputer(AiidaTestCase):
             # did not change.
             qb = QueryBuilder()
             qb.append(Computer, project=['name'])
-            self.assertEqual(qb.count(), 1, "Only one computer should be "
-                                            "found.")
+            self.assertEqual(qb.count(), 1, "Found {} computers"
+                "but only one computer should be found.".format(qb.count()))
             self.assertEqual(six.text_type(qb.first()[0]), comp1_name,
                              "The computer name is not correct.")
 
@@ -1690,7 +1691,7 @@ class TestLinks(AiidaTestCase):
             calc._set_state(calc_states.PARSING)
             data_output.add_link_from(calc, 'create', link_type=LinkType.CREATE)
 
-            group = Group.create(name='test_group')
+            group = orm.Group(name='test_group').store()
             group.add_nodes(data_output)
 
             export_file = os.path.join(tmp_folder, 'export.tar.gz')

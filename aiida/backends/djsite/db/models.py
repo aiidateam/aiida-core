@@ -15,18 +15,17 @@ import sys
 import six
 from six.moves import zip, range
 from django.db import models as m
-from django_extensions.db.fields import UUIDField
 from django.contrib.auth.models import (
     AbstractBaseUser, BaseUserManager, PermissionsMixin)
 from django.utils.encoding import python_2_unicode_compatible
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models.query import QuerySet
+from django.db.models.query import QuerySet, ModelIterable
 
 from aiida.utils import timezone
+from aiida.common.utils import get_new_uuid
 from aiida.common.exceptions import (
     ConfigurationError, DbContentError, MissingPluginError)
 
-from aiida.backends.settings import AIIDANODES_UUID_VERSION
 from aiida.backends.djsite.settings.settings import AUTH_USER_MODEL
 import aiida.backends.djsite.db.migrations as migrations
 from aiida.backends.utils import AIIDA_ATTRIBUTE_SEP
@@ -42,11 +41,27 @@ from aiida.backends.utils import AIIDA_ATTRIBUTE_SEP
 # load_dbenv() function).
 SCHEMA_VERSION = migrations.current_schema_version()
 
-
 class AiidaQuerySet(QuerySet):
     def iterator(self):
         for obj in super(AiidaQuerySet, self).iterator():
             yield obj.get_aiida_class()
+
+    def __iter__(self):
+        """Iterate for list comprehensions.
+
+        Note: used to rely on the iterator in django 1.8 but does no longer in django 1.11.
+        """
+
+        return (x.get_aiida_class() for x in super(AiidaQuerySet, self).__iter__())
+
+
+    def __getitem__(self, key):
+        """Get item for [] operator
+
+        Note: used to rely on the iterator in django 1.8 but does no longer in django 1.11.
+        """
+        res = super(AiidaQuerySet, self).__getitem__(key)
+        return res.get_aiida_class()
 
 
 class AiidaObjectManager(m.Manager):
@@ -104,7 +119,7 @@ class DbUser(AbstractBaseUser, PermissionsMixin):
     objects = DbUserManager()
 
     def get_aiida_class(self):
-        from aiida.orm.implementation.django.user import DjangoUser
+        from aiida.orm.implementation.django.users import DjangoUser
         from aiida.orm.backends import construct_backend
         return DjangoUser.from_dbmodel(self, construct_backend())
 
@@ -131,7 +146,7 @@ class DbNode(m.Model):
        in the DbAttribute field). Moreover, Attributes define uniquely the
        Node so should be immutable
     """
-    uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION, unique=True)
+    uuid = m.UUIDField(default=get_new_uuid, unique=True)
     # in the form data.upffile., data.structure., calculation., ...
     # Note that there is always a final dot, to allow to do queries of the
     # type (type__startswith="calculation.") and avoid problems with classes
@@ -1273,7 +1288,7 @@ class DbGroup(m.Model):
     pseudopotential families - if no two pseudos are included for the same
     atomic element).
     """
-    uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION)
+    uuid = m.UUIDField(default=get_new_uuid, unique=True)
     # max_length is required by MySql to have indexes and unique constraints
     name = m.CharField(max_length=255, db_index=True)
     # The type of group: a user group, a pseudopotential group,...
@@ -1297,6 +1312,11 @@ class DbGroup(m.Model):
             return '<DbGroup [type: {}] "{}">'.format(self.type, self.name)
         else:
             return '<DbGroup [user-defined] "{}">'.format(self.name)
+
+    def get_aiida_class(self):
+        from aiida.orm.implementation.django.groups import DjangoGroup
+        from aiida.orm.backends import construct_backend
+        return DjangoGroup.from_dbmodel(self, construct_backend())
 
 
 @python_2_unicode_compatible
@@ -1334,7 +1354,7 @@ class DbComputer(m.Model):
     """
     # TODO: understand if we want that this becomes simply another type of dbnode.
 
-    uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION)
+    uuid = m.UUIDField(default=get_new_uuid, unique=True)
     name = m.CharField(max_length=255, unique=True, blank=False)
     hostname = m.CharField(max_length=255)
     description = m.TextField(blank=True)
@@ -1439,7 +1459,7 @@ class DbAuthInfo(m.Model):
 
 @python_2_unicode_compatible
 class DbComment(m.Model):
-    uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION)
+    uuid = m.UUIDField(default=get_new_uuid, unique=True)
     # Delete comments if the node is removed
     dbnode = m.ForeignKey(DbNode, related_name='dbcomments', on_delete=m.CASCADE)
     ctime = m.DateTimeField(default=timezone.now, editable=False)
@@ -1477,7 +1497,7 @@ class DbLog(m.Model):
 class DbWorkflow(m.Model):
     from aiida.common.datastructures import wf_states
 
-    uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION)
+    uuid = m.UUIDField(default=get_new_uuid, unique=True)
     ctime = m.DateTimeField(default=timezone.now, editable=False)
     mtime = m.DateTimeField(auto_now=True, editable=False)
     user = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.PROTECT)
@@ -1487,7 +1507,7 @@ class DbWorkflow(m.Model):
     nodeversion = m.IntegerField(default=1, editable=False)
     # to be implemented similarly to the DbNode class
     lastsyncedversion = m.IntegerField(default=0, editable=False)
-    state = m.CharField(max_length=255, choices=list(zip(list(wf_states), list(wf_states))),
+    state = m.CharField(max_length=255, choices=list(zip(sorted(wf_states), sorted(wf_states))),
                         default=wf_states.INITIALIZED)
     report = m.TextField(blank=True)
     # File variables, script is the complete dump of the workflow python script
@@ -1708,7 +1728,7 @@ class DbWorkflowStep(m.Model):
     sub_workflows = m.ManyToManyField(DbWorkflow, symmetrical=False,
                                       related_name="parent_workflow_step")
     state = m.CharField(max_length=255,
-                        choices=list(zip(list(wf_states), list(wf_states))),
+                        choices=list(zip(sorted(wf_states), sorted(wf_states))),
                         default=wf_states.CREATED)
 
     class Meta:

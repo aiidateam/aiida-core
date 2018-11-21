@@ -19,7 +19,7 @@ import io
 
 from aiida.orm import DataFactory
 from aiida.orm.data.parameter import ParameterData
-from aiida.orm.calculation.inline import optional_inline
+from aiida.work import calcfunction
 
 aiida_executable_name = '_aiidasubmit.sh'
 inline_executable_name = 'aiidainline.py'
@@ -878,7 +878,7 @@ def _collect_tags(node, calc,parameters=None,
     return tags
 
 
-@optional_inline
+@calcfunction
 def add_metadata_inline(what, node, parameters, args):
     """
     Add metadata of original exported node to the produced TCOD CIF.
@@ -1002,7 +1002,6 @@ def export_cifnode(what, parameters=None, trajectory_index=None,
     """
     from aiida.common.links import LinkType
     from aiida.common.exceptions import MultipleObjectsError
-    from aiida.orm.calculation.inline import make_inline
     CifData        = DataFactory('cif')
     StructureData  = DataFactory('structure')
     TrajectoryData = DataFactory('array.trajectory')
@@ -1033,7 +1032,7 @@ def export_cifnode(what, parameters=None, trajectory_index=None,
     # Convert node to CifData (if required)
 
     if not isinstance(node, CifData) and getattr(node, '_get_cif'):
-        function_args = { 'store': store }
+        function_args = {'store': store}
         if trajectory_index is not None:
             function_args['index'] = trajectory_index
         node = node._get_cif(**function_args)
@@ -1046,13 +1045,13 @@ def export_cifnode(what, parameters=None, trajectory_index=None,
 
     if reduce_symmetry:
         from aiida.orm.data.cif import refine_inline
-        ret_dict = refine_inline(node=node, store=store)
+        ret_dict = refine_inline(node=node, store_provenance=store)
         node = ret_dict['cif']
 
     # Addition of the metadata
 
     args = ParameterData(dict=kwargs)
-    function_args = { 'what': what, 'args': args, 'store': store }
+    function_args = {'what': what, 'args': args, 'store_provenance': store}
     if node != what:
         function_args['node'] = node
     if parameters is not None:

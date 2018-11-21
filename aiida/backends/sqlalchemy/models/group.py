@@ -65,9 +65,10 @@ class DbGroup(Base):
     def __str__(self):
         if self.type:
             return '<DbGroup [type: {}] "{}">'.format(self.type, self.name)
-        else:
-            return '<DbGroup [user-defined] "{}">'.format(self.name)
+
+        return '<DbGroup [user-defined] "{}">'.format(self.name)
 
     def get_aiida_class(self):
-        from aiida.orm.implementation.sqlalchemy.group import Group
-        return Group(dbgroup=self)
+        from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
+        backend = SqlaBackend()
+        return backend.groups.from_dbmodel(self)

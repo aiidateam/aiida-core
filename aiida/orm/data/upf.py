@@ -152,12 +152,8 @@ def upload_upf_family(folder, group_name, group_description,
     nfiles = len(files)
 
     automatic_user = orm.User.objects.get_default()
-    try:
-        group = orm.Group.get(name=group_name, type_string=UPFGROUP_TYPE)
-        group_created = False
-    except NotExistent:
-        group = orm.Group(name=group_name, type_string=UPFGROUP_TYPE, user=automatic_user)
-        group_created = True
+    group, group_created = orm.Group.objects.get_or_create(name=group_name, type_string=UPFGROUP_TYPE,
+                                                           user=automatic_user)
 
     if group.user.email != automatic_user.email:
         raise UniquenessError("There is already a UpfFamily group with name {}"
@@ -177,9 +173,6 @@ def upload_upf_family(folder, group_name, group_description,
         qb = orm.QueryBuilder()
         qb.append(UpfData, filters={'attributes.md5': {'==': md5sum}})
         existing_upf = qb.first()
-
-        # ~ existing_upf = UpfData.query(dbattributes__key="md5",
-        # ~ dbattributes__tval=md5sum)
 
         if existing_upf is None:
             # return the upfdata instances, not stored

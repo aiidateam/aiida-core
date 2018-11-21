@@ -18,8 +18,8 @@ from collections import namedtuple
 import six
 
 from aiida.utils import timezone
-from .backends import CollectionEntry
-from aiida.orm.entities import Collection
+from . import backends
+from . import entities
 
 ASCENDING = 1
 DESCENDING = -1
@@ -28,7 +28,7 @@ OrderSpecifier = namedtuple("OrderSpecifier", ['field', 'direction'])
 
 
 @six.add_metaclass(ABCMeta)
-class LogCollection(Collection):
+class LogCollection(entities.Collection):
     """
     This class represents the collection of logs and can be used to create
     and retrieve logs.
@@ -115,11 +115,7 @@ class LogCollection(Collection):
 
 
 @six.add_metaclass(ABCMeta)
-class Log(CollectionEntry):
-    """
-    A log entry in the log collection
-    """
-
+class Log(backends.CollectionEntry):
     @abstractproperty
     def id(self):  # pylint: disable=invalid-name
         """

@@ -15,6 +15,7 @@ import errno
 import os
 import tempfile
 import tarfile
+import traceback
 import zipfile
 
 from click.testing import CliRunner
@@ -118,7 +119,7 @@ class TestVerdiExport(AiidaTestCase):
                 filename
             ]
             result = self.cli_runner.invoke(cmd_export.create, options)
-            self.assertIsNone(result.exception, result.output)
+            self.assertIsNone(result.exception, ''.join(traceback.format_exception(*result.exc_info)))
             self.assertTrue(os.path.isfile(filename))
             self.assertFalse(zipfile.ZipFile(filename).testzip(), None)
         finally:
@@ -133,7 +134,7 @@ class TestVerdiExport(AiidaTestCase):
                 'zip-uncompressed', filename
             ]
             result = self.cli_runner.invoke(cmd_export.create, options)
-            self.assertIsNone(result.exception, result.output)
+            self.assertIsNone(result.exception, ''.join(traceback.format_exception(*result.exc_info)))
             self.assertTrue(os.path.isfile(filename))
             self.assertFalse(zipfile.ZipFile(filename).testzip(), None)
         finally:
@@ -148,7 +149,7 @@ class TestVerdiExport(AiidaTestCase):
                 filename
             ]
             result = self.cli_runner.invoke(cmd_export.create, options)
-            self.assertIsNone(result.exception, result.output)
+            self.assertIsNone(result.exception, ''.join(traceback.format_exception(*result.exc_info)))
             self.assertTrue(os.path.isfile(filename))
             self.assertTrue(tarfile.is_tarfile(filename))
         finally:

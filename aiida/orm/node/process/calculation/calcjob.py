@@ -20,7 +20,6 @@ from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
 from aiida.common.links import LinkType
 from aiida.common.utils import classproperty, str_timedelta
 from aiida.plugins.loader import get_plugin_type_from_type_string
-from aiida.orm.computers import Computer
 from aiida.orm.node.process import ProcessNode
 from aiida.orm.mixins import Sealable
 from aiida.utils import timezone
@@ -453,159 +452,138 @@ class CalcJobNode(CalculationNode):
         else:
             raise NotExistent("_raw_input_folder not created yet")
 
-    options = {
-        'resources': {
-            'attribute_key':
-                'jobresource_params',
-            'valid_type':
-                dict,
-            'default': {},
-            'help':
-                'Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '
-                'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the '
-                'scheduler for more details.'
-        },
-        'max_wallclock_seconds': {
-            'attribute_key': 'max_wallclock_seconds',
-            'valid_type': int,
-            'non_db': True,
-            'required': False,
-            'help': 'Set the wallclock in seconds asked to the scheduler',
-        },
-        'custom_scheduler_commands': {
-            'attribute_key':
-                'custom_scheduler_commands',
-            'valid_type':
-                six.string_types,
-            'non_db':
-                True,
-            'required':
-                False,
-            'default':
-                '',
-            'help':
-                'Set a (possibly multiline) string with the commands that the user wants to manually set for the '
-                'scheduler. The difference of this option with respect to the `prepend_text` is the position in '
-                'the scheduler submission file where such text is inserted: with this option, the string is '
-                'inserted before any non-scheduler command',
-        },
-        'queue_name': {
-            'attribute_key': 'queue_name',
-            'valid_type': six.string_types,
-            'non_db': True,
-            'required': False,
-            'help': 'Set the name of the queue on the remote computer',
-        },
-        'account': {
-            'attribute_key': 'account',
-            'valid_type': six.string_types,
-            'non_db': True,
-            'required': False,
-            'help': 'Set the account to use in for the queue on the remote computer',
-        },
-        'qos': {
-            'attribute_key': 'qos',
-            'valid_type': six.string_types,
-            'non_db': True,
-            'required': False,
-            'help': 'Set the quality of service to use in for the queue on the remote computer',
-        },
-        'computer': {
-            'attribute_key': None,
-            'valid_type': Computer,
-            'non_db': True,
-            'required': False,
-            'help': 'Set the computer to be used by the calculation',
-        },
-        'withmpi': {
-            'attribute_key': 'withmpi',
-            'valid_type': bool,
-            'non_db': True,
-            'required': False,
-            'default': True,
-            'help': 'Set the calculation to use mpi',
-        },
-        'mpirun_extra_params': {
-            'attribute_key':
-                'mpirun_extra_params',
-            'valid_type': (list, tuple),
-            'non_db':
-                True,
-            'required':
-                False,
-            'default': [],
-            'help':
-                'Set the extra params to pass to the mpirun (or equivalent) command after the one provided in '
-                'computer.mpirun_command. Example: mpirun -np 8 extra_params[0] extra_params[1] ... exec.x',
-        },
-        'import_sys_environment': {
-            'attribute_key': 'import_sys_environment',
-            'valid_type': bool,
-            'non_db': True,
-            'required': False,
-            'default': True,
-            'help': 'If set to true, the submission script will load the system environment variables',
-        },
-        'environment_variables': {
-            'attribute_key': 'custom_environment_variables',
-            'valid_type': dict,
-            'non_db': True,
-            'required': False,
-            'default': {},
-            'help': 'Set a dictionary of custom environment variables for this calculation',
-        },
-        'priority': {
-            'attribute_key': 'priority',
-            'valid_type': six.string_types[0],
-            'non_db': True,
-            'required': False,
-            'help': 'Set the priority of the job to be queued',
-        },
-        'max_memory_kb': {
-            'attribute_key': 'max_memory_kb',
-            'valid_type': int,
-            'non_db': True,
-            'required': False,
-            'help': 'Set the maximum memory (in KiloBytes) to be asked to the scheduler',
-        },
-        'prepend_text': {
-            'attribute_key':
-                'prepend_text',
-            'valid_type':
-                six.string_types[0],
-            'non_db':
-                True,
-            'required':
-                False,
-            'default':
-                '',
-            'help':
-                'Set the calculation-specific prepend text, which is going to be prepended in the scheduler-job '
-                'script, just before the code execution',
-        },
-        'append_text': {
-            'attribute_key':
-                'append_text',
-            'valid_type':
-                six.string_types[0],
-            'non_db':
-                True,
-            'required':
-                False,
-            'default':
-                '',
-            'help':
-                'Set the calculation-specific append text, which is going to be appended in the scheduler-job '
-                'script, just after the code execution',
-        },
-        'parser_name': {
-            'attribute_key': 'parser',
-            'valid_type': six.string_types[0],
-            'non_db': True,
-            'required': False,
-            'help': 'Set a string for the output parser. Can be None if no output plugin is available or needed',
+    @classproperty
+    def options(cls):
+        from aiida import orm
+
+        return {
+            'resources': {
+                'attribute_key': 'jobresource_params',
+                'valid_type': dict,
+                'default': {},
+                'help': 'Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '
+                        'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the '
+                        'scheduler for more details.'
+            },
+            'max_wallclock_seconds': {
+                'attribute_key': 'max_wallclock_seconds',
+                'valid_type': int,
+                'non_db': True,
+                'required': False,
+                'help': 'Set the wallclock in seconds asked to the scheduler',
+            },
+            'custom_scheduler_commands': {
+                'attribute_key': 'custom_scheduler_commands',
+                'valid_type': six.string_types,
+                'non_db': True,
+                'required': False,
+                'default': '',
+                'help': 'Set a (possibly multiline) string with the commands that the user wants to manually set for the '
+                        'scheduler. The difference of this option with respect to the `prepend_text` is the position in '
+                        'the scheduler submission file where such text is inserted: with this option, the string is '
+                        'inserted before any non-scheduler command',
+            },
+            'queue_name': {
+                'attribute_key': 'queue_name',
+                'valid_type': six.string_types,
+                'non_db': True,
+                'required': False,
+                'help': 'Set the name of the queue on the remote computer',
+            },
+            'account': {
+                'attribute_key': 'account',
+                'valid_type': six.string_types,
+                'non_db': True,
+                'required': False,
+                'help': 'Set the account to use in for the queue on the remote computer',
+            },
+            'qos': {
+                'attribute_key': 'qos',
+                'valid_type': six.string_types,
+                'non_db': True,
+                'required': False,
+                'help': 'Set the quality of service to use in for the queue on the remote computer',
+            },
+            'computer': {
+                'attribute_key': None,
+                'valid_type': orm.Computer,
+                'non_db': True,
+                'required': False,
+                'help': 'Set the computer to be used by the calculation',
+            },
+            'withmpi': {
+                'attribute_key': 'withmpi',
+                'valid_type': bool,
+                'non_db': True,
+                'required': False,
+                'default': True,
+                'help': 'Set the calculation to use mpi',
+            },
+            'mpirun_extra_params': {
+                'attribute_key': 'mpirun_extra_params',
+                'valid_type': (list, tuple),
+                'non_db': True,
+                'required': False,
+                'default': [],
+                'help': 'Set the extra params to pass to the mpirun (or equivalent) command after the one provided in '
+                        'computer.mpirun_command. Example: mpirun -np 8 extra_params[0] extra_params[1] ... exec.x',
+            },
+            'import_sys_environment': {
+                'attribute_key': 'import_sys_environment',
+                'valid_type': bool,
+                'non_db': True,
+                'required': False,
+                'default': True,
+                'help': 'If set to true, the submission script will load the system environment variables',
+            },
+            'environment_variables': {
+                'attribute_key': 'custom_environment_variables',
+                'valid_type': dict,
+                'non_db': True,
+                'required': False,
+                'default': {},
+                'help': 'Set a dictionary of custom environment variables for this calculation',
+            },
+            'priority': {
+                'attribute_key': 'priority',
+                'valid_type': six.string_types[0],
+                'non_db': True,
+                'required': False,
+                'help': 'Set the priority of the job to be queued',
+            },
+            'max_memory_kb': {
+                'attribute_key': 'max_memory_kb',
+                'valid_type': int,
+                'non_db': True,
+                'required': False,
+                'help': 'Set the maximum memory (in KiloBytes) to be asked to the scheduler',
+            },
+            'prepend_text': {
+                'attribute_key': 'prepend_text',
+                'valid_type': six.string_types[0],
+                'non_db': True,
+                'required': False,
+                'default': '',
+                'help': 'Set the calculation-specific prepend text, which is going to be prepended in the scheduler-job '
+                        'script, just before the code execution',
+            },
+            'append_text': {
+                'attribute_key': 'append_text',
+                'valid_type': six.string_types[0],
+                'non_db': True,
+                'required': False,
+                'default': '',
+                'help': 'Set the calculation-specific append text, which is going to be appended in the scheduler-job '
+                        'script, just after the code execution',
+            },
+            'parser_name': {
+                'attribute_key': 'parser',
+                'valid_type': six.string_types[0],
+                'non_db': True,
+                'required': False,
+                'help': 'Set a string for the output parser. Can be None if no output plugin is available or needed',
+            }
         }
-    }
 
     def get_option(self, name, only_actually_set=False):
         """

@@ -11,17 +11,16 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import collections
 import six
 from django.db import IntegrityError, transaction
 
+from aiida.backends.djsite.db import models
 from aiida.backends.djsite.db.models import DbComputer
-from aiida.common.utils import type_check
 from aiida.common.exceptions import (InvalidOperation, DbContentError)
 from aiida.orm.implementation.computers import BackendComputerCollection, BackendComputer
+from . import entities
 from . import utils
 import aiida.utils.json as json
-
 
 
 class DjangoComputerCollection(BackendComputerCollection):
@@ -53,56 +52,16 @@ class DjangoComputerCollection(BackendComputerCollection):
         return DjangoComputer.from_dbmodel(computer, self.backend)
 
 
-class DjangoComputer(BackendComputer):
-    @classmethod
-    def from_dbmodel(cls, dbmodel, backend):
-        """
-        Create a DjangoUser from a dbmodel instance
-
-        :param dbmodel: The dbmodel instance
-        :type dbmodel: :class:`aiida.backends.djsite.db.models.DbComputer`
-        :param backend: The backend
-        :type backend: :class:`aiida.orm.implementation.django.backend.DjangoBackend`
-        :return: A DjangoComputer instance
-        :rtype: :class:`aiida.orm.implementation.django.computer.DjangoComputer`
-        """
-        type_check(dbmodel, DbComputer)
-        computer = cls.__new__(cls)
-        super(DjangoComputer, computer).__init__(backend)
-        computer._dbcomputer = utils.ModelWrapper(dbmodel)
-        return computer
-
-    @property
-    def uuid(self):
-        return six.text_type(self._dbcomputer.uuid)
-
-    @property
-    def pk(self):
-        return self._dbcomputer.pk
-
-    @property
-    def id(self):
-        return self._dbcomputer.pk
+class DjangoComputer(entities.DjangoModelEntity[models.DbComputer], BackendComputer):
+    MODEL_CLASS = models.DbComputer
 
     def __init__(self, backend, attributes):
         super(DjangoComputer, self).__init__(backend)
-        self._dbcomputer = utils.ModelWrapper(DbComputer(**attributes))
-
-    def set(self, **kwargs):
-        for k, v in kwargs.items():
-            try:
-                method = getattr(self, 'set_{}'.format(k))
-            except AttributeError:
-                raise ValueError("Unable to set '{0}', no set_{0} method "
-                                 "found".format(k))
-            if not isinstance(method, collections.Callable):
-                raise ValueError("Unable to set '{0}', set_{0} is not "
-                                 "callable!".format(k))
-            method(v)
+        self._dbmodel = utils.ModelWrapper(DbComputer(**attributes))
 
     @property
-    def is_stored(self):
-        return self._dbcomputer.pk is not None
+    def uuid(self):
+        return six.text_type(self._dbmodel.uuid)
 
     def copy(self):
         from aiida.backends.djsite.db.models import DbComputer
@@ -116,23 +75,13 @@ class DjangoComputer(BackendComputer):
 
         return newobject
 
-    @property
-    def dbcomputer(self):
-        """
-        Return the underlying DbComputer
-
-        :return: Return the DbComputer
-        :rtype: :class:`aiida.backends.djsite.db.models.DbComputer`
-        """
-        return self._dbcomputer._model
-
     def store(self):
         # As a first thing, I check if the data is valid
         sid = transaction.savepoint()
         try:
             # transactions are needed here for Postgresql:
             # https://docs.djangoproject.com/en/1.5/topics/db/transactions/#handling-exceptions-within-postgresql-transactions
-            self._dbcomputer.save()
+            self._dbmodel.save()
             transaction.savepoint_commit(sid)
         except IntegrityError:
             transaction.savepoint_rollback(sid)
@@ -144,26 +93,26 @@ class DjangoComputer(BackendComputer):
 
     @property
     def name(self):
-        return self._dbcomputer.name
+        return self._dbmodel.name
 
     @property
     def description(self):
-        return self._dbcomputer.description
+        return self._dbmodel.description
 
     @property
     def hostname(self):
-        return self._dbcomputer.hostname
+        return self._dbmodel.hostname
 
     def get_metadata(self):
-        return json.loads(self._dbcomputer.metadata)
+        return json.loads(self._dbmodel.metadata)
 
     def set_metadata(self, metadata_dict):
         # When setting, use the uncached _dbcomputer
-        self._dbcomputer.metadata = json.dumps(metadata_dict)
+        self._dbmodel.metadata = json.dumps(metadata_dict)
 
     def get_transport_params(self):
         try:
-            return json.loads(self._dbcomputer.transport_params)
+            return json.loads(self._dbmodel.transport_params)
         except ValueError:
             raise DbContentError(
                 "Error while reading transport_params for computer {}".format(
@@ -172,33 +121,33 @@ class DjangoComputer(BackendComputer):
     def set_transport_params(self, val):
         # When setting, use the uncached _dbcomputer
         try:
-            self._dbcomputer.transport_params = json.dumps(val)
+            self._dbmodel.transport_params = json.dumps(val)
         except ValueError:
             raise ValueError("The set of transport_params are not JSON-able")
 
     def get_name(self):
-        return self._dbcomputer.name
+        return self._dbmodel.name
 
     def set_name(self, val):
         # When setting, use the uncached _dbcomputer
-        self._dbcomputer.name = val
+        self._dbmodel.name = val
 
     def get_hostname(self):
-        return self._dbcomputer.hostname
+        return self._dbmodel.hostname
 
     def set_hostname(self, val):
         # When setting, use the uncached _dbcomputer
-        self._dbcomputer.hostname = val
+        self._dbmodel.hostname = val
 
     def get_description(self):
-        return self._dbcomputer.description
+        return self._dbmodel.description
 
     def set_description(self, val):
         # When setting, use the uncached _dbcomputer
-        self._dbcomputer.description = val
+        self._dbmodel.description = val
 
     def is_enabled(self):
-        return self._dbcomputer.enabled
+        return self._dbmodel.enabled
 
     def set_enabled_state(self, enabled):
         """
@@ -207,18 +156,18 @@ class DjangoComputer(BackendComputer):
         :param enabled: the new state
         """
         # When setting, use the uncached _dbcomputer
-        self._dbcomputer.enabled = enabled
+        self._dbmodel.enabled = enabled
 
     def get_scheduler_type(self):
-        return self._dbcomputer.scheduler_type
+        return self._dbmodel.scheduler_type
 
     def set_scheduler_type(self, val):
         # When setting, use the uncached _dbcomputer
-        self._dbcomputer.scheduler_type = val
+        self._dbmodel.scheduler_type = val
 
     def get_transport_type(self):
-        return self._dbcomputer.transport_type
+        return self._dbmodel.transport_type
 
     def set_transport_type(self, val):
         # When setting, use the uncached _dbcomputer
-        self._dbcomputer.transport_type = val
+        self._dbmodel.transport_type = val

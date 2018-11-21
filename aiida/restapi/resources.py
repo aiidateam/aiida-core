@@ -357,7 +357,7 @@ class Group(BaseResource):
     def __init__(self, **kwargs):
         super(Group, self).__init__(**kwargs)
 
-        from aiida.restapi.translator.group import GroupTranslator
+        from aiida.restapi.translator.groups import GroupTranslator
         self.trans = GroupTranslator(**kwargs)
 
         self.parse_pk_uuid = 'uuid'

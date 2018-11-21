@@ -66,7 +66,7 @@ class TestSessionSqla(AiidaTestCase):
         session = aiida.backends.sqlalchemy.get_scoped_session()
 
         user = self.backend.users.create(email=get_configured_user_email())
-        session.add(user.dbuser)
+        session.add(user.dbmodel)
         session.commit()
 
         defaults = dict(name='localhost',
@@ -74,7 +74,7 @@ class TestSessionSqla(AiidaTestCase):
                         transport_type='local',
                         scheduler_type='pbspro')
         computer = self.backend.computers.create(**defaults)
-        session.add(computer._dbcomputer)
+        session.add(computer.dbmodel)
         session.commit()
 
         code = Code()
@@ -97,7 +97,7 @@ class TestSessionSqla(AiidaTestCase):
         self.set_connection(expire_on_commit=True)
 
         user = self.backend.users.create(email=get_configured_user_email())
-        session.add(user.dbuser)
+        session.add(user.dbmodel)
         session.commit()
 
         defaults = dict(name='localhost',
@@ -125,7 +125,7 @@ class TestSessionSqla(AiidaTestCase):
         session = aiida.backends.sqlalchemy.get_scoped_session()
 
         user = self.backend.users.create(email=get_configured_user_email())
-        session.add(user.dbuser)
+        session.add(user.dbmodel)
         session.commit()
 
         defaults = dict(name='localhost',
@@ -133,7 +133,7 @@ class TestSessionSqla(AiidaTestCase):
                         transport_type='local',
                         scheduler_type='pbspro')
         computer = self.backend.computers.create(**defaults)
-        session.add(computer._dbcomputer)
+        session.add(computer.dbmodel)
         session.commit()
 
         code = Code()
@@ -155,7 +155,7 @@ class TestSessionSqla(AiidaTestCase):
         session = aiida.backends.sqlalchemy.get_scoped_session()
 
         user = self.backend.users.create(email=get_configured_user_email())
-        session.add(user.dbuser)
+        session.add(user.dbmodel)
         session.commit()
 
         defaults = dict(name='localhost',

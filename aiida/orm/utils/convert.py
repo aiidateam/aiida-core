@@ -10,29 +10,29 @@
 """ORM conversion functions, to be used internally by the code"""
 
 from __future__ import absolute_import
-from aiida.orm import Node
-from aiida.orm.group import Group
-from aiida.orm.log import Log
-from aiida.orm.computers import Computer
-from aiida.orm.users import User
-from aiida.orm.authinfos import AuthInfo
-
-from aiida.orm import implementation
 
 
 def aiida_from_backend_entity(backend_entity):
     """Convert from a backend entity type to an AiiDA frontend entity"""
+    from aiida.orm import Node
+    from aiida.orm.groups import Group
+    from aiida.orm.log import Log
+    from aiida.orm.computers import Computer
+    from aiida.orm.users import User
+    from aiida.orm.authinfos import AuthInfo
+    from aiida.orm import implementation
+
     if isinstance(backend_entity, implementation.BackendComputer):
         return Computer.from_backend_entity(backend_entity)
     if isinstance(backend_entity, implementation.BackendUser):
         return User.from_backend_entity(backend_entity)
     if isinstance(backend_entity, implementation.BackendAuthInfo):
         return AuthInfo.from_backend_entity(backend_entity)
+    if isinstance(backend_entity, implementation.BackendGroup):
+        return Group.from_backend_entity(backend_entity)
     if isinstance(backend_entity, Node):
         return backend_entity
     if isinstance(backend_entity, Log):
-        return backend_entity
-    if isinstance(backend_entity, Group):
         return backend_entity
 
     raise ValueError("Unknown entity type '{}'".format(type(backend_entity)))

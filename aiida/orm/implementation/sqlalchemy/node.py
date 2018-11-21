@@ -72,7 +72,7 @@ class Node(AbstractNode):
             if user is None:
                 raise RuntimeError("Could not find a default user")
 
-            self._dbnode = DbNode(user=user.dbuser, uuid=get_new_uuid(), type=self._plugin_type_string)
+            self._dbnode = DbNode(user=user.dbmodel, uuid=get_new_uuid(), type=self._plugin_type_string)
 
             self._to_be_stored = True
 
@@ -182,7 +182,7 @@ class Node(AbstractNode):
 
         type_check(user, orm.User)
         backend_user = user.backend_entity
-        self._dbnode.user = backend_user.dbuser
+        self._dbnode.user = backend_user.dbmodel
 
     def get_computer(self):
         """
@@ -348,7 +348,7 @@ class Node(AbstractNode):
 
     def _set_db_computer(self, computer):
         type_check(computer, computers.SqlaComputer)
-        self._dbnode.dbcomputer = computer.dbcomputer
+        self._dbnode.dbcomputer = computer.dbmodel
 
     def _set_db_attr(self, key, value):
         """
@@ -451,7 +451,7 @@ class Node(AbstractNode):
         if user is None:
             user = orm.User.objects(self.backend).get_default()
 
-        comment = DbComment(dbnode=self._dbnode, user=user.backend_entity.dbuser, content=content)
+        comment = DbComment(dbnode=self._dbnode, user=user.backend_entity.dbmodel, content=content)
         session.add(comment)
         try:
             session.commit()
@@ -480,7 +480,7 @@ class Node(AbstractNode):
         if user is not None:
             if isinstance(user, orm.User):
                 user = user.backend_entity
-            query = query.filter_by(user=user.dbuser)
+            query = query.filter_by(user=user.dbmodel)
 
         dbcomments = query.all()
         comments = []
@@ -519,7 +519,7 @@ class Node(AbstractNode):
         return comments
 
     def _update_comment(self, new_field, comment_pk, user):
-        comment = DbComment.query.filter_by(dbnode=self._dbnode, id=comment_pk, user=user.dbuser).first()
+        comment = DbComment.query.filter_by(dbnode=self._dbnode, id=comment_pk, user=user.dbmodel).first()
 
         if not isinstance(new_field, six.string_types):
             raise ValueError("Non string comments are not accepted")
@@ -537,7 +537,7 @@ class Node(AbstractNode):
             raise
 
     def _remove_comment(self, comment_pk, user):
-        comment = DbComment.query.filter_by(dbnode=self._dbnode, id=comment_pk, user=user.dbuser).first()
+        comment = DbComment.query.filter_by(dbnode=self._dbnode, id=comment_pk, user=user.dbmodel).first()
         if comment:
             try:
                 comment.delete()

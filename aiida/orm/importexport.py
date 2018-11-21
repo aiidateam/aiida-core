@@ -20,7 +20,7 @@ from aiida.common import exceptions
 from aiida.common.utils import (export_shard_uuid, get_class_string,
                                 get_object_from_string, grouper)
 from aiida.orm.computers import Computer
-from aiida.orm.group import Group
+from aiida.orm.groups import Group
 from aiida.orm.node import Node
 from aiida.orm.users import User
 
@@ -518,14 +518,16 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                 # Not necessarily all models are exported
                 if model_name in data['export_data']:
 
+                    # skip nodes that are already present in the DB
                     if unique_identifier is not None:
                         import_unique_ids = set(v[unique_identifier] for v in
                                                 data['export_data'][model_name].values())
 
-                        relevant_db_entries = {getattr(n, unique_identifier): n
-                                               for n in Model.objects.filter(
-                            **{'{}__in'.format(unique_identifier):
-                                   import_unique_ids})}
+                        relevant_db_entries_result = Model.objects.filter(
+                            **{'{}__in'.format(unique_identifier): import_unique_ids})
+                        # Note: uuids need to be converted to strings
+                        relevant_db_entries = { str(getattr(n, unique_identifier)): 
+                                n for n in relevant_db_entries_result }
 
                         foreign_ids_reverse_mappings[model_name] = {
                             k: v.pk for k, v in relevant_db_entries.items()}
@@ -637,9 +639,11 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                 Model.objects.bulk_create(objects_to_create)
 
                 # Get back the just-saved entries
-                just_saved = dict(Model.objects.filter(
+                just_saved_queryset = Model.objects.filter(
                     **{"{}__in".format(unique_identifier):
-                           import_entry_ids.keys()}).values_list(unique_identifier, 'pk'))
+                           import_entry_ids.keys()}).values_list(unique_identifier, 'pk')
+                # note: convert uuids from type UUID to strings
+                just_saved = { str(k) : v for k,v in just_saved_queryset }
 
                 # Now I have the PKs, print the info
                 # Moreover, set the foreing_ids_reverse_mappings
@@ -1394,8 +1398,8 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                                   type_string=IMPORTGROUP_TYPE)
                     from aiida.backends.sqlalchemy.models.group import DbGroup
                     if session.query(DbGroup).filter(
-                            DbGroup.name == group._dbgroup.name).count() == 0:
-                        session.add(group._dbgroup)
+                            DbGroup.name == group.backend_entity._dbmodel.name).count() == 0:
+                        session.add(group.backend_entity._dbmodel)
                         created = True
                     else:
                         counter += 1
@@ -1714,7 +1718,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
         # Now a load the backend-independent name into entry_entity_name, e.g. Node!
         entry_entity_name = schema_to_entity_names(entry_class_string)
         if issubclass(entry.__class__, Group):
-            given_group_entry_ids.add(entry.pk)
+            given_group_entry_ids.add(entry.id)
             given_groups.add(entry)
         elif issubclass(entry.__class__, Node):
             if issubclass(entry.__class__, Data):
@@ -1724,7 +1728,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
         elif issubclass(entry.__class__, Computer):
             given_computer_entry_ids.add(entry.pk)
         else:
-            raise ValueError("I was given {}, which is not a DbNode or DbGroup instance".format(entry))
+            raise ValueError("I was given {} ({}), which is not a DbNode or DbGroup instance".format(entry, type(entry)))
 
     # Add all the nodes contained within the specified groups
     for group in given_groups:

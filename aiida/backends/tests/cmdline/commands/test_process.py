@@ -25,17 +25,24 @@ import plumpy
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_process
+from aiida.common.links import LinkType
+from aiida.common.log import LOG_LEVEL_REPORT
+from aiida.orm.node.process import ProcessNode, WorkFunctionNode, WorkChainNode
 from aiida.work import test_utils
 from aiida import work
 
 
-class TestVerdiProcess(AiidaTestCase):
-    """Tests for `verdi process`."""
+def get_result_lines(result):
+    return [e for e in result.output.split('\n') if e]
+
+
+class TestVerdiProcessDaemon(AiidaTestCase):
+    """Tests for `verdi process` that require a running daemon."""
 
     TEST_TIMEOUT = 5.
 
     def setUp(self):
-        super(TestVerdiProcess, self).setUp()
+        super(TestVerdiProcessDaemon, self).setUp()
         from aiida.common.profile import get_profile
         from aiida.daemon.client import DaemonClient
 
@@ -51,7 +58,7 @@ class TestVerdiProcess(AiidaTestCase):
         import signal
 
         os.kill(self.daemon_pid, signal.SIGTERM)
-        super(TestVerdiProcess, self).tearDown()
+        super(TestVerdiProcessDaemon, self).tearDown()
 
     def test_pause_play_kill(self):
         """
@@ -99,6 +106,205 @@ class TestVerdiProcess(AiidaTestCase):
         self.assertIsNone(result.exception, result.output)
         self.assertTrue(calc.is_terminated)
         self.assertTrue(calc.is_killed)
+
+
+class TestVerdiProcess(AiidaTestCase):
+    """Tests for `verdi process`."""
+
+    TEST_TIMEOUT = 5.
+
+    def setUp(self):
+        super(TestVerdiProcess, self).setUp()
+        self.cli_runner = CliRunner()
+
+    def test_list(self):
+        """Test the list command."""
+        # pylint: disable=protected-access
+        from aiida.work.processes import ProcessState
+
+        # Number of output lines in -r/--raw format should be zero when there are no calculations yet
+        result = self.cli_runner.invoke(cmd_process.process_list, ['-r'])
+        self.assertIsNone(result.exception, result.output)
+        self.assertEqual(len(get_result_lines(result)), 0)
+
+        calcs = []
+
+        # Create 6 WorkFunctionNodes and WorkChainNodes (one for each ProcessState)
+        for state in ProcessState:
+
+            calc = WorkFunctionNode()
+            calc._set_process_state(state)
+
+            # Set the WorkFunctionNode as successful
+            if state == ProcessState.FINISHED:
+                calc._set_exit_status(0)
+
+            calc.store()
+            calcs.append(calc)
+
+            calc = WorkChainNode()
+            calc._set_process_state(state)
+
+            # Set the WorkChainNode as failed
+            if state == ProcessState.FINISHED:
+                calc._set_exit_status(1)
+
+            calc.store()
+            calcs.append(calc)
+
+        # Default behavior should yield all active states (CREATED, RUNNING and WAITING) so six in total
+        result = self.cli_runner.invoke(cmd_process.process_list, ['-r'])
+        self.assertIsNone(result.exception, result.output)
+        self.assertEqual(len(get_result_lines(result)), 6)
+
+        # Adding the all option should return all entries regardless of process state
+        for flag in ['-a', '--all']:
+            result = self.cli_runner.invoke(cmd_process.process_list, ['-r', flag])
+            self.assertIsNone(result.exception, result.output)
+            self.assertEqual(len(get_result_lines(result)), 12)
+
+        # Passing the limit option should limit the results
+        for flag in ['-l', '--limit']:
+            result = self.cli_runner.invoke(cmd_process.process_list, ['-r', flag, '6'])
+            self.assertIsNone(result.exception, result.output)
+            self.assertEqual(len(get_result_lines(result)), 6)
+
+        # Filtering for a specific process state
+        for flag in ['-S', '--process-state']:
+            for flag_value in ['created', 'running', 'waiting', 'killed', 'excepted', 'finished']:
+                result = self.cli_runner.invoke(cmd_process.process_list, ['-r', flag, flag_value])
+                self.assertIsNone(result.exception, result.output)
+                self.assertEqual(len(get_result_lines(result)), 2)
+
+        # Filtering for exit status should only get us one
+        for flag in ['-E', '--exit-status']:
+            for exit_status in ['0', '1']:
+                result = self.cli_runner.invoke(cmd_process.process_list, ['-r', flag, exit_status])
+                self.assertIsNone(result.exception, result.output)
+                self.assertEqual(len(get_result_lines(result)), 1)
+
+        # Passing the failed flag as a shortcut for FINISHED + non-zero exit status
+        for flag in ['-X', '--failed']:
+            result = self.cli_runner.invoke(cmd_process.process_list, ['-r', flag])
+            self.assertIsNone(result.exception, result.output)
+            self.assertEqual(len(get_result_lines(result)), 1)
+
+        # Projecting on pk should allow us to verify all the pks
+        for flag in ['-P', '--project']:
+            result = self.cli_runner.invoke(cmd_process.process_list, ['-r', flag, 'pk'])
+            self.assertIsNone(result.exception, result.output)
+            self.assertEqual(len(get_result_lines(result)), 6)
+
+            for line in get_result_lines(result):
+                self.assertIn(line.strip(), [str(calc.pk) for calc in calcs])
+
+    def test_process_show(self):
+        """Test verdi process show"""
+        node = ProcessNode().store()
+
+        # Running without identifiers should not except and not print anything
+        options = []
+        result = self.cli_runner.invoke(cmd_process.process_show, options)
+        self.assertIsNone(result.exception, result.output)
+        self.assertEqual(len(get_result_lines(result)), 0)
+
+        # Giving a single identifier should print a non empty string message
+        options = [str(node.pk)]
+        result = self.cli_runner.invoke(cmd_process.process_show, options)
+        self.assertIsNone(result.exception, result.output)
+        self.assertTrue(len(get_result_lines(result)) > 0)
+
+        # Giving multiple identifiers should print a non empty string message
+        options = [str(calc.pk) for calc in [node]]
+        result = self.cli_runner.invoke(cmd_process.process_show, options)
+        self.assertIsNone(result.exception, result.output)
+        self.assertTrue(len(get_result_lines(result)) > 0)
+
+    def test_process_report(self):
+        """Test verdi process report"""
+        node = ProcessNode().store()
+
+        # Running without identifiers should not except and not print anything
+        options = []
+        result = self.cli_runner.invoke(cmd_process.process_report, options)
+        self.assertIsNone(result.exception, result.output)
+        self.assertEqual(len(get_result_lines(result)), 0)
+
+        # Giving a single identifier should print a non empty string message
+        options = [str(node.pk)]
+        result = self.cli_runner.invoke(cmd_process.process_report, options)
+        self.assertIsNone(result.exception, result.output)
+        self.assertTrue(len(get_result_lines(result)) > 0)
+
+        # Giving multiple identifiers should print a non empty string message
+        options = [str(calc.pk) for calc in [node]]
+        result = self.cli_runner.invoke(cmd_process.process_report, options)
+        self.assertIsNone(result.exception, result.output)
+        self.assertTrue(len(get_result_lines(result)) > 0)
+
+    def test_report(self):
+        """Test the report command."""
+        grandparent = WorkChainNode().store()
+        parent = WorkChainNode().store()
+        child = WorkChainNode().store()
+
+        parent.add_link_from(grandparent, link_type=LinkType.CALL)
+        child.add_link_from(parent, link_type=LinkType.CALL)
+
+        grandparent.logger.log(LOG_LEVEL_REPORT, 'grandparent_message')
+        parent.logger.log(LOG_LEVEL_REPORT, 'parent_message')
+        child.logger.log(LOG_LEVEL_REPORT, 'child_message')
+
+        result = self.cli_runner.invoke(cmd_process.process_report, [str(grandparent.pk)])
+        self.assertIsNone(result.exception, result.output)
+        self.assertEqual(len(get_result_lines(result)), 3)
+
+        result = self.cli_runner.invoke(cmd_process.process_report, [str(parent.pk)])
+        self.assertIsNone(result.exception, result.output)
+        self.assertEqual(len(get_result_lines(result)), 2)
+
+        result = self.cli_runner.invoke(cmd_process.process_report, [str(child.pk)])
+        self.assertIsNone(result.exception, result.output)
+        self.assertEqual(len(get_result_lines(result)), 1)
+
+        # Max depth should limit nesting level
+        for flag in ['-m', '--max-depth']:
+            for flag_value in [1, 2]:
+                result = self.cli_runner.invoke(cmd_process.process_report,
+                                                [str(grandparent.pk), flag, str(flag_value)])
+                self.assertIsNone(result.exception, result.output)
+                self.assertEqual(len(get_result_lines(result)), flag_value)
+
+        # Filtering for other level name such as WARNING should not have any hits and only print the no log message
+        for flag in ['-l', '--levelname']:
+            result = self.cli_runner.invoke(cmd_process.process_report, [str(grandparent.pk), flag, 'WARNING'])
+            self.assertIsNone(result.exception, result.output)
+            self.assertEqual(len(get_result_lines(result)), 1)
+            self.assertEqual(get_result_lines(result)[0], 'No log messages recorded for this entry')
+
+    def test_work_show(self):
+        """Test verdi process show"""
+        workchain_one = WorkChainNode().store()
+        workchain_two = WorkChainNode().store()
+        workchains = [workchain_one, workchain_two]
+
+        # Running without identifiers should not except and not print anything
+        options = []
+        result = self.cli_runner.invoke(cmd_process.process_show, options)
+        self.assertIsNone(result.exception, result.output)
+        self.assertEqual(len(get_result_lines(result)), 0)
+
+        # Giving a single identifier should print a non empty string message
+        options = [str(workchain_one.pk)]
+        result = self.cli_runner.invoke(cmd_process.process_show, options)
+        self.assertIsNone(result.exception, result.output)
+        self.assertTrue(len(get_result_lines(result)) > 0)
+
+        # Giving multiple identifiers should print a non empty string message
+        options = [str(workchain.pk) for workchain in workchains]
+        result = self.cli_runner.invoke(cmd_process.process_show, options)
+        self.assertIsNone(result.exception, result.output)
+        self.assertTrue(len(get_result_lines(result)) > 0)
 
 
 @gen.coroutine

@@ -59,7 +59,7 @@ class TestVerdiCodeSetup(AiidaTestCase):
         user_input = '\n'.join(
             [label, 'description', 'arithmetic.add', 'yes', self.comp.name, '/remote/abs/path'])
         result = self.cli_runner.invoke(setup_code, input=user_input)
-        self.assertIsNone(result.exception, "".join(traceback.format_exception(*result.exc_info)))
+        self.assertClickResultNoException(result)
         self.assertIsInstance(Code.get_from_string('{}@{}'.format(label, self.comp.name)), Code)
 
     def test_interactive_upload(self):
@@ -82,7 +82,7 @@ class TestVerdiCodeSetup(AiidaTestCase):
             '--remote-abs-path=/remote/abs/path'
         ]
         result = self.cli_runner.invoke(setup_code, options)
-        self.assertIsNone(result.exception, "".join(traceback.format_exception(*result.exc_info)))
+        self.assertClickResultNoException(result)
         self.assertIsInstance(Code.get_from_string('{}@{}'.format(label, self.comp.name)), Code)
 
     def test_noninteractive_upload(self):
@@ -103,7 +103,7 @@ class TestVerdiCodeSetup(AiidaTestCase):
         options = ['--description=description', '--on-computer', '--remote-abs-path=/remote/abs/path']
         user_input = '\n'.join([label, 'arithmetic.add', self.comp.name])
         result = self.cli_runner.invoke(setup_code, options, input=user_input)
-        self.assertIsNone(result.exception, "".join(traceback.format_exception(*result.exc_info)))
+        self.assertClickResultNoException(result)
         self.assertIsInstance(Code.get_from_string('{}@{}'.format(label, self.comp.name)), Code)
 
 

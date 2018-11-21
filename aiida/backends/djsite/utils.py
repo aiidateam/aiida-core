@@ -17,7 +17,6 @@ from __future__ import print_function
 from __future__ import absolute_import
 import os
 import django
-from aiida.common.log import get_dblogger_extra
 
 # pylint: disable=no-name-in-module, no-member, import-error
 
@@ -49,33 +48,6 @@ def _load_dbenv_noschemacheck(profile):  # pylint: disable=unused-argument
     # djsite.settings.settings module.
     os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.backends.djsite.settings.settings'
     django.setup()
-
-
-def get_log_messages(obj):
-    """
-    Get a list of log messages from the database for the given
-    object (typically a Node)
-
-    :param obj: the object (typically a Node) for which you want to get
-        a list of DbLog messages
-    :return: a list of log messages. Each log message is a dictionary
-        including a 'loggername', a 'levelname', a 'message', a 'time' at
-        which the log message was issued, as well as additional 'metadata'
-    """
-    from aiida.backends.djsite.db.models import DbLog
-    import aiida.utils.json as json
-
-    extra = get_dblogger_extra(obj)
-
-    # convert to list, too
-    log_messages = list(
-        DbLog.objects.filter(**extra).order_by('time').values('loggername', 'levelname', 'message', 'metadata', 'time'))
-
-    # deserialize metadata
-    for log in log_messages:
-        log.update({'metadata': json.loads(log['metadata'])})
-
-    return log_messages
 
 
 _aiida_autouser_cache = None  # pylint: disable=invalid-name

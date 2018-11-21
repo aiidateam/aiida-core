@@ -15,7 +15,6 @@ import six
 from django.db import IntegrityError, transaction
 
 from aiida.backends.djsite.db import models
-from aiida.backends.djsite.db.models import DbComputer
 from aiida.common.exceptions import (InvalidOperation, DbContentError)
 from aiida.orm.implementation.computers import BackendComputerCollection, BackendComputer
 from . import entities
@@ -29,13 +28,13 @@ class DjangoComputerCollection(BackendComputerCollection):
 
     def list_names(self):
         from aiida.backends.djsite.db.models import DbComputer
-        return list(DbComputer.objects.filter().values_list('name', flat=True))
+        return list(models.DbComputer.objects.filter().values_list('name', flat=True))
 
     def delete(self, id):
         """ Delete the computer with the given id """
         from django.db.models.deletion import ProtectedError
         try:
-            DbComputer.objects.filter(pk=id).delete()
+            models.DbComputer.objects.filter(pk=id).delete()
         except ProtectedError:
             raise InvalidOperation("Unable to delete the requested computer: there"
                                    "is at least one node using this computer")
@@ -57,18 +56,17 @@ class DjangoComputer(entities.DjangoModelEntity[models.DbComputer], BackendCompu
 
     def __init__(self, backend, attributes):
         super(DjangoComputer, self).__init__(backend)
-        self._dbmodel = utils.ModelWrapper(DbComputer(**attributes))
+        self._dbmodel = utils.ModelWrapper(models.DbComputer(**attributes))
 
     @property
     def uuid(self):
         return six.text_type(self._dbmodel.uuid)
 
     def copy(self):
-        from aiida.backends.djsite.db.models import DbComputer
         if not self.is_stored:
             raise InvalidOperation(
                 "You can copy a computer only after having stored it")
-        newdbcomputer = DbComputer.objects.get(pk=self.pk)
+        newdbcomputer = models.DbComputer.objects.get(pk=self.pk)
         newdbcomputer.pk = None
 
         newobject = self.__class__(dbcomputer=newdbcomputer)

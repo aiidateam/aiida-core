@@ -140,7 +140,7 @@ class TestVerdiGroupSetup(AiidaTestCase):
         self.assertIsNone(result.exception, result.output)
 
         result = self.cli_runner.invoke(group_show, ["dummygroup2"])
-        self.assertIsNone(result.exception, "".join(traceback.format_exception(*result.exc_info)))
+        self.assertClickResultNoException(result)
         self.assertIn("Group description", result.output)
         self.assertNotIn("<no description>", result.output)
         self.assertIn("It is a new description", result.output)
@@ -185,6 +185,3 @@ class TestVerdiGroupSetup(AiidaTestCase):
         self.assertIsNone(result.exception, result.output)
         self.assertNotIn('ProcessNode', result.output)
         self.assertNotIn(str(node.pk), result.output)
-
-    def assertClickResultNoException(self, cli_result):
-        self.assertIsNone(cli_result.exception, ''.join(traceback.format_exception(*cli_result.exc_info)))

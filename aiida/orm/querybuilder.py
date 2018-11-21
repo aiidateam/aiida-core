@@ -52,6 +52,7 @@ from . import authinfos
 from . import computers
 from . import entities
 from . import groups
+from . import logs
 from . import users
 
 __all__ = ('QueryBuilder', )
@@ -117,6 +118,17 @@ def get_querybuilder_classifiers_from_cls(cls, obj):
         ormclasstype = 'authinfo'
         query_type_string = None
         ormclass = obj.AuthInfo
+
+    # Log
+    elif issubclass(cls, obj.log_model_class):
+        ormclasstype = 'log'
+        query_type_string = None
+        ormclass = cls
+    elif issubclass(cls, logs.Log):
+        ormclasstype = 'log'
+        query_type_string = None
+        ormclass = obj.log_model_class
+
     else:
         raise InputValidationError("I do not know what to do with {}".format(cls))
 

@@ -72,7 +72,7 @@ class Collection(object):
         :param filters: the filters identifying the object to get
         :return: the entry
         """
-        res = self.find(**filters)
+        res = self.find(filters=filters)
         if not res:
             raise exceptions.NotExistent("No {} with filter '{}' found".format(self.entity_type.__name__, filters))
         if len(res) > 1:
@@ -81,18 +81,26 @@ class Collection(object):
 
         return res[0]
 
-    def find(self, **filters):
+    def find(self, filters=None, order_by=None, limit=None):
         """
         Find collection entries matching the filter criteria
 
         :param filters: the keyword value pair filters to match
+        :param order_by: a list of (key, direction) pairs specifying the sort order
+        :type order_by: list
+        :param limit: the maximum number of results to return
+        :type limit: int
         :return: a list of resulting matches
         :rtype: list
         """
         query = self.query()
+        filters = filters or {}
         query.add_filter(self.entity_type, filters)
-        res = [_[0] for _ in query.all()]
-        return res
+        if order_by:
+            query.order_by({self.entity_type: order_by})
+        if limit:
+            query.limit(limit)
+        return [_[0] for _ in query.all()]
 
     def all(self):
         """

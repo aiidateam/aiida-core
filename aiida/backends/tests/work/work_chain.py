@@ -20,6 +20,7 @@ from tornado import gen
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 from aiida.daemon.workflowmanager import execute_steps
+from aiida import orm
 from aiida.orm import load_node
 from aiida.orm.data.bool import Bool
 from aiida.orm.data.float import Float
@@ -31,7 +32,6 @@ from aiida import work
 from aiida.work import ExitCode, Process
 from aiida.work.persistence import ObjectLoader
 from aiida.work.workchain import *
-from aiida.work import runners
 
 
 def run_until_paused(proc):
@@ -607,9 +607,7 @@ class TestWorkchain(AiidaTestCase):
                 spec.outputs.dynamic = True
 
             def run(self):
-                from aiida.orm.backends import construct_backend
-                self._backend = construct_backend()
-                self._backend.logs.delete_many({})
+                orm.Log.objects.delete_many({})
                 self.report("Testing the report function")
                 return
 

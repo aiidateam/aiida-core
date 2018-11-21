@@ -10,7 +10,6 @@
       (?x)^(
         docs/.*|
         examples/.*|
-        aiida/backends/djsite/cmdline.py|
         aiida/backends/djsite/db/admin.py|
         aiida/backends/djsite/db/__init__.py|
         aiida/backends/djsite/db/management/__init__.py|
@@ -53,7 +52,6 @@
         aiida/backends/profile.py|
         aiida/backends/settings.py|
         aiida/backends/sqlalchemy/alembic_manage.py|
-        aiida/backends/sqlalchemy/cmdline.py|
         aiida/backends/sqlalchemy/globalsettings.py|
         aiida/backends/sqlalchemy/__init__.py|
         aiida/backends/sqlalchemy/migrations/env.py|
@@ -138,7 +136,6 @@
         aiida/backends/tests/nodes.py|
         aiida/backends/tests/orm/data/frozendict.py|
         aiida/backends/tests/orm/data/remote.py|
-        aiida/backends/tests/orm/log.py|
         aiida/backends/tests/orm/mixins.py|
         aiida/backends/tests/orm/utils/loaders.py|
         aiida/backends/tests/parsers.py|
@@ -192,7 +189,6 @@
         aiida/common/ipython/ipython_magics.py|
         aiida/common/lang.py|
         aiida/common/links.py|
-        aiida/common/log.py|
         aiida/common/orbital/__init__.py|
         aiida/common/orbital/realhydrogen.py|
         aiida/common/profile.py|
@@ -247,7 +243,6 @@
         aiida/orm/implementation/django/computer.py|
         aiida/orm/implementation/django/group.py|
         aiida/orm/implementation/django/__init__.py|
-        aiida/orm/implementation/django/log.py|
         aiida/orm/implementation/django/node.py|
         aiida/orm/implementation/django/user.py|
         aiida/orm/implementation/django/utils.py|
@@ -265,7 +260,6 @@
         aiida/orm/implementation/sqlalchemy/computer.py|
         aiida/orm/implementation/sqlalchemy/group.py|
         aiida/orm/implementation/sqlalchemy/__init__.py|
-        aiida/orm/implementation/sqlalchemy/log.py|
         aiida/orm/implementation/sqlalchemy/node.py|
         aiida/orm/implementation/sqlalchemy/querytool.py|
         aiida/orm/implementation/sqlalchemy/user.py|
@@ -273,7 +267,6 @@
         aiida/orm/implementation/sqlalchemy/workflow.py|
         aiida/orm/__init__.py|
         aiida/orm/importexport.py|
-        aiida/orm/log.py|
         aiida/orm/mixins.py|
         aiida/orm/node/process/calculation/calcjob.py|
         aiida/orm/node.py|

@@ -48,9 +48,9 @@ class Transport(object):
         """
         __init__ method of the Transport base class.
         """
-        from aiida.common import aiidalogger
+        from aiida.common import AIIDA_LOGGER
 
-        self._logger = aiidalogger.getChild('transport').getChild(self.__class__.__name__)
+        self._logger = AIIDA_LOGGER.getChild('transport').getChild(self.__class__.__name__)
         self._logger_extra = None
         self._is_open = False
         self._enters = 0

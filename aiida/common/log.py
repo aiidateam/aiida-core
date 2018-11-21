@@ -7,6 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Module for all common logging methods/classes"""
+
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -33,7 +35,7 @@ LOG_LEVELS = {
 }
 
 # The AiiDA logger
-aiidalogger = logging.getLogger('aiida')
+AIIDA_LOGGER = logging.getLogger('aiida')
 
 
 # A logging filter that can be used to disable logging
@@ -46,6 +48,7 @@ class NotInTestingFilter(logging.Filter):
 
 # A logging handler that will store the log record in the database DbLog table
 class DBLogHandler(logging.Handler):
+    """A custom db log handler for writing logs tot he database"""
 
     def emit(self, record):
         # If this is reached before a backend is defined, simply pass
@@ -53,17 +56,23 @@ class DBLogHandler(logging.Handler):
         if not is_dbenv_loaded():
             return
 
+        if not hasattr(record, 'objpk'):
+            # Only log records with an object id
+            return
+
         if record.exc_info:
             # We do this because if there is exc_info this will put an appropriate string in exc_text.
-            # See: https://github.com/python/cpython/blob/1c2cb516e49ceb56f76e90645e67e8df4e5df01a/Lib/logging/handlers.py#L590
+            # See:
+            # https://github.com/python/cpython/blob/1c2cb516e49ceb56f76e90645e67e8df4e5df01a/Lib/logging/handlers.py#L590
             self.format(record)
 
-        from aiida.orm.backends import construct_backend
-        from django.core.exceptions import ImproperlyConfigured
+        from aiida import orm
+        from django.core.exceptions import ImproperlyConfigured  # pylint: disable=no-name-in-module, import-error
 
         try:
-            backend = construct_backend()
-            backend.logs.create_entry_from_record(record)
+            backend = record.backend
+            delattr(record, 'backend')  # We've consumed the backend, don't want it to get logged
+            orm.Log.objects(backend).create_entry_from_record(record)
 
         except ImproperlyConfigured:
             # Probably, the logger was called without the
@@ -74,8 +83,8 @@ class DBLogHandler(logging.Handler):
             # To avoid loops with the error handler, I just print.
             # Hopefully, though, this should not happen!
             import traceback
-
             traceback.print_exc()
+            raise
 
 
 # The default logging dictionary for AiiDA that can be used in conjunction
@@ -86,7 +95,7 @@ LOGGING = {
     'formatters': {
         'verbose': {
             'format': '%(levelname)s %(asctime)s %(module)s %(process)d '
-                      '%(thread)d %(message)s',
+            '%(thread)d %(message)s',
         },
         'halfverbose': {
             'format': '%(asctime)s <%(process)d> %(name)s: [%(levelname)s] %(message)s',
@@ -194,7 +203,7 @@ def configure_logging(daemon=False, daemon_log_file=None):
             'maxBytes': 100000,
         }
 
-        for name, logger in config.get('loggers', {}).items():
+        for logger in config.get('loggers', {}).values():
             logger.setdefault('handlers', []).append(daemon_handler_name)
 
     dictConfig(config)
@@ -209,11 +218,26 @@ def get_dblogger_extra(obj):
     from aiida.orm import Node
 
     if isinstance(obj, Node):
-        if obj._plugin_type_string:
-            objname = "node." + obj._plugin_type_string
+        if obj._plugin_type_string:  # pylint: disable=protected-access
+            objname = "node." + obj._plugin_type_string  # pylint: disable=protected-access
         else:
             objname = "node"
     else:
         objname = obj.__class__.__module__ + "." + obj.__class__.__name__
     objpk = obj.pk
-    return {'objpk': objpk, 'objname': objname}
+    return {'objpk': objpk, 'objname': objname, 'backend': obj.backend}
+
+
+def create_logger_adapter(logger, entity):
+    """
+    Create a logger adapter for a particular AiiDA entity
+
+    :param logger: the logger to adapt
+    :param entity: the entity to create the adapter for
+    :return: the logger adapter
+    :rtype: :class:`logging.LoggerAdapter`
+    """
+    extra = get_dblogger_extra(entity)
+    # Further augment with the backend so the logger handler knows which backend to log to
+    extra['backend'] = entity.backend
+    return logging.LoggerAdapter(logger=logger, extra=extra)

@@ -139,8 +139,8 @@ def get_node_info(node, include_summary=True):
     :param include_summary: also include a summary of node properties
     :return: a string summary of the node including a description of all its links and log messages
     """
-    from aiida.backends.utils import get_log_messages
     from aiida.common.links import LinkType
+    from aiida import orm
     from aiida.orm.node.process import WorkChainNode
 
     if include_summary:
@@ -185,7 +185,7 @@ def get_node_info(node, include_summary=True):
             table.append([key, value.pk, value.__class__.__name__])
         result += '\n{}'.format(tabulate(table, headers=table_headers))
 
-    log_messages = get_log_messages(node)
+    log_messages = orm.Log.objects.get_logs_for(node)
 
     if log_messages:
         table = []
@@ -207,10 +207,10 @@ def get_calcjob_report(calcjob):
     :param calcjob: the calcjob node
     :return: a string representation of the log messages and scheduler output
     """
-    from aiida.backends.utils import get_log_messages
+    from aiida import orm
     from aiida.common.datastructures import calc_states
 
-    log_messages = get_log_messages(calcjob)
+    log_messages = orm.Log.objects.get_logs_for(calcjob)
     scheduler_out = calcjob.get_scheduler_output()
     scheduler_err = calcjob.get_scheduler_error()
     calcjob_state = calcjob.get_state()
@@ -265,18 +265,15 @@ def get_workchain_report(node, levelname, indent_size=4, max_depth=None):
     # pylint: disable=too-many-locals
     import itertools
     from aiida.common.log import LOG_LEVELS
-    from aiida.orm.backends import construct_backend
+    from aiida import orm
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.orm.node.process import WorkChainNode
 
     def get_report_messages(pk, depth, levelname):
         """Return list of log messages with given levelname and their depth for a node with a given pk."""
-        backend = construct_backend()
-        filters = {
-            'objpk': pk,
-        }
+        filters = {'objpk': pk}
 
-        entries = backend.logs.find(filter_by=filters)
+        entries = orm.Log.objects.find(filters)
         entries = [entry for entry in entries if LOG_LEVELS[entry.levelname] >= LOG_LEVELS[levelname]]
         return [(_, depth) for _ in entries]
 

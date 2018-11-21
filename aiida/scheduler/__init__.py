@@ -48,7 +48,7 @@ class Scheduler(object):
     """
     Base class for all schedulers.
     """
-    _logger = aiida.common.aiidalogger.getChild('scheduler')
+    _logger = aiida.common.AIIDA_LOGGER.getChild('scheduler')
 
     # A list of features
     # Features that should be defined in the plugins:

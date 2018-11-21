@@ -821,10 +821,10 @@ class AbstractNode(object):
         :param link_label_filter: filters the incoming nodes by its link label.
             Here wildcards (% and _) can be passed in link label filter as we are using "like" in QB.
         """
-        import re
 
         if self.is_stored:
-            qb_obj = get_all_incoming_qbobj(self.id, node_class=node_class, link_type=link_type, link_label_filter=link_label_filter)
+            qb_obj = _get_neighbors_qbobj(self.id, node_class=node_class, link_type=link_type,
+                                          link_label_filter=link_label_filter, link_direction="incoming")
             filtered_list = [Neighbor(i[2], i[1], i[0]) for i in qb_obj.all()]
         else:
             filtered_list = []
@@ -843,7 +843,6 @@ class AbstractNode(object):
                 filtered_list.append(Neighbor(incoming_link_type, label, src))
 
         return NeighborManager(filtered_list)
-        #return filtered_list
 
     def get_inputs(self, node_type=None, also_labels=False, only_in_db=False, link_type=None):
         """
@@ -865,7 +864,6 @@ class AbstractNode(object):
         if also_labels:
             return [(link.label, link.node) for link in all_links]
         return [link.node for link in all_links]
-
 
     # def get_inputs(self, node_type=None, also_labels=False, only_in_db=False, link_type=None):
     #     """
@@ -924,6 +922,24 @@ class AbstractNode(object):
         """
         pass
 
+    def get_outgoing(self, node_class=None, link_type=None, link_label_filter=None):
+        """
+        Return a list of nodes that enter (directly) in this node
+
+        :param node_class: If specified, should be a class or tuple of classes, and it filters only
+            elements of that specific type (or a subclass of 'type')
+        :param link_type: If specified should be a string or tuple to get the inputs of this
+            link type, if None then returns all outputs of all link types.
+        :param link_label_filter: filters the outgoing nodes by its link label.
+            Here wildcards (% and _) can be passed in link label filter as we are using "like" in QB.
+        """
+
+        qb_obj = _get_neighbors_qbobj(self.id, node_class=node_class, link_type=link_type,
+                                          link_label_filter=link_label_filter, link_direction="outgoing")
+        filtered_list = [Neighbor(i[2], i[1], i[0]) for i in qb_obj.all()]
+
+        return NeighborManager(filtered_list)
+
     @override
     def get_outputs(self, node_type=None, also_labels=False, link_type=None):
         """
@@ -937,20 +953,39 @@ class AbstractNode(object):
             and Node a Node instance or subclass
         :param link_type: Only return outputs connected by links of this type.
         """
-        if link_type is not None and not isinstance(link_type, LinkType):
-            raise TypeError('link_type should be a LinkType object')
-
-        outputs_list = self._get_db_output_links(link_type=link_type)
-
-        if node_type is None:
-            filtered_list = outputs_list
-        else:
-            filtered_list = (i for i in outputs_list if isinstance(i[1], node_type))
-
+        all_links = self.get_outgoings(node_class=node_type, link_type=link_type)
         if also_labels:
-            return list(filtered_list)
+            return [(link.label, link.node) for link in all_links]
+        return [link.node for link in all_links]
 
-        return [i[1] for i in filtered_list]
+
+    # @override
+    # def get_outputs(self, node_type=None, also_labels=False, link_type=None):
+    #     """
+    #     Return a list of nodes that exit (directly) from this node
+    #
+    #     :param node_type: if specified, should be a class, and it filters only
+    #         elements of that specific node_type (or a subclass of 'node_type')
+    #     :param also_labels: if False (default) only return a list of input nodes.
+    #         If True, return a list of tuples, where each tuple has the
+    #         following format: ('label', Node), with 'label' the link label,
+    #         and Node a Node instance or subclass
+    #     :param link_type: Only return outputs connected by links of this type.
+    #     """
+    #     if link_type is not None and not isinstance(link_type, LinkType):
+    #         raise TypeError('link_type should be a LinkType object')
+    #
+    #     outputs_list = self._get_db_output_links(link_type=link_type)
+    #
+    #     if node_type is None:
+    #         filtered_list = outputs_list
+    #     else:
+    #         filtered_list = (i for i in outputs_list if isinstance(i[1], node_type))
+    #
+    #     if also_labels:
+    #         return list(filtered_list)
+    #
+    #     return [i[1] for i in filtered_list]
 
     @abstractmethod
     def _get_db_output_links(self, link_type):
@@ -2184,7 +2219,7 @@ class AttributeManager(object):
         except AttributeError as err:
             raise KeyError(str(err))
 
-def get_all_incoming_qbobj(node_id, node_class=None, link_type=None, link_label_filter=None):
+def _get_neighbors_qbobj(node_id, node_class=None, link_type=None, link_label_filter=None, link_direction="incoming"):
     """
     Return a querybuilder object for a list of nodes that enter (directly) in this node
 
@@ -2195,6 +2230,8 @@ def get_all_incoming_qbobj(node_id, node_class=None, link_type=None, link_label_
         returns all inputs of all link types.
     :param link_label_filter: filters the incoming nodes by its link label.
         Here regex can be passed for link label filter as we are using "like" in QB.
+    :param link_direction: It is either incoming (get all incoming of the node) or
+        outgoing (get all outgoing of the node)
     """
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.orm.node import Node
@@ -2218,7 +2255,13 @@ def get_all_incoming_qbobj(node_id, node_class=None, link_type=None, link_label_
 
     qb_obj = QueryBuilder()
     qb_obj.append(Node, filters={"id": {"==": node_id}}, tag="main")
-    qb_obj.append(filtered_node, input_of="main", project=["*"], edge_project=["label", "type"], edge_filters=edge_filters)
+
+    if link_direction == "outgoing":
+        qb_obj.append(filtered_node, output_of="main", project=["*"], edge_project=["label", "type"],
+                      edge_filters=edge_filters)
+    else:
+        qb_obj.append(filtered_node, input_of="main", project=["*"], edge_project=["label", "type"],
+                      edge_filters=edge_filters)
 
     return qb_obj
 

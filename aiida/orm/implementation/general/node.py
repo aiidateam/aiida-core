@@ -839,8 +839,12 @@ class AbstractNode(object):
                 raise InternalError("There exist a link with the same name '{}' and type '{}' both in the DB "
                                     "and in the internal cache for node pk= {}!".format(label, incoming_link_type, self.pk))
 
-            if (link_type is None or incoming_link_type == link_type) and sql_string_match(string=label, pattern=link_label_filter):
-                filtered_list.append(Neighbor(incoming_link_type, label, src))
+            if link_type is None or incoming_link_type == link_type:
+                if link_label_filter is not None:
+                    if sql_string_match(string=label, pattern=link_label_filter):
+                        filtered_list.append(Neighbor(incoming_link_type, label, src))
+                else:
+                    filtered_list.append(Neighbor(incoming_link_type, label, src))
 
         return NeighborManager(filtered_list)
 
@@ -860,7 +864,7 @@ class AbstractNode(object):
         :param link_type: Only get inputs of this link type, if None then
             returns all inputs of all link types.
         """
-        all_links = self.get_incoming(node_class=node_type, link_type=link_type, only_in_db=only_in_db)
+        all_links = self.get_incoming(node_class=node_type, link_type=link_type)
         if also_labels:
             return [(link.label, link.node) for link in all_links]
         return [link.node for link in all_links]
@@ -953,7 +957,7 @@ class AbstractNode(object):
             and Node a Node instance or subclass
         :param link_type: Only return outputs connected by links of this type.
         """
-        all_links = self.get_outgoings(node_class=node_type, link_type=link_type)
+        all_links = self.get_outgoing(node_class=node_type, link_type=link_type)
         if also_labels:
             return [(link.label, link.node) for link in all_links]
         return [link.node for link in all_links]

@@ -2039,6 +2039,47 @@ class TestSubNodesAndLinks(AiidaTestCase):
         self.assertEquals(len(node_origin.get_inputs(link_type=LinkType.CALL)), 1)
         self.assertEquals(len(node_origin.get_inputs(link_type=LinkType.INPUT)), 1)
 
+    def test_node_get_incoming_outgoing_links(self):
+        """
+        Test that the link_type parameter in get_inputs and get_outputs only
+        returns those nodes with the correct link type for stored nodes
+        """
+
+        node_origin = Node().store()
+        node_caller_stored = Node().store()
+        node_called = Node().store()
+        node_input_stored = Node().store()
+        node_output = Node().store()
+        node_return = Node().store()
+        node_caller_unstored = Node()
+        node_input_unstored = Node()
+
+        # Input links of node_origin
+        node_origin.add_link_from(node_caller_stored, label='caller_stored', link_type=LinkType.CALL)
+        node_origin.add_link_from(node_input_stored, label='input_stored', link_type=LinkType.INPUT)
+        node_origin.add_link_from(node_caller_unstored, label='caller_unstored', link_type=LinkType.CALL)
+        node_origin.add_link_from(node_input_unstored, label='input_unstored', link_type=LinkType.INPUT)
+
+        # Output links of node_origin
+        node_called.add_link_from(node_origin, label='called', link_type=LinkType.CALL)
+        node_output.add_link_from(node_origin, label='output', link_type=LinkType.CREATE)
+        node_return.add_link_from(node_origin, label='return', link_type=LinkType.RETURN)
+
+        # All incoming and outgoing
+        self.assertEquals(len(node_origin.get_incoming().all()), 4)
+        self.assertEquals(len(node_origin.get_outgoing().all()), 3)
+
+        # Link specific incoming
+        self.assertEquals(len(node_origin.get_incoming(link_type=LinkType.CALL).all()), 2)
+        self.assertEquals(len(node_origin.get_incoming(link_type=LinkType.INPUT).all()), 2)
+        self.assertEquals(len(node_origin.get_incoming(link_label_filter="in_ut%").all()), 2)
+        self.assertEquals(len(node_origin.get_incoming(node_class=Node).all()), 4)
+
+        # Link specific outgoing
+        self.assertEquals(len(node_origin.get_outgoing(link_type=LinkType.CALL).all()), 1)
+        self.assertEquals(len(node_origin.get_outgoing(link_type=LinkType.CREATE).all()), 1)
+        self.assertEquals(len(node_origin.get_outgoing(link_type=LinkType.RETURN).all()), 1)
+
 
 class AnyValue(object):
     """

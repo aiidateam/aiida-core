@@ -119,7 +119,7 @@ class AuthInfo(entities.Entity):
 
         :return: a dictionary
         """
-        return self._backend_entity._get_metadata()
+        return self._backend_entity._get_metadata()  # pylint: disable=protected-access
 
     def set_metadata(self, metadata):
         """

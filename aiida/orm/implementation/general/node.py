@@ -1832,7 +1832,7 @@ class AbstractNode(object):
         )
 
         # Make sure the node doesn't have any RETURN links
-        if cache_node.get_outputs(link_type=LinkType.RETURN):
+        if cache_node.get_outgoing(link_type=LinkType.RETURN):
             raise ValueError("Cannot use cache from nodes with RETURN links.")
 
         self.store(with_transaction=with_transaction, use_cache=False)
@@ -1840,9 +1840,9 @@ class AbstractNode(object):
 
     def _add_outputs_from_cache(self, cache_node):
         # Add CREATE links
-        for linkname, out_node in cache_node.get_outputs(also_labels=True, link_type=LinkType.CREATE):
-            new_node = out_node.clone().store()
-            new_node.add_link_from(self, label=linkname, link_type=LinkType.CREATE)
+        for entry in cache_node.get_outgoing(link_type=LinkType.CREATE):
+            new_node = entry.node.clone().store()
+            new_node.add_link_from(self, label=entry.label, link_type=LinkType.CREATE)
 
     @abstractmethod
     def _db_store(self, with_transaction=True):
@@ -2077,11 +2077,11 @@ class NodeOutputManager(object):
         """
         Allow to list all valid output links
         """
-        node_attributes = self._node.get_outputs_dict().keys()
+        node_attributes = self._node.get_outgoing().get_labels()
         return sorted(set(list(dir(type(self))) + list(node_attributes)))
 
     def __iter__(self):
-        node_attributes = self._node.get_outputs_dict().keys()
+        node_attributes = self._node.get_outgoing().get_labels()
         for k in node_attributes:
             yield k
 
@@ -2090,7 +2090,7 @@ class NodeOutputManager(object):
         :param name: name of the attribute to be asked to the parser results.
         """
         try:
-            return self._node.get_outputs_dict()[name]
+            return self._node.get_outgoing().get_node_by_label(name)
         except KeyError:
             raise AttributeError("Node {} does not have an output with link {}"
                                  .format(self._node.pk, name))
@@ -2102,7 +2102,7 @@ class NodeOutputManager(object):
         :param name: name of the attribute to be asked to the parser results.
         """
         try:
-            return self._node.get_outputs_dict()[name]
+            return self._node.get_outgoing().get_node_by_label(name)
         except KeyError:
             raise KeyError("Node {} does not have an output with link {}"
                            .format(self._node.pk, name))
@@ -2124,11 +2124,11 @@ class NodeInputManager(object):
         """
         Allow to list all valid input links
         """
-        node_attributes = self._node.get_inputs_dict().keys()
+        node_attributes = self._node.get_incoming().get_labels()
         return sorted(set(list(dir(type(self))) + list(node_attributes)))
 
     def __iter__(self):
-        node_attributes = self._node.get_inputs_dict().keys()
+        node_attributes = self._node.get_incoming().get_labels()
         for k in node_attributes:
             yield k
 
@@ -2137,7 +2137,7 @@ class NodeInputManager(object):
         :param name: name of the attribute to be asked to the parser results.
         """
         try:
-            return self._node.get_inputs_dict()[name]
+            return self._node.get_incoming().get_node_by_label(name)
         except KeyError:
             raise AttributeError(
                 "Node '{}' does not have an input with link '{}'".format(
@@ -2150,7 +2150,7 @@ class NodeInputManager(object):
         :param name: name of the attribute to be asked to the parser results.
         """
         try:
-            return self._node.get_inputs_dict()[name]
+            return self._node.get_incoming().get_node_by_label(name)
         except KeyError:
             raise KeyError("Node '{}' does not have an input with link '{}'"
                            .format(self._node.pk, name))
@@ -2250,10 +2250,10 @@ def _get_neighbors_qbobj(node_id, node_class=None, link_type=None, link_label_fi
     qb_obj.append(Node, filters={"id": {"==": node_id}}, tag="main")
 
     if link_direction == "outgoing":
-        qb_obj.append(filtered_node, output_of="main", project=["*"], edge_project=["label", "type"],
+        qb_obj.append(filtered_node, with_incoming="main", project=["*"], edge_project=["label", "type"],
                       edge_filters=edge_filters)
     else:
-        qb_obj.append(filtered_node, input_of="main", project=["*"], edge_project=["label", "type"],
+        qb_obj.append(filtered_node, with_outgoing="main", project=["*"], edge_project=["label", "type"],
                       edge_filters=edge_filters)
 
     return qb_obj

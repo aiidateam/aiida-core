@@ -447,7 +447,7 @@ def _collect_calculation_data(calc):
     import os
     calcs_now = []
     for d in calc.get_incoming(node_class=Data, link_type=LinkType.INPUT):
-        for c in d.get_incoming(node_class=CalculationNode, link_type=LinkType.CREATE):
+        for c in d.node.get_incoming(node_class=CalculationNode, link_type=LinkType.CREATE):
             calcs = _collect_calculation_data(c.node)
             calcs_now.extend(calcs)
 

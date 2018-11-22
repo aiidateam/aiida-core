@@ -116,7 +116,7 @@ def draw_graph(origin_node,
             # This query gives me all the inputs of this node, and link labels and types!
             input_query = QueryBuilder()
             input_query.append(Node, filters={'id': node.pk}, tag='n')
-            input_query.append(Node, input_of='n', edge_project=('id', 'label', 'type'), project='*', tag='inp')
+            input_query.append(Node, with_outgoing='n', edge_project=('id', 'label', 'type'), project='*', tag='inp')
             for inp, link_id, link_label, link_type in input_query.iterall():
                 # I removed this check, to me there is no way that this link was already referred to!
                 # if link_id not in links:
@@ -131,7 +131,7 @@ def draw_graph(origin_node,
                 # Query for the outputs, giving me also link labels and types:
                 output_query = QueryBuilder()
                 output_query.append(Node, filters={'id': node.pk}, tag='n')
-                output_query.append(Node, output_of='n', edge_project=('id', 'label', 'type'), project='*', tag='out')
+                output_query.append(Node, with_incoming='n', edge_project=('id', 'label', 'type'), project='*', tag='out')
                 # Iterate through results
                 for out, link_id, link_label, link_type in output_query.iterall():
                     # This link might have been drawn already, because the output is maybe
@@ -160,7 +160,7 @@ def draw_graph(origin_node,
             # Query for the outputs:
             output_query = QueryBuilder()
             output_query.append(Node, filters={'id': node.pk}, tag='n')
-            output_query.append(Node, output_of='n', edge_project=('id', 'label', 'type'), project='*', tag='out')
+            output_query.append(Node, with_incoming='n', edge_project=('id', 'label', 'type'), project='*', tag='out')
 
             for out, link_id, link_label, link_type in output_query.iterall():
                 # Draw the link
@@ -172,7 +172,7 @@ def draw_graph(origin_node,
             if include_calculation_inputs and isinstance(node, ProcessNode):
                 input_query = QueryBuilder()
                 input_query.append(Node, filters={'id': node.pk}, tag='n')
-                input_query.append(Node, input_of='n', edge_project=('id', 'label', 'type'), project='*', tag='inp')
+                input_query.append(Node, with_outgoing='n', edge_project=('id', 'label', 'type'), project='*', tag='inp')
                 for inp, link_id, link_label, link_type in input_query.iterall():
                     # Also here, maybe it's just better not to check?
                     if link_id not in links:

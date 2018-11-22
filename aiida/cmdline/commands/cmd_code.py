@@ -289,12 +289,12 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
         qb.append(Code, tag="code", filters=qb_code_filters, project=["id", "label"])
         # We have a user assigned to the code so we can ask for the
         # presence of a user even if there is no user filter
-        qb.append(orm.User, creator_of="code", project=["email"], filters=qb_user_filters)
+        qb.append(orm.User, with_node="code", project=["email"], filters=qb_user_filters)
         # We also add the filter on computer. This will automatically
         # return codes that have a computer (and of course satisfy the
         # other filters). The codes that have a computer attached are the
         # remote codes.
-        qb.append(orm.Computer, computer_of="code", project=["name"], filters=qb_computer_filters)
+        qb.append(orm.Computer, with_node="code", project=["name"], filters=qb_computer_filters)
         qb.order_by({Code: {'id': 'asc'}})
         print_list_res(qb, show_owner)
 
@@ -306,8 +306,8 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
         qb.append(Code, tag="code", filters=qb_code_filters, project=["id", "label"])
         # We have a user assigned to the code so we can ask for the
         # presence of a user even if there is no user filter
-        qb.append(orm.User, creator_of="code", project=["email"], filters=qb_user_filters)
-        qb.append(orm.Computer, computer_of="code", project=["name"])
+        qb.append(orm.User, with_node="code", project=["email"], filters=qb_user_filters)
+        qb.append(orm.Computer, with_node="code", project=["name"])
         qb.order_by({Code: {'id': 'asc'}})
         print_list_res(qb, show_owner)
 
@@ -323,7 +323,7 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
         qb.append(Code, tag="code", filters=qb_code_filters, project=["id", "label"])
         # We have a user assigned to the code so we can ask for the
         # presence of a user even if there is no user filter
-        qb.append(orm.User, creator_of="code", project=["email"], filters=qb_user_filters)
+        qb.append(orm.User, with_node="code", project=["email"], filters=qb_user_filters)
         qb.order_by({Code: {'id': 'asc'}})
         print_list_res(qb, show_owner)
 

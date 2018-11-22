@@ -276,6 +276,7 @@ class RESTApiTestCase(AiidaTestCase):
         with self.app.test_client() as client:
             rv_response = client.get(url)
             response = json.loads(rv_response.data)
+
             if expected_errormsg:
                 self.assertEqual(response["message"], expected_errormsg)
             else:
@@ -740,7 +741,8 @@ class RESTApiTestSuite(RESTApiTestCase):
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
-            print(response)
+            self.assertNotIn('message', response)
+
             self.assertEqual(response["data"]["attributes"], {'attr2': 'OK', 'attr1': 'OK'})
             RESTApiTestCase.compare_extra_response_data(self, "calculations", url, response, uuid=node_uuid)
 
@@ -753,6 +755,8 @@ class RESTApiTestSuite(RESTApiTestCase):
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
+            self.assertNotIn('message', response)
+
             self.assertEqual(response["data"]["attributes"], {'attr2': 'OK'})
             RESTApiTestCase.compare_extra_response_data(self, "calculations", url, response, uuid=node_uuid)
 
@@ -765,6 +769,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
+            self.assertNotIn('message', response)
             self.assertEqual(response["data"]["attributes"], {'attr1': 'OK'})
             RESTApiTestCase.compare_extra_response_data(self, "calculations", url, response, uuid=node_uuid)
 
@@ -779,6 +784,8 @@ class RESTApiTestSuite(RESTApiTestCase):
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
+            self.assertNotIn('message', response)
+
             expected_visdata = """\n##########################################################################\n#               Crystallographic Information Format file \n#               Produced by PyCifRW module\n# \n#  This is a CIF file.  CIF has been adopted by the International\n#  Union of Crystallography as the standard for data archiving and \n#  transmission.\n#\n#  For information on this file format, follow the CIF links at\n#  http://www.iucr.org\n##########################################################################\n\ndata_0\nloop_\n  _atom_site_label\n  _atom_site_fract_x\n  _atom_site_fract_y\n  _atom_site_fract_z\n  _atom_site_type_symbol\n   Ba1  0.0  0.0  0.0  Ba\n \n_cell_angle_alpha                       90.0\n_cell_angle_beta                        90.0\n_cell_angle_gamma                       90.0\n_cell_length_a                          2.0\n_cell_length_b                          2.0\n_cell_length_c                          2.0\nloop_\n  _symmetry_equiv_pos_as_xyz\n   'x, y, z'\n \n_symmetry_int_tables_number             1\n_symmetry_space_group_name_H-M          'P 1'\n"""  # pylint: disable=line-too-long
             self.assertEqual(
                 simplify(response["data"]["visualization"]["str_viz_info"]["data"]), simplify(expected_visdata))
@@ -802,6 +809,8 @@ class RESTApiTestSuite(RESTApiTestCase):
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
+            self.assertNotIn('message', response)
+
             expected_visdata = "CRYSTAL\nPRIMVEC 1\n      2.0000000000       0.0000000000       0.0000000000\n      0.0000000000       2.0000000000       0.0000000000\n      0.0000000000       0.0000000000       2.0000000000\nPRIMCOORD 1\n1 1\n56       0.0000000000       0.0000000000       0.0000000000\n"  # pylint: disable=line-too-long
             self.assertEqual(
                 simplify(response["data"]["visualization"]["str_viz_info"]["data"]), simplify(expected_visdata))
@@ -840,6 +849,8 @@ class RESTApiTestSuite(RESTApiTestCase):
             with self.app.test_client() as client:
                 rv_obj = client.get(url)
                 response = json.loads(rv_obj.data)
+                self.assertNotIn('message', response)
+
                 expected_keys = ["display_name", "help_text", "is_display", "is_foreign_key", "type"]
 
                 # check fields

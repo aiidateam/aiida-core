@@ -16,7 +16,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 import logging
 from aiida.common.exceptions import NotExistent
-from aiida.common.log import aiidalogger, get_dblogger_extra
+from aiida.common.log import AIIDA_LOGGER, create_logger_adapter
 
 
 class Parser(object):
@@ -33,7 +33,7 @@ class Parser(object):
     _retrieved_temporary_folder_key = 'retrieved_temporary_folder'
 
     def __init__(self, calc):
-        self._logger = aiidalogger.getChild('parser').getChild( self.__class__.__name__)
+        self._logger = AIIDA_LOGGER.getChild('parser').getChild(self.__class__.__name__)
         self._calc = calc
 
     @property
@@ -42,7 +42,7 @@ class Parser(object):
         Return the logger, also with automatic extras of the associated
         extras of the calculation
         """
-        return logging.LoggerAdapter(logger=self._logger, extra=get_dblogger_extra(self._calc))
+        return create_logger_adapter(self._logger, self._calc)
 
     @property
     def retrieved_temporary_folder_key(self):

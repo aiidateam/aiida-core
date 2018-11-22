@@ -138,6 +138,7 @@ py:class  logging.Filter
 py:class  logging.Handler
 py:class  logging.record
 py:class  logging.Logger
+py:class  logging.LoggerAdapter
 
 py:class  paramiko.proxy.ProxyCommand
 

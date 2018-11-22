@@ -38,9 +38,9 @@ def format_pk(workflow):
 @deprecated_command(DEPRECATION_MSG)
 def workflow_logshow(workflows):
     """Show the log for each workflow in a list of WORKFLOWS."""
-    from aiida.backends.utils import get_log_messages
+    from aiida import orm
     for workflow in workflows:
-        log_messages = get_log_messages(workflow)
+        log_messages = orm.Log.objects.get_logs_for(workflow)
         label_str = ' [{}]'.format(workflow.label) if workflow.label else ''
         state = workflow.get_state()
         echo.echo('*** {pk}{label}: {state}'.format(pk=format_pk(workflow), label=label_str, state=state))

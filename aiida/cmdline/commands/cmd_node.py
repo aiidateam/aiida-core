@@ -159,7 +159,7 @@ def show(nodes, print_groups):
             # pylint: disable=invalid-name
             qb = QueryBuilder()
             qb.append(Node, tag='node', filters={'id': {'==': node.pk}})
-            qb.append(Group, tag='groups', group_of='node', project=['id', 'name'])
+            qb.append(Group, tag='groups', with_node='node', project=['id', 'name'])
 
             echo.echo("#### GROUPS:")
 

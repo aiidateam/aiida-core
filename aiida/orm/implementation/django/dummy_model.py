@@ -322,6 +322,63 @@ class DbAuthInfo(Base):
         return dbauthinfo.get_aiida_class()
 
 
+class DbLog(Base):
+    __tablename__ = "db_dblog"
+
+    id = Column(Integer, primary_key=True)
+
+    time = Column(DateTime(timezone=True), default=timezone.now)
+    loggername = Column(String(255), index=True)
+    levelname = Column(String(255), index=True)
+
+    objname = Column(String(255), index=True)
+    objpk = Column(Integer, index=True, nullable=True)
+
+    message = Column(Text(), nullable=True)
+    _metadata = Column('metadata', String(255), default="{}")
+
+    def get_aiida_class(self):
+        from aiida.backends.djsite.db.models import DbLog as DjangoDbLog
+        dblog = DjangoDbLog(
+            time=self.time,
+            loggername=self.loggername,
+            levelname=self.levelname,
+            objname=self.objname,
+            objpk=self.objpk,
+            message=self.message,
+            metadata=self._metadata)
+        return dblog.get_aiida_class()
+
+
+class DbComment(Base):
+    __tablename__ = "db_dbcomment"
+
+    id = Column(Integer, primary_key=True)
+    uuid = Column(UUID(as_uuid=True), default=uuid_func)
+    dbnode_id = Column(Integer, ForeignKey('db_dbnode.id', ondelete="CASCADE", deferrable=True, initially="DEFERRED"))
+
+    ctime = Column(DateTime(timezone=True), default=timezone.now)
+    mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now)
+
+    user_id = Column(Integer, ForeignKey('db_dbuser.id', ondelete="CASCADE", deferrable=True, initially="DEFERRED"))
+    content = Column(Text, nullable=True)
+
+    dbnode = relationship('DbNode', backref='dbcomments')
+    user = relationship("DbUser")
+
+    def get_aiida_class(self):
+        from aiida.backends.djsite.db.models import DbComment as DjangoDbComment
+        dbcomment = DjangoDbComment(
+            id=self.id,
+            uuid=self.uuid,
+            dbnode=self.dbnode_id,
+            ctime=self.ctime,
+            mtime=self.mtime,
+            user=self.user_id,
+            content=self.content)
+        return dbcomment.get_aiida_class()
+
+
 profile = get_profile_config(settings.AIIDADB_PROFILE)
 
 

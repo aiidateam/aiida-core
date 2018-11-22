@@ -651,6 +651,7 @@ class BandsData(KpointsData):
             Use 'dat_multicolumn' format instead
         """
         import warnings
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn(
             "dat_1 format is deprecated, use dat_multicolumn instead",
             DeprecationWarning)
@@ -691,6 +692,7 @@ class BandsData(KpointsData):
             Use 'dat_block' format instead
         """
         import warnings
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn(
             "dat_2 format is deprecated, use dat_blocks instead",
             DeprecationWarning)

@@ -474,13 +474,23 @@ In case a method is renamed or removed, this is the procedure to follow:
 
      import warnings
 
-     warnings.warn(
-         "OLDMETHODNAME is deprecated, use NEWMETHODNAME instead",
-         DeprecationWarning)
+     # If we call this DeprecationWarning, pycharm will properly strike out the function
+     from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+     warnings.warn("<Deprecation warning here - MAKE IT SPECIFIC TO THIS DEPRECATION, as it will be shown only once per different message>", DeprecationWarning)
+        
+     # <REST OF THE FUNCTION HERE>
+ 
+   (of course replace the parts between ``< >`` symbols with the
+   correct strings).
 
-   (of course, replace ``OLDMETHODNAME`` and ``NEWMETHODNAME`` with the
-   correct string, and adapt the strings to the correct content if you are
-   only removing a function, or just adding a new one).
+   The advantage of the method above is:
+
+   - pycharm will still show the method crossed out
+   - Our ``AiidaDeprecationWarning`` does not inherit from ``DeprecationWarning``, so it will not be "hidden" by python
+   - User can disable our warnings (and only those) by using AiiDA
+     properties with::
+       
+       verdi devel setproperty warnings.showdeprecations False
 
 Changing the config.json structure
 ++++++++++++++++++++++++++++++++++

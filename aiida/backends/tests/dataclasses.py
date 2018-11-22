@@ -2744,7 +2744,7 @@ class TestArrayData(AiidaTestCase):
         n.set_array('third', third)
 
         # Check if the arrays are there
-        self.assertEquals(set(['first', 'second', 'third']), set(n.arraynames()))
+        self.assertEquals(set(['first', 'second', 'third']), set(n.get_arraynames()))
         self.assertAlmostEquals(abs(first - n.get_array('first')).max(), 0.)
         self.assertAlmostEquals(abs(second - n.get_array('second')).max(), 0.)
         self.assertAlmostEquals(abs(third - n.get_array('third')).max(), 0.)
@@ -2765,7 +2765,7 @@ class TestArrayData(AiidaTestCase):
         n.set_array('first', first)
 
         # Check if the arrays are there, and if I am getting the new one
-        self.assertEquals(set(['first', 'second']), set(n.arraynames()))
+        self.assertEquals(set(['first', 'second']), set(n.get_arraynames()))
         self.assertAlmostEquals(abs(first - n.get_array('first')).max(), 0.)
         self.assertAlmostEquals(abs(second - n.get_array('second')).max(), 0.)
         self.assertEquals(first.shape, n.get_shape('first'))
@@ -2774,14 +2774,14 @@ class TestArrayData(AiidaTestCase):
         n.store()
 
         # Same checks, after storing
-        self.assertEquals(set(['first', 'second']), set(n.arraynames()))
+        self.assertEquals(set(['first', 'second']), set(n.get_arraynames()))
         self.assertAlmostEquals(abs(first - n.get_array('first')).max(), 0.)
         self.assertAlmostEquals(abs(second - n.get_array('second')).max(), 0.)
         self.assertEquals(first.shape, n.get_shape('first'))
         self.assertEquals(second.shape, n.get_shape('second'))
 
         # Same checks, again (this is checking the caching features)
-        self.assertEquals(set(['first', 'second']), set(n.arraynames()))
+        self.assertEquals(set(['first', 'second']), set(n.get_arraynames()))
         self.assertAlmostEquals(abs(first - n.get_array('first')).max(), 0.)
         self.assertAlmostEquals(abs(second - n.get_array('second')).max(), 0.)
         self.assertEquals(first.shape, n.get_shape('first'))
@@ -2789,7 +2789,7 @@ class TestArrayData(AiidaTestCase):
 
         # Same checks, after reloading
         n2 = load_node(uuid=n.uuid)
-        self.assertEquals(set(['first', 'second']), set(n2.arraynames()))
+        self.assertEquals(set(['first', 'second']), set(n2.get_arraynames()))
         self.assertAlmostEquals(abs(first - n2.get_array('first')).max(), 0.)
         self.assertAlmostEquals(abs(second - n2.get_array('second')).max(), 0.)
         self.assertEquals(first.shape, n2.get_shape('first'))
@@ -2797,7 +2797,7 @@ class TestArrayData(AiidaTestCase):
 
         # Same checks, after reloading with UUID
         n2 = load_node(n.uuid, sub_classes=(ArrayData,))
-        self.assertEquals(set(['first', 'second']), set(n2.arraynames()))
+        self.assertEquals(set(['first', 'second']), set(n2.get_arraynames()))
         self.assertAlmostEquals(abs(first - n2.get_array('first')).max(), 0.)
         self.assertAlmostEquals(abs(second - n2.get_array('second')).max(), 0.)
         self.assertEquals(first.shape, n2.get_shape('first'))
@@ -2811,7 +2811,7 @@ class TestArrayData(AiidaTestCase):
 
         # Again same checks, to verify that the attempts to delete/overwrite
         # arrays did not damage the node content
-        self.assertEquals(set(['first', 'second']), set(n.arraynames()))
+        self.assertEquals(set(['first', 'second']), set(n.get_arraynames()))
         self.assertAlmostEquals(abs(first - n.get_array('first')).max(), 0.)
         self.assertAlmostEquals(abs(second - n.get_array('second')).max(), 0.)
         self.assertEquals(first.shape, n.get_shape('first'))

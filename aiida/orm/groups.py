@@ -54,7 +54,10 @@ class Group(entities.Entity):
             :return: (group, created) where group is the group (new or existing,
               in any case already stored) and created is a boolean saying
             """
-            res = self.find(name=name, type=kwargs.get("type_string", None))
+            filters = {'name': name}
+            if 'type_string' in kwargs:
+                filters['type_string'] = kwargs['type_string']
+            res = self.find(filters=filters)
 
             if not res:
                 return Group(name, backend=self.backend, **kwargs).store(), True
@@ -135,25 +138,18 @@ class Group(entities.Entity):
 
             return [Group.from_backend_entity(group) for group in self._backend.groups.query(**kwargs)]
 
-        def find(self, **filters):
-            """
-            A custom find method for Groups
-
-            :param filters: the filters to search for
-            :type filters: dict
-            :return: a list of matching groups
-            :rtype: list
-            """
+        def find(self, filters=None, order_by=None, limit=None):
+            """Custom find method for Group to correctly map to backend type_string"""
             # We need to map type_string to type for now because the underlying ORM model
             # for the current backends uses 'type' as the column name instead of type_string
             # A better way to deal with this would be to implement a general way for the query builder
             # to ask the backend class what the mapping between the attribute name and the column name
             # should be.  Probably in the get_column() method...but this requires a bit more thought
-            if 'type_string' in filters:
+            if filters and 'type_string' in filters:
                 assert 'type' not in filters, "Can't supply type and type_string"
                 filters['type'] = filters.pop('type_string')
 
-            return super(Group.Collection, self).find(**filters)
+            return super(Group.Collection, self).find(filters=filters, order_by=order_by, limit=limit)
 
         def delete(self, id):  # pylint: disable=invalid-name, redefined-builtin
             """
@@ -314,7 +310,8 @@ class Group(entities.Entity):
           in any case already stored) and created is a boolean saying
         """
         import warnings
-        warnings.warn('this method has been deprecated use Group.objects.get_or_create() instead', DeprecationWarning)
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        warnings.warn('this method has been deprecated use Group.objects.get_or_create() instead', DeprecationWarning)  # pylint: disable=no-member
 
         return cls.objects(backend).get_or_create(**kwargs)
 

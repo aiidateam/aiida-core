@@ -16,7 +16,7 @@ def aiida_from_backend_entity(backend_entity):
     """Convert from a backend entity type to an AiiDA frontend entity"""
     from aiida.orm import Node
     from aiida.orm.groups import Group
-    from aiida.orm.log import Log
+    from aiida.orm.logs import Log
     from aiida.orm.computers import Computer
     from aiida.orm.users import User
     from aiida.orm.authinfos import AuthInfo

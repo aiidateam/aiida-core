@@ -25,7 +25,7 @@ __all__ = ('BackendQueryBuilder',)
 class BackendQueryBuilder(object):
     """Backend query builder interface"""
 
-    # pylint: disable=invalid-name
+    # pylint: disable=invalid-name, too-many-public-methods
 
     def __init__(self, backend):
         self._backend = backend
@@ -71,6 +71,20 @@ class BackendQueryBuilder(object):
     def AuthInfo(self):
         """
         A property, decorated with @property. Returns the implementation for the Group
+        """
+        pass
+
+    @abc.abstractmethod
+    def Comment(self):
+        """
+        A property, decorated with @property. Returns the implementation for the Comment
+        """
+        pass
+
+    @abc.abstractmethod
+    def log_model_class(self):
+        """
+        A property, decorated with @property. Returns the implementation for the Log
         """
         pass
 

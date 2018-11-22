@@ -152,7 +152,7 @@ class Code(Data):
         qb = QueryBuilder()
         qb.append(cls, filters={'label': {'==': label}}, project=['*'], tag='code')
         if machinename:
-            qb.append(Computer, filters={'name': {'==': machinename}}, computer_of='code')
+            qb.append(Computer, filters={'name': {'==': machinename}}, with_node='code')
 
         if qb.count() == 0:
             raise NotExistent("'{}' is not a valid code " "name.".format(label))
@@ -471,6 +471,7 @@ class Code(Data):
         :raise ValueError: if no default plugin was specified in the code.
         """
         import warnings
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn(
             'directly creating and submitting calculations is deprecated, use the {}\nSee:{}'.format(
                 'ProcessBuilder', DEPRECATION_DOCS_URL), DeprecationWarning)

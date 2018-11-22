@@ -63,7 +63,8 @@ class Data(Node):
 
     def __copy__(self):
         """Copying a Data node is not supported, use copy.deepcopy or call Data.clone()."""
-        raise NotImplementedError('copying a Data node is not supported, use copy.deepcopy')
+        from aiida.common.exceptions import InvalidOperation
+        raise InvalidOperation('copying a Data node is not supported, use copy.deepcopy')
 
     def __deepcopy__(self, memo):
         """
@@ -71,8 +72,9 @@ class Data(Node):
 
         :returns: an unstored clone of this Data node
         """
+        from aiida.common.exceptions import InvalidOperation
         if self.is_stored:
-            raise NotImplementedError('deep copying a stored Data node is not supported, use Data.clone() instead')
+            raise InvalidOperation('deep copying a stored Data node is not supported, use Data.clone() instead')
 
         return self.clone()
 

@@ -189,7 +189,7 @@ class DbNode(m.Model):
         Return the corresponding aiida instance of class aiida.orm.Node or a
         appropriate subclass.
         """
-        from aiida.common import aiidalogger
+        from aiida.common import AIIDA_LOGGER
         from aiida.orm.node import Node
         from aiida.plugins.loader import get_plugin_type_from_type_string, load_plugin
 
@@ -352,7 +352,7 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
     from aiida.utils.timezone import (
         is_naive, make_aware, get_current_timezone)
 
-    from aiida.common import aiidalogger
+    from aiida.common import AIIDA_LOGGER
 
     if mainitem['datatype'] == 'none':
         if subitems:
@@ -438,7 +438,7 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
                 subspecifier_string,
                 mainitem['key'], expected_set, received_set))
             if lesserrors:
-                aiidalogger.error(msg)
+                AIIDA_LOGGER.error(msg)
             else:
                 raise DeserializationException(msg)
 
@@ -483,7 +483,7 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
                 mainitem['key'], len(firstlevelsubdict),
                 mainitem['ival']))
             if lesserrors:
-                aiidalogger.error(msg)
+                AIIDA_LOGGER.error(msg)
             else:
                 raise DeserializationException(msg)
 
@@ -1454,7 +1454,6 @@ class DbAuthInfo(m.Model):
         from aiida.orm.implementation.django.authinfo import DjangoAuthInfo
         from aiida.orm.backends import construct_backend
         return DjangoAuthInfo.from_dbmodel(self, construct_backend())
-
 
 
 @python_2_unicode_compatible

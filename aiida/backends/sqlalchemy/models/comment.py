@@ -37,7 +37,7 @@ class DbComment(Base):
     )
 
     ctime = Column(DateTime(timezone=True), default=timezone.now)
-    mtime = Column(DateTime(timezone=True), default=timezone.now)
+    mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now)
 
     user_id = Column(
         Integer,

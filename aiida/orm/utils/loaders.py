@@ -420,7 +420,7 @@ class CodeEntityLoader(OrmEntityLoader):
         qb.append(cls=classes, tag='code', project=['*'], filters={'label': {'==': label}})
 
         if machinename:
-            qb.append(Computer, filters={'name': {'==': machinename}}, computer_of='code')
+            qb.append(Computer, filters={'name': {'==': machinename}}, with_node='code')
 
         return qb
 

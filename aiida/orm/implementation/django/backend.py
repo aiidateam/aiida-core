@@ -14,34 +14,34 @@ from __future__ import absolute_import
 from aiida.orm.implementation.backends import Backend
 from aiida.backends.djsite.queries import DjangoQueryManager
 from . import authinfo
+from . import comment
 from . import computer
 from . import groups
 from . import log
 from . import querybuilder
 from . import users
 
+__all__ = ('DjangoBackend',)
+
 
 class DjangoBackend(Backend):
 
     def __init__(self):
-        self._logs = log.DjangoLogCollection(self, log.DjangoLog)
-        self._users = users.DjangoUserCollection(self)
         self._authinfos = authinfo.DjangoAuthInfoCollection(self)
+        self._comments = comment.DjangoCommentCollection(self)
         self._computers = computer.DjangoComputerCollection(self)
         self._groups = groups.DjangoGroupCollection(self)
+        self._logs = log.DjangoLogCollection(self)
         self._query_manager = DjangoQueryManager(self)
-
-    @property
-    def logs(self):
-        return self._logs
-
-    @property
-    def users(self):
-        return self._users
+        self._users = users.DjangoUserCollection(self)
 
     @property
     def authinfos(self):
         return self._authinfos
+
+    @property
+    def comments(self):
+        return self._comments
 
     @property
     def computers(self):
@@ -52,9 +52,16 @@ class DjangoBackend(Backend):
         return self._groups
 
     @property
+    def logs(self):
+        return self._logs
+
+    @property
     def query_manager(self):
         return self._query_manager
 
     def query(self):
         return querybuilder.DjangoQueryBuilder(self)
 
+    @property
+    def users(self):
+        return self._users

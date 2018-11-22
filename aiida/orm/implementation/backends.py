@@ -26,30 +26,21 @@ class Backend(object):
     """The public interface that defines a backend factory that creates backend specific concrete objects."""
 
     @abc.abstractproperty
-    def logs(self):
-        """
-        Return the collection of log entries
-
-        :return: the log collection
-        :rtype: :class:`aiida.orm.log.LogCollection`
-        """
-
-    @abc.abstractproperty
-    def users(self):
-        """
-        Return the collection of users
-
-        :return: the users collection
-        :rtype: :class:`aiida.orm.implementation.BackendUserCollection`
-        """
-
-    @abc.abstractproperty
     def authinfos(self):
         """
         Return the collection of authorisation information objects
 
         :return: the authinfo collection
         :rtype: :class:`aiida.orm.implementation.BackendAuthInfoCollection`
+        """
+
+    @abc.abstractproperty
+    def comments(self):
+        """
+        Return the collection of comment objects
+
+        :return: the comment collection
+        :rtype: :class:`aiida.orm.implementation.BackendCommentCollection`
         """
 
     @abc.abstractproperty
@@ -71,6 +62,15 @@ class Backend(object):
         """
 
     @abc.abstractproperty
+    def logs(self):
+        """
+        Return the collection of log entries
+
+        :return: the log collection
+        :rtype: :class:`aiida.orm.implementation.BackendLogCollection`
+        """
+
+    @abc.abstractproperty
     def query_manager(self):
         """
         Return the query manager for the objects stored in the backend
@@ -86,6 +86,15 @@ class Backend(object):
 
         :return: a new query builder instance
         :rtype: :class:`aiida.orm.implementation.BackendQueryBuilder`
+        """
+
+    @abc.abstractproperty
+    def users(self):
+        """
+        Return the collection of users
+
+        :return: the users collection
+        :rtype: :class:`aiida.orm.implementation.BackendUserCollection`
         """
 
 
@@ -104,6 +113,7 @@ class BackendEntity(object):
 
         :return: the entity id
         """
+        pass
 
     @property
     def backend(self):

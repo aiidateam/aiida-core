@@ -3,7 +3,6 @@
 """ORM class for ProcessNode."""
 from __future__ import absolute_import
 import enum
-import logging
 import six
 
 from plumpy import ProcessState
@@ -65,8 +64,8 @@ class ProcessNode(Sealable, Node):
 
         :return: LoggerAdapter object, that works like a logger, but also has the 'extra' embedded
         """
-        from aiida.common.log import get_dblogger_extra
-        return logging.LoggerAdapter(logger=self._logger, extra=get_dblogger_extra(self))
+        from aiida.common.log import create_logger_adapter
+        return create_logger_adapter(self._logger, self)
 
     def _set_process_type(self, process_class):
         """

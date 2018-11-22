@@ -527,7 +527,8 @@ class KpointsData(ArrayData):
         .. deprecated:: 0.11
         """
         import warnings
-        warnings.warn('this method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        warnings.warn('the bravais_lattice method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
         return self.get_attr('bravais_lattice')
 
     @bravais_lattice.setter
@@ -538,7 +539,8 @@ class KpointsData(ArrayData):
         .. deprecated:: 0.11
         """
         import warnings
-        warnings.warn('this method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        warnings.warn('the bravais_lattice method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
         self._set_bravais_lattice(value)
 
     def _set_bravais_lattice(self, value):
@@ -548,7 +550,8 @@ class KpointsData(ArrayData):
         .. deprecated:: 0.11
         """
         import warnings
-        warnings.warn('this method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        warnings.warn('the _set_bravais_lattice method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
 
         import copy
         if not isinstance(value, dict):
@@ -592,7 +595,8 @@ class KpointsData(ArrayData):
         :return bravais_lattice: the dictionary containing the symmetry info
         """
         import warnings
-        warnings.warn('this method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        warnings.warn('the _get_or_create_bravais_lattice method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
 
         try:
             bravais_lattice = self.bravais_lattice
@@ -640,7 +644,8 @@ class KpointsData(ArrayData):
 
         """
         import warnings
-        warnings.warn('this method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        warnings.warn('the set_kpoints_path method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
 
         from aiida.tools.data.array.kpoints.legacy import get_explicit_kpoints_path
 
@@ -680,7 +685,8 @@ class KpointsData(ArrayData):
                 with extra parameters used by the get_special_points method)
         """
         import warnings
-        warnings.warn('this method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        warnings.warn('the _find_bravais_info method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
 
         from aiida.tools.data.array.kpoints.legacy import find_bravais_info
         return find_bravais_info(
@@ -713,7 +719,8 @@ class KpointsData(ArrayData):
              eventual variation
         """
         import warnings
-        warnings.warn('this method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        warnings.warn('the find_bravais_lattice method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
 
         if not self.is_stored:
             bravais_lattice = self._find_bravais_info(epsilon_length=epsilon_length,
@@ -757,7 +764,8 @@ class KpointsData(ArrayData):
         :note: We assume that the cell given by the cell property is the primitive unit cell
         """
         import warnings
-        warnings.warn('this method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        warnings.warn('the get_special_points method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
 
         from aiida.tools.data.array.kpoints.legacy import get_kpoints_path
         point_coords, path, bravais_info = get_kpoints_path(

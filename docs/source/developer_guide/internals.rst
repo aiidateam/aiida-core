@@ -85,11 +85,9 @@ The :py:class:`~aiida.orm.implementation.general.node.AbstractNode` can be annot
 
 - :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.get_comments` returns a sorted list of the comments.
 
-- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._get_dbcomments` is similar to :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.get_comments`, just the sorting changes.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.update_comment` updates the node comment. It can be done by ``verdi comment update``.
 
-- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._update_comment` updates the node comment. It can be done by ``verdi comment update``.
-
-- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._remove_comment` removes the node comment. It can be done by ``verdi comment remove``.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.remove_comment` removes the node comment. It can be done by ``verdi comment remove``.
 
 
 

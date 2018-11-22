@@ -79,8 +79,8 @@ def get_calcjob_remote_paths(pks=None, past_days=None, older_than=None, computer
 
     qb = orm.QueryBuilder()
     qb.append(CalcJobNode, tag='calc', project=['attributes.remote_workdir'], filters=filters_calc)
-    qb.append(orm.Computer, computer_of='calc', tag='computer', project=['*'], filters=filters_computer)
-    qb.append(orm.User, creator_of='calc', filters={'email': user.email})
+    qb.append(orm.Computer, with_node='calc', tag='computer', project=['*'], filters=filters_computer)
+    qb.append(orm.User, with_node='calc', filters={'email': user.email})
 
     if qb.count() == 0:
         return None

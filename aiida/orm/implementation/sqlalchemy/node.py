@@ -55,9 +55,9 @@ class Node(AbstractNode):
         if dbnode is not None:
             type_check(dbnode, DbNode)
             if dbnode.id is None:
-                raise ValueError("If cannot load an aiida.orm.Node instance " "from an unsaved DbNode object.")
+                raise ValueError("I cannot load an aiida.orm.Node instance from an unsaved DbNode object.")
             if kwargs:
-                raise ValueError("If you pass a dbnode, you cannot pass any " "further parameter")
+                raise ValueError("If you pass a dbnode, you cannot pass any further parameter")
 
             # If I am loading, I cannot modify it
             self._to_be_stored = False
@@ -142,7 +142,8 @@ class Node(AbstractNode):
 
     @classmethod
     def query(cls, *args, **kwargs):
-        raise NotImplementedError("The node query method is not supported in " "SQLAlchemy. Please use QueryBuilder.")
+        from aiida.common.exceptions import FeatureNotAvailable
+        raise FeatureNotAvailable("The node query method is not supported in " "SQLAlchemy. Please use QueryBuilder.")
 
     @property
     def type(self):
@@ -438,114 +439,6 @@ class Node(AbstractNode):
     def _db_attrs(self):
         for key in self._attributes().keys():
             yield key
-
-    def add_comment(self, content, user=None):
-        from aiida import orm
-        from aiida.backends.sqlalchemy import get_scoped_session
-
-        session = get_scoped_session()
-
-        if self._to_be_stored:
-            raise ModificationNotAllowed("Comments can be added only after " "storing the node")
-
-        if user is None:
-            user = orm.User.objects(self.backend).get_default()
-
-        comment = DbComment(dbnode=self._dbnode, user=user.backend_entity.dbmodel, content=content)
-        session.add(comment)
-        try:
-            session.commit()
-        except:
-            session = get_scoped_session()
-            session.rollback()
-            raise
-
-        return comment.id
-
-    def get_comment_obj(self, comment_id=None, user=None):
-        """
-        Get comment models objects for this node, optionally for a given comment
-        id or user.
-
-        :param comment_id: Filter for a particular comment id
-        :param user: Filter for a particular user
-        :return: A list of comment model instances
-        """
-        from aiida import orm
-
-        query = DbComment.query.filter_by(dbnode=self._dbnode)
-
-        if comment_id is not None:
-            query = query.filter_by(id=comment_id)
-        if user is not None:
-            if isinstance(user, orm.User):
-                user = user.backend_entity
-            query = query.filter_by(user=user.dbmodel)
-
-        dbcomments = query.all()
-        comments = []
-        from aiida.orm.implementation.sqlalchemy.comment import Comment
-        for dbcomment in dbcomments:
-            comments.append(Comment(dbcomment=dbcomment))
-        return comments
-
-    def get_comments(self, pk=None):
-        comments = self._get_dbcomments(pk)
-
-        return [{
-            "pk": c.id,
-            "user__email": c.user.email,
-            "ctime": c.ctime,
-            "mtime": c.mtime,
-            "content": c.content
-        } for c in comments]
-
-    def _get_dbcomments(self, pk=None):
-        comments = DbComment.query.filter_by(dbnode=self._dbnode)
-
-        if pk is not None:
-            try:
-                correct = all([isinstance(_, int) for _ in pk])
-                if not correct:
-                    raise ValueError('id must be an integer or a list of integers')
-                comments = comments.filter(DbComment.id.in_(pk))
-            except TypeError:
-                if not isinstance(pk, int):
-                    raise ValueError('id must be an integer or a list of integers')
-
-                comments = comments.filter_by(id=pk)
-
-        comments = comments.order_by('id').all()
-        return comments
-
-    def _update_comment(self, new_field, comment_pk, user):
-        comment = DbComment.query.filter_by(dbnode=self._dbnode, id=comment_pk, user=user.dbmodel).first()
-
-        if not isinstance(new_field, six.string_types):
-            raise ValueError("Non string comments are not accepted")
-
-        if not comment:
-            raise NotExistent("Found no comment for user {} and id {}".format(user, comment_pk))
-
-        comment.content = new_field
-        try:
-            comment.save()
-        except:
-            from aiida.backends.sqlalchemy import get_scoped_session
-            session = get_scoped_session()
-            session.rollback()
-            raise
-
-    def _remove_comment(self, comment_pk, user):
-        comment = DbComment.query.filter_by(dbnode=self._dbnode, id=comment_pk, user=user.dbmodel).first()
-        if comment:
-            try:
-                comment.delete()
-            except:
-                from aiida.backends.sqlalchemy import get_scoped_session
-                session = get_scoped_session()
-                session.rollback()
-                raise
 
     def _increment_version_number_db(self):
         self._dbnode.nodeversion = self.nodeversion + 1

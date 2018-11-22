@@ -16,7 +16,7 @@ from aiida.orm.implementation import users
 from . import entities
 from . import utils
 
-__all__ = 'SqlaUserCollection', 'SqlaUser'
+__all__ = ('SqlaUserCollection', 'SqlaUser')
 
 
 class SqlaUserCollection(users.BackendUserCollection):

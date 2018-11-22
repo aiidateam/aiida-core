@@ -22,14 +22,14 @@ from aiida.common.exceptions import (InternalError, AiidaException,
 from aiida.common.datastructures import (wf_states, wf_exit_call,
                                          wf_default_call, calc_states)
 from aiida.common.utils import str_timedelta
-from aiida.common import aiidalogger
+from aiida.common import AIIDA_LOGGER
 from aiida.orm.node.process import CalcJobNode
 from aiida.orm.backends import construct_backend
 from aiida.utils import timezone
-from aiida.common.log import get_dblogger_extra
+from aiida.common.log import create_logger_adapter
 from aiida.common.utils import abstractclassmethod
 
-logger = aiidalogger.getChild('Workflow')
+logger = AIIDA_LOGGER.getChild('Workflow')
 
 
 class WorkflowKillError(AiidaException):
@@ -234,6 +234,11 @@ class AbstractWorkflow(object):
         """
         return not self._to_be_stored
 
+    @property
+    def backend(self):
+        """Get the backend of this workflow"""
+        return self._backend
+
     def get_folder_list(self, subfolder='.'):
         """
         Get the the list of files/directory in the repository of the object.
@@ -314,8 +319,7 @@ class AbstractWorkflow(object):
         :return: LoggerAdapter object, that works like a logger, but also has
           the 'extra' embedded
         """
-        return logging.LoggerAdapter(logger=self._logger,
-                                     extra=get_dblogger_extra(self))
+        return create_logger_adapter(self._logger, self)
 
     @abstractmethod
     def store(self):

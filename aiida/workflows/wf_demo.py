@@ -12,12 +12,12 @@ from __future__ import absolute_import
 from __future__ import print_function
 import plumpy
 import aiida.common
-from aiida.common import aiidalogger
+from aiida.common import AIIDA_LOGGER
 from aiida.orm.workflow import Workflow
 from aiida.orm import Code, Computer
 
 
-logger = aiidalogger.getChild('WorkflowDemo')
+logger = AIIDA_LOGGER.getChild('WorkflowDemo')
 
 
 class WorkflowDemo(Workflow):

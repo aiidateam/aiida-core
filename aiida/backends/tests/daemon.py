@@ -38,7 +38,7 @@ class TestDaemonBasic(AiidaTestCase):
         head_wf.start()
 
         # Get the user
-        user = backend.users.find(email=self.user_email)[0]
+        user = backend.users.get(email=self.user_email)
         wfl = get_workflow_list(user=user)
         running_no = 0
         for w in get_workflow_list(user=user, all_states=True):

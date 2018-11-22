@@ -20,7 +20,7 @@ from aiida.orm.implementation import users
 from . import entities
 from . import utils
 
-__all__ = 'DjangoUser', 'DjangoUserCollection'
+__all__ = ('DjangoUser', 'DjangoUserCollection')
 
 
 class DjangoUserCollection(users.BackendUserCollection):

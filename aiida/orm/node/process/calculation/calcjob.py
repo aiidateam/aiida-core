@@ -664,6 +664,7 @@ class CalcJobNode(CalculationNode):
 
         :param str val: the queue name
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         if val is not None:
@@ -675,6 +676,7 @@ class CalcJobNode(CalculationNode):
 
         :param str val: the account name
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         if val is not None:
@@ -686,6 +688,7 @@ class CalcJobNode(CalculationNode):
 
         :param str val: the quality of service
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         if val is not None:
@@ -698,6 +701,7 @@ class CalcJobNode(CalculationNode):
 
         :param bool val: load the environment if True
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         self._set_attr('import_sys_environment', bool(val))
@@ -709,6 +713,7 @@ class CalcJobNode(CalculationNode):
 
         :return: a boolean. If True the system environment will be load.
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         return self.get_attr('import_sys_environment', True)
@@ -722,6 +727,7 @@ class CalcJobNode(CalculationNode):
         In the remote-computer submission script, it's going to export
         variables as ``export 'keys'='values'``
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         if not isinstance(env_vars_dict, dict):
@@ -743,6 +749,7 @@ class CalcJobNode(CalculationNode):
         Return an empty dictionary if no special environment variables have
         to be set for this calculation.
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         return self.get_attr('custom_environment_variables', {})
@@ -753,6 +760,7 @@ class CalcJobNode(CalculationNode):
 
         :param val: the values of priority as accepted by the cluster scheduler.
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         self._set_attr('priority', six.text_type(val))
@@ -763,6 +771,7 @@ class CalcJobNode(CalculationNode):
 
         :param val: an integer. Default=None
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         self._set_attr('max_memory_kb', int(val))
@@ -773,6 +782,7 @@ class CalcJobNode(CalculationNode):
 
         :return: an integer
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         return self.get_attr('max_memory_kb', None)
@@ -783,6 +793,7 @@ class CalcJobNode(CalculationNode):
 
         :param val: An integer. Default=None
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         self._set_attr('max_wallclock_seconds', int(val))
@@ -794,6 +805,7 @@ class CalcJobNode(CalculationNode):
         :return: an integer
         :rtype: int
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         return self.get_attr('max_wallclock_seconds', None)
@@ -807,6 +819,7 @@ class CalcJobNode(CalculationNode):
         (scheduler type can be found with
         calc.get_computer().get_scheduler_type() )
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         # Note: for the time being, resources are only validated during the
@@ -821,6 +834,7 @@ class CalcJobNode(CalculationNode):
 
         :param val: A boolean. Default=True
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         self._set_attr('withmpi', val)
@@ -831,6 +845,7 @@ class CalcJobNode(CalculationNode):
 
         :return: a boolean. Default=True.
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         return self.get_attr('withmpi', True)
@@ -844,6 +859,7 @@ class CalcJobNode(CalculationNode):
 
         :return: a dictionary
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         resources_dict = self.get_attr('jobresource_params', {})
@@ -862,6 +878,7 @@ class CalcJobNode(CalculationNode):
 
         :return: a string or None.
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         return self.get_attr('queue_name', None)
@@ -872,6 +889,7 @@ class CalcJobNode(CalculationNode):
 
         :return: a string or None.
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         return self.get_attr('account', None)
@@ -882,6 +900,7 @@ class CalcJobNode(CalculationNode):
 
         :return: a string or None.
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         return self.get_attr('qos', None)
@@ -892,6 +911,7 @@ class CalcJobNode(CalculationNode):
 
         :return: a string or None
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         return self.get_attr('priority', None)
@@ -902,6 +922,7 @@ class CalcJobNode(CalculationNode):
         which is going to be prepended in the scheduler-job script, just before
         the code execution.
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         return self.get_attr("prepend_text", "")
@@ -916,6 +937,7 @@ class CalcJobNode(CalculationNode):
 
         :param val: a (possibly multiline) string
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         self._set_attr("prepend_text", six.text_type(val))
@@ -926,6 +948,7 @@ class CalcJobNode(CalculationNode):
         which is going to be appended in the scheduler-job script, just after
         the code execution.
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         return self.get_attr("append_text", "")
@@ -938,6 +961,7 @@ class CalcJobNode(CalculationNode):
 
         :param val: a (possibly multiline) string
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         self._set_attr("append_text", six.text_type(val))
@@ -952,6 +976,7 @@ class CalcJobNode(CalculationNode):
         inserted: with this method, the string is inserted before any
         non-scheduler command.
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         self._set_attr("custom_scheduler_commands", six.text_type(val))
@@ -966,6 +991,7 @@ class CalcJobNode(CalculationNode):
         :return: the custom scheduler command, or an empty string if no
           custom command was defined.
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         return self.get_attr("custom_scheduler_commands", "")
@@ -979,6 +1005,7 @@ class CalcJobNode(CalculationNode):
 
         Return an empty list if no parameters have been defined.
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         return self.get_attr("mpirun_extra_params", [])
@@ -993,6 +1020,7 @@ class CalcJobNode(CalculationNode):
         :param extra_params: must be a list of strings, one for each
             extra parameter
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         if extra_params is None:
@@ -1019,6 +1047,7 @@ class CalcJobNode(CalculationNode):
         :param parser: a string identifying the module of the parser.
               Such module must be located within the folder 'aiida/parsers/plugins'
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         self._set_attr('parser', parser)
@@ -1031,6 +1060,7 @@ class CalcJobNode(CalculationNode):
 
         :return: a string.
         """
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
 
@@ -1492,10 +1522,10 @@ class CalcJobNode(CalculationNode):
         qb.append(cls, filters=calculation_filters, tag='calculation')
 
         if group_filters is not None:
-            qb.append(type='group', filters=group_filters, group_of='calculation')
+            qb.append(type='group', filters=group_filters, with_node='calculation')
 
-        qb.append(type='computer', computer_of='calculation', tag='computer')
-        qb.append(type='user', creator_of="calculation", tag="user")
+        qb.append(type='computer', with_node='calculation', tag='computer')
+        qb.append(type='user', with_node="calculation", tag="user")
 
         projections_dict = {'calculation': [], 'user': [], 'computer': []}
 
@@ -1703,8 +1733,8 @@ class CalcJobNode(CalculationNode):
 
         qb = QueryBuilder()
         qb.append(type="computer", tag='computer', filters=computerfilter)
-        qb.append(cls, filters=calcfilter, tag='calc', has_computer='computer')
-        qb.append(type="user", tag='user', filters=userfilter, creator_of="calc")
+        qb.append(cls, filters=calcfilter, tag='calc', with_computer='computer')
+        qb.append(type="user", tag='user', filters=userfilter, with_node="calc")
 
         if only_computer_user_pairs:
             qb.add_projection("computer", "*")
@@ -1763,6 +1793,7 @@ class CalcJobNode(CalculationNode):
         import warnings
         from aiida.work.job_processes import ContinueCalcJob
         from aiida.work.launch import submit
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('directly creating and submitting calculations is deprecated, use the {}\nSee:{}'.format(
             'ProcessBuilder', DEPRECATION_DOCS_URL), DeprecationWarning)
 

@@ -58,6 +58,14 @@ class DjangoQueryBuilder(BackendQueryBuilder):
         return dummy_model.DbAuthInfo
 
     @property
+    def Comment(self):
+        return dummy_model.DbComment
+
+    @property
+    def log_model_class(self):
+        return dummy_model.DbLog
+
+    @property
     def table_groups_nodes(self):
         return dummy_model.table_groups_nodes
 

@@ -145,9 +145,9 @@ class NodeTranslator(BaseTranslator):
         if query_type == "default":
             pass
         elif query_type == "inputs":
-            self._result_type = 'input_of'
+            self._result_type = 'with_outgoing'
         elif query_type == "outputs":
-            self._result_type = "output_of"
+            self._result_type = "with_incoming"
         elif query_type == "attributes":
             self._content_type = "attributes"
             self._alist = alist
@@ -174,10 +174,10 @@ class NodeTranslator(BaseTranslator):
             raise InputValidationError("invalid result/content value: {}".format(query_type))
 
         ## Add input/output relation to the query help
-        if self._result_type is not self.__label__:
+        if self._result_type != self.__label__:
             self._query_help["path"].append({
                 "type": "node.Node.",
-                "label": self._result_type,
+                "tag": self._result_type,
                 self._result_type: self.__label__
             })
 
@@ -606,7 +606,7 @@ class NodeTranslator(BaseTranslator):
         # get all inputs
         qb_obj = QueryBuilder()
         qb_obj.append(Node, tag="main", project=['*'], filters=self._id_filter)
-        qb_obj.append(Node, tag="in", project=['*'], edge_project=['label'], input_of='main')
+        qb_obj.append(Node, tag="in", project=['*'], edge_project=['label'], with_outgoing='main')
 
         if qb_obj.count() > 0:
             for node_input in qb_obj.iterdict():
@@ -645,7 +645,7 @@ class NodeTranslator(BaseTranslator):
         # get all outputs
         qb_obj = QueryBuilder()
         qb_obj.append(Node, tag="main", project=['*'], filters=self._id_filter)
-        qb_obj.append(Node, tag="out", project=['*'], edge_project=['label'], output_of='main')
+        qb_obj.append(Node, tag="out", project=['*'], edge_project=['label'], with_incoming='main')
         if qb_obj.count() > 0:
             for output in qb_obj.iterdict():
                 node = output['out']['*']

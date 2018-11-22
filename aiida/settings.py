@@ -27,17 +27,17 @@ if settings.AIIDADB_PROFILE is None:
     raise ConfigurationError("AIIDADB_PROFILE not defined, did you load django "
                              "through the AiiDA load_dbenv()?")
 
-profile_conf = get_profile_config(settings.AIIDADB_PROFILE, conf_dict=confs)
+PROFILE_CONF = get_profile_config(settings.AIIDADB_PROFILE, conf_dict=confs)
 
 # put all database specific portions of settings here
-BACKEND = profile_conf.get('AIIDADB_BACKEND', 'django')
-DBENGINE = profile_conf.get('AIIDADB_ENGINE', '')
-DBNAME = profile_conf.get('AIIDADB_NAME', '')
-DBUSER = profile_conf.get('AIIDADB_USER', '')
-DBPASS = profile_conf.get('AIIDADB_PASS', '')
-DBHOST = profile_conf.get('AIIDADB_HOST', '')
-DBPORT = profile_conf.get('AIIDADB_PORT', '')
-REPOSITORY_URI = profile_conf.get('AIIDADB_REPOSITORY_URI', '')
+BACKEND = PROFILE_CONF.get('AIIDADB_BACKEND', 'django')
+DBENGINE = PROFILE_CONF.get('AIIDADB_ENGINE', '')
+DBNAME = PROFILE_CONF.get('AIIDADB_NAME', '')
+DBUSER = PROFILE_CONF.get('AIIDADB_USER', '')
+DBPASS = PROFILE_CONF.get('AIIDADB_PASS', '')
+DBHOST = PROFILE_CONF.get('AIIDADB_HOST', '')
+DBPORT = PROFILE_CONF.get('AIIDADB_PORT', '')
+REPOSITORY_URI = PROFILE_CONF.get('AIIDADB_REPOSITORY_URI', '')
 
 
 # Checks on the REPOSITORY_* variables

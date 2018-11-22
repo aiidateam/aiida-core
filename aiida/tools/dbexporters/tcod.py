@@ -355,7 +355,7 @@ def _get_calculation(node):
     parent_calculations = node.get_incoming(node_class=ProcessNode, link_type=LinkType.CREATE).all()
 
     if len(parent_calculations) == 1:
-        return parent_calculations[0]
+        return parent_calculations[0].node
     elif len(parent_calculations) == 0:
         return None
     else:
@@ -1015,7 +1015,7 @@ def export_cifnode(what, parameters=None, trajectory_index=None,
     elif calc is not None:
         params = calc.get_outgoing(node_class=ParameterData, link_type=LinkType.CREATE).all()
         if len(params) == 1:
-            parameters = params[0]
+            parameters = params[0].node
         elif len(params) > 0:
             raise MultipleObjectsError("Calculation {} has more than "
                                        "one ParameterData output, please "
@@ -1024,7 +1024,7 @@ def export_cifnode(what, parameters=None, trajectory_index=None,
                                        "calling export_cif()".format(calc))
 
     if parameters is not None:
-        _assert_same_parents(what, parameters.node)
+        _assert_same_parents(what, parameters)
 
     node = what
 

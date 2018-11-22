@@ -18,6 +18,7 @@ import importlib
 import collections
 import numbers
 import math
+import warnings
 
 import six
 from collections import namedtuple
@@ -768,6 +769,10 @@ class AbstractNode(object):
                 returns all inputs of all link types.
         :return: a dictionary {label:object}
         """
+        from aiida.common.warnings import \
+            AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        warnings.warn('get_inputs_dict method is deprecated, use get_incoming instead', DeprecationWarning)
+
         return dict(
             self.get_inputs(
                 also_labels=True, only_in_db=only_in_db, link_type=link_type))
@@ -783,6 +788,10 @@ class AbstractNode(object):
 
         :return: a dictionary {linkname:object}
         """
+        from aiida.common.warnings import \
+            AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        warnings.warn('get_outputs_dict method is deprecated, use get_outgoing instead', DeprecationWarning)
+
         if link_type is not None and not isinstance(link_type, LinkType):
             raise TypeError("link_type should be a LinkType object")
 
@@ -865,6 +874,10 @@ class AbstractNode(object):
         :param link_type: Only get inputs of this link type, if None then
             returns all inputs of all link types.
         """
+        from aiida.common.warnings import \
+            AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        warnings.warn('get_inputs method is deprecated, use get_incoming instead',
+                      DeprecationWarning)
 
         if link_type is not None and not isinstance(link_type, LinkType):
             raise TypeError('link_type should be a LinkType object')
@@ -938,6 +951,10 @@ class AbstractNode(object):
             and Node a Node instance or subclass
         :param link_type: Only return outputs connected by links of this type.
         """
+        from aiida.common.warnings import \
+            AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        warnings.warn('get_outputs method is deprecated, use get_outgoing instead', DeprecationWarning)
+
         if link_type is not None and not isinstance(link_type, LinkType):
             raise TypeError('link_type should be a LinkType object')
 

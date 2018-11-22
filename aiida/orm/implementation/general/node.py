@@ -2292,3 +2292,4 @@ class NeighborManager(object):
     def get_nodes(self):
         """ eturns list of all nodes """
         return [entry.node for entry in self.neighbors]
+

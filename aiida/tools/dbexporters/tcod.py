@@ -1013,7 +1013,7 @@ def export_cifnode(what, parameters=None, trajectory_index=None,
             raise ValueError("Supplied parameters are not an "
                              "instance of ParameterData")
     elif calc is not None:
-        params = calc.get_outgoing(node_type=ParameterData, link_type=LinkType.CREATE).one()
+        params = calc.get_outgoing(node_class=ParameterData, link_type=LinkType.CREATE).all()
         if len(params) == 1:
             parameters = params[0]
         elif len(params) > 0:
@@ -1024,7 +1024,7 @@ def export_cifnode(what, parameters=None, trajectory_index=None,
                                        "calling export_cif()".format(calc))
 
     if parameters is not None:
-        _assert_same_parents(what, parameters)
+        _assert_same_parents(what, parameters.node)
 
     node = what
 

@@ -953,7 +953,7 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         runner.schedule(process)
         runner.loop.run_sync(lambda: run_async())
 
-        child = process.calc.get_outgoing(link_type=LinkType.CALL).first()
+        child = process.calc.get_outgoing(link_type=LinkType.CALL).first().node
         self.assertEquals(child.is_finished_ok, False)
         self.assertEquals(child.is_excepted, False)
         self.assertEquals(child.is_killed, True)

@@ -33,9 +33,10 @@ def calcfunction(func):
     >>> r = sum(Int(4), Int(5))
     >>> print(r)
     9
-    >>> r.get_inputs_dict() # doctest: +SKIP
-    {u'result': <CalcFunctionNode: uuid: ce0c63b3-1c84-4bb8-ba64-7b70a36adf34 (pk: 3567)>}
-    >>> r.get_inputs_dict()['result'].get_inputs()
+    >>> r.get_incoming().all() # doctest: +SKIP
+    [Neighbor(link_type='', label='result',
+    node=<CalcFunctionNode: uuid: ce0c63b3-1c84-4bb8-ba64-7b70a36adf34 (pk: 3567)>)]
+    >>> r.get_incoming().get_node_by_label('result').get_incoming().get_nodes()
     [4, 5]
 
     """

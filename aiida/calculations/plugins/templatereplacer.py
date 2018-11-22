@@ -90,8 +90,7 @@ class TemplatereplacerCalculation(CalcJobNode):
 
         :param tempfolder: a aiida.common.folders.Folder subclass where
                            the plugin should put all its files.
-        :param inputdict: a dictionary with the input nodes, as they would
-                be returned by get_inputs_dict (with the Code!)
+        :param inputdict: a dictionary with the input nodes e.g. {label1: node1, ...} (with the Code!)
         """
         from six.moves import StringIO as StringIO
 

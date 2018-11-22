@@ -18,22 +18,25 @@ import importlib
 import collections
 import numbers
 import math
+import warnings
 
 import six
+from collections import namedtuple
 
 from aiida.backends.utils import validate_attribute_key
 from aiida.common.caching import get_use_cache
-from aiida.common.exceptions import InternalError, ModificationNotAllowed, UniquenessError, ValidationError
+from aiida.common.exceptions import InternalError, ModificationNotAllowed, UniquenessError, ValidationError, NotExistent
 from aiida.common.folders import SandboxFolder
 from aiida.common.hashing import _HASH_EXTRA_KEY
 from aiida.common.lang import override
 from aiida.common.links import LinkType
-from aiida.common.utils import abstractclassmethod
+from aiida.common.utils import abstractclassmethod, sql_string_match
 from aiida.common.utils import combomethod, classproperty
 from aiida.plugins.loader import get_query_type_from_type_string, get_type_string_from_class
 
 _NO_DEFAULT = tuple()
 
+Neighbor = namedtuple('Neighbor', ['link_type', 'label', 'node'])
 
 def clean_value(value):
     """
@@ -354,6 +357,13 @@ class AbstractNode(object):
         Return the modification time of the node.
         """
         pass
+
+    def has_cached_links(self):
+        """
+        This function returns true if there are any links in cache and
+        not yet stored in db, otherwise false.
+        """
+        return bool(self._inputlinks_cache)
 
     def _init_internal_params(self):
         """
@@ -759,6 +769,10 @@ class AbstractNode(object):
                 returns all inputs of all link types.
         :return: a dictionary {label:object}
         """
+        from aiida.common.warnings import \
+            AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        warnings.warn('get_inputs_dict method is deprecated, use get_incoming instead', DeprecationWarning)
+
         return dict(
             self.get_inputs(
                 also_labels=True, only_in_db=only_in_db, link_type=link_type))
@@ -774,6 +788,10 @@ class AbstractNode(object):
 
         :return: a dictionary {linkname:object}
         """
+        from aiida.common.warnings import \
+            AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        warnings.warn('get_outputs_dict method is deprecated, use get_outgoing instead', DeprecationWarning)
+
         if link_type is not None and not isinstance(link_type, LinkType):
             raise TypeError("link_type should be a LinkType object")
 
@@ -800,6 +818,46 @@ class AbstractNode(object):
 
         return new_outputs
 
+
+    def get_incoming(self, node_class=None, link_type=None, link_label_filter=None):
+        """
+        Return a list of nodes that enter (directly) in this node
+
+        :param node_class: If specified, should be a class or tuple of classes, and it filters only
+            elements of that specific type (or a subclass of 'type')
+        :param link_type: If specified should be a string or tuple to get the inputs of this
+            link type, if None then returns all inputs of all link types.
+        :param link_label_filter: filters the incoming nodes by its link label.
+            Here wildcards (% and _) can be passed in link label filter as we are using "like" in QB.
+        """
+
+        if self.is_stored:
+            qb_obj = _get_neighbors_qbobj(self.id, node_class=node_class, link_type=link_type,
+                                          link_label_filter=link_label_filter, link_direction="incoming")
+            filtered_list = [Neighbor(i[2], i[1], i[0]) for i in qb_obj.all()]
+        else:
+            filtered_list = []
+
+        # get all cached links
+        db_incoming_keys = set(incoming.label for incoming in filtered_list)
+
+        for label, v in self._inputlinks_cache.items():
+            src = v[0]
+            incoming_link_type = v[1]
+            if label in db_incoming_keys:
+                raise InternalError("There exist a link with the same name '{}' and type '{}' both in the DB "
+                                    "and in the internal cache for node pk= {}!".format(label, incoming_link_type, self.pk))
+
+            if link_type is None or incoming_link_type == link_type:
+                if link_label_filter is not None:
+                    if sql_string_match(string=label, pattern=link_label_filter):
+                        filtered_list.append(Neighbor(incoming_link_type, label, src))
+                else:
+                    filtered_list.append(Neighbor(incoming_link_type, label, src))
+
+        return NeighborManager(filtered_list)
+
+
     def get_inputs(self, node_type=None, also_labels=False, only_in_db=False, link_type=None):
         """
         Return a list of nodes that enter (directly) in this node
@@ -816,6 +874,11 @@ class AbstractNode(object):
         :param link_type: Only get inputs of this link type, if None then
             returns all inputs of all link types.
         """
+        from aiida.common.warnings import \
+            AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        warnings.warn('get_inputs method is deprecated, use get_incoming instead',
+                      DeprecationWarning)
+
         if link_type is not None and not isinstance(link_type, LinkType):
             raise TypeError('link_type should be a LinkType object')
 
@@ -856,6 +919,25 @@ class AbstractNode(object):
         """
         pass
 
+    def get_outgoing(self, node_class=None, link_type=None, link_label_filter=None):
+        """
+        Return a list of nodes that enter (directly) in this node
+
+        :param node_class: If specified, should be a class or tuple of classes, and it filters only
+            elements of that specific type (or a subclass of 'type')
+        :param link_type: If specified should be a string or tuple to get the inputs of this
+            link type, if None then returns all outputs of all link types.
+        :param link_label_filter: filters the outgoing nodes by its link label.
+            Here wildcards (% and _) can be passed in link label filter as we are using "like" in QB.
+        """
+
+        qb_obj = _get_neighbors_qbobj(self.id, node_class=node_class, link_type=link_type,
+                                          link_label_filter=link_label_filter, link_direction="outgoing")
+        filtered_list = [Neighbor(i[2], i[1], i[0]) for i in qb_obj.all()]
+
+        return NeighborManager(filtered_list)
+
+
     @override
     def get_outputs(self, node_type=None, also_labels=False, link_type=None):
         """
@@ -869,6 +951,10 @@ class AbstractNode(object):
             and Node a Node instance or subclass
         :param link_type: Only return outputs connected by links of this type.
         """
+        from aiida.common.warnings import \
+            AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        warnings.warn('get_outputs method is deprecated, use get_outgoing instead', DeprecationWarning)
+
         if link_type is not None and not isinstance(link_type, LinkType):
             raise TypeError('link_type should be a LinkType object')
 
@@ -1746,7 +1832,7 @@ class AbstractNode(object):
         )
 
         # Make sure the node doesn't have any RETURN links
-        if cache_node.get_outputs(link_type=LinkType.RETURN):
+        if cache_node.get_outgoing(link_type=LinkType.RETURN).all():
             raise ValueError("Cannot use cache from nodes with RETURN links.")
 
         self.store(with_transaction=with_transaction, use_cache=False)
@@ -1754,9 +1840,9 @@ class AbstractNode(object):
 
     def _add_outputs_from_cache(self, cache_node):
         # Add CREATE links
-        for linkname, out_node in cache_node.get_outputs(also_labels=True, link_type=LinkType.CREATE):
-            new_node = out_node.clone().store()
-            new_node.add_link_from(self, label=linkname, link_type=LinkType.CREATE)
+        for entry in cache_node.get_outgoing(link_type=LinkType.CREATE):
+            new_node = entry.node.clone().store()
+            new_node.add_link_from(self, label=entry.label, link_type=LinkType.CREATE)
 
     @abstractmethod
     def _db_store(self, with_transaction=True):
@@ -1991,11 +2077,11 @@ class NodeOutputManager(object):
         """
         Allow to list all valid output links
         """
-        node_attributes = self._node.get_outputs_dict().keys()
+        node_attributes = self._node.get_outgoing().get_labels()
         return sorted(set(list(dir(type(self))) + list(node_attributes)))
 
     def __iter__(self):
-        node_attributes = self._node.get_outputs_dict().keys()
+        node_attributes = self._node.get_outgoing().get_labels()
         for k in node_attributes:
             yield k
 
@@ -2004,7 +2090,7 @@ class NodeOutputManager(object):
         :param name: name of the attribute to be asked to the parser results.
         """
         try:
-            return self._node.get_outputs_dict()[name]
+            return self._node.get_outgoing().get_node_by_label(name)
         except KeyError:
             raise AttributeError("Node {} does not have an output with link {}"
                                  .format(self._node.pk, name))
@@ -2016,7 +2102,7 @@ class NodeOutputManager(object):
         :param name: name of the attribute to be asked to the parser results.
         """
         try:
-            return self._node.get_outputs_dict()[name]
+            return self._node.get_outgoing().get_node_by_label(name)
         except KeyError:
             raise KeyError("Node {} does not have an output with link {}"
                            .format(self._node.pk, name))
@@ -2038,11 +2124,11 @@ class NodeInputManager(object):
         """
         Allow to list all valid input links
         """
-        node_attributes = self._node.get_inputs_dict().keys()
+        node_attributes = self._node.get_incoming().get_labels()
         return sorted(set(list(dir(type(self))) + list(node_attributes)))
 
     def __iter__(self):
-        node_attributes = self._node.get_inputs_dict().keys()
+        node_attributes = self._node.get_incoming().get_labels()
         for k in node_attributes:
             yield k
 
@@ -2051,7 +2137,7 @@ class NodeInputManager(object):
         :param name: name of the attribute to be asked to the parser results.
         """
         try:
-            return self._node.get_inputs_dict()[name]
+            return self._node.get_incoming().get_node_by_label(name)
         except KeyError:
             raise AttributeError(
                 "Node '{}' does not have an input with link '{}'".format(
@@ -2064,7 +2150,7 @@ class NodeInputManager(object):
         :param name: name of the attribute to be asked to the parser results.
         """
         try:
-            return self._node.get_inputs_dict()[name]
+            return self._node.get_incoming().get_node_by_label(name)
         except KeyError:
             raise KeyError("Node '{}' does not have an input with link '{}'"
                            .format(self._node.pk, name))
@@ -2125,3 +2211,112 @@ class AttributeManager(object):
             return self._node.get_attr(name)
         except AttributeError as err:
             raise KeyError(str(err))
+
+def _get_neighbors_qbobj(node_id, node_class=None, link_type=None, link_label_filter=None, link_direction="incoming"):
+    """
+    Return a querybuilder object for a list of nodes that enter (directly) in this node
+
+    :param node_id: main node id for which incoming nodes are searched
+    :param node_class: If specified, should be a class, and it filters only
+        elements of that specific type (or a subclass of 'type')
+    :param link_type: Only get inputs of this link type, if None then
+        returns all inputs of all link types.
+    :param link_label_filter: filters the incoming nodes by its link label.
+        Here regex can be passed for link label filter as we are using "like" in QB.
+    :param link_direction: It is either incoming (get all incoming of the node) or
+        outgoing (get all outgoing of the node)
+    """
+    from aiida.orm.querybuilder import QueryBuilder
+    from aiida.orm.node import Node
+
+    filtered_node = Node
+    edge_filters = {}
+
+    if node_class:
+        filtered_node = node_class
+    if link_type:
+        if not isinstance(link_type, tuple):
+            link_type = (link_type,)
+        link_type_values = []
+        for ltype in link_type:
+            if not isinstance(ltype, LinkType):
+                raise TypeError("link_type '{}' should be a LinkType object".format(ltype))
+            link_type_values.append(ltype.value)
+        edge_filters["type"] = {"in": link_type_values}
+    if link_label_filter:
+        edge_filters["label"] = {"like": link_label_filter}
+
+    qb_obj = QueryBuilder()
+    qb_obj.append(Node, filters={"id": {"==": node_id}}, tag="main")
+
+    if link_direction == "outgoing":
+        qb_obj.append(filtered_node, with_incoming="main", project=["*"], edge_project=["label", "type"],
+                      edge_filters=edge_filters)
+    else:
+        qb_obj.append(filtered_node, with_outgoing="main", project=["*"], edge_project=["label", "type"],
+                      edge_filters=edge_filters)
+
+    return qb_obj
+
+
+class NeighborManager(object):
+    """
+    Class to convert neighbors list object into iterator object.
+    It defines methods like:
+    one(): returns one entry from list. The given entry needs to be unique in list otherwise it raises exception
+    first(): returns first entry from the list
+    all(): returns all entries from list
+    """
+    def __init__(self, neighbors):
+        """ Initialise the neighbors """
+        self.neighbors = neighbors
+
+    def __iter__(self):
+        """ Converts neighbors list to iterator """
+        return iter(self.neighbors)
+
+    def __next__(self):
+        """ Override iter next method """
+        for neighbor in self.neighbors:
+            yield neighbor
+
+    def next(self):
+        """ Calls private next method amd returns it """
+        return self.__next__()
+
+    def one(self):
+        """ returns one entry from list. The given entry needs to be
+        unique in list otherwise it raises exception """
+        if self.neighbors:
+            if len(self.neighbors) > 1:
+                raise ValueError("returns more than one links.")
+            return self.neighbors[0]
+
+        raise ValueError("No links available.")
+
+
+    def first(self):
+        """ returns first entry from the list """
+        if self.neighbors:
+            return self.neighbors[0]
+        raise ValueError("No links available.")
+
+    def all(self):
+        """ returns all entries from list """
+        return self.neighbors
+
+    def get_node_by_label(self, label):
+        """ get the node object from list for given label """
+        for entry in self.neighbors:
+            if entry.label == label:
+                return entry.node
+        raise NotExistent("Neighbor with label '{}' is not present".format(label))
+
+    def get_labels(self):
+        """ returns list of labels """
+        return [entry.label for entry in self.neighbors]
+
+    def get_nodes(self):
+        """ eturns list of all nodes """
+        return [entry.node for entry in self.neighbors]
+

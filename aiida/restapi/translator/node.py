@@ -425,7 +425,7 @@ class NodeTranslator(BaseTranslator):
 
         :param node: node object that has to be visualized
         :param visformat: visualization format
-        :returns: data selected and serializaed for visualization
+        :returns: data selected and serialized for visualization
 
         If this method is called by Node resource it will look for the type
         of object and invoke the correct method in the lowest-compatibel

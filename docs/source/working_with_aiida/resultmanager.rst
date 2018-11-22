@@ -81,7 +81,7 @@ Again, we start by loading a node from the database. Unlike before, this can be 
     from aiida.orm import load_node
     node = load_node(17)
 
-Now, we want to find the nodes which have a direct link to this node. The node has several methods to extract this information: :meth:`get_outputs() <aiida.orm.implementation.general.node.AbstractNode.get_outputs>`, :meth:`get_outputs_dict() <aiida.orm.implementation.general.node.AbstractNode.get_outputs_dict>`, :meth:`get_inputs() <aiida.orm.implementation.general.node.AbstractNode.get_inputs>` and :meth:`get_inputs_dict() <aiida.orm.implementation.general.node.AbstractNode.get_inputs_dict>`. The most practical way to access this information, especially when working on the ``verdi shell``, is by means of the ``inp`` and ``out`` attributes.
+Now, we want to find the nodes which have a direct link to this node. The node has several methods to extract this information: :meth:`get_outgoing() <aiida.orm.implementation.general.node.AbstractNode.get_outgoing>`, :meth:`get_incoming() <aiida.orm.implementation.general.node.AbstractNode.get_incoming>`. The most practical way to access this information, especially when working on the ``verdi shell``, is by means of the ``inp`` and ``out`` attributes.
 
 The ``inp`` attribute can be used to list and access the nodes with a direct link to 
 ``node`` in input. The names of the input links can be printed by ``list(node.inp)`` or interactively by ``node.inp. + TAB``. As an example, suppose that ``node`` has an input ``KpointsData`` object under the linkname ``kpoints``. The command

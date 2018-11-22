@@ -396,14 +396,14 @@ class Process(plumpy.Process):
                 self.calc.store_all()
                 if self.calc.is_finished_ok:
                     self._state = ProcessState.FINISHED
-                    for name, value in self.calc.get_outputs_dict(link_type=LinkType.RETURN).items():
-                        if name.endswith('_{pk}'.format(pk=value.pk)):
+                    for entry in self.calc.get_outgoing(link_type=LinkType.RETURN):
+                        if entry.label.endswith('_{pk}'.format(pk=entry.node.pk)):
                             continue
-                        self.out(name, value)
+                        self.out(entry.label, entry.node)
                     # This is needed for JobProcess. In that case, the outputs are
                     # returned regardless of whether they end in '_pk'
-                    for name, value in self.calc.get_outputs_dict(link_type=LinkType.CREATE).items():
-                        self.out(name, value)
+                    for entry in self.calc.get_outgoing(link_type=LinkType.CREATE):
+                        self.out(entry.label, entry.node)
             except exceptions.ModificationNotAllowed:
                 # The calculation was already stored
                 pass
@@ -442,7 +442,7 @@ class Process(plumpy.Process):
         if self.inputs.store_provenance is False:
             return
 
-        new_outputs = set(self.outputs.keys()) - set(self.calc.get_outputs_dict(link_type=LinkType.RETURN).keys())
+        new_outputs = set(self.outputs.keys()) - set(self.calc.get_outgoing(link_type=LinkType.RETURN).get_labels())
 
         for label in new_outputs:
             value = self.outputs[label]
@@ -627,7 +627,7 @@ class Process(plumpy.Process):
         # maps the exposed name to all outputs that belong to it
         top_namespace_map = collections.defaultdict(list)
         process_outputs_dict = {
-            k: v for k, v in process_instance.get_outputs(also_labels=True, link_type=LinkType.RETURN)
+            entry.label: entry.node for entry in process_instance.get_outgoing(link_type=LinkType.RETURN)
         }
 
         for port_name in process_outputs_dict:

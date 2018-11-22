@@ -214,11 +214,11 @@ class NodeTreePrinter(object):
 
         children = []
         # pylint: disable=unused-variable
-        for label, child \
-                in sorted(node.get_outputs(also_labels=True,
-                                           link_type=follow_links),
+        for entry \
+                in sorted(node.get_outgoing(link_type=follow_links).all(),
                           key=cls._ctime):
-            child_str = cls._build_tree(child, show_pk, follow_links=follow_links, max_depth=max_depth, depth=depth + 1)
+            child_str = cls._build_tree(
+                entry.node, show_pk, follow_links=follow_links, max_depth=max_depth, depth=depth + 1)
             if child_str:
                 children.append(child_str)
 

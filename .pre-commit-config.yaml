@@ -193,7 +193,6 @@
         aiida/common/profile.py|
         aiida/common/test_extendeddicts.py|
         aiida/common/test_logging.py|
-        aiida/common/test_utils.py|
         aiida/control/tests/test_postgres.py|
         aiida/daemon/execmanager.py|
         aiida/daemon/runner.py|

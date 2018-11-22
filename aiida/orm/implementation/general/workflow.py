@@ -704,8 +704,8 @@ class AbstractWorkflow(object):
         if (not issubclass(calc.__class__, CalcJobNode) and not isinstance(calc, CalcJobNode)):
             raise AiidaException("Cannot add a calculation not of type CalcJobNode")
 
-        for node in calc.get_inputs():
-            if node.pk is None:
+        for entry in calc.get_incoming():
+            if entry.node.pk is None:
                 raise AiidaException("Cannot add a calculation with "
                                      "unstored inputs")
 

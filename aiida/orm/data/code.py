@@ -541,7 +541,7 @@ class Code(Data):
         result.append(['Default plugin', self.get_input_plugin_name()])
 
         if verbose:
-            result.append(['Calculations', len(self.get_outputs())])
+            result.append(['Calculations', len(self.get_outgoing().all())])
 
         if self.is_local():
             result.append(['Type', 'local'])

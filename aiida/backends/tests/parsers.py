@@ -96,9 +96,9 @@ def output_test(pk, testname, skip_uuids_from_inputs=[]):
         raise ValueError("Out folder '{}' already exists".format(outfolder))
 
     inputs = []
-    for node in c.get_inputs():
-        if node.uuid not in skip_uuids_from_inputs:
-            inputs.append(node.dbnode)
+    for entry in c.get_incoming().all():
+        if entry.node.uuid not in skip_uuids_from_inputs:
+            inputs.append(entry.node.dbnode)
 
     folder = Folder(outfolder)
     to_export = [c.dbnode] + inputs

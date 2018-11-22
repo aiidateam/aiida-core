@@ -262,30 +262,6 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         results = [_ for [_] in qb.all()]
         self.assertEquals(set([i.pk for i in results]), set([a2.pk]))
 
-    def test_get_inputs_and_outputs(self):
-        a1 = Node().store()
-        a2 = Node().store()
-        a3 = Node().store()
-        a4 = Node().store()
-
-        a2.add_link_from(a1)
-        a3.add_link_from(a2)
-        a4.add_link_from(a2)
-        a4.add_link_from(a3)
-
-        # I check that I get the correct links
-        self.assertEquals(set([n.uuid for n in a1.get_inputs()]), set([]))
-        self.assertEquals(set([n.uuid for n in a1.get_outputs()]), set([a2.uuid]))
-
-        self.assertEquals(set([n.uuid for n in a2.get_inputs()]), set([a1.uuid]))
-        self.assertEquals(set([n.uuid for n in a2.get_outputs()]), set([a3.uuid, a4.uuid]))
-
-        self.assertEquals(set([n.uuid for n in a3.get_inputs()]), set([a2.uuid]))
-        self.assertEquals(set([n.uuid for n in a3.get_outputs()]), set([a4.uuid]))
-
-        self.assertEquals(set([n.uuid for n in a4.get_inputs()]), set([a2.uuid, a3.uuid]))
-        self.assertEquals(set([n.uuid for n in a4.get_outputs()]), set([]))
-
 
 class TestNodeBasic(AiidaTestCase):
     """
@@ -1570,9 +1546,8 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # Try also reverse storage
         endnode.add_link_from(n2, "N2")
 
-        self.assertEqual(endnode.get_inputs(only_in_db=True), [])
         self.assertEqual(
-            set([(i[0], i[1].uuid) for i in endnode.get_inputs(also_labels=True)]),
+            set([(i.label, i.node.uuid) for i in endnode.get_incoming()]),
             set([("N1", n1.uuid), ("N2", n2.uuid)]))
 
         # Endnode not stored yet, n3 and n4 already stored
@@ -1580,28 +1555,23 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # Try also reverse storage
         endnode.add_link_from(n4, "N4")
 
-        self.assertEqual(endnode.get_inputs(only_in_db=True), [])
         self.assertEqual(
-            set([(i[0], i[1].uuid) for i in endnode.get_inputs(also_labels=True)]),
+            set([(i.label, i.node.uuid) for i in endnode.get_incoming()]),
             set([("N1", n1.uuid), ("N2", n2.uuid), ("N3", n3.uuid), ("N4", n4.uuid)]))
 
         # Some parent nodes are not stored yet
         with self.assertRaises(ModificationNotAllowed):
             endnode.store()
 
-        self.assertEqual(set([(i[0], i[1].uuid) for i in endnode.get_inputs(only_in_db=True, also_labels=True)]), set())
         self.assertEqual(
-            set([(i[0], i[1].uuid) for i in endnode.get_inputs(also_labels=True)]),
+            set([(i.label, i.node.uuid) for i in endnode.get_incoming()]),
             set([("N1", n1.uuid), ("N2", n2.uuid), ("N3", n3.uuid), ("N4", n4.uuid)]))
 
         # This will also store n1 and n2!
         endnode.store_all()
 
         self.assertEqual(
-            set([(i[0], i[1].uuid) for i in endnode.get_inputs(only_in_db=True, also_labels=True)]),
-            set([("N1", n1.uuid), ("N2", n2.uuid), ("N3", n3.uuid), ("N4", n4.uuid)]))
-        self.assertEqual(
-            set([(i[0], i[1].uuid) for i in endnode.get_inputs(also_labels=True)]),
+            set([(i.label, i.node.uuid) for i in endnode.get_incoming()]),
             set([("N1", n1.uuid), ("N2", n2.uuid), ("N3", n3.uuid), ("N4", n4.uuid)]))
 
     def test_store_with_unstored_parents(self):
@@ -1615,23 +1585,16 @@ class TestSubNodesAndLinks(AiidaTestCase):
         endnode.add_link_from(n1, "N1")
         endnode.add_link_from(n2, "N2")
 
-        self.assertEqual(endnode.get_inputs(only_in_db=True), [])
-
         # Some parent nodes are not stored yet
         with self.assertRaises(ModificationNotAllowed):
             endnode.store()
-
-        self.assertEqual(endnode.get_inputs(only_in_db=True), [])
 
         n1.store()
         # Now I can store
         endnode.store()
 
         self.assertEqual(
-            set([(i[0], i[1].uuid) for i in endnode.get_inputs(only_in_db=True, also_labels=True)]),
-            set([("N1", n1.uuid), ("N2", n2.uuid)]))
-        self.assertEqual(
-            set([(i[0], i[1].uuid) for i in endnode.get_inputs(also_labels=True)]),
+            set([(i.label, i.node.uuid) for i in endnode.get_incoming()]),
             set([("N1", n1.uuid), ("N2", n2.uuid)]))
 
     def test_storeall_with_unstored_grandparents(self):
@@ -1654,8 +1617,8 @@ class TestSubNodesAndLinks(AiidaTestCase):
         endnode.store_all()
 
         # Check the parents...
-        self.assertEqual(set([(i[0], i[1].uuid) for i in n2.get_inputs(also_labels=True)]), set([("N1", n1.uuid)]))
-        self.assertEqual(set([(i[0], i[1].uuid) for i in endnode.get_inputs(also_labels=True)]), set([("N2", n2.uuid)]))
+        self.assertEqual(set([(i.label, i.node.uuid) for i in n2.get_incoming()]), set([("N1", n1.uuid)]))
+        self.assertEqual(set([(i.label, i.node.uuid) for i in endnode.get_incoming()]), set([("N2", n2.uuid)]))
 
     def test_has_children_has_parents(self):
         """
@@ -1772,7 +1735,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         n10.add_link_from(n8)
         n10.add_link_from(n9)
 
-        all_labels = [_[0] for _ in n10.get_inputs(also_labels=True)]
+        all_labels = [_.label for _ in n10.get_incoming()]
         self.assertEquals(len(set(all_labels)), len(all_labels), "There are duplicate links, that are not expected")
 
     @unittest.skip("Skipping while we solve issue #301")
@@ -1790,13 +1753,13 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
         # I can replace the link and check that it was replaced
         n3._replace_link_from(n2, label='the_label')
-        the_parent = [_[1].uuid for _ in n3.get_inputs(also_labels=True) if _[0] == 'the_label']
+        the_parent = [_.node.uuid for _ in n3.get_incoming() if _.label == 'the_label']
         self.assertEquals(len(the_parent), 1, "There are multiple input links with the same label (the_label)!")
         self.assertEquals(n2.uuid, the_parent[0])
 
         # _replace_link_from should work also if there is no previous link
         n2._replace_link_from(n1, label='the_label_2')
-        the_parent_2 = [_[1].uuid for _ in n3.get_inputs(also_labels=True) if _[0] == 'the_label_2']
+        the_parent_2 = [_.node.uuid for _ in n3.get_incoming() if _.label == 'the_label_2']
         self.assertEquals(len(the_parent_2), 1, "There are multiple input links with the same label (the_label_2)!")
         self.assertEquals(n1.uuid, the_parent_2[0])
 
@@ -1827,22 +1790,22 @@ class TestSubNodesAndLinks(AiidaTestCase):
         n2.store_all()
         n3.store_all()
 
-        n2_in_links = [(l, n.uuid) for l, n in n2.get_inputs_dict().items()]
+        n2_in_links = [(n.label, n.node.uuid) for n in n2.get_incoming()]
         self.assertEquals(sorted(n2_in_links), sorted([
             ('l1', n1.uuid),
         ]))
-        n3_in_links = [(l, n.uuid) for l, n in n3.get_inputs_dict().items()]
+        n3_in_links = [(n.label, n.node.uuid) for n in n3.get_incoming()]
         self.assertEquals(sorted(n3_in_links), sorted([
             ('l2', n2.uuid),
             ('l3', n1.uuid),
         ]))
 
-        n1_out_links = [(l, n.pk) for l, n in n1.get_outputs(also_labels=True)]
+        n1_out_links = [(entry.label, entry.node.pk) for entry in n1.get_outgoing()]
         self.assertEquals(sorted(n1_out_links), sorted([
             ('l1', n2.pk),
             ('l3', n3.pk),
         ]))
-        n2_out_links = [(l, n.pk) for l, n in n2.get_outputs(also_labels=True)]
+        n2_out_links = [(entry.label, entry.node.pk) for entry in n2.get_outgoing()]
         self.assertEquals(sorted(n2_out_links), sorted([('l2', n3.pk)]))
 
     @unittest.skip("This test should be enabled when link type constraints are properly implemented")
@@ -1960,7 +1923,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         with self.assertRaises(ModificationNotAllowed):
             calc_a.use_code(code)
 
-        calculation_inputs = calc.get_inputs()
+        calculation_inputs = calc.get_incoming().all()
 
         # This calculation has three inputs (2 data and one code)
         self.assertEquals(len(calculation_inputs), 3)
@@ -1999,60 +1962,46 @@ class TestSubNodesAndLinks(AiidaTestCase):
         with self.assertRaises(ValueError):
             d1.add_link_from(calc2, link_type=LinkType.CREATE)
 
-    def test_node_get_inputs_outputs_link_type_stored(self):
+    def test_node_get_incoming_outgoing_links(self):
         """
-        Test that the link_type parameter in get_inputs and get_outputs only
+        Test that the link_type parameter in get_incoming and get_outgoing only
         returns those nodes with the correct link type for stored nodes
         """
+
         node_origin = Node().store()
-        node_caller = Node().store()
+        node_caller_stored = Node().store()
         node_called = Node().store()
-        node_input = Node().store()
+        node_input_stored = Node().store()
         node_output = Node().store()
         node_return = Node().store()
+        node_caller_unstored = Node()
+        node_input_unstored = Node()
 
         # Input links of node_origin
-        node_origin.add_link_from(node_caller, label='caller', link_type=LinkType.CALL)
-        node_origin.add_link_from(node_input, label='input', link_type=LinkType.INPUT)
+        node_origin.add_link_from(node_caller_stored, label='caller_stored', link_type=LinkType.CALL)
+        node_origin.add_link_from(node_input_stored, label='input_stored', link_type=LinkType.INPUT)
+        node_origin.add_link_from(node_caller_unstored, label='caller_unstored', link_type=LinkType.CALL)
+        node_origin.add_link_from(node_input_unstored, label='input_unstored', link_type=LinkType.INPUT)
 
         # Output links of node_origin
         node_called.add_link_from(node_origin, label='called', link_type=LinkType.CALL)
         node_output.add_link_from(node_origin, label='output', link_type=LinkType.CREATE)
         node_return.add_link_from(node_origin, label='return', link_type=LinkType.RETURN)
 
-        # All inputs and outputs
-        self.assertEquals(len(node_origin.get_inputs()), 2)
-        self.assertEquals(len(node_origin.get_outputs()), 3)
+        # All incoming and outgoing
+        self.assertEquals(len(node_origin.get_incoming().all()), 4)
+        self.assertEquals(len(node_origin.get_outgoing().all()), 3)
 
-        # Link specific inputs
-        self.assertEquals(len(node_origin.get_inputs(link_type=LinkType.CALL)), 1)
-        self.assertEquals(len(node_origin.get_inputs(link_type=LinkType.INPUT)), 1)
+        # Link specific incoming
+        self.assertEquals(len(node_origin.get_incoming(link_type=LinkType.CALL).all()), 2)
+        self.assertEquals(len(node_origin.get_incoming(link_type=LinkType.INPUT).all()), 2)
+        self.assertEquals(len(node_origin.get_incoming(link_label_filter="in_ut%").all()), 2)
+        self.assertEquals(len(node_origin.get_incoming(node_class=Node).all()), 4)
 
-        # Link specific outputs
-        self.assertEquals(len(node_origin.get_outputs(link_type=LinkType.CALL)), 1)
-        self.assertEquals(len(node_origin.get_outputs(link_type=LinkType.CREATE)), 1)
-        self.assertEquals(len(node_origin.get_outputs(link_type=LinkType.RETURN)), 1)
-
-    def test_node_get_inputs_link_type_unstored(self):
-        """
-        Test that the link_type parameter in get_inputs only returns those nodes with
-        the correct link type for unstored nodes. We don't check this analogously for
-        get_outputs because there is not output links cache
-        """
-        node_origin = Node()
-        node_caller = Node()
-        node_input = Node()
-
-        # Input links of node_origin
-        node_origin.add_link_from(node_caller, label='caller', link_type=LinkType.CALL)
-        node_origin.add_link_from(node_input, label='input', link_type=LinkType.INPUT)
-
-        # All inputs and outputs
-        self.assertEquals(len(node_origin.get_inputs()), 2)
-
-        # Link specific inputs
-        self.assertEquals(len(node_origin.get_inputs(link_type=LinkType.CALL)), 1)
-        self.assertEquals(len(node_origin.get_inputs(link_type=LinkType.INPUT)), 1)
+        # Link specific outgoing
+        self.assertEquals(len(node_origin.get_outgoing(link_type=LinkType.CALL).all()), 1)
+        self.assertEquals(len(node_origin.get_outgoing(link_type=LinkType.CREATE).all()), 1)
+        self.assertEquals(len(node_origin.get_outgoing(link_type=LinkType.RETURN).all()), 1)
 
 
 class AnyValue(object):

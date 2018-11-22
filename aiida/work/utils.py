@@ -184,9 +184,7 @@ def get_or_create_output_group(node):
     if not isinstance(node, ProcessNode):
         raise TypeError("Can only create output groups for type ProcessNode")
 
-    outputs = node.get_outputs_dict(link_type=LinkType.CREATE)
-    outputs.update(node.get_outputs_dict(link_type=LinkType.RETURN))
-
+    outputs = {entry.label: entry.node for entry in node.get_outgoing(link_type=(LinkType.CREATE, LinkType.RETURN))}
     return FrozenDict(dict=outputs)
 
 

@@ -368,7 +368,7 @@ class ProcessNode(Sealable, Node):
 
         :returns: list of process nodes called by this process
         """
-        return self.get_outputs(link_type=LinkType.CALL)
+        return self.get_outgoing(link_type=LinkType.CALL).get_nodes()
 
     @property
     def called_descendants(self):
@@ -392,9 +392,9 @@ class ProcessNode(Sealable, Node):
 
         :returns: process node that called this process node instance or None
         """
-        called_by = self.get_inputs(link_type=LinkType.CALL)
+        called_by = self.get_incoming(link_type=LinkType.CALL)
         if called_by:
-            return called_by[0]
+            return called_by.first()
 
         return None
 
@@ -453,8 +453,8 @@ class ProcessNode(Sealable, Node):
         """
         res = super(ProcessNode, self)._get_objects_to_hash()
         res.append({
-            key: value.get_hash()
-            for key, value in self.get_inputs_dict(link_type=LinkType.INPUT).items()
-            if key not in self._hash_ignored_inputs
+            entry.label: entry.node.get_hash()
+            for entry in self.get_incoming(link_type=LinkType.INPUT)
+            if entry.label not in self._hash_ignored_inputs
         })
         return res

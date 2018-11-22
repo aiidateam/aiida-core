@@ -1832,7 +1832,7 @@ class AbstractNode(object):
         )
 
         # Make sure the node doesn't have any RETURN links
-        if cache_node.get_outgoing(link_type=LinkType.RETURN):
+        if cache_node.get_outgoing(link_type=LinkType.RETURN).all():
             raise ValueError("Cannot use cache from nodes with RETURN links.")
 
         self.store(with_transaction=with_transaction, use_cache=False)

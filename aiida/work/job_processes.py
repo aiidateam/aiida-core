@@ -669,8 +669,8 @@ class JobProcess(processes.Process):
                     raise
 
         # Finally link up the outputs and we're done
-        for label, node in self.calc.get_outputs_dict().items():
-            self.out(label, node)
+        for entry in self.calc.get_outgoing():
+            self.out(entry.label, entry.node)
 
         return exit_code
 

@@ -33,7 +33,7 @@ def delete_code(code):
 
     type_check(code, Code)
 
-    existing_outputs = code.get_outputs()
+    existing_outputs = code.get_outgoing().all()
 
     if len(existing_outputs) != 0:
         raise InvalidOperation('Unable to delete {} because it has {} output links'.format(

@@ -1798,12 +1798,12 @@ class TestSubNodesAndLinks(AiidaTestCase):
             ('l3', n1.uuid),
         ]))
 
-        n1_out_links = [(l, n.pk) for l, n in n1.get_outputs(also_labels=True)]
+        n1_out_links = [(entry.label, entry.node.pk) for entry in n1.get_outgoing()]
         self.assertEquals(sorted(n1_out_links), sorted([
             ('l1', n2.pk),
             ('l3', n3.pk),
         ]))
-        n2_out_links = [(l, n.pk) for l, n in n2.get_outputs(also_labels=True)]
+        n2_out_links = [(entry.label, entry.node.pk) for entry in n2.get_outgoing()]
         self.assertEquals(sorted(n2_out_links), sorted([('l2', n3.pk)]))
 
     @unittest.skip("This test should be enabled when link type constraints are properly implemented")

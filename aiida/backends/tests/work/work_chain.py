@@ -216,7 +216,7 @@ class TestExitStatus(AiidaTestCase):
         self.assertEquals(node.is_finished, True)
         self.assertEquals(node.is_finished_ok, False)
         self.assertEquals(node.is_failed, True)
-        self.assertNotIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outputs_dict())
+        self.assertNotIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outgoing().get_labels())
 
     def test_failing_workchain_through_exit_code(self):
         result, node = work.run_get_node(PotentialFailureWorkChain, success=Bool(False), through_exit_code=Bool(True))
@@ -225,7 +225,7 @@ class TestExitStatus(AiidaTestCase):
         self.assertEquals(node.is_finished, True)
         self.assertEquals(node.is_finished_ok, False)
         self.assertEquals(node.is_failed, True)
-        self.assertNotIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outputs_dict())
+        self.assertNotIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outgoing().get_labels())
 
     def test_successful_workchain_through_integer(self):
         result, node = work.run_get_node(PotentialFailureWorkChain, success=Bool(True))
@@ -233,8 +233,8 @@ class TestExitStatus(AiidaTestCase):
         self.assertEquals(node.is_finished, True)
         self.assertEquals(node.is_finished_ok, True)
         self.assertEquals(node.is_failed, False)
-        self.assertIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outputs_dict())
-        self.assertEquals(node.get_outputs_dict()[PotentialFailureWorkChain.OUTPUT_LABEL],
+        self.assertIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outgoing().get_labels())
+        self.assertEquals(node.get_outgoing().get_node_by_label(PotentialFailureWorkChain.OUTPUT_LABEL),
                           PotentialFailureWorkChain.OUTPUT_VALUE)
 
     def test_successful_workchain_through_exit_code(self):
@@ -243,8 +243,8 @@ class TestExitStatus(AiidaTestCase):
         self.assertEquals(node.is_finished, True)
         self.assertEquals(node.is_finished_ok, True)
         self.assertEquals(node.is_failed, False)
-        self.assertIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outputs_dict())
-        self.assertEquals(node.get_outputs_dict()[PotentialFailureWorkChain.OUTPUT_LABEL],
+        self.assertIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outgoing().get_labels())
+        self.assertEquals(node.get_outgoing().get_node_by_label(PotentialFailureWorkChain.OUTPUT_LABEL),
                           PotentialFailureWorkChain.OUTPUT_VALUE)
 
     def test_return_out_of_outline(self):
@@ -253,7 +253,7 @@ class TestExitStatus(AiidaTestCase):
         self.assertEquals(node.is_finished, True)
         self.assertEquals(node.is_finished_ok, False)
         self.assertEquals(node.is_failed, True)
-        self.assertNotIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outputs_dict())
+        self.assertNotIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outgoing().get_labels())
 
 
 class IfTest(work.WorkChain):
@@ -953,7 +953,7 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         runner.schedule(process)
         runner.loop.run_sync(lambda: run_async())
 
-        child = process.calc.get_outputs(link_type=LinkType.CALL)[0]
+        child = process.calc.get_outgoing(link_type=LinkType.CALL).first()
         self.assertEquals(child.is_finished_ok, False)
         self.assertEquals(child.is_excepted, False)
         self.assertEquals(child.is_killed, True)

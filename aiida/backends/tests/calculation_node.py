@@ -43,6 +43,7 @@ class TestCalcNode(AiidaTestCase):
     def setUpClass(cls):
         super(TestCalcNode, cls).setUpClass()
         from aiida.orm import JobCalculation
+        cls.computer.configure()
 
         cls.construction_options = {
             'resources': {
@@ -144,3 +145,15 @@ class TestCalcNode(AiidaTestCase):
             # Otherwise, if the option defines a default that is not `None`, verify that that is returned correctly
             elif 'default' in attributes and attributes['default'] is not None:
                 self.assertEqual(get_options[name], attributes['default'])
+
+    def test_get_authinfo(self):
+        """Test that we can get the AuthInfo object from the calculation instance."""
+        from aiida.orm import AuthInfo
+        authinfo = self.job_calculation._get_authinfo()
+        self.assertIsInstance(authinfo, AuthInfo)
+
+    def test_get_transport(self):
+        """Test that we can get the Transport object from the calculation instance."""
+        from aiida.transport import Transport
+        transport = self.job_calculation._get_transport()
+        self.assertIsInstance(transport, Transport)

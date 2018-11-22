@@ -1646,12 +1646,13 @@ class AbstractJobCalculation(AbstractCalculation):
 
     def _get_authinfo(self):
         from aiida.common.exceptions import NotExistent
+        from aiida.orm.authinfos import AuthInfo
 
         computer = self.get_computer()
         if computer is None:
             raise NotExistent("No computer has been set for this calculation")
 
-        return self.backend.authinfos.get(computer=computer, user=self.get_user())
+        return AuthInfo.from_backend_entity(self.backend.authinfos.get(computer=computer, user=self.get_user()))
 
     def _get_transport(self):
         """

@@ -13,8 +13,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-import traceback
-
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
@@ -39,7 +37,7 @@ class TestVerdiWork(AiidaTestCase):
         """Test the status command."""
         calc = WorkChainNode().store()
         result = self.cli_runner.invoke(cmd_work.work_status, [str(calc.pk)])
-        self.assertIsNone(result.exception, ''.join(traceback.format_exception(*result.exc_info)))
+        self.assertClickResultNoException(result)
 
     def test_list(self):
         """Test the list command."""

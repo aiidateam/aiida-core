@@ -82,7 +82,6 @@ class Data(Node):
         from aiida.orm.utils.links import validate_link
         validate_link(source, self, link_type, link_label)
 
-
     def __copy__(self):
         """Copying a Data node is not supported, use copy.deepcopy or call Data.clone()."""
         raise InvalidOperation('copying a Data node is not supported, use copy.deepcopy')

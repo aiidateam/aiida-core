@@ -406,7 +406,7 @@ def _inline_to_standalone_script(calc):
        ModificationNotAllowed exception, since the nodes, that are
        created by the ``\*_inline`` function, are already stored.
     """
-    args = ["{}=load_node('{}')".format(entry.label, entry.node.uuid) for entry in calc.get_incoming()]
+    args = ["{}=load_node('{}')".format(entry.link_label, entry.node.uuid) for entry in calc.get_incoming()]
     args_string = ',\n    '.join(sorted(args))
 
     function_name = calc.function_name

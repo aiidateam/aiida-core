@@ -1546,7 +1546,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         endnode.add_incoming(n2, LinkType.CREATE, "N2")
 
         self.assertEqual(
-            set([(i.label, i.node.uuid) for i in endnode.get_incoming()]),
+            set([(i.link_label, i.node.uuid) for i in endnode.get_incoming()]),
             set([("N1", n1.uuid), ("N2", n2.uuid)]))
 
         # Endnode not stored yet, n3 and n4 already stored
@@ -1555,7 +1555,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         endnode.add_incoming(n4, LinkType.CREATE, "N4")
 
         self.assertEqual(
-            set([(i.label, i.node.uuid) for i in endnode.get_incoming()]),
+            set([(i.link_label, i.node.uuid) for i in endnode.get_incoming()]),
             set([("N1", n1.uuid), ("N2", n2.uuid), ("N3", n3.uuid), ("N4", n4.uuid)]))
 
         # Some parent nodes are not stored yet
@@ -1563,14 +1563,14 @@ class TestSubNodesAndLinks(AiidaTestCase):
             endnode.store()
 
         self.assertEqual(
-            set([(i.label, i.node.uuid) for i in endnode.get_incoming()]),
+            set([(i.link_label, i.node.uuid) for i in endnode.get_incoming()]),
             set([("N1", n1.uuid), ("N2", n2.uuid), ("N3", n3.uuid), ("N4", n4.uuid)]))
 
         # This will also store n1 and n2!
         endnode.store_all()
 
         self.assertEqual(
-            set([(i.label, i.node.uuid) for i in endnode.get_incoming()]),
+            set([(i.link_label, i.node.uuid) for i in endnode.get_incoming()]),
             set([("N1", n1.uuid), ("N2", n2.uuid), ("N3", n3.uuid), ("N4", n4.uuid)]))
 
     def test_store_with_unstored_parents(self):
@@ -1593,7 +1593,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         endnode.store()
 
         self.assertEqual(
-            set([(i.label, i.node.uuid) for i in endnode.get_incoming()]),
+            set([(i.link_label, i.node.uuid) for i in endnode.get_incoming()]),
             set([("N1", n1.uuid), ("N2", n2.uuid)]))
 
     def test_storeall_with_unstored_grandparents(self):
@@ -1616,8 +1616,8 @@ class TestSubNodesAndLinks(AiidaTestCase):
         endnode.store_all()
 
         # Check the parents...
-        self.assertEqual(set([(i.label, i.node.uuid) for i in n2.get_incoming()]), set([("N1", n1.uuid)]))
-        self.assertEqual(set([(i.label, i.node.uuid) for i in endnode.get_incoming()]), set([("N2", n2.uuid)]))
+        self.assertEqual(set([(i.link_label, i.node.uuid) for i in n2.get_incoming()]), set([("N1", n1.uuid)]))
+        self.assertEqual(set([(i.link_label, i.node.uuid) for i in endnode.get_incoming()]), set([("N2", n2.uuid)]))
 
     def test_has_children_has_parents(self):
         """
@@ -1733,8 +1733,16 @@ class TestSubNodesAndLinks(AiidaTestCase):
         n10.add_incoming(n8, link_type=LinkType.RETURN)
         n10.add_incoming(n9, link_type=LinkType.RETURN)
 
-        all_labels = [_.label for _ in n10.get_incoming()]
+        all_labels = [_.link_label for _ in n10.get_incoming()]
         self.assertEquals(len(set(all_labels)), len(all_labels), "There are duplicate links, that are not expected")
+
+    @unittest.skip('write and activate this test once #2238 is addressed')
+    def test_link_label_autogenerator(self):
+        """
+        When the uniqueness constraints on links are reimplemented on the database level, auto generation of
+        labels that relies directly on those database level constraints should be reinstated and tested for here.
+        """
+        raise NotImplementedError
 
     @unittest.skip('remove this test once #2219 is addressed')
     def test_link_replace(self):
@@ -1752,73 +1760,73 @@ class TestSubNodesAndLinks(AiidaTestCase):
             n3.add_incoming(n1, link_type=LinkType.CREATE, link_label='the_label')
 
         # I can replace the link and check that it was replaced
-        n3._replace_link_from(n2, LinkType.CREATE, label='the_label')
-        the_parent = [_.node.uuid for _ in n3.get_incoming() if _.label == 'the_label']
+        n3._replace_link_from(n2, LinkType.CREATE, link_label='the_label')
+        the_parent = [_.node.uuid for _ in n3.get_incoming() if _.link_label == 'the_label']
         self.assertEquals(len(the_parent), 1, "There are multiple input links with the same label (the_label)!")
         self.assertEquals(n2.uuid, the_parent[0])
 
         # _replace_link_from should work also if there is no previous link
-        n2._replace_link_from(n1, LinkType.CREATE, label='the_label_2')
-        the_parent_2 = [_.node.uuid for _ in n4.get_incoming() if _.label == 'the_label_2']
+        n2._replace_link_from(n1, LinkType.CREATE, link_label='the_label_2')
+        the_parent_2 = [_.node.uuid for _ in n4.get_incoming() if _.link_label == 'the_label_2']
         self.assertEquals(len(the_parent_2), 1, "There are multiple input links with the same label (the_label_2)!")
         self.assertEquals(n1.uuid, the_parent_2[0])
 
     def test_link_with_unstored(self):
         """
-        It is possible to store links between nodes even if they are unstored;
-        these links are cached. However, if working in the cache, an explicit
-        link name must be provided.
+        It is possible to store links between nodes even if they are unstored these links are cached.
         """
-        n1 = Node()
-        n2 = Node()
-        n3 = Node()
-        n4 = Node()
+        from aiida.orm.node.process import CalculationNode, WorkflowNode
+        from aiida.orm import Data
 
-        # No link names provided
-        with self.assertRaises(ModificationNotAllowed):
-            n4.add_incoming(n1, link_type=LinkType.CREATE)
+        n1 = Data()
+        n2 = WorkflowNode()
+        n3 = CalculationNode()
+        n4 = Data()
 
         # Caching the links
-        n2.add_incoming(n1, link_type=LinkType.CREATE, link_label='l1')
-        n3.add_incoming(n2, link_type=LinkType.CREATE, link_label='l2')
-        n3.add_incoming(n1, link_type=LinkType.CREATE, link_label='l3')
+        n2.add_incoming(n1, link_type=LinkType.INPUT_WORK, link_label='l1')
+        n3.add_incoming(n1, link_type=LinkType.INPUT_CALC, link_label='l3')
+        n3.add_incoming(n2, link_type=LinkType.CALL_CALC, link_label='l2')
 
         # Twice the same link name
-        with self.assertRaises(UniquenessError):
-            n3.add_incoming(n4, link_type=LinkType.CREATE, link_label='l2')
+        with self.assertRaises(ValueError):
+            n3.add_incoming(n4, link_type=LinkType.INPUT_CALC, link_label='l3')
 
         n2.store_all()
         n3.store_all()
 
-        n2_in_links = [(n.label, n.node.uuid) for n in n2.get_incoming()]
+        n2_in_links = [(n.link_label, n.node.uuid) for n in n2.get_incoming()]
         self.assertEquals(sorted(n2_in_links), sorted([
             ('l1', n1.uuid),
         ]))
-        n3_in_links = [(n.label, n.node.uuid) for n in n3.get_incoming()]
+        n3_in_links = [(n.link_label, n.node.uuid) for n in n3.get_incoming()]
         self.assertEquals(sorted(n3_in_links), sorted([
             ('l2', n2.uuid),
             ('l3', n1.uuid),
         ]))
 
-        n1_out_links = [(entry.label, entry.node.pk) for entry in n1.get_outgoing()]
+        n1_out_links = [(entry.link_label, entry.node.pk) for entry in n1.get_outgoing()]
         self.assertEquals(sorted(n1_out_links), sorted([
             ('l1', n2.pk),
             ('l3', n3.pk),
         ]))
-        n2_out_links = [(entry.label, entry.node.pk) for entry in n2.get_outgoing()]
+        n2_out_links = [(entry.link_label, entry.node.pk) for entry in n2.get_outgoing()]
         self.assertEquals(sorted(n2_out_links), sorted([('l2', n3.pk)]))
 
     def test_multiple_create_links(self):
         """
         Cannot have two CREATE links for the same node.
         """
-        n1 = Node()
-        n2 = Node()
-        n3 = Node()
+        from aiida.orm.data import Data
+        from aiida.orm.node.process import CalculationNode
+
+        n1 = CalculationNode()
+        n2 = CalculationNode()
+        n3 = Data()
 
         # Caching the links
         n3.add_incoming(n1, link_type=LinkType.CREATE, link_label='CREATE')
-        with self.assertRaises(UniquenessError):
+        with self.assertRaises(ValueError):
             n3.add_incoming(n2, link_type=LinkType.CREATE, link_label='CREATE')
 
     def test_valid_links(self):
@@ -1916,7 +1924,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
         # Cannot replace input nodes if the calculation is not in status NEW
         with self.assertRaises(ModificationNotAllowed):
-            calc_a._replace_link_from(d2, LinkType.INPUT_CALC, label='some_label')
+            calc_a._replace_link_from(d2, LinkType.INPUT_CALC, link_label='some_label')
 
         # Cannot (re)set the code if the calculation is not in status NEW
         with self.assertRaises(ModificationNotAllowed):

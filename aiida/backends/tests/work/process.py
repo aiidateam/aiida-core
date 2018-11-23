@@ -63,7 +63,7 @@ class TestProcessNamespace(AiidaTestCase):
         self.assertEquals(input_node.value, 5)
 
         # Check that the link of the process node has the correct link name
-        self.assertTrue('some_name_space_a' in proc.calc.get_incoming().get_labels())
+        self.assertTrue('some_name_space_a' in proc.calc.get_incoming().all_link_labels())
         self.assertEquals(proc.calc.get_incoming().get_node_by_label('some_name_space_a'), 5)
 
 
@@ -110,9 +110,9 @@ class TestProcess(AiidaTestCase):
         p = test_utils.DummyProcess(inputs)
 
         for entry in p._calc.get_incoming().all():
-            self.assertTrue(entry.label in inputs)
-            self.assertEqual(int(entry.label), int(entry.node.value))
-            dummy_inputs.remove(entry.label)
+            self.assertTrue(entry.link_label in inputs)
+            self.assertEqual(int(entry.link_label), int(entry.node.value))
+            dummy_inputs.remove(entry.link_label)
 
         # Make sure there are no other inputs
         self.assertFalse(dummy_inputs)

@@ -397,13 +397,13 @@ class Process(plumpy.Process):
                 if self.calc.is_finished_ok:
                     self._state = ProcessState.FINISHED
                     for entry in self.calc.get_outgoing(link_type=LinkType.RETURN):
-                        if entry.label.endswith('_{pk}'.format(pk=entry.node.pk)):
+                        if entry.link_label.endswith('_{pk}'.format(pk=entry.node.pk)):
                             continue
-                        self.out(entry.label, entry.node)
+                        self.out(entry.link_label, entry.node)
                     # This is needed for JobProcess. In that case, the outputs are
                     # returned regardless of whether they end in '_pk'
                     for entry in self.calc.get_outgoing(link_type=LinkType.CREATE):
-                        self.out(entry.label, entry.node)
+                        self.out(entry.link_label, entry.node)
             except exceptions.ModificationNotAllowed:
                 # The calculation was already stored
                 pass
@@ -442,21 +442,22 @@ class Process(plumpy.Process):
         if self.inputs.store_provenance is False:
             return
 
-        new_outputs = set(self.outputs.keys()) - set(self.calc.get_outgoing(link_type=LinkType.RETURN).get_labels())
+        new_outputs = set(self.outputs.keys()) - set(self.calc.get_outgoing(link_type=LinkType.RETURN).all_link_labels())
 
-        for label in new_outputs:
-            value = self.outputs[label]
-            # Try making us the creator
+        for link_label in new_outputs:
+            value = self.outputs[link_label]
+
+            # Try making us the creator if we are a CalculationNode
             try:
-                value.add_incoming(self.calc, LinkType.CREATE, label)
+                value.add_incoming(self.calc, LinkType.CREATE, link_label)
             except ValueError:
-                # Must have already been created...nae dramas
+                # Must have already been created or we cannot have create links
                 pass
 
             value.store()
 
             if isinstance(self.calc, WorkflowNode):
-                value.add_incoming(self.calc, LinkType.RETURN, label)
+                value.add_incoming(self.calc, LinkType.RETURN, link_label)
 
     @property
     def process_class(self):
@@ -514,12 +515,11 @@ class Process(plumpy.Process):
             # Need this special case for tests that use ProcessNodes as classes
             if isinstance(self.calc, ProcessNode) and not isinstance(self.calc, (CalculationNode, WorkflowNode)):
                 self.calc.add_incoming(input_value, LinkType.INPUT_WORK, name)
-                continue
 
-            if isinstance(self.calc, CalculationNode):
+            elif isinstance(self.calc, CalculationNode):
                 self.calc.add_incoming(input_value, LinkType.INPUT_CALC, name)
 
-            if isinstance(self.calc, WorkflowNode):
+            elif isinstance(self.calc, WorkflowNode):
                 self.calc.add_incoming(input_value, LinkType.INPUT_WORK, name)
 
     def _add_description_and_label(self):

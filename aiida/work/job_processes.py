@@ -670,7 +670,7 @@ class JobProcess(processes.Process):
 
         # Finally link up the outputs and we're done
         for entry in self.calc.get_outgoing():
-            self.out(entry.label, entry.node)
+            self.out(entry.link_label, entry.node)
 
         return exit_code
 

@@ -494,25 +494,22 @@ class Node(AbstractNode):
             context_man = EmptyContextManager()
 
         if not self.is_stored:
-            raise ModificationNotAllowed(
-                "Node with pk= {} is not stored yet".format(self.pk))
+            raise ModificationNotAllowed('cannot store cached incoming links for unstored Node<{}>'.format(self.pk))
 
         with context_man:
             # This raises if there is an unstored node.
             self._check_are_parents_stored()
-            # I have to store only those links where the source is already
-            # stored
-            links_to_store = list(self._inputlinks_cache.keys())
 
-            for label in links_to_store:
-                src, link_type = self._inputlinks_cache[label]
-                self._add_dblink_from(src, link_type, label)
+            # I have to store only those links where the source is already stored
+            for link_triple in self._incoming_cache:
+                self._add_dblink_from(*link_triple)
+
             # If everything went smoothly, clear the entries from the cache.
             # I do it here because I delete them all at once if no error
             # occurred; otherwise, links will not be stored and I
             # should not delete them from the cache (but then an exception
             # would have been raised, and the following lines are not executed)
-            self._inputlinks_cache.clear()
+            self._incoming_cache.clear()
 
     def _db_store(self, with_transaction=True):
         """

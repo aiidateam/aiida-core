@@ -22,6 +22,11 @@ from aiida.common.links import LinkType
 
 class TestQueryBuilder(AiidaTestCase):
 
+    def setUp(self):
+        super(TestQueryBuilder, self).setUp()
+        self.clean_db()
+        self.insert_data()
+
     def test_classification(self):
         """
         This tests the classifications of the QueryBuilder
@@ -124,11 +129,11 @@ class TestQueryBuilder(AiidaTestCase):
         n5._set_attr('foo', None)
         n5.store()
 
-        n2.add_incoming(n1, link_type=LinkType.INPUT_CALC)
-        n3.add_incoming(n2, link_type=LinkType.CREATE)
+        n2.add_incoming(n1, link_type=LinkType.INPUT_CALC, link_label='link1')
+        n3.add_incoming(n2, link_type=LinkType.CREATE, link_label='link2')
 
-        n4.add_incoming(n3, link_type=LinkType.INPUT_CALC)
-        n5.add_incoming(n4, link_type=LinkType.CREATE)
+        n4.add_incoming(n3, link_type=LinkType.INPUT_CALC, link_label='link3')
+        n5.add_incoming(n4, link_type=LinkType.CREATE, link_label='link4')
 
         qb1 = QueryBuilder()
         qb1.append(Node, filters={'attributes.foo': 1.000})
@@ -852,13 +857,13 @@ class QueryBuilderPath(AiidaTestCase):
         # between two graphs
         # I set everything as an INPUT_CALC-links now, because the QueryBuilder path query or
         # our custom queries don't follow other links than CREATE or INPUT_CALC
-        n3.add_incoming(n2, link_type=LinkType.INPUT_CALC)
-        n2.add_incoming(n1, link_type=LinkType.INPUT_CALC)
-        n5.add_incoming(n3, link_type=LinkType.INPUT_CALC)
-        n5.add_incoming(n4, link_type=LinkType.INPUT_CALC)
-        n4.add_incoming(n2, link_type=LinkType.INPUT_CALC)
-        n7.add_incoming(n6, link_type=LinkType.INPUT_CALC)
-        n8.add_incoming(n7, link_type=LinkType.INPUT_CALC)
+        n3.add_incoming(n2, link_type=LinkType.INPUT_CALC, link_label='link1')
+        n2.add_incoming(n1, link_type=LinkType.INPUT_CALC, link_label='link2')
+        n5.add_incoming(n3, link_type=LinkType.INPUT_CALC, link_label='link3')
+        n5.add_incoming(n4, link_type=LinkType.INPUT_CALC, link_label='link4')
+        n4.add_incoming(n2, link_type=LinkType.INPUT_CALC, link_label='link5')
+        n7.add_incoming(n6, link_type=LinkType.INPUT_CALC, link_label='link6')
+        n8.add_incoming(n7, link_type=LinkType.INPUT_CALC, link_label='link7')
 
         # There are no parents to n9, checking that
         self.assertEqual(set([]), set(q.get_all_parents([n9.pk])))
@@ -882,7 +887,7 @@ class QueryBuilderPath(AiidaTestCase):
             ).append(Node, ancestor_of='desc', filters={'id': n1.pk}
                      ).count(), 0)
 
-        n6.add_incoming(n5, link_type=LinkType.INPUT_CALC)
+        n6.add_incoming(n5, link_type=LinkType.INPUT_CALC, link_label='link1')
         # Yet, now 2 links from 1 to 8
         self.assertEquals(
             QueryBuilder().append(
@@ -939,7 +944,7 @@ class QueryBuilderPath(AiidaTestCase):
              frozenset([n1.pk, n2.pk, n4.pk, n5.pk, n6.pk, n7.pk, n8.pk])]
         ))
 
-        n7.add_incoming(n9, link_type=LinkType.INPUT_CALC)
+        n7.add_incoming(n9, link_type=LinkType.INPUT_CALC, link_label='link0')
         # Still two links...
 
         self.assertEquals(
@@ -954,7 +959,7 @@ class QueryBuilderPath(AiidaTestCase):
                 Node, filters={'id': n8.pk}, tag='desc'
             ).append(Node, ancestor_of='desc', filters={'id': n1.pk}
                      ).count(), 2)
-        n9.add_incoming(n6, link_type=LinkType.INPUT_CALC)
+        n9.add_incoming(n6, link_type=LinkType.INPUT_CALC, link_label='link6')
         # And now there should be 4 nodes
 
         self.assertEquals(

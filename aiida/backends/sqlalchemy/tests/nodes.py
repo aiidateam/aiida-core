@@ -43,14 +43,14 @@ class TestTransitiveClosureDeletionSQLA(AiidaTestCase):
         # I create a strange graph, inserting links in a order
         # such that I often have to create the transitive closure
         # between two graphs
-        n3.add_incoming(n2, link_type=LinkType.CREATE)
-        n2.add_incoming(n1, link_type=LinkType.CREATE)
-        n5.add_incoming(n3, link_type=LinkType.CREATE)
-        n5.add_incoming(n4, link_type=LinkType.CREATE)
-        n4.add_incoming(n2, link_type=LinkType.CREATE)
+        n3.add_incoming(n2, link_type=LinkType.CREATE, link_label='link')
+        n2.add_incoming(n1, link_type=LinkType.CREATE, link_label='link')
+        n5.add_incoming(n3, link_type=LinkType.CREATE, link_label='link')
+        n5.add_incoming(n4, link_type=LinkType.CREATE, link_label='link')
+        n4.add_incoming(n2, link_type=LinkType.CREATE, link_label='link')
 
-        n7.add_incoming(n6, link_type=LinkType.CREATE)
-        n8.add_incoming(n7, link_type=LinkType.CREATE)
+        n7.add_incoming(n6, link_type=LinkType.CREATE, link_label='link')
+        n8.add_incoming(n7, link_type=LinkType.CREATE, link_label='link')
 
         # Yet, no links from 1 to 8
         self.assertEquals(
@@ -60,7 +60,7 @@ class TestTransitiveClosureDeletionSQLA(AiidaTestCase):
                      ).count(), 0
         )
 
-        n6.add_incoming(n5, link_type=LinkType.CREATE)
+        n6.add_incoming(n5, link_type=LinkType.CREATE, link_label='link')
         # Yet, now 2 links from 1 to 8
 
         self.assertEquals(
@@ -75,7 +75,7 @@ class TestTransitiveClosureDeletionSQLA(AiidaTestCase):
         # ~ DbPath.child == n8.dbnode).distinct().count(),
         # ~ 2)
 
-        n7.add_incoming(n9, link_type=LinkType.CREATE)
+        n7.add_incoming(n9, link_type=LinkType.CREATE, link_label='link')
         # Still two links...
 
         self.assertEquals(
@@ -89,7 +89,7 @@ class TestTransitiveClosureDeletionSQLA(AiidaTestCase):
         # ~ DbPath.child == n8.dbnode).distinct().count(),
         # ~ 2)
 
-        n9.add_incoming(n6, link_type=LinkType.CREATE)
+        n9.add_incoming(n6, link_type=LinkType.CREATE, link_label='link')
         # And now there should be 4 nodes
         self.assertEquals(
             QueryBuilder().append(
@@ -179,7 +179,7 @@ class TestTransitiveClosureDeletionSQLA(AiidaTestCase):
 
         # Finally, I reconnect in a different way the two graphs and
         # check that 1 and 8 are again connected
-        n4.add_incoming(n3, link_type=LinkType.CREATE)
+        n4.add_incoming(n3, link_type=LinkType.CREATE, link_label='link')
 
         self.assertEquals(
             QueryBuilder().append(

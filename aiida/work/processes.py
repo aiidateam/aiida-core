@@ -442,7 +442,8 @@ class Process(plumpy.Process):
         if self.inputs.store_provenance is False:
             return
 
-        new_outputs = set(self.outputs.keys()) - set(self.calc.get_outgoing(link_type=LinkType.RETURN).all_link_labels())
+        new_outputs = set(self.outputs.keys()) - set(
+            self.calc.get_outgoing(link_type=LinkType.RETURN).all_link_labels())
 
         for link_label in new_outputs:
             value = self.outputs[link_label]
@@ -631,7 +632,7 @@ class Process(plumpy.Process):
         # maps the exposed name to all outputs that belong to it
         top_namespace_map = collections.defaultdict(list)
         process_outputs_dict = {
-            entry.label: entry.node for entry in process_instance.get_outgoing(link_type=LinkType.RETURN)
+            entry.link_label: entry.node for entry in process_instance.get_outgoing(link_type=LinkType.RETURN)
         }
 
         for port_name in process_outputs_dict:

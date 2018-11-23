@@ -185,12 +185,12 @@ class TestTransitiveNoLoops(AiidaTestCase):
         n3 = Node().store()
         n4 = Node().store()
 
-        n2.add_incoming(n1, link_type=LinkType.CREATE)
-        n3.add_incoming(n2, link_type=LinkType.CREATE)
-        n4.add_incoming(n3, link_type=LinkType.CREATE)
+        n2.add_incoming(n1, link_type=LinkType.CREATE, link_label='link')
+        n3.add_incoming(n2, link_type=LinkType.CREATE, link_label='link')
+        n4.add_incoming(n3, link_type=LinkType.CREATE, link_label='link')
 
         with self.assertRaises(ValueError):  # This would generate a loop
-            n1.add_incoming(n4, link_type=LinkType.CREATE)
+            n1.add_incoming(n4, link_type=LinkType.CREATE, link_label='link')
 
 
 class TestQueryWithAiidaObjects(AiidaTestCase):
@@ -1710,7 +1710,10 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # are calculations that use as label 'input_cell')
         n5.add_incoming(n3, LinkType.CREATE, link_label='label1')
 
+    @unittest.skip('activate this test once #2238 is addressed')
     def test_links_label_autogenerator(self):
+        """Test the auto generation of link labels when labels are no longer required to be explicitly specified.
+        """
         n1 = Node().store()
         n2 = Node().store()
         n3 = Node().store()
@@ -1736,7 +1739,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         all_labels = [_.link_label for _ in n10.get_incoming()]
         self.assertEquals(len(set(all_labels)), len(all_labels), "There are duplicate links, that are not expected")
 
-    @unittest.skip('write and activate this test once #2238 is addressed')
+    @unittest.skip('activate this test once #2238 is addressed')
     def test_link_label_autogenerator(self):
         """
         When the uniqueness constraints on links are reimplemented on the database level, auto generation of
@@ -1871,29 +1874,29 @@ class TestSubNodesAndLinks(AiidaTestCase):
                 'num_mpiprocs_per_machine': 1
             }).store()
 
-        calc.add_incoming(d1, link_type=LinkType.INPUT_CALC)
+        calc.add_incoming(d1, link_type=LinkType.INPUT_CALC, link_label='link')
         calc.add_incoming(d2, link_type=LinkType.INPUT_CALC, link_label='some_label')
         calc.use_code(code)
 
         # Cannot link to itself
         with self.assertRaises(ValueError):
-            d1.add_incoming(d1, link_type=LinkType.INPUT_CALC)
+            d1.add_incoming(d1, link_type=LinkType.INPUT_CALC, link_label='link')
 
         # I try to add wrong links (data to data, calc to calc, etc.)
         with self.assertRaises(ValueError):
-            d2.add_incoming(d1, link_type=LinkType.INPUT_CALC)
+            d2.add_incoming(d1, link_type=LinkType.INPUT_CALC, link_label='link')
 
         with self.assertRaises(ValueError):
-            d1.add_incoming(d2, link_type=LinkType.INPUT_CALC)
+            d1.add_incoming(d2, link_type=LinkType.INPUT_CALC, link_label='link')
 
         with self.assertRaises(ValueError):
-            d1.add_incoming(code, link_type=LinkType.INPUT_CALC)
+            d1.add_incoming(code, link_type=LinkType.INPUT_CALC, link_label='link')
 
         with self.assertRaises(ValueError):
-            code.add_incoming(d1, link_type=LinkType.INPUT_CALC)
+            code.add_incoming(d1, link_type=LinkType.INPUT_CALC, link_label='link')
 
         with self.assertRaises(ValueError):
-            calc.add_incoming(calc2, link_type=LinkType.INPUT_CALC)
+            calc.add_incoming(calc2, link_type=LinkType.INPUT_CALC, link_label='link')
 
         calc_a = CalcJobNode(
             computer=self.computer, resources={
@@ -1912,15 +1915,15 @@ class TestSubNodesAndLinks(AiidaTestCase):
         calc_a._set_state(calc_states.RETRIEVING)
         calc_b._set_state(calc_states.RETRIEVING)
 
-        data_node.add_incoming(calc_a, link_type=LinkType.CREATE)
+        data_node.add_incoming(calc_a, link_type=LinkType.CREATE, link_label='link')
         # A data cannot have two input calculations
         with self.assertRaises(ValueError):
-            data_node.add_incoming(calc_b, link_type=LinkType.CREATE)
+            data_node.add_incoming(calc_b, link_type=LinkType.CREATE, link_label='link')
 
         newdata = Data()
         # Cannot add an input link if the calculation is not in status NEW
         with self.assertRaises(ModificationNotAllowed):
-            calc_a.add_incoming(newdata, link_type=LinkType.INPUT_CALC)
+            calc_a.add_incoming(newdata, link_type=LinkType.INPUT_CALC, link_label='link')
 
         # Cannot replace input nodes if the calculation is not in status NEW
         with self.assertRaises(ModificationNotAllowed):
@@ -1957,17 +1960,17 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
         # I cannot, calc it is in state NEW
         with self.assertRaises(ModificationNotAllowed):
-            d1.add_incoming(calc, link_type=LinkType.CREATE)
+            d1.add_incoming(calc, link_type=LinkType.CREATE, link_label='link')
 
         # I do a trick to set it to a state that allows setting the link
         calc._set_state(calc_states.RETRIEVING)
         calc2._set_state(calc_states.RETRIEVING)
 
-        d1.add_incoming(calc, link_type=LinkType.CREATE)
+        d1.add_incoming(calc, link_type=LinkType.CREATE, link_label='link')
 
         # more than one input to the same data object!
         with self.assertRaises(ValueError):
-            d1.add_incoming(calc2, link_type=LinkType.CREATE)
+            d1.add_incoming(calc2, link_type=LinkType.CREATE, link_label='link')
 
     def test_node_get_incoming_outgoing_links(self):
         """
@@ -2047,17 +2050,17 @@ class TestNodeDeletion(AiidaTestCase):
         command works as anticipated.
         """
         in1, in2, wf, slave1, outp1, outp2, slave2, outp3, outp4 = [Node().store() for i in range(9)]
-        wf.add_incoming(in1, link_type=LinkType.INPUT_WORK)
-        slave1.add_incoming(in1, link_type=LinkType.INPUT_WORK)
-        slave1.add_incoming(in2, link_type=LinkType.INPUT_WORK)
-        slave2.add_incoming(in2, link_type=LinkType.INPUT_WORK)
-        slave1.add_incoming(wf, link_type=LinkType.CALL_WORK)
-        slave2.add_incoming(wf, link_type=LinkType.CALL_WORK)
-        outp1.add_incoming(slave1, link_type=LinkType.CREATE)
-        outp2.add_incoming(slave2, link_type=LinkType.CREATE)
-        outp2.add_incoming(wf, link_type=LinkType.RETURN)
-        outp3.add_incoming(wf, link_type=LinkType.CREATE)
-        outp4.add_incoming(wf, link_type=LinkType.RETURN)
+        wf.add_incoming(in1, link_type=LinkType.INPUT_WORK, link_label='link1')
+        slave1.add_incoming(in1, link_type=LinkType.INPUT_WORK, link_label='link2')
+        slave1.add_incoming(in2, link_type=LinkType.INPUT_WORK, link_label='link3')
+        slave2.add_incoming(in2, link_type=LinkType.INPUT_WORK, link_label='link4')
+        slave1.add_incoming(wf, link_type=LinkType.CALL_WORK, link_label='link5')
+        slave2.add_incoming(wf, link_type=LinkType.CALL_WORK, link_label='link6')
+        outp1.add_incoming(slave1, link_type=LinkType.CREATE, link_label='link7')
+        outp2.add_incoming(slave2, link_type=LinkType.CREATE, link_label='link8')
+        outp2.add_incoming(wf, link_type=LinkType.RETURN, link_label='link9')
+        outp3.add_incoming(wf, link_type=LinkType.CREATE, link_label='link10')
+        outp4.add_incoming(wf, link_type=LinkType.RETURN, link_label='link11')
         return in1, in2, wf, slave1, outp1, outp2, slave2, outp3, outp4
 
     def test_deletion_simple(self):
@@ -2072,18 +2075,18 @@ class TestNodeDeletion(AiidaTestCase):
         # Now I am linking the nodes in a branched network
         # Connecting nodes 1,2,3 to 0
         for i in range(1, 4):
-            nodes[i].add_incoming(nodes[0], link_type=LinkType.INPUT_WORK)
+            nodes[i].add_incoming(nodes[0], link_type=LinkType.INPUT_WORK, link_label='link{}'.format(i))
         # Connecting nodes 4,5,6 to 3
         for i in range(4, 7):
-            nodes[i].add_incoming(nodes[3], link_type=LinkType.CREATE)
+            nodes[i].add_incoming(nodes[3], link_type=LinkType.CREATE, link_label='link{}'.format(i))
         # Connecting nodes 7,8 to 4
         for i in range(7, 9):
-            nodes[i].add_incoming(nodes[4], link_type=LinkType.INPUT_WORK)
+            nodes[i].add_incoming(nodes[4], link_type=LinkType.INPUT_WORK, link_label='link{}'.format(i))
         # Connecting nodes 9 to 5
         for i in range(9, 10):
-            nodes[i].add_incoming(nodes[5], link_type=LinkType.INPUT_WORK)
+            nodes[i].add_incoming(nodes[5], link_type=LinkType.INPUT_WORK, link_label='link{}'.format(i))
         for i in range(10, 14):
-            nodes[i + 1].add_incoming(nodes[i], link_type=LinkType.INPUT_WORK)
+            nodes[i + 1].add_incoming(nodes[i], link_type=LinkType.INPUT_WORK, link_label='link{}'.format(i))
 
         with Capturing():
             delete_nodes((nodes[3].pk, nodes[10].pk), force=True, verbosity=2)
@@ -2157,9 +2160,9 @@ class TestNodeDeletion(AiidaTestCase):
         Setting up a simple loop, to check that the following doesn't go bananas.
         """
         in1, in2, wf = [Node().store() for i in range(3)]
-        wf.add_incoming(in1, link_type=LinkType.INPUT_WORK)
-        wf.add_incoming(in2, link_type=LinkType.INPUT_WORK)
-        in2.add_incoming(wf, link_type=LinkType.RETURN)
+        wf.add_incoming(in1, link_type=LinkType.INPUT_WORK, link_label='link1')
+        wf.add_incoming(in2, link_type=LinkType.INPUT_WORK, link_label='link2')
+        in2.add_incoming(wf, link_type=LinkType.RETURN, link_label='link3')
 
         uuids_check_existence = (in1.uuid,)
         uuids_check_deleted = [n.uuid for n in (wf, in2)]
@@ -2175,7 +2178,7 @@ class TestNodeDeletion(AiidaTestCase):
         deleted works, even though it will raise a warning
         """
         caller, called = [ProcessNode().store() for i in range(2)]
-        called.add_incoming(caller, link_type=LinkType.CALL_WORK)
+        called.add_incoming(caller, link_type=LinkType.CALL_WORK, link_label='link')
 
         uuids_check_existence = (caller.uuid,)
         uuids_check_deleted = [n.uuid for n in (called,)]

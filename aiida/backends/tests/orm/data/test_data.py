@@ -30,17 +30,17 @@ class TestDataNodeLinks(AiidaTestCase):
 
             # From Data nodes only CALL_CALC links are valid
             if link_type in (LinkType.CALL_CALC,):
-                self.calculation_node_target.validate_incoming(self.calculation_node_source, link_type)
+                self.calculation_node_target.validate_incoming(self.calculation_node_source, link_type, 'label')
             else:
                 with self.assertRaises(ValueError):
-                    self.calculation_node_target.validate_incoming(self.calculation_node_source, link_type)
+                    self.calculation_node_target.validate_incoming(self.calculation_node_source, link_type, 'label')
 
             # From Data nodes only INPUT_CALC links are valid
             if link_type in (LinkType.INPUT_CALC,):
-                self.calculation_node_target.validate_incoming(self.data_node_source, link_type)
+                self.calculation_node_target.validate_incoming(self.data_node_source, link_type, 'label')
             else:
                 with self.assertRaises(ValueError):
-                    self.calculation_node_target.validate_incoming(self.data_node_source, link_type)
+                    self.calculation_node_target.validate_incoming(self.data_node_source, link_type, 'label')
 
     def test_validate_outgoing(self):
         """Test the `validate_outgoing` method
@@ -52,14 +52,14 @@ class TestDataNodeLinks(AiidaTestCase):
 
             # Into CalculationNodes only CALL_CALC links are valid
             if link_type in (LinkType.CALL_CALC,):
-                self.calculation_node_source.validate_outgoing(self.calculation_node_target, link_type)
+                self.calculation_node_source.validate_outgoing(self.calculation_node_target, link_type, 'label')
             else:
                 with self.assertRaises(ValueError):
-                    self.calculation_node_source.validate_outgoing(self.calculation_node_target, link_type)
+                    self.calculation_node_source.validate_outgoing(self.calculation_node_target, link_type, 'label')
 
             # Into Data nodes only CREATE links are valid
             if link_type in (LinkType.CREATE,):
-                self.calculation_node_source.validate_outgoing(self.data_node_target, link_type)
+                self.calculation_node_source.validate_outgoing(self.data_node_target, link_type, 'label')
             else:
                 with self.assertRaises(ValueError):
-                    self.calculation_node_source.validate_outgoing(self.data_node_target, link_type)
+                    self.calculation_node_source.validate_outgoing(self.data_node_target, link_type, 'label')

@@ -259,7 +259,7 @@ class Node(AbstractNode):
         if link is not None:
             session.delete(link)
 
-    def _add_dblink_from(self, src, link_type, label=None):
+    def _add_dblink_from(self, src, link_type, label):
         from aiida.backends.sqlalchemy import get_scoped_session
         from aiida.orm.querybuilder import QueryBuilder
         session = get_scoped_session()
@@ -290,32 +290,7 @@ class Node(AbstractNode):
                 }, tag='child', descendant_of='parent').count() > 0:
                 raise ValueError("The link you are attempting to create would generate a loop")
 
-        if label is None:
-            autolabel_idx = 1
-
-            existing_from_autolabels = [_[0] for _ in session.query(DbLink.label).filter(DbLink.output_id == self._dbnode.id,
-                                                                          DbLink.label.like("link%")).all()]
-
-            while "link_{}".format(autolabel_idx) in existing_from_autolabels:
-                autolabel_idx += 1
-
-            safety_counter = 0
-            while True:
-                safety_counter += 1
-                if safety_counter > 100:
-                    # Well, if you have more than 100 concurrent addings
-                    # to the same node, you are clearly doing something wrong...
-                    raise InternalError("Hey! We found more than 100 concurrent"
-                                        " adds of links "
-                                        "to the same nodes! Are you really doing that??")
-                try:
-                    self._do_create_link(src, "link_{}".format(autolabel_idx), link_type)
-                    break
-                except UniquenessError:
-                    # Retry loop until you find a new loop
-                    autolabel_idx += 1
-        else:
-            self._do_create_link(src, label, link_type)
+        self._do_create_link(src, label, link_type)
 
     def _do_create_link(self, src, label, link_type):
         """
@@ -536,7 +511,7 @@ class Node(AbstractNode):
         # occurred; otherwise, links will not be stored and I
         # should not delete them from the cache (but then an exception
         # would have been raised, and the following lines are not executed)
-        self._incoming_cache.clear()
+        self._incoming_cache = list()
 
         from aiida.backends.sqlalchemy import get_scoped_session
         session = get_scoped_session()

@@ -127,9 +127,9 @@ class TestSpecificImport(AiidaTestCase):
         child_calculation.store()
         remote_folder = RemoteData(computer=self.computer, remote_path='/').store()
 
-        remote_folder.add_incoming(parent_process, link_type=LinkType.CREATE)
-        child_calculation.add_incoming(remote_folder, link_type=LinkType.INPUT_CALC)
-        structure.add_incoming(child_calculation, link_type=LinkType.CREATE)
+        remote_folder.add_incoming(parent_process, link_type=LinkType.CREATE, link_label='link')
+        child_calculation.add_incoming(remote_folder, link_type=LinkType.INPUT_CALC, link_label='link')
+        structure.add_incoming(child_calculation, link_type=LinkType.CREATE, link_label='link')
 
         with tempfile.NamedTemporaryFile() as handle:
 
@@ -244,7 +244,7 @@ class TestSimple(AiidaTestCase):
             calc.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             calc.store()
 
-            calc.add_incoming(sd, link_type=LinkType.INPUT_CALC)
+            calc.add_incoming(sd, link_type=LinkType.INPUT_CALC, link_label='link')
 
             pks = [sd.pk, calc.pk]
 
@@ -487,7 +487,7 @@ class TestSimple(AiidaTestCase):
             jc1.set_user(user)
             jc1.label = 'jc1'
             jc1.store()
-            jc1.add_incoming(sd1, link_type=LinkType.INPUT_CALC)
+            jc1.add_incoming(sd1, link_type=LinkType.INPUT_CALC, link_label='link')
             jc1._set_state(calc_states.PARSING)
 
             # Create some nodes from a different user
@@ -570,7 +570,7 @@ class TestSimple(AiidaTestCase):
             jc1.set_user(user)
             jc1.label = 'jc1'
             jc1.store()
-            jc1.add_incoming(sd1, link_type=LinkType.INPUT_CALC)
+            jc1.add_incoming(sd1, link_type=LinkType.INPUT_CALC, link_label='link')
             jc1._set_state(calc_states.PARSING)
 
             # Create some nodes from a different user
@@ -675,7 +675,7 @@ class TestSimple(AiidaTestCase):
             jc1.set_user(user)
             jc1.label = 'jc1'
             jc1.store()
-            jc1.add_incoming(sd1, link_type=LinkType.INPUT_CALC)
+            jc1.add_incoming(sd1, link_type=LinkType.INPUT_CALC, link_label='link')
             jc1._set_state(calc_states.PARSING)
 
             # Create a group and add the data inside
@@ -1015,22 +1015,22 @@ class TestComplex(AiidaTestCase):
             rd1.set_remote_path("/x/y.py")
             rd1.set_computer(self.computer)
             rd1.store()
-            rd1.add_incoming(calc1, link_type=LinkType.CREATE)
+            rd1.add_incoming(calc1, link_type=LinkType.CREATE, link_label='link')
 
             calc2 = CalcJobNode()
             calc2.set_computer(self.computer)
             calc2.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             calc2.label = "calc2"
             calc2.store()
-            calc2.add_incoming(pd1, link_type=LinkType.INPUT_CALC)
-            calc2.add_incoming(pd2, link_type=LinkType.INPUT_CALC)
-            calc2.add_incoming(rd1, link_type=LinkType.INPUT_CALC)
+            calc2.add_incoming(pd1, link_type=LinkType.INPUT_CALC, link_label='link1')
+            calc2.add_incoming(pd2, link_type=LinkType.INPUT_CALC, link_label='link2')
+            calc2.add_incoming(rd1, link_type=LinkType.INPUT_CALC, link_label='link3')
             calc2._set_state(u'SUBMITTING')
 
             fd1 = FolderData()
             fd1.label = "fd1"
             fd1.store()
-            fd1.add_incoming(calc2, link_type=LinkType.CREATE)
+            fd1.add_incoming(calc2, link_type=LinkType.CREATE, link_label='link')
 
             node_uuids_labels = {calc1.uuid: calc1.label, pd1.uuid: pd1.label,
                                  pd2.uuid: pd2.label, rd1.uuid: rd1.label,

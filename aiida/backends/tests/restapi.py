@@ -83,9 +83,9 @@ class RESTApiTestCase(AiidaTestCase):
         calc._set_attr("attr2", "OK")  # pylint: disable=protected-access
         calc.store()
 
-        calc.add_incoming(structure, link_type=LinkType.INPUT_CALC)
-        calc.add_incoming(parameter1, link_type=LinkType.INPUT_CALC)
-        kpoint.add_incoming(calc, link_type=LinkType.CREATE)
+        calc.add_incoming(structure, link_type=LinkType.INPUT_CALC, link_label='link_structure')
+        calc.add_incoming(parameter1, link_type=LinkType.INPUT_CALC, link_label='link_parameter')
+        kpoint.add_incoming(calc, link_type=LinkType.CREATE, link_label='create')
 
         calc1 = CalculationNode()
         calc1.store()

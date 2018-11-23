@@ -368,7 +368,7 @@ class ProcessNode(Sealable, Node):
 
         :returns: list of process nodes called by this process
         """
-        return self.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).get_nodes()
+        return self.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all_nodes()
 
     @property
     def called_descendants(self):
@@ -412,8 +412,8 @@ class ProcessNode(Sealable, Node):
         """
         res = super(ProcessNode, self)._get_objects_to_hash()
         res.append({
-            entry.label: entry.node.get_hash()
+            entry.link_label: entry.node.get_hash()
             for entry in self.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK))
-            if entry.label not in self._hash_ignored_inputs
+            if entry.link_label not in self._hash_ignored_inputs
         })
         return res

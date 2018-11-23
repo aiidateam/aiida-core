@@ -94,12 +94,12 @@ def build_tree(node, node_label=None, show_pk=True, max_depth=1,
         relatives = []
 
         if descend:
-            outputs = node.get_outgoing(link_type=follow_links_of_type).get_nodes()
+            outputs = node.get_outgoing(link_type=follow_links_of_type).all_nodes()
         else:  # ascend
             if follow_links_of_type is None:
                 follow_links_of_type = (LinkType.CREATE, LinkType.INPUT_CALC, LinkType.INPUT_WORK)
 
-            outputs = node.get_incoming(link_type=follow_links_of_type).get_nodes()
+            outputs = node.get_incoming(link_type=follow_links_of_type).all_nodes()
 
         for child in sorted(outputs, key=_ctime):
             relatives.append(

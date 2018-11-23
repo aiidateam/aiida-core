@@ -291,11 +291,11 @@ class CalcJobNode(CalculationNode):
                 setattr(builder, port_name, options)
             elif isinstance(port, PortNamespace):
                 namespace = port_name + '_'
-                sub = {entry.label[len(namespace):]: entry.node for entry in inputs if entry.label.startswith(namespace)}
+                sub = {entry.link_label[len(namespace):]: entry.node for entry in inputs if entry.link_label.startswith(namespace)}
                 if sub:
                     setattr(builder, port_name, sub)
             else:
-                if port_name in inputs.get_labels():
+                if port_name in inputs.all_link_labels():
                     setattr(builder, port_name, inputs.get_node_by_label(port_name))
 
         return builder
@@ -1803,7 +1803,7 @@ class CalcJobNode(CalculationNode):
         retrieved_linkname = self._get_linkname_retrieved()
 
         for entry in outputs:
-            if entry.label == retrieved_linkname:
+            if entry.link_label == retrieved_linkname:
                 if retrieved_node is None:
                     retrieved_node = entry.node
                 else:
@@ -1860,9 +1860,9 @@ class CalcJobNode(CalculationNode):
         computer = self.get_computer()
         inputs = self.get_incoming(link_type=LinkType.INPUT_CALC)
 
-        codes = [_ for _ in inputs.get_nodes() if isinstance(_, Code)]
+        codes = [_ for _ in inputs.all_nodes() if isinstance(_, Code)]
 
-        inputdict = {entry.label: entry.node for entry in inputs}
+        inputdict = {entry.link_label: entry.node for entry in inputs}
 
         calcinfo = self._prepare_for_submission(folder, inputdict)
         s = computer.get_scheduler()

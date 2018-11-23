@@ -54,6 +54,10 @@ class TestNodeLinks(AiidaTestCase):
         with self.assertRaises(ValueError):
             target.validate_incoming(source_two, LinkType.CREATE)
 
+        # Or when the link label is different
+        with self.assertRaises(ValueError):
+            target.validate_incoming(source_one, LinkType.CREATE, 'other_label')
+
     def test_add_incoming_call_calc(self):
         """Nodes can only have a single incoming CALL_CALC link, independent of the source node."""
         source_one = WorkflowNode()
@@ -69,6 +73,10 @@ class TestNodeLinks(AiidaTestCase):
         # Even when the source node is different
         with self.assertRaises(ValueError):
             target.validate_incoming(source_two, LinkType.CALL_CALC)
+
+        # Or when the link label is different
+        with self.assertRaises(ValueError):
+            target.validate_incoming(source_one, LinkType.CALL_CALC, 'other_label')
 
     def test_add_incoming_call_work(self):
         """Nodes can only have a single incoming CALL_WORK link, independent of the source node."""
@@ -86,8 +94,50 @@ class TestNodeLinks(AiidaTestCase):
         with self.assertRaises(ValueError):
             target.validate_incoming(source_two, LinkType.CALL_WORK)
 
+        # Or when the link label is different
+        with self.assertRaises(ValueError):
+            target.validate_incoming(source_one, LinkType.CALL_WORK, 'other_label')
+
+    def test_add_incoming_input_calc(self):
+        """Nodes can have an infinite amount of incoming INPUT_CALC links, as long as the link pair is unique."""
+        source_one = Data()
+        source_two = Data()
+        target = CalculationNode()
+
+        target.add_incoming(source_one, LinkType.INPUT_CALC, 'link_label')
+
+        # Can only have a single incoming INPUT_CALC link from each source node if the label is not unique
+        with self.assertRaises(ValueError):
+            target.validate_incoming(source_one, LinkType.INPUT_CALC, 'link_label')
+
+        # Using another link label is fine
+        target.validate_incoming(source_one, LinkType.INPUT_CALC, 'other_label')
+
+        # However, using the same link, even from another node is illegal
+        with self.assertRaises(ValueError):
+            target.validate_incoming(source_two, LinkType.INPUT_CALC, 'link_label')
+
+    def test_add_incoming_input_work(self):
+        """Nodes can have an infinite amount of incoming INPUT_WORK links, as long as the link pair is unique."""
+        source_one = Data()
+        source_two = Data()
+        target = WorkflowNode()
+
+        target.add_incoming(source_one, LinkType.INPUT_WORK, 'link_label')
+
+        # Can only have a single incoming INPUT_WORK link from each source node if the label is not unique
+        with self.assertRaises(ValueError):
+            target.validate_incoming(source_one, LinkType.INPUT_WORK, 'link_label')
+
+        # Using another link label is fine
+        target.validate_incoming(source_one, LinkType.INPUT_WORK, 'other_label')
+
+        # However, using the same link, even from another node is illegal
+        with self.assertRaises(ValueError):
+            target.validate_incoming(source_two, LinkType.INPUT_WORK, 'link_label')
+
     def test_add_incoming_return(self):
-        """Nodes can have an infinite amount of incoming RETURN links, as long as (source, label) pair is unique."""
+        """Nodes can have an infinite amount of incoming RETURN links, as long as the link triple is unique."""
         source_one = WorkflowNode()
         source_two = WorkflowNode()
         target = Data()
@@ -101,38 +151,6 @@ class TestNodeLinks(AiidaTestCase):
         # From another source node or using another label is fine
         target.validate_incoming(source_one, LinkType.RETURN, 'other_label')
         target.validate_incoming(source_two, LinkType.RETURN, 'link_label')
-
-    def test_add_incoming_input_calc(self):
-        """Nodes can have an infinite amount of incoming INPUT_CALC links, as long as (source, label) pair is unique."""
-        source_one = Data()
-        source_two = Data()
-        target = CalculationNode()
-
-        target.add_incoming(source_one, LinkType.INPUT_CALC, 'link_label')
-
-        # Can only have a single incoming INPUT_CALC link from each source node if the label is not unique
-        with self.assertRaises(ValueError):
-            target.validate_incoming(source_one, LinkType.INPUT_CALC, 'link_label')
-
-        # From another source node or using another label is fine
-        target.validate_incoming(source_one, LinkType.INPUT_CALC, 'other_label')
-        target.validate_incoming(source_two, LinkType.INPUT_CALC, 'link_label')
-
-    def test_add_incoming_input_work(self):
-        """Nodes can have an infinite amount of incoming INPUT_WORK links, as long as (source, label) pair is unique."""
-        source_one = Data()
-        source_two = Data()
-        target = WorkflowNode()
-
-        target.add_incoming(source_one, LinkType.INPUT_WORK, 'link_label')
-
-        # Can only have a single incoming INPUT_WORK link from each source node if the label is not unique
-        with self.assertRaises(ValueError):
-            target.validate_incoming(source_one, LinkType.INPUT_WORK, 'link_label')
-
-        # From another source node or using another label is fine
-        target.validate_incoming(source_one, LinkType.INPUT_WORK, 'other_label')
-        target.validate_incoming(source_two, LinkType.INPUT_WORK, 'link_label')
 
     def test_get_incoming(self):
         """Test that `Node.get_incoming` will return stored and cached input links."""
@@ -157,3 +175,62 @@ class TestNodeLinks(AiidaTestCase):
         incoming_nodes = target.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK)).all()
         incoming_uuids = sorted([neighbor.node.uuid for neighbor in incoming_nodes])
         self.assertEqual(incoming_uuids, sorted([source_one.uuid, source_two.uuid]))
+
+    def test_node_indegree_unique_pair(self):
+        """Test that the validation of links with indegree `unique_pair` works correctly
+
+        The example here is a `DataNode` that has two incoming links with the same label, but with different types.
+        This is legal and should pass validation.
+        """
+        caller = WorkflowNode().store()
+        data = Data().store()
+        called = CalculationNode()
+
+        # Verify that adding two incoming links with the same link label but different type is allowed
+        called.add_incoming(caller, link_type=LinkType.CALL_CALC, link_label='call')
+        called.add_incoming(data, link_type=LinkType.INPUT_CALC, link_label='call')
+        called.store()
+
+        uuids_incoming = set([node.uuid for node in called.get_incoming().all_nodes()])
+        uuids_expected = set([caller.uuid, data.uuid])
+        self.assertEqual(uuids_incoming, uuids_expected)
+
+    def test_node_indegree_unique_triple(self):
+        """Test that the validation of links with indegree `unique_triple` works correctly
+
+        The example here is a `DataNode` that has two incoming RETURN links with the same label, but from different
+        source nodes. This is legal and should pass validation.
+        """
+        return_one = WorkflowNode().store()
+        return_two = WorkflowNode().store()
+        data = Data()
+
+        # Verify that adding two return links with the same link label but from different source is allowed
+        data.add_incoming(return_one, link_type=LinkType.RETURN, link_label='return')
+        data.add_incoming(return_two, link_type=LinkType.RETURN, link_label='return')
+        data.store()
+
+        uuids_incoming = set([node.uuid for node in data.get_incoming().all_nodes()])
+        uuids_expected = set([return_one.uuid, return_two.uuid])
+        self.assertEqual(uuids_incoming, uuids_expected)
+
+    def test_node_outdegree_unique_triple(self):
+        """Test that the validation of links with outdegree `unique_triple` works correctly
+
+        The example here is a `CalculationNode` that has two outgoing CREATE links with the same label, but to different
+        target nodes. This is legal and should pass validation.
+        """
+        creator = CalculationNode().store()
+        data_one = Data()
+        data_two = Data()
+
+        # Verify that adding two create links with the same link label but to different target is allowed from the
+        # perspective of the source node (the CalculationNode in this case)
+        data_one.add_incoming(creator, link_type=LinkType.CREATE, link_label='create')
+        data_two.add_incoming(creator, link_type=LinkType.CREATE, link_label='create')
+        data_one.store()
+        data_two.store()
+
+        uuids_outgoing = set([node.uuid for node in creator.get_outgoing().all_nodes()])
+        uuids_expected = set([data_one.uuid, data_two.uuid])
+        self.assertEqual(uuids_outgoing, uuids_expected)

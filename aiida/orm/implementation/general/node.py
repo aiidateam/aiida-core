@@ -21,11 +21,10 @@ import math
 import warnings
 
 import six
-from collections import namedtuple
 
 from aiida.backends.utils import validate_attribute_key
 from aiida.common.caching import get_use_cache
-from aiida.common.exceptions import InternalError, ModificationNotAllowed, UniquenessError, ValidationError, InvalidOperation, NotExistent
+from aiida.common.exceptions import InternalError, ModificationNotAllowed, UniquenessError, ValidationError, InvalidOperation
 from aiida.common.folders import SandboxFolder
 from aiida.common.hashing import _HASH_EXTRA_KEY
 from aiida.common.lang import override
@@ -33,10 +32,9 @@ from aiida.common.links import LinkType
 from aiida.common.utils import abstractclassmethod, sql_string_match
 from aiida.common.utils import combomethod, classproperty
 from aiida.plugins.loader import get_query_type_from_type_string, get_type_string_from_class
+from aiida.orm.utils import links
 
 _NO_DEFAULT = tuple()
-
-Neighbor = namedtuple('Neighbor', ['link_type', 'label', 'node'])
 
 
 def clean_value(value):
@@ -308,9 +306,10 @@ class AbstractNode(object):
         from aiida.orm.backends import construct_backend
 
         self._to_be_stored = True
-        # Empty cache of input links in any case
         self._attrs_cache = {}
-        self._inputlinks_cache = {}
+
+        # A cache of incoming links represented as a set of LinkTriples instances
+        self._incoming_cache = set()
 
         self._temp_folder = None
         self._repo_folder = None
@@ -361,10 +360,11 @@ class AbstractNode(object):
 
     def has_cached_links(self):
         """
-        This function returns true if there are any links in cache and
-        not yet stored in db, otherwise false.
+        Return whether there are unstored incoming links in the cache.
+
+        :return: boolean, True when there are links in the incoming cache, False otherwise
         """
-        return bool(self._inputlinks_cache)
+        return bool(self._incoming_cache)
 
     def _init_internal_params(self):
         """
@@ -654,53 +654,145 @@ class AbstractNode(object):
         else:
             self._add_cachelink_from(source, link_type, link_label)
 
-    def _add_cachelink_from(self, src, link_type, label):
-        """
-        Add a link in the cache.
-        """
-        if label is None:
-            raise ModificationNotAllowed(
-                "Cannot store a link in the cache if "
-                "no explicit label is provided. You can avoid "
-                "to provide an input link name only if "
-                "both nodes are already stored: in this case, "
-                "the link will be directly stored in the DB "
-                "and a default name will be provided")
+    def _add_cachelink_from(self, source, link_type, link_label):
+        """Add an incoming link to the cache.
 
-        if label in self._inputlinks_cache:
-            raise UniquenessError("Input link with name '{}' already present "
-                                  "in the internal cache".format(label))
+        .. note: the proposed link is not validated in this function, so this should not be called directly
+            but it should only be called by `Node.add_incoming`.
 
-        self._inputlinks_cache[label] = (src, link_type)
-
-    def _replace_link_from(self, src, link_type, label):
+        :param source: the node from which the link is coming
+        :param link_type: the type of link
+        :param link_label: optional link label
         """
-        Replace an input link with the given label, or simply creates it
-        if it does not exist.
+        link_triple = links.LinkTriple(source, link_type, link_label)
+
+        if link_triple in self._incoming_cache:
+            raise UniquenessError('the link triple {} is already present in the cache'.format(link_triple))
+
+        self._incoming_cache.add(link_triple)
+
+    def get_incoming(self, node_class=None, link_type=(), link_label_filter=None):
+        """
+        Return a list of link triples that are (directly) incoming into this node.
+
+        :param node_class: If specified, should be a class or tuple of classes, and it filters only
+            elements of that specific type (or a subclass of 'type')
+        :param link_type: If specified should be a string or tuple to get the inputs of this
+            link type, if None then returns all inputs of all link types.
+        :param link_label_filter: filters the incoming nodes by its link label.
+            Here wildcards (% and _) can be passed in link label filter as we are using "like" in QB.
+        """
+        if not isinstance(link_type, tuple):
+            link_type = (link_type,)
+
+        if self.is_stored:
+            link_triples = self.get_stored_link_triples(node_class, link_type, link_label_filter, 'incoming')
+        else:
+            link_triples = []
+
+        # Get all cached link triples
+        for link_triple in self._incoming_cache:
+
+            if link_triple in link_triples:
+                raise InternalError('Node<{}> has both a stored and cached link triple {}'.format(self.pk, link_triple))
+
+            if not link_type or link_triple.link_type in link_type:
+                if link_label_filter is not None:
+                    if sql_string_match(string=link_triple.link_label, pattern=link_label_filter):
+                        link_triples.append(link_triple)
+                else:
+                    link_triples.append(link_triple)
+
+        return links.LinkManager(link_triples)
+
+    def get_outgoing(self, node_class=None, link_type=(), link_label_filter=None):
+        """
+        Return a list of link triples that are (directly) outgoing of this node.
+
+        :param node_class: If specified, should be a class or tuple of classes, and it filters only
+            elements of that specific type (or a subclass of 'type')
+        :param link_type: If specified should be a string or tuple to get the inputs of this
+            link type, if None then returns all outputs of all link types.
+        :param link_label_filter: filters the outgoing nodes by its link label.
+            Here wildcards (% and _) can be passed in link label filter as we are using "like" in QB.
+        """
+        link_triples = self.get_stored_link_triples(node_class, link_type, link_label_filter, 'outgoing')
+        return links.LinkManager(link_triples)
+
+    def get_stored_link_triples(self, node_class=None, link_type=(), link_label_filter=None, link_direction='incoming'):
+        """
+        Return the list of stored link triples directly incoming to or outgoing of this node.
+
+        Note this will only return link triples that are stored in the database. Anything in the cache is ignored.
+
+        :param node_class: If specified, should be a class, and it filters only elements of that (subclass of) type
+        :param link_type: Only get inputs of this link type, if empty tuple then returns all inputs of all link types.
+        :param link_label_filter: filters the incoming nodes by its link label. This should be a regex statement as
+            one would pass directly to a QuerBuilder filter statement with the 'like' operation.
+        :param link_direction: `incoming` or `outgoing` to get the incoming or outgoing links, respectively.
+        """
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.orm.node import Node
+
+        if not isinstance(link_type, tuple):
+            link_type = (link_type,)
+
+        if link_type and not all([isinstance(t, LinkType) for t in link_type]):
+            raise TypeError('link_type should be a LinkType or tuple of LinkType: got {}'.format(link_type))
+
+        node_class = node_class or Node
+        node_filters = {'id': {'==': self.id}}
+        edge_filters = {}
+
+        if link_type:
+            edge_filters['type'] = {'in': [t.value for t in link_type]}
+
+        if link_label_filter:
+            edge_filters['label'] = {'like': link_label_filter}
+
+        builder = QueryBuilder()
+        builder.append(Node, filters=node_filters, tag='main')
+
+        if link_direction == 'outgoing':
+            builder.append(node_class, with_incoming='main', project=['*'],
+                edge_project=['type', 'label'], edge_filters=edge_filters)
+        else:
+            builder.append(node_class, with_outgoing='main', project=['*'],
+                edge_project=['type', 'label'], edge_filters=edge_filters)
+
+        return [links.LinkTriple(entry[0], entry[1], entry[2]) for entry in builder.all()]
+
+    def _replace_link_from(self, source, link_type, link_label):
+        """
+        Replace an incoming link with the given type andlabel, or create it if it does not exist.
 
         :note: In subclasses, change only this. Moreover, remember to call
            the super() method in order to properly use the caching logic!
 
-        :param src: the source object
-        :param str label: the name of the label to set the link from src.
+        :param source: the node from which the link is coming
+        :param link_type: the type of link
+        :param link_label: optional link label
         """
-        self.validate_incoming(src, link_type, label)
-        src.validate_outgoing(self, link_type, label)
+        self.validate_incoming(source, link_type, link_label)
+        source.validate_outgoing(self, link_type, link_label)
+
+        link_triple = links.LinkTriple(source, link_type, link_label)
 
         # If both are stored, write directly on the DB
-        if self.is_stored and src.is_stored:
-            self._replace_dblink_from(src, link_type, label)
-            # If the link was in the local cache, remove it
-            # (this could happen if I first store the output node, then
-            # the input node.
+        if self.is_stored and source.is_stored:
+            self._replace_dblink_from(source, link_type, link_label)
+
+            # If the link triple was in the local cache, remove it, which can happen if one first stores the target
+            # node, followed by the source node.
             try:
-                del self._inputlinks_cache[label]
+                self._incoming_cache.remove(link_triple)
             except KeyError:
                 pass
-        else:  # at least one is not stored: set in the internal cache
-            # I insert the link directly in the cache rather than calling
-            # _add_cachelink_from because this latter performs an undesired check
-            self._inputlinks_cache[label] = (src, link_type)
+        else:
+            # At least one node is not stored yet so add it to the internal cache
+            # I insert the link directly in the cache rather than calling _add_cachelink_from
+            # because this latter performs an undesired check
+            self._incoming_cache.add(link_triple)
 
     def _remove_link_from(self, label):
         """
@@ -717,7 +809,7 @@ class AbstractNode(object):
         """
         # Try to remove from the local cache, no problem if none is present
         try:
-            del self._inputlinks_cache[label]
+            del self._incoming_cache[label]
         except KeyError:
             pass
 
@@ -829,46 +921,6 @@ class AbstractNode(object):
 
         return new_outputs
 
-    def get_incoming(self, node_class=None, link_type=(), link_label_filter=None):
-        """
-        Return a list of nodes that enter (directly) in this node
-
-        :param node_class: If specified, should be a class or tuple of classes, and it filters only
-            elements of that specific type (or a subclass of 'type')
-        :param link_type: If specified should be a string or tuple to get the inputs of this
-            link type, if None then returns all inputs of all link types.
-        :param link_label_filter: filters the incoming nodes by its link label.
-            Here wildcards (% and _) can be passed in link label filter as we are using "like" in QB.
-        """
-        if not isinstance(link_type, tuple):
-            link_type = (link_type,)
-
-        if self.is_stored:
-            builder = self._get_neighbors_query_builder(self.id, node_class=node_class, link_type=link_type,
-                                                        link_label_filter=link_label_filter, link_direction='incoming')
-            filtered_list = [Neighbor(i[2], i[1], i[0]) for i in builder.all()]
-        else:
-            filtered_list = []
-
-        db_incoming_keys = set(incoming.label for incoming in filtered_list)
-
-        # Get all cached links
-        for label, v in self._inputlinks_cache.items():
-            src = v[0]
-            incoming_link_type = v[1]
-            if label in db_incoming_keys:
-                raise InternalError("There exist a link with the same name '{}' and type '{}' both in the DB "
-                                    "and in the internal cache for node pk= {}!".format(label, incoming_link_type, self.pk))
-
-            if not link_type or incoming_link_type in link_type:
-                if link_label_filter is not None:
-                    if sql_string_match(string=label, pattern=link_label_filter):
-                        filtered_list.append(Neighbor(incoming_link_type, label, src))
-                else:
-                    filtered_list.append(Neighbor(incoming_link_type, label, src))
-
-        return NeighborManager(filtered_list)
-
     def get_inputs(self, node_type=None, also_labels=False, only_in_db=False, link_type=None):
         """
         Return a list of nodes that enter (directly) in this node
@@ -897,15 +949,13 @@ class AbstractNode(object):
             # Needed for the check
             input_list_keys = [i[0] for i in inputs_list]
 
-            for label, v in self._inputlinks_cache.items():
-                src = v[0]
-                input_link_type = v[1]
-                if label in input_list_keys:
-                    raise InternalError("There exist a link with the same name '{}' both in the DB "
-                                        "and in the internal cache for node pk= {}!".format(label, self.pk))
+            for link_triple in self._incoming_cache:
+                if link_triple.link_label in input_list_keys:
+                    raise InternalError("There exist a link with the same name '{}' both in the DB and in the internal "
+                                        "cache for node pk= {}!".format(link_triple.link_label, self.pk))
 
-                if link_type is None or input_link_type is link_type:
-                    inputs_list.append((label, src))
+                if link_type is None or link_triple.link_type is link_type:
+                    inputs_list.append((link_triple.link_label, link_triple.node))
 
         if node_type is None:
             filtered_list = inputs_list
@@ -927,69 +977,6 @@ class AbstractNode(object):
         :return:  a list of tuples (label, aiida_class)
         """
         pass
-
-    def get_outgoing(self, node_class=None, link_type=(), link_label_filter=None):
-        """
-        Return a list of nodes that enter (directly) in this node
-
-        :param node_class: If specified, should be a class or tuple of classes, and it filters only
-            elements of that specific type (or a subclass of 'type')
-        :param link_type: If specified should be a string or tuple to get the inputs of this
-            link type, if None then returns all outputs of all link types.
-        :param link_label_filter: filters the outgoing nodes by its link label.
-            Here wildcards (% and _) can be passed in link label filter as we are using "like" in QB.
-        """
-        builder = self._get_neighbors_query_builder(self.id, node_class=node_class, link_type=link_type,
-                                                    link_label_filter=link_label_filter, link_direction='outgoing')
-        filtered_list = [Neighbor(i[2], i[1], i[0]) for i in builder.all()]
-
-        return NeighborManager(filtered_list)
-
-    @staticmethod
-    def _get_neighbors_query_builder(node_id, node_class=None, link_type=(), link_label_filter=None, link_direction='incoming'):
-        """
-        Return a querybuilder object for a list of nodes that enter (directly) in this node
-
-        :param node_id: main node id for which incoming nodes are searched
-        :param node_class: If specified, should be a class, and it filters only
-            elements of that specific type (or a subclass of 'type')
-        :param link_type: Only get inputs of this link type, if None then
-            returns all inputs of all link types.
-        :param link_label_filter: filters the incoming nodes by its link label.
-            Here regex can be passed for link label filter as we are using "like" in QB.
-        :param link_direction: It is either incoming (get all incoming of the node) or
-            outgoing (get all outgoing of the node)
-        """
-        from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm.node import Node
-
-        if not isinstance(link_type, tuple):
-            link_type = (link_type,)
-
-        if link_type and not all([isinstance(t, LinkType) for t in link_type]):
-            raise TypeError('link_type should be a LinkType or tuple of LinkType: got {}'.format(link_type))
-
-        node_class = node_class or Node
-        node_filters = {'id': {'==': node_id}}
-        edge_filters = {}
-
-        if link_type:
-            edge_filters['type'] = {'in': [t.value for t in link_type]}
-
-        if link_label_filter:
-            edge_filters['label'] = {'like': link_label_filter}
-
-        builder = QueryBuilder()
-        builder.append(Node, filters=node_filters, tag='main')
-
-        if link_direction == 'outgoing':
-            builder.append(node_class, with_incoming='main', project=['*'],
-                edge_project=['label', 'type'], edge_filters=edge_filters)
-        else:
-            builder.append(node_class, with_outgoing='main', project=['*'],
-                edge_project=['label', 'type'], edge_filters=edge_filters)
-
-        return builder
 
     @override
     def get_outputs(self, node_type=None, also_labels=False, link_type=None):
@@ -1709,28 +1696,25 @@ class AbstractNode(object):
 
     def store_all(self, with_transaction=True, use_cache=None):
         """
-        Store the node, together with all input links, if cached, and also the
-        linked nodes, if they were not stored yet.
+        Store the node, together with all input links.
 
-        :parameter with_transaction: if False, no transaction is used. This
-          is meant to be used ONLY if the outer calling function has already
-          a transaction open!
+        Unstored nodes from cached incoming linkswill also be stored.
+
+        :parameter with_transaction: if False, no transaction is used. This is meant to be used ONLY if the outer
+            calling function has already a transaction open!
         """
-        if not self._to_be_stored:
-            raise ModificationNotAllowed(
-                "Node with pk= {} was already stored".format(self.id))
+        if self.is_stored:
+            raise ModificationNotAllowed('Node<{}> is already stored'.format(self.id))
 
-        # For each parent, check that all its inputs are stored
-        for link in self._inputlinks_cache:
+        # For each node of a cached incoming link, check that all its incoming links are stored
+        for link_triple in self._incoming_cache:
             try:
-                parent_node = self._inputlinks_cache[link][0]
-                parent_node._check_are_parents_stored()
+                link_triple.node._check_are_parents_stored()
             except ModificationNotAllowed:
                 raise ModificationNotAllowed(
-                    "Parent node (UUID={}) has "
-                    "unstored parents, cannot proceed (only direct parents "
-                    "can be unstored and will be stored by store_all, not "
-                    "grandparents or other ancestors".format(parent_node.uuid))
+                    'source Node<{}> has unstored parents, cannot proceed (only direct parents can be unstored and '
+                    'will be stored by store_all, not grandparents or other ancestors'.format(link_triple.node.pk))
+
         return self._db_store_all(with_transaction, use_cache=use_cache)
 
     @abstractmethod
@@ -1756,31 +1740,25 @@ class AbstractNode(object):
         :note: this function stores all nodes without transactions; always
           call it from within a transaction!
         """
-        if not self._to_be_stored:
-            raise ModificationNotAllowed(
-                "_store_input_nodes can be called only if the node is "
-                "unstored (node {} is stored, instead)".format(self.pk))
+        if self.is_stored:
+            raise ModificationNotAllowed('Node<{}> is already stored, but this method can only be called for '
+                                         'unstored nodes'.format(self.pk))
 
-        for label in self._inputlinks_cache:
-            parent = self._inputlinks_cache[label][0]
-            if not parent.is_stored:
-                parent.store(with_transaction=False)
+        for link_triple in self._incoming_cache:
+            if not link_triple.node.is_stored:
+                link_triple.node.store(with_transaction=False)
 
     def _check_are_parents_stored(self):
         """
         Check if all parents are already stored, otherwise raise.
 
-        :raise ModificationNotAllowed: if one of the input nodes in not already
-          stored.
+        :raise ModificationNotAllowed: if one of the input nodes is not already stored.
         """
-        # Preliminary check to verify that inputs are stored already
-        for label in self._inputlinks_cache:
-            if not self._inputlinks_cache[label][0].is_stored:
+        for link_triple in self._incoming_cache:
+            if not link_triple.node.is_stored:
                 raise ModificationNotAllowed(
-                    "Cannot store the input link '{}' because the "
-                    "source node is not stored. Either store it first, "
-                    "or call _store_input_links with the store_parents "
-                    "parameter set to True".format(label))
+                    "Cannot store the incoming link triple {} because the source node is not stored. Either store it "
+                    "first, or call _store_input_links with `store_parents` set to True".format(link_triple.link_label))
 
     @abstractmethod
     def _store_cached_input_links(self, with_transaction=True):
@@ -1894,7 +1872,7 @@ class AbstractNode(object):
         # Add CREATE links
         for entry in cache_node.get_outgoing(link_type=LinkType.CREATE):
             new_node = entry.node.clone().store()
-            new_node.add_incoming(self, link_type=LinkType.CREATE, link_label=entry.label)
+            new_node.add_incoming(self, link_type=LinkType.CREATE, link_label=entry.link_label)
 
     @abstractmethod
     def _db_store(self, with_transaction=True):
@@ -2129,11 +2107,11 @@ class NodeOutputManager(object):
         """
         Allow to list all valid output links
         """
-        node_attributes = self._node.get_outgoing().get_labels()
+        node_attributes = self._node.get_outgoing().all_link_labels()
         return sorted(set(list(dir(type(self))) + list(node_attributes)))
 
     def __iter__(self):
-        node_attributes = self._node.get_outgoing().get_labels()
+        node_attributes = self._node.get_outgoing().all_link_labels()
         for k in node_attributes:
             yield k
 
@@ -2176,11 +2154,11 @@ class NodeInputManager(object):
         """
         Allow to list all valid input links
         """
-        node_attributes = self._node.get_incoming().get_labels()
+        node_attributes = self._node.get_incoming().all_link_labels()
         return sorted(set(list(dir(type(self))) + list(node_attributes)))
 
     def __iter__(self):
-        node_attributes = self._node.get_incoming().get_labels()
+        node_attributes = self._node.get_incoming().all_link_labels()
         for k in node_attributes:
             yield k
 
@@ -2263,66 +2241,3 @@ class AttributeManager(object):
             return self._node.get_attr(name)
         except AttributeError as err:
             raise KeyError(str(err))
-
-
-class NeighborManager(object):
-    """
-    Class to convert neighbors list object into iterator object.
-    It defines methods like:
-    one(): returns one entry from list. The given entry needs to be unique in list otherwise it raises exception
-    first(): returns first entry from the list
-    all(): returns all entries from list
-    """
-    def __init__(self, neighbors):
-        """ Initialise the neighbors """
-        self.neighbors = neighbors
-
-    def __iter__(self):
-        """ Converts neighbors list to iterator """
-        return iter(self.neighbors)
-
-    def __next__(self):
-        """ Override iter next method """
-        for neighbor in self.neighbors:
-            yield neighbor
-
-    def next(self):
-        """ Calls private next method amd returns it """
-        return self.__next__()
-
-    def one(self):
-        """ returns one entry from list. The given entry needs to be
-        unique in list otherwise it raises exception """
-        if self.neighbors:
-            if len(self.neighbors) > 1:
-                raise ValueError("returns more than one links.")
-            return self.neighbors[0]
-
-        raise ValueError("No links available.")
-
-
-    def first(self):
-        """ returns first entry from the list """
-        if self.neighbors:
-            return self.neighbors[0]
-        raise ValueError("No links available.")
-
-    def all(self):
-        """ returns all entries from list """
-        return self.neighbors
-
-    def get_node_by_label(self, label):
-        """ get the node object from list for given label """
-        for entry in self.neighbors:
-            if entry.label == label:
-                return entry.node
-        raise NotExistent("Neighbor with label '{}' is not present".format(label))
-
-    def get_labels(self):
-        """ returns list of labels """
-        return [entry.label for entry in self.neighbors]
-
-    def get_nodes(self):
-        """ eturns list of all nodes """
-        return [entry.node for entry in self.neighbors]
-

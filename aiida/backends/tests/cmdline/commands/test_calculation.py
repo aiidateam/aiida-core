@@ -239,7 +239,7 @@ class TestVerdiCalculation(AiidaTestCase):
         # Giving multiple identifiers should print a non empty string message
         options = [str(calc.pk) for calc in self.calcs]
         result = self.cli_runner.invoke(command.calculation_show, options)
-        self.assertIsNone(result.exception, result.output)
+        self.assertClickResultNoException(result)
         self.assertTrue(len(get_result_lines(result)) > 0)
 
     def test_calculation_logshow(self):

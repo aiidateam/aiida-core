@@ -123,7 +123,7 @@ class Parser(object):
         from aiida.orm.data.parameter import ParameterData
 
         out_parameters = self._calc.get_outgoing(node_class=ParameterData)
-        out_parameter_data = [entry.node for entry in out_parameters if entry.label == self.get_linkname_outparams()]
+        out_parameter_data = [entry.node for entry in out_parameters if entry.link_label == self.get_linkname_outparams()]
 
         if not out_parameter_data:
             raise NotExistent('No output .res ParameterData node found')

@@ -182,10 +182,10 @@ def get_or_create_output_group(node):
     from aiida.orm.node.process import ProcessNode
 
     if not isinstance(node, ProcessNode):
-        raise TypeError("Can only create output groups for type ProcessNode")
+        raise TypeError('Can only create output groups for type ProcessNode')
 
-    outputs = {entry.label: entry.node for entry in node.get_outgoing(link_type=(LinkType.CREATE, LinkType.RETURN))}
-    return FrozenDict(dict=outputs)
+    outputs = node.get_outgoing(link_type=(LinkType.CREATE, LinkType.RETURN))
+    return FrozenDict(dict={entry.link_label: entry.node for entry in outputs})
 
 
 @contextlib.contextmanager

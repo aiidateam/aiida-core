@@ -308,8 +308,8 @@ class AbstractNode(object):
         self._to_be_stored = True
         self._attrs_cache = {}
 
-        # A cache of incoming links represented as a set of LinkTriples instances
-        self._incoming_cache = set()
+        # A cache of incoming links represented as a list of LinkTriples instances
+        self._incoming_cache = list()
 
         self._temp_folder = None
         self._repo_folder = None
@@ -593,7 +593,7 @@ class AbstractNode(object):
         """
         pass
 
-    def validate_incoming(self, source, link_type, link_label=None):
+    def validate_incoming(self, source, link_type, link_label):
         """
         Validate adding a link of the given type from a given node to ourself.
 
@@ -604,8 +604,8 @@ class AbstractNode(object):
         number of links of the given type from the given node type is allowed.
 
         :param source: the node from which the link is coming
-        :param link_type: the type of link
-        :param link_label: optional link label
+        :param link_type: the link type
+        :param link_label: the link label
         :raise TypeError: if `source` is not a Node instance or `link_type` is not a `LinkType` enum
         :raise ValueError: if the proposed link is invalid
         """
@@ -615,7 +615,7 @@ class AbstractNode(object):
         if not isinstance(source, AbstractNode):
             raise TypeError('the source should be a Node instance')
 
-    def validate_outgoing(self, target, link_type, link_label=None):
+    def validate_outgoing(self, target, link_type, link_label):
         """
         Validate adding a link of the given type from a given node to ourself.
 
@@ -624,8 +624,8 @@ class AbstractNode(object):
         specific to that subclass.
 
         :param target: the node to which the link is going
-        :param link_type: the type of link
-        :param link_label: optional link label
+        :param link_type: the link type
+        :param link_label: the link label
         :raise TypeError: if `target` is not a Node instance or `link_type` is not a `LinkType` enum
         :raise ValueError: if the proposed link is invalid
         """
@@ -635,13 +635,13 @@ class AbstractNode(object):
         if not isinstance(target, AbstractNode):
             raise TypeError('the target should be a Node instance')
 
-    def add_incoming(self, source, link_type, link_label=None):
+    def add_incoming(self, source, link_type, link_label):
         """
         Add a link of the given type from a given node to ourself.
 
         :param source: the node from which the link is coming
-        :param link_type: the type of link
-        :param link_label: optional link label
+        :param link_type: the link type
+        :param link_label: the link label
         :return: True if the proposed link is allowed, False otherwise
         :raise TypeError: if `source` is not a Node instance or `link_type` is not a `LinkType` enum
         :raise ValueError: if the proposed link is invalid
@@ -661,15 +661,15 @@ class AbstractNode(object):
             but it should only be called by `Node.add_incoming`.
 
         :param source: the node from which the link is coming
-        :param link_type: the type of link
-        :param link_label: optional link label
+        :param link_type: the link type
+        :param link_label: the link label
         """
         link_triple = links.LinkTriple(source, link_type, link_label)
 
         if link_triple in self._incoming_cache:
             raise UniquenessError('the link triple {} is already present in the cache'.format(link_triple))
 
-        self._incoming_cache.add(link_triple)
+        self._incoming_cache.append(link_triple)
 
     def get_incoming(self, node_class=None, link_type=(), link_label_filter=None):
         """
@@ -770,8 +770,8 @@ class AbstractNode(object):
            the super() method in order to properly use the caching logic!
 
         :param source: the node from which the link is coming
-        :param link_type: the type of link
-        :param link_label: optional link label
+        :param link_type: the link type
+        :param link_label: the link label
         """
         self.validate_incoming(source, link_type, link_label)
         source.validate_outgoing(self, link_type, link_label)
@@ -786,13 +786,13 @@ class AbstractNode(object):
             # node, followed by the source node.
             try:
                 self._incoming_cache.remove(link_triple)
-            except KeyError:
+            except ValueError:
                 pass
         else:
             # At least one node is not stored yet so add it to the internal cache
             # I insert the link directly in the cache rather than calling _add_cachelink_from
             # because this latter performs an undesired check
-            self._incoming_cache.add(link_triple)
+            self._incoming_cache.append(link_triple)
 
     def _remove_link_from(self, label):
         """
@@ -804,7 +804,7 @@ class AbstractNode(object):
         :note: No error is raised if the link does not exist.
 
         :param str label: the name of the label to set the link from src.
-        :param link_type: The type of link, must be one of the enum values form
+        :param link_type: the link type, must be one of the enum values form
           :class:`~aiida.common.links.LinkType`
         """
         # Try to remove from the local cache, no problem if none is present
@@ -828,7 +828,7 @@ class AbstractNode(object):
 
         :param str src: the source object.
         :param str label: the label of the link from src to the current Node
-        :param link_type: The type of link, must be one of the enum values form
+        :param link_type: the link type, must be one of the enum values form
           :class:`~aiida.common.links.LinkType`
         """
         pass
@@ -844,13 +844,13 @@ class AbstractNode(object):
         :note: No checks are done to verify that the link actually exists.
 
         :param str label: the label of the link from src to the current Node
-        :param link_type: The type of link, must be one of the enum values form
+        :param link_type: the link type, must be one of the enum values form
           :class:`~aiida.common.links.LinkType`
         """
         pass
 
     @abstractmethod
-    def _add_dblink_from(self, src, link_type, label=None):
+    def _add_dblink_from(self, src, link_type, label):
         """
         Add a link to the current node from the 'src' node.
         Both nodes must be a Node instance (or a subclass of Node)
@@ -860,7 +860,6 @@ class AbstractNode(object):
 
         :param src: the source object
         :param str label: the name of the label to set the link from src.
-                    Default = None.
         """
         pass
 

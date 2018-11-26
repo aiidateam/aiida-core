@@ -114,7 +114,8 @@ class TestNodeHashing(AiidaTestCase):
         f2 = self.create_folderdata_with_empty_folder()
 
         assert (
-            f1.folder.get_subfolder('path').get_content_list() == f2.folder.get_subfolder('path').get_content_list())
+                f1.folder.get_subfolder('path').get_content_list() == f2.folder.get_subfolder(
+            'path').get_content_list())
         assert f1.get_hash() != f2.get_hash()
 
     def test_folder_same(self):
@@ -1184,7 +1185,7 @@ class TestNodeBasic(AiidaTestCase):
         from aiida.utils import timezone
         from time import sleep
 
-        user = User.objects(self.backend).get_default()
+        user = User.objects.get_default()
 
         a = Node()
         with self.assertRaises(ModificationNotAllowed):
@@ -1272,22 +1273,22 @@ class TestNodeBasic(AiidaTestCase):
         # Check that you can load it with a simple integer id.
         a2 = Node.get_subclass_from_pk(a1.id)
         self.assertEquals(a1.id, a2.id, "The ids of the stored and loaded node"
-                          "should be equal (since it should be "
-                          "the same node")
+                                        "should be equal (since it should be "
+                                        "the same node")
 
         if six.PY2:  # In Python 3, int is always long (enough)
             # Check that you can load it with an id of type long
             a3 = Node.get_subclass_from_pk(long(a1.id))
             self.assertEquals(a1.id, a3.id, "The ids of the stored and loaded node"
-                              "should be equal (since it should be "
-                              "the same node")
+                                            "should be equal (since it should be "
+                                            "the same node")
 
         # Check that it manages to load the node even if the id is
         # passed as a string.
         a4 = Node.get_subclass_from_pk(str(a1.id))
         self.assertEquals(a1.id, a4.id, "The ids of the stored and loaded node"
-                          "should be equal (since it should be "
-                          "the same node")
+                                        "should be equal (since it should be "
+                                        "the same node")
 
         # Check that a ValueError exception is raised when a string that can
         # not be casted to integer is passed.
@@ -1834,6 +1835,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
     def test_valid_links(self):
         import tempfile
+        from aiida import orm
         from aiida.orm import DataFactory
         from aiida.orm.node.process import CalcJobNode
         from aiida.orm.code import Code
@@ -1852,7 +1854,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         code.set_remote_computer_exec((self.computer, '/bin/true'))
         code.store()
 
-        unsavedcomputer = self.backend.computers.create(name='localhost2', hostname='localhost')
+        unsavedcomputer = orm.Computer(name='localhost2', hostname='localhost')
 
         with self.assertRaises(ValueError):
             # I need to save the localhost entry first

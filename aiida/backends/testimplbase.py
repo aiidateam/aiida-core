@@ -15,7 +15,8 @@ from abc import ABCMeta, abstractmethod
 import six
 
 from aiida.common.exceptions import InternalError
-from aiida.orm import Computer
+from aiida import orm
+from aiida.manage import get_manager
 
 
 @six.add_metaclass(ABCMeta)
@@ -41,6 +42,8 @@ class AiidaTestImplementation(object):
     # This should be set by the implementing class in setUpClass_method()
     backend = None  # type: aiida.orm.Backend
     computer = None  # type: aiida.orm.Computer
+    user = None  # type: aiida.orm.User
+    user_email = None  # type: str
 
     @abstractmethod
     def setUpClass_method(self):
@@ -51,15 +54,12 @@ class AiidaTestImplementation(object):
         """
         pass
 
-    @abstractmethod
     def setUp_method(self):
         pass
 
-    @abstractmethod
     def tearDown_method(self):
         pass
 
-    @abstractmethod
     def tearDownClass_method(self):
         """
         This class implements the tear down methods (e.g. cleans up the DB).
@@ -77,7 +77,7 @@ class AiidaTestImplementation(object):
         """
         This method inserts default data into the database.
         """
-        self.computer = Computer(
+        self.computer = orm.Computer(
             name='localhost',
             hostname='localhost',
             transport_type='local',
@@ -85,6 +85,10 @@ class AiidaTestImplementation(object):
             workdir='/tmp/aiida',
             backend=self.backend
         ).store()
+
+        email = get_manager().get_profile().default_user_email
+        self.user = orm.User(email=email).store()
+        self.user_email = email
 
     def get_computer(self):
         """

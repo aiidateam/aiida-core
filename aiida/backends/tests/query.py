@@ -792,7 +792,7 @@ class QueryBuilderJoinsTests(AiidaTestCase):
 
         # Create another user
         new_email = "newuser@new.n"
-        user = orm.User(email=new_email, backend=self.backend).store()
+        user = orm.User(email=new_email).store()
 
         # Create a group that belongs to that user
         from aiida.orm.groups import Group

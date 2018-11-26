@@ -18,7 +18,7 @@ from tornado import gen
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.data.int import Int
 from aiida import work
-from aiida.manage.manager import AiiDAManager
+from aiida.manage import get_manager
 
 
 class TestProcessControl(AiidaTestCase):
@@ -33,8 +33,9 @@ class TestProcessControl(AiidaTestCase):
 
         # These two need to share a common event loop otherwise the first will never send
         # the message while the daemon is running listening to intercept
-        self.runner = AiiDAManager.get_runner()
-        self.daemon_runner = AiiDAManager.create_daemon_runner(loop=self.runner.loop)
+        manager = get_manager()
+        self.runner = manager.get_runner()
+        self.daemon_runner = manager.create_daemon_runner(loop=self.runner.loop)
 
     def tearDown(self):
         self.daemon_runner.close()
@@ -83,7 +84,7 @@ class TestProcessControl(AiidaTestCase):
     def test_pause(self):
         """Testing sending a pause message to the process."""
 
-        controller = AiiDAManager.get_process_controller()
+        controller = get_manager().get_process_controller()
 
         @gen.coroutine
         def do_pause():
@@ -103,7 +104,7 @@ class TestProcessControl(AiidaTestCase):
     def test_pause_play(self):
         """Test sending a pause and then a play message."""
 
-        controller = AiiDAManager.get_process_controller()
+        controller = get_manager().get_process_controller()
 
         @gen.coroutine
         def do_pause_play():
@@ -129,7 +130,7 @@ class TestProcessControl(AiidaTestCase):
     def test_kill(self):
         """Test sending a kill message."""
 
-        controller = AiiDAManager.get_process_controller()
+        controller = get_manager().get_process_controller()
 
         @gen.coroutine
         def do_kill():

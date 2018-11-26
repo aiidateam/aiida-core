@@ -155,7 +155,10 @@ def setup_profile(profile, only_config, set_default=False, non_interactive=False
             load_dbenv()
 
     from aiida.common.setup import DEFAULT_AIIDA_USER
+    from aiida.manage import get_manager
     from aiida import orm
+
+    manager = get_manager()
 
     if not orm.User.objects.find({'email': DEFAULT_AIIDA_USER}):
         echo.echo("Installing default AiiDA user...")
@@ -163,8 +166,7 @@ def setup_profile(profile, only_config, set_default=False, non_interactive=False
         nuser.is_active = True
         nuser.store()
 
-    from aiida.common.utils import get_configured_user_email
-    email = get_configured_user_email()
+    email = manager.get_profile().default_user_email
     echo.echo("Starting user configuration for {}...".format(email))
     if email == DEFAULT_AIIDA_USER:
         echo.echo("You set up AiiDA using the default Daemon email ({}),".format(email))

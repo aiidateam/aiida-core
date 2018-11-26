@@ -163,8 +163,8 @@ class TestGroups(AiidaTestCase):
         n = orm.Node()
         stored_n = orm.Node().store()
 
-        g = orm.Group(name='testgroup', backend=self.backend)
-        self.addCleanup(lambda: orm.Group.objects(self.backend).delete(g.id))
+        g = orm.Group(name='testgroup')
+        self.addCleanup(lambda: orm.Group.objects.delete(g.id))
 
         with self.assertRaises(ModificationNotAllowed):
             # g unstored
@@ -195,12 +195,12 @@ class TestGroups(AiidaTestCase):
 
         n = orm.Node().store()
 
-        g1 = Group(name='testgroupdescription1', description="g1", backend=self.backend).store()
-        self.addCleanup(lambda: orm.Group.objects(self.backend).delete(g1.id))
+        g1 = Group(name='testgroupdescription1', description="g1").store()
+        self.addCleanup(lambda: orm.Group.objects.delete(g1.id))
         g1.add_nodes(n)
 
-        g2 = Group(name='testgroupdescription2', description="g2", backend=self.backend)
-        self.addCleanup(lambda: orm.Group.objects(self.backend).delete(g2.id))
+        g2 = Group(name='testgroupdescription2', description="g2")
+        self.addCleanup(lambda: orm.Group.objects.delete(g2.id))
 
         # Preliminary checks
         self.assertTrue(g1.is_stored)
@@ -237,8 +237,8 @@ class TestGroups(AiidaTestCase):
         n7 = orm.Node().store()
         n8 = orm.Node().store()
 
-        g = orm.Group(name='test_adding_nodes', backend=self.backend).store()
-        self.addCleanup(lambda: orm.Group.objects(self.backend).delete(g.pk))
+        g = orm.Group(name='test_adding_nodes').store()
+        self.addCleanup(lambda: orm.Group.objects.delete(g.pk))
         g.store()
         # Single node
         g.add_nodes(n1)
@@ -275,7 +275,7 @@ class TestGroups(AiidaTestCase):
         n_out = orm.Node().store()
 
         g = Group(name='test_remove_nodes').store()
-        self.addCleanup(lambda: orm.Group.objects(self.backend).delete(g.id))
+        self.addCleanup(lambda: orm.Group.objects.delete(g.id))
 
         # Add initial nodes
         g.add_nodes([n1, n2, n3, n4, n5, n6, n7, n8])
@@ -320,14 +320,14 @@ class TestGroups(AiidaTestCase):
         self.assertEquals(g.description, 'some desc')
 
         # To avoid to find it in further tests
-        orm.Group.objects(self.backend).delete(g.pk)
+        orm.Group.objects.delete(g.pk)
 
     def test_delete(self):
         from aiida.common.exceptions import NotExistent
 
         n = orm.Node().store()
 
-        g = orm.Group(name='testgroup3', description='some other desc', backend=self.backend).store()
+        g = orm.Group(name='testgroup3', description='some other desc').store()
 
         gcopy = orm.Group.get(name='testgroup3')
         self.assertEquals(g.uuid, gcopy.uuid)
@@ -335,7 +335,7 @@ class TestGroups(AiidaTestCase):
         g.add_nodes(n)
         self.assertEquals(len(g.nodes), 1)
 
-        orm.Group.objects(self.backend).delete(g.pk)
+        orm.Group.objects.delete(g.pk)
 
         with self.assertRaises(NotExistent):
             # The group does not exist anymore

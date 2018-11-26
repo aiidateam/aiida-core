@@ -426,7 +426,7 @@ class TestVerdiDataRemote(AiidaTestCase):
     def setUpClass(cls):
         from aiida import orm
         super(TestVerdiDataRemote, cls).setUpClass()
-        user = orm.User.objects(cls.backend).get_default()
+        user = orm.User.objects.get_default()
         authinfo = orm.AuthInfo(cls.computer, user)
         authinfo.store()
 

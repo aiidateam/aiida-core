@@ -18,10 +18,6 @@ from aiida.cmdline.commands.cmd_workflow import workflow_list, workflow_kill, wo
     format_pk
 
 
-def debug_msg(result):
-    return ''.join(format_exception(*result.exc_info))
-
-
 def format_wf_for_list(workflow):
     return '{} {}'.format(workflow.__class__.__name__, format_pk(workflow))
 
@@ -48,21 +44,21 @@ class TestVerdiLegacyWorkflow(AiidaTestCase):
 
     def test_workflow_list_default(self):
         result = self.cli_runner.invoke(workflow_list, [])
-        self.assertIsNone(result.exception, msg=debug_msg(result))
+        self.assertClickResultNoException(result)
         self.assertIn(format_wf_for_list(self.workflow), result.output)
         self.assertIn(format_wf_for_list(self.other_workflow), result.output)
         self.assertNotIn(format_wf_for_list(self.done_workflow), result.output)
 
     def test_workflow_list_workflows(self):
         result = self.cli_runner.invoke(workflow_list, ['--workflows={}'.format(self.workflow.pk)])
-        self.assertIsNone(result.exception, msg=debug_msg(result))
+        self.assertClickResultNoException(result)
         self.assertIn(format_wf_for_list(self.workflow), result.output)
         self.assertNotIn(format_wf_for_list(self.other_workflow), result.output)
         self.assertNotIn(format_wf_for_list(self.done_workflow), result.output)
 
     def test_workflow_list_states(self):
         result = self.cli_runner.invoke(workflow_list, ['--all-states'])
-        self.assertIsNone(result.exception, msg=debug_msg(result))
+        self.assertClickResultNoException(result)
         self.assertIn(format_wf_for_list(self.workflow), result.output)
         self.assertIn(format_wf_for_list(self.other_workflow), result.output)
         self.assertIn(format_wf_for_list(self.done_workflow), result.output)
@@ -74,14 +70,14 @@ class TestVerdiLegacyWorkflow(AiidaTestCase):
         results.append(self.cli_runner.invoke(workflow_list, ['--depth=2']))
 
         for result in results:
-            self.assertIsNone(result.exception, msg=debug_msg(result))
+            self.assertClickResultNoException(result)
 
         self.assertLess(len(results[0].output), len(results[1].output))
         self.assertLess(len(results[1].output), len(results[2].output))
 
     def test_workflow_report(self):
         result = self.cli_runner.invoke(workflow_report, [str(self.super_workflow.uuid)])
-        self.assertIsNone(result.exception, msg=debug_msg(result))
+        self.assertClickResultNoException(result)
         self.assertIn(format_pk(self.super_workflow), result.output)
 
     def test_workflow_kill(self):
@@ -102,5 +98,5 @@ class TestVerdiLegacyWorkflow(AiidaTestCase):
 
     def test_workflow_logshow(self):
         result = self.cli_runner.invoke(workflow_logshow, [str(self.super_workflow.pk)])
-        self.assertIsNone(result.exception, msg=debug_msg(result))
+        self.assertClickResultNoException(result)
         self.assertIn(format_pk(self.super_workflow), result.output)

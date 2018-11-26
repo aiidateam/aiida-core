@@ -17,7 +17,7 @@ import typing
 from aiida.common import exceptions
 from aiida.common import datastructures
 from aiida.common.utils import classproperty, type_check
-from . import backends
+from aiida.manage import get_manager
 
 __all__ = ('Entity', 'Collection')
 
@@ -44,11 +44,8 @@ class Collection(typing.Generic[EntityType]):
 
     def __init__(self, backend, entity_class):
         """Construct a new entity collection"""
-        # assert issubclass(entity_class, Entity), "Must provide an entity type"
-        if backend is None:
-            from . import backends
-            backend = backend or backends.construct_backend()
-        self._backend = backend
+        assert issubclass(entity_class, Entity), "Must provide an entity type"
+        self._backend = backend or get_manager().get_backend()
         self._entity_type = entity_class
 
     def __call__(self, backend):
@@ -136,10 +133,9 @@ class Collection(typing.Generic[EntityType]):
 class Entity(object):
     """An AiiDA entity"""
 
-    _backend = None
     _objects = None
 
-    # Define out collection type
+    # Define our collection type
     Collection = Collection
 
     @classproperty
@@ -150,25 +146,8 @@ class Entity(object):
         :param backend: the optional backend to use (otherwise use default)
         :return: an object that can be used to access entities of this type
         """
-        new_backend = backend or cls._backend or backends.construct_backend()
-
-        if type(cls._backend) != type(new_backend):  # pylint: disable=unidiomatic-typecheck
-            # if the backend has changed, update cache
-            cls._backend = new_backend
-            cls._objects = cls.Collection(cls._backend, cls)
-        else:
-            # if not, use cache (if already populated)
-            cls._objects = cls._objects or cls.Collection(cls._backend, cls)
-
-        return cls._objects
-
-    @classmethod
-    def reset(cls):
-        """
-        Reset the backend and objects cache.
-        """
-        cls._backend = None
-        cls._backendobjectS = None
+        backend = backend or get_manager().get_backend()
+        return cls.Collection.get_collection(cls, backend)
 
     @classmethod
     def get(cls, **kwargs):

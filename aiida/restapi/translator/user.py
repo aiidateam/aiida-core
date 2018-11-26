@@ -13,6 +13,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from aiida.restapi.translator.base import BaseTranslator
+from aiida import orm
 
 
 class UserTranslator(BaseTranslator):
@@ -23,8 +24,7 @@ class UserTranslator(BaseTranslator):
     # A label associated to the present class (coincides with the resource name)
     __label__ = "users"
     # The AiiDA class one-to-one associated to the present class
-    from aiida.orm import User
-    _aiida_class = User
+    _aiida_class = orm.User
     # The string name of the AiiDA class
     _aiida_type = "User"
     # The string associated to the AiiDA class in the query builder lexicon

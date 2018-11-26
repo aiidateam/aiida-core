@@ -14,12 +14,11 @@ Testing Session possible problems.
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import os
 from sqlalchemy.orm import sessionmaker
 
 import aiida.backends
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common.utils import get_configured_user_email
+from aiida.manage import get_manager
 
 
 class TestSessionSqla(AiidaTestCase):
@@ -65,7 +64,8 @@ class TestSessionSqla(AiidaTestCase):
 
         session = aiida.backends.sqlalchemy.get_scoped_session()
 
-        user = self.backend.users.create(email=get_configured_user_email())
+        email = get_manager().get_profile().default_user_email
+        user = self.backend.users.create(email=email)
         session.add(user.dbmodel)
         session.commit()
 
@@ -89,14 +89,14 @@ class TestSessionSqla(AiidaTestCase):
         expire_on_commit=True & committing computer and code objects with
         their built-in store function.
         """
-        from aiida.backends.sqlalchemy.models.user import DbUser
         from aiida.orm.data.code import Code
 
         session = aiida.backends.sqlalchemy.get_scoped_session()
 
         self.set_connection(expire_on_commit=True)
 
-        user = self.backend.users.create(email=get_configured_user_email())
+        email = get_manager().get_profile().default_user_email
+        user = self.backend.users.create(email=email)
         session.add(user.dbmodel)
         session.commit()
 
@@ -124,7 +124,8 @@ class TestSessionSqla(AiidaTestCase):
 
         session = aiida.backends.sqlalchemy.get_scoped_session()
 
-        user = self.backend.users.create(email=get_configured_user_email())
+        email = get_manager().get_profile().default_user_email
+        user = self.backend.users.create(email=email)
         session.add(user.dbmodel)
         session.commit()
 
@@ -154,7 +155,8 @@ class TestSessionSqla(AiidaTestCase):
 
         session = aiida.backends.sqlalchemy.get_scoped_session()
 
-        user = self.backend.users.create(email=get_configured_user_email())
+        email = get_manager().get_profile().default_user_email
+        user = self.backend.users.create(email=email)
         session.add(user.dbmodel)
         session.commit()
 

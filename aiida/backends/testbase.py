@@ -23,8 +23,7 @@ from aiida.backends import settings
 from aiida.backends.tests import get_db_test_list
 from aiida.common.exceptions import ConfigurationError, TestsNotAllowedError, InternalError
 from aiida.common.utils import classproperty
-from aiida import work
-from aiida.manage.manager import AiiDAManager
+from aiida.manage import get_manager, reset_manager
 
 
 def check_if_tests_can_run():
@@ -90,8 +89,6 @@ class AiidaTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        from aiida.orm.backends import construct_backend
-
         # Note: this will raise an exception, that will be seen as a test
         # failure. To be safe, you should do the same check also in the tearDownClass
         # to avoid that it is run
@@ -99,7 +96,8 @@ class AiidaTestCase(unittest.TestCase):
 
         cls.__backend_instance = cls.get_backend_class()()
         cls.__backend_instance.setUpClass_method(*args, **kwargs)
-        cls.backend = construct_backend()
+        cls.backend = cls.__backend_instance.backend
+        cls.insert_data()
 
         cls._class_was_setup = True
 
@@ -114,7 +112,7 @@ class AiidaTestCase(unittest.TestCase):
         self.__backend_instance.tearDown_method()
         # Clean up the loop we created in set up.
         # Call this after the instance tear down just in case it uses the loop
-        AiiDAManager.reset()
+        reset_manager()
         loop = ioloop.IOLoop.current()
         if not loop._closing:
             loop.close()
@@ -136,6 +134,8 @@ class AiidaTestCase(unittest.TestCase):
             raise InvalidOperation("You cannot call clean_db before running the setUpClass")
 
         cls.__backend_instance.clean_db()
+        # Make sure to reset the backend when cleaning the database
+        reset_manager()
 
     @classproperty
     def computer(cls):
@@ -156,6 +156,7 @@ class AiidaTestCase(unittest.TestCase):
         # Double check for double security to avoid to run the tearDown
         # if this is not a test profile
         check_if_tests_can_run()
+        cls.clean_db()
         cls.__backend_instance.tearDownClass_method(*args, **kwargs)
 
     def assertClickResultNoException(self, cli_result):

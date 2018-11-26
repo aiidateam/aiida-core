@@ -24,7 +24,6 @@ from aiida.common.datastructures import (wf_states, wf_exit_call,
 from aiida.common.utils import str_timedelta
 from aiida.common import AIIDA_LOGGER
 from aiida.orm.node.process import CalcJobNode
-from aiida.orm.backends import construct_backend
 from aiida.utils import timezone
 from aiida.common.log import create_logger_adapter
 from aiida.common.utils import abstractclassmethod
@@ -95,7 +94,6 @@ class AbstractWorkflow(object):
                              the given uuid.
         """
         super(AbstractWorkflow, self).__init__()
-        self._backend = construct_backend()
 
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))
@@ -233,11 +231,6 @@ class AbstractWorkflow(object):
         :rtype: bool
         """
         return not self._to_be_stored
-
-    @property
-    def backend(self):
-        """Get the backend of this workflow"""
-        return self._backend
 
     def get_folder_list(self, subfolder='.'):
         """
@@ -590,7 +583,7 @@ class AbstractWorkflow(object):
 
                 # self.get_steps(wrapped_method).set_nextcall(wf_exit_call)
 
-            automatic_user = orm.User.objects(self._backend).get_default().backend_entity
+            automatic_user = orm.User.objects.get_default().backend_entity
             method_step, created = self.dbworkflowinstance.steps.get_or_create(
                 name=wrapped_method, user=automatic_user.dbmodel)
             try:
@@ -666,7 +659,7 @@ class AbstractWorkflow(object):
         # arround
 
         # Retrieve the caller method
-        user = orm.User.objects(self._backend).get_default().backend_entity.dbmodel
+        user = orm.User.objects.get_default().backend_entity.dbmodel
         method_step = self.dbworkflowinstance.steps.get(name=caller_method, user=user)
 
         # Attach calculations

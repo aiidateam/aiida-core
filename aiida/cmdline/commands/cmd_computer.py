@@ -603,14 +603,12 @@ def computer_delete(computer):
     it.
     """
     from aiida.common.exceptions import InvalidOperation
-    from aiida.orm.backends import construct_backend
-
-    backend = construct_backend()
+    from aiida import orm
 
     compname = computer.name
 
     try:
-        backend.computers.delete(computer.id)
+        orm.Computer.objects.delete(computer.id)
     except InvalidOperation as error:
         echo.echo_critical(str(error))
 

@@ -307,7 +307,6 @@ class TestNodeBasicSQLA(AiidaTestCase):
         """
         from aiida.backends.sqlalchemy.models.node import DbNode
         from aiida.common.utils import get_new_uuid
-        from aiida.orm.implementation.sqlalchemy import users as users
         import aiida.backends.sqlalchemy
 
         backend = self.backend
@@ -336,7 +335,7 @@ class TestNodeBasicSQLA(AiidaTestCase):
                                       "UUID in the session/DB.")
 
         # Get the automatic user
-        dbuser = orm.User.objects(self.backend).get_default().backend_entity.dbmodel
+        dbuser = orm.User.objects.get_default().backend_entity.dbmodel
         # Create a new node but now add it to the session
         node_uuid = get_new_uuid()
         node = DbNode(user=dbuser, uuid=node_uuid, type=None)

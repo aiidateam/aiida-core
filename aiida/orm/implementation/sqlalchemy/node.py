@@ -28,7 +28,6 @@ from aiida.common.links import LinkType
 from aiida.common.utils import type_check
 from aiida.orm.implementation.general.node import AbstractNode, _HASH_EXTRA_KEY
 from aiida.orm.implementation.sqlalchemy.utils import get_attr
-from aiida.manage.manager import AiiDAManager
 
 from . import computer as computers
 

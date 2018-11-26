@@ -17,7 +17,6 @@ import warnings
 from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
 from .process_function import workfunction
 
-warnings.warn('this module has been deprecated, import directly from `aiida.work` instead',
-              DeprecationWarning)  # pylint: disable=no-member
+warnings.warn('this module has been deprecated, import directly from `aiida.work` instead', DeprecationWarning)  # pylint: disable=no-member
 
 __all__ = ('workfunction',)

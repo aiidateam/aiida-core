@@ -14,7 +14,6 @@ from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
 from aiida.common import exceptions
 from aiida.common.utils import type_check
 from aiida.orm.implementation.authinfos import BackendAuthInfo, BackendAuthInfoCollection
-from aiida.orm.backends import construct_backend
 from . import entities
 from . import computer as computers
 from . import users as users

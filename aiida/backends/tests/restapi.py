@@ -113,7 +113,7 @@ class RESTApiTestCase(AiidaTestCase):
         }]
 
         for dummy_computer in dummy_computers:
-            computer = orm.Computer(backend=cls.backend, **dummy_computer)
+            computer = orm.Computer(**dummy_computer)
             computer.store()
 
         # Prepare typical REST responses

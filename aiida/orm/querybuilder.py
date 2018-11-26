@@ -37,11 +37,8 @@ from sqlalchemy.dialects.postgresql import array
 from aiida.common.exceptions import InputValidationError
 # The way I get column as a an attribute to the orm class
 from aiida.common.links import LinkType
+from aiida.manage import get_manager
 from aiida.orm.node import Node
-from aiida.orm import backends
-from aiida.orm import computers
-from aiida.orm import users
-from aiida.orm import authinfos
 from aiida.orm.utils import convert
 
 from . import authinfos
@@ -52,7 +49,7 @@ from . import groups
 from . import logs
 from . import users
 
-__all__ = ('QueryBuilder', )
+__all__ = ('QueryBuilder',)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -239,7 +236,7 @@ class QueryBuilder(object):
             check :func:`QueryBuilder.order_by` for more information.
 
         """
-        backend = backend or backends.construct_backend()
+        backend = backend or get_manager().get_backend()
         self._impl = backend.query()
 
         # A list storing the path being traversed by the query
@@ -552,7 +549,6 @@ class QueryBuilder(object):
                 if not isinstance(type, six.string_types):
                     raise InputValidationError("{} was passed as type, but is not a string".format(type))
 
-
         ormclass, ormclasstype, query_type_string = self._get_ormclass(cls, type)
 
         # TAG #################################
@@ -667,8 +663,8 @@ class QueryBuilder(object):
                         "{} is not a valid keyword "
                         "for joining specification\n"
                         "Valid keywords are: "
-                        "{}".format(
-                            key, spec_to_function_map + ['cls', 'type', 'tag', 'autotag', 'filters', 'project']))
+                        "{}".format(key,
+                                    spec_to_function_map + ['cls', 'type', 'tag', 'autotag', 'filters', 'project']))
                 elif joining_keyword:
                     raise InputValidationError("You already specified joining specification {}\n"
                                                "But you now also want to specify {}"
@@ -902,6 +898,7 @@ class QueryBuilder(object):
         """
         Add a filter on the type based on the query_type_string
         """
+
         def get_type_filter(q, p):
             if subclassing:
                 return {'like': '{}%'.format(q)}
@@ -1458,7 +1455,8 @@ class QueryBuilder(object):
         :param entity_to_join: aliased comment
         """
         self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.Comment), 'with_node')
-        self._query = self._query.join(entity_to_join, joined_entity.id == entity_to_join.dbnode_id, isouter=isouterjoin)
+        self._query = self._query.join(
+            entity_to_join, joined_entity.id == entity_to_join.dbnode_id, isouter=isouterjoin)
 
     def _join_comment_node(self, joined_entity, entity_to_join, isouterjoin):
         """
@@ -1466,7 +1464,8 @@ class QueryBuilder(object):
         :param entity_to_join: aliased node
         """
         self._check_dbentities((joined_entity, self._impl.Comment), (entity_to_join, self._impl.Node), 'with_comment')
-        self._query = self._query.join(entity_to_join, joined_entity.dbnode_id == entity_to_join.id, isouter=isouterjoin)
+        self._query = self._query.join(
+            entity_to_join, joined_entity.dbnode_id == entity_to_join.id, isouter=isouterjoin)
 
     def _get_function_map(self):
         """
@@ -1768,6 +1767,7 @@ class QueryBuilder(object):
 
         :returns: self
         """
+
         def build_counterquery(calc_class):
             if issubclass(calc_class, self.Node):
                 orm_calc_class = calc_class
@@ -2146,6 +2146,7 @@ class QueryBuilder(object):
         :param preferred_name: the new name which is preferred
         :param version: aiida version for which this takes effect.
         """
+
         def wrapper(*args, **kwargs):
             """
             Decorator to print a deprecation warning
@@ -2158,4 +2159,5 @@ class QueryBuilder(object):
                 AiidaDeprecationWarning,
                 stacklevel=2)
             return function(*args, **kwargs)
+
         return wrapper

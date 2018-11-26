@@ -54,18 +54,17 @@ class TestComputer(AiidaTestCase):
             hostname='aaa',
             transport_type='local',
             scheduler_type='pbspro',
-            workdir='/tmp/aiida',
-            backend=self.backend).store()
+            workdir='/tmp/aiida').store()
 
         comp_pk = new_comp.pk
 
-        check_computer = orm.Computer.objects(self.backend).get(id=comp_pk)
+        check_computer = orm.Computer.objects.get(id=comp_pk)
         self.assertEquals(comp_pk, check_computer.pk)
 
         Computer.objects.delete(comp_pk)
 
         with self.assertRaises(NotExistent):
-            orm.Computer.objects(self.backend).get(id=comp_pk)
+            orm.Computer.objects.get(id=comp_pk)
 
 
 class TestComputerConfigure(AiidaTestCase):
@@ -74,7 +73,6 @@ class TestComputerConfigure(AiidaTestCase):
         """Prepare current user and computer builder with common properties."""
         from aiida.control.computer import ComputerBuilder
 
-        backend = self.backend
         self.comp_builder = ComputerBuilder(label='test', description='Test Computer', enabled=True,
                                             hostname='localhost')
         self.comp_builder.scheduler = 'direct'

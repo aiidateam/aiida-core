@@ -46,6 +46,8 @@ from aiida import is_dbenv_loaded
 from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 from aiida.common import setup as aiida_cfg
 from aiida.backends import settings as backend_settings
+from aiida.manage import get_manager, reset_manager
+from aiida.common import exceptions
 
 
 class FixtureError(Exception):
@@ -64,8 +66,7 @@ class FixtureManager(object):
     """
     Manage the life cycle of a completely separated and temporary AiiDA environment
 
-    * No previously created database of profile is required to run tests using this
-      environment
+    * No previously created database of profile is required to run tests using this environment
     * Tests using this environment will never pollute the user's work environment
 
     Example::
@@ -111,6 +112,8 @@ class FixtureManager(object):
 
     """
 
+    _test_case = None
+
     def __init__(self):
         self.db_params = {}
         self.fs_env = {'repo': 'test_repo', 'config': '.aiida'}
@@ -140,8 +143,7 @@ class FixtureManager(object):
         """
         if self.__backend is None:
             # Lazy load the backend so we don't do it too early (i.e. before load_dbenv())
-            from aiida.orm.backends import construct_backend
-            self.__backend = construct_backend()
+            self.__backend = get_manager().get_backend()
         return self.__backend
 
     def create_db_cluster(self):
@@ -189,15 +191,26 @@ class FixtureManager(object):
         setup_profile(profile=profile_name, only_config=False, non_interactive=True, **self.profile)
         aiida_cfg.set_default_profile(profile_name)
         self.__is_running_on_test_profile = True
+        self._create_test_case()
+        self.init_db()
 
     def reset_db(self):
         """Cleans all data from the database between tests"""
-        if not self.__is_running_on_test_profile:
-            raise FixtureError('No test profile has been set up yet, can not reset the db')
-        if self.profile_info['backend'] == BACKEND_DJANGO:
-            self.__clean_db_django()
-        elif self.profile_info['backend'] == BACKEND_SQLA:
-            self.__clean_db_sqla()
+
+        self._test_case.clean_db()
+        reset_manager()
+        self.init_db()
+
+    @staticmethod
+    def init_db():
+        """Initialise the database state"""
+        # Create the default user
+        from aiida import orm
+        try:
+            orm.User(email=get_manager().get_profile().default_user_email).store()
+        except exceptions.IntegrityError:
+            # The default user already exists, no problem
+            pass
 
     @property
     def profile(self):
@@ -362,29 +375,21 @@ class FixtureManager(object):
         if 'profile' in self._backup:
             backend_settings.AIIDADB_PROFILE = self._backup['profile']
 
-    @staticmethod
-    def __clean_db_django():
-        from aiida.backends.djsite.db.testbase import DjangoTests
-        DjangoTests().clean_db()
+    def _create_test_case(self):
+        """
+        Create the test case for the correct backend which will be used to clean up
+        """
+        if not self.__is_running_on_test_profile:
+            raise FixtureError('No test profile has been set up yet, cannot create appropriate test case')
+        if self.profile_info['backend'] == BACKEND_DJANGO:
+            from aiida.backends.djsite.db.testbase import DjangoTests
+            self._test_case = DjangoTests()
+        elif self.profile_info['backend'] == BACKEND_SQLA:
+            from aiida.backends.sqlalchemy.tests.testbase import SqlAlchemyTests
+            from aiida.backends.sqlalchemy import get_scoped_session
 
-    def __clean_db_sqla(self):
-        """Clean database for sqlalchemy backend"""
-        from aiida.backends.sqlalchemy.tests.testbase import SqlAlchemyTests
-        from aiida.backends.sqlalchemy import get_scoped_session
-        from aiida import orm
-
-        user = orm.User.objects(self._backend).get(email=self.email)
-        new_user = orm.User(email=user.email, backend=self._backend)
-        new_user.first_name = user.first_name
-        new_user.last_name = user.last_name
-        new_user.institution = user.institution
-
-        sqla_testcase = SqlAlchemyTests()
-        sqla_testcase.test_session = get_scoped_session()
-        sqla_testcase.clean_db()
-
-        # that deleted our user, we need to recreate it
-        new_user.store()
+            self._test_case = SqlAlchemyTests()
+            self._test_case.test_session = get_scoped_session()
 
     def has_profile_open(self):
         return self.__is_running_on_test_profile
@@ -445,14 +450,12 @@ class PluginTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        from aiida.orm.backends import construct_backend
-
         cls.fixture_manager = _GLOBAL_FIXTURE_MANAGER
         if not cls.fixture_manager.has_profile_open():
             raise ValueError(
                 "Fixture mananger has no open profile. Please use aiida.utils.fixtures.TestRunner to run these tests.")
 
-        cls.backend = construct_backend()
+        cls.backend = get_manager().get_backend()
 
     def tearDown(self):
         self.fixture_manager.reset_db()

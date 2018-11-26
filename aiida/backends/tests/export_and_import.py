@@ -466,14 +466,16 @@ class TestSimple(AiidaTestCase):
         from aiida.orm.importexport import export
         from aiida.common.datastructures import calc_states
         from aiida.common.links import LinkType
-        from aiida.common.utils import get_configured_user_email
-
+        from aiida.manage import get_manager
+        
+        manager = get_manager()
+        
         # Creating a folder for the import/export files
         temp_folder = tempfile.mkdtemp()
         try:
             # Create another user
             new_email = "newuser@new.n"
-            user = orm.User(email=new_email, backend=self.backend).store()
+            user = orm.User(email=new_email).store()
 
             # Create a structure data node that has a calculation as output
             sd1 = StructureData()
@@ -525,8 +527,7 @@ class TestSimple(AiidaTestCase):
                 node = load_node(uuid=uuid)
                 self.assertEquals(node.get_user().email, new_email)
             for uuid in uuids_u2:
-                self.assertEquals(load_node(uuid).get_user().email,
-                                  get_configured_user_email())
+                self.assertEquals(load_node(uuid).get_user().email, manager.get_profile().default_user_email)
         finally:
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
@@ -549,14 +550,16 @@ class TestSimple(AiidaTestCase):
         from aiida.orm.importexport import export
         from aiida.common.datastructures import calc_states
         from aiida.common.links import LinkType
-        from aiida.common.utils import get_configured_user_email
+        from aiida.manage import get_manager
+
+        manager = get_manager()
 
         # Creating a folder for the import/export files
         temp_folder = tempfile.mkdtemp()
         try:
             # Create another user
             new_email = "newuser@new.n"
-            user = orm.User(email=new_email, backend=self.backend).store()
+            user = orm.User(email=new_email).store()
 
             # Create a structure data node that has a calculation as output
             sd1 = StructureData()
@@ -631,8 +634,7 @@ class TestSimple(AiidaTestCase):
             for uuid in uuids1:
                 self.assertEquals(load_node(uuid).get_user().email, new_email)
             for uuid in uuids2:
-                self.assertEquals(load_node(uuid).get_user().email,
-                                  get_configured_user_email())
+                self.assertEquals(load_node(uuid).get_user().email, manager.get_profile().default_user_email)
 
         finally:
             # Deleting the created temporary folder
@@ -660,7 +662,7 @@ class TestSimple(AiidaTestCase):
         try:
             # Create another user
             new_email = "newuser@new.n"
-            user = orm.User(email=new_email, backend=self.backend)
+            user = orm.User(email=new_email)
             user.store()
 
             # Create a structure data node that has a calculation as output
@@ -725,7 +727,7 @@ class TestSimple(AiidaTestCase):
         try:
             # Create another user
             new_email = "newuser@new.n"
-            user = orm.User(email=new_email, backend=self.backend)
+            user = orm.User(email=new_email)
             user.store()
 
             # Create a structure data node

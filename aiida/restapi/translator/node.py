@@ -16,6 +16,7 @@ from aiida.common.exceptions import InputValidationError, ValidationError, \
     InvalidOperation
 from aiida.restapi.common.exceptions import RestValidationError
 from aiida.restapi.translator.base import BaseTranslator
+from aiida.manage import get_manager
 from aiida import orm
 
 
@@ -28,8 +29,7 @@ class NodeTranslator(BaseTranslator):
     # A label associated to the present class (coincides with the resource name)
     __label__ = "nodes"
     # The AiiDA class one-to-one associated to the present class
-    from aiida.orm.node import Node
-    _aiida_class = Node
+    _aiida_class = orm.Node
     # The string name of the AiiDA class
     _aiida_type = "node.Node"
     # The string associated to the AiiDA class in the query builder lexicon
@@ -123,7 +123,7 @@ class NodeTranslator(BaseTranslator):
         """
 
         self._subclasses = self._get_subclasses()
-        self._backend = orm.construct_backend()
+        self._backend = get_manager().get_backend()
 
     def set_query_type(self,
                        query_type,

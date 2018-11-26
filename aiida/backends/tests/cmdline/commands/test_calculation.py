@@ -45,16 +45,15 @@ class TestVerdiCalculation(AiidaTestCase):
             hostname='localhost',
             transport_type='local',
             scheduler_type='direct',
-            workdir='/tmp/aiida',
-            backend=cls.backend).store()
+            workdir='/tmp/aiida').store()
 
         cls.code = orm.Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
         cls.group = orm.Group(name='test_group').store()
         cls.node = Node().store()
         cls.calcs = []
 
-        user = orm.User.objects(cls.backend).get_default()
-        authinfo = orm.AuthInfo(computer=cls.computer, user=user, backend=cls.backend)
+        user = orm.User.objects.get_default()
+        authinfo = orm.AuthInfo(computer=cls.computer, user=user)
         authinfo.store()
 
         # Create 13 CalcJobNodes (one for each CalculationState)
@@ -109,7 +108,7 @@ class TestVerdiCalculation(AiidaTestCase):
 
         # Get the imported ArithmeticAddCalculation node
         ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
-        calculations = orm.QueryBuilder(backend=cls.backend).append(ArithmeticAddCalculation).all()[0]
+        calculations = orm.QueryBuilder().append(ArithmeticAddCalculation).all()[0]
         cls.arithmetic_job = calculations[0]
 
     def setUp(self):

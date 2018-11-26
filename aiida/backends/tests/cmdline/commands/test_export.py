@@ -68,8 +68,7 @@ class TestVerdiExport(AiidaTestCase):
             hostname='localhost',
             transport_type='local',
             scheduler_type='direct',
-            workdir='/tmp/aiida',
-            backend=cls.backend).store()
+            workdir='/tmp/aiida').store()
 
         cls.code = orm.Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
         cls.group = orm.Group(name='test_group').store()

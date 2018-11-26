@@ -14,7 +14,7 @@ from __future__ import absolute_import
 
 from aiida.transport import TransportFactory
 from aiida.common.exceptions import (ConfigurationError, MissingPluginError)
-from . import backends
+from aiida.manage import get_manager
 from . import entities
 from . import users
 
@@ -48,7 +48,7 @@ class AuthInfo(entities.Entity):
         :param user: a User instance
         :return: an AuthInfo object associated with the given computer and user
         """
-        backend = backend or backends.construct_backend()
+        backend = backend or get_manager().get_backend()
         model = backend.authinfos.create(computer=computer.backend_entity, user=user.backend_entity)
         super(AuthInfo, self).__init__(model)
 

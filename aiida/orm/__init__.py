@@ -13,12 +13,12 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from aiida.orm.data import *
-from aiida.orm.data.code import Code
-from aiida.orm.workflow import Workflow
+
+from .data import *
+from .data.code import Code
+from .workflow import Workflow
 
 from .authinfos import *
-from .backends import *
 from .calculation import *
 from .computers import *
 from .entities import *
@@ -41,7 +41,6 @@ _local = 'Code', 'CalculationFactory', 'DataFactory', 'WorkflowFactory', \
 
 __all__ = (_local +
            authinfos.__all__ +
-           backends.__all__ +
            calculation.__all__ +
            computers.__all__ +
            entities.__all__ +

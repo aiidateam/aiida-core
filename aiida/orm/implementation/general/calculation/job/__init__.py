@@ -92,7 +92,7 @@ class AbstractJobCalculation(AbstractCalculation):
     def _updatable_attributes(cls):
         return super(AbstractJobCalculation, cls)._updatable_attributes + (
             'job_id', 'scheduler_state', 'scheduler_lastchecktime', 'last_jobinfo', 'remote_workdir', 'retrieve_list',
-            'retrieve_temporary_list', 'retrieve_singlefile_list', 'state')
+            'retrieve_temporary_list', 'retrieve_singlefile_list', 'archive_list', 'state')
 
     @classproperty
     def _hash_ignored_attributes(cls):
@@ -267,7 +267,7 @@ class AbstractJobCalculation(AbstractCalculation):
     def _linking_as_output(self, dest, link_type):
         """
         An output of a JobCalculation can only be set
-        when the calculation is in the SUBMITTING or RETRIEVING or
+        when the calculation is in the SUBMITTING, COMPUTED, RETRIEVING or
         PARSING state.
         (during SUBMITTING, the execmanager adds a link to the remote folder;
         all other links are added while in the retrieving phase).
@@ -280,6 +280,7 @@ class AbstractJobCalculation(AbstractCalculation):
         """
         valid_states = [
             calc_states.SUBMITTING,
+            calc_states.COMPUTED,
             calc_states.RETRIEVING,
             calc_states.PARSING,
         ]
@@ -1189,6 +1190,43 @@ class AbstractJobCalculation(AbstractCalculation):
         """
         return self.get_attr('retrieve_singlefile_list', None)
 
+    def _set_archive_list(self, archive_list):
+        """
+        Set the `archive_list` attribute that tells the execmanager what files to archive after completion
+
+        :param archive_list: a list of length three tuples: ('remote_machine', 'relative_source', 'absolute_target')
+        """
+        import os
+
+        states = (calc_states.TOSUBMIT, calc_states.NEW)
+
+        if self.get_state() not in states:
+            raise ModificationNotAllowed('invalid state<{}>, should be one of {}'.format(self.get_state(), states))
+
+        if not isinstance(archive_list, (tuple, list)) or not archive_list:
+            raise TypeError('the value for the archive_list should be a list or tuple of length three tuples')
+
+        for spec in archive_list:
+            if not isinstance(spec, tuple) or len(spec) != 3:
+                raise TypeError('the specification of archive_list should be a list of length three tuples')
+            if spec[0] is not None:
+                raise NotImplementedError('archiving to another remote is not yet implemented, should be set to None')
+            if spec[1] is None or os.path.isabs(spec[1]):
+                raise ValueError('the second element of the archive list spec should be a relative path within the work directory of the calculation')
+            if spec[2] is None or not os.path.isabs(spec[2]):
+                raise ValueError('the third element of the archive list spec should be an absolute path on the remote machine')
+
+        self._set_attr('archive_list', archive_list)
+
+    def _get_archive_list(self):
+        """
+        Get the list of files/directories to be archived on the cluster.
+        Their path is relative to the remote workdirectory path.
+
+        :return: a list of strings for file/directory names
+        """
+        return self.get_attr('archive_list', None)
+
     def _set_job_id(self, job_id):
         """
         Always set as a string
@@ -1839,6 +1877,10 @@ class AbstractJobCalculation(AbstractCalculation):
         retrieve_temporary_list = (calcinfo.retrieve_temporary_list
                                    if calcinfo.retrieve_temporary_list is not None else [])
         self._set_retrieve_temporary_list(retrieve_temporary_list)
+
+        # Handle the archive_list
+        if calcinfo.archive_list:
+            self._set_archive_list(calcinfo.archive_list)
 
         # the if is done so that if the method returns None, this is
         # not added. This has two advantages:

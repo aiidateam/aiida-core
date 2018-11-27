@@ -238,6 +238,68 @@ def submit_calculation(calculation, transport, calc_info, script_filename):
     calculation._set_job_id(job_id)
 
 
+def archive_calculation(calculation, transport):
+    """
+    Archive files from the working directory of a completed calculation to a permanent remote folder.
+
+    After a calculation has been completed, optionally archive files from the work directory to a storage location
+    on the same remote machine. This is useful if one wants to keep certain files from a completed calculation to be
+    removed from the scratch directory, because they are necessary for restarts, but that are too heavy to retrieve.
+    Instructions of which files to copy where are retrieved from the `archive_list` attribute set on the calculation.
+
+    :param calculation: the instance of JobCalculation whose files to archive.
+    :param transport: an already opened transport to use to archive the files.
+    """
+    from aiida.orm.data.remote import RemoteData
+
+    computer = calculation.get_computer()
+    logger_extra = get_dblogger_extra(calculation)
+
+    files = calculation._get_archive_list()
+    execlogger.debug('archiving files for calculation<{}>: {}'.format(calculation.pk, files), extra=logger_extra)
+
+    for target_computer, source_filename, target_basepath in files:
+
+        if target_computer:
+            execlogger.warning('using a different computer for archiving is not yet implemented')
+            continue
+
+        source_basepath = calculation._get_remote_workdir()
+        source_filepath = os.path.join(source_basepath, source_filename)
+        transport.chdir(source_basepath)
+
+        if not transport.isfile(source_filename):
+            execlogger.error('source path for file to archive {} does not exist'.format(source_filepath))
+            continue
+
+        # Build the destination folder
+        transport.chdir(target_basepath)
+        transport.mkdir(calculation.uuid[:2], ignore_existing=True)
+        transport.chdir(calculation.uuid[:2])
+        transport.mkdir(calculation.uuid[2:4], ignore_existing=True)
+        transport.chdir(calculation.uuid[2:4])
+        transport.mkdir(calculation.uuid[4:], ignore_existing=True)
+        transport.chdir(calculation.uuid[4:])
+
+        # Final target filepath
+        target_basepath = transport.getcwd()
+        target_filepath = os.path.join(target_basepath, source_filename)
+
+        # If the source file is in a (nested) directory, create those directories first in the target directory
+        target_dirname = os.path.dirname(source_filename)
+        if target_dirname:
+            target_directory = os.path.join(target_basepath, target_dirname)
+            transport.makedirs(target_directory)
+
+        # Perform the copy
+        transport.put(source_filepath, target_filepath, overwrite=True)
+        execlogger.debug('archived {} to {}'.format(source_filepath, target_filepath))
+
+    remote_folder = RemoteData(computer=computer, remote_path=target_basepath)
+    remote_folder.add_link_from(calculation, link_type=LinkType.CREATE, label='archive_folder')
+    remote_folder.store()
+
+
 def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
     """
     Retrieve all the files of a completed job calculation using the given transport.

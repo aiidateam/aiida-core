@@ -157,3 +157,33 @@ class TestCalcNode(AiidaTestCase):
         from aiida.transport import Transport
         transport = self.job_calculation._get_transport()
         self.assertIsInstance(transport, Transport)
+
+    def test_set_archive_list(self):
+        """Test the setter and getter of the archive list attribute for the JobCalculation."""
+        with self.assertRaises(TypeError):
+            self.job_calculation._set_archive_list()
+
+        with self.assertRaises(TypeError):
+            self.job_calculation._set_archive_list([])
+
+        with self.assertRaises(TypeError):
+            self.job_calculation._set_archive_list([(None, None)])
+
+        with self.assertRaises(NotImplementedError):
+            self.job_calculation._set_archive_list([(self.computer, 'relative/path', '/absolute/path')])
+
+        with self.assertRaises(ValueError):
+            self.job_calculation._set_archive_list([(None, '/relative/path', '/absolute/path')])
+
+        with self.assertRaises(ValueError):
+            self.job_calculation._set_archive_list([(None, 'relative/path', 'absolute/path')])
+
+        archive_list = (
+            (None, u'relative/path1', u'/absolute/path1'),
+            (None, u'relative/path2', u'/absolute/path2')
+        )
+
+        self.job_calculation._set_archive_list(archive_list)
+
+        for spec in self.job_calculation._get_archive_list():
+            self.assertIn(tuple(spec), archive_list)

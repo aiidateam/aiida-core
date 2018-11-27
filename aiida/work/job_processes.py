@@ -39,6 +39,7 @@ __all__ = ('JobProcess',)
 UPLOAD_COMMAND = 'upload'
 SUBMIT_COMMAND = 'submit'
 UPDATE_COMMAND = 'update'
+ARCHIVE_COMMAND = 'archive'
 RETRIEVE_COMMAND = 'retrieve'
 KILL_COMMAND = 'kill'
 
@@ -213,6 +214,53 @@ def task_update_job(node, job_manager, cancellable):
 
 
 @coroutine
+def task_archive_job(node, transport_queue, cancellable):
+    """
+    Transport task that will optionally archive files of a completed job calculation on the remote.
+
+    The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
+    function is called, wrapped in the exponential_backoff_retry coroutine, which, in case of a caught exception, will
+    retry after an interval that increases exponentially with the number of retries, for a maximum number of retries.
+    If all retries fail, the task will raise a TransportTaskException
+
+    :param node: the node that represents the job calculation
+    :param transport_queue: the TransportQueue from which to request a Transport
+    :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
+    :type cancellable: :class:`aiida.work.utils.InterruptableFuture`
+    :raises: Return if the tasks was successfully completed
+    :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
+    """
+    if node.get_state() == calc_states.RETRIEVING:
+        logger.warning('calculation<{}> already marked as RETRIEVING, skipping task_archive_job'.format(node.pk))
+        raise Return(True)
+
+    initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
+    max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
+
+    authinfo = node.get_computer().get_authinfo(node.get_user())
+
+    @coroutine
+    def do_archive():
+        with transport_queue.request_transport(authinfo) as request:
+            transport = yield cancellable.with_interrupt(request)
+
+            logger.info('archiving calculation<{}>'.format(node.pk))
+            raise Return(execmanager.archive_calculation(node, transport))
+
+    try:
+        result = yield exponential_backoff_retry(
+            do_archive, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption)
+    except plumpy.Interruption:
+        raise
+    except Exception:
+        logger.warning('archiving calculation<{}> failed'.format(node.pk))
+        raise TransportTaskException('archive_calculation failed {} times consecutively'.format(max_attempts))
+    else:
+        logger.info('archiving calculation<{}> successful'.format(node.pk))
+        raise Return(result)
+
+
+@coroutine
 def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancellable):
     """
     Transport task that will attempt to retrieve all files of a completed job calculation
@@ -345,21 +393,26 @@ class Waiting(plumpy.Waiting):
         try:
 
             if command == UPLOAD_COMMAND:
-                calc_info, script_filename = yield self._launch_task(task_upload_job, calculation, transport_queue,
-                                                                     *args)
-                raise Return(self.submit(calc_info, script_filename))
+                result = yield self._launch_task(task_upload_job, calculation, transport_queue, *args)
+                raise Return(self.submit(*result))
 
             elif command == SUBMIT_COMMAND:
                 yield self._launch_task(task_submit_job, calculation, transport_queue, *args)
-                raise Return(self.scheduler_update())
+                raise Return(self.update())
 
             elif self.data == UPDATE_COMMAND:
                 job_done = False
 
                 while not job_done:
-                    job_done = yield self._launch_task(task_update_job, calculation,
-                                                       self.process.runner.job_manager)
+                    job_done = yield self._launch_task(task_update_job, calculation, self.process.runner.job_manager)
 
+                if calculation._get_archive_list():
+                    raise Return(self.archive())
+
+                raise Return(self.retrieve())
+
+            elif command == ARCHIVE_COMMAND:
+                yield self._launch_task(task_archive_job, calculation, transport_queue)
                 raise Return(self.retrieve())
 
             elif self.data == RETRIEVE_COMMAND:
@@ -423,7 +476,7 @@ class Waiting(plumpy.Waiting):
             msg='Waiting for scheduler submission',
             data=(SUBMIT_COMMAND, calc_info, script_filename))
 
-    def scheduler_update(self):
+    def update(self):
         """
         Create the next state to go to
 
@@ -434,6 +487,18 @@ class Waiting(plumpy.Waiting):
             None,
             msg='Waiting for scheduler update',
             data=UPDATE_COMMAND)
+
+    def archive(self):
+        """
+        Wait for transport to perform the ARCHIVE task
+
+        :return: The appropriate WAITING state
+        """
+        return self.create_state(
+            processes.ProcessState.WAITING,
+            None,
+            msg='Waiting to archive',
+            data=ARCHIVE_COMMAND)
 
     def retrieve(self):
         """

@@ -43,6 +43,6 @@ def get_workflow_list(pk_list=tuple(), user=None, all_states=False, n_days_ago=N
             time = timezone.now() - datetime.timedelta(days=n_days_ago)
             filters &= Q(ctime__gte=time)
 
-    wf_list = DbWorkflow.objects.filter(filters).order_by('ctime')
+    wf_list = DbWorkflow.objects.filter(filters).order_by('ctime')  # pylint: disable=no-member
 
     return list(wf_list)

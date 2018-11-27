@@ -10,13 +10,14 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm.node.process import WorkChainNode, WorkFunctionNode
 from aiida.orm.data.int import Int
-from aiida.work import run, run_get_node, run_get_pid, Process, WorkChain, workfunction
+from aiida.orm.node.process import WorkChainNode, CalcFunctionNode
+from aiida.work import run, run_get_node, run_get_pid, Process, WorkChain, calcfunction
 
 
-@workfunction
+@calcfunction
 def add(a, b):
     return a + b
 
@@ -50,16 +51,16 @@ class TestLaunchers(AiidaTestCase):
         super(TestLaunchers, self).tearDown()
         self.assertIsNone(Process.current())
 
-    def test_workfunction_run(self):
+    def test_calcfunction_run(self):
         result = run(add, a=self.a, b=self.b)
         self.assertEquals(result, self.result)
 
-    def test_workfunction_run_get_node(self):
+    def test_calcfunction_run_get_node(self):
         result, node = run_get_node(add, a=self.a, b=self.b)
         self.assertEquals(result, self.result)
-        self.assertTrue(isinstance(node, WorkFunctionNode))
+        self.assertTrue(isinstance(node, CalcFunctionNode))
 
-    def test_workfunction_run_get_pid(self):
+    def test_calcfunction_run_get_pid(self):
         result, pid = run_get_pid(add, a=self.a, b=self.b)
         self.assertEquals(result, self.result)
         self.assertTrue(isinstance(pid, int))

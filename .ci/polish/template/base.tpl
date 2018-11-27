@@ -8,7 +8,7 @@ from aiida.orm.data.str import Str
 from aiida.orm.data.parameter import ParameterData
 from aiida.work.run import submit
 from aiida.work.workchain import WorkChain, if_, while_, append_, ToContext
-from aiida.work.workfunctions import workfunction
+from aiida.work import calcfunction
 
 
 ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
@@ -30,10 +30,10 @@ def get_default_options(num_machines=1, max_wallclock_seconds=1800):
     }
 
 
-@workfunction
+@calcfunction
 def add_modulo(x, y, modulo):
     return (x + y) % modulo
 
-@workfunction
+@calcfunction
 def subtract_modulo(x, y, modulo):
     return (x - y) % modulo

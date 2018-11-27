@@ -910,6 +910,6 @@ However, these workchains can be updated with just a few minor updates that we w
 * The free functions from ``aiida.work.run`` have been moved to ``aiida.work.launch``, even though for the time being the old import will still work.
 * The future returned by ``submit`` no longer has the ``pid`` attribute but rather ``pk``.
 * The ``get_inputs_template class`` method has been replaced by ``get_builder``. See the section on the :ref:`process builder<process_builder>` on how to use it.
-* The import ``aiida.work.workfunction`` has been moved to ``aiida.work.workfunctions``.
+* The import ``aiida.work.workfunction.workfunction`` has been moved to ``aiida.work.process_function.workfunction``.
 * The ``input_group`` has been deprecated and been replaced by namespaces. See the section on :ref:`port namespaces<ports_portnamespaces>` on how to use them.
 * The use of a ``.`` (period) in output keys is not supported in ``Process.out`` because that is now reserved to indicate namespaces.

@@ -762,10 +762,10 @@ class TestSimple(AiidaTestCase):
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
-    def test_workfunction_1(self):
+    def test_calcfunction_1(self):
         import shutil, os, tempfile
 
-        from aiida.work.workfunctions import workfunction
+        from aiida.work import calcfunction
         from aiida.orm.data.float import Float
         from aiida.orm import load_node
         from aiida.orm.importexport import export
@@ -773,7 +773,7 @@ class TestSimple(AiidaTestCase):
         # Creating a folder for the import/export files
         temp_folder = tempfile.mkdtemp()
 
-        @workfunction
+        @calcfunction
         def add(a, b):
             """Add 2 numbers"""
             return {'res': Float(a + b)}
@@ -1816,15 +1816,15 @@ class TestLinks(AiidaTestCase):
         from aiida.orm import Node
         from aiida.orm.data.base import Int
         from aiida.orm.importexport import export
-        from aiida.orm.node.process import CalcFunctionNode, WorkChainNode
+        from aiida.orm.node.process import CalculationNode, WorkflowNode
         from aiida.common.links import LinkType
         from aiida.orm.querybuilder import QueryBuilder
         tmp_folder = tempfile.mkdtemp()
 
         try:
-            wc2 = WorkChainNode().store()
-            wc1 = WorkChainNode().store()
-            c1 = CalcFunctionNode().store()
+            wc2 = WorkflowNode().store()
+            wc1 = WorkflowNode().store()
+            c1 = CalculationNode().store()
             ni1 = Int(1).store()
             ni2 = Int(2).store()
             no1 = Int(1).store()

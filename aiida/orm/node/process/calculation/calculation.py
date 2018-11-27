@@ -9,11 +9,11 @@ __all__ = ('CalculationNode',)
 
 class CalculationNode(ProcessNode):
     """Base class for all nodes representing the execution of a calculation process."""
-    # pylint: disable=too-few-public-methods,abstract-method
+    # pylint: disable=too-few-public-methods
 
     _cacheable = True
 
-    def validate_incoming(self, source, link_type, link_label=None):
+    def validate_incoming(self, source, link_type, link_label):
         """
         Validate adding a link of the given type from a given node to ourself.
 
@@ -25,7 +25,7 @@ class CalculationNode(ProcessNode):
 
         :param source: the node from which the link is coming
         :param link_type: the type of link
-        :param link_label: optional link label
+        :param link_label: link label
         :raise TypeError: if `source` is not a Node instance or `link_type` is not a `LinkType` enum
         :raise ValueError: if the proposed link is invalid
         """

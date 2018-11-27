@@ -396,13 +396,13 @@ class CalcJobNode(CalculationNode):
             raise ValidationError("withmpi property must be boolean! It in instead {}"
                                   "".format(str(type(self.get_option('withmpi')))))
 
-    def validate_incoming(self, source, link_type, link_label=None):
+    def validate_incoming(self, source, link_type, link_label):
         """
         Validate adding a link of the given type from a given node to ourself.
 
         :param source: the node from which the link is coming
         :param link_type: the type of link
-        :param link_label: optional link label
+        :param link_label: link label
         :raise TypeError: if `source` is not a Node instance or `link_type` is not a `LinkType` enum
         :raise ValueError: if the proposed link is invalid
         """
@@ -414,13 +414,13 @@ class CalcJobNode(CalculationNode):
             raise ModificationNotAllowed('invalid link: CalcJobNode has to have state in {}, but is {}'.format(
                 valid_states, state))
 
-    def validate_outgoing(self, target, link_type, link_label=None):
+    def validate_outgoing(self, target, link_type, link_label):
         """
         Validate adding a link of the given type from ourself to a given node.
 
         :param target: the node to which the link is goming
         :param link_type: the type of link
-        :param link_label: optional link label
+        :param link_label: link label
         :raise TypeError: if `target` is not a Node instance or `link_type` is not a `LinkType` enum
         :raise ValueError: if the proposed link is invalid
         """

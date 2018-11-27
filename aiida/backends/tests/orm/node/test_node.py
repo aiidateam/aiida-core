@@ -21,7 +21,7 @@ class TestNodeLinks(AiidaTestCase):
     def test_validate_incoming_ipsum(self):
         """Test the `validate_incoming` method with respect to linking ourselves."""
         with self.assertRaises(ValueError):
-            self.node_target.validate_incoming(self.node_target, LinkType.CREATE)
+            self.node_target.validate_incoming(self.node_target, LinkType.CREATE, 'link_label')
 
     def test_validate_incoming(self):
         """Test the `validate_incoming` method
@@ -30,13 +30,13 @@ class TestNodeLinks(AiidaTestCase):
         type is a valid LinkType enum value.
         """
         with self.assertRaises(TypeError):
-            self.node_target.validate_incoming(self.node_source, None)
+            self.node_target.validate_incoming(self.node_source, None, 'link_label')
 
         with self.assertRaises(TypeError):
-            self.node_target.validate_incoming(None, LinkType.CREATE)
+            self.node_target.validate_incoming(None, LinkType.CREATE, 'link_label')
 
         with self.assertRaises(TypeError):
-            self.node_target.validate_incoming(self.node_source, LinkType.CREATE.value)
+            self.node_target.validate_incoming(self.node_source, LinkType.CREATE.value, 'link_label')
 
     def test_add_incoming_create(self):
         """Nodes can only have a single incoming CREATE link, independent of the source node."""
@@ -48,11 +48,11 @@ class TestNodeLinks(AiidaTestCase):
 
         # Can only have a single incoming CREATE link
         with self.assertRaises(ValueError):
-            target.validate_incoming(source_one, LinkType.CREATE)
+            target.validate_incoming(source_one, LinkType.CREATE, 'link_label')
 
         # Even when the source node is different
         with self.assertRaises(ValueError):
-            target.validate_incoming(source_two, LinkType.CREATE)
+            target.validate_incoming(source_two, LinkType.CREATE, 'link_label')
 
         # Or when the link label is different
         with self.assertRaises(ValueError):
@@ -68,11 +68,11 @@ class TestNodeLinks(AiidaTestCase):
 
         # Can only have a single incoming CALL_CALC link
         with self.assertRaises(ValueError):
-            target.validate_incoming(source_one, LinkType.CALL_CALC)
+            target.validate_incoming(source_one, LinkType.CALL_CALC, 'link_label')
 
         # Even when the source node is different
         with self.assertRaises(ValueError):
-            target.validate_incoming(source_two, LinkType.CALL_CALC)
+            target.validate_incoming(source_two, LinkType.CALL_CALC, 'link_label')
 
         # Or when the link label is different
         with self.assertRaises(ValueError):
@@ -88,11 +88,11 @@ class TestNodeLinks(AiidaTestCase):
 
         # Can only have a single incoming CALL_WORK link
         with self.assertRaises(ValueError):
-            target.validate_incoming(source_one, LinkType.CALL_WORK)
+            target.validate_incoming(source_one, LinkType.CALL_WORK, 'link_label')
 
         # Even when the source node is different
         with self.assertRaises(ValueError):
-            target.validate_incoming(source_two, LinkType.CALL_WORK)
+            target.validate_incoming(source_two, LinkType.CALL_WORK, 'link_label')
 
         # Or when the link label is different
         with self.assertRaises(ValueError):

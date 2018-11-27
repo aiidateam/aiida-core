@@ -143,7 +143,7 @@ class Runner(object):
         :param inputs: the inputs to be passed to the process
         :return: the calculation node of the process
         """
-        assert not utils.is_workfunction(process), 'Cannot submit a workfunction'
+        assert not utils.is_process_function(process), 'Cannot submit a process function'
         assert not self._closed
 
         process = instantiate_process(self, process, *args, **inputs)
@@ -165,7 +165,7 @@ class Runner(object):
         :param inputs: the inputs to be passed to the process
         :return: the calculation node of the process
         """
-        assert not utils.is_workfunction(process), 'Cannot submit a workfunction'
+        assert not utils.is_process_function(process), 'Cannot submit a process function'
         assert not self._closed
 
         process = instantiate_process(self, process, *args, **inputs)
@@ -177,13 +177,13 @@ class Runner(object):
         Run the process with the supplied inputs in this runner that will block until the process is completed.
         The return value will be the results of the completed process
 
-        :param process: the process class or workfunction to run
+        :param process: the process class or process function to run
         :param inputs: the inputs to be passed to the process
         :return: tuple of the outputs of the process and the calculation node
         """
         assert not self._closed
 
-        if utils.is_workfunction(process):
+        if utils.is_process_function(process):
             result, node = process.run_get_node(*args, **inputs)
             return result, node
 
@@ -197,7 +197,7 @@ class Runner(object):
         Run the process with the supplied inputs in this runner that will block until the process is completed.
         The return value will be the results of the completed process
 
-        :param process: the process class or workfunction to run
+        :param process: the process class or process function to run
         :param inputs: the inputs to be passed to the process
         :return: the outputs of the process
         """
@@ -209,7 +209,7 @@ class Runner(object):
         Run the process with the supplied inputs in this runner that will block until the process is completed.
         The return value will be the results of the completed process
 
-        :param process: the process class or workfunction to run
+        :param process: the process class or process function to run
         :param inputs: the inputs to be passed to the process
         :return: tuple of the outputs of the process and the calculation node
         """
@@ -221,7 +221,7 @@ class Runner(object):
         Run the process with the supplied inputs in this runner that will block until the process is completed.
         The return value will be the results of the completed process
 
-        :param process: the process class or workfunction to run
+        :param process: the process class or process function to run
         :param inputs: the inputs to be passed to the process
         :return: tuple of the outputs of the process and process pid
         """

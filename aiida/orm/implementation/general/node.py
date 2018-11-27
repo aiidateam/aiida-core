@@ -617,7 +617,7 @@ class AbstractNode(object):
 
     def validate_outgoing(self, target, link_type, link_label):
         """
-        Validate adding a link of the given type from a given node to ourself.
+        Validate adding a link of the given type from ourself to a given node.
 
         The validity of the triple (source, link, target) should be validated in the `validate_incoming` call.
         This method will be called afterwards and can be overriden by subclasses to add additional checks that are
@@ -1807,8 +1807,7 @@ class AbstractNode(object):
 
         if self._to_be_stored:
 
-            # Verify that parents are already stored. Raises if this is not
-            # the case.
+            # Verify that parents are already stored. Raises if this is not the case.
             self._check_are_parents_stored()
 
             # Get default for use_cache if it's not set explicitly.
@@ -1862,7 +1861,7 @@ class AbstractNode(object):
 
         # Make sure the node doesn't have any RETURN links
         if cache_node.get_outgoing(link_type=LinkType.RETURN).all():
-            raise ValueError("Cannot use cache from nodes with RETURN links.")
+            raise ValueError('Cannot use cache from nodes with RETURN links.')
 
         self.store(with_transaction=with_transaction, use_cache=False)
         self.set_extra('_aiida_cached_from', cache_node.uuid)
@@ -1870,8 +1869,9 @@ class AbstractNode(object):
     def _add_outputs_from_cache(self, cache_node):
         # Add CREATE links
         for entry in cache_node.get_outgoing(link_type=LinkType.CREATE):
-            new_node = entry.node.clone().store()
+            new_node = entry.node.clone()
             new_node.add_incoming(self, link_type=LinkType.CREATE, link_label=entry.link_label)
+            new_node.store()
 
     @abstractmethod
     def _db_store(self, with_transaction=True):
@@ -1946,6 +1946,23 @@ class AbstractNode(object):
         Sets the stored hash of the Node to None.
         """
         self.set_extra(_HASH_EXTRA_KEY, None)
+
+    def get_cache_source(self):
+        """
+        Return the UUID of the node that was used in creating this node from the cache, or None if it was not cached
+
+        :return: the UUID of the node from which this node was cached, or None if it was not created through the cache
+        """
+        return self.get_extra('_aiida_cached_from', None)
+
+    @property
+    def is_created_from_cache(self):
+        """
+        Return whether this node was created from a cached node.cached
+
+        :return: boolean, True if the node was created by cloning a cached node, False otherwise
+        """
+        return self.get_cache_source() is not None
 
     def _get_same_node(self):
         """

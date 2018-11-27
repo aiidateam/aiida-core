@@ -393,14 +393,26 @@ def profile_exists(profile):
     return profile in profiles
 
 
+def get_profile(profile_name):
+    """
+    Return the profile with the given name or None if it does not exist
+
+    :param profile_name: the name of the profile to return
+    :return: profile dictionary or None if it does not exist
+    """
+    config = get_or_create_config()
+    profiles = config.get('profiles', {})
+    return profiles.get(profile_name, None)
+
+
 def update_config(settings, write=True):
-    '''
+    """
     back up the config file, create or change config.
 
     :param settings: dictionary with the new or changed configuration
     :param write: if False, do not touch the config file (dryrun)
     :return: the new / changed configuration
-    '''
+    """
     config = get_or_create_config()
     config.update(settings)
     if write:
@@ -437,9 +449,9 @@ def create_config_noninteractive(profile='default', force_overwrite=False, dry_r
     :param values: The configuration inputs
     :return: The populated profile that was also stored
     """
-    if profile_exists(profile) and not force_overwrite:
-        raise ValueError(('profile {profile} exists! '
-                          'Cannot non-interactively edit a profile.').format(profile=profile))
+    current_profile = get_profile(profile)
+    if current_profile and not force_overwrite:
+        raise ValueError(('profile {profile} exists! Cannot non-interactively edit a profile.').format(profile=profile))
 
     new_profile = {}
 
@@ -480,8 +492,11 @@ def create_config_noninteractive(profile='default', force_overwrite=False, dry_r
             os.umask(old_umask)
     new_profile['AIIDADB_REPOSITORY_URI'] = 'file://' + repo_path
 
-    # Generate the profile uuid
-    new_profile[PROFILE_UUID_KEY] = generate_new_profile_uuid()
+    # Generate a new profile UUID or get it from the existing profile that is being overwritten
+    if current_profile:
+        new_profile[PROFILE_UUID_KEY] = current_profile.get(PROFILE_UUID_KEY, generate_new_profile_uuid())
+    else:
+        new_profile[PROFILE_UUID_KEY] = generate_new_profile_uuid()
 
     # finalizing
     write = not dry_run

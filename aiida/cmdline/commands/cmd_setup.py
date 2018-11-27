@@ -33,8 +33,9 @@ from aiida.control.profile import setup_profile
 @options.USER_FIRST_NAME()
 @options.USER_LAST_NAME()
 @options.USER_INSTITUTION()
+@options.FORCE()
 def setup(profile_name, only_config, set_default, non_interactive, backend, db_host, db_port, db_name, db_username,
-          db_password, repository, email, first_name, last_name, institution):
+          db_password, repository, email, first_name, last_name, institution, force):
     """Setup and configure a new profile."""
     kwargs = dict(
         profile=profile_name,
@@ -51,7 +52,8 @@ def setup(profile_name, only_config, set_default, non_interactive, backend, db_h
         email=email,
         first_name=first_name,
         last_name=last_name,
-        institution=institution)
+        institution=institution,
+        force_overwrite=force)
 
     kwargs = {k: v for k, v in kwargs.items() if v is not None}
 

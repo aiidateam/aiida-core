@@ -491,10 +491,14 @@ class Process(plumpy.Process):
         parent_calc = self.get_parent_calc()
 
         if parent_calc:
+
+            if isinstance(parent_calc, CalculationNode):
+                raise exceptions.InvalidOperation('calling processes from a calculation type process is forbidden.')
+
             if isinstance(self.calc, CalculationNode):
                 self.calc.add_incoming(parent_calc, LinkType.CALL_CALC, 'CALL_CALC')
 
-            if isinstance(self.calc, WorkflowNode):
+            elif isinstance(self.calc, WorkflowNode):
                 self.calc.add_incoming(parent_calc, LinkType.CALL_WORK, 'CALL_WORK')
 
         self._setup_db_inputs()

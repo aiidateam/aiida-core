@@ -13,6 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
+from aiida.common import exceptions
 from aiida.common.caching import enable_caching
 from aiida.common.links import LinkType
 from aiida.orm.data.int import Int
@@ -104,3 +105,13 @@ class TestCalcFunction(AiidaTestCase):
         self.assertFalse(data.is_stored)
         self.assertFalse(node.is_stored)
         self.assertEqual(result, data + 1)
+
+    def test_calculation_cannot_call(self):
+        """Verify that calling another process from within a calcfunction raises as it is forbidden."""
+
+        @calcfunction
+        def test_calcfunction_caller(data):
+            self.test_calcfunction(data)
+
+        with self.assertRaises(exceptions.InvalidOperation):
+            test_calcfunction_caller(self.default_int)

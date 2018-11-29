@@ -1987,7 +1987,7 @@ class AbstractJobCalculation(AbstractCalculation):
 
         for (remote_computer_uuid, remote_abs_path, dest_rel_path) in remote_copy_list:
             try:
-                remote_computer = self.backend.computers.get(uuid=remote_computer_uuid)
+                remote_computer = Computer.objects.get(uuid=remote_computer_uuid)
             except NotExistent:
                 raise PluginInternalError("[presubmission of calc {}] "
                                           "The remote copy requires a computer with UUID={}"
@@ -2103,7 +2103,7 @@ class AbstractJobCalculation(AbstractCalculation):
                 with io.open(os.path.join(subfolder.abspath, '_aiida_remote_copy_list.txt'), 'w', encoding='utf8') as f:
                     for (remote_computer_uuid, remote_abs_path, dest_rel_path) in remote_copy_list:
                         try:
-                            remote_computer = self.backend.computers.get(uuid=remote_computer_uuid)
+                            remote_computer = Computer.objects.get(uuid=remote_computer_uuid)
                         except NotExistent:
                             remote_computer = "[unknown]"
                         f.write(u"* I WOULD REMOTELY COPY "
@@ -2116,7 +2116,7 @@ class AbstractJobCalculation(AbstractCalculation):
                         os.path.join(subfolder.abspath, '_aiida_remote_symlink_list.txt'), 'w', encoding='utf8') as f:
                     for (remote_computer_uuid, remote_abs_path, dest_rel_path) in remote_symlink_list:
                         try:
-                            remote_computer = self.backend.computers.get(uuid=remote_computer_uuid)
+                            remote_computer = Computer.objects.get(uuid=remote_computer_uuid)
                         except NotExistent:
                             remote_computer = "[unknown]"
                         f.write(u"* I WOULD PUT SYMBOLIC LINKS FOR "

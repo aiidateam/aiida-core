@@ -12,7 +12,9 @@ from __future__ import print_function
 from __future__ import absolute_import
 import threading
 
+import plumpy
 from plumpy.utils import AttributesFrozendict
+
 from aiida import work
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.lang import override
@@ -146,7 +148,7 @@ class TestProcess(AiidaTestCase):
         self.assertTrue(p.calc.is_finished_ok)
 
     def test_calculation_input(self):
-        @work.workfunction
+        @work.calcfunction
         def simple_wf():
             return {'a': Int(6), 'b': Int(7)}
 
@@ -163,7 +165,7 @@ class TestProcess(AiidaTestCase):
     def test_save_instance_state(self):
         proc = test_utils.DummyProcess()
         # Save the instance state
-        bundle = work.Bundle(proc)
+        bundle = plumpy.Bundle(proc)
         proc2 = bundle.unbundle()
 
     def test_process_type_with_entry_point(self):
@@ -217,39 +219,3 @@ class TestProcess(AiidaTestCase):
         # Verify that load_process_class on the calculation node returns the original entry point class
         recovered_process = process.calc.load_process_class()
         self.assertEqual(recovered_process, process.__class__)
-
-
-class TestFunctionProcess(AiidaTestCase):
-
-    def test_fixed_inputs(self):
-        def wf(a, b, c):
-            return {'a': a, 'b': b, 'c': c}
-
-        inputs = {'a': Int(4), 'b': Int(5), 'c': Int(6)}
-        function_process_class = work.FunctionProcess.build(wf, CalcFunctionNode)
-        self.assertEqual(work.run(function_process_class, **inputs), inputs)
-
-    def test_kwargs(self):
-        def wf_with_kwargs(**kwargs):
-            return kwargs
-
-        def wf_without_kwargs():
-            return Int(4)
-
-        def wf_fixed_args(a):
-            return {'a': a}
-
-        a = Int(4)
-        inputs = {'a': a}
-
-        function_process_class = work.FunctionProcess.build(wf_with_kwargs, CalcFunctionNode)
-        outs = work.launch.run(function_process_class, **inputs)
-        self.assertEqual(outs, inputs)
-
-        function_process_class = work.FunctionProcess.build(wf_without_kwargs, CalcFunctionNode)
-        with self.assertRaises(ValueError):
-            work.launch.run(function_process_class, **inputs)
-
-        function_process_class = work.FunctionProcess.build(wf_fixed_args, CalcFunctionNode)
-        outs = work.launch.run(function_process_class, **inputs)
-        self.assertEqual(outs, inputs)

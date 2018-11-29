@@ -103,6 +103,7 @@ db_test_list = {
         'work.persistence': ['aiida.backends.tests.work.persistence'],
         'work.process': ['aiida.backends.tests.work.process'],
         'work.process_builder': ['aiida.backends.tests.work.test_process_builder'],
+        'work.process_function': ['aiida.backends.tests.work.test_process_function'],
         'work.process_spec': ['aiida.backends.tests.work.test_process_spec'],
         'work.rmq': ['aiida.backends.tests.work.test_rmq'],
         'work.run': ['aiida.backends.tests.work.run'],

@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 from aiida.orm.data.int import Int
-from aiida.work.workfunctions import workfunction
+from aiida.work import calcfunction
 
 a = Int(1)
 b = Int(2)
 c = Int(3)
 
-@workfunction
+@calcfunction
 def add(a, b):
     return Int(a + b)
 
-@workfunction
+@calcfunction
 def multiply(a, b):
     return Int(a * b)
 

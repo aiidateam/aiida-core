@@ -12,7 +12,7 @@ LinkPair = namedtuple('LinkPair', ['link_type', 'link_label'])
 LinkTriple = namedtuple('LinkTriple', ['node', 'link_type', 'link_label'])
 
 
-def validate_link(source, target, link_type, link_label=None):
+def validate_link(source, target, link_type, link_label):
     """
     Validate adding a link of the given type and label from a given node to ourself.
 
@@ -70,7 +70,7 @@ def validate_link(source, target, link_type, link_label=None):
     :param source: the node from which the link is coming
     :param target: the node to which the link is going
     :param link_type: the type of link
-    :param link_label: optional link label
+    :param link_label: link label
     :raise TypeError: if `source` or `target` is not a Node instance, or `link_type` is not a `LinkType` enum
     :raise ValueError: if the proposed link is invalid
     """

@@ -43,7 +43,7 @@ from aiida.cmdline.commands.cmd_data import cmd_structure
 from aiida.cmdline.commands.cmd_data import cmd_trajectory
 from aiida.cmdline.commands.cmd_data import cmd_upf
 
-from aiida.work.calcfunctions import calcfunction
+from aiida.work import calcfunction
 
 
 @contextmanager
@@ -336,9 +336,6 @@ class TestVerdiDataBands(AiidaTestCase, TestVerdiDataListable):
             b = BandsData()
             b.set_kpointsdata(k)
             b.set_bands([[1.0, 2.0], [3.0, 4.0]])
-
-            k.store()
-            b.store()
 
             return b
 

@@ -143,13 +143,13 @@ class Sealable(object):
     def _updatable_attributes(cls):
         return (cls.SEALED_KEY,)
 
-    def add_incoming(self, source, link_type, link_label=None):
+    def add_incoming(self, source, link_type, link_label):
         """
         Add a link of the given type from a given node to ourself.
 
         :param source: the node from which the link is coming
         :param link_type: the type of link
-        :param link_label: optional link label
+        :param link_label: link label
         :return: True if the proposed link is allowed, False otherwise
         :raise TypeError: if `source` is not a Node instance or `link_type` is not a `LinkType` enum
         :raise ValueError: if the proposed link is invalid

@@ -13,6 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import six
+import plumpy
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.work.persistence import AiiDAPersister
@@ -34,13 +35,13 @@ class TestProcess(AiidaTestCase):
 
     def test_save_load(self):
         process = DummyProcess()
-        saved_state = work.Bundle(process)
+        saved_state = plumpy.Bundle(process)
         del process
 
         loaded_process = saved_state.unbundle()
         work.launch.run(loaded_process)
 
-        self.assertEqual(loaded_process.state, work.ProcessState.FINISHED)
+        self.assertEqual(loaded_process.state, plumpy.ProcessState.FINISHED)
 
 
 class TestAiiDAPersister(AiidaTestCase):

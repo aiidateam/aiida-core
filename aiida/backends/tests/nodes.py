@@ -2206,6 +2206,3 @@ class TestNodeDeletion(AiidaTestCase):
             delete_nodes([called.pk], verbosity=2, force=True, follow_returns=True)
 
         self._check_existence(uuids_check_existence, uuids_check_deleted)
-
-
-

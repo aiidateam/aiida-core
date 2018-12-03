@@ -342,6 +342,19 @@ to which code, we have prepared the input file that the code will access
 and we let also AiiDA know the name of the output file: our first input plugin
 is ready!
 
+.. note:: A single ``JobCalculation`` may have more than one code.
+ For example, you may have one code to do the main calculation and another
+ for pre/post processing.
+ One ``CodeInfo`` should be specified for each code.
+ The order of execution depends on the order of the CodeInfo in the list
+ ``calcinfo.codes_info``. This makes ``JobCalculation`` very flexible and 
+ it is possible to pack multiple run in a single ``JobCalculation`` run.
+ The mode of execution is controlled by ``codes_run_mode`` of the ``CalcInfo``.
+ It assumes one of the values of ``aiida.common.datastructures.code_run_modes``,
+ like ``code_run_modes.PARALLEL`` or ``code_run_modes.SERIAL``. The former will 
+ execute the codes in parallel and the latter will execute one after another.
+
+
 .. note:: A few class internal parameters can (or should) be defined inside the 
   ``_init_internal_params`` method::
 

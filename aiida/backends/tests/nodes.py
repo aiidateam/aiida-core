@@ -195,17 +195,21 @@ class TestTransitiveNoLoops(AiidaTestCase):
 
 class TestTypes(AiidaTestCase):
     """
-    Test the transitive closure functionality
+    Generic test class to test types
     """
 
     def test_uuid_type(self):
+        """
+        Checking whether the UUID is returned as a string. In old implementations it was returned as uuid type
+        """
         from aiida.orm.querybuilder import QueryBuilder
         n1 = Node().store()
         n2 = Node().store()
 
-        results = QueryBuilder().append(Node, project='uuid').all()
-        for result, in results:
-            self.assertTrue(isinstance(result, six.string_types))
+        results = QueryBuilder().append(Node, project=('uuid', '*')).all()
+        for uuid, node in results:
+            self.assertTrue(isinstance(uuid, six.string_types))
+            self.assertTrue(isinstance(node.uuid, six.string_types))
 
 class TestQueryWithAiidaObjects(AiidaTestCase):
     """

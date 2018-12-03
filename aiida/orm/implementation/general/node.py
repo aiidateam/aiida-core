@@ -31,6 +31,7 @@ from aiida.common.lang import override
 from aiida.common.links import LinkType
 from aiida.common.utils import abstractclassmethod, sql_string_match
 from aiida.common.utils import combomethod, classproperty
+from aiida.manage import get_manager
 from aiida.plugins.loader import get_query_type_from_type_string, get_type_string_from_class
 from aiida.orm.utils import links
 
@@ -303,8 +304,6 @@ class AbstractNode(object):
           loaded from the database.
           (It is not possible to assign a uuid to a new Node.)
         """
-        from aiida.orm.backends import construct_backend
-
         self._to_be_stored = True
         self._attrs_cache = {}
 
@@ -314,7 +313,7 @@ class AbstractNode(object):
         self._temp_folder = None
         self._repo_folder = None
 
-        self._backend = construct_backend()
+        self._backend = get_manager().get_backend()
 
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))

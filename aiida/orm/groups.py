@@ -14,7 +14,7 @@ from __future__ import absolute_import
 
 from aiida.common import exceptions
 from aiida.common.utils import type_check
-from . import backends
+from aiida.manage import get_manager
 from . import entities
 from . import users
 
@@ -173,7 +173,7 @@ class Group(entities.Entity):
         :param type_string: a string identifying the type of group (by default,
             an empty string, indicating an user-defined group.
         """
-        backend = backend or backends.construct_backend()
+        backend = backend or get_manager().get_backend()
         user = user or users.User.objects(backend).get_default()
         type_check(user, users.User)
 

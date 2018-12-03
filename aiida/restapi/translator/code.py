@@ -15,6 +15,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from aiida.restapi.translator.node import NodeTranslator
+from aiida.orm.code import Code
 
 
 class CodeTranslator(NodeTranslator):
@@ -25,7 +26,6 @@ class CodeTranslator(NodeTranslator):
     # A label associated to the present class (coincides with the resource name)
     __label__ = "codes"
     # The AiiDA class one-to-one associated to the present class
-    from aiida.orm.code import Code
     _aiida_class = Code
     # The string name of the AiiDA class
     _aiida_type = "code.Code"

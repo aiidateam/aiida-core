@@ -123,7 +123,7 @@ def generate_calc(workflow):
 
     CustomCalc = CalculationFactory('templatereplacer')
 
-    computer = orm.Computer.objects(workflow._backend).get(name='localhost')
+    computer = orm.Computer.objects.get(name='localhost')
 
     calc = CustomCalc(computer=computer, withmpi=True)
     calc.set_option('resources',

@@ -77,25 +77,6 @@ class abstractstaticmethod(staticmethod):  # pylint: disable=too-few-public-meth
         super(abstractstaticmethod, self).__init__(callable)
 
 
-def get_configured_user_email():
-    """
-    Return the email (that is used as the username) configured during the
-    first verdi install.
-    """
-    from aiida.common.setup import get_profile_config, DEFAULT_USER_CONFIG_FIELD
-    from aiida.backends import settings
-
-    try:
-        profile_conf = get_profile_config(settings.AIIDADB_PROFILE)
-        email = profile_conf[DEFAULT_USER_CONFIG_FIELD]
-    # I do not catch the error in case of missing configuration, because
-    # it is already a ConfigurationError
-    except KeyError:
-        raise ConfigurationError("No '{}' key found in the AiiDA configuration file".format(DEFAULT_USER_CONFIG_FIELD))
-
-    return email
-
-
 def get_new_uuid():
     """
     Return a new UUID (typically to be used for new nodes).
@@ -976,12 +957,12 @@ class Prettifier(object):
         """
 
         label = (
-                label
+            label
                 .replace('GAMMA', r'\xG\f{}')
                 .replace('DELTA', r'\xD\f{}')
                 .replace('LAMBDA', r'\xL\f{}')
                 .replace('SIGMA', r'\xS\f{}')
-                )  # yapf:disable
+        )  # yapf:disable
         return re.sub(r'_(.?)', r'\\s\1\\N', label)
 
     @classmethod
@@ -1008,12 +989,12 @@ class Prettifier(object):
         """
 
         label = (
-                label
+            label
                 .replace(u'GAMMA', u'Γ')
                 .replace(u'DELTA', u'Δ')
                 .replace(u'LAMBDA', u'Λ')
                 .replace(u'SIGMA', u'Σ')
-                )  # yapf:disable
+        )  # yapf:disable
         return re.sub(r'_(.?)', r'_{\1}', label)
 
     @classmethod
@@ -1040,12 +1021,12 @@ class Prettifier(object):
         """
 
         label = (
-                label
+            label
                 .replace('GAMMA', r'$\Gamma$')
                 .replace('DELTA', r'$\Delta$')
                 .replace('LAMBDA', r'$\Lambda$')
                 .replace('SIGMA', r'$\Sigma$')
-                )  # yapf:disable
+        )  # yapf:disable
         label = re.sub(r'_(.?)', r'$_{\1}$', label)
 
         # label += r"$_{\vphantom{0}}$"

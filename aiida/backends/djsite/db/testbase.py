@@ -40,38 +40,9 @@ class DjangoTests(AiidaTestImplementation):
     def setUpClass_method(self):
         self.clean_db()
         self.backend = DjangoBackend()
-        self.insert_data()
-
-    def setUp_method(self):
-        pass
-
-    def tearDown_method(self):
-        pass
-
-    def insert_data(self):
-        """
-        Insert default data into the DB.
-        """
-        from django.core.exceptions import ObjectDoesNotExist  # pylint: disable=import-error, no-name-in-module
-
-        from aiida.backends.djsite.db.models import DbUser
-        from aiida.common.utils import get_configured_user_email
-        # We create the user only once:
-        # Otherwise, get_automatic_user() will fail when the
-        # user is recreated because it caches the user!
-        # In any case, store it in self.user though
-        try:
-            self.user = DbUser.objects.get(email=get_configured_user_email())
-        except ObjectDoesNotExist:
-            self.user = DbUser.objects.create_user(get_configured_user_email(), 'fakepwd')
-        # Reqired by the calling class
-        self.user_email = self.user.email
-
-        super(DjangoTests, self).insert_data()
 
     def clean_db(self):
         from aiida.backends.djsite.db.models import (DbComputer, DbUser, DbWorkflow, DbWorkflowStep, DbWorkflowData)
-        from aiida.common.utils import get_configured_user_email
 
         # Complicated way to make sure we 'unwind' all the relationships
         # between workflows and their children.
@@ -99,9 +70,7 @@ class DjangoTests(AiidaTestImplementation):
 
         DbNode.objects.all().delete()  # pylint: disable=no-member
 
-        # I delete all the users except the default user.
-        # See discussion in setUpClass
-        DbUser.objects.exclude(email=get_configured_user_email()).delete()
+        DbUser.objects.all().delete()  # pylint: disable=no-member
 
         DbComputer.objects.all().delete()
 
@@ -122,8 +91,6 @@ class DjangoTests(AiidaTestImplementation):
                                    "empty the database and I will not delete "
                                    "the repository. Repository path: "
                                    "{}".format(REPOSITORY_PATH))
-
-        self.clean_db()
 
         # I clean the test repository
         shutil.rmtree(REPOSITORY_PATH, ignore_errors=True)

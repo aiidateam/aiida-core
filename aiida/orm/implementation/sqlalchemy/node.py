@@ -20,7 +20,6 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from aiida.backends.sqlalchemy.models.node import DbNode, DbLink
 from aiida.backends.sqlalchemy.models.comment import DbComment
-from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.backends.sqlalchemy.utils import flag_modified
 from aiida.common.utils import get_new_uuid
 from aiida.common.folders import RepositoryFolder
@@ -69,6 +68,7 @@ class Node(AbstractNode):
 
         else:
             user = orm.User.objects(backend=self._backend).get_default().backend_entity
+
             if user is None:
                 raise RuntimeError("Could not find a default user")
 

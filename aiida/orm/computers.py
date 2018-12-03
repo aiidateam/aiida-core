@@ -18,7 +18,7 @@ import six
 
 from aiida import transport, scheduler
 from aiida.common import exceptions
-from . import backends
+from aiida.manage import get_manager
 from . import entities
 from . import users
 
@@ -173,7 +173,7 @@ class Computer(entities.Entity):
                  backend=None):
         """Construct a new computer"""
         # pylint: disable=too-many-arguments
-        backend = backend or backends.construct_backend()
+        backend = backend or get_manager().get_backend()
         model = backend.computers.create(
             name=name,
             hostname=hostname,

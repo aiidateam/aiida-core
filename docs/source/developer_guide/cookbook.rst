@@ -24,11 +24,10 @@ you can use a modification of the following script::
             feature is supported by the scheduler plugin). Otherwise,
             if False show all jobs. 
         """
-        from aiida.backends.utils import get_automatic_user
+        from aiida import orm
 
         computer = Computer.get('deneb')
-        dbauthinfo = computer.get_dbauthinfo(get_automatic_user())
-        transport = dbauthinfo.get_transport()
+        transport = computer.get_transport()
         scheduler = computer.get_scheduler()
         scheduler.set_transport(transport)
 

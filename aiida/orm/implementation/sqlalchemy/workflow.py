@@ -52,9 +52,6 @@ class Workflow(AbstractWorkflow):
                              the given uuid.
         """
         from aiida import orm
-        from aiida.orm.backends import construct_backend
-
-        self._backend = construct_backend()
 
         self._to_be_stored = True
 
@@ -121,7 +118,7 @@ class Workflow(AbstractWorkflow):
                 if isinstance(params, dict):
                     self.set_params(params)
 
-            user = orm.User.objects(self._backend).get_default().backend_entity
+            user = orm.User.objects.get_default().backend_entity
 
             # This stores the MD5 as well, to test in case the workflow has
             # been modified after the launch
@@ -459,7 +456,7 @@ class Workflow(AbstractWorkflow):
             raise InternalError("Cannot query a step with name {0}, reserved string".format(step_method_name))
 
         step_list = self.dbworkflowinstance.steps
-        automatic_user = orm.User.objects(self._backend).get_default().backend_entity
+        automatic_user = orm.User.objects.get_default().backend_entity
         step = [_ for _ in step_list if _.name == step_method_name and _.user == automatic_user.dbmodel]
         try:
             return step[0]
@@ -625,7 +622,7 @@ class Workflow(AbstractWorkflow):
 
                 # self.get_steps(wrapped_method).set_nextcall(wf_exit_call)
 
-            user = orm.User.objects(self._backend).get_default().backend_entity
+            user = orm.User.objects.get_default().backend_entity
             method_step, created = self.dbworkflowinstance._get_or_create_step(name=wrapped_method,
                                                                                user=user.dbmodel)
 
@@ -701,7 +698,7 @@ class Workflow(AbstractWorkflow):
         # with particular filters, in order to avoid repetition of all the code
         # arround
 
-        automatic_user = orm.User.objects(self._backend).get_default().backend_entity
+        automatic_user = orm.User.objects.get_default().backend_entity
 
         # Retrieve the caller method
         method_step, _ = self.dbworkflowinstance._get_or_create_step(name=caller_method, user=automatic_user.dbmodel)

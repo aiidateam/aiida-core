@@ -16,23 +16,23 @@ import datetime
 from tornado import gen
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.work import futures
-from aiida.work import test_utils
 from aiida import work
+from aiida.manage import get_manager
 
 
 class TestWf(AiidaTestCase):
     TIMEOUT = datetime.timedelta(seconds=5.0)
 
     def test_calculation_future_broadcasts(self):
-        runner = work.AiiDAManager.get_runner()
-        process = test_utils.DummyProcess()
+        manager = get_manager()
+        runner = manager.get_runner()
+        process = work.test_utils.DummyProcess()
 
         # No polling
-        future = futures.CalculationFuture(
+        future = work.futures.CalculationFuture(
             pk=process.pid,
             poll_interval=None,
-            communicator=work.AiiDAManager.get_communicator())
+            communicator=manager.get_communicator())
 
         work.run(process)
         calc_node = runner.run_until_complete(gen.with_timeout(self.TIMEOUT, future))
@@ -40,11 +40,11 @@ class TestWf(AiidaTestCase):
         self.assertEqual(process.calc.pk, calc_node.pk)
 
     def test_calculation_future_polling(self):
-        runner = work.AiiDAManager.get_runner()
-        process = test_utils.DummyProcess()
+        runner = get_manager().get_runner()
+        process = work.test_utils.DummyProcess()
 
         # No communicator
-        future = futures.CalculationFuture(
+        future = work.futures.CalculationFuture(
             pk=process.pid,
             loop=runner.loop,
             poll_interval=0)

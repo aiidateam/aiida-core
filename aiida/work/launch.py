@@ -12,7 +12,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from . import manager
+from aiida.manage import manager
 from . import processes
 from . import utils
 
@@ -31,7 +31,7 @@ def run(process, *args, **inputs):
     if isinstance(process, processes.Process):
         runner = process.runner
     else:
-        runner = manager.AiiDAManager.get_runner()
+        runner = manager.get_manager().get_runner()
 
     return runner.run(process, *args, **inputs)
 
@@ -48,7 +48,7 @@ def run_get_node(process, *args, **inputs):
     if isinstance(process, processes.Process):
         runner = process.runner
     else:
-        runner = manager.AiiDAManager.get_runner()
+        runner = manager.get_manager().get_runner()
 
     return runner.run_get_node(process, *args, **inputs)
 
@@ -65,7 +65,7 @@ def run_get_pid(process, *args, **inputs):
     if isinstance(process, processes.Process):
         runner = process.runner
     else:
-        runner = manager.AiiDAManager.get_runner()
+        runner = manager.get_manager().get_runner()
 
     return runner.run_get_pid(process, *args, **inputs)
 
@@ -81,8 +81,8 @@ def submit(process, **inputs):
     """
     assert not utils.is_process_function(process), 'Cannot submit a process function'
 
-    runner = manager.AiiDAManager.get_runner()
-    controller = manager.AiiDAManager.get_process_controller()
+    runner = manager.get_manager().get_runner()
+    controller = manager.get_manager().get_process_controller()
 
     process = processes.instantiate_process(runner, process, **inputs)
     runner.persister.save_checkpoint(process)

@@ -12,7 +12,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from . import backends
+from aiida.manage import get_manager
 from . import entities
 from . import users
 
@@ -53,7 +53,7 @@ class Comment(entities.Entity):
         :param content: the comment content
         :return: a Comment object associated to the given node and user
         """
-        backend = backend or backends.construct_backend()
+        backend = backend or get_manager().get_backend()
         model = backend.comments.create(node=node, user=user.backend_entity, content=content)
         super(Comment, self).__init__(model)
 

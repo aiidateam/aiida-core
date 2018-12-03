@@ -14,7 +14,6 @@ from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.utils import get_workflow_list
 from aiida.common.datastructures import wf_states
-from aiida.orm.backends import construct_backend
 from aiida.workflows.test import WFTestEmpty
 from aiida import orm
 from aiida.orm.implementation import get_workflow_info

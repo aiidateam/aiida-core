@@ -78,7 +78,7 @@ class PluginTestCase1(PluginTestCase):
 
         self.assertTrue(is_dbenv_loaded())
         self.assertEqual(orm.load_node(self.data_pk).uuid, self.data.uuid)
-        self.assertEqual(orm.Computer.objects(self.backend).get(name='localhost').uuid, self.computer.uuid)
+        self.assertEqual(orm.Computer.objects.get(name='localhost').uuid, self.computer.uuid)
 
     def test_tear_down(self):
         """

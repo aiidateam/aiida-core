@@ -22,7 +22,7 @@ from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.backends.sqlalchemy.models.user import DbUser
 from aiida.backends.sqlalchemy.utils import install_tc
 from aiida.backends.testimplbase import AiidaTestImplementation
-from aiida.common.utils import get_configured_user_email
+from aiida.manage import get_manager
 from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
 
 # Querying for expired objects automatically doesn't seem to work.
@@ -65,33 +65,12 @@ class SqlAlchemyTests(AiidaTestImplementation):
         else:
             self.clean_db()
         self.backend = SqlaBackend()
-        self.insert_data()
 
     def setUp_method(self):
         pass
 
     def tearDown_method(self):
         pass
-
-    def insert_data(self):
-        """
-        Insert default data into the DB.
-        """
-        email = get_configured_user_email()
-
-        has_user = DbUser.query.filter(DbUser.email == email).first()
-        if not has_user:
-            self.user = DbUser(get_configured_user_email(), "foo", "bar",
-                               "tests")
-            self.test_session.add(self.user)
-            self.test_session.commit()
-        else:
-            self.user = has_user
-
-        # Required by the calling class
-        self.user_email = self.user.email
-
-        super(SqlAlchemyTests, self).insert_data()
 
     @staticmethod
     def inject_computer(f):
@@ -140,7 +119,7 @@ class SqlAlchemyTests(AiidaTestImplementation):
         # delete computers and users
         self.test_session.query(DbNode).delete()
 
-        # # Delete the users
+        # Delete the users
         self.test_session.query(DbUser).delete()
 
         # Delete the computers
@@ -161,8 +140,6 @@ class SqlAlchemyTests(AiidaTestImplementation):
                                    "empty the database and I will not delete "
                                    "the repository. Repository path: "
                                    "{}".format(REPOSITORY_PATH))
-
-        self.clean_db()
 
         self.test_session.close()
         self.test_session = None

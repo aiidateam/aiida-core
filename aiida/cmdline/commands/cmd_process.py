@@ -18,6 +18,7 @@ from aiida.cmdline.params import arguments, options
 from aiida.cmdline.utils import decorators, echo
 from aiida.cmdline.utils.query.calculation import CalculationQueryBuilder
 from aiida.common.log import LOG_LEVELS
+from aiida.manage import get_manager
 
 
 @verdi.group('process')
@@ -118,9 +119,8 @@ def process_status(processes):
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_kill(processes, timeout, wait):
     """Kill running processes."""
-    from aiida import work
 
-    controller = work.AiiDAManager.get_process_controller()
+    controller = get_manager().get_process_controller()
 
     futures = {}
     for process in processes:
@@ -146,9 +146,8 @@ def process_kill(processes, timeout, wait):
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_pause(processes, timeout, wait):
     """Pause running processes."""
-    from aiida import work
 
-    controller = work.AiiDAManager.get_process_controller()
+    controller = get_manager().get_process_controller()
 
     futures = {}
     for process in processes:
@@ -174,9 +173,8 @@ def process_pause(processes, timeout, wait):
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_play(processes, timeout, wait):
     """Play paused processes."""
-    from aiida import work
 
-    controller = work.AiiDAManager.get_process_controller()
+    controller = get_manager().get_process_controller()
 
     futures = {}
     for process in processes:
@@ -198,13 +196,12 @@ def process_play(processes, timeout, wait):
 def process_watch(processes):
     """Watch the state transitions for a process."""
     from kiwipy import BroadcastFilter
-    from aiida import work
     import concurrent.futures
 
     def _print(body, sender, subject, correlation_id):
         echo.echo('pk={}, subject={}, body={}, correlation_id={}'.format(sender, subject, body, correlation_id))
 
-    communicator = work.AiiDAManager.get_communicator()
+    communicator = get_manager().get_communicator()
 
     for process in processes:
 

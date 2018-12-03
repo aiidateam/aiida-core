@@ -125,9 +125,9 @@ class Process(plumpy.Process):
         return cls._calc_class()
 
     def __init__(self, inputs=None, logger=None, runner=None, parent_pid=None, enable_persistence=True):
-        from . import manager
+        from aiida.manage import manager
 
-        self._runner = runner if runner is not None else manager.AiiDAManager.get_runner()
+        self._runner = runner if runner is not None else manager.get_manager().get_runner()
 
         super(Process, self).__init__(
             inputs=self.spec().inputs.serialize(inputs),
@@ -187,12 +187,12 @@ class Process(plumpy.Process):
 
     @override
     def load_instance_state(self, saved_state, load_context):
-        from . import manager
+        from aiida.manage import manager
 
         if 'runner' in load_context:
             self._runner = load_context.runner
         else:
-            self._runner = manager.AiiDAManager.get_runner()
+            self._runner = manager.get_manager().get_runner()
 
         load_context = load_context.copyextend(loop=self._runner.loop, communicator=self._runner.communicator)
         super(Process, self).load_instance_state(saved_state, load_context)

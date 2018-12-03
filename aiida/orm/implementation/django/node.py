@@ -123,7 +123,7 @@ class Node(AbstractNode):
         #                    uuid, self.__class__.__name__, e.message))
         else:
             # TODO: allow to get the user from the parameters
-            user = orm.User.objects(backend=self._backend).get_default().backend_entity
+            user = orm.User.objects.get_default().backend_entity
             self._dbnode = DbNode(user=user.dbmodel,
                                   uuid=get_new_uuid(),
                                   type=self._plugin_type_string)

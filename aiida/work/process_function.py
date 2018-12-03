@@ -11,8 +11,7 @@ import inspect
 from six.moves import zip  # pylint: disable=unused-import
 
 from aiida.common.lang import override
-
-from . import manager
+from aiida.manage import get_manager
 from . import processes
 
 __all__ = ('FunctionProcess', 'process_function', 'calcfunction', 'workfunction')
@@ -102,7 +101,7 @@ def process_function(node_class):
             :param kwargs: input keyword arguments to construct the FunctionProcess
             :return: tuple of the outputs of the process and the calculation node
             """
-            runner = manager.AiiDAManager.create_runner(with_persistence=False)
+            runner = get_manager().create_runner(with_persistence=False)
             inputs = process_class.create_inputs(*args, **kwargs)
 
             # Remove all the known inputs from the kwargs

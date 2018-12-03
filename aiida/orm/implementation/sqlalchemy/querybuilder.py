@@ -12,7 +12,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from datetime import datetime
-
+import uuid
 import six
 
 # pylint: disable=no-name-in-module, import-error
@@ -409,6 +409,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             returnval = res.get_aiida_class()
         elif isinstance(res, Choice):
             returnval = res.value
+        elif isinstance(res, uuid.UUID):
+            returnval = six.text_type(res)
         else:
             returnval = res
         return returnval

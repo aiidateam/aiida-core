@@ -66,10 +66,10 @@ def draw_graph(origin_node,
         else:
             additional_params = ""
         if node.label:
-            label_string = "\n'{}'".format(node.label)
+            label_string = "\\n'{}'".format(node.label)
             additional_string = ""
         else:
-            additional_string = "\n {}".format(node.get_desc())
+            additional_string = "\\n {}".format(node.get_desc())
             label_string = ""
         labelstring = 'label="{} ({}){}{}"'.format(node.__class__.__name__, node.pk, label_string, additional_string)
         return "N{} [{},{}{}];".format(node.pk, shape, labelstring, additional_params)

@@ -175,22 +175,22 @@ Use in ipython/jupyter
 
   If, for any reason, you do not want to install Jupyter in the virtual environment, you might consider to install it out of the virtual environment, if not already done::
 
-      $ pip install jupyter
+      pip install jupyter
 
   Then, activate the AiiDA virtual environment::
 
-      $ source ~/<aiida.virtualenv>/bin/activate
+      source ~/<aiida.virtualenv>/bin/activate
 
   and setup the AiiDA iPython kernel::
 
-      $ pip install ipykernel
-      $ python -m ipykernel install --user --name=<aiida.kernel.name>
+      pip install ipykernel
+      python -m ipykernel install --user --name=<aiida.kernel.name>
 
   where you have chosen a meaningful name for the new kernel.
 
   Finally, start a Jupyter server::
 
-      $ jupyter notebook
+      jupyter notebook
 
   and from the newly opened browser tab select ``New -> <aiida.kernel.name>``
 

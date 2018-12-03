@@ -193,6 +193,19 @@ class TestTransitiveNoLoops(AiidaTestCase):
         with self.assertRaises(ValueError):  # This would generate a loop
             n1.add_incoming(n4, link_type=LinkType.CREATE, link_label='link')
 
+class TestTypes(AiidaTestCase):
+    """
+    Test the transitive closure functionality
+    """
+
+    def test_uuid_type(self):
+        from aiida.orm.querybuilder import QueryBuilder
+        n1 = Node().store()
+        n2 = Node().store()
+
+        results = QueryBuilder().append(Node, project='uuid').all()
+        for result, in results:
+            self.assertTrue(isinstance(result, six.string_types))
 
 class TestQueryWithAiidaObjects(AiidaTestCase):
     """
@@ -2189,3 +2202,6 @@ class TestNodeDeletion(AiidaTestCase):
             delete_nodes([called.pk], verbosity=2, force=True, follow_returns=True)
 
         self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+
+

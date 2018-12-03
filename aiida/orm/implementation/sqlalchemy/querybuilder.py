@@ -14,6 +14,7 @@ from __future__ import absolute_import
 from datetime import datetime
 
 import six
+import uuid
 
 # pylint: disable=no-name-in-module, import-error
 from sqlalchemy_utils.types.choice import Choice
@@ -409,6 +410,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             returnval = res.get_aiida_class()
         elif isinstance(res, Choice):
             returnval = res.value
+        elif isinstance(res, uuid.UUID):
+            returnval = six.text_type(res)
         else:
             returnval = res
         return returnval

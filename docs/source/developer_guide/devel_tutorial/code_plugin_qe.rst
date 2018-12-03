@@ -395,9 +395,11 @@ OutputPlugin
 
 Well done! You were able to have a successful input plugin.
 Now we are going to see what you need to do for an output plugin.
-First of all let's create a new folder:
-``$path_to_aiida/aiida/parsers/plugins/the_name_of_new_code``, and put there an 
-empty ``__init__.py`` file.
+First of all let's create a new folder::
+
+  mkdir path_to_aiida/aiida/parsers/plugins/the_name_of_new_code
+
+and put there an empty ``__init__.py`` file.
 Here you will write in a new python file the output parser class.
 It is actually a rather simple class, performing only a few (but tedious) tasks.
 

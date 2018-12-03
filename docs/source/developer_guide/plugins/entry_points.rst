@@ -226,7 +226,7 @@ Usage:
 
 .. code-block:: bash
 
-   $ verdi data mydata animate --format=Format PK
+   verdi data mydata animate --format=Format PK
 
 ``aiida.tools.dbexporters``
 ---------------------------

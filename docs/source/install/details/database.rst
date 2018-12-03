@@ -13,22 +13,22 @@ Setup instructions
 In order for AiiDA to be able to use postgres it needs to be installed first.
 On Ubuntu and other Debian derivative distributions this can be accomplished with::
 
-    $ sudo apt-get install postgresql postgresql-server-dev-all postgresql-client
+    sudo apt-get install postgresql postgresql-server-dev-all postgresql-client
 
 For Mac OS X, binary packages can be downloaded from the official website of `PostgreSQL`_ or you can use ``brew``::
 
-    $ brew install postgresql
-    $ pg_ctl -D /usr/local/var/postgres start
+    brew install postgresql
+    pg_ctl -D /usr/local/var/postgres start
 
 To manually create a database for AiiDA that will later be used in the configuration with ``verdi setup``, you should follow these instructions.
 First you will need to run the program ``psql`` to interact with postgres and you have to do so as the ``postgres`` user that was created upon installing the software.
 To assume the role of ``postgres`` run as root::
 
-    $ su - postgres
+    su - postgres
 
 and launch the postgres program::
 
-    $ psql
+    psql
 
 Create a new database user account for AiiDA by running::
 
@@ -51,7 +51,7 @@ and grant all privileges on this DB to the previously-created ``aiida`` user::
 You have now created a database for AiiDA and you can close the postgres shell by typing ``\q``.
 To test if the database was created successfully, you can run the following command as a regular user in a bash terminal::
 
-    $ psql -h localhost -d aiidadb -U aiida -W
+    psql -h localhost -d aiidadb -U aiida -W
 
 and type the password you inserted before, when prompted.
 If everything worked well, you should get no error and see the prompt of the ``psql`` shell.
@@ -124,21 +124,21 @@ user exists.
 First install the packages as described above and make sure that the PostgreSQL daemon is running, 
 then assume the role of ``postgres`` by running the following as root::
 
-    $ su - postgres
+    su - postgres
 
 Create a database user with the **same name** as the user you are using to run AiiDA (usually your login name)::
 
-    $ createuser <username>
+    createuser <username>
 
 replacing ``<username>`` with your username.
 
 Next create the database itself making sure that your user is the owner::
 
-    $ createdb -O <username> aiidadb
+    createdb -O <username> aiidadb
 
 To test if the database was created successfully, you can run the following command as your user in a bash terminal::
 
-    $ psql aiidadb
+    psql aiidadb
 
 
 Make sure to leave the host, port and password empty when specifiying the parameters during the ``verdi setup`` phase

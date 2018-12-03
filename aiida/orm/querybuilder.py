@@ -1262,7 +1262,7 @@ class QueryBuilder(object):
         """
 
         self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.Node),
-                               'descendant_of_beta')
+                               'with_ancestors_beta')
 
         link1 = aliased(self._impl.Link)
         link2 = aliased(self._impl.Link)
@@ -1316,7 +1316,7 @@ class QueryBuilder(object):
 
         """
         self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.Node),
-                               'descendant_of_beta')
+                               'with_ancestors_beta')
 
         link1 = aliased(self._impl.Link)
         link2 = aliased(self._impl.Link)
@@ -1478,12 +1478,14 @@ class QueryBuilder(object):
                 'with_comment': self._join_comment_node,
                 'with_incoming': self._join_outputs,
                 'with_outgoing': self._join_inputs,
-                'ancestor_of': self._join_ancestors_recursive,
-                'descendant_of': self._join_descendants_recursive,
+                'with_descendants': self._join_ancestors_recursive,
+                'with_ancestors': self._join_descendants_recursive,
                 'with_computer': self._join_to_computer_used,
                 'with_user': self._join_created_by,
                 'with_group': self._join_group_members,
                 'direction': None,
+                'ancestor_of': self._deprecate(self._join_ancestors_recursive, 'ancestor_of', 'with_descendants'),
+                'descendant_of': self._deprecate(self._join_descendants_recursive, 'descendant_of', 'with_ancestors'),
                 'input_of': self._deprecate(self._join_inputs, 'input_of', 'with_outgoing'),
                 'output_of': self._deprecate(self._join_outputs, 'output_of', 'with_incoming'),
                 'has_computer': self._deprecate(self._join_to_computer_used, 'has_computer', 'with_computer'),
@@ -1659,7 +1661,7 @@ class QueryBuilder(object):
             isouterjoin = verticespec.get('outerjoin')
             edge_tag = verticespec['edge_tag']
 
-            if verticespec['joining_keyword'] in ('descendant_of', 'ancestor_of'):
+            if verticespec['joining_keyword'] in ('with_ancestors', 'with_descendants'):
                 # I treat those two cases in a special way.
                 # I give them a filter_dict, to help the recursive function find a good
                 # starting point. TODO: document this!
@@ -2065,7 +2067,7 @@ class QueryBuilder(object):
             )
             qb.append(
                 Node,
-                descendant_of='structure',
+                with_ancestors='structure',
                 project=['type', 'id'],  # returns type (string) and id (string)
                 tag='descendant'
             )
@@ -2120,7 +2122,7 @@ class QueryBuilder(object):
         """
         join_to = self._path[-1]['tag']
         cls = kwargs.pop('cls', Node)
-        self.append(cls=cls, descendant_of=join_to, autotag=True, **kwargs)
+        self.append(cls=cls, with_ancestors=join_to, autotag=True, **kwargs)
         return self
 
     def parents(self, **kwargs):
@@ -2131,7 +2133,7 @@ class QueryBuilder(object):
         """
         join_to = self._path[-1]['tag']
         cls = kwargs.pop('cls', Node)
-        self.append(cls=cls, ancestor_of=join_to, autotag=True, **kwargs)
+        self.append(cls=cls, with_descendants=join_to, autotag=True, **kwargs)
         return self
 
     def _deprecate(self, function, deprecated_name, preferred_name, version='1.0.0a5'):

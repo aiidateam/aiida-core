@@ -77,10 +77,13 @@ class CalculationQueryBuilder(object):
 
         return filters
 
-    def get_query_set(self, filters=None, order_by=None, past_days=None, limit=None):
+    def get_query_set(self, relationships=None, filters=None, order_by=None, past_days=None, limit=None):
         """
         Return the query set of calculations for the given filters and query parameters
 
+        :param relationships: a mapping of relationships to join on, e.g. {'with_node': Group} to join on a Group. The
+            keys in this dictionary should be the keyword used in the `append` method of the `QueryBuilder` to join the
+            entity on that is defined as the value.
         :param filters: rules to filter query results with
         :param order_by: order the query set by this criterion
         :param past_days: only include entries from the last past days
@@ -103,6 +106,10 @@ class CalculationQueryBuilder(object):
 
         builder = QueryBuilder()
         builder.append(cls=ProcessNode, filters=filters, project=projected_attributes, tag='process')
+
+        if relationships is not None:
+            for tag, entity in relationships.items():
+                builder.append(cls=type(entity), filters={'id': entity.id}, **{tag: 'process'})
 
         if order_by is not None:
             builder.order_by({'process': order_by})

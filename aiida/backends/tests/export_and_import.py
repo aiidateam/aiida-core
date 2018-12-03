@@ -764,6 +764,57 @@ class TestSimple(AiidaTestCase):
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
+    def test_group_import_existing(self):
+        """
+        Testing what happens when I try to import a group that already exists in the
+        database. This should raise an appropriate exception
+        """
+        import os
+        import shutil
+        import tempfile
+
+        from aiida.common.exceptions import UniquenessError
+        from aiida.orm import load_node
+        from aiida.orm.groups import Group
+        from aiida.orm.data.structure import StructureData
+        from aiida.orm.importexport import export
+        from aiida.orm.querybuilder import QueryBuilder
+
+        # Creating a folder for the import/export files
+        temp_folder = tempfile.mkdtemp()
+        try:
+            # Create another user
+            new_email = "newuser@new.n"
+            user = orm.User(email=new_email)
+            user.store()
+
+            # Create a structure data node
+            sd1 = StructureData()
+            sd1.set_user(user)
+            sd1.label = 'sd'
+            sd1.store()
+
+            # Create a group and add the data inside
+            g1 = Group(name="node_group_existing")
+            g1.store()
+            g1.add_nodes([sd1])
+            g1_uuid = g1.uuid
+
+            # At this point we export the generated data
+            filename1 = os.path.join(temp_folder, "export1.tar.gz")
+            export([g1], outfile=filename1, silent=True)
+            self.clean_db()
+            self.insert_data()
+
+            # Creating a group of the same name
+            g1 = Group(name="node_group_existing")
+            g1.store()
+            with self.assertRaises(UniquenessError):
+                import_data(filename1, silent=True)
+        finally:
+            # Deleting the created temporary folder
+            shutil.rmtree(temp_folder, ignore_errors=True)
+
     def test_calcfunction_1(self):
         import shutil, os, tempfile
 

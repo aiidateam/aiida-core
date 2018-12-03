@@ -348,7 +348,6 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
     from aiida.orm import Node, Group
     from aiida.common.archive import extract_tree, extract_tar, extract_zip, extract_cif
     from aiida.common.links import LinkType
-    from aiida.common.exceptions import UniquenessError
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.backends.djsite.db import models
     from aiida.common.utils import get_class_string, get_object_from_string
@@ -580,7 +579,13 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                         foreign_ids_reverse_mappings=foreign_ids_reverse_mappings)
                                        for k, v in entry_data.items())
 
-                    if Model is models.DbComputer:
+                    if Model is models.DbGroup:
+                        # Check if there is already a group with the same name
+                        dupl = Model.objects.filter(name=import_data['name'])
+                        if dupl:
+                            raise exceptions.UniquenessError("A group of that name ( {} ) already exists".format(
+                                import_data['name']))
+                    elif Model is models.DbComputer:
                         # Check if there is already a computer with the same
                         # name in the database
                         dupl = (Model.objects.filter(name=import_data['name'])
@@ -1078,7 +1083,18 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                         dupl_counter = 0
                         imported_comp_names = set()
                         for k, v in data['export_data'][entity_name].items():
-                            if entity_name == COMPUTER_ENTITY_NAME:
+                            if entity_name == GROUP_ENTITY_NAME:
+                                # Check if there is already a group with the same name
+                                qb = QueryBuilder()
+                                qb.append(entity,
+                                          filters={'name': {"==": v["name"]}},
+                                          project=["*"], tag="res")
+                                dupl = qb.all()
+                                if dupl:
+                                    raise exceptions.UniquenessError("A group of that name ( {} ) already exists".format(
+                                        v['name']))
+
+                            elif entity_name == COMPUTER_ENTITY_NAME:
                                 # The following is done for compatibility
                                 # reasons in case the export file was generated
                                 # with the Django export method. In Django the

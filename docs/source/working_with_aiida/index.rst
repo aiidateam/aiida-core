@@ -1,8 +1,3 @@
-##################
-Working with AiiDA
-##################
-
-
 ======================
 Command line interface
 ======================
@@ -11,6 +6,7 @@ Command line interface
     :maxdepth: 4
 
     ../verdi/verdi_user_guide
+    ../verdi/properties
 
 
 =========
@@ -101,3 +97,43 @@ Backups
     :maxdepth: 4
 
     ../backup/index.rst
+
+===============
+Troubleshooting
+===============
+
+.. toctree::
+    :maxdepth: 4
+
+    troubleshooting.rst
+
+===============
+Multi-user mode
+===============
+
+.. toctree::
+    :maxdepth: 4
+
+    aiida_multiuser.rst
+
+========
+REST API
+========
+
+.. toctree::
+    :maxdepth: 4
+
+    ../restapi/index.rst
+
+========
+Cookbook
+========
+
+.. toctree::
+    :maxdepth: 4
+
+    cookbook.rst
+
+
+
+

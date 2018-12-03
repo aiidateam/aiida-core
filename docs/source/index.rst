@@ -51,26 +51,24 @@ For advanced users and developers we point you to the developers section :doc:`d
     get_started/computers
     get_started/codes
     get_started/plugins
+
+.. toctree::
+    :maxdepth: 1
+    :caption: Working with AiiDA
+
     working_with_aiida/index
+    import_export/index
 
 
 .. toctree::
     :maxdepth: 1
     :caption: Concepts
 
+    concepts/provenance
     concepts/calculations
     concepts/workflows
     concepts/processes
-    concepts/provenance
     concepts/caching
-    import_export/index
-
-
-.. toctree::
-    :maxdepth: 1
-    :caption: Tutorials
-
-    tutorial/index
 
 
 .. toctree::
@@ -82,9 +80,9 @@ For advanced users and developers we point you to the developers section :doc:`d
 
 .. toctree::
     :maxdepth: 1
-    :caption: Advanced
+    :caption: Tutorials
 
-    advanced_guide/index
+    tutorial/index
 
 
 .. toctree::

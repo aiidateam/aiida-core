@@ -1,15 +1,15 @@
-===============
-Know your tools
-===============
+=====================
+Tools and conventions
+=====================
 
 
 .. toctree::
    :maxdepth: 1
 
-   developers
-   git_cheatsheet
-   sphinx_cheatsheet
-   testing
+   tools/developers
+   tools/git_cheatsheet
+   tools/sphinx_cheatsheet
+   tools/testing
 
 =============
 AiiDA plugins
@@ -34,10 +34,11 @@ AiiDA core
 .. toctree::
    :maxdepth: 1
 
-   internals
-   transport
-   database_schema
-   modifying_the_schema
-   devel_tutorial/extend_restapi
-   caching
+   core/internals
+   core/transport
+   core/database_schema
+   core/modifying_the_schema
+   core/extend_restapi
+   core/caching
+   core/plugin_system
 

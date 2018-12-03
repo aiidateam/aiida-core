@@ -17,10 +17,6 @@ case "$TEST_TYPE" in
     tests)
         CI_DIR="${TRAVIS_BUILD_DIR}/.ci"
 
-        # make sure we have the correct pg_ctl in our path for pgtest, to prevent issue #1722
-        # this must match the version request in travis.yml
-        export PATH="/usr/lib/postgresql/9.5/bin:${PATH}"
-
         # Add the .ci folder to the python path so workchains within it can be found by the daemon
         export PYTHONPATH="${PYTHONPATH}:${CI_DIR}"
 

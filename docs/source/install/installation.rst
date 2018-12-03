@@ -274,26 +274,36 @@ If you didn't already install AiiDA with the ``[notebook]`` option (during ``pip
 
     $ jupyter notebook
 
-This will open a tab in your browser. Click on ``New -> Python 2`` and type::
+This will open a tab in your browser. Click on ``New -> Python`` and type::
 
     import aiida
 
-followed by ``Shit-Enter``. If no exception is thrown, you can use AiiDA in Jupyter.
+followed by ``Shift-Enter``. If no exception is thrown, you can use AiiDA in Jupyter.
 
-If you want to set the same environment as in a ``verdi shell``, add the following code in ``<your.home.folder>/.ipython/profile_default/ipython_config.py``::
+If you want to set the same environment as in a ``verdi shell``,
+add the following code to a ``.py`` file (create on if there isn't any) in ``<your.home.folder>/.ipython/profile_default/startup/``::
+
 
   try:
       import aiida
   except ImportError:
       pass
   else:
-      c = get_config()
-      c.InteractiveShellApp.extensions = [
-            'aiida.common.ipython.ipython_magics'
-      ]
+      import IPython
+      from aiida.common.ipython.ipython_magics import load_ipython_extension
 
-then open a Jupyter notebook as explained above and type in a cell:
+      # Get the current Ipython session
+      ipython = IPython.get_ipython()
+  
+    #   Register the line magic
+      load_ipython_extension(ipython)
+
+This file will be executed when the ipython kernel starts up and enable the line magic ``%aiida``.
+Alternatively, you can just copy the file ``<aiida_core>/aiida/common/ipython/aiida_magic_register.py`` to the same folder.
+
+After this, if you open a Jupyter notebook as explained above and type in a cell:
 
     %aiida
 
 followed by ``Shift-Enter``. You should receive the message "Loaded AiiDA DB environment."
+This line magic should also be enabled in standard ipython shells.

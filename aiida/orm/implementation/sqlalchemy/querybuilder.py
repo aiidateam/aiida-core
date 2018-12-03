@@ -12,9 +12,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from datetime import datetime
-
-import six
 import uuid
+import six
 
 # pylint: disable=no-name-in-module, import-error
 from sqlalchemy_utils.types.choice import Choice

@@ -14,9 +14,8 @@ from __future__ import print_function
 from __future__ import absolute_import
 from datetime import datetime
 from json import loads as json_loads
-import six
 import uuid
-
+import six
 
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-name-in-module, import-error

@@ -108,19 +108,6 @@ def get_workflow_list(*args, **kwargs):
         raise ValueError("This method doesn't exist for this backend")
 
 
-def get_log_messages(*args, **kwargs):
-    if settings.BACKEND == BACKEND_SQLA:
-        from aiida.backends.sqlalchemy.cmdline import (
-            get_log_messages as get_log_messages_sqla)
-        return get_log_messages_sqla(*args, **kwargs)
-    elif settings.BACKEND == BACKEND_DJANGO:
-        from aiida.backends.djsite.cmdline import (
-            get_log_messages as get_log_messages_dj)
-        return get_log_messages_dj(*args, **kwargs)
-    else:
-        raise ValueError("This method doesn't exist for this backend")
-
-
 def get_global_setting(key):
     if settings.BACKEND == BACKEND_DJANGO:
         from aiida.backends.djsite.globalsettings import get_global_setting
@@ -205,22 +192,3 @@ def delete_nodes_and_connections(pks):
         raise Exception("unknown backend {}".format(settings.BACKEND))
 
     delete_nodes_backend(pks)
-
-
-def get_column(colname, alias):
-    """
-    Return the column for a given projection. Needed by the QueryBuilder
-    """
-
-    try:
-        return getattr(alias, colname)
-    except:
-        from aiida.common.exceptions import InputValidationError
-        raise InputValidationError(
-            "\n{} is not a column of {}\n"
-            "Valid columns are:\n"
-            "{}".format(
-                colname, alias,
-                '\n'.join(alias._sa_class_manager.mapper.c.keys())
-            )
-        )

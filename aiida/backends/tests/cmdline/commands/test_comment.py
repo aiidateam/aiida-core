@@ -11,10 +11,10 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from six.moves import range
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
+from aiida.cmdline.commands import cmd_comment
 from aiida import orm
 
 COMMENT = u'Well I never...'
@@ -24,68 +24,40 @@ class TestVerdiUserCommand(AiidaTestCase):
 
     def setUp(self):
         self.cli_runner = CliRunner()
+        self.node = orm.Node().store()
 
     def test_comment_show_simple(self):
-        """ test simply calling the show command (without data to show) """
-        from aiida.cmdline.commands.cmd_comment import show
-
-        result = CliRunner().invoke(show, [], catch_exceptions=False)
-        self.assertEqual(result.output, "")
+        """Test simply calling the show command (without data to show)."""
+        result = self.cli_runner.invoke(cmd_comment.show, [], catch_exceptions=False)
+        self.assertEqual(result.output, '')
         self.assertEqual(result.exit_code, 0)
 
     def test_comment_show(self):
-        """ Test showing an existing comment """
-        from aiida.cmdline.commands.cmd_comment import show
+        """Test showing an existing comment."""
+        self.node.add_comment(COMMENT)
 
-        node = orm.Node()
-        node.store()
-        node.add_comment(COMMENT)
-
-        result = CliRunner().invoke(show, [str(node.pk)], catch_exceptions=False)
+        options = [str(self.node.pk)]
+        result = self.cli_runner.invoke(cmd_comment.show, options, catch_exceptions=False)
         self.assertNotEqual(result.output.find(COMMENT), -1)
         self.assertEqual(result.exit_code, 0)
 
     def test_comment_add(self):
-        """ Test adding a comment """
-        from aiida.cmdline.commands.cmd_comment import add
-
-        node = orm.Node()
-        node.store()
-
-        result = CliRunner().invoke(add, ['-c{}'.format(COMMENT), str(node.pk)], catch_exceptions=False)
+        """Test adding a comment."""
+        options = ['-N', str(self.node.pk), '--', '{}'.format(COMMENT)]
+        result = self.cli_runner.invoke(cmd_comment.add, options, catch_exceptions=False)
         self.assertEqual(result.exit_code, 0)
 
-        comment = node.get_comments()
+        comment = self.node.get_comments()
         self.assertEquals(len(comment), 1)
-        self.assertEqual(comment[0]['content'], COMMENT)
+        self.assertEqual(comment[0].content, COMMENT)
 
     def test_comment_remove(self):
-        """ Test removing a comment """
-        from aiida.cmdline.commands.cmd_comment import remove
+        """Test removing a comment."""
+        comment = self.node.add_comment(COMMENT)
 
-        node = orm.Node()
-        node.store()
-        comment_id = node.add_comment(COMMENT)
+        self.assertEquals(len(self.node.get_comments()), 1)
 
-        self.assertEquals(len(node.get_comments()), 1)
-
-        result = CliRunner().invoke(remove, [str(node.pk), str(comment_id), '--force'], catch_exceptions=False)
-        self.assertEqual(result.exit_code, 0)
-
-        self.assertEquals(len(node.get_comments()), 0)
-
-    def test_comment_remove_all(self):
-        """ Test removing all comments from a node """
-        from aiida.cmdline.commands.cmd_comment import remove
-
-        node = orm.Node()
-        node.store()
-        for _ in range(10):
-            node.add_comment(COMMENT)
-
-        self.assertEqual(len(node.get_comments()), 10)
-
-        result = CliRunner().invoke(remove, [str(node.pk), '--all', '--force'], catch_exceptions=False)
-        self.assertEqual(result.exit_code, 0)
-
-        self.assertEqual(len(node.get_comments()), 0)
+        options = [str(comment.pk), '--force']
+        result = self.cli_runner.invoke(cmd_comment.remove, options, catch_exceptions=False)
+        self.assertEqual(result.exit_code, 0, result.output)
+        self.assertEquals(len(self.node.get_comments()), 0)

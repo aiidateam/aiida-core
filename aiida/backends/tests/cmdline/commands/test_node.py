@@ -19,9 +19,11 @@ import tempfile
 import numpy as np
 import subprocess as sp
 
+from contextlib import contextmanager
+from six.moves import cStringIO as StringIO
 from click.testing import CliRunner
 
-from aiida.orm.group import Group
+from aiida import orm
 from aiida.orm.data.array import ArrayData
 from aiida.orm.data.array.bands import BandsData
 from aiida.orm.data.array.kpoints import KpointsData
@@ -41,19 +43,7 @@ from aiida.cmdline.commands.cmd_data import cmd_structure
 from aiida.cmdline.commands.cmd_data import cmd_trajectory
 from aiida.cmdline.commands.cmd_data import cmd_upf
 
-from aiida.backends.utils import get_backend_type
-
-if get_backend_type() == 'sqlalchemy':
-    from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
-else:
-    from aiida.backends.djsite.db.models import DbAuthInfo
-
-from unittest import skip
-
-from aiida.work.workfunctions import workfunction as wf
-
-from contextlib import contextmanager
-from six.moves import cStringIO as StringIO
+from aiida.work import calcfunction
 
 
 @contextmanager
@@ -330,7 +320,7 @@ class TestVerdiDataBands(AiidaTestCase, TestVerdiDataListable):
         s.append_atom(position=(alat / 2., alat / 2., alat / 2.), symbols='O')
         s.store()
 
-        @wf
+        @calcfunction
         def connect_structure_bands(structure):
             alat = 4.
             cell = np.array([
@@ -347,19 +337,16 @@ class TestVerdiDataBands(AiidaTestCase, TestVerdiDataListable):
             b.set_kpointsdata(k)
             b.set_bands([[1.0, 2.0], [3.0, 4.0]])
 
-            k.store()
-            b.store()
-
             return b
 
         b = connect_structure_bands(s)
 
         # Create 2 groups and add the data to one of them
-        g_ne = Group(name='non_empty_group')
+        g_ne = orm.Group(name='non_empty_group')
         g_ne.store()
         g_ne.add_nodes(b)
 
-        g_e = Group(name='empty_group')
+        g_e = orm.Group(name='empty_group')
         g_e.store()
 
         return {
@@ -498,7 +485,6 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable, TestVerdiDat
     @staticmethod
     def create_trajectory_data():
         from aiida.orm.data.array.trajectory import TrajectoryData
-        from aiida.orm.group import Group
         import numpy
 
         # Create a node with two arrays
@@ -545,11 +531,11 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable, TestVerdiDat
         n.store()
 
         # Create 2 groups and add the data to one of them
-        g_ne = Group(name='non_empty_group')
+        g_ne = orm.Group(name='non_empty_group')
         g_ne.store()
         g_ne.add_nodes(n)
 
-        g_e = Group(name='empty_group')
+        g_e = orm.Group(name='empty_group')
         g_e.store()
 
         return {
@@ -612,7 +598,6 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable, TestVerdiData
     @staticmethod
     def create_structure_data():
         from aiida.orm.data.structure import StructureData, Site, Kind
-        from aiida.orm.group import Group
 
         alat = 4.  # angstrom
         cell = [
@@ -643,11 +628,11 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable, TestVerdiData
         struc.store()
 
         # Create 2 groups and add the data to one of them
-        g_ne = Group(name='non_empty_group')
+        g_ne = orm.Group(name='non_empty_group')
         g_ne.store()
         g_ne.add_nodes(struc)
 
-        g_e = Group(name='empty_group')
+        g_e = orm.Group(name='empty_group')
         g_e.store()
 
         return {
@@ -763,11 +748,11 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExport
             a = CifData(file=filename, source={'version': '1234', 'db_name': 'COD', 'id': '0000001'})
             a.store()
 
-            g_ne = Group(name='non_empty_group')
+            g_ne = orm.Group(name='non_empty_group')
             g_ne.store()
             g_ne.add_nodes(a)
 
-            g_e = Group(name='empty_group')
+            g_e = orm.Group(name='empty_group')
             g_e.store()
 
         return {

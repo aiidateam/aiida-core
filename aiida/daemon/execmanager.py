@@ -20,7 +20,7 @@ import os
 
 from six.moves import zip
 
-from aiida.common import aiidalogger
+from aiida.common import AIIDA_LOGGER
 from aiida.common import exceptions
 from aiida.common.datastructures import calc_states
 from aiida.common.folders import SandboxFolder
@@ -32,17 +32,17 @@ from aiida.scheduler.datastructures import JOB_STATES
 
 REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
 
-execlogger = aiidalogger.getChild('execmanager')
+execlogger = AIIDA_LOGGER.getChild('execmanager')
 
 
 def upload_calculation(calculation, transport, calc_info, script_filename):
     """
     Upload a calculation
 
-    :param calculation: the instance of JobCalculation to submit.
+    :param calculation: the instance of CalcJobNode to submit.
     :param transport: an already opened transport to use to submit the calculation.
-    :param calc_info: the calculation info datastructure returned by `JobCalculation._presubmit`
-    :param script_filename: the job launch script returned by `JobCalculation._presubmit`
+    :param calc_info: the calculation info datastructure returned by `CalcJobNode._presubmit`
+    :param script_filename: the job launch script returned by `CalcJobNode._presubmit`
     """
     from aiida.orm import load_node, Code
     from aiida.orm.data.remote import RemoteData
@@ -58,7 +58,7 @@ def upload_calculation(calculation, transport, calc_info, script_filename):
     logger_extra = get_dblogger_extra(calculation)
     transport._set_logger_extra(logger_extra)
 
-    if calculation._has_cached_links():
+    if calculation.has_cached_links():
         raise ValueError("Cannot submit calculation {} because it has "
                          "cached input links! If you "
                          "just want to test the submission, use the "
@@ -68,7 +68,7 @@ def upload_calculation(calculation, transport, calc_info, script_filename):
     folder = calculation._raw_input_folder
 
     # NOTE: some logic is partially replicated in the 'test_submit'
-    # method of JobCalculation. If major logic changes are done
+    # method of CalcJobNode. If major logic changes are done
     # here, make sure to update also the test_submit routine
     remote_user = transport.whoami()
     # TODO Doc: {username} field
@@ -215,7 +215,7 @@ def upload_calculation(calculation, transport, calc_info, script_filename):
                               "calculation {}".format(calculation.pk))
 
     remotedata = RemoteData(computer=computer, remote_path=workdir)
-    remotedata.add_link_from(calculation, label='remote_folder', link_type=LinkType.CREATE)
+    remotedata.add_incoming(calculation, link_type=LinkType.CREATE, link_label='remote_folder')
     remotedata.store()
 
     return calc_info, script_filename
@@ -225,10 +225,10 @@ def submit_calculation(calculation, transport, calc_info, script_filename):
     """
     Submit a calculation
 
-    :param calculation: the instance of JobCalculation to submit.
+    :param calculation: the instance of CalcJobNode to submit.
     :param transport: an already opened transport to use to submit the calculation.
-    :param calc_info: the calculation info datastructure returned by `JobCalculation._presubmit`
-    :param script_filename: the job launch script returned by `JobCalculation._presubmit`
+    :param calc_info: the calculation info datastructure returned by `CalcJobNode._presubmit`
+    :param script_filename: the job launch script returned by `CalcJobNode._presubmit`
     """
     scheduler = calculation.get_computer().get_scheduler()
     scheduler.set_transport(transport)
@@ -245,7 +245,7 @@ def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
     If the job defined anything in the `retrieve_temporary_list`, those entries will be stored in the
     `retrieved_temporary_folder`. The caller is responsible for creating and destroying this folder.
 
-    :param calculation: the instance of JobCalculation to update.
+    :param calculation: the instance of CalcJobNode to update.
     :param transport: an already opened transport to use for the retrieval.
     :param retrieved_temporary_folder: the absolute path to a directory in which to store the files
         listed, if any, in the `retrieved_temporary_folder` of the jobs CalcInfo
@@ -261,9 +261,7 @@ def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
 
     # Create the FolderData node to attach everything to
     retrieved_files = FolderData()
-    retrieved_files.add_link_from(
-        calculation, label=calculation._get_linkname_retrieved(),
-        link_type=LinkType.CREATE)
+    retrieved_files.add_incoming(calculation, link_type=LinkType.CREATE, link_label=calculation._get_linkname_retrieved())
 
     with transport:
         transport.chdir(workdir)
@@ -304,7 +302,7 @@ def kill_calculation(calculation, transport):
     """
     Kill the calculation through the scheduler
 
-    :param calculation: the instance of JobCalculation to kill.
+    :param calculation: the instance of CalcJobNode to kill.
     :param transport: an already opened transport to use to address the scheduler
     """
     job_id = calculation.get_job_id()
@@ -333,11 +331,11 @@ def kill_calculation(calculation, transport):
 
 def parse_results(job, retrieved_temporary_folder=None):
     """
-    Parse the results for a given JobCalculation (job)
+    Parse the results for a given CalcJobNode (job)
 
     :returns: integer exit code, where 0 indicates success and non-zero failure
     """
-    from aiida.orm.calculation.job import JobCalculationExitStatus
+    from aiida.orm.node.process.calculation.calcjob import CalcJobExitStatus
     from aiida.work import ExitCode
 
     assert job.get_state() == calc_states.PARSING, 'the job should be in the PARSING state when calling this function'
@@ -369,11 +367,11 @@ def parse_results(job, retrieved_temporary_folder=None):
         # Some implementations of parse_from_calc may still return a plain boolean or integer for the exit_code.
         # In the case of a boolean: True should be mapped to the default ExitCode which corresponds to an exit
         # status of 0. False values are mapped to the value that is mapped onto the FAILED calculation state
-        # throught the JobCalculationExitStatus. Plain integers are directly used to construct an ExitCode tuple
+        # throught the CalcJobExitStatus. Plain integers are directly used to construct an ExitCode tuple
         if isinstance(exit_code, bool) and exit_code is True:
             exit_code = ExitCode(0)
         elif isinstance(exit_code, bool) and exit_code is False:
-            exit_code = ExitCode(JobCalculationExitStatus[calc_states.FAILED].value)
+            exit_code = ExitCode(CalcJobExitStatus[calc_states.FAILED].value)
         elif isinstance(exit_code, int):
             exit_code = ExitCode(exit_code)
         elif isinstance(exit_code, ExitCode):
@@ -383,7 +381,7 @@ def parse_results(job, retrieved_temporary_folder=None):
                              "return a boolean, integer or ExitCode instance".format(type(exit_code)))
 
         for label, n in new_nodes_tuple:
-            n.add_link_from(job, label=label, link_type=LinkType.CREATE)
+            n.add_incoming(job, link_type=LinkType.CREATE, link_label=label)
             n.store()
 
     try:
@@ -425,7 +423,7 @@ def _retrieve_singlefiles(job, transport, folder, retrieve_file_list, logger_ext
         SinglefileSubclass = DataFactory(subclassname)
         singlefile = SinglefileSubclass()
         singlefile.set_file(filename)
-        singlefile.add_link_from(job, label=linkname, link_type=LinkType.CREATE)
+        singlefile.add_incoming(job, link_type=LinkType.CREATE, link_label=linkname)
         singlefiles.append(singlefile)
 
     for fil in singlefiles:

@@ -114,13 +114,13 @@ AiiDA object(s) you want to request. The following resources are available:
 +--------------------------------------------------------------------------------------------+-------------------+
 | Class                                                                                      | Resource          |
 +============================================================================================+===================+
-| :py:class:`Calculation <aiida.orm.implementation.general.calculation.AbstractCalculation>` | ``/calculations`` |
+| :py:class:`ProcessNode <aiida.orm.node.process.process.ProcessNode>`                       | ``/calculations`` |
 +--------------------------------------------------------------------------------------------+-------------------+
 | :py:class:`Computer <aiida.orm.Computer>`                                                  | ``/computers``    |
 +--------------------------------------------------------------------------------------------+-------------------+
 | :py:class:`Data <aiida.orm.data.Data>`                                                     | ``/data``         |
 +--------------------------------------------------------------------------------------------+-------------------+
-| :py:class:`Group <aiida.orm.implementation.general.group.AbstractGroup>`                   | ``/groups``       |
+| :py:class:`Group <aiida.orm.groups.Group>`                                                 | ``/groups``       |
 +--------------------------------------------------------------------------------------------+-------------------+
 | :py:class:`Node <aiida.orm.implementation.general.node.AbstractNode>`                      | ``/nodes``        |
 +--------------------------------------------------------------------------------------------+-------------------+
@@ -591,7 +591,7 @@ Nodes
                 "label": "",
                 "mtime": "Fri, 29 Apr 2016 19:24:13 GMT",
                 "state": null,
-                "type": "calculation.inline.InlineCalculation.",
+                "type": "node.process.calculation.CalcFunctionNode.",
                 "uuid": "68d2ed6c-6f51-4546-8d10-7fe063525ab8"
               },
               {

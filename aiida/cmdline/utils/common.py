@@ -84,7 +84,7 @@ def get_node_summary(node):
     :return: a string summary of the node
     """
     from plumpy import ProcessState
-    from aiida.orm.implementation.general.calculation import AbstractCalculation
+    from aiida.orm.node.process import ProcessNode
 
     table_headers = ['Property', 'Value']
     table = []
@@ -96,7 +96,7 @@ def get_node_summary(node):
     table.append(['ctime', node.ctime])
     table.append(['mtime', node.mtime])
 
-    if issubclass(node.__class__, AbstractCalculation):
+    if issubclass(node.__class__, ProcessNode):
         try:
             process_state = node.process_state
         except AttributeError:
@@ -139,59 +139,61 @@ def get_node_info(node, include_summary=True):
     :param include_summary: also include a summary of node properties
     :return: a string summary of the node including a description of all its links and log messages
     """
-    from aiida.backends.utils import get_log_messages
     from aiida.common.links import LinkType
-    from aiida.orm.calculation.work import WorkCalculation
+    from aiida import orm
+    from aiida.orm.node.process import WorkChainNode
 
     if include_summary:
         result = get_node_summary(node)
     else:
         result = ''
 
-    nodes_input = node.get_inputs(link_type=LinkType.INPUT, also_labels=True)
-    nodes_caller = node.get_inputs(link_type=LinkType.CALL, also_labels=True)
-    nodes_create = node.get_outputs(link_type=LinkType.CREATE, also_labels=True)
-    nodes_return = node.get_outputs(link_type=LinkType.RETURN, also_labels=True)
-    nodes_called = node.get_outputs(link_type=LinkType.CALL, also_labels=True)
+    nodes_input_calc = node.get_incoming(link_type=LinkType.INPUT_CALC).all()
+    nodes_input_work = node.get_incoming(link_type=LinkType.INPUT_WORK).all()
+    nodes_caller = node.get_incoming(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
+    nodes_create = node.get_outgoing(link_type=LinkType.CREATE).all()
+    nodes_return = node.get_outgoing(link_type=LinkType.RETURN).all()
+    nodes_called = node.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
+    nodes_input = nodes_input_calc + nodes_input_work
     nodes_output = nodes_create + nodes_return
 
     if nodes_caller:
         table = []
         table_headers = ['Called by', 'PK', 'Type']
-        for key, value in nodes_caller:
-            table.append([key, value.pk, value.__class__.__name__])
+        for entry in nodes_caller:
+            table.append([entry.link_label, entry.node.pk, entry.node.__class__.__name__])
         result += '\n{}'.format(tabulate(table, headers=table_headers))
 
     if nodes_input:
         table = []
         table_headers = ['Inputs', 'PK', 'Type']
-        for key, value in nodes_input:
-            if key == 'code':
+        for entry in nodes_input:
+            if entry.link_label == 'code':
                 continue
-            table.append([key, value.pk, value.__class__.__name__])
+            table.append([entry.link_label, entry.node.pk, entry.node.__class__.__name__])
         result += '\n{}'.format(tabulate(table, headers=table_headers))
 
     if nodes_output:
         table = []
         table_headers = ['Outputs', 'PK', 'Type']
-        for key, value in nodes_output:
-            table.append([key, value.pk, value.__class__.__name__])
+        for entry in nodes_output:
+            table.append([entry.link_label, entry.node.pk, entry.node.__class__.__name__])
         result += '\n{}'.format(tabulate(table, headers=table_headers))
 
     if nodes_called:
         table = []
         table_headers = ['Called', 'PK', 'Type']
-        for key, value in nodes_called:
-            table.append([key, value.pk, value.__class__.__name__])
+        for entry in nodes_called:
+            table.append([entry.link_label, entry.node.pk, entry.node.__class__.__name__])
         result += '\n{}'.format(tabulate(table, headers=table_headers))
 
-    log_messages = get_log_messages(node)
+    log_messages = orm.Log.objects.get_logs_for(node)
 
     if log_messages:
         table = []
         table_headers = ['Log messages']
         table.append(['There are {} log messages for this calculation'.format(len(log_messages))])
-        if isinstance(node, WorkCalculation):
+        if isinstance(node, WorkChainNode):
             table.append(["Run 'verdi work report {}' to see them".format(node.pk)])
         else:
             table.append(["Run 'verdi calculation logshow {}' to see them".format(node.pk)])
@@ -200,33 +202,33 @@ def get_node_info(node, include_summary=True):
     return result
 
 
-def get_calculation_log_report(calculation):
+def get_calcjob_report(calcjob):
     """
-    Return a multi line string representation of the log messages and output of a given calculation
+    Return a multi line string representation of the log messages and output of a given calcjob
 
-    :param calculation: the calculation node
+    :param calcjob: the calcjob node
     :return: a string representation of the log messages and scheduler output
     """
-    from aiida.backends.utils import get_log_messages
+    from aiida import orm
     from aiida.common.datastructures import calc_states
 
-    log_messages = get_log_messages(calculation)
-    scheduler_out = calculation.get_scheduler_output()
-    scheduler_err = calculation.get_scheduler_error()
-    calculation_state = calculation.get_state()
-    scheduler_state = calculation.get_scheduler_state()
+    log_messages = orm.Log.objects.get_logs_for(calcjob)
+    scheduler_out = calcjob.get_scheduler_output()
+    scheduler_err = calcjob.get_scheduler_error()
+    calcjob_state = calcjob.get_state()
+    scheduler_state = calcjob.get_scheduler_state()
 
     report = []
 
-    if calculation_state == calc_states.WITHSCHEDULER:
-        state_string = '{}, scheduler state: {}'.format(calculation_state, scheduler_state
+    if calcjob_state == calc_states.WITHSCHEDULER:
+        state_string = '{}, scheduler state: {}'.format(calcjob_state, scheduler_state
                                                         if scheduler_state else '(unknown)')
     else:
-        state_string = '{}'.format(calculation_state)
+        state_string = '{}'.format(calcjob_state)
 
-    label_string = ' [{}]'.format(calculation.label) if calculation.label else ''
+    label_string = ' [{}]'.format(calcjob.label) if calcjob.label else ''
 
-    report.append('*** {}{}: {}'.format(calculation.pk, label_string, state_string))
+    report.append('*** {}{}: {}'.format(calcjob.pk, label_string, state_string))
 
     if scheduler_out is None:
         report.append('*** Scheduler output: N/A')
@@ -251,5 +253,79 @@ def get_calculation_log_report(calculation):
         report.append('+-> {} at {}'.format(log['levelname'], log['time']))
         for message in log['message'].splitlines():
             report.append(' | {}'.format(message))
+
+    return '\n'.join(report)
+
+
+def get_workchain_report(node, levelname, indent_size=4, max_depth=None):
+    """
+    Return a multi line string representation of the log messages and output of a given workchain
+
+    :param node: the workchain node
+    :return: a nested string representation of the log messages
+    """
+    # pylint: disable=too-many-locals
+    import itertools
+    from aiida.common.log import LOG_LEVELS
+    from aiida import orm
+    from aiida.orm.querybuilder import QueryBuilder
+    from aiida.orm.node.process import WorkChainNode
+
+    def get_report_messages(pk, depth, levelname):
+        """Return list of log messages with given levelname and their depth for a node with a given pk."""
+        filters = {'objpk': pk}
+
+        entries = orm.Log.objects.find(filters)
+        entries = [entry for entry in entries if LOG_LEVELS[entry.levelname] >= LOG_LEVELS[levelname]]
+        return [(_, depth) for _ in entries]
+
+    def get_subtree(pk, level=0):
+        """Get a nested tree of work calculation nodes and their nesting level starting from this pk."""
+        builder = QueryBuilder()
+        builder.append(cls=WorkChainNode, filters={'id': pk}, tag='workcalculation')
+        builder.append(
+            cls=WorkChainNode,
+            project=['id'],
+            # In the future, we should specify here the type of link
+            # for now, CALL links are the only ones allowing calc-calc
+            # (we here really want instead to follow CALL links)
+            with_incoming='workcalculation',
+            tag='subworkchains')
+        result = list(itertools.chain(*builder.distinct().all()))
+
+        # This will return a single flat list of tuples, where the first element
+        # corresponds to the WorkChain pk and the second element is an integer
+        # that represents its level of nesting within the chain
+        return [(pk, level)] + list(itertools.chain(*[get_subtree(subpk, level=level + 1) for subpk in result]))
+
+    workchain_tree = get_subtree(node.pk)
+
+    if max_depth:
+        report_list = [get_report_messages(pk, depth, levelname) for pk, depth in workchain_tree if depth < max_depth]
+    else:
+        report_list = [get_report_messages(pk, depth, levelname) for pk, depth in workchain_tree]
+
+    reports = list(itertools.chain(*report_list))
+    reports.sort(key=lambda r: r[0].time)
+
+    if not reports:
+        return 'No log messages recorded for this entry'
+
+    object_ids = [entry[0].id for entry in reports]
+    levelnames = [len(entry[0].levelname) for entry in reports]
+    width_id = len(str(max(object_ids)))
+    width_levelname = max(levelnames)
+    report = []
+
+    for entry, depth in reports:
+        line = '{time:%Y-%m-%d %H:%M:%S} [{id:<{width_id}} | {levelname:>{width_levelname}}]:{indent} {message}'.format(
+            id=entry.id,
+            levelname=entry.levelname,
+            message=entry.message,
+            time=entry.time,
+            width_id=width_id,
+            width_levelname=width_levelname,
+            indent=' ' * (depth * indent_size))
+        report.append(line)
 
     return '\n'.join(report)

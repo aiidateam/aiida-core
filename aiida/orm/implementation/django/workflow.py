@@ -18,18 +18,18 @@ import six
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 
-from aiida.common import aiidalogger
+from aiida.common import AIIDA_LOGGER
 from aiida.common.datastructures import wf_states, wf_exit_call, calc_states
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, ValidationError,
                                      AiidaException)
 from aiida.common.folders import RepositoryFolder, SandboxFolder
 from aiida.common.utils import md5_file, str_timedelta
-from aiida.orm.implementation.django.calculation.job import JobCalculation
+from aiida.orm.node.process import CalcJobNode
 from aiida.orm.implementation.general.workflow import AbstractWorkflow
 from aiida.utils import timezone
 
-logger = aiidalogger.getChild('Workflow')
+logger = AIIDA_LOGGER.getChild('Workflow')
 
 
 class Workflow(AbstractWorkflow):
@@ -122,7 +122,7 @@ class Workflow(AbstractWorkflow):
 
             # This stores the MD5 as well, to test in case the workflow has
             # been modified after the launch
-            dbuser = orm.User.objects(self._backend).get_default().backend_entity.dbuser
+            dbuser = orm.User.objects(self._backend).get_default().backend_entity.dbmodel
             self._dbworkflowinstance = DbWorkflow(user=dbuser,
                                                   module=self.caller_module,
                                                   module_class=self.caller_module_class,
@@ -241,30 +241,6 @@ class Workflow(AbstractWorkflow):
         from aiida.backends.djsite.db.models import DbWorkflow
 
         return DbWorkflow.aiidaobjects.filter(*args, **kwargs)
-
-    # @property
-    # def logger(self):
-    #    """
-    #    Get the logger of the Workflow object.
-    #
-    #   :return: Logger object
-    #    """
-    #    return self._logger
-
-    @property
-    def logger(self):
-        """
-        Get the logger of the Workflow object, so that it also logs to the
-        DB.
-
-        :return: LoggerAdapter object, that works like a logger, but also has
-          the 'extra' embedded
-        """
-        import logging
-        from aiida.common.log import get_dblogger_extra
-
-        return logging.LoggerAdapter(logger=self._logger,
-                                     extra=get_dblogger_extra(self))
 
     def store(self):
         """
@@ -496,7 +472,7 @@ class Workflow(AbstractWorkflow):
 
         try:
             user = orm.User.objects(self._backend).get_default().backend_entity
-            step = self.dbworkflowinstance.steps.get(name=step_method_name, user=user.dbuser)
+            step = self.dbworkflowinstance.steps.get(name=step_method_name, user=user.dbmodel)
             return step
         except ObjectDoesNotExist:
             return None
@@ -618,7 +594,6 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
     """
     # Note: pre_string becomes larger at each call of get_workflow_info on the
     #       subworkflows: pre_string -> pre_string + "|" + " "*(tab_size-1))
-
     from aiida.backends.djsite.db.models import DbWorkflow
     if tab_size < 2:
         raise ValueError("tab_size must be > 2")
@@ -673,7 +648,7 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
         workflow_mapping = {_.pk: _ for _ in wflows}
 
         # get all calculations for all steps
-        calcs = JobCalculation.query(workflow_step__in=steps_pk)  # .order_by('ctime')
+        calcs = CalcJobNode.query(workflow_step__in=steps_pk)  # .order_by('ctime')
         # dictionary mapping pks into calculations
         calc_mapping = {_.pk: _ for _ in calcs}
 
@@ -721,7 +696,7 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
                                  "| Calculation ({}pk: {}) is {}{}".format(
                                      labelstring, calc_pk, calc_state, remote_state))
 
-            ## SubWorkflows
+            # SubWorkflows
             for subwf_pk in subwfs_of_steps[step_pk]['subwf_pks']:
                 subwf = workflow_mapping[subwf_pk]
                 lines.extend(get_workflow_info(subwf,

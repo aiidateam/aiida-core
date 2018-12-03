@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
-from aiida.work.workfunctions import workfunction
+from aiida.work import calcfunction
 
 a = 1
 b = 2
 c = 3
 
-@workfunction
+@calcfunction
 def add(a, b):
     return a + b
 
-@workfunction
+@calcfunction
 def multiply(a, b):
     return a * b
 

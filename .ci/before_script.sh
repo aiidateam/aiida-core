@@ -28,7 +28,7 @@ then
         # Configure the 'doubler' code inside torquessh
         verdi -p $TEST_AIIDA_BACKEND code setup -n -L doubler \
             -D "simple script that doubles a number and sleeps for a given number of seconds" \
-            --on-computer -P simpleplugins.templatereplacer -Y torquessh \
+            --on-computer -P templatereplacer -Y torquessh \
             --remote-abs-path=/usr/local/bin/d\"o\'ub\ ler.sh
 
         # Make sure that the torquessh (localhost:10022) key is hashed
@@ -55,12 +55,12 @@ then
         # Configure the 'doubler' code inside torquessh
         verdi -p $TEST_AIIDA_BACKEND code setup -n -L doubler \
             -D "simple script that doubles a number and sleeps for a given number of seconds" \
-            --on-computer -P simpleplugins.templatereplacer -Y torquessh \
+            --on-computer -P templatereplacer -Y torquessh \
             --remote-abs-path=/usr/local/bin/d\"o\'ub\ ler.sh
 
         # Configure the 'add' code inside torquessh, which is only required for the integrations test on Jenkins
         verdi -p $TEST_AIIDA_BACKEND code setup -n -L add \
-            -D "simple script that adds two numbers" --on-computer -P simpleplugins.arithmetic.add \
+            -D "simple script that adds two numbers" --on-computer -P arithmetic.add \
             -Y torquessh --remote-abs-path=/usr/local/bin/add.sh
 
         ## The key of localhost should be already set in the Jenkinsfile

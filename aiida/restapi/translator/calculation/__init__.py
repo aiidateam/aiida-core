@@ -28,10 +28,10 @@ class CalculationTranslator(NodeTranslator):
     # A label associated to the present class (coincides with the resource name)
     __label__ = "calculations"
     # The AiiDA class one-to-one associated to the present class
-    from aiida.orm.calculation import Calculation
-    _aiida_class = Calculation
+    from aiida.orm.node.process import ProcessNode
+    _aiida_class = ProcessNode
     # The string name of the AiiDA class
-    _aiida_type = "calculation.Calculation"
+    _aiida_type = "node.process.ProcessNode"
     # The string associated to the AiiDA class in the query builder lexicon
     _qb_type = _aiida_type + '.'
 
@@ -120,7 +120,7 @@ class CalculationTranslator(NodeTranslator):
         :return: the retrieved input files for job calculation
         """
 
-        if node.type.startswith("calculation.job."):
+        if node.type.startswith("node.process.calculation."):
 
             input_folder = node._raw_input_folder  # pylint: disable=protected-access
 
@@ -160,7 +160,7 @@ class CalculationTranslator(NodeTranslator):
         :return: the retrieved output files for job calculation
         """
 
-        if node.type.startswith("calculation.job."):
+        if node.type.startswith("node.process.calculation."):
 
             retrieved_folder = node.out.retrieved
             response = {}

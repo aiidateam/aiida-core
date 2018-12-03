@@ -44,9 +44,13 @@ NODE = OverridableArgument('node', type=types.NodeParamType())
 
 NODES = OverridableArgument('nodes', nargs=-1, type=types.NodeParamType())
 
-PROCESS = OverridableArgument('process', type=types.CalculationParamType())
+PROCESS = OverridableArgument('process', type=types.ProcessParamType())
 
-PROCESSES = OverridableArgument('processes', nargs=-1, type=types.CalculationParamType())
+PROCESSES = OverridableArgument('processes', nargs=-1, type=types.ProcessParamType())
+
+WORKFLOW = OverridableArgument('workflow', type=types.WorkflowParamType())
+
+WORKFLOWS = OverridableArgument('workflows', nargs=-1, type=types.WorkflowParamType())
 
 INPUT_FILE = OverridableArgument('input_file', metavar='INPUT_FILE', type=click.Path(exists=True))
 

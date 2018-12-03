@@ -63,11 +63,11 @@ class TestVerdiImport(AiidaTestCase):
         replaced with the version of the new format
         """
         archives = [
-            get_archive_file('calculation/simpleplugins.arithmetic.add.aiida'),
+            get_archive_file('calcjob/arithmetic.add.aiida'),
             get_archive_file('export/migrate/export_v0.3.aiida')
         ]
 
         options = [] + archives
         result = self.cli_runner.invoke(cmd_import.cmd_import, options)
 
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)

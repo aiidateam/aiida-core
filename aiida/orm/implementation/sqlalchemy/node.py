@@ -55,9 +55,9 @@ class Node(AbstractNode):
         if dbnode is not None:
             type_check(dbnode, DbNode)
             if dbnode.id is None:
-                raise ValueError("If cannot load an aiida.orm.Node instance " "from an unsaved DbNode object.")
+                raise ValueError("I cannot load an aiida.orm.Node instance from an unsaved DbNode object.")
             if kwargs:
-                raise ValueError("If you pass a dbnode, you cannot pass any " "further parameter")
+                raise ValueError("If you pass a dbnode, you cannot pass any further parameter")
 
             # If I am loading, I cannot modify it
             self._to_be_stored = False
@@ -72,7 +72,7 @@ class Node(AbstractNode):
             if user is None:
                 raise RuntimeError("Could not find a default user")
 
-            self._dbnode = DbNode(user=user.dbuser, uuid=get_new_uuid(), type=self._plugin_type_string)
+            self._dbnode = DbNode(user=user.dbmodel, uuid=get_new_uuid(), type=self._plugin_type_string)
 
             self._to_be_stored = True
 
@@ -142,7 +142,8 @@ class Node(AbstractNode):
 
     @classmethod
     def query(cls, *args, **kwargs):
-        raise NotImplementedError("The node query method is not supported in " "SQLAlchemy. Please use QueryBuilder.")
+        from aiida.common.exceptions import FeatureNotAvailable
+        raise FeatureNotAvailable("The node query method is not supported in " "SQLAlchemy. Please use QueryBuilder.")
 
     @property
     def type(self):
@@ -182,7 +183,7 @@ class Node(AbstractNode):
 
         type_check(user, orm.User)
         backend_user = user.backend_entity
-        self._dbnode.user = backend_user.dbuser
+        self._dbnode.user = backend_user.dbmodel
 
     def get_computer(self):
         """
@@ -236,16 +237,16 @@ class Node(AbstractNode):
             session.add(self._dbnode)
             self._increment_version_number_db()
 
-    def _replace_dblink_from(self, src, label, link_type):
+    def _replace_dblink_from(self, src, link_type, label):
         from aiida.backends.sqlalchemy import get_scoped_session
         session = get_scoped_session()
         try:
-            self._add_dblink_from(src, label)
+            self._add_dblink_from(src, link_type, label)
         except UniquenessError:
             # I have to replace the link; I do it within a transaction
             try:
                 self._remove_dblink_from(label)
-                self._add_dblink_from(src, label, link_type)
+                self._add_dblink_from(src, link_type, label)
                 session.commit()
             except:
                 session.rollback()
@@ -258,7 +259,7 @@ class Node(AbstractNode):
         if link is not None:
             session.delete(link)
 
-    def _add_dblink_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
+    def _add_dblink_from(self, src, link_type, label):
         from aiida.backends.sqlalchemy import get_scoped_session
         from aiida.orm.querybuilder import QueryBuilder
         session = get_scoped_session()
@@ -279,7 +280,7 @@ class Node(AbstractNode):
         #
         # I am linking src->self; a loop would be created if a DbPath exists
         # already in the TC table from self to src
-        if link_type is LinkType.CREATE or link_type is LinkType.INPUT:
+        if link_type is LinkType.CREATE or link_type is LinkType.INPUT_CALC or link_type is LinkType.INPUT_WORK:
             if QueryBuilder().append(
                     Node, filters={
                         'id': self.pk
@@ -289,32 +290,7 @@ class Node(AbstractNode):
                 }, tag='child', descendant_of='parent').count() > 0:
                 raise ValueError("The link you are attempting to create would generate a loop")
 
-        if label is None:
-            autolabel_idx = 1
-
-            existing_from_autolabels = session.query(DbLink.label).filter(DbLink.output_id == self._dbnode.id,
-                                                                          DbLink.label.like("link%"))
-
-            while "link_{}".format(autolabel_idx) in existing_from_autolabels:
-                autolabel_idx += 1
-
-            safety_counter = 0
-            while True:
-                safety_counter += 1
-                if safety_counter > 100:
-                    # Well, if you have more than 100 concurrent addings
-                    # to the same node, you are clearly doing something wrong...
-                    raise InternalError("Hey! We found more than 100 concurrent"
-                                        " adds of links "
-                                        "to the same nodes! Are you really doing that??")
-                try:
-                    self._do_create_link(src, "link_{}".format(autolabel_idx), link_type)
-                    break
-                except UniquenessError:
-                    # Retry loop until you find a new loop
-                    autolabel_idx += 1
-        else:
-            self._do_create_link(src, label, link_type)
+        self._do_create_link(src, label, link_type)
 
     def _do_create_link(self, src, label, link_type):
         """
@@ -348,7 +324,7 @@ class Node(AbstractNode):
 
     def _set_db_computer(self, computer):
         type_check(computer, computers.SqlaComputer)
-        self._dbnode.dbcomputer = computer.dbcomputer
+        self._dbnode.dbcomputer = computer.dbmodel
 
     def _set_db_attr(self, key, value):
         """
@@ -439,114 +415,6 @@ class Node(AbstractNode):
         for key in self._attributes().keys():
             yield key
 
-    def add_comment(self, content, user=None):
-        from aiida import orm
-        from aiida.backends.sqlalchemy import get_scoped_session
-
-        session = get_scoped_session()
-
-        if self._to_be_stored:
-            raise ModificationNotAllowed("Comments can be added only after " "storing the node")
-
-        if user is None:
-            user = orm.User.objects(self.backend).get_default()
-
-        comment = DbComment(dbnode=self._dbnode, user=user.backend_entity.dbuser, content=content)
-        session.add(comment)
-        try:
-            session.commit()
-        except:
-            session = get_scoped_session()
-            session.rollback()
-            raise
-
-        return comment.id
-
-    def get_comment_obj(self, comment_id=None, user=None):
-        """
-        Get comment models objects for this node, optionally for a given comment
-        id or user.
-
-        :param comment_id: Filter for a particular comment id
-        :param user: Filter for a particular user
-        :return: A list of comment model instances
-        """
-        from aiida import orm
-
-        query = DbComment.query.filter_by(dbnode=self._dbnode)
-
-        if comment_id is not None:
-            query = query.filter_by(id=comment_id)
-        if user is not None:
-            if isinstance(user, orm.User):
-                user = user.backend_entity
-            query = query.filter_by(user=user.dbuser)
-
-        dbcomments = query.all()
-        comments = []
-        from aiida.orm.implementation.sqlalchemy.comment import Comment
-        for dbcomment in dbcomments:
-            comments.append(Comment(dbcomment=dbcomment))
-        return comments
-
-    def get_comments(self, pk=None):
-        comments = self._get_dbcomments(pk)
-
-        return [{
-            "pk": c.id,
-            "user__email": c.user.email,
-            "ctime": c.ctime,
-            "mtime": c.mtime,
-            "content": c.content
-        } for c in comments]
-
-    def _get_dbcomments(self, pk=None):
-        comments = DbComment.query.filter_by(dbnode=self._dbnode)
-
-        if pk is not None:
-            try:
-                correct = all([isinstance(_, int) for _ in pk])
-                if not correct:
-                    raise ValueError('id must be an integer or a list of integers')
-                comments = comments.filter(DbComment.id.in_(pk))
-            except TypeError:
-                if not isinstance(pk, int):
-                    raise ValueError('id must be an integer or a list of integers')
-
-                comments = comments.filter_by(id=pk)
-
-        comments = comments.order_by('id').all()
-        return comments
-
-    def _update_comment(self, new_field, comment_pk, user):
-        comment = DbComment.query.filter_by(dbnode=self._dbnode, id=comment_pk, user=user.dbuser).first()
-
-        if not isinstance(new_field, six.string_types):
-            raise ValueError("Non string comments are not accepted")
-
-        if not comment:
-            raise NotExistent("Found no comment for user {} and id {}".format(user, comment_pk))
-
-        comment.content = new_field
-        try:
-            comment.save()
-        except:
-            from aiida.backends.sqlalchemy import get_scoped_session
-            session = get_scoped_session()
-            session.rollback()
-            raise
-
-    def _remove_comment(self, comment_pk, user):
-        comment = DbComment.query.filter_by(dbnode=self._dbnode, id=comment_pk, user=user.dbuser).first()
-        if comment:
-            try:
-                comment.delete()
-            except:
-                from aiida.backends.sqlalchemy import get_scoped_session
-                session = get_scoped_session()
-                session.rollback()
-                raise
-
     def _increment_version_number_db(self):
         self._dbnode.nodeversion = self.nodeversion + 1
         try:
@@ -628,25 +496,22 @@ class Node(AbstractNode):
           is meant to be used ONLY if the outer calling function has already
           a transaction open!
         """
-
         if not self.is_stored:
-            raise ModificationNotAllowed("Node with pk= {} is not stored yet".format(self.id))
+            raise ModificationNotAllowed('cannot store cached incoming links for unstored Node<{}>'.format(self.pk))
 
         # This raises if there is an unstored node.
         self._check_are_parents_stored()
-        # I have to store only those links where the source is already
-        # stored
-        links_to_store = list(self._inputlinks_cache.keys())
 
-        for label in links_to_store:
-            src, link_type = self._inputlinks_cache[label]
-            self._add_dblink_from(src, label, link_type)
+        # I have to store only those links where the source is already stored
+        for link_triple in self._incoming_cache:
+            self._add_dblink_from(*link_triple)
+
         # If everything went smoothly, clear the entries from the cache.
         # I do it here because I delete them all at once if no error
         # occurred; otherwise, links will not be stored and I
         # should not delete them from the cache (but then an exception
         # would have been raised, and the following lines are not executed)
-        self._inputlinks_cache.clear()
+        self._incoming_cache = list()
 
         from aiida.backends.sqlalchemy import get_scoped_session
         session = get_scoped_session()

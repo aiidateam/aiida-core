@@ -39,7 +39,7 @@ class DbWorkflow(Base):
     uuid = Column(UUID(as_uuid=True), default=uuid_func)
 
     ctime = Column(DateTime(timezone=True), default=timezone.now)
-    mtime = Column(DateTime(timezone=True), default=timezone.now)
+    mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now)
 
     user_id = Column(Integer, ForeignKey('db_dbuser.id'))
     user = relationship('DbUser')
@@ -186,8 +186,8 @@ class DbWorkflow(Base):
         self.save()
 
     def get_calculations(self):
-        from aiida.orm import JobCalculation
-        return JobCalculation.query(workflow_step=self.steps)
+        from aiida.orm.node.process import CalcJobNode
+        return CalcJobNode.query(workflow_step=self.steps)
 
     def get_sub_workflows(self):
         return DbWorkflow.objects.filter(parent_workflow_step=self.steps.all())
@@ -322,8 +322,8 @@ class DbWorkflowStep(Base):
     )
 
     def add_calculation(self, step_calculation):
-        from aiida.orm import JobCalculation
-        if (not isinstance(step_calculation, JobCalculation)):
+        from aiida.orm.node.process import CalcJobNode
+        if (not isinstance(step_calculation, CalcJobNode)):
             raise ValueError("Cannot add a non-Calculation object to a workflow step")
 
         try:

@@ -121,7 +121,7 @@ def generate_calc(workflow):
     from aiida.orm import CalculationFactory
     from aiida.common.datastructures import calc_states
 
-    CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
+    CustomCalc = CalculationFactory('templatereplacer')
 
     computer = orm.Computer.objects(workflow._backend).get(name='localhost')
 

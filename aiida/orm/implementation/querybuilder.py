@@ -14,7 +14,9 @@ from __future__ import absolute_import
 import abc
 import six
 
+from aiida.common import exceptions
 from aiida.common.utils import abstractclassmethod
+from aiida.common.exceptions import InputValidationError
 
 __all__ = ('BackendQueryBuilder',)
 
@@ -23,7 +25,10 @@ __all__ = ('BackendQueryBuilder',)
 class BackendQueryBuilder(object):
     """Backend query builder interface"""
 
-    # pylint: disable=invalid-name
+    # pylint: disable=invalid-name, too-many-public-methods
+
+    def __init__(self, backend):
+        self._backend = backend
 
     @abc.abstractmethod
     def Node(self):
@@ -70,6 +75,20 @@ class BackendQueryBuilder(object):
         pass
 
     @abc.abstractmethod
+    def Comment(self):
+        """
+        A property, decorated with @property. Returns the implementation for the Comment
+        """
+        pass
+
+    @abc.abstractmethod
+    def log_model_class(self):
+        """
+        A property, decorated with @property. Returns the implementation for the Log
+        """
+        pass
+
+    @abc.abstractmethod
     def table_groups_nodes(self):
         """
         A property, decorated with @property. Returns the implementation for the many-to-many
@@ -81,13 +100,6 @@ class BackendQueryBuilder(object):
     def AiidaNode(self):
         """
         A property, decorated with @property. Returns the implementation for the AiiDA-class for Node
-        """
-        pass
-
-    @abc.abstractmethod
-    def AiidaGroup(self):
-        """
-        A property, decorated with @property. Returns the implementation for the AiiDA-class for Group
         """
         pass
 
@@ -109,7 +121,7 @@ class BackendQueryBuilder(object):
     @abstractclassmethod
     def get_filter_expr_from_attributes(cls, operator, value, attr_key, column=None, column_name=None, alias=None):  # pylint: disable=too-many-arguments
         """
-        A classmethod that returns an valid SQLAlchemy expression.
+        Returns an valid SQLAlchemy expression.
 
         :param operator: The operator provided by the user ('==',  '>', ...)
         :param value: The value to compare with, e.g. (5.0, 'foo', ['a','b'])
@@ -121,10 +133,55 @@ class BackendQueryBuilder(object):
         :param str column_name: The name of the column, and the backend should get the InstrumentedAttribute.
         :param alias: The aliased class.
 
-
         :returns: An instance of sqlalchemy.sql.elements.BinaryExpression
         """
         pass
+
+    @classmethod
+    def get_filter_expr_from_column(cls, operator, value, column):
+        """
+        A method that returns an valid SQLAlchemy expression.
+
+        :param operator: The operator provided by the user ('==',  '>', ...)
+        :param value: The value to compare with, e.g. (5.0, 'foo', ['a','b'])
+        :param column: an instance of sqlalchemy.orm.attributes.InstrumentedAttribute or
+
+        :returns: An instance of sqlalchemy.sql.elements.BinaryExpression
+        """
+        # Label is used because it is what is returned for the
+        # 'state' column by the hybrid_column construct
+
+        # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
+        # pylint: disable=no-name-in-module,import-error
+        from sqlalchemy.sql.elements import Cast, Label
+        from sqlalchemy.orm.attributes import InstrumentedAttribute, QueryableAttribute
+        from sqlalchemy.sql.expression import ColumnClause
+        from sqlalchemy.types import String
+
+        if not isinstance(column, (Cast, InstrumentedAttribute, QueryableAttribute, Label, ColumnClause)):
+            raise TypeError('column ({}) {} is not a valid column'.format(type(column), column))
+        database_entity = column
+        if operator == '==':
+            expr = database_entity == value
+        elif operator == '>':
+            expr = database_entity > value
+        elif operator == '<':
+            expr = database_entity < value
+        elif operator == '>=':
+            expr = database_entity >= value
+        elif operator == '<=':
+            expr = database_entity <= value
+        elif operator == 'like':
+            # the like operator expects a string, so we cast to avoid problems
+            # with fields like UUID, which don't support the like operator
+            expr = database_entity.cast(String).like(value)
+        elif operator == 'ilike':
+            expr = database_entity.ilike(value)
+        elif operator == 'in':
+            expr = database_entity.in_(value)
+        else:
+            raise InputValidationError('Unknown operator {} for filters on columns'.format(operator))
+        return expr
 
     @abc.abstractmethod
     def get_projectable_attribute(self, alias, column_name, attrpath, cast=None, **kwargs):
@@ -174,7 +231,7 @@ class BackendQueryBuilder(object):
     @abc.abstractmethod
     def iterall(self, query, batch_size, tag_to_index_dict):
         """
-        :returns: An iterator over all the results of a list of lists.
+        :return: An iterator over all the results of a list of lists.
         """
         pass
 
@@ -184,3 +241,18 @@ class BackendQueryBuilder(object):
         :returns: An iterator over all the results of a list of dictionaries.
         """
         pass
+
+    def get_column(self, colname, alias):  # pylint: disable=no-self-use
+        """
+        Return the column for a given projection.
+        """
+        try:
+            return getattr(alias, colname)
+        except AttributeError:
+            raise exceptions.InputValidationError("{} is not a column of {}\n"
+                                                  "Valid columns are:\n"
+                                                  "{}".format(
+                                                      colname,
+                                                      alias,
+                                                      '\n'.join(alias._sa_class_manager.mapper.c.keys())  # pylint: disable=protected-access
+                                                  ))

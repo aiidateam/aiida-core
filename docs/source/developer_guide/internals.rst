@@ -5,14 +5,14 @@ AiiDA internals
 Node
 ++++
 
-The :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class is the basic class that represents all the possible objects at the AiiDA world. More precisely it is inherited by many classes including (among others) the :py:class:`~aiida.orm.implementation.general.calculation.AbstractCalculation` class, representing computations that convert data into a different form, the :py:class:`~aiida.orm.implementation.general.code.AbstractCode` class representing executables and file collections that are used by calculations and the :py:class:`~aiida.orm.data.Data` class which represents data that can be input or output of calculations.
+The :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class is the basic class that represents all the possible objects at the AiiDA world. More precisely it is inherited by many classes including (among others) the :py:class:`~aiida.orm.node.process.process.ProcessNode` class, representing computations that convert data into a different form, the :py:class:`~aiida.orm.data.code.Code` class representing executables and file collections that are used by calculations and the :py:class:`~aiida.orm.data.Data` class which represents data that can be input or output of calculations.
 
 
 Immutability concept
 ********************
 A node can store information through attributes. Since AiiDA guarantees a certain level of provenance, these attributes become immutable as soon as the node is stored.
 This means that as soon as a node is stored any attempt to alter its attributes, changing its value or deleting it altogether, shall be met with a raised exception.
-Certain subclasses of nodes need to adapt this behavior however, as for example in the case of the :py:class:`~aiida.orm.implementation.general.calculation.AbstractCalculation` class (see `calculation updatable attributes`_), but since the immutability
+Certain subclasses of nodes need to adapt this behavior however, as for example in the case of the :py:class:`~aiida.orm.node.process.process.ProcessNode` class (see `calculation updatable attributes`_), but since the immutability
 of stored nodes is a core concept of AiiDA, this behavior is nonetheless enforced on the node level. This guarantees that any subclasses of the Node class will respect this behavior unless it is explicitly overriden.
 
 
@@ -85,11 +85,9 @@ The :py:class:`~aiida.orm.implementation.general.node.AbstractNode` can be annot
 
 - :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.get_comments` returns a sorted list of the comments.
 
-- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._get_dbcomments` is similar to :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.get_comments`, just the sorting changes.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.update_comment` updates the node comment. It can be done by ``verdi comment update``.
 
-- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._update_comment` updates the node comment. It can be done by ``verdi comment update``.
-
-- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._remove_comment` removes the node comment. It can be done by ``verdi comment remove``.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.remove_comment` removes the node comment. It can be done by ``verdi comment remove``.
 
 
 
@@ -97,9 +95,9 @@ Link management methods
 =======================
 :py:class:`~aiida.orm.implementation.general.node.AbstractNode` objects and objects of its subclasses can have ancestors and descendants. These are connected with links. The following methods exist for the processing & management of these links.
 
-- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._has_cached_links` shows if there are cached links to other nodes.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.has_cached_links` shows if there are cached links to other nodes.
 
-- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.add_link_from` adds a link to the current node from the 'src' node with the given label. Depending on whether the nodes are stored or node, the linked are written to the database or to the cache.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.add_incoming` adds a link to the current node from the 'src' node with the given label. Depending on whether the nodes are stored or node, the linked are written to the database or to the cache.
 
 - :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._add_cachelink_from` adds a link to the cache.
 
@@ -121,27 +119,43 @@ Assume that the user wants to see the available links of a node in order to unde
 
 	In [2]: c = load_node(139168)
 
-	In [3]: c.get_inputs_dict()
+	In [3]: c.get_incoming()
 	Out[3]:
-	{u'code': <Code: Remote code 'cp-5.1' on daint, pk: 75709, uuid: 3c9cdb7f-0cda-402e-b898-4dd0d06aa5a4>,
-	 u'parameters': <ParameterData: uuid: 94efe64f-7f7e-46ea-922a-fe64a7fba8a5 (pk: 139166)>,
-	 u'parent_calc_folder': <RemoteData: uuid: becb4894-c50c-4779-b84f-713772eaceff (pk: 139118)>,
-	 u'pseudo_Ba': <UpfData: uuid: 5e53b22d-5757-4d50-bbe0-51f3b9ac8b7c (pk: 1905)>,
-	 u'pseudo_O': <UpfData: uuid: 5cccd0d9-7944-4c67-b3c7-a39a1f467906 (pk: 1658)>,
-	 u'pseudo_Ti': <UpfData: uuid: e5744077-8615-4927-9f97-c5f7b36ba421 (pk: 1660)>,
-	 u'settings': <ParameterData: uuid: a5a828b8-fdd8-4d75-b674-2e2d62792de0 (pk: 139167)>,
-	 u'structure': <StructureData: uuid: 3096f83c-6385-48c4-8cb2-24a427ce11b1 (pk: 139001)>}
+	[Neighbor(link_type='inputlink', label='code',
+	node=<Code: Remote code 'cp-5.1' on daint, pk: 75709, uuid: 3c9cdb7f-0cda-402e-b898-4dd0d06aa5a4>),
+	Neighbor(link_type='inputlink', label='parameters',
+	node=<ParameterData: uuid: 94efe64f-7f7e-46ea-922a-fe64a7fba8a5 (pk: 139166)>)
+	Neighbor(link_type='inputlink', label='parent_calc_folder',
+	node=<RemoteData: uuid: becb4894-c50c-4779-b84f-713772eaceff (pk: 139118)>)
+	Neighbor(link_type='inputlink', label='pseudo_Ba',
+	node=<UpfData: uuid: 5e53b22d-5757-4d50-bbe0-51f3b9ac8b7c (pk: 1905)>)
+	Neighbor(link_type='inputlink', label='pseudo_O',
+	node=<UpfData: uuid: 5cccd0d9-7944-4c67-b3c7-a39a1f467906 (pk: 1658)>)
+	Neighbor(link_type='inputlink', label='pseudo_Ti',
+	node=<UpfData: uuid: e5744077-8615-4927-9f97-c5f7b36ba421 (pk: 1660)>)
+	Neighbor(link_type='inputlink', label='settings',
+	node=<ParameterData: uuid: a5a828b8-fdd8-4d75-b674-2e2d62792de0 (pk: 139167)>)
+	Neighbor(link_type='inputlink', label='structure',
+	node=<StructureData: uuid: 3096f83c-6385-48c4-8cb2-24a427ce11b1 (pk: 139001)>)]
 
-	In [4]: c.get_outputs_dict()
+	In [4]: c.get_outgoing()
 	Out[4]:
-	{u'output_parameters': <ParameterData: uuid: f7a3ca96-4594-497f-a128-9843a1f12f7f (pk: 139257)>,
-	 u'output_parameters_139257': <ParameterData: uuid: f7a3ca96-4594-497f-a128-9843a1f12f7f (pk: 139257)>,
-	 u'output_trajectory': <TrajectoryData: uuid: 7c5b65bc-22bb-4b87-ac92-e8a78cf145c3 (pk: 139256)>,
-	 u'output_trajectory_139256': <TrajectoryData: uuid: 7c5b65bc-22bb-4b87-ac92-e8a78cf145c3 (pk: 139256)>,
-	 u'remote_folder': <RemoteData: uuid: 17642a1c-8cac-4e7f-8bd0-1dcebe974aa4 (pk: 139169)>,
-	 u'remote_folder_139169': <RemoteData: uuid: 17642a1c-8cac-4e7f-8bd0-1dcebe974aa4 (pk: 139169)>,
-	 u'retrieved': <FolderData: uuid: a9037dc0-3d84-494d-9616-42b8df77083f (pk: 139255)>,
-	 u'retrieved_139255': <FolderData: uuid: a9037dc0-3d84-494d-9616-42b8df77083f (pk: 139255)>}
+	[Neighbor(link_type='createlink', label='output_parameters',
+	node=<ParameterData: uuid: f7a3ca96-4594-497f-a128-9843a1f12f7f (pk: 139257)>),
+	Neighbor(link_type='createlink', label='output_parameters_139257',
+	node=<ParameterData: uuid: f7a3ca96-4594-497f-a128-9843a1f12f7f (pk: 139257)>),
+	Neighbor(link_type='createlink', label='output_trajectory',
+	node=<TrajectoryData: uuid: 7c5b65bc-22bb-4b87-ac92-e8a78cf145c3 (pk: 139256)>),
+	Neighbor(link_type='createlink', label='output_trajectory_139256',
+	node=<TrajectoryData: uuid: 7c5b65bc-22bb-4b87-ac92-e8a78cf145c3 (pk: 139256)>),
+	Neighbor(link_type='createlink', label='remote_folder',
+	node=<RemoteData: uuid: 17642a1c-8cac-4e7f-8bd0-1dcebe974aa4 (pk: 139169)>),
+	Neighbor(link_type='createlink', label='remote_folder_139169',
+	node=<RemoteData: uuid: 17642a1c-8cac-4e7f-8bd0-1dcebe974aa4 (pk: 139169)>),
+	Neighbor(link_type='createlink', label='retrieved',
+	node=<FolderData: uuid: a9037dc0-3d84-494d-9616-42b8df77083f (pk: 139255)>),
+	Neighbor(link_type='createlink', label='retrieved_139255',
+	node=<FolderData: uuid: a9037dc0-3d84-494d-9616-42b8df77083f (pk: 139255)>)]
 
 
 *Understanding link names*
@@ -155,9 +169,7 @@ The input/output links of the node can be accessed by the following methods.
 
 *Methods to get the input data*
 
-- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.get_inputs_dict` returns a dictionary where the key is the label of the input link.
-
-- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.get_inputs` returns the list of input nodes
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.get_incoming` returns the iterator of input nodes
 
 - :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.inp` returns a :py:meth:`~aiida.orm.implementation.general.node.NodeInputManager` object that can be used to access the node's parents.
 
@@ -165,9 +177,7 @@ The input/output links of the node can be accessed by the following methods.
 
 *Methods to get the output data*
 
-- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.get_outputs_dict` returns a dictionary where the key is the label of the output link, and the value is the output node.
-
-- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.get_outputs` returns a list of output nodes.
+- :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.get_outgoing` returns the iterator of output nodes.
 
 - :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.out` returns a :py:meth:`~aiida.orm.implementation.general.node.NodeOutputManager` object that can be used to access the node's children.
 
@@ -301,7 +311,7 @@ Store & deletion
 DbNode
 ++++++
 
-The :py:class:`~aiida.backends.djsite.db.models.DbNode` is the Django class that corresponds to the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class allowing to store and retrieve the needed information from and to the database. Other classes extending the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class, like :py:class:`~aiida.orm.data.Data`, :py:class:`~aiida.orm.implementation.general.calculation.AbstractCalculation` and :py:class:`~aiida.orm.implementation.general.code.AbstractCode` use the :py:class:`~aiida.backends.djsite.db.models.DbNode` code too to interact with the database.  The main methods are:
+The :py:class:`~aiida.backends.djsite.db.models.DbNode` is the Django class that corresponds to the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class allowing to store and retrieve the needed information from and to the database. Other classes extending the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class, like :py:class:`~aiida.orm.data.Data`, :py:class:`~aiida.orm.node.process.process.ProcessNode` and :py:class:`~aiida.orm.data.code.Code` use the :py:class:`~aiida.backends.djsite.db.models.DbNode` code too to interact with the database.  The main methods are:
 
 - :py:meth:`~aiida.backends.djsite.db.models.DbNode.get_aiida_class` which returns the corresponding AiiDA class instance.
 
@@ -376,7 +386,7 @@ Calculation
 
 Updatable attributes
 ********************
-The :py:class:`~aiida.orm.implementation.general.calculation.AbstractCalculation` class is a subclass of the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class, which means that its attributes become immutable once stored.
+The :py:class:`~aiida.orm.node.process.process.ProcessNode` class is a subclass of the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class, which means that its attributes become immutable once stored.
 However, for a ``Calculation`` to be runnable it needs to be stored, but that would mean that its state, which is stored in an attribute can no longer be updated.
 To solve this issue the :py:class:`~aiida.orm.mixins.Sealable` mixin is introduced. This mixin can be used for subclasses of ``Node`` that need to have updatable attributes even after the node has been stored in the database.
 The mixin defines the ``_updatable_attributes`` tuple, which defines the attributes that are considered to be mutable even when the node is stored.

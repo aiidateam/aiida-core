@@ -86,16 +86,16 @@ ${outline}
             self.report('no output node found')
             return self.ERROR_NO_OUTPUT_NODE
 
-    def add_workfunction(self):
+    def add_calcfunction(self):
         operand = self.ctx.operands.pop(0)
         operand = abs(operand) * prod(self.ctx.iterators_sign)
-        self.report('running add workfunction with inputs {} and {}'.format(self.ctx.result.value, operand))
+        self.report('running add calcfunction with inputs {} and {}'.format(self.ctx.result.value, operand))
         self.ctx.result = add_modulo(self.ctx.result, Int(operand), self.inputs.modulo)
 
-    def subtract_workfunction(self):
+    def subtract_calcfunction(self):
         operand = self.ctx.operands.pop(0)
         operand = abs(operand) * prod(self.ctx.iterators_sign)
-        self.report('running subtract workfunction with inputs {} and {}'.format(self.ctx.result.value, operand))
+        self.report('running subtract calcfunction with inputs {} and {}'.format(self.ctx.result.value, operand))
         self.ctx.result = subtract_modulo(self.ctx.result, Int(operand), self.inputs.modulo)
 
     def raise_power(self):

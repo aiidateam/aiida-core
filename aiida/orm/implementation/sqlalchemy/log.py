@@ -7,27 +7,27 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""SQLA Log and LogCollection module"""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from aiida.orm.log import LogCollection, Log
-from aiida.orm.log import ASCENDING
+
 from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models.log import DbLog
+from .. import BackendLog, BackendLogCollection
+from . import entities
+from . import utils
 
-session = get_scoped_session()
 
+class SqlaLog(entities.SqlaModelEntity[DbLog], BackendLog):
+    """SQLA Log backend entity"""
 
-class SqlaLogCollection(LogCollection):
+    MODEL_CLASS = DbLog
 
-    def create_entry(self, time, loggername, levelname, objname, objpk=None, message="", metadata=None):
-        """
-        Create a log entry.
-        """
-        if objpk is None or objname is None:
-            return None
-
-        entry = SqlaLog(
+    def __init__(self, backend, time, loggername, levelname, objname, objpk=None, message="", metadata=None):
+        # pylint: disable=too-many-arguments
+        super(SqlaLog, self).__init__(backend)
+        self._dbmodel = utils.ModelWrapper(
             DbLog(
                 time=time,
                 loggername=loggername,
@@ -35,48 +35,62 @@ class SqlaLogCollection(LogCollection):
                 objname=objname,
                 objpk=objpk,
                 message=message,
-                metadata=metadata
-            )
-        )
-        entry.save()
+                metadata=metadata))
 
-        return entry
-
-    def find(self, filter_by=None, order_by=None, limit=None):
+    @property
+    def time(self):
         """
-        Find all entries in the Log collection that confirm to the filter and
-        optionally sort and/or apply a limit.
+        Get the time corresponding to the entry
         """
-        order = []
-        filters = {}
+        return self._dbmodel.time
 
-        if not filter_by:
-            filter_by = {}
+    @property
+    def loggername(self):
+        """
+        The name of the logger that created this entry
+        """
+        return self._dbmodel.loggername
 
-        # Map the Log property names to DbLog field names
-        for key, value in filter_by.items():
-            filters[key] = value
+    @property
+    def levelname(self):
+        """
+        The name of the log level
+        """
+        return self._dbmodel.levelname
 
-        columns = {}
-        for column in DbLog.__table__.columns:
-            columns[column.key] = column
+    @property
+    def objpk(self):
+        """
+        Get the id of the object that created the log entry
+        """
+        return self._dbmodel.objpk
 
-        if not order_by:
-            order_by = []
+    @property
+    def objname(self):
+        """
+        Get the name of the object that created the log entry
+        """
+        return self._dbmodel.objname
 
-        for column in order_by:
-            if column.field in columns:
-                if column.direction == ASCENDING:
-                    order.append(columns[column.field].asc())
-                else:
-                    order.append(columns[column.field].desc())
+    @property
+    def message(self):
+        """
+        Get the message corresponding to the entry
+        """
+        return self._dbmodel.message
 
-        if filters:
-            entries = session.query(DbLog).filter_by(**filters).order_by(*order).limit(limit)
-        else:
-            entries = session.query(DbLog).order_by(*order).limit(limit)
+    @property
+    def metadata(self):
+        """
+        Get the metadata corresponding to the entry
+        """
+        return self._dbmodel._metadata  # pylint: disable=protected-access
 
-        return [SqlaLog(entry) for entry in entries]
+
+class SqlaLogCollection(BackendLogCollection):
+    """The SQLA collection for logs"""
+
+    ENTITY_CLASS = SqlaLog
 
     def delete_many(self, filters):
         """
@@ -85,80 +99,7 @@ class SqlaLogCollection(LogCollection):
         if not filters:
             for entry in DbLog.query.all():
                 entry.delete()
-            session.commit()
+            get_scoped_session().commit()
         else:
-            raise NotImplementedError(
-                "Only deleting all by passing an empty filer dictionary is "
-                "currently supported")
-
-
-class SqlaLog(Log):
-
-    def __init__(self, model):
-        """
-        :param model: :class:`aiida.backends.sqlalchemy.models.log.DbLog`
-        """
-        self._model = model
-
-    @property
-    def id(self):
-        """
-        Get the primary key of the entry
-        """
-        return self._model.id
-
-    @property
-    def time(self):
-        """
-        Get the time corresponding to the entry
-        """
-        return self._model.time
-
-    @property
-    def loggername(self):
-        """
-        The name of the logger that created this entry
-        """
-        return self._model.loggername
-
-    @property
-    def levelname(self):
-        """
-        The name of the log level
-        """
-        return self._model.levelname
-
-    @property
-    def objpk(self):
-        """
-        Get the id of the object that created the log entry
-        """
-        return self._model.objpk
-
-    @property
-    def objname(self):
-        """
-        Get the name of the object that created the log entry
-        """
-        return self._model.objname
-
-    @property
-    def message(self):
-        """
-        Get the message corresponding to the entry
-        """
-        return self._model.message
-
-    @property
-    def metadata(self):
-        """
-        Get the metadata corresponding to the entry
-        """
-        return self._model._metadata
-
-    def save(self):
-        """
-        Persist the log entry to the database
-        """
-        session.add(self._model)
-        session.commit()
+            raise NotImplementedError("Only deleting all by passing an empty filer dictionary is "
+                                      "currently supported")

@@ -128,7 +128,7 @@ class TestTcodDbExporter(AiidaTestCase):
     def test_cif_structure_roundtrip(self):
         from aiida.tools.dbexporters.tcod import export_cif, export_values
         from aiida.orm import Code
-        from aiida.orm import JobCalculation
+        from aiida.orm.node.process import CalcJobNode
         from aiida.orm.data.cif import CifData
         from aiida.orm.data.parameter import ParameterData
         from aiida.orm.data.upf import UpfData
@@ -169,10 +169,10 @@ class TestTcodDbExporter(AiidaTestCase):
 
         code.store()
 
-        calc = JobCalculation(computer=self.computer)
+        calc = CalcJobNode(computer=self.computer)
         calc.set_option('resources', {'num_machines': 1,
                             'num_mpiprocs_per_machine': 1})
-        calc.add_link_from(code, "code")
+        calc.add_incoming(code, LinkType.INPUT_CALC, "code")
         calc.set_option('environment_variables', {'PATH': '/dev/null', 'USER': 'unknown'})
 
         with tempfile.NamedTemporaryFile(mode='w+', prefix="Fe") as tmpf:
@@ -180,14 +180,14 @@ class TestTcodDbExporter(AiidaTestCase):
             tmpf.flush()
             upf = UpfData(file=tmpf.name)
             upf.store()
-            calc.add_link_from(upf, "upf")
+            calc.add_incoming(upf, LinkType.INPUT_CALC, "upf")
 
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write("data_test")
             tmpf.flush()
             cif = CifData(file=tmpf.name)
             cif.store()
-            calc.add_link_from(cif, "cif")
+            calc.add_incoming(cif, LinkType.INPUT_CALC, "cif")
 
         calc.store()
         calc._set_state(calc_states.TOSUBMIT)
@@ -205,15 +205,15 @@ class TestTcodDbExporter(AiidaTestCase):
 
         fd.store()
         calc._set_state(calc_states.PARSING)
-        fd.add_link_from(calc, calc._get_linkname_retrieved(), LinkType.CREATE)
+        fd.add_incoming(calc, LinkType.CREATE, calc._get_linkname_retrieved())
 
-        pd.add_link_from(calc, "calc", LinkType.CREATE)
+        pd.add_incoming(calc, LinkType.CREATE, "calc")
         pd.store()
 
         with self.assertRaises(ValueError):
             export_cif(c, parameters=pd)
 
-        c.add_link_from(calc, "calc", LinkType.CREATE)
+        c.add_incoming(calc, LinkType.CREATE, "calc")
         export_cif(c, parameters=pd)
 
         values = export_values(c, parameters=pd)

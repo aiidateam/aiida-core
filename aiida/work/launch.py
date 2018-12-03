@@ -24,7 +24,7 @@ def run(process, *args, **inputs):
     Run the process with the supplied inputs in a local runner that will block until the process is completed.
     The return value will be the results of the completed process
 
-    :param process: the process class or workfunction to run
+    :param process: the process class or process function to run
     :param inputs: the inputs to be passed to the process
     :return: the outputs of the process
     """
@@ -41,7 +41,7 @@ def run_get_node(process, *args, **inputs):
     Run the process with the supplied inputs in a local runner that will block until the process is completed.
     The return value will be the results of the completed process
 
-    :param process: the process class or workfunction to run
+    :param process: the process class or process function to run
     :param inputs: the inputs to be passed to the process
     :return: tuple of the outputs of the process and the calculation node
     """
@@ -58,7 +58,7 @@ def run_get_pid(process, *args, **inputs):
     Run the process with the supplied inputs in a local runner that will block until the process is completed.
     The return value will be the results of the completed process
 
-    :param process: the process class or workfunction to run
+    :param process: the process class or process function to run
     :param inputs: the inputs to be passed to the process
     :return: tuple of the outputs of the process and process pid
     """
@@ -79,7 +79,7 @@ def submit(process, **inputs):
     :param inputs: the inputs to be passed to the process
     :return: the calculation node of the process
     """
-    assert not utils.is_workfunction(process), 'Cannot submit a workfunction'
+    assert not utils.is_process_function(process), 'Cannot submit a process function'
 
     runner = manager.AiiDAManager.get_runner()
     controller = manager.AiiDAManager.get_process_controller()

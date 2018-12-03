@@ -15,8 +15,9 @@ from aiida.common import exceptions
 from aiida.common.utils import type_check
 from aiida.orm.implementation.authinfos import BackendAuthInfo, BackendAuthInfoCollection
 from aiida.orm.backends import construct_backend
+from . import entities
 from . import computer as computers
-from . import user as users
+from . import users as users
 from . import utils
 
 
@@ -73,18 +74,10 @@ class SqlaAuthInfoCollection(BackendAuthInfoCollection):
         return SqlaAuthInfo.from_dbmodel(dbmodel, self.backend)
 
 
-class SqlaAuthInfo(BackendAuthInfo):
+class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
     """AuthInfo implementation for SQLAlchemy."""
 
-    @classmethod
-    def from_dbmodel(cls, dbmodel, backend=None):
-        if backend is None:
-            backend = construct_backend()
-        type_check(dbmodel, DbAuthInfo)
-        authinfo = SqlaAuthInfo.__new__(cls)
-        super(SqlaAuthInfo, authinfo).__init__(backend)
-        authinfo._dbauthinfo = utils.ModelWrapper(dbmodel)
-        return authinfo
+    MODEL_CLASS = DbAuthInfo
 
     def __init__(self, backend, computer, user):
         """
@@ -97,11 +90,11 @@ class SqlaAuthInfo(BackendAuthInfo):
         super(SqlaAuthInfo, self).__init__(backend)
         type_check(user, users.SqlaUser)
         type_check(computer, computers.SqlaComputer)
-        self._dbauthinfo = utils.ModelWrapper(DbAuthInfo(dbcomputer=computer.dbcomputer, aiidauser=user.dbuser))
+        self._dbmodel = utils.ModelWrapper(DbAuthInfo(dbcomputer=computer.dbmodel, aiidauser=user.dbmodel))
 
     @property
     def dbauthinfo(self):
-        return self._dbauthinfo._model
+        return self._dbmodel._model
 
     @property
     def is_stored(self):
@@ -110,27 +103,27 @@ class SqlaAuthInfo(BackendAuthInfo):
 
         :return: True if stored, False otherwise
         """
-        return self._dbauthinfo.is_saved()
+        return self._dbmodel.is_saved()
 
     @property
     def id(self):
-        return self._dbauthinfo.id
+        return self._dbmodel.id
 
     @property
     def enabled(self):
-        return self._dbauthinfo.enabled
+        return self._dbmodel.enabled
 
     @enabled.setter
     def enabled(self, enabled):
-        self._dbauthinfo.enabled = enabled
+        self._dbmodel.enabled = enabled
 
     @property
     def computer(self):
-        return self._backend.computers.from_dbmodel(self._dbauthinfo.dbcomputer)
+        return self._backend.computers.from_dbmodel(self._dbmodel.dbcomputer)
 
     @property
     def user(self):
-        return self._backend.users.from_dbmodel(self._dbauthinfo.aiidauser)
+        return self._backend.users.from_dbmodel(self._dbmodel.aiidauser)
 
     def get_auth_params(self):
         """
@@ -138,14 +131,14 @@ class SqlaAuthInfo(BackendAuthInfo):
 
         :return: a dictionary
         """
-        return self._dbauthinfo.auth_params
+        return self._dbmodel.auth_params
 
     def set_auth_params(self, auth_params):
         """
         Replace the auth_params dictionary in the DB with the provided dictionary
         """
         # Raises ValueError if data is not JSON-serializable
-        self._dbauthinfo.auth_params = auth_params
+        self._dbmodel.auth_params = auth_params
 
     def _get_metadata(self):
         """
@@ -153,20 +146,11 @@ class SqlaAuthInfo(BackendAuthInfo):
 
         :return: a dictionary
         """
-        return self._dbauthinfo._metadata
+        return self._dbmodel._metadata
 
     def _set_metadata(self, metadata):
         """
         Replace the metadata dictionary in the DB with the provided dictionary
         """
         # Raises ValueError if data is not JSON-serializable
-        self._dbauthinfo._metadata = metadata
-
-    def store(self):
-        """
-        Store the AuthInfo (possibly updating values if changed)
-
-        :return: the AuthInfo instance
-        """
-        self._dbauthinfo.save()
-        return self
+        self._dbmodel._metadata = metadata

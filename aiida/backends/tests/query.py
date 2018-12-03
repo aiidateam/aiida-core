@@ -17,9 +17,15 @@ from six.moves import range, zip
 
 from aiida.backends.testbase import AiidaTestCase
 import aiida.backends.settings as settings
+from aiida.common.links import LinkType
 
 
 class TestQueryBuilder(AiidaTestCase):
+
+    def setUp(self):
+        super(TestQueryBuilder, self).setUp()
+        self.clean_db()
+        self.insert_data()
 
     def test_classification(self):
         """
@@ -93,8 +99,8 @@ class TestQueryBuilder(AiidaTestCase):
         Testing a simple query
         """
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm.calculation.job import JobCalculation
-        from aiida.orm import Node, Data, Calculation
+        from aiida.orm import Node, Data
+        from aiida.orm.node.process import CalculationNode
         from datetime import datetime
         from aiida.common.links import LinkType
 
@@ -103,7 +109,7 @@ class TestQueryBuilder(AiidaTestCase):
         n1._set_attr('foo', ['hello', 'goodbye'])
         n1.store()
 
-        n2 = Calculation()
+        n2 = CalculationNode()
         n2.label = 'node2'
         n2._set_attr('foo', 1)
         n2.store()
@@ -113,7 +119,7 @@ class TestQueryBuilder(AiidaTestCase):
         n3._set_attr('foo', 1.0000)  # Stored as fval
         n3.store()
 
-        n4 = Calculation()
+        n4 = CalculationNode()
         n4.label = 'node4'
         n4._set_attr('foo', 'bar')
         n4.store()
@@ -123,11 +129,11 @@ class TestQueryBuilder(AiidaTestCase):
         n5._set_attr('foo', None)
         n5.store()
 
-        n2.add_link_from(n1, link_type=LinkType.INPUT)
-        n3.add_link_from(n2, link_type=LinkType.CREATE)
+        n2.add_incoming(n1, link_type=LinkType.INPUT_CALC, link_label='link1')
+        n3.add_incoming(n2, link_type=LinkType.CREATE, link_label='link2')
 
-        n4.add_link_from(n3, link_type=LinkType.INPUT)
-        n5.add_link_from(n4, link_type=LinkType.CREATE)
+        n4.add_incoming(n3, link_type=LinkType.INPUT_CALC, link_label='link3')
+        n5.add_incoming(n4, link_type=LinkType.CREATE, link_label='link4')
 
         qb1 = QueryBuilder()
         qb1.append(Node, filters={'attributes.foo': 1.000})
@@ -148,13 +154,13 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(qb3.count(), 4)
 
         qb4 = QueryBuilder()
-        qb4.append(Calculation, tag='node1')
+        qb4.append(CalculationNode, tag='node1')
         qb4.append(Data, tag='node2')
         self.assertEqual(qb4.count(), 2)
 
         qb5 = QueryBuilder()
         qb5.append(Data, tag='node1')
-        qb5.append(Calculation, tag='node2')
+        qb5.append(CalculationNode, tag='node2')
         self.assertEqual(qb5.count(), 2)
 
         qb6 = QueryBuilder()
@@ -180,8 +186,8 @@ class TestQueryBuilder(AiidaTestCase):
         n2.label = 'bar'
         n2.description = 'I am BaR'
 
-        n2.add_link_from(n1, label='random_2')
-        n1.add_link_from(n0, label='random_1')
+        n2.add_incoming(n1, link_type=LinkType.CREATE, link_label='random_2')
+        n1.add_incoming(n0, link_type=LinkType.CREATE, link_label='random_1')
 
         for n in (n0, n1, n2):
             n.store()
@@ -199,7 +205,7 @@ class TestQueryBuilder(AiidaTestCase):
                 {
                     'cls': Node,
                     'tag': 'n2',
-                    'output_of': 'n1'
+                    'with_incoming': 'n1'
                 }
             ],
             'filters': {
@@ -234,7 +240,7 @@ class TestQueryBuilder(AiidaTestCase):
                 {
                     'cls': Node,
                     'tag': 'n2',
-                    'output_of': 'n1'
+                    'with_incoming': 'n1'
                 }
             ],
             'filters': {
@@ -366,7 +372,7 @@ class TestQueryBuilder(AiidaTestCase):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.data.structure import StructureData
         from aiida.common.exceptions import InputValidationError
-        from aiida.orm import Calculation
+        from aiida.orm.node.process import ProcessNode
 
         # So here I am giving two times the same tag
         with self.assertRaises(InputValidationError):
@@ -380,10 +386,10 @@ class TestQueryBuilder(AiidaTestCase):
 
         # here I am giving a nonsensical projection for the edge:
         with self.assertRaises(InputValidationError):
-            QueryBuilder().append(Calculation).append(StructureData, edge_tag='t').add_projection('t', True)
+            QueryBuilder().append(ProcessNode).append(StructureData, edge_tag='t').add_projection('t', True)
         # Giving a nonsensical limit
         with self.assertRaises(InputValidationError):
-            QueryBuilder().append(Calculation).limit(2.3)
+            QueryBuilder().append(ProcessNode).limit(2.3)
         # Giving a nonsensical offset
         with self.assertRaises(InputValidationError):
             QueryBuilder(offset=2.3)
@@ -406,35 +412,35 @@ class TestQueryBuilder(AiidaTestCase):
     def test_tags(self):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.node import Node
-        from aiida.orm.calculation import Calculation
+        from aiida.orm.node.process import ProcessNode
         from aiida.orm.data.structure import StructureData
         from aiida.orm.data.parameter import ParameterData
         from aiida.orm.computers import Computer
         qb = QueryBuilder()
         qb.append(Node, tag='n1')
-        qb.append(Node, tag='n2', edge_tag='e1', output_of='n1')
-        qb.append(Node, tag='n3', edge_tag='e2', output_of='n2')
-        qb.append(Computer, computer_of='n3', tag='c1', edge_tag='nonsense')
+        qb.append(Node, tag='n2', edge_tag='e1', with_incoming='n1')
+        qb.append(Node, tag='n3', edge_tag='e2', with_incoming='n2')
+        qb.append(Computer, with_node='n3', tag='c1', edge_tag='nonsense')
         self.assertEqual(qb.get_used_tags(), ['n1', 'n2', 'e1', 'n3', 'e2', 'c1', 'nonsense'])
 
         # Now I am testing the default tags,
-        qb = QueryBuilder().append(StructureData).append(Calculation).append(
+        qb = QueryBuilder().append(StructureData).append(ProcessNode).append(
             StructureData).append(
-            ParameterData, input_of=Calculation)
+            ParameterData, with_outgoing=ProcessNode)
         self.assertEqual(qb.get_used_tags(), [
-            'StructureData_1', 'Calculation_1',
-            'StructureData_1--Calculation_1', 'StructureData_2',
-            'Calculation_1--StructureData_2', 'ParameterData_1',
-            'Calculation_1--ParameterData_1'
+            'StructureData_1', 'ProcessNode_1',
+            'StructureData_1--ProcessNode_1', 'StructureData_2',
+            'ProcessNode_1--StructureData_2', 'ParameterData_1',
+            'ProcessNode_1--ParameterData_1'
         ])
         self.assertEqual(qb.get_used_tags(edges=False), [
-            'StructureData_1', 'Calculation_1',
+            'StructureData_1', 'ProcessNode_1',
             'StructureData_2', 'ParameterData_1',
         ])
         self.assertEqual(qb.get_used_tags(vertices=False), [
-            'StructureData_1--Calculation_1',
-            'Calculation_1--StructureData_2',
-            'Calculation_1--ParameterData_1'
+            'StructureData_1--ProcessNode_1',
+            'ProcessNode_1--StructureData_2',
+            'ProcessNode_1--ParameterData_1'
         ])
 
 
@@ -449,7 +455,7 @@ class TestQueryHelp(AiidaTestCase):
         from aiida.orm.data.parameter import ParameterData
         from aiida.orm.data import Data
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm.group import Group
+        from aiida.orm.groups import Group
         from aiida.orm.computers import Computer
         g = Group(name='helloworld').store()
         for cls in (StructureData, ParameterData, Data):
@@ -506,11 +512,11 @@ class TestQueryBuilderCornerCases(AiidaTestCase):
         decoding of a None value leads to an exception (this was the case
         under Django).
         """
+        from aiida.orm import Node, Data, Computer
+        from aiida.orm.node.process import ProcessNode
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm import Node, Data, Calculation
-        from aiida.orm import Computer
 
-        n1 = Calculation()
+        n1 = ProcessNode()
         n1.label = 'node2'
         n1._set_attr('foo', 1)
         n1.store()
@@ -518,17 +524,17 @@ class TestQueryBuilderCornerCases(AiidaTestCase):
         # Checking the correct retrieval of transport_params which is
         # a JSON field (in both backends).
         qb = QueryBuilder()
-        qb.append(Calculation, project=['id'], tag='calc')
+        qb.append(ProcessNode, project=['id'], tag='calc')
         qb.append(Computer, project=['id', 'transport_params'],
-                  outerjoin=True, computer_of='calc')
+                  outerjoin=True, with_node='calc')
         qb.all()
 
         # Checking the correct retrieval of _metadata which is
         # a JSON field (in both backends).
         qb = QueryBuilder()
-        qb.append(Calculation, project=['id'], tag='calc')
+        qb.append(ProcessNode, project=['id'], tag='calc')
         qb.append(Computer, project=['id', '_metadata'],
-                  outerjoin=True, computer_of='calc')
+                  outerjoin=True, with_node='calc')
         qb.all()
 
 
@@ -704,7 +710,7 @@ class QueryBuilderLimitOffsetsTest(AiidaTestCase):
 
 class QueryBuilderJoinsTests(AiidaTestCase):
     def test_joins1(self):
-        from aiida.orm import Node, Data, Calculation
+        from aiida.orm import Node, Data
         from aiida.orm.querybuilder import QueryBuilder
         # Creating n1, who will be a parent:
         parent = Node()
@@ -724,8 +730,8 @@ class QueryBuilderJoinsTests(AiidaTestCase):
         for n in (good_child, bad_child, parent, unrelated):
             n.store()
 
-        good_child.add_link_from(parent, label='parent')
-        bad_child.add_link_from(parent, label='parent')
+        good_child.add_incoming(parent, link_type=LinkType.CREATE, link_label='parent')
+        bad_child.add_incoming(parent, link_type=LinkType.CREATE, link_label='parent')
 
         # Using a standard inner join
         qb = QueryBuilder()
@@ -739,7 +745,7 @@ class QueryBuilderJoinsTests(AiidaTestCase):
         self.assertEqual(qb.count(), 1)
 
     def test_joins2(self):
-        from aiida.orm import Node, Data, Calculation
+        from aiida.orm import Node, Data
         from aiida.orm.querybuilder import QueryBuilder
         # Creating n1, who will be a parent:
 
@@ -754,18 +760,18 @@ class QueryBuilderJoinsTests(AiidaTestCase):
 
         # advisor 0 get student 0, 1
         for i in (0, 1):
-            students[i].add_link_from(advisors[0], label='is_advisor')
+            students[i].add_incoming(advisors[0], link_type=LinkType.CREATE, link_label='is_advisor')
 
         # advisor 1 get student 3, 4
         for i in (3, 4):
-            students[i].add_link_from(advisors[1], label='is_advisor')
+            students[i].add_incoming(advisors[1], link_type=LinkType.CREATE, link_label='is_advisor')
 
         # advisor 2 get student 5, 6, 7
         for i in (5, 6, 7):
-            students[i].add_link_from(advisors[2], label='is_advisor')
+            students[i].add_incoming(advisors[2], link_type=LinkType.CREATE, link_label='is_advisor')
 
         # let's add a differnt relationship than advisor:
-        students[9].add_link_from(advisors[2], label='lover')
+        students[9].add_incoming(advisors[2], link_type=LinkType.CREATE, link_label='lover')
 
         self.assertEqual(
             QueryBuilder().append(
@@ -782,31 +788,30 @@ class QueryBuilderJoinsTests(AiidaTestCase):
             ).count(), number_students)
 
     def test_joins3_user_group(self):
-        from aiida.orm.users import User
-        from aiida.orm.querybuilder import QueryBuilder
+        from aiida import orm
 
         # Create another user
         new_email = "newuser@new.n"
-        user = User(email=new_email, backend=self.backend).store()
+        user = orm.User(email=new_email, backend=self.backend).store()
 
         # Create a group that belongs to that user
-        from aiida.orm.group import Group
-        group = Group(name="node_group")
+        from aiida.orm.groups import Group
+        group = orm.Group(name="node_group")
         group.user = user
         group.store()
 
         # Search for the group of the user
-        qb = QueryBuilder()
-        qb.append(User, tag='user', filters={'id': {'==': user.id}})
-        qb.append(Group, belongs_to='user',
+        qb = orm.QueryBuilder()
+        qb.append(orm.User, tag='user', filters={'id': {'==': user.id}})
+        qb.append(orm.Group, with_user='user',
                   filters={'id': {'==': group.id}})
         self.assertEquals(qb.count(), 1, "The expected group that belongs to "
                                          "the selected user was not found.")
 
         # Search for the user that owns a group
-        qb = QueryBuilder()
-        qb.append(Group, tag='group', filters={'id': {'==': group.id}})
-        qb.append(User, owner_of='group', filters={'id': {'==': user.id}})
+        qb = orm.QueryBuilder()
+        qb.append(orm.Group, tag='group', filters={'id': {'==': group.id}})
+        qb.append(orm.User, with_group='group', filters={'id': {'==': user.id}})
 
         self.assertEquals(qb.count(), 1, "The expected user that owns the "
                                          "selected group was not found.")
@@ -850,15 +855,15 @@ class QueryBuilderPath(AiidaTestCase):
         # I create a strange graph, inserting links in a order
         # such that I often have to create the transitive closure
         # between two graphs
-        # I set everything as an INPUT-links now, because the QueryBuilder path query or
-        # our custom queries don't follow other links than CREATE or INPUT
-        n3.add_link_from(n2, link_type=LinkType.INPUT)
-        n2.add_link_from(n1, link_type=LinkType.INPUT)
-        n5.add_link_from(n3, link_type=LinkType.INPUT)
-        n5.add_link_from(n4, link_type=LinkType.INPUT)
-        n4.add_link_from(n2, link_type=LinkType.INPUT)
-        n7.add_link_from(n6, link_type=LinkType.INPUT)
-        n8.add_link_from(n7, link_type=LinkType.INPUT)
+        # I set everything as an INPUT_CALC-links now, because the QueryBuilder path query or
+        # our custom queries don't follow other links than CREATE or INPUT_CALC
+        n3.add_incoming(n2, link_type=LinkType.INPUT_CALC, link_label='link1')
+        n2.add_incoming(n1, link_type=LinkType.INPUT_CALC, link_label='link2')
+        n5.add_incoming(n3, link_type=LinkType.INPUT_CALC, link_label='link3')
+        n5.add_incoming(n4, link_type=LinkType.INPUT_CALC, link_label='link4')
+        n4.add_incoming(n2, link_type=LinkType.INPUT_CALC, link_label='link5')
+        n7.add_incoming(n6, link_type=LinkType.INPUT_CALC, link_label='link6')
+        n8.add_incoming(n7, link_type=LinkType.INPUT_CALC, link_label='link7')
 
         # There are no parents to n9, checking that
         self.assertEqual(set([]), set(q.get_all_parents([n9.pk])))
@@ -882,7 +887,7 @@ class QueryBuilderPath(AiidaTestCase):
             ).append(Node, ancestor_of='desc', filters={'id': n1.pk}
                      ).count(), 0)
 
-        n6.add_link_from(n5, link_type=LinkType.INPUT)
+        n6.add_incoming(n5, link_type=LinkType.INPUT_CALC, link_label='link1')
         # Yet, now 2 links from 1 to 8
         self.assertEquals(
             QueryBuilder().append(
@@ -939,7 +944,7 @@ class QueryBuilderPath(AiidaTestCase):
              frozenset([n1.pk, n2.pk, n4.pk, n5.pk, n6.pk, n7.pk, n8.pk])]
         ))
 
-        n7.add_link_from(n9, link_type=LinkType.INPUT)
+        n7.add_incoming(n9, link_type=LinkType.INPUT_CALC, link_label='link0')
         # Still two links...
 
         self.assertEquals(
@@ -954,7 +959,7 @@ class QueryBuilderPath(AiidaTestCase):
                 Node, filters={'id': n8.pk}, tag='desc'
             ).append(Node, ancestor_of='desc', filters={'id': n1.pk}
                      ).count(), 2)
-        n9.add_link_from(n6, link_type=LinkType.INPUT)
+        n9.add_incoming(n6, link_type=LinkType.INPUT_CALC, link_label='link6')
         # And now there should be 4 nodes
 
         self.assertEquals(
@@ -1007,7 +1012,8 @@ class TestManager(AiidaTestCase):
 
         I try to implement it in a way that does not depend on the past state.
         """
-        from aiida.orm import Node, DataFactory, Calculation
+        from aiida.orm import Node, DataFactory
+        from aiida.orm.node.process import ProcessNode
         from collections import defaultdict
 
         def store_and_add(n, statistics):
@@ -1034,7 +1040,7 @@ class TestManager(AiidaTestCase):
         store_and_add(Node(), expected_db_statistics)
         store_and_add(ParameterData(), expected_db_statistics)
         store_and_add(ParameterData(), expected_db_statistics)
-        store_and_add(Calculation(), expected_db_statistics)
+        store_and_add(ProcessNode(), expected_db_statistics)
 
         new_db_statistics = qmanager.get_creation_statistics()
         # I only check a few fields
@@ -1051,7 +1057,8 @@ class TestManager(AiidaTestCase):
 
         I try to implement it in a way that does not depend on the past state.
         """
-        from aiida.orm import Node, DataFactory, Calculation
+        from aiida.orm import Node, DataFactory
+        from aiida.orm.node.process import ProcessNode
         from collections import defaultdict
 
         def store_and_add(n, statistics):
@@ -1077,7 +1084,7 @@ class TestManager(AiidaTestCase):
         store_and_add(Node(), expected_db_statistics)
         store_and_add(ParameterData(), expected_db_statistics)
         store_and_add(ParameterData(), expected_db_statistics)
-        store_and_add(Calculation(), expected_db_statistics)
+        store_and_add(ProcessNode(), expected_db_statistics)
 
         new_db_statistics = self.backend.query_manager.get_creation_statistics()
         # I only check a few fields

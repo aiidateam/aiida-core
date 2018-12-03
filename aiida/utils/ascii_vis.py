@@ -94,13 +94,12 @@ def build_tree(node, node_label=None, show_pk=True, max_depth=1,
         relatives = []
 
         if descend:
-            outputs = node.get_outputs(link_type=follow_links_of_type)
+            outputs = node.get_outgoing(link_type=follow_links_of_type).all_nodes()
         else:  # ascend
             if follow_links_of_type is None:
-                outputs = node.get_inputs(link_type=LinkType.CREATE)
-                outputs.extend(node.get_inputs(link_type=LinkType.INPUT))
-            else:
-                outputs = node.get_inputs(link_type=follow_links_of_type)
+                follow_links_of_type = (LinkType.CREATE, LinkType.INPUT_CALC, LinkType.INPUT_WORK)
+
+            outputs = node.get_incoming(link_type=follow_links_of_type).all_nodes()
 
         for child in sorted(outputs, key=_ctime):
             relatives.append(
@@ -159,13 +158,11 @@ def _ctime(node):
 
 
 def calc_info(calc_node):
-    from aiida.orm.calculation.function import FunctionCalculation
-    from aiida.orm.calculation.inline import InlineCalculation
-    from aiida.orm.calculation.job import JobCalculation
-    from aiida.orm.calculation.work import WorkCalculation
+    from aiida.orm.node.process import CalcFunctionNode, CalcJobNode, WorkFunctionNode, WorkChainNode
+    from aiida.orm.node.process import WorkChainNode
     from aiida.work.processes import ProcessState
 
-    if isinstance(calc_node, WorkCalculation):
+    if isinstance(calc_node, WorkChainNode):
         plabel = calc_node.process_label
         pstate = calc_node.process_state
         winfo = calc_node.stepper_state_info
@@ -175,11 +172,11 @@ def calc_info(calc_node):
         else:
             s = u'{} <pk={}> [{}] [{}]'.format(plabel, calc_node.pk, pstate, winfo)
 
-    elif isinstance(calc_node, JobCalculation):
+    elif isinstance(calc_node, CalcJobNode):
         clabel = type(calc_node).__name__
         cstate = str(calc_node.get_state())
         s = u'{} <pk={}> [{}]'.format(clabel, calc_node.pk, cstate)
-    elif isinstance(calc_node, (FunctionCalculation, InlineCalculation)):
+    elif isinstance(calc_node, (WorkFunctionNode, CalcFunctionNode)):
         plabel = calc_node.process_label
         pstate = calc_node.process_state
         s = u'{} <pk={}> [{}]'.format(plabel, calc_node.pk, pstate)

@@ -12,7 +12,7 @@ from __future__ import division
 from __future__ import absolute_import
 from six.moves import zip, range
 import aiida.common
-from aiida.common import aiidalogger
+from aiida.common import AIIDA_LOGGER
 from aiida.orm.workflow import Workflow
 from aiida.orm import Code, Computer
 from aiida.orm import CalculationFactory, DataFactory
@@ -23,7 +23,7 @@ ParameterData = DataFactory('parameter')
 KpointsData = DataFactory('array.kpoints')
 StructureData = DataFactory('structure')
 
-logger = aiidalogger.getChild('WorkflowXTiO3')
+logger = AIIDA_LOGGER.getChild('WorkflowXTiO3')
 
 ## ===============================================
 ##    WorkflowXTiO3_EOS
@@ -141,7 +141,7 @@ class WorkflowXTiO3_EOS(Workflow):
 
         a_sweep = np.linspace(starting_alat * 0.85, starting_alat * 1.15, alat_steps).tolist()
 
-        aiidalogger.info("Storing a_sweep as " + str(a_sweep))
+        AIIDA_LOGGER.info("Storing a_sweep as " + str(a_sweep))
         self.add_attribute('a_sweep', a_sweep)
 
         for a in a_sweep:
@@ -163,7 +163,7 @@ class WorkflowXTiO3_EOS(Workflow):
         x_material = self.get_parameter("x_material")
         a_sweep = self.get_attribute("a_sweep")
 
-        aiidalogger.info("Retrieving a_sweep as {0}".format(a_sweep))
+        AIIDA_LOGGER.info("Retrieving a_sweep as {0}".format(a_sweep))
 
         # Get calculations
         start_calcs = self.get_step_calculations(self.eos)  # .get_calculations()
@@ -210,7 +210,7 @@ class WorkflowXTiO3_EOS(Workflow):
         optimal_alat = self.get_attribute("optimal_alat")
 
         opt_calc = self.get_step_calculations(self.optimize)[0]  # .get_calculations()[0]
-        opt_e = opt_calc.get_outputs(node_type=ParameterData)[0].get_dict()['energy']
+        opt_e = opt_calc.get_outgoing(node_class=ParameterData).first().get_dict()['energy']
 
         self.append_to_report(x_material + "Ti03 optimal with a=" + str(optimal_alat) + ", e=" + str(opt_e))
 

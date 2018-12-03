@@ -12,11 +12,15 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import plumpy
+
+from aiida.orm.node.process import WorkflowNode
 from aiida.work.processes import Process
 
 
 class DummyProcess(Process):
     """A Process that does nothing when it runs."""
+
+    _calc_class = WorkflowNode
 
     @classmethod
     def define(cls, spec):
@@ -30,6 +34,8 @@ class DummyProcess(Process):
 
 class AddProcess(Process):
     """A simple Process that adds two integers."""
+
+    _calc_class = WorkflowNode
 
     @classmethod
     def define(cls, spec):

@@ -2,11 +2,11 @@
 
 AiiDA calculations can be of two kinds:
 
-* :py:class:`JobCalculation <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation>`: those who need to be run on a scheduler
+* :py:class:`CalcJobNode <aiida.orm.node.process.calculation.calcjob.CalcJobNode>`: those who need to be run on a scheduler
 
-* :py:class:`InlineCalculation <aiida.orm.calculation.inline.InlineCalculation>`: rapid executions that are executed by the daemon itself, on your local machine.
+* :py:class:`CalcFunctionNode <aiida.orm.node.process.CalcFunctionNode>`: rapid executions that are executed by the daemon itself, on your local machine.
 
-In the following, we will refer to the JobCalculations as a Calculation for the sake of simplicity, unless we explicitly say otherwise. In the same way, the command ``verdi calculation`` refers to JobCalculations.
+In the following, we will refer to the CalcJobNodes as a Calculation for the sake of simplicity, unless we explicitly say otherwise. In the same way, the command ``verdi calculation`` refers to CalcJobNodes.
 
 The calculation state
 =====================
@@ -62,7 +62,7 @@ If you prefer, you can check the state of a calculation from within python. For 
     from aiida import load_dbenv
     load_dbenv()
 
-    from aiida.orm import JobCalculation
+    from aiida.orm.node.process import CalcJobNode
 
     ## pk must be a valid integer pk
     calc = load_node(pk)
@@ -97,8 +97,8 @@ Setting calculation properties
 ==============================
 
 There are various options that can be set that control the behavior of a calculation.
-They can be set through the :meth:~`.AbstractJobCalculation.set_option`` method.
-Here follows a brief documentation of their action. You can also find them in the  :class:`.AbstractJobCalculation` API reference.
+They can be set through the :meth:~`aiida.orm.node.process.calculation.calcjob.CalcJobNode.set_option`` method.
+Here follows a brief documentation of their action. You can also find them in the  :class:`aiida.orm.node.process.calculation.calcjob.CalcJobNode` API reference.
 
 * ``max_memory_kb``: require explicitely the memory to be allocated to the scheduler job.
 * ``append_text``: write a set of bash commands to be executed after the call to the executable. These commands are executed only for this instance of calculations. Look also at the computer and code append_text to write bash commands for any job run on that  computer or with that code.

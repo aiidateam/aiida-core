@@ -79,12 +79,14 @@ py:class  type
 py:class  __builtin__.bool
 py:class  __builtin__.float
 py:class  __builtin__.int
+py:class  __builtin__.object
 py:class  __builtin__.str
 py:class  __builtin__.dict
 # ... and the same for Python 3
 py:class  builtins.bool
 py:class  builtins.float
 py:class  builtins.int
+py:class  builtins.object
 py:class  builtins.str
 py:class  builtins.dict
 
@@ -103,6 +105,8 @@ py:obj bool
 # Note: These are needed, if they are provided, e.g.
 # as types or rtypes without actually being imported
 py:class  abc.ABCMeta
+
+py:class  CalcJobExitStatus
 
 py:exc    click.BadParameter
 py:class  click.ParamType
@@ -134,6 +138,7 @@ py:class  logging.Filter
 py:class  logging.Handler
 py:class  logging.record
 py:class  logging.Logger
+py:class  logging.LoggerAdapter
 
 py:class  paramiko.proxy.ProxyCommand
 
@@ -179,7 +184,8 @@ py:class  tuple
 
 py:class  staticmethod
 
-
+py:class  django.contrib.auth.base_user.AbstractBaseUser
+py:class  django.contrib.auth.base_user.BaseUserManager
 py:class  django.contrib.auth.models.AbstractBaseUser
 py:class  django.contrib.auth.models.BaseUserManager
 py:class  django.contrib.auth.models.PermissionsMixin
@@ -194,6 +200,7 @@ py:class  sqlalchemy.ext.declarative.api.Base
 py:class  sqlalchemy.ext.declarative.api.Model
 py:class  sqlalchemy.sql.functions.FunctionElement
 py:class  sqlalchemy.orm.query.Query
+py:class  sqlalchemy.orm.util.AliasedClass
 py:exc    sqlalchemy.orm.exc.MultipleResultsFound
 
 py:class  sphinx.ext.autodoc.ClassDocumenter
@@ -221,3 +228,7 @@ py:class yaml.dumper.Dumper
 py:class yaml.loader.Loader
 
 py:class uuid.UUID
+
+# typing
+py:class typing.Generic
+py:class typing.TypeVar

@@ -12,7 +12,9 @@ from __future__ import print_function
 from __future__ import absolute_import
 import threading
 
+import plumpy
 from plumpy.utils import AttributesFrozendict
+
 from aiida import work
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.lang import override
@@ -20,10 +22,13 @@ from aiida.orm import load_node
 from aiida.orm.data.int import Int
 from aiida.orm.data.frozendict import FrozenDict
 from aiida.orm.data.parameter import ParameterData
+from aiida.orm.node.process import CalcFunctionNode, WorkflowNode
 from aiida.work import test_utils, Process
 
 
 class NameSpacedProcess(work.Process):
+
+    _calc_class = WorkflowNode
 
     @classmethod
     def define(cls, spec):
@@ -59,9 +64,9 @@ class TestProcessNamespace(AiidaTestCase):
         self.assertTrue(isinstance(input_node, Int))
         self.assertEquals(input_node.value, 5)
 
-        # Check that the link of the WorkCalculation node has the correct link name
-        self.assertTrue('some_name_space_a' in proc.calc.get_inputs_dict())
-        self.assertEquals(proc.calc.get_inputs_dict()['some_name_space_a'], 5)
+        # Check that the link of the process node has the correct link name
+        self.assertTrue('some_name_space_a' in proc.calc.get_incoming().all_link_labels())
+        self.assertEquals(proc.calc.get_incoming().get_node_by_label('some_name_space_a'), 5)
 
 
 class ProcessStackTest(work.Process):
@@ -106,10 +111,10 @@ class TestProcess(AiidaTestCase):
         inputs['store_provenance'] = True
         p = test_utils.DummyProcess(inputs)
 
-        for label, value in p._calc.get_inputs_dict().items():
-            self.assertTrue(label in inputs)
-            self.assertEqual(int(label), int(value.value))
-            dummy_inputs.remove(label)
+        for entry in p._calc.get_incoming().all():
+            self.assertTrue(entry.link_label in inputs)
+            self.assertEqual(int(entry.link_label), int(entry.node.value))
+            dummy_inputs.remove(entry.link_label)
 
         # Make sure there are no other inputs
         self.assertFalse(dummy_inputs)
@@ -143,7 +148,7 @@ class TestProcess(AiidaTestCase):
         self.assertTrue(p.calc.is_finished_ok)
 
     def test_calculation_input(self):
-        @work.workfunction
+        @work.calcfunction
         def simple_wf():
             return {'a': Int(6), 'b': Int(7)}
 
@@ -153,14 +158,14 @@ class TestProcess(AiidaTestCase):
         dp = test_utils.DummyProcess(inputs={'calc': calc})
         work.launch.run(dp)
 
-        input_calc = dp.calc.get_inputs_dict()['calc']
+        input_calc = dp.calc.get_incoming().get_node_by_label('calc')
         self.assertTrue(isinstance(input_calc, FrozenDict))
         self.assertEqual(input_calc['a'], outputs['a'])
 
     def test_save_instance_state(self):
         proc = test_utils.DummyProcess()
         # Save the instance state
-        bundle = work.Bundle(proc)
+        bundle = plumpy.Bundle(proc)
         proc2 = bundle.unbundle()
 
     def test_process_type_with_entry_point(self):
@@ -190,7 +195,7 @@ class TestProcess(AiidaTestCase):
             'options': options,
         }
 
-        entry_point = 'simpleplugins.templatereplacer'
+        entry_point = 'templatereplacer'
         calculation = CalculationFactory(entry_point)
         job_process = calculation.process()
         process = job_process(inputs=inputs)
@@ -214,39 +219,3 @@ class TestProcess(AiidaTestCase):
         # Verify that load_process_class on the calculation node returns the original entry point class
         recovered_process = process.calc.load_process_class()
         self.assertEqual(recovered_process, process.__class__)
-
-
-class TestFunctionProcess(AiidaTestCase):
-
-    def test_fixed_inputs(self):
-        def wf(a, b, c):
-            return {'a': a, 'b': b, 'c': c}
-
-        inputs = {'a': Int(4), 'b': Int(5), 'c': Int(6)}
-        function_process_class = work.FunctionProcess.build(wf)
-        self.assertEqual(work.run(function_process_class, **inputs), inputs)
-
-    def test_kwargs(self):
-        def wf_with_kwargs(**kwargs):
-            return kwargs
-
-        def wf_without_kwargs():
-            return Int(4)
-
-        def wf_fixed_args(a):
-            return {'a': a}
-
-        a = Int(4)
-        inputs = {'a': a}
-
-        function_process_class = work.FunctionProcess.build(wf_with_kwargs)
-        outs = work.launch.run(function_process_class, **inputs)
-        self.assertEqual(outs, inputs)
-
-        function_process_class = work.FunctionProcess.build(wf_without_kwargs)
-        with self.assertRaises(ValueError):
-            work.launch.run(function_process_class, **inputs)
-
-        function_process_class = work.FunctionProcess.build(wf_fixed_args)
-        outs = work.launch.run(function_process_class, **inputs)
-        self.assertEqual(outs, inputs)

@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""ORM Log tests"""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -14,19 +15,18 @@ import logging
 
 from six.moves import range
 
-from aiida.utils.timezone import now
-from aiida.common.log import LOG_LEVEL_REPORT
-from aiida.orm.log import OrderSpecifier, ASCENDING, DESCENDING
-from aiida.orm.backends import construct_backend
-from aiida.orm.calculation import Calculation
 from aiida.backends.testbase import AiidaTestCase
+from aiida.common.log import LOG_LEVEL_REPORT
+from aiida import orm
+from aiida.orm.node.process import ProcessNode
+from aiida.utils.timezone import now
 
 
 class TestBackendLog(AiidaTestCase):
+    """Test the Log entity"""
 
     def setUp(self):
         super(TestBackendLog, self).setUp()
-        self._backend = construct_backend()
         self._record = {
             'time': now(),
             'loggername': 'loggername',
@@ -34,7 +34,9 @@ class TestBackendLog(AiidaTestCase):
             'objname': 'objname',
             'objpk': 0,
             'message': 'This is a template record message',
-            'metadata': {'content': 'test'},
+            'metadata': {
+                'content': 'test'
+            },
         }
 
     def tearDown(self):
@@ -42,7 +44,7 @@ class TestBackendLog(AiidaTestCase):
         Delete all the created log entries
         """
         super(TestBackendLog, self).tearDown()
-        self._backend.logs.delete_many({})
+        orm.Log.objects.delete_many({})
 
     def test_delete_many(self):
         """
@@ -52,56 +54,48 @@ class TestBackendLog(AiidaTestCase):
         """
         count = 10
         for _ in range(count):
-            self._backend.logs.create_entry(**self._record)
+            orm.Log(**self._record)
 
-        self.assertEquals(len(self._backend.logs.find()), count)
-        self._backend.logs.delete_many({})
-        self.assertEquals(len(self._backend.logs.find()), 0)
+        self.assertEqual(len(orm.Log.objects.all()), count)
+        orm.Log.objects.delete_many({})
+        self.assertEqual(len(orm.Log.objects.all()), 0)
 
     def test_create_log_message(self):
         """
         Test the manual creation of a log entry
         """
         record = self._record
-        entry = self._backend.logs.create_entry(
-            record['time'],
-            record['loggername'],
-            record['levelname'],
-            record['objname'],
-            record['objpk'],
-            record['message'],
-            record['metadata']
-        )
+        entry = orm.Log(record['time'], record['loggername'], record['levelname'], record['objname'], record['objpk'],
+                        record['message'], record['metadata'])
 
-        self.assertEquals(entry.time, record['time'])
-        self.assertEquals(entry.loggername, record['loggername'])
-        self.assertEquals(entry.levelname, record['levelname'])
-        self.assertEquals(entry.objname, record['objname'])
-        self.assertEquals(entry.objpk, record['objpk'])
-        self.assertEquals(entry.message, record['message'])
-        self.assertEquals(entry.metadata, record['metadata'])
-
-        # Regression test for #2155
-        self.assertEquals(entry.id, entry._model.id)
+        self.assertEqual(entry.time, record['time'])
+        self.assertEqual(entry.loggername, record['loggername'])
+        self.assertEqual(entry.levelname, record['levelname'])
+        self.assertEqual(entry.objname, record['objname'])
+        self.assertEqual(entry.objpk, record['objpk'])
+        self.assertEqual(entry.message, record['message'])
+        self.assertEqual(entry.metadata, record['metadata'])
 
     def test_find_orderby(self):
         """
         Test the order_by option of log.find
         """
+        from aiida.orm.logs import OrderSpecifier, ASCENDING, DESCENDING
+
         for pk in range(10):
             record = self._record
             record['objpk'] = pk
-            self._backend.logs.create_entry(**record)
+            orm.Log(**record)
 
         order_by = [OrderSpecifier('objpk', ASCENDING)]
-        entries = self._backend.logs.find(order_by=order_by)
+        entries = orm.Log.objects.find(order_by=order_by)
 
-        self.assertEquals(entries[0].objpk, 0)
+        self.assertEqual(entries[0].objpk, 0)
 
         order_by = [OrderSpecifier('objpk', DESCENDING)]
-        entries = self._backend.logs.find(order_by=order_by)
+        entries = orm.Log.objects.find(order_by=order_by)
 
-        self.assertEquals(entries[0].objpk, 9)
+        self.assertEqual(entries[0].objpk, 9)
 
     def test_find_limit(self):
         """
@@ -109,10 +103,10 @@ class TestBackendLog(AiidaTestCase):
         """
         limit = 2
         for _ in range(limit * 2):
-            self._backend.logs.create_entry(**self._record)
+            orm.Log(**self._record)
 
-        entries = self._backend.logs.find(limit=limit)
-        self.assertEquals(len(entries), limit)
+        entries = orm.Log.objects.find(limit=limit)
+        self.assertEqual(len(entries), limit)
 
     def test_find_filter(self):
         """
@@ -122,11 +116,11 @@ class TestBackendLog(AiidaTestCase):
         for pk in range(10):
             record = self._record
             record['objpk'] = pk
-            self._backend.logs.create_entry(**record)
+            orm.Log(**record)
 
-        entries = self._backend.logs.find(filter_by={'objpk': target_pk})
-        self.assertEquals(len(entries), 1)
-        self.assertEquals(entries[0].objpk, target_pk)
+        entries = orm.Log.objects.find(filters={'objpk': target_pk})
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0].objpk, target_pk)
 
     def test_db_log_handler(self):
         """
@@ -135,19 +129,19 @@ class TestBackendLog(AiidaTestCase):
         attached to a calculation node
         """
         message = 'Testing logging of critical failure'
-        calc = Calculation()
+        node = ProcessNode()
 
         # Firing a log for an unstored should not end up in the database
-        calc.logger.critical(message)
+        node.logger.critical(message)
 
-        logs = self._backend.logs.find()
+        logs = orm.Log.objects.find()
 
-        self.assertEquals(len(logs), 0)
+        self.assertEqual(len(logs), 0)
 
         # After storing the node, logs above log level should be stored
-        calc.store()
-        calc.logger.critical(message)
-        logs = self._backend.logs.find()
+        node.store()
+        node.logger.critical(message)
+        logs = orm.Log.objects.find()
 
-        self.assertEquals(len(logs), 1)
-        self.assertEquals(logs[0].message, message)
+        self.assertEqual(len(logs), 1)
+        self.assertEqual(logs[0].message, message)

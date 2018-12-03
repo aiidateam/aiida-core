@@ -38,11 +38,11 @@ Python, without being submitted to a cluster.
 However, this operation takes one (or more) input data nodes, and creates new
 data nodes, the operation itself is not recorded in the database, and provenance
 is lost. In order to put a Calculation object inbetween, we define the
-:py:class:`InlineCalculation <aiida.orm.calculation.inline.InlineCalculation>`
+:py:class:`CalcFunctionNode <aiida.orm.node.process.CalcFunctionNode>`
 class, that is used as the class for these calculations that are run "in-line".
 
 We also provide a wrapper (that also works as a decorator of a function),
-:py:func:`~aiida.orm.calculation.inline.make_inline`. This can be used
+:py:func:`~aiida.work.process_function.calcfunction`. This can be used
 to wrap suitably defined function, so that after their execution,
 a node representing their execution is stored in the DB, and suitable input
 and output nodes are also stored.
@@ -474,13 +474,23 @@ In case a method is renamed or removed, this is the procedure to follow:
 
      import warnings
 
-     warnings.warn(
-         "OLDMETHODNAME is deprecated, use NEWMETHODNAME instead",
-         DeprecationWarning)
+     # If we call this DeprecationWarning, pycharm will properly strike out the function
+     from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+     warnings.warn("<Deprecation warning here - MAKE IT SPECIFIC TO THIS DEPRECATION, as it will be shown only once per different message>", DeprecationWarning)
+        
+     # <REST OF THE FUNCTION HERE>
+ 
+   (of course replace the parts between ``< >`` symbols with the
+   correct strings).
 
-   (of course, replace ``OLDMETHODNAME`` and ``NEWMETHODNAME`` with the
-   correct string, and adapt the strings to the correct content if you are
-   only removing a function, or just adding a new one).
+   The advantage of the method above is:
+
+   - pycharm will still show the method crossed out
+   - Our ``AiidaDeprecationWarning`` does not inherit from ``DeprecationWarning``, so it will not be "hidden" by python
+   - User can disable our warnings (and only those) by using AiiDA
+     properties with::
+       
+       verdi devel setproperty warnings.showdeprecations False
 
 Changing the config.json structure
 ++++++++++++++++++++++++++++++++++

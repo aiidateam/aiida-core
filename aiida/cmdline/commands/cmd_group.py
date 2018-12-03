@@ -75,6 +75,7 @@ def group_delete(group, force):
     """
     Pass the GROUP to delete an existing group.
     """
+    from aiida import orm
     group_pk = group.pk
     group_name = group.name
 
@@ -87,7 +88,7 @@ def group_delete(group, force):
     if not force:
         click.confirm('Are you sure to kill the group with PK = {} ({})?'.format(group_pk, group_name), abort=True)
 
-    group.delete()
+    orm.Group.objects.delete(group_pk)
     echo.echo_success("Group '{}' (PK={}) deleted.".format(group_name, group_pk))
 
 
@@ -221,7 +222,7 @@ def group_list(all_users, user_email, group_type, with_description, count, past_
     """
     import datetime
     from aiida.utils import timezone
-    from aiida.orm.group import get_group_type_mapping
+    from aiida.orm.groups import get_group_type_mapping
     from aiida import orm
     from tabulate import tabulate
 
@@ -252,13 +253,12 @@ def group_list(all_users, user_email, group_type, with_description, count, past_
     name_filters = {'startswith': startswith, 'endswith': endswith, 'contains': contains}
 
     # Depending on --nodes option use or not key "nodes"
-    from aiida.orm.implementation import Group as OrmGroup
 
     if node:
-        result = OrmGroup.query(
+        result = orm.Group.query(
             user=user, type_string=type_string, nodes=node, past_days=n_days_ago, name_filters=name_filters)
     else:
-        result = OrmGroup.query(user=user, type_string=type_string, past_days=n_days_ago, name_filters=name_filters)
+        result = orm.Group.query(user=user, type_string=type_string, past_days=n_days_ago, name_filters=name_filters)
 
     projection_lambdas = {
         'pk': lambda group: str(group.pk),
@@ -293,10 +293,9 @@ def group_create(group_name):
     """
     Create a new empty group with the name GROUP_NAME
     """
+    from aiida import orm
 
-    from aiida.orm import Group as OrmGroup
-
-    group, created = OrmGroup.get_or_create(name=group_name)
+    group, created = orm.Group.objects.get_or_create(name=group_name)
 
     if created:
         echo.echo_success("Group created with PK = {} and name '{}'".format(group.pk, group.name))

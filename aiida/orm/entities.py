@@ -15,8 +15,6 @@ from __future__ import absolute_import
 from aiida.common import exceptions
 from aiida.common.utils import classproperty, type_check
 
-from . import backends
-
 __all__ = ('Entity', 'Collection')
 
 
@@ -25,6 +23,9 @@ class Collection(object):
 
     def __init__(self, backend, entity_class):
         # assert issubclass(entity_class, Entity), "Must provide an entity type"
+        if backend is None:
+            from . import backends
+            backend = backend or backends.construct_backend()
         self._backend = backend
         self._entity_type = entity_class
 
@@ -57,49 +58,49 @@ class Collection(object):
         :return: a new query builder instance
         :rtype: :class:`aiida.orm.QueryBuilder`
         """
-        # pylint: disable=no-self-use, fixme
+        # pylint: disable=no-self-use
         from . import querybuilder
 
         query = querybuilder.QueryBuilder()
         query.append(self._entity_type, project='*')
         return query
 
-    def get(self, **kwargs):
+    def get(self, **filters):
         """
-        Get a collection entry using keyword parameter filters
+        Get a single collection entry that matches the filter criteria
 
-        :param kwargs: the filters identifying the object to get
+        :param filters: the filters identifying the object to get
         :return: the entry
         """
-        query = self.query()
-        query.add_filter(self.entity_type, kwargs)
-        res = [_[0] for _ in query.all()]
-        if not res:
-            raise exceptions.NotExistent("No {} with filter '{}' found".format(self.entity_type.__name__, kwargs))
-        if len(res) > 1:
-            raise exceptions.MultipleObjectsError("Multiple {}s found with the same id '{}'".format(
-                self.entity_type.__name__, id))
-
-        return res[0]
-
-    def find(self, **filters):
-        """
-        Find entries matching the given filters
-
-        :param filters: the keyword value pair filters to match
-        :return: a list of resulting matches
-        :rtype: list
-        """
-        query = self.query()
-        query.add_filter(self.entity_type, filters)
-        res = [_[0] for _ in query.all()]
+        res = self.find(filters=filters)
         if not res:
             raise exceptions.NotExistent("No {} with filter '{}' found".format(self.entity_type.__name__, filters))
         if len(res) > 1:
             raise exceptions.MultipleObjectsError("Multiple {}s found with the same id '{}'".format(
                 self.entity_type.__name__, id))
 
-        return res
+        return res[0]
+
+    def find(self, filters=None, order_by=None, limit=None):
+        """
+        Find collection entries matching the filter criteria
+
+        :param filters: the keyword value pair filters to match
+        :param order_by: a list of (key, direction) pairs specifying the sort order
+        :type order_by: list
+        :param limit: the maximum number of results to return
+        :type limit: int
+        :return: a list of resulting matches
+        :rtype: list
+        """
+        query = self.query()
+        filters = filters or {}
+        query.add_filter(self.entity_type, filters)
+        if order_by:
+            query.order_by({self.entity_type: order_by})
+        if limit:
+            query.limit(limit)
+        return [_[0] for _ in query.all()]
 
     def all(self):
         """
@@ -127,6 +128,8 @@ class Entity(object):
         :param backend: the optional backend to use (otherwise use default)
         :return: an object that can be used to access entites of this type
         """
+        from . import backends
+
         backend = backend or backends.construct_backend()
         return cls.Collection(backend, cls)
 
@@ -146,9 +149,9 @@ class Entity(object):
         from . import implementation
 
         type_check(backend_entity, implementation.BackendEntity)
-        computer = cls.__new__(cls)
-        computer.init_from_backend(backend_entity)
-        return computer
+        entity = cls.__new__(cls)
+        entity.init_from_backend(backend_entity)
+        return entity
 
     def __init__(self, backend_entity):
         """

@@ -535,7 +535,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
 
         def enable_disable_globally_loop(self, user=None, user_enabled_state=True):
             result = self.cli_runner.invoke(computer_enable, [str(self.comp.label)])
-            self.assertIsNone(result.exception)
+            self.assertIsNone(result.exception, result.output)
             self.assertTrue(self.comp.is_enabled())
             """
             Change global state check if user states are affected
@@ -550,7 +550,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
                     self.assertFalse(self.comp.is_user_enabled(user))
 
             result = self.cli_runner.invoke(computer_disable, [str(self.comp.label)])
-            self.assertIsNone(result.exception)
+            self.assertIsNone(result.exception, result.output)
             self.assertFalse(self.comp.is_enabled())
 
             # Check that the change of global state did not affect the
@@ -562,7 +562,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
                     self.assertFalse(self.comp.is_user_enabled(user))
 
             result = self.cli_runner.invoke(computer_enable, [str(self.comp.label)])
-            self.assertIsNone(result.exception)
+            self.assertIsNone(result.exception, result.output)
             self.assertTrue(self.comp.is_enabled())
 
             # Check that the change of global state did not affect the
@@ -577,7 +577,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
         result = self.cli_runner.invoke(computer_enable,
                                         ['--user={}'.format(self.user_email),
                                          str(self.comp.label)])
-        self.assertIsNone(result.exception, msg="Error, output: {}".format(result.output))
+        self.assertClickResultNoException(result)
         self.assertTrue(self.comp.is_user_enabled(self.user))
         # enable and disable the computer globally as well
         enable_disable_globally_loop(self, self.user, user_enabled_state=True)
@@ -612,7 +612,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
         # Testing the right computer should pass locally
         result = self.cli_runner.invoke(computer_test, ['comp_cli_test_computer'])
         # No exceptions should arise
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
 
     def test_computer_list(self):
         """
@@ -621,7 +621,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
         # Check the vanilla command works
         result = self.cli_runner.invoke(computer_list, [])
         # No exceptions should arise
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
         # Something should be printed to stdout
         self.assertIsNotNone(result.output)
 
@@ -629,7 +629,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
         for opt in ['-r', '--raw', '-a', '--all']:
             result = self.cli_runner.invoke(computer_list, [opt])
             # No exceptions should arise
-            self.assertIsNone(result.exception)
+            self.assertIsNone(result.exception, result.output)
             # Something should be printed to stdout
             self.assertIsNotNone(result.output)
 
@@ -643,7 +643,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
         result = self.cli_runner.invoke(computer_show, ['comp_cli_test_computer'])
 
         # No exceptions should arise
-        self.assertIsNone(result.exception, "".join(traceback.format_exception(*result.exc_info)))
+        self.assertClickResultNoException(result)
         # Something should be printed to stdout
         self.assertIsNotNone(result.output)
 
@@ -680,7 +680,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
         options = ['comp_cli_test_computer', 'renamed_test_computer']
         result = self.cli_runner.invoke(computer_rename, options)
         # Exception should be not be raised
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
 
         # Check that the name really was changed
         # The old name should not be available
@@ -693,7 +693,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
         options = ['renamed_test_computer', 'comp_cli_test_computer']
         result = self.cli_runner.invoke(computer_rename, options)
         # Exception should be not be raised
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
 
         # Check that the name really was changed
         # The old name should not be available
@@ -723,7 +723,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
         options = ['computer_for_test_delete']
         result = self.cli_runner.invoke(computer_delete, options)
         # Exception should be not be raised
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
         # Check that the computer really was deleted
         with self.assertRaises(NotExistent):
             orm.Computer.objects(self.backend).get(name='computer_for_test_delete')
@@ -753,7 +753,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
         label = 'computer_duplicate_noninteractive'
         result = self.cli_runner.invoke(computer_duplicate,
                                         ['--non-interactive', '--label=' + label, str(self.comp.pk)])
-        self.assertIsNone(result.exception)
+        self.assertIsNone(result.exception, result.output)
 
         new_computer = orm.Computer.objects(self.backend).get(name=label)
         self.assertEquals(self.comp.description, new_computer.description)

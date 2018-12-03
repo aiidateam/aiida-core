@@ -204,20 +204,12 @@ There are two arguments:
    the input files. This tempfolder is gonna be copied to the remote
    cluster.
 
-2. ``inputdict``: contains all the input data nodes as a dictionary, in the
-same format that is returned by the ``get_inputs_dict()`` method,
+2. ``inputdict``: contains all the input data nodes as a dictionary
 i.e. a linkname as key, and the object as value.
 
 .. versionchanged:: 0.5
   inputdict should contain all input ``Data`` nodes, *and* the code.
-  (this is what the ``get_inputs_dict()`` method returns, by the way).
-  In older versions, the code is not present.
 
-In general, you simply want to do::
-
-      inputdict = self.get_inputs_dict()
-
-right before calling ``_prepare_for_submission``.
 The reason for having this explicitly passed is that the plugin does not have
 to perform explicit database queries, and moreover this is useful to test
 for submission without the need to store all nodes on the DB.    
@@ -494,12 +486,11 @@ A kind of template for writing such parser for the calculation class
                 nodes.
             """           
             # retrieve the whole list of input links
-            calc_input_parameterdata = self._calc.get_inputs(node_type=ParameterData,
-                                                             also_labels=True)
+            calc_input_parameterdata = self._calc.get_incoming(node_class=ParameterData)
 
             # then look for parameterdata only
             input_param_name = self._calc.get_linkname('parameters')
-            params = [i[1] for i in calc_input_parameterdata if i[0]==input_param_name]
+            params = [i.node for i in calc_input_parameterdata if i.label==input_param_name]
             if len(params) != 1:
                 # Use self.logger to log errors, warnings, ...
                 # This will also add an entry to the DbLog table associated

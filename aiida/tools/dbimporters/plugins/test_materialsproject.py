@@ -21,8 +21,8 @@ from aiida.backends.testbase import AiidaTestCase
 
 
 def run_materialsproject_api_tests():
-    from aiida.settings import profile_conf
-    return profile_conf.get('run_materialsproject_api_tests', False)
+    from aiida.settings import PROFILE_CONF
+    return PROFILE_CONF.get('run_materialsproject_api_tests', False)
 
 
 class TestMaterialsProject(AiidaTestCase):

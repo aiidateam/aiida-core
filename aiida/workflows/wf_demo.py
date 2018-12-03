@@ -12,12 +12,12 @@ from __future__ import absolute_import
 from __future__ import print_function
 import plumpy
 import aiida.common
-from aiida.common import aiidalogger
+from aiida.common import AIIDA_LOGGER
 from aiida.orm.workflow import Workflow
 from aiida.orm import Code, Computer
 
 
-logger = aiidalogger.getChild('WorkflowDemo')
+logger = AIIDA_LOGGER.getChild('WorkflowDemo')
 
 
 class WorkflowDemo(Workflow):
@@ -28,7 +28,7 @@ class WorkflowDemo(Workflow):
         from aiida.orm import Code, Computer, CalculationFactory
         from aiida.common.datastructures import calc_states
 
-        CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
+        CustomCalc = CalculationFactory('templatereplacer')
 
         computer = Computer.get("localhost")
 
@@ -86,7 +86,7 @@ class SubWorkflowDemo(Workflow):
         from aiida.orm import Code, Computer, CalculationFactory
         from aiida.common.datastructures import calc_states
 
-        CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
+        CustomCalc = CalculationFactory('templatereplacer')
 
         computer = Computer.get("localhost")
 
@@ -139,7 +139,7 @@ class BranchWorkflowDemo(Workflow):
         from aiida.orm import Code, Computer, CalculationFactory
         from aiida.common.datastructures import calc_states
 
-        CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
+        CustomCalc = CalculationFactory('templatereplacer')
 
         computer = Computer.get("localhost")
 
@@ -226,7 +226,7 @@ class LoopBranchWorkflowDemo(Workflow):
         from aiida.orm import Code, Computer, CalculationFactory
         from aiida.common.datastructures import calc_states
 
-        CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
+        CustomCalc = CalculationFactory('templatereplacer')
 
         computer = Computer.get("localhost")
 

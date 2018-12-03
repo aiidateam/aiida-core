@@ -157,7 +157,7 @@ def setup_profile(profile, only_config, set_default=False, non_interactive=False
     from aiida.common.setup import DEFAULT_AIIDA_USER
     from aiida import orm
 
-    if not orm.User.objects.find(email=DEFAULT_AIIDA_USER):
+    if not orm.User.objects.find({'email': DEFAULT_AIIDA_USER}):
         echo.echo("Installing default AiiDA user...")
         nuser = orm.User(email=DEFAULT_AIIDA_USER, first_name="AiiDA", last_name="Daemon")
         nuser.is_active = True

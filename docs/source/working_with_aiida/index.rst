@@ -55,7 +55,7 @@ Data types
 Schedulers
 ==========
 
-As described in the section about calculations, ``JobCalculation`` instances are submitted by the daemon to an external scheduler.
+As described in the section about calculations, ``CalcJobNode`` instances are submitted by the daemon to an external scheduler.
 For this functionality to work, AiiDA needs to be able to interact with these schedulers.
 Interfaces have been written for some of the most used schedulers.
 

@@ -7,15 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from aiida.orm.implementation.calculation import Calculation, JobCalculation
-from .inline import *
-from .work import WorkCalculation
-from .function import FunctionCalculation
 
-_local = 'Calculation', 'JobCalculation', 'WorkCalculation', 'FunctionCalculation'
+from .job import JobCalculation
 
-__all__ = _local + inline.__all__
+__all__ = ('JobCalculation',)

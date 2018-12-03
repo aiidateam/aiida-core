@@ -19,7 +19,7 @@ import six
 
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.workflow import DbWorkflow, DbWorkflowStep
-from aiida.common import aiidalogger
+from aiida.common import AIIDA_LOGGER
 from aiida.common.datastructures import (wf_states, wf_exit_call,
                                          wf_default_call)
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
@@ -30,9 +30,8 @@ from aiida.common.utils import md5_file, str_timedelta
 from aiida.orm.implementation.general.workflow import AbstractWorkflow
 from aiida.orm.implementation.sqlalchemy.utils import django_filter
 from aiida.utils import timezone
-from aiida.common.log import get_dblogger_extra
 
-logger = aiidalogger.getChild('Workflow')
+logger = AIIDA_LOGGER.getChild('Workflow')
 
 
 class Workflow(AbstractWorkflow):
@@ -126,7 +125,7 @@ class Workflow(AbstractWorkflow):
 
             # This stores the MD5 as well, to test in case the workflow has
             # been modified after the launch
-            self._dbworkflowinstance = DbWorkflow(user=user.dbuser,
+            self._dbworkflowinstance = DbWorkflow(user=user.dbmodel,
                                                   module=self.caller_module,
                                                   module_class=self.caller_module_class,
                                                   script_path=self.caller_file,
@@ -230,19 +229,6 @@ class Workflow(AbstractWorkflow):
 
         q = django_filter(DbWorkflow.aiida_query, **kwargs)
         return q
-
-    @property
-    def logger(self):
-        """
-        Get the logger of the Workflow object, so that it also logs to the
-        DB.
-
-        :return: LoggerAdapter object, that works like a logger, but also has
-          the 'extra' embedded
-        """
-
-        return logging.LoggerAdapter(logger=self._logger,
-                                     extra=get_dblogger_extra(self))
 
     def store(self):
         """
@@ -474,7 +460,7 @@ class Workflow(AbstractWorkflow):
 
         step_list = self.dbworkflowinstance.steps
         automatic_user = orm.User.objects(self._backend).get_default().backend_entity
-        step = [_ for _ in step_list if _.name == step_method_name and _.user == automatic_user.dbuser]
+        step = [_ for _ in step_list if _.name == step_method_name and _.user == automatic_user.dbmodel]
         try:
             return step[0]
         except IndexError:
@@ -641,7 +627,7 @@ class Workflow(AbstractWorkflow):
 
             user = orm.User.objects(self._backend).get_default().backend_entity
             method_step, created = self.dbworkflowinstance._get_or_create_step(name=wrapped_method,
-                                                                               user=user.dbuser)
+                                                                               user=user.dbmodel)
 
             try:
                 fun(self)
@@ -718,7 +704,7 @@ class Workflow(AbstractWorkflow):
         automatic_user = orm.User.objects(self._backend).get_default().backend_entity
 
         # Retrieve the caller method
-        method_step, _ = self.dbworkflowinstance._get_or_create_step(name=caller_method, user=automatic_user.dbuser)
+        method_step, _ = self.dbworkflowinstance._get_or_create_step(name=caller_method, user=automatic_user.dbmodel)
 
         # Attach calculations
         if caller_method in self.attach_calc_lazy_storage:
@@ -748,7 +734,7 @@ def kill_all():
 
     automatic_user = orm.User.objects.get_default().backend_entity
     w_list = DbWorkflow.query.filter(
-        DbWorkflow.user == automatic_user.dbuser,
+        DbWorkflow.user == automatic_user.dbmodel,
         DbWorkflow.state != wf_states.FINISHED
     ).all()
 
@@ -862,7 +848,6 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
         workflow_mapping = {_.id: _ for _ in wflows}
 
         # get all calculations for all steps
-        # calcs = JobCalculation.query(workflow_step__in=steps_pk)  #.order_by('ctime')
         calcs_ids = [_[2] for _ in steps_and_subwf_pks if _[2] is not None]  # extremely inefficient!
         calcs = [load_node(_) for _ in calcs_ids]
         # dictionary mapping pks into calculations

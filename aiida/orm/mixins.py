@@ -21,9 +21,9 @@ from aiida.common.utils import classproperty
 
 class FunctionCalculationMixin(object):
     """
-    This mixin should be used for Calculation subclasses that are used to record the execution
-    of a python function. For example the Calculation nodes that are used for a function that
-    was wrapped by the `workfunction` or `make_inline` function decorators. The `store_source_info`
+    This mixin should be used for ProcessNode subclasses that are used to record the execution
+    of a python function. For example the process nodes that are used for a function that
+    was wrapped by the `workfunction` or `calcfunction` function decorators. The `store_source_info`
     method can then be called with the wrapped function to store information about that function
     in the calculation node through the inspect module. Various property getters are defined to
     later retrieve that information from the node
@@ -143,22 +143,21 @@ class Sealable(object):
     def _updatable_attributes(cls):
         return (cls.SEALED_KEY,)
 
-    def add_link_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
+    def add_incoming(self, source, link_type, link_label):
         """
-        Add a link from a node
+        Add a link of the given type from a given node to ourself.
 
-        You can use the parameters of the base Node class, in particular the
-        label parameter to label the link.
-
-        :param src: the node to add a link from
-        :param str label: name of the link
-        :param link_type: type of the link, must be one of the enum values from
-          :class:`~aiida.common.links.LinkType`
+        :param source: the node from which the link is coming
+        :param link_type: the type of link
+        :param link_label: link label
+        :return: True if the proposed link is allowed, False otherwise
+        :raise TypeError: if `source` is not a Node instance or `link_type` is not a `LinkType` enum
+        :raise ValueError: if the proposed link is invalid
         """
         if self.is_sealed:
             raise ModificationNotAllowed('Cannot add a link from a sealed node')
 
-        super(Sealable, self).add_link_from(src, label=label, link_type=link_type)
+        super(Sealable, self).add_incoming(source, link_type=link_type, link_label=link_label)
 
     @property
     def is_sealed(self):

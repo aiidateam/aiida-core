@@ -119,7 +119,7 @@ class ProcessBuilder(ProcessBuilderNamespace):
 
 class JobProcessBuilder(ProcessBuilder):
     """
-    A process builder specific to JobCalculation classes, that provides
+    A process builder specific to CalcJobNode classes, that provides
     also the submit_test functionality
     """
 

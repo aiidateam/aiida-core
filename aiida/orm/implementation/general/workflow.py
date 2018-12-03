@@ -22,14 +22,14 @@ from aiida.common.exceptions import (InternalError, AiidaException,
 from aiida.common.datastructures import (wf_states, wf_exit_call,
                                          wf_default_call, calc_states)
 from aiida.common.utils import str_timedelta
-from aiida.common import aiidalogger
-from aiida.orm.implementation.calculation import JobCalculation
+from aiida.common import AIIDA_LOGGER
+from aiida.orm.node.process import CalcJobNode
 from aiida.orm.backends import construct_backend
 from aiida.utils import timezone
-from aiida.common.log import get_dblogger_extra
+from aiida.common.log import create_logger_adapter
 from aiida.common.utils import abstractclassmethod
 
-logger = aiidalogger.getChild('Workflow')
+logger = AIIDA_LOGGER.getChild('Workflow')
 
 
 class WorkflowKillError(AiidaException):
@@ -234,6 +234,11 @@ class AbstractWorkflow(object):
         """
         return not self._to_be_stored
 
+    @property
+    def backend(self):
+        """Get the backend of this workflow"""
+        return self._backend
+
     def get_folder_list(self, subfolder='.'):
         """
         Get the the list of files/directory in the repository of the object.
@@ -314,8 +319,7 @@ class AbstractWorkflow(object):
         :return: LoggerAdapter object, that works like a logger, but also has
           the 'extra' embedded
         """
-        return logging.LoggerAdapter(logger=self._logger,
-                                     extra=get_dblogger_extra(self))
+        return create_logger_adapter(self._logger, self)
 
     @abstractmethod
     def store(self):
@@ -588,7 +592,7 @@ class AbstractWorkflow(object):
 
             automatic_user = orm.User.objects(self._backend).get_default().backend_entity
             method_step, created = self.dbworkflowinstance.steps.get_or_create(
-                name=wrapped_method, user=automatic_user.dbuser)
+                name=wrapped_method, user=automatic_user.dbmodel)
             try:
                 fun(self)
             except:
@@ -662,7 +666,7 @@ class AbstractWorkflow(object):
         # arround
 
         # Retrieve the caller method
-        user = orm.User.objects(self._backend).get_default().backend_entity.dbuser
+        user = orm.User.objects(self._backend).get_default().backend_entity.dbmodel
         method_step = self.dbworkflowinstance.steps.get(name=caller_method, user=user)
 
         # Attach calculations
@@ -693,15 +697,15 @@ class AbstractWorkflow(object):
         calculations will be launched until the ``next`` method gets called. For a step to be
         completed all the calculations linked have to be in RETRIEVED state, after which the next
         method gets called from the workflow manager.
-        :param calc: a JobCalculation object
-        :raise: AiidaException: in case the input is not of JobCalculation type
+        :param calc: a CalcJobNode object
+        :raise: AiidaException: in case the input is not of CalcJobNode type
         """
 
-        if (not issubclass(calc.__class__, JobCalculation) and not isinstance(calc, JobCalculation)):
-            raise AiidaException("Cannot add a calculation not of type JobCalculation")
+        if (not issubclass(calc.__class__, CalcJobNode) and not isinstance(calc, CalcJobNode)):
+            raise AiidaException("Cannot add a calculation not of type CalcJobNode")
 
-        for node in calc.get_inputs():
-            if node.pk is None:
+        for entry in calc.get_incoming():
+            if entry.node.pk is None:
                 raise AiidaException("Cannot add a calculation with "
                                      "unstored inputs")
 
@@ -738,7 +742,7 @@ class AbstractWorkflow(object):
         is not existent it returns None, useful for simpler grammatic in the workflow definition.
         :param next_method: a Workflow step (decorated) method
         :param calc_state: a specific state to filter the calculations to retrieve
-        :return: a list of JobCalculations objects
+        :return: a list of CalcJobNodes objects
         """
         if not getattr(step_method, "is_wf_step"):
             raise AiidaException("Cannot get step calculations from a method not decorated as Workflow method")
@@ -838,11 +842,11 @@ class AbstractWorkflow(object):
             raise WorkflowUnkillable("Cannot kill a workflow in {} or {} state"
                                      "".format(wf_states.FINISHED, wf_states.ERROR))
 
-    def get_all_calcs(self, calc_class=JobCalculation, calc_state=None, depth=15):
+    def get_all_calcs(self, calc_class=CalcJobNode, calc_state=None, depth=15):
         """
         Get all calculations connected with this workflow and all its subworflows up to a given depth.
         The list of calculations can be restricted to a given calculation type and state
-        :param calc_class: the calculation class to which the calculations should belong (default: JobCalculation)
+        :param calc_class: the calculation class to which the calculations should belong (default: CalcJobNode)
 
         :param calc_state: a specific state to filter the calculations to retrieve
 
@@ -851,7 +855,7 @@ class AbstractWorkflow(object):
           into sub-workflows, 1 means we go down to one step level of
           the sub-workflows, etc.)
 
-        :return: a list of JobCalculation objects
+        :return: a list of CalcJobNode objects
         """
 
         all_calcs = []
@@ -1017,7 +1021,6 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
     # Note: pre_string becomes larger at each call of get_workflow_info on the
     #       subworkflows: pre_string -> pre_string + "|" + " "*(tab_size-1))
     # TODO SP: abstract the dependence on DbWorkflow
-
     from aiida.backends.djsite.db.models import DbWorkflow
 
     if tab_size < 2:
@@ -1074,7 +1077,7 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
         workflow_mapping = {_.pk: _ for _ in wflows}
 
         # get all calculations for all steps
-        calcs = JobCalculation.query(workflow_step__in=steps_pk)  # .order_by('ctime')
+        calcs = CalcJobNode.query(workflow_step__in=steps_pk)  # .order_by('ctime')
         # dictionary mapping pks into calculations
         calc_mapping = {_.pk: _ for _ in calcs}
 

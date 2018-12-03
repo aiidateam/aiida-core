@@ -136,7 +136,7 @@ def upload_upf_family(folder, group_name, group_description,
     import os
 
     import aiida.common
-    from aiida.common import aiidalogger
+    from aiida.common import AIIDA_LOGGER
     from aiida import orm
     from aiida.common.exceptions import UniquenessError, NotExistent
     if not os.path.isdir(folder):
@@ -152,12 +152,8 @@ def upload_upf_family(folder, group_name, group_description,
     nfiles = len(files)
 
     automatic_user = orm.User.objects.get_default()
-    try:
-        group = orm.Group.get(name=group_name, type_string=UPFGROUP_TYPE)
-        group_created = False
-    except NotExistent:
-        group = orm.Group(name=group_name, type_string=UPFGROUP_TYPE, user=automatic_user)
-        group_created = True
+    group, group_created = orm.Group.objects.get_or_create(name=group_name, type_string=UPFGROUP_TYPE,
+                                                           user=automatic_user)
 
     if group.user.email != automatic_user.email:
         raise UniquenessError("There is already a UpfFamily group with name {}"
@@ -177,9 +173,6 @@ def upload_upf_family(folder, group_name, group_description,
         qb = orm.QueryBuilder()
         qb.append(UpfData, filters={'attributes.md5': {'==': md5sum}})
         existing_upf = qb.first()
-
-        # ~ existing_upf = UpfData.query(dbattributes__key="md5",
-        # ~ dbattributes__tval=md5sum)
 
         if existing_upf is None:
             # return the upfdata instances, not stored
@@ -229,10 +222,10 @@ def upload_upf_family(folder, group_name, group_description,
         if created:
             pseudo.store()
 
-            aiidalogger.debug("New node {} created for file {}".format(
+            AIIDA_LOGGER.debug("New node {} created for file {}".format(
                 pseudo.uuid, pseudo.filename))
         else:
-            aiidalogger.debug("Reusing node {} for file {}".format(
+            AIIDA_LOGGER.debug("Reusing node {} for file {}".format(
                 pseudo.uuid, pseudo.filename))
 
     # Add elements to the group all togetehr
@@ -255,7 +248,7 @@ def parse_upf(fname, check_filename=True):
     import os
 
     from aiida.common.exceptions import ParsingError
-    from aiida.common import aiidalogger
+    from aiida.common import AIIDA_LOGGER
     # TODO: move these data in a 'chemistry' module
     from aiida.orm.data.structure import _valid_symbols
 
@@ -266,10 +259,10 @@ def parse_upf(fname, check_filename=True):
         match = _upfversion_regexp.match(first_line)
         if match:
             version = match.group('version')
-            aiidalogger.debug("Version found: {} for file {}".format(
+            AIIDA_LOGGER.debug("Version found: {} for file {}".format(
                 version, fname))
         else:
-            aiidalogger.debug("Assuming version 1 for file {}".format(fname))
+            AIIDA_LOGGER.debug("Assuming version 1 for file {}".format(fname))
             version = "1"
 
         parsed_data['version'] = version
@@ -278,7 +271,7 @@ def parse_upf(fname, check_filename=True):
         except ValueError:
             # If the version string does not start with a dot, fallback
             # to version 1
-            aiidalogger.debug("Falling back to version 1 for file {}, "
+            AIIDA_LOGGER.debug("Falling back to version 1 for file {}, "
                               "version string '{}' unrecognized".format(
                 fname, version))
             version_major = 1

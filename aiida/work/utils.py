@@ -20,7 +20,6 @@ import tornado.ioloop
 from tornado import concurrent, gen
 
 from aiida.common.links import LinkType
-from aiida.orm.calculation import Calculation, WorkCalculation, FunctionCalculation
 from aiida.orm.data.frozendict import FrozenDict
 
 __all__ = 'RefObjectStore', 'interruptable_task', 'InterruptableFuture'
@@ -28,7 +27,6 @@ __all__ = 'RefObjectStore', 'interruptable_task', 'InterruptableFuture'
 LOGGER = logging.getLogger(__name__)
 PROCESS_STATE_CHANGE_KEY = 'process|state_change|{}'
 PROCESS_STATE_CHANGE_DESCRIPTION = 'The last time a process of type {}, changed state'
-PROCESS_CALC_TYPES = (WorkCalculation, FunctionCalculation)
 
 
 class InterruptableFuture(concurrent.Future):
@@ -161,53 +159,33 @@ def exponential_backoff_retry(fct, initial_interval=10.0, max_attempts=5, logger
     raise gen.Return(result)
 
 
-def is_work_calc_type(calc_node):
+def is_process_function(function):
     """
-    Check if the given calculation node is of the new type.
-    Currently in AiiDA we have a hierarchy of 'Calculation' nodes with the following subclasses:
-
-        1. JobCalculation
-        2. InlineCalculation
-        3. WorkCalculation
-        4. FunctionCalculation
-
-    1 & 2 can be considered the 'old' way of doing things, even though they are still
-    in use while 3 & 4 are the 'new' way.  In loose terms the main difference is that
-    the old way don't support RETURN and CALL links.
-
-    :param calc_node: The calculation node to test
-    :return: True if of the new type, False otherwise.
-    """
-    return isinstance(calc_node, PROCESS_CALC_TYPES)
-
-
-def is_workfunction(function):
-    """
-    Return whether the given function is a workfunction
+    Return whether the given function is a process function
 
     :param function: a function
-    :returns: True if the function is a wrapped workfunction, False otherwise
+    :returns: True if the function is a wrapped process function, False otherwise
     """
     try:
-        return function.is_workfunction
+        return function.is_process_function
     except AttributeError:
         return False
 
 
-def get_or_create_output_group(calculation):
+def get_or_create_output_group(node):
     """
-    For a given Calculation, get or create a new frozendict Data node that
-    has as its values all output Data nodes of the Calculation.
+    For a given ProcessNode, get or create a new frozendict Data node that
+    has as its values all output Data nodes of the ProcessNode.
 
-    :param calculation: Calculation
+    :param node: ProcessNode
     """
-    if not isinstance(calculation, Calculation):
-        raise TypeError("Can only create output groups for type Calculation")
+    from aiida.orm.node.process import ProcessNode
 
-    outputs = calculation.get_outputs_dict(link_type=LinkType.CREATE)
-    outputs.update(calculation.get_outputs_dict(link_type=LinkType.RETURN))
+    if not isinstance(node, ProcessNode):
+        raise TypeError('Can only create output groups for type ProcessNode')
 
-    return FrozenDict(dict=outputs)
+    outputs = node.get_outgoing(link_type=(LinkType.CREATE, LinkType.RETURN))
+    return FrozenDict(dict={entry.link_label: entry.node for entry in outputs})
 
 
 @contextlib.contextmanager
@@ -237,14 +215,16 @@ def set_process_state_change_timestamp(process):
     """
     from aiida.backends.utils import set_global_setting
     from aiida.common.exceptions import UniquenessError
-    from aiida.orm.calculation.inline import InlineCalculation
-    from aiida.orm.calculation.job import JobCalculation
+    from aiida.orm.node.process import ProcessNode, CalculationNode, WorkflowNode
     from aiida.utils import timezone
 
-    if isinstance(process.calc, (JobCalculation, InlineCalculation)):
+    if isinstance(process.calc, CalculationNode):
         process_type = 'calculation'
-    elif is_work_calc_type(process.calc):
+    elif isinstance(process.calc, WorkflowNode):
         process_type = 'work'
+    elif isinstance(process.calc, ProcessNode):
+        # This will only occur for testing, as in general users cannot launch plain Process classes
+        return
     else:
         raise ValueError('unsupported calculation node type {}'.format(type(process.calc)))
 

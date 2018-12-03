@@ -102,9 +102,9 @@ In the following, the different :class:`JobResource <aiida.scheduler.datastructu
 
         from aiida.scheduler.datastructures import NodeNumberJobResource
     
-    However, in general, you will pass the fields to set directly to the :meth:`set_option <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation.set_option>` method of a :class:`JobCalculation <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation>` object with the ``resources`` key. For instance::
+    However, in general, you will pass the fields to set directly to the :meth:`set_option <aiida.orm.node.process.calculation.calcjob.CalcJobNode.set_option>` method of a :class:`CalcJobNode <aiida.orm.node.process.calculation.calcjob.CalcJobNode>` object with the ``resources`` key. For instance::
   
-        calc = JobCalculation(computer=...) # select here a given computer configured
+        calc = CalcJobNode(computer=...) # select here a given computer configured
                                             # in AiiDA
      
         # This assumes that the computer is configured to use a scheduler with
@@ -138,7 +138,7 @@ The same can be achieved passing the fields directly to the constructor::
 
     res = NodeNumberJobResource(num_machines=4, num_mpiprocs_per_machine=16)
 
-or, even better, directly calling the :meth:`set_option <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation.set_option>` method of the :class:`JobCalculation <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation>` class (assuming here that ``calc`` is your calculation object) for the ``resources`` key::
+or, even better, directly calling the :meth:`set_option <aiida.orm.node.process.calculation.calcjob.CalcJobNode.set_option>` method of the :class:`CalcJobNode <aiida.orm.node.process.calculation.calcjob.CalcJobNode>` class (assuming here that ``calc`` is your calculation object) for the ``resources`` key::
 
     calc.set_option('resources', {"num_machines": 4, "num_mpiprocs_per_machine": 16})
 
@@ -194,6 +194,6 @@ Some examples:
 
     res = ParEnvJobResource(parallel_env='mpi', tot_num_mpiprocs=64)
 
-* even better, directly calling the :meth:`set_option <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation.set_option>` method of the :meth:`JobCalculation <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation>` class (assuming here that ``calc`` is your calculation object) for the ``resources`` key::
+* even better, directly calling the :meth:`set_option <aiida.orm.node.process.calculation.calcjob.CalcJobNode.set_option>` method of the :meth:`CalcJobNode <aiida.orm.node.process.calculation.calcjob.CalcJobNode>` class (assuming here that ``calc`` is your calculation object) for the ``resources`` key::
 
     calc.set_option('resources', {"parallel_env": 'mpi', "tot_num_mpiprocs": 64})

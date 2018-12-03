@@ -82,7 +82,7 @@ summation code (a detailed description of the different sections follows)::
 
     # -*- coding: utf-8 -*-
 
-    from aiida.orm import JobCalculation
+    from aiida.orm.calculation.job import JobCalculation
     from aiida.orm.data.parameter import ParameterData
     from aiida.common.utils import classproperty
     from aiida.common.exceptions import InputValidationError
@@ -126,8 +126,8 @@ summation code (a detailed description of the different sections follows)::
 
             :param tempfolder: a aiida.common.folders.Folder subclass where
                                the plugin should put all its files.
-            :param inputdict: a dictionary with the input nodes, as they would
-                    be returned by get_inputs_dict (with the Code!)
+            :param inputdict: a dictionary with the input nodes e.g. {label1:node1, ...}
+                              (with the Code!)
             """
             try:
                 parameters = inputdict.pop(self.get_linkname('parameters'))
@@ -197,7 +197,7 @@ using ``CalculationFactory``.
 
 .. note:: The base ``Calculation`` class should only be used as the abstract
   base class. Any calculation that needs to run on a remote scheduler must
-  inherit from  :class:`~aiida.orm.implementation.general.calculation.job.AbstractJobCalculation`, that
+  inherit from  :class:`~aiida.orm.node.process.calculation.calcjob.CalcJobNode`, that
   contains all the methods to run on a remote scheduler, get the calculation
   state, copy files remotely and retrieve them, ...
 

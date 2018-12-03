@@ -10,6 +10,6 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from aiida.orm.implementation import Code, delete_code
-
+from aiida.orm.implementation import delete_code
+from aiida.orm.data.code import Code
 

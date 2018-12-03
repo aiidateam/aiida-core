@@ -22,7 +22,7 @@ Computer
 Group
 +++++
 
-.. automodule:: aiida.orm.implementation.general.group
+.. automodule:: aiida.orm.groups
    :members:
    :noindex:
    :private-members:
@@ -61,7 +61,7 @@ Workflow
 
 Code
 ++++
-.. automodule:: aiida.orm.implementation.general.code
+.. automodule:: aiida.orm.data.code
    :members:
    :noindex:
    :special-members: __init__
@@ -230,34 +230,19 @@ ORM documentation: Calculations
 .. note:: This list only includes the classes included in AiiDA-core. For all the plugin subclasses,
   check the corresponding plugin repositories.
 
-.. automodule:: aiida.orm.implementation.general.calculation
+.. automodule:: aiida.orm.node.process.process
    :members:
    :noindex:
    :special-members: __init__
 
-.. automodule:: aiida.orm.calculation.inline
-   :members:
-   :noindex:
-   :special-members: __init__
-
-.. automodule:: aiida.orm.implementation.general.calculation.job
-   :members:
-   :noindex:
-   :special-members: __init__
-
-.. automodule:: aiida.orm.implementation.general.calculation.inline
-   :members:
-   :noindex:
-   :special-members: __init__
-
-.. automodule:: aiida.orm.calculation
+.. automodule:: aiida.orm.node.process.calculation.calcjob
    :members:
    :noindex:
    :special-members: __init__
 
 TemplateReplacer
 ++++++++++++++++
-.. automodule:: aiida.orm.calculation.job.simpleplugins.templatereplacer
+.. automodule:: aiida.calculations.plugins.templatereplacer
    :members:
    :noindex:
 

@@ -59,14 +59,14 @@ class TestSessionSqla(AiidaTestCase):
         expire_on_commit=True & adding manually and committing
         computer and code objects.
         """
-        from aiida.orm.implementation.sqlalchemy.code import Code
+        from aiida.orm.data.code import Code
 
         self.set_connection(expire_on_commit=True)
 
         session = aiida.backends.sqlalchemy.get_scoped_session()
 
         user = self.backend.users.create(email=get_configured_user_email())
-        session.add(user.dbuser)
+        session.add(user.dbmodel)
         session.commit()
 
         defaults = dict(name='localhost',
@@ -74,7 +74,7 @@ class TestSessionSqla(AiidaTestCase):
                         transport_type='local',
                         scheduler_type='pbspro')
         computer = self.backend.computers.create(**defaults)
-        session.add(computer._dbcomputer)
+        session.add(computer.dbmodel)
         session.commit()
 
         code = Code()
@@ -90,14 +90,14 @@ class TestSessionSqla(AiidaTestCase):
         their built-in store function.
         """
         from aiida.backends.sqlalchemy.models.user import DbUser
-        from aiida.orm.implementation.sqlalchemy.code import Code
+        from aiida.orm.data.code import Code
 
         session = aiida.backends.sqlalchemy.get_scoped_session()
 
         self.set_connection(expire_on_commit=True)
 
         user = self.backend.users.create(email=get_configured_user_email())
-        session.add(user.dbuser)
+        session.add(user.dbmodel)
         session.commit()
 
         defaults = dict(name='localhost',
@@ -118,14 +118,14 @@ class TestSessionSqla(AiidaTestCase):
         expire_on_commit=False & adding manually and committing
         computer and code objects.
         """
-        from aiida.orm.implementation.sqlalchemy.code import Code
+        from aiida.orm.data.code import Code
 
         self.set_connection(expire_on_commit=False)
 
         session = aiida.backends.sqlalchemy.get_scoped_session()
 
         user = self.backend.users.create(email=get_configured_user_email())
-        session.add(user.dbuser)
+        session.add(user.dbmodel)
         session.commit()
 
         defaults = dict(name='localhost',
@@ -133,7 +133,7 @@ class TestSessionSqla(AiidaTestCase):
                         transport_type='local',
                         scheduler_type='pbspro')
         computer = self.backend.computers.create(**defaults)
-        session.add(computer._dbcomputer)
+        session.add(computer.dbmodel)
         session.commit()
 
         code = Code()
@@ -150,12 +150,12 @@ class TestSessionSqla(AiidaTestCase):
         """
         self.set_connection(expire_on_commit=False)
 
-        from aiida.orm.implementation.sqlalchemy.code import Code
+        from aiida.orm.data.code import Code
 
         session = aiida.backends.sqlalchemy.get_scoped_session()
 
         user = self.backend.users.create(email=get_configured_user_email())
-        session.add(user.dbuser)
+        session.add(user.dbmodel)
         session.commit()
 
         defaults = dict(name='localhost',

@@ -51,14 +51,14 @@ The first thing to know is how to chose entities that you want to query::
 
     from aiida.orm.querybuilder import QueryBuilder
     qb = QueryBuilder()       # Instantiating instance. One instance -> one query
-    qb.append(JobCalculation) # Setting first vertice of path
+    qb.append(CalcJobNode) # Setting first vertice of path
 
 You can also pass a tuple, list or set of classes, if you are interested in instances of different classes.
 However, they have to be of the same ORM-type (I.e. all have to be subclasses of Node::
 
     from aiida.orm.querybuilder import QueryBuilder
     qb = QueryBuilder()       # Instantiating instance. One instance -> one query
-    qb.append([JobCalculation, WorkCalculation]) # Setting first vertice of path, either Work or Job.
+    qb.append([CalcJobNode, WorkChainNode]) # Setting first vertice of path, either WorkChainNode or Job.
 
 
 Retrieving results
@@ -69,7 +69,7 @@ database). The question is how to get the results from the query::
 
     from aiida.orm.querybuilder import QueryBuilder
     qb = QueryBuilder()                 # Instantiating instance
-    qb.append(JobCalculation)           # Setting first vertice of path
+    qb.append(CalcJobNode)           # Setting first vertice of path
 
     first_row = qb.first()              # Returns a list (!)
                                         # of the results of the first row
@@ -99,12 +99,12 @@ Filtering
 
 
 Since we now know how to set an entity, we can start to filter by properties of that entity.
-Suppose we do not want to all JobCalculations, but only the ones in state
+Suppose we do not want to all CalcJobNodes, but only the ones in state
 'FINISHED'::
 
     qb = QueryBuilder()                 # An empty QueryBuilder instances
     qb.append(
-        JobCalculation,                 # I am appending a JobCalculation
+        CalcJobNode,                 # I am appending a CalcJobNode
         filters={                       # Specifying the filters:
             'state':{'==':'FINISHED'},  # the calculation has to have finished
         },
@@ -121,7 +121,7 @@ state 'FINISHED' and were created in the last *n* days::
 
     qb = QueryBuilder()                 # An empty QueryBuilder instances
     qb.append(
-        JobCalculation,                 # I am appending a JobCalculation
+        CalcJobNode,                 # I am appending a CalcJobNode
         filters={                       # Specifying the filters:
             'state':{'==':'FINISHED'},  # the calculation has to have finished AND
             'ctime':{'>':time_n_days_ago}     # created in the last n days
@@ -132,7 +132,7 @@ state 'FINISHED' and were created in the last *n* days::
 
 Let's go through the above example.
 We have instantiated QueryBuilder instance.
-We appended to its path a JobCalculation (a remote calculation),
+We appended to its path a CalcJobNode (a remote calculation),
 and specified that we are only interested in  calculations
 that have finished **and** that were created in the last *n* days.
 
@@ -141,7 +141,7 @@ What if we want calculations that have finished **or** were created in the last
 
     qb = QueryBuilder()
     qb.append(
-        JobCalculation,
+        CalcJobNode,
         filters={
             'or':[
                 {'state':{'==':'FINISHED'}},
@@ -159,7 +159,7 @@ This will be the next example::
 
     qb = QueryBuilder()
     qb.append(
-        JobCalculation,
+        CalcJobNode,
         filters={
             'state':{'in':['FINISHED', 'RETRIEVING']}
         },
@@ -172,7 +172,7 @@ So, to ask for all calculations that are not in 'FINISHED' or 'RETRIEVING'::
 
     qb = QueryBuilder()
     qb.append(
-        JobCalculation,
+        CalcJobNode,
         filters={
             'state':{'!in':['FINISHED', 'RETRIEVING']}
         },
@@ -196,7 +196,10 @@ This is a list of all implemented operators:
 |            | integers,  |                                     |                                  |
 |            | dates      |                                     |                                  |
 +------------+------------+-------------------------------------+----------------------------------+
-| like       | Strings    | 'name':{'like':'lovely_calc%'}      | substring (% is wildcard)        |
+| like       | Strings    | 'name':{'like':'lovely_calc%'}      | substring                        |
+|            |            |                                     | (% and _ are wildcards. To use % |
+|            |            |                                     | and _ as part of the string      |
+|            |            |                                     | prepend it with \\)              |
 +------------+------------+-------------------------------------+----------------------------------+
 | ilike      | Strings    | 'name':{'like':'loVely_Calc%'}      | case insensitive 'like'          |
 +------------+------------+-------------------------------------+----------------------------------+
@@ -269,11 +272,11 @@ Joining entities
 ++++++++++++++++
 
 But we sometimes need to query relationships in graph-like database.
-Let's join a node to its output, e.g. StructureData and JobCalculation (as output)::
+Let's join a node to its output, e.g. StructureData and CalcJobNode (as output)::
 
     qb = QueryBuilder()
     qb.append(StructureData, tag='structure')
-    qb.append(JobCalculation, output_of='structure')
+    qb.append(CalcJobNode, with_incoming='structure')
 
 In above example we are querying structures and calculations, with the predicate that the
 calculation is an output of the structure (the same as saying that the structure is an input to the calculation)
@@ -285,52 +288,52 @@ to a previous entity by using one of the keywords in the above table
 and as a value the tag of the vertice that it has a relationship with.
 There are several relationships that entities in Aiida can have:
 
-+------------------+---------------+------------------+-------------------------------------------------+
-| **Entity from**  | **Entity to** | **Relationship** | **Explanation**                                 |
-+==================+===============+==================+=================================================+
-| Node             | Node          | *input_of*       | One node as input of another node               |
-+------------------+---------------+------------------+-------------------------------------------------+
-| Node             | Node          | *output_of*      | One node as output of another node              |
-+------------------+---------------+------------------+-------------------------------------------------+
-| Node             | Node          | *ancestor_of*    | One node as the ancestor of another node (Path) |
-+------------------+---------------+------------------+-------------------------------------------------+
-| Node             | Node          | *descendant_of*  | One node as descendant of another node (Path)   |
-+------------------+---------------+------------------+-------------------------------------------------+
-| Node             | Group         | *group_of*       | The group of a node                             |
-+------------------+---------------+------------------+-------------------------------------------------+
-| Group            | Node          | *member_of*      | The node is a member of a group                 |
-+------------------+---------------+------------------+-------------------------------------------------+
-| Node             | Computer      | *computer_of*    | The computer of a node                          |
-+------------------+---------------+------------------+-------------------------------------------------+
-| Computer         | Node          | *has_computer*   | The node of a computer                          |
-+------------------+---------------+------------------+-------------------------------------------------+
-| Node             | User          | *creator_of*     | The creator of a node is a user                 |
-+------------------+---------------+------------------+-------------------------------------------------+
-| User             | Node          | *created_by*     | The node was created by a user                  |
-+------------------+---------------+------------------+-------------------------------------------------+
-| User             | Group         | *belongs_to*     | The node was created by a user                  |
-+------------------+---------------+------------------+-------------------------------------------------+
-| Group            | User          | *owner_of*       | The node was created by a user                  |
-+------------------+---------------+------------------+-------------------------------------------------+
++------------------+---------------+------------------+-----------------------------+-------------------------------------------------+
+| **Entity from**  | **Entity to** | **Relationship** | **Deprecated Relationship** | **Explanation**                                 |
++==================+===============+==================+=============================+=================================================+
+| Node             | Node          | *with_outgoing*  | *input_of*                  | One node as input of another node               |
++------------------+---------------+------------------+-----------------------------+-------------------------------------------------+
+| Node             | Node          | *with_incoming*  | *output_of*                 | One node as output of another node              |
++------------------+---------------+------------------+-----------------------------+-------------------------------------------------+
+| Node             | Node          | *ancestor_of*    |                             | One node as the ancestor of another node (Path) |
++------------------+---------------+------------------+-----------------------------+-------------------------------------------------+
+| Node             | Node          | *descendant_of*  |                             | One node as descendant of another node (Path)   |
++------------------+---------------+------------------+-----------------------------+-------------------------------------------------+
+| Node             | Group         | *with_node*      | *group_of*                  | The group of a node                             |
++------------------+---------------+------------------+-----------------------------+-------------------------------------------------+
+| Group            | Node          | *with_group*     | *member_of*                 | The node is a member of a group                 |
++------------------+---------------+------------------+-----------------------------+-------------------------------------------------+
+| Node             | Computer      | *with_node*      | *computer_of*               | The computer of a node                          |
++------------------+---------------+------------------+-----------------------------+-------------------------------------------------+
+| Computer         | Node          | *with_computer*  | *has_computer*              | The node of a computer                          |
++------------------+---------------+------------------+-----------------------------+-------------------------------------------------+
+| Node             | User          | *with_node*      | *creator_of*                | The creator of a node is a user                 |
++------------------+---------------+------------------+-----------------------------+-------------------------------------------------+
+| User             | Node          | *with_user*      | *created_by*                | The node was created by a user                  |
++------------------+---------------+------------------+-----------------------------+-------------------------------------------------+
+| User             | Group         | *with_user*      | *belongs_to*                | The node was created by a user                  |
++------------------+---------------+------------------+-----------------------------+-------------------------------------------------+
+| Group            | User          | *with_group*     | *owner_of*                  | The node was created by a user                  |
++------------------+---------------+------------------+-----------------------------+-------------------------------------------------+
 
 
 Some more examples::
 
     # StructureData as an input of a job calculation
     qb = QueryBuilder()
-    qb.append(JobCalculation, tag='calc')
-    qb.append(StructureData, input_of='calc')
+    qb.append(CalcJobNode, tag='calc')
+    qb.append(StructureData, with_outgoing='calc')
 
     # StructureData and ParameterData as inputs to a calculation
     qb = QueryBuilder()
-    qb.append(JobCalculation, tag='calc')
-    qb.append(StructureData, input_of='calc')
-    qb.append(ParameterDataData, input_of='calc')
+    qb.append(CalcJobNode, tag='calc')
+    qb.append(StructureData, with_outgoing='calc')
+    qb.append(ParameterDataData, with_outgoing='calc')
 
     # Filtering the remote data instance by the computer it ran on (name)
     qb = QueryBuilder()
     qb.append(RemoteData, tag='remote')
-    qb.append(Computer, computer_of='remote', filters={'name':{'==':'mycomputer'}})
+    qb.append(Computer, with_node='remote', filters={'name':{'==':'mycomputer'}})
 
     # Find all descendants of a structure with a certain uuid
     qb = QueryBuilder()
@@ -524,7 +527,7 @@ for the wavefunctions has a value above 30.0 Ry::
     qb.append(PwCalculation, project=['*'], tag='calc')
     qb.append(
         ParameterData,
-        input_of='calc',
+        with_outgoing='calc',
         filters={'attributes.SYSTEM.ecutwfc':{'>':30.0}},
         project=[
             'attributes.SYSTEM.ecutwfc',
@@ -567,14 +570,14 @@ You need to tell the QueryBuilder that::
     )
     qb.append(
         PwCalculation,
-        output_of='strucure',
+        with_incoming='strucure',
         project=['*'],
         tag='calc'
     )
     qb.append(
         ParameterData,
         filters={'attributes.SYSTEM.ecutwfc':{'>':30.0}},
-        input_of='calc',
+        with_outgoing='calc',
         tag='params'
     )
 
@@ -587,7 +590,7 @@ Cheats
 A few cheats to save some typing:
 
 *   The default edge specification, if no keyword is provided, is always
-    *output_of* the previous vertice.
+    *with_incoming* the previous vertice.
 *   Equality filters ('==') can be shortened, as will be shown below.
 *   Tags are not necessary, you can simply use the class as a label.
     This works as long as the same Aiida-class is not used again
@@ -606,7 +609,7 @@ A shorter version of the previous example::
     qb.append(
         ParameterData,
         filters={'attributes.SYSTEM.ecutwfc':{'>':30.0}},
-        input_of=PwCalculation
+        with_outgoing=PwCalculation
     )
 
 
@@ -637,7 +640,7 @@ you're in good shape to query the database, so you can skip the rest if you want
 .. ~
 .. ~     qb = QueryBuilder()
 .. ~     qb.append(
-.. ~             JobCalculation,
+.. ~             CalcJobNode,
 .. ~             filters={'ctime':{'>': now - timedelta(days=3)}}
 .. ~         )
 .. ~     qb.append(
@@ -663,7 +666,7 @@ you're in good shape to query the database, so you can skip the rest if you want
 .. ~
 .. ~     qb = QueryBuilder()
 .. ~     qb.append(
-.. ~             JobCalculation,
+.. ~             CalcJobNode,
 .. ~             filters={'ctime':{'>': now - timedelta(days=3)}}
 .. ~         )
 .. ~     qb.append(
@@ -682,7 +685,7 @@ you're in good shape to query the database, so you can skip the rest if you want
 .. ~
 .. ~     qb = QueryBuilder()
 .. ~     qb.append(
-.. ~             JobCalculation,
+.. ~             CalcJobNode,
 .. ~             filters={'ctime':{'>': now - timedelta(days=3)}}
 .. ~         )
 .. ~     qb.append(
@@ -703,7 +706,7 @@ you're in good shape to query the database, so you can skip the rest if you want
 .. ~
 .. ~     qb = QueryBuilder()
 .. ~     qb.append(
-.. ~             JobCalculation,
+.. ~             CalcJobNode,
 .. ~             filters={'ctime':{'>': now - timedelta(days=3)}},
 .. ~             project={'id':{'func':'count'}}
 .. ~         )
@@ -722,12 +725,11 @@ Working with edges
 Another feature that had to be added are projections, filters and labels on
 the edges of the graphs, that is to say links or paths between nodes.
 It works the same way, just that the keyword is preceeded by '*link*'.
-Let's take the above example, but put a filter on the label of the link,
-project the label and label::
+Let's take the above example, but put a filter on the label of the link and project the link label::
 
     qb = QueryBuilder()
     qb.append(
-            JobCalculation,
+            CalcJobNode,
             filters={'ctime':{'>': now - timedelta(days=3)}},
             project={'id':{'func':'count'}}
         )
@@ -751,7 +753,7 @@ Assuming you want to order the above example by the time of the calculations::
 
     qb = QueryBuilder()
     qb.append(
-            JobCalculation,
+            CalcJobNode,
             project=['*']
         )
     qb.append(
@@ -759,7 +761,7 @@ Assuming you want to order the above example by the time of the calculations::
             filters={'attributes.energy':{'>':-5.0}},
          )
 
-    qb.order_by({JobCalculation:{'ctime':'asc'}}) # 'asc' or 'desc' (ascending/descending)
+    qb.order_by({CalcJobNode:{'ctime':'asc'}}) # 'asc' or 'desc' (ascending/descending)
 
 
 Limiting the number of results
@@ -769,7 +771,7 @@ You can also limit the number of rows returned with the method *limit*::
 
     qb = QueryBuilder()
     qb.append(
-        JobCalculation,
+        CalcJobNode,
         filters={'ctime':{'>': now - timedelta(days=3)}},
         project=['*']
     )
@@ -779,7 +781,7 @@ You can also limit the number of rows returned with the method *limit*::
      )
 
     # order by time descending
-    qb.order_by({JobCalculation:{'ctime':'desc'}})
+    qb.order_by({CalcJobNode:{'ctime':'desc'}})
 
     # Limit to results to the first 10 results:
     qb.limit(10)
@@ -864,16 +866,16 @@ What do you have to specify:
         of the path with tag "struc1"::
 
             edge_specification = queryhelp['path'][3]
-            edge_specification['output_of'] = 2
-            edge_specification['output_of'] = StructureData
-            edge_specification['output_of'] = 'struc1'
-            edge_specification['input_of']  = 2
-            edge_specification['input_of']  = StructureData
-            edge_specification['input_of']  = 'struc1'
+            edge_specification['with_incoming'] = 2
+            edge_specification['with_incoming'] = StructureData
+            edge_specification['with_incoming'] = 'struc1'
+            edge_specification['with_outgoing']  = 2
+            edge_specification['with_outgoing']  = StructureData
+            edge_specification['with_outgoing']  = 'struc1'
 
     *   queryhelp_item['direction'] = integer
 
-        If any of the above specs ("input_of", "output_of")
+        If any of the above specs ("with_outgoing", "with_incoming")
         were not specified, the key "direction" is looked for.
         Directions are defined as distances in the tree.
         1 is defined as one step down the tree along a link.
@@ -915,7 +917,7 @@ What do you have to specify:
                     },
                     {
                         'cls':ParameterData,
-                        'input_of':PwCalculation
+                        'with_outgoing':PwCalculation
                     }
                 ]
             }
@@ -1035,9 +1037,9 @@ What do you have to specify:
 .. ~             ParameterData,
 .. ~             {'cls':PwCalculation, 'tag':'md'},
 .. ~             {'cls':Trajectory},
-.. ~             {'cls':StructureData, 'input_of':'md'},
-.. ~             {'cls':Relax, 'input_of':StructureData},
-.. ~             {'cls':StructureData,'tag':'struc2','input_of':Relax}
+.. ~             {'cls':StructureData, 'with_outgoing':'md'},
+.. ~             {'cls':Relax, 'with_outgoing':StructureData},
+.. ~             {'cls':StructureData,'tag':'struc2','with_outgoing':Relax}
 .. ~         ],
 .. ~         'project':{
 .. ~             ParameterData:{'attributes.IONS.tempw':{'cast':'f'}},
@@ -1119,14 +1121,14 @@ Let's take an example that we had and add a few filters on the link::
         }
     }
 
-Notice that the label for the link, by default, is the labels of the two connecting
+Notice that the tag for the link, by default, is the tag of the two connecting
 nodes delimited by two dashes '--'.
 The order does not matter, the following queryhelp would results in the same query::
 
     queryhelp = {
         'path':[
-            {'cls':Relax, 'label':'relax'},         # Relaxation with structure as output
-            {'cls':StructureData, 'label':'structure'}
+            {'cls':Relax, 'tag':'relax'},         # Relaxation with structure as output
+            {'cls':StructureData, 'tag':'structure'}
         ],
         'filters':{
             'structure':{
@@ -1145,8 +1147,8 @@ The order does not matter, the following queryhelp would results in the same que
         }
     }
 
-If you dislike that way to label the link, you can choose the linklabel in the
-path when definining the entity to join::
+If you dislike that way to tag the link, you can choose the tag for the edge in the
+path when definining the entity to join using ``edge_tag``::
 
     queryhelp = {
         'path':[
@@ -1154,7 +1156,7 @@ path when definining the entity to join::
             {
                 'cls':StructureData,
                 'label':'structure',
-                'edge_tag':'ThisIsMyLinkLabel'     # Definining the linklabel
+                'edge_tag':'ThisIsMyLinkTag'     # Definining the link tag
             }
         ],
         'filters':{
@@ -1162,13 +1164,13 @@ path when definining the entity to join::
                 'time':{'>': t},
                 'id':{'>': 50}
             },
-            'ThisIsMyLinkLabel':{                  # Using this linklabel
+            'ThisIsMyLinkTag':{                  # Using this link tag
                 'time':{'>': t},
                 'label':{'like':'output_%'},
             }
         },
         'project':{
-            'ThisIsMyLinkLabel':['label'],
+            'ThisIsMyLinkTag':['label'],
             'structure':['label'],
             'relax':['label', 'state'],
         }

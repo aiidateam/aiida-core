@@ -153,13 +153,13 @@ def show(nodes, print_groups):
 
         if print_groups:
             from aiida.orm.querybuilder import QueryBuilder
-            from aiida.orm.group import Group
+            from aiida.orm.groups import Group
             from aiida.orm.node import Node  # pylint: disable=redefined-outer-name
 
             # pylint: disable=invalid-name
             qb = QueryBuilder()
             qb.append(Node, tag='node', filters={'id': {'==': node.pk}})
-            qb.append(Group, tag='groups', group_of='node', project=['id', 'name'])
+            qb.append(Group, tag='groups', with_node='node', project=['id', 'name'])
 
             echo.echo("#### GROUPS:")
 
@@ -214,11 +214,11 @@ class NodeTreePrinter(object):
 
         children = []
         # pylint: disable=unused-variable
-        for label, child \
-                in sorted(node.get_outputs(also_labels=True,
-                                           link_type=follow_links),
+        for entry \
+                in sorted(node.get_outgoing(link_type=follow_links).all(),
                           key=cls._ctime):
-            child_str = cls._build_tree(child, show_pk, follow_links=follow_links, max_depth=max_depth, depth=depth + 1)
+            child_str = cls._build_tree(
+                entry.node, show_pk, follow_links=follow_links, max_depth=max_depth, depth=depth + 1)
             if child_str:
                 children.append(child_str)
 

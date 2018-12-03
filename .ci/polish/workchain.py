@@ -20,9 +20,9 @@ INDENTATION_WIDTH = 4
 
 BLOCK_TPL_INI = '{indent:}cls.setup,\n'
 BLOCK_TPL_ADD_BASE = '{indent:}if_(cls.is_positive)(\n{indent_inner:}cls.add\n{indent:}).else_(\n{indent_inner:}cls.subtract\n{indent:}),\n'
-BLOCK_TPL_ADD_WORK = '{indent:}if_(cls.is_positive)(\n{indent_inner:}cls.add\n{indent:}).else_(\n{indent_inner:}cls.subtract_workfunction\n{indent:}),\n'
+BLOCK_TPL_ADD_WORK = '{indent:}if_(cls.is_positive)(\n{indent_inner:}cls.add\n{indent:}).else_(\n{indent_inner:}cls.subtract_calcfunction\n{indent:}),\n'
 BLOCK_TPL_ADD_CALC = '{indent:}if_(cls.is_positive)(\n{indent_inner:}cls.add_calculation,\n{indent_inner:}cls.post_add,\n{indent:}).else_(\n{indent_inner:}cls.subtract\n{indent:}),\n'
-BLOCK_TPL_ADD_BOTH = '{indent:}if_(cls.is_positive)(\n{indent_inner:}cls.add_calculation,\n{indent_inner:}cls.post_add,\n{indent:}).else_(\n{indent_inner:}cls.subtract_workfunction\n{indent:}),\n'
+BLOCK_TPL_ADD_BOTH = '{indent:}if_(cls.is_positive)(\n{indent_inner:}cls.add_calculation,\n{indent_inner:}cls.post_add,\n{indent:}).else_(\n{indent_inner:}cls.subtract_calcfunction\n{indent:}),\n'
 BLOCK_TPL_MUL = '{indent:}cls.pre_iterate,\n{indent:}while_(cls.iterate)(\n{block:}{indent:}),\n'
 BLOCK_TPL_POW = '{indent:}cls.raise_power,\n{indent:}cls.post_raise_power,\n'
 BLOCK_TPL_END = '{indent:}cls.results'
@@ -64,14 +64,14 @@ def generate_outlines(expression):
     return outline, values
 
 
-def format_outlines(outlines, use_calculations=False, use_workfunctions=False):
+def format_outlines(outlines, use_calculations=False, use_calcfunctions=False):
     """
     Given the symbolic structure of the workchain outlines produced by ``generate_outlines``, format the actual
     string form of those workchain outlines
 
     :param outlines: the list of symbolic outline structures
-    :param use_calculations: use JobCalculations for the add operations
-    :param use_workfunctions: use workfunctions for the subtract operations
+    :param use_calculations: use CalcJobs for the add operations
+    :param use_calcfunctions: use calcfunctions for the subtract operations
     :return: a list of outline strings
     """
     outline_strings = []
@@ -84,25 +84,25 @@ def format_outlines(outlines, use_calculations=False, use_workfunctions=False):
             if instruction == 'ini':
                 outline_string = BLOCK_TPL_INI.format(indent=format_indent()) + outline_string
             elif instruction == 'add':
-                outline_string = format_block(instruction, 0, use_calculations, use_workfunctions) + outline_string
+                outline_string = format_block(instruction, 0, use_calculations, use_calcfunctions) + outline_string
             elif instruction == 'pow':
                 outline_string += BLOCK_TPL_POW.format(indent=format_indent())
             elif instruction == 'end':
                 outline_string += BLOCK_TPL_END.format(indent=format_indent())
             else:
-                outline_string += format_block(instruction, 0, use_calculations, use_workfunctions)
+                outline_string += format_block(instruction, 0, use_calculations, use_calcfunctions)
 
         outline_strings.append(outline_string)
 
     return outline_strings
 
 
-def format_block(instruction, level=0, use_calculations=False, use_workfunctions=False):
+def format_block(instruction, level=0, use_calculations=False, use_calcfunctions=False):
     """
     Format the instruction into its proper string form
 
-    :param use_calculations: use JobCalculations for the add operations
-    :param use_workfunctions: use workfunctions for the subtract operations
+    :param use_calculations: use CalcJobs for the add operations
+    :param use_calcfunctions: use calcfunctions for the subtract operations
     :return: the string representation of the instruction
     """
     block = ''
@@ -111,9 +111,9 @@ def format_block(instruction, level=0, use_calculations=False, use_workfunctions
     if isinstance(instruction, list):
         for sub_instruction in instruction:
             if sub_instruction == 'add':
-                block = format_block(sub_instruction, level + 1, use_calculations, use_workfunctions) + block
+                block = format_block(sub_instruction, level + 1, use_calculations, use_calcfunctions) + block
             else:
-                block += format_block(sub_instruction, level + 1, use_calculations, use_workfunctions)
+                block += format_block(sub_instruction, level + 1, use_calculations, use_calcfunctions)
 
         string += BLOCK_TPL_MUL.format(indent=format_indent(level), level=level, block=block)
 
@@ -121,11 +121,11 @@ def format_block(instruction, level=0, use_calculations=False, use_workfunctions
         string += BLOCK_TPL_POW.format(indent=format_indent(level))
 
     elif instruction == 'add':
-        if use_calculations and use_workfunctions:
+        if use_calculations and use_calcfunctions:
             string = BLOCK_TPL_ADD_BOTH.format(indent=format_indent(level), indent_inner=format_indent(level + 1))
         elif use_calculations:
             string = BLOCK_TPL_ADD_CALC.format(indent=format_indent(level), indent_inner=format_indent(level + 1))
-        elif use_workfunctions:
+        elif use_calcfunctions:
             string = BLOCK_TPL_ADD_WORK.format(indent=format_indent(level), indent_inner=format_indent(level + 1))
         else:
             string = BLOCK_TPL_ADD_BASE.format(indent=format_indent(level), indent_inner=format_indent(level + 1))

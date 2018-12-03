@@ -20,9 +20,10 @@ except ImportError:
 
 import six
 
-from aiida.orm.node import Node
+from aiida.common.exceptions import InvalidOperation
 from aiida.common.links import LinkType
 from aiida.common.lang import override
+from aiida.orm.node import Node
 
 
 @singledispatch
@@ -61,9 +62,29 @@ class Data(Node):
     # Example: {'dat': 'dat_multicolumn'}
     _custom_export_format_replacements = {}
 
+    def validate_incoming(self, source, link_type, link_label):
+        """
+        Validate adding a link of the given type from a given node to ourself.
+
+        This function will first validate the types of the inputs, followed by the node and link types and validate
+        whether in principle a link of that type between the nodes of these types is allowed.the
+
+        Subsequently, the validity of the "degree" of the proposed link is validated, which means validating the
+        number of links of the given type from the given node type is allowed.
+
+        :param source: the node from which the link is coming
+        :param link_type: the type of link
+        :param link_label: link label
+        :raise TypeError: if `source` is not a Node instance or `link_type` is not a `LinkType` enum
+        :raise ValueError: if the proposed link is invalid
+        """
+        super(Data, self).validate_incoming(source, link_type, link_label)
+        from aiida.orm.utils.links import validate_link
+        validate_link(source, self, link_type, link_label)
+
     def __copy__(self):
         """Copying a Data node is not supported, use copy.deepcopy or call Data.clone()."""
-        raise NotImplementedError('copying a Data node is not supported, use copy.deepcopy')
+        raise InvalidOperation('copying a Data node is not supported, use copy.deepcopy')
 
     def __deepcopy__(self, memo):
         """
@@ -72,7 +93,7 @@ class Data(Node):
         :returns: an unstored clone of this Data node
         """
         if self.is_stored:
-            raise NotImplementedError('deep copying a stored Data node is not supported, use Data.clone() instead')
+            raise InvalidOperation('deep copying a stored Data node is not supported, use Data.clone() instead')
 
         return self.clone()
 
@@ -141,37 +162,11 @@ class Data(Node):
 
     @property
     def created_by(self):
-        inputs = self.get_inputs(link_type=LinkType.CREATE)
+        inputs = self.get_incoming(link_type=LinkType.CREATE)
         if inputs:
-            return inputs[0]
+            return inputs.first()
         else:
             return None
-
-    @override
-    def add_link_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
-        from aiida.orm.calculation import Calculation
-
-        if link_type is LinkType.CREATE and \
-                        len(self.get_inputs(link_type=LinkType.CREATE)) > 0:
-            raise ValueError("At most one CREATE node can enter a data node")
-
-        if not isinstance(src, Calculation):
-            raise ValueError("Links entering a data object can only be of type calculation")
-
-        return super(Data, self).add_link_from(src, label, link_type)
-
-    @override
-    def _linking_as_output(self, dest, link_type):
-        """
-        Raise a ValueError if a link from self to dest is not allowed.
-
-        An output of a data can only be a calculation
-        """
-        from aiida.orm.calculation import Calculation
-        if not isinstance(dest, Calculation):
-            raise ValueError("The output of a data node can only be a calculation")
-
-        return super(Data, self)._linking_as_output(dest, link_type)
 
     @override
     def _exportcontent(self, fileformat, main_file_name="", **kwargs):

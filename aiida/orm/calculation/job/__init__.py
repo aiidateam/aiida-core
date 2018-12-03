@@ -10,5 +10,5 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from aiida.orm.calculation import Calculation
-from aiida.orm.implementation.calculation import JobCalculation, _input_subfolder, JobCalculationExitStatus
+
+from aiida.orm.node.process import CalcJobNode as JobCalculation

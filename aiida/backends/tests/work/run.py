@@ -13,9 +13,9 @@ from __future__ import print_function
 from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 
-import aiida.orm
 from aiida.orm.data.int import Int
 from aiida.orm.data.str import Str
+from aiida.orm.node.process import ProcessNode
 from aiida.work.launch import run, run_get_node
 from aiida.work.test_utils import DummyProcess
 
@@ -34,4 +34,4 @@ class TestRun(AiidaTestCase):
     def test_run_get_node(self):
         inputs = {'a': Int(2), 'b': Str('test')}
         result, node = run_get_node(DummyProcess, **inputs)
-        self.assertIsInstance(node, aiida.orm.Calculation)
+        self.assertIsInstance(node, ProcessNode)

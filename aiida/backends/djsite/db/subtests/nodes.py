@@ -15,6 +15,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
+from aiida.common.links import LinkType
 from aiida.orm.node import Node
 
 
@@ -52,15 +53,16 @@ class TestDataNodeDjango(AiidaTestCase):
 
         a4 = Node().store()
 
-        a2.add_link_from(a)
-        a3.add_link_from(a2)
-        a4.add_link_from(a2)
-        a4.add_link_from(a3)
+        a2.add_incoming(a, link_type=LinkType.CREATE, link_label='link')
+        a3.add_incoming(a2, link_type=LinkType.CREATE, link_label='link')
+        a4.add_incoming(a2, link_type=LinkType.CREATE, link_label='link')
+        a4.add_incoming(a3, link_type=LinkType.CREATE, link_label='link')
 
         b = Node.query(pk=a2)
         self.assertEquals(len(b), 1)
         # It is a aiida.orm.Node instance
-        self.assertTrue(isinstance(b[0], Node))
+        self.assertTrue(isinstance(b[0], Node),
+                "Expecting instance of {}, found {}".format(type(a4), type(b[0])))
         self.assertEquals(b[0].uuid, a2.uuid)
 
         going_out_from_a2 = Node.query(inputs__in=b)
@@ -77,8 +79,8 @@ class TestDataNodeDjango(AiidaTestCase):
         self.assertEquals(len(going_out_from_a2_db), 2)
         self.assertTrue(isinstance(going_out_from_a2_db[0], DbNode))
         self.assertTrue(isinstance(going_out_from_a2_db[1], DbNode))
-        uuid_set_db = set([going_out_from_a2_db[0].uuid,
-                           going_out_from_a2_db[1].uuid])
+        uuid_set_db = set([str(going_out_from_a2_db[0].uuid),
+                           str(going_out_from_a2_db[1].uuid)])
 
         # I check that doing the query with a Node or DbNode instance,
         # I get the same nodes
@@ -95,8 +97,8 @@ class TestDataNodeDjango(AiidaTestCase):
         self.assertEquals(len(output_links_b), 2)
         self.assertTrue(isinstance(output_links_b[0], DbLink))
         self.assertTrue(isinstance(output_links_b[1], DbLink))
-        uuid_set_db_link = set([output_links_b[0].output.uuid,
-                                output_links_b[1].output.uuid])
+        uuid_set_db_link = set([str(output_links_b[0].output.uuid),
+                                str(output_links_b[1].output.uuid)])
         self.assertEquals(uuid_set, uuid_set_db_link)
 
         # Query for related fields using django syntax
@@ -130,14 +132,14 @@ class TestTransitiveClosureDeletionDjango(AiidaTestCase):
         # I create a strange graph, inserting links in a order
         # such that I often have to create the transitive closure
         # between two graphs
-        n3.add_link_from(n2, link_type=LinkType.CREATE)
-        n2.add_link_from(n1, link_type=LinkType.CREATE)
-        n5.add_link_from(n3, link_type=LinkType.CREATE)
-        n5.add_link_from(n4, link_type=LinkType.CREATE)
-        n4.add_link_from(n2, link_type=LinkType.CREATE)
+        n3.add_incoming(n2, link_type=LinkType.CREATE, link_label='link')
+        n2.add_incoming(n1, link_type=LinkType.CREATE, link_label='link')
+        n5.add_incoming(n3, link_type=LinkType.CREATE, link_label='link')
+        n5.add_incoming(n4, link_type=LinkType.CREATE, link_label='link')
+        n4.add_incoming(n2, link_type=LinkType.CREATE, link_label='link')
 
-        n7.add_link_from(n6, link_type=LinkType.CREATE)
-        n8.add_link_from(n7, link_type=LinkType.CREATE)
+        n7.add_incoming(n6, link_type=LinkType.CREATE, link_label='link')
+        n8.add_incoming(n7, link_type=LinkType.CREATE, link_label='link')
 
         # Yet, no links from 1 to 8
         self.assertEquals(
@@ -147,7 +149,7 @@ class TestTransitiveClosureDeletionDjango(AiidaTestCase):
                 ).count(), 0
             )
 
-        n6.add_link_from(n5, link_type=LinkType.INPUT)
+        n6.add_incoming(n5, link_type=LinkType.INPUT_CALC, link_label='link')
 
         # Yet, now 2 links from 1 to 8
         self.assertEquals(
@@ -158,7 +160,7 @@ class TestTransitiveClosureDeletionDjango(AiidaTestCase):
             )
 
 
-        n7.add_link_from(n9, link_type=LinkType.INPUT)
+        n7.add_incoming(n9, link_type=LinkType.INPUT_CALC, link_label='link')
         # Still two links...
         self.assertEquals(
             QueryBuilder().append(
@@ -168,7 +170,7 @@ class TestTransitiveClosureDeletionDjango(AiidaTestCase):
             )
 
 
-        n9.add_link_from(n6, link_type=LinkType.INPUT)
+        n9.add_incoming(n6, link_type=LinkType.INPUT_CALC, link_label='link')
         # And now there should be 4 nodes
         self.assertEquals(
             QueryBuilder().append(
@@ -232,7 +234,7 @@ class TestTransitiveClosureDeletionDjango(AiidaTestCase):
 
         # Finally, I reconnect in a different way the two graphs and
         # check that 1 and 8 are again connected
-        n4.add_link_from(n3, link_type=LinkType.INPUT)
+        n4.add_incoming(n3, link_type=LinkType.INPUT_CALC, link_label='link')
 
         self.assertEquals(
             QueryBuilder().append(

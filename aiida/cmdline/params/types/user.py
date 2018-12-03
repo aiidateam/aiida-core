@@ -32,7 +32,7 @@ class UserParamType(click.ParamType):
     def convert(self, value, param, ctx):
         from aiida import orm
 
-        results = orm.User.objects.find(email=value)
+        results = orm.User.objects.find({'email': value})
 
         if not results:
             if self._create:

@@ -23,10 +23,10 @@ VERDI=$(which verdi)
 
 if [ -n "$EXPRESSIONS" ]; then
     for expression in "${EXPRESSIONS[@]}"; do
-        coverage run -a $VERDI -p ${TEST_AIIDA_BACKEND} run "${CLI_SCRIPT}" -c $CODE -C -W -d -t $TIMEOUT "$expression"
+        coverage run -a $VERDI -p ${TEST_AIIDA_BACKEND} run "${CLI_SCRIPT}" -c $CODE -C -F -d -t $TIMEOUT "$expression"
     done
 else
     for i in $(seq 1 $NUMBER_WORKCHAINS); do
-        coverage run -a $VERDI -p ${TEST_AIIDA_BACKEND} run "${CLI_SCRIPT}" -c $CODE -C -W -d -t $TIMEOUT
+        coverage run -a $VERDI -p ${TEST_AIIDA_BACKEND} run "${CLI_SCRIPT}" -c $CODE -C -F -d -t $TIMEOUT
     done
 fi

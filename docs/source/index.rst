@@ -34,7 +34,7 @@ For advanced users and developers we point you to the developers section :doc:`d
 
 .. toctree::
     :maxdepth: 1
-    :caption: Install
+    :caption: Installation
 
     install/quick_installation
     install/installation
@@ -44,7 +44,7 @@ For advanced users and developers we point you to the developers section :doc:`d
 
 .. toctree::
     :maxdepth: 1
-    :caption: Get started
+    :caption: Getting started
 
     get_started/index
     get_started/daemon
@@ -73,7 +73,7 @@ For advanced users and developers we point you to the developers section :doc:`d
 
 .. toctree::
     :maxdepth: 1
-    :caption: Developers
+    :caption: Development
 
     developer_guide/index
 

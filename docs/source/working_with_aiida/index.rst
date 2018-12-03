@@ -35,6 +35,7 @@ Calculations
 
     ../state/calculation_state
     resultmanager
+    inline_calculations
 
 ==========
 Data types

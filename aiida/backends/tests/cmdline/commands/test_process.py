@@ -113,21 +113,14 @@ class TestVerdiProcess(AiidaTestCase):
 
     TEST_TIMEOUT = 5.
 
-    def setUp(self):
-        super(TestVerdiProcess, self).setUp()
-        self.cli_runner = CliRunner()
-
-    def test_list(self):
-        """Test the list command."""
+    @classmethod
+    def setUpClass(cls, *args, **kwargs):
         # pylint: disable=protected-access
+        super(TestVerdiProcess, cls).setUpClass(*args, **kwargs)
+        from aiida.orm.groups import Group
         from aiida.work.processes import ProcessState
 
-        # Number of output lines in -r/--raw format should be zero when there are no calculations yet
-        result = self.cli_runner.invoke(cmd_process.process_list, ['-r'])
-        self.assertIsNone(result.exception, result.output)
-        self.assertEqual(len(get_result_lines(result)), 0)
-
-        calcs = []
+        cls.calcs = []
 
         # Create 6 WorkFunctionNodes and WorkChainNodes (one for each ProcessState)
         for state in ProcessState:
@@ -140,7 +133,7 @@ class TestVerdiProcess(AiidaTestCase):
                 calc._set_exit_status(0)
 
             calc.store()
-            calcs.append(calc)
+            cls.calcs.append(calc)
 
             calc = WorkChainNode()
             calc._set_process_state(state)
@@ -150,7 +143,17 @@ class TestVerdiProcess(AiidaTestCase):
                 calc._set_exit_status(1)
 
             calc.store()
-            calcs.append(calc)
+            cls.calcs.append(calc)
+
+        cls.group = Group('some_group').store()
+        cls.group.add_nodes(cls.calcs[0])
+
+    def setUp(self):
+        super(TestVerdiProcess, self).setUp()
+        self.cli_runner = CliRunner()
+
+    def test_list(self):
+        """Test the list command."""
 
         # Default behavior should yield all active states (CREATED, RUNNING and WAITING) so six in total
         result = self.cli_runner.invoke(cmd_process.process_list, ['-r'])
@@ -196,7 +199,14 @@ class TestVerdiProcess(AiidaTestCase):
             self.assertEqual(len(get_result_lines(result)), 6)
 
             for line in get_result_lines(result):
-                self.assertIn(line.strip(), [str(calc.pk) for calc in calcs])
+                self.assertIn(line.strip(), [str(calc.pk) for calc in self.calcs])
+
+        # The group option should limit the query set to nodes in the group
+        for flag in ['-G', '--group']:
+            result = self.cli_runner.invoke(cmd_process.process_list, ['-r', '-P', 'pk', flag, str(self.group.pk)])
+            self.assertClickResultNoException(result)
+            self.assertEqual(len(get_result_lines(result)), 1)
+            self.assertEqual(get_result_lines(result)[0], str(self.calcs[0].pk))
 
     def test_process_show(self):
         """Test verdi process show"""

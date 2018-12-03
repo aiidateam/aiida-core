@@ -18,35 +18,36 @@ from __future__ import absolute_import
 from aiida.common.hashing import is_password_usable
 from aiida.common import exceptions
 from aiida.utils.email import normalize_email
-
-from . import backends
+from aiida.manage import get_manager
 from . import entities
 
 __all__ = ('User',)
 
 
 class User(entities.Entity):
-    """
-    This is the base class for User information in AiiDA.  An implementing
-    backend needs to provide a concrete version.
-    """
-
-    # pylint: disable=invalid-name
+    """AiiDA User"""
 
     class Collection(entities.Collection):
         """
-        The collection of users stored in a backend
-        """
+            The collection of users stored in a backend
+            """
+        UNDEFINED = 'UNDEFINED'
+        _default_user = None  # type: aiida.orm.User
+
+        def __init__(self, *args, **kwargs):
+            super(User.Collection, self).__init__(*args, **kwargs)
+            self._default_user = self.UNDEFINED
 
         def get_or_create(self, **kwargs):
             """
-            Get the existing user with a given email address or create an unstored one
+                Get the existing user with a given email address or create an unstored one
 
-            :param kwargs: The properties of the user to get or create
-            :return: The corresponding user object
-            :rtype: :class:`aiida.orm.User`
-            :raises: :class:`aiida.common.exceptions.MultipleObjectsError`, :class:`aiida.common.exceptions.NotExistent`
-            """
+                :param kwargs: The properties of the user to get or create
+                :return: The corresponding user object
+                :rtype: :class:`aiida.orm.User`
+                :raises: :class:`aiida.common.exceptions.MultipleObjectsError`,
+                    :class:`aiida.common.exceptions.NotExistent`
+                """
             try:
                 return False, self.get(**kwargs)
             except exceptions.NotExistent:
@@ -59,21 +60,22 @@ class User(entities.Entity):
             :return: The default user
             :rtype: :class:`aiida.orm.User`
             """
-            from aiida.common.utils import get_configured_user_email
+            if self._default_user is self.UNDEFINED:
+                email = get_manager().get_profile().default_user_email
+                if not email:
+                    self._default_user = None
 
-            email = get_configured_user_email()
-            if not email:
-                return None
+                try:
+                    self._default_user = self.get(email=email)
+                except (exceptions.MultipleObjectsError, exceptions.NotExistent):
+                    self._default_user = None
 
-            try:
-                return self.get(email=email)
-            except (exceptions.MultipleObjectsError, exceptions.NotExistent):
-                return None
+            return self._default_user
 
     REQUIRED_FIELDS = ['first_name', 'last_name', 'institution']
 
     def __init__(self, email, first_name='', last_name='', institution='', backend=None):
-        backend = backend or backends.construct_backend()
+        backend = backend or get_manager().get_backend()
         email = normalize_email(email)
         backend_entity = backend.users.create(email, first_name, last_name, institution)
         super(User, self).__init__(backend_entity)

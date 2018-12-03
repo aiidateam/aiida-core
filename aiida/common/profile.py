@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""AiiDA profile related code"""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -14,7 +15,9 @@ import os
 
 from aiida.backends import settings
 from aiida.common import setup
+from aiida.common import exceptions
 
+__all__ = 'Profile', 'get_current_profile_name', 'get_profile_config'
 
 CONFIG_DIR = setup.AIIDA_CONFIG_FOLDER
 DAEMON_DIR = 'daemon'
@@ -47,7 +50,6 @@ def get_profile_config(name=None):
     :raises MissingConfigurationError: if the configuration file cannot be found
     :raises ProfileConfigurationError: if the name is not found in the configuration file
     """
-    from aiida.common.exceptions import MissingConfigurationError, ProfileConfigurationError
     from aiida.common.setup import get_config
 
     if name is None:
@@ -55,13 +57,13 @@ def get_profile_config(name=None):
 
     try:
         config = get_config()
-    except MissingConfigurationError:
-        raise MissingConfigurationError('could not load the configuration file')
+    except exceptions.MissingConfigurationError:
+        raise exceptions.MissingConfigurationError('could not load the configuration file')
 
     try:
         profile = config['profiles'][name]
     except KeyError:
-        raise ProfileConfigurationError('invalid profile name "{}"'.format(name))
+        raise exceptions.ProfileConfigurationError('invalid profile name "{}"'.format(name))
 
     return profile
 
@@ -96,38 +98,92 @@ class Profile(object):
         self._config = config
 
         # Currently, whether a profile is a test profile is solely determined by its name starting with 'test_'
-        if self.name.startswith('test_'):
-            self._test_profile = True
-        else:
-            self._test_profile = False
+        self._test_profile = bool(self.name.startswith('test_'))
 
-    def get_option(self, option):
+    @staticmethod
+    def get_option(option):
         """Return the value of an option of this profile."""
         from aiida.common.setup import get_property
         return get_property(option)
 
     @property
     def config(self):
+        """
+        Get the profile configuration dictionary
+
+        :return: the profile configuration
+        :rtype: dict
+        """
         return self._config
 
     @property
     def name(self):
+        """
+        Get the profile name
+
+        :return: the profile name
+        :rtype: str
+        """
         return self._name
 
     @property
     def uuid(self):
+        """
+        Get the UUID of this profile
+
+        :return: the profile UUID
+        """
         return self.config[setup.PROFILE_UUID_KEY]
 
     @property
     def rmq_prefix(self):
+        """
+        Get the RMQ prefix
+
+        :return: the rmq prefix string
+        :rtype: str
+        """
         return self._RMQ_PREFIX.format(uuid=self.uuid)
 
     @property
     def is_test_profile(self):
+        """
+        Is this a test profile
+
+        :return: True if test profile, False otherwise
+        :rtype: bool
+        """
         return self._test_profile
 
     @property
+    def default_user_email(self):
+        """
+        Return the email (that is used as the username) configured during the
+        first verdi install.
+
+        :return: the currently configured user email address
+        :rtype: str
+        """
+        from aiida.common.setup import DEFAULT_USER_CONFIG_FIELD
+
+        try:
+            email = self.config[DEFAULT_USER_CONFIG_FIELD]
+        # I do not catch the error in case of missing configuration, because
+        # it is already a ConfigurationError
+        except KeyError:
+            raise exceptions.ConfigurationError(
+                "No '{}' key found in the AiiDA configuration file".format(DEFAULT_USER_CONFIG_FIELD))
+
+        return email
+
+    @property
     def filepaths(self):
+        """
+        Get the filepaths used by this profile
+
+        :return: a dictionary of filepaths
+        :rtype: dict
+        """
         return {
             'circus': {
                 'log': CIRCUS_LOG_FILE_TEMPLATE.format(self.name),

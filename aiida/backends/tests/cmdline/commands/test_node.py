@@ -19,6 +19,8 @@ import tempfile
 import numpy as np
 import subprocess as sp
 
+from contextlib import contextmanager
+from six.moves import cStringIO as StringIO
 from click.testing import CliRunner
 
 from aiida import orm
@@ -41,19 +43,7 @@ from aiida.cmdline.commands.cmd_data import cmd_structure
 from aiida.cmdline.commands.cmd_data import cmd_trajectory
 from aiida.cmdline.commands.cmd_data import cmd_upf
 
-from aiida.backends.utils import get_backend_type
-
-if get_backend_type() == 'sqlalchemy':
-    from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
-else:
-    from aiida.backends.djsite.db.models import DbAuthInfo
-
-from unittest import skip
-
-from aiida.work.workfunctions import workfunction as wf
-
-from contextlib import contextmanager
-from six.moves import cStringIO as StringIO
+from aiida.work import calcfunction
 
 
 @contextmanager
@@ -330,7 +320,7 @@ class TestVerdiDataBands(AiidaTestCase, TestVerdiDataListable):
         s.append_atom(position=(alat / 2., alat / 2., alat / 2.), symbols='O')
         s.store()
 
-        @wf
+        @calcfunction
         def connect_structure_bands(structure):
             alat = 4.
             cell = np.array([
@@ -346,9 +336,6 @@ class TestVerdiDataBands(AiidaTestCase, TestVerdiDataListable):
             b = BandsData()
             b.set_kpointsdata(k)
             b.set_bands([[1.0, 2.0], [3.0, 4.0]])
-
-            k.store()
-            b.store()
 
             return b
 
@@ -439,7 +426,7 @@ class TestVerdiDataRemote(AiidaTestCase):
     def setUpClass(cls):
         from aiida import orm
         super(TestVerdiDataRemote, cls).setUpClass()
-        user = orm.User.objects(cls.backend).get_default()
+        user = orm.User.objects.get_default()
         authinfo = orm.AuthInfo(cls.computer, user)
         authinfo.store()
 

@@ -32,8 +32,7 @@ class TestExponentialBackoffRetry(AiidaTestCase):
         super(TestExponentialBackoffRetry, cls).setUpClass(*args, **kwargs)
         cls.authinfo = orm.AuthInfo(
             computer=cls.computer,
-            user=orm.User.objects(cls.backend).get_default(),
-            backend=cls.backend)
+            user=orm.User.objects.get_default())
         cls.authinfo.store()
 
     def test_exponential_backoff_success(self):

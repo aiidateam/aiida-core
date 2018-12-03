@@ -7,42 +7,32 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from plumpy import Bundle
-from plumpy import ProcessState
-from .calcfunctions import *
+
 from .exceptions import *
 from .exit_code import *
 from .futures import *
-from .launch import *
 from .job_processes import *
+from .launch import *
 from .persistence import *
 from .processes import *
+from .process_function import *
 from .rmq import *
 from .runners import *
 from .utils import *
-from .workfunctions import *
 from .workchain import *
-from .manager import *
-
-_local = ('ProcessState',)
 
 __all__ = (
-        calcfunctions.__all__ +
         exceptions.__all__ +
         exit_code.__all__ +
+        futures.__all__ +
+        job_processes.__all__ +
+        launch.__all__ +
+        persistence.__all__ +
         processes.__all__ +
+        rmq.__all__ +
         runners.__all__ +
         utils.__all__ +
-        workchain.__all__ +
-        launch.__all__ +
-        workfunctions.__all__ +
-        job_processes.__all__ +
-        rmq.__all__ +
-        futures.__all__ +
-        persistence.__all__ +
-        manager.__all__ +  # TODO: To be moved later
-        _local)
+        workchain.__all__)

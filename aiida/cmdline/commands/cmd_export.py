@@ -327,15 +327,22 @@ def migrate_v2_to_v3(metadata, data):  # pylint: disable=too-many-locals,too-man
     :param metadata: the content of an export archive metadata.json file
     """
     import enum
-    from aiida.common.links import LinkType
 
     old_version = '0.2'
     new_version = '0.3'
 
+    class LinkType(enum.Enum):  # pylint: disable=too-few-public-methods
+        """This was the state of the `aiida.common.links.LinkType` enum before aiida-core v1.0.0a5"""
+
+        UNSPECIFIED = 'unspecified'
+        CREATE = 'createlink'
+        RETURN = 'returnlink'
+        INPUT = 'inputlink'
+        CALL = 'calllink'
+
     class NodeType(enum.Enum):  # pylint: disable=too-few-public-methods
-        """
-        A simple enum of relevant node types
-        """
+        """A simple enum of relevant node types"""
+
         NONE = 'none'
         CALC = 'calculation'
         CODE = 'code'

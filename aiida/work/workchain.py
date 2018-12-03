@@ -31,7 +31,7 @@ from .exit_code import ExitCode
 from .process_spec import ProcessSpec
 from .processes import Process, ProcessState
 
-__all__ = 'WorkChain', 'assign_', 'append_', 'if_', 'while_', 'return_', 'ToContext', '_WorkChainSpec'
+__all__ = ('WorkChain', 'assign_', 'append_', 'if_', 'while_', 'return_', 'ToContext', '_WorkChainSpec')
 
 
 class _WorkChainSpec(ProcessSpec, WorkChainSpec):
@@ -253,7 +253,7 @@ class WorkChain(Process):
             raise ValueError('provided pk<{}> could not be resolved to a valid Node instance'.format(pk))
 
         if awaitable.outputs:
-            value = {entry.label: entry.node for entry in node.get_outgoing()}
+            value = {entry.link_label: entry.node for entry in node.get_outgoing()}
         else:
             value = node
 

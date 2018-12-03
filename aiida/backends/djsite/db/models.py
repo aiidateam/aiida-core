@@ -41,6 +41,7 @@ from aiida.backends.utils import AIIDA_ATTRIBUTE_SEP
 # load_dbenv() function).
 SCHEMA_VERSION = migrations.current_schema_version()
 
+
 class AiidaQuerySet(QuerySet):
     def iterator(self):
         for obj in super(AiidaQuerySet, self).iterator():
@@ -53,7 +54,6 @@ class AiidaQuerySet(QuerySet):
         """
 
         return (x.get_aiida_class() for x in super(AiidaQuerySet, self).__iter__())
-
 
     def __getitem__(self, key):
         """Get item for [] operator
@@ -120,8 +120,8 @@ class DbUser(AbstractBaseUser, PermissionsMixin):
 
     def get_aiida_class(self):
         from aiida.orm.implementation.django.users import DjangoUser
-        from aiida.orm.backends import construct_backend
-        return DjangoUser.from_dbmodel(self, construct_backend())
+        from aiida.manage import get_manager
+        return DjangoUser.from_dbmodel(self, get_manager().get_backend())
 
 
 @python_2_unicode_compatible
@@ -745,7 +745,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
           bulk_create() call).
         """
         import datetime
-        
+
         import aiida.utils.json as json
         from aiida.utils.timezone import is_naive, make_aware, get_current_timezone
 
@@ -1315,8 +1315,8 @@ class DbGroup(m.Model):
 
     def get_aiida_class(self):
         from aiida.orm.implementation.django.groups import DjangoGroup
-        from aiida.orm.backends import construct_backend
-        return DjangoGroup.from_dbmodel(self, construct_backend())
+        from aiida.manage import get_manager
+        return DjangoGroup.from_dbmodel(self, get_manager().get_backend())
 
 
 @python_2_unicode_compatible
@@ -1399,8 +1399,8 @@ class DbComputer(m.Model):
 
     def get_aiida_class(self):
         from aiida.orm.implementation.django.computer import DjangoComputer
-        from aiida.orm.backends import construct_backend
-        return DjangoComputer.from_dbmodel(self, construct_backend())
+        from aiida.manage import get_manager
+        return DjangoComputer.from_dbmodel(self, get_manager().get_backend())
 
     def _get_val_from_metadata(self, key):
         import aiida.utils.json as json
@@ -1452,8 +1452,8 @@ class DbAuthInfo(m.Model):
 
     def get_aiida_class(self):
         from aiida.orm.implementation.django.authinfo import DjangoAuthInfo
-        from aiida.orm.backends import construct_backend
-        return DjangoAuthInfo.from_dbmodel(self, construct_backend())
+        from aiida.manage import get_manager
+        return DjangoAuthInfo.from_dbmodel(self, get_manager().get_backend())
 
 
 @python_2_unicode_compatible

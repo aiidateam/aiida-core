@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -124,7 +123,7 @@ class Node(AbstractNode):
         #                    uuid, self.__class__.__name__, e.message))
         else:
             # TODO: allow to get the user from the parameters
-            user = orm.User.objects(backend=self._backend).get_default().backend_entity
+            user = orm.User.objects.get_default().backend_entity
             self._dbnode = DbNode(user=user.dbmodel,
                                   uuid=get_new_uuid(),
                                   type=self._plugin_type_string)
@@ -203,35 +202,36 @@ class Node(AbstractNode):
                 self._dbnode.save()
                 self._increment_version_number_db()
 
-    def _replace_dblink_from(self, src, label, link_type):
+    def _replace_dblink_from(self, src, link_type, label):
         try:
-            self._add_dblink_from(src, label, link_type)
+            self._add_dblink_from(src, link_type, label)
         except UniquenessError:
             # I have to replace the link; I do it within a transaction
             with transaction.atomic():
                 self._remove_dblink_from(label)
-                self._add_dblink_from(src, label, link_type)
+                self._add_dblink_from(src, link_type, label)
 
     def _remove_dblink_from(self, label):
         DbLink.objects.filter(output=self._dbnode, label=label).delete()
 
-    def _add_dblink_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
+    def _add_dblink_from(self, src, link_type, label):
         from aiida.orm.querybuilder import QueryBuilder
         if not isinstance(src, Node):
             raise ValueError("src must be a Node instance")
         if self.uuid == src.uuid:
             raise ValueError("Cannot link to itself")
 
-        if not self.is_stored:
-            raise ModificationNotAllowed(
-                "Cannot call the internal _add_dblink_from if the "
-                "destination node is not stored")
-        if src._to_be_stored:
+        if not src.is_stored:
             raise ModificationNotAllowed(
                 "Cannot call the internal _add_dblink_from if the "
                 "source node is not stored")
 
-        if link_type is LinkType.CREATE or link_type is LinkType.INPUT:
+        if not self.is_stored:
+            raise ModificationNotAllowed(
+                "Cannot call the internal _add_dblink_from if the "
+                "destination node is not stored")
+
+        if link_type is LinkType.CREATE or link_type is LinkType.INPUT_CALC or link_type is LinkType.INPUT_WORK:
             # Check for cycles. This works if the transitive closure is enabled; if it
             # isn't, this test will never fail, but then having a circular link is not
             # meaningful but does not pose a huge threat
@@ -244,32 +244,7 @@ class Node(AbstractNode):
                 raise ValueError(
                     "The link you are attempting to create would generate a loop")
 
-        if label is None:
-            autolabel_idx = 1
-
-            existing_from_autolabels = list(DbLink.objects.filter(
-                output=self._dbnode,
-                label__startswith="link_").values_list('label', flat=True))
-            while "link_{}".format(autolabel_idx) in existing_from_autolabels:
-                autolabel_idx += 1
-
-            safety_counter = 0
-            while True:
-                safety_counter += 1
-                if safety_counter > 100:
-                    # Well, if you have more than 100 concurrent addings
-                    # to the same node, you are clearly doing something wrong...
-                    raise InternalError("Hey! We found more than 100 concurrent"
-                                        " adds of links "
-                                        "to the same nodes! Are you really doing that??")
-                try:
-                    self._do_create_link(src, "link_{}".format(autolabel_idx), link_type)
-                    break
-                except UniquenessError:
-                    # Retry loop until you find a new loop
-                    autolabel_idx += 1
-        else:
-            self._do_create_link(src, label, link_type)
+        self._do_create_link(src, label, link_type)
 
     def _do_create_link(self, src, label, link_type):
         sid = None
@@ -493,25 +468,22 @@ class Node(AbstractNode):
             context_man = EmptyContextManager()
 
         if not self.is_stored:
-            raise ModificationNotAllowed(
-                "Node with pk= {} is not stored yet".format(self.pk))
+            raise ModificationNotAllowed('cannot store cached incoming links for unstored Node<{}>'.format(self.pk))
 
         with context_man:
             # This raises if there is an unstored node.
             self._check_are_parents_stored()
-            # I have to store only those links where the source is already
-            # stored
-            links_to_store = list(self._inputlinks_cache.keys())
 
-            for label in links_to_store:
-                src, link_type = self._inputlinks_cache[label]
-                self._add_dblink_from(src, label, link_type)
+            # I have to store only those links where the source is already stored
+            for link_triple in self._incoming_cache:
+                self._add_dblink_from(*link_triple)
+
             # If everything went smoothly, clear the entries from the cache.
             # I do it here because I delete them all at once if no error
             # occurred; otherwise, links will not be stored and I
             # should not delete them from the cache (but then an exception
             # would have been raised, and the following lines are not executed)
-            self._inputlinks_cache.clear()
+            self._incoming_cache = list()
 
     def _db_store(self, with_transaction=True):
         """

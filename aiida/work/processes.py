@@ -21,7 +21,7 @@ import uuid
 import traceback
 
 import six
-from six.moves import zip, filter, range
+from six.moves import filter, range
 from pika.exceptions import ConnectionClosed
 
 import plumpy
@@ -32,14 +32,14 @@ from aiida.common.lang import override, protected
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida import orm
-from aiida.orm.node.process import ProcessNode, WorkflowNode
+from aiida.orm.node.process import ProcessNode, CalculationNode, WorkflowNode
 from aiida.utils import serialize
 from aiida.work.ports import InputPort, PortNamespace
 from aiida.work.process_spec import ProcessSpec, ExitCode
 from aiida.work.process_builder import ProcessBuilder
 from . import utils
 
-__all__ = 'Process', 'ProcessState', 'FunctionProcess'
+__all__ = ('Process', 'ProcessState')
 
 
 def instantiate_process(runner, process, *args, **inputs):
@@ -93,7 +93,7 @@ class Process(plumpy.Process):
     _spec_type = ProcessSpec
     _calc_class = ProcessNode
 
-    SINGLE_RETURN_LINKNAME = 'result'
+    SINGLE_OUTPUT_LINKNAME = 'result'
 
     class SaveKeys(enum.Enum):
         """
@@ -125,9 +125,9 @@ class Process(plumpy.Process):
         return cls._calc_class()
 
     def __init__(self, inputs=None, logger=None, runner=None, parent_pid=None, enable_persistence=True):
-        from . import manager
+        from aiida.manage import manager
 
-        self._runner = runner if runner is not None else manager.AiiDAManager.get_runner()
+        self._runner = runner if runner is not None else manager.get_manager().get_runner()
 
         super(Process, self).__init__(
             inputs=self.spec().inputs.serialize(inputs),
@@ -187,12 +187,12 @@ class Process(plumpy.Process):
 
     @override
     def load_instance_state(self, saved_state, load_context):
-        from . import manager
+        from aiida.manage import manager
 
         if 'runner' in load_context:
             self._runner = load_context.runner
         else:
-            self._runner = manager.AiiDAManager.get_runner()
+            self._runner = manager.get_manager().get_runner()
 
         load_context = load_context.copyextend(loop=self._runner.loop, communicator=self._runner.communicator)
         super(Process, self).load_instance_state(saved_state, load_context)
@@ -241,7 +241,7 @@ class Process(plumpy.Process):
         if value is None:
             # In this case assume that output_port is the actual value and there is just one return value
             value = output_port
-            output_port = self.SINGLE_RETURN_LINKNAME
+            output_port = self.SINGLE_OUTPUT_LINKNAME
 
         return super(Process, self).out(output_port, value)
 
@@ -397,13 +397,13 @@ class Process(plumpy.Process):
                 if self.calc.is_finished_ok:
                     self._state = ProcessState.FINISHED
                     for entry in self.calc.get_outgoing(link_type=LinkType.RETURN):
-                        if entry.label.endswith('_{pk}'.format(pk=entry.node.pk)):
+                        if entry.link_label.endswith('_{pk}'.format(pk=entry.node.pk)):
                             continue
-                        self.out(entry.label, entry.node)
+                        self.out(entry.link_label, entry.node)
                     # This is needed for JobProcess. In that case, the outputs are
                     # returned regardless of whether they end in '_pk'
                     for entry in self.calc.get_outgoing(link_type=LinkType.CREATE):
-                        self.out(entry.label, entry.node)
+                        self.out(entry.link_label, entry.node)
             except exceptions.ModificationNotAllowed:
                 # The calculation was already stored
                 pass
@@ -442,21 +442,19 @@ class Process(plumpy.Process):
         if self.inputs.store_provenance is False:
             return
 
-        new_outputs = set(self.outputs.keys()) - set(self.calc.get_outgoing(link_type=LinkType.RETURN).get_labels())
+        outputs_stored = self.calc.get_outgoing(link_type=(LinkType.CREATE, LinkType.RETURN)).all_link_labels()
+        outputs_new = set(self.outputs.keys()) - set(outputs_stored)
 
-        for label in new_outputs:
-            value = self.outputs[label]
-            # Try making us the creator
-            try:
-                value.add_link_from(self.calc, label, LinkType.CREATE)
-            except ValueError:
-                # Must have already been created...nae dramas
-                pass
+        for link_label in outputs_new:
 
-            value.store()
+            output = self.outputs[link_label]
 
-            if isinstance(self.calc, WorkflowNode):
-                value.add_link_from(self.calc, label, LinkType.RETURN)
+            if isinstance(self.calc, CalculationNode):
+                output.add_incoming(self.calc, LinkType.CREATE, link_label)
+            elif isinstance(self.calc, WorkflowNode):
+                output.add_incoming(self.calc, LinkType.RETURN, link_label)
+
+            output.store()
 
     @property
     def process_class(self):
@@ -493,7 +491,15 @@ class Process(plumpy.Process):
         parent_calc = self.get_parent_calc()
 
         if parent_calc:
-            self.calc.add_link_from(parent_calc, 'CALL', link_type=LinkType.CALL)
+
+            if isinstance(parent_calc, CalculationNode):
+                raise exceptions.InvalidOperation('calling processes from a calculation type process is forbidden.')
+
+            if isinstance(self.calc, CalculationNode):
+                self.calc.add_incoming(parent_calc, LinkType.CALL_CALC, 'CALL_CALC')
+
+            elif isinstance(self.calc, WorkflowNode):
+                self.calc.add_incoming(parent_calc, LinkType.CALL_WORK, 'CALL_WORK')
 
         self._setup_db_inputs()
         self._add_description_and_label()
@@ -502,21 +508,20 @@ class Process(plumpy.Process):
         """
         Create the links that connect the inputs to the calculation node that represents this Process
         """
-        parent_calc = self.get_parent_calc()
-
         for name, input_value in self._flat_inputs().items():
 
             if isinstance(input_value, ProcessNode):
                 input_value = utils.get_or_create_output_group(input_value)
 
-            if not input_value.is_stored:
-                # If the input isn't stored then assume our parent created it
-                if parent_calc:
-                    input_value.add_link_from(parent_calc, 'CREATE', link_type=LinkType.CREATE)
-                if self.inputs.store_provenance:
-                    input_value.store()
+            # Need this special case for tests that use ProcessNodes as classes
+            if isinstance(self.calc, ProcessNode) and not isinstance(self.calc, (CalculationNode, WorkflowNode)):
+                self.calc.add_incoming(input_value, LinkType.INPUT_WORK, name)
 
-            self.calc.add_link_from(input_value, name)
+            elif isinstance(self.calc, CalculationNode):
+                self.calc.add_incoming(input_value, LinkType.INPUT_CALC, name)
+
+            elif isinstance(self.calc, WorkflowNode):
+                self.calc.add_incoming(input_value, LinkType.INPUT_WORK, name)
 
     def _add_description_and_label(self):
         """Add the description and label to the calculation node"""
@@ -627,7 +632,7 @@ class Process(plumpy.Process):
         # maps the exposed name to all outputs that belong to it
         top_namespace_map = collections.defaultdict(list)
         process_outputs_dict = {
-            entry.label: entry.node for entry in process_instance.get_outgoing(link_type=LinkType.RETURN)
+            entry.link_label: entry.node for entry in process_instance.get_outgoing(link_type=LinkType.RETURN)
         }
 
         for port_name in process_outputs_dict:
@@ -662,167 +667,3 @@ class Process(plumpy.Process):
                 split_ns = namespace.split('.')
                 namespace_list.extend(['.'.join(split_ns[:i]) for i in range(1, len(split_ns) + 1)])
             return namespace_list
-
-
-class FunctionProcess(Process):
-    """Function process class used for turning functions into a Process"""
-
-    _func_args = None
-
-    @staticmethod
-    def _func(*_args, **_kwargs):
-        """
-        This is used internally to store the actual function that is being
-        wrapped and will be replaced by the build method.
-        """
-        return {}
-
-    @staticmethod
-    def build(func, node_class):
-        """
-        Build a Process from the given function.
-
-        All function arguments will be assigned as process inputs. If keyword arguments are specified then
-        these will also become inputs.
-
-        :param func: The function to build a process from
-        :param node_class: Provide a custom node class to be used, has to be constructable with no arguments. It has to
-            be a sub class of `ProcessNode` as well as mixin the :class:`~aiida.orm.mixins.FunctionCalculationMixin`.
-        :type node_class: :class:`aiida.orm.node.process.ProcessNode`
-        :return: A Process class that represents the function
-        :rtype: :class:`FunctionProcess`
-        """
-        from aiida.orm.mixins import FunctionCalculationMixin
-
-        if not issubclass(node_class, ProcessNode) or not issubclass(node_class, FunctionCalculationMixin):
-            raise TypeError('the node_class should be a sub class of `ProcessNode` and `FunctionCalculationMixin`')
-
-        args, varargs, keywords, defaults = inspect.getargspec(func)  # pylint: disable=deprecated-method
-        nargs = len(args)
-        ndefaults = len(defaults) if defaults else 0
-        first_default_pos = nargs - ndefaults
-
-        if varargs is not None:
-            raise ValueError('variadic arguments are not supported')
-
-        def _define(cls, spec):
-            """Define the spec dynamically"""
-            super(FunctionProcess, cls).define(spec)
-
-            for i, arg in enumerate(args):
-                default = ()
-                if i >= first_default_pos:
-                    default = defaults[i - first_default_pos]
-
-                if spec.has_input(arg):
-                    spec.inputs[arg].default = default
-                else:
-                    spec.input(arg, valid_type=orm.Data, default=default)
-
-            # If the function support kwargs then allow dynamic inputs, otherwise disallow
-            spec.inputs.dynamic = keywords is not None
-
-            # Function processes return data types
-            spec.outputs.valid_type = orm.Data
-
-        return type(
-            func.__name__, (FunctionProcess,), {
-                '_func': staticmethod(func),
-                Process.define.__name__: classmethod(_define),
-                '_func_args': args,
-                '_node_class': node_class
-            })
-
-    @classmethod
-    def create_inputs(cls, *args, **kwargs):
-        """Create the input args for the FunctionProcess"""
-        ins = {}
-        if kwargs:
-            ins.update(kwargs)
-        if args:
-            ins.update(cls.args_to_dict(*args))
-        return ins
-
-    @classmethod
-    def args_to_dict(cls, *args):
-        """
-        Create an input dictionary (i.e. label: value) from supplied args.
-
-        :param args: The values to use
-        :return: A label: value dictionary
-        """
-        return dict(zip(cls._func_args, args))
-
-    @classmethod
-    def get_or_create_db_record(cls):
-        return cls._node_class()
-
-    def __init__(self, *args, **kwargs):
-        if kwargs.get('enable_persistence', False):
-            raise RuntimeError('Cannot persist a function process')
-        super(FunctionProcess, self).__init__(enable_persistence=False, *args, **kwargs)
-
-    @property
-    def process_class(self):
-        """
-        Return the class that represents this Process, for the FunctionProcess this is the function itself.
-
-        For a standard Process or sub class of Process, this is the class itself. However, for legacy reasons,
-        the Process class is a wrapper around another class. This function returns that original class, i.e. the
-        class that really represents what was being executed.
-        """
-        return self._func
-
-    def execute(self):
-        """Execute the process"""
-        result = super(FunctionProcess, self).execute()
-        # Create a special case for Process functions: They can return
-        # a single value in which case you get this a not a dict
-        if len(result) == 1 and self.SINGLE_RETURN_LINKNAME in result:
-            return result[self.SINGLE_RETURN_LINKNAME]
-
-        return result
-
-    @override
-    def _setup_db_record(self):
-        """Set up the database record for the process"""
-        super(FunctionProcess, self)._setup_db_record()
-        self.calc.store_source_info(self._func)
-
-    @override
-    def run(self):
-        """Run the process"""
-        args = []
-
-        # Split the inputs into positional and keyword arguments
-        args = [None] * len(self._func_args)
-        kwargs = {}
-        for name, value in self.inputs.items():
-            try:
-                if self.spec().inputs[name].non_db:
-                    # Don't consider non-database inputs
-                    continue
-            except KeyError:
-                pass  # No port found
-
-            # Check if it is a positional arg, if not then keyword
-            try:
-                args[self._func_args.index(name)] = value
-            except ValueError:
-                kwargs[name] = value
-
-        result = self._func(*args, **kwargs)
-
-        if result is None or isinstance(result, ExitCode):
-            return result
-
-        if isinstance(result, orm.Data):
-            self.out(self.SINGLE_RETURN_LINKNAME, result)
-        elif isinstance(result, collections.Mapping):
-            for name, value in result.items():
-                self.out(name, value)
-        else:
-            raise TypeError("Function process returned an output with unsupported type '{}'\n"
-                            "Must be a orm.Data type or a Mapping of {{string: orm.Data}}".format(result.__class__))
-
-        return ExitCode()

@@ -13,7 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.utils import timezone
-from . import backends
+from aiida.manage import get_manager
 from . import entities
 from . import node
 
@@ -98,7 +98,7 @@ class Log(entities.Entity):
 
     def __init__(self, time, loggername, levelname, objname, objpk=None, message='', metadata=None, backend=None):  # pylint: disable=too-many-arguments
         """Construct a new computer"""
-        backend = backend or backends.construct_backend()
+        backend = backend or get_manager().get_backend()
         model = backend.logs.create(
             time=time,
             loggername=loggername,

@@ -34,11 +34,10 @@ class TestVerdiCodeSetup(AiidaTestCase):
             hostname='localhost',
             transport_type='local',
             scheduler_type='direct',
-            workdir='/tmp/aiida',
-            backend=cls.backend).store()
+            workdir='/tmp/aiida').store()
 
     def setUp(self):
-        self.comp = orm.Computer.objects(self.backend).get(name='comp')
+        self.comp = orm.Computer.objects.get(name='comp')
 
         self.cli_runner = CliRunner()
         self.this_folder = os.path.dirname(__file__)
@@ -123,12 +122,11 @@ class TestVerdiCodeCommands(AiidaTestCase):
             hostname='localhost',
             transport_type='local',
             scheduler_type='direct',
-            workdir='/tmp/aiida',
-            backend=cls.backend).store()
+            workdir='/tmp/aiida').store()
 
     def setUp(self):
         from aiida import orm
-        self.comp = orm.Computer.objects(self.backend).get(name='comp')
+        self.comp = orm.Computer.objects.get(name='comp')
 
         try:
             code = orm.Code.get_from_string('code')

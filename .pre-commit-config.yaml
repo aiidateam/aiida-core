@@ -158,7 +158,6 @@
         aiida/backends/tests/work/test_runners.py|
         aiida/backends/tests/work/test_transport.py|
         aiida/backends/tests/work/test_utils.py|
-        aiida/backends/tests/work/test_workfunctions.py|
         aiida/backends/tests/work/utils.py|
         aiida/backends/tests/work/work_chain.py|
         aiida/backends/utils.py|
@@ -190,7 +189,6 @@
         aiida/common/links.py|
         aiida/common/orbital/__init__.py|
         aiida/common/orbital/realhydrogen.py|
-        aiida/common/profile.py|
         aiida/common/test_extendeddicts.py|
         aiida/common/test_logging.py|
         aiida/control/tests/test_postgres.py|

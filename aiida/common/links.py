@@ -13,13 +13,12 @@ from __future__ import absolute_import
 from enum import Enum
 
 
-
 class LinkType(Enum):
-    """
-    A simple enum of allowed link types.
-    """
-    UNSPECIFIED = 'unspecified'
-    CREATE = 'createlink'
-    RETURN = 'returnlink'
-    INPUT = 'inputlink'
-    CALL = 'calllink'
+    """A simple enum of allowed link types."""
+
+    CREATE = 'create'
+    RETURN = 'return'
+    INPUT_CALC = 'input_calc'
+    INPUT_WORK = 'input_work'
+    CALL_CALC = 'call_calc'
+    CALL_WORK = 'call_work'

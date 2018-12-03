@@ -12,119 +12,106 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-import io
-
 from aiida.backends.testbase import AiidaTestCase
+from aiida.common import exceptions
 from aiida.common.caching import enable_caching
+from aiida.common.links import LinkType
 from aiida.orm.data.int import Int
 from aiida.orm.node.process import CalcFunctionNode
-from aiida.work import calcfunction
+from aiida.work import calcfunction, Process
 
 
-class TestCalcFunctionNode(AiidaTestCase):
-    """
-    Tests for the calcfunction decorator and CalcFunctionNode.
+class TestCalcFunction(AiidaTestCase):
+    """Tests for calcfunctions.
+
+    .. note: tests common to all process functions should go in `aiida.backends.tests.work.test_process_function.py`
     """
 
     def setUp(self):
+        super(TestCalcFunction, self).setUp()
+        self.assertIsNone(Process.current())
+        self.default_int = Int(256)
 
         @calcfunction
-        def increment_calcfunction(inp):
-            return {'res': Int(inp.value + 1)}
+        def test_calcfunction(data):
+            return Int(data.value + 1)
 
-        self.increment_calcfunction = increment_calcfunction
+        self.test_calcfunction = test_calcfunction
 
-    def test_do_not_store_provenance(self):
-        """Run the function without storing the provenance."""
-        inp = 2
-        result = self.increment_calcfunction(inp=Int(inp), store_provenance=False)  # pylint: disable=unexpected-keyword-arg
-        self.assertFalse(result['res'].is_stored)
-        self.assertEqual(result['res'], inp + 1)
+    def tearDown(self):
+        super(TestCalcFunction, self).tearDown()
+        self.assertIsNone(Process.current())
 
-    def test_calculation_function_process_state(self):
-        """
-        Test the process state for a calculation function
-        """
-        _, node = self.increment_calcfunction.run_get_node(inp=Int(11))
+    def test_calcfunction_node_type(self):
+        """Verify that a calcfunction gets a CalcFunctionNode as node instance."""
+        _, node = self.test_calcfunction.run_get_node(self.default_int)
+        self.assertIsInstance(node, CalcFunctionNode)
 
-        self.assertEqual(node.is_terminated, True)
-        self.assertEqual(node.is_excepted, False)
-        self.assertEqual(node.is_killed, False)
-        self.assertEqual(node.is_finished, True)
-        self.assertEqual(node.is_finished_ok, True)
-        self.assertEqual(node.is_failed, False)
+    def test_calcfunction_links(self):
+        """Verify that a calcfunction can only get CREATE links and no RETURN links."""
+        _, node = self.test_calcfunction.run_get_node(self.default_int)
 
-    def test_exit_status(self):
-        """
-        If a calcfunction reaches the FINISHED process state, it has to have been successful
-        which means that the exit status always has to be 0
-        """
-        _, node = self.increment_calcfunction.run_get_node(inp=Int(11))
+        self.assertEqual(len(node.get_outgoing(link_type=LinkType.CREATE).all()), 1)
+        self.assertEqual(len(node.get_outgoing(link_type=LinkType.RETURN).all()), 0)
 
-        self.assertEqual(node.is_finished, True)
-        self.assertEqual(node.is_finished_ok, True)
-        self.assertEqual(node.is_failed, False)
-        self.assertEqual(node.exit_status, 0)
+    def test_calcfunction_return_stored(self):
+        """Verify that a calcfunction will raise when a stored node is returned."""
 
-    def test_incr(self):
-        """
-        Simple test for the increment calculation function.
-        """
-        for i in [-4, 0, 3, 10]:
-            result = self.increment_calcfunction(inp=Int(i))
-            self.assertEqual(result['res'].value, i + 1)
+        @calcfunction
+        def test_calcfunction():
+            return Int(2).store()
 
-    def test_caching(self):
-        """Test caching within the context manager using targeting the `CalcFunctionNode` class."""
+        with self.assertRaises(ValueError):
+            test_calcfunction.run_get_node()
+
+    def test_calcfunction_default_linkname(self):
+        """Verify that a calcfunction that returns a single Data node gets a default link label."""
+        _, node = self.test_calcfunction.run_get_node(self.default_int)
+
+        self.assertEqual(node.out.result, self.default_int.value + 1)
+        self.assertEqual(getattr(node.out, Process.SINGLE_OUTPUT_LINKNAME), self.default_int.value + 1)
+        self.assertEqual(node.out[Process.SINGLE_OUTPUT_LINKNAME], self.default_int.value + 1)
+
+    def test_calcfunction_caching(self):
+        """Verify that a calcfunction can be cached."""
+        _, original = self.test_calcfunction.run_get_node(Int(5))
+
+        # Caching a CalcFunctionNode should be possible
         with enable_caching(CalcFunctionNode):
-            result1, node1 = self.increment_calcfunction.run_get_node(inp=Int(11))
-            result2, node2 = self.increment_calcfunction.run_get_node(inp=Int(11))
-            self.assertEqual(result1['res'].value, result2['res'].value, 12)
-            self.assertEqual(node1.get_extra('_aiida_cached_from', node1.uuid), node2.get_extra('_aiida_cached_from'))
+            _, cached = self.test_calcfunction.run_get_node(Int(5))
+            self.assertTrue(cached.is_created_from_cache)
+            self.assertIn(cached.get_cache_source(), original.uuid)
 
-    def test_caching_change_code(self):
-        """Test caching within the context manager using targeting the `CalcFunctionNode` class."""
+    def test_calcfunction_caching_change_code(self):
+        """Verify that changing the source codde of a calcfunction invalidates any existing cached nodes."""
+        result_original = self.test_calcfunction(self.default_int)
+
         with enable_caching(CalcFunctionNode):
-            result1 = self.increment_calcfunction(inp=Int(11))
 
             @calcfunction
-            def increment_calcfunction(inp):
-                return {'res': Int(inp.value + 2)}
+            def test_calcfunction(data):
+                """This calcfunction has a different source code from the one setup in the setUp method."""
+                return Int(data.value + 2)
 
-            result2, node2 = increment_calcfunction.run_get_node(inp=Int(11))
-            self.assertNotEqual(result1['res'].value, result2['res'].value)
-            self.assertFalse('_aiida_cached_from' in node2.extras())
+            result_cached, cached = test_calcfunction.run_get_node(self.default_int)
+            self.assertNotEqual(result_original, result_cached)
+            self.assertFalse(cached.is_created_from_cache)
 
-    def test_source_code_attributes(self):
-        """
-        Verify that upon storing the calculation function is properly introspected and the expected
-        information is stored in the nodes attributes and repository folder
-        """
-        function_name = 'test_calcfunction'
+    def test_calcfunction_do_not_store_provenance(self):
+        """Run the function without storing the provenance."""
+        data = Int(1)
+        result, node = self.test_calcfunction.run_get_node(data, store_provenance=False)  # pylint: disable=unexpected-keyword-arg
+        self.assertFalse(result.is_stored)
+        self.assertFalse(data.is_stored)
+        self.assertFalse(node.is_stored)
+        self.assertEqual(result, data + 1)
+
+    def test_calculation_cannot_call(self):
+        """Verify that calling another process from within a calcfunction raises as it is forbidden."""
 
         @calcfunction
-        def test_calcfunction(inp):
-            return {'result': Int(inp.value + 1)}
+        def test_calcfunction_caller(data):
+            self.test_calcfunction(data)
 
-        _, node = test_calcfunction.run_get_node(inp=Int(5))
-
-        # Read the source file of the calculation function that should be stored in the repository
-        # into memory, which should be exactly this test file
-        function_source_file = node.function_source_file
-
-        with io.open(function_source_file, encoding='utf8') as handle:
-            function_source_code = handle.readlines()
-
-        # Get the attributes that should be stored in the node
-        function_name = node.function_name
-        function_starting_line_number = node.function_starting_line_number
-
-        # Verify that the function name is correct and the first source code linenumber is stored
-        self.assertEqual(function_name, function_name)
-        self.assertIsInstance(function_starting_line_number, int)
-
-        # Check that first line number is correct. Note that the first line should correspond
-        # to the `@calcfunction` directive, but since the list is zero-indexed we actually get the
-        # following line, which should correspond to the function name i.e. `def test_calcfunction(inp)`
-        function_name_from_source = function_source_code[function_starting_line_number]
-        self.assertTrue(function_name in function_name_from_source)
+        with self.assertRaises(exceptions.InvalidOperation):
+            test_calcfunction_caller(self.default_int)

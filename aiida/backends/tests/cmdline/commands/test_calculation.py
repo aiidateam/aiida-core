@@ -45,16 +45,15 @@ class TestVerdiCalculation(AiidaTestCase):
             hostname='localhost',
             transport_type='local',
             scheduler_type='direct',
-            workdir='/tmp/aiida',
-            backend=cls.backend).store()
+            workdir='/tmp/aiida').store()
 
         cls.code = orm.Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
         cls.group = orm.Group(name='test_group').store()
         cls.node = Node().store()
         cls.calcs = []
 
-        user = orm.User.objects(cls.backend).get_default()
-        authinfo = orm.AuthInfo(computer=cls.computer, user=user, backend=cls.backend)
+        user = orm.User.objects.get_default()
+        authinfo = orm.AuthInfo(computer=cls.computer, user=user)
         authinfo.store()
 
         # Create 13 CalcJobNodes (one for each CalculationState)
@@ -96,7 +95,7 @@ class TestVerdiCalculation(AiidaTestCase):
                     cls.KEY_TWO: cls.VAL_TWO,
                 }).store()
 
-                output_parameters.add_link_from(calc, 'output_parameters', link_type=LinkType.RETURN)
+                output_parameters.add_incoming(calc, LinkType.CREATE, 'output_parameters')
 
                 # Create shortcut for easy dereferencing
                 cls.result_job = calc
@@ -109,7 +108,7 @@ class TestVerdiCalculation(AiidaTestCase):
 
         # Get the imported ArithmeticAddCalculation node
         ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
-        calculations = orm.QueryBuilder(backend=cls.backend).append(ArithmeticAddCalculation).all()[0]
+        calculations = orm.QueryBuilder().append(ArithmeticAddCalculation).all()[0]
         cls.arithmetic_job = calculations[0]
 
     def setUp(self):
@@ -239,7 +238,7 @@ class TestVerdiCalculation(AiidaTestCase):
         # Giving multiple identifiers should print a non empty string message
         options = [str(calc.pk) for calc in self.calcs]
         result = self.cli_runner.invoke(command.calculation_show, options)
-        self.assertIsNone(result.exception, result.output)
+        self.assertClickResultNoException(result)
         self.assertTrue(len(get_result_lines(result)) > 0)
 
     def test_calculation_logshow(self):

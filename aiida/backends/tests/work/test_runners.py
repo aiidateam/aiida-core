@@ -16,8 +16,8 @@ import plumpy
 from aiida.backends.testbase import AiidaTestCase
 from aiida import work
 from aiida.daemon.workflowmanager import execute_steps
-from aiida.work import runners
 from aiida.workflows.wf_demo import WorkflowDemo
+from aiida.manage import get_manager
 
 
 class Proc(work.Process):
@@ -33,7 +33,7 @@ class TestWorkchain(AiidaTestCase):
 
     def setUp(self):
         super(TestWorkchain, self).setUp()
-        self.runner = work.AiiDAManager.get_runner()
+        self.runner = get_manager().get_runner()
 
     def tearDown(self):
         super(TestWorkchain, self).tearDown()

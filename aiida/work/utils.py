@@ -159,15 +159,15 @@ def exponential_backoff_retry(fct, initial_interval=10.0, max_attempts=5, logger
     raise gen.Return(result)
 
 
-def is_workfunction(function):
+def is_process_function(function):
     """
-    Return whether the given function is a workfunction
+    Return whether the given function is a process function
 
     :param function: a function
-    :returns: True if the function is a wrapped workfunction, False otherwise
+    :returns: True if the function is a wrapped process function, False otherwise
     """
     try:
-        return function.is_workfunction
+        return function.is_process_function
     except AttributeError:
         return False
 
@@ -182,10 +182,10 @@ def get_or_create_output_group(node):
     from aiida.orm.node.process import ProcessNode
 
     if not isinstance(node, ProcessNode):
-        raise TypeError("Can only create output groups for type ProcessNode")
+        raise TypeError('Can only create output groups for type ProcessNode')
 
-    outputs = {entry.label: entry.node for entry in node.get_outgoing(link_type=(LinkType.CREATE, LinkType.RETURN))}
-    return FrozenDict(dict=outputs)
+    outputs = node.get_outgoing(link_type=(LinkType.CREATE, LinkType.RETURN))
+    return FrozenDict(dict={entry.link_label: entry.node for entry in outputs})
 
 
 @contextlib.contextmanager

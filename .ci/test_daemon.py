@@ -362,10 +362,10 @@ def main():
     pk = submit(WorkFunctionRunnerWorkChain, input=value).pk
     expected_results_workchains[pk] = value
 
-    print("Submitting a WorkChain which contains an calcfunction.")
-    value = Str('test_string')
+    print("Submitting a WorkChain which contains a calcfunction.")
+    value = Int(1)
     pk = submit(CalcFunctionRunnerWorkChain, input=value).pk
-    expected_results_workchains[pk] = value
+    expected_results_workchains[pk] = Int(2)
 
     calculation_pks = sorted(expected_results_calculations.keys())
     workchains_pks = sorted(expected_results_workchains.keys())

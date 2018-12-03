@@ -17,9 +17,15 @@ from six.moves import range, zip
 
 from aiida.backends.testbase import AiidaTestCase
 import aiida.backends.settings as settings
+from aiida.common.links import LinkType
 
 
 class TestQueryBuilder(AiidaTestCase):
+
+    def setUp(self):
+        super(TestQueryBuilder, self).setUp()
+        self.clean_db()
+        self.insert_data()
 
     def test_classification(self):
         """
@@ -94,7 +100,7 @@ class TestQueryBuilder(AiidaTestCase):
         """
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import Node, Data
-        from aiida.orm.node.process import ProcessNode
+        from aiida.orm.node.process import CalculationNode
         from datetime import datetime
         from aiida.common.links import LinkType
 
@@ -103,7 +109,7 @@ class TestQueryBuilder(AiidaTestCase):
         n1._set_attr('foo', ['hello', 'goodbye'])
         n1.store()
 
-        n2 = ProcessNode()
+        n2 = CalculationNode()
         n2.label = 'node2'
         n2._set_attr('foo', 1)
         n2.store()
@@ -113,7 +119,7 @@ class TestQueryBuilder(AiidaTestCase):
         n3._set_attr('foo', 1.0000)  # Stored as fval
         n3.store()
 
-        n4 = ProcessNode()
+        n4 = CalculationNode()
         n4.label = 'node4'
         n4._set_attr('foo', 'bar')
         n4.store()
@@ -123,11 +129,11 @@ class TestQueryBuilder(AiidaTestCase):
         n5._set_attr('foo', None)
         n5.store()
 
-        n2.add_link_from(n1, link_type=LinkType.INPUT)
-        n3.add_link_from(n2, link_type=LinkType.CREATE)
+        n2.add_incoming(n1, link_type=LinkType.INPUT_CALC, link_label='link1')
+        n3.add_incoming(n2, link_type=LinkType.CREATE, link_label='link2')
 
-        n4.add_link_from(n3, link_type=LinkType.INPUT)
-        n5.add_link_from(n4, link_type=LinkType.CREATE)
+        n4.add_incoming(n3, link_type=LinkType.INPUT_CALC, link_label='link3')
+        n5.add_incoming(n4, link_type=LinkType.CREATE, link_label='link4')
 
         qb1 = QueryBuilder()
         qb1.append(Node, filters={'attributes.foo': 1.000})
@@ -148,13 +154,13 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(qb3.count(), 4)
 
         qb4 = QueryBuilder()
-        qb4.append(ProcessNode, tag='node1')
+        qb4.append(CalculationNode, tag='node1')
         qb4.append(Data, tag='node2')
         self.assertEqual(qb4.count(), 2)
 
         qb5 = QueryBuilder()
         qb5.append(Data, tag='node1')
-        qb5.append(ProcessNode, tag='node2')
+        qb5.append(CalculationNode, tag='node2')
         self.assertEqual(qb5.count(), 2)
 
         qb6 = QueryBuilder()
@@ -180,8 +186,8 @@ class TestQueryBuilder(AiidaTestCase):
         n2.label = 'bar'
         n2.description = 'I am BaR'
 
-        n2.add_link_from(n1, label='random_2')
-        n1.add_link_from(n0, label='random_1')
+        n2.add_incoming(n1, link_type=LinkType.CREATE, link_label='random_2')
+        n1.add_incoming(n0, link_type=LinkType.CREATE, link_label='random_1')
 
         for n in (n0, n1, n2):
             n.store()
@@ -724,8 +730,8 @@ class QueryBuilderJoinsTests(AiidaTestCase):
         for n in (good_child, bad_child, parent, unrelated):
             n.store()
 
-        good_child.add_link_from(parent, label='parent')
-        bad_child.add_link_from(parent, label='parent')
+        good_child.add_incoming(parent, link_type=LinkType.CREATE, link_label='parent')
+        bad_child.add_incoming(parent, link_type=LinkType.CREATE, link_label='parent')
 
         # Using a standard inner join
         qb = QueryBuilder()
@@ -754,18 +760,18 @@ class QueryBuilderJoinsTests(AiidaTestCase):
 
         # advisor 0 get student 0, 1
         for i in (0, 1):
-            students[i].add_link_from(advisors[0], label='is_advisor')
+            students[i].add_incoming(advisors[0], link_type=LinkType.CREATE, link_label='is_advisor')
 
         # advisor 1 get student 3, 4
         for i in (3, 4):
-            students[i].add_link_from(advisors[1], label='is_advisor')
+            students[i].add_incoming(advisors[1], link_type=LinkType.CREATE, link_label='is_advisor')
 
         # advisor 2 get student 5, 6, 7
         for i in (5, 6, 7):
-            students[i].add_link_from(advisors[2], label='is_advisor')
+            students[i].add_incoming(advisors[2], link_type=LinkType.CREATE, link_label='is_advisor')
 
         # let's add a differnt relationship than advisor:
-        students[9].add_link_from(advisors[2], label='lover')
+        students[9].add_incoming(advisors[2], link_type=LinkType.CREATE, link_label='lover')
 
         self.assertEqual(
             QueryBuilder().append(
@@ -786,7 +792,7 @@ class QueryBuilderJoinsTests(AiidaTestCase):
 
         # Create another user
         new_email = "newuser@new.n"
-        user = orm.User(email=new_email, backend=self.backend).store()
+        user = orm.User(email=new_email).store()
 
         # Create a group that belongs to that user
         from aiida.orm.groups import Group
@@ -849,15 +855,15 @@ class QueryBuilderPath(AiidaTestCase):
         # I create a strange graph, inserting links in a order
         # such that I often have to create the transitive closure
         # between two graphs
-        # I set everything as an INPUT-links now, because the QueryBuilder path query or
-        # our custom queries don't follow other links than CREATE or INPUT
-        n3.add_link_from(n2, link_type=LinkType.INPUT)
-        n2.add_link_from(n1, link_type=LinkType.INPUT)
-        n5.add_link_from(n3, link_type=LinkType.INPUT)
-        n5.add_link_from(n4, link_type=LinkType.INPUT)
-        n4.add_link_from(n2, link_type=LinkType.INPUT)
-        n7.add_link_from(n6, link_type=LinkType.INPUT)
-        n8.add_link_from(n7, link_type=LinkType.INPUT)
+        # I set everything as an INPUT_CALC-links now, because the QueryBuilder path query or
+        # our custom queries don't follow other links than CREATE or INPUT_CALC
+        n3.add_incoming(n2, link_type=LinkType.INPUT_CALC, link_label='link1')
+        n2.add_incoming(n1, link_type=LinkType.INPUT_CALC, link_label='link2')
+        n5.add_incoming(n3, link_type=LinkType.INPUT_CALC, link_label='link3')
+        n5.add_incoming(n4, link_type=LinkType.INPUT_CALC, link_label='link4')
+        n4.add_incoming(n2, link_type=LinkType.INPUT_CALC, link_label='link5')
+        n7.add_incoming(n6, link_type=LinkType.INPUT_CALC, link_label='link6')
+        n8.add_incoming(n7, link_type=LinkType.INPUT_CALC, link_label='link7')
 
         # There are no parents to n9, checking that
         self.assertEqual(set([]), set(q.get_all_parents([n9.pk])))
@@ -881,7 +887,7 @@ class QueryBuilderPath(AiidaTestCase):
             ).append(Node, ancestor_of='desc', filters={'id': n1.pk}
                      ).count(), 0)
 
-        n6.add_link_from(n5, link_type=LinkType.INPUT)
+        n6.add_incoming(n5, link_type=LinkType.INPUT_CALC, link_label='link1')
         # Yet, now 2 links from 1 to 8
         self.assertEquals(
             QueryBuilder().append(
@@ -938,7 +944,7 @@ class QueryBuilderPath(AiidaTestCase):
              frozenset([n1.pk, n2.pk, n4.pk, n5.pk, n6.pk, n7.pk, n8.pk])]
         ))
 
-        n7.add_link_from(n9, link_type=LinkType.INPUT)
+        n7.add_incoming(n9, link_type=LinkType.INPUT_CALC, link_label='link0')
         # Still two links...
 
         self.assertEquals(
@@ -953,7 +959,7 @@ class QueryBuilderPath(AiidaTestCase):
                 Node, filters={'id': n8.pk}, tag='desc'
             ).append(Node, ancestor_of='desc', filters={'id': n1.pk}
                      ).count(), 2)
-        n9.add_link_from(n6, link_type=LinkType.INPUT)
+        n9.add_incoming(n6, link_type=LinkType.INPUT_CALC, link_label='link6')
         # And now there should be 4 nodes
 
         self.assertEquals(

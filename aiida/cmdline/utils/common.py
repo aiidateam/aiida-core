@@ -148,41 +148,43 @@ def get_node_info(node, include_summary=True):
     else:
         result = ''
 
-    nodes_input = node.get_incoming(link_type=LinkType.INPUT)
-    nodes_caller = node.get_incoming(link_type=LinkType.CALL)
+    nodes_input_calc = node.get_incoming(link_type=LinkType.INPUT_CALC).all()
+    nodes_input_work = node.get_incoming(link_type=LinkType.INPUT_WORK).all()
+    nodes_caller = node.get_incoming(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
     nodes_create = node.get_outgoing(link_type=LinkType.CREATE).all()
     nodes_return = node.get_outgoing(link_type=LinkType.RETURN).all()
-    nodes_called = node.get_outgoing(link_type=LinkType.CALL)
+    nodes_called = node.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
+    nodes_input = nodes_input_calc + nodes_input_work
     nodes_output = nodes_create + nodes_return
 
     if nodes_caller:
         table = []
         table_headers = ['Called by', 'PK', 'Type']
         for entry in nodes_caller:
-            table.append([entry.label, entry.node.pk, entry.node.__class__.__name__])
+            table.append([entry.link_label, entry.node.pk, entry.node.__class__.__name__])
         result += '\n{}'.format(tabulate(table, headers=table_headers))
 
     if nodes_input:
         table = []
         table_headers = ['Inputs', 'PK', 'Type']
         for entry in nodes_input:
-            if entry.label == 'code':
+            if entry.link_label == 'code':
                 continue
-            table.append([entry.label, entry.node.pk, entry.node.__class__.__name__])
+            table.append([entry.link_label, entry.node.pk, entry.node.__class__.__name__])
         result += '\n{}'.format(tabulate(table, headers=table_headers))
 
     if nodes_output:
         table = []
         table_headers = ['Outputs', 'PK', 'Type']
         for entry in nodes_output:
-            table.append([entry.label, entry.node.pk, entry.node.__class__.__name__])
+            table.append([entry.link_label, entry.node.pk, entry.node.__class__.__name__])
         result += '\n{}'.format(tabulate(table, headers=table_headers))
 
     if nodes_called:
         table = []
         table_headers = ['Called', 'PK', 'Type']
         for entry in nodes_called:
-            table.append([entry.label, entry.node.pk, entry.node.__class__.__name__])
+            table.append([entry.link_label, entry.node.pk, entry.node.__class__.__name__])
         result += '\n{}'.format(tabulate(table, headers=table_headers))
 
     log_messages = orm.Log.objects.get_logs_for(node)

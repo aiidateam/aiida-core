@@ -406,7 +406,7 @@ def _inline_to_standalone_script(calc):
        ModificationNotAllowed exception, since the nodes, that are
        created by the ``\*_inline`` function, are already stored.
     """
-    args = ["{}=load_node('{}')".format(entry.label, entry.node.uuid) for entry in calc.get_incoming()]
+    args = ["{}=load_node('{}')".format(entry.link_label, entry.node.uuid) for entry in calc.get_incoming()]
     args_string = ',\n    '.join(sorted(args))
 
     function_name = calc.function_name
@@ -446,7 +446,7 @@ def _collect_calculation_data(calc):
     import hashlib
     import os
     calcs_now = []
-    for d in calc.get_incoming(node_class=Data, link_type=LinkType.INPUT):
+    for d in calc.get_incoming(node_class=Data, link_type=LinkType.INPUT_CALC):
         for c in d.node.get_incoming(node_class=CalculationNode, link_type=LinkType.CREATE):
             calcs = _collect_calculation_data(c.node)
             calcs_now.extend(calcs)
@@ -841,7 +841,7 @@ def _collect_tags(node, calc,parameters=None,
 
     if calc is not None:
         from aiida.orm.data.array.kpoints import KpointsData
-        kpoints_list = calc.get_incoming(node_class=KpointsData, link_type=LinkType.INPUT).all()
+        kpoints_list = calc.get_incoming(node_class=KpointsData, link_type=LinkType.INPUT_CALC).all()
         # TODO: stop if more than one KpointsData is used?
         if len(kpoints_list) == 1:
             kpoints = kpoints_list[0]

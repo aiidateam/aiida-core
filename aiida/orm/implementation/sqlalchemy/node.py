@@ -20,7 +20,6 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from aiida.backends.sqlalchemy.models.node import DbNode, DbLink
 from aiida.backends.sqlalchemy.models.comment import DbComment
-from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.backends.sqlalchemy.utils import flag_modified
 from aiida.common.utils import get_new_uuid
 from aiida.common.folders import RepositoryFolder
@@ -69,6 +68,7 @@ class Node(AbstractNode):
 
         else:
             user = orm.User.objects(backend=self._backend).get_default().backend_entity
+
             if user is None:
                 raise RuntimeError("Could not find a default user")
 
@@ -237,16 +237,16 @@ class Node(AbstractNode):
             session.add(self._dbnode)
             self._increment_version_number_db()
 
-    def _replace_dblink_from(self, src, label, link_type):
+    def _replace_dblink_from(self, src, link_type, label):
         from aiida.backends.sqlalchemy import get_scoped_session
         session = get_scoped_session()
         try:
-            self._add_dblink_from(src, label)
+            self._add_dblink_from(src, link_type, label)
         except UniquenessError:
             # I have to replace the link; I do it within a transaction
             try:
                 self._remove_dblink_from(label)
-                self._add_dblink_from(src, label, link_type)
+                self._add_dblink_from(src, link_type, label)
                 session.commit()
             except:
                 session.rollback()
@@ -259,7 +259,7 @@ class Node(AbstractNode):
         if link is not None:
             session.delete(link)
 
-    def _add_dblink_from(self, src, label=None, link_type=LinkType.UNSPECIFIED):
+    def _add_dblink_from(self, src, link_type, label):
         from aiida.backends.sqlalchemy import get_scoped_session
         from aiida.orm.querybuilder import QueryBuilder
         session = get_scoped_session()
@@ -280,7 +280,7 @@ class Node(AbstractNode):
         #
         # I am linking src->self; a loop would be created if a DbPath exists
         # already in the TC table from self to src
-        if link_type is LinkType.CREATE or link_type is LinkType.INPUT:
+        if link_type is LinkType.CREATE or link_type is LinkType.INPUT_CALC or link_type is LinkType.INPUT_WORK:
             if QueryBuilder().append(
                     Node, filters={
                         'id': self.pk
@@ -290,32 +290,7 @@ class Node(AbstractNode):
                 }, tag='child', descendant_of='parent').count() > 0:
                 raise ValueError("The link you are attempting to create would generate a loop")
 
-        if label is None:
-            autolabel_idx = 1
-
-            existing_from_autolabels = session.query(DbLink.label).filter(DbLink.output_id == self._dbnode.id,
-                                                                          DbLink.label.like("link%"))
-
-            while "link_{}".format(autolabel_idx) in existing_from_autolabels:
-                autolabel_idx += 1
-
-            safety_counter = 0
-            while True:
-                safety_counter += 1
-                if safety_counter > 100:
-                    # Well, if you have more than 100 concurrent addings
-                    # to the same node, you are clearly doing something wrong...
-                    raise InternalError("Hey! We found more than 100 concurrent"
-                                        " adds of links "
-                                        "to the same nodes! Are you really doing that??")
-                try:
-                    self._do_create_link(src, "link_{}".format(autolabel_idx), link_type)
-                    break
-                except UniquenessError:
-                    # Retry loop until you find a new loop
-                    autolabel_idx += 1
-        else:
-            self._do_create_link(src, label, link_type)
+        self._do_create_link(src, label, link_type)
 
     def _do_create_link(self, src, label, link_type):
         """
@@ -521,25 +496,22 @@ class Node(AbstractNode):
           is meant to be used ONLY if the outer calling function has already
           a transaction open!
         """
-
         if not self.is_stored:
-            raise ModificationNotAllowed("Node with pk= {} is not stored yet".format(self.id))
+            raise ModificationNotAllowed('cannot store cached incoming links for unstored Node<{}>'.format(self.pk))
 
         # This raises if there is an unstored node.
         self._check_are_parents_stored()
-        # I have to store only those links where the source is already
-        # stored
-        links_to_store = list(self._inputlinks_cache.keys())
 
-        for label in links_to_store:
-            src, link_type = self._inputlinks_cache[label]
-            self._add_dblink_from(src, label, link_type)
+        # I have to store only those links where the source is already stored
+        for link_triple in self._incoming_cache:
+            self._add_dblink_from(*link_triple)
+
         # If everything went smoothly, clear the entries from the cache.
         # I do it here because I delete them all at once if no error
         # occurred; otherwise, links will not be stored and I
         # should not delete them from the cache (but then an exception
         # would have been raised, and the following lines are not executed)
-        self._inputlinks_cache.clear()
+        self._incoming_cache = list()
 
         from aiida.backends.sqlalchemy import get_scoped_session
         session = get_scoped_session()

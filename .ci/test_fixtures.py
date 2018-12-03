@@ -32,15 +32,12 @@ class FixtureManagerTestCase(unittest.TestCase):
 
     def test_create_db_cluster(self):
         self.fixture_manager.create_db_cluster()
-        self.assertTrue(
-            pgtest.is_server_running(self.fixture_manager.pg_cluster.cluster))
+        self.assertTrue(pgtest.is_server_running(self.fixture_manager.pg_cluster.cluster))
 
     def test_create_aiida_db(self):
         self.fixture_manager.create_db_cluster()
         self.fixture_manager.create_aiida_db()
-        self.assertTrue(
-            self.fixture_manager.postgres.db_exists(
-                self.fixture_manager.db_name))
+        self.assertTrue(self.fixture_manager.postgres.db_exists(self.fixture_manager.db_name))
 
     def test_create_use_destroy_profile(self):
         """
@@ -55,6 +52,7 @@ class FixtureManagerTestCase(unittest.TestCase):
         from aiida import is_dbenv_loaded
         with Capturing() as output:
             self.fixture_manager.create_profile()
+
         self.assertTrue(self.fixture_manager.root_dir_ok, msg=output)
         self.assertTrue(self.fixture_manager.config_dir_ok, msg=output)
         self.assertTrue(self.fixture_manager.repo_ok, msg=output)

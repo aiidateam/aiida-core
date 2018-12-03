@@ -51,9 +51,9 @@ class Workflow(AbstractWorkflow):
         """
         from aiida.backends.djsite.db.models import DbWorkflow
         from aiida import orm
-        from aiida.orm.backends import construct_backend
+        from aiida.manage import get_manager
 
-        self._backend = construct_backend()
+        self._backend = get_manager().get_backend()
         self._to_be_stored = True
         self._logger = logger.getChild(self.__class__.__name__)
 

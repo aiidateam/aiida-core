@@ -19,9 +19,12 @@ import tempfile
 import numpy as np
 import subprocess as sp
 
+from six.moves import cStringIO as StringIO
+
+from contextlib import contextmanager
 from click.testing import CliRunner
 
-from aiida.cmdline.utils import echo
+from aiida import orm
 from aiida.orm.groups import Group
 from aiida.orm.data.array import ArrayData
 from aiida.orm.data.array.bands import BandsData
@@ -32,7 +35,6 @@ from aiida.orm.data.remote import RemoteData
 from aiida.orm.data.structure import StructureData
 from aiida.orm.data.array.trajectory import TrajectoryData
 
-from aiida.orm.backends import construct_backend
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands.cmd_data import cmd_array
 from aiida.cmdline.commands.cmd_data import cmd_bands
@@ -42,19 +44,7 @@ from aiida.cmdline.commands.cmd_data import cmd_remote
 from aiida.cmdline.commands.cmd_data import cmd_structure
 from aiida.cmdline.commands.cmd_data import cmd_trajectory
 from aiida.cmdline.commands.cmd_data import cmd_upf
-
-from aiida.backends.utils import get_backend_type
-
-if get_backend_type() == 'sqlalchemy':
-    from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
-else:
-    from aiida.backends.djsite.db.models import DbAuthInfo
-
-from aiida.work.workfunctions import workfunction as wf
-
-from contextlib import contextmanager
-from six.moves import cStringIO as StringIO
-from aiida import orm
+from aiida.work import calcfunction
 
 
 @contextmanager
@@ -331,7 +321,7 @@ class TestVerdiDataBands(AiidaTestCase, TestVerdiDataListable):
         s.append_atom(position=(alat / 2., alat / 2., alat / 2.), symbols='O')
         s.store()
 
-        @wf
+        @calcfunction
         def connect_structure_bands(structure):
             alat = 4.
             cell = np.array([
@@ -347,9 +337,6 @@ class TestVerdiDataBands(AiidaTestCase, TestVerdiDataListable):
             b = BandsData()
             b.set_kpointsdata(k)
             b.set_bands([[1.0, 2.0], [3.0, 4.0]])
-
-            k.store()
-            b.store()
 
             return b
 
@@ -439,8 +426,8 @@ class TestVerdiDataRemote(AiidaTestCase):
     @classmethod
     def setUpClass(cls):
         super(TestVerdiDataRemote, cls).setUpClass()
-        user = orm.User.objects(cls.backend).get_default()
-        orm.AuthInfo(cls.computer, user, backend=cls.backend).store()
+        user = orm.User.objects.get_default()
+        orm.AuthInfo(cls.computer, user).store()
 
     def setUp(self):
         comp = self.computer
@@ -565,8 +552,7 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable, TestVerdiDat
             hostname='localhost',
             transport_type='local',
             scheduler_type='direct',
-            workdir='/tmp/aiida',
-            backend=cls.backend).store()
+            workdir='/tmp/aiida').store()
         cls.ids = cls.create_trajectory_data()
 
     def setUp(self):
@@ -662,8 +648,7 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable, TestVerdiData
                      hostname='localhost',
                      transport_type='local',
                      scheduler_type='direct',
-                     workdir='/tmp/aiida',
-                     backend=cls.backend).store()
+                     workdir='/tmp/aiida').store()
         cls.ids = cls.create_structure_data()
 
     def setUp(self):
@@ -781,8 +766,7 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExport
             hostname='localhost',
             transport_type='local',
             scheduler_type='direct',
-            workdir='/tmp/aiida',
-            backend=cls.backend).store()
+            workdir='/tmp/aiida').store()
 
         cls.ids = cls.create_cif_data()
 

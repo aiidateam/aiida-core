@@ -12,21 +12,40 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+import typing
+
 from aiida.common import exceptions
+from aiida.common import datastructures
 from aiida.common.utils import classproperty, type_check
+from aiida.manage import get_manager
 
 __all__ = ('Entity', 'Collection')
 
+EntityType = typing.TypeVar('EntityType')  # pylint: disable=invalid-name
 
-class Collection(object):
+
+class Collection(typing.Generic[EntityType]):
     """Container class that represents the collection of objects of a particular type."""
 
+    # A store for any backend specific collections that already exist
+    _COLLECTIONS = datastructures.LazyStore()
+
+    @classmethod
+    def get_collection(cls, entity_type, backend):
+        """
+        Get the collection for a given entity type and backend instance
+
+        :param entity_type: the entity type e.g. User, Computer, etc
+        :param backend: the backend instance to get the collection for
+        :return: the collection instance
+        """
+        # Lazily get the collection i.e. create only if we haven't done so yet
+        return cls._COLLECTIONS.get((entity_type, backend), lambda: entity_type.Collection(backend, entity_type))
+
     def __init__(self, backend, entity_class):
-        # assert issubclass(entity_class, Entity), "Must provide an entity type"
-        if backend is None:
-            from . import backends
-            backend = backend or backends.construct_backend()
-        self._backend = backend
+        """Construct a new entity collection"""
+        assert issubclass(entity_class, Entity), "Must provide an entity type"
+        self._backend = backend or get_manager().get_backend()
         self._entity_type = entity_class
 
     def __call__(self, backend):
@@ -40,7 +59,7 @@ class Collection(object):
             # Special case if they actually want the same collection
             return self
 
-        return self.__class__(backend, self._entity_type)
+        return self.get_collection(self.entity_type, backend)
 
     @property
     def backend(self):
@@ -114,10 +133,9 @@ class Collection(object):
 class Entity(object):
     """An AiiDA entity"""
 
-    _BACKEND = None
-    _OBJECTS = None
+    _objects = None
 
-    # Define out collection type
+    # Define our collection type
     Collection = Collection
 
     @classproperty
@@ -126,12 +144,10 @@ class Entity(object):
         Get an collection for objects of this type.
 
         :param backend: the optional backend to use (otherwise use default)
-        :return: an object that can be used to access entites of this type
+        :return: an object that can be used to access entities of this type
         """
-        from . import backends
-
-        backend = backend or backends.construct_backend()
-        return cls.Collection(backend, cls)
+        backend = backend or get_manager().get_backend()
+        return cls.Collection.get_collection(cls, backend)
 
     @classmethod
     def get(cls, **kwargs):

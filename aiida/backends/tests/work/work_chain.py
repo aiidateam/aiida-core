@@ -32,6 +32,7 @@ from aiida import work
 from aiida.work import ExitCode, Process
 from aiida.work.persistence import ObjectLoader
 from aiida.work.workchain import *
+from aiida.manage import get_manager
 
 
 def run_until_paused(proc):
@@ -216,7 +217,7 @@ class TestExitStatus(AiidaTestCase):
         self.assertEquals(node.is_finished, True)
         self.assertEquals(node.is_finished_ok, False)
         self.assertEquals(node.is_failed, True)
-        self.assertNotIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outgoing().get_labels())
+        self.assertNotIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outgoing().all_link_labels())
 
     def test_failing_workchain_through_exit_code(self):
         result, node = work.run_get_node(PotentialFailureWorkChain, success=Bool(False), through_exit_code=Bool(True))
@@ -225,7 +226,7 @@ class TestExitStatus(AiidaTestCase):
         self.assertEquals(node.is_finished, True)
         self.assertEquals(node.is_finished_ok, False)
         self.assertEquals(node.is_failed, True)
-        self.assertNotIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outgoing().get_labels())
+        self.assertNotIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outgoing().all_link_labels())
 
     def test_successful_workchain_through_integer(self):
         result, node = work.run_get_node(PotentialFailureWorkChain, success=Bool(True))
@@ -233,7 +234,7 @@ class TestExitStatus(AiidaTestCase):
         self.assertEquals(node.is_finished, True)
         self.assertEquals(node.is_finished_ok, True)
         self.assertEquals(node.is_failed, False)
-        self.assertIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outgoing().get_labels())
+        self.assertIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outgoing().all_link_labels())
         self.assertEquals(node.get_outgoing().get_node_by_label(PotentialFailureWorkChain.OUTPUT_LABEL),
                           PotentialFailureWorkChain.OUTPUT_VALUE)
 
@@ -243,7 +244,7 @@ class TestExitStatus(AiidaTestCase):
         self.assertEquals(node.is_finished, True)
         self.assertEquals(node.is_finished_ok, True)
         self.assertEquals(node.is_failed, False)
-        self.assertIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outgoing().get_labels())
+        self.assertIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outgoing().all_link_labels())
         self.assertEquals(node.get_outgoing().get_node_by_label(PotentialFailureWorkChain.OUTPUT_LABEL),
                           PotentialFailureWorkChain.OUTPUT_VALUE)
 
@@ -253,7 +254,7 @@ class TestExitStatus(AiidaTestCase):
         self.assertEquals(node.is_finished, True)
         self.assertEquals(node.is_finished_ok, False)
         self.assertEquals(node.is_failed, True)
-        self.assertNotIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outgoing().get_labels())
+        self.assertNotIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outgoing().all_link_labels())
 
 
 class IfTest(work.WorkChain):
@@ -563,7 +564,7 @@ class TestWorkchain(AiidaTestCase):
         """
         This test was created to capture issue #902
         """
-        runner = work.AiiDAManager.get_runner()
+        runner = get_manager().get_runner()
         wc = IfTest()
         runner.schedule(wc)
 
@@ -649,7 +650,7 @@ class TestWorkchain(AiidaTestCase):
 
     def test_persisting(self):
         persister = plumpy.test_utils.TestPersister()
-        runner = work.AiiDAManager.get_runner()
+        runner = get_manager().get_runner()
         workchain = Wf(runner=runner)
         work.run(workchain)
 
@@ -817,7 +818,7 @@ class TestWorkChainAbort(AiidaTestCase):
         Run the workchain which should hit the exception and therefore end
         up in the EXCEPTED state
         """
-        runner = work.AiiDAManager.get_runner()
+        runner = get_manager().get_runner()
         process = TestWorkChainAbort.AbortableWorkChain()
 
         @gen.coroutine
@@ -843,7 +844,7 @@ class TestWorkChainAbort(AiidaTestCase):
         on the workchain itself. This should have the workchain end up
         in the KILLED state.
         """
-        runner = work.AiiDAManager.get_runner()
+        runner = get_manager().get_runner()
         process = TestWorkChainAbort.AbortableWorkChain()
 
         @gen.coroutine
@@ -936,7 +937,7 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         Run the workchain for one step and then kill it. This should have the
         workchain and its children end up in the KILLED state.
         """
-        runner = work.AiiDAManager.get_runner()
+        runner = get_manager().get_runner()
         process = TestWorkChainAbortChildren.MainWorkChain(inputs={'kill': Bool(True)})
 
         @gen.coroutine
@@ -946,12 +947,12 @@ class TestWorkChainAbortChildren(AiidaTestCase):
             process.kill()
 
             with self.assertRaises(plumpy.KilledError):
-                result = yield process.future()
+                yield process.future()
 
         runner.schedule(process)
         runner.loop.run_sync(lambda: run_async())
 
-        child = process.calc.get_outgoing(link_type=LinkType.CALL).first().node
+        child = process.calc.get_outgoing(link_type=LinkType.CALL_WORK).first().node
         self.assertEquals(child.is_finished_ok, False)
         self.assertEquals(child.is_excepted, False)
         self.assertEquals(child.is_killed, True)
@@ -1325,7 +1326,7 @@ class TestDefaultUniqueness(AiidaTestCase):
         }
         result, node = work.run.get_node(TestDefaultUniqueness.Parent, **inputs)
 
-        nodes = node.get_incoming().get_nodes()
+        nodes = node.get_incoming().all_nodes()
         uuids = set([n.uuid for n in nodes])
 
         # Trying to load one of the inputs through the UUID should fail,

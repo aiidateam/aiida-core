@@ -34,7 +34,7 @@ class TestComputer(AiidaTestCase):
                                    workdir='/tmp/aiida').store()
 
         # # This should be possible, because nothing is using this computer
-        self.backend.computers.delete(newcomputer.id)
+        orm.Computer.objects.delete(newcomputer.id)
 
         calc_params = {
             'computer': self.computer,
@@ -47,7 +47,7 @@ class TestComputer(AiidaTestCase):
         # This should fail, because there is at least a calculation
         # using this computer (the one created just above)
         with self.assertRaises(InvalidOperation):
-            self.backend.computers.delete(self.computer.id)
+            orm.Computer.objects.delete(self.computer.id)
 
 
 class TestGroupsDjango(AiidaTestCase):

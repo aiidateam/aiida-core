@@ -21,6 +21,7 @@ from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.cmdline.utils import echo
 from aiida.common.exceptions import NotExistent
+from aiida.manage import get_manager
 
 TRANSPORT_PARAMS = []
 
@@ -38,13 +39,12 @@ def match_comp_transport(ctx, param, computer, transport_type):
 @with_dbenv()
 def configure_computer_main(computer, user, **kwargs):
     """Configure a computer via the CLI."""
-    from aiida.common.utils import get_configured_user_email
     from aiida import orm
 
     user = user or orm.User.objects.get_default()
 
     echo.echo_info('Configuring computer {} for user {}.'.format(computer.name, user.email))
-    if user.email != get_configured_user_email():
+    if user.email != get_manager().get_profile().default_user_email:
         echo.echo_info('Configuring different user, defaults may not be appropriate.')
 
     computer.configure(user=user, **kwargs)

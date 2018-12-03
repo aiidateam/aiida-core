@@ -9,10 +9,10 @@ from plumpy import ProcessState
 
 from aiida.common.links import LinkType
 from aiida.common.utils import classproperty
-from aiida.orm.mixins import Sealable
 from aiida.plugins.entry_point import get_entry_point_string_from_class
 
 from aiida.orm.implementation import Node
+from aiida.orm.mixins import Sealable
 
 __all__ = ('ProcessNode',)
 
@@ -39,7 +39,7 @@ class ProcessNode(Sealable, Node):
     PROCESS_STATUS_KEY = 'process_status'
 
     # The link_type might not be correct while the object is being created.
-    _hash_ignored_inputs = ['CALL']
+    _hash_ignored_inputs = ['CALL_CALC', 'CALL_WORK']
 
     # Specific sub classes should be marked as cacheable when appropriate
     _cacheable = False
@@ -368,7 +368,7 @@ class ProcessNode(Sealable, Node):
 
         :returns: list of process nodes called by this process
         """
-        return self.get_outgoing(link_type=LinkType.CALL).get_nodes()
+        return self.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all_nodes()
 
     @property
     def called_descendants(self):
@@ -392,52 +392,11 @@ class ProcessNode(Sealable, Node):
 
         :returns: process node that called this process node instance or None
         """
-        called_by = self.get_incoming(link_type=LinkType.CALL)
+        called_by = self.get_incoming(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK))
         if called_by:
             return called_by.first()
 
         return None
-
-    def _linking_as_output(self, dest, link_type):
-        """
-        Link this process node to another node with a given link type.
-
-        :param dest: a `Node` instance
-        :raise: ValueError if a link from self to `dest` is not allowed.
-        """
-        from aiida.orm.data import Data
-
-        if link_type is LinkType.CREATE or link_type is LinkType.RETURN:
-            if not isinstance(dest, Data):
-                raise ValueError('The output of a process node can only be a data node')
-        elif link_type is LinkType.CALL:
-            if not isinstance(dest, ProcessNode):
-                raise ValueError('Call links can only link two process nodes: {}'.format(type(dest)))
-        else:
-            raise ValueError('a process node cannot have links of type {} as output'.format(link_type))
-
-        return super(ProcessNode, self)._linking_as_output(dest, link_type)
-
-    def add_link_from(self, src, label=None, link_type=LinkType.INPUT):
-        """
-        Add a link from another node.
-
-        :param src: node to add the link from
-        :param str label: name of the link, default is None
-        :param link_type: the type of link, must be one of the enum values form :class:`~aiida.common.links.LinkType`
-        """
-        from aiida.orm.data import Data
-
-        if link_type is LinkType.INPUT:
-            if not isinstance(src, Data):
-                raise ValueError('Nodes entering processes as input link can only be of type data')
-        elif link_type is LinkType.CALL:
-            if not isinstance(src, ProcessNode):
-                raise ValueError('Call links can only link two process nodes: {}'.format(type(src)))
-        else:
-            raise ValueError('Process node cannot have links of type {} as input'.format(link_type))
-
-        return super(ProcessNode, self).add_link_from(src, label, link_type)
 
     def _is_valid_cache(self):
         """
@@ -453,8 +412,8 @@ class ProcessNode(Sealable, Node):
         """
         res = super(ProcessNode, self)._get_objects_to_hash()
         res.append({
-            entry.label: entry.node.get_hash()
-            for entry in self.get_incoming(link_type=LinkType.INPUT)
-            if entry.label not in self._hash_ignored_inputs
+            entry.link_label: entry.node.get_hash()
+            for entry in self.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK))
+            if entry.link_label not in self._hash_ignored_inputs
         })
         return res

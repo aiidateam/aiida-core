@@ -12,7 +12,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from . import manager
+from aiida.manage import manager
 from . import processes
 from . import utils
 
@@ -24,14 +24,14 @@ def run(process, *args, **inputs):
     Run the process with the supplied inputs in a local runner that will block until the process is completed.
     The return value will be the results of the completed process
 
-    :param process: the process class or workfunction to run
+    :param process: the process class or process function to run
     :param inputs: the inputs to be passed to the process
     :return: the outputs of the process
     """
     if isinstance(process, processes.Process):
         runner = process.runner
     else:
-        runner = manager.AiiDAManager.get_runner()
+        runner = manager.get_manager().get_runner()
 
     return runner.run(process, *args, **inputs)
 
@@ -41,14 +41,14 @@ def run_get_node(process, *args, **inputs):
     Run the process with the supplied inputs in a local runner that will block until the process is completed.
     The return value will be the results of the completed process
 
-    :param process: the process class or workfunction to run
+    :param process: the process class or process function to run
     :param inputs: the inputs to be passed to the process
     :return: tuple of the outputs of the process and the calculation node
     """
     if isinstance(process, processes.Process):
         runner = process.runner
     else:
-        runner = manager.AiiDAManager.get_runner()
+        runner = manager.get_manager().get_runner()
 
     return runner.run_get_node(process, *args, **inputs)
 
@@ -58,14 +58,14 @@ def run_get_pid(process, *args, **inputs):
     Run the process with the supplied inputs in a local runner that will block until the process is completed.
     The return value will be the results of the completed process
 
-    :param process: the process class or workfunction to run
+    :param process: the process class or process function to run
     :param inputs: the inputs to be passed to the process
     :return: tuple of the outputs of the process and process pid
     """
     if isinstance(process, processes.Process):
         runner = process.runner
     else:
-        runner = manager.AiiDAManager.get_runner()
+        runner = manager.get_manager().get_runner()
 
     return runner.run_get_pid(process, *args, **inputs)
 
@@ -79,10 +79,10 @@ def submit(process, **inputs):
     :param inputs: the inputs to be passed to the process
     :return: the calculation node of the process
     """
-    assert not utils.is_workfunction(process), 'Cannot submit a workfunction'
+    assert not utils.is_process_function(process), 'Cannot submit a process function'
 
-    runner = manager.AiiDAManager.get_runner()
-    controller = manager.AiiDAManager.get_process_controller()
+    runner = manager.get_manager().get_runner()
+    controller = manager.get_manager().get_process_controller()
 
     process = processes.instantiate_process(runner, process, **inputs)
     runner.persister.save_checkpoint(process)

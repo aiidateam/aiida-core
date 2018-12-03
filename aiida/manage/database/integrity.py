@@ -13,6 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 import uuid as UUID
 
+from aiida.manage import get_manager
 from aiida.common.exceptions import IntegrityError
 
 
@@ -33,9 +34,7 @@ def get_duplicate_node_uuids():
 
     :return: list of tuples of (pk, uuid) of nodes with duplicate UUIDs
     """
-    from aiida.orm.backends import construct_backend
-
-    backend = construct_backend()
+    backend = get_manager().get_backend()
     duplicates = backend.query_manager.get_duplicate_node_uuids()
 
     return duplicates

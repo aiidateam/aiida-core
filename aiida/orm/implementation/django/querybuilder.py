@@ -14,6 +14,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 from datetime import datetime
 from json import loads as json_loads
+import uuid
 import six
 
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
@@ -401,6 +402,8 @@ class DjangoQueryBuilder(BackendQueryBuilder):
             return json_loads(res)
         elif isinstance(res, (self.Group, self.Node, self.Computer, self.User, self.AuthInfo)):
             returnval = res.get_aiida_class()
+        elif isinstance(res, uuid.UUID):
+            returnval = six.text_type(res)
         else:
             returnval = res
         return returnval

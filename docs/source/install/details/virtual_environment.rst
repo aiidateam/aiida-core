@@ -40,22 +40,22 @@ Creating a virtual environment
 There are different programs that can create and work with virtual environments.
 An example for python virtual environments is called ``virtualenv`` and can be installed with for example ``pip`` by running::
 
-    $ pip install --user -U virtualenv
+    pip install --user -U virtualenv
 
 As explained before, a virtual environment is in essence little more than a directory containing everything it needs.
 In principle a virtual environment can thus be created anywhere where you can create a directory.
 You could for example opt to create a directory for all your virtual environments in your home folder::
 
-    $ mkdir ~/.virtualenvs
+    mkdir ~/.virtualenvs
 
 Using ``virtualenv`` you can then create a new virtual environment with python 2.7 by running::
 
-    $ virtualenv --python=<path/to/python2.7> ~/.virtualenvs/my_env
+    virtualenv --python=<path/to/python2.7> ~/.virtualenvs/my_env
 
 This will create the environment ``my_env`` and automatically activate it for you.
 If you open a new terminal, or you have deactivated the environment, you can reactivate it as follows::
 
-    $ ~/.virtualenvs/my_env/bin/activate
+    ~/.virtualenvs/my_env/bin/activate
 
 If it is activated successfully, you should see that your prompt is prefixed with the name of the environment::
 
@@ -77,7 +77,7 @@ When you run AiiDA in multiple virtual environments, it can be convenient to use
 1. Create your virtualenv, as described above
 2. Create a ``.aiida`` directory in your virtualenv directory::
 
-    $ mkdir ~/.virtualenvs/my_env/.aiida
+    mkdir ~/.virtualenvs/my_env/.aiida
 3. At the end of ``~/.virtualenvs/my_env/bin/activate``, add the following line::
 
     export AIIDA_PATH='~/.virtualenvs/my_env'

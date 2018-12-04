@@ -987,9 +987,11 @@ class QueryBuilderPath(AiidaTestCase):
 
 class TestConsistency(AiidaTestCase):
     def test_create_node_and_query(self):
+        """
+        Testing whether creating nodes within a iterall iteration changes the results.
+        """
         from aiida.orm import Node
         from aiida.orm.querybuilder import QueryBuilder
-
         import random
 
         for i in range(100):
@@ -998,12 +1000,31 @@ class TestConsistency(AiidaTestCase):
 
         for idx, item in enumerate(QueryBuilder().append(Node, project=['id', 'label']).iterall(batch_size=10)):
             if idx % 10 == 10:
-                print("creating new node")
                 n = Node()
                 n.store()
         self.assertEqual(idx, 99)
         self.assertTrue(len(QueryBuilder().append(Node, project=['id', 'label']).all(batch_size=10)) > 99)
 
+    def test_len_results(self):
+        """
+        Test whether the len of results matches the count returned.
+        See also https://github.com/aiidateam/aiida_core/issues/1600
+        SQLAlchemy has a deduplication strategy that leads to strange behavior, tested against here
+        """
+        from aiida.orm import Data
+        from aiida.orm.node.process import CalculationNode
+        from aiida.orm.querybuilder import QueryBuilder
+
+        parent = CalculationNode().store()
+        # adding 5 links going out:
+        for inode in range(5):
+            output_node = Data().store()
+            output_node.add_incoming(parent, link_type=LinkType.CREATE, link_label='link-{}'.format(inode))
+        for projection in ('id', '*'):
+            qb = QueryBuilder()
+            qb.append(CalculationNode, filters={'id':parent.id}, tag='parent', project=projection)
+            qb.append(Data, with_incoming='parent')
+            self.assertEqual(len(qb.all()), qb.count())
 
 class TestManager(AiidaTestCase):
     def test_statistics(self):

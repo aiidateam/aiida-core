@@ -256,26 +256,26 @@ It is time to run ``example.py``. Type in a terminal
 
 .. code-block:: bash
 
-    $ chmod +x example.py
-    $ ./example.py --host=127.0.0.2 --port=6000
+    chmod +x example.py
+    ./example.py --host=127.0.0.2 --port=6000
 
 You should read the message
 
 .. code-block:: bash
 
-    $  * Running on http://127.0.0.2:6000/ (Press CTRL+C to quit)
+   * Running on http://127.0.0.2:6000/ (Press CTRL+C to quit)
 
 To route a request to the API from a terminal you can employ ``curl``. Alternatively, you can use any REST client providing a GUI. Let us first ask for the latest created node through the GET method:
 
 .. code-block:: bash
 
-    $ curl http://127.0.0.2:6000/api/v2/new-endpoint/ -X GET
+    curl http://127.0.0.2:6000/api/v2/new-endpoint/ -X GET
 
 The form of the output (and only the form) should resemble
 
 .. code-block:: bash
 
-    $ {"attributes": {"binding_energy_per_substructure_per_unit_area_units": "eV/ang^2", "binding_energy_per_substructure_per_unit_area": 0.0220032273047497}, "ctime": "2017-04-05T16:01:06.227942+00:00", "id": 403504}
+    {"attributes": {"binding_energy_per_substructure_per_unit_area_units": "eV/ang^2", "binding_energy_per_substructure_per_unit_area": 0.0220032273047497}, "ctime": "2017-04-05T16:01:06.227942+00:00", "id": 403504}
 
 , whereas the actual values of the response dictionary as well as the internal structure of the attributes field will be in general very different.
 
@@ -283,10 +283,10 @@ Now, let us create a node through the POST method, and check it again through GE
 
 .. code-block:: bash
 
-    $ curl http://127.0.0.2:6000/api/v2/new-endpoint/ -X POST
-    $ {"id": 410618}
-    $ curl http://127.0.0.2:6000/api/v2/new-endpoint/ -X GET
-    $ {"attributes": {"property1": "spam", "property2": "egg"}, "ctime": "2017-06-20T15:36:56.320180+00:00", "id": 410618}
+    curl http://127.0.0.2:6000/api/v2/new-endpoint/ -X POST
+    {"id": 410618}
+    curl http://127.0.0.2:6000/api/v2/new-endpoint/ -X GET
+    {"attributes": {"property1": "spam", "property2": "egg"}, "ctime": "2017-06-20T15:36:56.320180+00:00", "id": 410618}
 
 The POST request triggers the creation of a new ParameterData node, as confirmed by the response to the GET request.
 

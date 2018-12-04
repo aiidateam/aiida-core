@@ -2038,7 +2038,7 @@ class AbstractNode(object):
         from aiida.orm import Node
         first_desc = QueryBuilder().append(
             Node, filters={'id': self.pk}, tag='self').append(
-            Node, descendant_of='self', project='id').first()
+            Node, with_ancestors='self', project='id').first()
         return bool(first_desc)
 
     @property
@@ -2051,7 +2051,7 @@ class AbstractNode(object):
         from aiida.orm import Node
         first_ancestor = QueryBuilder().append(
             Node, filters={'id': self.pk}, tag='self').append(
-            Node, ancestor_of='self', project='id').first()
+            Node, with_descendants='self', project='id').first()
         return bool(first_ancestor)
 
     # pylint: disable=no-self-argument

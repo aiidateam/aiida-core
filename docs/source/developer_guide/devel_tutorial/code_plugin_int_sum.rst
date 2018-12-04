@@ -5,12 +5,22 @@ Calculation plugin - Integer summation
    :maxdepth: 2
 
 In this chapter we will give you some examples and a brief guide on how to write
-a plugin to support a new code. We will focus here on a very simple code (that
-simply adds two numbers), so that we can focus only on how AiiDA manages 
-the calculation. At the end, you will have an overview of how a plugin is 
-developed. You will be able then to proceed to more complex plugin guides like
-the guide for the Quantum Espresso plugin, or you can directly jump in
+a plugin to support a new code. Please take a look at the
+:ref:`Plugin Development <plugin_development>` session of the
+developer guide to get an overall understanding of the plugin system.
+We will focus here on writing a plugin for a very simple code
+(that simply adds two numbers) and explain how AiiDA manages calculations.
+At the end, you will have an overview of how a plugin is
+developed. You will be able to understand more complex plugins like
+the Quantum Espresso plugin (`aiida-qe`_), or you can directly jump in
 and develop your own plugin!
+
+.. seealso::
+  You may also want to check out some simple plugin examples such as
+  `aiida-plugin-cutter`_ and `aiida-diff`_. The former also works as a
+  template to help you start your own project.
+
+.. _aiida-qe: https://github.com/aiidateam/aiida-quantumespresso
 
 Overview
 --------
@@ -178,18 +188,16 @@ The above input plugin can be downloaded from
 
 In order the plugin to be automatically discoverable by AiiDA, it needs to be
 registered using the :ref:`entry point system <plugins.entry_points>`.
-
-Other things to note:
-
-* name the class inside the plugin as PluginnameCalculation. For example, the
-  class name of the summation input plugin is, as you see above, 
-  ``SumCalculation``. The first letter must be capitalized, the other letters
-  must be lowercase;
-
-* inherit the class from ``JobCalculation``.
-
-By doing the above, your plugin will be discoverable and loadable
+After proper installation, your plugin will be discoverable and loadable
 using ``CalculationFactory``.
+
+When developing your calculation plugin, you should name the class inside the plugin as
+PluginnameCalculation. For example, the class name of the summation input plugin is,
+as you see above, ``SumCalculation``. The first letter must be capitalized,
+the other letters must be lowercase. Also you, make sure your calculation plugin
+inherit the class from ``JobCalculation``. At the end, you will be able
+to load your plugin using ``CalculationFactory``.
+
 
 .. note:: The base ``Calculation`` class should only be used as the abstract
   base class. Any calculation that needs to run on a remote scheduler must
@@ -260,7 +268,7 @@ The main plugin logic
 
 The main logic of the plugin (called by AiiDA just before submission, in order
 to read the AiiDA input data nodes and create the actual input files for the 
-extenal code) must be defined inside a method ``_prepare_for_submission``, that
+external code) must be defined inside a method ``_prepare_for_submission``, that
 will receive (beside ``self``) two parameters, a temporary folder ``tempfolder``
 in which content can be written, and a dictionary containing all the input 
 nodes that AiiDA will retrieve from the database (in this way, the plugin does
@@ -291,7 +299,7 @@ The last step: the calcinfo
 
 We can now create the calculation info: an object containing some additional
 information that AiiDA needs (beside the files you generated in the folder)
-in order to submit the claculation::
+in order to submit the calculation::
 
   calcinfo = CalcInfo()
   calcinfo.uuid = self.uuid
@@ -316,7 +324,7 @@ into the AiiDA database::
    calcinfo.retrieve_list = [self._DEFAULT_OUTPUT_FILE]
 
 The entries of the list should either be a string, which corresponds to the full
-filepath of the file on the remote, or if you want to specify a group of files with
+file path of the file on the remote, or if you want to specify a group of files with
 wildcards, it should be another list containing the following three items
 
 * Remote path with wildcards e.g. ``some/path/bigfiles*[0-9].xml``
@@ -347,28 +355,28 @@ For the time being, just define also the following variables as empty lists
 .. note::
   Other fields that can be specified in CalcInfo:
 
-  1. ``retrieve_singlefile_list``: a list of triplets, in the form
+  #. ``retrieve_singlefile_list``: a list of triplets, in the form
      ``['<linkname_from calc to singlefile>', '<subclass of singlefile>', '<filename>']``.
      If this is specified, at the end of the
      calculation it will be created a ``SinglefileData`` like object in the
      Database, children of the calculation, if of course the file is found
      on the cluster.
 
-  2. ``codes_run_mode``: a string, only necessary if you want to run more than one code
+  #. ``codes_run_mode``: a string, only necessary if you want to run more than one code
      in the same scheduling job. Determines the order in which the multiple 
      codes are run (i.e. sequentially or all at the same time.
      It assumes one of the values of ``aiida.common.datastructures.code_run_modes``,
      like ``code_run_modes.PARALLEL`` or ``code_run_modes.SERIAL``
-  3. ``stdin_name``: the name of the standard input.
+  #. ``stdin_name``: the name of the standard input.
 
-  4. ``stdin_name``: the name of the standard output.
+  #. ``stdin_name``: the name of the standard output.
 
-  5. ``cmdline_params``: like parallelization flags, that will be used when
+  #. ``cmdline_params``: like parallelization flags, that will be used when
      running the code.
 
-  6. ``stderr_name``: the name of the error output.
+  #. ``stderr_name``: the name of the error output.
 
-  7. ``withmpi``: whether the code has to be called with mpi or not.
+  #. ``withmpi``: whether the code has to be called with mpi or not.
 
   For the full definition of ``CalcInfo()`` and ``CodeInfo()``, refer to the 
   source ``aiida.common.datastructures``. 
@@ -382,7 +390,7 @@ Finally, you need to specify which code executable(s) need to be called
 link the code to the ``codeinfo`` object. 
 For each code, you need to create a ``CodeInfo`` object, specify the code UUID,
 and define the command line parameters that should be passed to the code as a
-list of strings (only paramters after the executable name must be specified. 
+list of strings (only parameters after the executable name must be specified. 
 Moreover, AiiDA takes care of escaping spaces and other symbols). 
 In our case, our code requires the name of the input file, followed by the
 name of the output file, so we write::
@@ -420,7 +428,7 @@ is ready!
 
 As a final step, after copying the file in the location specified above, we
 can check if AiiDA recognised the plugin, by running the command
-``verdi calculation plugins`` and veryfing that our new ``sum`` plugin is
+``verdi calculation plugins`` and verifying that our new ``sum`` plugin is
 now listed.
 
 
@@ -586,7 +594,7 @@ in the database::
 
 .. note:: the ``self.get_linkname_outparams()`` is a string automatically
   defined in all ``Parser`` classes and subclasses. In general, you can have
-  multiple output nodes with any name, but it is good pratice so have also
+  multiple output nodes with any name, but it is good practice so have also
   one of the output nodes with link name ``self.get_linkname_outparams()``
   and of type ``ParameterData``. The reason is that this node is the one exposed
   with the ``calc.res`` interface (for instance, later we will be able to get
@@ -715,3 +723,13 @@ commands (change 327 with the correct calculation PK)::
   <<< 5
   
 So we verified that, indeed, 2+3=5.
+
+.. seealso::
+  Now you have learnt how to write a simple plugin. Please also have a look at more
+  examples online, such as `aiida-diff`_ and `aiida-plugin-cutter`_ to see how a
+  complete plugin package should be organized. The latter works can be used to easily
+  start your own plugin project. The next :doc:`section <code_plugin_float_sum>`
+  will guide you to add more data classes for AiiDA.
+
+.. _aiida-diff: https://github.com/aiidateam/aiida-diff
+.. _aiida-plugin-cutter: https://github.com/aiidateam/aiida-plugin-cutter

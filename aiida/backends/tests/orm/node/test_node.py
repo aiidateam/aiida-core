@@ -7,7 +7,9 @@ from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 from aiida.orm.data import Data
+from aiida.orm.node import Node
 from aiida.orm.node.process import CalculationNode, WorkflowNode
+from aiida.orm.utils.links import LinkTriple
 
 
 class TestNodeLinks(AiidaTestCase):
@@ -17,6 +19,26 @@ class TestNodeLinks(AiidaTestCase):
         super(TestNodeLinks, self).setUp()
         self.node_source = CalculationNode()
         self.node_target = Data()
+
+    def test_get_stored_link_triples(self):
+        """Validate the `get_stored_link_triples` method."""
+        data = Data().store()
+        calculation = CalculationNode().store()
+
+        calculation.add_incoming(data, LinkType.INPUT_CALC, 'input')
+        stored_triples = calculation.get_stored_link_triples()
+
+        self.assertEqual(len(stored_triples), 1)
+
+        link_triple = stored_triples[0]
+
+        # Verify the type and value of the tuple elements
+        self.assertTrue(isinstance(link_triple, LinkTriple))
+        self.assertTrue(isinstance(link_triple.node, Node))
+        self.assertTrue(isinstance(link_triple.link_type, LinkType))
+        self.assertEqual(link_triple.node.uuid, data.uuid)
+        self.assertEqual(link_triple.link_type, LinkType.INPUT_CALC)
+        self.assertEqual(link_triple.link_label, 'input')
 
     def test_validate_incoming_ipsum(self):
         """Test the `validate_incoming` method with respect to linking ourselves."""

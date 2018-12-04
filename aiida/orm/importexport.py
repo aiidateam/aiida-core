@@ -1686,9 +1686,11 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     :raises LicensingException: if any node is licensed under forbidden
     license
     """
+    import os
     import aiida
     from aiida.orm import Node, Data, Group
     from aiida.orm.node.process import ProcessNode
+    from aiida.common.exceptions import ContentNotExistent
     from aiida.common.links import LinkType
     from aiida.common.folders import RepositoryFolder
     from aiida.orm.querybuilder import QueryBuilder
@@ -2231,9 +2233,12 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 reset_limit=True)
             # In this way, I copy the content of the folder, and not the folder
             # itself
-            thisnodefolder.insert_path(src=RepositoryFolder(
-                section=Node._section_name, uuid=uuid).abspath,
-                                       dest_name='.')
+            src = RepositoryFolder(section=Node._section_name, uuid=uuid).abspath
+            if not os.path.exists(os.path.join(src, Node._path_subfolder_name)):
+                raise ContentNotExistent("The exported repository folder '{}' for node<{}> does not contain the '{}' "
+                        "sub folder, probably it was deleted manually before exporting. Try to recreate it and export "
+                        "again.".format(src, uuid, Node._path_subfolder_name))
+            thisnodefolder.insert_path(src=src, dest_name='.')
 
 
 def check_licences(node_licenses, allowed_licenses, forbidden_licenses):

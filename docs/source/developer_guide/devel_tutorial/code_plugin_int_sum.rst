@@ -450,7 +450,7 @@ codes by typing::
 
 A typical output of the above command is::
 
-    $ verdi code list
+    verdi code list
     # List of configured codes:
     # (use 'verdi code show CODEID' to see the details)
     * Id 73: sum
@@ -462,7 +462,7 @@ specific parameters that we gave when we set-up the code by typing::
 
 Which will give us an output similar to the following::
 
-    $ verdi code show 73
+    verdi code show 73
      * PK:             73
      * UUID:           34b44d33-86c1-478b-88ff-baadfb6f30bf
      * Label:          sum
@@ -702,7 +702,7 @@ remember is that:
 As usual, we can see the executed calculations by doing a
 ``verdi calculation list``. To see the calculations of the last day::
 
-    $ verdi calculation list -a -p1
+    verdi calculation list -a -p1
     # Last daemon state_updater check: 0h:00m:06s ago (at 20:10:31 on 2015-10-20)
     # Pk|State        |Creation|Sched. state|Computer   |Type
     327 |FINISHED     |4h ago  |DONE        |localhost  |sum

@@ -19,7 +19,7 @@ from django.db.migrations.executor import MigrationExecutor
 from django.db import connection
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import IntegrityError
-from aiida.manage.database.integrity import deduplicate_node_uuids, verify_node_uuid_uniqueness
+from aiida.manage.database.integrity.duplicate_uuid import deduplicate_node_uuids, verify_node_uuid_uniqueness
 from aiida.utils.capturing import Capturing
 
 
@@ -183,4 +183,4 @@ class TestNoMigrations(AiidaTestCase):
         from django.core.management import call_command
 
         # Raises SystemExit, if migrations remain
-        call_command("makemigrations", "--check", verbosity=0)
+        call_command('makemigrations', '--check', verbosity=0)

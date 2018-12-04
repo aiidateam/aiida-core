@@ -15,7 +15,6 @@ AiiDA plugins
    devel_tutorial/code_plugin_qe
    devel_tutorial/cmdline_plugin
    devel_tutorial/parser_warnings_policy
-   data_cmdline
    aiida_sphinxext
 
 ==========

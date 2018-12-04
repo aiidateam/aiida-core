@@ -16,6 +16,8 @@ import uuid as UUID
 from aiida.manage import get_manager
 from aiida.common.exceptions import IntegrityError
 
+__all__ = ('verify_node_uuid_uniqueness', 'get_duplicate_node_uuids', 'deduplicate_node_uuids')
+
 
 def verify_node_uuid_uniqueness():
     """Check whether the database contains nodes with duplicate UUIDS.

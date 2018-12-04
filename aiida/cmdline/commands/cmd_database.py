@@ -57,7 +57,7 @@ def verdi_database_integrity():
     '--apply-patch',
     is_flag=True,
     help='Apply the proposed changes. If this flag is not passed, a dry run is performed instead.')
-def database_integrity(apply_patch):
+def duplicate_node_uuid(apply_patch):
     """Detect and solve nodes with duplicate UUIDs.
 
     Before aiida-core v1.0.0, there was no uniqueness constraint on the UUID column of the Node table in the database.
@@ -67,7 +67,7 @@ def database_integrity(apply_patch):
     command will run an analysis to detect duplicate UUIDs in the node table and solve it by generating new UUIDs. Note
     that it will not delete or merge any nodes.
     """
-    from aiida.manage.database.integrity import deduplicate_node_uuids
+    from aiida.manage.database.integrity.duplicate_uuid import deduplicate_node_uuids
     from aiida.manage.manager import get_manager
 
     manager = get_manager()

@@ -1262,7 +1262,7 @@ class QueryBuilder(object):
         """
 
         self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.Node),
-                               'with_ancestors_beta')
+                               'with_ancestors')
 
         link1 = aliased(self._impl.Link)
         link2 = aliased(self._impl.Link)
@@ -1316,7 +1316,7 @@ class QueryBuilder(object):
 
         """
         self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.Node),
-                               'with_ancestors_beta')
+                               'with_ancestors')
 
         link1 = aliased(self._impl.Link)
         link2 = aliased(self._impl.Link)
@@ -1661,7 +1661,7 @@ class QueryBuilder(object):
             isouterjoin = verticespec.get('outerjoin')
             edge_tag = verticespec['edge_tag']
 
-            if verticespec['joining_keyword'] in ('with_ancestors', 'with_descendants'):
+            if verticespec['joining_keyword'] in ('with_ancestors', 'with_descendants', 'ancestor_of', 'descendant_of'):
                 # I treat those two cases in a special way.
                 # I give them a filter_dict, to help the recursive function find a good
                 # starting point. TODO: document this!

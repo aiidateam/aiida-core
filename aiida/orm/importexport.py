@@ -2234,10 +2234,10 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             # In this way, I copy the content of the folder, and not the folder
             # itself
             src = RepositoryFolder(section=Node._section_name, uuid=uuid).abspath
-            if not os.path.exists(src+'/path'):
-                raise ContentNotExistent("The node with uuid {} does not contain \"path\" folder. Something strange "
-                        "happend to your file repository. "
-                        "Please check it here: {}".format(uuid, src))
+            if not os.path.exists(os.path.join(src, Node._path_subfolder_name)):
+                raise ContentNotExistent("The exported repository folder '{}' for node<{}> does not contain the '{}' "
+                        "sub folder, probably it was deleted manually before exporting. Try to recreate it and export "
+                        "again.".format(src, uuid, Node._path_subfolder_name))
             thisnodefolder.insert_path(src=src, dest_name='.')
 
 

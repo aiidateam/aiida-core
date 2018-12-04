@@ -59,27 +59,27 @@ Install AiiDA
 With the prerequisites installed, we can now download AiiDA itself and install it along with all its python dependencies.
 Create a directory where you want to install AiiDA and clone the repository::
 
-    $ mkdir <your_directory>
-    $ cd <your_directory>
-    $ git clone https://github.com/aiidateam/aiida_core
+    mkdir <your_directory>
+    cd <your_directory>
+    git clone https://github.com/aiidateam/aiida_core
 
 To prevent the python packages that AiiDA depends on, from clashing with the packages you already have installed on your system, we will install them in a virtual environment.
 For detailed information, see the section on :ref:`virtual environments <virtual_environment>`.
 To create a new virtual environment and activate it, run the following commands::
 
-    $ virtualenv ~/aiidapy
-    $ source ~/aiidapy/bin/activate
+    virtualenv ~/aiidapy
+    source ~/aiidapy/bin/activate
 
 This will create a directory in your home directory named ``aiidapy`` where all the packages will be installed.
 After activation, your prompt now should have ``(aiidapy)`` in front of it, indicating that you are working in the virtual environment.
 
 .. note:: You may need to install ``pip`` and ``setuptools`` in your virtual environment in case the system or user version of these tools is old::
 
-    $ pip install -U setuptools pip
+    (aiidapy) $ pip install -U setuptools pip
 
 Finally, to install AiiDA, run the following command from the directory where you cloned the repository::
 
-   (aiidapy) $ pip install -e aiida_core
+    (aiidapy) $ pip install -e aiida_core
 
 (In this example the AiiDA directory is in ``aiida_core``)
 
@@ -179,7 +179,7 @@ Then, the following prompts will help you configure the database. Typical settin
 Remember that in order to work with AiiDA through for example the ``verdi`` command, you need to be in your virtual environment.
 If you open a new terminal for example, be sure to activate it first with::
 
-    $ source ~/aiidapy/bin/activate
+    source ~/aiidapy/bin/activate
 
 At this point, you can choose to read on for additional installation details and configuration options, or you can choose to start using
 AiiDA and go straight to the section :ref:`get started<get_started>`.
@@ -272,7 +272,7 @@ Originally born out of the iPython project, it now supports code written in many
 
 If you didn't already install AiiDA with the ``[notebook]`` option (during ``pip install``), run ``pip install jupyter`` **inside** the virtualenv, and then run **from within the virtualenv**::
 
-    $ jupyter notebook
+    jupyter notebook
 
 This will open a tab in your browser. Click on ``New -> Python`` and type::
 

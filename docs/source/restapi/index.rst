@@ -23,7 +23,7 @@ To start the REST server open a terminal and type
 
 .. code-block:: bash
 
-    $ verdi restapi
+    verdi restapi
 
 This command will hook up a REST api with the default parameters, namely on port ``5000``
 of ``localhost``,
@@ -33,7 +33,7 @@ For an overview of options accepted by ``verdi restapi`` you can type
 
 .. code-block:: bash
 
-    $ verdi restapi --help
+    verdi restapi --help
 
 
 Like all ``verdi`` commands, the AiiDA profile can be changed by putting ``-p PROFILE`` right after ``verdi``.
@@ -443,8 +443,8 @@ The latest step is to move either ``one.conf`` or ``many.conf`` into the Apache 
 
 .. code-block:: bash
 
-    $ cp <conf_file>.conf /etc/apache2/sites-enabled/000-default.conf
-    $ sudo service apache2 restart
+    cp <conf_file>.conf /etc/apache2/sites-enabled/000-default.conf
+    sudo service apache2 restart
 
 We believe the two basic architectures we have just explained can be successfully applied in many different deployment scenarios. Nevertheless, we suggest users who need finer tuning of the deployment setup to look into to the official documentation of `Apache <https://httpd.apache.org/>`_ and, more importantly,  `WSGI <modwsgi.readthedocs.io/>`_.
 
@@ -452,8 +452,8 @@ The URLs of the requests handled by Apache must start with one of the paths spec
 
 .. code-block:: bash
 
-    $ curl http://localhost/django/api/v2/computers -X GET
-    $ curl http://localhost/sqlalchemy/api/v2/computers -X GET
+    curl http://localhost/django/api/v2/computers -X GET
+    curl http://localhost/sqlalchemy/api/v2/computers -X GET
 
 The first (second)request will be handled by the app ``django`` (``sqlalchemy``), namely will serve results fetched from the profile ``django`` (``sqlalchemy``). Notice that we haven't specified any port in the URLs since Apache listens conventionally to port 80, where any request lacking the port is automatically redirected.
 

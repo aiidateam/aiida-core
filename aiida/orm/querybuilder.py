@@ -1746,6 +1746,17 @@ class QueryBuilder(object):
         # pop the entity that I added to start the query
         self._query._entities.pop(0)
 
+        # Dirty solution coming up:
+        # Sqlalchemy is by default de-duplicating results if possible.
+        # This can lead to strange results, as shown in:
+        # https://github.com/aiidateam/aiida_core/issues/1600
+        # essentially qb.count() != len(qb.all()) in some cases.
+        # We also addressed this with sqlachemy:
+        # https://github.com/sqlalchemy/sqlalchemy/issues/4395#event-2002418814
+        # where the following solution was sanctioned:
+        self._query._has_mapper_entities = False
+        # We should monitor SQLAlchemy, for when a solution is officially supported by the API!
+
         # Make a list that helps the projection postprocessing
         self._attrkeys_as_in_sql_result = {
             index_in_sql_result: attrkey for tag, projected_entities_dict in self.tag_to_projected_entity_dict.items()

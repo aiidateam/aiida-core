@@ -133,9 +133,6 @@ to provide the addends to the code, something like::
 
 and similarly for the second addend.
 
-The final input plugin should be placed 
-at ``aiida/orm/calculation/job/floatsum.py``.
-
 Code
 ////
 The python code that actually performs the calculation does not need to be

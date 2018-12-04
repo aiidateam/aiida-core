@@ -780,6 +780,7 @@ class TestSimple(AiidaTestCase):
         from aiida.orm.importexport import export
         from aiida.orm.querybuilder import QueryBuilder
 
+        groupname = "node_group_existing"
         # Creating a folder for the import/export files
         temp_folder = tempfile.mkdtemp()
         try:
@@ -795,7 +796,7 @@ class TestSimple(AiidaTestCase):
             sd1.store()
 
             # Create a group and add the data inside
-            g1 = Group(name="node_group_existing")
+            g1 = Group(name=groupname)
             g1.store()
             g1.add_nodes([sd1])
             g1_uuid = g1.uuid
@@ -809,8 +810,24 @@ class TestSimple(AiidaTestCase):
             # Creating a group of the same name
             g1 = Group(name="node_group_existing")
             g1.store()
-            with self.assertRaises(UniquenessError):
-                import_data(filename1, silent=True)
+            import_data(filename1, silent=True)
+            # The import should have created a new group with a suffix
+            # I check for this:
+            qb = QueryBuilder().append(Group, filters={'name':{'like':groupname+'%'}})
+            self.assertEqual(qb.count(),2)
+            #Now I check for the group having one member, and whether the name is different:
+            qb = QueryBuilder()
+            qb.append(Group, filters={'name':{'like':groupname+'%'}}, tag='g', project='name')
+            qb.append(StructureData, with_group='g')
+            self.assertEqual(qb.count(),1)
+            # I check that the group name was changed:
+            self.assertTrue(qb.all()[0][0] != groupname)
+            # I import another name, the group should not be imported again
+            import_data(filename1, silent=True)
+            qb = QueryBuilder()
+            qb.append(Group, filters={'name':{'like':groupname+'%'}})
+            self.assertEqual(qb.count(),2)
+
         finally:
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
@@ -1364,7 +1381,7 @@ class TestComputer(AiidaTestCase):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.computers import Computer
         from aiida.orm.node.process import CalcJobNode
-        from aiida.orm.importexport import COMP_DUPL_SUFFIX
+        from aiida.orm.importexport import DUPL_SUFFIX
 
         # Creating a folder for the import/export files
         export_file_tmp_folder = tempfile.mkdtemp()
@@ -1462,10 +1479,10 @@ class TestComputer(AiidaTestCase):
             self.assertIn([calc1_label, comp1_name], res,
                           "Calc-Computer combination not found.")
             self.assertIn([calc2_label,
-                           comp1_name + COMP_DUPL_SUFFIX.format(0)], res,
+                           comp1_name + DUPL_SUFFIX.format(0)], res,
                           "Calc-Computer combination not found.")
             self.assertIn([calc3_label,
-                           comp1_name + COMP_DUPL_SUFFIX.format(1)], res,
+                           comp1_name + DUPL_SUFFIX.format(1)], res,
                           "Calc-Computer combination not found.")
         finally:
             # Deleting the created temporary folders

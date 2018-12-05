@@ -759,7 +759,7 @@ class AbstractNode(object):
             builder.append(node_class, with_outgoing='main', project=['*'],
                 edge_project=['type', 'label'], edge_filters=edge_filters)
 
-        return [links.LinkTriple(entry[0], entry[1], entry[2]) for entry in builder.all()]
+        return [links.LinkTriple(entry[0], LinkType(entry[1]), entry[2]) for entry in builder.all()]
 
     def _replace_link_from(self, source, link_type, link_label):
         """
@@ -2038,7 +2038,7 @@ class AbstractNode(object):
         from aiida.orm import Node
         first_desc = QueryBuilder().append(
             Node, filters={'id': self.pk}, tag='self').append(
-            Node, descendant_of='self', project='id').first()
+            Node, with_ancestors='self', project='id').first()
         return bool(first_desc)
 
     @property
@@ -2051,7 +2051,7 @@ class AbstractNode(object):
         from aiida.orm import Node
         first_ancestor = QueryBuilder().append(
             Node, filters={'id': self.pk}, tag='self').append(
-            Node, ancestor_of='self', project='id').first()
+            Node, with_descendants='self', project='id').first()
         return bool(first_ancestor)
 
     # pylint: disable=no-self-argument

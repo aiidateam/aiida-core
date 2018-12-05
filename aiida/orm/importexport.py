@@ -1859,7 +1859,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             if return_reversed:
                 qb = QueryBuilder()
                 qb.append(ProcessNode, tag='predecessor', project=['id'])
-                qb.append(Data, output_of='predecessor',
+                qb.append(Data, with_incoming='predecessor',
                           filters={'id': {'==': curr_node_id}},
                           edge_filters={
                               'type': {

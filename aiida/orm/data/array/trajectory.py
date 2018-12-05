@@ -473,7 +473,7 @@ class TrajectoryData(ArrayData):
         ret_dict = _get_aiida_structure_inline(trajectory=self, parameters=param, store_provenance=store)  # pylint: disable=unexpected-keyword-arg
         return ret_dict['structure']
 
-    def _get_cif(self, index=None, **kwargs):
+    def get_cif(self, index=None, **kwargs):
         """
         Creates :py:class:`aiida.orm.data.cif.CifData`
         """

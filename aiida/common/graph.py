@@ -15,13 +15,14 @@ from __future__ import print_function
 from __future__ import absolute_import
 import io
 import os
+import subprocess
 import tempfile
 
 
 def draw_graph(origin_node,
                ancestor_depth=None,
                descendant_depth=None,
-               format='dot',
+               image_format='dot',
                include_calculation_inputs=False,
                include_calculation_outputs=False):
     """
@@ -30,9 +31,9 @@ def draw_graph(origin_node,
     :param origin_node: An Aiida node, the starting point for drawing the graph
     :param int ancestor_depth: The maximum depth of the ancestors drawn. If left to None, we recurse until the graph is fully explored
     :param int descendant_depth: The maximum depth of the descendants drawn. If left to None, we recurse until the graph is fully explored
-    :param str format: The format, by default dot
+    :param str image_format: The output plot format, by default dot
 
-    :returns: The exit_status of the os.system call that produced the valid file
+    :returns: The exit_code of the subprocess.call() method that produced the valid file
     :returns: The file name of the final output
 
     ..note::
@@ -194,8 +195,13 @@ def draw_graph(origin_node,
         fhandle.write(u"}\n")
 
     # Now I am producing the output file
-    output_file_name = "{0}.{format}".format(origin_node.pk, format=format)
-    exit_status = os.system('dot -T{format} {0} -o {1}'.format(fname, output_file_name, format=format))
+    output_file_name = "{0}.{1}".format(origin_node.pk, image_format)
+    # Try and convert the .dot file using the `dot` utility from graphviz
+    try:
+        exit_code = subprocess.call(['dot', '-T', image_format, fname, '-o', output_file_name])
+    except OSError as error:
+        from aiida.cmdline.utils import echo
+        echo.echo_critical('Operating system error - perhaps Graphviz is not installed?')
     # cleaning up by removing the temporary file
     os.remove(fname)
-    return exit_status, output_file_name
+    return exit_code, output_file_name

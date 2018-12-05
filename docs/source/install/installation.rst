@@ -50,6 +50,11 @@ The installation instructions for these prerequisites will depend on the operati
 We provide basic instructions for :ref:`several operating systems<installation_os>`.
 Make sure you have successfully installed these prerequisites before continuing with the installation guide.
 
+A final optional dependancy of note is `graphviz`_ which is necessary for plotting the AiiDA provenance graphs
+via ``verdi graph``.
+
+.. _graphviz: https://www.graphviz.org/download 
+
 
 .. _install_aiida:
 
@@ -146,9 +151,7 @@ We suggest here to use your institution email, that will be used to associate th
 
   The existence of a default user is internally useful for multi-user
   setups, where only one user
-  runs the daemon, even if many users can simultaneously access the DB.
-  See the page on :ref:`setting up AiiDA in multi-user mode<aiida_multiuser>`
-  for more details (only for advanced users).
+  runs the daemon.
 
 .. note:: The password, in the current version of AiiDA, is not used (it will
     be used only in the REST API and in the web interface). If you leave the
@@ -282,6 +285,7 @@ followed by ``Shift-Enter``. If no exception is thrown, you can use AiiDA in Jup
 
 If you want to set the same environment as in a ``verdi shell``,
 add the following code to a ``.py`` file (create one if there isn't any) in ``<home_folder>/.ipython/profile_default/startup/``::
+
 
 
   try:

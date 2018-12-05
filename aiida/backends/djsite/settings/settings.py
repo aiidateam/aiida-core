@@ -141,9 +141,6 @@ TEMPLATES = [
     },
 ]
 
-# Python dotted path to the WSGI application used by Django's runserver.
-WSGI_APPLICATION = 'aiida.backends.djsite.settings.wsgi.application'
-
 INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',

@@ -1882,6 +1882,9 @@ class StructureData(Data):
         """
         Creates :py:class:`aiida.orm.data.cif.CifData`.
 
+        .. versionadded:: 1.0
+           Renamed from _get_cif
+
         :param converter: specify the converter. Default 'ase'.
         :param store: If True, intermediate calculation gets stored in the
             AiiDA database for record. Default False.

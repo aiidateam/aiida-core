@@ -6,7 +6,7 @@ Calculation plugin - Integer Summation
 
 In this chapter we will give you some examples and a brief guide on how to write
 a plugin to support a new code. Please take a look at the
-:ref:`Plugin Development <plugin_development>` session of the
+:ref:`Plugin Development <plugin_development>` section of the
 developer guide to get an overall understanding of the plugin system.
 We will focus here on writing a plugin for a very simple code
 (that simply adds two numbers) and explain how AiiDA manages calculations.
@@ -215,14 +215,14 @@ Defining the internal parameters
 
 
 A few class internal parameters can (or should) be defined inside the 
-``_init_internal_params`` method::
+``_init_internal_params`` method in ``SumCalculation``::
 
   def _init_internal_params(self):
-  super(SumCalculation, self)._init_internal_params()
+      super(SumCalculation, self)._init_internal_params()
 
-  self._DEFAULT_INPUT_FILE = 'in.json'
-  self._DEFAULT_OUTPUT_FILE = 'out.json'
-  self._default_parser = 'sum'
+      self._DEFAULT_INPUT_FILE = 'in.json'
+      self._DEFAULT_OUTPUT_FILE = 'out.json'
+      self._default_parser = 'sum'
 
 In particular, it is good practice to define
 a ``_DEFAULT_INPUT_FILE`` and ``_DEFAULT_OUTPUT_FILE`` attributes (pointing to the
@@ -338,7 +338,7 @@ wildcards, it should be another list containing the following three items
   root directory as ``bigfiles*[0-9].xml``. For ``depth=1``, the sub path ``path`` will be included
   and the files will be copied as ``path/bigfiles*[0-9].xml``
 
-There is another field that follows exactly the same syntax as the ``retrieve_list`` but behaves a little differently.
+There is another field that follows exactly the same syntax as the ``retrieve_list`` but behaves a little differently::
 
    calcinfo.retrieve_temporary_list = [['some/path/bigfiles*[0-9].xml', '.', 0]]
 
@@ -347,7 +347,7 @@ be available during the parsing of the calculation. After the parsing is complet
 files will be deleted. This is useful if during parsing, one wants to analyze the contents of big files and
 parse a small subset of the data to keep permanently, but does not want to have the store the raw files themselves
 which would unnecessarily increase the size of the repository. The files that are retrieved will be stored in
-a temporary ``FolderData`` and be passed as an argument to the ``parse_with_retrieved`` method of the ``Parser``
+a temporary :class:`aiida.orm.data.folder.FolderData` and be passed as an argument to the ``parse_with_retrieved`` method of the :class:`aiida.parsers.parser.Parser`
 class, which is implemented by the specific plugin. It will be passed under the key ``retrieved_temporary_folder``.
 
 For the time being, just define also the following variables as empty lists
@@ -357,33 +357,34 @@ For the time being, just define also the following variables as empty lists
     calcinfo.remote_copy_list = []
 
 .. note::
-  Other fields that can be specified in CalcInfo:
+  Other fields that can be specified in ``CalcInfo``:
 
-  #. ``retrieve_singlefile_list``: a list of triplets, in the form
-     ``['<linkname_from calc to singlefile>', '<subclass of singlefile>', '<filename>']``.
-     If this is specified, at the end of the
-     calculation it will be created a ``SinglefileData`` like object in the
-     Database, children of the calculation, if of course the file is found
-     on the cluster.
+  * ``retrieve_singlefile_list``: a list of triplets, in the form
+    ``['<linkname_from calc to singlefile>', '<subclass of singlefile>', '<filename>']``.
+    If this is specified, at the end of the
+    calculation it will be created a ``SinglefileData`` like object in the
+    Database, children of the calculation, if of course the file is found
+    on the cluster.
 
-  #. ``codes_run_mode``: a string, only necessary if you want to run more than one code
-     in the same scheduling job. Determines the order in which the multiple 
-     codes are run (i.e. sequentially or all at the same time.
-     It assumes one of the values of ``aiida.common.datastructures.code_run_modes``,
-     like ``code_run_modes.PARALLEL`` or ``code_run_modes.SERIAL``
-  #. ``stdin_name``: the name of the standard input.
+  * ``codes_run_mode``: a string, only necessary if you want to run more than one code
+    in the same scheduling job. Determines the order in which the multiple 
+    codes are run (i.e. sequentially or all at the same time.
+    It assumes one of the values of ``aiida.common.datastructures.code_run_modes``,
+    like ``code_run_modes.PARALLEL`` or ``code_run_modes.SERIAL``
 
-  #. ``stdin_name``: the name of the standard output.
+  * ``stdin_name``: the name of the standard input.
 
-  #. ``cmdline_params``: like parallelization flags, that will be used when
-     running the code.
+  * ``stdin_name``: the name of the standard output.
 
-  #. ``stderr_name``: the name of the error output.
+  * ``cmdline_params``: like parallelization flags, that will be used when
+    running the code.
 
-  #. ``withmpi``: whether the code has to be called with mpi or not.
+  * ``stderr_name``: the name of the error output.
 
-  For the full definition of ``CalcInfo()`` and ``CodeInfo()``, refer to the 
-  source ``aiida.common.datastructures``. 
+  * ``withmpi``: whether the code has to be called with mpi or not.
+
+  For the full definition of ``CalcInfo`` and ``CodeInfo``, refer to the 
+  source :mod:`aiida.common.datastructures`. 
   In particular, give a look to the
   ``local_copy_list`` and ``remote_copy_list`` attributes of ``CalcInfo``, which
   defines how additions files are copied.
@@ -425,10 +426,11 @@ to which code, we have prepared the input file that the code will access
 and we let also AiiDA know the name of the output file: our first input plugin
 is ready!
 
-.. note:: All content stored in the tempfolder will be then stored into the 
+.. note:: All content in the in the ``tempfolder`` in preparation of the inputs
+  files will be then stored into the
   AiiDA database, potentially `forever`. Therefore, before generating 
   huge files, you should carefully think at how to design your plugin 
-  interface.
+  interface. The same applies for ``calcinfo.retrieve_list``.
 
 As a final step, after copying the file in the location specified above, we
 can check if AiiDA recognised the plugin, by running the command

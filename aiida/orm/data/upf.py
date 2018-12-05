@@ -266,10 +266,10 @@ def parse_upf(fname, check_filename=True):
     try:
         version_major = int(version.partition('.')[0])
     except ValueError:
-        # If the version string does not start with a dot, fallback
+        # If the version string does not contain a dot, fallback
         # to version 1
         AIIDA_LOGGER.debug("Falling back to version 1 for file {}, "
-                          "version string '{}' unrecognized".format(
+                           "version string '{}' unrecognized".format(
             fname, version))
         version_major = 1
 

@@ -15,7 +15,7 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 import os
 import logging
 import importlib
-import collections
+from collections import Callable, Iterable, Mapping
 import numbers
 import math
 import warnings
@@ -42,8 +42,9 @@ def clean_value(value):
     """
     Get value from input and (recursively) replace, if needed, all occurrences
     of BaseType AiiDA data nodes with their value, and List with a standard list.
-
-    It also makes a deep copy of everything.
+    It also makes a deep copy of everything 
+    The purpose of this function is to convert data to a type which can be serialized and deserialized 
+    for storage in the DB without its value changing.      
 
     Note however that there is no logic to avoid infinite loops when the
     user passes some perverse recursive dictionary or list.
@@ -66,10 +67,10 @@ def clean_value(value):
     if isinstance(value, BaseType):
         return clean_builtin(value.value)
 
-    if isinstance(value, dict):
-        # Check dictionary before iterables
+    if isinstance(value, Mapping):
+       # Check dictionary before iterables
         return {k: clean_value(v) for k, v in value.items()}
-    if (isinstance(value, collections.Iterable) and not isinstance(value, six.string_types)):
+    if (isinstance(value, Iterable) and not isinstance(value, six.string_types)):
         # list, tuple, ... but not a string
         # This should also properly take care of dealing with the
         # basedatatypes.List object
@@ -469,7 +470,7 @@ class AbstractNode(object):
             except AttributeError:
                 raise ValueError("Unable to set '{0}', no set_{0} method "
                                  "found".format(k))
-            if not isinstance(method, collections.Callable):
+            if not isinstance(method, Callable):
                 raise ValueError("Unable to set '{0}', set_{0} is not "
                                  "callable!".format(k))
             method(v)

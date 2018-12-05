@@ -1634,17 +1634,17 @@ class TestLinks(AiidaTestCase):
         pw1.add_incoming(wc2, LinkType.CALL_CALC, 'call')
         pw1._set_state(calc_states.PARSING)
 
-        d3.add_incoming(pw1, LinkType.CREATE, 'create')
-        d3.add_incoming(wc2, LinkType.RETURN, 'return')
+        d3.add_incoming(pw1, LinkType.CREATE, 'create1')
+        d3.add_incoming(wc2, LinkType.RETURN, 'return1')
 
-        d4.add_incoming(pw1, LinkType.CREATE, 'create')
-        d4.add_incoming(wc2, LinkType.RETURN, 'return')
+        d4.add_incoming(pw1, LinkType.CREATE, 'create2')
+        d4.add_incoming(wc2, LinkType.RETURN, 'return2')
 
         pw2.add_incoming(d4, LinkType.INPUT_CALC, 'input')
         pw2._set_state(calc_states.PARSING)
 
-        d5.add_incoming(pw2, LinkType.CREATE, 'create')
-        d6.add_incoming(pw2, LinkType.CREATE, 'create')
+        d5.add_incoming(pw2, LinkType.CREATE, 'create5')
+        d6.add_incoming(pw2, LinkType.CREATE, 'create6')
 
         # Return the generated nodes
         graph_nodes = [d1, d2, d3, d4, d5, d6, pw1, pw2, wc1, wc2]
@@ -1845,12 +1845,12 @@ class TestLinks(AiidaTestCase):
             c1.add_incoming(ni2, LinkType.INPUT_CALC, 'ni2-to-c1')
 
             # Connecting the first output node to wc1 & c1
-            no1.add_incoming(wc1, LinkType.RETURN, 'output')
-            no1.add_incoming(c1, LinkType.CREATE, 'output')
+            no1.add_incoming(wc1, LinkType.RETURN, 'output1')
+            no1.add_incoming(c1, LinkType.CREATE, 'output1')
 
             # Connecting the second output node to wc1 & c1
-            no2.add_incoming(wc1, LinkType.RETURN, 'output')
-            no2.add_incoming(c1, LinkType.CREATE, 'output')
+            no2.add_incoming(wc1, LinkType.RETURN, 'output2')
+            no2.add_incoming(c1, LinkType.CREATE, 'output2')
 
             # Getting the input, create, return and call links
             qb = QueryBuilder()

@@ -457,7 +457,7 @@ class TrajectoryData(ArrayData):
         from aiida.tools.dbexporters.tcod import export_cif
         return export_cif(self, **kwargs), {}
 
-    def _get_aiida_structure(self, store=False, **kwargs):
+    def get_structure(self, store=False, **kwargs):
         """
         Creates :py:class:`aiida.orm.data.structure.StructureData`.
 
@@ -477,7 +477,7 @@ class TrajectoryData(ArrayData):
         """
         Creates :py:class:`aiida.orm.data.cif.CifData`
         """
-        struct = self._get_aiida_structure(index=index, **kwargs)
+        struct = self.get_structure(index=index, **kwargs)
         cif = struct._get_cif(**kwargs)  # pylint: disable=protected-access
         return cif
 

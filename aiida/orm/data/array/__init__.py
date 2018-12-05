@@ -90,7 +90,7 @@ class ArrayData(Data):
         """
         return tuple(self.get_attr("{}{}".format(self.array_prefix, name)))
 
-    def iterarrays(self):
+    def get_iterarrays(self):
         """
         Iterator that returns tuples (name, array) for each array stored in the
         node.

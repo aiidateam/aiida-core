@@ -2819,7 +2819,7 @@ class TestArrayData(AiidaTestCase):
 
     def test_iteration(self):
         """
-        Check the functionality of the iterarrays() iterator
+        Check the functionality of the get_iterarrays() iterator
         """
         from aiida.orm.data.array import ArrayData
         import numpy
@@ -2835,7 +2835,7 @@ class TestArrayData(AiidaTestCase):
         third = numpy.random.rand(6, 6)
         n.set_array('third', third)
 
-        for name, array in n.iterarrays():
+        for name, array in n.get_iterarrays():
             if name == 'first':
                 self.assertAlmostEquals(abs(first - array).max(), 0.)
             if name == 'second':

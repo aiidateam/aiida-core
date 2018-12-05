@@ -50,6 +50,11 @@ The installation instructions for these prerequisites will depend on the operati
 We provide basic instructions for :ref:`several operating systems<installation_os>`.
 Make sure you have successfully installed these prerequisites before continuing with the installation guide.
 
+A final optional dependancy of note is `graphviz`_ which is necessary for plotting the AiiDA provenance graphs
+via ``verdi graph``.
+
+.. _graphviz: https://www.graphviz.org/download 
+
 
 .. _install_aiida:
 
@@ -278,7 +283,7 @@ This will open a tab in your browser. Click on ``New -> Python 2`` and type::
 
     import aiida
 
-followed by ``Shit-Enter``. If no exception is thrown, you can use AiiDA in Jupyter.
+followed by ``Shift-Enter``. If no exception is thrown, you can use AiiDA in Jupyter.
 
 If you want to set the same environment as in a ``verdi shell``, add the following code in ``<your.home.folder>/.ipython/profile_default/ipython_config.py``::
 

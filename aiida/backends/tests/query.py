@@ -18,7 +18,8 @@ from six.moves import range, zip
 from aiida.backends.testbase import AiidaTestCase
 import aiida.backends.settings as settings
 from aiida.common.links import LinkType
-
+from aiida.orm import Node, Data
+from aiida.orm.node.process.calculation import CalculationNode
 
 class TestQueryBuilder(AiidaTestCase):
 
@@ -170,24 +171,25 @@ class TestQueryBuilder(AiidaTestCase):
 
     def test_simple_query_2(self):
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm import Node
+        from aiida.orm import Node, Data
+        from aiida.orm.node.process.calculation import CalculationNode
         from datetime import datetime
         from aiida.common.exceptions import MultipleObjectsError, NotExistent
-        n0 = Node()
+        n0 = Data()
         n0.label = 'hello'
         n0.description = ''
         n0._set_attr('foo', 'bar')
 
-        n1 = Node()
+        n1 = CalculationNode()
         n1.label = 'foo'
         n1.description = 'I am FoO'
 
-        n2 = Node()
+        n2 = Data()
         n2.label = 'bar'
         n2.description = 'I am BaR'
 
         n2.add_incoming(n1, link_type=LinkType.CREATE, link_label='random_2')
-        n1.add_incoming(n0, link_type=LinkType.CREATE, link_label='random_1')
+        n1.add_incoming(n0, link_type=LinkType.INPUT_CALC, link_label='random_1')
 
         for n in (n0, n1, n2):
             n.store()
@@ -270,7 +272,7 @@ class TestQueryBuilder(AiidaTestCase):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import Node
 
-        nodes = [Node() for _ in range(8)]
+        nodes = [Data() for _ in range(8)]
 
         nodes[0]._set_attr('fa', 1)
         nodes[1]._set_attr('fa', 1.0)
@@ -306,13 +308,9 @@ class TestQueryBuilder(AiidaTestCase):
         p = ParameterData(dict=dict(cat='miau'))
         p.store()
 
-        n = Node()
-        n._set_attr('cat', 'miau')
-        n.store()
-
-        # Now when asking for a node with attr.cat==miau, I want 4 esults:
+        # Now when asking for a node with attr.cat==miau, I want 3 esults:
         qb = QueryBuilder().append(Node, filters={'attributes.cat': 'miau'})
-        self.assertEqual(qb.count(), 4)
+        self.assertEqual(qb.count(), 3)
 
         qb = QueryBuilder().append(Data, filters={'attributes.cat': 'miau'})
         self.assertEqual(qb.count(), 3)
@@ -323,9 +321,13 @@ class TestQueryBuilder(AiidaTestCase):
             self.assertEqual(qb.count(), 1)
 
         # Now I am not allow the subclassing, which should give 1 result for each
-        for cls in (StructureData, ParameterData, Node, Data):
+        for cls, count in (
+            (StructureData, 1),
+            (ParameterData, 1),
+            (Data, 1),
+            (Node, 0)):
             qb = QueryBuilder().append(cls, filters={'attributes.cat': 'miau'}, subclassing=False)
-            self.assertEqual(qb.count(), 1)
+            self.assertEqual(qb.count(), count)
 
         # Now I am testing the subclassing with tuples:
         qb = QueryBuilder().append(cls=(StructureData, ParameterData), filters={'attributes.cat': 'miau'})
@@ -350,7 +352,8 @@ class TestQueryBuilder(AiidaTestCase):
         from aiida.orm.querybuilder import QueryBuilder
 
         for i in range(4):
-            Node().store()
+            Data().store()
+
         self.assertEqual(len(QueryBuilder().append(Node).all()), 4)
         self.assertEqual(len(QueryBuilder().append(Node, project='*').all()), 4)
         self.assertEqual(len(QueryBuilder().append(Node, project=['*', 'id']).all()), 4)
@@ -516,7 +519,7 @@ class TestQueryBuilderCornerCases(AiidaTestCase):
         from aiida.orm.node.process import ProcessNode
         from aiida.orm.querybuilder import QueryBuilder
 
-        n1 = ProcessNode()
+        n1 = CalculationNode()
         n1.label = 'node2'
         n1._set_attr('foo', 1)
         n1.store()
@@ -524,7 +527,7 @@ class TestQueryBuilderCornerCases(AiidaTestCase):
         # Checking the correct retrieval of transport_params which is
         # a JSON field (in both backends).
         qb = QueryBuilder()
-        qb.append(ProcessNode, project=['id'], tag='calc')
+        qb.append(CalculationNode, project=['id'], tag='calc')
         qb.append(Computer, project=['id', 'transport_params'],
                   outerjoin=True, with_node='calc')
         qb.all()
@@ -532,7 +535,7 @@ class TestQueryBuilderCornerCases(AiidaTestCase):
         # Checking the correct retrieval of _metadata which is
         # a JSON field (in both backends).
         qb = QueryBuilder()
-        qb.append(ProcessNode, project=['id'], tag='calc')
+        qb.append(CalculationNode, project=['id'], tag='calc')
         qb.append(Computer, project=['id', '_metadata'],
                   outerjoin=True, with_node='calc')
         qb.all()
@@ -545,7 +548,7 @@ class TestAttributes(AiidaTestCase):
         from aiida.orm.querybuilder import QueryBuilder
         val = 1.
         res_uuids = set()
-        n1 = Node()
+        n1 = Data()
         n1._set_attr("whatever", 3.)
         n1._set_attr("test_case", "test_attribute_existence")
         n1.store()
@@ -553,7 +556,7 @@ class TestAttributes(AiidaTestCase):
         # I want all the nodes where whatever is smaller than 1. or there is no such value:
 
         qb = QueryBuilder()
-        qb.append(Node, filters={
+        qb.append(Data, filters={
             'or': [
                 {'attributes': {'!has_key': 'whatever'}},
                 {'attributes.whatever': {'<': val}}
@@ -566,7 +569,7 @@ class TestAttributes(AiidaTestCase):
         from aiida.orm.node import Node
         from aiida.orm.querybuilder import QueryBuilder
         key = 'value_test_attr_type'
-        n_int, n_float, n_str, n_str2, n_bool, n_arr = [Node() for _ in range(6)]
+        n_int, n_float, n_str, n_str2, n_bool, n_arr = [Data() for _ in range(6)]
         n_int._set_attr(key, 1)
         n_float._set_attr(key, 1.0)
         n_bool._set_attr(key, True)
@@ -630,7 +633,7 @@ class QueryBuilderDateTimeAttribute(AiidaTestCase):
         from aiida.utils import timezone
         from datetime import timedelta
         from aiida.orm.node import Node
-        n = Node()
+        n = Data()
         now = timezone.now()
         n._set_attr('now', now)
         n.store()
@@ -650,7 +653,7 @@ class QueryBuilderLimitOffsetsTest(AiidaTestCase):
         from aiida.orm.querybuilder import QueryBuilder
         # Creating 10 nodes with an attribute that can be ordered
         for i in range(10):
-            n = Node()
+            n = Data()
             n._set_attr('foo', i)
             n.store()
 
@@ -713,25 +716,25 @@ class QueryBuilderJoinsTests(AiidaTestCase):
         from aiida.orm import Node, Data
         from aiida.orm.querybuilder import QueryBuilder
         # Creating n1, who will be a parent:
-        parent = Node()
+        parent = Data()
         parent.label = 'mother'
 
-        good_child = Node()
+        good_child = CalculationNode()
         good_child.label = 'good_child'
         good_child._set_attr('is_good', True)
 
-        bad_child = Node()
+        bad_child = CalculationNode()
         bad_child.label = 'bad_child'
         bad_child._set_attr('is_good', False)
 
-        unrelated = Node()
+        unrelated = CalculationNode()
         unrelated.label = 'unrelated'
 
         for n in (good_child, bad_child, parent, unrelated):
             n.store()
 
-        good_child.add_incoming(parent, link_type=LinkType.CREATE, link_label='parent')
-        bad_child.add_incoming(parent, link_type=LinkType.CREATE, link_label='parent')
+        good_child.add_incoming(parent, link_type=LinkType.INPUT_CALC, link_label='parent')
+        bad_child.add_incoming(parent, link_type=LinkType.INPUT_CALC, link_label='parent')
 
         # Using a standard inner join
         qb = QueryBuilder()
@@ -749,8 +752,8 @@ class QueryBuilderJoinsTests(AiidaTestCase):
         from aiida.orm.querybuilder import QueryBuilder
         # Creating n1, who will be a parent:
 
-        students = [Node() for i in range(10)]
-        advisors = [Node() for i in range(3)]
+        students = [Data() for i in range(10)]
+        advisors = [CalculationNode() for i in range(3)]
         for i, a in enumerate(advisors):
             a.label = 'advisor {}'.format(i)
             a._set_attr('advisor_id', i)
@@ -760,15 +763,15 @@ class QueryBuilderJoinsTests(AiidaTestCase):
 
         # advisor 0 get student 0, 1
         for i in (0, 1):
-            students[i].add_incoming(advisors[0], link_type=LinkType.CREATE, link_label='is_advisor')
+            students[i].add_incoming(advisors[0], link_type=LinkType.CREATE, link_label='is_advisor_{}'.format(i))
 
         # advisor 1 get student 3, 4
         for i in (3, 4):
-            students[i].add_incoming(advisors[1], link_type=LinkType.CREATE, link_label='is_advisor')
+            students[i].add_incoming(advisors[1], link_type=LinkType.CREATE, link_label='is_advisor_{}'.format(i))
 
         # advisor 2 get student 5, 6, 7
         for i in (5, 6, 7):
-            students[i].add_incoming(advisors[2], link_type=LinkType.CREATE, link_label='is_advisor')
+            students[i].add_incoming(advisors[2], link_type=LinkType.CREATE, link_label='is_advisor_{}'.format(i))
 
         # let's add a differnt relationship than advisor:
         students[9].add_incoming(advisors[2], link_type=LinkType.CREATE, link_label='lover')
@@ -777,14 +780,14 @@ class QueryBuilderJoinsTests(AiidaTestCase):
             QueryBuilder().append(
                 Node
             ).append(
-                Node, edge_filters={'label': 'is_advisor'}, tag='student'
+                Node, edge_filters={'label': {'like': 'is\\_advisor\\_%'}}, tag='student'
             ).count(), 7)
 
         for adv_id, number_students in zip(list(range(3)), (2, 2, 3)):
             self.assertEqual(QueryBuilder().append(
                 Node, filters={'attributes.advisor_id': adv_id}
             ).append(
-                Node, edge_filters={'label': 'is_advisor'}, tag='student'
+                Node, edge_filters={'label': {'like': 'is\\_advisor\\_%'}}, tag='student'
             ).count(), number_students)
 
     def test_joins3_user_group(self):
@@ -824,46 +827,44 @@ class QueryBuilderPath(AiidaTestCase):
         from aiida.common.links import LinkType
 
         q = self.backend.query_manager
-        n1 = Node()
+        n1 = Data()
         n1.label = 'n1'
         n1.store()
-        n2 = Node()
+        n2 = CalculationNode()
         n2.label = 'n2'
         n2.store()
-        n3 = Node()
+        n3 = Data()
         n3.label = 'n3'
         n3.store()
-        n4 = Node()
+        n4 = Data()
         n4.label = 'n4'
         n4.store()
-        n5 = Node()
+        n5 = CalculationNode()
         n5.label = 'n5'
         n5.store()
-        n6 = Node()
+        n6 = Data()
         n6.label = 'n6'
         n6.store()
-        n7 = Node()
+        n7 = CalculationNode()
         n7.label = 'n7'
         n7.store()
-        n8 = Node()
+        n8 = Data()
         n8.label = 'n8'
         n8.store()
-        n9 = Node()
+        n9 = Data()
         n9.label = 'n9'
         n9.store()
 
         # I create a strange graph, inserting links in a order
         # such that I often have to create the transitive closure
         # between two graphs
-        # I set everything as an INPUT_CALC-links now, because the QueryBuilder path query or
-        # our custom queries don't follow other links than CREATE or INPUT_CALC
-        n3.add_incoming(n2, link_type=LinkType.INPUT_CALC, link_label='link1')
+        n3.add_incoming(n2, link_type=LinkType.CREATE, link_label='link1')
         n2.add_incoming(n1, link_type=LinkType.INPUT_CALC, link_label='link2')
         n5.add_incoming(n3, link_type=LinkType.INPUT_CALC, link_label='link3')
         n5.add_incoming(n4, link_type=LinkType.INPUT_CALC, link_label='link4')
-        n4.add_incoming(n2, link_type=LinkType.INPUT_CALC, link_label='link5')
+        n4.add_incoming(n2, link_type=LinkType.CREATE, link_label='link5')
         n7.add_incoming(n6, link_type=LinkType.INPUT_CALC, link_label='link6')
-        n8.add_incoming(n7, link_type=LinkType.INPUT_CALC, link_label='link7')
+        n8.add_incoming(n7, link_type=LinkType.CREATE, link_label='link7')
 
         # There are no parents to n9, checking that
         self.assertEqual(set([]), set(q.get_all_parents([n9.pk])))
@@ -887,7 +888,7 @@ class QueryBuilderPath(AiidaTestCase):
             ).append(Node, with_descendants='desc', filters={'id': n1.pk}
                      ).count(), 0)
 
-        n6.add_incoming(n5, link_type=LinkType.INPUT_CALC, link_label='link1')
+        n6.add_incoming(n5, link_type=LinkType.CREATE, link_label='link1')
         # Yet, now 2 links from 1 to 8
         self.assertEquals(
             QueryBuilder().append(
@@ -959,7 +960,7 @@ class QueryBuilderPath(AiidaTestCase):
                 Node, filters={'id': n8.pk}, tag='desc'
             ).append(Node, with_descendants='desc', filters={'id': n1.pk}
                      ).count(), 2)
-        n9.add_incoming(n6, link_type=LinkType.INPUT_CALC, link_label='link6')
+        n9.add_incoming(n5, link_type=LinkType.CREATE, link_label='link6')
         # And now there should be 4 nodes
 
         self.assertEquals(
@@ -981,8 +982,8 @@ class QueryBuilderPath(AiidaTestCase):
         )
         qb.add_projection('edge', 'depth')
         self.assertTrue(set(next(zip(*qb.all()))), set([5, 6]))
-        qb.add_filter('edge', {'depth': 6})
-        self.assertTrue(set(next(zip(*qb.all()))), set([6]))
+        qb.add_filter('edge', {'depth': 5})
+        self.assertTrue(set(next(zip(*qb.all()))), set([5]))
 
 
 class TestConsistency(AiidaTestCase):
@@ -995,12 +996,12 @@ class TestConsistency(AiidaTestCase):
         import random
 
         for i in range(100):
-            n = Node()
+            n = Data()
             n.store()
 
         for idx, item in enumerate(QueryBuilder().append(Node, project=['id', 'label']).iterall(batch_size=10)):
             if idx % 10 == 10:
-                n = Node()
+                n = Data()
                 n.store()
         self.assertEqual(idx, 99)
         self.assertTrue(len(QueryBuilder().append(Node, project=['id', 'label']).all(batch_size=10)) > 99)
@@ -1058,10 +1059,10 @@ class TestManager(AiidaTestCase):
 
         ParameterData = DataFactory('parameter')
 
-        store_and_add(Node(), expected_db_statistics)
+        store_and_add(Data(), expected_db_statistics)
         store_and_add(ParameterData(), expected_db_statistics)
         store_and_add(ParameterData(), expected_db_statistics)
-        store_and_add(ProcessNode(), expected_db_statistics)
+        store_and_add(CalculationNode(), expected_db_statistics)
 
         new_db_statistics = qmanager.get_creation_statistics()
         # I only check a few fields
@@ -1102,10 +1103,10 @@ class TestManager(AiidaTestCase):
 
         ParameterData = DataFactory('parameter')
 
-        store_and_add(Node(), expected_db_statistics)
+        store_and_add(Data(), expected_db_statistics)
         store_and_add(ParameterData(), expected_db_statistics)
         store_and_add(ParameterData(), expected_db_statistics)
-        store_and_add(ProcessNode(), expected_db_statistics)
+        store_and_add(CalculationNode(), expected_db_statistics)
 
         new_db_statistics = self.backend.query_manager.get_creation_statistics()
         # I only check a few fields

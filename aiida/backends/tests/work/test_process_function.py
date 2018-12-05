@@ -18,9 +18,9 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.data.bool import get_true_node
 from aiida.orm.data.int import Int
 from aiida.orm.data.str import Str
-from aiida.orm.mixins import FunctionCalculationMixin
-from aiida.orm.node.process import ProcessNode
-from aiida.work import run, run_get_node, submit, process_function, Process, ExitCode
+from aiida.orm.node.process.workflow.workfunction import WorkFunctionNode
+from aiida.orm.node.process.calculation.calcfunction import CalcFunctionNode
+from aiida.work import run, run_get_node, submit, calcfunction, workfunction, Process, ExitCode
 
 DEFAULT_INT = 256
 DEFAULT_LABEL = 'Default label'
@@ -29,64 +29,61 @@ CUSTOM_LABEL = 'Custom label'
 CUSTOM_DESCRIPTION = 'Custom description'
 
 
-class ProcessFunctionNode(FunctionCalculationMixin, ProcessNode):
-    """A dummy ORM node class to test base process functions."""
-    pass
-
-
 class TestProcessFunction(AiidaTestCase):
     """
-    Note that the @process_function decorator should never be used in production, which is why it does not have a node
-    class by default and we create a dummy class in this file especially for testing purposes. We just use it here to
-    test the generic interface functionality, that is shared between the concrete @calcfunction and @workfunction
-    variants. For that reason we also do not test the outputs here, because they will not be generated for the base
-    ProcessNode class and are specific to the @calculation and @workfunction, and will therefore be tested for them
-    separately.
+    Note that here we use `@workfunctions` and `@calculations`, the concrete versions of the
+    `@process_function` decorator, even though we are testing only the shared functionality
+    that is captured in the `@process_function` decorator, relating to the transformation
+    of the wrapped function into a `FunctionProcess`.
+    The reason we do not use the `@process_function` decorator itself, is because it
+    does not have a node class by default. We could create one on the fly, but then
+    anytime inputs or outputs would be attached to it in the tests, the `validate_link`
+    function would complain as the dummy node class is not recognized as a valid process node.
     """
 
     def setUp(self):
         super(TestProcessFunction, self).setUp()
         self.assertIsNone(Process.current())
 
-        @process_function(node_class=ProcessFunctionNode)
+        @workfunction
         def function_return_input(data):
             return data
 
-        @process_function(node_class=ProcessFunctionNode)
+        @calcfunction
         def function_return_true():
             return get_true_node()
 
-        @process_function(node_class=ProcessFunctionNode)
+        @workfunction
         def function_args(data_a):
             return data_a
 
-        @process_function(node_class=ProcessFunctionNode)
+        @workfunction
         def function_args_with_default(data_a=Int(DEFAULT_INT)):
             return data_a
 
-        @process_function(node_class=ProcessFunctionNode)
+        @workfunction
         def function_kwargs(**kwargs):
             return kwargs
 
-        @process_function(node_class=ProcessFunctionNode)
+        @workfunction
         def function_args_and_kwargs(data_a, **kwargs):
             result = {'data_a': data_a}
             result.update(kwargs)
             return result
 
-        @process_function(node_class=ProcessFunctionNode)
+        @workfunction
         def function_args_and_default(data_a, data_b=Int(DEFAULT_INT)):
             return {'data_a': data_a, 'data_b': data_b}
 
-        @process_function(node_class=ProcessFunctionNode)
+        @workfunction
         def function_defaults(data_a=Int(DEFAULT_INT), label=DEFAULT_LABEL, description=DEFAULT_DESCRIPTION):  # pylint: disable=unused-argument
             return data_a
 
-        @process_function(node_class=ProcessFunctionNode)
+        @workfunction
         def function_exit_code(exit_status, exit_message):
             return ExitCode(exit_status.value, exit_message.value)
 
-        @process_function(node_class=ProcessFunctionNode)
+        @workfunction
         def function_excepts(exception):
             raise RuntimeError(exception.value)
 
@@ -127,7 +124,7 @@ class TestProcessFunction(AiidaTestCase):
         """Verify function properties are properly introspected and stored in the nodes attributes and repository."""
         function_name = 'test_process_function'
 
-        @process_function(node_class=ProcessFunctionNode)
+        @calcfunction
         def test_process_function(data):
             return {'result': Int(data.value + 1)}
 
@@ -149,7 +146,7 @@ class TestProcessFunction(AiidaTestCase):
         self.assertIsInstance(function_starting_line_number, int)
 
         # Check that first line number is correct. Note that the first line should correspond
-        # to the `@process_function` directive, but since the list is zero-indexed we actually get the
+        # to the `@workfunction` directive, but since the list is zero-indexed we actually get the
         # following line, which should correspond to the function name i.e. `def test_process_function(data)`
         function_name_from_source = function_source_code[function_starting_line_number]
         self.assertTrue(function_name in function_name_from_source)
@@ -158,7 +155,7 @@ class TestProcessFunction(AiidaTestCase):
         """Variadic arguments are not supported and should raise."""
         with self.assertRaises(ValueError):
 
-            @process_function(node_class=ProcessFunctionNode)
+            @workfunction
             def function_varargs(*args):  # pylint: disable=unused-variable
                 return args
 
@@ -275,7 +272,7 @@ class TestProcessFunction(AiidaTestCase):
         result, node = run_get_node(self.function_return_true)
         self.assertTrue(result)
         self.assertEqual(result, get_true_node())
-        self.assertTrue(isinstance(node, ProcessFunctionNode))
+        self.assertTrue(isinstance(node, CalcFunctionNode))
 
         with self.assertRaises(AssertionError):
             submit(self.function_return_true)
@@ -306,22 +303,22 @@ class TestProcessFunction(AiidaTestCase):
     def test_simple_workflow(self):
         """Test construction of simple workflow by chaining process functions."""
 
-        @process_function(node_class=ProcessFunctionNode)
+        @calcfunction
         def add(data_a, data_b):
             return data_a + data_b
 
-        @process_function(node_class=ProcessFunctionNode)
+        @calcfunction
         def mul(data_a, data_b):
             return data_a * data_b
 
-        @process_function(node_class=ProcessFunctionNode)
+        @workfunction
         def add_mul_wf(data_a, data_b, data_c):
             return mul(add(data_a, data_b), data_c)
 
         result, node = add_mul_wf.run_get_node(Int(3), Int(4), Int(5))
 
         self.assertEqual(result, (3 + 4) * 5)
-        self.assertIsInstance(node, ProcessFunctionNode)
+        self.assertIsInstance(node, WorkFunctionNode)
 
     def test_hashes(self):
         """Test that the hashes generated for identical process functions with identical inputs are the same."""

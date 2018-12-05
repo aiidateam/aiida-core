@@ -44,9 +44,9 @@ _element_v1_regexp = re.compile(
 _element_v2_regexp = re.compile(
     r"""
     \s*
-    element\s*=\s*(?P<quote_symbol>['"])\s*
+    (?i)element\s*=\s*(?P<quote_symbol>['"])\s*
     (?P<element_name>[a-zA-Z]{1,2})\s*
-    (?P=quote_symbol).*
+    (?P=quote_symbol)
    """, re.VERBOSE)
 
 

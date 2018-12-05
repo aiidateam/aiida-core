@@ -39,15 +39,16 @@ from aiida.common.exceptions import InputValidationError
 from aiida.common.links import LinkType
 from aiida.manage import get_manager
 from aiida.orm.node import Node
-from aiida.orm.utils import convert
+from aiida.common.exceptions import ConfigurationError
 
 from . import authinfos
 from . import comments
 from . import computers
-from . import entities
 from . import groups
 from . import logs
 from . import users
+from . import entities
+from . import convertors
 
 __all__ = ('QueryBuilder',)
 
@@ -1893,6 +1894,10 @@ class QueryBuilder(object):
                 self._hash = queryhelp_hash
         return query
 
+    @staticmethod
+    def get_aiida_entity_res(backend_entity):
+        return convertors.get_orm_entity(backend_entity)
+
     def inject_query(self, query):
         """
         Manipulate the query an inject it back.
@@ -1942,6 +1947,8 @@ class QueryBuilder(object):
         try:
             returnval = [
                 self._impl.get_aiida_res(self._attrkeys_as_in_sql_result[colindex], rowitem)
+                # factories.EntityFactory.get_orm_from_backend_entity(
+                #     self._impl.get_backend_entity_res(self._attrkeys_as_in_sql_result[colindex], rowitem))
                 for colindex, rowitem in enumerate(resultrow)
             ]
         except TypeError:
@@ -1952,6 +1959,8 @@ class QueryBuilder(object):
             # It still returns a list!
             else:
                 returnval = [self._impl.get_aiida_res(self._attrkeys_as_in_sql_result[0], resultrow)]
+                # returnval = [factories.EntityFactory.get_orm_from_backend_entity(
+                #     self._impl.get_backend_entity_res(self._attrkeys_as_in_sql_result[0], resultrow))]
         return returnval
 
     def one(self):
@@ -1998,8 +2007,8 @@ class QueryBuilder(object):
             # Convert to AiiDA frontend entities (if they are such)
             for i, item_entry in enumerate(item):
                 try:
-                    item[i] = convert.aiida_from_backend_entity(item_entry)
-                except ValueError:
+                    item[i] = convertors.get_orm_entity(item_entry)
+                except TypeError:
                     # Keep the current value
                     pass
 
@@ -2025,8 +2034,8 @@ class QueryBuilder(object):
         for item in self._impl.iterdict(query, batch_size, self.tag_to_projected_entity_dict):
             for key, value in item.items():
                 try:
-                    item[key] = convert.aiida_from_backend_entity(value)
-                except ValueError:
+                    item[key] = convertors.get_orm_entity(value)
+                except TypeError:
                     # Keep the current value
                     pass
 

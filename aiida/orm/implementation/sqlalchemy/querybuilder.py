@@ -27,6 +27,10 @@ import aiida.backends.sqlalchemy
 from aiida.common.exceptions import InputValidationError
 from aiida.orm.implementation.querybuilder import BackendQueryBuilder
 
+from aiida.orm.implementation.sqlalchemy.convertors import get_backend_entity
+
+# from aiida.orm.factories import EntityFactory
+
 
 class jsonb_array_length(FunctionElement):  # pylint: disable=invalid-name
     # pylint: disable=too-few-public-methods
@@ -406,7 +410,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         :returns: an aiida-compatible instance
         """
         if isinstance(res, (self.Group, self.Node, self.Computer, self.User, self.AuthInfo)):
-            returnval = res.get_aiida_class()
+            returnval = get_backend_entity(res, self)  # pylint: disable=assignment-from-no-return
         elif isinstance(res, Choice):
             returnval = res.value
         elif isinstance(res, uuid.UUID):

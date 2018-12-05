@@ -73,7 +73,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
 
     @property
     def user(self):
-        return self._backend.users.from_dbmodel(self._dbmodel.user)
+        return users.DjangoUser.from_dbmodel(self._dbmodel.user, self._backend)
 
     @user.setter
     def user(self, new_user):

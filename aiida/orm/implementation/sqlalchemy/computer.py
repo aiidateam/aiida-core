@@ -143,6 +143,9 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
     def set_transport_type(self, val):
         self._dbmodel.transport_type = val
 
+    def get_backend_entity(self):
+        return
+
 
 class SqlaComputerCollection(BackendComputerCollection):
 

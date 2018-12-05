@@ -108,15 +108,6 @@ Troubleshooting
 
     troubleshooting.rst
 
-===============
-Multi-user mode
-===============
-
-.. toctree::
-    :maxdepth: 4
-
-    aiida_multiuser.rst
-
 ========
 REST API
 ========

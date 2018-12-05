@@ -151,9 +151,7 @@ We suggest here to use your institution email, that will be used to associate th
 
   The existence of a default user is internally useful for multi-user
   setups, where only one user
-  runs the daemon, even if many users can simultaneously access the DB.
-  See the page on :ref:`setting up AiiDA in multi-user mode<aiida_multiuser>`
-  for more details (only for advanced users).
+  runs the daemon.
 
 .. note:: The password, in the current version of AiiDA, is not used (it will
     be used only in the REST API and in the web interface). If you leave the

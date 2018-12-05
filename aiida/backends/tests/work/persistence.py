@@ -36,7 +36,7 @@ class TestProcess(AiidaTestCase):
     def test_save_load(self):
         process = DummyProcess()
         saved_state = plumpy.Bundle(process)
-        del process
+        process.close()
 
         loaded_process = saved_state.unbundle()
         work.launch.run(loaded_process)

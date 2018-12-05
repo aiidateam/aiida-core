@@ -1,6 +1,6 @@
 .. _DevelopDataPluginTutorialFloat:
 
-Data plugin - Float summation
+Data plugin - Float Summation
 =============================
 
 .. toctree::

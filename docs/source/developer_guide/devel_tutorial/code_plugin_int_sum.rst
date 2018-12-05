@@ -1,4 +1,4 @@
-Calculation plugin - Integer summation
+Calculation plugin - Integer Summation
 ======================================
 
 .. toctree::
@@ -17,8 +17,12 @@ and develop your own plugin!
 
 .. seealso::
   You may also want to check out some simple plugin examples such as
-  `aiida-plugin-cutter`_ and `aiida-diff`_. The former also works as a
+  `aiida-plugin-cutter`_ and `aiida-diff`_. The former works as a
   template to help you start your own project.
+  A registry of plugins is available `here <https://aiidateam.github.io/aiida-registry/>`_.
+  We encourage registering your plugin, even if it is in the early stage.
+  This allows the plugin name to be secured, and will also let other people with
+  similar interests known the project.
 
 .. _aiida-qe: https://github.com/aiidateam/aiida-quantumespresso
 

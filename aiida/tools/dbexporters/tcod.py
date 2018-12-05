@@ -973,7 +973,7 @@ def export_cifnode(what, parameters=None, trajectory_index=None,
     """
     The main exporter function. Exports given coordinate-containing \*Data
     node to :py:class:`aiida.orm.data.cif.CifData` node, ready to be
-    exported to TCOD. All \*Data types, having method ``_get_cif()``, are
+    exported to TCOD. All \*Data types, having method ``get_cif()``, are
     supported in addition to :py:class:`aiida.orm.data.cif.CifData`.
 
     :param what: data node to be exported.
@@ -1030,11 +1030,11 @@ def export_cifnode(what, parameters=None, trajectory_index=None,
 
     # Convert node to CifData (if required)
 
-    if not isinstance(node, CifData) and getattr(node, '_get_cif'):
+    if not isinstance(node, CifData) and getattr(node, 'get_cif'):
         function_args = {'store': store}
         if trajectory_index is not None:
             function_args['index'] = trajectory_index
-        node = node._get_cif(**function_args)
+        node = node.get_cif(**function_args)
 
     if not isinstance(node,CifData):
         raise NotImplementedError("Exporter does not know how to "

@@ -50,6 +50,11 @@ The installation instructions for these prerequisites will depend on the operati
 We provide basic instructions for :ref:`several operating systems<installation_os>`.
 Make sure you have successfully installed these prerequisites before continuing with the installation guide.
 
+A final optional dependancy of note is `graphviz`_ which is necessary for plotting the AiiDA provenance graphs
+via ``verdi graph``.
+
+.. _graphviz: https://www.graphviz.org/download 
+
 
 .. _install_aiida:
 
@@ -59,27 +64,27 @@ Install AiiDA
 With the prerequisites installed, we can now download AiiDA itself and install it along with all its python dependencies.
 Create a directory where you want to install AiiDA and clone the repository::
 
-    $ mkdir <your_directory>
-    $ cd <your_directory>
-    $ git clone https://github.com/aiidateam/aiida_core
+    mkdir <your_directory>
+    cd <your_directory>
+    git clone https://github.com/aiidateam/aiida_core
 
 To prevent the python packages that AiiDA depends on, from clashing with the packages you already have installed on your system, we will install them in a virtual environment.
 For detailed information, see the section on :ref:`virtual environments <virtual_environment>`.
 To create a new virtual environment and activate it, run the following commands::
 
-    $ virtualenv ~/aiidapy
-    $ source ~/aiidapy/bin/activate
+    virtualenv ~/aiidapy
+    source ~/aiidapy/bin/activate
 
 This will create a directory in your home directory named ``aiidapy`` where all the packages will be installed.
 After activation, your prompt now should have ``(aiidapy)`` in front of it, indicating that you are working in the virtual environment.
 
 .. note:: You may need to install ``pip`` and ``setuptools`` in your virtual environment in case the system or user version of these tools is old::
 
-    $ pip install -U setuptools pip
+    (aiidapy) $ pip install -U setuptools pip
 
 Finally, to install AiiDA, run the following command from the directory where you cloned the repository::
 
-   (aiidapy) $ pip install -e aiida_core
+    (aiidapy) $ pip install -e aiida_core
 
 (In this example the AiiDA directory is in ``aiida_core``)
 
@@ -146,9 +151,7 @@ We suggest here to use your institution email, that will be used to associate th
 
   The existence of a default user is internally useful for multi-user
   setups, where only one user
-  runs the daemon, even if many users can simultaneously access the DB.
-  See the page on :ref:`setting up AiiDA in multi-user mode<aiida_multiuser>`
-  for more details (only for advanced users).
+  runs the daemon.
 
 .. note:: The password, in the current version of AiiDA, is not used (it will
     be used only in the REST API and in the web interface). If you leave the
@@ -179,7 +182,7 @@ Then, the following prompts will help you configure the database. Typical settin
 Remember that in order to work with AiiDA through for example the ``verdi`` command, you need to be in your virtual environment.
 If you open a new terminal for example, be sure to activate it first with::
 
-    $ source ~/aiidapy/bin/activate
+    source ~/aiidapy/bin/activate
 
 At this point, you can choose to read on for additional installation details and configuration options, or you can choose to start using
 AiiDA and go straight to the section :ref:`get started<get_started>`.
@@ -272,13 +275,13 @@ Originally born out of the iPython project, it now supports code written in many
 
 If you didn't already install AiiDA with the ``[notebook]`` option (during ``pip install``), run ``pip install jupyter`` **inside** the virtualenv, and then run **from within the virtualenv**::
 
-    $ jupyter notebook
+    jupyter notebook
 
 This will open a tab in your browser. Click on ``New -> Python 2`` and type::
 
     import aiida
 
-followed by ``Shit-Enter``. If no exception is thrown, you can use AiiDA in Jupyter.
+followed by ``Shift-Enter``. If no exception is thrown, you can use AiiDA in Jupyter.
 
 If you want to set the same environment as in a ``verdi shell``, add the following code in ``<your.home.folder>/.ipython/profile_default/ipython_config.py``::
 

@@ -77,14 +77,14 @@ Code Download
 
 Code can be downloaded like this.
 
-Download: :download:`this example script <devel_tutorial/sum_executable.py>`
+Download: :download:`this example script <../devel_tutorial/sum_executable.py>`
 
 Code Display
 ============
 
 Can be done like this. This entire document can be seen unformated below using this method.
 
-.. literalinclude:: devel_tutorial/sum_executable.py
+.. literalinclude:: ../devel_tutorial/sum_executable.py
 
 .. _self-reference:
 
@@ -142,8 +142,8 @@ it is done for documents. For example the parser docs can be indexed like this
 .. toctree::
    :maxdepth: 1
 
-   aiida.orm <../apidoc/aiida.orm>
-   ../apidoc/aiida.utils
+   aiida.orm <../../apidoc/aiida.orm>
+   ../../apidoc/aiida.utils
 
 
 Automodules Example

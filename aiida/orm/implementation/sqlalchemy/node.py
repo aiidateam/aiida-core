@@ -287,7 +287,7 @@ class Node(AbstractNode):
                     }, tag='parent').append(
                 Node, filters={
                     'id': src.pk
-                }, tag='child', descendant_of='parent').count() > 0:
+                }, tag='child', with_ancestors='parent').count() > 0:
                 raise ValueError("The link you are attempting to create would generate a loop")
 
         self._do_create_link(src, label, link_type)

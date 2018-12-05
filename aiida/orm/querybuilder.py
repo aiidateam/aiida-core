@@ -48,7 +48,7 @@ from . import groups
 from . import logs
 from . import users
 from . import entities
-from . import convertors
+from . import convert
 
 __all__ = ('QueryBuilder',)
 
@@ -1896,7 +1896,7 @@ class QueryBuilder(object):
 
     @staticmethod
     def get_aiida_entity_res(backend_entity):
-        return convertors.get_orm_entity(backend_entity)
+        return convert.get_orm_entity(backend_entity)
 
     def inject_query(self, query):
         """
@@ -1947,8 +1947,6 @@ class QueryBuilder(object):
         try:
             returnval = [
                 self._impl.get_aiida_res(self._attrkeys_as_in_sql_result[colindex], rowitem)
-                # factories.EntityFactory.get_orm_from_backend_entity(
-                #     self._impl.get_backend_entity_res(self._attrkeys_as_in_sql_result[colindex], rowitem))
                 for colindex, rowitem in enumerate(resultrow)
             ]
         except TypeError:
@@ -1959,8 +1957,6 @@ class QueryBuilder(object):
             # It still returns a list!
             else:
                 returnval = [self._impl.get_aiida_res(self._attrkeys_as_in_sql_result[0], resultrow)]
-                # returnval = [factories.EntityFactory.get_orm_from_backend_entity(
-                #     self._impl.get_backend_entity_res(self._attrkeys_as_in_sql_result[0], resultrow))]
         return returnval
 
     def one(self):
@@ -2007,7 +2003,7 @@ class QueryBuilder(object):
             # Convert to AiiDA frontend entities (if they are such)
             for i, item_entry in enumerate(item):
                 try:
-                    item[i] = convertors.get_orm_entity(item_entry)
+                    item[i] = convert.get_orm_entity(item_entry)
                 except TypeError:
                     # Keep the current value
                     pass
@@ -2034,7 +2030,7 @@ class QueryBuilder(object):
         for item in self._impl.iterdict(query, batch_size, self.tag_to_projected_entity_dict):
             for key, value in item.items():
                 try:
-                    item[key] = convertors.get_orm_entity(value)
+                    item[key] = convert.get_orm_entity(value)
                 except TypeError:
                     # Keep the current value
                     pass

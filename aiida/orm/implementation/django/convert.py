@@ -1,0 +1,214 @@
+# -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+"""
+Module to get the backend instance from the Models instance
+"""
+
+from __future__ import absolute_import
+
+try:  # Python3
+    from functools import singledispatch
+except ImportError:  # Python2
+    from singledispatch import singledispatch
+
+# pylint: disable=cyclic-import
+
+from aiida.backends.djsite.db import models
+from aiida.orm.implementation.django import dummy_model as dummy_models
+from aiida.common.exceptions import DbContentError
+from aiida.plugins.loader import get_plugin_type_from_type_string, load_plugin
+
+__all__ = ('get_backend_entity',)
+
+
+#####################################################################
+# Singledispatch to get the backend instance from the Models instance
+#####################################################################
+@singledispatch
+def get_backend_entity(dbmodel, backend):  # pylint: disable=unused-argument
+    """
+    Default get_backend_entity from DbModel
+
+    :param dbmodel: the db model instance
+    """
+    raise TypeError("No corresponding AiiDA backend class exists for the DbModel instance {}"
+                    .format(dbmodel.__class__.__name__))
+
+
+##################################
+# Singledispatch for Django Models
+##################################
+@get_backend_entity.register(models.DbUser)
+def _(dbmodel, backend):
+    """
+    get_backend_entity for Django DbUser
+    """
+    from . import users
+    return users.DjangoUser.from_dbmodel(dbmodel, backend)
+
+
+@get_backend_entity.register(models.DbGroup)
+def _(dbmodel, backend):
+    """
+    get_backend_entity for Django DbGroup
+    """
+    from . import groups
+    return groups.DjangoGroup.from_dbmodel(dbmodel, backend)
+
+
+@get_backend_entity.register(models.DbComputer)
+def _(dbmodel, backend):
+    """
+    get_backend_entity for Django DbGroup
+    """
+    from . import computer
+    return computer.DjangoComputer.from_dbmodel(dbmodel, backend)
+
+
+@get_backend_entity.register(models.DbNode)
+def _(dbmodel, _backend):
+    """
+    get_backend_entity for Django DbNode. It will return an ORM instance since
+    there is not Node backend entity yet.
+    """
+    try:
+        plugin_type = get_plugin_type_from_type_string(dbmodel.type)
+    except DbContentError:
+        raise DbContentError("The type name of node with pk= {} is " "not valid: '{}'".format(dbmodel.pk, dbmodel.type))
+
+    plugin_class = load_plugin(plugin_type, safe=True)
+    return plugin_class(dbnode=dbmodel)
+
+
+@get_backend_entity.register(models.DbAuthInfo)
+def _(dbmodel, backend):
+    """
+    get_backend_entity for Django DbAuthInfo
+    """
+    from . import authinfo
+    return authinfo.DjangoAuthInfo.from_dbmodel(dbmodel, backend)
+
+
+@get_backend_entity.register(models.DbWorkflow)
+def _(dbmodel, _backend):
+    from . import workflow
+    return workflow.Workflow.get_subclass_from_dbnode(dbmodel)
+
+
+########################################
+# Singledispatch for Dummy Django Models
+########################################
+@get_backend_entity.register(dummy_models.DbUser)
+def _(dbmodel, backend):
+    """
+    get_backend_entity for DummyModel DbUser.
+    DummyModel instances are created when QueryBuilder queries the Django backend.
+    """
+    from . import users
+    djuser_instance = models.DbUser(
+        id=dbmodel.id,
+        email=dbmodel.email,
+        password=dbmodel.password,
+        first_name=dbmodel.first_name,
+        last_name=dbmodel.last_name,
+        institution=dbmodel.institution,
+        is_staff=dbmodel.is_staff,
+        is_active=dbmodel.is_active,
+        last_login=dbmodel.last_login,
+        date_joined=dbmodel.date_joined)
+    return users.DjangoUser.from_dbmodel(djuser_instance, backend)
+
+
+@get_backend_entity.register(dummy_models.DbGroup)
+def _(dbmodel, backend):
+    """
+    get_backend_entity for DummyModel DbGroup.
+    DummyModel instances are created when QueryBuilder queries the Django backend.
+    """
+    from . import groups
+    djgroup_instance = models.DbGroup(
+        id=dbmodel.id,
+        type=dbmodel.type,
+        uuid=dbmodel.uuid,
+        name=dbmodel.name,
+        time=dbmodel.time,
+        description=dbmodel.description,
+        user_id=dbmodel.user_id,
+    )
+    return groups.DjangoGroup.from_dbmodel(djgroup_instance, backend)
+
+
+@get_backend_entity.register(dummy_models.DbComputer)
+def _(dbmodel, backend):
+    """
+    get_backend_entity for DummyModel DbComputer.
+    DummyModel instances are created when QueryBuilder queries the Django backend.
+    """
+    from . import computer
+    djcomputer_instance = models.DbComputer(
+        id=dbmodel.id,
+        uuid=dbmodel.uuid,
+        name=dbmodel.name,
+        hostname=dbmodel.hostname,
+        description=dbmodel.description,
+        enabled=dbmodel.enabled,
+        transport_type=dbmodel.transport_type,
+        scheduler_type=dbmodel.scheduler_type,
+        transport_params=dbmodel.transport_params,
+        metadata=dbmodel._metadata)  # pylint: disable=protected-access
+    return computer.DjangoComputer.from_dbmodel(djcomputer_instance, backend)
+
+
+@get_backend_entity.register(dummy_models.DbNode)
+def _(dbmodel, _):
+    """
+    get_backend_entity for DummyModel DbNode.
+    DummyModel instances are created when QueryBuilder queries the Django backend.
+    """
+    djnode_instance = models.DbNode(
+        id=dbmodel.id,
+        type=dbmodel.type,
+        process_type=dbmodel.process_type,
+        uuid=dbmodel.uuid,
+        ctime=dbmodel.ctime,
+        mtime=dbmodel.mtime,
+        label=dbmodel.label,
+        description=dbmodel.description,
+        dbcomputer_id=dbmodel.dbcomputer_id,
+        user_id=dbmodel.user_id,
+        public=dbmodel.public,
+        nodeversion=dbmodel.nodeversion)
+
+    try:
+        plugin_type = get_plugin_type_from_type_string(djnode_instance.type)
+    except DbContentError:
+        raise DbContentError("The type name of node with pk= {} is "
+                             "not valid: '{}'".format(djnode_instance.pk, djnode_instance.type))
+
+    plugin_class = load_plugin(plugin_type, safe=True)
+    return plugin_class(dbnode=djnode_instance)
+
+
+@get_backend_entity.register(dummy_models.DbAuthInfo)
+def _(dbmodel, backend):
+    """
+    get_backend_entity for DummyModel DbAuthInfo.
+    DummyModel instances are created when QueryBuilder queries the Django backend.
+    """
+    from . import authinfo
+    djauthinfo_instance = models.DbAuthInfo(
+        id=dbmodel.id,
+        aiidauser_id=dbmodel.aiidauser_id,
+        dbcomputer_id=dbmodel.dbcomputer_id,
+        metadata=dbmodel._metadata,  # pylint: disable=protected-access
+        auth_params=dbmodel.auth_params,
+        enabled=dbmodel.enabled,
+    )
+    return authinfo.DjangoAuthInfo.from_dbmodel(djauthinfo_instance, backend)

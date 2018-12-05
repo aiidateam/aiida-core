@@ -17,7 +17,7 @@ from sqlalchemy.schema import Column, UniqueConstraint
 from sqlalchemy.types import Integer, Boolean
 from sqlalchemy.dialects.postgresql import JSONB
 
-from aiida.backends.sqlalchemy.models.base import Base
+from .base import Base
 
 
 class DbAuthInfo(Base):
@@ -52,8 +52,3 @@ class DbAuthInfo(Base):
             return "DB authorization info for {} on {}".format(self.aiidauser.email, self.dbcomputer.name)
         else:
             return "DB authorization info for {} on {} [DISABLED]".format(self.aiidauser.email, self.dbcomputer.name)
-
-    def get_aiida_class(self):
-        from aiida.orm.implementation.sqlalchemy.authinfo import SqlaAuthInfo
-        from aiida.manage import get_manager
-        return SqlaAuthInfo.from_dbmodel(dbmodel=self, backend=get_manager().get_backend())

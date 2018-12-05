@@ -13,7 +13,6 @@ from __future__ import print_function
 from __future__ import absolute_import
 import importlib
 import inspect
-import logging
 
 import six
 
@@ -721,7 +720,6 @@ class Workflow(AbstractWorkflow):
 
         # logger.info("Adding step {0} after {1} in {2}".format(next_method_name, caller_method, self.uuid))
         method_step.set_nextcall(next_method_name)
-        #
         self.dbworkflowinstance.set_state(wf_states.RUNNING)
         method_step.set_state(wf_states.RUNNING)
 
@@ -745,14 +743,15 @@ def get_all_running_steps():
     return DbWorkflowStep.query.filter_by(state=wf_states.RUNNING).all()
 
 
-def get_workflow_info(w, tab_size=2, short=False, pre_string="",
+def get_workflow_info(workflow, tab_size=2, short=False, pre_string="",
                       depth=16):
     """
     Return a string with all the information regarding the given workflow and
     all its calculations and subworkflows.
     This is a recursive function (to print all subworkflows info as well).
 
-    :param w: a DbWorkflow instance
+    :param workflow: a workflow instance
+    :type workflow: :class:`aiida.orm.Workflow`
     :param tab_size: number of spaces to use for the indentation
     :param short: if True, provide a shorter output (only total number of
         calculations, rather than the state of each calculation)
@@ -777,21 +776,24 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
 
     lines = []
 
-    if w.label:
-        wf_labelstring = "'{}', ".format(w.label)
+    if workflow.label:
+        wf_labelstring = "'{}', ".format(workflow.label)
     else:
         wf_labelstring = ""
 
     lines.append(pre_string)  # put an empty line before any workflow
     lines.append(pre_string + "+ Workflow {} ({}pk: {}) is {} [{}]".format(
-        w.module_class, wf_labelstring, w.id, w.state, str_timedelta(
-            now - w.ctime, negative_to_zero=True)))
+        workflow.__class__.__name__,
+        wf_labelstring,
+        workflow.pk,
+        workflow.get_state(),
+        str_timedelta(now - workflow.ctime, negative_to_zero=True)))
 
     # print information on the steps only if depth is higher than 0
     if depth > 0:
 
         # order all steps by time and  get all the needed values
-        step_list = sorted([[_.time, _] for _ in w.steps])
+        step_list = sorted([[_.time, _] for _ in workflow.get_steps()])
         step_list = [_[1] for _ in step_list]
 
         steps_and_subwf_pks = []
@@ -828,21 +830,11 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
             if calc_pk:
                 subwfs_of_steps[step_pk]['calc_pks'].append(calc_pk)
 
-        # TODO: replace the database access using SQLAlchemy
-
-        # get all subworkflows for all steps
-        # wflows = DbWorkflow.query.filter_by(DbWorkflow.parent_workflow_step.in_(steps_pk))
-        # although the line above is equivalent to the following, has a bug of sqlalchemy.
-        #  import warnings
-        # from sqlalchemy import exc as sa_exc
-        # with warnings.catch_warnings():
-        #     warnings.simplefilter("ignore", category=sa_exc.SAWarning)
-        #     wflows = DbWorkflow.parent_workflow_step.any(DbWorkflowStep.id.in_(steps_pk))
-
-        wflows = DbWorkflow.query.join(DbWorkflow.parent_workflow_step).filter(DbWorkflowStep.id.in_(steps_pk)).all()
+        wflows = [Workflow.get_subclass_from_dbnode(wf) for wf in
+                  DbWorkflow.query.join(DbWorkflow.parent_workflow_step).filter(DbWorkflowStep.id.in_(steps_pk)).all()]
 
         # dictionary mapping pks into workflows
-        workflow_mapping = {_.id: _ for _ in wflows}
+        workflow_mapping = {_.pk: _ for _ in wflows}
 
         # get all calculations for all steps
         calcs_ids = [_[2] for _ in steps_and_subwf_pks if _[2] is not None]  # extremely inefficient!

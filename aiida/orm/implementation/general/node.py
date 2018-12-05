@@ -24,9 +24,8 @@ import six
 
 from aiida.backends.utils import validate_attribute_key
 from aiida.common.caching import get_use_cache
-from aiida.common.exceptions import (
-    InternalError, InvalidOperation, ModificationNotAllowed, 
-    StoringNotAllowed, UniquenessError, ValidationError)
+from aiida.common.exceptions import InternalError, ModificationNotAllowed, UniquenessError, ValidationError, \
+    InvalidOperation, StoringNotAllowed
 from aiida.common.folders import SandboxFolder
 from aiida.common.hashing import _HASH_EXTRA_KEY
 from aiida.common.lang import override
@@ -589,6 +588,7 @@ class AbstractNode(object):
         Get the user.
 
         :return: a User model object
+        :rtype: :class:`aiida.orm.User`
         """
         pass
 
@@ -625,7 +625,6 @@ class AbstractNode(object):
 
         from aiida.orm.utils.links import validate_link
         validate_link(source, self, link_type, link_label)
-
 
     def validate_outgoing(self, target, link_type, link_label):
         """
@@ -767,10 +766,10 @@ class AbstractNode(object):
 
         if link_direction == 'outgoing':
             builder.append(node_class, with_incoming='main', project=['*'],
-                edge_project=['type', 'label'], edge_filters=edge_filters)
+                           edge_project=['type', 'label'], edge_filters=edge_filters)
         else:
             builder.append(node_class, with_outgoing='main', project=['*'],
-                edge_project=['type', 'label'], edge_filters=edge_filters)
+                           edge_project=['type', 'label'], edge_filters=edge_filters)
 
         return [links.LinkTriple(entry[0], LinkType(entry[1]), entry[2]) for entry in builder.all()]
 
@@ -885,7 +884,8 @@ class AbstractNode(object):
                 returns all inputs of all link types.
         :return: a dictionary {label:object}
         """
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        from aiida.common.warnings import \
+            AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('get_inputs_dict method is deprecated, use get_incoming instead', DeprecationWarning)
 
         return dict(
@@ -903,7 +903,8 @@ class AbstractNode(object):
 
         :return: a dictionary {linkname:object}
         """
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        from aiida.common.warnings import \
+            AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('get_outputs_dict method is deprecated, use get_outgoing instead', DeprecationWarning)
 
         if link_type is not None and not isinstance(link_type, LinkType):
@@ -948,7 +949,8 @@ class AbstractNode(object):
         :param link_type: Only get inputs of this link type, if None then
             returns all inputs of all link types.
         """
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        from aiida.common.warnings import \
+            AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('get_inputs method is deprecated, use get_incoming instead', DeprecationWarning)
 
         if link_type is not None and not isinstance(link_type, LinkType):
@@ -1002,7 +1004,8 @@ class AbstractNode(object):
             and Node a Node instance or subclass
         :param link_type: Only return outputs connected by links of this type.
         """
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        from aiida.common.warnings import \
+            AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('get_outputs method is deprecated, use get_outgoing instead', DeprecationWarning)
 
         if link_type is not None and not isinstance(link_type, LinkType):
@@ -1487,14 +1490,13 @@ class AbstractNode(object):
         Add a new comment.
 
         :param content: string with comment
+        :param user: the user to associate with the comment, will use default if not supplied
         :return: the newly created comment
         """
         from aiida import orm
         from aiida.orm.comments import Comment
 
-        if user is None:
-            user = orm.User.objects.get_default()
-
+        user = user or orm.User.objects.get_default()
         return Comment(node=self, user=user, content=content).store()
 
     def get_comment(self, identifier):
@@ -1516,7 +1518,8 @@ class AbstractNode(object):
         :return: the list of comments, sorted by pk
         """
         from aiida.orm.comments import Comment
-        return Comment.objects.find(filters={'dbnode_id': self.pk})
+        return Comment.objects.find(filters={'dbnode_id': self.pk},
+                                    order_by=[{'id': 'asc'}])
 
     def update_comment(self, identifier, content):
         """
@@ -1946,7 +1949,7 @@ class AbstractNode(object):
                 if (
                     key not in self._hash_ignored_attributes and
                     key not in getattr(self, '_updatable_attributes', tuple())
-                )
+            )
             },
             self.folder,
             computer.uuid if computer is not None else None

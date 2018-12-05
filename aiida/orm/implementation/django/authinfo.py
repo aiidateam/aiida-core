@@ -11,7 +11,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from aiida.backends.djsite.db import models
 from aiida.backends.djsite.db.models import DbAuthInfo
 from aiida.common import exceptions
 from aiida.common.utils import type_check
@@ -73,10 +72,10 @@ class DjangoAuthInfoCollection(BackendAuthInfoCollection):
         return DjangoAuthInfo.from_dbmodel(dbmodel, self.backend)
 
 
-class DjangoAuthInfo(entities.DjangoModelEntity[models.DbAuthInfo], BackendAuthInfo):
+class DjangoAuthInfo(entities.DjangoModelEntity[DbAuthInfo], BackendAuthInfo):
     """AuthInfo implementation for Django."""
 
-    MODEL_CLASS = models.DbAuthInfo
+    MODEL_CLASS = DbAuthInfo
 
     @classmethod
     def get_dbmodel_attribute_name(cls, attr_name):

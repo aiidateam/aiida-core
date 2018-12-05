@@ -117,6 +117,11 @@ class AiidaTestCase(unittest.TestCase):
         if not loop._closing:
             loop.close()
 
+    def reset_database(self):
+        """Reset the database to the default state deleting any content currently stored"""
+        self.clean_db()
+        self.insert_data()
+
     @classmethod
     def insert_data(cls):
         cls.__backend_instance.insert_data()

@@ -13,6 +13,11 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import collections
+
+try:
+    from collections.abc import Iterator, Sized  # only works on python 3.3+
+except ImportError:
+    from collections import Iterator, Sized
 import six
 
 # pylint: disable=no-name-in-module, import-error
@@ -24,6 +29,8 @@ from aiida.common.utils import type_check
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.backends.djsite.db import models
 from .node import Node
+
+from . import convert
 from . import entities
 from . import users
 from . import utils
@@ -73,7 +80,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
 
     @property
     def user(self):
-        return users.DjangoUser.from_dbmodel(self._dbmodel.user, self._backend)
+        return self._backend.users.from_dbmodel(self._dbmodel.user)
 
     @user.setter
     def user(self, new_user):
@@ -135,22 +142,26 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
     def nodes(self):
         """Get an iterator to the nodes in the group"""
 
-        class Iterator(object):
+        class NodesIterator(Iterator, Sized):
             """The nodes iterator"""
 
-            def __init__(self, dbnodes):
+            def __init__(self, dbnodes, backend):
+                super(NodesIterator, self).__init__()
                 self.dbnodes = dbnodes
                 self.generator = self._genfunction()
+                self._backend = backend
 
             def _genfunction(self):
-                for node in self.dbnodes:
-                    yield node.get_aiida_class()
+                # Best to use dbnodes.iterator() so we load entities from the database as we need them
+                # see: http://blog.etianen.com/blog/2013/06/08/django-querysets/
+                for node in self.dbnodes.iterator():
+                    yield convert.get_backend_entity(node, self._backend)
 
             def __iter__(self):
                 return self
 
             def __len__(self):
-                return self.dbnodes.count()
+                return len(self.dbnodes)
 
             # For future python-3 compatibility
             def __next__(self):
@@ -159,12 +170,12 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
             def next(self):
                 return next(self.generator)
 
-        return Iterator(self._dbmodel.dbnodes.all())
+        return NodesIterator(self._dbmodel.dbnodes.all(), self._backend)
 
     def remove_nodes(self, nodes):
         from aiida.backends.djsite.db.models import DbNode
         if not self.is_stored:
-            raise ModificationNotAllowed("Cannot remove nodes from a group " "before storing")
+            raise ModificationNotAllowed("Cannot remove nodes from a group before storing")
 
         # First convert to a list
         if isinstance(nodes, (Node, DbNode)):

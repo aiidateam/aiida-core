@@ -2,10 +2,6 @@ Sphinx cheatsheet
 #################
 
 A collection of some Sphinx features used in the aiida documentation.
-See also:
-
-* a great introduction to `ReStructured Text (RST) <http://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html>`_
-* the official `Sphinx documentation <http://sphinx-doc.org>`_
 
 Terminal and Code Formatting
 ============================

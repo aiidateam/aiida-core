@@ -1878,7 +1878,7 @@ class StructureData(Data):
         """
         return calc_cell_volume(self.cell)
 
-    def _get_cif(self, converter='ase', store=False, **kwargs):
+    def get_cif(self, converter='ase', store=False, **kwargs):
         """
         Creates :py:class:`aiida.orm.data.cif.CifData`.
 

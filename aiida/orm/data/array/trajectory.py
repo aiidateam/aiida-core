@@ -478,7 +478,7 @@ class TrajectoryData(ArrayData):
         Creates :py:class:`aiida.orm.data.cif.CifData`
         """
         struct = self.get_structure(index=index, **kwargs)
-        cif = struct._get_cif(**kwargs)  # pylint: disable=protected-access
+        cif = struct.get_cif(**kwargs)  # pylint: disable=protected-access
         return cif
 
     def _parse_xyz_pos(self, inputstring):

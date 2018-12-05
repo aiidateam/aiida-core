@@ -289,7 +289,6 @@ class TestSimple(AiidaTestCase):
         from aiida.orm.importexport import export
         import aiida.utils.json as json
 
-
         # Creating a folder for the import/export files
         export_file_tmp_folder = tempfile.mkdtemp()
         unpack_tmp_folder = tempfile.mkdtemp()
@@ -305,7 +304,7 @@ class TestSimple(AiidaTestCase):
                 tar.extractall(unpack_tmp_folder)
 
             with io.open(os.path.join(unpack_tmp_folder,
-                                   'metadata.json'), 'r', encoding='utf8') as fhandle:
+                                      'metadata.json'), 'r', encoding='utf8') as fhandle:
                 metadata = json.load(fhandle)
             metadata['export_version'] = 0.0
 
@@ -467,9 +466,9 @@ class TestSimple(AiidaTestCase):
         from aiida.common.datastructures import calc_states
         from aiida.common.links import LinkType
         from aiida.manage import get_manager
-        
+
         manager = get_manager()
-        
+
         # Creating a folder for the import/export files
         temp_folder = tempfile.mkdtemp()
         try:
@@ -1237,7 +1236,7 @@ class TestComputer(AiidaTestCase):
             qb = QueryBuilder()
             qb.append(Computer, project=['name', 'uuid', 'id'])
             self.assertEqual(qb.count(), 1, "Found {} computers"
-                "but only one computer should be found.".format(qb.count()))
+                                            "but only one computer should be found.".format(qb.count()))
             self.assertEqual(six.text_type(qb.first()[0]), comp_name,
                              "The computer name is not correct.")
             self.assertEqual(six.text_type(qb.first()[1]), comp_uuid,
@@ -1359,7 +1358,7 @@ class TestComputer(AiidaTestCase):
             qb = QueryBuilder()
             qb.append(Computer, project=['name'])
             self.assertEqual(qb.count(), 1, "Found {} computers"
-                "but only one computer should be found.".format(qb.count()))
+                                            "but only one computer should be found.".format(qb.count()))
             self.assertEqual(six.text_type(qb.first()[0]), comp1_name,
                              "The computer name is not correct.")
 
@@ -1568,7 +1567,7 @@ class TestComputer(AiidaTestCase):
 
         for archive in ['export/compare/django.aiida', 'export/compare/sqlalchemy.aiida']:
             # Clean the database
-            self.clean_db()
+            self.reset_database()
 
             # Import the needed data
             import_archive_fixture(archive)
@@ -1583,8 +1582,10 @@ class TestComputer(AiidaTestCase):
             }
 
             # Check that we got the correct metadata & transport parameters
+            # Make sure to exclude the default computer
             qb = QueryBuilder()
-            qb.append(Computer, project=['transport_params', '_metadata'], tag="comp")
+            qb.append(Computer, project=['transport_params', '_metadata'], tag="comp",
+                      filters={'name': {'!==': self.computer.name}})
             self.assertEqual(qb.count(), 1, "Expected only one computer")
 
             res = qb.dict()[0]
@@ -1596,11 +1597,7 @@ class TestComputer(AiidaTestCase):
 class TestLinks(AiidaTestCase):
 
     def setUp(self):
-        self.clean_db()
-        self.insert_data()
-
-    def tearDown(self):
-        pass
+        self.reset_database()
 
     def get_all_node_links(self):
         """
@@ -1639,8 +1636,7 @@ class TestLinks(AiidaTestCase):
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
             export([node_output], outfile=export_file, silent=True)
 
-            self.clean_db()
-            self.insert_data()
+            self.reset_database()
 
             import_data(export_file, silent=True)
             import_links = self.get_all_node_links()
@@ -1769,8 +1765,7 @@ class TestLinks(AiidaTestCase):
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
             export([group], outfile=export_file, silent=True, create_reversed=False)
 
-            self.clean_db()
-            self.insert_data()
+            self.reset_database()
 
             import_data(export_file, silent=True)
 
@@ -1819,8 +1814,7 @@ class TestLinks(AiidaTestCase):
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
             export(graph_nodes, outfile=export_file, silent=True)
 
-            self.clean_db()
-            self.insert_data()
+            self.reset_database()
 
             import_data(export_file, silent=True)
             import_links = self.get_all_node_links()
@@ -1849,8 +1843,7 @@ class TestLinks(AiidaTestCase):
                 export([export_node], outfile=export_file, silent=True)
                 export_node_str = str(export_node)
 
-                self.clean_db()
-                self.insert_data()
+                self.reset_database()
 
                 import_data(export_file, silent=True)
 
@@ -1936,8 +1929,7 @@ class TestLinks(AiidaTestCase):
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
             export([wc2], outfile=export_file, silent=True)
 
-            self.clean_db()
-            self.insert_data()
+            self.reset_database()
 
             import_data(export_file, silent=True)
             import_links = self.get_all_node_links()
@@ -1994,15 +1986,13 @@ class TestLinks(AiidaTestCase):
             export([o1], outfile=export_file_1, silent=True, return_reversed=True)
             export([w1], outfile=export_file_2, silent=True, return_reversed=True)
 
-            self.clean_db()
-            self.insert_data()
+            self.reset_database()
 
             import_data(export_file_1, silent=True)
             links_in_db = self.get_all_node_links()
 
             self.assertEquals(sorted(links_wanted), sorted(links_in_db))
-            self.clean_db()
-            self.insert_data()
+            self.reset_database()
 
             import_data(export_file_2, silent=True)
             links_in_db = self.get_all_node_links()
@@ -2046,8 +2036,7 @@ class TestLinks(AiidaTestCase):
             export([o1, w1, w2, i1],
                    outfile=export_file, silent=True)
 
-            self.clean_db()
-            self.insert_data()
+            self.reset_database()
 
             import_data(export_file, silent=True)
 
@@ -2087,8 +2076,7 @@ class TestLinks(AiidaTestCase):
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
             export([code], outfile=export_file, silent=True)
 
-            self.clean_db()
-            self.insert_data()
+            self.reset_database()
 
             import_data(export_file, silent=True)
 
@@ -2134,8 +2122,7 @@ class TestLinks(AiidaTestCase):
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
             export([jc], outfile=export_file, silent=True)
 
-            self.clean_db()
-            self.insert_data()
+            self.reset_database()
 
             import_data(export_file, silent=True)
 

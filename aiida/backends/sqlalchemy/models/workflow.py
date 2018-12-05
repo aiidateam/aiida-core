@@ -13,7 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship
 from sqlalchemy.schema import Column, UniqueConstraint, Table
 from sqlalchemy.types import Integer, String, DateTime, Text
 
@@ -27,7 +27,6 @@ from aiida.common.datastructures import (wf_states, wf_data_types,
                                          wf_data_value_types, wf_default_call)
 from aiida.utils import timezone
 import aiida.utils.json as json
-
 
 
 class DbWorkflow(Base):
@@ -75,13 +74,6 @@ class DbWorkflow(Base):
     @property
     def pk(self):
         return self.id
-
-    def get_aiida_class(self):
-        """
-        Return the corresponding aiida instance of class aiida.worflow
-        """
-        from aiida.orm.workflow import Workflow
-        return Workflow.get_subclass_from_uuid(self.uuid)
 
     def set_state(self, state):
         self.state = state
@@ -263,10 +255,12 @@ class DbWorkflowData(Base):
             raise ValueError("Cannot set the parameter {}\n{}".format(self.name, exc))
 
     def get_value(self):
+        from aiida.orm.implementation.sqlalchemy import convert
+
         if self.value_type == wf_data_value_types.JSON:
             return json.loads(self.json_value)
         elif self.value_type == wf_data_value_types.AIIDA:
-            return self.aiida_obj.get_aiida_class()
+            return convert.get_backend_entity(self.aiida_obj, None)
         elif self.value_type == wf_data_value_types.NONE:
             return None
         else:
@@ -332,12 +326,14 @@ class DbWorkflowStep(Base):
             raise ValueError("Error adding calculation to step")
 
     def get_calculations(self, state=None):
+        from aiida.orm.implementation.sqlalchemy import convert
+
         dbnodes = self.calculations
-        calcs = [_.get_aiida_class() for _ in dbnodes]
-        if (state == None):
+        calcs = [convert.get_backend_entity(model, None) for model in dbnodes]
+        if state is None:
             return calcs
-        else:
-            return [_ for _ in calcs if _.get_state() == state]
+
+        return [_ for _ in calcs if _.get_state() == state]
 
     def remove_calculations(self):
         self.calculations.all().delete()
@@ -353,7 +349,9 @@ class DbWorkflowStep(Base):
             raise ValueError("Error adding calculation to step")
 
     def get_sub_workflows(self):
-        return [_.get_aiida_class() for _ in self.sub_workflows]
+        from aiida.orm.implementation.sqlalchemy import convert
+
+        return [convert.get_backend_entity(model, None) for model in self.sub_workflows]
 
     def remove_sub_workflows(self):
         self.sub_workflows.all().delete()

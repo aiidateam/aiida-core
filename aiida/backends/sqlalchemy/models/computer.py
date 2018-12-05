@@ -90,11 +90,6 @@ class DbComputer(Base):
                 "Pass either a computer name, a DbComputer SQLAlchemy instance, a Computer id or a Computer object")
         return dbcomputer
 
-    def get_aiida_class(self):
-        from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
-        backend = SqlaBackend()
-        return backend.computers.from_dbmodel(self)
-
     @property
     def pk(self):
         return self.id

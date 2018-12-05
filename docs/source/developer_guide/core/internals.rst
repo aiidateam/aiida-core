@@ -317,8 +317,6 @@ DbNode
 
 The :py:class:`~aiida.backends.djsite.db.models.DbNode` is the Django class that corresponds to the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class allowing to store and retrieve the needed information from and to the database. Other classes extending the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class, like :py:class:`~aiida.orm.data.Data`, :py:class:`~aiida.orm.node.process.process.ProcessNode` and :py:class:`~aiida.orm.data.code.Code` use the :py:class:`~aiida.backends.djsite.db.models.DbNode` code too to interact with the database.  The main methods are:
 
-- :py:meth:`~aiida.backends.djsite.db.models.DbNode.get_aiida_class` which returns the corresponding AiiDA class instance.
-
 - :py:meth:`~aiida.backends.djsite.db.models.DbNode.get_simple_name` which returns a string with the type of the class (by stripping the path before the class name).
 
 - :py:meth:`~aiida.backends.djsite.db.models.DbNode.attributes` which returns the all the attributes of the specific node as a dictionary.

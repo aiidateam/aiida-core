@@ -70,16 +70,10 @@ class TestWorkflowBasic(AiidaTestCase):
         # and checking if we got the right one.
         wfqs = get_workflow_list(all_states=True, user=user)
         self.assertTrue(len(wfqs) == 1, "We expect one workflow")
-        a_prime = wfqs[0].get_aiida_class()
-        self.assertEqual(a.uuid, a_prime.uuid, "The uuid is not the expected "
-                                               "one")
 
         # We ask all the running workflows. We should get one workflow.
         wfqs = get_workflow_list(all_states=True, user=user)
         self.assertTrue(len(wfqs) == 1, "We expect one workflow")
-        a_prime = wfqs[0].get_aiida_class()
-        self.assertEqual(a.uuid, a_prime.uuid, "The uuid is not the expected "
-                                               "one")
 
         # We change the state of the workflow to FINISHED.
         a.set_state(wf_states.FINISHED)
@@ -88,9 +82,6 @@ class TestWorkflowBasic(AiidaTestCase):
         # and checking if we got the right one.
         wfqs = get_workflow_list(all_states=True, user=user)
         self.assertTrue(len(wfqs) == 1, "We expect one workflow")
-        a_prime = wfqs[0].get_aiida_class()
-        self.assertEqual(a.uuid, a_prime.uuid, "The uuid is not the expected "
-                                               "one")
 
         # We ask all the running workflows. We should get zero results.
         wfqs = get_workflow_list(all_states=False, user=user)
@@ -102,9 +93,6 @@ class TestWorkflowBasic(AiidaTestCase):
         # We ask all the running workflows. We should get one workflow.
         wfqs = get_workflow_list(all_states=True, user=user)
         self.assertTrue(len(wfqs) == 1, "We expect one workflow")
-        a_prime = wfqs[0].get_aiida_class()
-        self.assertEqual(a.uuid, a_prime.uuid, "The uuid is not the expected "
-                                               "one")
 
         # We change the state of the workflow to ERROR.
         a.set_state(wf_states.ERROR)
@@ -127,24 +115,24 @@ class TestWorkflowBasic(AiidaTestCase):
         a.store()
 
         # Emulate the workflow list
-        for w in get_workflow_list(all_states=True, user=user):
-            if not w.is_subworkflow():
-                get_workflow_info(w)
+        for wf in get_workflow_list(all_states=True, user=user):
+            if not wf.is_subworkflow():
+                get_workflow_info(wf)
 
         # Create a workflow with sub-workflows and store it
         b = WFTestSimpleWithSubWF()
         b.store()
 
         # Emulate the workflow list
-        for w in get_workflow_list(all_states=True, user=user):
-            if not w.is_subworkflow():
-                get_workflow_info(w)
+        for wf in get_workflow_list(all_states=True, user=user):
+            if not wf.is_subworkflow():
+                get_workflow_info(wf)
 
         # Start the first workflow and perform a workflow list
         b.start()
-        for w in get_workflow_list(all_states=True, user=user):
-            if not w.is_subworkflow():
-                get_workflow_info(w)
+        for wf in get_workflow_list(all_states=True, user=user):
+            if not wf.is_subworkflow():
+                get_workflow_info(wf)
 
     def test_wf_get_state(self):
         """

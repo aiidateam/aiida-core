@@ -53,13 +53,15 @@ class _AiidaQuery(orm.Query):
         super(_AiidaQuery, self).__init__(*args, **kwargs)
 
     def __iter__(self):
+        from aiida.orm.implementation.sqlalchemy import convert
+
         iterator = super(_AiidaQuery, self).__iter__()
-        for r in iterator:
+        for result in iterator:
             # Allow the use of with_entities
-            if issubclass(type(r), Model):
-                yield r.get_aiida_class()
+            if issubclass(type(result), Model):
+                yield convert.get_backend_entity(result, None)
             else:
-                yield r
+                yield result
 
 
 from aiida.backends.sqlalchemy import get_scoped_session

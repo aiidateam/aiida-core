@@ -14,13 +14,13 @@ from __future__ import absolute_import
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.schema import Column, Table, UniqueConstraint, Index
-from sqlalchemy.types import Integer, String, Boolean, DateTime, Text
+from sqlalchemy.types import Integer, String, DateTime, Text
 
 from sqlalchemy.dialects.postgresql import UUID
 
 from aiida.utils import timezone
-from aiida.backends.sqlalchemy.models.base import Base
-from aiida.backends.sqlalchemy.models.utils import uuid_func
+from .base import Base
+from .utils import uuid_func
 
 table_groups_nodes = Table(
     'db_dbgroup_dbnodes',
@@ -67,8 +67,3 @@ class DbGroup(Base):
             return '<DbGroup [type: {}] "{}">'.format(self.type, self.name)
 
         return '<DbGroup [user-defined] "{}">'.format(self.name)
-
-    def get_aiida_class(self):
-        from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
-        backend = SqlaBackend()
-        return backend.groups.from_dbmodel(self)

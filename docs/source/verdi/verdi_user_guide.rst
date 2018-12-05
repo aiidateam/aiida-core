@@ -379,6 +379,7 @@ Create and manage export archives.
 ``verdi graph``
 ---------------
 Create graphical representations of part of the provenance graph.
+Requires that `graphviz <https://graphviz.org/download>`_ be installed. 
 
   * **generate**: generates a graph from a given root node either in a graphical or a  ``.dot`` format.
 

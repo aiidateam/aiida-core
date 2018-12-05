@@ -44,6 +44,9 @@ install_requires = [
     'ecdsa==0.13',
     'ipython>=4.0,<6.0',  # Version of ipython non enforced, because some still prefer version 4 rather than the latest
     'plumpy==0.11.4',
+    'kiwipy==0.3.10',
+    'pika==1.0.0b1',
+    'topika==0.1.3',
     'circus==0.14.0',
     'tornado==4.5.3',  # As of 2018/03/06 Tornado released v5.0 which breaks circus 0.14.0
     'pyblake2==1.1.2; python_version<"3.6"',

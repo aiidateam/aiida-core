@@ -56,7 +56,7 @@ class TestTransitiveClosureDeletionSQLA(AiidaTestCase):
         self.assertEquals(
             QueryBuilder().append(
                 Node, filters={'id': n1.pk}, tag='anc'
-            ).append(Node, descendant_of='anc', filters={'id': n8.pk}
+            ).append(Node, with_ancestors='anc', filters={'id': n8.pk}
                      ).count(), 0
         )
 
@@ -66,7 +66,7 @@ class TestTransitiveClosureDeletionSQLA(AiidaTestCase):
         self.assertEquals(
             QueryBuilder().append(
                 Node, filters={'id': n1.pk}, tag='anc'
-            ).append(Node, descendant_of='anc', filters={'id': n8.pk}
+            ).append(Node, with_ancestors='anc', filters={'id': n8.pk}
                      ).count(), 2
         )
 
@@ -81,7 +81,7 @@ class TestTransitiveClosureDeletionSQLA(AiidaTestCase):
         self.assertEquals(
             QueryBuilder().append(
                 Node, filters={'id': n1.pk}, tag='anc'
-            ).append(Node, descendant_of='anc', filters={'id': n8.pk}
+            ).append(Node, with_ancestors='anc', filters={'id': n8.pk}
                      ).count(), 2
         )
         # ~ self.assertEquals(
@@ -94,7 +94,7 @@ class TestTransitiveClosureDeletionSQLA(AiidaTestCase):
         self.assertEquals(
             QueryBuilder().append(
                 Node, filters={'id': n1.pk}, tag='anc'
-            ).append(Node, descendant_of='anc', filters={'id': n8.pk}
+            ).append(Node, with_ancestors='anc', filters={'id': n8.pk}
                      ).count(), 4
         )
 
@@ -111,7 +111,7 @@ class TestTransitiveClosureDeletionSQLA(AiidaTestCase):
         self.assertEquals(
             QueryBuilder().append(
                 Node, filters={'id': n1.pk}, tag='anc'
-            ).append(Node, descendant_of='anc', filters={'id': n8.pk}
+            ).append(Node, with_ancestors='anc', filters={'id': n8.pk}
                      ).count(), 2
         )
 
@@ -127,7 +127,7 @@ class TestTransitiveClosureDeletionSQLA(AiidaTestCase):
         self.assertEquals(
             QueryBuilder().append(
                 Node, filters={'id': n1.pk}, tag='anc'
-            ).append(Node, descendant_of='anc', filters={'id': n8.pk}
+            ).append(Node, with_ancestors='anc', filters={'id': n8.pk}
                      ).count(), 1
         )
 
@@ -143,7 +143,7 @@ class TestTransitiveClosureDeletionSQLA(AiidaTestCase):
         self.assertEquals(
             QueryBuilder().append(
                 Node, filters={'id': n1.pk}, tag='anc'
-            ).append(Node, descendant_of='anc', filters={'id': n8.pk}
+            ).append(Node, with_ancestors='anc', filters={'id': n8.pk}
                      ).count(), 0
         )
 
@@ -158,7 +158,7 @@ class TestTransitiveClosureDeletionSQLA(AiidaTestCase):
         self.assertEquals(
             QueryBuilder().append(
                 Node, filters={'id': n4.pk}, tag='anc'
-            ).append(Node, descendant_of='anc', filters={'id': n8.pk}
+            ).append(Node, with_ancestors='anc', filters={'id': n8.pk}
                      ).count(), 1
         )
         # ~ self.assertEquals(
@@ -169,7 +169,7 @@ class TestTransitiveClosureDeletionSQLA(AiidaTestCase):
         self.assertEquals(
             QueryBuilder().append(
                 Node, filters={'id': n5.pk}, tag='anc'
-            ).append(Node, descendant_of='anc', filters={'id': n7.pk}
+            ).append(Node, with_ancestors='anc', filters={'id': n7.pk}
                      ).count(), 1
         )
         # ~ self.assertEquals(
@@ -184,7 +184,7 @@ class TestTransitiveClosureDeletionSQLA(AiidaTestCase):
         self.assertEquals(
             QueryBuilder().append(
                 Node, filters={'id': n1.pk}, tag='anc'
-            ).append(Node, descendant_of='anc', filters={'id': n8.pk}
+            ).append(Node, with_ancestors='anc', filters={'id': n8.pk}
                      ).count(), 1
         )
         # ~ self.assertEquals(

@@ -16,14 +16,14 @@ import functools
 
 from aiida.backends.djsite.db import models
 from aiida.backends.djsite.db.models import DbUser
-from aiida.orm.implementation import users
+from aiida.orm.implementation.users import BackendUser, BackendUserCollection
 from . import entities
 from . import utils
 
 __all__ = ('DjangoUser', 'DjangoUserCollection')
 
 
-class DjangoUserCollection(users.BackendUserCollection):
+class DjangoUserCollection(BackendUserCollection):
     """The Django collection of users"""
 
     def create(self, email, first_name='', last_name='', institution=''):
@@ -71,7 +71,7 @@ class DjangoUserCollection(users.BackendUserCollection):
         return DjangoUser.from_dbmodel(dbmodel, self.backend)
 
 
-class DjangoUser(entities.DjangoModelEntity[models.DbUser], users.BackendUser):
+class DjangoUser(entities.DjangoModelEntity[models.DbUser], BackendUser):
     """The Django user class"""
 
     MODEL_CLASS = models.DbUser

@@ -164,7 +164,7 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
 @with_dbenv()
 def show(code, verbose):
     """Display detailed information for the given CODE."""
-    click.echo(tabulate.tabulate(code.full_text_info(verbose)))
+    click.echo(tabulate.tabulate(code.get_full_text_info(verbose)))
 
 
 @verdi_code.command()

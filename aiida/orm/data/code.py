@@ -514,7 +514,7 @@ class Code(Data):
 
         return builder
 
-    def full_text_info(self, verbose=False):
+    def get_full_text_info(self, verbose=False):
         """
         Return a (multiline) string with a human-readable detailed information on this computer
         """

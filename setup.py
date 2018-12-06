@@ -49,8 +49,8 @@ if __name__ == '__main__':
         {item for sublist in setup_json['extras_require'].values() for item in sublist if item != 'bpython'})
 
     setup(
-        **setup_json,
         packages=find_packages(),
         long_description=open(path.join(aiida_folder, 'README.md')).read(),
         long_description_content_type='text/markdown',
+        **setup_json,
     )

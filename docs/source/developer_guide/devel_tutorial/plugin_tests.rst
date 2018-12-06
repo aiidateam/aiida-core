@@ -130,7 +130,7 @@ The discovery of the tests will be handled by pytest (file, class and function n
 .. _aiida-cutter: https://github.com/aiidateam/aiida-plugin-cutter/
 
 Using the unittest framework
-------------------------
+----------------------------
 
 The ``uniitest`` package is included in the python standard library.
 It is widely used despite some limitations (it is also used for testing ``aiida_core``).
@@ -265,7 +265,7 @@ modifications and use it as the superclass for other test classes.
 
 .. note::
   The modification will break the compatibility of ``uniitest`` and you will not be able
-  to run with ``verdi devel tests`` interface. Simply use ``pytest`` to run them and do
-  not forget to remove entry points in your setup.json. 
+  to run with ``verdi devel tests`` interface.
+  Do not forget to remove redundant entry points in your setup.json. 
 
 .. _pytest documentation: https://docs.pytest.org/en/latest/unittest.html

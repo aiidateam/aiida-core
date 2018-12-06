@@ -151,9 +151,7 @@ We suggest here to use your institution email, that will be used to associate th
 
   The existence of a default user is internally useful for multi-user
   setups, where only one user
-  runs the daemon, even if many users can simultaneously access the DB.
-  See the page on :ref:`setting up AiiDA in multi-user mode<aiida_multiuser>`
-  for more details (only for advanced users).
+  runs the daemon.
 
 .. note:: The password, in the current version of AiiDA, is not used (it will
     be used only in the REST API and in the web interface). If you leave the
@@ -279,26 +277,41 @@ If you didn't already install AiiDA with the ``[notebook]`` option (during ``pip
 
     jupyter notebook
 
-This will open a tab in your browser. Click on ``New -> Python 2`` and type::
+This will open a tab in your browser. Click on ``New -> Python`` and type::
 
     import aiida
 
 followed by ``Shift-Enter``. If no exception is thrown, you can use AiiDA in Jupyter.
 
-If you want to set the same environment as in a ``verdi shell``, add the following code in ``<your.home.folder>/.ipython/profile_default/ipython_config.py``::
+If you want to set the same environment as in a ``verdi shell``,
+add the following code to a ``.py`` file (create one if there isn't any) in ``<home_folder>/.ipython/profile_default/startup/``::
+
+
 
   try:
       import aiida
   except ImportError:
       pass
   else:
-      c = get_config()
-      c.InteractiveShellApp.extensions = [
-            'aiida.common.ipython.ipython_magics'
-      ]
+      import IPython
+      from aiida.common.ipython.ipython_magics import load_ipython_extension
 
-then open a Jupyter notebook as explained above and type in a cell:
+      # Get the current Ipython session
+      ipython = IPython.get_ipython()
+  
+      # Register the line magic
+      load_ipython_extension(ipython)
+
+This file will be executed when the ipython kernel starts up and enable the line magic ``%aiida``.
+Alternatively, if you have a ``aiida_core`` repository checked out locally,
+you can just copy the file ``<aiida_core>/aiida/common/ipython/aiida_magic_register.py`` to the same folder.
+The current ipython profile folder can be located using::
+
+  ipython locate profile
+
+After this, if you open a Jupyter notebook as explained above and type in a cell::
 
     %aiida
 
 followed by ``Shift-Enter``. You should receive the message "Loaded AiiDA DB environment."
+This line magic should also be enabled in standard ipython shells.

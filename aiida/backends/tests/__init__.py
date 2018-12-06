@@ -14,7 +14,11 @@ from __future__ import absolute_import
 from six.moves import range
 
 try:
-    from reentry import manager as epm
+    from reentry.default_manager import PluginManager
+    # I don't use the default manager as it has scan_for_not_found=True
+    # by default, which re-runs scan if no entrypoints are found (which is
+    # quite possible if no aiida.tests entrypoints are registered)
+    epm = PluginManager(scan_for_not_found=False)
 except ImportError:
     import pkg_resources as epm
 

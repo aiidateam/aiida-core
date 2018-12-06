@@ -26,7 +26,6 @@ def verdi_devel():
     pass
 
 
-@decorators.with_dbenv()
 def get_valid_test_paths():
     """
     Return a dictionary with the available test folders
@@ -171,7 +170,6 @@ def devel_run_daemon():
 @verdi_devel.command('tests')
 @click.argument('paths', nargs=-1, type=TestModuleParamType(), required=False)
 @options.VERBOSE(help='Print the class and function name for each test.')
-@decorators.with_dbenv()
 def devel_tests(paths, verbose):  # pylint: disable=too-many-locals,too-many-statements,too-many-branches
     """Run the unittest suite or parts of it."""
     import os

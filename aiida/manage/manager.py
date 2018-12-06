@@ -13,7 +13,6 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import functools
-import plumpy
 
 from aiida import utils
 from aiida import common
@@ -142,6 +141,7 @@ class Manager(object):
         :return: the process controller instance
         :rtype: :class:`plumpy.RemoteProcessThreadController`
         """
+        import plumpy
         if self._process_controller is None:
             self._process_controller = plumpy.RemoteProcessThreadController(self.get_communicator())
 
@@ -206,6 +206,7 @@ class Manager(object):
         :return: a runner configured to work in the daemon configuration
         :rtype: :class:`aiida.work.Runner`
         """
+        import plumpy
         from aiida.work import rmq, persistence
         runner = self.create_runner(rmq_submit=True, loop=loop)
         runner_loop = runner.loop

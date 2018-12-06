@@ -160,8 +160,8 @@ class TestGroups(AiidaTestCase):
     """
 
     def test_creation(self):
-        n = orm.Node()
-        stored_n = orm.Node().store()
+        n = orm.Data()
+        stored_n = orm.Data().store()
 
         g = orm.Group(name='testgroup')
         self.addCleanup(lambda: orm.Group.objects.delete(g.id))
@@ -193,7 +193,7 @@ class TestGroups(AiidaTestCase):
         """
         from aiida.orm.groups import Group
 
-        n = orm.Node().store()
+        n = orm.Data().store()
 
         g1 = Group(name='testgroupdescription1', description="g1").store()
         self.addCleanup(lambda: orm.Group.objects.delete(g1.id))
@@ -228,14 +228,14 @@ class TestGroups(AiidaTestCase):
         """
         Test different ways of adding nodes
         """
-        n1 = orm.Node().store()
-        n2 = orm.Node().store()
-        n3 = orm.Node().store()
-        n4 = orm.Node().store()
-        n5 = orm.Node().store()
-        n6 = orm.Node().store()
-        n7 = orm.Node().store()
-        n8 = orm.Node().store()
+        n1 = orm.Data().store()
+        n2 = orm.Data().store()
+        n3 = orm.Data().store()
+        n4 = orm.Data().store()
+        n5 = orm.Data().store()
+        n6 = orm.Data().store()
+        n7 = orm.Data().store()
+        n8 = orm.Data().store()
 
         g = orm.Group(name='test_adding_nodes').store()
         self.addCleanup(lambda: orm.Group.objects.delete(g.pk))
@@ -264,15 +264,15 @@ class TestGroups(AiidaTestCase):
         """
         from aiida.orm.groups import Group
 
-        n1 = orm.Node().store()
-        n2 = orm.Node().store()
-        n3 = orm.Node().store()
-        n4 = orm.Node().store()
-        n5 = orm.Node().store()
-        n6 = orm.Node().store()
-        n7 = orm.Node().store()
-        n8 = orm.Node().store()
-        n_out = orm.Node().store()
+        n1 = orm.Data().store()
+        n2 = orm.Data().store()
+        n3 = orm.Data().store()
+        n4 = orm.Data().store()
+        n5 = orm.Data().store()
+        n6 = orm.Data().store()
+        n7 = orm.Data().store()
+        n8 = orm.Data().store()
+        n_out = orm.Data().store()
 
         g = Group(name='test_remove_nodes').store()
         self.addCleanup(lambda: orm.Group.objects.delete(g.id))
@@ -325,7 +325,7 @@ class TestGroups(AiidaTestCase):
     def test_delete(self):
         from aiida.common.exceptions import NotExistent
 
-        n = orm.Node().store()
+        n = orm.Data().store()
 
         g = orm.Group(name='testgroup3', description='some other desc').store()
 

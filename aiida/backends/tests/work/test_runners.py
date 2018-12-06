@@ -18,9 +18,12 @@ from aiida import work
 from aiida.daemon.workflowmanager import execute_steps
 from aiida.workflows.wf_demo import WorkflowDemo
 from aiida.manage import get_manager
+from aiida.orm.node.process.workflow import WorkflowNode
 
 
 class Proc(work.Process):
+
+    _calc_class = WorkflowNode
     def run(self):
         pass
 

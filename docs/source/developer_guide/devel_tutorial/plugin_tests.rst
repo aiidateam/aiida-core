@@ -6,9 +6,9 @@ Writing tests for plugin
 When developing a plugin it is important to write tests. The main concern of running
 tests is that the test environment has to be separated from the production environment
 and care should be taken to avoid any unwanted change to the user's database.
-You may have noticed that ``aiida_core`` has its :ref:`testing framework <tools.testing>` for developments.
-While it is possible to use the same framework it to the plugins,
-it makes things complicated as any tests of plugins has to be run with
+You may have noticed that ``aiida_core`` has its own test framework for developments.
+While it is possible to use the same framework for the plugins,
+it is not ideal as any tests of plugins has to be run with
 using ``verdi devel tests`` command-line interface.
 The special test profile also has to be set mannually.
 

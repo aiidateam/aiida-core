@@ -833,6 +833,27 @@ class CifData(SinglefileData):
 
         return aiida.common.utils.md5_file(abspath)
 
+    def _get_aiida_structure(self, converter='pymatgen', store=False, **kwargs):
+        """
+        Creates :py:class:`aiida.orm.data.structure.StructureData`.
+
+        :param converter: specify the converter. Default 'pymatgen'.
+        :param store: if True, intermediate calculation gets stored in the
+            AiiDA database for record. Default False.
+        :param primitive_cell: if True, primitive cell is returned,
+            conventional cell if False. Default False.
+        :param occupancy_tolerance: If total occupancy of a site is between 1 and occupancy_tolerance,
+            the occupancies will be scaled down to 1. (pymatgen only)
+        :param site_tolerance: This tolerance is used to determine if two sites are sitting in the same position,
+            in which case they will be combined to a single disordered site. Defaults to 1e-4. (pymatgen only)
+        :return: :py:class:`aiida.orm.data.structure.StructureData` node.
+        """
+        import warnings
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        warnings.warn('This method has been deprecated and will be renamed to get_structure() in AiiDA v1.0',
+                      DeprecationWarning)  # pylint: disable=no-member
+        return self.get_structure(converter=converter, store=store, **kwargs)
+
     def get_structure(self, converter='pymatgen', store=False, **kwargs):
         """
         Creates :py:class:`aiida.orm.data.structure.StructureData`.

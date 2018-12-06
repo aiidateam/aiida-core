@@ -490,6 +490,21 @@ class TrajectoryData(ArrayData):
         from aiida.tools.dbexporters.tcod import export_cif
         return export_cif(self, **kwargs), {}
 
+    def _get_aiida_structure(self, store=False, **kwargs):
+        """
+        Creates :py:class:`aiida.orm.data.structure.StructureData`.
+
+        :param converter: specify the converter. Default 'ase'.
+        :param store: If True, intermediate calculation gets stored in the
+            AiiDA database for record. Default False.
+        :return: :py:class:`aiida.orm.data.structure.StructureData` node.
+        """
+        import warnings
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        warnings.warn('This method has been deprecated and will be renamed to get_structure() in AiiDA v1.0',
+                      DeprecationWarning)  # pylint: disable=no-member
+        return self.get_structure(store=store, **kwargs)
+
     def get_structure(self, store=False, **kwargs):
         """
         Creates :py:class:`aiida.orm.data.structure.StructureData`.
@@ -508,6 +523,16 @@ class TrajectoryData(ArrayData):
 
         ret_dict = _get_aiida_structure_inline(trajectory=self, parameters=param, store_provenance=store)  # pylint: disable=unexpected-keyword-arg
         return ret_dict['structure']
+
+    def _get_cif(self, index=None, **kwargs):
+        """
+        Creates :py:class:`aiida.orm.data.cif.CifData`
+        """
+        import warnings
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        warnings.warn('This method has been deprecated and will be renamed to get_cif() in AiiDA v1.0',
+                      DeprecationWarning)  # pylint: disable=no-member
+        return self.get_cif(index=index, **kwargs)
 
     def get_cif(self, index=None, **kwargs):
         """

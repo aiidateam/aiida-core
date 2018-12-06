@@ -90,6 +90,17 @@ class ArrayData(Data):
         """
         return tuple(self.get_attr("{}{}".format(self.array_prefix, name)))
 
+    def iterarrays(self):
+        """
+        Iterator that returns tuples (name, array) for each array stored in the
+        node.
+        """
+        import warnings
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        warnings.warn('This method has been deprecated and will be renamed to get_iterarrays() in AiiDA v1.0',
+                      DeprecationWarning)  # pylint: disable=no-member
+        return self.get_iterarrays()
+
     def get_iterarrays(self):
         """
         Iterator that returns tuples (name, array) for each array stored in the

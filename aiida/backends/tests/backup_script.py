@@ -23,7 +23,7 @@ from aiida.backends.settings import BACKEND
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import utils
 from aiida.common.additions.backup_script import backup_setup
-from aiida.orm.node import Node
+from aiida.orm import Data
 import aiida.utils.json as json
 
 
@@ -366,13 +366,13 @@ class TestBackupScriptIntegration(AiidaTestCase):
         a3.set_extra(extra_name, True)
         a4 = ParameterData(dict={'a': 'b'}).store()
         a4.set_extra(extra_name, True)
-        a5 = Node().store()
+        a5 = Data().store()
         a5.set_extra(extra_name, True)
         # I don't set the extras, just to be sure that the filtering works
         # The filtering is needed because other tests will put stuff int he DB
         a6 = CalcJobNode(**calc_params)
         a6.store()
-        a7 = Node()
+        a7 = Data()
         a7.store()
 
     def create_backup_scripts(self, tmp_folder):

@@ -12,7 +12,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.params.types import NodeParamType
-from aiida.orm import Node
+from aiida.orm import Data
 from aiida.orm.utils.loaders import OrmEntityLoader
 
 
@@ -29,9 +29,9 @@ class TestNodeParamType(AiidaTestCase):
         super(TestNodeParamType, cls).setUpClass()
 
         cls.param = NodeParamType()
-        cls.entity_01 = Node().store()
-        cls.entity_02 = Node().store()
-        cls.entity_03 = Node().store()
+        cls.entity_01 = Data().store()
+        cls.entity_02 = Data().store()
+        cls.entity_03 = Data().store()
 
         cls.entity_01.label = 'data_01'
         cls.entity_02.label = str(cls.entity_01.pk)

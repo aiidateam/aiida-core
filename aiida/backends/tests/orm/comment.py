@@ -23,7 +23,7 @@ class TestComment(AiidaTestCase):
 
     def setUp(self):
         super(TestComment, self).setUp()
-        self.node = orm.Node().store()
+        self.node = orm.Data().store()
         self.user = orm.User.objects.get_default()
         self.content = 'Sometimes when I am freestyling, I lose confidence'
         self.comment = Comment(self.node, self.user, self.content).store()
@@ -72,10 +72,10 @@ class TestComment(AiidaTestCase):
 
     def test_comment_querybuilder(self):
         """Test querying for comments by joining on nodes in the QueryBuilder."""
-        node_one = orm.Node().store()
+        node_one = orm.Data().store()
         comment_one = Comment(node_one, self.user, 'comment_one').store()
 
-        node_two = orm.Node().store()
+        node_two = orm.Data().store()
         comment_three = Comment(node_two, self.user, 'comment_three').store()
         comment_four = Comment(node_two, self.user, 'comment_four').store()
 

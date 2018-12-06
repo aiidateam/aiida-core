@@ -6,15 +6,15 @@ Writing tests for plugin
 When developing a plugin it is important to write tests. The main concern of running
 tests is that the test environment has to be separated from the production environment
 and care should be taken to avoid any unwanted change to the user's database.
-You may have
-noticed that AiiDA has a :ref:`testing framework <tools.testing>` for the development
-of it new features. While it is possible to apply it to the plugins, it makes things
-complicated as any tests for plugins has to be run using ``verdi devel tests`` command-line
-interface with test-specific profile pre-defined.
+You may have noticed that ``aiida_core`` has its :ref:`testing framework <tools.testing>` for developments.
+While it is possible to use the same framework it to the plugins,
+it makes things complicated as any tests of plugins has to be run with
+using ``verdi devel tests`` command-line interface.
+The special test profile also has to be set mannually.
 
-AiiDA ships with tools to simply tests for plugins. The recommended way is to use the
-`pytest`_ framework, while the `unittest`_ framework is also supported.
-The test environments are created and managed by the :py:func:`aiida.utils.fixtures.fixture_manager` defined in :py:mod:`aiida.utils.fixtures`.
+AiiDA ships with tools to simplify tests for plugins.
+The recommended way is to use the `pytest`_ framework, while the `unittest`_ package is also supported.
+Internally, test environments are created and managed by the :py:func:`aiida.utils.fixtures.fixture_manager` defined in :py:mod:`aiida.utils.fixtures`.
 
 .. _pytest: https://pytest.org
 .. _unittest: https://docs.python.org/library/unittest.html
@@ -38,26 +38,19 @@ test starts. Please see pytest's `documentation <https://docs.pytest.org/en/late
 To utilize the ``fixture_manager``, we first need to define the actual fixtures:
 
 .. literalinclude:: conftest.py
-   :start-after: @pytest.fixture(scope='session')
 
   
-The ``aiida_profile`` fixture initialize the ``fixture_manager`` yields a :py:class:`aiida.utils.fixtures.FixtureManager` object.
-By using the *with* clause we can ensure that the resources used during the tests are released. Notice the line::
+The ``aiida_profile`` fixture initialize the ``fixture_manager`` yields it to the test function.
+By using the *with* clause, we ensure that the test profile to run tests are destroyed in the end.
+The scope of this fixture should be *session*, since there is no need to re-initialize the
+test profile mid-way.
+The next fixture ``new_database`` request the ``aiida_profile`` fixture and tells the received ``FixtureManager`` instance to reset the database.
+By requesting the ``new_database`` fixture, the test function will start with a fresh aiida environment.
+The next fixture, ``new_workdir``, returns an temporary directory for file operations and delete it when the test is finished.
+You may also want to define other fixtures such as those setup and return ``Data`` nodes or prepare calculations.
 
-  @pytest.fixture(scope='session')
-
-which signals that this fixture will be reused for the entire test session, as the test aiida
-profile only needs to be initialized once.
-The next fixture ``new_database`` request and ``aiida_profile`` and tells the received
-``FixtureManager`` object to reset the database. By requesting the ``new_database`` fixture,
-the test function will start with a fresh aiida environment.
-The next fixture, ``new_workdir``, returns an temporary directory for file operations.
-Using the yield statement allows the fixture to execute code after test function finishes.
-Here, it automatically cleans up the returned directory.
-You may want to define other fixtures such as those setup and return ``Data`` nodes or prepare calculations.
-
-To make these two fixtures available to all tests, they can be put into the ``conftest.py``
-in root level of the package or ``tests`` sub-packages. An example can be downloaded :download:`here <conftest.py>`.
+To make these fixtures available to all tests, they can be put into the ``conftest.py``
+in root level of the package or ``tests`` sub-packages. The code shown above can be downloaded :download:`here <conftest.py>`.
 
 .. seealso::
   More information of ``conftest.py`` can be found `here <conftest>`_.
@@ -70,15 +63,16 @@ Import statements in tests
 When running test, it is important that you DO NOT explicitly load the aiida database
 via ``load_dbenv()``, which could result in corruption of your database with actual data.
 However, many AiiDA modules, such as those in ``aiida.orm`` cannot be loaded without calling ``load_dbenv()`` first.
-Modules in the plugin may also import such aiida modules at the top level,
-which make themselves impossible to be imported directly in test moduels.
-To solve this issue, import should be delay to after the test profile has been setup.
-You can import these required modules at function level.
-A better way is to define a fixture as a loader for module imports. Instead of having::
+Modules in your plugin may also import such aiida modules at the top level.
+Hence, they can not be imported directly in test modules.
+To solve this issue, import should be delayed until the test profile has been loaded.
+You can always import these required modules inside the test function.
+A better way is to define a fixture as a loader for module imports.
+For example, instead of having::
 
   import aiida.orm as orm
 
-at the top of the file, you can define a special fixture::
+at the module level, you can define a fixture::
 
   @pytest.fixture(scope='module')
   def orm(aiida_profile):
@@ -89,10 +83,11 @@ and simply request this fixture for your test function::
 
   def test_load_dataclass(orm):
       """Test loading a data class defined by the plugin"""
-      MyData = orm.DataFactory('my_plugin.maydata')
+      MyData = orm.DataFactory('myplugin.maydata')
 
-The ``'scope='module'`` avoids repetitively doing the import again for each test.
-It is also possible to group many imports in a single fixture and return them::
+We set ``'scope='module'`` to declare that this is module scope fixture and
+avoids repetitively doing the import for each test.
+It is also possible to group many imports in a single fixture::
 
   @pytest.fixture(scope='module')
   def imps(aiida_profile):
@@ -107,38 +102,40 @@ It is also possible to group many imports in a single fixture and return them::
       """Test loading a data class defined by the plugin"""
       MyData = imps.orm.DataFactory('my_plugin.maydata')
 
-Requesting the ``aiida_profile`` fixture in the ``imps`` fixture,
-guarantees that the test environment will be loaded before the any import statement
-are executed.
+Requesting the ``aiida_profile`` fixture in the ``imps`` fixture guarantees
+that the test environment will be loaded before the any import statement are executed.
+
 
 Running the tests
 ^^^^^^^^^^^^^^^^^
-
-To run the tests, simply type::
+Finally, to run the tests, simply type::
 
   pytest
 
-As ``pytest`` will handle the discovery of the test modules and test functions (their name should start with the work **test**)
+in your terminal from the code directory.
+The discovery of the tests will be handled by pytest (file, class and function name should start with the word **test**)
 
 .. note::
-   You should see information about creating aiida profile and database in the beginning.
-   Do not panic, as and the aiida profile and database are completely isolated and will not affect your ``.aiida`` folder.
-   Internally, at temporary folder is used as the ``.aiida`` folder and the test database are created using the *pgtest* package.
+   Your terminal will print something out during the creation of a test profile.
+   Do not panic, as and the aiida profile and database are completely isolated and
+   will not affect your ``.aiida`` folder and file repositories.
+   Internally, at temporary folder is used as the ``.aiida`` folder and the test
+   database are created using the `pgtest <https://github.com/jamesnunn/pgtest>`_ package.
 
 
 .. seealso::
-   Before jump in writing your own tests, please takes a look at the tests provided in the
+   Before jumping in and start writing your own tests, please takes a look at the tests provided in the
    `aiida-cutter`_ plugin template.
 
 .. _aiida-cutter: https://github.com/aiidateam/aiida-plugin-cutter/
 
-Using unittest framework
+Using the unittest framework
 ------------------------
 
-The ``uniitest`` package is included in the python standard library. It has some
-limitations but is still widely used (also for ``aiida_core``).
-The :py:class:`aiida.utils.fixtures.PluginTestCase` should be used for inheritance in the
-TestCase classes. By default each test method will be run with a fresh aiida database.
+The ``uniitest`` package is included in the python standard library.
+It is widely used despite some limitations (it is also used for testing ``aiida_core``).
+We provide a :py:class:`aiida.utils.fixtures.PluginTestCase` to be used for inheritance.
+By default, each test method in the test case class runs with a fresh aiida database.
 Due to the limitation of ``uniitest``, sub-clasess of ``PluginTestCase`` has to be run
 with the special runner in  :py:class:`aiida.utils.fixtures.TestRunner`.
 To run the actually tests, you need to prepare a run script in python::
@@ -155,32 +152,30 @@ Save it as ``run_tests.py`` and tests can be discovered and run using::
 
 
 
-Migrating existing AiiDATestCase tests
+Migrating existing AiidaTestCase tests
 --------------------------------------
 
-The ``pytest`` framework can also be used to run those tests defined using
-``uniittest``. Furthermore, it is possible to blend in some ``pytest`` features.
-Here, we will introduce how to adjust existing tests for the plugins, written by
-inheriting ``AiiDATestCase`` to work with ``pytest``.
-First, lets see a typical test class using the ``unittest``::
+The ``pytest`` framework can also be used to run ``unittest`` tests.
+Here, we will explain how to migrate existing tests for the plugins,
+written as sub-classes of ``AiidaTestCase`` to work with ``pytest``.
+First, let's see a typical test class using the ``unittest``::
 
   from aiida.orm import DataFactory
 
   # Assuming our new date type has entry point myplugin.complex
   ComplexData = DataFactory("myplugin.complex")
 
-  class TestComplexData(AiiDATestCase):
+  class TestComplexData(AiidaTestCase):
 
       def setUp(self):
           """Clean up database for each test"""
           self.clean_db()
 
       def store_complex(self, comp_num):
-
+          """Store a complex number, returns pk"""
           comdata = ComplexData()
           comdata.value = comp_num
           return comdata.pk
-
 
       def test_complex_store(self):
           """Test if the complex numbers can be stored"""
@@ -189,32 +184,34 @@ First, lets see a typical test class using the ``unittest``::
           comdata.value = 1 + 2j
           comdata.store()
 
-      def test_complex_retrived(self):
+      def test_complex_retrieve(self):
           """Test if the complex 
 
           comp_num = 1 + 2j
-          pk = self.store_complx(cnum)
+          pk = self.store_complex(cnum)
           comdata = load_node(pk)
           self.assertEqual(comdata.value == comp_num)
 
-Previously, a test entry point has to be registered to AiiDA to point to this test.
-Direct running with ``python unittest -m`` will not work and the same for ``pytest``.
-We modify this test using some of the ``pytest`` features
+We can modify this test class using some of the pytest features to allow it to be
+run with ``pytest`` directly, as shown below:
 
 .. code-block:: python
-  :emphasize-lines: 6-9, 11, 15-19
+  :emphasize-lines: 6-11, 14, 18-22
 
   # Assuming our new date type has entry point myplugin.complex
   import unittest
   import pytest
 
 
-  @pytest.fixture(scope='class')
-  def cls_import(aiida_profile, request):
+  @pytest.fixture(scope='module')
+  def module_import(aiida_profile, request):
       from aiida.orm import DataFactory
-      request.module.ComplexData = DataFactory('myplugin.complex')
+      ComplexData = DataFactory("myplugin.complex")
+      for name, value in locals():
+          setattr(resquest.module, name, value)
 
-  @pytest.mark.usefixtures('cls_import')
+
+  @pytest.mark.usefixtures('module_import')
   class TestComplexData(TestCase):
       """Test ComplexData. Compatible with pytest."""
 
@@ -229,32 +226,37 @@ We modify this test using some of the ``pytest`` features
           comdata.value = comp_num
           return comdata.pk
 
-
       def test_complex_store(self):
           """Test if the complex numbers can be stored"""
           comdata = ComplexData()
           comdata.value = 1 + 2j
           comdata.store()
 
-      def test_complex_retrived(self):
+      def test_complex_retrieve(self):
           """
           Test if the complex number stored can be retrieved
           """
           comp_num = 1 + 2j
-          pk = self.store_complx(cnum)
+          pk = self.store_complex(cnum)
           comdata = load_node(pk)
           self.assertEqual(comdata.value == comp_num)
 
  
-To allow ``pytest`` to run the tests, we first swap the ``AiiDATestCase`` with the generic
-``TestCase``. We define a class scope fixture ``cls_import`` to import the
+To allow pytest to run the tests, we first swap the ``AiidaTestCase`` with the generic
+``TestCase``. We define a module scope fixture ``module_import`` to import the
 required AiiDA modules and make them available in the module namespace.
-Note this fixture relies on the ``aiida_profile`` fixture to ensure that the test environment is loaded first.
-The `request`_ is a built-in fixture in pytest to introspect of the function from which
-the fixture is requested.
-Instead of the ``setUp`` and ``unittest.TestCase.tearDown`` methods,
+All previous module levels imports should be encapsulated inside this fixture.
+The `request`_ is a built-in fixture in pytest to allow introspect of the function
+from which the fixture is requested.
+Here, we simply add every things in the function scope back into the module of the
+class which requested the fixture.
+
+Instead of the ``setUp`` and ``tearDown`` methods,
 we define a ``reset_db`` fixture to reset the database for every tests.
 The ``autouse=True`` flag tells all test methods inside the class to use it automatically.
+
+When migrating your code to use the pytest, you may define a base class with these
+modifications and use it as the superclass for other test classes. 
 
 .. _request: https://docs.pytest.org/en/3.6.3/reference.html#request
 

@@ -12,4 +12,3 @@ Plugin Development
    publish
    update_plugin
    plugin_system
-   plugin_tests

@@ -201,7 +201,7 @@ class TrajectoryData(ArrayData):
         for symbols_now in [[str(s.kind_name) for s in structurelist[i].sites] for i in stepids]:
             if symbols_first != symbols_now:
                 raise ValueError("Symbol lists have to be the same for " "all of the supplied structures")
-        symbols = numpy.array(symbols_first)
+        symbols = symbols_first.copy()
         positions = numpy.array([[list(s.position) for s in x.sites] for x in structurelist])
         self.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions)
 
@@ -237,7 +237,7 @@ class TrajectoryData(ArrayData):
         Return the number of stored sites, or zero if nothing has been stored yet.
         """
         try:
-            return self.get_shape('symbols')[0]
+            return len(self.symbols)
         except (AttributeError, KeyError, IndexError):
             return 0
 

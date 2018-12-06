@@ -50,10 +50,10 @@ class TrajectoryData(ArrayData):
         """
         import numpy
 
-        if not isinstance(symbols, numpy.ndarray):
-            raise TypeError("TrajectoryData.symbols must be a numpy array")
+        if not isinstance(symbols, list):
+            raise TypeError("TrajectoryData.symbols must be of type list")
         if any([not isinstance(i, six.string_types) for i in symbols]):
-            raise TypeError("TrajectoryData.symbols must be a numpy array of strings")
+            raise TypeError("TrajectoryData.symbols must be a list of strings")
         if not isinstance(positions, numpy.ndarray) or positions.dtype != float:
             raise TypeError("TrajectoryData.positions must be a numpy array of floats")
         if stepids is not None:
@@ -78,8 +78,8 @@ class TrajectoryData(ArrayData):
         if cells is not None:
             if cells.shape != (numsteps, 3, 3):
                 raise ValueError("TrajectoryData.cells must have shape (s,3,3), " "with s=number of steps")
-        numatoms = symbols.size
-        if symbols.shape != (numatoms,):
+        numatoms = len(symbols)
+        if numpy.array(symbols).shape != (numatoms,):
             raise ValueError("TrajectoryData.symbols must be a 1d array")
         if positions.shape != (numsteps, numatoms, 3):
             raise ValueError("TrajectoryData.positions must have shape (s,n,3), "
@@ -122,9 +122,9 @@ class TrajectoryData(ArrayData):
                       ``cells[i,j,k]`` is the ``k``-th component of the ``j``-th
                       cell vector at the time step with index ``i`` (identified
                       by step number ``stepid[i]`` and with timestamp ``times[i]``).
-        :param symbols: string array with dimension ``n``, where ``n`` is the
+        :param symbols: string list with dimension ``n``, where ``n`` is the
                       number of atoms (i.e., sites) in the structure.
-                      The same array is used for each step. Normally, the string
+                      The same list is used for each step. Normally, the string
                       should be a valid chemical symbol, but actually any unique
                       string works and can be used as the name of the atomic kind
                       (see also the :py:meth:`.get_step_structure()` method).
@@ -150,7 +150,8 @@ class TrajectoryData(ArrayData):
         import numpy
 
         self._internal_validate(stepids, cells, symbols, positions, times, velocities)
-        self.set_array('symbols', symbols)
+        # set symbols as attribute for easier querying
+        self._set_attr('symbols', symbols)
         self.set_array('positions', positions)
         if stepids is not None:  # use input stepids
             self.set_array('steps', stepids)
@@ -213,7 +214,7 @@ class TrajectoryData(ArrayData):
         from aiida.common.exceptions import ValidationError
 
         try:
-            self._internal_validate(self.get_stepids(), self.get_cells(), self.get_symbols(), self.get_positions(),
+            self._internal_validate(self.get_stepids(), self.get_cells(), self.symbols, self.get_positions(),
                                     self.get_times(), self.get_velocities())
         # Should catch TypeErrors, ValueErrors, and KeyErrors for missing arrays
         except Exception as exception:
@@ -273,13 +274,14 @@ class TrajectoryData(ArrayData):
         except (AttributeError, KeyError):
             return None
 
-    def get_symbols(self):
+    @property
+    def symbols(self):
         """
         Return the array of symbols, if it has already been set.
 
         :raises KeyError: if the trajectory has not been set yet.
         """
-        return self.get_array('symbols')
+        return self.get_attr('symbols')
 
     def get_positions(self):
         """
@@ -361,7 +363,7 @@ class TrajectoryData(ArrayData):
         cells = self.get_cells()
         if cells is not None:
             cell = cells[index, :, :]
-        return (self.get_stepids()[index], time, cell, self.get_symbols(), self.get_positions()[index, :, :], vel)
+        return (self.get_stepids()[index], time, cell, self.symbols, self.get_positions()[index, :, :], vel)
 
     def get_step_structure(self, index, custom_kinds=None):
         """
@@ -438,7 +440,7 @@ class TrajectoryData(ArrayData):
         if cells is None:
             raise ValueError("No cell parameters have been supplied for " "TrajectoryData")
         positions = self.get_positions()
-        symbols = self.get_symbols()
+        symbols = self.symbols
         atomic_numbers_list = [_atomic_numbers[s] for s in symbols]
         nat = len(symbols)
 
@@ -616,7 +618,7 @@ class TrajectoryData(ArrayData):
         # Reading the arrays I need:
         positions = self.get_positions()
         times = self.get_times()
-        symbols = self.get_symbols()
+        symbols = self.symbols
 
         # Try to get the units.
         try:
@@ -745,7 +747,7 @@ class TrajectoryData(ArrayData):
         except KeyError:
             pass
 
-        symbols = self.get_symbols()
+        symbols = self.symbols
         if elements is None:
             elements = set(symbols)
 

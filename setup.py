@@ -50,7 +50,6 @@ if __name__ == '__main__':
 
     setup(
         **setup_json,
-        extras_require=extras_require,
         packages=find_packages(),
         long_description=open(path.join(aiida_folder, 'README.md')).read(),
         long_description_content_type='text/markdown',

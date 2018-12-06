@@ -26,8 +26,8 @@ class TestSerialize(AiidaTestCase):
         Test the serialization of a dictionary with Nodes in various data structure
         Also make sure that the serialized data is json-serializable
         """
-        node_a = orm.Node().store()
-        node_b = orm.Node().store()
+        node_a = orm.Data().store()
+        node_b = orm.Data().store()
 
         data = {'test': 1, 'list': [1, 2, 3, node_a], 'dict': {('Si',): node_b, 'foo': 'bar'}, 'baz': 'aar'}
 
@@ -60,7 +60,7 @@ class TestSerialize(AiidaTestCase):
 
     def test_serialize_node_round_trip(self):
         """Test you can serialize and deserialize a node"""
-        node = orm.Node().store()
+        node = orm.Data().store()
         deserialized = serialize.deserialize(serialize.serialize(node))
         self.assertEqual(node.uuid, deserialized.uuid)
 
@@ -83,7 +83,7 @@ class TestSerialize(AiidaTestCase):
 
     def test_serialize_unstored_node(self):
         """Test that you can't serialize an unstored node"""
-        node = orm.Node()
+        node = orm.Data()
 
         with self.assertRaises(ValueError):
             serialize.serialize(node)

@@ -27,7 +27,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_process
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
-from aiida.orm.node.process import ProcessNode, WorkFunctionNode, WorkChainNode
+from aiida.orm.node.process import WorkflowNode, WorkFunctionNode, WorkChainNode
 from aiida.work import test_utils
 from aiida.manage import get_manager
 
@@ -210,7 +210,8 @@ class TestVerdiProcess(AiidaTestCase):
 
     def test_process_show(self):
         """Test verdi process show"""
-        node = ProcessNode().store()
+        # We must choose a Node we can store
+        node = WorkflowNode().store()
 
         # Running without identifiers should not except and not print anything
         options = []
@@ -232,7 +233,7 @@ class TestVerdiProcess(AiidaTestCase):
 
     def test_process_report(self):
         """Test verdi process report"""
-        node = ProcessNode().store()
+        node = WorkflowNode().store()
 
         # Running without identifiers should not except and not print anything
         options = []

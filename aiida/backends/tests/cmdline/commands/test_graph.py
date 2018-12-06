@@ -43,9 +43,9 @@ class TestVerdiGraph(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         super(TestVerdiGraph, cls).setUpClass()
-        from aiida.orm import Node
+        from aiida.orm import Data
 
-        cls.node = Node().store()
+        cls.node = Data().store()
 
         # some of the export tests write in the current directory,
         # make sure it is writeable and we don't pollute the current one

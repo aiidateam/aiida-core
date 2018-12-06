@@ -50,16 +50,18 @@ class TrajectoryData(ArrayData):
         """
         import numpy
 
-        if not isinstance(stepids, numpy.ndarray) or stepids.dtype != int:
-            raise TypeError("TrajectoryData.stepids must be a numpy array of integers")
-        if not isinstance(cells, numpy.ndarray) or cells.dtype != float:
-            raise TypeError("TrajectoryData.cells must be a numpy array of floats")
         if not isinstance(symbols, numpy.ndarray):
             raise TypeError("TrajectoryData.symbols must be a numpy array")
         if any([not isinstance(i, six.string_types) for i in symbols]):
             raise TypeError("TrajectoryData.symbols must be a numpy array of strings")
         if not isinstance(positions, numpy.ndarray) or positions.dtype != float:
             raise TypeError("TrajectoryData.positions must be a numpy array of floats")
+        if stepids is not None:
+            if not isinstance(stepids, numpy.ndarray) or stepids.dtype != int:
+                raise TypeError("TrajectoryData.stepids must be a numpy array of integers")
+        if cells is not None:
+            if not isinstance(cells, numpy.ndarray) or cells.dtype != float:
+                raise TypeError("TrajectoryData.cells must be a numpy array of floats")
         if times is not None:
             if not isinstance(times, numpy.ndarray) or times.dtype != float:
                 raise TypeError("TrajectoryData.times must be a numpy array of floats")
@@ -67,11 +69,15 @@ class TrajectoryData(ArrayData):
             if not isinstance(velocities, numpy.ndarray) or velocities.dtype != float:
                 raise TypeError("TrajectoryData.velocities must be a numpy array of floats, or None")
 
-        numsteps = stepids.size
-        if stepids.shape != (numsteps,):
-            raise ValueError("TrajectoryData.stepids must be a 1d array")
-        if cells.shape != (numsteps, 3, 3):
-            raise ValueError("TrajectoryData.cells must have shape (s,3,3), " "with s=number of steps")
+        if stepids is not None:
+            numsteps = stepids.size
+            if stepids.shape != (numsteps,):
+                raise ValueError("TrajectoryData.stepids must be a 1d array")
+        else:
+            numsteps = positions.shape[0]
+        if cells is not None:
+            if cells.shape != (numsteps, 3, 3):
+                raise ValueError("TrajectoryData.cells must have shape (s,3,3), " "with s=number of steps")
         numatoms = symbols.size
         if symbols.shape != (numatoms,):
             raise ValueError("TrajectoryData.symbols must be a 1d array")
@@ -87,11 +93,16 @@ class TrajectoryData(ArrayData):
                                  "have shape (s,n,3), "
                                  "with s=number of steps and n=number of symbols")
 
-    def set_trajectory(self, stepids, cells, symbols, positions, times=None, velocities=None):  # pylint: disable=too-many-arguments
+    def set_trajectory(self, symbols, positions, stepids=None, cells=None, times=None, velocities=None):  # pylint: disable=too-many-arguments
         r"""
         Store the whole trajectory, after checking that types and dimensions
         are correct.
-        Velocities are optional, if they are not passed, nothing is stored.
+
+        Parameters ``stepids``, ``cells`` and ``velocities`` are optional
+        variables. If nothing is passed for ``cells`` or ``velocities``
+        nothing will be stored. However, if no input is given for ``stepids``
+        a consecutive sequence [0,1,2,...,len(positions)-1] will be assumed.
+
 
         :param stepids: integer array with dimension ``s``, where ``s`` is the
                       number of steps. Typically represents an internal counter
@@ -135,11 +146,24 @@ class TrajectoryData(ArrayData):
 
         .. todo :: Choose suitable units for velocities
         """
+
+        import numpy
+
         self._internal_validate(stepids, cells, symbols, positions, times, velocities)
-        self.set_array('steps', stepids)
-        self.set_array('cells', cells)
         self.set_array('symbols', symbols)
         self.set_array('positions', positions)
+        if stepids is not None:  # use input stepids
+            self.set_array('steps', stepids)
+        else:  # use consecutive sequence if not given
+            self.set_array('steps', numpy.arange(positions.shape[0]))
+        if cells is not None:
+            self.set_array('cells', cells)
+        else:
+            # Delete cells array, if it was present
+            try:
+                self.delete_array('cells')
+            except KeyError:
+                pass
         if times is not None:
             self.set_array('times', times)
         else:
@@ -178,7 +202,7 @@ class TrajectoryData(ArrayData):
                 raise ValueError("Symbol lists have to be the same for " "all of the supplied structures")
         symbols = numpy.array(symbols_first)
         positions = numpy.array([[list(s.position) for s in x.sites] for x in structurelist])
-        self.set_trajectory(stepids, cells, symbols, positions)
+        self.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions)
 
     def _validate(self):
         """
@@ -244,7 +268,10 @@ class TrajectoryData(ArrayData):
 
         :raises KeyError: if the trajectory has not been set yet.
         """
-        return self.get_array('cells')
+        try:
+            return self.get_array('cells')
+        except (AttributeError, KeyError):
+            return None
 
     def get_symbols(self):
         """
@@ -331,8 +358,10 @@ class TrajectoryData(ArrayData):
         time = self.get_times()
         if time is not None:
             time = time[index]
-        return (self.get_stepids()[index], time, self.get_cells()[index, :, :], self.get_symbols(),
-                self.get_positions()[index, :, :], vel)
+        cells = self.get_cells()
+        if cells is not None:
+            cell = cells[index, :, :]
+        return (self.get_stepids()[index], time, cell, self.get_symbols(), self.get_positions()[index, :, :], vel)
 
     def get_step_structure(self, index, custom_kinds=None):
         """
@@ -406,6 +435,8 @@ class TrajectoryData(ArrayData):
         if structure.is_alloy() or structure.has_vacancies():
             raise NotImplementedError("XSF for alloys or systems with " "vacancies not implemented.")
         cells = self.get_cells()
+        if cells is None:
+            raise ValueError("No cell parameters have been supplied for " "TrajectoryData")
         positions = self.get_positions()
         symbols = self.get_symbols()
         atomic_numbers_list = [_atomic_numbers[s] for s in symbols]
@@ -718,7 +749,11 @@ class TrajectoryData(ArrayData):
         if elements is None:
             elements = set(symbols)
 
-        cell = np.array(self.get_cells()[0])
+        cells = self.get_cells()
+        if cells is None:
+            raise ValueError("No cell parameters have been supplied for " "TrajectoryData")
+        else:
+            cell = np.array(cells[0])
         storage_dict = {s: {} for s in elements}
         for ele in elements:
             storage_dict[ele] = [np.array([]), np.array([]), np.array([])]

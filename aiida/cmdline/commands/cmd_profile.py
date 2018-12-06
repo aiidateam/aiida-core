@@ -31,10 +31,17 @@ def verdi_profile():
 @verdi_profile.command('list')
 def profile_list():
     """Displays list of all available profiles."""
-    from aiida.common.setup import get_profiles_list, AIIDA_CONFIG_FOLDER
+    from aiida.common.setup import get_config, get_profiles_list, AIIDA_CONFIG_FOLDER
     from aiida.common.exceptions import ConfigurationError
+    from aiida.common.exceptions import MissingConfigurationError
 
     echo.echo_info('configuration folder: {}'.format(AIIDA_CONFIG_FOLDER))
+
+    try:
+        get_config()
+    except MissingConfigurationError:
+        echo.echo_info("no configuration file found, run 'verdi quicksetup' first")
+        return
 
     try:
         default_profile = get_default_profile_name()

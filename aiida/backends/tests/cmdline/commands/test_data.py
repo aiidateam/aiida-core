@@ -518,7 +518,7 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable, TestVerdiDat
             0.,
             3.,
         ]]])
-        symbols = numpy.array(['H', 'O', 'C'])
+        symbols = ['H', 'O', 'C']
         positions = numpy.array([[[0., 0., 0.], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]], [[0., 0., 0.], [0.5, 0.5, 0.5],
                                                                                     [1.5, 1.5, 1.5]]])
         velocities = numpy.array([[[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]], [[0.5, 0.5, 0.5], [0.5, 0.5, 0.5],

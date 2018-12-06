@@ -759,7 +759,7 @@ class AbstractNode(object):
             builder.append(node_class, with_outgoing='main', project=['*'],
                 edge_project=['type', 'label'], edge_filters=edge_filters)
 
-        return [links.LinkTriple(entry[0], entry[1], entry[2]) for entry in builder.all()]
+        return [links.LinkTriple(entry[0], LinkType(entry[1]), entry[2]) for entry in builder.all()]
 
     def _replace_link_from(self, source, link_type, link_label):
         """

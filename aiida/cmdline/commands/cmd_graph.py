@@ -20,7 +20,10 @@ from aiida.cmdline.utils import decorators, echo
 
 @verdi.group('graph')
 def verdi_graph():
-    """Create visual representations of part of the provenance graph."""
+    """
+    Create visual representations of part of the provenance graph.
+    Requires that `graphviz<https://graphviz.org/download>` be installed.
+    """
     pass
 
 
@@ -55,7 +58,7 @@ def generate(root_node, ancestor_depth, descendant_depth, outputs, inputs, outpu
         root_node,
         ancestor_depth=ancestor_depth,
         descendant_depth=descendant_depth,
-        format=output_format,
+        image_format=output_format,
         include_calculation_inputs=inputs,
         include_calculation_outputs=outputs)
     if exit_status:

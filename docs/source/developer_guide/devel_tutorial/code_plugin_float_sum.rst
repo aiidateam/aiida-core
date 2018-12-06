@@ -1,12 +1,12 @@
 .. _DevelopDataPluginTutorialFloat:
 
-Data plugin - Float summation
+Data plugin - Float Summation
 =============================
 
 .. toctree::
    :maxdepth: 2
 
-Now that you have writen :doc:`your first AiiDA plugin <code_plugin_int_sum>`,
+Now that you have written :doc:`your first AiiDA plugin <code_plugin_int_sum>`,
 we can try to extend it to see how we can introduce different type of parameters
 and how the plugins have to be modified to encompass these changes.
 
@@ -14,11 +14,7 @@ Introducing a new data type
 ---------------------------
 We will start by describing what is a data plugin, and by creating a new one.
 
-A data plugin is a subclass of :py:class:`Data<aiida.orm.data.Data>`. What
-you have to do is just to define a subclass with a suitable name inside the
-``aiida/orm/data`` folder (with the same name convention of Calculation plugins:
-the class should be called ``NameData`` (with ``Name`` being a name of your
-choice) and put in a ``aiida/orm/data/name.py`` file. 
+A data plugin is a subclass of :py:class:`Data<aiida.orm.data.Data>`.
 In the class, you should provide methods that the end user should use to store
 high-level objects (for instance, for a crystal structure, there can be a method
 for setting the unit cell, one for adding an atom in a given position, ...).
@@ -62,7 +58,7 @@ implementation can look like this::
            """
            self._set_attr('number', float(value))
 
-Assuming you placed this file in ``<aiida_yourplugin>/data/float.py`` you should now expose the following entry point in your ``setup.py``: ``aiida.data: {'yourplugin.float = aiida_yourplugin.data.float:FloatData'``. 
+           
 
 
 Exercise: Modifying the calculation plugin
@@ -133,9 +129,6 @@ to provide the addends to the code, something like::
 
 and similarly for the second addend.
 
-The final input plugin should be placed 
-at ``aiida/orm/calculation/job/floatsum.py``.
-
 Code
 ////
 The python code that actually performs the calculation does not need to be
@@ -148,8 +141,8 @@ Submission script
 Finally, adapt your submission script to create the correct input nodes, 
 and try to perform a sum of two numbers to verify that you did all correctly!
 
-.. note:: After placing your files, do not forget to restart the daemon so that
-   it will recognize the files! The same should be done if you do any change to
+.. note:: After (re)registering the entry points, do not forget to restart the daemon so that
+   it will recognize the change! The same should be done if you do any change to
    the plugin, otherwise the daemon may have cached the old file and will keep
    using it.
    

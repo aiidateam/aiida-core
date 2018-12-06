@@ -30,7 +30,6 @@ Plugin development
 
     ../developer_guide/devel_tutorial/code_plugin_int_sum
     ../developer_guide/devel_tutorial/code_plugin_float_sum
-    ../developer_guide/devel_tutorial/code_plugin_qe
     ../developer_guide/devel_tutorial/cmdline_plugin
 
 *************

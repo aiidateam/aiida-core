@@ -7,21 +7,23 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Setup script for aiida-core package."""
 
 from __future__ import division
 from __future__ import print_function
 
 from __future__ import absolute_import
-import fastentrypoints
-import re
 import sys
 import json
-from distutils.version import StrictVersion
 from os import path
+# pylint: disable=wrong-import-order
+# Note: This speeds up command line scripts (e.g. verdi)
+from utils import fastentrypoints  # pylint: disable=unused-import
+from distutils.version import StrictVersion
 from setuptools import setup, find_packages
 
 if __name__ == '__main__':
-    aiida_folder = path.split(path.abspath(__file__))[0]
+    THIS_FOLDER = path.split(path.abspath(__file__))[0]
 
     # Ensure that pip is installed and the version is at least 10.0.0, which is required for the build process
     try:
@@ -31,26 +33,27 @@ if __name__ == '__main__':
         sys.exit(1)
 
     PIP_REQUIRED_VERSION = '10.0.0'
-    required_version = StrictVersion(PIP_REQUIRED_VERSION)
-    installed_version = StrictVersion(pip.__version__)
+    REQUIRED_VERSION = StrictVersion(PIP_REQUIRED_VERSION)
+    INSTALLED_VERSION = StrictVersion(pip.__version__)
 
-    if installed_version < required_version:
+    if INSTALLED_VERSION < REQUIRED_VERSION:
         print('The installation requires pip>={}, whereas currently {} is installed'.format(
-            required_version, installed_version))
+            REQUIRED_VERSION, INSTALLED_VERSION))
         sys.exit(1)
 
-    with open(path.join(aiida_folder, 'setup.json'), 'r') as info:
-        setup_json = json.load(info)
+    with open(path.join(THIS_FOLDER, 'setup.json'), 'r') as info:
+        SETUP_JSON = json.load(info)
 
-    setup_json['extras_require'][
-        'testing'] += setup_json['extras_require']['rest'] + setup_json['extras_require']['atomic_tools'] + setup_json['extras_require']['docs']
+    SETUP_JSON['extras_require'][
+        'testing'] += SETUP_JSON['extras_require']['rest'] \
+                   + SETUP_JSON['extras_require']['atomic_tools'] \
+                   + SETUP_JSON['extras_require']['docs']
 
-    setup_json['extras_require']['all'] = list(
-        {item for sublist in setup_json['extras_require'].values() for item in sublist if item != 'bpython'})
+    SETUP_JSON['extras_require']['all'] = list(
+        {item for sublist in SETUP_JSON['extras_require'].values() for item in sublist if item != 'bpython'})
 
     setup(
         packages=find_packages(),
-        long_description=open(path.join(aiida_folder, 'README.md')).read(),
+        long_description=open(path.join(THIS_FOLDER, 'README.md')).read(),
         long_description_content_type='text/markdown',
-        **setup_json,
-    )
+        **SETUP_JSON)

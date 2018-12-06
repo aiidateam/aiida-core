@@ -12,20 +12,9 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from six.moves import range
-
-try:
-    from reentry.default_manager import PluginManager
-    # I don't use the default manager as it has scan_for_not_found=True
-    # by default, which re-runs scan if no entrypoints are found (which is
-    # quite possible if no aiida.tests entrypoints are registered)
-    epm = PluginManager(scan_for_not_found=False)
-except ImportError:
-    import pkg_resources as epm
-
+from aiida.plugins.entry_point import ENTRYPOINT_MANAGER
 from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
 
-# TODO: define only folders in which tests should be put, and each
-#       file defines a new test
 db_test_list = {
     BACKEND_DJANGO: {
         'generic': ['aiida.backends.djsite.db.subtests.generic'],
@@ -133,7 +122,7 @@ def get_db_test_names():
 
     # This is a temporary solution to be able to run tests in plugins. Once the plugin fixtures
     # have been made working and are released, we can replace this logic with them
-    for ep in [ep for ep in epm.iter_entry_points(group='aiida.tests')]:
+    for ep in [ep for ep in ENTRYPOINT_MANAGER.iter_entry_points(group='aiida.tests')]:
         retlist.append(ep.name)
 
     # Explode the list so that if I have a.b.c,
@@ -184,7 +173,7 @@ def get_db_test_list():
 
     # This is a temporary solution to be able to run tests in plugins. Once the plugin fixtures
     # have been made working and are released, we can replace this logic with them
-    for ep in [ep for ep in epm.iter_entry_points(group='aiida.tests')]:
+    for ep in [ep for ep in ENTRYPOINT_MANAGER.iter_entry_points(group='aiida.tests')]:
         retdict[ep.name].append(ep.module_name)
 
     # Explode the dictionary so that if I have a.b.c,

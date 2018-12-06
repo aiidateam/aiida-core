@@ -420,7 +420,6 @@ def parse_formula(formula):
     return contents
 
 
-# pylint: disable=abstract-method
 # Note:  Method 'query' is abstract in class 'Node' but is not overridden
 class CifData(SinglefileData):
     """
@@ -431,6 +430,7 @@ class CifData(SinglefileData):
         when setting ``ase`` or ``values``, a physical CIF file is generated
         first, the values are updated from the physical CIF file.
     """
+    # pylint: disable=abstract-method, too-many-public-methods
     _set_incompatibilities = [('ase', 'file'), ('ase', 'values'), ('file', 'values')]
     _scan_types = ['standard', 'flex']
     _parse_policies = ['eager', 'lazy']
@@ -833,9 +833,12 @@ class CifData(SinglefileData):
 
         return aiida.common.utils.md5_file(abspath)
 
-    def _get_aiida_structure(self, converter='pymatgen', store=False, **kwargs):
+    def get_structure(self, converter='pymatgen', store=False, **kwargs):
         """
         Creates :py:class:`aiida.orm.data.structure.StructureData`.
+
+        .. versionadded:: 1.0
+           Renamed from _get_aiida_structure
 
         :param converter: specify the converter. Default 'pymatgen'.
         :param store: if True, intermediate calculation gets stored in the

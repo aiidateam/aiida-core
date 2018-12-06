@@ -256,7 +256,7 @@ class TestCifData(AiidaTestCase):
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
-    def test_get_aiida_structure(self):
+    def test_get_structure(self):
         import tempfile
 
         from aiida.orm.data.cif import CifData
@@ -286,9 +286,9 @@ O 0.5 0.5 0.5
             a = CifData(file=tmpf.name)
 
         with self.assertRaises(ValueError):
-            a._get_aiida_structure(converter='none')
+            a.get_structure(converter='none')
 
-        c = a._get_aiida_structure()
+        c = a.get_structure()
 
         self.assertEquals(c.get_kind_names(), ['C', 'O'])
 
@@ -330,13 +330,13 @@ O 0.5 0.5 0.5
             tmpf.flush()
             c = CifData(file=tmpf.name)
 
-        ase = c._get_aiida_structure(converter='ase', primitive_cell=False).get_ase()
+        ase = c.get_structure(converter='ase', primitive_cell=False).get_ase()
         self.assertEquals(ase.get_number_of_atoms(), 15)
 
-        ase = c._get_aiida_structure(converter='ase').get_ase()
+        ase = c.get_structure(converter='ase').get_ase()
         self.assertEquals(ase.get_number_of_atoms(), 15)
 
-        ase = c._get_aiida_structure(converter='ase', primitive_cell=True, subtrans_included=False).get_ase()
+        ase = c.get_structure(converter='ase', primitive_cell=True, subtrans_included=False).get_ase()
         self.assertEquals(ase.get_number_of_atoms(), 5)
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
@@ -389,13 +389,13 @@ Te2 0.00000 0.00000 0.79030 0.01912
             tmpf.flush()
             c = CifData(file=tmpf.name)
 
-        ase = c._get_aiida_structure(converter='pymatgen', primitive_cell=False).get_ase()
+        ase = c.get_structure(converter='pymatgen', primitive_cell=False).get_ase()
         self.assertEquals(ase.get_number_of_atoms(), 15)
 
-        ase = c._get_aiida_structure(converter='pymatgen').get_ase()
+        ase = c.get_structure(converter='pymatgen').get_ase()
         self.assertEquals(ase.get_number_of_atoms(), 15)
 
-        ase = c._get_aiida_structure(converter='pymatgen', primitive_cell=True).get_ase()
+        ase = c.get_structure(converter='pymatgen', primitive_cell=True).get_ase()
         self.assertEquals(ase.get_number_of_atoms(), 5)
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")

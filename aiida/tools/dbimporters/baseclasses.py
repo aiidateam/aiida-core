@@ -321,7 +321,7 @@ class CifEntry(DbEntry):
         """
         cif = self.get_cif_node(store=store, parse_policy='lazy')
         
-        return cif._get_aiida_structure(converter=converter, store=store, **kwargs)
+        return cif.get_structure(converter=converter, store=store, **kwargs)
 
     def get_parsed_cif(self):
         """

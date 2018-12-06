@@ -60,6 +60,13 @@ class FailedError(AiidaException):
     pass
 
 
+class StoringNotAllowed(AiidaException):
+    """
+    Raised when the user tries to store an unstorable node (e.g. a base Node class)
+    """
+    pass
+
+
 class ModificationNotAllowed(AiidaException):
     """
     Raised when the user tries to modify a field, object, property, ... that should not

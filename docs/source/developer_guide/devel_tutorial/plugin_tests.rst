@@ -9,8 +9,8 @@ and care should be taken to avoid any unwanted change to the user's database.
 You may have noticed that ``aiida_core`` has its own test framework for developments.
 While it is possible to use the same framework for the plugins,
 it is not ideal as any tests of plugins has to be run with
-using ``verdi devel tests`` command-line interface.
-The special test profile also has to be set mannually.
+the ``verdi devel tests`` command-line interface.
+Special profiles also have to be set mannually by the user and in automated test environments.
 
 AiiDA ships with tools to simplify tests for plugins.
 The recommended way is to use the `pytest`_ framework, while the `unittest`_ package is also supported.

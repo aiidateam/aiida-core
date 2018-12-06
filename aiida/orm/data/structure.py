@@ -1891,7 +1891,7 @@ class StructureData(Data):
         """
         import warnings
         from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
-        warnings.warn('This method has been deprecated and will be renamed to get_cif() in AiiDA v1.0', DeprecationWarning)  # pylint: disable=no-member
+        warnings.warn('This method has been deprecated and will be renamed to get_cif() in AiiDA v1.0', DeprecationWarning)
         return self.get_cif(converter=converter, store=store, **kwargs) 
 
     def get_cif(self, converter='ase', store=False, **kwargs):

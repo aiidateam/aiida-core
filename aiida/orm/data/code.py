@@ -520,7 +520,7 @@ class Code(Data):
         """
         import warnings
         from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
-        warnings.warn('This method has been deprecated and will be renamed to get_full_text_info() in AiiDA v1.0', DeprecationWarning)  # pylint: disable=no-member
+        warnings.warn('This method has been deprecated and will be renamed to get_full_text_info() in AiiDA v1.0', DeprecationWarning)
         return self.get_full_text_info(verbose=verbose)
 
     def get_full_text_info(self, verbose=False):

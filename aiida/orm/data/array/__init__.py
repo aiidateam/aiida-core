@@ -98,7 +98,7 @@ class ArrayData(Data):
         import warnings
         from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('This method has been deprecated and will be renamed to get_iterarrays() in AiiDA v1.0',
-                      DeprecationWarning)  # pylint: disable=no-member
+                      DeprecationWarning)
         return self.get_iterarrays()
 
     def get_iterarrays(self):

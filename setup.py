@@ -45,10 +45,13 @@ if __name__ == '__main__':
     with open(path.join(THIS_FOLDER, 'setup.json'), 'r') as info:
         SETUP_JSON = json.load(info)
 
-    SETUP_JSON['extras_require'][
-        'testing'] += SETUP_JSON['extras_require']['rest'] \
-                   + SETUP_JSON['extras_require']['atomic_tools'] \
-                   + SETUP_JSON['extras_require']['docs']
+    SETUP_JSON['extras_require']['testing'] \
+        += SETUP_JSON['extras_require']['rest'] \
+        + SETUP_JSON['extras_require']['atomic_tools']
+
+    SETUP_JSON['extras_require']['docs'] \
+        += SETUP_JSON['extras_require']['rest'] \
+        + SETUP_JSON['extras_require']['atomic_tools']
 
     SETUP_JSON['extras_require']['all'] = list(
         {item for sublist in SETUP_JSON['extras_require'].values() for item in sublist if item != 'bpython'})

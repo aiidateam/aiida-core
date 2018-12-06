@@ -13,7 +13,6 @@ from __future__ import print_function
 from __future__ import absolute_import
 import click
 import os
-from os import path
 import sys
 import toml
 import json
@@ -26,12 +25,12 @@ def validate_pyproject():
     filename_pyproject = 'pyproject.toml'
     filename_requirements = 'setup.json'
 
-    this_path = path.split(path.realpath(__file__))[0]
-    root_dir = path.join(this_path, os.pardir)
-    toml_file = path.join(root_dir, filename_pyproject)
+    this_path = os.path.split(os.path.realpath(__file__))[0]
+    root_dir = os.path.join(this_path, os.pardir)
+    toml_file = os.path.join(root_dir, filename_pyproject)
 
     reentry_requirement = None
-    with open(path.join(root_dir, 'setup.json'), 'r') as info:
+    with open(os.path.join(root_dir, 'setup.json'), 'r') as info:
         setup_json = json.load(info)
 
     for requirement in setup_json['install_requires']:

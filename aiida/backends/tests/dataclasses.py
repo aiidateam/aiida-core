@@ -2887,7 +2887,7 @@ class TestTrajectoryData(AiidaTestCase):
             0.,
             3.,
         ]]])
-        symbols = numpy.array(['H', 'O', 'C'])
+        symbols = ['H', 'O', 'C']
         positions = numpy.array([[[0., 0., 0.], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]], [[0., 0., 0.], [0.5, 0.5, 0.5],
                                                                                     [1.5, 1.5, 1.5]]])
         velocities = numpy.array([[[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]], [[0.5, 0.5, 0.5], [0.5, 0.5, 0.5],
@@ -2903,7 +2903,7 @@ class TestTrajectoryData(AiidaTestCase):
         self.assertAlmostEqual(abs(stepids - n.get_stepids()).sum(), 0.)
         self.assertAlmostEqual(abs(times - n.get_times()).sum(), 0.)
         self.assertAlmostEqual(abs(cells - n.get_cells()).sum(), 0.)
-        self.assertEqual(symbols.tolist(), n.get_symbols().tolist())
+        self.assertEqual(symbols, n.symbols)
         self.assertAlmostEqual(abs(positions - n.get_positions()).sum(), 0.)
         self.assertAlmostEqual(abs(velocities - n.get_velocities()).sum(), 0.)
 
@@ -2912,7 +2912,7 @@ class TestTrajectoryData(AiidaTestCase):
         self.assertEqual(data[0], stepids[1])
         self.assertAlmostEqual(data[1], times[1])
         self.assertAlmostEqual(abs(cells[1] - data[2]).sum(), 0.)
-        self.assertEqual(symbols.tolist(), data[3].tolist())
+        self.assertEqual(symbols, data[3])
         self.assertAlmostEqual(abs(data[4] - positions[1]).sum(), 0.)
         self.assertAlmostEqual(abs(data[5] - velocities[1]).sum(), 0.)
 
@@ -2931,7 +2931,7 @@ class TestTrajectoryData(AiidaTestCase):
         self.assertAlmostEqual(abs(stepids - n.get_stepids()).sum(), 0.)
         self.assertIsNone(n.get_times())
         self.assertAlmostEqual(abs(cells - n.get_cells()).sum(), 0.)
-        self.assertEqual(symbols.tolist(), n.get_symbols().tolist())
+        self.assertEqual(symbols, n.symbols)
         self.assertAlmostEqual(abs(positions - n.get_positions()).sum(), 0.)
         self.assertIsNone(n.get_velocities())
 
@@ -2944,7 +2944,7 @@ class TestTrajectoryData(AiidaTestCase):
         self.assertAlmostEqual(abs(stepids - n.get_stepids()).sum(), 0.)
         self.assertIsNone(n.get_times())
         self.assertAlmostEqual(abs(cells - n.get_cells()).sum(), 0.)
-        self.assertEqual(symbols.tolist(), n.get_symbols().tolist())
+        self.assertEqual(symbols, n.symbols)
         self.assertAlmostEqual(abs(positions - n.get_positions()).sum(), 0.)
         self.assertIsNone(n.get_velocities())
 
@@ -2957,7 +2957,7 @@ class TestTrajectoryData(AiidaTestCase):
         self.assertAlmostEqual(abs(stepids - n.get_stepids()).sum(), 0.)
         self.assertAlmostEqual(abs(times - n.get_times()).sum(), 0.)
         self.assertAlmostEqual(abs(cells - n.get_cells()).sum(), 0.)
-        self.assertEqual(symbols.tolist(), n.get_symbols().tolist())
+        self.assertEqual(symbols, n.symbols)
         self.assertAlmostEqual(abs(positions - n.get_positions()).sum(), 0.)
         self.assertIsNone(n.get_velocities())
 
@@ -2970,7 +2970,7 @@ class TestTrajectoryData(AiidaTestCase):
         self.assertAlmostEqual(abs(stepids - n.get_stepids()).sum(), 0.)
         self.assertAlmostEqual(abs(times - n.get_times()).sum(), 0.)
         self.assertAlmostEqual(abs(cells - n.get_cells()).sum(), 0.)
-        self.assertEqual(symbols.tolist(), n.get_symbols().tolist())
+        self.assertEqual(symbols, n.symbols)
         self.assertAlmostEqual(abs(positions - n.get_positions()).sum(), 0.)
         self.assertIsNone(n.get_velocities())
 
@@ -2983,7 +2983,7 @@ class TestTrajectoryData(AiidaTestCase):
         self.assertAlmostEqual(abs(stepids - n.get_stepids()).sum(), 0.)
         self.assertAlmostEqual(abs(times - n.get_times()).sum(), 0.)
         self.assertAlmostEqual(abs(cells - n.get_cells()).sum(), 0.)
-        self.assertEqual(symbols.tolist(), n.get_symbols().tolist())
+        self.assertEqual(symbols, n.symbols)
         self.assertAlmostEqual(abs(positions - n.get_positions()).sum(), 0.)
         self.assertIsNone(n.get_velocities())
 
@@ -2992,7 +2992,7 @@ class TestTrajectoryData(AiidaTestCase):
         self.assertEqual(data[0], stepids[1])
         self.assertAlmostEqual(data[1], times[1])
         self.assertAlmostEqual(abs(cells[1] - data[2]).sum(), 0.)
-        self.assertEqual(symbols.tolist(), data[3].tolist())
+        self.assertEqual(symbols, data[3])
         self.assertAlmostEqual(abs(data[4] - positions[1]).sum(), 0.)
         self.assertIsNone(data[5])
 
@@ -3011,7 +3011,7 @@ class TestTrajectoryData(AiidaTestCase):
         self.assertAlmostEqual(abs(stepids - n.get_stepids()).sum(), 0.)
         self.assertAlmostEqual(abs(times - n.get_times()).sum(), 0.)
         self.assertAlmostEqual(abs(cells - n.get_cells()).sum(), 0.)
-        self.assertEqual(symbols.tolist(), n.get_symbols().tolist())
+        self.assertEqual(symbols, n.symbols)
         self.assertAlmostEqual(abs(positions - n.get_positions()).sum(), 0.)
         self.assertIsNone(n.get_velocities())
 
@@ -3020,7 +3020,7 @@ class TestTrajectoryData(AiidaTestCase):
         self.assertEqual(data[0], stepids[1])
         self.assertAlmostEqual(data[1], times[1])
         self.assertAlmostEqual(abs(cells[1] - data[2]).sum(), 0.)
-        self.assertEqual(symbols.tolist(), data[3].tolist())
+        self.assertEqual(symbols, data[3])
         self.assertAlmostEqual(abs(data[4] - positions[1]).sum(), 0.)
         self.assertIsNone(data[5])
 
@@ -3069,7 +3069,7 @@ class TestTrajectoryData(AiidaTestCase):
             0.,
             3.,
         ]]])
-        symbols = numpy.array(['H', 'O', 'C'])
+        symbols = ['H', 'O', 'C']
         positions = numpy.array([[[0., 0., 0.], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]], [[0., 0., 0.], [0.5, 0.5, 0.5],
                                                                                     [1.5, 1.5, 1.5]]])
         velocities = numpy.array([[[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]], [[0.5, 0.5, 0.5], [0.5, 0.5, 0.5],
@@ -3088,7 +3088,7 @@ class TestTrajectoryData(AiidaTestCase):
             newpos = numpy.array([s.position for s in struc.sites])
             self.assertAlmostEqual(abs(newpos - positions[1]).sum(), 0)
             newkinds = [s.kind_name for s in struc.sites]
-            self.assertEqual(newkinds, symbols.tolist())
+            self.assertEqual(newkinds, symbols)
 
             # Weird assignments (nobody should ever do this, but it is possible in
             # principle and we want to check
@@ -3123,7 +3123,7 @@ class TestTrajectoryData(AiidaTestCase):
             self.assertAlmostEqual(abs(newpos - positions[1]).sum(), 0)
             newkinds = [s.kind_name for s in struc.sites]
             # Kinds are in the same order as given in the custm_kinds list
-            self.assertEqual(newkinds, symbols.tolist())
+            self.assertEqual(newkinds, symbols)
             newatomtypes = [struc.get_kind(s.kind_name).symbols[0] for s in struc.sites]
             # Atoms remain in the same order as given in the positions list
             self.assertEqual(newatomtypes, ['He', 'Os', 'Cu'])
@@ -3175,7 +3175,7 @@ class TestTrajectoryData(AiidaTestCase):
 
         td = TrajectoryData(structurelist=structurelist)
         self.assertEqual(td.get_cells().tolist(), cells)
-        self.assertEqual(td.get_symbols().tolist(), symbols[0])
+        self.assertEqual(td.symbols, symbols[0])
         self.assertEqual(td.get_positions().tolist(), positions)
 
         symbols = [['H', 'O', 'C'], ['H', 'O', 'P']]
@@ -3229,7 +3229,7 @@ class TestTrajectoryData(AiidaTestCase):
             0.,
             3.,
         ]]])
-        symbols = numpy.array(['H', 'O', 'C'])
+        symbols = ['H', 'O', 'C']
         positions = numpy.array([[[0., 0., 0.], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]], [[0., 0., 0.], [0.5, 0.5, 0.5],
                                                                                     [1.5, 1.5, 1.5]]])
         velocities = numpy.array([[[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]], [[0.5, 0.5, 0.5], [0.5, 0.5, 0.5],
@@ -3274,7 +3274,7 @@ class TestTrajectoryData(AiidaTestCase):
 
 class TestKpointsData(AiidaTestCase):
     """
-    Tests the TrajectoryData objects.
+    Tests the KpointsData objects.
     """
 
     def test_set_kpoints_path_legacy(self):

@@ -7,7 +7,7 @@ include aiida/common/additions/backup_script/backup_info.json.tmpl
 include examples/testdata/qepseudos/*
 include docs/source/images/*.png
 include fastentrypoints.py
-include setup_requirements.py
+include setup.json
 include AUTHORS.txt
 include CHANGELOG.md
 include pyproject.toml

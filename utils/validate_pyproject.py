@@ -13,26 +13,28 @@ from __future__ import print_function
 from __future__ import absolute_import
 import click
 import os
+from os import path
 import sys
 import toml
+import json
 
 @click.command()
 def validate_pyproject():
     """
-    Ensure that the version of reentry in setup_requirements.py and pyproject.toml are identical
+    Ensure that the version of reentry in setup.json and pyproject.toml are identical
     """
     filename_pyproject = 'pyproject.toml'
-    filename_requirements = 'setup_requirements.py'
+    filename_requirements = 'setup.json'
 
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    toml_file = os.path.join(dir_path, os.pardir, filename_pyproject)
-    sys.path.append(os.path.join(dir_path, os.pardir))
-
-    import setup_requirements
+    this_path = path.split(path.realpath(__file__))[0]
+    root_dir = path.join(this_path, os.pardir)
+    toml_file = path.join(root_dir, filename_pyproject)
 
     reentry_requirement = None
+    with open(path.join(root_dir, 'setup.json'), 'r') as info:
+        setup_json = json.load(info)
 
-    for requirement in setup_requirements.install_requires:
+    for requirement in setup_json['install_requires']:
         if 'reentry' in requirement:
             reentry_requirement = requirement
             break

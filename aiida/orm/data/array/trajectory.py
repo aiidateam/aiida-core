@@ -434,7 +434,7 @@ class TrajectoryData(ArrayData):
         return_string = "ANIMSTEPS {}\nCRYSTAL\n".format(len(indices))
         # Do the checks once and for all here:
         structure = self.get_step_structure(index=0)
-        if structure.is_alloy() or structure.has_vacancies():
+        if structure.is_alloy or structure.has_vacancies:
             raise NotImplementedError("XSF for alloys or systems with " "vacancies not implemented.")
         cells = self.get_cells()
         if cells is None:
@@ -448,7 +448,7 @@ class TrajectoryData(ArrayData):
             return_string += "PRIMVEC {}\n".format(idx + 1)
             #~ structure = self.get_step_structure(index=idx)
             #~ sites = structure.sites
-            #~ if structure.is_alloy() or structure.has_vacancies():
+            #~ if structure.is_alloy or structure.has_vacancies:
             #~ raise NotImplementedError("XSF for alloys or systems with "
             #~ "vacancies not implemented.")
             for cell_vector in cells[idx]:

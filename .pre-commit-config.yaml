@@ -188,6 +188,7 @@
         aiida/common/links.py|
         aiida/common/orbital/__init__.py|
         aiida/common/orbital/realhydrogen.py|
+        aiida/common/setup.py|
         aiida/common/test_extendeddicts.py|
         aiida/common/test_logging.py|
         aiida/control/tests/test_postgres.py|

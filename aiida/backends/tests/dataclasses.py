@@ -1827,7 +1827,7 @@ class TestStructureData(AiidaTestCase):
         a.append_atom(position=(0.5, 0.5, 0.5), symbols=['Ba'])
         a.append_atom(position=(1., 1., 1.), symbols=['Ti'])
 
-        c = a._get_cif()
+        c = a.get_cif()
         lines = c._prepare_cif()[0].decode('utf-8').split('\n')
         non_comments = []
         for line in lines:
@@ -3080,9 +3080,9 @@ class TestTrajectoryData(AiidaTestCase):
             stepids=stepids, cells=cells, symbols=symbols, positions=positions, times=times, velocities=velocities)
 
         from_step = n.get_step_structure(1)
-        from_get_aiida_structure = n._get_aiida_structure(index=1)
+        from_get_structure = n.get_structure(index=1)
 
-        for struc in [from_step, from_get_aiida_structure]:
+        for struc in [from_step, from_get_structure]:
             self.assertEqual(len(struc.sites), 3)  # 3 sites
             self.assertAlmostEqual(abs(numpy.array(struc.cell) - cells[1]).sum(), 0)
             newpos = numpy.array([s.position for s in struc.sites])

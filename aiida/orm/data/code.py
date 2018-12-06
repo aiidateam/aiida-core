@@ -59,6 +59,7 @@ class Code(Data):
         """
         self.set_extra(self.HIDDEN_KEY, False)
 
+    @property
     def is_hidden(self):
         """
         Determines whether the Code is hidden or not

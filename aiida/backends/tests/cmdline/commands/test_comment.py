@@ -24,7 +24,7 @@ class TestVerdiUserCommand(AiidaTestCase):
 
     def setUp(self):
         self.cli_runner = CliRunner()
-        self.node = orm.Node().store()
+        self.node = orm.Data().store()
 
     def test_comment_show_simple(self):
         """Test simply calling the show command (without data to show)."""

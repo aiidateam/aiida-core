@@ -70,6 +70,9 @@ class TestProcessNamespace(AiidaTestCase):
 
 
 class ProcessStackTest(work.Process):
+
+    _calc_class = WorkflowNode
+
     @override
     def run(self):
         pass
@@ -102,7 +105,7 @@ class TestProcess(AiidaTestCase):
 
     def test_inputs(self):
         with self.assertRaises(TypeError):
-            work.launch.run(test_utils.BadOutput)
+            work.launch.run(work.test_utils.BadOutput)
 
     def test_input_link_creation(self):
         dummy_inputs = ["1", "2", "3", "4"]

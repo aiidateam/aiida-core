@@ -290,8 +290,8 @@ def set_default_profile(profile, force_rewrite=False):
     if current_default_profile is None or force_rewrite:
         confs['default_profile'] = profile
 
-    backup_config()
-    store_config(confs)
+        backup_config()
+        store_config(confs)
 
 
 def get_default_profile():
@@ -544,7 +544,7 @@ def create_configuration(profile='default'):
     # to modify it.
     updating_existing_prof = False
     if this_existing_confs:
-        print("The following configuration found corresponding to " "profile {}.".format(profile))
+        print("The following configuration found corresponding to profile {}.".format(profile))
         for k, v in this_existing_confs.items():
             if k in key_explanation:
                 print("{}: {}".format(key_explanation.get(k), v))

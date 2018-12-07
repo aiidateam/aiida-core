@@ -4,16 +4,17 @@
 Installation
 ************
 
-This section of the manual will guide you through the process of installing AiiDA on your system.
-AiiDA has been tested to run on the following platforms:
+AiiDA is designed to run on `Unix <https://en.wikipedia.org/wiki/Unix>`_ operating systems,
+and has been tested on the following platforms:
 
 * Ubuntu 14.04, 16.04
 * Mac OS X
 
-We expect that AiiDA should also run on these other platforms:
+We expect that AiiDA should also run on:
 
 * Older and newer Ubuntu versions
 * Other Linux distributions
+* Windows subsystem for Linux
 
 The installation procedure can generally be split into four separate steps:
 
@@ -31,6 +32,8 @@ Install prerequisites
 The installation procedure itself requires certain software, which therefore will have to be installed first.
 The following software is required to continue with the installation:
 
+* `bash <https://en.wikipedia.org/wiki/Bash_(Unix_shell)>`_ or
+  `zsh <https://en.wikipedia.org/wiki/Z_shell>`_ (The shell)
 * `git`_ (To download the ``aiida-core`` repository)
 * `python-2.7.x`_ (The programming language used for AiiDA)
 * `python-pip`_ (Python package manager)
@@ -197,16 +200,24 @@ Configure AiiDA
 
 Verdi tab-completion
 --------------------
-The ``verdi`` command line interface has many commands and options.
-To simplify its usage, there is a way to enable tab-completion for it in your shell.
-To do so, simply add the following line to the activation script of your virtual environment (or to your shell config, e.g. ``.bashrc``)::
+The ``verdi`` command line interface has many commands and options,
+which can be tab-completed to simplify your life.
+Enable tab-completion with the following shell command::
 
     eval "$(_VERDI_COMPLETE=source verdi)"
 
-For the changes to apply to your current shell, make sure to source the activation script or ``.bashrc`` (depending the approach you chose).
+Place this command in your startup file, i.e. one of
+
+* the startup file of your shell (``.bashrc``, ``.zsh``, ...), if aiida is installed system-wide
+* the `activate script <https://virtualenv.pypa.io/en/latest/userguide/#activate-script>`_ of your virtual environment
+* a `startup file <https://conda.io/docs/user-guide/tasks/manage-environments.html#saving-environment-variables>`_ for your conda environment
+
+In order to enable tab completion in your current shell, 
+make sure to source the startup file once.
 
 .. note::
-    This line replaces the ``eval "$(verdi completioncommand)"`` line that was used in ``aiida-core<1.0.0``.
+    This line replaces the ``eval "$(verdi completioncommand)"`` line that was used in ``aiida-core<1.0.0``. While this continues to work, support for the old line may be dropped in the future.
+
 
 Adding AiiDA to the PATH
 ------------------------

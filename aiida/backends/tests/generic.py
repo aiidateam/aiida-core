@@ -136,12 +136,12 @@ class TestGroupHashing(AiidaTestCase):
         from aiida.orm.groups import Group
         from aiida.orm.querybuilder import QueryBuilder
 
-        g = Group(name='test_group')
+        g = Group(label='test_group')
         g.store()
 
         # Search for the UUID of the stored group
         qb = QueryBuilder()
-        qb.append(Group, project=['uuid'], filters={'name': {'==': 'test_group'}})
+        qb.append(Group, project=['uuid'], filters={'label': {'==': 'test_group'}})
         [uuid] = qb.first()
 
         # Look the node with the previously returned UUID
@@ -163,7 +163,7 @@ class TestGroups(AiidaTestCase):
         n = orm.Data()
         stored_n = orm.Data().store()
 
-        g = orm.Group(name='testgroup')
+        g = orm.Group(label='testgroup')
         self.addCleanup(lambda: orm.Group.objects.delete(g.id))
 
         with self.assertRaises(ModificationNotAllowed):
@@ -195,11 +195,11 @@ class TestGroups(AiidaTestCase):
 
         n = orm.Data().store()
 
-        g1 = Group(name='testgroupdescription1', description="g1").store()
+        g1 = Group(label='testgroupdescription1', description="g1").store()
         self.addCleanup(lambda: orm.Group.objects.delete(g1.id))
         g1.add_nodes(n)
 
-        g2 = Group(name='testgroupdescription2', description="g2")
+        g2 = Group(label='testgroupdescription2', description="g2")
         self.addCleanup(lambda: orm.Group.objects.delete(g2.id))
 
         # Preliminary checks
@@ -237,7 +237,7 @@ class TestGroups(AiidaTestCase):
         n7 = orm.Data().store()
         n8 = orm.Data().store()
 
-        g = orm.Group(name='test_adding_nodes').store()
+        g = orm.Group(label='test_adding_nodes').store()
         self.addCleanup(lambda: orm.Group.objects.delete(g.pk))
         g.store()
         # Single node
@@ -274,7 +274,7 @@ class TestGroups(AiidaTestCase):
         n8 = orm.Data().store()
         n_out = orm.Data().store()
 
-        g = Group(name='test_remove_nodes').store()
+        g = Group(label='test_remove_nodes').store()
         self.addCleanup(lambda: orm.Group.objects.delete(g.id))
 
         # Add initial nodes
@@ -309,13 +309,13 @@ class TestGroups(AiidaTestCase):
         self.assertEquals(set(), set([_.pk for _ in g.nodes]))
 
     def test_name_desc(self):
-        g = orm.Group(name='testgroup2', description='some desc')
-        self.assertEquals(g.name, 'testgroup2')
+        g = orm.Group(label='testgroup2', description='some desc')
+        self.assertEquals(g.label, 'testgroup2')
         self.assertEquals(g.description, 'some desc')
         self.assertTrue(g.is_user_defined)
         g.store()
         # Same checks after storing
-        self.assertEquals(g.name, 'testgroup2')
+        self.assertEquals(g.label, 'testgroup2')
         self.assertTrue(g.is_user_defined)
         self.assertEquals(g.description, 'some desc')
 
@@ -327,9 +327,9 @@ class TestGroups(AiidaTestCase):
 
         n = orm.Data().store()
 
-        g = orm.Group(name='testgroup3', description='some other desc').store()
+        g = orm.Group(label='testgroup3', description='some other desc').store()
 
-        gcopy = orm.Group.get(name='testgroup3')
+        gcopy = orm.Group.get(label='testgroup3')
         self.assertEquals(g.uuid, gcopy.uuid)
 
         g.add_nodes(n)
@@ -339,7 +339,7 @@ class TestGroups(AiidaTestCase):
 
         with self.assertRaises(NotExistent):
             # The group does not exist anymore
-            orm.Group.get(name='testgroup3')
+            orm.Group.get(label='testgroup3')
 
     def test_rename(self):
         """
@@ -347,24 +347,24 @@ class TestGroups(AiidaTestCase):
         """
         from aiida.orm.groups import Group
 
-        name_original = 'groupie'
-        name_changed = 'nogroupie'
+        label_original = 'groupie'
+        label_changed = 'nogroupie'
 
-        g = Group(name=name_original, description='I will be renamed')
+        g = Group(label=label_original, description='I will be renamed')
 
         # Check name changes work before storing
-        self.assertEquals(g.name, name_original)
-        g.name = name_changed
-        self.assertEquals(g.name, name_changed)
+        self.assertEquals(g.label, label_original)
+        g.label = label_changed
+        self.assertEquals(g.label, label_changed)
 
         # Revert the name to its original and store it
-        g.name = name_original
+        g.label = label_original
         g.store()
 
         # Check name changes work after storing
-        self.assertEquals(g.name, name_original)
-        g.name = name_changed
-        self.assertEquals(g.name, name_changed)
+        self.assertEquals(g.label, label_original)
+        g.label = label_changed
+        self.assertEquals(g.label, label_changed)
 
 
 class TestBool(AiidaTestCase):

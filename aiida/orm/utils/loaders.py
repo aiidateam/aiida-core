@@ -516,7 +516,7 @@ class GroupEntityLoader(OrmEntityLoader):
         :raises NotExistent: if the orm base class does not support a LABEL like identifier
         """
         qb = QueryBuilder()
-        qb.append(cls=classes, tag='group', project=['*'], filters={'name': {'==': identifier}})
+        qb.append(cls=classes, tag='group', project=['*'], filters={'label': {'==': identifier}})
 
         return qb
 

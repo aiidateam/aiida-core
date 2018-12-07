@@ -66,9 +66,9 @@ class TestGroupsDjango(AiidaTestCase):
 
         default_user = backend.users.create("{}@aiida.net".format(self.id())).store()
 
-        g1 = backend.groups.create(name='testquery1', user=default_user).store()
+        g1 = backend.groups.create(label='testquery1', user=default_user).store()
         self.addCleanup(lambda: backend.groups.delete(g1.id))
-        g2 = backend.groups.create(name='testquery2', user=default_user).store()
+        g2 = backend.groups.create(label='testquery2', user=default_user).store()
         self.addCleanup(lambda: backend.groups.delete(g2.id))
 
         n1 = Data().store()
@@ -80,7 +80,7 @@ class TestGroupsDjango(AiidaTestCase):
         g2.add_nodes([n1, n3])
 
         newuser = backend.users.create(email='test@email.xx')
-        g3 = backend.groups.create(name='testquery3', user=newuser).store()
+        g3 = backend.groups.create(label='testquery3', user=newuser).store()
         self.addCleanup(lambda: backend.groups.delete(g3.id))
 
         # I should find it
@@ -126,33 +126,33 @@ class TestGroupsDjango(AiidaTestCase):
         """
         backend = self.backend
 
-        name_group_a = 'group_a'
-        name_group_c = 'group_c'
+        label_group_a = 'group_a'
+        label_group_c = 'group_c'
 
         default_user = backend.users.create("{}@aiida.net".format(self.id())).store()
 
-        group_a = backend.groups.create(name=name_group_a, description='I am the Original G', user=default_user).store()
+        group_a = backend.groups.create(label=label_group_a, description='I am the Original G', user=default_user).store()
         self.addCleanup(lambda: backend.groups.delete(group_a.id))
 
         # Before storing everything should be fine
-        group_b = backend.groups.create(name=name_group_a, description='They will try to rename me', user=default_user)
-        group_c = backend.groups.create(name=name_group_c, description='They will try to rename me', user=default_user)
+        group_b = backend.groups.create(label=label_group_a, description='They will try to rename me', user=default_user)
+        group_c = backend.groups.create(label=label_group_c, description='They will try to rename me', user=default_user)
 
         # Storing for duplicate group name should trigger UniquenessError
         with self.assertRaises(exceptions.IntegrityError):
             group_b.store()
 
         # Before storing everything should be fine
-        group_c.name = name_group_a
+        group_c.label = label_group_a
 
         # Reverting to unique name before storing
-        group_c.name = name_group_c
+        group_c.label = label_group_c
         group_c.store()
         self.addCleanup(lambda: backend.groups.delete(group_c.id))
 
         # After storing name change to existing should raise
         with self.assertRaises(exceptions.IntegrityError):
-            group_c.name = name_group_a
+            group_c.label = label_group_a
 
     def test_creation_from_dbgroup(self):
         backend = self.backend
@@ -161,7 +161,7 @@ class TestGroupsDjango(AiidaTestCase):
 
         default_user = backend.users.create("{}@aiida.net".format(self.id())).store()
 
-        g = backend.groups.create(name='testgroup_from_dbgroup', user=default_user).store()
+        g = backend.groups.create(label='testgroup_from_dbgroup', user=default_user).store()
         self.addCleanup(lambda: backend.groups.delete(g.id))
 
         g.store()
@@ -175,9 +175,7 @@ class TestGroupsDjango(AiidaTestCase):
 
 
 class TestDbExtrasDjango(AiidaTestCase):
-    """
-    Test DbAttributes.
-    """
+    """Test DbAttributes."""
 
     def test_replacement_1(self):
         from aiida.backends.djsite.db.models import DbExtra

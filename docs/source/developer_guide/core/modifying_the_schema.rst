@@ -14,8 +14,7 @@ If you need to change the database schema follow these steps:
 
    This will create the migration file in ``aiida/backends/djsite/db/migrations`` whose
    name begins with a number followed by some description.  If the description
-   is not appropriate then change to it to something better but retain the
-   number.
+   is not appropriate then change it to something better but retain the number.
 
 3. Open the generated file and make the following changes::
 
@@ -31,18 +30,93 @@ If you need to change the database schema follow these steps:
         upgrade_schema_version(REVISION, DOWN_REVISION)
       ]
 
+4. The migration file now contains some migrations steps that were generated automatically.
+   Please make sure that they are correct. Also, if you want to add some changes that affect
+   the content of the database -- you should do it ''manually'' by adding some sql commands
+   that will run directly on your database::
+
+     forward_sql = [
+          """UPDATE db_dbgroup SET type_string = 'auto.import' WHERE type_string = 'aiida.import';""",
+          """UPDATE db_dbgroup SET type_string = 'auto.run' WHERE type_string = 'autogroup.run';""",
+          ]
+
+     reverse_sql = [
+          """UPDATE db_dbgroup SET type_string = 'aiida.import' WHERE type_string = 'auto.import';""",
+          """UPDATE db_dbgroup SET type_string = 'autogroup.run' WHERE type_string = 'auto.run';""",
+           
+          ]
+     ...
+
+     operations = [
+        ...
+        migrations.RunSQL(
+            sql='\n'.join(forward_sql),
+            reverse_sql='\n'.join(reverse_sql)),
+        upgrade_schema_version(REVISION, DOWN_REVISION),
+        ...
+     ]
+
+
+   As you can see here, you should not only provide the sql commands to upgrade your database,
+   but also the commands to revert these changes in case you want to perform a downgrade (see: 
+   ``sql=forward_sql``, ``reverse_sql=reverse_sql``)
+
 5. Change the ``LATEST_MIGRATION`` variable in
    ``aiida/backends/djsite/db/migrations/__init__.py`` to the name of your migration
    file::
 
      LATEST_MIGRATION = '0003_my_db_update'
 
-   This let's AiiDA get the version number from your migration and make sure the
+   This allows AiiDA to get the version number from your migration and make sure the
    database and the code are in sync.
+
 6. Migrate your database to the new version, (again from ``aiida/backends/djsite``),
    run::
 
      python manage.py migrate
+
+   In case you want to (and, most probably, you should) test the downgrade operation, please
+   check the list of available versions of the database::
+
+     python manage.py showmigrations db
+
+   The output will look as follows::
+     
+     db
+      [X] 0001_initial
+      [X] 0002_db_state_change
+      [X] 0003_add_link_type
+      [X] 0004_add_daemon_and_uuid_indices
+      [X] 0005_add_cmtime_indices
+      [X] 0006_delete_dbpath
+      [X] 0007_update_linktypes
+      [X] 0008_code_hidden_to_extra
+      [X] 0009_base_data_plugin_type_string
+      [X] 0010_process_type
+      [X] 0011_delete_kombu_tables
+      [X] 0012_drop_dblock
+      [X] 0013_django_1_8
+      [X] 0014_add_node_uuid_unique_constraint
+      [X] 0015_invalidating_node_hash
+      [X] 0016_code_sub_class_of_data
+      [X] 0017_drop_dbcalcstate
+      [X] 0018_django_1_11
+
+   Chose the previous migration step and migrate to it::
+
+     python manage.py migrate db 0017_drop_dbcalcstate
+
+   Check that both: upgrade and downgrade changes are succesfull and if yes, go
+   to the next step.
+
+7. Prepare tests for your migrations. An example of a test can be found here:
+   ``aiida_core/aiida/backends/djsite/db/subtests/migrations.py``
+   
+.. note:: Such a test can only be applied to the migration of the database
+  content. For example, you can **not** test modifications of the database
+  column names.
+
+
 
 
 SQLAlchemy
@@ -53,19 +127,62 @@ If you need to change the database schema follow these steps:
 
 1. Make all the necessary changes to the model than you would like to modify
    located in the ``aiida/backends/sqlalchemy/models`` directory.
+
 2. Create new migration file by going to ``aiida/backends/sqlalchemy`` and
    executing::
 
-    ./alembic_manage.py revision "This is a new revision"
+    ./alembic_manage.py revision "This is the description for the next revision"
 
    This will create a new migration file in ``aiida/backends/sqlalchemy/migrations/versions``
    whose names begins with an automatically generated hash code and the
-   provided message for this new migration. Of course you can change the
-   migration message to a message of your preference. Please look at the
-   generatedvfile and ensure that migration is correct. If you are in doubt
-   about the operations mentioned in the file and its content, you can have a
+   provided message for this new migration. Modify the migration message
+   for your convinience.
+   
+3. Have a look at the generated migration file and ensure that migration
+   is correct. The file should contain automatically generated hashes that
+   point to the previous and to the current revision::
+
+     revision = 'e72ad251bcdb'
+     down_revision = 'b8b23ddefad4'
+
+   Also ``upgrade()`` and ``downgrade()`` function defenitions should be
+   present in the file::
+     
+     def upgrade():
+        # some upgrage operations
+     def downgrade():
+        # some downgrade operations
+     
+   If you want to add some changes that affect the content of the database --
+   you should do it ''manually'' by adding some sql commands that will run
+   directly on your database. Learn the following example and adapt it for your
+   needs::
+
+     from sqlalchemy.sql import text
+
+     forward_sql = [
+         """UPDATE db_dbgroup SET type_string = 'auto.import' WHERE type_string = 'aiida.import';""",
+         """UPDATE db_dbgroup SET type_string = 'auto.run' WHERE type_string = 'autogroup.run';""",
+         ]
+
+     reverse_sql = [
+         """UPDATE db_dbgroup SET type_string = 'aiida.import' WHERE type_string = 'auto.import';""",
+         """UPDATE db_dbgroup SET type_string = 'autogroup.run' WHERE type_string = 'auto.run';""",
+         ]
+
+     def upgrade():
+         conn = op.get_bind()
+         statement = text('\n'.join(forward_sql))
+         conn.execute(statement)
+     def downgrade():
+         conn = op.get_bind()
+         statement = text('\n'.join(reverse_sql))
+         conn.execute(statement)
+ 
+   If you want to learn more about the migration operations, you can have a
    look at the Alembic documentation.
-3. Your database will be automatically migrated to the latest revision as soon
+
+4. Your database will be automatically migrated to the latest revision as soon
    as you run your first verdi command. You can also migrate it manually with
    the help of the alembic_manage.py script as you can see below.
 
@@ -118,5 +235,4 @@ would like to modify). Then, execute the following commands::
     CREATE TABLE alembic_version (version_num character varying(32) not null, PRIMARY KEY(version_num));
     INSERT INTO alembic_version VALUES ('e15ef2630a1b');
     GRANT ALL ON alembic_version TO aiida;
-
 

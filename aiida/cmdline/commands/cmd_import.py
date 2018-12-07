@@ -15,6 +15,7 @@ import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params.options import MultipleValueOption
+from aiida.cmdline.params.types import GroupParamType
 from aiida.cmdline.utils import decorators, echo
 from aiida.common import exceptions
 
@@ -28,8 +29,14 @@ from aiida.common import exceptions
     cls=MultipleValueOption,
     help="Discover all URL targets pointing to files with the .aiida extension for these HTTP addresses. "
     "Automatically discovered archive URLs will be downloadeded and added to ARCHIVES for importing")
+@click.option(
+    '-G',
+    '--group',
+    type=GroupParamType(create_if_not_exist=True),
+    help='Specify group to which all the import nodes will be added. If such a group does not exist, it will be'
+    ' created automatically.')
 @decorators.with_dbenv()
-def cmd_import(archives, webpages):
+def cmd_import(archives, webpages, group):
     """Import one or multiple exported AiiDA archives
 
     The ARCHIVES can be specified by their relative or absolute file path, or their HTTP URL.
@@ -71,7 +78,7 @@ def cmd_import(archives, webpages):
         echo.echo_info('importing archive {}'.format(archive))
 
         try:
-            import_data(archive)
+            import_data(archive, group)
         except exceptions.IncompatibleArchiveVersionError as exception:
             echo.echo_warning('{} cannot be imported: {}'.format(archive, exception))
             echo.echo_warning('run `verdi export migrate {}` to update it'.format(archive))
@@ -98,7 +105,7 @@ def cmd_import(archives, webpages):
             echo.echo_success('archive downloaded, proceeding with import')
 
             try:
-                import_data(temp_folder.get_abs_path(temp_file))
+                import_data(temp_folder.get_abs_path(temp_file), group)
             except exceptions.IncompatibleArchiveVersionError as exception:
                 echo.echo_warning('{} cannot be imported: {}'.format(archive, exception))
                 echo.echo_warning('download the archive file and run `verdi export migrate` to update it')

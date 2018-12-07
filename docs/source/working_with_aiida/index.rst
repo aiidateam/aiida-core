@@ -48,6 +48,15 @@ Data types
     ../datatypes/kpoints
     ../datatypes/functionality
 
+======
+Groups
+======
+
+.. toctree::
+    :maxdepth: 4
+
+    groups
+
 ==========
 Schedulers
 ==========

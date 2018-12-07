@@ -19,10 +19,12 @@ import re
 import six
 
 import aiida.orm.users
-from aiida.orm.data.singlefile import SinglefileData
 from aiida.common.utils import classproperty
+from aiida.orm.data.singlefile import SinglefileData
+from aiida.orm import GroupTypeString
 
-UPFGROUP_TYPE = 'data.upf.family'
+
+UPFGROUP_TYPE = GroupTypeString.UPFGROUP_TYPE.value
 
 _upfversion_regexp = re.compile(
     r"""
@@ -114,14 +116,14 @@ def get_pseudos_dict(structure, family_name):
     return pseudos
 
 
-def upload_upf_family(folder, group_name, group_description,
+def upload_upf_family(folder, group_label, group_description,
                       stop_if_existing=True):
     """
     Upload a set of UPF files in a given group.
 
     :param folder: a path containing all UPF files to be added.
         Only files ending in .UPF (case-insensitive) are considered.
-    :param group_name: the name of the group to create. If it exists and is
+    :param group_label: the name of the group to create. If it exists and is
         non-empty, a UniquenessError is raised.
     :param group_description: a string to be set as the group description.
         Overwrites previous descriptions, if the group was existing.
@@ -148,13 +150,13 @@ def upload_upf_family(folder, group_name, group_description,
     nfiles = len(files)
 
     automatic_user = orm.User.objects.get_default()
-    group, group_created = orm.Group.objects.get_or_create(name=group_name, type_string=UPFGROUP_TYPE,
+    group, group_created = orm.Group.objects.get_or_create(label=group_label, type_string=UPFGROUP_TYPE,
                                                            user=automatic_user)
 
     if group.user.email != automatic_user.email:
-        raise UniquenessError("There is already a UpfFamily group with name {}"
+        raise UniquenessError("There is already a UpfFamily group with label {}"
                               ", but it belongs to user {}, therefore you "
-                              "cannot modify it".format(group_name,
+                              "cannot modify it".format(group_label,
                                                         group.user.email))
 
     # Always update description, even if the group already existed
@@ -418,13 +420,14 @@ class UpfData(SinglefileData):
         self._set_attr('md5', md5sum)
 
     def get_upf_family_names(self):
-        """
-        Get the list of all upf family names to which the pseudo belongs
-        """
+        """Get the list of all upf family names to which the pseudo belongs."""
         from aiida.orm import Group
+        from aiida.orm import QueryBuilder
 
-        return [_.name for _ in Group.query(nodes=self,
-                                            type_string=self.upffamily_type_string)]
+        query = QueryBuilder()
+        query.append(Group, filters={'type':{'==':self.upffamily_type_string}}, tag='group', project='name')
+        query.append(UpfData, filters={'id': {'==':self.id}}, with_group='group')
+        return [ _[0] for _ in query.all()]
 
     @property
     def element(self):
@@ -478,13 +481,13 @@ class UpfData(SinglefileData):
                 attr_md5, md5))
 
     @classmethod
-    def get_upf_group(cls, group_name):
+    def get_upf_group(cls, group_label):
         """
         Return the UpfFamily group with the given name.
         """
         from aiida.orm import Group
 
-        return Group.get(name=group_name, type_string=cls.upffamily_type_string)
+        return Group.get(label=group_label, type_string=cls.upffamily_type_string)
 
     @classmethod
     def get_upf_groups(cls, filter_elements=None, user=None):
@@ -500,25 +503,23 @@ class UpfData(SinglefileData):
                for the username (that is, the user email).
         """
         from aiida.orm import Group
+        from aiida.orm import QueryBuilder
+        from aiida.orm import User
 
-        group_query_params = {"type_string": cls.upffamily_type_string}
+        query = QueryBuilder()
+        filters = {'type': {'==': cls.upffamily_type_string}}
 
-        if user is not None:
-            group_query_params['user'] = user
+        query.append(Group, filters=filters, tag='group', project='*')
+
+        if user:
+            query.append(User, filters={'email':{'==':user}}, with_group='group')
 
         if isinstance(filter_elements, six.string_types):
             filter_elements = [filter_elements]
 
         if filter_elements is not None:
-            actual_filter_elements = {_.capitalize() for _ in filter_elements}
+            actual_filter_elements = [_ for _ in filter_elements]
+            query.append(UpfData, filters={'attributes.element':{'in': filter_elements}}, with_group='group')
 
-            group_query_params['node_attributes'] = {
-                'element': actual_filter_elements}
-
-        all_upf_groups = Group.query(**group_query_params)
-
-        groups = [(g.name, g) for g in all_upf_groups]
-        # Sort by name
-        groups.sort()
-        # Return the groups, without name
-        return [_[1] for _ in groups]
+        query.order_by({Group:{'id':'asc'}}) 
+        return [_[0] for _ in query.all()]

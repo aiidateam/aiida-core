@@ -28,7 +28,7 @@ def upf():
 
 @upf.command('uploadfamily')
 @click.argument('folder', type=click.Path(exists=True, file_okay=False, resolve_path=True))
-@click.argument('group_name', type=click.STRING)
+@click.argument('group_label', type=click.STRING)
 @click.argument('group_description', type=click.STRING)
 @click.option(
     '--stop-if-existing',
@@ -36,7 +36,7 @@ def upf():
     default=False,
     help='Interrupt pseudos import if a pseudo was already present in the AiiDA database')
 @decorators.with_dbenv()
-def upf_uploadfamily(folder, group_name, group_description, stop_if_existing):
+def upf_uploadfamily(folder, group_label, group_description, stop_if_existing):
     """
     Upload a new pseudopotential family.
 
@@ -45,7 +45,7 @@ def upf_uploadfamily(folder, group_name, group_description, stop_if_existing):
     Call without parameters to get some help.
     """
     import aiida.orm.data.upf as upf_
-    files_found, files_uploaded = upf_.upload_upf_family(folder, group_name, group_description, stop_if_existing)
+    files_found, files_uploaded = upf_.upload_upf_family(folder, group_label, group_description, stop_if_existing)
     echo.echo_success("UPF files found: {}. New files uploaded: {}".format(files_found, files_uploaded))
 
 
@@ -75,18 +75,18 @@ def upf_listfamilies(elements, with_description):
         orm.Group,
         with_node='upfdata',
         tag='group',
-        project=["name", "description"],
-        filters={"type": {
+        project=["label", "description"],
+        filters={"type_string": {
             '==': UPFGROUP_TYPE
         }})
 
     query.distinct()
     if query.count() > 0:
         for res in query.dict():
-            group_name = res.get("group").get("name")
+            group_label = res.get("group").get("label")
             group_desc = res.get("group").get("description")
             query = orm.QueryBuilder()
-            query.append(orm.Group, tag='thisgroup', filters={"name": {'like': group_name}})
+            query.append(orm.Group, tag='thisgroup', filters={"label": {'like': group_label}})
             query.append(UpfData, project=["id"], with_group='thisgroup')
 
             if with_description:
@@ -94,7 +94,7 @@ def upf_listfamilies(elements, with_description):
             else:
                 description_string = ""
 
-            echo.echo_success("* {} [{} pseudos]{}".format(group_name, query.count(), description_string))
+            echo.echo_success("* {} [{} pseudos]{}".format(group_label, query.count(), description_string))
 
     else:
         echo.echo_warning("No valid UPF pseudopotential family found.")

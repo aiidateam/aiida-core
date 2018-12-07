@@ -132,9 +132,9 @@ class DbGroup(Base):
     id = Column(Integer, primary_key=True)
 
     uuid = Column(UUID(as_uuid=True), default=uuid_func)
-    name = Column(String(255), index=True)
+    label = Column(String(255), index=True)
 
-    type = Column(String(255), default="", index=True)
+    type_string = Column(String(255), default="", index=True)
 
     time = Column(DateTime(timezone=True), default=timezone.now)
     description = Column(Text, nullable=True)
@@ -144,13 +144,10 @@ class DbGroup(Base):
 
     dbnodes = relationship('DbNode', secondary=table_groups_nodes, backref="dbgroups", lazy='dynamic')
 
-    __table_args__ = (UniqueConstraint('name', 'type'),)
+    __table_args__ = (UniqueConstraint('label', 'type_string'),)
 
     def __str__(self):
-        if self.type:
-            return '<DbGroup [type: {}] "{}">'.format(self.type, self.name)
-
-        return '<DbGroup [user-defined] "{}">'.format(self.name)
+        return '<DbGroup [type: {}] "{}">'.format(self.type_string, self.label)
 
 
 class DbNode(Base):

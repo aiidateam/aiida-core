@@ -13,7 +13,7 @@ Remote computer requirements
 Requirements for a computer are:
 
 * It must run a Unix-like operating system
-* The default shell must be ``bash``
+* It must have ``bash`` installed (but ``bash`` does not need to be the default shell)
 * It should have a batch scheduler installed (see :doc:`here <../scheduler/index>`
   for a list of supported batch schedulers)
 * It must be accessible from the machine that runs AiiDA using one of the 
@@ -69,7 +69,7 @@ should show you a prompt without errors (possibly with a message saying
 
 .. note:: If the ``ssh`` command works, but the ``sftp`` command does not
   (e.g. it just prints ``Connection closed``), a possible reason can be
-  that there is a line in your ``~/.bashrc`` that either produces an output, 
+  that there is a line in your ``~/.bashrc`` that either produces text output, 
   or an error. Remove/comment it until no output or error is produced: this
   should make ``sftp`` working again.
 

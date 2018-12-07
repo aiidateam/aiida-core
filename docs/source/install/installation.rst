@@ -199,13 +199,13 @@ Verdi tab-completion
 --------------------
 The ``verdi`` command line interface has many commands and options,
 which can be tab-completed to simplify your life.
-Enable tab-completion with the following bash command::
+Enable tab-completion with the following shell command::
 
     eval "$(_VERDI_COMPLETE=source verdi)"
 
 Place this command in your startup file, i.e. one of
 
-* the ``.bashrc``, if aiida is installed system-wide
+* the startup file of your shell (``.bashrc``, ``.zsh``, ...), if aiida is installed system-wide
 * the `activate script <https://virtualenv.pypa.io/en/latest/userguide/#activate-script>`_ of your virtual environment
 * a `startup file <https://conda.io/docs/user-guide/tasks/manage-environments.html#saving-environment-variables>`_ for your conda environment
 

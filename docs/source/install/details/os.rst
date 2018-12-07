@@ -3,8 +3,13 @@
 Operating Systems
 =================
 
-This page provides some installation instructions for installing the prerequisite software necessary to run AiiDA.
-Note that we do not officially support all platforms and cannot therefore provide instructions for all possible operating systems.
+AiiDA is designed to run on `Unix <https://en.wikipedia.org/wiki/Unix>`_ operating systems, such as Ubuntu, MacOS (and Windows subsystem for Linux).
+
+Interacting with AiiDA requires a shell. We currently support
+`bash <https://en.wikipedia.org/wiki/Bash_(Unix_shell)>`_ and
+`Zsh <https://en.wikipedia.org/wiki/Z_shell>`_
+
+See below for specific installation instructions for a selection of operating systems.
 
 
 Ubuntu
@@ -37,7 +42,7 @@ If you run into trouble, please refer to the RabbitMQ :ref:`troubleshooting sect
 Mac OS X
 --------
 
-For Mac OS it is adviced to use the `Homebrew`_ package manager.
+For Mac OS we recommend using the `Homebrew`_ package manager.
 If you have not installed Homebrew yet, you can do so with the following command:
 
 .. code-block:: bash

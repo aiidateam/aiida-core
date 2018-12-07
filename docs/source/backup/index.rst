@@ -224,9 +224,10 @@ where PROFILENAME is the name of the profile you want to use (if you don't speci
   
   You should put this line into the actions performed at start-up (under gnome you 
   can access them by typing ``gnome-session-properties`` in a terminal), so that the 
-  remote directory is mounted automatically after a reboot (but do not put it in 
-  your ``.bashrc`` file otherwise each time you open a new terminal, your 
-  computer will complain that the mount point is not empty...). 
+  remote directory is mounted automatically after a reboot.
+  Do **not** not put it in your shell's startup file (e.g. ``.bashrc``) -
+  otherwise each time you open a new terminal, your computer will complain that
+  the mount point is not empty... 
 
 
 A template backup configuration file (``backup_info.json.tmpl``) will be copied

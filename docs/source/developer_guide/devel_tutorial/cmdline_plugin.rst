@@ -159,8 +159,8 @@ Example test in ``test_float_cmd.py``::
 
         BACKEND = os.environ.get('TEST_BACKEND')
         # load the backend to be tested from the environment variable
-        # on bash, simply prepend the test command with TEST_BACKEND='django' or TEST_BACKEND='sqlalchemy'
-        # or set the TEST_BACKEND in your CI configuration
+        # in you shell, simply prepend the test command with TEST_BACKEND='django' or TEST_BACKEND='sqlalchemy'
+        # or set the TEST_BACKEND variable in your CI configuration
 
       def setUp(self):
          from aiida.orm import DataFactory

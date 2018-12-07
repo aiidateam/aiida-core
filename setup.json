@@ -197,6 +197,8 @@
       "tcod = aiida.tools.dbexporters.tcod"
     ],
     "aiida.tests": [],
+    "aiida.tools.calculations": [
+    ],
     "aiida.tools.dbimporters": [
       "cod = aiida.tools.dbimporters.plugins.cod:CodDbImporter",
       "icsd = aiida.tools.dbimporters.plugins.icsd:IcsdDbImporter",

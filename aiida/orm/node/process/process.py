@@ -44,6 +44,13 @@ class ProcessNode(Sealable, Node):
     # Specific sub classes should be marked as cacheable when appropriate
     _cacheable = False
 
+    def __str__(self):
+        base = super(ProcessNode, self).__str__()
+        if self.process_type:
+            return '{} ({})'.format(base, self.process_type)
+
+        return '{}'.format(base)
+
     @classproperty
     def _updatable_attributes(cls):
         return super(ProcessNode, cls)._updatable_attributes + (

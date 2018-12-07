@@ -57,6 +57,40 @@ class CalcJobNode(CalculationNode):
     JOB_STATE_KEY = 'state'
     JOB_STATE_ATTRIBUTE_KEY = 'attributes.{}'.format(JOB_STATE_KEY)
 
+    # An optional entry point for a CalculationTools instance
+    _tools = None
+
+    @property
+    def tools(self):
+        """Return the calculation tools that are registered for the process type associated with this calculation.
+
+        If the entry point name stored in the `process_type` of the CalcJobNode has an accompanying entry point in the
+        `aiida.tools.calculations` entry point category, it will attempt to load the entry point and instantiate it
+        passing the node to the constructor. If the entry point does not exist, cannot be resolved or loaded, a warning
+        will be logged and the base CalculationTools class will be instantiated and returned.
+
+        :return: CalculationTools instance
+        """
+        from aiida.common.exceptions import MultipleEntryPointError, MissingEntryPointError, LoadingEntryPointError
+        from aiida.plugins.entry_point import is_valid_entry_point_string, get_entry_point_from_string, load_entry_point
+        from aiida.tools.calculations import CalculationTools
+
+        if self._tools is None:
+            entry_point_string = self.process_type
+
+            if is_valid_entry_point_string(entry_point_string):
+                entry_point = get_entry_point_from_string(entry_point_string)
+
+                try:
+                    tools_class = load_entry_point('aiida.tools.calculations', entry_point.name)
+                    self._tools = tools_class(self)
+                except (MultipleEntryPointError, MissingEntryPointError, LoadingEntryPointError) as exception:
+                    self._tools = CalculationTools(self)
+                    self.logger.warning('could not load the calculation tools entry point {}: {}'.format(
+                        entry_point.name, exception))
+
+        return self._tools
+
     def __dir__(self):
         """
         Allow to list all valid attributes, adding also the use_* methods

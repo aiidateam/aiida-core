@@ -3,13 +3,6 @@
 Operating Systems
 =================
 
-AiiDA is designed to run on `Unix <https://en.wikipedia.org/wiki/Unix>`_ operating systems, such as Ubuntu, MacOS (and Windows subsystem for Linux).
-
-Interacting with AiiDA requires a shell. We currently support
-`bash <https://en.wikipedia.org/wiki/Bash_(Unix_shell)>`_ and
-`Zsh <https://en.wikipedia.org/wiki/Z_shell>`_
-
-See below for specific installation instructions for a selection of operating systems.
 
 
 Ubuntu

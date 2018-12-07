@@ -13,11 +13,15 @@ Remote computer requirements
 Requirements for a computer are:
 
 * It must run a Unix-like operating system
-* It must have ``bash`` installed (but ``bash`` does not need to be the default shell)
+* It must have ``bash`` installed
 * It should have a batch scheduler installed (see :doc:`here <../scheduler/index>`
   for a list of supported batch schedulers)
 * It must be accessible from the machine that runs AiiDA using one of the 
   available transports (see below).
+
+.. note::
+    AiiDA will use ``bash`` on the remote computer, regardless of the default shell.
+    Please ensure that your remote ``bash`` configuration does not load a different shell.
   
 The first step is to choose the transport to connect to the computer. Typically,
 you will want to use the SSH transport, apart from a few special cases where

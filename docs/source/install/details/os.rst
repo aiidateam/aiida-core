@@ -104,7 +104,7 @@ Windows Subsystem for Linux (Ubuntu)
 The guide for Ubuntu above can be followed but there are a few things to note:
 
 #. The `windows native RabbitMQ <https://www.rabbitmq.com/install-windows.html>`_
-   should be installed and started as a service for WSL installation,
+   should be installed and started,
    since the version in WSL Ubuntu 18.04 does not work properly.
 
 #. Linux services under WSL are not started automatically.

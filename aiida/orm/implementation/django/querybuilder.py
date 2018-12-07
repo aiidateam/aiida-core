@@ -402,12 +402,14 @@ class DjangoQueryBuilder(BackendQueryBuilder):
         elif key in ('_metadata', 'transport_params') and res is not None:
             # Metadata and transport_params are stored as json strings in the DB:
             return json_loads(res)
-        elif isinstance(res, (self.Group, self.Node, self.Computer, self.User, self.AuthInfo)):
-            returnval = get_backend_entity(res, self._backend)  # pylint: disable=assignment-from-no-return
         elif isinstance(res, uuid.UUID):
             returnval = six.text_type(res)
         else:
-            returnval = res
+            try:
+                returnval = get_backend_entity(res, self._backend)  # pylint: disable=assignment-from-no-return
+            except TypeError:
+                returnval = res
+
         return returnval
 
     def yield_per(self, query, batch_size):

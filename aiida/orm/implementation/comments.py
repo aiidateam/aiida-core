@@ -87,15 +87,3 @@ class BackendCommentCollection(backends.BackendCollection[BackendComment]):
         :param comment: the id of the comment to delete
         """
         pass
-
-    @abc.abstractmethod
-    def get(self, comment):
-        """
-        Return a Comment given its id
-
-        :param comment: the id of the comment to retrieve
-        :return: the comment
-        :raise NotExistent: if the comment with the given id does not exist
-        :raise MultipleObjectsError: if the id cannot be uniquely resolved to a comment
-        """
-        pass

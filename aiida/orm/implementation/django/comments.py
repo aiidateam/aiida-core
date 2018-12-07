@@ -112,27 +112,8 @@ class DjangoCommentCollection(BackendCommentCollection):
         """
         # pylint: disable=no-name-in-module,import-error
         from django.core.exceptions import ObjectDoesNotExist
+        assert comment is not None
         try:
             models.DbComment.objects.get(pk=comment).delete()
         except ObjectDoesNotExist:
             raise exceptions.NotExistent("Comment with id '{}' not found".format(comment))
-
-    def get(self, comment):
-        """
-        Return a Comment given its id
-
-        :param comment: the id of the comment to retrieve
-        :return: the comment
-        :raise NotExistent: if the comment with the given id does not exist
-        :raise MultipleObjectsError: if the id cannot be uniquely resolved to a comment
-        """
-        # pylint: disable=no-name-in-module,import-error
-        from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
-
-        try:
-            comment = models.DbComment.objects.get(id=comment)
-            return self.from_dbmodel(comment)
-        except ObjectDoesNotExist:
-            raise exceptions.NotExistent('Could not find Comment<{}>'.format(comment))
-        except MultipleObjectsReturned:
-            raise exceptions.MultipleObjectsError('Found multiple Comments for pk<{}>'.format(comment))

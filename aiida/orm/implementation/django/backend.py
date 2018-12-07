@@ -16,10 +16,10 @@ from aiida.backends.djsite.queries import DjangoQueryManager
 from aiida.orm.implementation.backends import Backend
 
 from . import authinfo
-from . import comment
+from . import comments
 from . import computer
 from . import groups
-from . import log
+from . import logs
 from . import querybuilder
 from . import users
 
@@ -30,10 +30,10 @@ class DjangoBackend(Backend):
 
     def __init__(self):
         self._authinfos = authinfo.DjangoAuthInfoCollection(self)
-        self._comments = comment.DjangoCommentCollection(self)
+        self._comments = comments.DjangoCommentCollection(self)
         self._computers = computer.DjangoComputerCollection(self)
         self._groups = groups.DjangoGroupCollection(self)
-        self._logs = log.DjangoLogCollection(self)
+        self._logs = logs.DjangoLogCollection(self)
         self._query_manager = DjangoQueryManager(self)
         self._users = users.DjangoUserCollection(self)
 

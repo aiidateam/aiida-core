@@ -23,9 +23,9 @@ from .rmq import *
 from .runners import *
 from .utils import *
 from .workchain import *
+from . import test_utils
 
-__all__ = (
-        exceptions.__all__ +
+__all__ = (exceptions.__all__ +
         exit_code.__all__ +
         futures.__all__ +
         job_processes.__all__ +
@@ -35,4 +35,4 @@ __all__ = (
         rmq.__all__ +
         runners.__all__ +
         utils.__all__ +
-        workchain.__all__)
+        workchain.__all__ + ('test_utils', ))

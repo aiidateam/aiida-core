@@ -41,11 +41,11 @@ class TestQueryBuilderSQLA(AiidaTestCase):
 class QueryBuilderLimitOffsetsTestSQLA(AiidaTestCase):
 
     def test_ordering_limits_offsets_of_results_for_SQLA(self):
-        from aiida.orm import Node
+        from aiida.orm import Node, Data
         from aiida.orm.querybuilder import QueryBuilder
         # Creating 10 nodes with an attribute that can be ordered
         for i in range(10):
-            n = Node()
+            n = Data()
             n._set_attr('foo', i)
             n.store()
         qb = QueryBuilder().append(

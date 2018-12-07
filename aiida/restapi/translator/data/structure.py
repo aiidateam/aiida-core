@@ -53,6 +53,11 @@ class StructureDataTranslator(DataTranslator):
         response = {}
         response["str_viz_info"] = {}
 
+        # This check is explicitly added here because sometimes
+        # None is passed here as an value for visformat.
+        if visformat is None:
+            visformat = 'xsf'
+
         if visformat in node.get_export_formats():
             try:
                 response["str_viz_info"]["data"] = node._exportcontent(visformat)[0].decode('utf-8')  # pylint: disable=protected-access
@@ -81,6 +86,11 @@ class StructureDataTranslator(DataTranslator):
         """
 
         response = {}
+
+        # This check is explicitly added here because sometimes
+        # None is passed here as an value for download_format.
+        if download_format is None:
+            download_format = 'cif'
 
         if download_format in node.get_export_formats():
             try:

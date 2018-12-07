@@ -17,7 +17,8 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.sqlalchemy.models.user import DbUser
 from aiida.backends.sqlalchemy.models.node import DbNode
 from aiida.common.links import LinkType
-from aiida.orm.node import Node
+from aiida.orm import Data
+from aiida.orm.node.process.calculation import CalculationNode
 import aiida
 
 from aiida.common.utils import get_new_uuid
@@ -41,12 +42,12 @@ class TestRelationshipsSQLA(AiidaTestCase):
         This test checks that the outputs_q, children_q relationship and the
         corresponding properties work as expected.
         """
-        n1 = Node().store()
-        n2 = Node().store()
-        n3 = Node().store()
+        n1 = Data().store()
+        n2 = CalculationNode().store()
+        n3 = Data().store()
 
         # Create a link between these 2 nodes
-        n2.add_incoming(n1, link_type=LinkType.CREATE, link_label="N1")
+        n2.add_incoming(n1, link_type=LinkType.INPUT_CALC, link_label="N1")
         n3.add_incoming(n2, link_type=LinkType.CREATE, link_label="N2")
 
         # Check that the result of outputs is a list
@@ -67,12 +68,12 @@ class TestRelationshipsSQLA(AiidaTestCase):
         This test checks that the inputs_q, parents_q relationship and the
         corresponding properties work as expected.
         """
-        n1 = Node().store()
-        n2 = Node().store()
-        n3 = Node().store()
+        n1 = Data().store()
+        n2 = CalculationNode().store()
+        n3 = Data().store()
 
         # Create a link between these 2 nodes
-        n2.add_incoming(n1, link_type=LinkType.CREATE, link_label="N1")
+        n2.add_incoming(n1, link_type=LinkType.INPUT_CALC, link_label="N1")
         n3.add_incoming(n2, link_type=LinkType.CREATE, link_label="N2")
 
         # Check that the result of outputs is a list

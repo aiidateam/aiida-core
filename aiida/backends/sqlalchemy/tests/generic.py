@@ -15,7 +15,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm.node import Node
+from aiida.orm import Node, Data
 from aiida.common import exceptions
 
 
@@ -83,10 +83,10 @@ class TestGroupsSqla(AiidaTestCase):
         g2 = backend.groups.create(name='testquery2', user=simple_user).store()
         self.addCleanup(lambda: backend.groups.delete(g2.id))
 
-        n1 = Node().store()
-        n2 = Node().store()
-        n3 = Node().store()
-        n4 = Node().store()
+        n1 = Data().store()
+        n2 = Data().store()
+        n3 = Data().store()
+        n4 = Data().store()
 
         g1.add_nodes([n1, n2])
         g2.add_nodes([n1, n3])
@@ -182,8 +182,8 @@ class TestDbExtrasSqla(AiidaTestCase):
      """
 
     def test_replacement_1(self):
-        n1 = Node().store()
-        n2 = Node().store()
+        n1 = Data().store()
+        n2 = Data().store()
 
         n1.set_extra("pippo", [1, 2, u'a'])
 

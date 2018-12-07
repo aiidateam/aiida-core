@@ -24,7 +24,9 @@ import six
 
 from aiida.backends.utils import validate_attribute_key
 from aiida.common.caching import get_use_cache
-from aiida.common.exceptions import InternalError, ModificationNotAllowed, UniquenessError, ValidationError, InvalidOperation
+from aiida.common.exceptions import (
+    InternalError, InvalidOperation, ModificationNotAllowed, 
+    StoringNotAllowed, UniquenessError, ValidationError)
 from aiida.common.folders import SandboxFolder
 from aiida.common.hashing import _HASH_EXTRA_KEY
 from aiida.common.lang import override
@@ -151,6 +153,12 @@ class AbstractNode(object):
 
     # Flag that determines whether the class can be cached.
     _cacheable = True
+
+    # Flag that says if the node is storable or not.
+    # By default, bare nodes (and also ProcessNodes) are not storable,
+    # all subclasses (WorkflowNode, CalculationNode, Data and their subclasses)
+    # are storable. This flag is checked in store()
+    _storable = False
 
     def get_desc(self):
         """
@@ -614,6 +622,10 @@ class AbstractNode(object):
 
         if not isinstance(source, AbstractNode):
             raise TypeError('the source should be a Node instance')
+
+        from aiida.orm.utils.links import validate_link
+        validate_link(source, self, link_type, link_label)
+
 
     def validate_outgoing(self, target, link_type, link_label):
         """
@@ -1802,7 +1814,12 @@ class AbstractNode(object):
         # TODO: This needs to be generalized, allowing for flexible methods
         # for storing data and its attributes.
 
-        # As a first thing, I check if the data is valid
+        # As a first thing, I check if the data is storable
+        if not self._storable:
+            raise StoringNotAllowed(
+                "You are not allowed to store a base Node or ProcessNode, you can "
+                "only store Data, WorkflowNode, CalculationNode or their subclasses")
+        # Second thing: check if it's valid
         self._validate()
 
         if self._to_be_stored:

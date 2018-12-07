@@ -1,76 +1,28 @@
 Sphinx cheatsheet
-+++++++++++++++++
+#################
 
-A brief overview of some of the main functions of Sphinx
-as used in the aiida documentation. View :ref:`this-page` to see
-how this page was formatted. This is only a brief outline for more
-please see `the Sphinx documentation <http://sphinx-doc.org/contents.html>`_
-
-
-Main Titles and Subtitles
--------------------------
-
-This is an example of a main title.
-
-subtitles are made like this
-============================
-
-This is an example of a subtitle.
-
-Formatting
-----------
-
-Basic Paragraph Formatting
-==========================
-
-Words can be written in *italics* or in **bold**. Text describing a specific
-``computer_thing`` can be formatted as well.
-
-
-Paragraph and Indentation
-=========================
-
-Much like in regular python, the indentation plays a strong role in the formatting.
-
-For example all of this sentence will
-appear on the same line.
-
-While this sentence will appear
- differently because there is an indent.
+A collection of some Sphinx features used in the aiida documentation.
 
 Terminal and Code Formatting
 ============================
 
 Something to be run in command line can be formatted like this::
 
- >> Some command
+  Some command
 
-As can be seen above, while snippets of python on code can be done like this::
 
- import module
- print('hello world')
+Code formatting, but now with python syntax highlighting::
+
+   import module
+   print('hello world')
 
 Notes
 =====
 .. note:: Notes can be added like this.
 
-Bullet Points and Lists
-=======================
-
-* Bullet points can be added
-* Just like this
-  * With sub-bullets like this
-
-#. While numerical bullets
-#. Can be added
-#. Like this
-
 
 Links, Code Display, Cross References
 -------------------------------------
-External Links
-==============
-Can be done like here for `AiiDA <www.aiida.net/>`_
 
 Code Download
 =============
@@ -82,7 +34,7 @@ Download: :download:`this example script <../devel_tutorial/sum_executable.py>`
 Code Display
 ============
 
-Can be done like this. This entire document can be seen unformated below using this method.
+Can be done like this. This entire document can be seen unformatted below using this method.
 
 .. literalinclude:: ../devel_tutorial/sum_executable.py
 
@@ -100,37 +52,26 @@ Cross Reference Docs
 
 Here is an example of a reference to the :ref:`structure_tutorial` which is on *another page*
 
-Here is an example of a reference to something on the same page, :ref:`self-reference`
+Here is an example of a :ref:`self-reference` to something on the same page
 
 .. note:: References within the same document need a reference label, see `.. _self-reference:`
-          used in this section for an example. *Hidden in formatted page, can only be seen in the
-          input text.*
+          used in this section for an example.
 
 Cross Reference Classes and Methods
 ===================================
 
-Any class can be referenced for example :py:class:`~aiida.orm.data.structure.StructureData` references the
-StructureData data class.
+Reference to the :py:class:`aiida.orm.data.structure.StructureData` class, showing the full path.
 
-Similarily any method can be referenced for example :py:meth:`~aiida.orm.data.structure.StructureData.append_atom`
-shows the StructureData class' append atom method.
+Reference to the :py:class:`~aiida.orm.data.structure.StructureData` class (with preceding tilde), showing only the class name.
 
+.. note:: Always point to the actual definition of a class, e.g. ``aiida.backends.querybuild.querybuilder_base.AbstractQueryBuilder``, **not** an alias like ``aiida.orm.QueryBuilder`` (or sphinx will complain).
 
-Table of Contents Docs and Code
--------------------------------
+Reference to the :py:meth:`~aiida.orm.data.structure.StructureData.append_atom`
+method.
 
-Table of Contents for Docs
-==========================
-An example of the table of contents syntax for the :ref:`git-cheatsheet` can be seen here
-note that these are especially important in the global structure of the
-document, as found in index.rst files.
-
-.. toctree::
-   :maxdepth: 2
-
-   git_cheatsheet
-
-.. note:: The `maxdepth` parameter can be used to change how deep the title indexing goes. See :ref:`this-page`.
+.. note:: In the docstring of a class, you can 
+  `refer to a method of the same class <http://www.sphinx-doc.org/en/stable/domains.html>`_ 
+  using ``py:meth:`.name_of_method```.
 
 
 Table of Contents for Code
@@ -152,13 +93,12 @@ Automodules Example
 .. toctree::
    :maxdepth: 2
 
-.. automodule:: aiida.common.datastructures
+.. automodule:: aiida.common.warnings
    :members:
    :noindex:
 
 .. note:: A `:noindex:` directive was added to avoid duplicate object
-          description for this example. Do not put the keyword in a real
-          documentation.
+          description for this example.
 
 How To Format Docstrings
 ------------------------
@@ -166,29 +106,14 @@ How To Format Docstrings
 Much of the work will be done automatically by Sphinx, just format the docstrings with the same syntax used here,
 a few extra examples of use would include::
 
-    :param parameters: some notes on input parameters
+    :param parameter: some notes on input parameter
+    :type parameter: str
 
     :return returned: some note on what is returned
+    :rtype: str
 
     :raise Errors: Notes on warnings raised
 
-
-
-Changing The Docs
------------------
-
-When creating a new ``.rst`` file, please:
-the relevant ``index.rst`` tree. This can be done by:
-
-* Modify relevant doc strings or ``.rst`` files in
-  the ``/docs/source/`` folder, not in ``/docs/build`` 
-
-* Make sure that all relevant ``.rst`` files are added
-  to relevant ``index.rst`` files (table of contents)
-
-* Run ``make all`` in the ``/docs/`` folder
-
-* Fix warnings, if any
 
 .. _this-page:
 

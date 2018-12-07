@@ -16,7 +16,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
-from aiida.orm.node import Node
+from aiida.orm import Node, Data
 from aiida import orm
 
 
@@ -71,10 +71,10 @@ class TestGroupsDjango(AiidaTestCase):
         g2 = backend.groups.create(name='testquery2', user=default_user).store()
         self.addCleanup(lambda: backend.groups.delete(g2.id))
 
-        n1 = Node().store()
-        n2 = Node().store()
-        n3 = Node().store()
-        n4 = Node().store()
+        n1 = Data().store()
+        n2 = Data().store()
+        n3 = Data().store()
+        n4 = Data().store()
 
         g1.add_nodes([n1, n2])
         g2.add_nodes([n1, n3])
@@ -157,7 +157,7 @@ class TestGroupsDjango(AiidaTestCase):
     def test_creation_from_dbgroup(self):
         backend = self.backend
 
-        n = Node().store()
+        n = Data().store()
 
         default_user = backend.users.create("{}@aiida.net".format(self.id())).store()
 
@@ -182,8 +182,8 @@ class TestDbExtrasDjango(AiidaTestCase):
     def test_replacement_1(self):
         from aiida.backends.djsite.db.models import DbExtra
 
-        n1 = Node().store()
-        n2 = Node().store()
+        n1 = Data().store()
+        n2 = Data().store()
 
         DbExtra.set_value_for_node(n1._dbnode, "pippo", [1, 2, 'a'])
         DbExtra.set_value_for_node(n1._dbnode, "pippobis", [5, 6, 'c'])

@@ -1,15 +1,6 @@
-=====================
-Tools and conventions
-=====================
-
-
-.. toctree::
-   :maxdepth: 1
-
-   tools/developers
-   tools/git_cheatsheet
-   tools/sphinx_cheatsheet
-   tools/testing
+Practical information concerning how to set up your development environment and how
+to contribute to aiida core can be found on the 
+`AiiDA Wiki <https://github.com/aiidateam/aiida_core/wiki>`_.
 
 =============
 AiiDA plugins
@@ -21,10 +12,9 @@ AiiDA plugins
    plugins/index
    devel_tutorial/code_plugin_int_sum
    devel_tutorial/code_plugin_float_sum
-   devel_tutorial/code_plugin_qe
+   devel_tutorial/plugin_tests
    devel_tutorial/cmdline_plugin
    devel_tutorial/parser_warnings_policy
-   data_cmdline
    aiida_sphinxext
 
 ==========
@@ -41,4 +31,5 @@ AiiDA core
    core/extend_restapi
    core/caching
    core/plugin_system
+   tools/sphinx_cheatsheet
 

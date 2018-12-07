@@ -183,13 +183,13 @@ class TestSessionSqla(AiidaTestCase):
         to the DbWorkflowData#set_value then there was a collision in the
         session and SQLA identity map.
         """
-        from aiida.orm.node import Node
+        from aiida.orm import Data
         from aiida.workflows.test import WFTestSimpleWithSubWF
         from aiida.backends.sqlalchemy import get_scoped_session
         from aiida.orm.utils import load_node
 
         # Create a node and store it
-        n = Node()
+        n = Data()
         n.store()
 
         # Keep some useful information
@@ -228,7 +228,7 @@ class TestSessionSqla(AiidaTestCase):
         Tests for bug #1372
         """
         from aiida.utils import timezone
-        from aiida.orm.implementation.sqlalchemy.node import Node
+        from aiida.orm import Data
         from aiida.orm.implementation.sqlalchemy.node import DbNode
         import aiida.backends.sqlalchemy as sa
         from sqlalchemy.orm import sessionmaker
@@ -236,7 +236,7 @@ class TestSessionSqla(AiidaTestCase):
         Session = sessionmaker(bind=sa.engine)
         custom_session = Session()
 
-        node = Node().store()
+        node = Data().store()
         master_session = node._dbnode.session
         self.assertIsNot(master_session, custom_session)
 

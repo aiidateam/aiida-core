@@ -18,7 +18,7 @@ from six.moves import range
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida import orm
-from aiida.orm.node.process import ProcessNode
+from aiida.orm.node.process.calculation import CalculationNode
 from aiida.utils.timezone import now
 
 
@@ -129,7 +129,7 @@ class TestBackendLog(AiidaTestCase):
         attached to a calculation node
         """
         message = 'Testing logging of critical failure'
-        node = ProcessNode()
+        node = CalculationNode()
 
         # Firing a log for an unstored should not end up in the database
         node.logger.critical(message)

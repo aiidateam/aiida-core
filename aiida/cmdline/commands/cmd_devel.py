@@ -26,7 +26,6 @@ def verdi_devel():
     pass
 
 
-@decorators.with_dbenv()
 def get_valid_test_paths():
     """
     Return a dictionary with the available test folders

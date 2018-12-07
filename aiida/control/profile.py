@@ -13,7 +13,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import os
-import sys
 
 from aiida.cmdline.utils import echo
 
@@ -46,24 +45,16 @@ def setup_profile(profile, only_config, set_default=False, non_interactive=False
 
     # Create the directories to store the configuration files
     create_base_dirs()
-    if settings.AIIDADB_PROFILE and profile:
-        sys.exit('the profile argument cannot be used if verdi is called with -p option: {} and {}'.format(
-            settings.AIIDADB_PROFILE, profile))
-    gprofile = settings.AIIDADB_PROFILE or profile
-    if gprofile == profile:
-        settings.AIIDADB_PROFILE = profile
-    if not settings.AIIDADB_PROFILE:
-        settings.AIIDADB_PROFILE = 'default'
 
-    # used internally later
-    gprofile = settings.AIIDADB_PROFILE
+    # we need to overwrite this variable for the following to work
+    settings.AIIDADB_PROFILE = profile
 
     created_conf = None
     # ask and store the configuration of the DB
     if non_interactive:
         try:
             created_conf = create_config_noninteractive(
-                profile=gprofile,
+                profile=profile,
                 backend=kwargs['backend'],
                 email=kwargs['email'],
                 db_host=kwargs['db_host'],
@@ -83,12 +74,12 @@ def setup_profile(profile, only_config, set_default=False, non_interactive=False
                     exception.args[0]))
     else:
         try:
-            created_conf = create_configuration(profile=gprofile)
+            created_conf = create_configuration(profile=profile)
         except ValueError as exception:
             echo.echo_critical("Error during configuration: {}".format(exception))
 
-        # Set default DB profile
-        set_default_profile(gprofile, force_rewrite=False)
+    # Set default DB profile
+    set_default_profile(profile, force_rewrite=False)
 
     if only_user_config:
         echo.echo("Only user configuration requested, skipping the migrate command")
@@ -117,7 +108,7 @@ def setup_profile(profile, only_config, set_default=False, non_interactive=False
 
             try:
                 from aiida.backends.djsite.utils import pass_to_django_manage
-                pass_to_django_manage([EXECNAME, 'migrate'], profile=gprofile)
+                pass_to_django_manage([EXECNAME, 'migrate'], profile=profile)
             finally:
                 os.umask(old_umask)
 

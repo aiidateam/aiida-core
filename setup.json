@@ -177,7 +177,7 @@
       "process.workflow.workchain = aiida.orm.node.process.workflow.workchain:WorkChainNode",
       "process.workflow.workfunction = aiida.orm.node.process.workflow.workfunction:WorkFunctionNode"
     ],
-    "aiida.cmdline": [],
+    "aiida.cmdline.data": [],
     "aiida.parsers": [
       "arithmetic.add = aiida.parsers.plugins.arithmetic.add:ArithmeticAddParser",
       "templatereplacer.doubler = aiida.parsers.plugins.templatereplacer.doubler:TemplatereplacerDoublerParser"

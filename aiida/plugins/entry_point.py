@@ -16,9 +16,13 @@ import traceback
 import six
 
 try:
-    from reentry import manager as epm
+    from reentry.default_manager import PluginManager
+    # I don't use the default manager as it has scan_for_not_found=True
+    # by default, which re-runs scan if no entrypoints are found (which is
+    # quite possible if no aiida.tests entrypoints are registered)
+    ENTRYPOINT_MANAGER = PluginManager(scan_for_not_found=False)
 except ImportError:
-    import pkg_resources as epm
+    import pkg_resources as ENTRYPOINT_MANAGER
 
 from aiida.common.exceptions import MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError
 
@@ -212,7 +216,7 @@ def get_entry_points(group):
     :param group: the entry point group
     :return: a list of entry points
     """
-    return [ep for ep in epm.iter_entry_points(group=group)]
+    return [ep for ep in ENTRYPOINT_MANAGER.iter_entry_points(group=group)]
 
 
 def get_entry_point(group, name):
@@ -251,8 +255,8 @@ def get_entry_point_from_class(class_module, class_name):
         class_path = class_name[len(prefix):]
         class_module, class_name = class_path.rsplit('.', 1)
 
-    for group in epm.get_entry_map().keys():
-        for entry_point in epm.iter_entry_points(group):
+    for group in ENTRYPOINT_MANAGER.get_entry_map().keys():
+        for entry_point in ENTRYPOINT_MANAGER.iter_entry_points(group):
 
             if entry_point.module_name != class_module:
                 continue

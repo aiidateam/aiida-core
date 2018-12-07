@@ -7,18 +7,3 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-from django.contrib import admin
-
-from .models import DbNode, DbLink, DbAttribute, DbGroup, DbComputer, DbAuthInfo, DbComment
-
-
-admin.site.register(DbNode)
-admin.site.register(DbLink)
-admin.site.register(DbAttribute)
-admin.site.register(DbGroup)
-admin.site.register(DbComputer)
-admin.site.register(DbAuthInfo)
-admin.site.register(DbComment)

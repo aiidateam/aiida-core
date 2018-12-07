@@ -6,7 +6,7 @@ from __future__ import unicode_literals
 from __future__ import absolute_import
 
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
-# pylint: disable=no-name-in-module,import-error,line-too-long
+# pylint: disable=no-name-in-module,import-error
 from django.db import migrations
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
 
@@ -23,10 +23,7 @@ def migrate_infer_calculation_entry_point(apps, schema_editor):
 
     :raises: IntegrityError if database contains nodes with duplicate UUIDS.
     """
-    from tabulate import tabulate
-    from tempfile import NamedTemporaryFile
-
-    from aiida.cmdline.utils import echo
+    from aiida.manage.database.integrity import write_database_integrity_violation
     from aiida.manage.database.integrity.plugins import infer_calculation_entry_point
     from aiida.plugins.entry_point import ENTRY_POINT_STRING_SEPARATOR
 
@@ -50,20 +47,30 @@ def migrate_infer_calculation_entry_point(apps, schema_editor):
         DbNode.objects.filter(type=type_string).update(process_type=entry_point_string)
 
     if fallback_cases:
-        with NamedTemporaryFile(prefix='migration-', suffix='.log', dir='.', delete=False) as handle:
-            name = handle.name
-            echo.echo('')
-            echo.echo_warning(
-                '\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n'
-                'Found one or multiple calculations nodes with a type string that could not be mapped  \n'
-                'onto a known calculation entry point, either in your working environment or from the  \n'
-                'plugin registry. We have used a fallback value for the `process_type` that would have \n'
-                'been the entry point name. The exact list of affected nodes and the used fallback     \n'
-                'process type based on the found type has been written to a log file:                  \n'
-                '{}\n'
-                '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n'.format(name))
+        headers = ['UUID', 'type (old)', 'process_type (fallback)']
+        warning_message = 'found calculation nodes with a type string that could not be mapped onto a known entry point'
+        action_message = 'inferred `process_type` for all calculation nodes, using fallback for unknown entry points'
+        write_database_integrity_violation(fallback_cases, headers, warning_message, action_message)
 
-            handle.write(tabulate(fallback_cases, headers=['UUID', 'type (old)', 'process_type (fallback)']))
+
+def detect_unexpected_links(apps, schema_editor):
+    """Scan the database for any links that are unexpected.from
+
+    The checks will verify that there are no outgoing `call` or `return` links from calculation nodes and that if a
+    workflow node has a `create` link, it has at least an accompanying return link to the same data node, or it has a
+    `call` link to a calculation node that takes the created data node as input.
+    """
+    from aiida.backends.general.migrations.provenance_redesign import INVALID_LINK_SELECT_STATEMENTS
+    from aiida.manage.database.integrity import write_database_integrity_violation
+
+    with schema_editor.connection.cursor() as cursor:
+
+        for sql, warning_message in INVALID_LINK_SELECT_STATEMENTS:
+            cursor.execute(sql)
+            results = cursor.fetchall()
+            if results:
+                headers = ['UUID source', 'UUID target', 'link type', 'link label']
+                write_database_integrity_violation(results, headers, warning_message)
 
 
 def reverse_code(apps, schema_editor):
@@ -91,6 +98,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunPython(migrate_infer_calculation_entry_point, reverse_code=reverse_code, atomic=True),
+        migrations.RunPython(detect_unexpected_links, reverse_code=reverse_code, atomic=True),
         migrations.RunSQL(
             """
             DELETE FROM db_dblink WHERE db_dblink.id IN (
@@ -141,7 +149,7 @@ class Migration(migrations.Migration):
             WHERE type = 'calculation.function.FunctionCalculation.'; -- Update type for FunctionCalculation nodes
 
             UPDATE db_dblink SET type = 'create' WHERE type = 'createlink'; -- Rename `createlink` to `create`
-            UPDATE db_dblink SET type = 'return' WHERE type = 'returnlink'; -- Rename `returnlink` to `create`
+            UPDATE db_dblink SET type = 'return' WHERE type = 'returnlink'; -- Rename `returnlink` to `return`
 
             UPDATE db_dblink SET type = 'input_calc' FROM db_dbnode
             WHERE db_dblink.output_id = db_dbnode.id AND db_dbnode.type LIKE 'node.process.calculation%'

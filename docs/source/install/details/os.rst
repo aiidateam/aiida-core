@@ -99,7 +99,7 @@ For more information, or if you run into trouble, please refer to the RabbitMQ :
 
 
 Windows Subsystem for Linux (Ubuntu)
------------------------------------
+------------------------------------
 
 The guide for Ubuntu above can be followed but there are a few things to note:
 

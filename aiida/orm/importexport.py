@@ -22,10 +22,11 @@ from aiida.common.utils import (export_shard_uuid, get_class_string,
 from aiida.orm.computers import Computer
 from aiida.orm.groups import Group
 from aiida.orm.node import Node
+from aiida.orm.querybuilder import QueryBuilder
 from aiida.orm.users import User
 
 IMPORTGROUP_TYPE = 'aiida.import'
-COMP_DUPL_SUFFIX = ' (Imported #{})'
+DUPL_SUFFIX = ' (Imported #{})'
 
 # Giving names to the various entities. Attributes and links are not AiiDA
 # entities but we will refer to them as entities in the file (to simplify
@@ -348,7 +349,6 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
     from aiida.orm import Node, Group
     from aiida.common.archive import extract_tree, extract_tar, extract_zip, extract_cif
     from aiida.common.links import LinkType
-    from aiida.common.exceptions import UniquenessError
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.backends.djsite.db import models
     from aiida.common.utils import get_class_string, get_object_from_string
@@ -570,7 +570,6 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                 objects_to_create = []
                 # This is needed later to associate the import entry with the new pk
                 import_entry_ids = {}
-                dupl_counter = 0
                 imported_comp_names = set()
                 for import_entry_id, entry_data in new_entries[model_name].items():
                     unique_id = entry_data[unique_identifier]
@@ -580,21 +579,36 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                         foreign_ids_reverse_mappings=foreign_ids_reverse_mappings)
                                        for k, v in entry_data.items())
 
-                    if Model is models.DbComputer:
+                    if Model is models.DbGroup:
+                        # Check if there is already a group with the same name
+                        dupl_counter = 0
+                        orig_name = import_data['name']
+                        while Model.objects.filter(name=import_data['name']):
+                            import_data['name'] = orig_name + DUPL_SUFFIX.format(dupl_counter)
+                            dupl_counter += 1
+                            if dupl_counter == 100:
+                                raise exceptions.UniquenessError("A group of that name ( {} ) already exists"
+                                    " and I could not create a new one".format(orig_name))
+
+                    elif Model is models.DbComputer:
                         # Check if there is already a computer with the same
                         # name in the database
                         dupl = (Model.objects.filter(name=import_data['name'])
                                 or import_data['name'] in imported_comp_names)
                         orig_name = import_data['name']
+                        dupl_counter = 0
                         while dupl:
                             # Rename the new computer
                             import_data['name'] = (
                                     orig_name +
-                                    COMP_DUPL_SUFFIX.format(dupl_counter))
+                                    DUPL_SUFFIX.format(dupl_counter))
                             dupl_counter += 1
                             dupl = (
                                     Model.objects.filter(name=import_data['name'])
                                     or import_data['name'] in imported_comp_names)
+                            if dupl_counter == 100:
+                                raise exceptions.UniquenessError("A computer of that name ( {} ) already exists"
+                                    " and I could not create a new one".format(orig_name))
 
                         # The following is done for compatibility reasons
                         # In case the export file was generate with the SQLA
@@ -867,7 +881,6 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.common.utils import get_object_from_string
     from aiida.common.datastructures import calc_states
-    from aiida.orm.querybuilder import QueryBuilder
     from aiida.common.links import LinkType
     import aiida.utils.json as json
 
@@ -1075,10 +1088,25 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                                 k: v.pk for k, v in
                                 relevant_db_entries.items()}
 
-                        dupl_counter = 0
                         imported_comp_names = set()
                         for k, v in data['export_data'][entity_name].items():
-                            if entity_name == COMPUTER_ENTITY_NAME:
+                            if entity_name == GROUP_ENTITY_NAME:
+                                # Check if there is already a group with the same name,
+                                # and if so, recreate the name
+                                orig_name = v["name"]
+                                dupl_counter = 0
+                                while QueryBuilder().append(entity,
+                                            filters={'name': {"==": v["name"]}}).count():
+                                    # Rename the new group
+                                    v["name"] = orig_name + DUPL_SUFFIX.format(dupl_counter)
+                                    dupl_counter += 1
+                                    if dupl_counter == 100:
+                                        raise exceptions.UniquenessError("A group of that name ( {} )"
+                                                "  already exists and I could not create a new one"
+                                                "".format(orig_name))
+
+
+                            elif entity_name == COMPUTER_ENTITY_NAME:
                                 # The following is done for compatibility
                                 # reasons in case the export file was generated
                                 # with the Django export method. In Django the
@@ -1102,13 +1130,13 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                                           project=["*"], tag="res")
                                 dupl = (qb.count()
                                         or v["name"] in imported_comp_names)
-
+                                dupl_counter = 0
                                 orig_name = v["name"]
                                 while dupl:
                                     # Rename the new computer
                                     v["name"] = (
                                             orig_name +
-                                            COMP_DUPL_SUFFIX.format(
+                                            DUPL_SUFFIX.format(
                                                 dupl_counter))
                                     dupl_counter += 1
                                     qb = QueryBuilder()

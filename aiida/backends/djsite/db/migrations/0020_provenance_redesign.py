@@ -6,7 +6,7 @@ from __future__ import unicode_literals
 from __future__ import absolute_import
 
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
-# pylint: disable=no-name-in-module,import-error
+# pylint: disable=no-name-in-module,import-error,line-too-long
 from django.db import migrations
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
 
@@ -117,6 +117,19 @@ class Migration(migrations.Migration):
                     AND db_dblink.type = 'createlink'
             ); -- Delete all outgoing CREATE links from FunctionCalculation and WorkCalculation nodes
 
+            UPDATE db_dbnode SET type = 'calculation.work.WorkCalculation.'
+            WHERE type = 'calculation.process.ProcessCalculation.';
+             -- First migrate very old `ProcessCalculation` to `WorkCalculation`
+
+            UPDATE db_dbnode SET type = 'node.process.workflow.workfunction.WorkFunctionNode.' FROM db_dbattribute
+            WHERE db_dbattribute.dbnode_id = db_dbnode.id
+                AND type = 'calculation.work.WorkCalculation.'
+                AND db_dbattribute.key = 'function_name';
+             -- WorkCalculations that have a `function_name` attribute are FunctionCalculations
+
+            UPDATE db_dbnode SET type = 'node.process.workflow.workchain.WorkChainNode.'
+            WHERE type = 'calculation.work.WorkCalculation.';
+             -- Update type for `WorkCalculation` nodes - all what is left should be `WorkChainNodes`
 
             UPDATE db_dbnode SET type = 'node.process.calculation.calcjob.CalcJobNode.'
             WHERE type LIKE 'calculation.job.%'; -- Update type for JobCalculation nodes
@@ -126,10 +139,6 @@ class Migration(migrations.Migration):
 
             UPDATE db_dbnode SET type = 'node.process.workflow.workfunction.WorkFunctionNode.'
             WHERE type = 'calculation.function.FunctionCalculation.'; -- Update type for FunctionCalculation nodes
-
-            UPDATE db_dbnode SET type = 'node.process.workflow.workchain.WorkChainNode.'
-            WHERE type = 'calculation.work.WorkCalculation.'; -- Update type for WorkCalculation nodes
-
 
             UPDATE db_dblink SET type = 'create' WHERE type = 'createlink'; -- Rename `createlink` to `create`
             UPDATE db_dblink SET type = 'return' WHERE type = 'returnlink'; -- Rename `returnlink` to `create`

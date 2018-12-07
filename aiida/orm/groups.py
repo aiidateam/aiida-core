@@ -15,6 +15,8 @@ from __future__ import absolute_import
 from aiida.common import exceptions
 from aiida.common.utils import type_check
 from aiida.manage import get_manager
+
+from . import convert
 from . import entities
 from . import users
 
@@ -269,7 +271,7 @@ class Group(entities.Entity):
         the respective AiiDA subclasses of Node, and also allows to ask for
         the number of nodes in the group using len().
         """
-        return self._backend_entity.nodes
+        return convert.ConvertIterator(self._backend_entity.nodes)
 
     def remove_nodes(self, nodes):
         """
@@ -310,7 +312,8 @@ class Group(entities.Entity):
           in any case already stored) and created is a boolean saying
         """
         import warnings
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        # pylint: disable=redefined-builtin
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning
         warnings.warn('this method has been deprecated use Group.objects.get_or_create() instead', DeprecationWarning)  # pylint: disable=no-member
 
         return cls.objects(backend).get_or_create(**kwargs)

@@ -21,7 +21,7 @@ from . import log
 from . import querybuilder
 from . import users
 
-__all__ = ('SqlaBackend',)
+__all__ = ('SqlaBackend', )
 
 
 class SqlaBackend(Backend):

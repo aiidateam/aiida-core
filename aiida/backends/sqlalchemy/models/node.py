@@ -11,33 +11,26 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from sqlalchemy import ForeignKey, select, func, join, case
+from sqlalchemy import ForeignKey, select
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.schema import Column, UniqueConstraint, Index
+from sqlalchemy.schema import Column
 from sqlalchemy.types import Integer, String, Boolean, DateTime, Text
 # Specific to PGSQL. If needed to be agnostic
 # http://docs.sqlalchemy.org/en/rel_0_9/core/custom_types.html?highlight=guid#backend-agnostic-guid-type
 # Or maybe rely on sqlalchemy-utils UUID type
 from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy_utils.types.choice import ChoiceType
 
 from aiida.utils import timezone
-from aiida.backends.sqlalchemy.models.base import Base, _QueryProperty, _AiidaQuery
+from aiida.backends.sqlalchemy.models.base import Base
 from aiida.backends.sqlalchemy.models.utils import uuid_func
 from aiida.backends.sqlalchemy.utils import flag_modified
-
-from aiida.common.exceptions import DbContentError
-from aiida.common.datastructures import calc_states, _sorted_datastates, sort_states
-
 from aiida.backends.sqlalchemy.models.user import DbUser
 from aiida.backends.sqlalchemy.models.computer import DbComputer
 
 
 class DbNode(Base):
     __tablename__ = "db_dbnode"
-
-    aiida_query = _QueryProperty(_AiidaQuery)
 
     id = Column(Integer, primary_key=True)
     uuid = Column(UUID(as_uuid=True), default=uuid_func, unique=True)
@@ -113,25 +106,6 @@ class DbNode(Base):
     @property
     def inputs(self):
         return self.inputs_q.all()
-
-    # XXX repetition between django/sqlalchemy here.
-    def get_aiida_class(self):
-        """
-        Return the corresponding aiida instance of class aiida.orm.Node or a
-        appropriate subclass.
-        """
-        from aiida.orm.node import Node
-        from aiida.plugins.loader import get_plugin_type_from_type_string, load_plugin
-
-        try:
-            plugin_type = get_plugin_type_from_type_string(self.type)
-        except DbContentError:
-            raise DbContentError("The type name of node with pk= {} is "
-                                 "not valid: '{}'".format(self.pk, self.type))
-
-        PluginClass = load_plugin(plugin_type, safe=True)
-
-        return PluginClass(dbnode=self)
 
     def get_simple_name(self, invalid_result=None):
         """

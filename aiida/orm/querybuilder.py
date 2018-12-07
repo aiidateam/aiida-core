@@ -39,15 +39,16 @@ from aiida.common.exceptions import InputValidationError
 from aiida.common.links import LinkType
 from aiida.manage import get_manager
 from aiida.orm.node import Node
-from aiida.orm.utils import convert
+from aiida.common.exceptions import ConfigurationError
 
 from . import authinfos
 from . import comments
 from . import computers
-from . import entities
 from . import groups
 from . import logs
 from . import users
+from . import entities
+from . import convert
 
 __all__ = ('QueryBuilder',)
 
@@ -1893,6 +1894,10 @@ class QueryBuilder(object):
                 self._hash = queryhelp_hash
         return query
 
+    @staticmethod
+    def get_aiida_entity_res(backend_entity):
+        return convert.get_orm_entity(backend_entity)
+
     def inject_query(self, query):
         """
         Manipulate the query an inject it back.
@@ -1998,8 +2003,8 @@ class QueryBuilder(object):
             # Convert to AiiDA frontend entities (if they are such)
             for i, item_entry in enumerate(item):
                 try:
-                    item[i] = convert.aiida_from_backend_entity(item_entry)
-                except ValueError:
+                    item[i] = convert.get_orm_entity(item_entry)
+                except TypeError:
                     # Keep the current value
                     pass
 
@@ -2025,8 +2030,8 @@ class QueryBuilder(object):
         for item in self._impl.iterdict(query, batch_size, self.tag_to_projected_entity_dict):
             for key, value in item.items():
                 try:
-                    item[key] = convert.aiida_from_backend_entity(value)
-                except ValueError:
+                    item[key] = convert.get_orm_entity(value)
+                except TypeError:
                     # Keep the current value
                     pass
 

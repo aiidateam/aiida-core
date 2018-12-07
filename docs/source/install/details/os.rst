@@ -3,8 +3,6 @@
 Operating Systems
 =================
 
-This page provides some installation instructions for installing the prerequisite software necessary to run AiiDA.
-Note that we do not officially support all platforms and cannot therefore provide instructions for all possible operating systems.
 
 
 Ubuntu
@@ -37,7 +35,7 @@ If you run into trouble, please refer to the RabbitMQ :ref:`troubleshooting sect
 Mac OS X
 --------
 
-For Mac OS it is adviced to use the `Homebrew`_ package manager.
+For Mac OS we recommend using the `Homebrew`_ package manager.
 If you have not installed Homebrew yet, you can do so with the following command:
 
 .. code-block:: bash
@@ -119,3 +117,4 @@ The guide for Ubuntu above can be followed but there are a few things to note:
      dpkg-reconfigure tzdata
 
 #. The file open limit may need to be raised using ``sudo ulimit -n 2048`` (default is 1024), when running tests.
+

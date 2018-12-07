@@ -112,7 +112,7 @@ The guide for Ubuntu above can be followed but there are a few things to note:
 
      sudo service postgresql start
 
-#. There is a known issue in WSL Ubuntu 18.04 where the timezone is not
+#. There is a `known issue <https://github.com/Microsoft/WSL/issues/856>`_ in WSL Ubuntu 18.04 where the timezone is not
    configured correctly out-of-the-box, which may cause problem for the database. 
    The following command can be used to re-configure the time zone::
 

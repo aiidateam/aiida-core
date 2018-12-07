@@ -15,6 +15,11 @@ We expect that AiiDA should also run on these other platforms:
 * Older and newer Ubuntu versions
 * Other Linux distributions
 
+On windows platform, it is possible to install AiiDA inside the Windows Subsystem for Linux
+(`WSL <https://docs.microsoft.com/en-us/windows/wsl/about>`_).
+However, please note this is not fully tested.
+Additional steps are required to get around a few issues.
+
 The installation procedure can generally be split into four separate steps:
 
 1. :ref:`Install prerequisite software<install_prerequisites>`
@@ -50,10 +55,24 @@ The installation instructions for these prerequisites will depend on the operati
 We provide basic instructions for :ref:`several operating systems<installation_os>`.
 Make sure you have successfully installed these prerequisites before continuing with the installation guide.
 
-A final optional dependancy of note is `graphviz`_ which is necessary for plotting the AiiDA provenance graphs
+A final optional dependency of note is `graphviz`_ which is necessary for plotting the AiiDA provenance graphs
 via ``verdi graph``.
 
 .. _graphviz: https://www.graphviz.org/download 
+
+
+.. note::
+   The window native RabbitMQ should be installed and started as a service for WSL installation, since the version in WSL Ubuntu 18.04 does not work properly.
+   By default, linux services under WSL are not started automatically.
+   To start the Postgre SQL service, type the command below in the terminal::
+
+     sudo service postgresql start
+
+   In addition, there is a known issue in WSL Ubuntu 18.04 where the timezone is not
+   configured correctly out-of-the-box, which may cause problem for the database.
+   The following command can be used to re-configure the time zone::
+
+     dpkg-reconfigure tzdata
 
 
 .. _install_aiida:

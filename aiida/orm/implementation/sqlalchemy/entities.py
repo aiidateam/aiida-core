@@ -40,8 +40,10 @@ class SqlaModelEntity(typing.Generic[ModelType]):
         :param backend: the corresponding backend
         :return: the Django entity
         """
+        from .backend import SqlaBackend
         cls._class_check()
         type_check(dbmodel, cls.MODEL_CLASS)
+        type_check(backend, SqlaBackend)
         entity = cls.__new__(cls)
         super(SqlaModelEntity, entity).__init__(backend)
         entity._dbmodel = utils.ModelWrapper(dbmodel)  # pylint: disable=protected-access

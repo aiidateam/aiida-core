@@ -15,7 +15,7 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 import os
 import logging
 import importlib
-import collections
+from collections import Callable, Iterable, Mapping
 import numbers
 import math
 import warnings
@@ -24,7 +24,8 @@ import six
 
 from aiida.backends.utils import validate_attribute_key
 from aiida.common.caching import get_use_cache
-from aiida.common.exceptions import InternalError, ModificationNotAllowed, UniquenessError, ValidationError, InvalidOperation
+from aiida.common.exceptions import InternalError, ModificationNotAllowed, UniquenessError, ValidationError, \
+    InvalidOperation, StoringNotAllowed
 from aiida.common.folders import SandboxFolder
 from aiida.common.hashing import _HASH_EXTRA_KEY
 from aiida.common.lang import override
@@ -42,8 +43,9 @@ def clean_value(value):
     """
     Get value from input and (recursively) replace, if needed, all occurrences
     of BaseType AiiDA data nodes with their value, and List with a standard list.
-
-    It also makes a deep copy of everything.
+    It also makes a deep copy of everything 
+    The purpose of this function is to convert data to a type which can be serialized and deserialized 
+    for storage in the DB without its value changing.      
 
     Note however that there is no logic to avoid infinite loops when the
     user passes some perverse recursive dictionary or list.
@@ -66,10 +68,10 @@ def clean_value(value):
     if isinstance(value, BaseType):
         return clean_builtin(value.value)
 
-    if isinstance(value, dict):
-        # Check dictionary before iterables
+    if isinstance(value, Mapping):
+       # Check dictionary before iterables
         return {k: clean_value(v) for k, v in value.items()}
-    if (isinstance(value, collections.Iterable) and not isinstance(value, six.string_types)):
+    if (isinstance(value, Iterable) and not isinstance(value, six.string_types)):
         # list, tuple, ... but not a string
         # This should also properly take care of dealing with the
         # basedatatypes.List object
@@ -150,6 +152,12 @@ class AbstractNode(object):
 
     # Flag that determines whether the class can be cached.
     _cacheable = True
+
+    # Flag that says if the node is storable or not.
+    # By default, bare nodes (and also ProcessNodes) are not storable,
+    # all subclasses (WorkflowNode, CalculationNode, Data and their subclasses)
+    # are storable. This flag is checked in store()
+    _storable = False
 
     def get_desc(self):
         """
@@ -469,7 +477,7 @@ class AbstractNode(object):
             except AttributeError:
                 raise ValueError("Unable to set '{0}', no set_{0} method "
                                  "found".format(k))
-            if not isinstance(method, collections.Callable):
+            if not isinstance(method, Callable):
                 raise ValueError("Unable to set '{0}', set_{0} is not "
                                  "callable!".format(k))
             method(v)
@@ -580,6 +588,7 @@ class AbstractNode(object):
         Get the user.
 
         :return: a User model object
+        :rtype: :class:`aiida.orm.User`
         """
         pass
 
@@ -613,6 +622,9 @@ class AbstractNode(object):
 
         if not isinstance(source, AbstractNode):
             raise TypeError('the source should be a Node instance')
+
+        from aiida.orm.utils.links import validate_link
+        validate_link(source, self, link_type, link_label)
 
     def validate_outgoing(self, target, link_type, link_label):
         """
@@ -754,12 +766,12 @@ class AbstractNode(object):
 
         if link_direction == 'outgoing':
             builder.append(node_class, with_incoming='main', project=['*'],
-                edge_project=['type', 'label'], edge_filters=edge_filters)
+                           edge_project=['type', 'label'], edge_filters=edge_filters)
         else:
             builder.append(node_class, with_outgoing='main', project=['*'],
-                edge_project=['type', 'label'], edge_filters=edge_filters)
+                           edge_project=['type', 'label'], edge_filters=edge_filters)
 
-        return [links.LinkTriple(entry[0], entry[1], entry[2]) for entry in builder.all()]
+        return [links.LinkTriple(entry[0], LinkType(entry[1]), entry[2]) for entry in builder.all()]
 
     def _replace_link_from(self, source, link_type, link_label):
         """
@@ -872,7 +884,8 @@ class AbstractNode(object):
                 returns all inputs of all link types.
         :return: a dictionary {label:object}
         """
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        from aiida.common.warnings import \
+            AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('get_inputs_dict method is deprecated, use get_incoming instead', DeprecationWarning)
 
         return dict(
@@ -890,7 +903,8 @@ class AbstractNode(object):
 
         :return: a dictionary {linkname:object}
         """
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        from aiida.common.warnings import \
+            AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('get_outputs_dict method is deprecated, use get_outgoing instead', DeprecationWarning)
 
         if link_type is not None and not isinstance(link_type, LinkType):
@@ -935,7 +949,8 @@ class AbstractNode(object):
         :param link_type: Only get inputs of this link type, if None then
             returns all inputs of all link types.
         """
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        from aiida.common.warnings import \
+            AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('get_inputs method is deprecated, use get_incoming instead', DeprecationWarning)
 
         if link_type is not None and not isinstance(link_type, LinkType):
@@ -989,7 +1004,8 @@ class AbstractNode(object):
             and Node a Node instance or subclass
         :param link_type: Only return outputs connected by links of this type.
         """
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        from aiida.common.warnings import \
+            AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('get_outputs method is deprecated, use get_outgoing instead', DeprecationWarning)
 
         if link_type is not None and not isinstance(link_type, LinkType):
@@ -1474,14 +1490,13 @@ class AbstractNode(object):
         Add a new comment.
 
         :param content: string with comment
+        :param user: the user to associate with the comment, will use default if not supplied
         :return: the newly created comment
         """
         from aiida import orm
         from aiida.orm.comments import Comment
 
-        if user is None:
-            user = orm.User.objects.get_default()
-
+        user = user or orm.User.objects.get_default()
         return Comment(node=self, user=user, content=content).store()
 
     def get_comment(self, identifier):
@@ -1503,7 +1518,8 @@ class AbstractNode(object):
         :return: the list of comments, sorted by pk
         """
         from aiida.orm.comments import Comment
-        return Comment.objects.find(filters={'dbnode_id': self.pk})
+        return Comment.objects.find(filters={'dbnode_id': self.pk},
+                                    order_by=[{'id': 'asc'}])
 
     def update_comment(self, identifier, content):
         """
@@ -1801,7 +1817,12 @@ class AbstractNode(object):
         # TODO: This needs to be generalized, allowing for flexible methods
         # for storing data and its attributes.
 
-        # As a first thing, I check if the data is valid
+        # As a first thing, I check if the data is storable
+        if not self._storable:
+            raise StoringNotAllowed(
+                "You are not allowed to store a base Node or ProcessNode, you can "
+                "only store Data, WorkflowNode, CalculationNode or their subclasses")
+        # Second thing: check if it's valid
         self._validate()
 
         if self._to_be_stored:
@@ -1928,7 +1949,7 @@ class AbstractNode(object):
                 if (
                     key not in self._hash_ignored_attributes and
                     key not in getattr(self, '_updatable_attributes', tuple())
-                )
+            )
             },
             self.folder,
             computer.uuid if computer is not None else None
@@ -2038,7 +2059,7 @@ class AbstractNode(object):
         from aiida.orm import Node
         first_desc = QueryBuilder().append(
             Node, filters={'id': self.pk}, tag='self').append(
-            Node, descendant_of='self', project='id').first()
+            Node, with_ancestors='self', project='id').first()
         return bool(first_desc)
 
     @property
@@ -2051,7 +2072,7 @@ class AbstractNode(object):
         from aiida.orm import Node
         first_ancestor = QueryBuilder().append(
             Node, filters={'id': self.pk}, tag='self').append(
-            Node, ancestor_of='self', project='id').first()
+            Node, with_descendants='self', project='id').first()
         return bool(first_ancestor)
 
     # pylint: disable=no-self-argument

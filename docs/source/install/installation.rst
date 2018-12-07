@@ -4,16 +4,17 @@
 Installation
 ************
 
-This section of the manual will guide you through the process of installing AiiDA on your system.
-AiiDA has been tested to run on the following platforms:
+AiiDA is designed to run on `Unix <https://en.wikipedia.org/wiki/Unix>`_ operating systems,
+and has been tested on the following platforms:
 
 * Ubuntu 14.04, 16.04
 * Mac OS X
 
-We expect that AiiDA should also run on these other platforms:
+We expect that AiiDA should also run on:
 
 * Older and newer Ubuntu versions
 * Other Linux distributions
+* Windows subsystem for Linux
 
 The installation procedure can generally be split into four separate steps:
 
@@ -31,6 +32,8 @@ Install prerequisites
 The installation procedure itself requires certain software, which therefore will have to be installed first.
 The following software is required to continue with the installation:
 
+* `bash <https://en.wikipedia.org/wiki/Bash_(Unix_shell)>`_ or
+  `zsh <https://en.wikipedia.org/wiki/Z_shell>`_ (The shell)
 * `git`_ (To download the ``aiida-core`` repository)
 * `python-2.7.x`_ (The programming language used for AiiDA)
 * `python-pip`_ (Python package manager)
@@ -49,6 +52,11 @@ The following software is required to continue with the installation:
 The installation instructions for these prerequisites will depend on the operating system of your machine.
 We provide basic instructions for :ref:`several operating systems<installation_os>`.
 Make sure you have successfully installed these prerequisites before continuing with the installation guide.
+
+A final optional dependancy of note is `graphviz`_ which is necessary for plotting the AiiDA provenance graphs
+via ``verdi graph``.
+
+.. _graphviz: https://www.graphviz.org/download 
 
 
 .. _install_aiida:
@@ -146,9 +154,7 @@ We suggest here to use your institution email, that will be used to associate th
 
   The existence of a default user is internally useful for multi-user
   setups, where only one user
-  runs the daemon, even if many users can simultaneously access the DB.
-  See the page on :ref:`setting up AiiDA in multi-user mode<aiida_multiuser>`
-  for more details (only for advanced users).
+  runs the daemon.
 
 .. note:: The password, in the current version of AiiDA, is not used (it will
     be used only in the REST API and in the web interface). If you leave the
@@ -194,16 +200,24 @@ Configure AiiDA
 
 Verdi tab-completion
 --------------------
-The ``verdi`` command line interface has many commands and options.
-To simplify its usage, there is a way to enable tab-completion for it in your shell.
-To do so, simply add the following line to the activation script of your virtual environment (or to your shell config, e.g. ``.bashrc``)::
+The ``verdi`` command line interface has many commands and options,
+which can be tab-completed to simplify your life.
+Enable tab-completion with the following shell command::
 
     eval "$(_VERDI_COMPLETE=source verdi)"
 
-For the changes to apply to your current shell, make sure to source the activation script or ``.bashrc`` (depending the approach you chose).
+Place this command in your startup file, i.e. one of
+
+* the startup file of your shell (``.bashrc``, ``.zsh``, ...), if aiida is installed system-wide
+* the `activate script <https://virtualenv.pypa.io/en/latest/userguide/#activate-script>`_ of your virtual environment
+* a `startup file <https://conda.io/docs/user-guide/tasks/manage-environments.html#saving-environment-variables>`_ for your conda environment
+
+In order to enable tab completion in your current shell, 
+make sure to source the startup file once.
 
 .. note::
-    This line replaces the ``eval "$(verdi completioncommand)"`` line that was used in ``aiida-core<1.0.0``.
+    This line replaces the ``eval "$(verdi completioncommand)"`` line that was used in ``aiida-core<1.0.0``. While this continues to work, support for the old line may be dropped in the future.
+
 
 Adding AiiDA to the PATH
 ------------------------
@@ -274,26 +288,41 @@ If you didn't already install AiiDA with the ``[notebook]`` option (during ``pip
 
     jupyter notebook
 
-This will open a tab in your browser. Click on ``New -> Python 2`` and type::
+This will open a tab in your browser. Click on ``New -> Python`` and type::
 
     import aiida
 
-followed by ``Shit-Enter``. If no exception is thrown, you can use AiiDA in Jupyter.
+followed by ``Shift-Enter``. If no exception is thrown, you can use AiiDA in Jupyter.
 
-If you want to set the same environment as in a ``verdi shell``, add the following code in ``<your.home.folder>/.ipython/profile_default/ipython_config.py``::
+If you want to set the same environment as in a ``verdi shell``,
+add the following code to a ``.py`` file (create one if there isn't any) in ``<home_folder>/.ipython/profile_default/startup/``::
+
+
 
   try:
       import aiida
   except ImportError:
       pass
   else:
-      c = get_config()
-      c.InteractiveShellApp.extensions = [
-            'aiida.common.ipython.ipython_magics'
-      ]
+      import IPython
+      from aiida.common.ipython.ipython_magics import load_ipython_extension
 
-then open a Jupyter notebook as explained above and type in a cell:
+      # Get the current Ipython session
+      ipython = IPython.get_ipython()
+  
+      # Register the line magic
+      load_ipython_extension(ipython)
+
+This file will be executed when the ipython kernel starts up and enable the line magic ``%aiida``.
+Alternatively, if you have a ``aiida_core`` repository checked out locally,
+you can just copy the file ``<aiida_core>/aiida/common/ipython/aiida_magic_register.py`` to the same folder.
+The current ipython profile folder can be located using::
+
+  ipython locate profile
+
+After this, if you open a Jupyter notebook as explained above and type in a cell::
 
     %aiida
 
 followed by ``Shift-Enter``. You should receive the message "Loaded AiiDA DB environment."
+This line magic should also be enabled in standard ipython shells.

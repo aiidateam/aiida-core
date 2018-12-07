@@ -289,7 +289,6 @@ class TestSimple(AiidaTestCase):
         from aiida.orm.importexport import export
         import aiida.utils.json as json
 
-
         # Creating a folder for the import/export files
         export_file_tmp_folder = tempfile.mkdtemp()
         unpack_tmp_folder = tempfile.mkdtemp()
@@ -305,7 +304,7 @@ class TestSimple(AiidaTestCase):
                 tar.extractall(unpack_tmp_folder)
 
             with io.open(os.path.join(unpack_tmp_folder,
-                                   'metadata.json'), 'r', encoding='utf8') as fhandle:
+                                      'metadata.json'), 'r', encoding='utf8') as fhandle:
                 metadata = json.load(fhandle)
             metadata['export_version'] = 0.0
 
@@ -467,9 +466,9 @@ class TestSimple(AiidaTestCase):
         from aiida.common.datastructures import calc_states
         from aiida.common.links import LinkType
         from aiida.manage import get_manager
-        
+
         manager = get_manager()
-        
+
         # Creating a folder for the import/export files
         temp_folder = tempfile.mkdtemp()
         try:
@@ -760,6 +759,74 @@ class TestSimple(AiidaTestCase):
             qb = QueryBuilder()
             qb.append(Group, filters={'uuid': {'==': g1_uuid}})
             self.assertEquals(qb.count(), 1, "The group was not found.")
+        finally:
+            # Deleting the created temporary folder
+            shutil.rmtree(temp_folder, ignore_errors=True)
+
+    def test_group_import_existing(self):
+        """
+        Testing what happens when I try to import a group that already exists in the
+        database. This should raise an appropriate exception
+        """
+        import os
+        import shutil
+        import tempfile
+
+        from aiida.common.exceptions import UniquenessError
+        from aiida.orm import load_node
+        from aiida.orm.groups import Group
+        from aiida.orm.data.structure import StructureData
+        from aiida.orm.importexport import export
+        from aiida.orm.querybuilder import QueryBuilder
+
+        grouplabel = "node_group_existing"
+        # Creating a folder for the import/export files
+        temp_folder = tempfile.mkdtemp()
+        try:
+            # Create another user
+            new_email = "newuser@new.n"
+            user = orm.User(email=new_email)
+            user.store()
+
+            # Create a structure data node
+            sd1 = StructureData()
+            sd1.set_user(user)
+            sd1.label = 'sd'
+            sd1.store()
+
+            # Create a group and add the data inside
+            g1 = Group(label=grouplabel)
+            g1.store()
+            g1.add_nodes([sd1])
+            g1_uuid = g1.uuid
+
+            # At this point we export the generated data
+            filename1 = os.path.join(temp_folder, "export1.tar.gz")
+            export([g1], outfile=filename1, silent=True)
+            self.clean_db()
+            self.insert_data()
+
+            # Creating a group of the same name
+            g1 = Group(label="node_group_existing")
+            g1.store()
+            import_data(filename1, silent=True)
+            # The import should have created a new group with a suffix
+            # I check for this:
+            qb = QueryBuilder().append(Group, filters={'label':{'like':grouplabel+'%'}})
+            self.assertEqual(qb.count(),2)
+            #Now I check for the group having one member, and whether the name is different:
+            qb = QueryBuilder()
+            qb.append(Group, filters={'label':{'like':grouplabel+'%'}}, tag='g', project='label')
+            qb.append(StructureData, with_group='g')
+            self.assertEqual(qb.count(),1)
+            # I check that the group name was changed:
+            self.assertTrue(qb.all()[0][0] != grouplabel)
+            # I import another name, the group should not be imported again
+            import_data(filename1, silent=True)
+            qb = QueryBuilder()
+            qb.append(Group, filters={'label':{'like':grouplabel+'%'}})
+            self.assertEqual(qb.count(),2)
+
         finally:
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
@@ -1169,7 +1236,7 @@ class TestComputer(AiidaTestCase):
             qb = QueryBuilder()
             qb.append(Computer, project=['name', 'uuid', 'id'])
             self.assertEqual(qb.count(), 1, "Found {} computers"
-                "but only one computer should be found.".format(qb.count()))
+                                            "but only one computer should be found.".format(qb.count()))
             self.assertEqual(six.text_type(qb.first()[0]), comp_name,
                              "The computer name is not correct.")
             self.assertEqual(six.text_type(qb.first()[1]), comp_uuid,
@@ -1291,7 +1358,7 @@ class TestComputer(AiidaTestCase):
             qb = QueryBuilder()
             qb.append(Computer, project=['name'])
             self.assertEqual(qb.count(), 1, "Found {} computers"
-                "but only one computer should be found.".format(qb.count()))
+                                            "but only one computer should be found.".format(qb.count()))
             self.assertEqual(six.text_type(qb.first()[0]), comp1_name,
                              "The computer name is not correct.")
 
@@ -1313,7 +1380,7 @@ class TestComputer(AiidaTestCase):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.computers import Computer
         from aiida.orm.node.process import CalcJobNode
-        from aiida.orm.importexport import COMP_DUPL_SUFFIX
+        from aiida.orm.importexport import DUPL_SUFFIX
 
         # Creating a folder for the import/export files
         export_file_tmp_folder = tempfile.mkdtemp()
@@ -1411,10 +1478,10 @@ class TestComputer(AiidaTestCase):
             self.assertIn([calc1_label, comp1_name], res,
                           "Calc-Computer combination not found.")
             self.assertIn([calc2_label,
-                           comp1_name + COMP_DUPL_SUFFIX.format(0)], res,
+                           comp1_name + DUPL_SUFFIX.format(0)], res,
                           "Calc-Computer combination not found.")
             self.assertIn([calc3_label,
-                           comp1_name + COMP_DUPL_SUFFIX.format(1)], res,
+                           comp1_name + DUPL_SUFFIX.format(1)], res,
                           "Calc-Computer combination not found.")
         finally:
             # Deleting the created temporary folders
@@ -1500,7 +1567,7 @@ class TestComputer(AiidaTestCase):
 
         for archive in ['export/compare/django.aiida', 'export/compare/sqlalchemy.aiida']:
             # Clean the database
-            self.clean_db()
+            self.reset_database()
 
             # Import the needed data
             import_archive_fixture(archive)
@@ -1515,8 +1582,10 @@ class TestComputer(AiidaTestCase):
             }
 
             # Check that we got the correct metadata & transport parameters
+            # Make sure to exclude the default computer
             qb = QueryBuilder()
-            qb.append(Computer, project=['transport_params', '_metadata'], tag="comp")
+            qb.append(Computer, project=['transport_params', '_metadata'], tag="comp",
+                      filters={'name': {'!==': self.computer.name}})
             self.assertEqual(qb.count(), 1, "Expected only one computer")
 
             res = qb.dict()[0]
@@ -1528,11 +1597,7 @@ class TestComputer(AiidaTestCase):
 class TestLinks(AiidaTestCase):
 
     def setUp(self):
-        self.clean_db()
-        self.insert_data()
-
-    def tearDown(self):
-        pass
+        self.reset_database()
 
     def get_all_node_links(self):
         """
@@ -1571,8 +1636,7 @@ class TestLinks(AiidaTestCase):
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
             export([node_output], outfile=export_file, silent=True)
 
-            self.clean_db()
-            self.insert_data()
+            self.reset_database()
 
             import_data(export_file, silent=True)
             import_links = self.get_all_node_links()
@@ -1634,17 +1698,17 @@ class TestLinks(AiidaTestCase):
         pw1.add_incoming(wc2, LinkType.CALL_CALC, 'call')
         pw1._set_state(calc_states.PARSING)
 
-        d3.add_incoming(pw1, LinkType.CREATE, 'create')
-        d3.add_incoming(wc2, LinkType.RETURN, 'return')
+        d3.add_incoming(pw1, LinkType.CREATE, 'create1')
+        d3.add_incoming(wc2, LinkType.RETURN, 'return1')
 
-        d4.add_incoming(pw1, LinkType.CREATE, 'create')
-        d4.add_incoming(wc2, LinkType.RETURN, 'return')
+        d4.add_incoming(pw1, LinkType.CREATE, 'create2')
+        d4.add_incoming(wc2, LinkType.RETURN, 'return2')
 
         pw2.add_incoming(d4, LinkType.INPUT_CALC, 'input')
         pw2._set_state(calc_states.PARSING)
 
-        d5.add_incoming(pw2, LinkType.CREATE, 'create')
-        d6.add_incoming(pw2, LinkType.CREATE, 'create')
+        d5.add_incoming(pw2, LinkType.CREATE, 'create5')
+        d6.add_incoming(pw2, LinkType.CREATE, 'create6')
 
         # Return the generated nodes
         graph_nodes = [d1, d2, d3, d4, d5, d6, pw1, pw2, wc1, wc2]
@@ -1701,8 +1765,7 @@ class TestLinks(AiidaTestCase):
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
             export([group], outfile=export_file, silent=True, create_reversed=False)
 
-            self.clean_db()
-            self.insert_data()
+            self.reset_database()
 
             import_data(export_file, silent=True)
 
@@ -1751,8 +1814,7 @@ class TestLinks(AiidaTestCase):
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
             export(graph_nodes, outfile=export_file, silent=True)
 
-            self.clean_db()
-            self.insert_data()
+            self.reset_database()
 
             import_data(export_file, silent=True)
             import_links = self.get_all_node_links()
@@ -1781,8 +1843,7 @@ class TestLinks(AiidaTestCase):
                 export([export_node], outfile=export_file, silent=True)
                 export_node_str = str(export_node)
 
-                self.clean_db()
-                self.insert_data()
+                self.reset_database()
 
                 import_data(export_file, silent=True)
 
@@ -1845,12 +1906,12 @@ class TestLinks(AiidaTestCase):
             c1.add_incoming(ni2, LinkType.INPUT_CALC, 'ni2-to-c1')
 
             # Connecting the first output node to wc1 & c1
-            no1.add_incoming(wc1, LinkType.RETURN, 'output')
-            no1.add_incoming(c1, LinkType.CREATE, 'output')
+            no1.add_incoming(wc1, LinkType.RETURN, 'output1')
+            no1.add_incoming(c1, LinkType.CREATE, 'output1')
 
             # Connecting the second output node to wc1 & c1
-            no2.add_incoming(wc1, LinkType.RETURN, 'output')
-            no2.add_incoming(c1, LinkType.CREATE, 'output')
+            no2.add_incoming(wc1, LinkType.RETURN, 'output2')
+            no2.add_incoming(c1, LinkType.CREATE, 'output2')
 
             # Getting the input, create, return and call links
             qb = QueryBuilder()
@@ -1868,8 +1929,7 @@ class TestLinks(AiidaTestCase):
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
             export([wc2], outfile=export_file, silent=True)
 
-            self.clean_db()
-            self.insert_data()
+            self.reset_database()
 
             import_data(export_file, silent=True)
             import_links = self.get_all_node_links()
@@ -1926,15 +1986,13 @@ class TestLinks(AiidaTestCase):
             export([o1], outfile=export_file_1, silent=True, return_reversed=True)
             export([w1], outfile=export_file_2, silent=True, return_reversed=True)
 
-            self.clean_db()
-            self.insert_data()
+            self.reset_database()
 
             import_data(export_file_1, silent=True)
             links_in_db = self.get_all_node_links()
 
             self.assertEquals(sorted(links_wanted), sorted(links_in_db))
-            self.clean_db()
-            self.insert_data()
+            self.reset_database()
 
             import_data(export_file_2, silent=True)
             links_in_db = self.get_all_node_links()
@@ -1978,8 +2036,7 @@ class TestLinks(AiidaTestCase):
             export([o1, w1, w2, i1],
                    outfile=export_file, silent=True)
 
-            self.clean_db()
-            self.insert_data()
+            self.reset_database()
 
             import_data(export_file, silent=True)
 
@@ -2019,8 +2076,7 @@ class TestLinks(AiidaTestCase):
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
             export([code], outfile=export_file, silent=True)
 
-            self.clean_db()
-            self.insert_data()
+            self.reset_database()
 
             import_data(export_file, silent=True)
 
@@ -2066,8 +2122,7 @@ class TestLinks(AiidaTestCase):
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
             export([jc], outfile=export_file, silent=True)
 
-            self.clean_db()
-            self.insert_data()
+            self.reset_database()
 
             import_data(export_file, silent=True)
 

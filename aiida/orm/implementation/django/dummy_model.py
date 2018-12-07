@@ -102,21 +102,6 @@ class DbComputer(Base):
     transport_params = Column(String(255))
     _metadata = Column('metadata', String(255), default="{}")
 
-    def get_aiida_class(self):
-        from aiida.backends.djsite.db.models import DbComputer as DjangoSchemaDbComputer
-        djcomputer = DjangoSchemaDbComputer(
-            id=self.id,
-            uuid=self.uuid,
-            name=self.name,
-            hostname=self.hostname,
-            description=self.description,
-            enabled=self.enabled,
-            transport_type=self.transport_type,
-            scheduler_type=self.scheduler_type,
-            transport_params=self.transport_params,
-            metadata=self._metadata)
-        return djcomputer.get_aiida_class()
-
 
 class DbUser(Base):
     __tablename__ = "db_dbuser"
@@ -133,21 +118,6 @@ class DbUser(Base):
 
     last_login = Column(DateTime(timezone=True), default=timezone.now)
     date_joined = Column(DateTime(timezone=True), default=timezone.now)
-
-    def get_aiida_class(self):
-        from aiida.backends.djsite.db.models import DbUser as DjangoSchemaDbUser
-        djuser = DjangoSchemaDbUser(
-            id=self.id,
-            email=self.email,
-            password=self.password,
-            first_name=self.first_name,
-            last_name=self.last_name,
-            institution=self.institution,
-            is_staff=self.is_staff,
-            is_active=self.is_active,
-            last_login=self.last_login,
-            date_joined=self.date_joined)
-        return djuser.get_aiida_class()
 
 
 table_groups_nodes = Table(
@@ -182,18 +152,6 @@ class DbGroup(Base):
 
         return '<DbGroup [user-defined] "{}">'.format(self.label)
 
-    def get_aiida_class(self):
-        from aiida.backends.djsite.db.models import DbGroup as DjangoSchemaDbGroup
-        return DjangoSchemaDbGroup(
-            id=self.id,
-            type_string=self.type_string,
-            uuid=self.uuid,
-            label=self.label,
-            time=self.time,
-            description=self.description,
-            user_id=self.user_id,
-        ).get_aiida_class()
-
 
 class DbNode(Base):
     __tablename__ = "db_dbnode"
@@ -225,41 +183,6 @@ class DbNode(Base):
         secondaryjoin="DbNode.id == DbLink.output_id",
         backref=backref("inputs", passive_deletes=True),
         passive_deletes=True)
-
-    def get_aiida_class(self):
-        """
-        Return the corresponding instance of
-        :func:`~aiida.orm.implementation.django.node.Node`
-        or a subclass return by the plugin loader.
-
-        .. todo::
-            The behavior is quite pathetic, creating a django DbNode instance
-            to instantiate the aiida instance.
-            These means that every time you load Aiida instances with
-            the QueryBuilder when using Django as a backend, three instances
-            are instantiated for every Aiida instance you load!
-            Could be fixed by allowing DbNode from the dummy nodel to be passed
-            to AiidaNode's __init__.
-
-        :returns: An instance of the plugin class
-        """
-        # I need to import the DbNode in the Django model,
-        # and instantiate an object that has the same attributes as self.
-        from aiida.backends.djsite.db.models import DbNode as DjangoSchemaDbNode
-        dbnode = DjangoSchemaDbNode(
-            id=self.id,
-            type=self.type,
-            process_type=self.process_type,
-            uuid=self.uuid,
-            ctime=self.ctime,
-            mtime=self.mtime,
-            label=self.label,
-            description=self.description,
-            dbcomputer_id=self.dbcomputer_id,
-            user_id=self.user_id,
-            public=self.public,
-            nodeversion=self.nodeversion)
-        return dbnode.get_aiida_class()
 
     @hybrid_property
     def user_email(self):
@@ -309,18 +232,6 @@ class DbAuthInfo(Base):
 
     __table_args__ = (UniqueConstraint("aiidauser_id", "dbcomputer_id"),)
 
-    def get_aiida_class(self):
-        from aiida.backends.djsite.db.models import DbAuthInfo as DjangoSchemaDbAuthInfo
-        dbauthinfo = DjangoSchemaDbAuthInfo(
-            id=self.id,
-            aiidauser_id=self.aiidauser_id,
-            dbcomputer_id=self.dbcomputer_id,
-            metadata=self._metadata,
-            auth_params=self.auth_params,
-            enabled=self.enabled,
-        )
-        return dbauthinfo.get_aiida_class()
-
 
 class DbLog(Base):
     __tablename__ = "db_dblog"
@@ -336,18 +247,6 @@ class DbLog(Base):
 
     message = Column(Text(), nullable=True)
     _metadata = Column('metadata', String(255), default="{}")
-
-    def get_aiida_class(self):
-        from aiida.backends.djsite.db.models import DbLog as DjangoDbLog
-        dblog = DjangoDbLog(
-            time=self.time,
-            loggername=self.loggername,
-            levelname=self.levelname,
-            objname=self.objname,
-            objpk=self.objpk,
-            message=self.message,
-            metadata=self._metadata)
-        return dblog.get_aiida_class()
 
 
 class DbComment(Base):
@@ -365,18 +264,6 @@ class DbComment(Base):
 
     dbnode = relationship('DbNode', backref='dbcomments')
     user = relationship("DbUser")
-
-    def get_aiida_class(self):
-        from aiida.backends.djsite.db.models import DbComment as DjangoDbComment
-        dbcomment = DjangoDbComment(
-            id=self.id,
-            uuid=self.uuid,
-            dbnode=self.dbnode_id,
-            ctime=self.ctime,
-            mtime=self.mtime,
-            user=self.user_id,
-            content=self.content)
-        return dbcomment.get_aiida_class()
 
 
 profile = get_profile_config(settings.AIIDADB_PROFILE)

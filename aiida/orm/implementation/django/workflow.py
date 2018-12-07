@@ -573,14 +573,15 @@ def get_all_running_steps():
     return DbWorkflowStep.objects.filter(state=wf_states.RUNNING)
 
 
-def get_workflow_info(w, tab_size=2, short=False, pre_string="",
+def get_workflow_info(workflow, tab_size=2, short=False, pre_string="",
                       depth=16):
     """
     Return a string with all the information regarding the given workflow and
     all its calculations and subworkflows.
     This is a recursive function (to print all subworkflows info as well).
 
-    :param w: a DbWorkflow instance
+    :param workflow: the workflow
+    :type workflow: :class:`aiida.orm.Workflow`
     :param tab_size: number of spaces to use for the indentation
     :param short: if True, provide a shorter output (only total number of
         calculations, rather than the state of each calculation)
@@ -602,25 +603,27 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
 
     lines = []
 
-    if w.label:
-        wf_labelstring = "'{}', ".format(w.label)
+    if workflow.label:
+        wf_labelstring = "'{}', ".format(workflow.label)
     else:
         wf_labelstring = ""
 
     lines.append(pre_string)  # put an empty line before any workflow
     lines.append(pre_string + "+ Workflow {} ({}pk: {}) is {} [{}]".format(
-        w.module_class, wf_labelstring, w.pk, w.state, str_timedelta(
-            now - w.ctime, negative_to_zero=True)))
+        workflow.__class__.__name__,
+        wf_labelstring,
+        workflow.pk,
+        workflow.get_state(),
+        str_timedelta(now - workflow.ctime, negative_to_zero=True)))
 
     # print information on the steps only if depth is higher than 0
     if depth > 0:
 
         # order all steps by time and  get all the needed values
-        steps_and_subwf_pks = w.steps.all().order_by('time', 'sub_workflows__ctime',
-                                                     'calculations__ctime').values_list('pk',
-                                                                                        'sub_workflows__pk',
-                                                                                        'calculations', 'name',
-                                                                                        'nextcall', 'state')
+        steps_and_subwf_pks = workflow._dbworkflowinstance.steps.all(). \
+            order_by('time', 'sub_workflows__ctime', 'calculations__ctime'). \
+            values_list('pk', 'sub_workflows__pk', 'calculations', 'name', 'nextcall', 'state')
+
         # get the list of step pks (distinct), preserving the order
         steps_pk = []
         for item in steps_and_subwf_pks:
@@ -643,7 +646,8 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
                 subwfs_of_steps[step_pk]['calc_pks'].append(calc_pk)
 
         # get all subworkflows for all steps
-        wflows = DbWorkflow.objects.filter(parent_workflow_step__in=steps_pk)  # .order_by('ctime')
+        wflows = [Workflow.get_subclass_from_dbnode(wf) for wf in
+                  DbWorkflow.objects.filter(parent_workflow_step__in=steps_pk)]
         # dictionary mapping pks into workflows
         workflow_mapping = {_.pk: _ for _ in wflows}
 

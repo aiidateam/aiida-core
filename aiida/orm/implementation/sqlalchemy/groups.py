@@ -22,6 +22,7 @@ from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError)
 from aiida.common.utils import type_check
 from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
 
+from . import convert
 from . import entities
 from . import users
 from . import utils
@@ -94,7 +95,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
 
     @property
     def user(self):
-        return self._dbmodel.user.get_aiida_class()
+        return self._backend.users.from_dbmodel(self._dbmodel.user)
 
     @user.setter
     def user(self, new_user):
@@ -177,14 +178,15 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
         class Iterator(object):
             """Nodes iterator"""
 
-            def __init__(self, dbnodes):
+            def __init__(self, dbnodes, backend):
                 self._dbnodes = dbnodes
                 self._iter = dbnodes.__iter__()
                 self.generator = self._genfunction()
+                self._backend = backend
 
             def _genfunction(self):
                 for node in self._iter:
-                    yield node.get_aiida_class()
+                    yield convert.get_backend_entity(node, self._backend)
 
             def __iter__(self):
                 return self
@@ -199,7 +201,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
             def next(self):
                 return next(self.generator)
 
-        return Iterator(self._dbmodel.dbnodes)
+        return Iterator(self._dbmodel.dbnodes, self._backend)
 
     def remove_nodes(self, nodes):
         """

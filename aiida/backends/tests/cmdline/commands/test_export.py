@@ -72,7 +72,7 @@ class TestVerdiExport(AiidaTestCase):
 
         cls.code = orm.Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
         cls.group = orm.Group(label='test_group').store()
-        cls.node = orm.Node().store()
+        cls.node = orm.Data().store()
 
         # some of the export tests write in the current directory,
         # make sure it is writeable and we don't pollute the current one

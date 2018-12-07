@@ -13,8 +13,17 @@ Tests for the folder class
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+import sys
 import io
 import unittest
+
+
+def fs_encoding_is_utf8():
+    """
+    :return: True if the current filesystem encoding is set to UTF-8
+    """
+
+    return sys.getfilesystemencoding() == 'utf-8'
 
 
 class FoldersTest(unittest.TestCase):
@@ -23,6 +32,8 @@ class FoldersTest(unittest.TestCase):
     """
 
     @classmethod
+    @unittest.skipUnless(fs_encoding_is_utf8(), ("Testing for unicode folders "
+                                                 "requires UTF-8 to be set for filesystem encoding"))
     def test_unicode(cls):
         """
         Check that there are no exceptions raised when

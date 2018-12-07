@@ -1,3 +1,5 @@
+.. _DataTypes:
+
 ================
 AiiDA data types
 ================

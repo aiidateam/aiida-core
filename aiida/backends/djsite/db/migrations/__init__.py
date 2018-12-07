@@ -11,7 +11,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-LATEST_MIGRATION = '0020_dbgroup_type_string_change_content'
+LATEST_MIGRATION = '0021_migrate_builtin_calculations'
 
 def _update_schema_version(version, apps, schema_editor):
     from aiida.backends.djsite.utils import set_db_schema_version

@@ -207,13 +207,13 @@ class TestTcodDbExporter(AiidaTestCase):
         calc._set_state(calc_states.PARSING)
         fd.add_incoming(calc, LinkType.CREATE, calc._get_linkname_retrieved())
 
-        pd.add_incoming(calc, LinkType.CREATE, "calc")
+        pd.add_incoming(calc, LinkType.CREATE, "create1")
         pd.store()
 
         with self.assertRaises(ValueError):
             export_cif(c, parameters=pd)
 
-        c.add_incoming(calc, LinkType.CREATE, "calc")
+        c.add_incoming(calc, LinkType.CREATE, "create2")
         export_cif(c, parameters=pd)
 
         values = export_values(c, parameters=pd)

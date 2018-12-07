@@ -171,7 +171,7 @@ class AbstractQueryManager(object):
             qb.append(orm.Group, tag="group", filters=group_filters,
                       group_of="bdata")
 
-        qb.append(StructureData, tag="sdata", ancestor_of="bdata",
+        qb.append(StructureData, tag="sdata", with_descendants="bdata",
                   # We don't care about the creator of StructureData
                   project=["id", "attributes.kinds", "attributes.sites"])
 
@@ -245,5 +245,5 @@ class AbstractQueryManager(object):
         qb = QueryBuilder()
         qb.append(Node, tag='low_node',
                   filters={'id': {'in': node_pks}})
-        qb.append(Node, ancestor_of='low_node', project=return_values)
+        qb.append(Node, with_descendants='low_node', project=return_values)
         return qb.all()

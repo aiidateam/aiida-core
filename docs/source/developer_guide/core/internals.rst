@@ -15,10 +15,14 @@ This means that as soon as a node is stored any attempt to alter its attributes,
 Certain subclasses of nodes need to adapt this behavior however, as for example in the case of the :py:class:`~aiida.orm.node.process.process.ProcessNode` class (see `calculation updatable attributes`_), but since the immutability
 of stored nodes is a core concept of AiiDA, this behavior is nonetheless enforced on the node level. This guarantees that any subclasses of the Node class will respect this behavior unless it is explicitly overriden.
 
+Node methods
+******************
+- :py:meth:`~aiida.orm.implementation.general.node.clean_value` takes a value and returns an object which can be serialized for storage in the database. Such an object must be able to be subsequently deserialized without changing value. If a simple datatype is passed (integer, float, etc.), a check is performed to see if it has a value of ``nan`` or ``inf``, as these cannot be stored. Otherwise, if a list, tuple, dictionary, etc., is  passed, this check is performed for each value it contains. This is done recursively, automatically handling the case of nested objects. It is important to note that iterable type objects are converted to lists during this process, and mappings, such as dictionaries, are converted to normal dictionaries. This cleaning process is used by default when setting node attributes via :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._set_attr` and :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._append_to_attr`, although it can be disabled by setting ``clean=False``. Values are also cleaned when setting extras on a stored node using :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.set_extras` or :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.reset_extras`, but this cannot be disabled. 
 
-Methods & properties
-********************
-In the sequel the most important methods and properties of the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class will be described.
+
+AbstractNode methods & properties
+*********************************
+In the following sections, the most important methods and properties of the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class will be described.
 
 Node subclasses organization
 ============================
@@ -313,8 +317,6 @@ DbNode
 
 The :py:class:`~aiida.backends.djsite.db.models.DbNode` is the Django class that corresponds to the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class allowing to store and retrieve the needed information from and to the database. Other classes extending the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class, like :py:class:`~aiida.orm.data.Data`, :py:class:`~aiida.orm.node.process.process.ProcessNode` and :py:class:`~aiida.orm.data.code.Code` use the :py:class:`~aiida.backends.djsite.db.models.DbNode` code too to interact with the database.  The main methods are:
 
-- :py:meth:`~aiida.backends.djsite.db.models.DbNode.get_aiida_class` which returns the corresponding AiiDA class instance.
-
 - :py:meth:`~aiida.backends.djsite.db.models.DbNode.get_simple_name` which returns a string with the type of the class (by stripping the path before the class name).
 
 - :py:meth:`~aiida.backends.djsite.db.models.DbNode.attributes` which returns the all the attributes of the specific node as a dictionary.
@@ -402,3 +404,85 @@ For the **complete** API documentation see :py:mod:`aiida.orm`.
     :maxdepth: 2
 
     orm_overview
+
+Deprecated features, renaming, and adding new methods
++++++++++++++++++++++++++++++++++++++++++++++++++++++
+In case a method is renamed or removed, this is the procedure to follow:
+
+1. (If you want to rename) move the code to the new function name.
+   Then, in the docstring, add something like::
+
+     .. versionadded:: 0.7
+        Renamed from OLDMETHODNAME
+
+2. Don't remove directly the old function, but just change the code to use
+   the new function, and add in the docstring::
+
+     .. deprecated:: 0.7
+        Use :meth:`NEWMETHODNAME` instead.
+
+   Moreover, at the beginning of the function, add something like::
+
+     import warnings
+
+     # If we call this DeprecationWarning, pycharm will properly strike out the function
+     from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+     warnings.warn("<Deprecation warning here - MAKE IT SPECIFIC TO THIS DEPRECATION, as it will be shown only once per different message>", DeprecationWarning)
+        
+     # <REST OF THE FUNCTION HERE>
+ 
+   (of course replace the parts between ``< >`` symbols with the
+   correct strings).
+
+   The advantage of the method above is:
+
+   - pycharm will still show the method crossed out
+   - Our ``AiidaDeprecationWarning`` does not inherit from ``DeprecationWarning``, so it will not be "hidden" by python
+   - User can disable our warnings (and only those) by using AiiDA
+     properties with::
+       
+       verdi devel setproperty warnings.showdeprecations False
+
+Changing the config.json structure
+++++++++++++++++++++++++++++++++++
+
+In general, changes to ``config.json`` should be avoided if possible. However, if there is a need to modify it, the following procedure should be used to create a migration:
+
+1. Determine whether the change will be backwards-compatible. This means that an older version of AiiDA will still be able to run with the new ``config.json`` structure. It goes without saying that it's preferable to change ``config.json`` in a backwards-compatible way.
+
+2. In ``aiida/common/additions/config_migration/_migrations.py``, increase the ``CURRENT_CONFIG_VERSION`` by one. If the change is **not** backwards-compatible, set ``OLDEST_COMPATIBLE_CONFIG_VERSION`` to the same value.
+
+3. Write a function which transforms the old config dict into the new version. It is possible that you need user input for the migration, in which case this should also be handled in that function.
+
+4. Add an entry in ``_MIGRATION_LOOKUP`` where the key is the version **before** the migration, and the value is a ``ConfigMigration`` object. The ``ConfigMigration`` is constructed from your migration function, and the **hard-coded** values of ``CURRENT_CONFIG_VERSION`` and ``OLDEST_COMPATIBLE_CONFIG_VERSION``. If these values are not hard-coded, the migration will break as soon as the values are changed again.
+
+5. Add tests for the migration, in ``aiida/common/additions/config_migration/test_migrations.py``. You can add two types of tests:
+
+    * Tests that run the entire migration, using the ``check_and_migrate_config`` function. Make sure to run it with ``store=False``, otherwise it will overwrite your ``config.json`` file. For these tests, you will have to update the reference files.
+    * Tests that run a single step in the migration, using the ``ConfigMigration.apply`` method. This can be used if you need to test different edge cases of the migration.
+
+  There are examples for both types of tests.
+
+Daemon and signal handling
+++++++++++++++++++++++++++
+
+While the AiiDA daemon is running, interrupt signals (``SIGINT`` and ``SIGTERM``) are captured so that the daemon can shut down gracefully. This is implemented using Python's ``signal`` module, as shown in the following dummy example:
+
+.. code:: python
+
+    import signal
+
+    def print_foo(*args):
+        print('foo')
+
+    signal.signal(signal.SIGINT, print_foo)
+
+You should be aware of this while developing code which runs in the daemon. In particular, it's important when creating subprocesses. When a signal is sent, the whole process group receives that signal. As a result, the subprocess can be killed even though the Python main process captures the signal. This can be avoided by creating a new process group for the subprocess, meaning that it will not receive the signal. To do this, you need to pass ``preexec_fn=os.setsid`` to the ``subprocess`` function:
+
+.. code:: python
+
+    import os
+    import subprocess
+
+    print(subprocess.check_output('sleep 3; echo bar', preexec_fn=os.setsid))
+

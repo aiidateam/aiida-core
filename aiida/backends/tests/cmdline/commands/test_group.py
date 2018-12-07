@@ -170,9 +170,9 @@ class TestVerdiGroupSetup(AiidaTestCase):
         """
         Test group addnotes command
         """
-        from aiida.orm.node.process import ProcessNode
+        from aiida.orm.node.process.calculation import CalculationNode
 
-        node = ProcessNode()
+        node = CalculationNode()
         node._set_attr('attr1', 'OK')  # pylint: disable=protected-access
         node._set_attr('attr2', 'OK')  # pylint: disable=protected-access
         node.store()
@@ -182,7 +182,7 @@ class TestVerdiGroupSetup(AiidaTestCase):
         # check if node is added in group using group show command
         result = self.cli_runner.invoke(group_show, ['dummygroup1'])
         self.assertClickResultNoException(result)
-        self.assertIn('ProcessNode', result.output)
+        self.assertIn('CalculationNode', result.output)
         self.assertIn(str(node.pk), result.output)
 
         # remove same node
@@ -191,5 +191,5 @@ class TestVerdiGroupSetup(AiidaTestCase):
         # check if node is added in group using group show command
         result = self.cli_runner.invoke(group_show, ['-r', 'dummygroup1'])
         self.assertIsNone(result.exception, result.output)
-        self.assertNotIn('ProcessNode', result.output)
+        self.assertNotIn('CalculationNode', result.output)
         self.assertNotIn(str(node.pk), result.output)

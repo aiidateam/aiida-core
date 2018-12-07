@@ -19,13 +19,11 @@ from django.contrib.auth.models import (
     AbstractBaseUser, BaseUserManager, PermissionsMixin)
 from django.utils.encoding import python_2_unicode_compatible
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models.query import QuerySet, ModelIterable
+from django.db.models.query import QuerySet
 
 from aiida.utils import timezone
 from aiida.common.utils import get_new_uuid
-from aiida.common.exceptions import (
-    ConfigurationError, DbContentError, MissingPluginError)
-
+from aiida.common.exceptions import (ConfigurationError, DbContentError)
 from aiida.backends.djsite.settings.settings import AUTH_USER_MODEL
 import aiida.backends.djsite.db.migrations as migrations
 from aiida.backends.utils import AIIDA_ATTRIBUTE_SEP
@@ -44,24 +42,26 @@ SCHEMA_VERSION = migrations.current_schema_version()
 
 class AiidaQuerySet(QuerySet):
     def iterator(self):
+        from aiida.orm.implementation.django import convert
         for obj in super(AiidaQuerySet, self).iterator():
-            yield obj.get_aiida_class()
+            yield convert.get_backend_entity(obj, None)
 
     def __iter__(self):
         """Iterate for list comprehensions.
 
         Note: used to rely on the iterator in django 1.8 but does no longer in django 1.11.
         """
-
-        return (x.get_aiida_class() for x in super(AiidaQuerySet, self).__iter__())
+        from aiida.orm.implementation.django import convert
+        return (convert.get_backend_entity(model, None) for model in super(AiidaQuerySet, self).__iter__())
 
     def __getitem__(self, key):
         """Get item for [] operator
 
         Note: used to rely on the iterator in django 1.8 but does no longer in django 1.11.
         """
+        from aiida.orm.implementation.django import convert
         res = super(AiidaQuerySet, self).__getitem__(key)
-        return res.get_aiida_class()
+        return convert.get_backend_entity(res, None)
 
 
 class AiidaObjectManager(m.Manager):
@@ -117,11 +117,6 @@ class DbUser(AbstractBaseUser, PermissionsMixin):
     USERNAME_FIELD = 'email'
 
     objects = DbUserManager()
-
-    def get_aiida_class(self):
-        from aiida.orm.implementation.django.users import DjangoUser
-        from aiida.manage import get_manager
-        return DjangoUser.from_dbmodel(self, get_manager().get_backend())
 
 
 @python_2_unicode_compatible
@@ -183,25 +178,6 @@ class DbNode(m.Model):
     objects = m.Manager()
     # Return aiida Node instances or their subclasses instead of DbNode instances
     aiidaobjects = AiidaObjectManager()
-
-    def get_aiida_class(self):
-        """
-        Return the corresponding aiida instance of class aiida.orm.Node or a
-        appropriate subclass.
-        """
-        from aiida.common import AIIDA_LOGGER
-        from aiida.orm.node import Node
-        from aiida.plugins.loader import get_plugin_type_from_type_string, load_plugin
-
-        try:
-            plugin_type = get_plugin_type_from_type_string(self.type)
-        except DbContentError:
-            raise DbContentError("The type name of node with pk= {} is "
-                                 "not valid: '{}'".format(self.pk, self.type))
-
-        PluginClass = load_plugin(plugin_type, safe=True)
-
-        return PluginClass(dbnode=self)
 
     def get_simple_name(self, invalid_result=None):
         """
@@ -1313,11 +1289,6 @@ class DbGroup(m.Model):
         else:
             return '<DbGroup [user-defined] "{}">'.format(self.label)
 
-    def get_aiida_class(self):
-        from aiida.orm.implementation.django.groups import DjangoGroup
-        from aiida.manage import get_manager
-        return DjangoGroup.from_dbmodel(self, get_manager().get_backend())
-
 
 @python_2_unicode_compatible
 class DbComputer(m.Model):
@@ -1397,11 +1368,6 @@ class DbComputer(m.Model):
                 "Pass either a computer name, a DbComputer django instance, a Computer pk or a Computer object")
         return dbcomputer
 
-    def get_aiida_class(self):
-        from aiida.orm.implementation.django.computer import DjangoComputer
-        from aiida.manage import get_manager
-        return DjangoComputer.from_dbmodel(self, get_manager().get_backend())
-
     def _get_val_from_metadata(self, key):
         import aiida.utils.json as json
 
@@ -1449,11 +1415,6 @@ class DbAuthInfo(m.Model):
             return "DB authorization info for {} on {}".format(self.aiidauser.email, self.dbcomputer.name)
         else:
             return "DB authorization info for {} on {} [DISABLED]".format(self.aiidauser.email, self.dbcomputer.name)
-
-    def get_aiida_class(self):
-        from aiida.orm.implementation.django.authinfo import DjangoAuthInfo
-        from aiida.manage import get_manager
-        return DjangoAuthInfo.from_dbmodel(self, get_manager().get_backend())
 
 
 @python_2_unicode_compatible
@@ -1518,14 +1479,6 @@ class DbWorkflow(m.Model):
     objects = m.Manager()
     # Return aiida Node instances or their subclasses instead of DbNode instances
     aiidaobjects = AiidaObjectManager()
-
-    def get_aiida_class(self):
-        """
-        Return the corresponding aiida instance of class aiida.workflow
-        """
-        from aiida.orm.workflow import Workflow
-
-        return Workflow.get_subclass_from_dbnode(self)
 
     def set_state(self, _state):
         self.state = _state
@@ -1694,6 +1647,7 @@ class DbWorkflowData(m.Model):
             six.reraise(ValueError, "Cannot set the parameter {}".format(self.name), sys.exc_info()[2])
 
     def get_value(self):
+        from aiida.orm.convert import get_orm_entity
         import aiida.utils.json as json
 
         from aiida.common.datastructures import wf_data_value_types
@@ -1701,7 +1655,7 @@ class DbWorkflowData(m.Model):
         if self.value_type == wf_data_value_types.JSON:
             return json.loads(self.json_value)
         elif self.value_type == wf_data_value_types.AIIDA:
-            return self.aiida_obj.get_aiida_class()
+            return get_orm_entity(self.aiida_obj)
         elif self.value_type == wf_data_value_types.NONE:
             return None
         else:

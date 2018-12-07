@@ -19,15 +19,14 @@ import six
 from sqlalchemy.exc import SQLAlchemyError
 
 from aiida.backends.sqlalchemy.models.node import DbNode, DbLink
-from aiida.backends.sqlalchemy.models.comment import DbComment
 from aiida.backends.sqlalchemy.utils import flag_modified
 from aiida.common.utils import get_new_uuid
 from aiida.common.folders import RepositoryFolder
-from aiida.common.exceptions import (InternalError, ModificationNotAllowed, NotExistent, UniquenessError)
+from aiida.common.exceptions import (ModificationNotAllowed, NotExistent, UniquenessError)
 from aiida.common.links import LinkType
 from aiida.common.utils import type_check
 from aiida.orm.implementation.general.node import AbstractNode, _HASH_EXTRA_KEY
-from aiida.orm.implementation.sqlalchemy.utils import get_attr
+from .utils import get_attr
 
 from . import computer as computers
 
@@ -287,7 +286,7 @@ class Node(AbstractNode):
                     }, tag='parent').append(
                 Node, filters={
                     'id': src.pk
-                }, tag='child', descendant_of='parent').count() > 0:
+                }, tag='child', with_ancestors='parent').count() > 0:
                 raise ValueError("The link you are attempting to create would generate a loop")
 
         self._do_create_link(src, label, link_type)
@@ -311,16 +310,20 @@ class Node(AbstractNode):
             raise UniquenessError("There is already a link with the same " "name (raw message was {})" "".format(exc))
 
     def _get_db_input_links(self, link_type):
+        from aiida.orm.convert import get_orm_entity
+
         link_filter = {'output': self._dbnode}
         if link_type is not None:
             link_filter['type'] = link_type.value
-        return [(i.label, i.input.get_aiida_class()) for i in DbLink.query.filter_by(**link_filter).distinct().all()]
+        return [(i.label, get_orm_entity(i.input)) for i in DbLink.query.filter_by(**link_filter).distinct().all()]
 
     def _get_db_output_links(self, link_type):
+        from aiida.orm.convert import get_orm_entity
+
         link_filter = {'input': self._dbnode}
         if link_type is not None:
             link_filter['type'] = link_type.value
-        return ((i.label, i.output.get_aiida_class()) for i in DbLink.query.filter_by(**link_filter).distinct().all())
+        return ((i.label, get_orm_entity(i.output)) for i in DbLink.query.filter_by(**link_filter).distinct().all())
 
     def _set_db_computer(self, computer):
         type_check(computer, computers.SqlaComputer)

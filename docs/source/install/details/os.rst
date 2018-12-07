@@ -3,8 +3,6 @@
 Operating Systems
 =================
 
-This page provides some installation instructions for installing the prerequisite software necessary to run AiiDA.
-Note that we do not officially support all platforms and cannot therefore provide instructions for all possible operating systems.
 
 
 Ubuntu
@@ -37,7 +35,7 @@ If you run into trouble, please refer to the RabbitMQ :ref:`troubleshooting sect
 Mac OS X
 --------
 
-For Mac OS it is adviced to use the `Homebrew`_ package manager.
+For Mac OS we recommend using the `Homebrew`_ package manager.
 If you have not installed Homebrew yet, you can do so with the following command:
 
 .. code-block:: bash
@@ -96,3 +94,27 @@ If you want to manually start the RabbitMQ server you can use:
     /etc/init.d/rabbitmq start
 
 For more information, or if you run into trouble, please refer to the RabbitMQ :ref:`troubleshooting section<installation_rabbitmq>`.
+
+
+Windows Subsystem for Linux (Ubuntu)
+------------------------------------
+
+The guide for Ubuntu above can be followed but there are a few things to note:
+
+#. The `windows native RabbitMQ <https://www.rabbitmq.com/install-windows.html>`_
+   should be installed and started,
+   since the version in WSL Ubuntu 18.04 does not work properly.
+
+#. Linux services under WSL are not started automatically.
+   To start the PostgreSQL service, type the command below in the terminal::
+
+     sudo service postgresql start
+
+#. There is a `known issue <https://github.com/Microsoft/WSL/issues/856>`_ in WSL Ubuntu 18.04 where the timezone is not
+   configured correctly out-of-the-box, which may cause problem for the database. 
+   The following command can be used to re-configure the time zone::
+
+     dpkg-reconfigure tzdata
+
+#. The file open limit may need to be raised using ``sudo ulimit -n 2048`` (default is 1024), when running tests.
+

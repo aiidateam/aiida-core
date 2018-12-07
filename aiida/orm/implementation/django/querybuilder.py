@@ -28,6 +28,8 @@ from aiida.common.exceptions import InputValidationError
 from aiida.orm.implementation.django import dummy_model
 from aiida.backends.djsite.db.models import DbAttribute, DbExtra, ObjectDoesNotExist
 
+from aiida.orm.implementation.django.convert import get_backend_entity
+
 
 class DjangoQueryBuilder(BackendQueryBuilder):
     """Django query builder"""
@@ -401,7 +403,7 @@ class DjangoQueryBuilder(BackendQueryBuilder):
             # Metadata and transport_params are stored as json strings in the DB:
             return json_loads(res)
         elif isinstance(res, (self.Group, self.Node, self.Computer, self.User, self.AuthInfo)):
-            returnval = res.get_aiida_class()
+            returnval = get_backend_entity(res, self._backend)  # pylint: disable=assignment-from-no-return
         elif isinstance(res, uuid.UUID):
             returnval = six.text_type(res)
         else:

@@ -78,7 +78,7 @@ RUN updatedb
 
 # update pip and setuptools to get a relatively-recent version
 # This can be updated in the future
-RUN pip install pip==10.0.1 setuptools==39.0.1
+RUN pip install pip==18.1 setuptools==40.6.2
 
 # Put the doubler script
 COPY doubler.sh /usr/local/bin/

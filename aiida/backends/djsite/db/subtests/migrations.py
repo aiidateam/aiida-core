@@ -33,6 +33,7 @@ class TestMigrations(AiidaTestCase):
     migrate_to = None
 
     def setUp(self):
+        """Go to a specific schema version before running tests."""
         assert self.migrate_from and self.migrate_to, \
             "TestCase '{}' must define migrate_from and migrate_to properties".format(type(self).__name__)
         self.migrate_from = [(self.app, self.migrate_from)]
@@ -43,23 +44,37 @@ class TestMigrations(AiidaTestCase):
         # Reverse to the original migration
         executor.migrate(self.migrate_from)
 
-        self.setUpBeforeMigration(old_apps)
+        try:
+            self.setUpBeforeMigration(old_apps)
+            # Run the migration to test
+            executor = MigrationExecutor(connection)
+            executor.loader.build_graph()
+            executor.migrate(self.migrate_to)
 
-        # Run the migration to test
-        executor = MigrationExecutor(connection)
-        executor.loader.build_graph()
-        executor.migrate(self.migrate_to)
+            self.apps = executor.loader.project_state(self.migrate_to).apps
+        except Exception:
+            # Bring back the DB to the correct state if this setup part fails
+            self._revert_database_schema()
+            raise
 
-        self.apps = executor.loader.project_state(self.migrate_to).apps
 
     def tearDown(self):
+        """At the end make sure we go back to the latest schema version."""
+        self._revert_database_schema()
+
+    def setUpBeforeMigration(self, apps):
+        """
+        Anything to do before running the migrations. 
+        This is typically implemented in test subclasses.
+        """
+        pass
+
+    def _revert_database_schema(self):
+        """Bring back the DB to the correct state."""
         from ..migrations import LATEST_MIGRATION
         self.migrate_to = [(self.app, LATEST_MIGRATION)]
         executor = MigrationExecutor(connection)
         executor.migrate(self.migrate_to)
-
-    def setUpBeforeMigration(self, apps):
-        pass
 
 
 class TestDuplicateNodeUuidMigration(TestMigrations):
@@ -144,9 +159,9 @@ class TestUuidMigration(TestMigrations):
     migrate_to = '0018_django_1_11'
 
     def setUpBeforeMigration(self, apps):
-        from aiida.orm import Node
+        from aiida.orm import Data
 
-        n = Node().store()
+        n = Data().store()
         self.node_uuid = n.uuid
         self.node_id = n.id
 
@@ -160,7 +175,6 @@ class TestUuidMigration(TestMigrations):
 class TestGroupRenamingMigration(TestMigrations):
 
     migrate_from = '0019_dbgroup_name2label_type2type_string'
-    #migrate_from = '0018_django_1_11'
     migrate_to = '0020_dbgroup_type_string_change_content'
 
     def setUpBeforeMigration(self, apps):

@@ -72,7 +72,8 @@ class BackendGroup(backends.BackendEntity):
     @abc.abstractproperty
     def user(self):
         """
-        :return: a Django DbUser object, representing the user associated to this group.
+        :return: a backend user object, representing the user associated to this group.
+        :rtype: :class:`aiida.orm.implementation.BackendUser`
         """
         pass
 

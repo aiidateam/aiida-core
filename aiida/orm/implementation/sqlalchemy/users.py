@@ -12,14 +12,14 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from aiida.backends.sqlalchemy.models.user import DbUser
-from aiida.orm.implementation import users
+from aiida.orm.implementation.users import BackendUser, BackendUserCollection
 from . import entities
 from . import utils
 
 __all__ = ('SqlaUserCollection', 'SqlaUser')
 
 
-class SqlaUserCollection(users.BackendUserCollection):
+class SqlaUserCollection(BackendUserCollection):
     """Collection of SQLA Users"""
 
     def create(self, email, first_name='', last_name='', institution=''):
@@ -62,7 +62,7 @@ class SqlaUserCollection(users.BackendUserCollection):
         return SqlaUser.from_dbmodel(dbmodel, self.backend)
 
 
-class SqlaUser(entities.SqlaModelEntity[DbUser], users.BackendUser):
+class SqlaUser(entities.SqlaModelEntity[DbUser], BackendUser):
     """SQLA user"""
 
     MODEL_CLASS = DbUser

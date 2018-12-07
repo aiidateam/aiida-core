@@ -16,234 +16,9 @@ from __future__ import print_function
 from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
-from aiida.orm.node import Node
+from aiida.orm import Data, Node
+from aiida.orm.node.process.calculation import CalculationNode
 
-
-class TestDataNodeDjango(AiidaTestCase):
-    """
-    These tests check the features of Data nodes that differ from the base Node
-    """
-
-    def test_uuid_uniquess(self):
-        """
-        A uniqueness constraint on the UUID column of the Node model should prevent multiple nodes with identical UUID
-        """
-        from django.db import IntegrityError
-
-        a = Node()
-        b = Node()
-        b.dbnode.uuid = a.uuid
-        a.store()
-
-        with self.assertRaises(IntegrityError):
-            b.store()
-
-    def test_links_and_queries(self):
-        from aiida.backends.djsite.db.models import DbNode, DbLink
-
-        a = Node()
-        a._set_attr('myvalue', 123)
-        a.store()
-
-        a2 = Node().store()
-
-        a3 = Node()
-        a3._set_attr('myvalue', 145)
-        a3.store()
-
-        a4 = Node().store()
-
-        a2.add_incoming(a, link_type=LinkType.CREATE, link_label='link')
-        a3.add_incoming(a2, link_type=LinkType.CREATE, link_label='link')
-        a4.add_incoming(a2, link_type=LinkType.CREATE, link_label='link')
-        a4.add_incoming(a3, link_type=LinkType.CREATE, link_label='link')
-
-        b = Node.query(pk=a2)
-        self.assertEquals(len(b), 1)
-        # It is a aiida.orm.Node instance
-        self.assertTrue(isinstance(b[0], Node),
-                "Expecting instance of {}, found {}".format(type(a4), type(b[0])))
-        self.assertEquals(b[0].uuid, a2.uuid)
-
-        going_out_from_a2 = Node.query(inputs__in=b)
-        # Two nodes going out from a2
-        self.assertEquals(len(going_out_from_a2), 2)
-        self.assertTrue(isinstance(going_out_from_a2[0], Node))
-        self.assertTrue(isinstance(going_out_from_a2[1], Node))
-        uuid_set = set([going_out_from_a2[0].uuid, going_out_from_a2[1].uuid])
-
-        # I check that I can query also directly the django DbNode
-        # class passing a aiida.orm.Node entity
-
-        going_out_from_a2_db = DbNode.objects.filter(inputs__in=b)
-        self.assertEquals(len(going_out_from_a2_db), 2)
-        self.assertTrue(isinstance(going_out_from_a2_db[0], DbNode))
-        self.assertTrue(isinstance(going_out_from_a2_db[1], DbNode))
-        uuid_set_db = set([str(going_out_from_a2_db[0].uuid),
-                           str(going_out_from_a2_db[1].uuid)])
-
-        # I check that doing the query with a Node or DbNode instance,
-        # I get the same nodes
-        self.assertEquals(uuid_set, uuid_set_db)
-
-        # This time I don't use the __in filter, but I still pass a Node instance
-        going_out_from_a2_bis = Node.query(inputs=b[0])
-        self.assertEquals(len(going_out_from_a2_bis), 2)
-        self.assertTrue(isinstance(going_out_from_a2_bis[0], Node))
-        self.assertTrue(isinstance(going_out_from_a2_bis[1], Node))
-
-        # Query for links starting from b[0]==a2 using again the Node class
-        output_links_b = DbLink.objects.filter(input=b[0])
-        self.assertEquals(len(output_links_b), 2)
-        self.assertTrue(isinstance(output_links_b[0], DbLink))
-        self.assertTrue(isinstance(output_links_b[1], DbLink))
-        uuid_set_db_link = set([str(output_links_b[0].output.uuid),
-                                str(output_links_b[1].output.uuid)])
-        self.assertEquals(uuid_set, uuid_set_db_link)
-
-        # Query for related fields using django syntax
-        # Note that being myvalue an attribute, it is internally stored starting
-        # with an underscore
-        nodes_with_given_attribute = Node.query(dbattributes__key='myvalue',
-                                                dbattributes__ival=145)
-        # should be entry a3
-        self.assertEquals(len(nodes_with_given_attribute), 1)
-        self.assertTrue(isinstance(nodes_with_given_attribute[0], Node))
-        self.assertEquals(nodes_with_given_attribute[0].uuid, a3.uuid)
-
-
-class TestTransitiveClosureDeletionDjango(AiidaTestCase):
-    def test_creation_and_deletion(self):
-        from aiida.backends.djsite.db.models import DbLink  # Direct links
-        from aiida.orm.querybuilder import QueryBuilder
-        from aiida.common.links import LinkType
-
-
-        n1 = Node().store()
-        n2 = Node().store()
-        n3 = Node().store()
-        n4 = Node().store()
-        n5 = Node().store()
-        n6 = Node().store()
-        n7 = Node().store()
-        n8 = Node().store()
-        n9 = Node().store()
-
-        # I create a strange graph, inserting links in a order
-        # such that I often have to create the transitive closure
-        # between two graphs
-        n3.add_incoming(n2, link_type=LinkType.CREATE, link_label='link')
-        n2.add_incoming(n1, link_type=LinkType.CREATE, link_label='link')
-        n5.add_incoming(n3, link_type=LinkType.CREATE, link_label='link')
-        n5.add_incoming(n4, link_type=LinkType.CREATE, link_label='link')
-        n4.add_incoming(n2, link_type=LinkType.CREATE, link_label='link')
-
-        n7.add_incoming(n6, link_type=LinkType.CREATE, link_label='link')
-        n8.add_incoming(n7, link_type=LinkType.CREATE, link_label='link')
-
-        # Yet, no links from 1 to 8
-        self.assertEquals(
-            QueryBuilder().append(
-                    Node, filters={'id':n1.pk}, tag='anc'
-                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
-                ).count(), 0
-            )
-
-        n6.add_incoming(n5, link_type=LinkType.INPUT_CALC, link_label='link')
-
-        # Yet, now 2 links from 1 to 8
-        self.assertEquals(
-            QueryBuilder().append(
-                    Node, filters={'id':n1.pk}, tag='anc'
-                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
-                ).count(), 2
-            )
-
-
-        n7.add_incoming(n9, link_type=LinkType.INPUT_CALC, link_label='link')
-        # Still two links...
-        self.assertEquals(
-            QueryBuilder().append(
-                    Node, filters={'id':n1.pk}, tag='anc'
-                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
-                ).count(), 2
-            )
-
-
-        n9.add_incoming(n6, link_type=LinkType.INPUT_CALC, link_label='link')
-        # And now there should be 4 nodes
-        self.assertEquals(
-            QueryBuilder().append(
-                    Node, filters={'id':n1.pk}, tag='anc'
-                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
-                ).count(), 4
-            )
-
-        ### I start deleting now
-
-        # I cut one branch below: I should loose 2 links
-        DbLink.objects.filter(input=n6, output=n9).delete()
-
-        self.assertEquals(
-            QueryBuilder().append(
-                    Node, filters={'id':n1.pk}, tag='anc'
-                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
-                ).count(), 2
-            )
-
-        DbLink.objects.filter(input=n2, output=n4).delete()
-
-        self.assertEquals(
-            QueryBuilder().append(
-                    Node, filters={'id':n1.pk}, tag='anc'
-                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
-                ).count(), 1
-            )
-        #~ self.assertEquals(
-            #~ len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 1)
-
-        # Another cut should delete all links
-        DbLink.objects.filter(input=n3, output=n5).delete()
-        self.assertEquals(
-            QueryBuilder().append(
-                    Node, filters={'id':n1.pk}, tag='anc'
-                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
-                ).count(), 0
-            )
-        #~ self.assertEquals(
-            #~ len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 0)
-
-        # But I did not delete everything! For instance, I can check
-        # the following links
-        self.assertEquals(
-            QueryBuilder().append(
-                    Node, filters={'id':n4.pk}, tag='anc'
-                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
-                ).count(), 1
-            )
-        self.assertEquals(
-            QueryBuilder().append(
-                    Node, filters={'id':n5.pk}, tag='anc'
-                ).append(Node, descendant_of='anc',  filters={'id':n7.pk}
-                ).count(), 1
-            )
-        #~ self.assertEquals(
-            #~ len(DbPath.objects.filter(parent=n4, child=n8).distinct()), 1)
-        #~ self.assertEquals(
-            #~ len(DbPath.objects.filter(parent=n5, child=n7).distinct()), 1)
-
-        # Finally, I reconnect in a different way the two graphs and
-        # check that 1 and 8 are again connected
-        n4.add_incoming(n3, link_type=LinkType.INPUT_CALC, link_label='link')
-
-        self.assertEquals(
-            QueryBuilder().append(
-                    Node, filters={'id':n1.pk}, tag='anc'
-                ).append(Node, descendant_of='anc',  filters={'id':n8.pk}
-                ).count(), 1
-            )
-        #~ self.assertEquals(
-            #~ len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 1)
 
 class TestNodeBasicDjango(AiidaTestCase):
     def test_replace_extras_2(self):
@@ -254,7 +29,7 @@ class TestNodeBasicDjango(AiidaTestCase):
         """
         from aiida.backends.djsite.db.models import DbExtra
 
-        a = Node().store()
+        a = Data().store()
         extras_to_set = {
             'bool': True,
             'integer': 12,
@@ -307,7 +82,7 @@ class TestNodeBasicDjango(AiidaTestCase):
 
         separator = DbAttributeBaseClass._sep
 
-        a = Node()
+        a = Data()
 
         with self.assertRaises(ValidationError):
             # I did not store, I cannot modify
@@ -349,7 +124,7 @@ class TestNodeBasicDjango(AiidaTestCase):
         """
         from aiida.orm import load_node
 
-        a = Node()
+        a = Data()
         a.store()
         self.assertEquals(a.pk, load_node(pk=a.pk).pk)
         self.assertEquals(a.pk, load_node(uuid=a.uuid).pk)

@@ -98,17 +98,17 @@ If you want to manually start the RabbitMQ server you can use:
 For more information, or if you run into trouble, please refer to the RabbitMQ :ref:`troubleshooting section<installation_rabbitmq>`.
 
 
-Window Subsystem for Linux (Ubuntu)
+Windows Subsystem for Linux (Ubuntu)
 -----------------------------------
 
 The guide for Ubuntu above can be followed but there are a few things to note:
 
-#. The `window native RabbitMQ <https://www.rabbitmq.com/install-windows.html>`_
+#. The `windows native RabbitMQ <https://www.rabbitmq.com/install-windows.html>`_
    should be installed and started as a service for WSL installation,
    since the version in WSL Ubuntu 18.04 does not work properly.
 
 #. Linux services under WSL are not started automatically.
-   To start the Postgre SQL service, type the command below in the terminal::
+   To start the PostgreSQL service, type the command below in the terminal::
 
      sudo service postgresql start
 

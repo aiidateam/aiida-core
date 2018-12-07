@@ -96,3 +96,24 @@ If you want to manually start the RabbitMQ server you can use:
     /etc/init.d/rabbitmq start
 
 For more information, or if you run into trouble, please refer to the RabbitMQ :ref:`troubleshooting section<installation_rabbitmq>`.
+
+
+Window Subsystem for Linux (Ubuntu)
+-----------------------------------
+
+The `window native RabbitMQ <https://www.rabbitmq.com/install-windows.html>`_
+should be installed and started as a service for WSL installation,
+since the version in WSL Ubuntu 18.04 does not work properly.
+
+By default, linux services under WSL are not started automatically.
+To start the Postgre SQL service, type the command below in the terminal::
+
+  sudo service postgresql start
+
+There is a known issue in WSL Ubuntu 18.04 where the timezone is not
+configured correctly out-of-the-box, which may cause problem for the database. 
+The following command can be used to re-configure the time zone::
+
+  dpkg-reconfigure tzdata
+
+In addition, the file open limit may need to be raised using ``sudo ulimit -n 2048`` (default is 1024) when running tests.

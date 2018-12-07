@@ -764,6 +764,74 @@ class TestSimple(AiidaTestCase):
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
 
+    def test_group_import_existing(self):
+        """
+        Testing what happens when I try to import a group that already exists in the
+        database. This should raise an appropriate exception
+        """
+        import os
+        import shutil
+        import tempfile
+
+        from aiida.common.exceptions import UniquenessError
+        from aiida.orm import load_node
+        from aiida.orm.groups import Group
+        from aiida.orm.data.structure import StructureData
+        from aiida.orm.importexport import export
+        from aiida.orm.querybuilder import QueryBuilder
+
+        groupname = "node_group_existing"
+        # Creating a folder for the import/export files
+        temp_folder = tempfile.mkdtemp()
+        try:
+            # Create another user
+            new_email = "newuser@new.n"
+            user = orm.User(email=new_email)
+            user.store()
+
+            # Create a structure data node
+            sd1 = StructureData()
+            sd1.set_user(user)
+            sd1.label = 'sd'
+            sd1.store()
+
+            # Create a group and add the data inside
+            g1 = Group(name=groupname)
+            g1.store()
+            g1.add_nodes([sd1])
+            g1_uuid = g1.uuid
+
+            # At this point we export the generated data
+            filename1 = os.path.join(temp_folder, "export1.tar.gz")
+            export([g1], outfile=filename1, silent=True)
+            self.clean_db()
+            self.insert_data()
+
+            # Creating a group of the same name
+            g1 = Group(name="node_group_existing")
+            g1.store()
+            import_data(filename1, silent=True)
+            # The import should have created a new group with a suffix
+            # I check for this:
+            qb = QueryBuilder().append(Group, filters={'name':{'like':groupname+'%'}})
+            self.assertEqual(qb.count(),2)
+            #Now I check for the group having one member, and whether the name is different:
+            qb = QueryBuilder()
+            qb.append(Group, filters={'name':{'like':groupname+'%'}}, tag='g', project='name')
+            qb.append(StructureData, with_group='g')
+            self.assertEqual(qb.count(),1)
+            # I check that the group name was changed:
+            self.assertTrue(qb.all()[0][0] != groupname)
+            # I import another name, the group should not be imported again
+            import_data(filename1, silent=True)
+            qb = QueryBuilder()
+            qb.append(Group, filters={'name':{'like':groupname+'%'}})
+            self.assertEqual(qb.count(),2)
+
+        finally:
+            # Deleting the created temporary folder
+            shutil.rmtree(temp_folder, ignore_errors=True)
+
     def test_calcfunction_1(self):
         import shutil, os, tempfile
 
@@ -1313,7 +1381,7 @@ class TestComputer(AiidaTestCase):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.computers import Computer
         from aiida.orm.node.process import CalcJobNode
-        from aiida.orm.importexport import COMP_DUPL_SUFFIX
+        from aiida.orm.importexport import DUPL_SUFFIX
 
         # Creating a folder for the import/export files
         export_file_tmp_folder = tempfile.mkdtemp()
@@ -1411,10 +1479,10 @@ class TestComputer(AiidaTestCase):
             self.assertIn([calc1_label, comp1_name], res,
                           "Calc-Computer combination not found.")
             self.assertIn([calc2_label,
-                           comp1_name + COMP_DUPL_SUFFIX.format(0)], res,
+                           comp1_name + DUPL_SUFFIX.format(0)], res,
                           "Calc-Computer combination not found.")
             self.assertIn([calc3_label,
-                           comp1_name + COMP_DUPL_SUFFIX.format(1)], res,
+                           comp1_name + DUPL_SUFFIX.format(1)], res,
                           "Calc-Computer combination not found.")
         finally:
             # Deleting the created temporary folders

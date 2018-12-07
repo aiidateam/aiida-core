@@ -84,6 +84,7 @@ db_test_list = {
         'orm.computer': ['aiida.backends.tests.computer'],
         'orm.data.frozendict': ['aiida.backends.tests.orm.data.frozendict'],
         'orm.data.remote': ['aiida.backends.tests.orm.data.remote'],
+        'orm.data.upf': ['aiida.backends.tests.orm.data.upf'],
         'orm.entities': ['aiida.backends.tests.orm.entities'],
         'orm.log': ['aiida.backends.tests.orm.log'],
         'orm.mixins': ['aiida.backends.tests.orm.mixins'],

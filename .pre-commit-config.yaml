@@ -45,7 +45,6 @@
         aiida/backends/djsite/queries.py|
         aiida/backends/djsite/settings/__init__.py|
         aiida/backends/djsite/settings/settings_profile.py|
-        aiida/backends/djsite/settings/wsgi.py|
         aiida/backends/general/abstractqueries.py|
         aiida/backends/__init__.py|
         aiida/backends/profile.py|
@@ -189,6 +188,7 @@
         aiida/common/links.py|
         aiida/common/orbital/__init__.py|
         aiida/common/orbital/realhydrogen.py|
+        aiida/common/setup.py|
         aiida/common/test_extendeddicts.py|
         aiida/common/test_logging.py|
         aiida/control/tests/test_postgres.py|
@@ -341,9 +341,6 @@
         aiida/work/__init__.py|
         aiida/work/job_processes.py|
         aiida/work/run.py|
-        fastentrypoints.py|
-        setup.py|
-        setup_requirements.py|
         utils/create_requirements.py|
         utils/validate_pyproject.py|
         .ci/test_daemon.py|
@@ -369,7 +366,8 @@
     language: system
     files: >-
       (?x)^(
-        setup_requirements.py|
+        setup.json|
+        setup.py|
         docs/requirements_for_rtd.txt|
         docs/update_req_for_rtd.py|
       )$
@@ -381,7 +379,8 @@
     language: system
     files: >-
       (?x)^(
-        setup_requirements.py|
+        setup.json|
+        setup.py|
         utils/validate_pyproject|
       )$
     pass_filenames: false
@@ -392,6 +391,17 @@
     files: .travis.yml
     language: ruby
     additional_dependencies: ['travis']
+
+  - id: version-number
+    name: Check version numbers
+    entry: python ./utils/validate_version.py
+    language: system
+    files: >-
+      (?x)^(
+        setup.json|
+        aiida/__init__.py
+      )$
+    pass_filenames: false
 
 # modernizer: make sure our code-base is Python 3 ready
 - repo: https://github.com/python-modernize/python-modernize.git

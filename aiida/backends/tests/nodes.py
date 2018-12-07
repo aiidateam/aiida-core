@@ -22,14 +22,43 @@ from six.moves import range
 from sqlalchemy.exc import StatementError
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common.exceptions import InvalidOperation, ModificationNotAllowed, UniquenessError
+from aiida.common.exceptions import InvalidOperation, ModificationNotAllowed, StoringNotAllowed, UniquenessError
 from aiida.common.links import LinkType
 from aiida.orm import User, Data, Node
 from aiida.orm.node.process import ProcessNode
+from aiida.orm.node.process.calculation import CalculationNode
+from aiida.orm.node.process.workflow import WorkflowNode
 from aiida.orm.utils import load_node
 from aiida.utils.capturing import Capturing
 from aiida.utils.delete_nodes import delete_nodes
 
+
+class TestNodeIsStorable(AiidaTestCase):
+    """
+    Test if one can store specific Node subclasses, and that Node and
+    ProcessType are not storable, intead.
+    """
+    def test_storable_unstorable(self):
+        """
+        Test storability of Nodes
+        """
+        node = Node()
+        with self.assertRaises(StoringNotAllowed):
+            node.store()
+
+        process = ProcessNode()
+        with self.assertRaises(StoringNotAllowed):
+            process.store()
+
+        # These below should be allowed instead
+        data = Data()
+        data.store()
+
+        calc = CalculationNode()
+        calc.store()
+
+        work = WorkflowNode()
+        work.store()
 
 class TestNodeCopyDeepcopy(AiidaTestCase):
     """Test that calling copy and deepcopy on a Node does the right thing."""
@@ -38,13 +67,13 @@ class TestNodeCopyDeepcopy(AiidaTestCase):
         """Copying a base Node instance is not supported."""
         node = Node()
         with self.assertRaises(InvalidOperation):
-            clone = copy.copy(node)
+            clone = copy.copy(node)  # pylint: disable=unused_variable
 
     def test_copy_not_supported(self):
         """Deep copying a base Node instance is not supported."""
         node = Node()
         with self.assertRaises(InvalidOperation):
-            clone = copy.deepcopy(node)
+            clone = copy.deepcopy(node)  # pylint: disable=unused_variable
 
 
 class TestNodeHashing(AiidaTestCase):
@@ -54,7 +83,7 @@ class TestNodeHashing(AiidaTestCase):
 
     @staticmethod
     def create_simple_node(a, b=0, c=0):
-        n = Node()
+        n = Data()
         n._set_attr('a', a)
         n._set_attr('b', b)
         n._set_attr('c', c)
@@ -73,20 +102,19 @@ class TestNodeHashing(AiidaTestCase):
         """
         QueryBuilder results should be reusable and shouldn't brake hashing.
         """
-        from aiida.orm.node import Node
         from aiida.orm.querybuilder import QueryBuilder
 
-        n = Node()
+        n = Data()
         n.store()
 
         # Search for the UUID of the stored node
         qb = QueryBuilder()
-        qb.append(Node, project=['uuid'], filters={'id': {'==': n.id}})
+        qb.append(Data, project=['uuid'], filters={'id': {'==': n.id}})
         [uuid] = qb.first()
 
         # Look the node with the previously returned UUID
         qb = QueryBuilder()
-        qb.append(Node, project=['id'], filters={'uuid': {'==': uuid}})
+        qb.append(Data, project=['id'], filters={'uuid': {'==': uuid}})
 
         # Check that the query doesn't fail
         qb.all()
@@ -181,18 +209,35 @@ class TestTransitiveNoLoops(AiidaTestCase):
     """
 
     def test_loop_not_allowed(self):
-        n1 = Node().store()
-        n2 = Node().store()
-        n3 = Node().store()
-        n4 = Node().store()
+        d1 = Data().store()
+        c1 = CalculationNode().store()
+        d2 = Data().store()
+        c2 = CalculationNode().store()
 
-        n2.add_incoming(n1, link_type=LinkType.CREATE, link_label='link')
-        n3.add_incoming(n2, link_type=LinkType.CREATE, link_label='link')
-        n4.add_incoming(n3, link_type=LinkType.CREATE, link_label='link')
+        c1.add_incoming(d1, link_type=LinkType.INPUT_CALC, link_label='link')
+        d2.add_incoming(c1, link_type=LinkType.CREATE, link_label='link')
+        c2.add_incoming(d2, link_type=LinkType.INPUT_CALC, link_label='link')
 
         with self.assertRaises(ValueError):  # This would generate a loop
-            n1.add_incoming(n4, link_type=LinkType.CREATE, link_label='link')
+            d1.add_incoming(c2, link_type=LinkType.CREATE, link_label='link')
 
+class TestTypes(AiidaTestCase):
+    """
+    Generic test class to test types
+    """
+
+    def test_uuid_type(self):
+        """
+        Checking whether the UUID is returned as a string. In old implementations it was returned as uuid type
+        """
+        from aiida.orm.querybuilder import QueryBuilder
+        n1 = Data().store()
+        n2 = Data().store()
+
+        results = QueryBuilder().append(Data, project=('uuid', '*')).all()
+        for uuid, data in results:
+            self.assertTrue(isinstance(uuid, six.string_types))
+            self.assertTrue(isinstance(data.uuid, six.string_types))
 
 class TestQueryWithAiidaObjects(AiidaTestCase):
     """
@@ -221,20 +266,18 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         a3.set_extra(extra_name, True)
         a4 = ParameterData(dict={'a': 'b'}).store()
         a4.set_extra(extra_name, True)
-        a5 = Node().store()
-        a5.set_extra(extra_name, True)
         # I don't set the extras, just to be sure that the filtering works
         # The filtering is needed because other tests will put stuff int he DB
         a6 = CalcJobNode(**calc_params)
         a6.store()
-        a7 = Node()
+        a7 = Data()
         a7.store()
 
         # Query by calculation
         qb = QueryBuilder()
         qb.append(CalcJobNode, filters={'extras': {'has_key': extra_name}})
         results = [_ for [_] in qb.all()]
-        # a3, a4, a5 should not be found because they are not CalcJobNodes.
+        # a3, a4 should not be found because they are not CalcJobNodes.
         # a6, a7 should not be found because they have not the attribute set.
         self.assertEquals(set([i.pk for i in results]), set([a1.pk, a2.pk]))
 
@@ -242,7 +285,7 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         qb = QueryBuilder()
         qb.append(Node, filters={'extras': {'has_key': extra_name}})
         results = [_ for [_] in qb.all()]
-        self.assertEquals(set([i.pk for i in results]), set([a1.pk, a2.pk, a3.pk, a4.pk, a5.pk]))
+        self.assertEquals(set([i.pk for i in results]), set([a1.pk, a2.pk, a3.pk, a4.pk]))
 
         # Same query, but by the Data class
         qb = QueryBuilder()
@@ -294,12 +337,28 @@ class TestNodeBasic(AiidaTestCase):
     emptydict = {}
     emptylist = []
 
+    def test_uuid_uniquess(self):
+        """
+        A uniqueness constraint on the UUID column of the Node model should prevent multiple nodes with identical UUID
+        """
+        from django.db import IntegrityError as DjIntegrityError
+        from sqlalchemy.exc import IntegrityError as SqlaIntegrityError
+
+        a = Data()
+        b = Data()
+        b._dbnode.uuid = a.uuid
+        a.store()
+
+        with self.assertRaises((DjIntegrityError, SqlaIntegrityError)):
+            b.store()
+
+
     def test_attribute_mutability(self):
         """
         Attributes of a node should be immutable after storing, unless the stored_check is
         disabled in the call
         """
-        a = Node()
+        a = Data()
         a._set_attr('bool', self.boolval)
         a._set_attr('integer', self.intval)
         a.store()
@@ -321,7 +380,7 @@ class TestNodeBasic(AiidaTestCase):
             a.get_attr('bool')
 
     def test_attr_before_storing(self):
-        a = Node()
+        a = Data()
         a._set_attr('k1', self.boolval)
         a._set_attr('k2', self.intval)
         a._set_attr('k3', self.floatval)
@@ -371,7 +430,7 @@ class TestNodeBasic(AiidaTestCase):
             a.get_attr('nonexisting')
 
     def test_get_attrs_before_storing(self):
-        a = Node()
+        a = Data()
         a._set_attr('k1', self.boolval)
         a._set_attr('k2', self.intval)
         a._set_attr('k3', self.floatval)
@@ -411,7 +470,7 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(a.get_attrs(), {})
 
     def test_get_attrs_after_storing(self):
-        a = Node()
+        a = Data()
         a._set_attr('k1', self.boolval)
         a._set_attr('k2', self.intval)
         a._set_attr('k3', self.floatval)
@@ -441,7 +500,7 @@ class TestNodeBasic(AiidaTestCase):
 
     def test_store_object(self):
         """Trying to store objects should fail"""
-        a = Node()
+        a = Data()
         a._set_attr('object', object(), clean=False)
 
         # django raises ValueError
@@ -449,7 +508,7 @@ class TestNodeBasic(AiidaTestCase):
         with self.assertRaises((ValueError, StatementError)):
             a.store()
 
-        b = Node()
+        b = Data()
         b._set_attr('object_list', [object(), object()], clean=False)
         with self.assertRaises((ValueError, StatementError)):
             # objects are not json-serializable
@@ -457,7 +516,7 @@ class TestNodeBasic(AiidaTestCase):
 
     def test_append_to_empty_attr(self):
         """Appending to an empty attribute"""
-        a = Node()
+        a = Data()
         a._append_to_attr('test', 0)
         a._append_to_attr('test', 1)
 
@@ -465,7 +524,7 @@ class TestNodeBasic(AiidaTestCase):
 
     def test_append_no_side_effects(self):
         """Check that _append_to_attr has no side effects"""
-        a = Node()
+        a = Data()
         mylist = [1, 2, 3]
 
         a._set_attr('list', mylist)
@@ -474,47 +533,10 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(a.get_attr('list'), [1, 2, 3, 4])
         self.assertEquals(mylist, [1, 2, 3])
 
-    # pylint: disable=no-self-use,unused-argument,unused-variable,no-member
-    def DISABLED(self):
-        """
-        This test routine is disabled for the time being; I will re-enable
-        when I have time to implement the check of the length of the 'key'.
-        """
-
-        def test_very_deep_attributes(self):
-            """
-            Test attributes where the total length of the key, including the
-            separators, would be longer than the field length in the DB.
-            """
-            from aiida.backends.djsite.db import models
-
-            n = Node()
-
-            semi_long_string = "abcdefghijklmnopqrstuvwxyz"
-            value = "some value"
-
-            attribute = {semi_long_string: value}
-            key_len = len(semi_long_string)
-
-            max_len = models.DbAttribute._meta.get_field_by_name('key')[0].max_length
-
-            while key_len < 2 * max_len:
-                # Create a deep, recursive attribute
-                attribute = {semi_long_string: attribute}
-                key_len += len(semi_long_string) + len(models.DbAttribute._sep)
-
-            n._set_attr(semi_long_string, attribute)
-
-            n.store()
-
-            all_keys = models.DbAttribute.objects.filter(dbnode=n.dbnode).values_list('key', flat=True)
-
-            print(max(len(i) for i in all_keys))
-
     def test_datetime_attribute(self):
         from aiida.utils.timezone import (get_current_timezone, is_naive, make_aware, now)
 
-        a = Node()
+        a = Data()
 
         date = now()
 
@@ -813,7 +835,7 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(self.listval, a.get_attr('list'))
 
     def test_attr_with_reload(self):
-        a = Node()
+        a = Data()
         a._set_attr('none', None)
         a._set_attr('bool', self.boolval)
         a._set_attr('integer', self.intval)
@@ -834,7 +856,7 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(self.listval, b.get_attr('list'))
 
         # Reload directly
-        b = Node(dbnode=a.dbnode)
+        b = Data(dbnode=a.dbnode)
         self.assertIsNone(a.get_attr('none'))
         self.assertEquals(self.boolval, b.get_attr('bool'))
         self.assertEquals(self.intval, b.get_attr('integer'))
@@ -844,7 +866,7 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(self.listval, b.get_attr('list'))
 
     def test_attr_and_extras(self):
-        a = Node()
+        a = Data()
         a._set_attr('bool', self.boolval)
         a._set_attr('integer', self.intval)
         a._set_attr('float', self.floatval)
@@ -868,7 +890,7 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(a.get_extras(), {'bool': a_string, '_aiida_hash': AnyValue()})
 
     def test_get_extras_with_default(self):
-        a = Node()
+        a = Data()
         a.store()
         a.set_extra('a', 'b')
 
@@ -884,8 +906,8 @@ class TestNodeBasic(AiidaTestCase):
 
         I test only extras because the two tables are formally identical
         """
-        n1 = Node().store()
-        n2 = Node().store()
+        n1 = Data().store()
+        n2 = Data().store()
 
         n1.set_extra('samename', 1)
         # No problem, they are two different nodes
@@ -917,7 +939,7 @@ class TestNodeBasic(AiidaTestCase):
         """
         Checks that the list of attributes and extras is ok.
         """
-        a = Node()
+        a = Data()
         attrs_to_set = {
             'none': None,
             'bool': self.boolval,
@@ -954,7 +976,7 @@ class TestNodeBasic(AiidaTestCase):
         """
         Test the versioning of the node when setting attributes and extras
         """
-        a = Node()
+        a = Data()
         attrs_to_set = {
             'bool': self.boolval,
             'integer': self.intval,
@@ -994,7 +1016,7 @@ class TestNodeBasic(AiidaTestCase):
         or lists.
         """
 
-        a = Node().store()
+        a = Data().store()
         extras_to_set = {
             'bool': self.boolval,
             'integer': self.intval,
@@ -1026,7 +1048,7 @@ class TestNodeBasic(AiidaTestCase):
         Checks the ability of replacing extras, removing the subkeys also when
         these are dictionaries or lists.
         """
-        a = Node().store()
+        a = Data().store()
         extras_to_set = {
             'bool': True,
             'integer': 12,
@@ -1100,7 +1122,7 @@ class TestNodeBasic(AiidaTestCase):
         self.assertIsInstance(p.get_attr('c'), (list, tuple))
 
         # Check also before storing
-        n = Node()
+        n = Data()
         n._set_attr('a', Str("sometext2"))
         n._set_attr('b', l2)
         self.assertEqual(n.get_attr('a'), "sometext2")
@@ -1109,7 +1131,7 @@ class TestNodeBasic(AiidaTestCase):
         self.assertIsInstance(n.get_attr('b'), (list, tuple))
 
         # Check also deep in a dictionary/list
-        n = Node()
+        n = Data()
         n._set_attr('a', {'b': [Str("sometext3")]})
         self.assertEqual(n.get_attr('a')['b'][0], "sometext3")
         self.assertIsInstance(n.get_attr('a')['b'][0], six.string_types)
@@ -1134,7 +1156,7 @@ class TestNodeBasic(AiidaTestCase):
         l2.store()
 
         # Check also before storing
-        n = Node()
+        n = Data()
         n.store()
         n.set_extra('a', Str("sometext2"))
         n.set_extra('c', l1)
@@ -1147,7 +1169,7 @@ class TestNodeBasic(AiidaTestCase):
         self.assertIsInstance(n.get_extra('d'), (list, tuple))
 
         # Check also deep in a dictionary/list
-        n = Node()
+        n = Data()
         n.store()
         n.set_extra('a', {'b': [Str("sometext3")]})
         self.assertEqual(n.get_extra('a')['b'][0], "sometext3")
@@ -1157,7 +1179,7 @@ class TestNodeBasic(AiidaTestCase):
         """
         Checks the versioning.
         """
-        a = Node()
+        a = Data()
         a.store()
 
         # Even if I stored many attributes, this should stay at 1
@@ -1182,26 +1204,28 @@ class TestNodeBasic(AiidaTestCase):
         # This is the best way to compare dates with the stored ones, instead
         # of directly loading datetime.datetime.now(), or you can get a
         # "can't compare offset-naive and offset-aware datetimes" error
+        from datetime import timedelta
         from aiida.utils import timezone
         from time import sleep
 
         user = User.objects.get_default()
 
-        a = Node()
+        a = Data()
         with self.assertRaises(ModificationNotAllowed):
             a.add_comment('text', user=user)
 
         a.store()
         self.assertEquals(a.get_comments(), [])
 
-        before = timezone.now()
-        sleep(1)  # I wait 1 second because MySql time precision is 1 sec
+        before = timezone.now() - timedelta(seconds=1)
         a.add_comment('text', user=user)
+        sleep(0.1)
         a.add_comment('text2', user=user)
-        sleep(1)
-        after = timezone.now()
+        after = timezone.now() + timedelta(seconds=1)
 
-        comments = a.get_comments()
+        # Make sure comments are sorted to avoid
+        # random test failures
+        comments = sorted(a.get_comments(), key=lambda comment: comment.ctime)
 
         times = [i.ctime for i in comments]
 
@@ -1268,7 +1292,7 @@ class TestNodeBasic(AiidaTestCase):
         aiida.orm.implementation.general.node.AbstractNode#get_subclass_from_pk
         works correctly for both backends.
         """
-        a1 = Node().store()
+        a1 = Data().store()
 
         # Check that you can load it with a simple integer id.
         a2 = Node.get_subclass_from_pk(a1.id)
@@ -1431,7 +1455,7 @@ class TestNodeBasic(AiidaTestCase):
         from aiida.common.exceptions import NotExistent
 
         # I only need one node to test
-        node = Node().store()
+        node = Data().store()
         uuid_stored = node.uuid  # convenience to store the uuid
         # Simple test to see whether I load correctly from the pk:
         self.assertEqual(uuid_stored, load_node(pk=node.pk).uuid)
@@ -1523,7 +1547,7 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEqual(type(kpoint), type(obj))
 
         ###### for node
-        n1 = Node().store()
+        n1 = Data().store()
         obj = n1.dbnode.get_aiida_class()
         self.assertEqual(type(n1), type(obj))
 
@@ -1535,90 +1559,90 @@ class TestSubNodesAndLinks(AiidaTestCase):
         Test the proper functionality of the links cache, with different
         scenarios.
         """
-        n1 = Node()
-        n2 = Node()
-        n3 = Node().store()
-        n4 = Node().store()
-        endnode = Node()
+        n1 = Data()
+        n2 = Data()
+        n3 = Data().store()
+        n4 = Data().store()
+        endcalc = CalculationNode()
 
         # Nothing stored
-        endnode.add_incoming(n1, LinkType.CREATE, "N1")
+        endcalc.add_incoming(n1, LinkType.INPUT_CALC, "N1")
         # Try also reverse storage
-        endnode.add_incoming(n2, LinkType.CREATE, "N2")
+        endcalc.add_incoming(n2, LinkType.INPUT_CALC, "N2")
 
         self.assertEqual(
-            set([(i.link_label, i.node.uuid) for i in endnode.get_incoming()]),
+            set([(i.link_label, i.node.uuid) for i in endcalc.get_incoming()]),
             set([("N1", n1.uuid), ("N2", n2.uuid)]))
 
         # Endnode not stored yet, n3 and n4 already stored
-        endnode.add_incoming(n3, LinkType.CREATE, "N3")
+        endcalc.add_incoming(n3, LinkType.INPUT_CALC, "N3")
         # Try also reverse storage
-        endnode.add_incoming(n4, LinkType.CREATE, "N4")
+        endcalc.add_incoming(n4, LinkType.INPUT_CALC, "N4")
 
         self.assertEqual(
-            set([(i.link_label, i.node.uuid) for i in endnode.get_incoming()]),
+            set([(i.link_label, i.node.uuid) for i in endcalc.get_incoming()]),
             set([("N1", n1.uuid), ("N2", n2.uuid), ("N3", n3.uuid), ("N4", n4.uuid)]))
 
         # Some parent nodes are not stored yet
         with self.assertRaises(ModificationNotAllowed):
-            endnode.store()
+            endcalc.store()
 
         self.assertEqual(
-            set([(i.link_label, i.node.uuid) for i in endnode.get_incoming()]),
+            set([(i.link_label, i.node.uuid) for i in endcalc.get_incoming()]),
             set([("N1", n1.uuid), ("N2", n2.uuid), ("N3", n3.uuid), ("N4", n4.uuid)]))
 
         # This will also store n1 and n2!
-        endnode.store_all()
+        endcalc.store_all()
 
         self.assertEqual(
-            set([(i.link_label, i.node.uuid) for i in endnode.get_incoming()]),
+            set([(i.link_label, i.node.uuid) for i in endcalc.get_incoming()]),
             set([("N1", n1.uuid), ("N2", n2.uuid), ("N3", n3.uuid), ("N4", n4.uuid)]))
 
     def test_store_with_unstored_parents(self):
         """
         I want to check that if parents are unstored I cannot store
         """
-        n1 = Node()
-        n2 = Node().store()
-        endnode = Node()
+        n1 = Data()
+        n2 = Data().store()
+        endcalc = CalculationNode()
 
-        endnode.add_incoming(n1, LinkType.CREATE, "N1")
-        endnode.add_incoming(n2, LinkType.CREATE, "N2")
+        endcalc.add_incoming(n1, LinkType.INPUT_CALC, "N1")
+        endcalc.add_incoming(n2, LinkType.INPUT_CALC, "N2")
 
         # Some parent nodes are not stored yet
         with self.assertRaises(ModificationNotAllowed):
-            endnode.store()
+            endcalc.store()
 
         n1.store()
         # Now I can store
-        endnode.store()
+        endcalc.store()
 
         self.assertEqual(
-            set([(i.link_label, i.node.uuid) for i in endnode.get_incoming()]),
+            set([(i.link_label, i.node.uuid) for i in endcalc.get_incoming()]),
             set([("N1", n1.uuid), ("N2", n2.uuid)]))
 
     def test_storeall_with_unstored_grandparents(self):
         """
         I want to check that if grandparents are unstored I cannot store_all
         """
-        n1 = Node()
-        n2 = Node()
-        endnode = Node()
+        n1 = CalculationNode()
+        n2 = Data()
+        endcalc = CalculationNode()
 
         n2.add_incoming(n1, LinkType.CREATE, "N1")
-        endnode.add_incoming(n2, LinkType.CREATE, "N2")
+        endcalc.add_incoming(n2, LinkType.INPUT_CALC, "N2")
 
         # Grandparents are unstored
         with self.assertRaises(ModificationNotAllowed):
-            endnode.store_all()
+            endcalc.store_all()
 
         n1.store()
         # Now it should work
-        endnode.store_all()
+        endcalc.store_all()
 
         # Check the parents...
         self.assertEqual(set([(i.link_label, i.node.uuid) for i in n2.get_incoming()]), set([("N1", n1.uuid)]))
-        self.assertEqual(set([(i.link_label, i.node.uuid) for i in endnode.get_incoming()]), set([("N2", n2.uuid)]))
+        self.assertEqual(set([(i.link_label, i.node.uuid) for i in endcalc.get_incoming()]), set([("N2", n2.uuid)]))
 
     def test_has_children_has_parents(self):
         """
@@ -1628,8 +1652,8 @@ class TestSubNodesAndLinks(AiidaTestCase):
         from aiida.common.links import LinkType
 
         # Create 2 nodes and store them
-        n1 = Node().store()
-        n2 = Node().store()
+        n1 = CalculationNode().store()
+        n2 = Data().store()
 
         # Create a link between these 2 nodes, link type CREATE so we track the provenance
         n2.add_incoming(n1, LinkType.CREATE, "N1")
@@ -1690,54 +1714,63 @@ class TestSubNodesAndLinks(AiidaTestCase):
                 }).store()
 
     def test_links_label_constraints(self):
-        n1 = Node().store()
-        n2 = Node().store()
-        n3 = Node().store()
-        n4 = Node().store()
-        n5 = Node().store()
+        d1 = Data().store()
+        d1bis = Data().store()
+        calc = CalculationNode().store()
+        d2 = Data().store()
+        d3 = Data().store()
+        d4 = Data().store()
+        calc2a = CalculationNode().store()
+        calc2b = CalculationNode().store()
 
-        n3.add_incoming(n1, LinkType.CREATE, link_label='label1')
+        calc.add_incoming(d1, LinkType.INPUT_CALC, link_label='label1')
+        with self.assertRaises(ValueError):
+            calc.add_incoming(d1bis, LinkType.INPUT_CALC, link_label='label1')
+
         # This should be allowed since it is an output label with the same name
-        n4.add_incoming(n3, LinkType.CREATE, link_label='label1')
+        # as an input label: no problem
+        d2.add_incoming(calc, LinkType.CREATE, link_label='label1')
+        # This should be allowed, it's a different label
+        d3.add_incoming(calc, LinkType.CREATE, link_label='label2')
 
-        # TODO: The following assertion doesn't apply anymore as it is
-        # link_type specific
-        # An input link with that name already exists
-        # with self.assertRaises(UniquenessError):
-        #     n3.add_incoming(n2, link_label='label1')
+        # This shouldn't be allowed, it's an output CREATE link with 
+        # the same same of an existing output CREATE link
+        with self.assertRaises(ValueError):
+            d4.add_incoming(calc,  LinkType.CREATE, link_label='label2')
 
         # instead, for outputs, I can have multiple times the same label
-        # (think to the case where n3 is a StructureData, and both n4 and n5
+        # (think to the case where d4 is a StructureData, and both calc2a and calc2b
         # are calculations that use as label 'input_cell')
-        n5.add_incoming(n3, LinkType.CREATE, link_label='label1')
+        calc2a.add_incoming(d4, LinkType.INPUT_CALC, link_label='label3')
+        calc2b.add_incoming(d4, LinkType.INPUT_CALC, link_label='label3')
 
     @unittest.skip('activate this test once #2238 is addressed')
     def test_links_label_autogenerator(self):
         """Test the auto generation of link labels when labels are no longer required to be explicitly specified.
         """
-        n1 = Node().store()
-        n2 = Node().store()
-        n3 = Node().store()
-        n4 = Node().store()
-        n5 = Node().store()
-        n6 = Node().store()
-        n7 = Node().store()
-        n8 = Node().store()
-        n9 = Node().store()
-        n10 = Node().store()
+        n1 = WorkflowNode().store()
+        n2 = WorkflowNode().store()
+        n3 = WorkflowNode().store()
+        n4 = WorkflowNode().store()
+        n5 = WorkflowNode().store()
+        n6 = WorkflowNode().store()
+        n7 = WorkflowNode().store()
+        n8 = WorkflowNode().store()
+        n9 = WorkflowNode().store()
+        data = Data().store()
 
-        n10.add_incoming(n1, link_type=LinkType.RETURN)
+        data.add_incoming(n1, link_type=LinkType.RETURN)
         # Label should be automatically generated
-        n10.add_incoming(n2, link_type=LinkType.RETURN)
-        n10.add_incoming(n3, link_type=LinkType.RETURN)
-        n10.add_incoming(n4, link_type=LinkType.RETURN)
-        n10.add_incoming(n5, link_type=LinkType.RETURN)
-        n10.add_incoming(n6, link_type=LinkType.RETURN)
-        n10.add_incoming(n7, link_type=LinkType.RETURN)
-        n10.add_incoming(n8, link_type=LinkType.RETURN)
-        n10.add_incoming(n9, link_type=LinkType.RETURN)
+        data.add_incoming(n2, link_type=LinkType.RETURN)
+        data.add_incoming(n3, link_type=LinkType.RETURN)
+        data.add_incoming(n4, link_type=LinkType.RETURN)
+        data.add_incoming(n5, link_type=LinkType.RETURN)
+        data.add_incoming(n6, link_type=LinkType.RETURN)
+        data.add_incoming(n7, link_type=LinkType.RETURN)
+        data.add_incoming(n8, link_type=LinkType.RETURN)
+        data.add_incoming(n9, link_type=LinkType.RETURN)
 
-        all_labels = [_.link_label for _ in n10.get_incoming()]
+        all_labels = [_.link_label for _ in data.get_incoming()]
         self.assertEquals(len(set(all_labels)), len(all_labels), "There are duplicate links, that are not expected")
 
     @unittest.skip('activate this test once #2238 is addressed')
@@ -1979,40 +2012,42 @@ class TestSubNodesAndLinks(AiidaTestCase):
         Test that the link_type parameter in get_incoming and get_outgoing only
         returns those nodes with the correct link type for stored nodes
         """
-        node_origin = Node().store()
-        node_caller_stored = Node().store()
-        node_called = Node().store()
-        node_input_stored = Node().store()
-        node_output = Node().store()
-        node_return = Node().store()
-        node_caller_unstored = Node()
-        node_input_unstored = Node()
+        node_origin = WorkflowNode().store()
+        node_origin2 = WorkflowNode().store()
+        node_caller_stored = WorkflowNode().store()
+        node_called = WorkflowNode().store()
+        node_input_stored = Data().store()
+        node_output = Data().store()
+        node_return = Data().store()
+        node_caller_unstored = WorkflowNode()
+        node_input_unstored = Data()
 
         # Input links of node_origin
         node_origin.add_incoming(node_caller_stored, link_type=LinkType.CALL_WORK, link_label='caller_stored')
         node_origin.add_incoming(node_input_stored, link_type=LinkType.INPUT_WORK, link_label='input_stored')
-        node_origin.add_incoming(node_caller_unstored, link_type=LinkType.CALL_WORK, link_label='caller_unstored')
         node_origin.add_incoming(node_input_unstored, link_type=LinkType.INPUT_WORK, link_label='input_unstored')
+
+        node_origin2.add_incoming(node_caller_unstored, link_type=LinkType.CALL_WORK, link_label='caller_unstored')
 
         # Output links of node_origin
         node_called.add_incoming(node_origin, link_type=LinkType.CALL_WORK, link_label='called')
-        node_output.add_incoming(node_origin, link_type=LinkType.CREATE, link_label='output')
-        node_return.add_incoming(node_origin, link_type=LinkType.RETURN, link_label='return')
+        node_output.add_incoming(node_origin, link_type=LinkType.RETURN, link_label='return1')
+        node_return.add_incoming(node_origin, link_type=LinkType.RETURN, link_label='return2')
 
         # All incoming and outgoing
-        self.assertEquals(len(node_origin.get_incoming().all()), 4)
+        self.assertEquals(len(node_origin.get_incoming().all()), 3)
         self.assertEquals(len(node_origin.get_outgoing().all()), 3)
 
         # Link specific incoming
-        self.assertEquals(len(node_origin.get_incoming(link_type=LinkType.CALL_WORK).all()), 2)
+        self.assertEquals(len(node_origin.get_incoming(link_type=LinkType.CALL_WORK).all()), 1)
+        self.assertEquals(len(node_origin2.get_incoming(link_type=LinkType.CALL_WORK).all()), 1)
         self.assertEquals(len(node_origin.get_incoming(link_type=LinkType.INPUT_WORK).all()), 2)
         self.assertEquals(len(node_origin.get_incoming(link_label_filter="in_ut%").all()), 2)
-        self.assertEquals(len(node_origin.get_incoming(node_class=Node).all()), 4)
+        self.assertEquals(len(node_origin.get_incoming(node_class=Node).all()), 3)
 
         # Link specific outgoing
         self.assertEquals(len(node_origin.get_outgoing(link_type=LinkType.CALL_WORK).all()), 1)
-        self.assertEquals(len(node_origin.get_outgoing(link_type=LinkType.CREATE).all()), 1)
-        self.assertEquals(len(node_origin.get_outgoing(link_type=LinkType.RETURN).all()), 1)
+        self.assertEquals(len(node_origin.get_outgoing(link_type=LinkType.RETURN).all()), 2)
 
 
 class AnyValue(object):
@@ -2035,13 +2070,27 @@ class TestNodeDeletion(AiidaTestCase):
             I check that NotExistent is raised.
         """
         from aiida.common.exceptions import NotExistent
-        for uuid in uuids_check_existence:
-            # This will raise if node is not existent:
-            load_node(uuid)
-        for uuid in uuids_check_deleted:
-            # I check that it raises
-            with self.assertRaises(NotExistent):
+
+        # Shouldn't be needed, but just to avoid an exception being
+        # raised from the exception management block below
+        uuid = None 
+
+        try:
+            for uuid in uuids_check_existence:
+                # This will raise if node is not existent:
                 load_node(uuid)
+            for uuid in uuids_check_deleted:
+                # I check that it raises
+                with self.assertRaises(NotExistent):
+                    load_node(uuid)
+        except Exception as exc:  # pylint: disable=broad-except
+            import sys
+            six.reraise(
+                type(exc), 
+                str(exc) + 
+                "\nCurrent UUID being processed: {}\nFull uuids_check_existence: {}; full uuids_check_deleted: {}".format(
+                    uuid, uuids_check_existence, uuids_check_deleted), 
+                sys.exc_info()[2])
 
     def _create_calls_n_returns_graph(self):
         """
@@ -2051,17 +2100,31 @@ class TestNodeDeletion(AiidaTestCase):
         Master also creates one nodes. This allows to check whether the delete_nodes
         command works as anticipated.
         """
-        in1, in2, wf, slave1, outp1, outp2, slave2, outp3, outp4 = [Node().store() for i in range(9)]
+        # in1 -> wf
+        #     `-> slave1
+        #      ____^  ^
+        #     /       "CALL
+        # in2 -> slave2
+        # ind
+        in1 = Data().store()
+        in2 = Data().store()
+        wf = WorkflowNode().store()
+        slave1 = WorkflowNode().store()
+        outp1 = Data().store()
+        outp2 = Data().store()
+        slave2 = CalculationNode().store()
+        outp3 = Data().store()
+        outp4 = Data().store()
         wf.add_incoming(in1, link_type=LinkType.INPUT_WORK, link_label='link1')
         slave1.add_incoming(in1, link_type=LinkType.INPUT_WORK, link_label='link2')
         slave1.add_incoming(in2, link_type=LinkType.INPUT_WORK, link_label='link3')
-        slave2.add_incoming(in2, link_type=LinkType.INPUT_WORK, link_label='link4')
+        slave2.add_incoming(in2, link_type=LinkType.INPUT_CALC, link_label='link4')
         slave1.add_incoming(wf, link_type=LinkType.CALL_WORK, link_label='link5')
-        slave2.add_incoming(wf, link_type=LinkType.CALL_WORK, link_label='link6')
-        outp1.add_incoming(slave1, link_type=LinkType.CREATE, link_label='link7')
+        slave2.add_incoming(wf, link_type=LinkType.CALL_CALC, link_label='link6')
+        outp1.add_incoming(slave1, link_type=LinkType.RETURN, link_label='link7')
         outp2.add_incoming(slave2, link_type=LinkType.CREATE, link_label='link8')
         outp2.add_incoming(wf, link_type=LinkType.RETURN, link_label='link9')
-        outp3.add_incoming(wf, link_type=LinkType.CREATE, link_label='link10')
+        outp3.add_incoming(wf, link_type=LinkType.RETURN, link_label='link10')
         outp4.add_incoming(wf, link_type=LinkType.RETURN, link_label='link11')
         return in1, in2, wf, slave1, outp1, outp2, slave2, outp3, outp4
 
@@ -2070,25 +2133,42 @@ class TestNodeDeletion(AiidaTestCase):
         I'm setting up a sequence of nodes connected by data provenance links.
         Testing whether I will delete the right ones.
         """
-        nodes = [Node().store() for i in range(15)]
+        nodes = [
+            Data(), # 0
+            CalculationNode(), CalculationNode(), CalculationNode(), # 1, 2, 3
+            Data(), Data(), Data(), # 4, 5, 6
+            CalculationNode(), CalculationNode(), CalculationNode(), # 7, 8, 9
+            Data(), # 10 
+            CalculationNode(), # 11
+            Data(), # 12
+            CalculationNode(), # 13
+            Data(), # 14
+            ]
+        # Store all of them
+        for node in nodes:
+            node.store()
+
         uuids_check_existence = [n.uuid for n in nodes[:3]]
         uuids_check_deleted = [n.uuid for n in nodes[3:]]
 
         # Now I am linking the nodes in a branched network
         # Connecting nodes 1,2,3 to 0
         for i in range(1, 4):
-            nodes[i].add_incoming(nodes[0], link_type=LinkType.INPUT_WORK, link_label='link{}'.format(i))
+            nodes[i].add_incoming(nodes[0], link_type=LinkType.INPUT_CALC, link_label='link{}'.format(i))
         # Connecting nodes 4,5,6 to 3
         for i in range(4, 7):
             nodes[i].add_incoming(nodes[3], link_type=LinkType.CREATE, link_label='link{}'.format(i))
         # Connecting nodes 7,8 to 4
         for i in range(7, 9):
-            nodes[i].add_incoming(nodes[4], link_type=LinkType.INPUT_WORK, link_label='link{}'.format(i))
-        # Connecting nodes 9 to 5
-        for i in range(9, 10):
-            nodes[i].add_incoming(nodes[5], link_type=LinkType.INPUT_WORK, link_label='link{}'.format(i))
+            nodes[i].add_incoming(nodes[4], link_type=LinkType.INPUT_CALC, link_label='link{}'.format(i))
+        # Connecting node 9 (WF) to 5 (input data)
+        nodes[9].add_incoming(nodes[5], link_type=LinkType.INPUT_CALC, link_label='link9')
+
+        # Connect each node to the next one
         for i in range(10, 14):
-            nodes[i + 1].add_incoming(nodes[i], link_type=LinkType.INPUT_WORK, link_label='link{}'.format(i))
+            # First link to create: 10 (Data) -> 11 (Calc) via a INPUT_CALC
+            link_type = LinkType.CREATE if i % 2 else LinkType.INPUT_CALC
+            nodes[i + 1].add_incoming(nodes[i], link_type=link_type, link_label='link{}'.format(i))
 
         with Capturing():
             delete_nodes((nodes[3].pk, nodes[10].pk), force=True, verbosity=2)
@@ -2116,9 +2196,9 @@ class TestNodeDeletion(AiidaTestCase):
         """
         in1, in2, wf, slave1, outp1, outp2, slave2, outp3, outp4 = self._create_calls_n_returns_graph()
         # The inputs are not harmed.
-        uuids_check_existence = (in1.uuid, in2.uuid, outp4.uuid)
+        uuids_check_existence = [n.uuid for n in (in1, in2, outp1, outp3, outp4)]
         # the slaves and their outputs have to disappear since calls are followed!
-        uuids_check_deleted = [n.uuid for n in (wf, slave1, outp1, outp2, outp3, slave2)]
+        uuids_check_deleted = [n.uuid for n in (wf, slave1, slave2, outp2)]
 
         with Capturing():
             delete_nodes([wf.pk], verbosity=2, force=True, follow_calls=True, follow_returns=False)
@@ -2131,9 +2211,9 @@ class TestNodeDeletion(AiidaTestCase):
         """
         in1, in2, wf, slave1, outp1, outp2, slave2, outp3, outp4 = self._create_calls_n_returns_graph()
         # I don't follow calls, so the slaves and their output are unharmed, as well as input
-        uuids_check_existence = [n.uuid for n in (in1, in2, slave1, outp1, outp2, slave2, outp4)]
+        uuids_check_existence = [n.uuid for n in (in1, in2, slave1, outp1, outp2, outp3, slave2, outp4)]
         # the wf and it's direct output
-        uuids_check_deleted = [n.uuid for n in (wf, outp3)]
+        uuids_check_deleted = [n.uuid for n in (wf, )]
 
         with Capturing():
             delete_nodes([wf.pk], verbosity=2, force=True, follow_calls=False, follow_returns=False)
@@ -2161,7 +2241,7 @@ class TestNodeDeletion(AiidaTestCase):
         """
         Setting up a simple loop, to check that the following doesn't go bananas.
         """
-        in1, in2, wf = [Node().store() for i in range(3)]
+        in1, in2, wf = [Data().store(), Data().store(), WorkflowNode().store()]
         wf.add_incoming(in1, link_type=LinkType.INPUT_WORK, link_label='link1')
         wf.add_incoming(in2, link_type=LinkType.INPUT_WORK, link_label='link2')
         in2.add_incoming(wf, link_type=LinkType.RETURN, link_label='link3')
@@ -2179,7 +2259,7 @@ class TestNodeDeletion(AiidaTestCase):
         Check that deleting a ProcessNode that was called by another ProcessNode which won't be
         deleted works, even though it will raise a warning
         """
-        caller, called = [ProcessNode().store() for i in range(2)]
+        caller, called = [WorkflowNode().store() for i in range(2)]
         called.add_incoming(caller, link_type=LinkType.CALL_WORK, link_label='link')
 
         uuids_check_existence = (caller.uuid,)

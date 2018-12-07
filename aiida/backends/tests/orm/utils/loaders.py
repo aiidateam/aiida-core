@@ -12,7 +12,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import NotExistent
-from aiida.orm import Group, Node
+from aiida.orm import Group, Data
 from aiida.orm.utils import load_entity, load_code, load_computer, load_group, load_node
 from aiida.orm.utils.loaders import NodeEntityLoader
 
@@ -177,7 +177,7 @@ class TestOrmUtils(AiidaTestCase):
 
     def test_load_node(self):
         """Test the functionality of load_node."""
-        node = Node().store()
+        node = Data().store()
 
         # Load through uuid
         loaded_node = load_node(node.uuid)

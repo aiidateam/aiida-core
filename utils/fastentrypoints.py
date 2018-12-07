@@ -47,9 +47,10 @@ http://github.com/ninjaaron/fast-entry_points
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
-from setuptools.command import easy_install
 import re
-TEMPLATE = '''\
+from setuptools.command import easy_install
+
+TEMPLATE = r'''
 import re
 import sys
 
@@ -66,17 +67,17 @@ def get_args(cls, dist, header=None):
     Yield write_script() argument tuples for a distribution's
     console_scripts and gui_scripts entry points.
     """
+    # pylint: disable=no-member,protected-access
     if header is None:
         header = cls.get_header()
-    spec = str(dist.as_requirement())
+
     for type_ in 'console', 'gui':
         group = type_ + '_scripts'
-        for name, ep in dist.get_entry_map(group).items():
+        for name, epoint in dist.get_entry_map(group).items():
             # ensure_safe_name
             if re.search(r'[\\/]', name):
                 raise ValueError("Path separators not allowed in script names")
-            script_text = TEMPLATE.format(
-                          ep.module_name, ep.attrs[0], '.'.join(ep.attrs))
+            script_text = TEMPLATE.format(epoint.module_name, epoint.attrs[0], '.'.join(epoint.attrs))
             args = cls._get_script_args(type_, name, header, script_text)
             for res in args:
                 yield res
@@ -85,13 +86,12 @@ def get_args(cls, dist, header=None):
 easy_install.ScriptWriter.get_args = get_args
 
 
-def main():
+def main():  # pylint: disable=missing-docstring
     import os
-    import re
     import shutil
     import sys
     dests = sys.argv[1:] or ['.']
-    filename = re.sub('\.pyc$', '.py', __file__)
+    filename = re.sub(r'\.pyc$', '.py', __file__)
 
     for dst in dests:
         shutil.copy(filename, dst)
@@ -103,8 +103,7 @@ def main():
             manifest.seek(0)
             manifest_content = manifest.read()
             if not 'include fastentrypoints.py' in manifest_content:
-                manifest.write(('\n' if manifest_content else '')
-                               + 'include fastentrypoints.py')
+                manifest.write(('\n' if manifest_content else '') + 'include fastentrypoints.py')
 
         # Insert the import statement to setup.py if not present
         with open(setup_path, 'a+') as setup:
@@ -114,5 +113,3 @@ def main():
                 setup.seek(0)
                 setup.truncate()
                 setup.write('import fastentrypoints\n' + setup_content)
-
-print(__name__)

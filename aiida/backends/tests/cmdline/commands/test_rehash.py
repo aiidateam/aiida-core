@@ -23,12 +23,12 @@ class TestVerdiRehash(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         super(TestVerdiRehash, cls).setUpClass(*args, **kwargs)
-        from aiida.orm import Node
+        from aiida.orm import Data
         from aiida.orm.data.bool import Bool
         from aiida.orm.data.float import Float
         from aiida.orm.data.int import Int
 
-        cls.node_base = Node().store()
+        cls.node_base = Data().store()
         cls.node_bool_true = Bool(True).store()
         cls.node_bool_false = Bool(False).store()
         cls.node_float = Float(1.0).store()

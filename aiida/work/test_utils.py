@@ -49,7 +49,9 @@ class AddProcess(Process):
 
 
 class BadOutput(Process):
-    """A Process that emits an output that isn't part of the spec raising an exception."""
+    """A Process that emits an output that isn't an AiiDA Data type."""
+
+    _calc_class = WorkflowNode
 
     @classmethod
     def define(cls, spec):
@@ -63,12 +65,16 @@ class BadOutput(Process):
 class ExceptionProcess(Process):
     """A Process that raises a RuntimeError when run."""
 
+    _calc_class = WorkflowNode
+
     def run(self):  # pylint: disable=no-self-use
         raise RuntimeError('CRASH')
 
 
 class WaitProcess(Process):
     """A Process that waits until it is asked to continue."""
+
+    _calc_class = WorkflowNode
 
     def run(self):
         return plumpy.Wait(self.next_step)

@@ -1,16 +1,30 @@
-Calculation plugin - Integer summation
+Calculation plugin - Integer Summation
 ======================================
 
 .. toctree::
    :maxdepth: 2
 
 In this chapter we will give you some examples and a brief guide on how to write
-a plugin to support a new code. We will focus here on a very simple code (that
-simply adds two numbers), so that we can focus only on how AiiDA manages 
-the calculation. At the end, you will have an overview of how a plugin is 
-developed. You will be able then to proceed to more complex plugin guides like
-the guide for the Quantum Espresso plugin, or you can directly jump in
+a plugin to support a new code. Please take a look at the
+:ref:`Plugin Development <plugin_development>` section of the
+developer guide to get an overall understanding of the plugin system.
+We will focus here on writing a plugin for a very simple code
+(that simply adds two numbers) and explain how AiiDA manages calculations.
+At the end, you will have an overview of how a plugin is
+developed. You will be able to understand more complex plugins like
+the Quantum Espresso plugin (`aiida-qe`_), or you can directly jump in
 and develop your own plugin!
+
+.. seealso::
+  You may also want to check out some simple plugin examples such as
+  `aiida-plugin-cutter`_ and `aiida-diff`_. The former works as a
+  template to help you start your own project.
+  A registry of plugins is available `here <https://aiidateam.github.io/aiida-registry/>`_.
+  We encourage registering your plugin, even if it is in the early stage.
+  This allows the plugin name to be secured, and will also let other people with
+  similar interests known the project.
+
+.. _aiida-qe: https://github.com/aiidateam/aiida-quantumespresso
 
 Overview
 --------
@@ -174,26 +188,20 @@ summation code (a detailed description of the different sections follows)::
 
 
 The above input plugin can be downloaded from
-(:download:`here <sum_calc.py>`) and should be placed at 
-``aiida/orm/calculation/job/sum.py``.
+(:download:`here <sum_calc.py>`).
 
-In order the plugin to be automatically discoverable by AiiDA, it is important 
-to:
-
-* give the right name to the file. This should be the name of your input plugin
-  (all lowercase);
-
-* place the plugin under ``aiida/orm/calculation/job``;
-
-* name the class inside the plugin as PluginnameCalculation. For example, the
-  class name of the summation input plugin is, as you see above, 
-  ``SumCalculation``. The first letter must be capitalized, the other letters
-  must be lowercase;
-
-* inherit the class from ``JobCalculation``.
-
-By doing the above, your plugin will be discoverable and loadable
+In order the plugin to be automatically discoverable by AiiDA, it needs to be
+registered using the :ref:`entry point system <plugins.entry_points>`.
+After proper installation, your plugin will be discoverable and loadable
 using ``CalculationFactory``.
+
+When developing your calculation plugin, you should name the class inside the plugin as
+PluginnameCalculation. For example, the class name of the summation input plugin is,
+as you see above, ``SumCalculation``. The first letter must be capitalized,
+the other letters must be lowercase. Also you, make sure your calculation plugin
+inherit the class from ``JobCalculation``. At the end, you will be able
+to load your plugin using ``CalculationFactory``.
+
 
 .. note:: The base ``Calculation`` class should only be used as the abstract
   base class. Any calculation that needs to run on a remote scheduler must
@@ -201,8 +209,36 @@ using ``CalculationFactory``.
   contains all the methods to run on a remote scheduler, get the calculation
   state, copy files remotely and retrieve them, ...
 
+
+Defining the internal parameters
+//////////////////////////////////////
+
+
+A few class internal parameters can (or should) be defined inside the 
+``_init_internal_params`` method in ``SumCalculation``::
+
+  def _init_internal_params(self):
+      super(SumCalculation, self)._init_internal_params()
+
+      self._DEFAULT_INPUT_FILE = 'in.json'
+      self._DEFAULT_OUTPUT_FILE = 'out.json'
+      self._default_parser = 'sum'
+
+In particular, it is good practice to define
+a ``_DEFAULT_INPUT_FILE`` and ``_DEFAULT_OUTPUT_FILE`` attributes (pointing to the
+default input and output file name -- these variables are then used by some
+``verdi`` commands, such as ``verdi calculation outputcat``). Also, you need
+to define the name of the default parser that will be invoked when the
+calculation completes in ``_default_parser``. 
+In the example above, we choose the 'sum' plugin (that
+we are going to define later on). If you don't want to call any parser,
+set this variable to ``None``.
+
+
+
 Defining the accepted input Data nodes
 //////////////////////////////////////
+
 
 The input data nodes that the input plugin expects are those returned by the
 ``_use_methods`` class property.
@@ -236,7 +272,7 @@ The main plugin logic
 
 The main logic of the plugin (called by AiiDA just before submission, in order
 to read the AiiDA input data nodes and create the actual input files for the 
-extenal code) must be defined inside a method ``_prepare_for_submission``, that
+external code) must be defined inside a method ``_prepare_for_submission``, that
 will receive (beside ``self``) two parameters, a temporary folder ``tempfolder``
 in which content can be written, and a dictionary containing all the input 
 nodes that AiiDA will retrieve from the database (in this way, the plugin does
@@ -264,9 +300,23 @@ external code, creating a suitable JSON file::
 The last step: the calcinfo
 ///////////////////////////
 
+
 We can now create the calculation info: an object containing some additional
 information that AiiDA needs (beside the files you generated in the folder)
-in order to submit the claculation. 
+in order to submit the calculation::
+
+  calcinfo = CalcInfo()
+  calcinfo.uuid = self.uuid
+  calcinfo.local_copy_list = []
+  calcinfo.remote_copy_list = []
+  calcinfo.retrieve_list = [self._DEFAULT_OUTPUT_FILE]
+  calcinfo.retrieve_temporary_list = [['path/hugefiles*[0-9].xml', '.', '1']]
+
+  codeinfo = CodeInfo()
+  codeinfo.cmdline_params = [self._DEFAULT_INPUT_FILE,self._DEFAULT_OUTPUT_FILE]
+  codeinfo.code_uuid = code.uuid
+  calcinfo.codes_info = [codeinfo]
+
 In the calcinfo object, you need to store the calculation UUID::
 
     calcinfo.uuid = self.uuid
@@ -278,7 +328,7 @@ into the AiiDA database::
    calcinfo.retrieve_list = [self._DEFAULT_OUTPUT_FILE]
 
 The entries of the list should either be a string, which corresponds to the full
-filepath of the file on the remote, or if you want to specify a group of files with
+file path of the file on the remote, or if you want to specify a group of files with
 wildcards, it should be another list containing the following three items
 
 * Remote path with wildcards e.g. ``some/path/bigfiles*[0-9].xml``
@@ -288,7 +338,7 @@ wildcards, it should be another list containing the following three items
   root directory as ``bigfiles*[0-9].xml``. For ``depth=1``, the sub path ``path`` will be included
   and the files will be copied as ``path/bigfiles*[0-9].xml``
 
-There is another field that follows exactly the same syntax as the ``retrieve_list`` but behaves a little differently.
+There is another field that follows exactly the same syntax as the ``retrieve_list`` but behaves a little differently::
 
    calcinfo.retrieve_temporary_list = [['some/path/bigfiles*[0-9].xml', '.', 0]]
 
@@ -297,7 +347,7 @@ be available during the parsing of the calculation. After the parsing is complet
 files will be deleted. This is useful if during parsing, one wants to analyze the contents of big files and
 parse a small subset of the data to keep permanently, but does not want to have the store the raw files themselves
 which would unnecessarily increase the size of the repository. The files that are retrieved will be stored in
-a temporary ``FolderData`` and be passed as an argument to the ``parse_with_retrieved`` method of the ``Parser``
+a temporary :class:`aiida.orm.data.folder.FolderData` and be passed as an argument to the ``parse_with_retrieved`` method of the :class:`aiida.parsers.parser.Parser`
 class, which is implemented by the specific plugin. It will be passed under the key ``retrieved_temporary_folder``.
 
 For the time being, just define also the following variables as empty lists
@@ -306,12 +356,46 @@ For the time being, just define also the following variables as empty lists
     calcinfo.local_copy_list = []
     calcinfo.remote_copy_list = []
 
+.. note::
+  Other fields that can be specified in ``CalcInfo``:
+
+  * ``retrieve_singlefile_list``: a list of triplets, in the form
+    ``['<linkname_from calc to singlefile>', '<subclass of singlefile>', '<filename>']``.
+    If this is specified, at the end of the
+    calculation it will be created a ``SinglefileData`` like object in the
+    Database, children of the calculation, if of course the file is found
+    on the cluster.
+
+  * ``codes_run_mode``: a string, only necessary if you want to run more than one code
+    in the same scheduling job. Determines the order in which the multiple 
+    codes are run (i.e. sequentially or all at the same time.
+    It assumes one of the values of ``aiida.common.datastructures.code_run_modes``,
+    like ``code_run_modes.PARALLEL`` or ``code_run_modes.SERIAL``
+
+  * ``stdin_name``: the name of the standard input.
+
+  * ``stdin_name``: the name of the standard output.
+
+  * ``cmdline_params``: like parallelization flags, that will be used when
+    running the code.
+
+  * ``stderr_name``: the name of the error output.
+
+  * ``withmpi``: whether the code has to be called with mpi or not.
+
+  For the full definition of ``CalcInfo`` and ``CodeInfo``, refer to the 
+  source :mod:`aiida.common.datastructures`. 
+  In particular, give a look to the
+  ``local_copy_list`` and ``remote_copy_list`` attributes of ``CalcInfo``, which
+  defines how additions files are copied.
+
+
 
 Finally, you need to specify which code executable(s) need to be called
 link the code to the ``codeinfo`` object. 
 For each code, you need to create a ``CodeInfo`` object, specify the code UUID,
 and define the command line parameters that should be passed to the code as a
-list of strings (only paramters after the executable name must be specified. 
+list of strings (only parameters after the executable name must be specified. 
 Moreover, AiiDA takes care of escaping spaces and other symbols). 
 In our case, our code requires the name of the input file, followed by the
 name of the output file, so we write::
@@ -325,47 +409,34 @@ it::
     
     return calcinfo
 
-.. note:: ``calcinfo.codes_info`` is a list of ``CodeInfo`` objects. This
-  allows to support the execution of more than one code, and will be described
-  later.
-
-.. note:: All content stored in the tempfolder will be then stored into the 
-  AiiDA database, potentially `forever`. Therefore, before generating 
-  huge files, you should carefully   think at how to design your plugin 
-  interface. In particular, give a look to the ``local_copy_list`` and 
-  ``remote_copy_list`` attributes of ``calcinfo``, 
-  described in more detail in the :doc:`Quantum ESPRESSO developer 
-  plugin tutorial<code_plugin_qe>`.
+.. note:: A single ``JobCalculation`` may have more than one code.
+ For example, you may have one code to do the main calculation and another
+ for pre/post processing.
+ One ``CodeInfo`` should be specified for each code.
+ The order of execution depends on the order of the ``CodeInfo`` in the list
+ ``calcinfo.codes_info``. This makes ``JobCalculation`` very flexible and 
+ it is possible to pack multiple run in a single ``JobCalculation`` run.
+ The mode of execution is controlled by ``codes_run_mode`` of the ``CalcInfo``.
+ It assumes one of the values of ``aiida.common.datastructures.code_run_modes``,
+ like ``code_run_modes.PARALLEL`` or ``code_run_modes.SERIAL``. The former will 
+ execute the codes in parallel and the latter will execute one after another.
 
 By doing all the above, we have clarified what parameters should be passed
 to which code, we have prepared the input file that the code will access
 and we let also AiiDA know the name of the output file: our first input plugin
 is ready!
 
-.. note:: A few class internal parameters can (or should) be defined inside the 
-  ``_init_internal_params`` method::
-
-        def _init_internal_params(self):
-            super(SumCalculation, self)._init_internal_params()
-
-            self._DEFAULT_INPUT_FILE = 'in.json'
-            self._DEFAULT_OUTPUT_FILE = 'out.json'
-            self._default_parser = 'sum'
-
-  In particular, it is good practice to define
-  a ``_DEFAULT_INPUT_FILE`` and ``_DEFAULT_OUTPUT_FILE`` attributes (pointing to the
-  default input and output file name -- these variables are then used by some
-  ``verdi`` commands, such as ``verdi calculation outputcat``). Also, you need
-  to define the name of the default parser that will be invoked when the
-  calculation completes in ``_default_parser``. 
-  In the example above, we choose the 'sum' plugin (that
-  we are going to define later on). If you don't want to call any parser,
-  set this variable to ``None``.
+.. note:: All content in the in the ``tempfolder`` in preparation of the inputs
+  files will be then stored into the
+  AiiDA database, potentially `forever`. Therefore, before generating 
+  huge files, you should carefully think at how to design your plugin 
+  interface. The same applies for ``calcinfo.retrieve_list``.
 
 As a final step, after copying the file in the location specified above, we
 can check if AiiDA recognised the plugin, by running the command
-``verdi calculation plugins`` and veryfing that our new ``sum`` plugin is
+``verdi calculation plugins`` and verifying that our new ``sum`` plugin is
 now listed.
+
 
 Setup of the code
 -----------------
@@ -393,7 +464,7 @@ codes by typing::
 
 A typical output of the above command is::
 
-    $ verdi code list
+    verdi code list
     # List of configured codes:
     # (use 'verdi code show CODEID' to see the details)
     * Id 73: sum
@@ -405,7 +476,7 @@ specific parameters that we gave when we set-up the code by typing::
 
 Which will give us an output similar to the following::
 
-    $ verdi code show 73
+    verdi code show 73
      * PK:             73
      * UUID:           34b44d33-86c1-478b-88ff-baadfb6f30bf
      * Label:          sum
@@ -529,7 +600,7 @@ in the database::
 
 .. note:: the ``self.get_linkname_outparams()`` is a string automatically
   defined in all ``Parser`` classes and subclasses. In general, you can have
-  multiple output nodes with any name, but it is good pratice so have also
+  multiple output nodes with any name, but it is good practice so have also
   one of the output nodes with link name ``self.get_linkname_outparams()``
   and of type ``ParameterData``. The reason is that this node is the one exposed
   with the ``calc.res`` interface (for instance, later we will be able to get
@@ -645,7 +716,7 @@ remember is that:
 As usual, we can see the executed calculations by doing a
 ``verdi calculation list``. To see the calculations of the last day::
 
-    $ verdi calculation list -a -p1
+    verdi calculation list -a -p1
     # Last daemon state_updater check: 0h:00m:06s ago (at 20:10:31 on 2015-10-20)
     # Pk|State        |Creation|Sched. state|Computer   |Type
     327 |FINISHED     |4h ago  |DONE        |localhost  |sum
@@ -658,3 +729,13 @@ commands (change 327 with the correct calculation PK)::
   <<< 5
   
 So we verified that, indeed, 2+3=5.
+
+.. seealso::
+  Now you have learnt how to write a simple plugin. Please also have a look at more
+  examples online, such as `aiida-diff`_ and `aiida-plugin-cutter`_ to see how a
+  complete plugin package should be organized. The latter works can be used to easily
+  start your own plugin project. The next :doc:`section <code_plugin_float_sum>`
+  will guide you to add more data classes for AiiDA.
+
+.. _aiida-diff: https://github.com/aiidateam/aiida-diff
+.. _aiida-plugin-cutter: https://github.com/aiidateam/aiida-plugin-cutter

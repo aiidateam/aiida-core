@@ -25,13 +25,16 @@ def verdi(ctx, profile, version):
     import sys
     import aiida
     from aiida.cmdline.utils import echo
+    from aiida.backends import settings
+    from aiida.common import setup
 
     if version:
         echo.echo('AiiDA version {}'.format(aiida.__version__))
         sys.exit(0)
 
-    if profile is not None:
-        from aiida.backends import settings
+    if profile is None:
+        settings.AIIDADB_PROFILE = setup.get_default_profile_name()
+    else:
         settings.AIIDADB_PROFILE = profile
 
     ctx.help_option_names = ['-h', '--help']

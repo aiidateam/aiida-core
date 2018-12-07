@@ -32,13 +32,9 @@ _upfversion_regexp = re.compile(
 
 _element_v1_regexp = re.compile(
     r"""
-    ^
-    \s*
     (?P<element_name>[a-zA-Z]{1,2})
     \s+
     Element
-    \s*
-    $
    """, re.VERBOSE)
 
 _element_v2_regexp = re.compile(
@@ -46,7 +42,7 @@ _element_v2_regexp = re.compile(
     \s*
     element\s*=\s*(?P<quote_symbol>['"])\s*
     (?P<element_name>[a-zA-Z]{1,2})\s*
-    (?P=quote_symbol).*
+    (?P=quote_symbol)
    """, re.VERBOSE)
 
 
@@ -255,56 +251,53 @@ def parse_upf(fname, check_filename=True):
     parsed_data = {}
 
     with io.open(fname, encoding='utf8') as f:
-        first_line = f.readline().strip()
-        match = _upfversion_regexp.match(first_line)
+        upf_contents = f.read()
+
+    match = _upfversion_regexp.search(upf_contents)
+    if match:
+        version = match.group('version')
+        AIIDA_LOGGER.debug("Version found: {} for file {}".format(
+            version, fname))
+    else:
+        AIIDA_LOGGER.debug("Assuming version 1 for file {}".format(fname))
+        version = "1"
+
+    parsed_data['version'] = version
+    try:
+        version_major = int(version.partition('.')[0])
+    except ValueError:
+        # If the version string does not contain a dot, fallback
+        # to version 1
+        AIIDA_LOGGER.debug("Falling back to version 1 for file {}, "
+                           "version string '{}' unrecognized".format(
+            fname, version))
+        version_major = 1
+
+    element = None
+    if version_major == 1:
+        match = _element_v1_regexp.search(upf_contents)
         if match:
-            version = match.group('version')
-            AIIDA_LOGGER.debug("Version found: {} for file {}".format(
-                version, fname))
-        else:
-            AIIDA_LOGGER.debug("Assuming version 1 for file {}".format(fname))
-            version = "1"
+            element = match.group('element_name')
+    else:  # all versions > 1
+        match = _element_v2_regexp.search(upf_contents)
+        if match:
+            element = match.group('element_name')
 
-        parsed_data['version'] = version
-        try:
-            version_major = int(version.partition('.')[0])
-        except ValueError:
-            # If the version string does not start with a dot, fallback
-            # to version 1
-            AIIDA_LOGGER.debug("Falling back to version 1 for file {}, "
-                              "version string '{}' unrecognized".format(
-                fname, version))
-            version_major = 1
+    if element is None:
+        raise ParsingError("Unable to find the element of UPF {}".format(
+            fname))
+    element = element.capitalize()
+    if element not in _valid_symbols:
+        raise ParsingError("Unknown element symbol {} for file {}".format(
+            element, fname))
+    if check_filename:
+        if not os.path.basename(fname).lower().startswith(
+                element.lower()):
+            raise ParsingError("Filename {0} was recognized for element "
+                               "{1}, but the filename does not start "
+                               "with {1}".format(fname, element))
 
-        element = None
-        if version_major == 1:
-            for l in f:
-                match = _element_v1_regexp.match(l.strip())
-                if match:
-                    element = match.group('element_name')
-                    break
-        else:  # all versions > 1
-            for l in f:
-                match = _element_v2_regexp.match(l.strip())
-                if match:
-                    element = match.group('element_name')
-                    break
-
-        if element is None:
-            raise ParsingError("Unable to find the element of UPF {}".format(
-                fname))
-        element = element.capitalize()
-        if element not in _valid_symbols:
-            raise ParsingError("Unknown element symbol {} for file {}".format(
-                element, fname))
-        if check_filename:
-            if not os.path.basename(fname).lower().startswith(
-                    element.lower()):
-                raise ParsingError("Filename {0} was recognized for element "
-                                   "{1}, but the filename does not start "
-                                   "with {1}".format(fname, element))
-
-        parsed_data['element'] = element
+    parsed_data['element'] = element
 
     return parsed_data
 

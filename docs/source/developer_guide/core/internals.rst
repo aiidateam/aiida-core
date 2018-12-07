@@ -15,10 +15,14 @@ This means that as soon as a node is stored any attempt to alter its attributes,
 Certain subclasses of nodes need to adapt this behavior however, as for example in the case of the :py:class:`~aiida.orm.node.process.process.ProcessNode` class (see `calculation updatable attributes`_), but since the immutability
 of stored nodes is a core concept of AiiDA, this behavior is nonetheless enforced on the node level. This guarantees that any subclasses of the Node class will respect this behavior unless it is explicitly overriden.
 
+Node methods
+******************
+- :py:meth:`~aiida.orm.implementation.general.node.clean_value` takes a value and returns an object which can be serialized for storage in the database. Such an object must be able to be subsequently deserialized without changing value. If a simple datatype is passed (integer, float, etc.), a check is performed to see if it has a value of ``nan`` or ``inf``, as these cannot be stored. Otherwise, if a list, tuple, dictionary, etc., is  passed, this check is performed for each value it contains. This is done recursively, automatically handling the case of nested objects. It is important to note that iterable type objects are converted to lists during this process, and mappings, such as dictionaries, are converted to normal dictionaries. This cleaning process is used by default when setting node attributes via :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._set_attr` and :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._append_to_attr`, although it can be disabled by setting ``clean=False``. Values are also cleaned when setting extras on a stored node using :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.set_extras` or :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.reset_extras`, but this cannot be disabled. 
 
-Methods & properties
-********************
-In the sequel the most important methods and properties of the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class will be described.
+
+AbstractNode methods & properties
+*********************************
+In the following sections, the most important methods and properties of the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class will be described.
 
 Node subclasses organization
 ============================

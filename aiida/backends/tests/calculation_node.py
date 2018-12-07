@@ -13,7 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed
-from aiida.orm.node.process import ProcessNode
+from aiida.orm.node.process import ProcessNode, CalculationNode
 
 
 class TestProcessNode(AiidaTestCase):
@@ -59,7 +59,7 @@ class TestProcessNode(AiidaTestCase):
         """
         Check the properties of a newly created bare ProcessNode
         """
-        process_node = ProcessNode()
+        process_node = CalculationNode()
 
         self.assertEquals(process_node.is_terminated, False)
         self.assertEquals(process_node.is_excepted, False)
@@ -72,7 +72,7 @@ class TestProcessNode(AiidaTestCase):
         """
         Check that updatable attributes and only those can be mutated for a stored but unsealed ProcessNode
         """
-        a = ProcessNode()
+        a = CalculationNode()
         attrs_to_set = {
             'bool': self.boolval,
             'integer': self.intval,

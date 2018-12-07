@@ -33,7 +33,7 @@ class TestVerdiCalculation(AiidaTestCase):
         from aiida.backends.tests.utils.fixtures import import_archive_fixture
         from aiida.common.exceptions import ModificationNotAllowed
         from aiida.common.links import LinkType
-        from aiida.orm import Node, CalculationFactory
+        from aiida.orm import CalculationFactory, Data
         from aiida.orm.node.process import CalcJobNode
         from aiida.orm.data.parameter import ParameterData
         from aiida.work.processes import ProcessState
@@ -45,7 +45,7 @@ class TestVerdiCalculation(AiidaTestCase):
 
         cls.code = orm.Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
         cls.group = orm.Group(name='test_group').store()
-        cls.node = Node().store()
+        cls.node = Data().store()
         cls.calcs = []
 
         user = orm.User.objects.get_default()

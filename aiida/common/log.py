@@ -160,11 +160,6 @@ LOGGING = {
             'propagate': False,
             'qualname': 'sqlalchemy.engine',
         },
-        'pika': {
-            'handlers': ['console'],
-            'level': 'ERROR',
-            'propagate': False,
-        },
         'py.warnings': {
             'handlers': ['console'],
         },

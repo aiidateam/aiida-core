@@ -197,16 +197,24 @@ Configure AiiDA
 
 Verdi tab-completion
 --------------------
-The ``verdi`` command line interface has many commands and options.
-To simplify its usage, there is a way to enable tab-completion for it in your shell.
-To do so, simply add the following line to the activation script of your virtual environment (or to your shell config, e.g. ``.bashrc``)::
+The ``verdi`` command line interface has many commands and options,
+which can be tab-completed to simplify your life.
+Enable tab-completion with the following bash command::
 
     eval "$(_VERDI_COMPLETE=source verdi)"
 
-For the changes to apply to your current shell, make sure to source the activation script or ``.bashrc`` (depending the approach you chose).
+Place this command in your startup file, i.e. one of
+
+* the ``.bashrc``, if aiida is installed system-wide
+* the `activate script <https://virtualenv.pypa.io/en/latest/userguide/#activate-script>`_ of your virtual environment
+* a `startup file <https://conda.io/docs/user-guide/tasks/manage-environments.html#saving-environment-variables>`_ for your conda environment
+
+In order to enable tab completion in your current shell, 
+make sure to source the startup file once.
 
 .. note::
     This line replaces the ``eval "$(verdi completioncommand)"`` line that was used in ``aiida-core<1.0.0``.
+
 
 Adding AiiDA to the PATH
 ------------------------

@@ -1290,10 +1290,10 @@ class DbGroup(m.Model):
     """
     uuid = m.UUIDField(default=get_new_uuid, unique=True)
     # max_length is required by MySql to have indexes and unique constraints
-    name = m.CharField(max_length=255, db_index=True)
-    # The type of group: a user group, a pseudopotential group,...
-    # User groups have type equal to an empty string
-    type = m.CharField(default="", max_length=255, db_index=True)
+    label = m.CharField(max_length=255, db_index=True)
+    # The type_string of group: a user group, a pseudopotential group,...
+    # User groups have type_string equal to an empty string
+    type_string = m.CharField(default="", max_length=255, db_index=True)
     dbnodes = m.ManyToManyField('DbNode', related_name='dbgroups')
     # Creation time
     time = m.DateTimeField(default=timezone.now, editable=False)
@@ -1305,13 +1305,13 @@ class DbGroup(m.Model):
                         related_name='dbgroups')
 
     class Meta:
-        unique_together = (("name", "type"),)
+        unique_together = (("label", "type_string"),)
 
     def __str__(self):
-        if self.type:
-            return '<DbGroup [type: {}] "{}">'.format(self.type, self.name)
+        if self.type_string:
+            return '<DbGroup [type_string: {}] "{}">'.format(self.type_string, self.label)
         else:
-            return '<DbGroup [user-defined] "{}">'.format(self.name)
+            return '<DbGroup [user-defined] "{}">'.format(self.label)
 
     def get_aiida_class(self):
         from aiida.orm.implementation.django.groups import DjangoGroup

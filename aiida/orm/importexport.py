@@ -20,11 +20,11 @@ from aiida.common import exceptions
 from aiida.common.utils import (export_shard_uuid, get_class_string,
                                 get_object_from_string, grouper)
 from aiida.orm.computers import Computer
-from aiida.orm.groups import Group
+from aiida.orm.groups import Group, GroupTypeString
 from aiida.orm.node import Node
 from aiida.orm.users import User
 
-IMPORTGROUP_TYPE = 'aiida.import'
+IMPORTGROUP_TYPE = GroupTypeString.IMPORTGROUP_TYPE.value
 COMP_DUPL_SUFFIX = ' (Imported #{})'
 
 # Giving names to the various entities. Attributes and links are not AiiDA
@@ -237,9 +237,9 @@ def get_all_fields_info():
         "time": {
             "convert_type": "date"
         },
-        "type": {},
+        "type_string": {},
         "uuid": {},
-        "name": {}
+        "label": {}
     }
     return all_fields_info, unique_identifiers
 
@@ -311,23 +311,23 @@ def deserialize_field(k, v, fields_info, import_unique_ids_mappings,
             return ("{}_id".format(k), None)
 
 
-def import_data(in_path, ignore_unknown_nodes=False,
+def import_data(in_path, group=None, ignore_unknown_nodes=False,
                 silent=False):
     from aiida.backends.settings import BACKEND
     from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 
     if BACKEND == BACKEND_SQLA:
-        return import_data_sqla(in_path, ignore_unknown_nodes=ignore_unknown_nodes,
+        return import_data_sqla(in_path, user_group=group, ignore_unknown_nodes=ignore_unknown_nodes,
                                 silent=silent)
     elif BACKEND == BACKEND_DJANGO:
-        return import_data_dj(in_path, ignore_unknown_nodes=ignore_unknown_nodes,
+        return import_data_dj(in_path, user_group=group, ignore_unknown_nodes=ignore_unknown_nodes,
                               silent=silent)
     else:
         raise Exception("Unknown settings.BACKEND: {}".format(
             BACKEND))
 
 
-def import_data_dj(in_path, ignore_unknown_nodes=False,
+def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
                    silent=False):
     """
     Import exported AiiDA environment to the AiiDA database.
@@ -794,30 +794,34 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
 
             # So that we do not create empty groups
             if pks_for_group:
-                # Get an unique name for the import group, based on the
-                # current (local) time
-                basename = timezone.localtime(timezone.now()).strftime(
-                    "%Y%m%d-%H%M%S")
-                counter = 0
-                created = False
-                while not created:
-                    if counter == 0:
-                        group_name = basename
-                    else:
-                        group_name = "{}_{}".format(basename, counter)
-                    try:
-                        group = Group(name=group_name, type_string=IMPORTGROUP_TYPE).store()
-                        created = True
-                    except (exceptions.UniquenessError, exceptions.IntegrityError):
-                        counter += 1
+                # If user specified a group, import all things in it
+                if user_group:
+                    group = user_group[0]
+                else:
+                    # Get an unique name for the import group, based on the
+                    # current (local) time
+                    basename = timezone.localtime(timezone.now()).strftime(
+                        "%Y%m%d-%H%M%S")
+                    counter = 0
+                    created = False
+                    while not created:
+                        if counter == 0:
+                            group_label = basename
+                        else:
+                            group_label = "{}_{}".format(basename, counter)
+                        try:
+                            group = Group(label=group_label, type_string=IMPORTGROUP_TYPE).store()
+                            created = True
+                        except (exceptions.UniquenessError, exceptions.IntegrityError):
+                            counter += 1
 
                 # Add all the nodes to the new group
-                # TODO: decide if we want to return the group name
+                # TODO: decide if we want to return the group label
                 group.add_nodes(models.DbNode.objects.filter(
                     pk__in=pks_for_group))
 
                 if not silent:
-                    print("IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.name))
+                    print("IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.label))
             else:
                 if not silent:
                     print("NO DBNODES TO IMPORT, SO NO GROUP CREATED")
@@ -846,7 +850,7 @@ def validate_uuid(given_uuid):
     return str(parsed_uuid) == given_uuid
 
 
-def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
+def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False, silent=False):
     """
     Import exported AiiDA environment to the AiiDA database.
     If the 'in_path' is a folder, calls export_tree; otherwise, tries to
@@ -1382,27 +1386,31 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
             # So that we do not create empty groups
             if pks_for_group:
-                # Get an unique name for the import group, based on the
-                # current (local) time
-                basename = timezone.localtime(timezone.now()).strftime(
-                    "%Y%m%d-%H%M%S")
-                counter = 0
-                created = False
-                while not created:
-                    if counter == 0:
-                        group_name = basename
-                    else:
-                        group_name = "{}_{}".format(basename, counter)
+                # If user specified a group, import all things in it
+                if user_group:
+                    group = user_group[0]
+                else:
+                    # Get an unique name for the import group, based on the
+                    # current (local) time
+                    basename = timezone.localtime(timezone.now()).strftime(
+                        "%Y%m%d-%H%M%S")
+                    counter = 0
+                    created = False
+                    while not created:
+                        if counter == 0:
+                            group_label = basename
+                        else:
+                            group_label = "{}_{}".format(basename, counter)
 
-                    group = Group(name=group_name,
-                                  type_string=IMPORTGROUP_TYPE)
-                    from aiida.backends.sqlalchemy.models.group import DbGroup
-                    if session.query(DbGroup).filter(
-                            DbGroup.name == group.backend_entity._dbmodel.name).count() == 0:
-                        session.add(group.backend_entity._dbmodel)
-                        created = True
-                    else:
-                        counter += 1
+                        group = Group(label=group_label,
+                                      type_string=IMPORTGROUP_TYPE)
+                        from aiida.backends.sqlalchemy.models.group import DbGroup
+                        if session.query(DbGroup).filter(
+                                DbGroup.name == group.backend_entity._dbmodel.name).count() == 0:
+                            session.add(group.backend_entity._dbmodel)
+                            created = True
+                        else:
+                            counter += 1
 
                 # Add all the nodes to the new group
                 # TODO: decide if we want to return the group name

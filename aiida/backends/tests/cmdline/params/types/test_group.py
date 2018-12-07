@@ -29,9 +29,9 @@ class TestGroupParamType(AiidaTestCase):
         super(TestGroupParamType, cls).setUpClass()
 
         cls.param = GroupParamType()
-        cls.entity_01 = Group(name='group_01').store()
-        cls.entity_02 = Group(name=str(cls.entity_01.pk)).store()
-        cls.entity_03 = Group(name=str(cls.entity_01.uuid)).store()
+        cls.entity_01 = Group(label='group_01').store()
+        cls.entity_02 = Group(label=str(cls.entity_01.pk)).store()
+        cls.entity_03 = Group(label=str(cls.entity_01.uuid)).store()
 
     def test_get_by_id(self):
         """
@@ -53,7 +53,7 @@ class TestGroupParamType(AiidaTestCase):
         """
         Verify that using the LABEL will retrieve the correct entity
         """
-        identifier = '{}'.format(self.entity_01.name)
+        identifier = '{}'.format(self.entity_01.label)
         result = self.param.convert(identifier, None, None)
         self.assertEquals(result.uuid, self.entity_01.uuid)
 
@@ -64,11 +64,11 @@ class TestGroupParamType(AiidaTestCase):
         Verify that using an ambiguous identifier gives precedence to the ID interpretation
         Appending the special ambiguity breaker character will force the identifier to be treated as a LABEL
         """
-        identifier = '{}'.format(self.entity_02.name)
+        identifier = '{}'.format(self.entity_02.label)
         result = self.param.convert(identifier, None, None)
         self.assertEquals(result.uuid, self.entity_01.uuid)
 
-        identifier = '{}{}'.format(self.entity_02.name, OrmEntityLoader.LABEL_AMBIGUITY_BREAKER_CHARACTER)
+        identifier = '{}{}'.format(self.entity_02.label, OrmEntityLoader.LABEL_AMBIGUITY_BREAKER_CHARACTER)
         result = self.param.convert(identifier, None, None)
         self.assertEquals(result.uuid, self.entity_02.uuid)
 
@@ -79,10 +79,10 @@ class TestGroupParamType(AiidaTestCase):
         Verify that using an ambiguous identifier gives precedence to the UUID interpretation
         Appending the special ambiguity breaker character will force the identifier to be treated as a LABEL
         """
-        identifier = '{}'.format(self.entity_03.name)
+        identifier = '{}'.format(self.entity_03.label)
         result = self.param.convert(identifier, None, None)
         self.assertEquals(result.uuid, self.entity_01.uuid)
 
-        identifier = '{}{}'.format(self.entity_03.name, OrmEntityLoader.LABEL_AMBIGUITY_BREAKER_CHARACTER)
+        identifier = '{}{}'.format(self.entity_03.label, OrmEntityLoader.LABEL_AMBIGUITY_BREAKER_CHARACTER)
         result = self.param.convert(identifier, None, None)
         self.assertEquals(result.uuid, self.entity_03.uuid)

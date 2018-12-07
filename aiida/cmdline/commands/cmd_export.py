@@ -89,6 +89,7 @@ def inspect(archive, version, data, meta_data):
     default=False,
     show_default=True,
     help='Follow reverse CALL links (recursively) when calculating the node set to export.')
+@decorators.with_dbenv()
 def create(output_file, codes, computers, groups, nodes, input_forward, create_reversed, return_reversed, call_reversed,
            force, archive_format):
     """

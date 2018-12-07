@@ -1267,6 +1267,11 @@ SQL_TO_REGEX_TOKENS = [  # Remember in the strings below we have to escape backs
 ]
 
 
+def escape_for_sql_like(string):
+    """Function that escapes % or _ symbols provided by user"""
+    return string.replace('%', '\\%').replace('_', '\\_')
+
+
 def get_regex_pattern_from_sql(sql_pattern):
     r"""
     Convert a string providing a pattern to match in SQL

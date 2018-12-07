@@ -15,11 +15,12 @@ import six
 
 from aiida.utils import timezone
 from aiida.common.exceptions import ValidationError, MissingPluginError
+from aiida.orm import GroupTypeString
 
 
 current_autogroup = None
 
-VERDIAUTOGROUP_TYPE = 'autogroup.run'
+VERDIAUTOGROUP_TYPE = GroupTypeString.VERDIAUTOGROUP_TYPE.value
 
 # TODO: make the Autogroup usable to the user, and not only to the verdi run
 

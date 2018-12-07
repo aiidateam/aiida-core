@@ -39,9 +39,9 @@ class DbGroup(Base):
     id = Column(Integer, primary_key=True)
 
     uuid = Column(UUID(as_uuid=True), default=uuid_func)
-    name = Column(String(255), index=True)
+    label = Column(String(255), index=True)
 
-    type = Column(String(255), default="", index=True)
+    type_string = Column(String(255), default="", index=True)
 
     time = Column(DateTime(timezone=True), default=timezone.now)
     description = Column(Text, nullable=True)
@@ -52,7 +52,7 @@ class DbGroup(Base):
     dbnodes = relationship('DbNode', secondary=table_groups_nodes, backref="dbgroups", lazy='dynamic')
 
     __table_args__ = (
-        UniqueConstraint('name', 'type'),
+        UniqueConstraint('label', 'type_string'),
     )
 
     Index('db_dbgroup_dbnodes_dbnode_id_idx', table_groups_nodes.c.dbnode_id)
@@ -63,10 +63,10 @@ class DbGroup(Base):
         return self.id
 
     def __str__(self):
-        if self.type:
-            return '<DbGroup [type: {}] "{}">'.format(self.type, self.name)
+        if self.type_string:
+            return '<DbGroup [type: {}] "{}">'.format(self.type_string, self.label)
 
-        return '<DbGroup [user-defined] "{}">'.format(self.name)
+        return '<DbGroup [user-defined] "{}">'.format(self.label)
 
     def get_aiida_class(self):
         from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend

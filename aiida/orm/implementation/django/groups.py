@@ -35,29 +35,29 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
     """The Django group object"""
     MODEL_CLASS = models.DbGroup
 
-    def __init__(self, backend, name, user, description='', type_string=''):
+    def __init__(self, backend, label, user, description='', type_string=''):
         """Construct a new Django group"""
         type_check(user, users.DjangoUser)
         super(DjangoGroup, self).__init__(backend)
 
         self._dbmodel = utils.ModelWrapper(
-            models.DbGroup(name=name, description=description, user=user.dbmodel, type=type_string))
+            models.DbGroup(label=label, description=description, user=user.dbmodel, type_string=type_string))
 
     @property
-    def name(self):
-        return self._dbmodel.name
+    def label(self):
+        return self._dbmodel.label
 
-    @name.setter
-    def name(self, name):
+    @label.setter
+    def label(self, label):
         """
-        Attempt to change the name of the group instance. If the group is already stored
-        and the another group of the same type already exists with the desired name, a
+        Attempt to change the label of the group instance. If the group is already stored
+        and the another group of the same type already exists with the desired label, a
         UniquenessError will be raised
 
-        :param name: the new group name
-        :raises UniquenessError: if another group of same type and name already exists
+        :param label : the new group label
+        :raises UniquenessError: if another group of same type and label already exists
         """
-        self._dbmodel.name = name
+        self._dbmodel.label = label
 
     @property
     def description(self):
@@ -69,7 +69,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
 
     @property
     def type_string(self):
-        return self._dbmodel.type
+        return self._dbmodel.type_string
 
     @property
     def user(self):
@@ -194,7 +194,7 @@ class DjangoGroupCollection(BackendGroupCollection):
     ENTITY_CLASS = DjangoGroup
 
     def query(self,
-              name=None,
+              label=None,
               type_string=None,
               pk=None,
               uuid=None,
@@ -202,16 +202,16 @@ class DjangoGroupCollection(BackendGroupCollection):
               user=None,
               node_attributes=None,
               past_days=None,
-              name_filters=None,
+              label_filters=None,
               **kwargs):  # pylint: disable=too-many-arguments
         # pylint: disable=too-many-branches,too-many-locals
         # Analyze args and kwargs to create the query
         queryobject = Q()
-        if name is not None:
-            queryobject &= Q(name=name)
+        if label is not None:
+            queryobject &= Q(label=label)
 
         if type_string is not None:
-            queryobject &= Q(type=type_string)
+            queryobject &= Q(type_string=type_string)
 
         if pk is not None:
             queryobject &= Q(pk=pk)
@@ -243,9 +243,9 @@ class DjangoGroupCollection(BackendGroupCollection):
             else:
                 queryobject &= Q(user=user.id)
 
-        if name_filters is not None:
-            name_filters_list = {"name__" + key: value for (key, value) in name_filters.items() if value}
-            queryobject &= Q(**name_filters_list)
+        if label_filters is not None:
+            label_filters_list = {"name__" + key: value for (key, value) in label_filters.items() if value}
+            queryobject &= Q(**label_filters_list)
 
         groups_pk = set(models.DbGroup.objects.filter(queryobject, **kwargs).values_list('pk', flat=True))
 

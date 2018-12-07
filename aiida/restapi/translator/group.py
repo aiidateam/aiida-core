@@ -41,7 +41,7 @@ class GroupTranslator(BaseTranslator):
     # All the values from column_order must present in additional info dict
     # Note: final schema will contain details for only the fields present in column order
     _schema_projections = {
-        "column_order": ["id", "name", "type", "description", "user_id", "user_email", "uuid"],
+        "column_order": ["id", "label", "type_string", "description", "user_id", "user_email", "uuid"],
         "additional_info": {
             "id": {
                 "is_display": True

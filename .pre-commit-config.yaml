@@ -30,6 +30,8 @@
         aiida/backends/djsite/db/migrations/0015_invalidating_node_hash.py|
         aiida/backends/djsite/db/migrations/0016_code_sub_class_of_data.py|
         aiida/backends/djsite/db/migrations/0017_drop_dbcalcstate.py|
+        aiida/backends/djsite/db/migrations/0019_dbgroup_name2label_type2type_string.py|
+        aiida/backends/djsite/db/migrations/0020_dbgroup_type_string_change_content.py|
         aiida/backends/djsite/db/migrations/__init__.py|
         aiida/backends/djsite/db/models.py|
         aiida/backends/djsite/db/subtests/djangomigrations.py|
@@ -68,6 +70,8 @@
         aiida/backends/sqlalchemy/migrations/versions/5d4d844852b6_invalidating_node_hash.py|
         aiida/backends/sqlalchemy/migrations/versions/a603da2cc809_code_sub_class_of_data.py|
         aiida/backends/sqlalchemy/migrations/versions/162b99bca4a2_drop_dbcalcstate.py|
+        aiida/backends/sqlalchemy/migrations/versions/b8b23ddefad4_dbgroup__name2label_type2type_string.py|
+        aiida/backends/sqlalchemy/migrations/versions/e72ad251bcdb_dbgroup_class_change_type_string_values.py|
         aiida/backends/sqlalchemy/models/authinfo.py|
         aiida/backends/sqlalchemy/models/base.py|
         aiida/backends/sqlalchemy/models/comment.py|

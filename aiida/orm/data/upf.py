@@ -19,10 +19,12 @@ import re
 import six
 
 import aiida.orm.users
-from aiida.orm.data.singlefile import SinglefileData
 from aiida.common.utils import classproperty
+from aiida.orm.data.singlefile import SinglefileData
+from aiida.orm import GroupTypeString
 
-UPFGROUP_TYPE = 'data.upf.family'
+
+UPFGROUP_TYPE = GroupTypeString.UPFGROUP_TYPE.value
 
 _upfversion_regexp = re.compile(
     r"""
@@ -425,13 +427,14 @@ class UpfData(SinglefileData):
         self._set_attr('md5', md5sum)
 
     def get_upf_family_names(self):
-        """
-        Get the list of all upf family names to which the pseudo belongs
-        """
+        """Get the list of all upf family names to which the pseudo belongs."""
         from aiida.orm import Group
+        from aiida.orm import QueryBuilder
 
-        return [_.name for _ in Group.query(nodes=self,
-                                            type_string=self.upffamily_type_string)]
+        query = QueryBuilder()
+        query.append(Group, filters={'type':{'==':self.upffamily_type_string}}, tag='group', project='name')
+        query.append(UpfData, filters={'id': {'==':self.id}}, with_group='group')
+        return [ _[0] for _ in query.all()]
 
     @property
     def element(self):
@@ -507,25 +510,23 @@ class UpfData(SinglefileData):
                for the username (that is, the user email).
         """
         from aiida.orm import Group
+        from aiida.orm import QueryBuilder
+        from aiida.orm import User
 
-        group_query_params = {"type_string": cls.upffamily_type_string}
+        query = QueryBuilder()
+        filters = {'type': {'==': cls.upffamily_type_string}}
 
-        if user is not None:
-            group_query_params['user'] = user
+        query.append(Group, filters=filters, tag='group', project='*')
+
+        if user:
+            query.append(User, filters={'email':{'==':user}}, with_group='group')
 
         if isinstance(filter_elements, six.string_types):
             filter_elements = [filter_elements]
 
         if filter_elements is not None:
-            actual_filter_elements = {_.capitalize() for _ in filter_elements}
+            actual_filter_elements = [_ for _ in filter_elements]
+            query.append(UpfData, filters={'attributes.element':{'in': filter_elements}}, with_group='group')
 
-            group_query_params['node_attributes'] = {
-                'element': actual_filter_elements}
-
-        all_upf_groups = Group.query(**group_query_params)
-
-        groups = [(g.name, g) for g in all_upf_groups]
-        # Sort by name
-        groups.sort()
-        # Return the groups, without name
-        return [_[1] for _ in groups]
+        query.order_by({Group:{'id':'asc'}}) 
+        return [_[0] for _ in query.all()]

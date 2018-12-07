@@ -18,7 +18,7 @@ from click.testing import CliRunner
 import traceback
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands.cmd_group import (group_list, group_create, group_delete, group_rename, group_description,
-                                              group_addnodes, group_removenodes, group_show)
+                                              group_addnodes, group_removenodes, group_show, group_copy)
 
 
 class TestVerdiGroupSetup(AiidaTestCase):
@@ -31,7 +31,7 @@ class TestVerdiGroupSetup(AiidaTestCase):
         super(TestVerdiGroupSetup, cls).setUpClass(*args, **kwargs)
         from aiida.orm import Group
         for grp in ["dummygroup1", "dummygroup2", "dummygroup3", "dummygroup4"]:
-            Group(name=grp).store()
+            Group(label=grp).store()
 
     def setUp(self):
         """
@@ -85,10 +85,13 @@ class TestVerdiGroupSetup(AiidaTestCase):
         self.assertIsNone(result.exception, result.output)
         self.assertIn('Usage', result.output)
 
+        # verdi group copy
+        result = self.cli_runner.invoke(group_copy, options)
+        self.assertIsNone(result.exception, result.output)
+        self.assertIn('Usage', result.output)
+
     def test_create(self):
-        """
-        Test group create command
-        """
+        """Test group create command."""
         result = self.cli_runner.invoke(group_create, ["dummygroup5"])
         self.assertClickResultNoException(result)
 
@@ -99,14 +102,19 @@ class TestVerdiGroupSetup(AiidaTestCase):
         self.assertIn("dummygroup5", result.output)
 
     def test_list(self):
-        """
-        Test group list command
-        """
+        """Test group list command."""
         result = self.cli_runner.invoke(group_list)
         self.assertClickResultNoException(result)
 
         for grp in ["dummygroup1", "dummygroup2"]:
             self.assertIn(grp, result.output)
+
+    def test_copy(self):
+        """Test group copy command."""
+        result = self.cli_runner.invoke(group_copy, ["dummygroup1", "dummygroup2"])
+        self.assertClickResultNoException(result)
+
+        self.assertIn("Success", result.output)
 
     def test_delete(self):
         """
@@ -128,7 +136,7 @@ class TestVerdiGroupSetup(AiidaTestCase):
         self.assertClickResultNoException(result)
 
         for grpline in [
-            "Group name", "dummygroup1", "Group type", "<user-defined>", "Group description", "<no description>"
+            "Group label", "dummygroup1", "Group type_string", "user", "Group description", "<no description>"
         ]:
             self.assertIn(grpline, result.output)
 

@@ -101,19 +101,21 @@ For more information, or if you run into trouble, please refer to the RabbitMQ :
 Window Subsystem for Linux (Ubuntu)
 -----------------------------------
 
-The `window native RabbitMQ <https://www.rabbitmq.com/install-windows.html>`_
-should be installed and started as a service for WSL installation,
-since the version in WSL Ubuntu 18.04 does not work properly.
+The guide for Ubuntu above can be followed but there are a few things to note:
 
-By default, linux services under WSL are not started automatically.
-To start the Postgre SQL service, type the command below in the terminal::
+#. The `window native RabbitMQ <https://www.rabbitmq.com/install-windows.html>`_
+   should be installed and started as a service for WSL installation,
+   since the version in WSL Ubuntu 18.04 does not work properly.
 
-  sudo service postgresql start
+#. Linux services under WSL are not started automatically.
+   To start the Postgre SQL service, type the command below in the terminal::
 
-There is a known issue in WSL Ubuntu 18.04 where the timezone is not
-configured correctly out-of-the-box, which may cause problem for the database. 
-The following command can be used to re-configure the time zone::
+     sudo service postgresql start
 
-  dpkg-reconfigure tzdata
+#. There is a known issue in WSL Ubuntu 18.04 where the timezone is not
+   configured correctly out-of-the-box, which may cause problem for the database. 
+   The following command can be used to re-configure the time zone::
 
-In addition, the file open limit may need to be raised using ``sudo ulimit -n 2048`` (default is 1024) when running tests.
+     dpkg-reconfigure tzdata
+
+#. The file open limit may need to be raised using ``sudo ulimit -n 2048`` (default is 1024), when running tests.

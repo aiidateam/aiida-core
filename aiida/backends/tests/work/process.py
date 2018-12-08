@@ -20,14 +20,14 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.common.lang import override
 from aiida.orm import load_node
 from aiida.orm.data.int import Int
+from aiida.orm.data.str import Str
 from aiida.orm.data.frozendict import FrozenDict
 from aiida.orm.data.parameter import ParameterData
-from aiida.orm.node.process import CalcFunctionNode, WorkflowNode
+from aiida.orm.node.process import WorkflowNode
 from aiida.work import test_utils, Process
 
 
 class NameSpacedProcess(work.Process):
-
     _calc_class = WorkflowNode
 
     @classmethod
@@ -169,6 +169,7 @@ class TestProcess(AiidaTestCase):
         proc = test_utils.DummyProcess()
         # Save the instance state
         bundle = plumpy.Bundle(proc)
+        proc.close()
         proc2 = bundle.unbundle()
 
     def test_process_type_with_entry_point(self):
@@ -222,3 +223,16 @@ class TestProcess(AiidaTestCase):
         # Verify that load_process_class on the calculation node returns the original entry point class
         recovered_process = process.calc.load_process_class()
         self.assertEqual(recovered_process, process.__class__)
+
+    def test_validation_error(self):
+        """Test that validating a port produces an meaningful message"""
+
+        class TestProc(work.Process):
+            @classmethod
+            def define(cls, spec):
+                super(TestProc, cls).define(spec)
+                spec.input('a.b', valid_type=Str)
+
+        with self.assertRaises(ValueError) as context:
+            TestProc({'a': {'b': Int(5)}})
+        self.assertIn("inputs.a.b", str(context.exception))

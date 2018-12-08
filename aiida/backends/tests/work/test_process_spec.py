@@ -32,10 +32,10 @@ class TestProcessSpec(AiidaTestCase):
 
         n = Node()
         d = Data()
-        self.assertFalse(self.spec.validate_inputs({'key': 'foo'})[0])
-        self.assertFalse(self.spec.validate_inputs({'key': 5})[0])
-        self.assertFalse(self.spec.validate_inputs({'key': n})[0])
-        self.assertTrue(self.spec.validate_inputs({'key': d})[0])
+        self.assertIsNotNone(self.spec.validate_inputs({'key': 'foo'}))
+        self.assertIsNotNone(self.spec.validate_inputs({'key': 5}))
+        self.assertIsNotNone(self.spec.validate_inputs({'key': n}))
+        self.assertIsNone(self.spec.validate_inputs({'key': d}))
 
     def test_dynamic_output(self):
         from aiida.orm import Node
@@ -43,10 +43,10 @@ class TestProcessSpec(AiidaTestCase):
 
         n = Node()
         d = Data()
-        self.assertFalse(self.spec.validate_outputs({'key': 'foo'})[0])
-        self.assertFalse(self.spec.validate_outputs({'key': 5})[0])
-        self.assertFalse(self.spec.validate_outputs({'key': n})[0])
-        self.assertTrue(self.spec.validate_outputs({'key': d})[0])
+        self.assertIsNotNone(self.spec.validate_outputs({'key': 'foo'}))
+        self.assertIsNotNone(self.spec.validate_outputs({'key': 5}))
+        self.assertIsNotNone(self.spec.validate_outputs({'key': n}))
+        self.assertIsNone(self.spec.validate_outputs({'key': d}))
 
     def test_exit_code(self):
         """

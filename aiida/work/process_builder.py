@@ -79,9 +79,9 @@ class ProcessBuilderNamespace(Mapping):
                 raise AttributeError('Unknown builder parameter: {}'.format(attr))
 
             value = port.serialize(value)
-            is_valid, message = port.validate(value)
-            if not is_valid:
-                raise ValueError('invalid attribute value: {}'.format(message))
+            validation_error = port.validate(value)
+            if validation_error:
+                raise ValueError('invalid attribute value {}'.format(validation_error.message))
 
             self._data[attr] = value
 

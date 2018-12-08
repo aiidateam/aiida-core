@@ -576,6 +576,8 @@ class TestWorkchain(AiidaTestCase):
 
             # Now bundle the thing
             bundle = plumpy.Bundle(workchain)
+            # Need to close the process before recreating a new instance
+            workchain.close()
 
             # Load from saved state
             workchain2 = bundle.unbundle()
@@ -854,7 +856,7 @@ class TestWorkChainAbort(AiidaTestCase):
             self.assertTrue(process.paused)
             process.kill()
 
-            with self.assertRaises(plumpy.KilledError):
+            with self.assertRaises(plumpy.ClosedError):
                 work.run(process)
 
         runner.schedule(process)

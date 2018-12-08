@@ -118,25 +118,3 @@ class SqlaCommentCollection(BackendCommentCollection):
             session.commit()
         except NoResultFound:
             raise exceptions.NotExistent("Comment with id '{}' not found".format(comment))
-
-    def get(self, comment):
-        """
-        Return a Comment given its id
-
-        :param comment: the id of the comment to retrieve
-        :return: the comment
-        :raise NotExistent: if the comment with the given id does not exist
-        :raise MultipleObjectsError: if the id cannot be uniquely resolved to a comment
-        """
-        # pylint: disable=no-name-in-module,import-error
-        from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
-        from aiida.backends.sqlalchemy import get_scoped_session
-        session = get_scoped_session()
-
-        try:
-            comment = session.query(models.DbComment).filter_by(id=comment).one()
-            return self.from_dbmodel(comment)
-        except NoResultFound:
-            raise exceptions.NotExistent('Could not find Comment<{}>'.format(comment))
-        except MultipleResultsFound:
-            raise exceptions.MultipleObjectsError('Found multiple Comments for pk<{}>'.format(comment))

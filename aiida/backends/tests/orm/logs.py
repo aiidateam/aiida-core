@@ -76,6 +76,17 @@ class TestBackendLog(AiidaTestCase):
         self.assertEqual(entry.message, record['message'])
         self.assertEqual(entry.metadata, record['metadata'])
 
+    def test_objects_find(self):
+        """Put logs in and find them"""
+        for pk in range(10):
+            record = self._record
+            record['objpk'] = pk
+            orm.Log(**record)
+
+        entries = orm.Log.objects.all()
+        self.assertEqual(10, len(entries))
+        self.assertIsInstance(entries[0], orm.Log)
+
     def test_find_orderby(self):
         """
         Test the order_by option of log.find

@@ -14,10 +14,10 @@ from __future__ import absolute_import
 from aiida.orm.implementation.backends import Backend
 from aiida.backends.sqlalchemy.queries import SqlaQueryManager
 from . import authinfo
-from . import comment
+from . import comments
 from . import computer
 from . import groups
-from . import log
+from . import logs
 from . import querybuilder
 from . import users
 
@@ -28,10 +28,10 @@ class SqlaBackend(Backend):
 
     def __init__(self):
         self._authinfos = authinfo.SqlaAuthInfoCollection(self)
-        self._comments = comment.SqlaCommentCollection(self)
+        self._comments = comments.SqlaCommentCollection(self)
         self._computers = computer.SqlaComputerCollection(self)
         self._groups = groups.SqlaGroupCollection(self)
-        self._logs = log.SqlaLogCollection(self)
+        self._logs = logs.SqlaLogCollection(self)
         self._query_manager = SqlaQueryManager(self)
         self._users = users.SqlaUserCollection(self)
 

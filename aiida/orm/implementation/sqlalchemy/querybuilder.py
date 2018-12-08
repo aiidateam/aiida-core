@@ -407,14 +407,16 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
         :returns: an aiida-compatible instance
         """
-        if isinstance(res, (self.Group, self.Node, self.Computer, self.User, self.AuthInfo)):
-            returnval = get_backend_entity(res, self._backend)  # pylint: disable=assignment-from-no-return
-        elif isinstance(res, Choice):
+        if isinstance(res, Choice):
             returnval = res.value
         elif isinstance(res, uuid.UUID):
             returnval = six.text_type(res)
         else:
-            returnval = res
+            try:
+                returnval = get_backend_entity(res, self._backend)  # pylint: disable=assignment-from-no-return
+            except TypeError:
+                returnval = res
+
         return returnval
 
     def yield_per(self, query, batch_size):

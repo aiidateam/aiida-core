@@ -102,6 +102,18 @@ def _(dbmodel, _backend):
     return workflow.Workflow.get_subclass_from_dbnode(dbmodel)
 
 
+@get_backend_entity.register(models.DbComment)
+def _(dbmodel, backend):
+    from . import comments
+    return comments.DjangoComment.from_dbmodel(dbmodel, backend)
+
+
+@get_backend_entity.register(models.DbLog)
+def _(dbmodel, backend):
+    from . import logs
+    return logs.DjangoLog.from_dbmodel(dbmodel, backend)
+
+
 ########################################
 # Singledispatch for Dummy Django Models
 ########################################
@@ -212,3 +224,39 @@ def _(dbmodel, backend):
         enabled=dbmodel.enabled,
     )
     return authinfo.DjangoAuthInfo.from_dbmodel(djauthinfo_instance, backend)
+
+
+@get_backend_entity.register(dummy_models.DbComment)
+def _(dbmodel, backend):
+    """
+    Convert a dbcomment to the backend entity
+    """
+    from . import comments
+    djcomment = models.DbComment(
+        id=dbmodel.id,
+        uuid=dbmodel.uuid,
+        dbnode_id=dbmodel.dbnode_id,
+        ctime=dbmodel.ctime,
+        mtime=dbmodel.mtime,
+        user_id=dbmodel.user_id,
+        content=dbmodel.content)
+    return comments.DjangoComment.from_dbmodel(djcomment, backend)
+
+
+@get_backend_entity.register(dummy_models.DbLog)
+def _(dbmodel, backend):
+    """
+    Convert a dbcomment to the backend entity
+    """
+    from . import logs
+    djlog = models.DbLog(
+        id=dbmodel.id,
+        time=dbmodel.time,
+        loggername=dbmodel.loggername,
+        levelname=dbmodel.levelname,
+        objname=dbmodel.objname,
+        objpk=dbmodel.objpk,
+        message=dbmodel.message,
+        metadata=dbmodel._metadata  # pylint: disable=protected-access
+    )
+    return logs.DjangoLog.from_dbmodel(djlog, backend)

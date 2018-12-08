@@ -19,8 +19,10 @@ except ImportError:  # Python2
     from singledispatch import singledispatch
 
 from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
+from aiida.backends.sqlalchemy.models.comment import DbComment
 from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.backends.sqlalchemy.models.group import DbGroup
+from aiida.backends.sqlalchemy.models.log import DbLog
 from aiida.backends.sqlalchemy.models.node import DbNode
 from aiida.backends.sqlalchemy.models.user import DbUser
 from aiida.backends.sqlalchemy.models.workflow import DbWorkflow
@@ -105,3 +107,21 @@ def _(dbmodel, backend):
     """
     from . import workflow
     return workflow.Workflow.get_subclass_from_dbnode(dbmodel)
+
+
+@get_backend_entity.register(DbComment)
+def _(dbmodel, backend):
+    """
+    Get the comment from the model
+    """
+    from . import comments
+    return comments.SqlaComment.from_dbmodel(dbmodel, backend)
+
+
+@get_backend_entity.register(DbLog)
+def _(dbmodel, backend):
+    """
+    Get the comment from the model
+    """
+    from . import logs
+    return logs.SqlaLog.from_dbmodel(dbmodel, backend)

@@ -57,7 +57,7 @@ class TestComment(AiidaTestCase):
 
     def test_comment_collection_get(self):
         """Test retrieving a Comment through the collection."""
-        comment = Comment.objects.get(comment=self.comment.pk)
+        comment = Comment.objects.get(id=self.comment.pk)
         self.assertEqual(self.comment.uuid, comment.uuid)
 
     def test_comment_collection_delete(self):
@@ -65,10 +65,10 @@ class TestComment(AiidaTestCase):
         comment = Comment(self.node, self.user, 'I will perish').store()
         comment_pk = comment.pk
 
-        Comment.objects.delete(comment=comment.pk)
+        Comment.objects.delete(comment.pk)
 
         with self.assertRaises(exceptions.NotExistent):
-            Comment.objects.get(comment=comment_pk)
+            Comment.objects.get(id=comment_pk)
 
     def test_comment_querybuilder(self):
         """Test querying for comments by joining on nodes in the QueryBuilder."""
@@ -100,3 +100,10 @@ class TestComment(AiidaTestCase):
         self.assertEqual(len(comments), 2)
         for comment in comments:
             self.assertIn(str(comment[0]), [comment_three.uuid, comment_four.uuid])
+
+    def test_objects_get(self):
+        """Test getting a comment from the collection"""
+        node = orm.Data().store()
+        comment = node.add_comment('Check out the comment on _this_ one')
+        gotten_comment = Comment.objects.get(id=comment.id)
+        self.assertIsInstance(gotten_comment, Comment)

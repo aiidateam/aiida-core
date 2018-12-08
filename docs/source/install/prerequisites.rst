@@ -1,9 +1,50 @@
-.. _installation_os:
+.. _install_prerequisites:
 
-Operating Systems
+*************
+Prerequisites
+*************
+
+AiiDA is designed to run on `Unix <https://en.wikipedia.org/wiki/Unix>`_ operating systems and requires the following software:
+
+* `bash <https://en.wikipedia.org/wiki/Bash_(Unix_shell)>`_ or
+  `zsh <https://en.wikipedia.org/wiki/Z_shell>`_ (The shell)
+* `python-2.7.x`_ (The programming language used for AiiDA)
+* `python-pip`_ (Python package manager)
+* `postgresql`_ (Database software version 9.4 or higher)
+* `RabbitMQ`_ (A message broker necessary for AiiDA to communicate between processes)
+
+Depending on your set up, there are a few optional dependencies:
+
+* `virtualenv`_ (Software to create a virtual python environment to install AiiDA in)
+* `graphviz`_ (For plotting AiiDA provenance graphs)
+* `git`_ (Version control system used for AiiDA development)
+
+.. _graphviz: https://www.graphviz.org/download 
+.. _git: https://git-scm.com/downloads
+.. _python-2.7.x: https://www.python.org/downloads
+.. _python-pip: https://packaging.python.org/installing/#requirements-for-installing-packages
+.. _virtualenv: https://packages.ubuntu.com/xenial/virtualenv
+.. _postgresql: https://www.postgresql.org/downloads
+.. _RabbitMQ: https://www.rabbitmq.com/
+
+
+Operating systems
 =================
 
+AiiDA has been tested on the following platforms:
 
+* Ubuntu 14.04, 16.04
+* Mac OS X
+
+We expect AiiDA to also run on:
+
+* Older and newer Ubuntu versions
+* Other Linux distributions
+* Windows subsystem for Linux
+
+Below, we provide installation instructions for a number of operating systems.
+
+.. _details_ubuntu:
 
 Ubuntu
 ------
@@ -31,9 +72,10 @@ Finally, to install the RabbitMQ message broker, run the following command:
 After a reboot, RabbitMQ should be started automatically as it is added as a self starting service.
 If you run into trouble, please refer to the RabbitMQ :ref:`troubleshooting section<installation_rabbitmq>`.
 
+.. _details_brew:
 
-Mac OS X
---------
+Mac OS X (homebrew)
+-------------------
 
 For Mac OS we recommend using the `Homebrew`_ package manager.
 If you have not installed Homebrew yet, you can do so with the following command:
@@ -71,6 +113,30 @@ To start the server and add it as a self-starting service, run:
 
 For more information, or if you run into trouble, please refer to the RabbitMQ :ref:`troubleshooting section<installation_rabbitmq>`.
 
+.. _details_macports:
+
+Mac OS X (MacPorts)
+-------------------
+
+.. _macports: https://www.macports.org/
+
+Another package manager for MacOS is `macports`_.
+
+.. code-block:: bash
+
+    sudo port install git python postgresql96 postgresql96-server rabbitmq-server
+
+To start the `postgres` database server, execute:
+
+.. code-block:: bash
+
+    sudo su postgres
+    pg_ctl -D /opt/local/var/db/postgresql96/defaultdb start
+
+As of Dec 2018, there is an `unresolved issue <https://trac.macports.org/ticket/56928>`_ with ``rabbitmq-server 3.6.15``. Please see the instructions at the bottom of the issue in order to downgrade to ``erlang 20.3`` as needed for ``rabbitmq-server``.
+
+
+.. _details_gentoo:
 
 Gentoo Linux
 ------------
@@ -95,6 +161,8 @@ If you want to manually start the RabbitMQ server you can use:
 
 For more information, or if you run into trouble, please refer to the RabbitMQ :ref:`troubleshooting section<installation_rabbitmq>`.
 
+
+.. _details_wsl:
 
 Windows Subsystem for Linux (Ubuntu)
 ------------------------------------

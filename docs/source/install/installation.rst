@@ -4,72 +4,10 @@
 Installation
 ************
 
-AiiDA is designed to run on `Unix <https://en.wikipedia.org/wiki/Unix>`_ operating systems,
-and has been tested on the following platforms:
+With the prerequisites installed, we can now download AiiDA and install it along with its python dependencies.
 
-* Ubuntu 14.04, 16.04
-* Mac OS X
-
-We expect that AiiDA should also run on:
-
-* Older and newer Ubuntu versions
-* Other Linux distributions
-* Windows subsystem for Linux
-
-The installation procedure can generally be split into four separate steps:
-
-1. :ref:`Install prerequisite software<install_prerequisites>`
-2. :ref:`Install AiiDA<install_aiida>`
-3. :ref:`Setup AiiDA<setup_aiida>`
-4. :ref:`Configure AiiDA<configure_aiida>`
-
-
-.. _install_prerequisites:
-
-Install prerequisites
-=====================
-
-The installation procedure itself requires certain software, which therefore will have to be installed first.
-The following software is required to continue with the installation:
-
-* `bash <https://en.wikipedia.org/wiki/Bash_(Unix_shell)>`_ or
-  `zsh <https://en.wikipedia.org/wiki/Z_shell>`_ (The shell)
-* `git`_ (To download the ``aiida-core`` repository)
-* `python-2.7.x`_ (The programming language used for AiiDA)
-* `python-pip`_ (Python package manager)
-* `virtualenv`_ (Software to create a virtual python environment to install AiiDA in)
-* `postgresql`_ (Database software version 9.4 or higher)
-* `RabbitMQ`_ (A message broker necessary for AiiDA to communicate between processes)
-
-.. _git: https://git-scm.com/downloads
-.. _python-2.7.x: https://www.python.org/downloads
-.. _python-pip: https://packaging.python.org/installing/#requirements-for-installing-packages
-.. _virtualenv: https://packages.ubuntu.com/xenial/virtualenv
-.. _postgresql: https://www.postgresql.org/downloads
-.. _RabbitMQ: https://www.rabbitmq.com/
-
-
-The installation instructions for these prerequisites will depend on the operating system of your machine.
-We provide basic instructions for :ref:`several operating systems<installation_os>`.
-Make sure you have successfully installed these prerequisites before continuing with the installation guide.
-
-A final optional dependancy of note is `graphviz`_ which is necessary for plotting the AiiDA provenance graphs
-via ``verdi graph``.
-
-.. _graphviz: https://www.graphviz.org/download 
-
-
-.. _install_aiida:
-
-Install AiiDA
-=============
-
-With the prerequisites installed, we can now download AiiDA itself and install it along with all its python dependencies.
-Create a directory where you want to install AiiDA and clone the repository::
-
-    mkdir <your_directory>
-    cd <your_directory>
-    git clone https://github.com/aiidateam/aiida_core
+Virtual environment
+-------------------
 
 To prevent the python packages that AiiDA depends on, from clashing with the packages you already have installed on your system, we will install them in a virtual environment.
 For detailed information, see the section on :ref:`virtual environments <virtual_environment>`.
@@ -85,11 +23,34 @@ After activation, your prompt now should have ``(aiidapy)`` in front of it, indi
 
     (aiidapy) $ pip install -U setuptools pip
 
-Finally, to install AiiDA, run the following command from the directory where you cloned the repository::
+Aiida python package
+--------------------
 
-    (aiidapy) $ pip install -e aiida_core
+.. _PyPI: https://pypi.python.org/pypi/aiida
+.. _github repository: https://github.com/aiidateam/aiida_core
 
-(In this example the AiiDA directory is in ``aiida_core``)
+AiiDA can be installed either from the python package index `PyPI`_ (good for general use) or directly from the aiida-core `github repository`_ (good for developers).
+
+Install the ``aiida`` python package from `PyPI`_ using:
+
+.. code-block:: bash
+
+    pip install --pre aiida
+
+This will install the ``aiida-core`` package along with the four base plugins:
+
+    * ``aiida-ase``
+    * ``aiida-codtools``
+    * ``aiida-nwchem``
+    * ``aiida-quantumespresso``
+
+Alternatively, you can create a directory where to clone the AiiDA source code and install AiiDA from source::
+
+    mkdir <your_directory>
+    cd <your_directory>
+    git clone https://github.com/aiidateam/aiida_core
+    pip install -e aiida_core
+
 
 .. _install_optional_dependencies:
 
@@ -120,6 +81,12 @@ Setup AiiDA
 
 After successful installation AiiDA needs to be setup, which includes setting up a profile.
 This can be accomplished through through AiiDA's command line interface ``verdi``.
+
+For a quick installation, AiiDA provides ``verdi quicksetup`` which will try to setup all requirements with sensible defaults
+
+For maximum control and customizability one can use ``verdi setup``, which will be explained in greater detail in the :ref:`setup section<setup_aiida>`.
+
+
 The setup functionality requires that a database has already been created, for information on how to do this, please refer to the :ref:`database section<database>`.
 Once the database has been created, AiiDA can be setup by calling the following command:
 

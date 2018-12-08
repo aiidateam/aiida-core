@@ -37,6 +37,7 @@ For advanced users and developers we point you to the developers section :doc:`d
     :caption: Installation
 
     install/quick_installation
+    install/prerequisites
     install/installation
     install/updating_installation
     install/details

@@ -83,10 +83,15 @@ After completing the setup, your newly created profile should show up in the lis
 
 .. code-block:: bash
 
-    verdi profile list
-    > quicksetup (DEFAULT) (DAEMON PROFILE)
+    $ verdi profile list
+
+    Info: configuration folder: /path.to/.aiida
+    Info: default profile is highlighted and marked by the * symbol
+    * coding_day
 
 Time to :ref:`get started<get_started>`!
 
-If the quick installation failed at any point, please refer to the :ref:`full installation guide<install>` for more details or the :ref:`troubleshooting section<troubleshooting>`.
+If the quick installation failed at any point, please refer 
+to the :ref:`full installation guide<installation>` for more details 
+or the :ref:`troubleshooting section<troubleshooting>`.
 For additional configuration, please refer to the :ref:`configuration section<configure_aiida>`.

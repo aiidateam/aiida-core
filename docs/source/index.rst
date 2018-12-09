@@ -40,7 +40,7 @@ For advanced users and developers we point you to the developers section :doc:`d
     install/prerequisites
     install/installation
     install/updating_installation
-    install/details
+    install/troubleshooting
 
 
 .. toctree::

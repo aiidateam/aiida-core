@@ -28,8 +28,8 @@ Depending on your set up, there are a few optional dependencies:
 .. _RabbitMQ: https://www.rabbitmq.com/
 
 
-Operating systems
-=================
+Supported operating systems
+===========================
 
 AiiDA has been tested on the following platforms:
 
@@ -47,7 +47,7 @@ Below, we provide installation instructions for a number of operating systems.
 .. _details_ubuntu:
 
 Ubuntu
-------
+======
 
 To install the prerequisites on Ubuntu and any other Debian derived distribution, you can use the ``apt`` package manager.
 The following will install the basic ``python`` requirements and the ``git`` source control manager:
@@ -81,7 +81,7 @@ If you are having problems installing RabbitMQ, please refer to the detailed ins
 .. _details_brew:
 
 Mac OS X (homebrew)
--------------------
+===================
 
 For Mac OS we recommend using the `Homebrew`_ package manager.
 If you have not installed Homebrew yet, you can do so with the following command:
@@ -129,7 +129,7 @@ If you encounter problems installing RabbitMQ, please refer to the detailed inst
 .. _details_macports:
 
 Mac OS X (MacPorts)
--------------------
+===================
 
 .. _macports: https://www.macports.org/
 
@@ -159,7 +159,7 @@ To start the ``rabbitmq`` server, run:
 .. _details_gentoo:
 
 Gentoo Linux
-------------
+============
 
 To install RabbitMQ on a Gentoo distribution through the ``portage`` package manager run the following command:
 
@@ -198,7 +198,7 @@ Make sure that RabbitMQ is running with:
 .. _details_wsl:
 
 Windows Subsystem for Linux (Ubuntu)
-------------------------------------
+====================================
 
 The guide for Ubuntu above can be followed but there are a few things to note:
 

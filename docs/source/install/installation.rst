@@ -137,22 +137,24 @@ Most users should use the interactive quicksetup:
     
 which leads through the installation process and takes care of creating the corresponding AiiDA database.
 
-For maximum control and customizability, one can use ``verdi setup`` explained below, which requires the user to set up the database.
+For maximum control and customizability, one can use ``verdi setup``
+and set up the database manually as explained below.
 
 .. _database:
 
 Database setup
 --------------
 
-AiiDA uses a database to store the nodes, node attributes and
-other information, allowing the end user to perform fast
-queries of the results.
+AiiDA uses a database to store the nodes, node attributes and other
+information, allowing the end user to perform fast queries of the results.
 Currently, only `PostgreSQL`_ is allowed as a database backend.
 
 .. _PostgreSQL: https://www.postgresql.org/downloads
 
-To manually create the database for AiiDA, you need to run the program ``psql`` to interact with postgres.
-On most operating systems, you need to do so as the ``postgres`` user that was created upon installing the software.
+To manually create the database for AiiDA, you need to run the program ``psql``
+to interact with postgres.
+On most operating systems, you need to do so as the ``postgres`` user that was
+created upon installing the software.
 To assume the role of ``postgres`` run as root::
 
     su - postgres

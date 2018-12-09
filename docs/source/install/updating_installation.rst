@@ -1,21 +1,22 @@
 .. _updating_installation:
+.. _updating_aiida:
 
-*********************
-Updating installation
-*********************
+**************
+Updating AiiDA
+**************
 
-Before you update your AiiDA installation, first make sure that you do the following:
+Before you update your AiiDA installation, make sure to:
 
 * Stop your daemon by executing ``verdi daemon stop``
 * Create a backup of your database(s) by following the guidelines in the :ref:`backup section<backup>`
 * Create a backup of the ``~/.aiida`` folder (where configuration files are stored)
 
 If you have installed AiiDA manually from a local clone of the ``aiida_core`` repository, skip to the instructions for :ref:`developers <update_developers>`.
-Otherwise, if you have installed AiiDA through ``pip``, you can also update your installation through ``pip``.
-If you installed ``aiida_core`` in a virtual environment make sure to load it first.
-Now you are ready to update your AiiDA installation through ``pip``::
 
-  pip install --upgrade aiida_core
+If you have installed AiiDA through ``pip``, 
+enter the python environment where you've installed AiiDA and run::
+
+  pip install --upgrade aiida-core
 
 After upgrading your AiiDA installation you may have to perform :ref:`version specific migrations <update_migrations>`.
 When all necessary migrations are completed, finalize the update by executing::
@@ -60,12 +61,6 @@ This updates your daemon profile and related files.
     files that may have remained from the previous version. E.g. If you are
     in your AiiDA folder you can type ``find . -name "*.pyc" -type f -delete``.
 
-.. note::
-  Since AiiDA ``0.9.0``, we use Alembic for the database migrations of the
-  SQLAlchemy backend. In case you were using SQLAlchemy before the introduction
-  of Alembic, you may experience problems during your first migration. If it is
-  the case, please have a look at the following section :ref:`first_alembic_migration`
-
 
 .. _update_migrations:
 
@@ -78,7 +73,6 @@ Updating from 0.12.* to 1.0
 Configuration file
 ^^^^^^^^^^^^^^^^^^
 * The tab-completion activation for ``verdi`` has changed, simply replace the ``eval "$(verdi completioncommand)"`` line in your activation script with ``eval "$(_VERDI_COMPLETE=source verdi)"``
-
 
 
 Updating from older versions
@@ -104,3 +98,9 @@ To find the update instructions for older versions of AiiDA follow the following
 .. _0.6.* SqlAlchemy:   http://aiida-core.readthedocs.io/en/v0.7.0/installation.html#updating-from-0-6-0-django-to-0-7-0-sqlalchemy
 .. _0.5.* Django: http://aiida-core.readthedocs.io/en/v0.7.0/installation.html#updating-from-0-5-0-to-0-6-0
 .. _0.4.* Django: http://aiida-core.readthedocs.io/en/v0.5.0/installation.html#updating-from-0-4-1-to-0-5-0
+
+.. note::
+  Since AiiDA ``0.9.0``, we use Alembic for the database migrations of the
+  SQLAlchemy backend. In case you were using SQLAlchemy before the introduction
+  of Alembic, you may experience problems during your first migration. If it is
+  the case, please see :ref:`this section <first_alembic_migration>`.

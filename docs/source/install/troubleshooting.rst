@@ -92,13 +92,13 @@ Configuring remote SSH computers
 
 .. _ContinuumIO/anaconda-issues#686: https://github.com/ContinuumIO/anaconda-issues/issues/686
 
-* [**.bashrc and .bash_profile behavior on remote computers**] 
-  (**NOTE** This applies also to a computer configured via a ``local`` transport!)
+* [**Output from .bashrc and/or .bash_profile on remote computers**] 
+  (**NOTE** This applies also computers configured via ``local`` transport!)
   
-  When connecting
-  to remote computers, AiiDA (like other codes as ``sftp``) might get very confused
-  if you have code in your ``.bashrc`` or ``.bash_profile`` producing output
-  or e.g. running commands like ``clean`` that require a terminal.
+  When connecting to remote computers, AiiDA (like other codes as ``sftp``)
+  can get confused if you have code in your ``.bashrc`` or
+  ``.bash_profile`` that produces output or e.g. runs commands like ``clean``
+  that require a terminal.
 
   For instance, if you add a ``echo "a"`` in your ``.bashrc`` and then try to SFTP
   a file from it, you will get an error like ``Received message too long 1091174400``.
@@ -194,33 +194,8 @@ Use in ipython/jupyter
 
   and from the newly opened browser tab select ``New -> <aiida.kernel.name>``
 
-.. _updating_aiida:
-
-For developers (testing)
+Postgres restart problem
 ------------------------
-
-* [**Making the SSH tests pass**] The developer tests of the *SSH* transport plugin are
-  performed connecting to ``localhost``. The tests will fail if
-  a passwordless ssh connection is not set up. Therefore, if you want to run
-  the tests:
-
-  + make sure to have a ssh server. On Ubuntu, for instance, you can install
-    it using::
-
-       sudo apt-get install openssh-server
-
-  + Configure a ssh key for your user on your machine, and then add
-    your public key to the authorized keys of localhsot.
-    The easiest way to achieve this is to run::
-
-       ssh-copy-id localhost
-
-    (it will ask your password, because it is connecting via ssh to ``localhost``
-    to install your public key inside ~/.ssh/authorized_keys).
-
-
-Postgres restart
-----------------
 
 Due to a `bug <https://wiki.postgresql.org/wiki/May_2015_Fsync_Permissions_Bug>` affecting older postgres versions (<9.4), 
 PostgreSQL could refuse to restart after a crash or after a restore from binary backup. 

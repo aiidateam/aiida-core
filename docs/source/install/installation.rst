@@ -4,27 +4,70 @@
 Installation
 ************
 
-With the prerequisites installed, we can now download AiiDA and install it along with its python dependencies.
+With all prerequisites in place, we can now install AiiDA and its python dependencies.
 
-Virtual environment
--------------------
+.. _virtual_environment:
 
-To prevent the python packages that AiiDA depends on, from clashing with the packages you already have installed on your system, we will install them in a virtual environment.
-For detailed information, see the section on :ref:`virtual environments <virtual_environment>`.
-To create a new virtual environment and activate it, run the following commands::
+Virtual python environment
+==========================
 
-    virtualenv ~/aiidapy
-    source ~/aiidapy/bin/activate
+AiiDA depends on a number of third party python packages, and usually on specific versions of those packages.
+In order not to interfere with third party packages needed by
+other software on your system, we *strongly* recommend
+isolating AiiDA in a `virtual python environment <https://docs.python.org/tutorial/venv.html>`_.
+In the following, we describe how to create a virtual python environment using the `virtualenv <https://virtualenv.pypa.io/en/latest/>`_ tool, but feel free to use your preferred envorinment manage (e.g. `conda <https://conda.io/docs/>`_).
+
+Creating the virtual environment
+--------------------------------
+
+To create and activate a new virtual environment, run the following commands::
+
+    pip install --user --upgrade virtualenv   # install virtualenv tool
+    virtualenv ~/aiidapy                      # create "aiidapy" environment
+    source ~/aiidapy/bin/activate             # activate "aiidapy"environment
 
 This will create a directory in your home directory named ``aiidapy`` where all the packages will be installed.
-After activation, your prompt now should have ``(aiidapy)`` in front of it, indicating that you are working in the virtual environment.
+After activation, your prompt should have ``(aiidapy)`` in front of it, indicating that you are working inside the virtual environment.
+The activation script ensures that the python executable of the virtualenv is the first in ``PATH``, and that python programs have access only to packages installed inside the virtualenv.
+
+To leave or deactivate the environment, simply run::
+
+    (my_env) $ deactivate
 
 .. note:: You may need to install ``pip`` and ``setuptools`` in your virtual environment in case the system or user version of these tools is old::
 
     (aiidapy) $ pip install -U setuptools pip
 
+
+.. _aiida_path_in_virtualenv:
+
+Creating an ``.aiida`` folder in your virtualenvironment
+--------------------------------------------------------
+
+When you run AiiDA in multiple virtual environments, it can be convenient to use a separate ``.aiida`` folder for each virtualenv. To do this, you can use the :ref:`AIIDA_PATH mechanism <directory_location>` as follows:
+
+1. Create your virtualenv, as described above
+2. Create a ``.aiida`` directory in your virtualenv directory::
+
+    mkdir ~/.virtualenvs/my_env/.aiida
+3. At the end of ``~/.virtualenvs/my_env/bin/activate``, add the following line::
+
+    export AIIDA_PATH='~/.virtualenvs/my_env'
+4. Deactivate and re-activate the virtualenv
+5. You can test that everything is set up correctly if you can reproduce the following::
+
+    (my_env)$ echo $AIIDA_PATH
+    >>> ~/.virtualenvs/my_env
+
+    (my_env)$ verdi profile list
+    >>> Configuration folder: /home/my_username/.virtualenvs/my_env/.aiida
+    >>> Stopping: No configuration file found
+    >>> Note: if no configuration file was found, it means that you have not run
+    >>> 'verdi setup' yet to configure at least one AiiDA profile.
+6. Continue setting up AiiDA with ``verdi setup`` or ``verdi quicksetup``.
+
 Aiida python package
---------------------
+====================
 
 .. _PyPI: https://pypi.python.org/pypi/aiida
 .. _github repository: https://github.com/aiidateam/aiida_core
@@ -36,6 +79,11 @@ Install the ``aiida`` python package from `PyPI`_ using:
 .. code-block:: bash
 
     pip install --pre aiida
+
+.. note:: 
+    If you are installing AiiDA in your system environment,
+    consider adding the ``--user`` flag to avoid the need for
+    administrator privileges.
 
 This will install the ``aiida-core`` package along with the four base plugins:
 
@@ -76,34 +124,139 @@ In order to install any of these package groups, simply append them as a comma s
 
 .. _setup_aiida:
 
-Setup AiiDA
-===========
+AiiDA profile setup
+===================
 
-After successful installation AiiDA needs to be setup, which includes setting up a profile.
-This can be accomplished through through AiiDA's command line interface ``verdi``.
+After successful installation, you need to create an AiiDA profile via AiiDA's command line interface ``verdi``.
 
-For a quick installation, AiiDA provides ``verdi quicksetup`` which will try to setup all requirements with sensible defaults
+Most users should use the interactive quicksetup:
 
-For maximum control and customizability one can use ``verdi setup``, which will be explained in greater detail in the :ref:`setup section<setup_aiida>`.
+.. code-block:: bash
+
+    verdi quicksetup <profile_name>
+    
+which leads through the installation process and takes care of creating the corresponding AiiDA database.
+
+For maximum control and customizability, one can use ``verdi setup`` explained below, which requires the user to set up the database.
+
+.. _database:
+
+Database setup
+--------------
+
+AiiDA uses a database to store the nodes, node attributes and
+other information, allowing the end user to perform fast
+queries of the results.
+Currently, only `PostgreSQL`_ is allowed as a database backend.
+
+.. _PostgreSQL: https://www.postgresql.org/downloads
+
+To manually create the database for AiiDA, you need to run the program ``psql`` to interact with postgres.
+On most operating systems, you need to do so as the ``postgres`` user that was created upon installing the software.
+To assume the role of ``postgres`` run as root::
+
+    su - postgres
+
+and launch the postgres program::
+
+    psql
+
+Create a new database user account for AiiDA by running::
+
+    CREATE USER aiida WITH PASSWORD '<password>';
+
+replacing ``<password>`` with a password of your choice.
+Make sure to remember it, as you will need it again when you configure AiiDA to use this database through ``verdi setup``.
+If you want to change the password you just created use the command::
+
+    ALTER USER aiida PASSWORD '<password>';
+
+Next we create the database itself. Keep in mind that we enforce the UTF-8 encoding and specific locales::
+
+    CREATE DATABASE aiidadb OWNER aiida ENCODING 'UTF8' LC_COLLATE='en_US.UTF-8' LC_CTYPE='en_US.UTF-8' TEMPLATE=template0;
+
+and grant all privileges on this DB to the previously-created ``aiida`` user::
+
+    GRANT ALL PRIVILEGES ON DATABASE aiidadb to aiida;
+
+You have now created a database for AiiDA and you can close the postgres shell by typing ``\q``.
+To test if the database was created successfully, you can run the following command as a regular user in a bash terminal::
+
+    psql -h localhost -d aiidadb -U aiida -W
+
+and type the password you inserted before, when prompted.
+If everything worked well, you should get no error and see the prompt of the ``psql`` shell.
+
+If you uses the same names used in the example commands above, during the ``verdi setup`` phase you want to use the following parameters to use the database you just created::
+
+    Database engine: postgresql_psycopg2
+    PostgreSQL host: localhost
+    PostgreSQL port: 5432
+    AiiDA Database name: aiidadb
+    AiiDA Database user: aiida
+    AiiDA Database password: <password>
+
+.. note:: Do not forget to backup your database (instructions :ref:`here<backup_postgresql>`).
+
+.. note:: If you want to move the physical location of the data files
+  on your hard drive AFTER it has been created and filled, look at the
+  instructions :ref:`here<move_postgresql>`.
 
 
-The setup functionality requires that a database has already been created, for information on how to do this, please refer to the :ref:`database section<database>`.
-Once the database has been created, AiiDA can be setup by calling the following command:
+Database setup using unix sockets
++++++++++++++++++++++++++++++++++
+
+Instead of using passwords to protect access to the database 
+(which could be used by other users on the same machine),
+PostgreSQL allows password-less logins via unix sockets. 
+
+In this scenario PostgreSQL compares the user connecting to the socket with its
+own database of users and will allow a connection if a matching user exists.
+
+Assume the role of ``postgres`` by running the following as root::
+
+    su - postgres
+
+Create a database user with the **same name** as the user you are using to run AiiDA (usually your login name)::
+
+    createuser <username>
+
+replacing ``<username>`` with your username.
+
+Next, create the database itself making sure that your user is the owner::
+
+    createdb -O <username> aiidadb
+
+To test if the database was created successfully, you can run the following command as your user in a bash terminal::
+
+    psql aiidadb
+
+
+Make sure to leave the host, port and password empty when specifiying the parameters during the ``verdi setup`` phase
+and specify your username as the *AiiDA Database user*::
+
+    Database engine: postgresql_psycopg2
+    PostgreSQL host:
+    PostgreSQL port:
+    AiiDA Database name: aiidadb
+    AiiDA Database user: <username>
+    AiiDA Database password:
+
+
+Setup instructions
+------------------
+
+After the database has been created, do
+
 
 .. code-block:: bash
 
     verdi setup <profile_name>
 
-or equivalently
-
-.. code-block:: bash
-
-    verdi -p <profile_name> setup
-
 where `<profile_name>` is a profile name of your choosing.
 The ``verdi setup`` command will guide you through the setup process through a series of prompts.
 
-The first thing that will be asked to you is the timezone, extremely important to get correct dates and times for your calculations.
+The first thing that will be asked to you is the timezone, important to get correct dates and times for your calculations.
 
 AiiDA will do its best to try and understand the local timezone (if properly configured on your machine), and will suggest a set of sensible values.
 Choose the timezone that fits best to you (that is, the nearest city in your timezone - for Lausanne, for instance, we choose ``Europe/Zurich``) and type it at the prompt.

@@ -8,9 +8,9 @@ AiiDA is designed to run on `Unix <https://en.wikipedia.org/wiki/Unix>`_ operati
 
 * `bash <https://en.wikipedia.org/wiki/Bash_(Unix_shell)>`_ or
   `zsh <https://en.wikipedia.org/wiki/Z_shell>`_ (The shell)
-* `python-2.7.x`_ (The programming language used for AiiDA)
+* `python-2.7.x`_ (The programming language used by AiiDA)
 * `python-pip`_ (Python package manager)
-* `postgresql`_ (Database software version 9.4 or higher)
+* `postgresql`_ (Database software, version 9.4 or higher)
 * `RabbitMQ`_ (A message broker necessary for AiiDA to communicate between processes)
 
 Depending on your set up, there are a few optional dependencies:
@@ -69,8 +69,14 @@ Finally, to install the RabbitMQ message broker, run the following command:
 
     sudo apt-get install rabbitmq-server
 
-After a reboot, RabbitMQ should be started automatically as it is added as a self starting service.
-If you run into trouble, please refer to the RabbitMQ :ref:`troubleshooting section<installation_rabbitmq>`.
+After a reboot, RabbitMQ should be started automatically as it is added as a self starting service. You can check whether it is running by checking the status through the command:
+
+.. code-block:: bash
+
+    sudo rabbitmqctl status
+
+If you are having problems installing RabbitMQ, please refer to the detailed instructions  provided on the `website of RabbitMQ itself for Debian based distributions <https://www.rabbitmq.com/install-debian.html>`_.
+
 
 .. _details_brew:
 
@@ -107,11 +113,18 @@ Installing the RabbitMQ message broke through Homebrew is as easy as:
 
 To start the server and add it as a self-starting service, run:
 
-.. code-block bash::
+.. code-block:: bash
 
     brew services start rabbitmq
 
-For more information, or if you run into trouble, please refer to the RabbitMQ :ref:`troubleshooting section<installation_rabbitmq>`.
+
+You can check whether it is running by checking the status through the command:
+
+.. code-block:: bash
+
+    /usr/local/sbin/rabbitmqctl status
+
+If you encounter problems installing RabbitMQ, please refer to the detailed instructions provided on the `website of RabbitMQ itself for Homebrew <https://www.rabbitmq.com/install-homebrew.html>`_.
 
 .. _details_macports:
 
@@ -126,14 +139,21 @@ Another package manager for MacOS is `macports`_.
 
     sudo port install git python postgresql96 postgresql96-server rabbitmq-server
 
-To start the `postgres` database server, execute:
+To start the ``postgres`` database server, run:
 
 .. code-block:: bash
 
     sudo su postgres
     pg_ctl -D /opt/local/var/db/postgresql96/defaultdb start
 
-As of Dec 2018, there is an `unresolved issue <https://trac.macports.org/ticket/56928>`_ with ``rabbitmq-server 3.6.15``. Please see the instructions at the bottom of the issue in order to downgrade to ``erlang 20.3`` as needed for ``rabbitmq-server``.
+To start the ``rabbitmq`` server, run:
+
+.. code-block:: bash
+
+    sudo launchctl load -w /Library/LaunchDaemons/org.macports.rabbitmq-server.plist
+
+.. note::
+    As of Dec 2018, there is an `unresolved issue <https://trac.macports.org/ticket/56928>`_ with ``rabbitmq-server 3.6.15``. Please see the instructions at the bottom of the issue in order to downgrade to ``erlang 20.3`` as needed for ``rabbitmq-server``.
 
 
 .. _details_gentoo:
@@ -159,9 +179,22 @@ If you want to manually start the RabbitMQ server you can use:
 
     /etc/init.d/rabbitmq start
 
-For more information, or if you run into trouble, please refer to the RabbitMQ :ref:`troubleshooting section<installation_rabbitmq>`.
+Make sure that RabbitMQ is running with:
 
+.. code-block:: bash
 
+    rabbitmqctl status
+
+.. note::
+    If you have encounter the following error
+    
+    .. code-block:: bash
+    
+        Argument '-smp enable' not supported."
+    
+    Remove the mentioned option from the file ``/usr/libexec/rabbitmq/rabbitmq-env`` and restart the server.
+    If you still have trouble getting RabbitMQ to run, please refer to the detailed instructions provided on the `website of RabbitMQ itself for generic Unix systems <https://www.rabbitmq.com/install-generic-unix.html>`_.
+    
 .. _details_wsl:
 
 Windows Subsystem for Linux (Ubuntu)

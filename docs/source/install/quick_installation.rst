@@ -62,6 +62,8 @@ Prerequisites
     See :ref:`WSL instructions<details_wsl>` for details.
 
 
+.. _quick_install:
+
 Installation
 ============
 
@@ -84,7 +86,7 @@ After completing the setup, your newly created profile should show up in the lis
     verdi profile list
     > quicksetup (DEFAULT) (DAEMON PROFILE)
 
-It's time to :ref:`get started<get_started>`!
+Time to :ref:`get started<get_started>`!
 
 If the quick installation failed at any point, please refer to the :ref:`full installation guide<install>` for more details or the :ref:`troubleshooting section<troubleshooting>`.
 For additional configuration, please refer to the :ref:`configuration section<configure_aiida>`.

@@ -103,7 +103,7 @@ def load_dbenv(profile=None, connection=None):
     """
     _load_dbenv_noschemacheck(profile=profile)
     # Check schema version and the existence of the needed tables
-    check_schema_version()
+    check_schema_version(profile_name=profile)
 
 
 def _load_dbenv_noschemacheck(profile=None, connection=None):
@@ -367,62 +367,53 @@ CREATE TRIGGER autoupdate_tc
                             closure_table_child_field=closure_table_child_field)
 
 
-def check_schema_version(force_migration=False, alembic_cfg=None):
+def migrate_database(alembic_cfg=None):
+    """Migrate the database to the latest schema version.
+
+    :param config: alembic configuration to use, will use default if not provided
     """
-    Check if the version stored in the database is the same of the version
-    of the code.
-
-    :note: if the DbSetting table does not exist, this function does not
-      fail. The reason is to avoid to have problems before running the first
-      migrate call.
-
-    :note: if no version is found, the version is set to the version of the
-      code. This is useful to have the code automatically set the DB version
-      at the first code execution.
-
-    :raise ConfigurationError: if the two schema versions do not match.
-      Otherwise, just return.
-    """
-    import sys
-    from aiida.common.utils import query_yes_no
     from aiida.backends import sqlalchemy as sa
-    from aiida.backends.settings import IN_DOC_MODE
 
-    # Early exit if we compile the documentation since the schema
-    # check is not needed and it creates problems with the sqlalchemy
-    # migrations
-    if IN_DOC_MODE:
-        return
-
-    # If an alembic configuration file is given then use that one.
     if alembic_cfg is None:
         alembic_cfg = get_alembic_conf()
 
-    # Getting the version of the code and the database
-    # Reusing the existing engine (initialized by AiiDA)
+    with sa.engine.begin() as connection:
+        alembic_cfg.attributes['connection'] = connection
+        command.upgrade(alembic_cfg, "head")
+
+
+def check_schema_version(profile_name=None):
+    """
+    Check if the version stored in the database is the same of the version of the code.
+
+    :raise ConfigurationError: if the two schema versions do not match
+    """
+    from aiida.backends import sqlalchemy as sa
+    from aiida.backends.settings import IN_DOC_MODE
+    from aiida.common.exceptions import ConfigurationError
+
+    # Early exit if we compile the documentation since the schema check is not needed and it creates problems
+    # with the sqlalchemy migrations
+    if IN_DOC_MODE:
+        return
+
+    alembic_cfg = get_alembic_conf()
+
+    # Getting the version of the code and the database, reusing the existing engine (initialized by AiiDA)
     with sa.engine.begin() as connection:
         alembic_cfg.attributes['connection'] = connection
         code_schema_version = get_migration_head(alembic_cfg)
         db_schema_version = get_db_schema_version(alembic_cfg)
 
     if code_schema_version != db_schema_version:
-        if db_schema_version is None:
-            print("It is time to perform your first SQLAlchemy migration.")
-        else:
-            print("The code schema version is {}, but the version stored in "
-                  "the database is {}."
-                  .format(code_schema_version, db_schema_version))
-        if force_migration or query_yes_no("Would you like to migrate to the "
-                                           "latest version?", "yes"):
-            print("Migrating to the last version")
-            # Reusing the existing engine (initialized by AiiDA)
-            with sa.engine.begin() as connection:
-                alembic_cfg.attributes['connection'] = connection
-                command.upgrade(alembic_cfg, "head")
-        else:
-            print("No migration is performed. Exiting since database is out "
-                  "of sync with the code.")
-            sys.exit(1)
+        from aiida.manage.manager import get_manager
+        manager = get_manager()
+        profile_name = manager.get_profile().name
+        raise ConfigurationError('Database schema version {} is outdated compared to the code schema version {}\n'
+                                 'To migrate the database to the current version, run the following commands:'
+                                 '\n  verdi -p {} daemon stop\n  verdi -p {} database migrate'.format(
+                                    code_schema_version, db_schema_version, profile_name, profile_name))
+
 
 
 def get_migration_head(config):

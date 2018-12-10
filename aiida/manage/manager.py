@@ -19,7 +19,7 @@ from aiida import common
 
 __all__ = 'get_manager', 'reset_manager'
 
-_manager = None  # pylint: disable=invalid-name
+MANAGER = None
 
 
 class Manager(object):
@@ -38,6 +38,37 @@ class Manager(object):
       * reset manager cache when loading a new profile
     """
 
+    def _load_backend(self, schema_check=True):
+        """Load the backend for the currently configured profile and return it.
+
+        :param schema_check: force a database schema check if the database environment has not yet been loaded
+        :return: the database backend
+        :rtype: :class:`aiida.orm.Backend`
+        """
+        from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
+        from aiida.backends.utils import is_dbenv_loaded, load_dbenv, _load_dbenv_noschemacheck
+
+        profile = self.get_profile()
+
+        if not is_dbenv_loaded():
+            if schema_check:
+                load_dbenv(profile.name)
+            else:
+                _load_dbenv_noschemacheck(profile.name)
+
+        backend_type = profile.config.AIIDADB_BACKEND
+
+        if backend_type == BACKEND_DJANGO:
+            from aiida.orm.implementation.django.backend import DjangoBackend
+            self._backend = DjangoBackend()
+        elif backend_type == BACKEND_SQLA:
+            from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
+            self._backend = SqlaBackend()
+        else:
+            raise RuntimeError('Invalid backend type {} in profile: {}'.format(backend_type, profile.name))
+
+        return self._backend
+
     def get_backend(self):
         """
         Get the database backend
@@ -46,16 +77,7 @@ class Manager(object):
         :rtype: :class:`aiida.orm.Backend`
         """
         if self._backend is None:
-            from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
-            backend_type = self.get_profile().config.get('AIIDADB_BACKEND')
-            if backend_type == BACKEND_DJANGO:
-                from aiida.orm.implementation.django.backend import DjangoBackend
-                self._backend = DjangoBackend()
-            elif backend_type == BACKEND_SQLA:
-                from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
-                self._backend = SqlaBackend()
-            else:
-                raise RuntimeError("Invalid backend type in profile: {}".format(backend_type))
+            self._load_backend()
 
         return self._backend
 
@@ -251,14 +273,14 @@ class Manager(object):
 
 
 def get_manager():
-    global _manager  # pylint: disable=invalid-name, global-statement
-    if _manager is None:
-        _manager = Manager()
-    return _manager
+    global MANAGER  # pylint: disable=global-statement
+    if MANAGER is None:
+        MANAGER = Manager()
+    return MANAGER
 
 
 def reset_manager():
-    global _manager  # pylint: disable=invalid-name, global-statement
-    if _manager is not None:
-        _manager.close()
-        _manager = None
+    global MANAGER  # pylint: disable=global-statement
+    if MANAGER is not None:
+        MANAGER.close()
+        MANAGER = None

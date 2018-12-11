@@ -12,7 +12,6 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import os
 
 from aiida.cmdline.utils import echo
 
@@ -35,11 +34,13 @@ def setup_profile(profile, only_config, set_default=False, non_interactive=False
     from aiida.backends import settings
     from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
     from aiida.backends.utils import set_backend_type
-    from aiida.cmdline import EXECNAME
     from aiida.cmdline.commands import cmd_user
     from aiida.common.exceptions import InvalidOperation
-    from aiida.common.setup import (create_base_dirs, create_configuration, set_default_profile, DEFAULT_UMASK,
-                                    create_config_noninteractive)
+    from aiida.common.setup import (create_base_dirs, create_configuration, set_default_profile,
+                                    create_config_noninteractive, DEFAULT_AIIDA_USER)
+    from aiida.manage import get_manager
+
+    manager = get_manager()
 
     only_user_config = only_config
 
@@ -89,67 +90,21 @@ def setup_profile(profile, only_config, set_default=False, non_interactive=False
         backend_choice = created_conf['AIIDADB_BACKEND']
         if backend_choice == BACKEND_DJANGO:
             echo.echo("...for Django backend")
-            # The correct profile is selected within load_dbenv.
-            # Setting os.umask here since sqlite database gets created in
-            # this step.
-            old_umask = os.umask(DEFAULT_UMASK)
-
-            # This check should be done more properly
-            # try:
-            #     backend_type = get_backend_type()
-            # except KeyError:
-            #     backend_type = None
-            #
-            # if backend_type is not None and backend_type != BACKEND_DJANGO:
-            #     raise InvalidOperation("An already existing database found"
-            #                            "and a different than the selected"
-            #                            "backend was used for its "
-            #                            "management.")
-
-            try:
-                from aiida.backends.djsite.utils import pass_to_django_manage
-                pass_to_django_manage([EXECNAME, 'migrate'], profile=profile)
-            finally:
-                os.umask(old_umask)
-
+            backend = manager._load_backend(schema_check=False)  # pylint: disable=protected-access
+            backend.migrate()
             set_backend_type(BACKEND_DJANGO)
 
         elif backend_choice == BACKEND_SQLA:
             echo.echo("...for SQLAlchemy backend")
-            from aiida import is_dbenv_loaded
-            from aiida.backends.sqlalchemy.utils import _load_dbenv_noschemacheck, check_schema_version
-            from aiida.backends.profile import load_profile
-
-            # We avoid calling load_dbenv since we want to force the schema
-            # migration
-            if not is_dbenv_loaded():
-                settings.LOAD_DBENV_CALLED = True
-                # This is going to set global variables in settings, including settings.BACKEND
-                load_profile()
-                _load_dbenv_noschemacheck()
-
-            # Perform the needed migration quietly
-            check_schema_version(force_migration=True)
+            backend = manager._load_backend(schema_check=False)  # pylint: disable=protected-access
+            backend.migrate()
             set_backend_type(BACKEND_SQLA)
 
         else:
             raise InvalidOperation("Not supported backend selected.")
 
     echo.echo("Database was created successfully")
-
-    # I create here the default user
-    echo.echo("Loading new environment...")
-    if only_user_config:
-        from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-        # db environment has not been loaded in this case
-        if not is_dbenv_loaded():
-            load_dbenv()
-
-    from aiida.common.setup import DEFAULT_AIIDA_USER
-    from aiida.manage import get_manager
     from aiida import orm
-
-    manager = get_manager()
 
     if not orm.User.objects.find({'email': DEFAULT_AIIDA_USER}):
         echo.echo("Installing default AiiDA user...")

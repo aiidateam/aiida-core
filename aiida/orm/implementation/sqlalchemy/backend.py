@@ -35,6 +35,10 @@ class SqlaBackend(Backend):
         self._query_manager = SqlaQueryManager(self)
         self._users = users.SqlaUserCollection(self)
 
+    def migrate(self):
+        from aiida.backends.sqlalchemy.utils import migrate_database
+        migrate_database()
+
     @property
     def authinfos(self):
         return self._authinfos

@@ -10,6 +10,9 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
+from contextlib import contextmanager
+
 from aiida.backends.general.abstractqueries import AbstractQueryManager
 
 
@@ -33,6 +36,15 @@ class SqlaQueryManager(AbstractQueryManager):
         result = session.execute(query)
 
         return result.fetchall()
+
+    @contextmanager
+    def cursor(self):
+        from aiida.backends import sqlalchemy as sa
+        try:
+            connection = sa.engine.raw_connection()
+            yield connection.cursor()
+        finally:
+            connection.close()
 
     def get_creation_statistics(
             self,

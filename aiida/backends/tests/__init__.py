@@ -54,6 +54,7 @@ db_test_list = {
         'cmdline.commands.comment': ['aiida.backends.tests.cmdline.commands.test_comment'],
         'cmdline.commands.computer': ['aiida.backends.tests.cmdline.commands.test_computer'],
         'cmdline.commands.data': ['aiida.backends.tests.cmdline.commands.test_data'],
+        'cmdline.commands.database': ['aiida.backends.tests.cmdline.commands.test_database'],
         'cmdline.commands.devel': ['aiida.backends.tests.cmdline.commands.test_devel'],
         'cmdline.commands.export': ['aiida.backends.tests.cmdline.commands.test_export'],
         'cmdline.commands.graph': ['aiida.backends.tests.cmdline.commands.test_graph'],

@@ -17,6 +17,7 @@ from __future__ import absolute_import
 import io
 import six
 from six.moves import range, zip
+import unittest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.importexport import import_data
@@ -1557,6 +1558,7 @@ class TestComputer(AiidaTestCase):
             shutil.rmtree(export_file_tmp_folder, ignore_errors=True)
             shutil.rmtree(unpack_tmp_folder, ignore_errors=True)
 
+    @unittest.skip('reenable when issue #2342 is addressed')
     def test_import_of_django_sqla_export_file(self):
         """
         Check why sqla import manages to import the django export file correctly

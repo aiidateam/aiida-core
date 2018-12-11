@@ -12,6 +12,9 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
+import unittest
+
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
@@ -25,6 +28,7 @@ def get_result_lines(result):
     return [e for e in result.output.split('\n') if e]
 
 
+@unittest.skip('reenable when issue #2342 is addressed')
 class TestVerdiCalculation(AiidaTestCase):
     """Tests for `verdi calculation`."""
 

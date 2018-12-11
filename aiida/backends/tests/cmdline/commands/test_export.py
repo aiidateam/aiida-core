@@ -16,6 +16,7 @@ import os
 import tempfile
 import tarfile
 import traceback
+import unittest
 import zipfile
 
 from click.testing import CliRunner
@@ -88,6 +89,7 @@ class TestVerdiExport(AiidaTestCase):
     def setUp(self):
         self.cli_runner = CliRunner()
 
+    @unittest.skip('reenable when issue #2342 is addressed')
     def test_create_file_already_exists(self):
         """Test that using a file that already exists, which is the case when using NamedTemporaryFile, will raise."""
         with tempfile.NamedTemporaryFile() as handle:
@@ -95,6 +97,7 @@ class TestVerdiExport(AiidaTestCase):
             result = self.cli_runner.invoke(cmd_export.create, options)
             self.assertIsNotNone(result.exception)
 
+    @unittest.skip('reenable when issue #2342 is addressed')
     def test_create_force(self):
         """
         Test that using a file that already exists, which is the case when using NamedTemporaryFile, will work
@@ -109,6 +112,7 @@ class TestVerdiExport(AiidaTestCase):
             result = self.cli_runner.invoke(cmd_export.create, options)
             self.assertIsNone(result.exception, result.output)
 
+    @unittest.skip('reenable when issue #2342 is addressed')
     def test_create_zip(self):
         """Test that creating an archive for a set of various ORM entities works with the zip format."""
         filename = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
@@ -124,6 +128,7 @@ class TestVerdiExport(AiidaTestCase):
         finally:
             delete_temporary_file(filename)
 
+    @unittest.skip('reenable when issue #2342 is addressed')
     def test_create_zip_uncompressed(self):
         """Test that creating an archive for a set of various ORM entities works with the zip-uncompressed format."""
         filename = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
@@ -139,6 +144,7 @@ class TestVerdiExport(AiidaTestCase):
         finally:
             delete_temporary_file(filename)
 
+    @unittest.skip('reenable when issue #2342 is addressed')
     def test_create_tar_gz(self):
         """Test that creating an archive for a set of various ORM entities works with the tar.gz format."""
         filename = next(tempfile._get_candidate_names())  # pylint: disable=protected-access

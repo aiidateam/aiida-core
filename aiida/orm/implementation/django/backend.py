@@ -37,6 +37,10 @@ class DjangoBackend(Backend):
         self._query_manager = DjangoQueryManager(self)
         self._users = users.DjangoUserCollection(self)
 
+    def migrate(self):
+        from aiida.backends.djsite.utils import migrate_database
+        migrate_database()
+
     @property
     def authinfos(self):
         return self._authinfos

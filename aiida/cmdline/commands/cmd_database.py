@@ -16,7 +16,7 @@ import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
-from aiida.cmdline.utils import echo
+from aiida.cmdline.utils import decorators, echo
 
 
 @verdi.group('database')
@@ -51,13 +51,13 @@ def verdi_database_integrity():
     pass
 
 
-@verdi_database_integrity.command('duplicate-node-uuid')
+@verdi_database_integrity.command('detect-duplicate-node-uuid')
 @click.option(
     '-a',
     '--apply-patch',
     is_flag=True,
     help='Apply the proposed changes. If this flag is not passed, a dry run is performed instead.')
-def duplicate_node_uuid(apply_patch):
+def detect_duplicate_node_uuid(apply_patch):
     """Detect and solve nodes with duplicate UUIDs.
 
     Before aiida-core v1.0.0, there was no uniqueness constraint on the UUID column of the Node table in the database.
@@ -85,3 +85,59 @@ def duplicate_node_uuid(apply_patch):
             echo.echo_success('integrity patch completed')
         else:
             echo.echo_success('dry-run of integrity patch completed')
+
+
+@verdi_database_integrity.command('detect-invalid-links')
+@decorators.with_dbenv()
+def detect_invalid_links():
+    """Scan the database for invalid links."""
+    from tabulate import tabulate
+
+    from aiida.manage.database.integrity.sql.links import INVALID_LINK_SELECT_STATEMENTS
+    from aiida.manage.manager import get_manager
+
+    integrity_violated = False
+
+    query_manager = get_manager().get_backend().query_manager
+
+    for check in INVALID_LINK_SELECT_STATEMENTS:
+
+        result = query_manager.prepared_statement(check.sql, check.parameters)
+
+        if result:
+            integrity_violated = True
+            echo.echo_warning('{}:\n'.format(check.message))
+            echo.echo(tabulate(result, headers=check.headers))
+
+    if not integrity_violated:
+        echo.echo_success('no integrity violations detected')
+    else:
+        echo.echo_critical('one or more integrity violations detected')
+
+
+@verdi_database_integrity.command('detect-invalid-nodes')
+@decorators.with_dbenv()
+def detect_invalid_nodes():
+    """Scan the database for invalid nodes."""
+    from tabulate import tabulate
+
+    from aiida.manage.database.integrity.sql.nodes import INVALID_NODE_SELECT_STATEMENTS
+    from aiida.manage.manager import get_manager
+
+    integrity_violated = False
+
+    query_manager = get_manager().get_backend().query_manager
+
+    for check in INVALID_NODE_SELECT_STATEMENTS:
+
+        result = query_manager.prepared_statement(check.sql, check.parameters)
+
+        if result:
+            integrity_violated = True
+            echo.echo_warning('{}:\n'.format(check.message))
+            echo.echo(tabulate(result, headers=check.headers))
+
+    if not integrity_violated:
+        echo.echo_success('no integrity violations detected')
+    else:
+        echo.echo_critical('one or more integrity violations detected')

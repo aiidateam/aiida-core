@@ -10,12 +10,15 @@
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
-import six
+
+from contextlib import contextmanager
+
 from six.moves import zip
 from aiida.backends.general.abstractqueries import AbstractQueryManager
 
 
 class DjangoQueryManager(AbstractQueryManager):
+
     def __init__(self, backend):
         super(DjangoQueryManager, self).__init__(backend)
 
@@ -32,6 +35,14 @@ class DjangoQueryManager(AbstractQueryManager):
             results = cursor.fetchall()
 
         return results
+
+    @contextmanager
+    def cursor(self):
+        from django.db import connection
+        try:
+            yield connection.cursor()
+        finally:
+            pass
 
     def get_creation_statistics(
             self,

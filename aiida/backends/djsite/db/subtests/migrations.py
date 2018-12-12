@@ -128,7 +128,7 @@ class TestDuplicateNodeUuidMigration(TestMigrations):
             verify_node_uuid_uniqueness()
 
         # Now run the function responsible for solving duplicate UUIDs which would also be called by the user
-        # through the `verdi database integrity duplicate-node-uuid` command
+        # through the `verdi database integrity detect-duplicate-node-uuid` command
         deduplicate_node_uuids(dry_run=False)
 
     def test_deduplicated_uuids(self):

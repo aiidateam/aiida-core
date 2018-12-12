@@ -27,8 +27,8 @@ def verify_node_uuid_uniqueness():
     duplicates = get_duplicate_node_uuids()
 
     if duplicates:
-        raise IntegrityError('your database contains nodes with duplicate UUIDS: '
-                             'run `verdi database integrity duplicate-node-uuid` to return to a consistent state')
+        raise IntegrityError('your database contains nodes with duplicate UUIDS: run '
+                             '`verdi database integrity detect-duplicate-node-uuid` to return to a consistent state')
 
 
 def get_duplicate_node_uuids():

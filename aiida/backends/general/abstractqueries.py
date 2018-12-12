@@ -10,13 +10,14 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from abc import ABCMeta, abstractmethod
-from six.moves import zip
 import six
 
 
 @six.add_metaclass(ABCMeta)
 class AbstractQueryManager(object):
+
     def __init__(self, backend):
         """
         :param backend: The AiiDA backend
@@ -32,6 +33,26 @@ class AbstractQueryManager(object):
         :return: the result of the query
         """
         pass
+
+    @abstractmethod
+    def cursor(self):
+        pass
+
+    def prepared_statement(self, sql, parameters):
+        """Execute an SQL statement with optional prepared statements.
+
+        :param sql: the SQL statement string
+        :param parameters: dictionary to use to populate the prepared statement
+        """
+        results = []
+
+        with self.cursor() as cursor:
+            cursor.execute(sql, parameters)
+
+            for row in cursor:
+                results.append(row)
+
+        return results
 
     def get_duplicate_node_uuids(self):
         """

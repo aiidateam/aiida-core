@@ -44,8 +44,8 @@ def verify_node_uuid_uniqueness():
     duplicates = conn.execute(query).fetchall()
 
     if duplicates:
-        raise IntegrityError('your database contains nodes with duplicate UUIDS: '
-                             'run `verdi database integrity duplicate-node-uuid` to return to a consistent state')
+        raise IntegrityError('your database contains nodes with duplicate UUIDS: run '
+                             '`verdi database integrity detect-duplicate-node-uuid` to return to a consistent state')
 
 
 def upgrade():

@@ -290,6 +290,7 @@ class Node(AbstractNode):
                 raise ValueError("The link you are attempting to create would generate a loop")
 
         self._do_create_link(src, label, link_type)
+        session.commit()
 
     def _do_create_link(self, src, label, link_type):
         """

@@ -70,7 +70,6 @@ class TestProcessNamespace(AiidaTestCase):
 
 
 class ProcessStackTest(work.Process):
-
     _calc_class = WorkflowNode
 
     @override

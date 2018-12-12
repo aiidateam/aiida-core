@@ -15,7 +15,7 @@ AiiDA depends on a number of third party python packages, and usually on specifi
 In order not to interfere with third party packages needed by
 other software on your system, we *strongly* recommend
 isolating AiiDA in a `virtual python environment <https://docs.python.org/tutorial/venv.html>`_.
-In the following, we describe how to create a virtual python environment using the `virtualenv <https://virtualenv.pypa.io/en/latest/>`_ tool, but feel free to use your preferred envorinment manage (e.g. `conda <https://conda.io/docs/>`_).
+In the following, we describe how to create a virtual python environment using the `virtualenv <https://virtualenv.pypa.io/en/latest/>`_ tool, but feel free to use your preferred environment manager (e.g. `conda <https://conda.io/docs/>`_).
 
 Creating the virtual environment
 --------------------------------
@@ -24,7 +24,7 @@ To create and activate a new virtual environment, run the following commands::
 
     pip install --user --upgrade virtualenv   # install virtualenv tool
     virtualenv ~/aiidapy                      # create "aiidapy" environment
-    source ~/aiidapy/bin/activate             # activate "aiidapy"environment
+    source ~/aiidapy/bin/activate             # activate "aiidapy" environment
 
 This will create a directory in your home directory named ``aiidapy`` where all the packages will be installed.
 After activation, your prompt should have ``(aiidapy)`` in front of it, indicating that you are working inside the virtual environment.
@@ -32,7 +32,7 @@ The activation script ensures that the python executable of the virtualenv is th
 
 To leave or deactivate the environment, simply run::
 
-    (my_env) $ deactivate
+    (aiidapy) $ deactivate
 
 .. note:: You may need to install ``pip`` and ``setuptools`` in your virtual environment in case the system or user version of these tools is old::
 
@@ -205,12 +205,12 @@ If you uses the same names used in the example commands above, during the ``verd
   instructions :ref:`here<move_postgresql>`.
 
 
-Database setup using unix sockets
+Database setup using Unix sockets
 +++++++++++++++++++++++++++++++++
 
 Instead of using passwords to protect access to the database 
 (which could be used by other users on the same machine),
-PostgreSQL allows password-less logins via unix sockets. 
+PostgreSQL allows password-less logins via Unix sockets. 
 
 In this scenario PostgreSQL compares the user connecting to the socket with its
 own database of users and will allow a connection if a matching user exists.
@@ -234,7 +234,7 @@ To test if the database was created successfully, you can run the following comm
     psql aiidadb
 
 
-Make sure to leave the host, port and password empty when specifiying the parameters during the ``verdi setup`` phase
+Make sure to leave the host, port and password empty when specifying the parameters during the ``verdi setup`` phase
 and specify your username as the *AiiDA Database user*::
 
     Database engine: postgresql_psycopg2
@@ -258,25 +258,8 @@ After the database has been created, do
 where `<profile_name>` is a profile name of your choosing.
 The ``verdi setup`` command will guide you through the setup process through a series of prompts.
 
-The first thing that will be asked to you is the timezone, important to get correct dates and times for your calculations.
-
-AiiDA will do its best to try and understand the local timezone (if properly configured on your machine), and will suggest a set of sensible values.
-Choose the timezone that fits best to you (that is, the nearest city in your timezone - for Lausanne, for instance, we choose ``Europe/Zurich``) and type it at the prompt.
-
-As a second parameter to input during the ``verdi setup`` phase, the "Default user email" is asked.
-We suggest here to use your institution email, that will be used to associate the calculations to you.
-
-.. note:: In AiiDA, the user email is used as username, and also as unique identifier when importing/exporting data from AiiDA.
-
-.. note:: Even if you choose an email different from the default one
-  (``aiida@localhost``), a user with email ``aiida@localhost`` will be
-  set up,
-  with its password set to ``None`` (disabling access via this user
-  via API or Web interface).
-
-  The existence of a default user is internally useful for multi-user
-  setups, where only one user
-  runs the daemon.
+The first information asked is your email, which will be used to associate the calculations to you.
+In AiiDA, the email is your username, and acts as a unique identifier when importing/exporting data from AiiDA.
 
 .. note:: The password, in the current version of AiiDA, is not used (it will
     be used only in the REST API and in the web interface). If you leave the
@@ -285,7 +268,6 @@ We suggest here to use your institution email, that will be used to associate th
 
 Then, the following prompts will help you configure the database. Typical settings are::
 
-    Insert your timezone: Europe/Zurich
     Default user email: richard.wagner@leipzig.de
     Database engine: postgresql_psycopg2
     PostgreSQL host: localhost
@@ -304,7 +286,8 @@ Then, the following prompts will help you configure the database. Typical settin
     Insert the new password (again):
 
 
-Remember that in order to work with AiiDA through for example the ``verdi`` command, you need to be in your virtual environment.
+Remember that in order to work with AiiDA through for example the ``verdi``
+command, you need to be in your virtual environment.
 If you open a new terminal for example, be sure to activate it first with::
 
     source ~/aiidapy/bin/activate
@@ -360,7 +343,7 @@ After updating your ``PATH`` you can check if it worked in the following way:
   provide a list of valid commands). If it doesn't, check if you correctly set
   up the ``PATH`` environment variable above.
 * go into your home folder or in another folder different from the AiiDA folder,
-  run ``python`` or ``ipython`` and try to import a module, e.g. typing::
+  run ``python`` or ``ipython`` and try to import a module, e.g. by typing::
 
     import aiida
 

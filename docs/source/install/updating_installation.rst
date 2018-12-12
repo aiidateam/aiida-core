@@ -5,62 +5,44 @@
 Updating AiiDA
 **************
 
-Before you update your AiiDA installation, make sure to:
+Before you update your AiiDA installation, please:
 
+* Enter the python environment where AiiDA is installed
 * Stop your daemon by executing ``verdi daemon stop``
 * Create a backup of your database(s) by following the guidelines in the :ref:`backup section<backup>`
 * Create a backup of the ``~/.aiida`` folder (where configuration files are stored)
 
-If you have installed AiiDA manually from a local clone of the ``aiida_core`` repository, skip to the instructions for :ref:`developers <update_developers>`.
-
-If you have installed AiiDA through ``pip``, 
-enter the python environment where you've installed AiiDA and run::
+If you have installed AiiDA through ``pip`` run::
 
   pip install --upgrade aiida-core
 
-After upgrading your AiiDA installation you may have to perform :ref:`version specific migrations <update_migrations>`.
-When all necessary migrations are completed, finalize the update by executing::
+If you have installed AiiDA from a local clone of the ``aiida_core``
+repository, enter the directory of the local clone and run::
 
-  verdi setup
-
-This updates your daemon profile and related files.
-It should not be done when another version of aiida is wished to be used productively on the same machine/user.
-
-
-.. _update_developers:
-
-Updating AiiDA for developers
-=============================
-Each version increase may come with its own necessary migrations and you should only ever update the version by one at a time.
-Therefore, first make sure you know the version number of the current installed version by using ``verdi shell`` and typing::
-
-  import aiida
-  aiida.__version__
-
-After you have performed all the steps in the checklist described in the previous section and determined the current installed version, go to your local clone of the ``aiida_core`` repository and checkout the desired branch or tag.
-If you installed ``aiida_core`` in a virtual environment make sure that you have loaded it.
-
-Now you can install the updated version of ``aiida_core`` by simply executing::
-
+  find . -name "*.pyc" -type f -delete  # deletes pre-compiled python files
+  git checkout <desired-branch>
+  git pull
   pip install -e .
+  
+After upgrading AiiDA, you may need to migrate your AiiDA database to the latest 
+version of the schema.
+If migrations are required, running any ``verdi`` command will automatically raise an exception
+and print the instructions for performing the :ref:`migrations <update_migrations>`.
 
-After upgrading your AiiDA installation you may have to perform :ref:`version specific migrations <update_migrations>` based on the version of your previous installation.
-When all necessary migrations are completed, finalize the update by executing::
+.. code-block:: bash
 
-  verdi setup
+    aiida.common.exceptions.ConfigurationError: Database schema version 1.0.19 is outdated compared to the code schema version 1.0.20
+    To migrate the database to the current version, run the following commands:
+      verdi -p quicksetup daemon stop
+      verdi -p quicksetup database migrate
 
-This updates your daemon profile and related files.
+Once the migrations have been performed, start the daemon and you are done.
 
 .. note::
-  A few general remarks:
 
-  * If you want to update the code in the same folder, but modified some files locally,
-    you can stash them (``git stash``) before cloning or pulling the new code.
-    Then put them back with ``git stash pop`` (note that conflicts might appear).
-  * If you encounter any problems and/or inconsistencies, delete any ``.pyc``
-    files that may have remained from the previous version. E.g. If you are
-    in your AiiDA folder you can type ``find . -name "*.pyc" -type f -delete``.
-
+    Each version increase may come with its own necessary migrations and you should
+    only ever update the version by one at a time.  
+    Therefore, first get the version number from ``verdi --version``
 
 .. _update_migrations:
 

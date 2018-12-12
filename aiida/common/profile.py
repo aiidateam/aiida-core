@@ -36,11 +36,28 @@ CIRCUS_PUBSUB_SOCKET_TEMPLATE = 'circus.p.sock'
 CIRCUS_STATS_SOCKET_TEMPLATE = 'circus.s.sock'
 
 
+def get_default_profile_name():
+    """
+    Return the default profile name from the configuration.
+
+    :return: None if no default profile is found
+    """
+    from aiida.common.setup import get_config
+
+    try:
+        config = get_config()
+        default = config['default_profile']
+    except (exceptions.MissingConfigurationError, KeyError):
+        return None
+    else:
+        return default
+
+
 def get_current_profile_name():
     """
     Return the currently configured profile name or if not set, the default profile
     """
-    return settings.AIIDADB_PROFILE or setup.get_default_profile_name()
+    return settings.AIIDADB_PROFILE or get_default_profile_name()
 
 
 def get_profile_config(name=None):

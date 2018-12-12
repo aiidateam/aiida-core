@@ -18,7 +18,6 @@ import click
 
 from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 from aiida.cmdline.params import types
-from aiida.cmdline.params.options.conditional import ConditionalOption
 from aiida.cmdline.params.options.multivalue import MultipleValueOption
 from aiida.cmdline.params.options.overridable import OverridableOption
 
@@ -44,6 +43,11 @@ def active_process_states():
         ProcessState.RUNNING.value,
     ])
 
+
+PROFILE = OverridableOption(
+    '-p', '--profile', 'profile',
+    type=types.ProfileParamType(),
+    help='Execute the command for this profile instead of the default profile.')
 
 CALCULATION = OverridableOption(
     '-C', '--calculation', 'calculation',

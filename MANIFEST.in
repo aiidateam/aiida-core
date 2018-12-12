@@ -9,3 +9,4 @@ include setup_requirements.py
 include AUTHORS.txt
 include CHANGELOG.md
 include pyproject.toml
+include LICENSE.txt

@@ -8,14 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """AiiDA common functionality"""
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from aiida.common.log import AIIDA_LOGGER
-
-# pylint: disable=wildcard-import
-
-from .profile import *
-
-__all__ = profile.__all__

@@ -13,8 +13,6 @@ from __future__ import absolute_import
 
 from aiida.backends import settings
 from aiida.common.exceptions import InvalidOperation
-from aiida.common.profile import get_default_profile_name
-from aiida.common.setup import get_profile_config
 
 
 # Possible choices for backend
@@ -27,8 +25,12 @@ def load_profile(profile=None):
     Load the profile. This function is called by load_dbenv and SHOULD NOT
     be called by the user by hand.
     """
+    from aiida.manage import load_config
+
     if settings.LOAD_PROFILE_CALLED:
-        raise InvalidOperation('You cannot call  multiple times!')
+        raise InvalidOperation('You cannot call load_profile multiple times!')
+
+    config = load_config()
 
     settings.LOAD_PROFILE_CALLED = True
 
@@ -37,15 +39,15 @@ def load_profile(profile=None):
             raise ValueError('Error in profile loading')
     else:
         if profile is None:
-            profile = get_default_profile_name()
+            profile = config.default_profile_name
 
         settings.AIIDADB_PROFILE = profile
 
-    config = get_profile_config(settings.AIIDADB_PROFILE)
+    profile = config.get_profile(profile)
 
     # Check if AIIDADB_BACKEND is set and if not error (with message)
     # Migration script should put it in profile (config.json)
-    settings.BACKEND = config.get('AIIDADB_BACKEND', BACKEND_DJANGO)
+    settings.BACKEND = profile.dictionary.get('AIIDADB_BACKEND', BACKEND_DJANGO)
 
 
 def is_profile_loaded():

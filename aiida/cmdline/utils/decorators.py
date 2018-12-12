@@ -208,11 +208,11 @@ def deprecated_command(message):
         @wraps(function)
         def decorated_function(*args, **kwargs):
             """Echo a deprecation warning before doing anything else."""
-            from aiida.common.profile import get_profile
+            from aiida.manage import load_config
             from aiida.cmdline.utils import templates
             from textwrap import wrap
 
-            profile = get_profile()
+            profile = load_config().current_profile
 
             if not profile.is_test_profile:
                 template = templates.env.get_template('deprecated.tpl')

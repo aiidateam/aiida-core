@@ -7,45 +7,40 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
-# The current configuration version. Increment this value whenever a change
-# to the config.json structure is made.
+"""Define the current configuration version and migrations."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-CURRENT_CONFIG_VERSION = 3
 
-# The oldest config version where no backwards-incompatible changes have been made since.
-# When doing backwards-incompatible changes, set this to the current version.
+__all__ = ('CURRENT_CONFIG_VERSION', 'OLDEST_COMPATIBLE_CONFIG_VERSION')
+
+# The expected version of the configuration file and the oldest backwards compatible configuration version.
+# If the configuration file format is changed, the current version number should be upped and a migration added.
+# When the configuration file format is changed in a backwards-incompatible way, the oldest compatible version should
+# be set to the new current version.
+CURRENT_CONFIG_VERSION = 3
 OLDEST_COMPATIBLE_CONFIG_VERSION = 3
 
 
 class ConfigMigration(object):
-    """
-    Defines a config migration.
+    """Defines a config migration."""
 
-    :param migrate_function: Function which transforms the config dict. This function does not need to change the CONFIG_VERSION values.
+    def __init__(self, migrate_function, version, version_oldest_compatible):
+        """Construct a ConfigMigration
 
-    :param current_version: Current config version after the migration.
-    :type current_version: int
-
-    :param oldest_version: Oldest compatible config version after the migration.
-    :type oldest_version: int
-    """
-    def __init__(self, migrate_function, current_version, oldest_version):
+        :param migrate_function: function which migrates the configuration dictionary
+        :param version: configuration version after the migration.
+        :param version_oldest_compatible: oldest compatible configuration version after the migration.
+        """
         self.migrate_function = migrate_function
-        self.current_version = int(current_version)
-        self.oldest_version = int(oldest_version)
+        self.version = int(version)
+        self.version_oldest_compatible = int(version_oldest_compatible)
 
     def apply(self, config):
-        from ._utils import VERSION_KEY, CURRENT_KEY, OLDEST_KEY
-        from ._utils import add_config_version
+        """Apply the migration to the configuration."""
         config = self.migrate_function(config)
-        add_config_version(
-            config,
-            current_version=self.current_version,
-            oldest_version=self.oldest_version
-        )
+        config.version = self.version
+        config.version_oldest_compatible = self.version_oldest_compatible
         return config
 
 
@@ -58,13 +53,9 @@ def _1_add_profile_uuid(config):
     The profile uuid will be used as a general purpose identifier for the profile, in
     for example the RabbitMQ message queues and exchanges.
     """
-    from aiida.common.setup import generate_new_profile_uuid
-    from aiida.common.setup import PROFILE_UUID_KEY
-
-    profiles = config.get('profiles', {})
-
-    for profile in profiles.values():
-        profile[PROFILE_UUID_KEY] = generate_new_profile_uuid()
+    for profile in config.profiles:
+        profile.uuid = profile.generate_uuid()
+        config.update_profile(profile, store=False)
 
     return config
 
@@ -77,33 +68,21 @@ def _2_simplify_default_profiles(config):
     """
     from aiida.backends import settings
 
-    default_profiles = config.pop('default_profiles', None)
+    default_profiles = config.dictionary.pop('default_profiles', None)
 
     if default_profiles:
         default_profile = default_profiles['daemon']
     else:
         default_profile = settings.AIIDADB_PROFILE
 
-    config['default_profile'] = default_profile
+    config.set_default_profile(default_profile, store=False)
 
     return config
 
 
 # Maps the initial config version to the ConfigMigration which updates it.
 _MIGRATION_LOOKUP = {
-    0: ConfigMigration(
-        migrate_function=lambda x: x,
-        current_version=1,
-        oldest_version=0
-    ),
-    1: ConfigMigration(
-        migrate_function=_1_add_profile_uuid,
-        current_version=2,
-        oldest_version=0
-    ),
-    2: ConfigMigration(
-        migrate_function=_2_simplify_default_profiles,
-        current_version=3,
-        oldest_version=3
-    )
+    0: ConfigMigration(migrate_function=lambda x: x, version=1, version_oldest_compatible=0),
+    1: ConfigMigration(migrate_function=_1_add_profile_uuid, version=2, version_oldest_compatible=0),
+    2: ConfigMigration(migrate_function=_2_simplify_default_profiles, version=3, version_oldest_compatible=3)
 }

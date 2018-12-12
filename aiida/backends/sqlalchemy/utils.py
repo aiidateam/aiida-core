@@ -37,8 +37,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session
 from sqlalchemy.orm import sessionmaker
 
-from aiida.backends import sqlalchemy as sa, settings
-from aiida.common.setup import (get_profile_config)
+from aiida.backends import sqlalchemy as sa
 
 ALEMBIC_FILENAME = "alembic.ini"
 ALEMBIC_REL_PATH = "migrations"
@@ -110,8 +109,11 @@ def _load_dbenv_noschemacheck(profile=None, connection=None):
     """
     Load the SQLAlchemy database.
     """
-    config = get_profile_config(settings.AIIDADB_PROFILE)
-    reset_session(config)
+    from aiida.manage import load_config
+
+    config = load_config()
+    profile = config.current_profile
+    reset_session(profile.dictionary)
 
 
 _aiida_autouser_cache = None

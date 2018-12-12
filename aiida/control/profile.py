@@ -36,16 +36,17 @@ def setup_profile(profile, only_config, set_default=False, non_interactive=False
     from aiida.backends.utils import set_backend_type
     from aiida.cmdline.commands import cmd_user
     from aiida.common.exceptions import InvalidOperation
-    from aiida.common.setup import (create_base_dirs, create_configuration, set_default_profile,
-                                    create_config_noninteractive, DEFAULT_AIIDA_USER)
-    from aiida.manage import get_manager
+    from aiida.manage.configuration.setup import create_instance_directories
+    from aiida.common.setup import create_configuration, create_config_noninteractive
+    from aiida.manage import get_manager, load_config
+    from aiida.manage.configuration.settings import DEFAULT_AIIDA_USER
 
     manager = get_manager()
 
     only_user_config = only_config
 
     # Create the directories to store the configuration files
-    create_base_dirs()
+    create_instance_directories()
 
     # we need to overwrite this variable for the following to work
     settings.AIIDADB_PROFILE = profile
@@ -55,7 +56,7 @@ def setup_profile(profile, only_config, set_default=False, non_interactive=False
     if non_interactive:
         try:
             created_conf = create_config_noninteractive(
-                profile=profile,
+                profile_name=profile,
                 backend=kwargs['backend'],
                 email=kwargs['email'],
                 db_host=kwargs['db_host'],
@@ -75,12 +76,13 @@ def setup_profile(profile, only_config, set_default=False, non_interactive=False
                     exception.args[0]))
     else:
         try:
-            created_conf = create_configuration(profile=profile)
+            created_conf = create_configuration(profile_name=profile)
         except ValueError as exception:
             echo.echo_critical("Error during configuration: {}".format(exception))
 
     # Set default DB profile
-    set_default_profile(profile, force_rewrite=False)
+    config = load_config()
+    config.set_default_profile(profile, overwrite=set_default)
 
     if only_user_config:
         echo.echo("Only user configuration requested, skipping the migrate command")
@@ -138,8 +140,5 @@ def setup_profile(profile, only_config, set_default=False, non_interactive=False
         except SystemExit:
             # Have to catch this as the configure command will do a sys.exit()
             pass
-
-    if set_default:
-        set_default_profile(profile, force_rewrite=True)
 
     echo.echo("Setup finished.")

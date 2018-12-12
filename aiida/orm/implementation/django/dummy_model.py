@@ -34,10 +34,6 @@ from sqlalchemy.orm import (relationship, backref, sessionmaker)
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.dialects.postgresql import UUID
 
-# SETTINGS:
-from aiida.common.setup import get_profile_config
-from aiida.backends import settings
-
 # MISC
 from aiida.backends.sqlalchemy.models.utils import uuid_func
 from aiida.utils import timezone
@@ -261,9 +257,6 @@ class DbComment(Base):
 
     dbnode = relationship('DbNode', backref='dbcomments')
     user = relationship("DbUser")
-
-
-profile = get_profile_config(settings.AIIDADB_PROFILE)
 
 
 def get_aldjemy_session():

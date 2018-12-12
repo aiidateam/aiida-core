@@ -7,20 +7,22 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=undefined-variable,wildcard-import
 """
-A module to bring together the different parts of AiIDA:
+A module to bring together the different parts of AiiDA:
 
-  * backend
-  * profile/settings
-  * daemon/workflow runner
-  * etc.
+  * configuration file
+  * profile
+  * daemon runners
+  * process controllers
+  * RabbitMQ communicators
+
 """
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-# pylint: disable=wildcard-import
-
+from .configuration import *
 from .manager import *
 
-__all__ = manager.__all__  # pylint: disable=undefined-variable
+__all__ = (configuration.__all__ + manager.__all__)

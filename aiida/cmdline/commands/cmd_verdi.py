@@ -16,11 +16,10 @@ import click
 
 from aiida.cmdline.params import options
 from aiida.common.extendeddicts import AttributeDict
-from aiida.common.profile import get_default_profile_name
 
 
 @click.group()
-@options.PROFILE(default=get_default_profile_name())
+@options.PROFILE()
 @click.option('--version', is_flag=True, default=False, help='Print the version of AiiDA that is currently installed.')
 @click.pass_context
 def verdi(ctx, profile, version):

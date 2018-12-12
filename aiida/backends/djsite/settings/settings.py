@@ -18,8 +18,9 @@ import os
 
 from aiida.common.exceptions import ConfigurationError, MissingConfigurationError
 
-from aiida.common.setup import (get_config, get_secret_key, get_profile_config, parse_repository_uri)
 from aiida.backends import settings
+from aiida.common.setup import parse_repository_uri
+from aiida.manage import load_config
 from aiida.utils.timezone import get_current_timezone
 
 # Assumes that parent directory of aiida is root for
@@ -30,7 +31,7 @@ BASE_DIR = os.path.split(AIIDA_DIR)[0]
 sys.path = [BASE_DIR] + sys.path
 
 try:
-    CONFS = get_config()
+    CONFIG = load_config()
 except MissingConfigurationError:
     raise MissingConfigurationError("Please run the AiiDA Installation, no config found")
 
@@ -38,7 +39,8 @@ if settings.AIIDADB_PROFILE is None:
     raise ConfigurationError("settings.AIIDADB_PROFILE not defined, did you load django"
                              "through the AiiDA load_dbenv()?")
 
-PROFILE_CONF = get_profile_config(settings.AIIDADB_PROFILE, conf_dict=CONFS)
+PROFILE = CONFIG.current_profile
+PROFILE_CONF = PROFILE.dictionary
 
 DATABASES = {
     'default': {
@@ -82,17 +84,12 @@ else:
 # CUSTOM USER CLASS
 AUTH_USER_MODEL = 'db.DbUser'
 
-# Make this unique, and don't share it with anybody.
-# This is generated with the first run of 'verdi install'
-SECRET_KEY = get_secret_key()
+# No secret key defined since we do not use Django to serve HTTP pages
+SECRET_KEY = 'placeholder'  # noqa
 
 # Automatic logging configuration for Django is disabled here
 # and done for all backends in aiida/__init__.py
 LOGGING_CONFIG = None
-
-###################################################
-### keep (almost) default django conf below #######
-###################################################
 
 # Keep DEBUG = False! Otherwise every query is stored in memory
 DEBUG = False

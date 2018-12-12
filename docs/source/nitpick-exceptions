@@ -109,6 +109,7 @@ py:class  abc.ABCMeta
 py:class  CalcJobExitStatus
 
 py:exc    click.BadParameter
+py:exc    click.UsageError
 py:class  click.ParamType
 py:class  click.core.Group
 py:class  click.core.Option

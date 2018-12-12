@@ -15,7 +15,8 @@ from __future__ import absolute_import
 import functools
 
 from aiida import utils
-from aiida import common
+
+from .configuration import load_config
 
 __all__ = 'get_manager', 'reset_manager'
 
@@ -56,7 +57,7 @@ class Manager(object):
             else:
                 _load_dbenv_noschemacheck(profile.name)
 
-        backend_type = profile.config.AIIDADB_BACKEND
+        backend_type = profile.dictionary.AIIDADB_BACKEND
 
         if backend_type == BACKEND_DJANGO:
             from aiida.orm.implementation.django.backend import DjangoBackend
@@ -86,10 +87,11 @@ class Manager(object):
         Get the current profile
 
         :return: current loaded profile instance
-        :rtype: :class:`~aiida.common.profile.Profile`
+        :rtype: :class:`~aiida.manage.configuration.profile.Profile`
         """
         if self._profile is None:
-            self._profile = common.profile.get_profile()
+            config = load_config()
+            self._profile = config.current_profile
 
         return self._profile
 
@@ -265,7 +267,8 @@ class Manager(object):
     def __init__(self):
         super(Manager, self).__init__()
         self._backend = None  # type: aiida.orm.Backend
-        self._profile = None  # type: aiida.common.profile.Profile
+        self._config = None  # type: aiida.manage.configuration.config.Config
+        self._profile = None  # type: aiida.manage.configuration.profile.Profile
         self._communicator = None  # type: kiwipy.rmq.RmqThreadCommunicator
         self._process_controller = None  # type: plumpy.RemoteProcessThreadController
         self._persister = None  # type: aiida.work.AiiDAPersister

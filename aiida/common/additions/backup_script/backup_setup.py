@@ -26,7 +26,7 @@ from aiida.backends.profile import BACKEND_SQLA
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 from aiida.common import utils
 from aiida.common.additions.backup_script.backup_base import AbstractBackup, BackupError
-from aiida.common.setup import AIIDA_CONFIG_FOLDER
+from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
 import aiida.utils.json as json
 
 if not is_dbenv_loaded():

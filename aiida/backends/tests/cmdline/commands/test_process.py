@@ -43,10 +43,10 @@ class TestVerdiProcessDaemon(AiidaTestCase):
 
     def setUp(self):
         super(TestVerdiProcessDaemon, self).setUp()
-        from aiida.common.profile import get_profile
+        from aiida.manage import load_config
         from aiida.daemon.client import DaemonClient
 
-        profile = get_profile()
+        profile = load_config().current_profile
         self.daemon_client = DaemonClient(profile)
         self.daemon_pid = subprocess.Popen(
             self.daemon_client.cmd_string.split(), stderr=sys.stderr, stdout=sys.stdout).pid

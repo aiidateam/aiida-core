@@ -41,13 +41,13 @@ from contextlib import contextmanager
 
 from pgtest.pgtest import PGTest
 
-from aiida.control.postgres import Postgres
 from aiida import is_dbenv_loaded
-from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
-from aiida.common import setup as aiida_cfg
 from aiida.backends import settings as backend_settings
-from aiida.manage import get_manager, reset_manager
+from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 from aiida.common import exceptions
+from aiida.control.postgres import Postgres
+from aiida.manage import load_config, get_manager, reset_manager
+from aiida.manage.configuration.setup import create_instance_directories
 
 
 class FixtureError(Exception):
@@ -115,6 +115,8 @@ class FixtureManager(object):
     _test_case = None
 
     def __init__(self):
+        from aiida.manage.configuration import config as config_module
+        from aiida.manage.configuration import settings as configuration_settings
         self.db_params = {}
         self.fs_env = {'repo': 'test_repo', 'config': '.aiida'}
         self.profile_info = {
@@ -132,7 +134,8 @@ class FixtureManager(object):
         self.__is_running_on_test_db = False
         self.__is_running_on_test_profile = False
         self._backup = {}
-        self._backup['config_dir'] = aiida_cfg.AIIDA_CONFIG_FOLDER
+        self._backup['config'] = config_module.CONFIG
+        self._backup['config_dir'] = configuration_settings.AIIDA_CONFIG_FOLDER
         self._backup['profile'] = backend_settings.AIIDADB_PROFILE
         self.__backend = None
 
@@ -180,16 +183,21 @@ class FixtureManager(object):
             raise FixtureError('AiiDA dbenv can not be loaded while creating a test profile')
         if not self.__is_running_on_test_db:
             self.create_aiida_db()
+        from aiida.manage.configuration import config as config_module
+        from aiida.manage.configuration import settings as configuration_settings
         from aiida.control.profile import setup_profile
         if not self.root_dir:
             self.create_root_dir()
-        print(self.root_dir, self.config_dir)
-        aiida_cfg.AIIDA_CONFIG_FOLDER = self.config_dir
+        config_module.CONFIG = None
+        configuration_settings.AIIDA_CONFIG_FOLDER = self.config_dir
         backend_settings.AIIDADB_PROFILE = None
-        aiida_cfg.create_base_dirs()
+        create_instance_directories()
         profile_name = 'test_profile'
+        print(configuration_settings.AIIDA_CONFIG_FOLDER)
+        print(config_module.CONFIG)
         setup_profile(profile=profile_name, only_config=False, non_interactive=True, **self.profile)
-        aiida_cfg.set_default_profile(profile_name)
+        config = load_config()
+        config.set_default_profile(profile_name)
         self.__is_running_on_test_profile = True
         self._create_test_case()
         self.init_db()
@@ -362,6 +370,8 @@ class FixtureManager(object):
 
     def destroy_all(self):
         """Remove all traces of the test run"""
+        from aiida.manage.configuration import config as config_module
+        from aiida.manage.configuration import settings as configuration_settings
         if self.root_dir:
             shutil.rmtree(self.root_dir)
             self.root_dir = None
@@ -370,8 +380,10 @@ class FixtureManager(object):
             self.pg_cluster = None
         self.__is_running_on_test_db = False
         self.__is_running_on_test_profile = False
+        if 'config' in self._backup:
+            config_module.CONFIG = self._backup['config']
         if 'config_dir' in self._backup:
-            aiida_cfg.AIIDA_CONFIG_FOLDER = self._backup['config_dir']
+            configuration_settings.AIIDA_CONFIG_FOLDER = self._backup['config_dir']
         if 'profile' in self._backup:
             backend_settings.AIIDADB_PROFILE = self._backup['profile']
 

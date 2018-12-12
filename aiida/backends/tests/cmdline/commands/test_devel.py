@@ -11,14 +11,17 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import tempfile
 
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_devel
-from aiida.common import setup as aiida_cfg
-from aiida.common.setup import _property_table, exists_property, get_property, del_property
+from aiida.common.setup import create_config_noninteractive, _property_table, exists_property, get_property, del_property
+from aiida.manage.configuration.setup import create_instance_directories
+from aiida.manage.configuration import settings
+from aiida.manage import load_config
 
 
 def get_result_lines(result):
@@ -31,13 +34,15 @@ class TestVerdiDevel(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         super(TestVerdiDevel, cls).setUpClass()
+        from aiida.manage.configuration import config as config_module
 
-        cls._old_aiida_config_folder = None
         cls._new_aiida_config_folder = tempfile.mkdtemp()
-        cls._old_aiida_config_folder = aiida_cfg.AIIDA_CONFIG_FOLDER
+        cls._old_aiida_config_folder = settings.AIIDA_CONFIG_FOLDER
+        cls._old_config = config_module.CONFIG
 
-        aiida_cfg.AIIDA_CONFIG_FOLDER = cls._new_aiida_config_folder
-        aiida_cfg.create_base_dirs()
+        config_module.CONFIG = None
+        settings.AIIDA_CONFIG_FOLDER = cls._new_aiida_config_folder
+        create_instance_directories()
 
         cls.profile_name = 'aiida_dummy_profile_1234'
         cls.dummy_profile = {}
@@ -48,10 +53,12 @@ class TestVerdiDevel(AiidaTestCase):
         cls.dummy_profile['db_name'] = cls.profile_name
         cls.dummy_profile['db_user'] = 'dummy_user'
         cls.dummy_profile['db_pass'] = 'dummy_pass'
-        cls.dummy_profile['repo'] = aiida_cfg.AIIDA_CONFIG_FOLDER + '/repository_' + cls.profile_name
+        cls.dummy_profile['repo'] = settings.AIIDA_CONFIG_FOLDER + '/repository_' + cls.profile_name
 
-        aiida_cfg.create_config_noninteractive(profile=cls.profile_name, **cls.dummy_profile)
-        aiida_cfg.set_default_profile(cls.profile_name, force_rewrite=True)
+        create_config_noninteractive(profile_name=cls.profile_name, **cls.dummy_profile)
+
+        config = load_config()
+        config.set_default_profile(cls.profile_name, overwrite=True)
 
     @classmethod
     def tearDownClass(cls, *args, **kwargs):
@@ -63,8 +70,10 @@ class TestVerdiDevel(AiidaTestCase):
         """
         import os
         import shutil
+        from aiida.manage.configuration import config as config_module
 
-        aiida_cfg.AIIDA_CONFIG_FOLDER = cls._old_aiida_config_folder
+        config_module.CONFIG = cls._old_config
+        settings.AIIDA_CONFIG_FOLDER = cls._old_aiida_config_folder
 
         if os.path.isdir(cls._new_aiida_config_folder):
             shutil.rmtree(cls._new_aiida_config_folder)

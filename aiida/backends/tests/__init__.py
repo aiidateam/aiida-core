@@ -80,6 +80,7 @@ db_test_list = {
         'common.archive': ['aiida.backends.tests.common.test_archive'],
         'common.datastructures': ['aiida.backends.tests.common.test_datastructures'],
         'daemon.client': ['aiida.backends.tests.daemon.test_client'],
+        'manage.configuration.migrations.': ['aiida.backends.tests.manage.configuration.migrations.test_migrations'],
         'orm.authinfo': ['aiida.backends.tests.orm.authinfo'],
         'orm.comments': ['aiida.backends.tests.orm.comments'],
         'orm.computer': ['aiida.backends.tests.computer'],

@@ -7,18 +7,19 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from aiida.backends import settings
 from aiida.common.exceptions import InvalidOperation
-from aiida.common.setup import get_default_profile_name, get_profile_config
+from aiida.common.profile import get_default_profile_name
+from aiida.common.setup import get_profile_config
 
 
 # Possible choices for backend
-BACKEND_DJANGO = "django"
-BACKEND_SQLA = "sqlalchemy"
+BACKEND_DJANGO = 'django'
+BACKEND_SQLA = 'sqlalchemy'
 
 
 def load_profile(profile=None):

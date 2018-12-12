@@ -17,9 +17,9 @@ import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils import echo
-from aiida.cmdline.params import options, types
+from aiida.cmdline.params import arguments, options
 from aiida.control.postgres import Postgres
-from aiida.common.setup import get_default_profile_name
+from aiida.common.profile import get_default_profile_name
 
 
 @verdi.group('profile')
@@ -65,7 +65,7 @@ def profile_list():
 
 
 @verdi_profile.command('show')
-@click.argument('profile', nargs=1, type=types.ProfileParamType(), default=get_default_profile_name())
+@arguments.PROFILE(default=get_default_profile_name())
 def profile_show(profile):
     """Show details for PROFILE or, when not specified, the default profile."""
     import tabulate
@@ -76,7 +76,7 @@ def profile_show(profile):
 
 
 @verdi_profile.command('setdefault')
-@click.argument('profile', nargs=1, type=types.ProfileParamType())
+@arguments.PROFILE()
 def profile_setdefault(profile):
     """Set PROFILE as the default profile."""
     from aiida.common.setup import set_default_profile
@@ -86,7 +86,7 @@ def profile_setdefault(profile):
 
 @verdi_profile.command('delete')
 @options.FORCE(help='to skip any questions/warnings about loss of data')
-@click.argument('profiles', nargs=-1, type=types.ProfileParamType())
+@arguments.PROFILES()
 def profile_delete(force, profiles):
     """
     Delete PROFILES separated by space from aiida config file

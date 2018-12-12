@@ -294,47 +294,6 @@ def set_default_profile(profile, force_rewrite=False):
         store_config(confs)
 
 
-def get_default_profile():
-    """
-    Return the default profile from the configuration
-
-    :return: None if no default profile is found
-    """
-    from aiida.common.exceptions import ProfileConfigurationError
-
-    config = get_config()
-    default_profile = get_default_profile_name()
-
-    if default_profile is None:
-        return None
-
-    try:
-        profile = config['profiles'][default_profile]
-    except KeyError:
-        raise ProfileConfigurationError('the defined default profile {} does not exist'.format(default_profile))
-
-    return profile
-
-
-def get_default_profile_name():
-    """
-    Return the default profile name from the configuration
-
-    :return: None if no default profile is found
-    """
-    from aiida.common.exceptions import MissingConfigurationError
-
-    try:
-        confs = get_config()
-    except MissingConfigurationError:
-        return None
-
-    try:
-        return confs['default_profile']
-    except KeyError:
-        return None
-
-
 def get_profiles_list():
     """
     Return the list of names of installed configurations

@@ -1265,6 +1265,33 @@ class TestWorkChainExpose(AiidaTestCase):
             }
         )
 
+    def test_issue_1741_expose_inputs(self):
+        """Test that expose inputs works correctly when copying a stored default value"""
+
+        stored_a = Int(5).store()
+
+        class Parent(work.WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(Parent, cls).define(spec)
+                spec.input('a', default=stored_a)
+                spec.outline(cls.step1)
+
+            def step1(self):
+                pass
+
+        class Child(work.WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(Child, cls).define(spec)
+                spec.expose_inputs(Parent)
+                spec.outline(cls.step1)
+
+            def step1(self):
+                pass
+
+        work.run(Child)
+
 
 class TestWorkChainReturnDict(AiidaTestCase):
     class PointlessWorkChain(WorkChain):

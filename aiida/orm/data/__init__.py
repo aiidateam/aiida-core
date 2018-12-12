@@ -75,9 +75,6 @@ class Data(Node):
 
         :returns: an unstored clone of this Data node
         """
-        if self.is_stored:
-            raise InvalidOperation('deep copying a stored Data node is not supported, use Data.clone() instead')
-
         return self.clone()
 
     def clone(self):

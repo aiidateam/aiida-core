@@ -25,6 +25,8 @@ except ImportError:
 
 import click
 
+from aiida.cmdline.utils import echo
+
 _CREATE_USER_COMMAND = 'CREATE USER "{}" WITH PASSWORD \'{}\''
 _DROP_USER_COMMAND = 'DROP USER "{}"'
 _CREATE_DB_COMMAND = ('CREATE DATABASE "{}" OWNER "{}" ENCODING \'UTF8\' '
@@ -118,21 +120,25 @@ class Postgres(object):
                 self.dbinfo = local_dbinfo
                 break
 
-        # This will work for the default Debian postgres setup
+        # This will work for the default Debian postgres setup, assuming that sudo is available to the user
         if self.pg_execute == _pg_execute_not_connected:
-            dbinfo['user'] = 'postgres'
-            if _try_subcmd(non_interactive=bool(not self.interactive), **dbinfo):
-                self.pg_execute = _pg_execute_sh
-                self.dbinfo = dbinfo
+            # Check if the user can find the sudo command
+            if _sudo_exists():
+                dbinfo['user'] = 'postgres'
+                if _try_subcmd(non_interactive=bool(not self.interactive), **dbinfo):
+                    self.pg_execute = _pg_execute_sh
+                    self.dbinfo = dbinfo
+            else:
+                echo.echo_warning('Could not find `sudo`. No way of connecting to the database could be found.')
 
         # This is to allow for any other setup
         if self.pg_execute == _pg_execute_not_connected:
             self.setup_fail_counter += 1
             self._no_setup_detected()
         elif not self.interactive and not self.quiet:
-            click.echo(('Database setup not confirmed, (non-interactive). '
-                        'This may cause problems if the current user is not '
-                        'allowed to create databases.'))
+            echo.echo_warning(('Database setup not confirmed, (non-interactive). '
+                               'This may cause problems if the current user is not '
+                               'allowed to create databases.'))
 
         return bool(self.pg_execute != _pg_execute_not_connected)
 
@@ -201,7 +207,7 @@ class Postgres(object):
             'If postgresql is installed, please ask your system manager to provide you with the following parameters:'
         ])
         if not self.quiet:
-            click.echo(message)
+            echo.echo_warning(message)
         if self.setup_fail_callback and self.setup_fail_counter <= self.setup_max_tries:
             self.dbinfo = self.setup_fail_callback(self.interactive, self.dbinfo)
             self.determine_setup()
@@ -236,8 +242,8 @@ def prompt_db_info(*args):  # pylint: disable=unused-argument
         dbinfo['port'] = click.prompt('postgres port', default=5432, type=int)
         dbinfo['database'] = click.prompt('template', default='template1', type=str)
         dbinfo['user'] = click.prompt('postgres super user', default='postgres', type=str)
-        click.echo('')
-        click.echo('trying to access postgres..')
+        echo.echo('')
+        echo.echo('trying to access postgres..')
         if _try_connect(**dbinfo):
             access = True
         else:
@@ -263,6 +269,22 @@ def _try_connect(**kwargs):
     except Exception:  # pylint: disable=broad-except
         pass
     return success
+
+
+def _sudo_exists():
+    """
+    Check that the sudo command can be found
+
+    :return: True if successful, False otherwise
+    """
+    try:
+        subprocess.check_output(['sudo', '-V'])
+    except subprocess.CalledProcessError:
+        return False
+    except OSError:
+        return False
+
+    return True
 
 
 def _try_subcmd(**kwargs):
@@ -312,7 +334,7 @@ def _pg_execute_sh(command, user='postgres', **kwargs):
     :param kwargs: connection details to forward to psql, signature as in psycopg2.connect
 
     To stop `sudo` from asking for a password and fail if one is required,
-    pass `noninteractive=True` as a kwarg.
+    pass `non_interactive=True` as a kwarg.
     """
     options = ''
     database = kwargs.pop('database', None)
@@ -336,7 +358,6 @@ def _pg_execute_sh(command, user='postgres', **kwargs):
     psql_cmd = ['psql {options} -tc {}'.format(escape_for_bash(command), options=options)]
     sudo_su_psql = sudo_cmd + su_cmd + psql_cmd
     result = subprocess.check_output(sudo_su_psql, **kwargs)
-
     result = result.decode('utf-8').strip().split('\n')
     result = [i for i in result if i]
 

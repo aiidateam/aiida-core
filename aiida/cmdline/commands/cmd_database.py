@@ -15,6 +15,7 @@ from __future__ import absolute_import
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
+from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
 
 
@@ -22,6 +23,26 @@ from aiida.cmdline.utils import echo
 def verdi_database():
     """Inspect and manage the database."""
     pass
+
+
+@verdi_database.command('migrate')
+@options.FORCE()
+def database_migrate(force):
+    """Migrate the database to the latest schema version."""
+    from aiida.manage.manager import get_manager
+
+    manager = get_manager()
+    profile = manager.get_profile()
+    backend = manager._load_backend(schema_check=False)  # pylint: disable=protected-access
+
+    if not force:
+        echo.echo_warning('Migrating your database might take a while.')
+        echo.echo_warning('Before continuing, make sure the daemon is stopped and you have a backup of your database.')
+        echo.echo_warning('', nl=False)
+        confirm_message = 'Are you really sure you want to migrate the database for profile "{}"?'.format(profile.name)
+        click.confirm(confirm_message, abort=True)
+
+    backend.migrate()
 
 
 @verdi_database.group('integrity')
@@ -36,7 +57,7 @@ def verdi_database_integrity():
     '--apply-patch',
     is_flag=True,
     help='Apply the proposed changes. If this flag is not passed, a dry run is performed instead.')
-def database_integrity(apply_patch):
+def duplicate_node_uuid(apply_patch):
     """Detect and solve nodes with duplicate UUIDs.
 
     Before aiida-core v1.0.0, there was no uniqueness constraint on the UUID column of the Node table in the database.
@@ -46,17 +67,11 @@ def database_integrity(apply_patch):
     command will run an analysis to detect duplicate UUIDs in the node table and solve it by generating new UUIDs. Note
     that it will not delete or merge any nodes.
     """
-    from aiida.backends import settings
-    from aiida.backends.utils import _load_dbenv_noschemacheck
-    from aiida.common.setup import get_default_profile_name
-    from aiida.manage.database.integrity import deduplicate_node_uuids
+    from aiida.manage.database.integrity.duplicate_uuid import deduplicate_node_uuids
+    from aiida.manage.manager import get_manager
 
-    if settings.AIIDADB_PROFILE is not None:
-        profile = settings.AIIDADB_PROFILE
-    else:
-        profile = get_default_profile_name()
-
-    _load_dbenv_noschemacheck(profile)
+    manager = get_manager()
+    manager._load_backend(schema_check=False)  # pylint: disable=protected-access
 
     try:
         messages = deduplicate_node_uuids(dry_run=not apply_patch)

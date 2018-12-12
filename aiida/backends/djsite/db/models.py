@@ -554,9 +554,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
     Abstract base class for tables storing attribute + value data, of
     different data types (without any association to a Node).
     """
-    from aiida.backends.djsite.utils import long_field_length
-
-    key = m.CharField(max_length=long_field_length(), db_index=True, blank=False)
+    key = m.CharField(max_length=1024, db_index=True, blank=False)
     datatype = m.CharField(max_length=10,
                            default='none',
                            choices=attrdatatype_choice, db_index=True)

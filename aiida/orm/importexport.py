@@ -356,7 +356,7 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
     import aiida.utils.json as json
 
     # This is the export version expected by this function
-    expected_export_version = '0.3'
+    expected_export_version = '0.4'
 
     # The name of the subfolder in which the node files are stored
     nodes_export_subfolder = 'nodes'
@@ -885,7 +885,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
     import aiida.utils.json as json
 
     # This is the export version expected by this function
-    expected_export_version = '0.3'
+    expected_export_version = '0.4'
 
     # The name of the subfolder in which the node files are stored
     nodes_export_subfolder = 'nodes'
@@ -1727,7 +1727,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     if not silent:
         print("STARTING EXPORT...")
 
-    EXPORT_VERSION = '0.3'
+    EXPORT_VERSION = '0.4'
 
     all_fields_info, unique_identifiers = get_all_fields_info()
 

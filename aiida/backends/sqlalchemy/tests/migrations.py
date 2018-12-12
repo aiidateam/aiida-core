@@ -90,7 +90,7 @@ class TestMigrationApplicationSQLA(AiidaTestCase):
 
         """
         from aiida.backends.sqlalchemy.tests.migration_test import versions
-        from aiida.backends.sqlalchemy.utils import check_schema_version
+        from aiida.backends.sqlalchemy.utils import migrate_database
 
         try:
             # Constructing the versions directory
@@ -115,7 +115,7 @@ class TestMigrationApplicationSQLA(AiidaTestCase):
                                   "None (no version) since the test setUp "
                                   "method should undo all migrations")
             # Migrate the database to the latest version
-            check_schema_version(force_migration=True, alembic_cfg=alembic_cfg)
+            migrate_database(alembic_cfg=alembic_cfg)
             with sa.engine.begin() as connection:
                 alembic_cfg.attributes['connection'] = connection
                 self.assertEquals(get_db_schema_version(alembic_cfg),

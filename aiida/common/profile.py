@@ -17,6 +17,8 @@ from aiida.backends import settings
 from aiida.common import setup
 from aiida.common import exceptions
 
+from .extendeddicts import AttributeDict
+
 __all__ = 'Profile', 'get_current_profile_name', 'get_profile_config'
 
 CONFIG_DIR = setup.AIIDA_CONFIG_FOLDER
@@ -95,7 +97,7 @@ class Profile(object):
 
     def __init__(self, name, config):
         self._name = name
-        self._config = config
+        self._config = AttributeDict(config)
 
         # Currently, whether a profile is a test profile is solely determined by its name starting with 'test_'
         self._test_profile = bool(self.name.startswith('test_'))

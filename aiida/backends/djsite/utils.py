@@ -11,10 +11,10 @@
 This modules contains a number of utility functions specific to the
 Django backend.
 """
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import os
 import django
 
@@ -30,7 +30,7 @@ def load_dbenv(profile=None):
     """
     _load_dbenv_noschemacheck(profile)
     # Check schema version and the existence of the needed tables
-    check_schema_version(profile)
+    check_schema_version(profile_name=profile)
 
 
 def _load_dbenv_noschemacheck(profile):  # pylint: disable=unused-argument
@@ -53,27 +53,13 @@ def _load_dbenv_noschemacheck(profile):  # pylint: disable=unused-argument
 _aiida_autouser_cache = None  # pylint: disable=invalid-name
 
 
-def long_field_length():
-    """
-    Return the length of "long" fields.
-    This is used, for instance, for the 'key' field of attributes.
-    This returns 1024 typically, but it returns 255 if the backend is mysql.
-
-    :note: Call this function only AFTER having called load_dbenv!
-    """
-    # One should not load directly settings because there are checks inside
-    # for the current profile. However, this function is going to be called
-    # only after having loaded load_dbenv, so there should be no problem
-    from django.conf import settings
-
-    if 'mysql' in settings.DATABASES['default']['ENGINE']:
-        return 255
-
-    # else
-    return 1024
+def migrate_database():
+    """Migrate the database to the latest schema version."""
+    from django.core.management import call_command
+    call_command('migrate')
 
 
-def check_schema_version(profile):
+def check_schema_version(profile_name=None):
     """
     Check if the version stored in the database is the same of the version
     of the code.
@@ -89,8 +75,9 @@ def check_schema_version(profile):
     :raise ConfigurationError: if the two schema versions do not match.
       Otherwise, just return.
     """
-    import aiida.backends.djsite.db.models
     from django.db import connection
+
+    import aiida.backends.djsite.db.models
     from aiida.common.exceptions import ConfigurationError
 
     # Do not do anything if the table does not exist yet
@@ -105,19 +92,16 @@ def check_schema_version(profile):
         set_db_schema_version(code_schema_version)
         db_schema_version = get_db_schema_version()
 
-    filepath_utils = os.path.abspath(__file__)
-    filepath_manage = os.path.join(os.path.dirname(filepath_utils), 'manage.py')
-
-    if profile is None:
-        from aiida.common.setup import get_default_profile_name
-        profile = get_default_profile_name()
-
     if code_schema_version != db_schema_version:
-        raise ConfigurationError("The code schema version is {}, but the version stored in the "
-                                 "database (DbSetting table) is {}, stopping.\n"
-                                 "To migrate the database to the current version, run the following commands:"
-                                 "\n  verdi daemon stop\n  python {} --aiida-profile={} migrate".format(
-                                     code_schema_version, db_schema_version, filepath_manage, profile))
+        if profile_name is None:
+            from aiida.manage.manager import get_manager
+            manager = get_manager()
+            profile_name = manager.get_profile().name
+
+        raise ConfigurationError('Database schema version {} is outdated compared to the code schema version {}\n'
+                                 'To migrate the database to the current version, run the following commands:'
+                                 '\n  verdi -p {} daemon stop\n  verdi -p {} database migrate'.format(
+                                     db_schema_version, code_schema_version, profile_name, profile_name))
 
 
 def set_db_schema_version(version):
@@ -157,15 +141,3 @@ def delete_nodes_and_connections_django(pks_to_delete):  # pylint: disable=inval
         models.DbLink.objects.filter(Q(input__in=pks_to_delete) | Q(output__in=pks_to_delete)).delete()
         # now delete nodes
         models.DbNode.objects.filter(pk__in=pks_to_delete).delete()
-
-
-def pass_to_django_manage(argv, profile=None):
-    """
-    Call the corresponding django manage.py command
-    """
-    from aiida.backends.utils import load_dbenv as load_dbenv_, is_dbenv_loaded
-    if not is_dbenv_loaded():
-        load_dbenv_(profile=profile)
-
-    from django.core import management
-    management.execute_from_command_line(argv)

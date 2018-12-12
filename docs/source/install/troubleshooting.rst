@@ -92,13 +92,13 @@ Configuring remote SSH computers
 
 .. _ContinuumIO/anaconda-issues#686: https://github.com/ContinuumIO/anaconda-issues/issues/686
 
-* [**.bashrc and .bash_profile behavior on remote computers**] 
-  (**NOTE** This applies also to a computer configured via a ``local`` transport!)
+* [**Output from .bashrc and/or .bash_profile on remote computers**] 
+  (**NOTE** This applies also computers configured via ``local`` transport!)
   
-  When connecting
-  to remote computers, AiiDA (like other codes as ``sftp``) might get very confused
-  if you have code in your ``.bashrc`` or ``.bash_profile`` producing output
-  or e.g. running commands like ``clean`` that require a terminal.
+  When connecting to remote computers, AiiDA (like other codes as ``sftp``)
+  can get confused if you have code in your ``.bashrc`` or
+  ``.bash_profile`` that produces output or e.g. runs commands like ``clean``
+  that require a terminal.
 
   For instance, if you add a ``echo "a"`` in your ``.bashrc`` and then try to SFTP
   a file from it, you will get an error like ``Received message too long 1091174400``.
@@ -194,27 +194,44 @@ Use in ipython/jupyter
 
   and from the newly opened browser tab select ``New -> <aiida.kernel.name>``
 
-.. _updating_aiida:
-
-For developers (testing)
+Postgres restart problem
 ------------------------
 
-* [**Making the SSH tests pass**] The developer tests of the *SSH* transport plugin are
-  performed connecting to ``localhost``. The tests will fail if
-  a passwordless ssh connection is not set up. Therefore, if you want to run
-  the tests:
+Due to a `bug <https://wiki.postgresql.org/wiki/May_2015_Fsync_Permissions_Bug>` affecting older postgres versions (<9.4), 
+PostgreSQL could refuse to restart after a crash or after a restore from binary backup. 
 
-  + make sure to have a ssh server. On Ubuntu, for instance, you can install
-    it using::
+The error message would be something like::
 
-       sudo apt-get install openssh-server
+    * Starting PostgreSQL 9.1 database server
+    * The PostgreSQL server failed to start. Please check the log output:
+    2015-05-26 03:27:20 UTC [331-1] LOG:  database system was interrupted; last known up at 2015-05-21 19:56:58 UTC
+    2015-05-26 03:27:20 UTC [331-2] FATAL:  could not open file "/etc/ssl/certs/ssl-cert-snakeoil.pem": Permission denied
+    2015-05-26 03:27:20 UTC [330-1] LOG:  startup process (PID 331) exited with exit code 1
+    2015-05-26 03:27:20 UTC [330-2] LOG:  aborting startup due to startup process failure
 
-  + Configure a ssh key for your user on your machine, and then add
-    your public key to the authorized keys of localhsot.
-    The easiest way to achieve this is to run::
+If this happens you should change the permissions on any symlinked files
+to being writable by the Postgres user. For example, on Ubuntu, with PostgreSQL 9.1,
+the following should work (**WARNING**: Make sure these configuration files are
+symbolic links before executing these commands! If someone has customized the server.crt
+or server.key file, you can erase them by following these steps.
+It's a good idea to make a backup of the server.crt and server.key files before removing them)::
 
-       ssh-copy-id localhost
+    (as root)
+    # go to PGDATA directory
+    cd /var/lib/postgresql/9.1/main
+    ls -l server.crt server.key
+    # confirm both of those files are symbolic links
+    # to files in /etc/ssl before going further
+    # remove symlinks to SSL certs
+    rm server.crt
+    rm server.key
+    # copy the SSL certs to the local directory
+    cp /etc/ssl/certs/ssl-cert-snakeoil.pem server.crt
+    cp /etc/ssl/private/ssl-cert-snakeoil.key server.key
+    # set permissions on ssl certs
+    # and postgres ownership on everything else
+    # just in case
+    chown postgres *
+    chmod 640 server.crt server.key
 
-    (it will ask your password, because it is connecting via ssh to ``localhost``
-    to install your public key inside ~/.ssh/authorized_keys).
-
+    service postgresql start

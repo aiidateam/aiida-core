@@ -85,7 +85,8 @@
       "docutils==0.14",
       "Jinja2==2.10",
       "MarkupSafe==1.0",
-      "sphinx-rtd-theme==0.4.2"
+      "sphinx-rtd-theme==0.4.2",
+      "sphinxcontrib-contentui==0.2.2"
     ],
     "atomic_tools": [
       "spglib==1.10.3.65",

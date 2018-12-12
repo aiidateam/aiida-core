@@ -28,8 +28,6 @@ from aiida.common.exceptions import InputValidationError
 from aiida.orm.implementation.django import dummy_model
 from aiida.backends.djsite.db.models import DbAttribute, DbExtra, ObjectDoesNotExist
 
-from aiida.orm.implementation.django.convert import get_backend_entity
-
 
 class DjangoQueryBuilder(BackendQueryBuilder):
     """Django query builder"""
@@ -406,7 +404,7 @@ class DjangoQueryBuilder(BackendQueryBuilder):
             returnval = six.text_type(res)
         else:
             try:
-                returnval = get_backend_entity(res, self._backend)  # pylint: disable=assignment-from-no-return
+                returnval = self._backend.get_backend_entity(res)
             except TypeError:
                 returnval = res
 

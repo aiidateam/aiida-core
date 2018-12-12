@@ -11,13 +11,17 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from aiida.backends.djsite.queries import DjangoQueryManager
+from contextlib import contextmanager
 
-from aiida.orm.implementation.backends import Backend
+from django.db import models
+
+from aiida.backends.djsite.queries import DjangoQueryManager
+from aiida.orm.implementation.sql import SqlBackend
 
 from . import authinfo
 from . import comments
 from . import computer
+from . import convert
 from . import groups
 from . import logs
 from . import querybuilder
@@ -26,7 +30,7 @@ from . import users
 __all__ = ('DjangoBackend',)
 
 
-class DjangoBackend(Backend):
+class DjangoBackend(SqlBackend[models.Model]):
 
     def __init__(self):
         self._authinfos = authinfo.DjangoAuthInfoCollection(self)
@@ -71,3 +75,31 @@ class DjangoBackend(Backend):
     @property
     def users(self):
         return self._users
+
+    def get_backend_entity(self, model):
+        return convert.get_backend_entity(model, self)
+
+    def get_connection(self):
+        """
+        Get the Django connection
+
+        :return: the django connection
+        """
+        # For now we just return the global but if we ever support multiple Django backends
+        # being loaded this should be specific to this backend
+        from django.db import connection
+        return connection
+
+    def execute_raw(self, query):
+        with self.cursor() as cursor:
+            cursor.execute(query)
+            results = cursor.fetchall()
+
+        return results
+
+    @contextmanager
+    def cursor(self):
+        try:
+            yield self.get_connection().cursor()
+        finally:
+            pass

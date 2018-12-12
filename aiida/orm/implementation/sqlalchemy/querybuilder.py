@@ -27,8 +27,6 @@ import aiida.backends.sqlalchemy
 from aiida.common.exceptions import InputValidationError
 from aiida.orm.implementation.querybuilder import BackendQueryBuilder
 
-from aiida.orm.implementation.sqlalchemy.convert import get_backend_entity
-
 
 class jsonb_array_length(FunctionElement):  # pylint: disable=invalid-name
     # pylint: disable=too-few-public-methods
@@ -413,7 +411,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             returnval = six.text_type(res)
         else:
             try:
-                returnval = get_backend_entity(res, self._backend)  # pylint: disable=assignment-from-no-return
+                returnval = self._backend.get_backend_entity(res)
             except TypeError:
                 returnval = res
 

@@ -21,38 +21,9 @@ class AbstractQueryManager(object):
     def __init__(self, backend):
         """
         :param backend: The AiiDA backend
-        :type backend: :class:`aiida.orm.implementation.backends.Backend`
+        :type backend: :class:`aiida.orm.implementation.sql.SqlBackend`
         """
         self._backend = backend
-
-    @abstractmethod
-    def raw(self, query):
-        """Execute a raw SQL statement and return the result.
-
-        :param query: a string containing a raw SQL statement
-        :return: the result of the query
-        """
-        pass
-
-    @abstractmethod
-    def cursor(self):
-        pass
-
-    def prepared_statement(self, sql, parameters):
-        """Execute an SQL statement with optional prepared statements.
-
-        :param sql: the SQL statement string
-        :param parameters: dictionary to use to populate the prepared statement
-        """
-        results = []
-
-        with self.cursor() as cursor:
-            cursor.execute(sql, parameters)
-
-            for row in cursor:
-                results.append(row)
-
-        return results
 
     def get_duplicate_node_uuids(self):
         """
@@ -64,7 +35,7 @@ class AbstractQueryManager(object):
             SELECT s.id, s.uuid FROM (SELECT *, COUNT(*) OVER(PARTITION BY uuid) AS c FROM db_dbnode)
             AS s WHERE c > 1
             """
-        return self.raw(query)
+        return self._backend.execute_raw(query)
 
     def get_creation_statistics(
             self,

@@ -239,3 +239,7 @@ py:class typing.TypeVar
 
 # Python 3 complains about this because of orm.Entity.Collection inner class (no idea why)
 py:class Collection
+
+
+# psychopg2
+py:class psycopg2.extensions.cursor

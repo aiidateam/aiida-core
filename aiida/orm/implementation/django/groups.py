@@ -30,7 +30,6 @@ from aiida.common.exceptions import ModificationNotAllowed
 from aiida.backends.djsite.db import models
 from .node import Node
 
-from . import convert
 from . import entities
 from . import users
 from . import utils
@@ -155,7 +154,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
                 # Best to use dbnodes.iterator() so we load entities from the database as we need them
                 # see: http://blog.etianen.com/blog/2013/06/08/django-querysets/
                 for node in self.dbnodes.iterator():
-                    yield convert.get_backend_entity(node, self._backend)
+                    yield self._backend.get_backend_entity(node)
 
             def __iter__(self):
                 return self

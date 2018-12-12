@@ -98,11 +98,11 @@ def detect_invalid_links():
 
     integrity_violated = False
 
-    query_manager = get_manager().get_backend().query_manager
+    backend = get_manager().get_backend()
 
     for check in INVALID_LINK_SELECT_STATEMENTS:
 
-        result = query_manager.prepared_statement(check.sql, check.parameters)
+        result = backend.execute_prepared_statement(check.sql, check.parameters)
 
         if result:
             integrity_violated = True
@@ -126,11 +126,11 @@ def detect_invalid_nodes():
 
     integrity_violated = False
 
-    query_manager = get_manager().get_backend().query_manager
+    backend = get_manager().get_backend()
 
     for check in INVALID_NODE_SELECT_STATEMENTS:
 
-        result = query_manager.prepared_statement(check.sql, check.parameters)
+        result = backend.execute_prepared_statement(check.sql, check.parameters)
 
         if result:
             integrity_violated = True

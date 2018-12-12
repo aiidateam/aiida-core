@@ -22,7 +22,6 @@ from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError)
 from aiida.common.utils import type_check
 from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
 
-from . import convert
 from . import entities
 from . import users
 from . import utils
@@ -186,7 +185,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
 
             def _genfunction(self):
                 for node in self._iter:
-                    yield convert.get_backend_entity(node, self._backend)
+                    yield self._backend.get_backend_entity(node)
 
             def __iter__(self):
                 return self

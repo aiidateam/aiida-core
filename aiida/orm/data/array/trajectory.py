@@ -54,7 +54,7 @@ class TrajectoryData(ArrayData):
         if not isinstance(symbols, collections.Iterable):
             raise TypeError("TrajectoryData.symbols must be of type list")
         if any([not isinstance(i, six.string_types) for i in symbols]):
-            raise TypeError("TrajectoryData.symbols must be a list of strings")
+            raise TypeError("TrajectoryData.symbols must be a 1d list of strings")
         if not isinstance(positions, numpy.ndarray) or positions.dtype != float:
             raise TypeError("TrajectoryData.positions must be a numpy array of floats")
         if stepids is not None:
@@ -80,8 +80,6 @@ class TrajectoryData(ArrayData):
             if cells.shape != (numsteps, 3, 3):
                 raise ValueError("TrajectoryData.cells must have shape (s,3,3), " "with s=number of steps")
         numatoms = len(symbols)
-        if numpy.array(symbols).shape != (numatoms,):
-            raise ValueError("TrajectoryData.symbols must be a 1d array")
         if positions.shape != (numsteps, numatoms, 3):
             raise ValueError("TrajectoryData.positions must have shape (s,n,3), "
                              "with s=number of steps and n=number of symbols")

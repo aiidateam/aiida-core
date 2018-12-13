@@ -150,7 +150,7 @@ class TrajectoryData(ArrayData):
 
         self._internal_validate(stepids, cells, symbols, positions, times, velocities)
         # set symbols as attribute for easier querying
-        self._set_attr('symbols', symbols)
+        self._set_attr('symbols', list(symbols))
         self.set_array('positions', positions)
         if stepids is not None:  # use input stepids
             self.set_array('steps', stepids)

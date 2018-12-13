@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 from enum import Enum
 from aiida.common import exceptions
+from aiida.common.exceptions import ValidationError
 from aiida.common.utils import type_check
 from aiida.cmdline.utils import echo
 from aiida.manage import get_manager
@@ -32,6 +33,10 @@ class GroupTypeString(Enum):
     IMPORTGROUP_TYPE = 'auto.import'
     VERDIAUTOGROUP_TYPE = 'auto.run'
     USER = 'user'
+
+
+# pylint: disable=invalid-name
+system_type = type
 
 
 class Group(entities.Entity):
@@ -64,14 +69,13 @@ class Group(entities.Entity):
                 echo.echo_critical("Group label must be provided")
 
             filters = {'label': label}
+
             if 'type_string' in kwargs:
-                filters['type_string'] = kwargs['type_string']
-                try:
-                    GroupTypeString(kwargs['type_string'])
-                except ValueError:
-                    echo.echo_critical("Group type_string <{}> is not allowed. Allowed type_strings are: "
-                                       "{}".format(kwargs['type_string'],
-                                                   ', '.join([i.value for i in GroupTypeString])))
+                if isinstance(kwargs['type_string'], GroupTypeString):
+                    filters['type_string'] = kwargs['type_string'].value
+                else:
+                    raise ValidationError("type_string must be {}, you provided an object of type "
+                                          "{}".format(GroupTypeString, type(kwargs['type_string'])))
 
             res = self.find(filters=filters)
 
@@ -95,7 +99,7 @@ class Group(entities.Entity):
                  label=None,
                  user=None,
                  description='',
-                 type_string=GroupTypeString.USER.value,
+                 type_string=GroupTypeString.USER,
                  backend=None,
                  name=None,
                  type=None):
@@ -127,19 +131,17 @@ class Group(entities.Entity):
         if not label:
             echo.echo_critical("Group label must be provided")
 
+        # Check that chosen type_string is allowed
+        if not isinstance(type_string, GroupTypeString):
+            raise ValidationError("type_string must be {}, you provided an object of type "
+                                  "{}".format(GroupTypeString, system_type(type_string)))
+
         backend = backend or get_manager().get_backend()
         user = user or users.User.objects(backend).get_default()
         type_check(user, users.User)
 
-        # Check that chosen type is allowed
-        try:
-            GroupTypeString(type_string)
-        except ValueError:
-            echo.echo_critical("Group type_string <{}> is not allowed. Allowed type_strings are: "
-                               "{}".format(type_string, ', '.join([i.value for i in GroupTypeString])))
-
         model = backend.groups.create(
-            label=label, user=user.backend_entity, description=description, type_string=type_string)
+            label=label, user=user.backend_entity, description=description, type_string=type_string.value)
         super(Group, self).__init__(model)
 
     def __repr__(self):
@@ -307,10 +309,17 @@ class Group(entities.Entity):
             kwargs['type_string'] = kwargs.pop('type')
             warnings.warn('type is deprecated, use type_string instead', DeprecationWarning)  # pylint: disable=no-member
 
-        query = QueryBuilder()
         filters = {}
+        if 'type_string' in kwargs:
+            if isinstance(kwargs['type_string'], GroupTypeString):
+                filters['type_string'] = kwargs.pop('type_string').value
+            else:
+                raise ValidationError("type_string must be {}, you provided an object of type "
+                                      "{}".format(GroupTypeString, type(kwargs['type_string'])))
+
+        query = QueryBuilder()
         for key, val in kwargs.items():
-            filters[key] = {'==': val}
+            filters[key] = val
 
         query.append(cls, filters=filters)
         results = query.all()
@@ -356,10 +365,9 @@ class Group(entities.Entity):
         label, sep, typestr = string.rpartition(':')
         if not sep:
             label = typestr
-            typestr = GroupTypeString.USER.value
-
+            typestr = GroupTypeString.USER
         try:
-            internal_type_string = GroupTypeString(typestr).value
+            internal_type_string = GroupTypeString(typestr)
         except ValueError:
             msg = ("Invalid group type '{}'. Valid group types are: "
                    "{}".format(typestr, ', '.join([i.value for i in GroupTypeString])))

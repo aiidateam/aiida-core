@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+# pylint: disable=invalid-name,no-member
 """DbGroup class: change type_string values
 
 Revision ID: e72ad251bcdb
@@ -6,6 +16,7 @@ Create Date: 2018-12-06 19:34:47.732890
 
 """
 from __future__ import absolute_import
+# pylint: disable=no-name-in-module,import-error
 from alembic import op
 from sqlalchemy.sql import text
 

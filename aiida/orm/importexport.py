@@ -25,7 +25,7 @@ from aiida.orm.node import Node
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.orm.users import User
 
-IMPORTGROUP_TYPE = GroupTypeString.IMPORTGROUP_TYPE.value
+IMPORTGROUP_TYPE = GroupTypeString.IMPORTGROUP_TYPE
 DUPL_SUFFIX = ' (Imported #{})'
 
 # Giving names to the various entities. Attributes and links are not AiiDA

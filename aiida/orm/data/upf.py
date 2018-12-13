@@ -24,7 +24,7 @@ from aiida.orm.data.singlefile import SinglefileData
 from aiida.orm import GroupTypeString
 
 
-UPFGROUP_TYPE = GroupTypeString.UPFGROUP_TYPE.value
+UPFGROUP_TYPE = GroupTypeString.UPFGROUP_TYPE
 
 _upfversion_regexp = re.compile(
     r"""

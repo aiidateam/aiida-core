@@ -147,7 +147,7 @@ def group_show(group, raw, uuid):
 
         table = []
         table.append(["Group label", group.label])
-        table.append(["Group type_string", type_string if type_string else "<user-defined>"])
+        table.append(["Group type_string", type_string])
         table.append(["Group description", desc if desc else "<no description>"])
         echo.echo(tabulate(table))
 
@@ -313,7 +313,7 @@ def group_create(group_label):
     from aiida import orm
     from aiida.orm import GroupTypeString
 
-    group, created = orm.Group.objects.get_or_create(label=group_label, type_string=GroupTypeString.USER.value)
+    group, created = orm.Group.objects.get_or_create(label=group_label, type_string=GroupTypeString.USER)
 
     if created:
         echo.echo_success("Group created with PK = {} and name '{}'".format(group.id, group.label))
@@ -328,8 +328,10 @@ def group_create(group_label):
 def group_copy(source_group, destination_group):
     """Add all nodes that belong to source group to the destination group (which may or may not exist)."""
     from aiida import orm
+    from aiida.orm import GroupTypeString
 
-    dest_group = orm.Group.objects.get_or_create(label=destination_group, type_string=source_group.type_string)[0]
+    dest_group = orm.Group.objects.get_or_create(
+        label=destination_group, type_string=GroupTypeString(source_group.type_string))[0]
     try:
         dest_group.add_nodes(source_group.nodes)
         echo.echo_success("Nodes were succesfully copied from the group <{}> to the group "

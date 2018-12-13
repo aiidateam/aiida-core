@@ -103,24 +103,6 @@ class TrajectoryData(ArrayData):
         a consecutive sequence [0,1,2,...,len(positions)-1] will be assumed.
 
 
-        :param stepids: integer array with dimension ``s``, where ``s`` is the
-                      number of steps. Typically represents an internal counter
-                      within the code. For instance, if you want to store a
-                      trajectory with one step every 10, starting from step 65,
-                      the array will be ``[65,75,85,...]``.
-                      No checks are done on duplicate elements
-                      or on the ordering, but anyway this array should be
-                      sorted in ascending order, without duplicate elements.
-                      If your code does not provide an internal counter, just
-                      provide for instance ``arange(s)``.
-                      It is internally stored as an array named 'steps'.
-        :param cells: float array with dimension :math:`s \times 3 \times 3`,
-                      where ``s`` is the
-                      length of the ``stepids`` array. Units are angstrom.
-                      In particular,
-                      ``cells[i,j,k]`` is the ``k``-th component of the ``j``-th
-                      cell vector at the time step with index ``i`` (identified
-                      by step number ``stepid[i]`` and with timestamp ``times[i]``).
         :param symbols: string list with dimension ``n``, where ``n`` is the
                       number of atoms (i.e., sites) in the structure.
                       The same list is used for each step. Normally, the string
@@ -136,6 +118,23 @@ class TrajectoryData(ArrayData):
                       ``j``-th atom (or site) in the structure at the time step
                       with index ``i`` (identified
                       by step number ``step[i]`` and with timestamp ``times[i]``).
+        :param stepids: integer array with dimension ``s``, where ``s`` is the
+                      number of steps. Typically represents an internal counter
+                      within the code. For instance, if you want to store a
+                      trajectory with one step every 10, starting from step 65,
+                      the array will be ``[65,75,85,...]``.
+                      No checks are done on duplicate elements
+                      or on the ordering, but anyway this array should be
+                      sorted in ascending order, without duplicate elements.
+                      (If not specified, stepids will be set to ``numpy.arange(s)``
+                      by default) It is internally stored as an array named 'steps'.
+        :param cells: if specified float array with dimension
+                      :math:`s \times 3 \times 3`, where ``s`` is the
+                      length of the ``stepids`` array. Units are angstrom.
+                      In particular, ``cells[i,j,k]`` is the ``k``-th component
+                      of the ``j``-th cell vector at the time step with index
+                      ``i`` (identified by step number ``stepid[i]`` and with
+                      timestamp ``times[i]``).
         :param times: if specified, float array with dimension ``s``, where
                       ``s`` is the length of the ``stepids`` array. Contains the
                       timestamp of each step in picoseconds (ps).

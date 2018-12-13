@@ -28,6 +28,9 @@ class BackendQueryBuilder(object):
     # pylint: disable=invalid-name, too-many-public-methods
 
     def __init__(self, backend):
+        """
+        :param backend: the backend
+        """
         from . import backends
         type_check(backend, backends.Backend)
         self._backend = backend

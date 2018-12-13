@@ -31,7 +31,9 @@ def get_workflow_list(pk_list=tuple(), user=None, all_states=False, n_days_ago=N
       workflows started up to this number of days ago
     """
     from aiida.backends.djsite.db.models import DbWorkflow
-    from aiida.orm.implementation.django import convert
+    from aiida.manage import get_manager
+
+    backend = get_manager().get_backend()
 
     if pk_list:
         filters = Q(pk__in=pk_list)
@@ -45,4 +47,4 @@ def get_workflow_list(pk_list=tuple(), user=None, all_states=False, n_days_ago=N
             filters &= Q(ctime__gte=time)
 
     wf_list = DbWorkflow.objects.filter(filters).order_by('ctime')  # pylint: disable=no-member
-    return [convert.get_backend_entity(wf, None) for wf in wf_list]
+    return [backend.get_backend_entity(wf) for wf in wf_list]

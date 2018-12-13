@@ -28,7 +28,9 @@ def get_workflow_list(pk_list=tuple(), user=None, all_states=False, n_days_ago=N
     """
     from aiida.backends.sqlalchemy.models.workflow import DbWorkflow
     from aiida.common.datastructures import wf_states
-    from aiida.orm.implementation.sqlalchemy import convert
+    from aiida.manage import get_manager
+
+    backend = get_manager().get_backend()
 
     if pk_list:
         query = DbWorkflow.query.filter(DbWorkflow.id.in_(pk_list))
@@ -42,4 +44,4 @@ def get_workflow_list(pk_list=tuple(), user=None, all_states=False, n_days_ago=N
             time = timezone.now() - datetime.timedelta(days=n_days_ago)
             query = query.filter(DbWorkflow.ctime >= time)
 
-    return [convert.get_backend_entity(wf, None) for wf in query.distinct().order_by('ctime')]
+    return [backend.get_backend_entity(wf) for wf in query.distinct().order_by('ctime')]

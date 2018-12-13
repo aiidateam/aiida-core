@@ -34,6 +34,10 @@ class TestMigrations(AiidaTestCase):
 
     def setUp(self):
         """Go to a specific schema version before running tests."""
+        from aiida.orm import autogroup
+
+        self.current_autogroup = autogroup.current_autogroup
+        autogroup.current_autogroup = None
         assert self.migrate_from and self.migrate_to, \
             "TestCase '{}' must define migrate_from and migrate_to properties".format(type(self).__name__)
         self.migrate_from = [(self.app, self.migrate_from)]
@@ -60,7 +64,10 @@ class TestMigrations(AiidaTestCase):
 
     def tearDown(self):
         """At the end make sure we go back to the latest schema version."""
+        from aiida.orm import autogroup
         self._revert_database_schema()
+        autogroup.current_autogroup = self.current_autogroup
+        
 
     def setUpBeforeMigration(self, apps):
         """
@@ -172,14 +179,65 @@ class TestUuidMigration(TestMigrations):
         n = load_node(self.node_id)
         self.assertEqual(self.node_uuid, n.uuid)
 
+class TestGroupRenamingMigration(TestMigrations):
+
+    migrate_from = '0021_dbgroup_name_to_label_type_to_type_string'
+    migrate_to = '0022_dbgroup_type_string_change_content'
+
+    def setUpBeforeMigration(self, apps):
+        from aiida.orm import Node
+
+        # Create group
+        DbGroup = apps.get_model('db', 'DbGroup')
+        default_user = self.backend.users.create("{}@aiida.net".format(self.id())).store()
+
+        # test user group type_string: '' -> 'user'
+        group_user = DbGroup(label='test_user_group', user_id = default_user.id, type_string='')
+        group_user.save()
+        self.group_user_pk = group_user.pk
+
+        # test data.upf group type_string: 'data.upf.family' -> 'data.upf'
+        group_data_upf = DbGroup(label='test_data_upf_group', user_id = default_user.id, type_string='data.upf.family')
+        group_data_upf.save()
+        self.group_data_upf_pk = group_data_upf.pk
+
+        # test auto.import group type_string: 'aiida.import' -> 'auto.import'
+        group_autoimport = DbGroup(label='test_import_group', user_id = default_user.id, type_string='aiida.import')
+        group_autoimport.save()
+        self.group_autoimport_pk = group_autoimport.pk
+
+        # test auto.run group type_string: 'autogroup.run' -> 'auto.run'
+        group_autorun = DbGroup(label='test_autorun_group', user_id = default_user.id, type_string='autogroup.run')
+        group_autorun.save()
+        self.group_autorun_pk = group_autorun.pk
+
+
+    def test_group_string_update(self):
+        from aiida.backends.djsite.db.models import DbGroup
+
+        # test user group type_string: '' -> 'user'
+        group_user = DbGroup.objects.get(pk = self.group_user_pk)
+        self.assertEqual(group_user.type_string, 'user')
+
+        # test data.upf group type_string: 'data.upf.family' -> 'data.upf'
+        group_data_upf = DbGroup.objects.get(pk = self.group_data_upf_pk)
+        self.assertEqual(group_data_upf.type_string, 'data.upf')
+
+        # test auto.import group type_string: 'aiida.import' -> 'auto.import'
+        group_autoimport = DbGroup.objects.get(pk = self.group_autoimport_pk)
+        self.assertEqual(group_autoimport.type_string, 'auto.import')
+
+        # test auto.run group type_string: 'autogroup.run' -> 'auto.run'
+        group_autorun = DbGroup.objects.get(pk = self.group_autorun_pk)
+        self.assertEqual(group_autorun.type_string, 'auto.run')
 
 class TestNoMigrations(AiidaTestCase):
 
     def test_no_remaining_migrations(self):
         """Verify that no django migrations remain.
 
-        Equivalent to python manage.py makemigrations --check
-        """
+        Equivalent to python manage.py makemigrations --check"""
+
         from django.core.management import call_command
 
         # Raises SystemExit, if migrations remain

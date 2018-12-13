@@ -15,11 +15,12 @@ import six
 
 from aiida.utils import timezone
 from aiida.common.exceptions import ValidationError, MissingPluginError
+from aiida.orm import GroupTypeString
 
 
 current_autogroup = None
 
-VERDIAUTOGROUP_TYPE = 'autogroup.run'
+VERDIAUTOGROUP_TYPE = GroupTypeString.VERDIAUTOGROUP_TYPE
 
 # TODO: make the Autogroup usable to the user, and not only to the verdi run
 
@@ -71,9 +72,7 @@ class Autogroup(object):
         return the_param
 
     def get_exclude(self):
-        """
-        Return the list of classes to exclude from autogrouping
-        """
+        """Return the list of classes to exclude from autogrouping."""
         try:
             return self.exclude
         except AttributeError:
@@ -90,29 +89,23 @@ class Autogroup(object):
             return []
 
     def get_include(self):
-        """
-        Return the list of classes to include in the autogrouping
-        """
+        """Return the list of classes to include in the autogrouping."""
         try:
             return self.include
         except AttributeError:
             return []
 
     def get_include_with_subclasses(self):
-        """
-        Return the list of classes to include in the autogrouping.
-        Will also include their derived subclasses
-        """
+        """Return the list of classes to include in the autogrouping.
+        Will also include their derived subclasses."""
         try:
             return self.include_with_subclasses
         except AttributeError:
             return []
 
     def get_group_name(self):
-        """
-        Get the name of the group.
-        If no group name was set, it will set a default one by itself.
-        """
+        """Get the name of the group.
+        If no group name was set, it will set a default one by itself."""
         try:
             return self.group_name
         except AttributeError:
@@ -122,9 +115,7 @@ class Autogroup(object):
             return self.group_name
 
     def set_exclude(self, exclude):
-        """
-        Return the list of classes to exclude from autogrouping.
-        """
+        """Return the list of classes to exclude from autogrouping."""
         the_exclude_classes = self._validate(exclude)
         if self.get_include() is not None:
             if 'all.' in self.get_include():

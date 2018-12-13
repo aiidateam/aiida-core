@@ -12,43 +12,40 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+from enum import Enum
 from aiida.common import exceptions
+from aiida.common.exceptions import ValidationError
 from aiida.common.utils import type_check
+from aiida.cmdline.utils import echo
 from aiida.manage import get_manager
 
 from . import convert
 from . import entities
 from . import users
 
-__all__ = ('Group',)
+__all__ = ('Group', 'GroupTypeString')
 
 
-def get_group_type_mapping():
-    """
-    Return a dictionary with ``{short_name: proper_long_name_in_DB}`` format,
-    where ``short_name`` is the name to use on the command line, while
-    ``proper_long_name_in_DB`` is the string stored in the ``type`` field of the
-    DbGroup table.
+class GroupTypeString(Enum):
+    """A simple enum of allowed group type strings."""
 
-    It is defined as a function so that the import statements are confined
-    inside here.
-    """
-    from aiida.orm.data.upf import UPFGROUP_TYPE
-    from aiida.orm.autogroup import VERDIAUTOGROUP_TYPE
-    from aiida.orm.importexport import IMPORTGROUP_TYPE
+    UPFGROUP_TYPE = 'data.upf'
+    IMPORTGROUP_TYPE = 'auto.import'
+    VERDIAUTOGROUP_TYPE = 'auto.run'
+    USER = 'user'
 
-    return {'data.upf': UPFGROUP_TYPE, 'import': IMPORTGROUP_TYPE, 'autogroup.run': VERDIAUTOGROUP_TYPE}
+
+# pylint: disable=invalid-name
+system_type = type
 
 
 class Group(entities.Entity):
-    """
-    An AiiDA ORM implementation of group of nodes.
-    """
+    """An AiiDA ORM implementation of group of nodes."""
 
     class Collection(entities.Collection):
         """Collection of Groups"""
 
-        def get_or_create(self, name, **kwargs):
+        def get_or_create(self, label=None, **kwargs):
             """
             Try to retrieve a group from the DB with the given arguments;
             create (and store) a new group if such a group was not present yet.
@@ -56,102 +53,38 @@ class Group(entities.Entity):
             :return: (group, created) where group is the group (new or existing,
               in any case already stored) and created is a boolean saying
             """
-            filters = {'name': name}
+            if 'name' in kwargs:
+                import warnings
+                # pylint: disable=redefined-builtin
+                from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning
+                label = kwargs.pop('name')
+                warnings.warn('name is deprecated, use label instead', DeprecationWarning)  # pylint: disable=no-member
+            if 'type' in kwargs:
+                import warnings
+                # pylint: disable=redefined-builtin
+                from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning
+                kwargs['type_string'] = kwargs.pop('type')
+                warnings.warn('type is deprecated, use type_string instead', DeprecationWarning)  # pylint: disable=no-member
+            if not label:
+                echo.echo_critical("Group label must be provided")
+
+            filters = {'label': label}
+
             if 'type_string' in kwargs:
-                filters['type_string'] = kwargs['type_string']
+                if isinstance(kwargs['type_string'], GroupTypeString):
+                    filters['type_string'] = kwargs['type_string'].value
+                else:
+                    raise ValidationError("type_string must be {}, you provided an object of type "
+                                          "{}".format(GroupTypeString, type(kwargs['type_string'])))
+
             res = self.find(filters=filters)
 
             if not res:
-                return Group(name, backend=self.backend, **kwargs).store(), True
+                return Group(label, backend=self.backend, **kwargs).store(), True
             elif len(res) > 1:
                 raise exceptions.MultipleObjectsError("More than one groups found in the database")
             else:
                 return res[0], False
-
-        def group_query(self,
-                        name=None,
-                        type_string='',
-                        id=None,
-                        uuid=None,
-                        nodes=None,
-                        user=None,
-                        node_attributes=None,
-                        past_days=None,
-                        **kwargs):  # pylint: disable=too-many-arguments, redefined-builtin, invalid-name
-            """
-            Query for groups.
-
-            :note: By default, query for user-defined groups only (type_string=="").
-                If you want to query for all type of groups, pass type_string=None.
-                If you want to query for a specific type of groups, pass a specific
-                string as the type_string argument.
-
-            :param name: the name of the group
-            :param nodes: a node or list of nodes that belongs to the group (alternatively,
-                you can also pass a DbNode or list of DbNodes)
-            :param id: the pk of the group
-            :param uuid: the uuid of the group
-            :param type_string: the string for the type of node; by default, look
-                only for user-defined groups (see note above).
-            :param user: by default, query for groups of all users; if specified,
-                must be a DbUser object, or a string for the user email.
-            :param past_days: by default, query for all groups; if specified, query
-                the groups created in the last past_days. Must be a datetime object.
-            :param node_attributes: if not None, must be a dictionary with
-                format {k: v}. It will filter and return only groups where there
-                is at least a node with an attribute with key=k and value=v.
-                Different keys of the dictionary are joined with AND (that is, the
-                group should satisfy all requirements.
-                v can be a base data type (str, bool, int, float, ...)
-                If it is a list or iterable, that the condition is checked so that
-                there should be at least a node in the group with key=k and
-                value=each of the values of the iterable.
-            :param kwargs: any other filter to be passed to DbGroup.objects.filter
-
-                Example: if ``node_attributes = {'elements': ['Ba', 'Ti'], 'md5sum': 'xxx'}``,
-                    it will find groups that contain the node with md5sum = 'xxx', and moreover
-                    contain at least one node for element 'Ba' and one node for element 'Ti'.
-
-            """
-            # Put everything in the kwargs
-            # Two warninigs:
-            #   1. Make sure to change the key if the variable name gets changed!
-            #   2. These are assuming that if the default gets passed in then that means the user didn't
-            #      specify it.  This a) precludes actually checking for something _being_ the whatever the
-            #      default is, and, b) means that we need to make the right check e.g. 'is not None' or is 'is'
-            #      depending on the type  (usually strings vs objects)
-            if name:
-                kwargs['name'] = name
-            if type_string:
-                kwargs['type_string'] = type_string
-            if id is not None:
-                kwargs['id'] = id
-            if uuid is not None:
-                kwargs['uuid'] = uuid
-            if nodes:
-                kwargs['nodes'] = nodes
-            if user is not None:
-                type_check(user, users.User)
-                kwargs['user'] = user.backend_entity
-            if node_attributes is not None:
-                kwargs['node_attributes'] = node_attributes
-            if past_days is not None:
-                kwargs['past_days'] = past_days
-
-            return [Group.from_backend_entity(group) for group in self._backend.groups.query(**kwargs)]
-
-        def find(self, filters=None, order_by=None, limit=None):
-            """Custom find method for Group to correctly map to backend type_string"""
-            # We need to map type_string to type for now because the underlying ORM model
-            # for the current backends uses 'type' as the column name instead of type_string
-            # A better way to deal with this would be to implement a general way for the query builder
-            # to ask the backend class what the mapping between the attribute name and the column name
-            # should be.  Probably in the get_column() method...but this requires a bit more thought
-            if filters and 'type_string' in filters:
-                assert 'type' not in filters, "Can't supply type and type_string"
-                filters['type'] = filters.pop('type_string')
-
-            return super(Group.Collection, self).find(filters=filters, order_by=order_by, limit=limit)
 
         def delete(self, id):  # pylint: disable=invalid-name, redefined-builtin
             """
@@ -161,7 +94,15 @@ class Group(entities.Entity):
             """
             self._backend.groups.delete(id)
 
-    def __init__(self, name, user=None, description='', type_string='', backend=None):
+    # pylint: disable=too-many-arguments, redefined-builtin
+    def __init__(self,
+                 label=None,
+                 user=None,
+                 description='',
+                 type_string=GroupTypeString.USER,
+                 backend=None,
+                 name=None,
+                 type=None):
         """
         Create a new group. Either pass a dbgroup parameter, to reload
         ad group from the DB (and then, no further parameters are allowed),
@@ -169,18 +110,38 @@ class Group(entities.Entity):
 
         :param dbgroup: the dbgroup object, if you want to reload the group
             from the DB rather than creating a new one.
-        :param name: The group name, required on creation
+        :param label: The group label, required on creation
         :param description: The group description (by default, an empty string)
         :param user: The owner of the group (by default, the automatic user)
         :param type_string: a string identifying the type of group (by default,
             an empty string, indicating an user-defined group.
         """
+        if name:
+            import warnings
+            # pylint: disable=redefined-builtin
+            from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning
+            label = name
+            warnings.warn('name is deprecated, use label instead', DeprecationWarning)  # pylint: disable=no-member
+        if type:
+            import warnings
+            # pylint: disable=redefined-builtin
+            from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning
+            type_string = type
+            warnings.warn('type is deprecated, use type_string instead', DeprecationWarning)  # pylint: disable=no-member
+        if not label:
+            echo.echo_critical("Group label must be provided")
+
+        # Check that chosen type_string is allowed
+        if not isinstance(type_string, GroupTypeString):
+            raise ValidationError("type_string must be {}, you provided an object of type "
+                                  "{}".format(GroupTypeString, system_type(type_string)))
+
         backend = backend or get_manager().get_backend()
         user = user or users.User.objects(backend).get_default()
         type_check(user, users.User)
 
         model = backend.groups.create(
-            name=name, user=user.backend_entity, description=description, type_string=type_string)
+            label=label, user=user.backend_entity, description=description, type_string=type_string.value)
         super(Group, self).__init__(model)
 
     def __repr__(self):
@@ -188,28 +149,55 @@ class Group(entities.Entity):
 
     def __str__(self):
         if self.type_string:
-            return '"{}" [type {}], of user {}'.format(self.name, self.type_string, self.user.email)
+            return '"{}" [type {}], of user {}'.format(self.label, self.type_string, self.user.email)
 
-        return '"{}" [user-defined], of user {}'.format(self.name, self.user.email)
+        return '"{}" [user-defined], of user {}'.format(self.label, self.user.email)
+
+    @property
+    def label(self):
+        """
+        :return: the label of the group as a string
+        """
+        return self._backend_entity.label
 
     @property
     def name(self):
         """
-        :return: the name of the group as a string
+        :return: the label of the group as a string
         """
-        return self._backend_entity.name
+        import warnings
+        # pylint: disable=redefined-builtin
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning
+        warnings.warn('name is deprecated, use label instead', DeprecationWarning)  # pylint: disable=no-member
+        return self._backend_entity.label
+
+    @label.setter
+    def label(self, label):
+        """
+        Attempt to change the label of the group instance. If the group is already stored
+        and the another group of the same type already exists with the desired label, a
+        UniquenessError will be raised
+
+        :param label: the new group label
+        :raises UniquenessError: if another group of same type and label already exists
+        """
+        self._backend_entity.label = label
 
     @name.setter
     def name(self, name):
         """
-        Attempt to change the name of the group instance. If the group is already stored
-        and the another group of the same type already exists with the desired name, a
+        Attempt to change the label of the group instance. If the group is already stored
+        and the another group of the same type already exists with the desired label, a
         UniquenessError will be raised
 
-        :param name: the new group name
-        :raises UniquenessError: if another group of same type and name already exists
+        :param label: the new group label
+        :raises UniquenessError: if another group of same type and label already exists
         """
-        self._backend_entity.name = name
+        import warnings
+        # pylint: disable=redefined-builtin
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning
+        warnings.warn('name is deprecated, use label instead', DeprecationWarning)  # pylint: disable=no-member
+        self._backend_entity.label = name
 
     @property
     def description(self):
@@ -224,6 +212,17 @@ class Group(entities.Entity):
         :return: the description of the group as a string
         """
         self._backend_entity.description = description
+
+    @property
+    def type(self):
+        """
+        :return: the string defining the type of the group
+        """
+        import warnings
+        # pylint: disable=redefined-builtin
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning
+        warnings.warn('type is deprecated, use type_string instead', DeprecationWarning)  # pylint: disable=no-member
+        return self._backend_entity.type_string
 
     @property
     def type_string(self):
@@ -295,12 +294,40 @@ class Group(entities.Entity):
         :return: the group
         :rtype: :class:`aiida.orm.Group`
         """
-        results = cls.query(**kwargs)
+        from aiida.orm import QueryBuilder
+
+        if 'name' in kwargs:
+            import warnings
+            # pylint: disable=redefined-builtin
+            from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning
+            kwargs['label'] = kwargs.pop('name')
+            warnings.warn('name is deprecated, use label instead', DeprecationWarning)  # pylint: disable=no-member
+        if 'type' in kwargs:
+            import warnings
+            # pylint: disable=redefined-builtin
+            from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning
+            kwargs['type_string'] = kwargs.pop('type')
+            warnings.warn('type is deprecated, use type_string instead', DeprecationWarning)  # pylint: disable=no-member
+
+        filters = {}
+        if 'type_string' in kwargs:
+            if isinstance(kwargs['type_string'], GroupTypeString):
+                filters['type_string'] = kwargs.pop('type_string').value
+            else:
+                raise ValidationError("type_string must be {}, you provided an object of type "
+                                      "{}".format(GroupTypeString, type(kwargs['type_string'])))
+
+        query = QueryBuilder()
+        for key, val in kwargs.items():
+            filters[key] = val
+
+        query.append(cls, filters=filters)
+        results = query.all()
         if len(results) > 1:
             raise exceptions.MultipleObjectsError("Found {} groups matching criteria '{}'".format(len(results), kwargs))
         if not results:
             raise exceptions.NotExistent("No group found matching criteria '{}'".format(kwargs))
-        return results[0]
+        return results[0][0]
 
     @classmethod
     def get_or_create(cls, backend=None, **kwargs):
@@ -319,99 +346,41 @@ class Group(entities.Entity):
         return cls.objects(backend).get_or_create(**kwargs)
 
     @classmethod
-    def query(cls,
-              name=None,
-              type_string="",
-              id=None,
-              uuid=None,
-              nodes=None,
-              user=None,
-              node_attributes=None,
-              past_days=None,
-              backend=None,
-              **kwargs):  # pylint: disable=too-many-arguments, redefined-builtin, invalid-name
-        """
-        Query for groups.
-
-        :note: By default, query for user-defined groups only (type_string=="").
-            If you want to query for all type of groups, pass type_string=None.
-            If you want to query for a specific type of groups, pass a specific
-            string as the type_string argument.
-
-        :param name: the name of the group
-        :param nodes: a node or list of nodes that belongs to the group (alternatively,
-            you can also pass a DbNode or list of DbNodes)
-        :param id: the pk of the group
-        :param uuid: the uuid of the group
-        :param type_string: the string for the type of node; by default, look
-            only for user-defined groups (see note above).
-        :param user: by default, query for groups of all users; if specified,
-            must be a DbUser object, or a string for the user email.
-        :param past_days: by default, query for all groups; if specified, query
-            the groups created in the last past_days. Must be a datetime object.
-        :param node_attributes: if not None, must be a dictionary with
-            format {k: v}. It will filter and return only groups where there
-            is at least a node with an attribute with key=k and value=v.
-            Different keys of the dictionary are joined with AND (that is, the
-            group should satisfy all requirements.
-            v can be a base data type (str, bool, int, float, ...)
-            If it is a list or iterable, that the condition is checked so that
-            there should be at least a node in the group with key=k and
-            value=each of the values of the iterable.
-        :param backend: the backend to query
-        :param kwargs: any other filter to be passed to DbGroup.objects.filter
-
-            Example: if ``node_attributes = {'elements': ['Ba', 'Ti'], 'md5sum': 'xxx'}``,
-                it will find groups that contain the node with md5sum = 'xxx', and moreover
-                contain at least one node for element 'Ba' and one node for element 'Ti'.
-
-        """
-        return cls.objects(backend).group_query(
-            name=name,
-            type_string=type_string,
-            id=id,
-            uuid=uuid,
-            nodes=nodes,
-            user=user,
-            node_attributes=node_attributes,
-            past_days=past_days,
-            **kwargs)
-
-    @classmethod
     def get_from_string(cls, string):
         """
         Get a group from a string.
-        If only the name is provided, without colons,
+        If only the label is provided, without colons,
         only user-defined groups are searched;
-        add ':type_str' after the group name to choose also
+        add ':type_str' after the group label to choose also
         the type of the group equal to 'type_str'
         (e.g. 'data.upf', 'import', etc.)
 
         :raise ValueError: if the group type does not exist.
         :raise NotExistent: if the group is not found.
         """
-        name, sep, typestr = string.rpartition(':')
+        import warnings
+        # pylint: disable=redefined-builtin
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning
+        warnings.warn('get_from_string() is deprecated, use get() instead', DeprecationWarning)  # pylint: disable=no-member
+        label, sep, typestr = string.rpartition(':')
         if not sep:
-            name = typestr
-            typestr = ""
-        if typestr:
-            try:
-                internal_type_string = get_group_type_mapping()[typestr]
-            except KeyError:
-                msg = ("Invalid group type '{}'. Valid group types are: "
-                       "{}".format(typestr, ",".join(sorted(get_group_type_mapping().keys()))))
-                raise ValueError(msg)
-        else:
-            internal_type_string = ""
+            label = typestr
+            typestr = GroupTypeString.USER
+        try:
+            internal_type_string = GroupTypeString(typestr)
+        except ValueError:
+            msg = ("Invalid group type '{}'. Valid group types are: "
+                   "{}".format(typestr, ', '.join([i.value for i in GroupTypeString])))
+            raise ValueError(msg)
 
         try:
-            group = cls.get(name=name, type_string=internal_type_string)
+            group = cls.get(label=label, type_string=internal_type_string)
             return group
         except exceptions.NotExistent:
             if typestr:
-                msg = ("No group of type '{}' with name '{}' " "found.".format(typestr, name))
+                msg = ("No group of type '{}' with label '{}' " "found.".format(typestr, label))
             else:
-                msg = ("No user-defined group with name '{}' " "found.".format(name))
+                msg = ("No user-defined group with label '{}' " "found.".format(label))
 
             raise exceptions.NotExistent(msg)
 
@@ -445,14 +414,14 @@ class Group(entities.Entity):
                 "is_foreign_key": False,
                 "type": "int"
             },
-            "name": {
-                "display_name": "Name",
+            "label": {
+                "display_name": "Label",
                 "help_text": "Name of the object",
                 "is_foreign_key": False,
                 "type": "str"
             },
-            "type": {
-                "display_name": "Type",
+            "type_string": {
+                "display_name": "Type_string",
                 "help_text": "Code type",
                 "is_foreign_key": False,
                 "type": "str"

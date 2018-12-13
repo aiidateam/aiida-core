@@ -17,9 +17,9 @@ import click
 
 from aiida.common.exceptions import UniquenessError
 from aiida.cmdline.commands.cmd_verdi import verdi
+from aiida.cmdline.params import options, arguments, types
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
-from aiida.cmdline.params import options, arguments
 
 
 @verdi.group('group')
@@ -29,37 +29,34 @@ def verdi_group():
 
 
 @verdi_group.command("removenodes")
-@options.GROUP()
+@options.GROUP(required=True)
 @arguments.NODES()
 @options.FORCE(help="Force to remove the nodes from group.")
 @with_dbenv()
 def group_removenodes(group, nodes, force):
-    """
-    Remove NODES from a given AiiDA group.
-    """
+    """Remove NODES from a given AiiDA group."""
+
     if not force:
         click.confirm(
             "Are you sure to remove {} nodes from the group with PK = {} "
-            "({})?".format(len(nodes), group.pk, group.name),
+            "({})?".format(len(nodes), group.id, group.label),
             abort=True)
 
     group.remove_nodes(nodes)
 
 
 @verdi_group.command("addnodes")
-@options.GROUP()
+@options.GROUP(required=True)
 @options.FORCE(help="Force to add nodes in the group.")
 @arguments.NODES()
 @with_dbenv()
 def group_addnodes(group, force, nodes):
-    """
-    Add NODES to a given AiiDA group.
-    """
+    """Add NODES to a given AiiDA group."""
 
     if not force:
         click.confirm(
             "Are you sure to add {} nodes the group with PK = {} "
-            "({})?".format(len(nodes), group.pk, group.name),
+            "({})?".format(len(nodes), group.id, group.label),
             abort=True)
 
     group.add_nodes(nodes)
@@ -76,33 +73,30 @@ def group_delete(group, force):
     Pass the GROUP to delete an existing group.
     """
     from aiida import orm
-    group_pk = group.pk
-    group_name = group.name
+    group_id = group.id
+    group_label = group.label
 
     num_nodes = len(group.nodes)
     if num_nodes > 0 and not force:
         echo.echo_critical(("Group '{}' is not empty (it contains {} "
                             "nodes). Pass the -f option if you really want to delete "
-                            "it.".format(group_name, num_nodes)))
+                            "it.".format(group_label, num_nodes)))
 
     if not force:
-        click.confirm('Are you sure to kill the group with PK = {} ({})?'.format(group_pk, group_name), abort=True)
+        click.confirm('Are you sure to kill the group with PK = {} ({})?'.format(group_id, group_label), abort=True)
 
-    orm.Group.objects.delete(group_pk)
-    echo.echo_success("Group '{}' (PK={}) deleted.".format(group_name, group_pk))
+    orm.Group.objects.delete(group_id)
+    echo.echo_success("Group '{}' (PK={}) deleted.".format(group_label, group_id))
 
 
 @verdi_group.command("rename")
 @arguments.GROUP()
-@click.argument("name", nargs=1, type=click.STRING)
+@click.argument("label", nargs=1, type=click.STRING)
 @with_dbenv()
-def group_rename(group, name):
-    """
-    Rename an existing group. Pass the GROUP for which you want to rename and its
-    new NAME.
-    """
+def group_rename(group, label):
+    """Rename an existing group. Pass the GROUP which you want to rename and its new LABEL."""
     try:
-        group.name = name
+        group.label = label
     except UniquenessError as exception:
         echo.echo_critical("Error: {}.".format(exception))
     else:
@@ -134,9 +128,7 @@ def group_description(group, description):
 @arguments.GROUP()
 @with_dbenv()
 def group_show(group, raw, uuid):
-    """
-    Show information on a given group. Pass the GROUP as a parameter.
-    """
+    """Show information on a given group. Pass the GROUP as a parameter."""
 
     from aiida.common.utils import str_timedelta
     from aiida.utils import timezone
@@ -154,8 +146,8 @@ def group_show(group, raw, uuid):
         now = timezone.now()
 
         table = []
-        table.append(["Group name", group.name])
-        table.append(["Group type", type_string if type_string else "<user-defined>"])
+        table.append(["Group label", group.label])
+        table.append(["Group type_string", type_string])
         table.append(["Group description", desc if desc else "<no description>"])
         echo.echo(tabulate(table))
 
@@ -176,6 +168,18 @@ def group_show(group, raw, uuid):
         echo.echo(tabulate(table, headers=header))
 
 
+@with_dbenv()
+def valid_group_type_strings():
+    from aiida.orm import GroupTypeString
+    return tuple(i.value for i in GroupTypeString)
+
+
+@with_dbenv()
+def user_defined_group():
+    from aiida.orm import GroupTypeString
+    return GroupTypeString.USER.value
+
+
 # pylint: disable=too-many-arguments, too-many-locals
 @verdi_group.command("list")
 @options.ALL_USERS(help="Show groups for all users, rather than only for the current user")
@@ -185,12 +189,15 @@ def group_show(group, raw, uuid):
     'user_email',
     type=click.STRING,
     help="Add a filter to show only groups belonging to a specific user")
+@click.option('-a', '--all-types', is_flag=True, default=False, help="Show groups of all types")
 @click.option(
     '-t',
     '--type',
     'group_type',
-    type=click.STRING,
-    help="Show groups of a specific type, instead of user-defined groups")
+    type=types.LazyChoice(valid_group_type_strings),
+    default=user_defined_group,
+    help="Show groups of a specific type, instead of user-defined groups. Start with semicolumn if you want to "
+    "specify aiida-internal type")
 @click.option(
     '-d', '--with-description', 'with_description', is_flag=True, default=False, help="Show also the group description")
 @click.option('-C', '--count', is_flag=True, default=False, help="Show also the number of nodes in the group")
@@ -215,62 +222,72 @@ def group_show(group, raw, uuid):
     help="add a filter to show only groups for which the name contains STRING")
 @options.NODE(help="Show only the groups that contain the node")
 @with_dbenv()
-def group_list(all_users, user_email, group_type, with_description, count, past_days, startswith, endswith, contains,
-               node):
-    """
-    List AiiDA user-defined groups.
-    """
+def group_list(all_users, user_email, all_types, group_type, with_description, count, past_days, startswith, endswith,
+               contains, node):
+    # pylint: disable=too-many-branches
+    """Show a list of groups."""
     import datetime
+    from aiida.common.utils import escape_for_sql_like
     from aiida.utils import timezone
-    from aiida.orm.groups import get_group_type_mapping
+    from aiida.orm import Group
+    from aiida.orm import QueryBuilder
+    from aiida.orm import User
     from aiida import orm
     from tabulate import tabulate
 
-    if all_users and user_email is not None:
-        echo.echo_critical("argument -A/--all-users: not allowed with argument -u/--user")
+    query = QueryBuilder()
+    filters = {}
 
-    if all_users:
-        user = None
-    else:
-        if user_email:
-            user = user_email
-        else:
-            # By default: only groups of this user
-            user = orm.User.objects.get_default()
+    # Specify group types
+    if not all_types:
+        filters = {'type_string': {'==': group_type}}
 
-    type_string = ""
-    if group_type is not None:
-        try:
-            type_string = get_group_type_mapping()[group_type]
-        except KeyError:
-            echo.echo_critical("Invalid group type. Valid group types are: {}".format(",".join(
-                sorted(get_group_type_mapping().keys()))))
-
-    n_days_ago = None
+    # Creation time
     if past_days:
-        n_days_ago = (timezone.now() - datetime.timedelta(days=past_days))
+        filters['time'] = {'>': timezone.now() - datetime.timedelta(days=past_days)}
 
-    name_filters = {'startswith': startswith, 'endswith': endswith, 'contains': contains}
+    # Query for specific group names
+    filters['or'] = []
+    if startswith:
+        filters['or'].append({'label': {'like': '{}%'.format(escape_for_sql_like(startswith))}})
+    if endswith:
+        filters['or'].append({'label': {'like': '%{}'.format(escape_for_sql_like(endswith))}})
+    if contains:
+        filters['or'].append({'label': {'like': '%{}%'.format(escape_for_sql_like(contains))}})
 
-    # Depending on --nodes option use or not key "nodes"
+    query.append(Group, filters=filters, tag='group', project='*')
 
-    if node:
-        result = orm.Group.query(
-            user=user, type_string=type_string, nodes=node, past_days=n_days_ago, name_filters=name_filters)
+    # Query groups that belong to specific user
+    if user_email:
+        user = user_email
     else:
-        result = orm.Group.query(user=user, type_string=type_string, past_days=n_days_ago, name_filters=name_filters)
+        # By default: only groups of this user
+        user = orm.User.objects.get_default().email
+
+    # Query groups that belong to all users
+    if not all_users:
+        query.append(User, filters={'email': {'==': user}}, with_group='group')
+
+    # Query groups that contain a particular node
+    if node:
+        from aiida.orm import Node
+        query.append(Node, filters={'id': {'==': node.id}}, with_group='group')
+
+    query.order_by({Group: {'id': 'asc'}})
+    result = query.all()
 
     projection_lambdas = {
         'pk': lambda group: str(group.pk),
-        'name': lambda group: group.name,
+        'label': lambda group: group.label,
+        'type_string': lambda group: group.type_string,
         'count': lambda group: len(group.nodes),
         'user': lambda group: group.user.email.strip(),
         'description': lambda group: group.description
     }
 
     table = []
-    projection_header = ['PK', 'Name', 'User']
-    projection_fields = ['pk', 'name', 'user']
+    projection_header = ['PK', 'Label', 'Type string', 'User']
+    projection_fields = ['pk', 'label', 'type_string', 'user']
 
     if with_description:
         projection_header.append('Description')
@@ -281,23 +298,43 @@ def group_list(all_users, user_email, group_type, with_description, count, past_
         projection_fields.append('count')
 
     for group in result:
-        table.append([projection_lambdas[field](group) for field in projection_fields])
+        table.append([projection_lambdas[field](group[0]) for field in projection_fields])
 
+    if not all_types:
+        echo.echo_info("If you want to see the groups of all types, please add -a/--all-types option")
     echo.echo(tabulate(table, headers=projection_header))
 
 
 @verdi_group.command("create")
-@click.argument('group_name', nargs=1, type=click.STRING)
+@click.argument('group_label', nargs=1, type=click.STRING)
 @with_dbenv()
-def group_create(group_name):
-    """
-    Create a new empty group with the name GROUP_NAME
-    """
+def group_create(group_label):
+    """Create a new empty group with the name GROUP_NAME."""
     from aiida import orm
+    from aiida.orm import GroupTypeString
 
-    group, created = orm.Group.objects.get_or_create(name=group_name)
+    group, created = orm.Group.objects.get_or_create(label=group_label, type_string=GroupTypeString.USER)
 
     if created:
-        echo.echo_success("Group created with PK = {} and name '{}'".format(group.pk, group.name))
+        echo.echo_success("Group created with PK = {} and name '{}'".format(group.id, group.label))
     else:
-        echo.echo_info("Group '{}' already exists, PK = {}".format(group.name, group.pk))
+        echo.echo_info("Group '{}' already exists, PK = {}".format(group.label, group.id))
+
+
+@verdi_group.command("copy")
+@arguments.GROUP('source_group')
+@click.argument('destination_group', nargs=1, type=click.STRING)
+@with_dbenv()
+def group_copy(source_group, destination_group):
+    """Add all nodes that belong to source group to the destination group (which may or may not exist)."""
+    from aiida import orm
+    from aiida.orm import GroupTypeString
+
+    dest_group = orm.Group.objects.get_or_create(
+        label=destination_group, type_string=GroupTypeString(source_group.type_string))[0]
+    try:
+        dest_group.add_nodes(source_group.nodes)
+        echo.echo_success("Nodes were succesfully copied from the group <{}> to the group "
+                          "<{}>".format(source_group, destination_group))
+    except:
+        raise

@@ -48,7 +48,7 @@ class TestSerialize(AiidaTestCase):
         Also make sure that the serialized data is json-serializable
         """
         group_name = 'groupie'
-        group_a = orm.Group(name=group_name).store()
+        group_a = orm.Group(label=group_name).store()
 
         data = {'group': group_a}
 
@@ -56,7 +56,7 @@ class TestSerialize(AiidaTestCase):
         deserialized_data = serialize.deserialize(serialized_data)
 
         self.assertEqual(data['group'].uuid, deserialized_data['group'].uuid)
-        self.assertEqual(data['group'].name, deserialized_data['group'].name)
+        self.assertEqual(data['group'].label, deserialized_data['group'].label)
 
     def test_serialize_node_round_trip(self):
         """Test you can serialize and deserialize a node"""
@@ -66,11 +66,11 @@ class TestSerialize(AiidaTestCase):
 
     def test_serialize_group_round_trip(self):
         """Test you can serialize and deserialize a group"""
-        group = orm.Group(name='test_serialize_group_round_trip').store()
+        group = orm.Group(label='test_serialize_group_round_trip').store()
         deserialized = serialize.deserialize(serialize.serialize(group))
 
         self.assertEqual(group.uuid, deserialized.uuid)
-        self.assertEqual(group.name, deserialized.name)
+        self.assertEqual(group.label, deserialized.label)
 
     def test_serialize_computer_round_trip(self):
         """Test you can serialize and deserialize a computer"""
@@ -90,7 +90,7 @@ class TestSerialize(AiidaTestCase):
 
     def test_serialize_unstored_group(self):
         """Test that you can't serialize an unstored group"""
-        group = orm.Group(name='test_serialize_unstored_group')
+        group = orm.Group(label='test_serialize_unstored_group')
 
         with self.assertRaises(ValueError):
             serialize.serialize(group)

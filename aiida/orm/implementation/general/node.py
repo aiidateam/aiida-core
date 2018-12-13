@@ -1852,10 +1852,10 @@ class AbstractNode(object):
                         "current_autogroup is not an AiiDA Autogroup")
 
                 if current_autogroup.is_to_be_grouped(self):
-                    group_name = current_autogroup.get_group_name()
-                    if group_name is not None:
+                    group_label = current_autogroup.get_group_name()
+                    if group_label is not None:
                         g = Group.objects.get_or_create(
-                            name=group_name, type_string=VERDIAUTOGROUP_TYPE)[0]
+                            label=group_label, type_string=VERDIAUTOGROUP_TYPE)[0]
                         g.add_nodes(self)
 
         # This is useful because in this way I can do

@@ -342,11 +342,11 @@ class TestVerdiDataBands(AiidaTestCase, TestVerdiDataListable):
         b = connect_structure_bands(s)
 
         # Create 2 groups and add the data to one of them
-        g_ne = orm.Group(name='non_empty_group')
+        g_ne = orm.Group(label='non_empty_group')
         g_ne.store()
         g_ne.add_nodes(b)
 
-        g_e = orm.Group(name='empty_group')
+        g_e = orm.Group(label='empty_group')
         g_e.store()
 
         return {
@@ -531,11 +531,11 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable, TestVerdiDat
         n.store()
 
         # Create 2 groups and add the data to one of them
-        g_ne = orm.Group(name='non_empty_group')
+        g_ne = orm.Group(label='non_empty_group')
         g_ne.store()
         g_ne.add_nodes(n)
 
-        g_e = orm.Group(name='empty_group')
+        g_e = orm.Group(label='empty_group')
         g_e.store()
 
         return {
@@ -628,11 +628,11 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable, TestVerdiData
         struc.store()
 
         # Create 2 groups and add the data to one of them
-        g_ne = orm.Group(name='non_empty_group')
+        g_ne = orm.Group(label='non_empty_group')
         g_ne.store()
         g_ne.add_nodes(struc)
 
-        g_e = orm.Group(name='empty_group')
+        g_e = orm.Group(label='empty_group')
         g_e.store()
 
         return {
@@ -748,11 +748,11 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExport
             a = CifData(file=filename, source={'version': '1234', 'db_name': 'COD', 'id': '0000001'})
             a.store()
 
-            g_ne = orm.Group(name='non_empty_group')
+            g_ne = orm.Group(label='non_empty_group')
             g_ne.store()
             g_ne.add_nodes(a)
 
-            g_e = orm.Group(name='empty_group')
+            g_e = orm.Group(label='empty_group')
             g_e.store()
 
         return {

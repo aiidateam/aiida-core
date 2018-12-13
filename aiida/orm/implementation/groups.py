@@ -28,15 +28,15 @@ class BackendGroup(backends.BackendEntity):
     """
 
     @abc.abstractproperty
-    def name(self):
+    def label(self):
         """
         :return: the name of the group as a string
         """
         pass
 
     @abc.abstractproperty
-    @name.setter
-    def name(self, name):
+    @label.setter
+    def label(self, name):
         """
         Attempt to change the name of the group instance. If the group is already stored
         and the another group of the same type already exists with the desired name, a
@@ -185,9 +185,9 @@ class BackendGroup(backends.BackendEntity):
 
     def __str__(self):
         if self.type_string:
-            return '"{}" [type {}], of user {}'.format(self.name, self.type_string, self.user.email)
+            return '"{}" [type {}], of user {}'.format(self.label, self.type_string, self.user.email)
 
-        return '"{}" [user-defined], of user {}'.format(self.name, self.user.email)
+        return '"{}" [user-defined], of user {}'.format(self.label, self.user.email)
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -198,7 +198,7 @@ class BackendGroupCollection(backends.BackendCollection[BackendGroup]):
 
     @abc.abstractmethod
     def query(self,
-              name=None,
+              label=None,
               type_string=None,
               pk=None,
               uuid=None,
@@ -206,7 +206,7 @@ class BackendGroupCollection(backends.BackendCollection[BackendGroup]):
               user=None,
               node_attributes=None,
               past_days=None,
-              name_filters=None,
+              label_filters=None,
               **kwargs):  # pylint: disable=too-many-arguments
         """
         Query for groups.

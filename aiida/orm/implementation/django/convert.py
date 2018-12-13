@@ -147,9 +147,9 @@ def _(dbmodel, backend):
     from . import groups
     djgroup_instance = models.DbGroup(
         id=dbmodel.id,
-        type=dbmodel.type,
+        type_string=dbmodel.type_string,
         uuid=dbmodel.uuid,
-        name=dbmodel.name,
+        label=dbmodel.label,
         time=dbmodel.time,
         description=dbmodel.description,
         user_id=dbmodel.user_id,

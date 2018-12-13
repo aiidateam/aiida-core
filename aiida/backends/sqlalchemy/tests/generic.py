@@ -78,9 +78,9 @@ class TestGroupsSqla(AiidaTestCase):
 
         simple_user = backend.users.create('simple@ton.com')
 
-        g1 = backend.groups.create(name='testquery1', user=simple_user).store()
+        g1 = backend.groups.create(label='testquery1', user=simple_user).store()
         self.addCleanup(lambda: backend.groups.delete(g1.id))
-        g2 = backend.groups.create(name='testquery2', user=simple_user).store()
+        g2 = backend.groups.create(label='testquery2', user=simple_user).store()
         self.addCleanup(lambda: backend.groups.delete(g2.id))
 
         n1 = Data().store()
@@ -94,7 +94,7 @@ class TestGroupsSqla(AiidaTestCase):
         # NOTE: Here we pass type_string to query and get calls so that these calls don't
         # find the autogroups (otherwise the assertions will fail)
         newuser = backend.users.create(email='test@email.xx')
-        g3 = backend.groups.create(name='testquery3', user=newuser).store()
+        g3 = backend.groups.create(label='testquery3', user=newuser).store()
 
         # I should find it
         g1copy = backend.groups.get(uuid=g1.uuid)
@@ -132,27 +132,25 @@ class TestGroupsSqla(AiidaTestCase):
         self.assertSetEqual(set(_.pk for _ in res), set(_.pk for _ in [g1, g2]))
 
     def test_rename_existing(self):
-        """
-        Test that renaming to an already existing name is not permitted
-        """
+        """Test that renaming to an already existing label is not permitted."""
         from aiida.backends.sqlalchemy import get_scoped_session
 
         backend = self.backend
         user = backend.users.create(email="{}@aiida.net".format(self.id())).store()
 
-        name_group_a = 'group_a'
-        name_group_c = 'group_c'
+        label_group_a = 'group_a'
+        label_group_c = 'group_c'
 
-        group_a = backend.groups.create(name=name_group_a, description='I am the Original G', user=user)
+        group_a = backend.groups.create(label=label_group_a, description='I am the Original G', user=user)
         group_a.store()
 
         # Before storing everything should be fine
-        group_b = backend.groups.create(name=name_group_a, description='They will try to rename me', user=user)
-        group_c = backend.groups.create(name=name_group_c, description='They will try to rename me', user=user)
+        group_b = backend.groups.create(label=label_group_a, description='They will try to rename me', user=user)
+        group_c = backend.groups.create(label=label_group_c, description='They will try to rename me', user=user)
 
         session = get_scoped_session()
 
-        # Storing for duplicate group name should trigger Integrity
+        # Storing for duplicate group label should trigger Integrity
         try:
             session.begin_nested()
             with self.assertRaises(exceptions.IntegrityError):
@@ -161,17 +159,17 @@ class TestGroupsSqla(AiidaTestCase):
             session.rollback()
 
         # Before storing everything should be fine
-        group_c.name = name_group_a
+        group_c.label = label_group_a
 
-        # Reverting to unique name before storing
-        group_c.name = name_group_c
+        # Reverting to unique label before storing
+        group_c.label = label_group_c
         group_c.store()
 
-        # After storing name change to existing should raise
+        # After storing label change to existing should raise
         try:
             session.begin_nested()
             with self.assertRaises(exceptions.IntegrityError):
-                group_c.name = name_group_a
+                group_c.label = label_group_a
         finally:
             session.rollback()
 

@@ -52,7 +52,7 @@ class TestVerdiCalculation(AiidaTestCase):
             workdir='/tmp/aiida').store()
 
         cls.code = orm.Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
-        cls.group = orm.Group(name='test_group').store()
+        cls.group = orm.Group(label='test_group').store()
         cls.node = Data().store()
         cls.calcs = []
 

@@ -138,10 +138,10 @@ class TestOrmUtils(AiidaTestCase):
     def test_load_group(self):
         """Test the functionality of load_group."""
         name = 'groupie'
-        group = Group(name=name).store()
+        group = Group(label=name).store()
 
         # Load through label
-        loaded_group = load_group(group.name)
+        loaded_group = load_group(group.label)
         self.assertEquals(loaded_group.uuid, group.uuid)
 
         # Load through uuid
@@ -153,7 +153,7 @@ class TestOrmUtils(AiidaTestCase):
         self.assertEquals(loaded_group.uuid, group.uuid)
 
         # Load through label explicitly
-        loaded_group = load_group(label=group.name)
+        loaded_group = load_group(label=group.label)
         self.assertEquals(loaded_group.uuid, group.uuid)
 
         # Load through uuid explicitly

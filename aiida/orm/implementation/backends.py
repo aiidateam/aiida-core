@@ -103,6 +103,16 @@ class Backend(object):
         :rtype: :class:`aiida.orm.implementation.BackendUserCollection`
         """
 
+    @abc.abstractmethod
+    def transaction(self):
+        """
+        Get a context manager that can be used as a transaction context for a series of backend operations.
+        If there is an exception within the context then the changes will be rolled back and the state will
+        be as before entering.  Transactions can be nested.
+
+        :return: a context manager to group database operations
+        """
+
 
 @six.add_metaclass(abc.ABCMeta)
 class BackendEntity(object):

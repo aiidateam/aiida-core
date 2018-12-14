@@ -20,7 +20,7 @@ from sqlalchemy.types import Integer, Boolean
 import sqlalchemy.exc
 
 from aiida.common import exceptions
-
+from aiida.backends.sqlalchemy import get_scoped_session
 
 __all__ = ['django_filter', 'get_attr']
 
@@ -53,7 +53,7 @@ class ModelWrapper(object):
         if item == '_model':
             raise AttributeError()
 
-        if self.is_saved() and self._is_model_field(item):
+        if self.is_saved() and not self._in_transaction() and self._is_model_field(item):
             self._ensure_model_uptodate(fields=(item,))
 
         return getattr(self._model, item)
@@ -70,7 +70,8 @@ class ModelWrapper(object):
     def save(self):
         """Store the model (possibly updating values if changed)."""
         try:
-            self._model.save(commit=True)
+            commit = not self._in_transaction()
+            self._model.save(commit=commit)
         except sqlalchemy.exc.IntegrityError as e:
             self._model.session.rollback()
             raise exceptions.IntegrityError(str(e))
@@ -89,6 +90,10 @@ class ModelWrapper(object):
     def _ensure_model_uptodate(self, fields=None):
         if self.is_saved():
             self._model.session.expire(self._model, attribute_names=fields)
+
+    @staticmethod
+    def _in_transaction():
+        return get_scoped_session().transaction.nested
 
 
 @contextlib.contextmanager

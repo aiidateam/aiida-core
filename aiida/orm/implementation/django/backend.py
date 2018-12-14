@@ -13,7 +13,7 @@ from __future__ import print_function
 
 from contextlib import contextmanager
 
-from django.db import models
+from django.db import models, transaction
 
 from aiida.backends.djsite.queries import DjangoQueryManager
 from aiida.orm.implementation.sql import SqlBackend
@@ -103,3 +103,6 @@ class DjangoBackend(SqlBackend[models.Model]):
             yield self.get_connection().cursor()
         finally:
             pass
+
+    def transaction(self):
+        return transaction.atomic()

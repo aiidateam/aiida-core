@@ -22,9 +22,8 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils import decorators, echo
 from aiida.cmdline.utils.common import get_env_with_venv_bin
 from aiida.cmdline.utils.daemon import get_daemon_status, print_client_response_status
-from aiida.common.profile import get_current_profile_name
-from aiida.common.setup import get_profiles_list
 from aiida.daemon.client import get_daemon_client
+from aiida.manage import load_config
 
 
 @verdi.group('daemon')
@@ -70,15 +69,17 @@ def status(all_profiles):
     """
     Print the status of the current daemon or all daemons
     """
-    if all_profiles is True:
-        profiles = [p for p in get_profiles_list() if not p.startswith('test_')]
-    else:
-        profiles = [get_current_profile_name()]
+    config = load_config()
 
-    for profile_name in profiles:
-        client = get_daemon_client(profile_name)
+    if all_profiles is True:
+        profiles = [profile for profile in config.profiles if not profile.is_test_profile]
+    else:
+        profiles = [config.current_profile]
+
+    for profile in profiles:
+        client = get_daemon_client(profile.name)
         click.secho('Profile: ', fg='red', bold=True, nl=False)
-        click.secho('{}'.format(profile_name), bold=True)
+        click.secho('{}'.format(profile.name), bold=True)
         result = get_daemon_status(client)
         echo.echo(result)
 
@@ -129,17 +130,19 @@ def stop(no_wait, all_profiles):
     """
     Stop the daemon
     """
+    config = load_config()
+
     if all_profiles is True:
-        profiles = [p for p in get_profiles_list() if not p.startswith('test_')]
+        profiles = [profile for profile in config.profiles if not profile.is_test_profile]
     else:
-        profiles = [get_current_profile_name()]
+        profiles = [config.current_profile]
 
-    for profile_name in profiles:
+    for profile in profiles:
 
-        client = get_daemon_client(profile_name)
+        client = get_daemon_client(profile.name)
 
         click.secho('Profile: ', fg='red', bold=True, nl=False)
-        click.secho('{}'.format(profile_name), bold=True)
+        click.secho('{}'.format(profile.name), bold=True)
 
         if not client.is_daemon_running:
             echo.echo('Daemon was not running')

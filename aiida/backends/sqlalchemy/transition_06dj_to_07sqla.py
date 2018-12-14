@@ -574,7 +574,7 @@ def change_backend_to_sqla(profile=None):
             sys.exit(0)
         curr_profile = profiles[profile]
 
-        if setup.aiidadb_backend_key in curr_profile.keys():
+        if aiidadb_backend_key in curr_profile.keys():
             if curr_profile[aiidadb_backend_key] == aiidadb_backend_value_sqla:
                 print("This is already an SQLAlchemy profile. Exiting")
                 sys.exit(0)

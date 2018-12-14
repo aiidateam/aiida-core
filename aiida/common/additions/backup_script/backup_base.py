@@ -313,25 +313,19 @@ class AbstractBackup(object):
         return 0, query_sets
 
     def _get_repository_path(self):
-        from aiida.backends import settings
-        from aiida.common.setup import (get_config, get_profile_config,
-                                        parse_repository_uri)
-        from aiida.common.exceptions import ConfigurationError, MissingConfigurationError
+        from aiida.common.setup import parse_repository_uri
+        from aiida.common.exceptions import MissingConfigurationError
+        from aiida.manage import load_config
 
         try:
-            confs = get_config()
+            config = load_config()
         except MissingConfigurationError:
             raise MissingConfigurationError(
                 "Please run the AiiDA Installation, no config found")
 
-        if settings.AIIDADB_PROFILE is None:
-            raise ConfigurationError(
-                "settings.AIIDADB_PROFILE not defined, did you load django"
-                "through the AiiDA load_dbenv()?")
+        profile_dictionary = config.current_profile.dictionary
 
-        profile_conf = get_profile_config(settings.AIIDADB_PROFILE, conf_dict=confs)
-
-        REPOSITORY_URI = profile_conf.get('AIIDADB_REPOSITORY_URI', '')
+        REPOSITORY_URI = profile_dictionary.get('AIIDADB_REPOSITORY_URI', '')
         REPOSITORY_PROTOCOL, REPOSITORY_PATH = parse_repository_uri(REPOSITORY_URI)
 
         return REPOSITORY_PATH

@@ -56,8 +56,11 @@ def _check_db_name(dbname, postgres):
 def quicksetup(profile_name, only_config, set_default, non_interactive, backend, db_host, db_port, db_name, db_username,
                db_password, repository, email, first_name, last_name, institution):
     """Set up a sane configuration with as little interaction as possible."""
-    from aiida.common.setup import create_base_dirs, AIIDA_CONFIG_FOLDER
-    create_base_dirs()
+    from aiida.manage import load_config
+    from aiida.manage.configuration.setup import create_instance_directories
+    from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
+
+    create_instance_directories()
 
     aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
 
@@ -79,18 +82,16 @@ def quicksetup(profile_name, only_config, set_default, non_interactive, backend,
     # default database user name is aiida_qs_<login-name>
     # default password is random
     dbuser = db_username or 'aiida_qs_' + osuser + '_' + aiida_base_dir_hash
-    from aiida.common.setup import generate_random_secret_key
-    dbpass = db_password or generate_random_secret_key()
+    from aiida.common.hashing import get_random_string
+    dbpass = db_password or get_random_string(length=50)
 
     # check if there is a profile that contains the db user already
     # and if yes, take the db user password from there
     # This is ok because a user can only see his own config files
-    from aiida.common.setup import get_or_create_config
-    confs = get_or_create_config()
-    profs = confs.get('profiles', {})
-    for profile in profs.values():
-        if profile.get('AIIDADB_USER', '') == dbuser and not db_password:
-            dbpass = profile.get('AIIDADB_PASS')
+    config = load_config(create=True)
+    for profile in config.profiles:
+        if profile.dictionary.get('AIIDADB_USER', '') == dbuser and not db_password:
+            dbpass = profile.dictionary.get('AIIDADB_PASS')
             echo.echo('using found password for {}'.format(dbuser))
             break
 
@@ -112,13 +113,11 @@ def quicksetup(profile_name, only_config, set_default, non_interactive, backend,
         ]))
         raise exception
 
-    # create a profile, by default 'quicksetup' and prompt the user if
-    # already exists
-    confs = get_or_create_config()
+    # create a profile, by default 'quicksetup' and prompt the user if already exists
     profile_name = profile_name or 'quicksetup'
     write_profile = False
     while not write_profile:
-        if profile_name in confs.get('profiles', {}):
+        if profile_name in config.profile_names:
             if click.confirm('overwrite existing profile {}?'.format(profile_name)):
                 write_profile = True
             else:

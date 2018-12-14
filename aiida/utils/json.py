@@ -16,6 +16,7 @@ Also note the conventions for using io.open for dump and dumps.
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import simplejson
 
 
@@ -49,14 +50,24 @@ def dumps(data, **kwargs):
 def load(fhandle, **kwargs):
     """
     Deserialise a JSON file.
-    For Py2/Py3 compatibility, io.open(filename, 'r' encoding='utf8')
-    should be used.
+
+    For Py2/Py3 compatibility, io.open(filename, 'r', encoding='utf8') should be used.
+
+    :raises IOError: if no valid JSON object could be decoded
     """
-    return simplejson.load(fhandle, encoding='utf8', **kwargs)
+    try:
+        return simplejson.load(fhandle, encoding='utf8', **kwargs)
+    except simplejson.errors.JSONDecodeError:
+        raise IOError
 
 
 def loads(json_string, **kwargs):
     """
     Deserialise a JSON string.
+
+    :raises IOError: if no valid JSON object could be decoded
     """
-    return simplejson.loads(json_string, encoding='utf8', **kwargs)
+    try:
+        return simplejson.loads(json_string, encoding='utf8', **kwargs)
+    except simplejson.errors.JSONDecodeError:
+        raise IOError

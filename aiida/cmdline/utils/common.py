@@ -11,8 +11,10 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import os
 import sys
+
 from tabulate import tabulate
 
 
@@ -21,11 +23,11 @@ def get_env_with_venv_bin():
     Create a clone of the current running environment with the AIIDA_PATH variable set to the
     value configured in the AIIDA_CONFIG_FOLDER variable
     """
-    from aiida.common import setup
+    from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
 
     currenv = os.environ.copy()
     currenv['PATH'] = os.path.dirname(sys.executable) + ':' + currenv['PATH']
-    currenv['AIIDA_PATH'] = os.path.abspath(os.path.expanduser(setup.AIIDA_CONFIG_FOLDER))
+    currenv['AIIDA_PATH'] = os.path.abspath(os.path.expanduser(AIIDA_CONFIG_FOLDER))
     currenv['PYTHONUNBUFFERED'] = 'True'
 
     return currenv

@@ -8,13 +8,14 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for all common logging methods/classes"""
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
+import copy
 import logging
-from copy import deepcopy
-from aiida.common import setup
+
+from aiida.common.setup import get_property
 
 # Custom logging level, intended specifically for informative log messages
 # reported during WorkChains and Workflows. We want the level between INFO(20)
@@ -119,44 +120,44 @@ LOGGING = {
             # specified in the _property_table inside aiida.common.setup
             # NOTE: To modify properties, use the 'verdi devel setproperty'
             #   command and similar ones (getproperty, describeproperties, ...)
-            'level': setup.get_property('logging.db_loglevel'),
+            'level': get_property('logging.db_loglevel'),
             'class': 'aiida.common.log.DBLogHandler',
         },
     },
     'loggers': {
         'aiida': {
             'handlers': ['console', 'dblogger'],
-            'level': setup.get_property('logging.aiida_loglevel'),
+            'level': get_property('logging.aiida_loglevel'),
             'propagate': False,
         },
         'tornado': {
             'handlers': ['console'],
-            'level': setup.get_property('logging.tornado_loglevel'),
+            'level': get_property('logging.tornado_loglevel'),
             'propagate': False,
         },
         'plumpy': {
             'handlers': ['console'],
-            'level': setup.get_property('logging.plumpy_loglevel'),
+            'level': get_property('logging.plumpy_loglevel'),
             'propagate': False,
         },
         'kiwipy': {
             'handlers': ['console'],
-            'level': setup.get_property('logging.kiwipy_loglevel'),
+            'level': get_property('logging.kiwipy_loglevel'),
             'propagate': False,
         },
         'paramiko': {
             'handlers': ['console'],
-            'level': setup.get_property('logging.paramiko_loglevel'),
+            'level': get_property('logging.paramiko_loglevel'),
             'propagate': False,
         },
         'alembic': {
             'handlers': ['console'],
-            'level': setup.get_property('logging.alembic_loglevel'),
+            'level': get_property('logging.alembic_loglevel'),
             'propagate': False,
         },
         'sqlalchemy': {
             'handlers': ['console'],
-            'level': setup.get_property('logging.sqlalchemy_loglevel'),
+            'level': get_property('logging.sqlalchemy_loglevel'),
             'propagate': False,
             'qualname': 'sqlalchemy.engine',
         },
@@ -181,7 +182,7 @@ def configure_logging(daemon=False, daemon_log_file=None):
     """
     from logging.config import dictConfig
 
-    config = deepcopy(LOGGING)
+    config = copy.deepcopy(LOGGING)
     daemon_handler_name = 'daemon_log_file'
 
     # Add the daemon file handler to all loggers if daemon=True

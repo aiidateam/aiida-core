@@ -29,7 +29,7 @@ import six
 import aiida
 from aiida.common.exceptions import ConfigurationError
 from aiida.common.extendeddicts import Enumerate
-from aiida.common.setup import AIIDA_CONFIG_FOLDER
+from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
 from aiida.backends.utils import get_current_profile
 from aiida.common.utils import get_object_from_string
 

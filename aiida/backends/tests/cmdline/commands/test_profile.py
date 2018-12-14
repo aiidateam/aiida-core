@@ -12,11 +12,16 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+import tempfile
+
 from click.testing import CliRunner
 from six.moves import range
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common import setup as aiida_cfg
+from aiida.common.setup import create_config_noninteractive
+from aiida.manage.configuration.setup import create_instance_directories
+from aiida.manage.configuration import settings
+from aiida.manage import load_config
 
 
 class TestVerdiProfileSetup(AiidaTestCase):
@@ -34,15 +39,15 @@ class TestVerdiProfileSetup(AiidaTestCase):
         :param kwargs: list of keyword arguments
         """
         super(TestVerdiProfileSetup, cls).setUpClass()
+        from aiida.manage.configuration import config as config_module
 
-        import tempfile
-
-        cls._old_aiida_config_folder = None
+        cls._old_config = config_module.CONFIG
         cls._new_aiida_config_folder = tempfile.mkdtemp()
+        cls._old_aiida_config_folder = settings.AIIDA_CONFIG_FOLDER
 
-        cls._old_aiida_config_folder = aiida_cfg.AIIDA_CONFIG_FOLDER
-        aiida_cfg.AIIDA_CONFIG_FOLDER = cls._new_aiida_config_folder
-        aiida_cfg.create_base_dirs()
+        config_module.CONFIG = None
+        settings.AIIDA_CONFIG_FOLDER = cls._new_aiida_config_folder
+        create_instance_directories()
 
         dummy_profile_list = ['dummy_profile1', 'dummy_profile2', 'dummy_profile3', 'dummy_profile4', 'dummy_profile5']
         dummy_profile_list = ["{}_{}".format(profile_name, get_random_string(4)) for profile_name in dummy_profile_list]
@@ -56,10 +61,11 @@ class TestVerdiProfileSetup(AiidaTestCase):
             dummy_profile['db_name'] = profile_name
             dummy_profile['db_user'] = 'dummy_user'
             dummy_profile['db_pass'] = 'dummy_pass'
-            dummy_profile['repo'] = aiida_cfg.AIIDA_CONFIG_FOLDER + '/repository_' + profile_name
-            aiida_cfg.create_config_noninteractive(profile=profile_name, **dummy_profile)
+            dummy_profile['repo'] = settings.AIIDA_CONFIG_FOLDER + '/repository_' + profile_name
+            create_config_noninteractive(profile_name=profile_name, **dummy_profile)
 
-        aiida_cfg.set_default_profile(dummy_profile_list[0], force_rewrite=True)
+        config = load_config()
+        config.set_default_profile(dummy_profile_list[0], overwrite=True)
         cls.dummy_profile_list = dummy_profile_list
 
     @classmethod
@@ -72,8 +78,10 @@ class TestVerdiProfileSetup(AiidaTestCase):
         """
         import os
         import shutil
+        from aiida.manage.configuration import config as config_module
 
-        aiida_cfg.AIIDA_CONFIG_FOLDER = cls._old_aiida_config_folder
+        config_module.CONFIG = cls._old_config
+        settings.AIIDA_CONFIG_FOLDER = cls._old_aiida_config_folder
 
         if os.path.isdir(cls._new_aiida_config_folder):
             shutil.rmtree(cls._new_aiida_config_folder)
@@ -135,16 +143,14 @@ class TestVerdiProfileSetup(AiidaTestCase):
         Test for verdi profile show command
         """
         from aiida.cmdline.commands.cmd_profile import profile_show
-        from aiida.common.setup import get_config
 
-        config = get_config()
-        profiles = config['profiles']
+        config = load_config()
         profile_name = self.dummy_profile_list[0]
-        profile = profiles[profile_name]
+        profile = config.get_profile(profile_name)
 
         result = self.cli_runner.invoke(profile_show, [profile_name])
         self.assertIsNone(result.exception, result.output)
-        for key, value in profile.items():
+        for key, value in profile.dictionary.items():
             self.assertIn(key.lower(), result.output)
             self.assertIn(value, result.output)
 
@@ -156,24 +162,24 @@ class TestVerdiProfileSetup(AiidaTestCase):
 
         # delete single profile
         result = self.cli_runner.invoke(profile_delete, ["--force", self.dummy_profile_list[2]])
-        self.assertIsNone(result.exception, result.output)
+        self.assertClickResultNoException(result)
 
         result = self.cli_runner.invoke(profile_list)
-        self.assertIsNone(result.exception, result.output)
+        self.assertClickResultNoException(result)
 
         self.assertNotIn(self.dummy_profile_list[2], result.output)
-        self.assertIsNone(result.exception, result.output)
+        self.assertClickResultNoException(result)
 
         # delete multiple profile
         result = self.cli_runner.invoke(profile_delete,
                                         ["--force", self.dummy_profile_list[3], self.dummy_profile_list[4]])
-        self.assertIsNone(result.exception, result.output)
+        self.assertClickResultNoException(result)
 
         result = self.cli_runner.invoke(profile_list)
-        self.assertIsNone(result.exception, result.output)
+        self.assertClickResultNoException(result)
         self.assertNotIn(self.dummy_profile_list[3], result.output)
         self.assertNotIn(self.dummy_profile_list[4], result.output)
-        self.assertIsNone(result.exception, result.output)
+        self.assertClickResultNoException(result)
 
 
 def get_random_string(length):

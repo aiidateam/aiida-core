@@ -16,6 +16,7 @@ import click
 
 from aiida.cmdline.params import options
 from aiida.common.extendeddicts import AttributeDict
+from aiida.common import exceptions
 
 
 @click.group()
@@ -28,6 +29,7 @@ def verdi(ctx, profile, version):
     import aiida
     from aiida.backends import settings
     from aiida.cmdline.utils import echo
+    from aiida.manage import get_config
 
     if version:
         echo.echo('AiiDA version {}'.format(aiida.__version__))
@@ -36,8 +38,17 @@ def verdi(ctx, profile, version):
     if ctx.obj is None:
         ctx.obj = AttributeDict()
 
-    if profile:
+    try:
+        config = get_config()
+    except exceptions.ConfigurationError:
+        config = None
+    else:
+        if not profile:
+            profile = config.get_profile()
+
         settings.AIIDADB_PROFILE = profile.name
-        ctx.obj.profile = profile
+
+    ctx.obj.config = config
+    ctx.obj.profile = profile
 
     ctx.help_option_names = ['-h', '--help']

@@ -66,3 +66,5 @@ LABEL = OverridableArgument('label')
 USER = OverridableArgument('user', metavar='USER', type=types.UserParamType())
 
 PROFILE_NAME = OverridableArgument('profile_name', type=click.STRING)
+
+CONFIG_OPTION = OverridableArgument('option', type=types.ConfigOptionParamType())

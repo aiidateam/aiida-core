@@ -16,11 +16,11 @@ from __future__ import absolute_import
 from aiida.cmdline.utils import echo
 
 
-def setup_profile(profile, only_config, set_default=False, non_interactive=False, **kwargs):
+def setup_profile(profile_name, only_config, set_default=False, non_interactive=False, **kwargs):
     """
     Setup an AiiDA profile and AiiDA user (and the AiiDA default user).
 
-    :param profile: Profile name
+    :param profile_name: Profile name
     :param only_config: do not create a new user
     :param set_default: set the new profile as the default
     :param non_interactive: do not prompt for configuration values, fail if not all values are given as kwargs.
@@ -37,10 +37,11 @@ def setup_profile(profile, only_config, set_default=False, non_interactive=False
     from aiida.cmdline.commands import cmd_user
     from aiida.common.exceptions import InvalidOperation
     from aiida.manage.configuration.setup import create_instance_directories
-    from aiida.common.setup import create_configuration, create_config_noninteractive
-    from aiida.manage import get_manager, load_config
+    from aiida.common.setup import create_profile, create_profile_noninteractive
+    from aiida.manage import get_config, get_manager
     from aiida.manage.configuration.settings import DEFAULT_AIIDA_USER
 
+    config = get_config()
     manager = get_manager()
 
     only_user_config = only_config
@@ -49,14 +50,15 @@ def setup_profile(profile, only_config, set_default=False, non_interactive=False
     create_instance_directories()
 
     # we need to overwrite this variable for the following to work
-    settings.AIIDADB_PROFILE = profile
+    settings.AIIDADB_PROFILE = profile_name
 
-    created_conf = None
+    profile = None
     # ask and store the configuration of the DB
     if non_interactive:
         try:
-            created_conf = create_config_noninteractive(
-                profile_name=profile,
+            profile = create_profile_noninteractive(
+                config=config,
+                profile_name=profile_name,
                 backend=kwargs['backend'],
                 email=kwargs['email'],
                 db_host=kwargs['db_host'],
@@ -76,20 +78,21 @@ def setup_profile(profile, only_config, set_default=False, non_interactive=False
                     exception.args[0]))
     else:
         try:
-            created_conf = create_configuration(profile_name=profile)
+            profile = create_profile(config=config, profile_name=profile_name)
         except ValueError as exception:
             echo.echo_critical("Error during configuration: {}".format(exception))
 
-    # Set default DB profile
-    config = load_config()
-    config.set_default_profile(profile, overwrite=set_default)
+    # Add the created profile and set it as the new default profile
+    config.add_profile(profile_name, profile)
+    config.set_default_profile(profile_name, overwrite=set_default)
+    config.store()
 
     if only_user_config:
         echo.echo("Only user configuration requested, skipping the migrate command")
     else:
         echo.echo("Executing now a migrate command...")
 
-        backend_choice = created_conf['AIIDADB_BACKEND']
+        backend_choice = profile['AIIDADB_BACKEND']
         if backend_choice == BACKEND_DJANGO:
             echo.echo("...for Django backend")
             backend = manager._load_backend(schema_check=False)  # pylint: disable=protected-access

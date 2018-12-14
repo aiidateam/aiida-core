@@ -23,17 +23,18 @@ More information at http://www.aiida.net
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import warnings
 
-from aiida.common.log import configure_logging
-from aiida.common.setup import get_property
 import aiida.common.warnings
+from aiida.common.log import configure_logging
+from aiida.manage import get_config_option
 
-__copyright__ = (u"Copyright (c), This file is part of the AiiDA platform. "
-                 u"For further information please visit http://www.aiida.net/. All rights reserved.")
-__license__ = "MIT license, see LICENSE.txt file."
-__version__ = "1.0.0a4"
-__authors__ = "The AiiDA team."
+__copyright__ = (u'Copyright (c), This file is part of the AiiDA platform. '
+                 u'For further information please visit http://www.aiida.net/. All rights reserved.')
+__license__ = 'MIT license, see LICENSE.txt file.'
+__version__ = '1.0.0a4'
+__authors__ = 'The AiiDA team.'
 __paper__ = (u'G. Pizzi, A. Cepellotti, R. Sabatini, N. Marzari, and B. Kozinsky,'
              u'"AiiDA: automated interactive infrastructure and database for computational science", '
              u'Comp. Mat. Sci 111, 218-230 (2016); http://dx.doi.org/10.1016/j.commatsci.2015.09.013 '
@@ -43,10 +44,9 @@ __paper_short__ = 'G. Pizzi et al., Comp. Mat. Sci 111, 218 (2016).'
 # Configure the default logging
 configure_logging()
 
-if get_property("warnings.showdeprecations"):
-    # If the user does not want to get AiiDA deprecation warnings,
-    # we disable them - this can be achieved with::
-    #   verdi devel setproperty warnings.showdeprecations False
+if get_config_option('warnings.showdeprecations'):
+    # If the user does not want to get AiiDA deprecation warnings, we disable them - this can be achieved with::
+    #   verdi config warnings.showdeprecations False
     # Note that the AiidaDeprecationWarning does NOT inherit from DeprecationWarning
     warnings.simplefilter('default', aiida.common.warnings.AiidaDeprecationWarning)  # pylint: disable=no-member
     # This should default to 'once', i.e. once per different message

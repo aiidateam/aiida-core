@@ -19,7 +19,7 @@ modules/classes are already loaded and available::
   from aiida.backends.djsite.db import models
 
 .. note:: It is possible to customize the shell by adding modules to be loaded 
-	automatically, thanks to the ``verdi devel setproperty verdishell.modules`` command. 
+	automatically, thanks to the ``verdi config verdishell.modules`` command. 
 	See :doc:`here<../verdi/properties>` for more information.
 
 A further advantage is that bash completion is enabled, allowing to press the 

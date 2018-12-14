@@ -177,7 +177,7 @@ class TestVerdiExport(AiidaTestCase):
                 result = self.cli_runner.invoke(cmd_export.migrate, options)
                 self.assertIsNone(result.exception, result.output)
                 self.assertTrue(os.path.isfile(filename_output))
-                self.assertEquals(zipfile.ZipFile(filename_output).testzip(), None)
+                self.assertEqual(zipfile.ZipFile(filename_output).testzip(), None)
             finally:
                 delete_temporary_file(filename_output)
 
@@ -223,7 +223,7 @@ class TestVerdiExport(AiidaTestCase):
                     result = self.cli_runner.invoke(cmd_export.migrate, options)
                     self.assertIsNone(result.exception, result.output)
                     self.assertTrue(os.path.isfile(filename_output))
-                    self.assertEquals(zipfile.ZipFile(filename_output).testzip(), None)
+                    self.assertEqual(zipfile.ZipFile(filename_output).testzip(), None)
 
     def test_migrate_silent(self):
         """Test that the captured output is an empty string when the -s/--silent option is passed."""
@@ -240,10 +240,10 @@ class TestVerdiExport(AiidaTestCase):
                 try:
                     options = [option, filename_input, filename_output]
                     result = self.cli_runner.invoke(cmd_export.migrate, options)
-                    self.assertEquals(result.output, '')
+                    self.assertEqual(result.output, '')
                     self.assertIsNone(result.exception, result.output)
                     self.assertTrue(os.path.isfile(filename_output))
-                    self.assertEquals(zipfile.ZipFile(filename_output).testzip(), None)
+                    self.assertEqual(zipfile.ZipFile(filename_output).testzip(), None)
                 finally:
                     delete_temporary_file(filename_output)
 
@@ -290,4 +290,4 @@ class TestVerdiExport(AiidaTestCase):
             options = ['--version', filename_input]
             result = self.cli_runner.invoke(cmd_export.inspect, options)
             self.assertIsNone(result.exception, result.output)
-            self.assertEquals(result.output.strip(), version_number)
+            self.assertEqual(result.output.strip(), version_number)

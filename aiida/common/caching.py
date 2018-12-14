@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
@@ -8,29 +7,22 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import io
 import os
 import copy
 from functools import wraps
 from contextlib import contextmanager
 
-try:
-    from collections import ChainMap
-except ImportError:
-    from chainmap import ChainMap
-
 import yaml
 import six
 
-import aiida
-from aiida.common.exceptions import ConfigurationError
-from aiida.common.extendeddicts import Enumerate
-from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
 from aiida.backends.utils import get_current_profile
+from aiida.common import exceptions
+from aiida.common.extendeddicts import Enumerate
 from aiida.common.utils import get_object_from_string
 
 __all__ = ['get_use_cache', 'enable_caching', 'disable_caching']
@@ -71,19 +63,23 @@ def _get_config(config_file):
             config[key] = [get_object_from_string(c) for c in config[key]]
     except (ValueError) as err:
         six.raise_from(
-            ConfigurationError("Unknown class given in 'cache_config.yml': '{}'".format(err)),
-            err
-        )
+            exceptions.ConfigurationError("Unknown class given in 'cache_config.yml': '{}'".format(err)), err)
     return config
 
 
 _CONFIG = {}
 
 
-def configure(config_file=os.path.join(os.path.expanduser(AIIDA_CONFIG_FOLDER), 'cache_config.yml')):
+def configure(config_file=None):
     """
     Reads the caching configuration file and sets the _CONFIG variable.
     """
+    if config_file is None:
+        from aiida.manage import get_config
+
+        config = get_config()
+        config_file = os.path.join(config.dirpath, 'cache_config.yml')
+
     global _CONFIG
     _CONFIG.clear()
     _CONFIG.update(_get_config(config_file=config_file))

@@ -20,7 +20,7 @@ from aiida.cmdline.utils import defaults, echo
 from aiida.cmdline.params import arguments, options
 from aiida.common import exceptions
 from aiida.control.postgres import Postgres
-from aiida.manage import load_config
+from aiida.manage import get_config
 
 
 @verdi.group('profile')
@@ -33,7 +33,7 @@ def verdi_profile():
 def profile_list():
     """Displays list of all available profiles."""
     try:
-        config = load_config()
+        config = get_config()
     except (exceptions.MissingConfigurationError, exceptions.ConfigurationError) as exception:
         echo.echo_critical(str(exception))
 
@@ -61,11 +61,11 @@ def profile_show(profile):
 def profile_setdefault(profile):
     """Set PROFILE as the default profile."""
     try:
-        config = load_config()
+        config = get_config()
     except (exceptions.MissingConfigurationError, exceptions.ConfigurationError) as exception:
         echo.echo_critical(str(exception))
 
-    config.set_default_profile(profile.name, overwrite=True)
+    config.set_default_profile(profile.name, overwrite=True).store()
     echo.echo_success('{} set as default profile'.format(profile.name))
 
 
@@ -82,7 +82,7 @@ def profile_delete(force, profiles):
     import aiida.utils.json as json
 
     try:
-        config = load_config()
+        config = get_config()
     except (exceptions.MissingConfigurationError, exceptions.ConfigurationError) as exception:
         echo.echo_critical(str(exception))
 
@@ -140,4 +140,4 @@ def profile_delete(force, profiles):
                 "Delete configuration for profile '{}'?\n"
                 "WARNING: Permanently removes profile from the list of AiiDA profiles.".format(profile_name)):
             echo.echo_info("Deleting configuration for profile '{}'.".format(profile_name))
-            config.remove_profile(profile_name)
+            config.remove_profile(profile_name).store()

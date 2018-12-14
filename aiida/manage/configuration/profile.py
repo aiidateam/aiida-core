@@ -14,7 +14,6 @@ from __future__ import absolute_import
 
 import os
 
-from aiida.common import exceptions
 from aiida.common import extendeddicts
 
 from .settings import DAEMON_DIR, DAEMON_LOG_DIR
@@ -58,12 +57,6 @@ class Profile(object):
         """
         from uuid import uuid4
         return uuid4().hex
-
-    @staticmethod
-    def get_option(option):
-        """Return the value of an option of this profile."""
-        from aiida.common.setup import get_property
-        return get_property(option)
 
     @property
     def dictionary(self):
@@ -128,14 +121,13 @@ class Profile(object):
         """
         Return the email (that is used as the username) configured during the first verdi setup.
 
-        :return: the currently configured user email address
-        :rtype: str
+        :return: the currently configured user email address or None if not defined
+        :rtype: str or None
         """
         try:
             email = self.dictionary[self.KEY_DEFAULT_USER]
         except KeyError:
-            raise exceptions.ConfigurationError('profile "{}"  does not define "{}"'.format(
-                self.name, self.KEY_DEFAULT_USER))
+            email = None
 
         return email
 

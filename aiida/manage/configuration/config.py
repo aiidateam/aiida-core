@@ -9,80 +9,20 @@ import shutil
 from aiida.common import exceptions
 from aiida.utils import json
 
-from .migrations import check_and_migrate_config, CURRENT_CONFIG_VERSION, OLDEST_COMPATIBLE_CONFIG_VERSION
+from .migrations import CURRENT_CONFIG_VERSION, OLDEST_COMPATIBLE_CONFIG_VERSION
+from .options import get_option, parse_option, NO_DEFAULT
 from .profile import Profile
-from .settings import DEFAULT_CONFIG_FILE_NAME, DEFAULT_UMASK, DEFAULT_CONFIG_INDENT_SIZE
+from .settings import DEFAULT_UMASK, DEFAULT_CONFIG_INDENT_SIZE
 
-__all__ = ('load_config', 'Config')
-
-CONFIG = None
-
-
-def create_config():
-    """Create the template configuration file and store it.
-
-    :raises ConfigurationError: if a configuration file already exists
-    """
-    from .settings import AIIDA_CONFIG_FOLDER
-    from aiida.backends.settings import IN_RT_DOC_MODE, DUMMY_CONF_FILE
-
-    if IN_RT_DOC_MODE:
-        return DUMMY_CONF_FILE
-
-    dirpath = os.path.expanduser(AIIDA_CONFIG_FOLDER)
-    filepath = os.path.join(dirpath, DEFAULT_CONFIG_FILE_NAME)
-
-    if os.path.isfile(filepath):
-        raise exceptions.ConfigurationError('configuration file {} already exists'.format(filepath))
-
-    config = Config(filepath, {})
-
-    return config
-
-
-def load_config(create=False):
-    """Instantiate the Config object representing the configuration file of the current AiiDA instance.
-
-    :param create: when set to True, will create the configuration file if it does not already exist
-    :return: the config
-    :rtype: :class:`~aiida.manage.configuration.config.Config`
-    :raises MissingConfigurationError: if the configuration file could not be found and create=False
-    """
-    from .settings import AIIDA_CONFIG_FOLDER
-    from aiida.backends.settings import IN_RT_DOC_MODE, DUMMY_CONF_FILE
-
-    if IN_RT_DOC_MODE:
-        return DUMMY_CONF_FILE
-
-    global CONFIG  # pylint: disable=global-statement
-
-    if CONFIG is None:
-        dirpath = os.path.expanduser(AIIDA_CONFIG_FOLDER)
-        filepath = os.path.join(dirpath, DEFAULT_CONFIG_FILE_NAME)
-
-        if not os.path.isfile(filepath):
-            if not create:
-                raise exceptions.MissingConfigurationError('configuration file {} does not exist'.format(filepath))
-            else:
-                config = create_config()
-        else:
-            try:
-                with io.open(filepath, 'r', encoding='utf8') as handle:
-                    config = Config(filepath, json.load(handle))
-            except IOError:
-                raise exceptions.ConfigurationError('configuration file {} could not be read'.format(filepath))
-
-        CONFIG = check_and_migrate_config(config)
-
-    return CONFIG
+__all__ = ('Config',)
 
 
 class Config(object):
     """Object that represents the configuration file of an AiiDA instance."""
 
     KEY_VERSION = 'CONFIG_VERSION'
-    KEY_CURRENT = 'CURRENT'
-    KEY_OLDEST_COMPATIBLE = 'OLDEST_COMPATIBLE'
+    KEY_VERSION_CURRENT = 'CURRENT'
+    KEY_VERSION_OLDEST_COMPATIBLE = 'OLDEST_COMPATIBLE'
     KEY_DEFAULT_PROFILE = 'default_profile'
     KEY_PROFILES = 'profiles'
 
@@ -98,8 +38,8 @@ class Config(object):
             # Construct the default configuration template
             dictionary = {
                 self.KEY_VERSION: {
-                    self.KEY_CURRENT: CURRENT_CONFIG_VERSION,
-                    self.KEY_OLDEST_COMPATIBLE: OLDEST_COMPATIBLE_CONFIG_VERSION,
+                    self.KEY_VERSION_CURRENT: CURRENT_CONFIG_VERSION,
+                    self.KEY_VERSION_OLDEST_COMPATIBLE: OLDEST_COMPATIBLE_CONFIG_VERSION,
                 },
                 self.KEY_PROFILES: {},
             }
@@ -121,19 +61,19 @@ class Config(object):
 
     @property
     def version(self):
-        return self._version_settings.get(self.KEY_CURRENT, 0)
+        return self._version_settings.get(self.KEY_VERSION_CURRENT, 0)
 
     @version.setter
     def version(self, version):
-        self._version_settings[self.KEY_CURRENT] = version
+        self._version_settings[self.KEY_VERSION_CURRENT] = version
 
     @property
     def version_oldest_compatible(self):
-        return self._version_settings.get(self.KEY_OLDEST_COMPATIBLE, 0)
+        return self._version_settings.get(self.KEY_VERSION_OLDEST_COMPATIBLE, 0)
 
     @version_oldest_compatible.setter
     def version_oldest_compatible(self, version_oldest_compatible):
-        self._version_settings[self.KEY_OLDEST_COMPATIBLE] = version_oldest_compatible
+        self._version_settings[self.KEY_VERSION_OLDEST_COMPATIBLE] = version_oldest_compatible
 
     @property
     def _version_settings(self):
@@ -146,15 +86,6 @@ class Config(object):
     @property
     def dirpath(self):
         return os.path.dirname(self.filepath)
-
-    @property
-    def current_profile_name(self):
-        """Return the currently configured profile name or if not set, the default profile
-
-        :return: the default profile or None if not defined
-        """
-        from aiida.backends import settings
-        return settings.AIIDADB_PROFILE or self.default_profile_name
 
     @property
     def default_profile_name(self):
@@ -173,15 +104,14 @@ class Config(object):
 
         :return: the current profile or None if not defined
         """
-        return self.get_profile(self.current_profile_name)
+        from aiida.backends import settings
 
-    @property
-    def default_profile(self):
-        """Return the default profile.
+        current_profile_name = settings.AIIDADB_PROFILE
 
-        :return: the default profile or None if not defined
-        """
-        return self.get_profile(self.default_profile_name)
+        if current_profile_name:
+            return self.get_profile(current_profile_name)
+
+        return None
 
     @property
     def profile_names(self):
@@ -194,7 +124,7 @@ class Config(object):
         except KeyError:
             return []
         else:
-            return profiles.keys()
+            return list(profiles)
 
     @property
     def profiles(self):
@@ -210,84 +140,134 @@ class Config(object):
         else:
             return [Profile(name, profile) for name, profile in profiles.items()]
 
-    def profile_exists(self, name):
-        """Return whether the profile with the given name exists.
-
-        :param name: name of the profile:
-        :return: boolean, True if the profile exists, False otherwise
-        """
-        return name in self.profile_names
-
     def validate_profile(self, name):
         """Validate that a profile exists.
 
         :param name: name of the profile:
         :raises ProfileConfigurationError: if the name is not found in the configuration file
         """
-        if not self.profile_exists(name):
+        if name not in self.profile_names:
             raise exceptions.ProfileConfigurationError('profile `{}` does not exist'.format(name))
 
-    def get_profile(self, name):
+    def get_profile(self, name=None):
         """Return the profile for the given name or the default one if not specified.
 
         :return: the profile instance or None if it does not exist
         :raises ProfileConfigurationError: if the name is not found in the configuration file
         """
+        if not name:
+            name = self.default_profile_name
+
         self.validate_profile(name)
+
         return Profile(name, self.dictionary[self.KEY_PROFILES][name])
 
-    def add_profile(self, name, profile, store=True):
+    def _get_profile_dictionary(self, name):
+        """Return the internal profile dictionary for the given name or the default one if not specified.
+
+        :return: the profile instance or None if it does not exist
+        :raises ProfileConfigurationError: if the name is not found in the configuration file
+        """
+        self.validate_profile(name)
+        return self.dictionary[self.KEY_PROFILES][name]
+
+    def add_profile(self, name, profile):
         """Add a profile to the configuration.
 
         :param name: the name of the profile to remove
         :param profile: the profile configuration dictionary
-        :param store: boolean, if True will write the updated configuration to file
+        :return: self
         """
         self.dictionary[self.KEY_PROFILES][name] = profile
+        return self
 
-        if store:
-            self.store()
-
-    def update_profile(self, profile, store=True):
+    def update_profile(self, profile):
         """Update a profile in the configuration.
 
         :param profile: the profile instance to update
-        :param store: boolean, if True will write the updated configuration to file
+        :return: self
         """
         self.dictionary[self.KEY_PROFILES][profile.name] = profile.dictionary
+        return self
 
-        if store:
-            self.store()
-
-    def remove_profile(self, name, store=True):
+    def remove_profile(self, name):
         """Remove a profile from the configuration.
 
         :param name: the name of the profile to remove
-        :param store: boolean, if True will write the updated configuration to file
         :raises ProfileConfigurationError: if the given profile does not exist
+        :return: self
         """
         self.validate_profile(name)
         self.dictionary[self.KEY_PROFILES].pop(name)
+        return self
 
-        if store:
-            self.store()
-
-    def set_default_profile(self, name, overwrite=False, store=True):
+    def set_default_profile(self, name, overwrite=False):
         """Set the given profile as the new default.
 
         :param name: name of the profile to set as new default
         :param overwrite: when True, set the profile as the new default even if a default profile is already defined
-        :param store: boolean, if True will write the updated configuration to file
         :raises ProfileConfigurationError: if the given profile does not exist
+        :return: self
         """
         if self.default_profile_name and not overwrite:
-            return
+            return self
 
         self.validate_profile(name)
         self.dictionary[self.KEY_DEFAULT_PROFILE] = name
+        return self
 
-        if store:
-            self.store()
+    def option_set(self, option_name, option_value, scope=None):
+        """Set a configuration option.
+
+        :param option_name: the name of the configuration option
+        :param option_value: the option value
+        :param scope: set the option for this profile or globally if not specified
+        """
+        option, parsed_value = parse_option(option_name, option_value)
+
+        if scope is not None:
+            dictionary = self._get_profile_dictionary(scope)
+        else:
+            dictionary = self.dictionary
+
+        if parsed_value:
+            dictionary[option.key] = parsed_value
+        elif option.default is not NO_DEFAULT:
+            dictionary[option.key] = option.default
+        else:
+            pass
+
+    def option_unset(self, option_name, scope=None):
+        """Unset a configuration option.
+
+        :param option_name: the name of the configuration option
+        :param scope: unset the option for this profile or globally if not specified
+        """
+        option = get_option(option_name)
+
+        if scope is not None:
+            dictionary = self._get_profile_dictionary(scope)
+        else:
+            dictionary = self.dictionary
+
+        dictionary.pop(option.key, None)
+
+    def option_get(self, option_name, scope=None, default=True):
+        """Get a configuration option.
+
+        :param option_name: the name of the configuration option
+        :param scope: get the option for this profile or globally if not specified
+        :param default: boolean, If True will return the option default, even if not defined within the given scope
+        :return: the option value or None if not set for the given scope
+        """
+        option = get_option(option_name)
+
+        if scope is not None:
+            dictionary = self.get_profile(scope).dictionary
+        else:
+            dictionary = self.dictionary
+
+        return dictionary.get(option.key, option.default if default else None)
 
     def store(self):
         """Write the current config to file."""
@@ -300,6 +280,8 @@ class Config(object):
                 json.dump(self.dictionary, handle, indent=DEFAULT_CONFIG_INDENT_SIZE)
         finally:
             os.umask(umask)
+
+        return self
 
     def _backup(self):
         """Create a backup of the current config as it exists on disk."""

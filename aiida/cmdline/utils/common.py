@@ -19,15 +19,14 @@ from tabulate import tabulate
 
 
 def get_env_with_venv_bin():
-    """
-    Create a clone of the current running environment with the AIIDA_PATH variable set to the
-    value configured in the AIIDA_CONFIG_FOLDER variable
-    """
-    from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
+    """Create a clone of the current running environment with the AIIDA_PATH variable set directory of the config."""
+    from aiida.manage import get_config
+
+    config = get_config()
 
     currenv = os.environ.copy()
     currenv['PATH'] = os.path.dirname(sys.executable) + ':' + currenv['PATH']
-    currenv['AIIDA_PATH'] = os.path.abspath(os.path.expanduser(AIIDA_CONFIG_FOLDER))
+    currenv['AIIDA_PATH'] = config.dirpath
     currenv['PYTHONUNBUFFERED'] = 'True'
 
     return currenv

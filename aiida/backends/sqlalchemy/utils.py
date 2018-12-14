@@ -109,9 +109,9 @@ def _load_dbenv_noschemacheck(profile=None, connection=None):
     """
     Load the SQLAlchemy database.
     """
-    from aiida.manage import load_config
+    from aiida.manage import get_config
 
-    config = load_config()
+    config = get_config()
     profile = config.current_profile
     reset_session(profile.dictionary)
 

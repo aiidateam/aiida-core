@@ -1075,8 +1075,9 @@ def deposit(what, type, author_name=None, author_email=None, url=None,
         instance.
     :raises ValueError: if any of the required parameters are not given.
     """
-    from aiida.common.setup import get_property
+    from aiida.manage import get_config
 
+    config = get_config()
     parameters = {}
 
     if not what:
@@ -1086,15 +1087,15 @@ def deposit(what, type, author_name=None, author_email=None, url=None,
                          "one of the following: 'published', "
                          "'prepublication' or 'personal'")
     if not username:
-        username = get_property('tcod.depositor_username')
+        username = config.option_get('tcod.depositor_username')
         if not username:
             raise ValueError("Depositor username is not supplied")
     if not password:
-        parameters['password'] = get_property('tcod.depositor_password')
+        parameters['password'] = config.option_get('tcod.depositor_password')
         if not parameters['password']:
             raise ValueError("Depositor password is not supplied")
     if not user_email:
-        user_email = get_property('tcod.depositor_email')
+        user_email = config.option_get('tcod.depositor_email')
         if not user_email:
             raise ValueError("Depositor email is not supplied")
 
@@ -1106,11 +1107,11 @@ def deposit(what, type, author_name=None, author_email=None, url=None,
         pass
     elif type in ['prepublication', 'personal']:
         if not author_name:
-            author_name = get_property('tcod.depositor_author_name')
+            author_name = config.option_get('tcod.depositor_author_name')
             if not author_name:
                 raise ValueError("Author name is not supplied")
         if not author_email:
-            author_email = get_property('tcod.depositor_author_email')
+            author_email = config.option_get('tcod.depositor_author_email')
             if not author_email:
                 raise ValueError("Author email is not supplied")
         if not title:

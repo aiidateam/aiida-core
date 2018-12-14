@@ -1132,21 +1132,6 @@ class CalcJobNode(CalculationNode):
 
         return self.get_attr(self.JOB_STATE_KEY, None)
 
-    def _get_state_string(self):
-        """
-        Return a string, that is correct also when the state is imported
-        (in this case, the string will be in the format IMPORTED/ORIGSTATE
-        where ORIGSTATE is the original state from the node attributes).
-        """
-        state = self.get_state(from_attribute=False)
-        if state == calc_states.IMPORTED:
-            attribute_state = self.get_state(from_attribute=True)
-            if attribute_state is None:
-                attribute_state = "NOTFOUND"
-            return 'IMPORTED/{}'.format(attribute_state)
-        else:
-            return state
-
     def _is_new(self):
         """
         Get whether the calculation is in the NEW status.
@@ -2292,7 +2277,7 @@ class CalcJobNode(CalculationNode):
         Returns a string with infos retrieved from a CalcJobNode node's
         properties.
         """
-        return self.get_state(from_attribute=True)
+        return self.get_state()
 
 
 def _parse_single_arg(function_name, additional_parameter, args, kwargs):

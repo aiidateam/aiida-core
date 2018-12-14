@@ -7,13 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+"""Tests for the CalculationNode and CalcJobNode class."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed
-from aiida.orm.node.process import ProcessNode, CalculationNode
+from aiida.orm.node.process import CalculationNode, CalcJobNode
 
 
 class TestProcessNode(AiidaTestCase):
@@ -26,11 +27,19 @@ class TestProcessNode(AiidaTestCase):
     stringval = 'aaaa'
     listval = [1, 's', True, None]
     dictval = {
-        'num': 3, 'something': 'else', 'emptydict': {},
+        'num': 3,
+        'something': 'else',
+        'emptydict': {},
         'recursive': {
-            'a': 1, 'b': True, 'c': 1.2, 'd': [1, 2, None],
-            'e': {
-                'z': 'z', 'x': None, 'xx': {}, 'yy': []
+            'integer': 1,
+            'boolean': True,
+            'float': 1.2,
+            'list': [1, 2, None],
+            'dictionary': {
+                'string': 'z',
+                'none': None,
+                'empty_dictionary': {},
+                'empty_list': []
             }
         }
     }
@@ -39,16 +48,9 @@ class TestProcessNode(AiidaTestCase):
     emptylist = []
 
     @classmethod
-    def setUpClass(cls):
-        super(TestProcessNode, cls).setUpClass()
-        from aiida.orm.node.process import CalcJobNode
-
-        cls.construction_options = {
-            'resources': {
-                'num_machines': 1,
-                'num_mpiprocs_per_machine': 1
-            }
-        }
+    def setUpClass(cls, *args, **kwargs):
+        super(TestProcessNode, cls).setUpClass(*args, **kwargs)
+        cls.construction_options = {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}}
 
         cls.calcjob = CalcJobNode()
         cls.calcjob.set_computer(cls.computer)
@@ -57,22 +59,21 @@ class TestProcessNode(AiidaTestCase):
 
     def test_process_state(self):
         """
-        Check the properties of a newly created bare ProcessNode
+        Check the properties of a newly created bare CalculationNode
         """
         process_node = CalculationNode()
 
-        self.assertEquals(process_node.is_terminated, False)
-        self.assertEquals(process_node.is_excepted, False)
-        self.assertEquals(process_node.is_killed, False)
-        self.assertEquals(process_node.is_finished, False)
-        self.assertEquals(process_node.is_finished_ok, False)
-        self.assertEquals(process_node.is_failed, False)
+        self.assertEqual(process_node.is_terminated, False)
+        self.assertEqual(process_node.is_excepted, False)
+        self.assertEqual(process_node.is_killed, False)
+        self.assertEqual(process_node.is_finished, False)
+        self.assertEqual(process_node.is_finished_ok, False)
+        self.assertEqual(process_node.is_failed, False)
 
     def test_process_node_updatable_attribute(self):
-        """
-        Check that updatable attributes and only those can be mutated for a stored but unsealed ProcessNode
-        """
-        a = CalculationNode()
+        """Check that updatable attributes and only those can be mutated for a stored but unsealed CalculationNode."""
+        # pylint: disable=protected-access
+        node = CalculationNode()
         attrs_to_set = {
             'bool': self.boolval,
             'integer': self.intval,
@@ -83,58 +84,58 @@ class TestProcessNode(AiidaTestCase):
             'state': self.stateval
         }
 
-        for k, v in attrs_to_set.items():
-            a._set_attr(k, v)
+        for key, value in attrs_to_set.items():
+            node._set_attr(key, value)
 
         # Check before storing
-        a._set_attr(ProcessNode.PROCESS_STATE_KEY, self.stateval)
-        self.assertEquals(a.get_attr(ProcessNode.PROCESS_STATE_KEY), self.stateval)
+        node._set_attr(CalculationNode.PROCESS_STATE_KEY, self.stateval)
+        self.assertEqual(node.get_attr(CalculationNode.PROCESS_STATE_KEY), self.stateval)
 
-        a.store()
+        node.store()
 
         # Check after storing
-        self.assertEquals(a.get_attr(ProcessNode.PROCESS_STATE_KEY), self.stateval)
+        self.assertEqual(node.get_attr(CalculationNode.PROCESS_STATE_KEY), self.stateval)
 
         # I should be able to mutate the updatable attribute but not the others
-        a._set_attr(ProcessNode.PROCESS_STATE_KEY, 'FINISHED')
-        a._del_attr(ProcessNode.PROCESS_STATE_KEY)
+        node._set_attr(CalculationNode.PROCESS_STATE_KEY, 'FINISHED')
+        node._del_attr(CalculationNode.PROCESS_STATE_KEY)
 
         # Deleting non-existing attribute should raise attribute error
         with self.assertRaises(AttributeError):
-            a._del_attr(ProcessNode.PROCESS_STATE_KEY)
+            node._del_attr(CalculationNode.PROCESS_STATE_KEY)
 
         with self.assertRaises(ModificationNotAllowed):
-            a._set_attr('bool', False)
+            node._set_attr('bool', False)
 
         with self.assertRaises(ModificationNotAllowed):
-            a._del_attr('bool')
+            node._del_attr('bool')
 
-        a.seal()
+        node.seal()
 
         # After sealing, even updatable attributes should be immutable
         with self.assertRaises(ModificationNotAllowed):
-            a._set_attr(ProcessNode.PROCESS_STATE_KEY, 'FINISHED')
+            node._set_attr(CalculationNode.PROCESS_STATE_KEY, 'FINISHED')
 
         with self.assertRaises(ModificationNotAllowed):
-            a._del_attr(ProcessNode.PROCESS_STATE_KEY)
+            node._del_attr(CalculationNode.PROCESS_STATE_KEY)
 
     def test_calcjob_get_option(self):
         """Verify that options used during process_node construction can be retrieved with `get_option`."""
-        for name, attributes in self.calcjob.options.items():
+        for name in self.calcjob.options:  # pylint: disable=not-an-iterable
 
             if name in self.construction_options:
                 self.assertEqual(self.calcjob.get_option(name), self.construction_options[name])
 
-    def test_calcjob_get_options_only_actually_set(self):
+    def test_calcjob_get_options_only_set(self):
         """Verify that `get_options only` returns explicitly set options if `only_actually_set=True`."""
         set_options = self.calcjob.get_options(only_actually_set=True)
-        self.assertEquals(set(set_options.keys()), set(self.construction_options.keys()))
+        self.assertEqual(set(set_options.keys()), set(self.construction_options.keys()))
 
     def test_calcjob_get_options_defaults(self):
         """Verify that `get_options` returns all options with defaults if `only_actually_set=False`."""
         get_options = self.calcjob.get_options()
 
-        for name, attributes in self.calcjob.options.items():
+        for name, attributes in self.calcjob.options.items():  # pylint: disable=no-member
 
             # If the option was specified in construction options, verify that `get_options` returns same value
             if name in self.construction_options:
@@ -143,3 +144,6 @@ class TestProcessNode(AiidaTestCase):
             # Otherwise, if the option defines a default that is not `None`, verify that that is returned correctly
             elif 'default' in attributes and attributes['default'] is not None:
                 self.assertEqual(get_options[name], attributes['default'])
+
+    def test_get_description(self):
+        self.assertEqual(self.calcjob.get_desc(), self.calcjob.get_state())

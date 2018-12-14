@@ -98,7 +98,6 @@
         aiida/backends/tests/backup_script.py|
         aiida/backends/tests/backup_setup_script.py|
         aiida/backends/tests/base_dataclasses.py|
-        aiida/backends/tests/calculation_node.py|
         aiida/backends/tests/cmdline/commands/test_calculation.py|
         aiida/backends/tests/cmdline/commands/test_code.py|
         aiida/backends/tests/cmdline/commands/test_comment.py|

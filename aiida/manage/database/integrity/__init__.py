@@ -33,7 +33,7 @@ def write_database_integrity_violation(results, headers, reason_message, action_
     if action_message is None:
         action_message = 'nothing'
 
-    with NamedTemporaryFile(prefix='migration-', suffix='.log', dir='.', delete=False) as handle:
+    with NamedTemporaryFile(prefix='migration-', suffix='.log', dir='.', delete=False, mode='w+') as handle:
         echo.echo('')
         echo.echo_warning(
             '\n{}\nFound one or multiple records that violate the integrity of the database\nViolation reason: {}\n'

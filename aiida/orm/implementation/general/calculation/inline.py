@@ -21,7 +21,7 @@ class InlineCalculation(Calculation):
     for a simple calculation
     """
 
-    _cacheable = True
+    _cacheable = False
 
     def get_desc(self):
         """

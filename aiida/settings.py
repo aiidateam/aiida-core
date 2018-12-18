@@ -14,13 +14,13 @@ import os
 from aiida.backends import settings
 from aiida.common.exceptions import ConfigurationError, MissingConfigurationError
 from aiida.common.setup import parse_repository_uri
-from aiida.manage import load_config
+from aiida.manage import get_config
 
 
 TESTING_MODE = False
 
 try:
-    config = load_config()
+    config = get_config()
 except MissingConfigurationError:
     raise MissingConfigurationError("Please run the AiiDA installation, no config found")
 

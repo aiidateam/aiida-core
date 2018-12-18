@@ -23,8 +23,7 @@ import tempfile
 
 import six
 
-from aiida.common.setup import get_property
-from aiida.manage import load_config
+from aiida.manage import get_config
 from aiida.utils.which import which
 
 VERDI_BIN = which('verdi')
@@ -51,7 +50,7 @@ def get_daemon_client(profile_name=None):
     :raises MissingConfigurationError: if the configuration file cannot be found
     :raises ProfileConfigurationError: if the given profile does not exist
     """
-    config = load_config()
+    config = get_config()
 
     if profile_name:
         profile = config.get_profile(profile_name)
@@ -80,9 +79,10 @@ class DaemonClient(object):  # pylint: disable=too-many-public-methods
 
         :param profile: the profile instance :class:`aiida.manage.configuration.profile.Profile`
         """
+        config = get_config()
         self._profile = profile
         self._SOCKET_DIRECTORY = None  # pylint: disable=invalid-name
-        self._DAEMON_TIMEOUT = get_property('daemon.timeout')  # pylint: disable=invalid-name
+        self._DAEMON_TIMEOUT = config.option_get('daemon.timeout')  # pylint: disable=invalid-name
 
     @property
     def profile(self):

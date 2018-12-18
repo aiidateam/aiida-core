@@ -12,18 +12,17 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-import click
-
+from aiida.cmdline.utils import echo
 from aiida.common import exceptions
-from aiida.manage import load_config
+from aiida.manage import get_config
 
 
 def get_default_profile(ctx, param, value):  # pylint: disable=unused-argument
     """Try to get the default profile.
 
     This should be used if the default profile should be returned lazily, at a point for example when the config
-    is not created at import time. Otherwise, the preference should go to calling `load_config` to load the actual
-    config and using `config.default_profile` to get the default profile
+    is not created at import time. Otherwise, the preference should go to calling `get_config` to load the actual
+    config and using `config.default_profile_name` to get the default profile name
 
     :raises click.UsageError: if the config could not be loaded or no default profile exists
     :return: the default profile
@@ -32,13 +31,13 @@ def get_default_profile(ctx, param, value):  # pylint: disable=unused-argument
         return value
 
     try:
-        config = load_config()
-    except (exceptions.MissingConfigurationError, exceptions.ConfigurationError) as exception:
-        raise click.UsageError(str(exception))
+        config = get_config()
+    except exceptions.ConfigurationError as exception:
+        echo.echo_critical(str(exception))
 
     try:
-        default_profile = config.default_profile
+        default_profile = config.get_profile(config.default_profile_name)
     except exceptions.ProfileConfigurationError:
-        raise click.UsageError('no default profile is configured, please set it or specify one')
+        default_profile = None
 
     return default_profile

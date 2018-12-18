@@ -68,9 +68,9 @@ def get_rmq_prefix():
 
     :returns: string prefix for the RMQ communicators
     """
-    from aiida.manage import load_config
+    from aiida.manage import get_config
 
-    profile = load_config().current_profile
+    profile = get_config().current_profile
     prefix = profile.rmq_prefix
 
     return prefix

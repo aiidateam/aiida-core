@@ -441,7 +441,7 @@ In case a method is renamed or removed, this is the procedure to follow:
    - User can disable our warnings (and only those) by using AiiDA
      properties with::
        
-       verdi devel setproperty warnings.showdeprecations False
+       verdi config warnings.showdeprecations False
 
 Changing the config.json structure
 ++++++++++++++++++++++++++++++++++

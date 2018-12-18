@@ -53,21 +53,21 @@ def load(fhandle, **kwargs):
 
     For Py2/Py3 compatibility, io.open(filename, 'r', encoding='utf8') should be used.
 
-    :raises IOError: if no valid JSON object could be decoded
+    :raises ValueError: if no valid JSON object could be decoded
     """
     try:
         return simplejson.load(fhandle, encoding='utf8', **kwargs)
     except simplejson.errors.JSONDecodeError:
-        raise IOError
+        raise ValueError
 
 
 def loads(json_string, **kwargs):
     """
     Deserialise a JSON string.
 
-    :raises IOError: if no valid JSON object could be decoded
+    :raises ValueError: if no valid JSON object could be decoded
     """
     try:
         return simplejson.loads(json_string, encoding='utf8', **kwargs)
     except simplejson.errors.JSONDecodeError:
-        raise IOError
+        raise ValueError

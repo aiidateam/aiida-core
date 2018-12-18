@@ -7,12 +7,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Unit tests for plugin parameter type."""
+"""Tests for the `PluginParamType`."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import click
-import mock
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.params.types.plugin import PluginParamType
@@ -20,7 +20,7 @@ from aiida.plugins.entry_point import get_entry_point_from_string
 
 
 class TestPluginParamType(AiidaTestCase):
-    """Unit tests for plugin parameter type."""
+    """Tests for the `PluginParamType`."""
 
     def test_group_definition(self):
         """
@@ -92,11 +92,11 @@ class TestPluginParamType(AiidaTestCase):
             param.get_entry_point_from_string('not_existent')
 
         # Valid entry point strings
-        self.assertEquals(param.get_entry_point_from_string('aiida.transports:ssh').name, entry_point.name)
-        self.assertEquals(param.get_entry_point_from_string('transports:ssh').name, entry_point.name)
-        self.assertEquals(param.get_entry_point_from_string('ssh').name, entry_point.name)
+        self.assertEqual(param.get_entry_point_from_string('aiida.transports:ssh').name, entry_point.name)
+        self.assertEqual(param.get_entry_point_from_string('transports:ssh').name, entry_point.name)
+        self.assertEqual(param.get_entry_point_from_string('ssh').name, entry_point.name)
 
-    def test_get_entry_point_from_string_ambiguous(self):
+    def test_get_entry_point_from_ambiguous(self):
         """
         Test the functionality of the get_entry_point_from_string which will take an entry point string
         and try to map it onto a valid entry point that is part of the groups defined for the parameter.
@@ -109,8 +109,8 @@ class TestPluginParamType(AiidaTestCase):
             param.get_entry_point_from_string('tcod')
 
         # Passing PARTIAL or FULL should allow entry point to be returned
-        self.assertEquals(param.get_entry_point_from_string('aiida.tools.dbexporters:tcod').name, entry_point.name)
-        self.assertEquals(param.get_entry_point_from_string('tools.dbexporters:tcod').name, entry_point.name)
+        self.assertEqual(param.get_entry_point_from_string('aiida.tools.dbexporters:tcod').name, entry_point.name)
+        self.assertEqual(param.get_entry_point_from_string('tools.dbexporters:tcod').name, entry_point.name)
 
     def test_convert(self):
         """
@@ -119,27 +119,27 @@ class TestPluginParamType(AiidaTestCase):
         param = PluginParamType(group=('transports', 'data'))
 
         entry_point = param.convert('aiida.transports:ssh', None, None)
-        self.assertEquals(entry_point.name, 'ssh')
+        self.assertEqual(entry_point.name, 'ssh')
         # self.assertTrue(isinstance(entry_point, EntryPoint))
 
         entry_point = param.convert('transports:ssh', None, None)
-        self.assertEquals(entry_point.name, 'ssh')
+        self.assertEqual(entry_point.name, 'ssh')
         # self.assertTrue(isinstance(entry_point, EntryPoint))
 
         entry_point = param.convert('ssh', None, None)
-        self.assertEquals(entry_point.name, 'ssh')
+        self.assertEqual(entry_point.name, 'ssh')
         # self.assertTrue(isinstance(entry_point, EntryPoint))
 
         entry_point = param.convert('aiida.data:structure', None, None)
-        self.assertEquals(entry_point.name, 'structure')
+        self.assertEqual(entry_point.name, 'structure')
         # self.assertTrue(isinstance(entry_point, EntryPoint))
 
         entry_point = param.convert('data:structure', None, None)
-        self.assertEquals(entry_point.name, 'structure')
+        self.assertEqual(entry_point.name, 'structure')
         # self.assertTrue(isinstance(entry_point, EntryPoint))
 
         entry_point = param.convert('structure', None, None)
-        self.assertEquals(entry_point.name, 'structure')
+        self.assertEqual(entry_point.name, 'structure')
         # self.assertTrue(isinstance(entry_point, EntryPoint))
 
         with self.assertRaises(click.BadParameter):

@@ -25,12 +25,12 @@ def load_profile(profile=None):
     Load the profile. This function is called by load_dbenv and SHOULD NOT
     be called by the user by hand.
     """
-    from aiida.manage import load_config
+    from aiida.manage import get_config
 
     if settings.LOAD_PROFILE_CALLED:
         raise InvalidOperation('You cannot call load_profile multiple times!')
 
-    config = load_config()
+    config = get_config()
 
     settings.LOAD_PROFILE_CALLED = True
 

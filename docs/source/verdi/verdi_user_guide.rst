@@ -9,6 +9,7 @@ But ``verdi`` is very versatile and provides a wealth of other functionalities; 
 * :ref:`code<code>`:                 Setup and manage codes.
 * :ref:`comment<comment>`:           Inspect, create and manage comments.
 * :ref:`computer<computer>`:         Setup and manage computers.
+* :ref:`config<config>`:             Set, unset and get profile specific or global configuration options.
 * :ref:`daemon<daemon>`:             Inspect and manage the daemon.
 * :ref:`data<data>`:                 Inspect, create and manage data nodes.
 * :ref:`devel<devel>`:               Commands for developers.
@@ -277,6 +278,18 @@ Setup and manage computer objects.
   *  **update**: [deprecated: use ``verdi computer duplicate`` instead] change configuration of a computer. Works only if the computer node is a disconnected node in the database (has not been used yet)
 
 
+.. _config:
+
+``verdi config``
+----------------
+This command allows you to set various configuration options that change how AiiDA works.
+The options can be set for specific profiles or globally.
+The command works just like ``git config`` does.
+Only passing the option name as an argument will print its value, if it is set.
+Passing a value as a second argument, will set that value for the given option.
+With the ``--unset`` flag an option can be unset and by using ``--global`` the get, set or unset operation is applied globally instead of the default profile.
+
+
 .. _daemon:
 
 ``verdi daemon``
@@ -355,12 +368,7 @@ Manage ``Data`` nodes.
 ---------------
 Commands intended for developers, such as setting :doc:`config properties<properties>` and running the unit test suite.
 
-  * **delproperty**: delete a property from the configuration
-  * **describeproperties**: print a list of available configuration properties
-  * **getproperty**: get the value of a property set for the configuration
-  * **listproperties**: print the properties defined in the configuration
   * **run_daemon**: run an instance of the daemon runner in the current interpreter
-  * **setproperty**: set a property with a given value for the configuration
   * **tests**: run the unittest suite
 
 

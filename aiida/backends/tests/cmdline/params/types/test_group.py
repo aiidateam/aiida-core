@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Tests for the `GroupParamType`."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -17,16 +18,17 @@ from aiida.orm.utils.loaders import OrmEntityLoader
 
 
 class TestGroupParamType(AiidaTestCase):
+    """Tests for the `GroupParamType`."""
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls, *args, **kwargs):
         """
         Create some groups to test the GroupParamType parameter type for the command line infrastructure
         We create an initial group with a random name and then on purpose create two groups with a name
         that matches exactly the ID and UUID, respectively, of the first one. This allows us to test
         the rules implemented to solve ambiguities that arise when determing the identifier type
         """
-        super(TestGroupParamType, cls).setUpClass()
+        super(TestGroupParamType, cls).setUpClass(*args, **kwargs)
 
         cls.param = GroupParamType()
         cls.entity_01 = Group(label='group_01').store()
@@ -39,7 +41,7 @@ class TestGroupParamType(AiidaTestCase):
         """
         identifier = '{}'.format(self.entity_01.pk)
         result = self.param.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_01.uuid)
+        self.assertEqual(result.uuid, self.entity_01.uuid)
 
     def test_get_by_uuid(self):
         """
@@ -47,7 +49,7 @@ class TestGroupParamType(AiidaTestCase):
         """
         identifier = '{}'.format(self.entity_01.uuid)
         result = self.param.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_01.uuid)
+        self.assertEqual(result.uuid, self.entity_01.uuid)
 
     def test_get_by_label(self):
         """
@@ -55,7 +57,7 @@ class TestGroupParamType(AiidaTestCase):
         """
         identifier = '{}'.format(self.entity_01.label)
         result = self.param.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_01.uuid)
+        self.assertEqual(result.uuid, self.entity_01.uuid)
 
     def test_ambiguous_label_pk(self):
         """
@@ -66,11 +68,11 @@ class TestGroupParamType(AiidaTestCase):
         """
         identifier = '{}'.format(self.entity_02.label)
         result = self.param.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_01.uuid)
+        self.assertEqual(result.uuid, self.entity_01.uuid)
 
         identifier = '{}{}'.format(self.entity_02.label, OrmEntityLoader.LABEL_AMBIGUITY_BREAKER_CHARACTER)
         result = self.param.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_02.uuid)
+        self.assertEqual(result.uuid, self.entity_02.uuid)
 
     def test_ambiguous_label_uuid(self):
         """
@@ -81,8 +83,8 @@ class TestGroupParamType(AiidaTestCase):
         """
         identifier = '{}'.format(self.entity_03.label)
         result = self.param.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_01.uuid)
+        self.assertEqual(result.uuid, self.entity_01.uuid)
 
         identifier = '{}{}'.format(self.entity_03.label, OrmEntityLoader.LABEL_AMBIGUITY_BREAKER_CHARACTER)
         result = self.param.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_03.uuid)
+        self.assertEqual(result.uuid, self.entity_03.uuid)

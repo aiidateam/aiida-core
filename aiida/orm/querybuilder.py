@@ -351,10 +351,10 @@ class QueryBuilder(object):
         When somebody hits: print(QueryBuilder) or print(str(QueryBuilder))
         I want to print the SQL-query. Because it looks cool...
         """
-        from aiida.manage import load_config
+        from aiida.manage import get_config
 
-        config = load_config()
-        engine = config.current_profile.dicctionary['AIIDADB_ENGINE']
+        config = get_config()
+        engine = config.current_profile.dictionary['AIIDADB_ENGINE']
 
         if engine.startswith("mysql"):
             from sqlalchemy.dialects import mysql as mydialect

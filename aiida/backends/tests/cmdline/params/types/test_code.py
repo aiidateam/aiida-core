@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Tests for the `CodeParamType`."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -20,24 +21,25 @@ from aiida.orm.utils.loaders import OrmEntityLoader
 
 
 class TestCodeParamType(AiidaTestCase):
+    """Tests for the `CodeParamType`."""
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls, *args, **kwargs):
         """
         Create some code to test the CodeParamType parameter type for the command line infrastructure
         We create an initial code with a random name and then on purpose create two code with a name
         that matches exactly the ID and UUID, respectively, of the first one. This allows us to test
         the rules implemented to solve ambiguities that arise when determing the identifier type
         """
-        super(TestCodeParamType, cls).setUpClass()
+        super(TestCodeParamType, cls).setUpClass(*args, **kwargs)
 
         cls.param_base = CodeParamType()
         cls.param_entry_point = CodeParamType(entry_point='arithmetic.add')
         cls.entity_01 = Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
-        cls.entity_02 = Code(remote_computer_exec=(cls.computer, '/bin/true'),
-            input_plugin_name='arithmetic.add').store()
-        cls.entity_03 = Code(remote_computer_exec=(cls.computer, '/bin/true'),
-            input_plugin_name='templatereplacer').store()
+        cls.entity_02 = Code(
+            remote_computer_exec=(cls.computer, '/bin/true'), input_plugin_name='arithmetic.add').store()
+        cls.entity_03 = Code(
+            remote_computer_exec=(cls.computer, '/bin/true'), input_plugin_name='templatereplacer').store()
 
         cls.entity_01.label = 'computer_01'
         cls.entity_02.label = str(cls.entity_01.pk)
@@ -49,7 +51,7 @@ class TestCodeParamType(AiidaTestCase):
         """
         identifier = '{}'.format(self.entity_01.pk)
         result = self.param_base.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_01.uuid)
+        self.assertEqual(result.uuid, self.entity_01.uuid)
 
     def test_get_by_uuid(self):
         """
@@ -57,7 +59,7 @@ class TestCodeParamType(AiidaTestCase):
         """
         identifier = '{}'.format(self.entity_01.uuid)
         result = self.param_base.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_01.uuid)
+        self.assertEqual(result.uuid, self.entity_01.uuid)
 
     def test_get_by_label(self):
         """
@@ -65,15 +67,15 @@ class TestCodeParamType(AiidaTestCase):
         """
         identifier = '{}'.format(self.entity_01.label)
         result = self.param_base.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_01.uuid)
+        self.assertEqual(result.uuid, self.entity_01.uuid)
 
     def test_get_by_fullname(self):
         """
         Verify that using the LABEL@machinename will retrieve the correct entity
         """
-        identifier = '{}@{}'.format(self.entity_01.label, self.computer.name)
+        identifier = '{}@{}'.format(self.entity_01.label, self.computer.name)  # pylint: disable=no-member
         result = self.param_base.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_01.uuid)
+        self.assertEqual(result.uuid, self.entity_01.uuid)
 
     def test_ambiguous_label_pk(self):
         """
@@ -84,11 +86,11 @@ class TestCodeParamType(AiidaTestCase):
         """
         identifier = '{}'.format(self.entity_02.label)
         result = self.param_base.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_01.uuid)
+        self.assertEqual(result.uuid, self.entity_01.uuid)
 
         identifier = '{}{}'.format(self.entity_02.label, OrmEntityLoader.LABEL_AMBIGUITY_BREAKER_CHARACTER)
         result = self.param_base.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_02.uuid)
+        self.assertEqual(result.uuid, self.entity_02.uuid)
 
     def test_ambiguous_label_uuid(self):
         """
@@ -99,17 +101,17 @@ class TestCodeParamType(AiidaTestCase):
         """
         identifier = '{}'.format(self.entity_03.label)
         result = self.param_base.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_01.uuid)
+        self.assertEqual(result.uuid, self.entity_01.uuid)
 
         identifier = '{}{}'.format(self.entity_03.label, OrmEntityLoader.LABEL_AMBIGUITY_BREAKER_CHARACTER)
         result = self.param_base.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_03.uuid)
+        self.assertEqual(result.uuid, self.entity_03.uuid)
 
     def test_entry_point_validation(self):
         """Verify that when an `entry_point` is defined in the constructor, it is respected in the validation."""
         identifier = '{}'.format(self.entity_02.pk)
         result = self.param_entry_point.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_02.uuid)
+        self.assertEqual(result.uuid, self.entity_02.uuid)
 
         with self.assertRaises(click.BadParameter):
             identifier = '{}'.format(self.entity_03.pk)

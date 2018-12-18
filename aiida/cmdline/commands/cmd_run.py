@@ -79,7 +79,7 @@ def run(scriptname, varargs, group, group_name, exclude, excludesubclasses, incl
     if group:
         automatic_group_name = group_name
         if automatic_group_name is None:
-            from aiida.utils import timezone
+            from aiida.common import timezone
 
             automatic_group_name = 'Verdi autogroup on ' + timezone.now().strftime("%Y-%m-%d %H:%M:%S")
 

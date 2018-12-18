@@ -195,9 +195,9 @@ making efficient backups of the AiiDA repository.
 
 Before running the backup script, you will have to configure it. Therefore you
 should execute the ``backup_setup.py`` which is located under
-``MY_AIIDA_FOLDER/aiida/common/additions/backup_script``. For example::
+``MY_AIIDA_FOLDER/aiida/manage/backup``. For example::
 
-	verdi -p PROFILENAME run MY_AIIDA_FOLDER/aiida/common/additions/backup_script/backup_setup.py
+	verdi -p PROFILENAME run MY_AIIDA_FOLDER/aiida/manage/backup/backup_setup.py
 
 where PROFILENAME is the name of the profile you want to use (if you don't specify the ``-p`` option, the default profile will be used). This will ask a set of questions. More precisely, it will initially ask for:
 

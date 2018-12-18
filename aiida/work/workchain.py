@@ -20,7 +20,7 @@ from plumpy.workchains import if_, while_, return_, _PropagateReturn
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import override
-from aiida.common.utils import classproperty
+from aiida.common.lang import classproperty
 from aiida.orm import Node
 from aiida.orm.node.process import WorkChainNode
 from aiida.orm.utils import load_node, load_workflow

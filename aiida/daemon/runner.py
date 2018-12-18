@@ -7,21 +7,20 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Function that starts a daemon runner."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from __future__ import print_function
+
+import functools
 import logging
 import signal
-from functools import partial
 
 from aiida.common.log import configure_logging
 from aiida.daemon.client import get_daemon_client
-from aiida import work
 from aiida.manage import get_manager
 
-
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 DAEMON_LEGACY_WORKFLOW_INTERVAL = 30
 
@@ -36,27 +35,27 @@ def start_daemon():
     try:
         runner = get_manager().create_daemon_runner()
     except Exception as exception:
-        logger.exception('daemon runner failed to start')
+        LOGGER.exception('daemon runner failed to start')
         raise
 
     def shutdown_daemon(_num, _frame):
-        logger.info('Received signal to shut down the daemon runner')
+        LOGGER.info('Received signal to shut down the daemon runner')
         runner.close()
 
     signal.signal(signal.SIGINT, shutdown_daemon)
     signal.signal(signal.SIGTERM, shutdown_daemon)
 
-    logger.info('Starting a daemon runner')
+    LOGGER.info('Starting a daemon runner')
 
     tick_legacy_workflows(runner)
 
     try:
         runner.start()
     except SystemError as exception:
-        logger.info('Received a SystemError: {}'.format(exception))
+        LOGGER.info('Received a SystemError: %s', exception)
         runner.close()
 
-    logger.info('Daemon runner stopped')
+    LOGGER.info('Daemon runner stopped')
 
 
 def tick_legacy_workflows(runner, interval=DAEMON_LEGACY_WORKFLOW_INTERVAL):
@@ -67,9 +66,9 @@ def tick_legacy_workflows(runner, interval=DAEMON_LEGACY_WORKFLOW_INTERVAL):
     :param runner: the Runner instance to perform the callback
     :param interval: the number of seconds to wait between callbacks
     """
-    logger.debug('Ticking the legacy workflows')
+    LOGGER.debug('Ticking the legacy workflows')
     legacy_workflow_stepper()
-    runner.loop.call_later(interval, partial(tick_legacy_workflows, runner))
+    runner.loop.call_later(interval, functools.partial(tick_legacy_workflows, runner))
 
 
 def legacy_workflow_stepper():
@@ -80,22 +79,22 @@ def legacy_workflow_stepper():
     from aiida.daemon.timestamps import set_timestamp_workflow_stepper, get_timestamp_workflow_stepper
     from aiida.daemon.workflowmanager import execute_steps
 
-    logger.debug('Checking for workflows to manage')
+    LOGGER.debug('Checking for workflows to manage')
     # RUDIMENTARY way to check if this task is already running (to avoid acting
     # again and again on the same workflow steps)
     try:
-        stepper_is_running = (get_timestamp_workflow_stepper(when='stop')
-                              - get_timestamp_workflow_stepper(when='start')) <= timedelta(0)
+        stepper_is_running = (
+            get_timestamp_workflow_stepper(when='stop') - get_timestamp_workflow_stepper(when='start')) <= timedelta(0)
     except TypeError:
         # When some timestamps are None (undefined)
-        stepper_is_running = (get_timestamp_workflow_stepper(when='stop')
-                              is None and get_timestamp_workflow_stepper(when='start') is not None)
+        stepper_is_running = (get_timestamp_workflow_stepper(when='stop') is None and
+                              get_timestamp_workflow_stepper(when='start') is not None)
 
     if not stepper_is_running:
         # The previous wf manager stopped already -> we can run a new one
         set_timestamp_workflow_stepper(when='start')
-        logger.debug('Running execute_steps')
+        LOGGER.debug('Running execute_steps')
         execute_steps()
         set_timestamp_workflow_stepper(when='stop')
     else:
-        logger.debug('Execute_steps already running')
+        LOGGER.debug('Execute_steps already running')

@@ -7,11 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Module that defines utility functions to set timestamps of the daemon's workflow stepper in the settings table."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from aiida.backends.utils import set_global_setting, get_global_setting
-from aiida.utils import timezone
+from aiida.common import timezone
 
 
 def set_timestamp_workflow_stepper(when):
@@ -30,11 +32,9 @@ def set_timestamp_workflow_stepper(when):
         raise ValueError("the 'when' parameter can only be 'start' or 'stop'")
 
     set_global_setting(
-        'daemon|task_{}|{}'.format(when, task), timezone.datetime.now(),
-        description=(
-            "The last time the daemon {} to run the task '{}'".format(verb, task)
-        )
-    )
+        'daemon|task_{}|{}'.format(when, task),
+        timezone.datetime.now(),
+        description=("The last time the daemon {} to run the task '{}'".format(verb, task)))
 
 
 def get_timestamp_workflow_stepper(when='stop'):

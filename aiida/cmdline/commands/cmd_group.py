@@ -131,7 +131,7 @@ def group_show(group, raw, uuid):
     """Show information on a given group. Pass the GROUP as a parameter."""
 
     from aiida.common.utils import str_timedelta
-    from aiida.utils import timezone
+    from aiida.common import timezone
     from aiida.plugins.loader import get_plugin_type_from_type_string
     from tabulate import tabulate
 
@@ -227,8 +227,8 @@ def group_list(all_users, user_email, all_types, group_type, with_description, c
     # pylint: disable=too-many-branches
     """Show a list of groups."""
     import datetime
-    from aiida.common.utils import escape_for_sql_like
-    from aiida.utils import timezone
+    from aiida.common.escaping import escape_for_sql_like
+    from aiida.common import timezone
     from aiida.orm import Group
     from aiida.orm import QueryBuilder
     from aiida.orm import User

@@ -15,7 +15,7 @@ import abc
 import six
 
 from aiida.common import exceptions
-from aiida.common.utils import abstractclassmethod, type_check
+from aiida.common.lang import abstractclassmethod, type_check
 from aiida.common.exceptions import InputValidationError
 
 __all__ = ('BackendQueryBuilder',)

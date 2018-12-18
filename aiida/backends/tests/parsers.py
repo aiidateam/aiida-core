@@ -77,7 +77,7 @@ def output_test(pk, testname, skip_uuids_from_inputs=[]):
         skipped
     """
     import os
-    import aiida.utils.json as json
+    import aiida.common.json as json
 
     from aiida.common.folders import Folder
     from aiida.orm.node.process import CalcJobNode
@@ -90,7 +90,7 @@ def output_test(pk, testname, skip_uuids_from_inputs=[]):
         testname)
 
     if not is_valid_folder_name(outfolder):
-        raise ValueError("The testname is invalid; it can contain only " "letters, digits or underscores")
+        raise ValueError("The testname is invalid; it can contain only letters, digits or underscores")
 
     if os.path.exists(outfolder):
         raise ValueError("Out folder '{}' already exists".format(outfolder))
@@ -105,7 +105,7 @@ def output_test(pk, testname, skip_uuids_from_inputs=[]):
     try:
         to_export.append(c.out.retrieved.dbnode)
     except AttributeError:
-        raise ValueError("No output retrieved node; without it, we cannot " "test the parser!")
+        raise ValueError("No output retrieved node; without it, we cannot test the parser!")
     export_tree(to_export, folder=folder, also_parents=False, also_calc_outputs=False)
 
     # Create an empty checks file
@@ -115,7 +115,7 @@ def output_test(pk, testname, skip_uuids_from_inputs=[]):
     for path, dirlist, filelist in os.walk(outfolder):
         if len(dirlist) == 0 and len(filelist) == 0:
             with io.open("{}/.gitignore".format(path), 'w', encoding='utf8') as fhandle:
-                fhandle.write(u"# This is a placeholder file, used to make git " "store an empty folder")
+                fhandle.write(u"# This is a placeholder file, used to make git store an empty folder")
                 fhandle.flush()
 
 
@@ -173,7 +173,7 @@ class TestParsers(AiidaTestCase):
     def read_test(self, outfolder):
         import os
         import importlib
-        import aiida.utils.json as json
+        import aiida.common.json as json
 
         from aiida.orm.node.process import CalcJobNode
         from aiida.orm.utils import load_node
@@ -196,7 +196,7 @@ class TestParsers(AiidaTestCase):
         except IOError:
             raise ValueError("This test does not provide a check file!")
         except ValueError:
-            raise ValueError("This test does provide a check file, but it cannot " "be JSON-decoded!")
+            raise ValueError("This test does provide a check file, but it cannot be JSON-decoded!")
 
         mod_path = 'aiida.backends.tests.parser_tests.{}'.format(os.path.split(outfolder)[1])
 
@@ -235,7 +235,7 @@ class TestParsers(AiidaTestCase):
                     try:
                         test_node = parsed_output_nodes[test_node_name]
                     except KeyError:
-                        raise AssertionError("Output node '{}' expected but " "not found".format(test_node_name))
+                        raise AssertionError("Output node '{}' expected but not found".format(test_node_name))
 
                     # Each subkey: attribute to check
                     # attr_test is the name of the attribute

@@ -18,7 +18,7 @@ from __future__ import absolute_import
 import six
 
 import aiida.scheduler
-from aiida.common.utils import escape_for_bash
+from aiida.common.escaping import escape_for_bash
 from aiida.scheduler import SchedulerError, SchedulerParsingError
 from aiida.scheduler.datastructures import (JobInfo, JOB_STATES, JobResource)
 
@@ -134,11 +134,11 @@ class LsfJobResource(JobResource):
 
         default_mpiprocs_per_machine = kwargs.pop('default_mpiprocs_per_machine', None)
         if default_mpiprocs_per_machine is not None:
-            raise ConfigurationError("default_mpiprocs_per_machine cannot be set " "for LSF scheduler")
+            raise ConfigurationError("default_mpiprocs_per_machine cannot be set for LSF scheduler")
 
         num_machines = kwargs.pop('num_machines', None)
         if num_machines is not None:
-            raise ConfigurationError("num_machines cannot be set " "for LSF scheduler")
+            raise ConfigurationError("num_machines cannot be set for LSF scheduler")
 
         if self.tot_num_mpiprocs <= 0:
             raise ValueError("tot_num_mpiprocs must be >= 1")
@@ -273,7 +273,7 @@ class LsfScheduler(aiida.scheduler.Scheduler):
                 joblist.append(jobs)
             else:
                 if not isinstance(jobs, (tuple, list)):
-                    raise TypeError("If provided, the 'jobs' variable must be a string or " "a list of strings")
+                    raise TypeError("If provided, the 'jobs' variable must be a string or a list of strings")
                 joblist = jobs
             command.append(' '.join(joblist))
 
@@ -345,7 +345,7 @@ class LsfScheduler(aiida.scheduler.Scheduler):
             lines.append('#BSUB -J "{}"'.format(job_title))
 
         if not job_tmpl.import_sys_environment:
-            self.logger.warning("LSF scheduler cannot ignore " "the user environment")
+            self.logger.warning("LSF scheduler cannot ignore the user environment")
 
         if job_tmpl.sched_output_path:
             lines.append("#BSUB -o {}".format(job_tmpl.sched_output_path))
@@ -374,7 +374,7 @@ class LsfScheduler(aiida.scheduler.Scheduler):
             lines.append("#BSUB -sp {}".format(job_tmpl.priority))
 
         if not job_tmpl.job_resource:
-            raise ValueError("Job resources (as the tot_num_mpiprocs) are " "required for the LSF scheduler plugin")
+            raise ValueError("Job resources (as the tot_num_mpiprocs) are required for the LSF scheduler plugin")
 
         lines.append("#BSUB -n {}".format(job_tmpl.job_resource.get_tot_num_mpiprocs()))
         # Note:  make sure that PARALLEL_SCHED_BY_SLOT=Y is NOT
@@ -426,7 +426,7 @@ class LsfScheduler(aiida.scheduler.Scheduler):
             lines.append(empty_line)
             lines.append("# ENVIRONMENT VARIABLES BEGIN ###")
             if not isinstance(job_tmpl.job_environment, dict):
-                raise ValueError("If you provide job_environment, it must be " "a dictionary")
+                raise ValueError("If you provide job_environment, it must be a dictionary")
             for key, value in job_tmpl.job_environment.items():
                 lines.append("export {}={}".format(key.strip(), escape_for_bash(value)))
             lines.append("# ENVIRONMENT VARIABLES END  ###")
@@ -606,18 +606,18 @@ fi
 
                     this_job.requested_wallclock_time_seconds = requested_walltime.total_seconds()
                 except (TypeError, ValueError):
-                    self.logger.warning("Error parsing the time limit " "for job id {}".format(this_job.job_id))
+                    self.logger.warning("Error parsing the time limit for job id {}".format(this_job.job_id))
 
                 try:
                     psd_percent_complete = float(percent_complete.strip(' L').strip("%"))
                     this_job.wallclock_time_seconds = requested_walltime.total_seconds() * psd_percent_complete / 100.
                 except ValueError:
-                    self.logger.warning("Error parsing the time used " "for job id {}".format(this_job.job_id))
+                    self.logger.warning("Error parsing the time used for job id {}".format(this_job.job_id))
 
             try:
                 this_job.submission_time = psd_submission_time
             except ValueError:
-                self.logger.warning("Error parsing submission time for job " "id {}".format(this_job.job_id))
+                self.logger.warning("Error parsing submission time for job id {}".format(this_job.job_id))
 
             this_job.title = job_name
 

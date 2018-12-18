@@ -216,7 +216,7 @@ def set_process_state_change_timestamp(process):
     from aiida.backends.utils import set_global_setting
     from aiida.common.exceptions import UniquenessError
     from aiida.orm.node.process import ProcessNode, CalculationNode, WorkflowNode
-    from aiida.utils import timezone
+    from aiida.common import timezone
 
     if isinstance(process.calc, CalculationNode):
         process_type = 'calculation'

@@ -22,7 +22,7 @@ from aiida.orm.computers import Computer
 from aiida.orm.data import Data
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.restapi.api import App, AiidaApi
-import aiida.utils.json as json
+import aiida.common.json as json
 
 StructureData = DataFactory('structure')  # pylint: disable=invalid-name
 CifData = DataFactory('cif')  # pylint: disable=invalid-name

@@ -17,7 +17,7 @@ import tempfile
 import yaml
 
 from aiida.backends.utils import get_current_profile
-from aiida.common.caching import configure, get_use_cache, enable_caching, disable_caching
+from aiida.manage.caching import configure, get_use_cache, enable_caching, disable_caching
 from aiida.orm.data.bool import Bool
 from aiida.orm.data.float import Float
 from aiida.orm.data.int import Int

@@ -115,7 +115,7 @@ Suppose you are interested in all calculations in your database that are in
 state 'FINISHED' and were created in the last *n* days::
 
     from datetime import timedelta
-    from aiida.utils import timezone
+    from aiida.common import timezone
     now = timezone.now()
     time_n_days_ago = now - timedelta(days=n)
 

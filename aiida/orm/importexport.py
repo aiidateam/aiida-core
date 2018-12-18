@@ -344,7 +344,7 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
     from itertools import chain
 
     from django.db import transaction
-    from aiida.utils import timezone
+    from aiida.common import timezone
 
     from aiida.orm import Node, Group
     from aiida.common.archive import extract_tree, extract_tar, extract_zip, extract_cif
@@ -353,7 +353,7 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
     from aiida.backends.djsite.db import models
     from aiida.common.utils import get_class_string, get_object_from_string
     from aiida.common.datastructures import calc_states
-    import aiida.utils.json as json
+    import aiida.common.json as json
 
     # This is the export version expected by this function
     expected_export_version = '0.4'
@@ -878,7 +878,7 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False, silen
     import zipfile
     from itertools import chain
 
-    from aiida.utils import timezone
+    from aiida.common import timezone
 
     from aiida.orm import Node, Group
     from aiida.common.archive import extract_tree, extract_tar, extract_zip, extract_cif
@@ -886,7 +886,7 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False, silen
     from aiida.common.utils import get_object_from_string
     from aiida.common.datastructures import calc_states
     from aiida.common.links import LinkType
-    import aiida.utils.json as json
+    import aiida.common.json as json
 
     # This is the export version expected by this function
     expected_export_version = '0.4'
@@ -1730,7 +1730,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     from aiida.common.links import LinkType
     from aiida.common.folders import RepositoryFolder
     from aiida.orm.querybuilder import QueryBuilder
-    import aiida.utils.json as json
+    import aiida.common.json as json
 
     if not silent:
         print("STARTING EXPORT...")

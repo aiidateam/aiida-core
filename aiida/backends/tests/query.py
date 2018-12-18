@@ -630,7 +630,7 @@ class QueryBuilderDateTimeAttribute(AiidaTestCase):
                      "SQLA doesn't have full datetime support in attributes")
     def test_date(self):
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.utils import timezone
+        from aiida.common import timezone
         from datetime import timedelta
         from aiida.orm.node import Node
         n = Data()

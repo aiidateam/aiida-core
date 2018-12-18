@@ -18,13 +18,12 @@ import numpy as np
 
 from aiida.orm import load_node
 from aiida.orm.data.array import ArrayData
-from aiida.orm.data.orbital import OrbitalData 
+from aiida.orm.data.orbital import OrbitalData
 from aiida.orm.data.array.bands import BandsData
-from aiida.common.orbital import  Orbital
-from aiida.common.exceptions import   ValidationError, NotExistent
+from aiida.common.exceptions import ValidationError, NotExistent
 
 
-class ProjectionData(OrbitalData, ArrayData): 
+class ProjectionData(OrbitalData, ArrayData):
     """
     A class to handle arrays of projected wavefunction data. That is projections
     of a orbitals, usually an atomic-hydrogen orbital, onto a

@@ -131,7 +131,7 @@ def user_list(color):
             name_pieces.append(user.first_name)
         if user.last_name:
             name_pieces.append(user.last_name)
-        full_name = " ".join(name_pieces)
+        full_name = ' '.join(name_pieces)
         if full_name:
             full_name = " {}".format(full_name)
 

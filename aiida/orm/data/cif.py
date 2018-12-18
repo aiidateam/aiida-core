@@ -17,7 +17,7 @@ from six.moves import range
 
 from aiida.orm.data.singlefile import SinglefileData
 from aiida.work import calcfunction
-from aiida.common.utils import HiddenPrints
+from aiida.common.utils import Capturing
 
 
 class InvalidOccupationsError(Exception):
@@ -503,7 +503,7 @@ class CifData(SinglefileData):
 
         if not os.path.abspath(filename):
             raise ValueError("filename must be an absolute path")
-        md5 = aiida.common.utils.md5_file(filename)
+        md5 = aiida.common.files.md5_file(filename)
 
         cifs = cls.from_md5(md5)
         if not cifs:
@@ -556,7 +556,7 @@ class CifData(SinglefileData):
         import tempfile
         cif = cif_from_ase(aseatoms)
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
-            with HiddenPrints():
+            with Capturing():
                 tmpf.write(pycifrw_from_cif(cif, loops=ase_loops).WriteOut())
             tmpf.flush()
             self.set_file(tmpf.name)
@@ -594,7 +594,7 @@ class CifData(SinglefileData):
         """
         import tempfile
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
-            with HiddenPrints():
+            with Capturing():
                 tmpf.write(values.WriteOut())
             tmpf.flush()
             self.set_file(tmpf.name)
@@ -831,7 +831,7 @@ class CifData(SinglefileData):
         if not abspath:
             raise ValidationError("No valid CIF was passed!")
 
-        return aiida.common.utils.md5_file(abspath)
+        return aiida.common.files.md5_file(abspath)
 
     def _get_aiida_structure(self, converter='pymatgen', store=False, **kwargs):
         """
@@ -917,4 +917,4 @@ class CifData(SinglefileData):
             raise ValidationError("attribute 'md5' not set.")
         md5 = self.generate_md5()
         if attr_md5 != md5:
-            raise ValidationError("Attribute 'md5' says '{}' but '{}' was " "parsed instead.".format(attr_md5, md5))
+            raise ValidationError("Attribute 'md5' says '{}' but '{}' was parsed instead.".format(attr_md5, md5))

@@ -8,7 +8,7 @@ import six
 from plumpy import ProcessState
 
 from aiida.common.links import LinkType
-from aiida.common.utils import classproperty
+from aiida.common.lang import classproperty
 from aiida.plugins.entry_point import get_entry_point_string_from_class
 
 from aiida.orm.implementation import Node

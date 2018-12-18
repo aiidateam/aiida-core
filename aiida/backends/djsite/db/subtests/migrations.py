@@ -20,7 +20,7 @@ from django.db import connection
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import IntegrityError
 from aiida.manage.database.integrity.duplicate_uuid import deduplicate_node_uuids, verify_node_uuid_uniqueness
-from aiida.utils.capturing import Capturing
+from aiida.common.utils import Capturing
 
 
 class TestMigrations(AiidaTestCase):

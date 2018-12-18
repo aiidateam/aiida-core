@@ -8,31 +8,66 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Command line interface to dynamically create and run a WorkChain that can evaluate a reversed polish expression."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import click
-from aiida.utils.cli import command
-from aiida.utils.cli import options
+
+from aiida.cmdline.params import options, types
+from aiida.cmdline.utils import decorators
 
 
-@command()
+@click.command()
 @click.argument('expression', type=click.STRING, required=False)
-@options.daemon()
-@options.code(callback_kwargs={'entry_point': 'arithmetic.add'}, required=False,
+@click.option('-d', '--daemon', is_flag=True, help='Submit the workchains to the daemon.')
+@options.CODE(
+    type=types.CodeParamType(entry_point='arithmetic.add'),
+    required=False,
     help='Code to perform the add operations with. Required if -C flag is specified')
-@click.option('-C', '--use-calculations', is_flag=True, default=False, show_default=True,
+@click.option(
+    '-C',
+    '--use-calculations',
+    is_flag=True,
+    default=False,
+    show_default=True,
     help='Use job calculations to perform all additions')
-@click.option('-F', '--use-calcfunctions', is_flag=True, default=False, show_default=True,
+@click.option(
+    '-F',
+    '--use-calcfunctions',
+    is_flag=True,
+    default=False,
+    show_default=True,
     help='Use calcfunctions to perform all substractions')
-@click.option('-s', '--sleep', type=click.INT, default=5, show_default=True,
+@click.option(
+    '-s',
+    '--sleep',
+    type=click.INT,
+    default=5,
+    show_default=True,
     help='When submitting to the daemon, the number of seconds to sleep between polling the workchain process state')
-@click.option('-t', '--timeout', type=click.INT, default=60, show_default=True,
+@click.option(
+    '-t',
+    '--timeout',
+    type=click.INT,
+    default=60,
+    show_default=True,
     help='When submitting to the daemon, the number of seconds to wait for a workchain to finish before timing out')
-@click.option('-m', '--modulo', type=click.INT, default=1000000, show_default=True,
+@click.option(
+    '-m',
+    '--modulo',
+    type=click.INT,
+    default=1000000,
+    show_default=True,
     help='Specify an integer to modulo all intermediate and the final result to avoid integer overflow')
-@click.option('-n', '--dry-run', is_flag=True, default=False,
+@click.option(
+    '-n',
+    '--dry-run',
+    is_flag=True,
+    default=False,
     help='Only evaluate the expression and generate the workchain but do not launch it')
+@decorators.with_dbenv()
 def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout, modulo, dry_run, daemon):
     """
     Evaluate the expression in Reverse Polish Notation in both a normal way and by procedurally generating
@@ -56,6 +91,7 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
 
     If no expression is specified, a random one will be generated that adheres to these rules
     """
+    # pylint: disable=too-many-arguments,too-many-locals,too-many-statements,too-many-branches
     import importlib
     import sys
     import time
@@ -64,8 +100,8 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
     from aiida.orm.data.int import Int
     from aiida.orm.data.str import Str
     from aiida.work.launch import run_get_node, submit
-    from expression import generate, validate, evaluate
-    from workchain import generate_outlines, format_outlines, write_workchain
+    from lib.expression import generate, validate, evaluate
+    from lib.workchain import generate_outlines, format_outlines, write_workchain
 
     if use_calculations and not isinstance(code, Code):
         raise click.BadParameter('if you specify the -C flag, you have to specify a code as well')
@@ -83,7 +119,7 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
     evaluated = evaluate(expression, modulo)
     outlines, stack = generate_outlines(expression)
     outlines_string = format_outlines(outlines, use_calculations, use_calcfunctions)
-    workchain_filename = write_workchain(outlines_string, filename=filename)
+    write_workchain(outlines_string, filename=filename)
 
     click.echo('Expression: {}'.format(expression))
 
@@ -95,10 +131,7 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
             click.echo('could not import the {} module'.format(workchain_module))
             sys.exit(1)
 
-        inputs = {
-            'modulo': Int(modulo),
-            'operands': Str(' '.join(stack))
-        }
+        inputs = {'modulo': Int(modulo), 'operands': Str(' '.join(stack))}
 
         if code:
             inputs['code'] = code
@@ -117,7 +150,9 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
 
             if timed_out:
                 click.secho('Failed: ', fg='red', bold=True, nl=False)
-                click.secho('the workchain<{}> did not finish in time and the operation timed out'.format(workchain.pk), bold=True)
+                click.secho(
+                    'the workchain<{}> did not finish in time and the operation timed out'.format(workchain.pk),
+                    bold=True)
                 sys.exit(1)
 
             try:
@@ -145,5 +180,6 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
             click.secho('the workchain accurately reproduced the evaluated value', bold=True)
             sys.exit(0)
 
+
 if __name__ == '__main__':
-    launch()
+    launch()  # pylint: disable=no-value-for-parameter

@@ -12,9 +12,10 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
-from aiida.control.profile import setup_profile
+from aiida.manage.configuration.setup import setup_profile
 
 
 @verdi.command('setup')

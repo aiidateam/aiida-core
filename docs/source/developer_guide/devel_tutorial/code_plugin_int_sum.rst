@@ -98,7 +98,7 @@ summation code (a detailed description of the different sections follows)::
 
     from aiida.orm.calculation.job import JobCalculation
     from aiida.orm.data.parameter import ParameterData
-    from aiida.common.utils import classproperty
+    from aiida.common.lang import classproperty
     from aiida.common.exceptions import InputValidationError
     from aiida.common.exceptions import ValidationError
     from aiida.common.datastructures import CalcInfo, CodeInfo

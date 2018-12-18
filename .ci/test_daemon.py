@@ -18,7 +18,7 @@ import time
 from six.moves import range
 
 from aiida.common.exceptions import NotExistent
-from aiida.common.caching import enable_caching
+from aiida.manage.caching import enable_caching
 from aiida.daemon.client import get_daemon_client
 from aiida.orm import Code, CalculationFactory, DataFactory
 from aiida.orm.data.int import Int

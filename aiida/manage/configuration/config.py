@@ -7,7 +7,7 @@ import os
 import shutil
 
 from aiida.common import exceptions
-from aiida.utils import json
+from aiida.common import json
 
 from .migrations import CURRENT_CONFIG_VERSION, OLDEST_COMPATIBLE_CONFIG_VERSION
 from .options import get_option, parse_option, NO_DEFAULT

@@ -24,7 +24,7 @@ from aiida.common.utils import get_new_uuid
 from aiida.common.folders import RepositoryFolder
 from aiida.common.exceptions import (ModificationNotAllowed, NotExistent, UniquenessError)
 from aiida.common.links import LinkType
-from aiida.common.utils import type_check
+from aiida.common.lang import type_check
 from aiida.orm.implementation.general.node import AbstractNode, _HASH_EXTRA_KEY
 from .utils import get_attr
 
@@ -142,7 +142,7 @@ class Node(AbstractNode):
     @classmethod
     def query(cls, *args, **kwargs):
         from aiida.common.exceptions import FeatureNotAvailable
-        raise FeatureNotAvailable("The node query method is not supported in " "SQLAlchemy. Please use QueryBuilder.")
+        raise FeatureNotAvailable("The node query method is not supported in SQLAlchemy. Please use QueryBuilder.")
 
     @property
     def type(self):
@@ -308,7 +308,7 @@ class Node(AbstractNode):
                 link = DbLink(input_id=src.id, output_id=self.id, label=label, type=link_type.value)
                 session.add(link)
         except SQLAlchemyError as exc:
-            raise UniquenessError("There is already a link with the same " "name (raw message was {})" "".format(exc))
+            raise UniquenessError("There is already a link with the same name (raw message was {})" "".format(exc))
 
     def _get_db_input_links(self, link_type):
         from aiida.orm.convert import get_orm_entity

@@ -130,7 +130,7 @@ class Data(Node):
             raise ValueError("Source must be supplied as a dictionary")
         unknown_attrs = tuple(set(source.keys()) - set(self._source_attributes))
         if unknown_attrs:
-            raise KeyError("Unknown source parameters: " "{}".format(", ".join(unknown_attrs)))
+            raise KeyError("Unknown source parameters: {}".format(", ".join(unknown_attrs)))
 
         self._set_attr('source', source)
 
@@ -210,7 +210,7 @@ class Data(Node):
             if extension.startswith(os.path.extsep):
                 extension = extension[len(os.path.extsep):]
             if not extension:
-                raise ValueError("Cannot recognized the fileformat from the " "extension")
+                raise ValueError("Cannot recognized the fileformat from the extension")
 
             # Replace the fileformat using the replacements specified in the
             # _custom_export_format_replacements dictionary. If not found there,

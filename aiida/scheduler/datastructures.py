@@ -523,7 +523,7 @@ class JobInfo(DefaultFieldsAttributeDict):
         # is_naive check from django.utils.timezone
         if value.tzinfo is None or value.tzinfo.utcoffset(value) is None:
             # TODO: FIX TIMEZONE
-            SCHEDULER_LOGGER.debug("Datetime to serialize in JobInfo is naive, " "this should be fixed!")
+            SCHEDULER_LOGGER.debug("Datetime to serialize in JobInfo is naive, this should be fixed!")
             # v = v.replace(tzinfo = pytz.utc)
             return {'date': value.strftime('%Y-%m-%dT%H:%M:%S.%f'), 'timezone': None}
 
@@ -587,7 +587,7 @@ class JobInfo(DefaultFieldsAttributeDict):
         Serialise the current data
         :return: A serialised representation of the current data
         """
-        import aiida.utils.json as json
+        import aiida.common.json as json
 
         ser_data = {k: self.serialize_field(v, self._special_serializers.get(k, None)) for k, v in self.items()}
 
@@ -599,7 +599,7 @@ class JobInfo(DefaultFieldsAttributeDict):
         :param data: The data to load from
         :return: The value after loading
         """
-        import aiida.utils.json as json
+        import aiida.common.json as json
 
         deser_data = json.loads(data)
 

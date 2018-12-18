@@ -94,7 +94,7 @@ class TestVerdiDataExportable:
         # Check that the simple command works as expected
         options = [str(ids[self.NODE_ID_STR])]
         res = self.cli_runner.invoke(export_cmd, options, catch_exceptions=False)
-        self.assertEqual(res.exit_code, 0, "The command did not finish " "correctly")
+        self.assertEqual(res.exit_code, 0, "The command did not finish correctly")
 
         dump_flags = ['-F', '--format']
         for flag in dump_flags:
@@ -124,7 +124,7 @@ class TestVerdiDataExportable:
                 # Try to export it again. It should fail because the
                 # file exists
                 res = self.cli_runner.invoke(export_cmd, options, catch_exceptions=False)
-                self.assertNotEquals(res.exit_code, 0, "The command should fail because the " "file already exists")
+                self.assertNotEquals(res.exit_code, 0, "The command should fail because the file already exists")
 
                 # Now we force the export of the file and it should overwrite
                 # existing files
@@ -288,7 +288,7 @@ class TestVerdiDataArray(AiidaTestCase):
         # with captured_output() as (out, err):
         options = [str(self.a.id)]
         res = self.cli_runner.invoke(cmd_array.array_show, options, catch_exceptions=False)
-        self.assertEqual(res.exit_code, 0, "The command did not finish " "correctly")
+        self.assertEqual(res.exit_code, 0, "The command did not finish correctly")
 
 
 class TestVerdiDataBands(AiidaTestCase, TestVerdiDataListable):

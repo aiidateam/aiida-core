@@ -39,7 +39,7 @@ def format_local_time(timestamp, format_str='%Y-%m-%d %H:%M:%S'):
     :param timestamp: a datetime object or a float representing a UNIX timestamp
     :param format_str: optional string format to pass to strftime
     """
-    from aiida.utils import timezone
+    from aiida.common import timezone
 
     if isinstance(timestamp, float):
         return timezone.datetime.fromtimestamp(timestamp).strftime(format_str)
@@ -57,7 +57,7 @@ def print_last_process_state_change(process_type=None):
     """
     from aiida.cmdline.utils.echo import echo_info, echo_warning
     from aiida.daemon.client import get_daemon_client
-    from aiida.utils import timezone
+    from aiida.common import timezone
     from aiida.common.utils import str_timedelta
     from aiida.work.utils import get_process_state_change_timestamp
 

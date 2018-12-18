@@ -16,7 +16,7 @@ import six
 
 from aiida.backends.djsite.db import models
 from aiida.common import exceptions
-from aiida.common import utils
+from aiida.common import lang
 
 from ..comments import BackendComment, BackendCommentCollection
 from .utils import ModelWrapper
@@ -40,7 +40,7 @@ class DjangoComment(entities.DjangoModelEntity[models.DbComment], BackendComment
         :return: a Comment object associated to the given node and user
         """
         super(DjangoComment, self).__init__(backend)
-        utils.type_check(user, users.DjangoUser)  # pylint: disable=no-member
+        lang.type_check(user, users.DjangoUser)  # pylint: disable=no-member
         self._dbmodel = ModelWrapper(
             models.DbComment(dbnode=node.dbnode, user=user.dbmodel, content=content), auto_flush=self._auto_flush)
 

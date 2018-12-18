@@ -35,7 +35,7 @@ class TestNodeBasicSQLA(AiidaTestCase):
         session = get_scoped_session()
 
         from pytz import UTC
-        from aiida.utils import timezone
+        from aiida.common import timezone
         from sqlalchemy.exc import IntegrityError
 
         DbSetting.set_value(key='pippo', value=[1, 2, 3])

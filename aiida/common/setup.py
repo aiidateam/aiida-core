@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Functions to interactively or non-interactively set up the AiiDA instance and a profile."""
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
@@ -23,6 +24,23 @@ USE_TZ = True
 # Keyword that is used in test profiles, databases and repositories to
 # differentiate them from non-testing ones.
 TEST_KEYWORD = 'test_'
+
+
+def validate_email(email):
+    """Validate an email address using Django's email validator.
+
+    :param email: the email address
+    :return: boolean, True if email address is valid, False otherwise
+    """
+    from django.core.validators import validate_email as django_validate_email  # pylint: disable=import-error,no-name-in-module
+    from django import forms  # pylint: disable=no-name-in-module
+
+    try:
+        django_validate_email(email)
+    except forms.ValidationError:
+        return False
+    else:
+        return True
 
 
 def create_profile_noninteractive(config, profile_name='default', force_overwrite=False, **kwargs):
@@ -50,7 +68,6 @@ def create_profile_noninteractive(config, profile_name='default', force_overwrit
         raise ValueError('{} is not a valid backend choice.'.format(backend_v))
 
     # Setting email
-    from validate_email import validate_email
     email_v = kwargs.pop('email')
     if validate_email(email_v):
         profile[Profile.KEY_DEFAULT_USER] = email_v
@@ -70,7 +87,7 @@ def create_profile_noninteractive(config, profile_name='default', force_overwrit
     repo_path = os.path.expanduser(repo_v)
     if not os.path.isabs(repo_path):
         raise ValueError('The repository path must be an absolute path')
-    if (not os.path.isdir(repo_path)):
+    if not os.path.isdir(repo_path):
         old_umask = os.umask(DEFAULT_UMASK)
         try:
             os.makedirs(repo_path)
@@ -89,10 +106,10 @@ def create_profile(config, profile_name='default'):
     :param profile_name: The profile to be configured
     :return: The populated profile that was also stored.
     """
+    # pylint: disable=too-many-locals,too-many-statements,too-many-branches
+    import click
     import readline
-    from validate_email import validate_email
     from aiida.manage.configuration.settings import DEFAULT_UMASK, DEFAULT_AIIDA_USER
-    from aiida.common.utils import query_yes_no
 
     print("Setting up profile {}.".format(profile_name))
 
@@ -125,14 +142,13 @@ def create_profile(config, profile_name='default'):
     updating_existing_prof = False
     if profile:
         print("The following configuration found corresponding to profile {}.".format(profile_name))
-        for k, v in profile.items():
-            if k in profile_key_explanation:
-                print("{}: {}".format(profile_key_explanation.get(k), v))
+        for key, value in profile.items():
+            if key in profile_key_explanation:
+                print("{}: {}".format(profile_key_explanation.get(key), value))
             else:
-                print("{}: {}".format(k, v))
-        answ = query_yes_no("Would you like to change it?", "no")
+                print("{}: {}".format(key, value))
         # If the user doesn't want to change it, we abandon
-        if answ is False:
+        if not click.prompt('Would you like to change it?'):
             return profile
         # Otherwise, we continue.
         else:
@@ -149,7 +165,7 @@ def create_profile(config, profile_name='default'):
             this_new_confs['AIIDADB_BACKEND'] = aiida_backend
         else:
             backend_possibilities = ['django', 'sqlalchemy']
-            if len(backend_possibilities) > 0:
+            if backend_possibilities:
 
                 valid_aiida_backend = False
                 while not valid_aiida_backend:
@@ -178,7 +194,7 @@ def create_profile(config, profile_name='default'):
             db_possibilities.extend(['postgresql_psycopg2', 'mysql'])
         elif aiida_backend == 'sqlalchemy':
             db_possibilities.extend(['postgresql_psycopg2'])
-        if len(db_possibilities) > 0:
+        if db_possibilities:
             db_engine = profile.get('AIIDADB_ENGINE', db_possibilities[0])
             readline.set_startup_hook(lambda: readline.insert_text(db_engine))
 
@@ -265,7 +281,7 @@ def create_profile(config, profile_name='default'):
             readline.set_startup_hook(lambda: readline.insert_text(profile.get('AIIDADB_PASS')))
             this_new_confs['AIIDADB_PASS'] = input('AiiDA Database password: ')
         else:
-            raise ValueError("You have to specify a valid database " "(valid choices are 'mysql', 'postgres')")
+            raise ValueError("You have to specify a valid database (valid choices are 'mysql', 'postgres')")
 
         # This part for the time being is a bit oddly written
         # it should change in the future to add the possibility of having a
@@ -333,7 +349,7 @@ def parse_repository_uri(repository_uri):
     if parts.scheme == u'file':
         if not os.path.isabs(parts.path):
             raise exceptions.ConfigurationError("The current repository is specified with a "
-                                     "file protocol but with a relative path")
+                                                "file protocol but with a relative path")
 
-        # Normalize path to its absolute path
-        return parts.scheme, os.path.expanduser(parts.path)
+    # Normalize path to its absolute path
+    return parts.scheme, os.path.expanduser(parts.path)

@@ -7,26 +7,27 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import io
+import os
 import shutil
 import tempfile
-import os
 
-from aiida.common import utils
-from aiida.common.additions.backup_script import backup_setup
-from aiida.common.additions.backup_script.backup_base import AbstractBackup
 from aiida.backends.testbase import AiidaTestCase
-import aiida.utils.json as json
+from aiida.common import json
+from aiida.common import utils
+from aiida.manage.backup import backup_setup
+from aiida.manage.backup import backup_utils
+from aiida.manage.backup.backup_base import AbstractBackup
 
 
 class TestBackupSetupScriptUnit(AiidaTestCase):
 
     def tearDown(self):
-        utils.input = None
+        backup_utils.input = None
 
     def test_construct_backup_variables(self):
         """
@@ -39,8 +40,8 @@ class TestBackupSetupScriptUnit(AiidaTestCase):
 
         # Checking parsing of backup variables with many empty answers
         answers = ["", "y", "", "y", "", "y", "1", "y", "2", "y"]
-        # utils.input = lambda _: answers[self.array_counter()]
-        utils.input = lambda _: answers[ac.array_counter()]
+        # input = lambda _: answers[self.array_counter()]
+        backup_utils.input = lambda _: answers[ac.array_counter()]
         bk_vars = _backup_setup_inst.construct_backup_variables("")
         # Check the parsed answers
         self.assertIsNone(bk_vars[AbstractBackup.OLDEST_OBJECT_BK_KEY])
@@ -54,7 +55,7 @@ class TestBackupSetupScriptUnit(AiidaTestCase):
         answers = ["2013-07-28 20:48:53.197537+02:00", "y",
                     "2", "y", "2015-07-28 20:48:53.197537+02:00", "y",
                     "3", "y", "4", "y"]
-        utils.input = lambda _: answers[ac.array_counter()]
+        backup_utils.input = lambda _: answers[ac.array_counter()]
         bk_vars = _backup_setup_inst.construct_backup_variables("")
         # Check the parsed answers
         self.assertEqual(bk_vars[AbstractBackup.OLDEST_OBJECT_BK_KEY], answers[0])
@@ -72,7 +73,7 @@ class TestBackupSetupScriptIntegration(AiidaTestCase):
         replies to all the question as the user would do and in the end it
         checks that the correct files were created with the right content.
         """
-        from aiida.utils.capturing import Capturing
+        from aiida.common.utils import Capturing
 
         # Create a temp folder where the backup files will be placed
         temp_folder = tempfile.mkdtemp()
@@ -99,7 +100,7 @@ class TestBackupSetupScriptIntegration(AiidaTestCase):
                        "",                  # is it correct?
                        "2",                 # threshold?
                        ""]                  # is it correct?
-            utils.input = lambda _: answers[ac.array_counter()]
+            backup_utils.input = lambda _: answers[ac.array_counter()]
 
             # Run the setup script and catch the sysout
             with Capturing():

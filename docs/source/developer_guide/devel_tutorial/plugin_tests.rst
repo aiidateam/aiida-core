@@ -14,7 +14,7 @@ Special profiles also have to be set mannually by the user and in automated test
 
 AiiDA ships with tools to simplify tests for plugins.
 The recommended way is to use the `pytest`_ framework, while the `unittest`_ package is also supported.
-Internally, test environments are created and managed by the :py:func:`aiida.utils.fixtures.fixture_manager` defined in :py:mod:`aiida.utils.fixtures`.
+Internally, test environments are created and managed by the :py:func:`aiida.manage.fixtures.fixture_manager` defined in :py:mod:`aiida.manage.fixtures`.
 
 .. _pytest: https://pytest.org
 .. _unittest: https://docs.python.org/library/unittest.html
@@ -134,14 +134,14 @@ Using the unittest framework
 
 The ``uniitest`` package is included in the python standard library.
 It is widely used despite some limitations (it is also used for testing ``aiida_core``).
-We provide a :py:class:`aiida.utils.fixtures.PluginTestCase` to be used for inheritance.
+We provide a :py:class:`aiida.manage.fixtures.PluginTestCase` to be used for inheritance.
 By default, each test method in the test case class runs with a fresh aiida database.
 Due to the limitation of ``uniitest``, sub-clasess of ``PluginTestCase`` has to be run
-with the special runner in  :py:class:`aiida.utils.fixtures.TestRunner`.
+with the special runner in  :py:class:`aiida.manage.fixtures.TestRunner`.
 To run the actually tests, you need to prepare a run script in python::
 
   import uniitest
-  from aiida.utils.fixtures import TestRunner
+  from aiida.manage.fixtures import TestRunner
 
   test = unittest.deaultTestLoader.discover('.')
   TestRunner().run(tests)

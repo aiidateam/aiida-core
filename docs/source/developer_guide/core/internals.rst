@@ -450,13 +450,13 @@ In general, changes to ``config.json`` should be avoided if possible. However, i
 
 1. Determine whether the change will be backwards-compatible. This means that an older version of AiiDA will still be able to run with the new ``config.json`` structure. It goes without saying that it's preferable to change ``config.json`` in a backwards-compatible way.
 
-2. In ``aiida/common/additions/config_migration/_migrations.py``, increase the ``CURRENT_CONFIG_VERSION`` by one. If the change is **not** backwards-compatible, set ``OLDEST_COMPATIBLE_CONFIG_VERSION`` to the same value.
+2. In ``aiida/manage/configuration/migrations/migrations.py``, increase the ``CURRENT_CONFIG_VERSION`` by one. If the change is **not** backwards-compatible, set ``OLDEST_COMPATIBLE_CONFIG_VERSION`` to the same value.
 
 3. Write a function which transforms the old config dict into the new version. It is possible that you need user input for the migration, in which case this should also be handled in that function.
 
 4. Add an entry in ``_MIGRATION_LOOKUP`` where the key is the version **before** the migration, and the value is a ``ConfigMigration`` object. The ``ConfigMigration`` is constructed from your migration function, and the **hard-coded** values of ``CURRENT_CONFIG_VERSION`` and ``OLDEST_COMPATIBLE_CONFIG_VERSION``. If these values are not hard-coded, the migration will break as soon as the values are changed again.
 
-5. Add tests for the migration, in ``aiida/common/additions/config_migration/test_migrations.py``. You can add two types of tests:
+5. Add tests for the migration, in ``aiida/backends/tests/manage/configuration/migrations/test_migrations.py``. You can add two types of tests:
 
     * Tests that run the entire migration, using the ``check_and_migrate_config`` function. Make sure to run it with ``store=False``, otherwise it will overwrite your ``config.json`` file. For these tests, you will have to update the reference files.
     * Tests that run a single step in the migration, using the ``ConfigMigration.apply`` method. This can be used if you need to test different edge cases of the migration.

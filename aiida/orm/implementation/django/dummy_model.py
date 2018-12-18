@@ -36,7 +36,7 @@ from sqlalchemy.dialects.postgresql import UUID
 
 # MISC
 from aiida.backends.sqlalchemy.models.utils import uuid_func
-from aiida.utils import timezone
+from aiida.common import timezone
 
 Base = declarative_base()
 

@@ -19,7 +19,7 @@ from kiwipy import communications
 
 import plumpy
 
-from aiida.utils import serialize
+from aiida.common import serialize
 from aiida.work.exceptions import PastException
 
 __all__ = 'RemoteException', 'CommunicationTimeout', 'DeliveryFailed', 'ProcessLauncher'

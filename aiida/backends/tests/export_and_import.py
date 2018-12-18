@@ -288,7 +288,7 @@ class TestSimple(AiidaTestCase):
         from aiida.common import exceptions
         from aiida.orm import DataFactory
         from aiida.orm.importexport import export
-        import aiida.utils.json as json
+        import aiida.common.json as json
 
         # Creating a folder for the import/export files
         export_file_tmp_folder = tempfile.mkdtemp()
@@ -339,7 +339,7 @@ class TestSimple(AiidaTestCase):
         from aiida.common.folders import SandboxFolder
         from aiida.orm.data.structure import StructureData
         from aiida.orm import load_node
-        import aiida.utils.json as json
+        import aiida.common.json as json
 
         # Creating a folder for the import/export files
         temp_folder = tempfile.mkdtemp()

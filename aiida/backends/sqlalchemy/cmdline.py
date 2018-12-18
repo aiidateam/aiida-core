@@ -13,7 +13,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import datetime
-from aiida.utils import timezone
+from aiida.common import timezone
 
 
 def get_workflow_list(pk_list=tuple(), user=None, all_states=False, n_days_ago=None):

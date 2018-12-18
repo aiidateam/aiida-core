@@ -20,8 +20,9 @@ from collections import OrderedDict
 
 import six
 from aiida.common.exceptions import InternalError
-from aiida.common.utils import classproperty
-from aiida.utils import DEFAULT_TRANSPORT_INTERVAL
+from aiida.common.lang import classproperty
+
+DEFAULT_TRANSPORT_INTERVAL = 30.
 
 
 # pylint: disable=too-many-public-methods
@@ -655,7 +656,7 @@ class Transport(object):
         retval, username, stderr = self.exec_command_wait(command)
         if retval == 0:
             if stderr.strip():
-                self.logger.warning("There was nonempty stderr in the whoami " "command: {}".format(stderr))
+                self.logger.warning("There was nonempty stderr in the whoami command: {}".format(stderr))
             return username.strip()
         else:
             self.logger.error("Problem executing whoami. Exit code: {}, stdout: '{}', "

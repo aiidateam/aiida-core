@@ -23,7 +23,7 @@ from aiida.cmdline.utils import decorators, echo
 from aiida.cmdline.utils.common import get_env_with_venv_bin
 from aiida.cmdline.utils.daemon import get_daemon_status, print_client_response_status
 from aiida.daemon.client import get_daemon_client
-from aiida.manage import load_config
+from aiida.manage import get_config
 
 
 @verdi.group('daemon')
@@ -69,7 +69,7 @@ def status(all_profiles):
     """
     Print the status of the current daemon or all daemons
     """
-    config = load_config()
+    config = get_config()
 
     if all_profiles is True:
         profiles = [profile for profile in config.profiles if not profile.is_test_profile]
@@ -130,7 +130,7 @@ def stop(no_wait, all_profiles):
     """
     Stop the daemon
     """
-    config = load_config()
+    config = get_config()
 
     if all_profiles is True:
         profiles = [profile for profile in config.profiles if not profile.is_test_profile]

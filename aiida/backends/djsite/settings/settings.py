@@ -20,7 +20,7 @@ from aiida.common.exceptions import ConfigurationError, MissingConfigurationErro
 
 from aiida.backends import settings
 from aiida.common.setup import parse_repository_uri
-from aiida.manage import load_config
+from aiida.manage import get_config
 from aiida.utils.timezone import get_current_timezone
 
 # Assumes that parent directory of aiida is root for
@@ -31,7 +31,7 @@ BASE_DIR = os.path.split(AIIDA_DIR)[0]
 sys.path = [BASE_DIR] + sys.path
 
 try:
-    CONFIG = load_config()
+    CONFIG = get_config()
 except MissingConfigurationError:
     raise MissingConfigurationError("Please run the AiiDA Installation, no config found")
 

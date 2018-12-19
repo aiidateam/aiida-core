@@ -7,30 +7,26 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Profile param type for click."""
+"""Module to define the custom click type for code."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import click
 
 
-class ProfileParamType(click.ParamType):
-    """The profile parameter type for click."""
+class ConfigOptionParamType(click.types.StringParamType):
+    """ParamType for configuration options."""
 
-    name = 'profile'
+    name = 'config option'
 
     def convert(self, value, param, ctx):
-        """Attempt to match the given value to a valid profile."""
-        from aiida.common.exceptions import MissingConfigurationError, ProfileConfigurationError
-        from aiida.manage import get_config
+        from aiida.manage.configuration.options import get_option, get_option_names
 
-        try:
-            config = get_config()
-            profile = config.get_profile(value)
-        except (MissingConfigurationError, ProfileConfigurationError) as exception:
-            self.fail(str(exception))
+        if value not in get_option_names():
+            raise click.BadParameter('{} is not a valid configuration option'.format(value))
 
-        return profile
+        return get_option(value)
 
     def complete(self, ctx, incomplete):  # pylint: disable=unused-argument,no-self-use
         """
@@ -38,12 +34,6 @@ class ProfileParamType(click.ParamType):
 
         :returns: list of tuples of valid entry points (matching incomplete) and a description
         """
-        from aiida.common.exceptions import MissingConfigurationError
-        from aiida.manage import get_config
+        from aiida.manage.configuration.options import get_option_names
 
-        try:
-            config = get_config()
-        except MissingConfigurationError:
-            return []
-
-        return [(profile.name, '') for profile in config.profiles if profile.name.startswith(incomplete)]
+        return [(option_name, '') for option_name in get_option_names() if option_name.startswith(incomplete)]

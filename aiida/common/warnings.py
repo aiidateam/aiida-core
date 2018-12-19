@@ -23,6 +23,6 @@ class AiidaDeprecationWarning(Warning):
     this would be filtered out by default.
     Enabled by default, you can disable it by running in the shell::
 
-      verdi devel setproperty warnings.showdeprecations False
+      verdi config warnings.showdeprecations False
     """
     pass

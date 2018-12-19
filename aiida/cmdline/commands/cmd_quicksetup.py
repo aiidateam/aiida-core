@@ -12,6 +12,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import os
 import sys
 import hashlib
@@ -56,13 +57,13 @@ def _check_db_name(dbname, postgres):
 def quicksetup(profile_name, only_config, set_default, non_interactive, backend, db_host, db_port, db_name, db_username,
                db_password, repository, email, first_name, last_name, institution):
     """Set up a sane configuration with as little interaction as possible."""
-    from aiida.manage import load_config
+    import getpass
+    from aiida.common.hashing import get_random_string
+    from aiida.manage.configuration.utils import load_config
     from aiida.manage.configuration.setup import create_instance_directories
-    from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
 
     create_instance_directories()
-
-    aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
+    config = load_config(create=True)
 
     # access postgres
     postgres = Postgres(host=db_host, port=db_port, interactive=bool(not non_interactive), quiet=False)
@@ -71,24 +72,20 @@ def quicksetup(profile_name, only_config, set_default, non_interactive, backend,
     if not success:
         sys.exit(1)
 
-    # default database name is <profile_name>_<login-name>
-    # this ensures that for profiles named test_... the database will also
-    # be named test_...
-    import getpass
     osuser = getpass.getuser()
-    aiida_base_dir_hash = hashlib.md5(AIIDA_CONFIG_FOLDER.encode('utf-8')).hexdigest()
-    dbname = db_name or profile_name + '_' + osuser + '_' + aiida_base_dir_hash
+    config_dir_hash = hashlib.md5(config.dirpath.encode('utf-8')).hexdigest()
 
     # default database user name is aiida_qs_<login-name>
     # default password is random
-    dbuser = db_username or 'aiida_qs_' + osuser + '_' + aiida_base_dir_hash
-    from aiida.common.hashing import get_random_string
+    # default database name is <profile_name>_<login-name>
+    # this ensures that for profiles named test_... the database will also be named test_...
+    dbuser = db_username or 'aiida_qs_' + osuser + '_' + config_dir_hash
     dbpass = db_password or get_random_string(length=50)
 
     # check if there is a profile that contains the db user already
     # and if yes, take the db user password from there
     # This is ok because a user can only see his own config files
-    config = load_config(create=True)
+    dbname = db_name or profile_name + '_' + osuser + '_' + config_dir_hash
     for profile in config.profiles:
         if profile.dictionary.get('AIIDADB_USER', '') == dbuser and not db_password:
             dbpass = profile.dictionary.get('AIIDADB_PASS')
@@ -128,10 +125,9 @@ def quicksetup(profile_name, only_config, set_default, non_interactive, backend,
     dbhost = postgres.dbinfo.get('host', 'localhost')
     dbport = postgres.dbinfo.get('port', '5432')
 
-    from os.path import isabs
-    repo = repository or 'repository-{}/'.format(profile_name)
-    if not isabs(repo):
-        repo = os.path.join(aiida_dir, repo)
+    repo = repository or 'repository/{}/'.format(profile_name)
+    if not os.path.isabs(repo):
+        repo = os.path.join(config.dirpath, repo)
 
     setup_args = {
         'backend': backend,

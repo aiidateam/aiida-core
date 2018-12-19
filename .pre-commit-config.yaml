@@ -10,9 +10,7 @@
       (?x)^(
         docs/.*|
         examples/.*|
-        aiida/backends/djsite/db/admin.py|
         aiida/backends/djsite/db/__init__.py|
-        aiida/backends/djsite/db/management/__init__.py|
         aiida/backends/djsite/db/migrations/0001_initial.py|
         aiida/backends/djsite/db/migrations/0002_db_state_change.py|
         aiida/backends/djsite/db/migrations/0003_add_link_type.py|
@@ -32,13 +30,11 @@
         aiida/backends/djsite/db/migrations/0017_drop_dbcalcstate.py|
         aiida/backends/djsite/db/migrations/__init__.py|
         aiida/backends/djsite/db/models.py|
-        aiida/backends/djsite/db/subtests/djangomigrations.py|
         aiida/backends/djsite/db/subtests/migrations.py|
         aiida/backends/djsite/db/subtests/generic.py|
         aiida/backends/djsite/db/subtests/__init__.py|
         aiida/backends/djsite/db/subtests/nodes.py|
         aiida/backends/djsite/db/subtests/query.py|
-        aiida/backends/djsite/db/views.py|
         aiida/backends/djsite/globalsettings.py|
         aiida/backends/djsite/__init__.py|
         aiida/backends/djsite/manage.py|
@@ -103,22 +99,12 @@
         aiida/backends/tests/cmdline/commands/test_comment.py|
         aiida/backends/tests/cmdline/commands/test_computer.py|
         aiida/backends/tests/cmdline/commands/test_data.py|
-        aiida/backends/tests/cmdline/commands/test_devel.py|
         aiida/backends/tests/cmdline/commands/test_export.py|
         aiida/backends/tests/cmdline/commands/test_group.py|
         aiida/backends/tests/cmdline/commands/test_node.py|
         aiida/backends/tests/cmdline/commands/test_user.py|
         aiida/backends/tests/cmdline/commands/test_work.py|
         aiida/backends/tests/cmdline/commands/test_workflow.py|
-        aiida/backends/tests/cmdline/params/types/test_calculation.py|
-        aiida/backends/tests/cmdline/params/types/test_code.py|
-        aiida/backends/tests/cmdline/params/types/test_computer.py|
-        aiida/backends/tests/cmdline/params/types/test_data.py|
-        aiida/backends/tests/cmdline/params/types/test_group.py|
-        aiida/backends/tests/cmdline/params/types/test_identifier.py|
-        aiida/backends/tests/cmdline/params/types/test_node.py|
-        aiida/backends/tests/cmdline/params/types/test_plugin.py|
-        aiida/backends/tests/cmdline/params/types/test_workflow.py|
         aiida/backends/tests/common/test_datastructures.py|
         aiida/backends/tests/computer.py|
         aiida/backends/tests/control/test_computer_ctrl.py|

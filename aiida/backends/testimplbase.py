@@ -16,7 +16,6 @@ import six
 
 from aiida.common.exceptions import InternalError
 from aiida import orm
-from aiida.manage import get_manager
 
 
 @six.add_metaclass(ABCMeta)
@@ -77,6 +76,8 @@ class AiidaTestImplementation(object):
         """
         This method inserts default data into the database.
         """
+        from aiida.manage import get_config
+
         self.computer = orm.Computer(
             name='localhost',
             hostname='localhost',
@@ -86,7 +87,8 @@ class AiidaTestImplementation(object):
             backend=self.backend
         ).store()
 
-        email = get_manager().get_profile().default_user_email
+        config = get_config()
+        email = config.current_profile.default_user_email
         self.user = orm.User(email=email).store()
         self.user_email = email
 

@@ -55,7 +55,7 @@ def _1_add_profile_uuid(config):
     """
     for profile in config.profiles:
         profile.uuid = profile.generate_uuid()
-        config.update_profile(profile, store=False)
+        config.update_profile(profile)
 
     return config
 
@@ -75,7 +75,7 @@ def _2_simplify_default_profiles(config):
     else:
         default_profile = settings.AIIDADB_PROFILE
 
-    config.set_default_profile(default_profile, store=False)
+    config.set_default_profile(default_profile)
 
     return config
 

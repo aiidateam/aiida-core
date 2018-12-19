@@ -16,7 +16,7 @@ import functools
 
 from aiida import utils
 
-from .configuration import load_config
+from .configuration import get_config
 
 __all__ = 'get_manager', 'reset_manager'
 
@@ -90,7 +90,7 @@ class Manager(object):
         :rtype: :class:`~aiida.manage.configuration.profile.Profile`
         """
         if self._profile is None:
-            config = load_config()
+            config = get_config()
             self._profile = config.current_profile
 
         return self._profile
@@ -206,8 +206,9 @@ class Manager(object):
         """
         from aiida.work import runners
 
-        profile = self.get_profile()
-        poll_interval = 0.0 if profile.is_test_profile else profile.get_option('runner.poll.interval')
+        config = get_config()
+        profile = config.current_profile
+        poll_interval = 0.0 if profile.is_test_profile else config.option_get('runner.poll.interval')
 
         settings = {'rmq_submit': False, 'poll_interval': poll_interval}
         settings.update(kwargs)

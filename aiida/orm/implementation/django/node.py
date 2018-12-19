@@ -276,6 +276,7 @@ class Node(AbstractNode):
                 DbLink.objects.filter(**link_filter).distinct()]
 
     def _get_db_output_links(self, link_type):
+        from aiida.orm.convert import get_orm_entity
         from aiida.backends.djsite.db.models import DbLink
 
         link_filter = {'input': self._dbnode}

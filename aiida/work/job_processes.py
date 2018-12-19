@@ -579,7 +579,7 @@ class JobProcess(processes.Process):
             # Call the 'set' attribute methods for the contents of the 'option' namespace
             if name == self.OPTIONS_INPUT_LABEL:
                 for option_name, option_value in input_value.items():
-                    getattr(self.calc, 'set_{}'.format(option_name))(option_value)
+                    self.calc.set_option(option_name, option_value)
                 continue
 
             # Call the 'use' methods to set up the data-calc links

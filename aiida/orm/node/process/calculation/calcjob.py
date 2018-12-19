@@ -377,6 +377,21 @@ class CalcJobNode(CalculationNode):
 
         return parent_dict
 
+    def _set_internal(self, arguments, allow_hidden=False):
+        """
+        Works as self.set(), but takes a dictionary as the 'arguments' variable,
+        instead of reading it from the ``kwargs``; moreover, it allows to specify
+        allow_hidden to True. In this case, if a a key starts with and
+        underscore, as for instance ``_state``, it will not call
+        the function ``set__state`` but rather ``_set_state``.
+        """
+        for key, value in copy.copy(arguments).items():
+            if key in self.options and value is not None:
+                arguments.pop(key)
+                self.set_option(key, value)
+
+        super(CalcJobNode, self)._set_internal(arguments, allow_hidden=allow_hidden)
+
     def store(self, *args, **kwargs):
         """
         Override the store() method to store also the calculation in the NEW
@@ -677,7 +692,10 @@ class CalcJobNode(CalculationNode):
         if not isinstance(value, valid_type):
             raise TypeError('value is of invalid type {}'.format(type(value)))
 
-        self._set_attr(attribute_key, value)
+        if name == 'computer':
+            self.set_computer(value)
+        else:
+            self._set_attr(attribute_key, value)
 
     def get_options(self, only_actually_set=False):
         """

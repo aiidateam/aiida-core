@@ -95,74 +95,74 @@ class TestAttributeDictAccess(unittest.TestCase):
     def test_copy(self):
         """Test copying."""
         dictionary_01 = extendeddicts.AttributeDict()
-        dictionary_01.x = 'a'
+        dictionary_01.alpha = 'a'
         dictionary_02 = dictionary_01.copy()
-        dictionary_02.x = 'b'
-        self.assertEqual(dictionary_01.x, 'a')
-        self.assertEqual(dictionary_02.x, 'b')
+        dictionary_02.alpha = 'b'
+        self.assertEqual(dictionary_01.alpha, 'a')
+        self.assertEqual(dictionary_02.alpha, 'b')
 
     def test_delete_after_copy(self):
         """Test deleting after copying."""
         dictionary_01 = extendeddicts.AttributeDict()
-        dictionary_01.x = 'a'
-        dictionary_01.y = 'b'
+        dictionary_01.alpha = 'a'
+        dictionary_01.beta = 'b'
         dictionary_02 = dictionary_01.copy()
-        del dictionary_01.x
-        del dictionary_01['y']
+        del dictionary_01.alpha
+        del dictionary_01['beta']
         with self.assertRaises(AttributeError):
-            _ = dictionary_01.x
+            _ = dictionary_01.alpha
         with self.assertRaises(KeyError):
-            _ = dictionary_01['y']
-        self.assertEqual(dictionary_02['x'], 'a')
-        self.assertEqual(dictionary_02.y, 'b')
+            _ = dictionary_01['beta']
+        self.assertEqual(dictionary_02['alpha'], 'a')
+        self.assertEqual(dictionary_02.beta, 'b')
         self.assertEqual(set(dictionary_01.keys()), set({}))
-        self.assertEqual(set(dictionary_02.keys()), set({'x', 'y'}))
+        self.assertEqual(set(dictionary_02.keys()), set({'alpha', 'beta'}))
 
     def test_shallowcopy1(self):
         """Test shallow copying."""
         dictionary_01 = extendeddicts.AttributeDict()
-        dictionary_01.x = [1, 2, 3]
-        dictionary_01.y = 3
+        dictionary_01.alpha = [1, 2, 3]
+        dictionary_01.beta = 3
         dictionary_02 = dictionary_01.copy()
-        dictionary_02.x[0] = 4
-        dictionary_02.y = 5
-        self.assertEqual(dictionary_01.x, [4, 2, 3])  # copy does a shallow copy
-        self.assertEqual(dictionary_02.x, [4, 2, 3])
-        self.assertEqual(dictionary_01.y, 3)
-        self.assertEqual(dictionary_02.y, 5)
+        dictionary_02.alpha[0] = 4
+        dictionary_02.beta = 5
+        self.assertEqual(dictionary_01.alpha, [4, 2, 3])  # copy does a shallow copy
+        self.assertEqual(dictionary_02.alpha, [4, 2, 3])
+        self.assertEqual(dictionary_01.beta, 3)
+        self.assertEqual(dictionary_02.beta, 5)
 
     def test_shallowcopy2(self):
         """Test shallow copying."""
         dictionary_01 = extendeddicts.AttributeDict()
-        dictionary_01.x = {'a': 'b', 'c': 'd'}
+        dictionary_01.alpha = {'a': 'b', 'c': 'd'}
         # dictionary_02 = copy.deepcopy(dictionary_01)
         dictionary_02 = dictionary_01.copy()
         # doesn't work like this, would work as dictionary_02['x']['a']
         # i think that it is because deepcopy on dict actually creates a
         # copy only if the data is changed; but for a nested dict,
-        # dictionary_02.x returns a dict wrapped in our class and this looses all the
+        # dictionary_02.alpha returns a dict wrapped in our class and this looses all the
         # information on what should be updated when changed.
-        dictionary_02.x['a'] = 'ggg'
-        self.assertEqual(dictionary_01.x['a'], 'ggg')  # copy does a shallow copy
-        self.assertEqual(dictionary_02.x['a'], 'ggg')
+        dictionary_02.alpha['a'] = 'ggg'
+        self.assertEqual(dictionary_01.alpha['a'], 'ggg')  # copy does a shallow copy
+        self.assertEqual(dictionary_02.alpha['a'], 'ggg')
 
     def test_deepcopy1(self):
         """Test deep copying."""
         dictionary_01 = extendeddicts.AttributeDict()
-        dictionary_01.x = [1, 2, 3]
+        dictionary_01.alpha = [1, 2, 3]
         dictionary_02 = copy.deepcopy(dictionary_01)
-        dictionary_02.x[0] = 4
-        self.assertEqual(dictionary_01.x, [1, 2, 3])
-        self.assertEqual(dictionary_02.x, [4, 2, 3])
+        dictionary_02.alpha[0] = 4
+        self.assertEqual(dictionary_01.alpha, [1, 2, 3])
+        self.assertEqual(dictionary_02.alpha, [4, 2, 3])
 
     def test_shallowcopy3(self):
         """Test shallow copying."""
         dictionary_01 = extendeddicts.AttributeDict()
-        dictionary_01.x = {'a': 'b', 'c': 'd'}
+        dictionary_01.alpha = {'a': 'b', 'c': 'd'}
         dictionary_02 = copy.deepcopy(dictionary_01)
-        dictionary_02.x['a'] = 'ggg'
-        self.assertEqual(dictionary_01.x['a'], 'b')  # copy does a shallow copy
-        self.assertEqual(dictionary_02.x['a'], 'ggg')
+        dictionary_02.alpha['a'] = 'ggg'
+        self.assertEqual(dictionary_01.alpha['a'], 'b')  # copy does a shallow copy
+        self.assertEqual(dictionary_02.alpha['a'], 'ggg')
 
 
 class TestAttributeDictNested(unittest.TestCase):

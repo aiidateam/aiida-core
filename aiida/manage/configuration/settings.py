@@ -4,7 +4,7 @@ from __future__ import absolute_import
 
 import os
 
-from aiida.utils.find_folder import find_path
+from aiida.common.folders import find_path
 
 DEFAULT_UMASK = 0o0077
 DEFAULT_AIIDA_PATH_VARIABLE = 'AIIDA_PATH'

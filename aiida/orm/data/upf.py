@@ -19,7 +19,7 @@ import re
 import six
 
 import aiida.orm.users
-from aiida.common.utils import classproperty
+from aiida.common.lang import classproperty
 from aiida.orm.data.singlefile import SinglefileData
 from aiida.orm import GroupTypeString
 
@@ -167,7 +167,7 @@ def upload_upf_family(folder, group_label, group_description,
     pseudo_and_created = []
 
     for f in files:
-        md5sum = aiida.common.utils.md5_file(f)
+        md5sum = aiida.common.files.md5_file(f)
         qb = orm.QueryBuilder()
         qb.append(UpfData, filters={'attributes.md5': {'==': md5sum}})
         existing_upf = qb.first()
@@ -330,7 +330,7 @@ class UpfData(SinglefileData):
 
         if not os.path.isabs(filename):
             raise ValueError("filename must be an absolute path")
-        md5 = aiida.common.utils.md5_file(filename)
+        md5 = aiida.common.files.md5_file(filename)
 
         pseudos = cls.from_md5(md5)
         if len(pseudos) == 0:
@@ -372,7 +372,7 @@ class UpfData(SinglefileData):
             raise ValidationError("No valid UPF was passed!")
 
         parsed_data = parse_upf(upf_abspath)
-        md5sum = aiida.common.utils.md5_file(upf_abspath)
+        md5sum = aiida.common.files.md5_file(upf_abspath)
 
         try:
             element = parsed_data['element']
@@ -406,7 +406,7 @@ class UpfData(SinglefileData):
         import aiida.common.utils
 
         parsed_data = parse_upf(filename)
-        md5sum = aiida.common.utils.md5_file(filename)
+        md5sum = aiida.common.files.md5_file(filename)
 
         try:
             element = parsed_data['element']
@@ -452,7 +452,7 @@ class UpfData(SinglefileData):
         except ParsingError:
             raise ValidationError("The file '{}' could not be "
                                   "parsed".format(upf_abspath))
-        md5 = aiida.common.utils.md5_file(upf_abspath)
+        md5 = aiida.common.files.md5_file(upf_abspath)
 
         try:
             element = parsed_data['element']

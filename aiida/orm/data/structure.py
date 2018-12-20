@@ -11,10 +11,10 @@
 This module defines the classes for structures and all related
 functions to operate on them.
 """
-
 from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
+
 import itertools
 import copy
 from functools import reduce
@@ -23,8 +23,8 @@ import six
 from six.moves import range, zip
 
 from aiida.orm import Data
+from aiida.common.constants import elements
 from aiida.common.exceptions import UnsupportedSpeciesError
-from aiida.common.utils import classproperty, xyz_parser_iterator
 from aiida.work import calcfunction
 
 # Threshold used to check if the mass of two different Site objects is the same.
@@ -35,9 +35,6 @@ _mass_threshold = 1.e-3
 _sum_threshold = 1.e-6
 # Threshold used to check if the cell volume is not zero.
 _volume_threshold = 1.e-6
-
-# Element table
-from aiida.common.constants import elements
 
 _valid_symbols = tuple(i['symbol'] for i in elements.values())
 _atomic_masses = {el['symbol']: el['mass'] for el in elements.values()}
@@ -1008,7 +1005,7 @@ class StructureData(Data):
 
         return_string = "CRYSTAL\nPRIMVEC 1\n"
         for cell_vector in self.cell:
-            return_string += " ".join(["%18.10f" % i for i in cell_vector])
+            return_string +=' '.join(["%18.10f" % i for i in cell_vector])
             return_string += "\n"
         return_string += "PRIMCOORD 1\n"
         return_string += "%d 1\n" % len(sites)
@@ -1043,7 +1040,7 @@ class StructureData(Data):
         import numpy as np
         from itertools import product
         
-        import aiida.utils.json as json
+        import aiida.common.json as json
 
         supercell_factors=[1, 1, 1]
 
@@ -1142,6 +1139,7 @@ class StructureData(Data):
         """
         Read the structure from a string of format XYZ.
         """
+        from aiida.tools.data.structure import xyz_parser_iterator
 
         # idiom to get to the last block
         atoms = None
@@ -1167,7 +1165,12 @@ class StructureData(Data):
         """
         import numpy as np
         from ase.visualize import view
-        from aiida.common.utils import get_extremas_from_positions
+
+        def get_extremas_from_positions(positions):
+            """
+            returns the minimum and maximum value for each dimension in the positions given
+            """
+            return list(zip(*[(min(values), max(values)) for values in zip(*positions)]))
 
         # First, set PBC
         # All the checks are done in get_valid_pbc called by set_pbc, no need to check anything here

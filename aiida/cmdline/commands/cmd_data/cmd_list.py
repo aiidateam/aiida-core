@@ -39,7 +39,7 @@ def query(datatype, project, past_days, group_pks, all_users):
     import datetime
 
     from aiida import orm
-    from aiida.utils import timezone
+    from aiida.common import timezone
 
     qbl = orm.QueryBuilder()
     if all_users is False:

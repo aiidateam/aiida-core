@@ -16,11 +16,12 @@ import warnings
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed, MissingPluginError
 from aiida.common.links import LinkType
-from aiida.common.utils import classproperty, str_timedelta
+from aiida.common.lang import classproperty
+from aiida.common.utils import str_timedelta
 from aiida.plugins.loader import get_plugin_type_from_type_string
 from aiida.orm.node.process import ProcessNode
 from aiida.orm.mixins import Sealable
-from aiida.utils import timezone
+from aiida.common import timezone
 
 from .calculation import CalculationNode
 
@@ -424,7 +425,7 @@ class CalcJobNode(CalculationNode):
         try:
             _ = s.create_job_resource(**resources)
         except (TypeError, ValueError) as exc:
-            raise ValidationError("Invalid resources for the scheduler of the " "specified computer: {}".format(exc))
+            raise ValidationError("Invalid resources for the scheduler of the specified computer: {}".format(exc))
 
         if not isinstance(self.get_option('withmpi', only_actually_set=False), bool):
             raise ValidationError("withmpi property must be boolean! It in instead {}"
@@ -774,7 +775,7 @@ class CalcJobNode(CalculationNode):
         warnings.warn('explicit option getter/setter methods are deprecated, use get_option and set_option',
                       DeprecationWarning)
         if not isinstance(env_vars_dict, dict):
-            raise ValueError("You have to pass a " "dictionary to set_environment_variables")
+            raise ValueError("You have to pass a dictionary to set_environment_variables")
 
         for k, v in env_vars_dict.items():
             if not isinstance(k, six.string_types) or not isinstance(v, six.string_types):
@@ -1075,10 +1076,10 @@ class CalcJobNode(CalculationNode):
             return
 
         if not isinstance(extra_params, (list, tuple)):
-            raise ValueError("You must pass a list of strings to " "set_mpirun_extra_params")
+            raise ValueError("You must pass a list of strings to set_mpirun_extra_params")
         for param in extra_params:
             if not isinstance(param, six.string_types):
-                raise ValueError("You must pass a list of strings to " "set_mpirun_extra_params")
+                raise ValueError("You must pass a list of strings to set_mpirun_extra_params")
 
         self._set_attr("mpirun_extra_params", list(extra_params))
 
@@ -1208,7 +1209,7 @@ class CalcJobNode(CalculationNode):
         for item in retrieve_list:
             if not isinstance(item, six.string_types):
                 if (not (isinstance(item, (tuple, list))) or len(item) != 3):
-                    raise ValueError("You should pass a list containing either " "strings or lists/tuples")
+                    raise ValueError("You should pass a list containing either strings or lists/tuples")
                 if (not (isinstance(item[0], six.string_types)) or not (isinstance(item[1], six.string_types)) or
                         not (isinstance(item[2], int))):
                     raise ValueError("You have to pass a list (or tuple) of "
@@ -1268,7 +1269,7 @@ class CalcJobNode(CalculationNode):
                                          "NEW nor TOSUBMIT (current state is {})".format(self.get_state()))
 
         if not isinstance(retrieve_singlefile_list, (tuple, list)):
-            raise ValueError("You have to pass a list (or tuple) of lists of " "strings as retrieve_singlefile_list")
+            raise ValueError("You have to pass a list (or tuple) of lists of strings as retrieve_singlefile_list")
         for j in retrieve_singlefile_list:
             if (not (isinstance(j, (tuple, list))) or not (all(isinstance(i, six.string_types) for i in j))):
                 raise ValueError("You have to pass a list (or tuple) of lists "
@@ -1308,7 +1309,7 @@ class CalcJobNode(CalculationNode):
     def _set_scheduler_state(self, state):
         # I don't do any test here on the possible valid values,
         # I just convert it to a string
-        from aiida.utils import timezone
+        from aiida.common import timezone
 
         self._set_attr('scheduler_state', six.text_type(state))
         self._set_attr('scheduler_lastchecktime', timezone.now())
@@ -1593,7 +1594,7 @@ class CalcJobNode(CalculationNode):
                     dt = timezone.delta(time, times_since)
                     d['calculation'][proj] = str_timedelta(dt, negative_to_zero=True, max_num_fields=1)
                 else:
-                    d['calculation'][proj] = " ".join([
+                    d['calculation'][proj] =' '.join([
                         timezone.localtime(time).isoformat().split('T')[0],
                         timezone.localtime(time).isoformat().split('T')[1].split('.')[0].rsplit(":", 1)[0]
                     ])
@@ -1834,7 +1835,7 @@ class CalcJobNode(CalculationNode):
             return None
 
         if not isinstance(retrieved_node, FolderData):
-            raise TypeError("The retrieved node of calc with pk= {} is not of " "type FolderData".format(self.pk))
+            raise TypeError("The retrieved node of calc with pk= {} is not of type FolderData".format(self.pk))
 
         return retrieved_node
 
@@ -1874,7 +1875,7 @@ class CalcJobNode(CalculationNode):
         from aiida.common.datastructures import CodeInfo, code_run_modes
         from aiida.orm.code import Code
         from aiida.orm.utils import load_node
-        import aiida.utils.json as json
+        import aiida.common.json as json
 
         computer = self.get_computer()
         inputs = self.get_incoming(link_type=LinkType.INPUT_CALC)
@@ -1966,13 +1967,13 @@ class CalcJobNode(CalculationNode):
 
         # set the codes_info
         if not isinstance(calcinfo.codes_info, (list, tuple)):
-            raise PluginInternalError("codes_info passed to CalcInfo must be a " "list of CalcInfo objects")
+            raise PluginInternalError("codes_info passed to CalcInfo must be a list of CalcInfo objects")
 
         codes_info = []
         for code_info in calcinfo.codes_info:
 
             if not isinstance(code_info, CodeInfo):
-                raise PluginInternalError("Invalid codes_info, must be a list " "of CodeInfo objects")
+                raise PluginInternalError("Invalid codes_info, must be a list of CodeInfo objects")
 
             if code_info.code_uuid is None:
                 raise PluginInternalError("CalcInfo should have "
@@ -2013,7 +2014,7 @@ class CalcJobNode(CalculationNode):
             try:
                 job_tmpl.codes_run_mode = calcinfo.codes_run_mode
             except KeyError:
-                raise PluginInternalError("Need to set the order of the code " "execution (parallel or serial?)")
+                raise PluginInternalError("Need to set the order of the code execution (parallel or serial?)")
         else:
             job_tmpl.codes_run_mode = code_run_modes.SERIAL
         ########################################################################
@@ -2121,7 +2122,7 @@ class CalcJobNode(CalculationNode):
         """
         import os
         import errno
-        from aiida.utils import timezone
+        from aiida.common import timezone
 
         from aiida.transport.plugins.local import LocalTransport
         from aiida.orm.computers import Computer

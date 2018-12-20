@@ -20,7 +20,7 @@ import six
 from six.moves import zip
 
 import aiida.scheduler
-from aiida.common.utils import escape_for_bash
+from aiida.common.escaping import escape_for_bash
 from aiida.scheduler import SchedulerError
 from aiida.scheduler.datastructures import (JobInfo, JOB_STATES, NodeNumberJobResource)
 
@@ -214,7 +214,7 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
                 joblist.append(jobs)
             else:
                 if not isinstance(jobs, (tuple, list)):
-                    raise TypeError("If provided, the 'jobs' variable must be a string or " "a list of strings")
+                    raise TypeError("If provided, the 'jobs' variable must be a string or a list of strings")
                 joblist = jobs
             command.append('--jobs={}'.format(','.join(joblist)))
 
@@ -334,7 +334,7 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
             lines.append("#SBATCH --nice={}".format(job_tmpl.priority))
 
         if not job_tmpl.job_resource:
-            raise ValueError("Job resources (as the num_machines) are required " "for the SLURM scheduler plugin")
+            raise ValueError("Job resources (as the num_machines) are required for the SLURM scheduler plugin")
 
         lines.append("#SBATCH --nodes={}".format(job_tmpl.job_resource.num_machines))
         if job_tmpl.job_resource.num_mpiprocs_per_machine:
@@ -390,7 +390,7 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
             lines.append(empty_line)
             lines.append("# ENVIRONMENT VARIABLES BEGIN ###")
             if not isinstance(job_tmpl.job_environment, dict):
-                raise ValueError("If you provide job_environment, it must be " "a dictionary")
+                raise ValueError("If you provide job_environment, it must be a dictionary")
             for key, value in job_tmpl.job_environment.items():
                 lines.append("export {}={}".format(key.strip(), escape_for_bash(value)))
             lines.append("# ENVIRONMENT VARIABLES  END  ###")
@@ -483,7 +483,7 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
         # there is no line containing "Invalid job id specified", that happens
         # when I ask for specific calculations, and they are all finished
         if stderr.strip() and "Invalid job id specified" not in stderr:
-            self.logger.warning("Warning in _parse_joblist_output, non-empty " "stderr='{}'".format(stderr.strip()))
+            self.logger.warning("Warning in _parse_joblist_output, non-empty stderr='{}'".format(stderr.strip()))
             if retval != 0:
                 raise SchedulerError("Error during squeue parsing (_parse_joblist_output function)")
 
@@ -588,7 +588,7 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
             try:
                 this_job.requested_wallclock_time_seconds = (self._convert_time(thisjob_dict['time_limit']))
             except ValueError:
-                self.logger.warning("Error parsing the time limit " "for job id {}".format(this_job.job_id))
+                self.logger.warning("Error parsing the time limit for job id {}".format(this_job.job_id))
 
             # Only if it is RUNNING; otherwise it is not meaningful,
             # and may be not set (in my test, it is set to zero)
@@ -596,17 +596,17 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
                 try:
                     this_job.wallclock_time_seconds = (self._convert_time(thisjob_dict['time_used']))
                 except ValueError:
-                    self.logger.warning("Error parsing time_used " "for job id {}".format(this_job.job_id))
+                    self.logger.warning("Error parsing time_used for job id {}".format(this_job.job_id))
 
                 try:
                     this_job.dispatch_time = self._parse_time_string(thisjob_dict['dispatch_time'])
                 except ValueError:
-                    self.logger.warning("Error parsing dispatch_time for job " "id {}".format(this_job.job_id))
+                    self.logger.warning("Error parsing dispatch_time for job id {}".format(this_job.job_id))
 
             try:
                 this_job.submission_time = self._parse_time_string(thisjob_dict['submission_time'])
             except ValueError:
-                self.logger.warning("Error parsing submission_time for job " "id {}".format(this_job.job_id))
+                self.logger.warning("Error parsing submission_time for job id {}".format(this_job.job_id))
 
             this_job.title = thisjob_dict['job_name']
 
@@ -634,7 +634,7 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
         """
         groups = _TIME_REGEXP.match(string)
         if groups is None:
-            self.logger.warning("Unrecognized format for " "time string '{}'".format(string))
+            self.logger.warning("Unrecognized format for time string '{}'".format(string))
             raise ValueError("Unrecognized format for time string.")
 
         groupdict = groups.groupdict()
@@ -657,7 +657,7 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
         try:
             time_struct = time.strptime(string, fmt)
         except Exception as exc:
-            self.logger.debug("Unable to parse time string {}, the message " "was {}".format(string, exc))
+            self.logger.debug("Unable to parse time string {}, the message was {}".format(string, exc))
             raise ValueError("Problem parsing the time string.")
 
         # I convert from a time_struct to a datetime object going through

@@ -73,4 +73,3 @@ tzlocal==1.5.1
 ujson==1.35
 unittest2==1.1.0; python_version<"3.5"
 uritools==2.1.0
-validate-email==1.3

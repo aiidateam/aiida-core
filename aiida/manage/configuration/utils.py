@@ -6,7 +6,7 @@ import io
 import os
 
 from aiida.common import exceptions
-from aiida.utils import json
+from aiida.common import json
 
 from .config import Config
 from .migrations import check_and_migrate_config

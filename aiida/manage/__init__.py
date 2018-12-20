@@ -9,13 +9,15 @@
 ###########################################################################
 # pylint: disable=undefined-variable,wildcard-import
 """
-A module to bring together the different parts of AiiDA:
+Managing an AiiDA instance:
 
-  * configuration file
-  * profile
-  * daemon runners
-  * process controllers
-  * RabbitMQ communicators
+    * configuration file
+    * profiles
+    * databases
+    * repositories
+    * external components (such as Postgres, RabbitMQ)
+
+.. note:: Modules in this sub package may require the database environment to be loaded
 
 """
 from __future__ import division

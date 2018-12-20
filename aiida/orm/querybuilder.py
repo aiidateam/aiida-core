@@ -526,7 +526,7 @@ class QueryBuilder(object):
         # First of all, let's make sure the specified
         # the class or the type (not both)
         if cls and type:
-            raise InputValidationError("You cannot specify both a " "class ({}) " "and a type ({})".format(cls, type))
+            raise InputValidationError("You cannot specify both a class ({}) and a type ({})".format(cls, type))
 
         if not (cls or type):
             raise InputValidationError("You need to specify at least a class or a type")

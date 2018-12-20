@@ -90,7 +90,7 @@ class DjangoQueryManager(AbstractQueryManager):
         :param q_object: a query object
         :param args: a namespace with parsed command line parameters.
         """
-        from aiida.utils import timezone
+        from aiida.common import timezone
         from django.db.models import Q
         import datetime
         if args.past_days is not None:

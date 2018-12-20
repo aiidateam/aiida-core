@@ -17,7 +17,7 @@ from sqlalchemy.schema import Column
 from sqlalchemy.types import Integer, DateTime, Text
 from sqlalchemy.dialects.postgresql import UUID
 
-from aiida.utils import timezone
+from aiida.common import timezone
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.backends.sqlalchemy.models.utils import uuid_func
 

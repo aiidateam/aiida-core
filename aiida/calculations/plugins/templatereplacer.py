@@ -7,13 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Implementation of CalcJobNode to replace a template for testing and demonstration purposes."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.common.exceptions import InputValidationError
 from aiida.common.datastructures import CalcInfo, CodeInfo
-from aiida.common.utils import classproperty
+from aiida.common.lang import classproperty
 from aiida.orm.node.process import CalcJobNode
 from aiida.orm.data.parameter import ParameterData
 
@@ -59,13 +60,13 @@ class TemplatereplacerCalculation(CalcJobNode):
             temporarily stored in an unstored FolderData node that will be available during the
             Parser.parser_with_retrieved call under the key specified by the Parser.retrieved_temporary_folder key
 
-    TODO: probably use Python's Template strings instead??
-    TODO: catch exceptions
-    TODO: write a 'input_type_checker' routine to automatically check the existence and type of inputs + default values etc.
     """
+
+    # pylint: disable=abstract-method
 
     @classproperty
     def _use_methods(cls):
+        # pylint: disable=no-self-argument,no-member
         retdict = CalcJobNode._use_methods
         retdict.update({
             'template': {
@@ -92,6 +93,7 @@ class TemplatereplacerCalculation(CalcJobNode):
                            the plugin should put all its files.
         :param inputdict: a dictionary with the input nodes e.g. {label1: node1, ...} (with the Code!)
         """
+        # pylint: disable=too-many-locals,too-many-statements,too-many-branches
         from six.moves import StringIO as StringIO
 
         from aiida.orm.data.singlefile import SinglefileData
@@ -148,15 +150,15 @@ class TemplatereplacerCalculation(CalcJobNode):
         if code is None:
             raise InputValidationError("No code in input")
 
-        if len(inputdict) > 0:
+        if inputdict:
             raise InputValidationError("The input nodes with the following labels could not be "
                                        "used by the templatereplacer plugin: {}".format(inputdict.keys()))
 
         if input_file_name is not None and not input_file_template:
-            raise InputValidationError("If you give an input_file_name, you " "must also specify a input_file_template")
+            raise InputValidationError("If you give an input_file_name, you must also specify a input_file_template")
 
         if input_through_stdin and input_file_name is None:
-            raise InputValidationError("If you ask for input_through_stdin you have to " "specify a input_file_name")
+            raise InputValidationError("If you ask for input_through_stdin you have to specify a input_file_name")
 
         input_file = StringIO(input_file_template.format(**parameters))
         if input_file_name:

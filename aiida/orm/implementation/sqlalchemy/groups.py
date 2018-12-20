@@ -19,7 +19,7 @@ from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.group import DbGroup, table_groups_nodes
 from aiida.backends.sqlalchemy.models.node import DbNode
 from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError)
-from aiida.common.utils import type_check
+from aiida.common.lang import type_check
 from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
 
 from . import entities
@@ -127,7 +127,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
         from sqlalchemy.exc import IntegrityError  # pylint: disable=import-error, no-name-in-module
 
         if not self.is_stored:
-            raise ModificationNotAllowed("Cannot add nodes to a group before " "storing")
+            raise ModificationNotAllowed("Cannot add nodes to a group before storing")
         from aiida.orm.implementation.sqlalchemy.node import Node
         from aiida.backends.sqlalchemy import get_scoped_session
 
@@ -151,7 +151,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
                                     "a DbNode, it is instead {}".format(str(type(node))))
 
                 if node.id is None:
-                    raise ValueError("At least one of the provided nodes is " "unstored, stopping...")
+                    raise ValueError("At least one of the provided nodes is unstored, stopping...")
                 if isinstance(node, Node):
                     to_add = node.dbnode
                 else:
@@ -209,7 +209,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
         :param nodes: the nodes to remove
         """
         if not self.is_stored:
-            raise ModificationNotAllowed("Cannot remove nodes from a group " "before storing")
+            raise ModificationNotAllowed("Cannot remove nodes from a group before storing")
 
         from aiida.orm.implementation.sqlalchemy.node import Node
         # First convert to a list
@@ -231,7 +231,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
                                 "to add_nodes, it should be either a Node or "
                                 "a DbNode, it is instead {}".format(str(type(node))))
             if node.id is None:
-                raise ValueError("At least one of the provided nodes is " "unstored, stopping...")
+                raise ValueError("At least one of the provided nodes is unstored, stopping...")
             if isinstance(node, Node):
                 node = node.dbnode
             # If we don't check first, SqlA might issue a DELETE statement for

@@ -13,7 +13,7 @@ from __future__ import absolute_import
 
 import six
 
-from aiida.utils import timezone
+from aiida.common import timezone
 from aiida.common.exceptions import ValidationError, MissingPluginError
 from aiida.orm import GroupTypeString
 

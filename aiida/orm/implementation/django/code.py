@@ -14,7 +14,7 @@ from __future__ import absolute_import
 from django.db import transaction
 
 from aiida.common.exceptions import InvalidOperation
-from aiida.common.utils import type_check
+from aiida.common.lang import type_check
 
 
 def delete_code(code):

@@ -12,7 +12,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
 from aiida.common import exceptions
-from aiida.common.utils import type_check
+from aiida.common.lang import type_check
 from aiida.orm.implementation.authinfos import BackendAuthInfo, BackendAuthInfoCollection
 from . import entities
 from . import computer as computers

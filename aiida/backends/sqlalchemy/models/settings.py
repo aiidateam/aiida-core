@@ -19,7 +19,7 @@ from sqlalchemy.types import Integer, String, DateTime
 import aiida.backends.sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.backends.sqlalchemy.utils import flag_modified
-from aiida.utils import timezone
+from aiida.common import timezone
 
 
 class DbSetting(Base):
@@ -32,7 +32,7 @@ class DbSetting(Base):
 
     # I also add a description field for the variables
     description = Column(String(255), default='', nullable=False)
-    time = Column(DateTime(timezone=True), default=timezone.utc, onupdate=timezone.now)
+    time = Column(DateTime(timezone=True), default=timezone.UTC, onupdate=timezone.now)
 
     def __str__(self):
         return "'{}'={}".format(self.key, self.getvalue())

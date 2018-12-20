@@ -21,7 +21,7 @@ from sqlalchemy.types import Integer, String, Boolean, DateTime, Text
 # Or maybe rely on sqlalchemy-utils UUID type
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 
-from aiida.utils import timezone
+from aiida.common import timezone
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.backends.sqlalchemy.models.utils import uuid_func
 from aiida.backends.sqlalchemy.utils import flag_modified

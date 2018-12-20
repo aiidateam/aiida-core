@@ -297,7 +297,7 @@ class CifEntry(DbEntry):
 
         :return: :py:class:`aiida.orm.data.cif.CifData` object
         """
-        from aiida.common.utils import md5_file
+        from aiida.common.files import md5_file
         from aiida.orm.data.cif import CifData
         import tempfile
 
@@ -344,7 +344,7 @@ class UpfEntry(DbEntry):
 
         :return: :py:class:`aiida.orm.data.upf.UpfData` object
         """
-        from aiida.common.utils import md5_file
+        from aiida.common.files import md5_file
         from aiida.orm.data.upf import UpfData
         import tempfile
 

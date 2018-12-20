@@ -84,7 +84,6 @@ it is done for documents. For example the parser docs can be indexed like this
    :maxdepth: 1
 
    aiida.orm <../../apidoc/aiida.orm>
-   ../../apidoc/aiida.utils
 
 
 Automodules Example

@@ -256,7 +256,7 @@ class NodeTranslator(BaseTranslator):
         running the query
         """
         if not self._is_qb_initialized:
-            raise InvalidOperation("query builder object has not been " "initialized.")
+            raise InvalidOperation("query builder object has not been initialized.")
 
         ## Count the total number of rows returned by the query (if not
         # already done)
@@ -290,7 +290,7 @@ class NodeTranslator(BaseTranslator):
                         attrs[key] = node.get_attr(key)
                 data = {self._content_type: attrs}
             else:
-                raise RestValidationError("you cannot specify both alist " "and nalist")
+                raise RestValidationError("you cannot specify both alist and nalist")
         # content/extras
         elif self._content_type == "extras":
 
@@ -315,7 +315,7 @@ class NodeTranslator(BaseTranslator):
                 data = {self._content_type: extras}
 
             else:
-                raise RestValidationError("you cannot specify both elist " "and nelist")
+                raise RestValidationError("you cannot specify both elist and nelist")
 
         # Data needed for visualization appropriately serialized (this
         # actually works only for data derived classes)

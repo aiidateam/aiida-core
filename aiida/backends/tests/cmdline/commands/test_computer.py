@@ -351,7 +351,7 @@ class TestVerdiComputerConfigure(AiidaTestCase):
 
     def setUp(self):
         """Prepare computer builder with common properties."""
-        from aiida.control.computer import ComputerBuilder
+        from aiida.orm.utils.builders.computer import ComputerBuilder
         self.cli_runner = CliRunner()
         self.user = orm.User.objects.get_default()
         self.comp_builder = ComputerBuilder(label='test_comp_setup')

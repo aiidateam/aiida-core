@@ -52,7 +52,7 @@ def generate(root_node, ancestor_depth, descendant_depth, outputs, inputs, outpu
     """
     Generate a graph from a given ROOT_NODE user-specified by its pk.
     """
-    from aiida.common.graph import draw_graph
+    from aiida.tools.visualization.graphviz import draw_graph
 
     exit_status, output_file_name = draw_graph(
         root_node,

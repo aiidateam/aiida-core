@@ -15,7 +15,7 @@ import typing
 
 from django.db.models import Model  # pylint: disable=import-error, no-name-in-module
 
-from aiida.common.utils import type_check
+from aiida.common.lang import type_check
 from . import utils
 
 ModelType = typing.TypeVar('ModelType')  # pylint: disable=invalid-name

@@ -19,8 +19,8 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils import defaults, echo
 from aiida.cmdline.params import arguments, options
 from aiida.common import exceptions
-from aiida.control.postgres import Postgres
 from aiida.manage import get_config
+from aiida.manage.external.postgres import Postgres
 
 
 @verdi.group('profile')
@@ -79,7 +79,7 @@ def profile_delete(force, profiles):
     """
     import os
     from six.moves.urllib.parse import urlparse  # pylint: disable=import-error
-    import aiida.utils.json as json
+    import aiida.common.json as json
 
     try:
         config = get_config()

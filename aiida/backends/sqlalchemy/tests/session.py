@@ -227,7 +227,7 @@ class TestSessionSqla(AiidaTestCase):
 
         Tests for bug #1372
         """
-        from aiida.utils import timezone
+        from aiida.common import timezone
         from aiida.orm import Data
         from aiida.orm.implementation.sqlalchemy.node import DbNode
         import aiida.backends.sqlalchemy as sa

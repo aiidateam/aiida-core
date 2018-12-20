@@ -17,7 +17,7 @@ import datetime
 from django.db.models import Q  # pylint: disable=import-error, no-name-in-module
 
 from aiida.common.datastructures import wf_states
-from aiida.utils import timezone
+from aiida.common import timezone
 
 
 def get_workflow_list(pk_list=tuple(), user=None, all_states=False, n_days_ago=None):

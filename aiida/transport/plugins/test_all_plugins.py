@@ -101,7 +101,7 @@ def run_for_all_plugins(actual_test_method):
             else:
                 exception_to_raise = CollectiveException
 
-            messages = ["*** At least one test for a subplugin failed. " "See below ***", ""]
+            messages = ["*** At least one test for a subplugin failed. See below ***", ""]
             for exc in exceptions:
                 messages.append("*** [For plugin {}]: Exception '{}': {}"
                                 .format(exc[2], type(exc[0]).__name__, exc[0]))

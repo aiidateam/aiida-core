@@ -295,22 +295,30 @@ def encode_textfield_gzip_base64(content, **kwargs):
     :param content: contents as bytes
     :return: encoded string as bytes
     """
-    from aiida.common.utils import gzip_string
+    import gzip
+    import tempfile
 
-    return encode_textfield_base64(gzip_string(content), **kwargs)
+    with tempfile.NamedTemporaryFile() as fhandle:
+        with gzip.open(fhandle.name, 'wb') as zipfile:
+            zipfile.write(content)
+        return encode_textfield_base64(fhandle.read(), **kwargs)
 
 
 def decode_textfield_gzip_base64(content):
     """
-    Decodes the contents for CIF textfield from Base64 and decompresses
-    them with gzip.
+    Decodes the contents for CIF textfield from Base64 and decompresses them with gzip.
 
     :param content: contents as bytes
     :return: decoded string as bytes
     """
-    from aiida.common.utils import gunzip_string
+    import gzip
+    import tempfile
 
-    return gunzip_string(decode_textfield_base64(content))
+    with tempfile.NamedTemporaryFile() as fhandle:
+        fhandle.write(decode_textfield_base64(content))
+        fhandle.flush()
+        with gzip.open(fhandle.name, 'rb') as zipfile:
+            return zipfile.read()
 
 
 def decode_textfield(content, method):
@@ -542,7 +550,7 @@ def _collect_files(base, path=''):
     Recursively collects files from the tree, starting at a given path.
     """
     from aiida.common.folders import Folder
-    from aiida.common.utils import md5_file,sha1_file
+    from aiida.common.files import md5_file, sha1_file
     import os
 
     def get_dict(name, full_path):
@@ -579,7 +587,7 @@ def _collect_files(base, path=''):
         files = []
         files.append(get_dict(name=path, full_path=os.path.join(base, path)))
 
-        import aiida.utils.json as json
+        import aiida.common.json as json
         with open(os.path.join(base,path)) as f:
             calcinfo = json.load(f)
         if 'local_copy_list' in calcinfo:
@@ -679,7 +687,7 @@ def _collect_tags(node, calc,parameters=None,
     from aiida.common.links import LinkType
     import os 
     import aiida
-    import aiida.utils.json as json
+    import aiida.common.json as json
 
     tags = { '_audit_creation_method': "AiiDA version {}".format(aiida.__version__) }
 
@@ -742,7 +750,7 @@ def _collect_tags(node, calc,parameters=None,
         from aiida.common.exceptions import LicensingException
         from aiida.common.folders import SandboxFolder
         from aiida.orm.importexport import export_tree
-        import aiida.utils.json as json
+        import aiida.common.json as json
 
         with SandboxFolder() as folder:
             try:

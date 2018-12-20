@@ -14,8 +14,6 @@ from __future__ import absolute_import
 
 import functools
 
-from aiida import utils
-
 from .configuration import get_config
 
 __all__ = 'get_manager', 'reset_manager'
@@ -129,6 +127,7 @@ class Manager(object):
         :return: the communicator instance
         :rtype: :class:`~kiwipy.rmq.communicator.RmqThreadCommunicator`
         """
+        from aiida.common import serialize
         from aiida.work import rmq
         import kiwipy.rmq
         profile = self.get_profile()
@@ -150,8 +149,8 @@ class Manager(object):
         return kiwipy.rmq.RmqThreadCommunicator.connect(
             connection_params={'url': url},
             message_exchange=message_exchange,
-            encoder=functools.partial(utils.serialize.serialize, encoding='utf-8'),
-            decoder=utils.serialize.deserialize,
+            encoder=functools.partial(serialize.serialize, encoding='utf-8'),
+            decoder=serialize.deserialize,
             task_exchange=task_exchange,
             task_queue=task_queue,
             task_prefetch_count=task_prefetch_count,

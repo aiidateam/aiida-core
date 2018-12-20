@@ -21,7 +21,7 @@ from django.utils.encoding import python_2_unicode_compatible
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.query import QuerySet
 
-from aiida.utils import timezone
+from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
 from aiida.common.exceptions import (ConfigurationError, DbContentError)
 from aiida.backends.djsite.settings.settings import AUTH_USER_MODEL
@@ -324,8 +324,8 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
     :return: the deserialized value
     :raise aiida.backends.djsite.db.models.DeserializationException: if an error occurs
     """
-    import aiida.utils.json as json
-    from aiida.utils.timezone import (
+    import aiida.common.json as json
+    from aiida.common.timezone import (
         is_naive, make_aware, get_current_timezone)
 
     from aiida.common import AIIDA_LOGGER
@@ -720,8 +720,8 @@ class DbMultipleValueAttributeBaseClass(m.Model):
         """
         import datetime
 
-        import aiida.utils.json as json
-        from aiida.utils.timezone import is_naive, make_aware, get_current_timezone
+        import aiida.common.json as json
+        from aiida.common.timezone import is_naive, make_aware, get_current_timezone
 
         if cls._subspecifier_field_name is None:
             if subspecifier_value is not None:
@@ -877,7 +877,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
             float, bool, None, or date)
         """
         import datetime
-        from aiida.utils.timezone import (
+        from aiida.common.timezone import (
             is_naive, make_aware, get_current_timezone)
 
         if value is None:
@@ -1364,7 +1364,7 @@ class DbComputer(m.Model):
         return dbcomputer
 
     def _get_val_from_metadata(self, key):
-        import aiida.utils.json as json
+        import aiida.common.json as json
 
         try:
             metadata = json.loads(self.metadata)
@@ -1569,10 +1569,10 @@ class DbWorkflow(m.Model):
         self.save()
 
     def append_to_report(self, _text):
-        from aiida.utils.timezone import utc
+        from aiida.common.timezone import UTC
         import datetime
 
-        now = datetime.datetime.utcnow().replace(tzinfo=utc)
+        now = datetime.datetime.utcnow().replace(tzinfo=UTC)
         self.report += str(now) + "] " + _text + "\n"
         self.save()
 
@@ -1625,7 +1625,7 @@ class DbWorkflowData(m.Model):
     def set_value(self, arg):
         from aiida.orm.node import Node
         from aiida.common.datastructures import wf_data_value_types
-        import aiida.utils.json as json
+        import aiida.common.json as json
 
         try:
             if isinstance(arg, Node) or issubclass(arg.__class__, Node):
@@ -1643,7 +1643,7 @@ class DbWorkflowData(m.Model):
 
     def get_value(self):
         from aiida.orm.convert import get_orm_entity
-        import aiida.utils.json as json
+        import aiida.common.json as json
 
         from aiida.common.datastructures import wf_data_value_types
 

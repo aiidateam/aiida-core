@@ -16,13 +16,14 @@ Since the dbenv gets loaded on the temporary profile.
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import os
 import sys
 import unittest
 import tempfile
 import shutil
 
-from aiida.utils.fixtures import PluginTestCase, TestRunner
+from aiida.manage.fixtures import PluginTestCase, TestRunner
 from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 from aiida import is_dbenv_loaded
 

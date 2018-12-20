@@ -22,7 +22,7 @@ from aiida.common import exceptions
 from aiida.manage import Config, Profile
 from aiida.manage.configuration.migrations import CURRENT_CONFIG_VERSION, OLDEST_COMPATIBLE_CONFIG_VERSION
 from aiida.manage.configuration.options import get_option
-from aiida.utils import json
+from aiida.common import json
 
 
 class TestConfig(AiidaTestCase):

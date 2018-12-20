@@ -11,9 +11,10 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import errno
-import tempfile
 import os
+import tempfile
 
 from click.testing import CliRunner
 
@@ -98,14 +99,14 @@ class TestVerdiGraph(AiidaTestCase):
 
         # Non-existant pk
 
-        ### Check that an arbitrary pk definately can't be loaded
+        # Check that an arbitrary pk definately can't be loaded
         root_node = 123456789
         try:
             node = load_node(pk=root_node)
             self.assertIsNone(node)
         except NotExistent:
             pass
-        ###  Make sure verdi graph rejects this non-existant pk
+        #  Make sure verdi graph rejects this non-existant pk
         try:
             filename = str(root_node) + '.dot'
             options = [str(root_node)]

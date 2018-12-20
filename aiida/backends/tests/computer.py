@@ -71,7 +71,7 @@ class TestComputerConfigure(AiidaTestCase):
 
     def setUp(self):
         """Prepare current user and computer builder with common properties."""
-        from aiida.control.computer import ComputerBuilder
+        from aiida.orm.utils.builders.computer import ComputerBuilder
 
         self.comp_builder = ComputerBuilder(label='test', description='Test Computer', enabled=True,
                                             hostname='localhost')

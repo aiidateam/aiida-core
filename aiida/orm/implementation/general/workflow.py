@@ -24,9 +24,9 @@ from aiida.common.datastructures import (wf_states, wf_exit_call,
 from aiida.common.utils import str_timedelta
 from aiida.common import AIIDA_LOGGER
 from aiida.orm.node.process import CalcJobNode
-from aiida.utils import timezone
+from aiida.common import timezone
 from aiida.common.log import create_logger_adapter
-from aiida.common.utils import abstractclassmethod
+from aiida.common.lang import abstractclassmethod
 
 logger = AIIDA_LOGGER.getChild('Workflow')
 
@@ -1012,7 +1012,7 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
     :return lines: list of lines to be outputed
     """
     # Note: pre_string becomes larger at each call of get_workflow_info on the
-    #       subworkflows: pre_string -> pre_string + "|" + " "*(tab_size-1))
+    #       subworkflows: pre_string -> pre_string + "|" + ' ' *(tab_size-1))
     # TODO SP: abstract the dependence on DbWorkflow
     from aiida.backends.djsite.db.models import DbWorkflow
 
@@ -1085,7 +1085,7 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
 
             # print calculations only if it is not short
             if short:
-                lines.append(pre_string + "|" + " " * (tab_size - 1) +
+                lines.append(pre_string + "|" + ' ' * (tab_size - 1) +
                              "| [{0} calculations]".format(len(calc_pks)))
             else:
                 for calc_pk in calc_pks:
@@ -1114,7 +1114,7 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
                                                               sched_state, when_string)
                     else:
                         remote_state = ""
-                    lines.append(pre_string + "|" + " " * (tab_size - 1) +
+                    lines.append(pre_string + "|" + ' ' * (tab_size - 1) +
                                  "| Calculation ({}pk: {}) is {}{}".format(
                                      labelstring, calc_pk, calc_state, remote_state))
 
@@ -1123,7 +1123,7 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
                 subwf = workflow_mapping[subwf_pk]
                 lines.extend(get_workflow_info(subwf,
                                                short=short, tab_size=tab_size,
-                                               pre_string=pre_string + "|" + " " * (tab_size - 1),
+                                               pre_string=pre_string + "|" + ' ' * (tab_size - 1),
                                                depth=depth - 1))
 
             lines.append(pre_string + "|")

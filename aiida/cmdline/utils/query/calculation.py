@@ -11,7 +11,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from aiida.common.utils import classproperty
+from aiida.common.lang import classproperty
 from aiida.cmdline.utils.query.mapping import CalculationProjectionMapper
 
 
@@ -94,7 +94,7 @@ class CalculationQueryBuilder(object):
 
         from aiida.orm.node.process import ProcessNode
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.utils import timezone
+        from aiida.common import timezone
 
         projected_attributes = [self.mapper.get_attribute(projection) for projection in self._valid_projections]
 

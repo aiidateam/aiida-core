@@ -19,7 +19,8 @@ from abc import ABCMeta, abstractmethod
 import six
 
 import aiida.common
-from aiida.common.utils import classproperty, escape_for_bash
+from aiida.common.lang import classproperty
+from aiida.common.escaping import escape_for_bash
 from aiida.common.exceptions import AiidaException, FeatureNotAvailable
 from aiida.plugins.factory import BaseFactory
 from aiida.scheduler.datastructures import JobTemplate, JobInfo, JOB_STATES
@@ -241,7 +242,7 @@ class Scheduler(object):
             command_to_exec_list = []
             for arg in code_info.cmdline_params:
                 command_to_exec_list.append(escape_for_bash(arg))
-            command_to_exec = " ".join(command_to_exec_list)
+            command_to_exec =' '.join(command_to_exec_list)
 
             stdin_str = "< {}".format(escape_for_bash(code_info.stdin_name)) if code_info.stdin_name else ""
             stdout_str = "> {}".format(escape_for_bash(code_info.stdout_name)) if code_info.stdout_name else ""

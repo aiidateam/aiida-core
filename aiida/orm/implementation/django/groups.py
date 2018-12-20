@@ -25,7 +25,7 @@ from django.db import transaction
 from django.db.models import Q
 
 from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
-from aiida.common.utils import type_check
+from aiida.common.lang import type_check
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.backends.djsite.db import models
 from .node import Node
@@ -114,7 +114,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
     def add_nodes(self, nodes):
         from aiida.backends.djsite.db.models import DbNode
         if not self.is_stored:
-            raise ModificationNotAllowed("Cannot add nodes to a group before " "storing")
+            raise ModificationNotAllowed("Cannot add nodes to a group before storing")
 
         # First convert to a list
         if isinstance(nodes, (Node, DbNode)):
@@ -132,7 +132,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
                                 "to add_nodes, it should be either a Node or "
                                 "a DbNode, it is instead {}".format(str(type(node))))
             if node.pk is None:
-                raise ValueError("At least one of the provided nodes is " "unstored, stopping...")
+                raise ValueError("At least one of the provided nodes is unstored, stopping...")
             list_pk.append(node.pk)
 
         self._dbmodel.dbnodes.add(*list_pk)
@@ -192,7 +192,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
                                 "to add_nodes, it should be either a Node or "
                                 "a DbNode, it is instead {}".format(str(type(node))))
             if node.pk is None:
-                raise ValueError("At least one of the provided nodes is " "unstored, stopping...")
+                raise ValueError("At least one of the provided nodes is unstored, stopping...")
             list_pk.append(node.pk)
 
         self._dbmodel.dbnodes.remove(*list_pk)

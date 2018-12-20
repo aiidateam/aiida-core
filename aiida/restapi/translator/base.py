@@ -186,7 +186,7 @@ class BaseTranslator(object):
         if self._is_qb_initialized:
             self._total_count = self.qbobj.count()
         else:
-            raise InvalidOperation("query builder object has not been " "initialized.")
+            raise InvalidOperation("query builder object has not been initialized.")
 
             # def caching_method(self):
             #     """
@@ -366,7 +366,7 @@ class BaseTranslator(object):
         if node_id is not None:
             self._is_id_query = True
             if self._result_type == self.__label__ and filters:
-                raise RestInputValidationError("selecting a specific id does " "not " "allow to specify filters")
+                raise RestInputValidationError("selecting a specific id does not allow to specify filters")
 
             try:
                 self._check_id_validity(node_id)
@@ -422,7 +422,7 @@ class BaseTranslator(object):
             except ValueError:
                 raise InputValidationError("Limit value must be an integer")
             if limit > self.limit_default:
-                raise RestValidationError("Limit and perpage cannot be bigger " "than {}".format(self.limit_default))
+                raise RestValidationError("Limit and perpage cannot be bigger than {}".format(self.limit_default))
         else:
             limit = self.limit_default
 
@@ -430,7 +430,7 @@ class BaseTranslator(object):
             try:
                 offset = int(offset)
             except ValueError:
-                raise InputValidationError("Offset value must be an " "integer")
+                raise InputValidationError("Offset value must be an integer")
 
         if self._is_qb_initialized:
             if limit is not None:
@@ -442,7 +442,7 @@ class BaseTranslator(object):
             else:
                 pass
         else:
-            raise InvalidOperation("query builder object has not been " "initialized.")
+            raise InvalidOperation("query builder object has not been initialized.")
 
     def get_formatted_result(self, label):
         """
@@ -455,7 +455,7 @@ class BaseTranslator(object):
         """
 
         if not self._is_qb_initialized:
-            raise InvalidOperation("query builder object has not been " "initialized.")
+            raise InvalidOperation("query builder object has not been initialized.")
 
         results = []
         if self._total_count > 0:
@@ -478,7 +478,7 @@ class BaseTranslator(object):
 
         ## Check whether the querybuilder object has been initialized
         if not self._is_qb_initialized:
-            raise InvalidOperation("query builder object has not been " "initialized.")
+            raise InvalidOperation("query builder object has not been initialized.")
 
         ## Count the total number of rows returned by the query (if not
         # already done)

@@ -410,7 +410,7 @@ add the following code to a ``.py`` file (create one if there isn't any) in ``<h
       pass
   else:
       import IPython
-      from aiida.common.ipython.ipython_magics import load_ipython_extension
+      from aiida.tools.ipython.ipython_magics import load_ipython_extension
 
       # Get the current Ipython session
       ipython = IPython.get_ipython()
@@ -420,7 +420,7 @@ add the following code to a ``.py`` file (create one if there isn't any) in ``<h
 
 This file will be executed when the ipython kernel starts up and enable the line magic ``%aiida``.
 Alternatively, if you have a ``aiida_core`` repository checked out locally,
-you can just copy the file ``<aiida_core>/aiida/common/ipython/aiida_magic_register.py`` to the same folder.
+you can just copy the file ``<aiida_core>/aiida/tools/ipython/aiida_magic_register.py`` to the same folder.
 The current ipython profile folder can be located using::
 
   ipython locate profile

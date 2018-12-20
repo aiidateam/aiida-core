@@ -7,7 +7,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""AiiDA common functionality"""
+"""
+Common data structures, utility classes and functions
+
+.. note:: Modules in this sub package have to run without a loaded database environment
+
+"""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import

@@ -19,7 +19,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida import orm
 from aiida.orm.node.process.calculation import CalculationNode
-from aiida.utils.timezone import now
+from aiida.common.timezone import now
 
 
 class TestBackendLog(AiidaTestCase):

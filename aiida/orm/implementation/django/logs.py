@@ -13,7 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.backends.djsite.db import models
-import aiida.utils.json as json
+import aiida.common.json as json
 from . import entities
 from .. import BackendLog, BackendLogCollection
 

@@ -16,7 +16,7 @@ import six
 
 from aiida.backends.sqlalchemy.models import comment as models
 from aiida.common import exceptions
-from aiida.common import utils
+from aiida.common import lang
 
 from ..comments import BackendComment, BackendCommentCollection
 from .utils import ModelWrapper
@@ -39,7 +39,7 @@ class SqlaComment(entities.SqlaModelEntity[models.DbComment], BackendComment):
         :return: a Comment object associated to the given node and user
         """
         super(SqlaComment, self).__init__(backend)
-        utils.type_check(user, users.SqlaUser)  # pylint: disable=no-member
+        lang.type_check(user, users.SqlaUser)  # pylint: disable=no-member
         self._dbmodel = ModelWrapper(models.DbComment(dbnode=node.dbnode, user=user.dbmodel, content=content))
 
     def store(self):

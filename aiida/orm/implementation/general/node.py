@@ -23,15 +23,14 @@ import warnings
 import six
 
 from aiida.backends.utils import validate_attribute_key
-from aiida.common.caching import get_use_cache
+from aiida.manage.caching import get_use_cache
 from aiida.common.exceptions import InternalError, ModificationNotAllowed, UniquenessError, ValidationError, \
     InvalidOperation, StoringNotAllowed
 from aiida.common.folders import SandboxFolder
 from aiida.common.hashing import _HASH_EXTRA_KEY
-from aiida.common.lang import override
 from aiida.common.links import LinkType
-from aiida.common.utils import abstractclassmethod, sql_string_match
-from aiida.common.utils import combomethod, classproperty
+from aiida.common.lang import override, abstractclassmethod, combomethod, classproperty
+from aiida.common.escaping import sql_string_match
 from aiida.manage import get_manager
 from aiida.plugins.loader import get_query_type_from_type_string, get_type_string_from_class
 from aiida.orm.utils import links
@@ -2090,7 +2089,7 @@ class AbstractNode(object):
         :param filters: filters to apply
         :param project: projections
 
-        This class is a comboclass (see :func:`~aiida.common.utils.combomethod`)
+        This class is a comboclass (see :func:`~aiida.common.lang.combomethod`)
         therefore the method can be called as class or instance method.
         If called as an instance method, adds a filter on the id.
         """

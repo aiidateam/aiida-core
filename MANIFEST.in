@@ -1,5 +1,3 @@
-recursive-include aiida/common/additions/migration_tests/test_migration_files *
-recursive-include aiida/common/additions/config_migrations/test_samples/ *
 include aiida/backends/tests/export_import_test_files/*.aiida
 include aiida/backends/sqlalchemy/migrations/script.py.mako
 include aiida/cmdline/templates/*.tpl

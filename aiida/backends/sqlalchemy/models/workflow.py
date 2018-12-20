@@ -25,8 +25,8 @@ from aiida.backends.sqlalchemy.models.base import Base, _QueryProperty, _AiidaQu
 from aiida.backends.sqlalchemy.models.utils import uuid_func
 from aiida.common.datastructures import (wf_states, wf_data_types,
                                          wf_data_value_types, wf_default_call)
-from aiida.utils import timezone
-import aiida.utils.json as json
+from aiida.common import timezone
+import aiida.common.json as json
 
 
 class DbWorkflow(Base):

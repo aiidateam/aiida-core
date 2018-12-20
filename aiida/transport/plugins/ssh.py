@@ -27,7 +27,7 @@ from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.params.types.path import AbsolutePathParamType
 from aiida.cmdline.utils import echo
 from aiida.common import AIIDA_LOGGER
-from aiida.common.utils import escape_for_bash
+from aiida.common.escaping import escape_for_bash
 from aiida.common.exceptions import NotExistent
 
 
@@ -199,7 +199,7 @@ class SshTransport(aiida.transport.Transport):
                 break
             else:
                 new_pieces.append(piece)
-        return " ".join(new_pieces)
+        return' '.join(new_pieces)
 
     @classmethod
     def _get_compress_suggestion_string(cls, computer):
@@ -360,7 +360,7 @@ class SshTransport(aiida.transport.Transport):
         from aiida.common.exceptions import InvalidOperation
 
         if not self._is_open:
-            raise InvalidOperation("Cannot close the transport: " "it is already closed")
+            raise InvalidOperation("Cannot close the transport: it is already closed")
 
         self._sftp.close()
         self._client.close()
@@ -535,7 +535,7 @@ class SshTransport(aiida.transport.Transport):
 
         if retval == 0:
             if stderr.strip():
-                self.logger.warning("There was nonempty stderr in the rm " "command: {}".format(stderr))
+                self.logger.warning("There was nonempty stderr in the rm command: {}".format(stderr))
             return True
         else:
             self.logger.error("Problem executing rm. Exit code: {}, stdout: '{}', "
@@ -621,7 +621,7 @@ class SshTransport(aiida.transport.Transport):
 
         if self.has_magic(localpath):
             if self.has_magic(remotepath):
-                raise ValueError("Pathname patterns are not allowed in the " "destination")
+                raise ValueError("Pathname patterns are not allowed in the destination")
 
             # use the imported glob to analyze the path locally
             to_copy_list = glob.glob(localpath)
@@ -784,7 +784,7 @@ class SshTransport(aiida.transport.Transport):
 
         if self.has_magic(remotepath):
             if self.has_magic(localpath):
-                raise ValueError("Pathname patterns are not allowed in the " "destination")
+                raise ValueError("Pathname patterns are not allowed in the destination")
             # use the self glob to analyze the path remotely
             to_copy_list = self.glob(remotepath)
 
@@ -980,7 +980,7 @@ class SshTransport(aiida.transport.Transport):
 
             if len(to_copy_list) > 1:
                 if not self.path_exists(remotedestination) or self.isfile(remotedestination):
-                    raise OSError("Can't copy more than one file in the same " "destination file")
+                    raise OSError("Can't copy more than one file in the same destination file")
 
             for s in to_copy_list:
                 self._exec_cp(cp_exe, cp_flags, s, remotedestination)
@@ -998,7 +998,7 @@ class SshTransport(aiida.transport.Transport):
 
         if retval == 0:
             if stderr.strip():
-                self.logger.warning("There was nonempty stderr in the cp " "command: {}".format(stderr))
+                self.logger.warning("There was nonempty stderr in the cp command: {}".format(stderr))
         else:
             self.logger.error("Problem executing cp. Exit code: {}, stdout: '{}', "
                               "stderr: '{}', command: '{}'".format(retval, stdout, stderr, command))
@@ -1108,7 +1108,7 @@ class SshTransport(aiida.transport.Transport):
         exec_command_wait.
 
         :param  command: the command to execute. The command is assumed to be
-            already escaped using :py:func:`aiida.common.utils.escape_for_bash`.
+            already escaped using :py:func:`aiida.common.escaping.escape_for_bash`.
         :param combine_stderr: (default False) if True, combine stdout and
                 stderr on the same buffer (i.e., stdout).
                 Note: If combine_stderr is True, stderr will always be empty.
@@ -1169,7 +1169,7 @@ class SshTransport(aiida.transport.Transport):
                 for l in filelike_stdin.readlines():
                     ssh_stdin.write(l)
             except AttributeError:
-                raise ValueError("stdin can only be either a string of a " "file-like object!")
+                raise ValueError("stdin can only be either a string of a file-like object!")
 
         # I flush and close them anyway; important to call shutdown_write
         # to avoid hangouts
@@ -1203,7 +1203,7 @@ class SshTransport(aiida.transport.Transport):
         if 'key_filename' in self._connect_args:
             further_params.append("-i {}".format(escape_for_bash(self._connect_args['key_filename'])))
 
-        further_params_str = " ".join(further_params)
+        further_params_str =' '.join(further_params)
         connect_string = """ssh -t {machine} {further_params} "if [ -d {escaped_remotedir} ] ; then cd {escaped_remotedir} ; bash -l ; else echo '  ** The directory' ; echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
             further_params=further_params_str,
             machine=self._machine,

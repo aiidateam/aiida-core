@@ -84,7 +84,7 @@ def _show_xcrysden(exec_name, object_list, **kwargs):
     import subprocess
 
     if len(object_list) > 1:
-        raise MultipleObjectsError("Visualization of multiple trajectories " "is not implemented")
+        raise MultipleObjectsError("Visualization of multiple trajectories is not implemented")
     obj = object_list[0]
 
     # pylint: disable=protected-access
@@ -173,7 +173,7 @@ def _show_vmd(exec_name, structure_list):
     import subprocess
 
     if len(structure_list) > 1:
-        raise MultipleObjectsError("Visualization of multiple objects " "is not implemented")
+        raise MultipleObjectsError("Visualization of multiple objects is not implemented")
     structure = structure_list[0]
 
     # pylint: disable=protected-access

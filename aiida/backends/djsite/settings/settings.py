@@ -21,7 +21,7 @@ from aiida.common.exceptions import ConfigurationError, MissingConfigurationErro
 from aiida.backends import settings
 from aiida.common.setup import parse_repository_uri
 from aiida.manage import get_config
-from aiida.utils.timezone import get_current_timezone
+from aiida.common.timezone import get_current_timezone
 
 # Assumes that parent directory of aiida is root for
 # things like templates/, SQL/ etc.  If not, change what follows...

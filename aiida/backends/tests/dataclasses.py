@@ -21,7 +21,7 @@ from six.moves import range
 from aiida.orm import load_node
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common.utils import HiddenPrints
+from aiida.common.utils import Capturing
 
 
 def has_seekpath():
@@ -411,7 +411,7 @@ Te2 0.00000 0.00000 0.79030 0.01912
             '_atom_site_occupancy': [1.0, 0.5, 0.5],
             '_publ_section_title': 'Test CIF'
         }]
-        with HiddenPrints():
+        with Capturing():
             lines = pycifrw_from_cif(datablocks).WriteOut().split('\n')
         non_comments = []
         for line in lines:
@@ -437,7 +437,7 @@ _publ_section_title                     'Test CIF'
 '''))
 
         loops = {'_atom_site': ['_atom_site_label', '_atom_site_occupancy']}
-        with HiddenPrints():
+        with Capturing():
             lines = pycifrw_from_cif(datablocks, loops).WriteOut().split('\n')
         non_comments = []
         for line in lines:
@@ -468,7 +468,7 @@ _publ_section_title                     'Test CIF'
         datablocks = [{
             '_tag': '[value]',
         }]
-        with HiddenPrints():
+        with Capturing():
             lines = pycifrw_from_cif(datablocks).WriteOut().split('\n')
         non_comments = []
         for line in lines:

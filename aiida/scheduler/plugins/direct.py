@@ -17,7 +17,7 @@ from __future__ import absolute_import
 import six
 
 import aiida.scheduler
-from aiida.common.utils import escape_for_bash
+from aiida.common.escaping import escape_for_bash
 from aiida.scheduler import SchedulerError
 from aiida.scheduler.datastructures import (JobInfo, JOB_STATES, NodeNumberJobResource)
 
@@ -133,7 +133,7 @@ class DirectScheduler(aiida.scheduler.Scheduler):
             # See that this automatic redirection works also if
             # I specify a different --output file
             if job_tmpl.sched_error_path:
-                self.logger.info("sched_join_files is True, but sched_error_path is set; " " ignoring sched_error_path")
+                self.logger.info("sched_join_files is True, but sched_error_path is set; ignoring sched_error_path")
         else:
             if job_tmpl.sched_error_path:
                 lines.append("exec 2> {}".format(job_tmpl.sched_error_path))
@@ -167,7 +167,7 @@ class DirectScheduler(aiida.scheduler.Scheduler):
             lines.append(empty_line)
             lines.append("# ENVIRONMENT VARIABLES BEGIN ###")
             if not isinstance(job_tmpl.job_environment, dict):
-                raise ValueError("If you provide job_environment, it must be " "a dictionary")
+                raise ValueError("If you provide job_environment, it must be a dictionary")
             for key, value in job_tmpl.job_environment.items():
                 lines.append("export {}={}".format(key.strip(), escape_for_bash(value)))
             lines.append("# ENVIRONMENT VARIABLES  END  ###")
@@ -272,7 +272,7 @@ class DirectScheduler(aiida.scheduler.Scheduler):
                 # May not have started yet
                 pass
             except ValueError:
-                self.logger.warning("Error parsing 'resources_used.walltime' " "for job id {}".format(this_job.job_id))
+                self.logger.warning("Error parsing 'resources_used.walltime' for job id {}".format(this_job.job_id))
 
             # I append to the list of jobs to return
             job_list.append(this_job)
@@ -315,7 +315,7 @@ class DirectScheduler(aiida.scheduler.Scheduler):
 
         pieces = re.split('[:.]', string)
         if len(pieces) != 3:
-            self.logger.warning("Wrong number of pieces (expected 3) for " "time string {}".format(string))
+            self.logger.warning("Wrong number of pieces (expected 3) for time string {}".format(string))
             raise ValueError("Wrong number of pieces for time string.")
 
         days = 0

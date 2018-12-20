@@ -19,7 +19,7 @@ from aiida.common.exceptions import (InvalidOperation, DbContentError)
 from aiida.orm.implementation.computers import BackendComputerCollection, BackendComputer
 from . import entities
 from . import utils
-import aiida.utils.json as json
+import aiida.common.json as json
 
 
 class DjangoComputerCollection(BackendComputerCollection):

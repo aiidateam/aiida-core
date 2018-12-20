@@ -249,7 +249,7 @@ def node_delete(nodes, follow_calls, dry_run, verbose, non_interactive):
     """
     Deletes a node and everything that originates from it.
     """
-    from aiida.utils.delete_nodes import delete_nodes
+    from aiida.manage.database.delete.nodes import delete_nodes
 
     if not nodes:
         return

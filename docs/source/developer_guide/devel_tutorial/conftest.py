@@ -8,7 +8,7 @@ import tempfile
 import shutil
 import pytest
 
-from aiida.utils.fixtures import fixture_manager
+from aiida.manage.fixtures import fixture_manager
 
 
 @pytest.fixture(scope='session')

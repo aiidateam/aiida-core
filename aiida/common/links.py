@@ -7,9 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Module to define valid link types."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from enum import Enum
 
 

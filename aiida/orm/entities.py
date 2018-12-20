@@ -16,7 +16,7 @@ import typing
 
 from aiida.common import exceptions
 from aiida.common import datastructures
-from aiida.common.utils import classproperty, type_check
+from aiida.common.lang import classproperty, type_check
 from aiida.manage import get_manager
 
 __all__ = ('Entity', 'Collection')

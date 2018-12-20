@@ -57,7 +57,7 @@ def get_calcjob_remote_paths(pks=None, past_days=None, older_than=None, computer
 
     from aiida import orm
     from aiida.orm.node.process import CalcJobNode
-    from aiida.utils import timezone
+    from aiida.common import timezone
 
     filters_calc = {}
     filters_computer = {}

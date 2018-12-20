@@ -34,7 +34,7 @@ from aiida.backends import sqlalchemy as sa
 from aiida.backends.profile import BACKEND_SQLA
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.backends.sqlalchemy.utils import flag_modified
-from aiida.common.utils import query_yes_no
+from aiida.manage.backup.backup_utils import query_yes_no
 
 
 # Profile keys
@@ -341,7 +341,7 @@ def transition_settings(profile=None):
     if not is_dbenv_loaded():
         transition_load_db_env(profile=profile)
 
-    from aiida.utils import timezone
+    from aiida.common import timezone
 
     class DbSetting(Base):
         __tablename__ = "db_dbsetting"
@@ -497,7 +497,7 @@ def transition_load_db_env(profile=None, *args, **kwargs):
 
 
 def set_correct_schema_version_and_backend():
-    from aiida.utils import timezone
+    from aiida.common import timezone
     # Setting the correct backend and schema version
     SQLA_SCHEMA_VERSION = 0.1
 

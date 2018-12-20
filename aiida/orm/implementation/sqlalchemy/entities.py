@@ -14,7 +14,7 @@ from __future__ import absolute_import
 import typing
 
 from aiida.backends.sqlalchemy.models.base import Base
-from aiida.common.utils import type_check
+from aiida.common.lang import type_check
 from . import utils
 
 ModelType = typing.TypeVar('ModelType')  # pylint: disable=invalid-name

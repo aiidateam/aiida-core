@@ -23,8 +23,8 @@ import tempfile
 
 import six
 
+from aiida.common.files import which
 from aiida.manage import get_config
-from aiida.utils.which import which
 
 VERDI_BIN = which('verdi')
 # Recent versions of virtualenv create the environment variable VIRTUAL_ENV

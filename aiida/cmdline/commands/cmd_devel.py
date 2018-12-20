@@ -39,14 +39,12 @@ def get_valid_test_paths():
     db_prefix_raw = 'db'
     db_prefix = db_prefix_raw + '.'
     base_test_modules = [
-        'aiida.scheduler',
-        'aiida.transport',
-        'aiida.common',
-        'aiida.utils',
-        'aiida.control',
         'aiida.cmdline.utils',
         'aiida.cmdline.params.types',
         'aiida.cmdline.params.options',
+        'aiida.common',
+        'aiida.scheduler',
+        'aiida.transport',
         'aiida.tools.dbimporters.plugins',
     ]
 

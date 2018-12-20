@@ -15,7 +15,7 @@ from __future__ import absolute_import
 from enum import Enum
 from aiida.common import exceptions
 from aiida.common.exceptions import ValidationError
-from aiida.common.utils import type_check
+from aiida.common.lang import type_check
 from aiida.cmdline.utils import echo
 from aiida.manage import get_manager
 
@@ -378,9 +378,9 @@ class Group(entities.Entity):
             return group
         except exceptions.NotExistent:
             if typestr:
-                msg = ("No group of type '{}' with label '{}' " "found.".format(typestr, label))
+                msg = ("No group of type '{}' with label '{}' found.".format(typestr, label))
             else:
-                msg = ("No user-defined group with label '{}' " "found.".format(label))
+                msg = ("No user-defined group with label '{}' found.".format(label))
 
             raise exceptions.NotExistent(msg)
 

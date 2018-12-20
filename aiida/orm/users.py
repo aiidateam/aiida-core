@@ -7,18 +7,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Module for the ORM user classes yo
-"""
-
+"""Module for the ORM user class."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.common.hashing import is_password_usable
 from aiida.common import exceptions
-from aiida.utils.email import normalize_email
 from aiida.manage import get_manager
+
 from . import entities
 
 __all__ = ('User',)
@@ -76,12 +73,29 @@ class User(entities.Entity):
 
     def __init__(self, email, first_name='', last_name='', institution='', backend=None):
         backend = backend or get_manager().get_backend()
-        email = normalize_email(email)
+        email = self.normalize_email(email)
         backend_entity = backend.users.create(email, first_name, last_name, institution)
         super(User, self).__init__(backend_entity)
 
     def __str__(self):
         return self.email
+
+    @staticmethod
+    def normalize_email(email):
+        """
+        Normalize the address by lowercasing the domain part of the email
+        address.
+
+        Taken from Django.
+        """
+        email = email or ''
+        try:
+            email_name, domain_part = email.strip().rsplit('@', 1)
+        except ValueError:
+            pass
+        else:
+            email = '@'.join([email_name, domain_part.lower()])
+        return email
 
     @property
     def email(self):

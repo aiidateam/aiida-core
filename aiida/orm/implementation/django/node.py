@@ -21,7 +21,8 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, UniquenessError)
 from aiida.common.folders import RepositoryFolder
 from aiida.common.links import LinkType
-from aiida.common.utils import get_new_uuid, type_check
+from aiida.common.utils import get_new_uuid
+from aiida.common.lang import type_check
 from aiida.orm.implementation.general.node import AbstractNode, _HASH_EXTRA_KEY
 from . import computer as computers
 
@@ -416,7 +417,7 @@ class Node(AbstractNode):
           a transaction open!
         """
         from django.db import transaction
-        from aiida.common.utils import EmptyContextManager
+        from aiida.common.lang import EmptyContextManager
 
         if with_transaction:
             context_man = transaction.atomic()
@@ -462,7 +463,7 @@ class Node(AbstractNode):
           a transaction open!
         """
         from django.db import transaction
-        from aiida.common.utils import EmptyContextManager
+        from aiida.common.lang import EmptyContextManager
 
         if with_transaction:
             context_man = transaction.atomic()
@@ -509,8 +510,7 @@ class Node(AbstractNode):
         # TODO: This needs to be generalized, allowing for flexible methods
         # for storing data and its attributes.
         from django.db import transaction
-        from aiida.common.utils import EmptyContextManager
-        from aiida.common.exceptions import ValidationError
+        from aiida.common.lang import EmptyContextManager
         from aiida.backends.djsite.db.models import DbAttribute
 
         if with_transaction:

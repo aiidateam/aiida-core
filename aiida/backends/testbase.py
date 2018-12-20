@@ -21,7 +21,7 @@ from tornado import ioloop
 from aiida.backends import settings
 from aiida.backends.tests import get_db_test_list
 from aiida.common.exceptions import ConfigurationError, TestsNotAllowedError, InternalError
-from aiida.common.utils import classproperty
+from aiida.common.lang import classproperty
 from aiida.manage import reset_manager
 
 

@@ -26,7 +26,6 @@ from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.cmdline.utils.multi_line_input import ensure_scripts
 from aiida.common.exceptions import ValidationError, InputValidationError
-from aiida.control.computer import ComputerBuilder
 from aiida.plugins.entry_point import get_entry_points
 from aiida.transport import cli as transport_cli
 
@@ -86,7 +85,7 @@ def _computer_test_no_unexpected_output(transport, scheduler, authinfo):  # pyli
     echo.echo("> Checking that no spurious output is present...")
     retval, stdout, stderr = transport.exec_command_wait('echo -n')
     if retval != 0:
-        echo.echo_error("* ERROR! The command 'echo -n' returned a " "non-zero return code ({})!".format(retval))
+        echo.echo_error("* ERROR! The command 'echo -n' returned a non-zero return code ({})!".format(retval))
         return False
     if stdout:
         echo.echo_error(u"""* ERROR! There is some spurious output in the standard output,
@@ -174,7 +173,7 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
             read_string = dfile.read()
         echo.echo("      [Retrieved]")
         if read_string != file_content:
-            echo.echo_error("* ERROR! The file content is different from what was " "expected!")
+            echo.echo_error("* ERROR! The file content is different from what was expected!")
             echo.echo("** Expected:")
             echo.echo(file_content)
             echo.echo("** Found:")
@@ -218,6 +217,7 @@ def get_parameter_default(parameter, ctx):
 # pylint: disable=unused-argument
 def set_computer_builder(ctx, param, value):
     """Set the computer spec for defaults of following options."""
+    from aiida.orm.utils.builders.computer import ComputerBuilder
     ctx.computer_builder = ComputerBuilder.from_computer(value)
     return value
 
@@ -240,6 +240,8 @@ def set_computer_builder(ctx, param, value):
 @with_dbenv()
 def computer_setup(ctx, non_interactive, **kwargs):
     """Add a Computer."""
+    from aiida.orm.utils.builders.computer import ComputerBuilder
+
     if kwargs['label'] in get_computer_names():
         echo.echo_critical('A computer called {c} already exists. '
                            'Use "verdi computer duplicate {c}" to set up a new '
@@ -294,6 +296,7 @@ def computer_setup(ctx, non_interactive, **kwargs):
 def computer_duplicate(ctx, computer, non_interactive, **kwargs):
     """Duplicate a Computer."""
     from aiida import orm
+    from aiida.orm.utils.builders.computer import ComputerBuilder
 
     if kwargs['label'] in get_computer_names():
         echo.echo_critical('A computer called {} already exists'.format(kwargs['label']))
@@ -568,7 +571,7 @@ def computer_test(user, print_traceback, computer):
                         echo.echo("\n".join(["   {}".format(l) for l in traceback.format_exc().splitlines()]))
                     else:
                         echo.echo("** {}: {}".format(error.__class__.__name__, error))
-                        echo.echo("** (use the --print-traceback option to see the " "full traceback)")
+                        echo.echo("** (use the --print-traceback option to see the full traceback)")
                     succeeded = False
 
                 if not succeeded:
@@ -588,7 +591,7 @@ def computer_test(user, print_traceback, computer):
             echo.echo("\n".join(["   {}".format(l) for l in traceback.format_exc().splitlines()]))
         else:
             echo.echo("{}: {}".format(error.__class__.__name__, error))
-            echo.echo("(use the --print-traceback option to see the " "full traceback)")
+            echo.echo("(use the --print-traceback option to see the full traceback)")
         succeeded = False
 
 
@@ -630,7 +633,7 @@ def computer_configure():
 def computer_config_show(computer, user, defaults, as_option_string):
     """Show the current or default configuration for COMPUTER."""
     import tabulate
-    from aiida.common.utils import escape_for_bash
+    from aiida.common.escaping import escape_for_bash
 
     transport_cls = computer.get_transport_class()
     option_list = [

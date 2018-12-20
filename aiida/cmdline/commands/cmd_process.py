@@ -107,7 +107,7 @@ def process_report(processes, levelname, indent_size, max_depth):
 @arguments.PROCESSES()
 def process_status(processes):
     """Print the status of the process."""
-    from aiida.utils.ascii_vis import format_call_graph
+    from aiida.cmdline.utils.ascii_vis import format_call_graph
 
     for process in processes:
         graph = format_call_graph(process)

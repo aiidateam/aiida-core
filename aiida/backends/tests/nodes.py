@@ -22,16 +22,16 @@ from six.moves import range
 from sqlalchemy.exc import StatementError
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common.exceptions import InvalidOperation, ModificationNotAllowed, StoringNotAllowed, UniquenessError
+from aiida.common.exceptions import InvalidOperation, ModificationNotAllowed, StoringNotAllowed
 from aiida.common.links import LinkType
+from aiida.manage.database.delete.nodes import delete_nodes
 from aiida.orm import User, Data, Node
 from aiida.orm.node.process import ProcessNode
 from aiida.orm.node.process.calculation import CalculationNode
 from aiida.orm.node.process.workflow import WorkflowNode
 from aiida.orm.utils import load_node
 from aiida.orm.convert import get_orm_entity
-from aiida.utils.capturing import Capturing
-from aiida.utils.delete_nodes import delete_nodes
+from aiida.common.utils import Capturing
 
 
 class TestNodeIsStorable(AiidaTestCase):
@@ -538,7 +538,7 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(mylist, [1, 2, 3])
 
     def test_datetime_attribute(self):
-        from aiida.utils.timezone import (get_current_timezone, is_naive, make_aware, now)
+        from aiida.common.timezone import (get_current_timezone, is_naive, make_aware, now)
 
         a = Data()
 
@@ -1209,7 +1209,7 @@ class TestNodeBasic(AiidaTestCase):
         # of directly loading datetime.datetime.now(), or you can get a
         # "can't compare offset-naive and offset-aware datetimes" error
         from datetime import timedelta
-        from aiida.utils import timezone
+        from aiida.common import timezone
         from time import sleep
 
         user = User.objects.get_default()
@@ -1662,10 +1662,10 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # Create a link between these 2 nodes, link type CREATE so we track the provenance
         n2.add_incoming(n1, LinkType.CREATE, "N1")
 
-        self.assertTrue(n1.has_children, "It should be true since n2 is the " "child of n1.")
-        self.assertFalse(n1.has_parents, "It should be false since n1 doesn't " "have any parents.")
-        self.assertFalse(n2.has_children, "It should be false since n2 " "doesn't have any children.")
-        self.assertTrue(n2.has_parents, "It should be true since n1 is the " "parent of n2.")
+        self.assertTrue(n1.has_children, "It should be true since n2 is the child of n1.")
+        self.assertFalse(n1.has_parents, "It should be false since n1 doesn't have any parents.")
+        self.assertFalse(n2.has_children, "It should be false since n2 doesn't have any children.")
+        self.assertTrue(n2.has_parents, "It should be true since n1 is the parent of n2.")
 
     def test_use_code(self):
         from aiida.orm.node.process import CalcJobNode

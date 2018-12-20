@@ -15,7 +15,7 @@ import six
 from six.moves import range, zip
 import numpy
 
-from aiida.common.utils import classproperty
+from aiida.common.lang import classproperty
 from aiida.orm.data.array import ArrayData
 
 

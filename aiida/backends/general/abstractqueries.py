@@ -128,7 +128,7 @@ class AbstractQueryManager(object):
         """
 
         import datetime
-        from aiida.utils import timezone
+        from aiida.common import timezone
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.data.structure import (get_formula, get_symbols_string)
         from aiida.orm.data.array.bands import BandsData

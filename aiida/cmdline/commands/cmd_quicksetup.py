@@ -22,8 +22,8 @@ import click
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.utils import echo
-from aiida.control.profile import setup_profile
-from aiida.control.postgres import Postgres, manual_setup_instructions, prompt_db_info
+from aiida.manage.external.postgres import Postgres, manual_setup_instructions, prompt_db_info
+from aiida.manage.configuration.setup import setup_profile
 
 
 def _check_db_name(dbname, postgres):

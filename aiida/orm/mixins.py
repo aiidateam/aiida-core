@@ -7,16 +7,17 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+"""Mixin classes for ORM classes."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import inspect
 import io
+
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.common.lang import override
-from aiida.common.links import LinkType
-from aiida.common.utils import classproperty
+from aiida.common.lang import classproperty
 
 
 class FunctionCalculationMixin(object):
@@ -31,7 +32,7 @@ class FunctionCalculationMixin(object):
 
     FUNCTION_NAME_KEY = 'function_name'
     FUNCTION_NAMESPACE_KEY = 'function_namespace'
-    FUNCTION_STARTING_LINE_NUMBER_KEY = 'function_starting_line_number'
+    FUNCTION_STARTING_LINE_KEY = 'function_starting_line_number'
     FUNCTION_SOURCE_FILE_PATH = 'source_file'
 
     def store_source_info(self, func):
@@ -46,14 +47,14 @@ class FunctionCalculationMixin(object):
         self._set_function_name(func.__name__)
 
         try:
-            source_code, starting_line_number = inspect.getsourcelines(func)
+            _, starting_line_number = inspect.getsourcelines(func)
             self._set_function_starting_line_number(starting_line_number)
         except (IOError, OSError):
             pass
 
         try:
             self._set_function_namespace(func.__globals__['__name__'])
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
 
         try:
@@ -104,7 +105,7 @@ class FunctionCalculationMixin(object):
 
         :returns: the starting line number or None
         """
-        return self.get_attr(self.FUNCTION_STARTING_LINE_NUMBER_KEY, None)
+        return self.get_attr(self.FUNCTION_STARTING_LINE_KEY, None)
 
     def _set_function_starting_line_number(self, function_starting_line_number):
         """
@@ -112,7 +113,7 @@ class FunctionCalculationMixin(object):
 
         :param function_starting_line_number: the starting line number
         """
-        self._set_attr(self.FUNCTION_STARTING_LINE_NUMBER_KEY, function_starting_line_number)
+        self._set_attr(self.FUNCTION_STARTING_LINE_KEY, function_starting_line_number)
 
     @property
     def function_source_file(self):
@@ -136,11 +137,13 @@ class FunctionCalculationMixin(object):
 
 
 class Sealable(object):
+    """Mixin to mark a Node as `sealable`."""
+    # pylint: disable=no-member,unsupported-membership-test
 
     SEALED_KEY = 'sealed'
 
     @classproperty
-    def _updatable_attributes(cls):
+    def _updatable_attributes(cls):  # pylint: disable=no-self-argument
         return (cls.SEALED_KEY,)
 
     def add_incoming(self, source, link_type, link_label):

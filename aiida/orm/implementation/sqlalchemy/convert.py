@@ -85,7 +85,7 @@ def _(dbmodel, _backend):
     try:
         plugin_type = get_plugin_type_from_type_string(dbmodel.type)
     except DbContentError:
-        raise DbContentError("The type name of node with pk= {} is " "not valid: '{}'".format(dbmodel.pk, dbmodel.type))
+        raise DbContentError("The type name of node with pk= {} is not valid: '{}'".format(dbmodel.pk, dbmodel.type))
 
     plugin_class = load_plugin(plugin_type, safe=True)
     return plugin_class(dbnode=dbmodel)

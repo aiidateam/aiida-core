@@ -94,7 +94,7 @@ class LocalTransport(Transport):
         from aiida.common.exceptions import InvalidOperation
 
         if not self._is_open:
-            raise InvalidOperation("Cannot close the transport: " "it is already closed")
+            raise InvalidOperation("Cannot close the transport: it is already closed")
         self._is_open = False
 
     def __str__(self):
@@ -258,16 +258,16 @@ class LocalTransport(Transport):
         overwrite = kwargs.get('overwrite', args[1] if len(args) > 1 else True)
         ignore_nonexisting = kwargs.get('ignore_noexisting', args[2] if len(args) > 2 else False)
         if not remotepath:
-            raise IOError("Input remotepath to put function " "must be a non empty string")
+            raise IOError("Input remotepath to put function must be a non empty string")
         if not localpath:
-            raise ValueError("Input localpath to put function " "must be a non empty string")
+            raise ValueError("Input localpath to put function must be a non empty string")
 
         if not os.path.isabs(localpath):
             raise ValueError("Source must be an absolute path")
 
         if self.has_magic(localpath):
             if self.has_magic(remotepath):
-                raise ValueError("Pathname patterns are not allowed in the " "remotepath")
+                raise ValueError("Pathname patterns are not allowed in the remotepath")
 
             to_copy_list = glob.glob(localpath)  # using local glob here
 
@@ -329,9 +329,9 @@ class LocalTransport(Transport):
         """
         overwrite = kwargs.get('overwrite', args[0] if args else True)
         if not remotepath:
-            raise IOError("Input remotepath to putfile " "must be a non empty string")
+            raise IOError("Input remotepath to putfile must be a non empty string")
         if not localpath:
-            raise ValueError("Input localpath to putfile " "must be a non empty string")
+            raise ValueError("Input localpath to putfile must be a non empty string")
 
         if not os.path.isabs(localpath):
             raise ValueError("Source must be an absolute path")
@@ -364,9 +364,9 @@ class LocalTransport(Transport):
         dereference = kwargs.get('dereference', args[0] if args else True)
         overwrite = kwargs.get('overwrite', args[1] if len(args) > 1 else True)
         if not remotepath:
-            raise IOError("Input remotepath to putfile " "must be a non empty string")
+            raise IOError("Input remotepath to putfile must be a non empty string")
         if not localpath:
-            raise ValueError("Input localpath to putfile " "must be a non empty string")
+            raise ValueError("Input localpath to putfile must be a non empty string")
 
         if not os.path.isabs(localpath):
             raise ValueError("Source must be an absolute path")
@@ -425,16 +425,16 @@ class LocalTransport(Transport):
         overwrite = kwargs.get('overwrite', args[1] if len(args) > 1 else True)
         ignore_nonexisting = kwargs.get('ignore_nonexisting', args[2] if len(args) > 2 else False)
         if not localpath:
-            raise ValueError("Input localpath to get function " "must be a non empty string")
+            raise ValueError("Input localpath to get function must be a non empty string")
         if not remotepath:
-            raise IOError("Input remotepath to get function " "must be a non empty string")
+            raise IOError("Input remotepath to get function must be a non empty string")
 
         if not os.path.isabs(localpath):
             raise ValueError("Destination must be an absolute path")
 
         if self.has_magic(remotepath):
             if self.has_magic(localpath):
-                raise ValueError("Pathname patterns are not allowed in the " "localpath")
+                raise ValueError("Pathname patterns are not allowed in the localpath")
             to_copy_list = self.glob(remotepath)
 
             rename_local = False
@@ -490,9 +490,9 @@ class LocalTransport(Transport):
         """
         overwrite = kwargs.get('overwrite', args[0] if args else True)
         if not localpath:
-            raise ValueError("Input localpath to get function " "must be a non empty string")
+            raise ValueError("Input localpath to get function must be a non empty string")
         if not remotepath:
-            raise IOError("Input remotepath to get function " "must be a non empty string")
+            raise IOError("Input remotepath to get function must be a non empty string")
         the_source = os.path.join(self.curdir, remotepath)
         if not os.path.exists(the_source):
             raise IOError("Source not found")
@@ -558,9 +558,9 @@ class LocalTransport(Transport):
         :raise OSError: if remotesource does not exist
         """
         if not remotesource:
-            raise ValueError("Input remotesource to copy " "must be a non empty object")
+            raise ValueError("Input remotesource to copy must be a non empty object")
         if not remotedestination:
-            raise ValueError("Input remotedestination to copy " "must be a non empty object")
+            raise ValueError("Input remotedestination to copy must be a non empty object")
         if not self.has_magic(remotesource):
             if not os.path.exists(os.path.join(self.curdir, remotesource)):
                 raise OSError("Source not found")
@@ -576,13 +576,13 @@ class LocalTransport(Transport):
 
         if self.has_magic(remotesource):
             if self.has_magic(remotedestination):
-                raise ValueError("Pathname patterns are not allowed in the " "remotedestination")
+                raise ValueError("Pathname patterns are not allowed in the remotedestination")
 
             to_copy_list = self.glob(remotesource)
 
             if len(to_copy_list) > 1:
                 if not self.path_exists(remotedestination) or self.isfile(remotedestination):
-                    raise OSError("Can't copy more than one file in the same " "remotedestination file")
+                    raise OSError("Can't copy more than one file in the same remotedestination file")
 
             for source in to_copy_list:
                 # If s is an absolute path, then the_s = s
@@ -617,9 +617,9 @@ class LocalTransport(Transport):
         :raise OSError: if remotesource does not exist
         """
         if not remotesource:
-            raise ValueError("Input remotesource to copyfile " "must be a non empty object")
+            raise ValueError("Input remotesource to copyfile must be a non empty object")
         if not remotedestination:
-            raise ValueError("Input remotedestination to copyfile " "must be a non empty object")
+            raise ValueError("Input remotedestination to copyfile must be a non empty object")
         the_source = os.path.join(self.curdir, remotesource)
         the_destination = os.path.join(self.curdir, remotedestination)
         if not os.path.exists(the_source):
@@ -644,9 +644,9 @@ class LocalTransport(Transport):
         :raise OSError: if remotesource does not exist
         """
         if not remotesource:
-            raise ValueError("Input remotesource to copytree " "must be a non empty object")
+            raise ValueError("Input remotesource to copytree must be a non empty object")
         if not remotedestination:
-            raise ValueError("Input remotedestination to copytree " "must be a non empty object")
+            raise ValueError("Input remotedestination to copytree must be a non empty object")
         the_source = os.path.join(self.curdir, remotesource)
         the_destination = os.path.join(self.curdir, remotedestination)
         if not os.path.exists(the_source):
@@ -744,14 +744,14 @@ class LocalTransport(Transport):
         main process, so that it is shielded from signals sent to the parent.
 
         :param  command: the command to execute. The command is assumed to be
-            already escaped using :py:func:`aiida.common.utils.escape_for_bash`.
+            already escaped using :py:func:`aiida.common.escaping.escape_for_bash`.
 
         :return: a tuple with (stdin, stdout, stderr, proc),
             where stdin, stdout and stderr behave as file-like objects,
             proc is the process object as returned by the
             subprocess.Popen() class.
         """
-        from aiida.common.utils import escape_for_bash
+        from aiida.common.escaping import escape_for_bash
 
         # Note: The outer shell will eat one level of escaping, while
         # 'bash -l -c ...' will eat another. Thus, we need to escape again.

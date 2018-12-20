@@ -7,74 +7,23 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-miscellaneous utilities for different parts in AiiDA
-"""
-
-# pylint: disable=too-many-lines
-
+"""Miscellaneous generic utility functions and classes."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import datetime
+
 import filecmp
-import functools
 import inspect
-import io
-import os.path
-import sys
-import numbers
+import os
 import re
+import sys
 
 import six
-from six.moves import range, input, zip
-from dateutil.parser import parse
+from six.moves import range
+from six.moves import cStringIO as StringIO
 
 from aiida.common.exceptions import ConfigurationError
-
-
-class classproperty(object):  # pylint: disable=too-few-public-methods, invalid-name
-    """
-    A class that, when used as a decorator, works as if the
-    two decorators @property and @classmethod where applied together
-    (i.e., the object works as a property, both for the Class and for any
-    of its instance; and is called with the class cls rather than with the
-    instance as its first argument).
-    """
-
-    def __init__(self, getter):
-        self.getter = getter
-
-    def __get__(self, instance, owner):
-        return self.getter(owner)
-
-
-class abstractclassmethod(classmethod):  # pylint: disable=too-few-public-methods, invalid-name
-    """
-    A decorator indicating abstract classmethods.
-
-    Backported from python3.
-    """
-    __isabstractmethod__ = True
-
-    def __init__(self, callable):  # pylint: disable=redefined-builtin
-        callable.__isabstractmethod__ = True
-        super(abstractclassmethod, self).__init__(callable)
-
-
-class abstractstaticmethod(staticmethod):  # pylint: disable=too-few-public-methods, invalid-name
-    """
-    A decorator indicating abstract staticmethods.
-
-    Similar to abstractmethod.
-    Backported from python3.
-    """
-
-    __isabstractmethod__ = True
-
-    def __init__(self, callable):  # pylint: disable=redefined-builtin
-        callable.__isabstractmethod__ = True  # pylint: disable=redefined-builtin
-        super(abstractstaticmethod, self).__init__(callable)
+from .lang import classproperty
 
 
 def get_new_uuid():
@@ -118,62 +67,9 @@ def get_repository_folder(subfolder=None):
         elif subfolder == "repository":
             retval = os.path.abspath(os.path.join(REPOSITORY_PATH, 'repository'))
         else:
-            raise ValueError("Invalid 'subfolder' passed to " "get_repository_folder: {}".format(subfolder))
+            raise ValueError("Invalid 'subfolder' passed to get_repository_folder: {}".format(subfolder))
         _repository_folder_cache[subfolder] = retval
         return retval
-
-
-def escape_for_bash(str_to_escape):
-    """
-    This function takes any string and escapes it in a way that
-    bash will interpret it as a single string.
-
-    Explanation:
-
-    At the end, in the return statement, the string is put within single
-    quotes. Therefore, the only thing that I have to escape in bash is the
-    single quote character. To do this, I substitute every single
-    quote ' with '"'"' which means:
-
-    First single quote: exit from the enclosing single quotes
-
-    Second, third and fourth character: "'" is a single quote character,
-    escaped by double quotes
-
-    Last single quote: reopen the single quote to continue the string
-
-    Finally, note that for python I have to enclose the string '"'"'
-    within triple quotes to make it work, getting finally: the complicated
-    string found below.
-    """
-    escaped_quotes = str_to_escape.replace("'", """'"'"'""")
-    return "'{}'".format(escaped_quotes)
-
-
-def get_suggestion(provided_string, allowed_strings):
-    """
-    Given a string and a list of allowed_strings, it returns a string to print
-    on screen, with sensible text depending on whether no suggestion is found,
-    or one or more than one suggestions are found.
-
-    Args:
-        provided_string: the string to compare
-        allowed_strings: a list of valid strings
-
-    Returns:
-        A string to print on output, to suggest to the user a possible valid
-        value.
-    """
-    import difflib
-
-    similar_kws = difflib.get_close_matches(provided_string, allowed_strings)
-
-    if len(similar_kws) == 1:
-        return "(Maybe you wanted to specify {0}?)".format(similar_kws[0])
-    elif len(similar_kws) > 1:
-        return "(Maybe you wanted to specify one of these: {}?)".format(', '.join(similar_kws))
-
-    return "(No similar keywords found...)"
 
 
 def validate_list_of_string_tuples(val, tuple_length):
@@ -206,69 +102,6 @@ def validate_list_of_string_tuples(val, tuple_length):
     return True
 
 
-def conv_to_fortran(val, quote_strings=True):
-    """
-    :param val: the value to be read and converted to a Fortran-friendly string.
-    """
-    # Note that bool should come before integer, because a boolean matches also
-    # isinstance(...,int)
-    import numpy
-
-    if isinstance(val, (bool, numpy.bool_)):
-        if val:
-            val_str = '.true.'
-        else:
-            val_str = '.false.'
-    elif isinstance(val, numbers.Integral):
-        val_str = "{:d}".format(val)
-    elif isinstance(val, numbers.Real):
-        val_str = ("{:18.10e}".format(val)).replace('e', 'd')
-    elif isinstance(val, six.string_types):
-        if quote_strings:
-            val_str = "'{!s}'".format(val)
-        else:
-            val_str = "{!s}".format(val)
-    else:
-        raise ValueError("Invalid value '{}' of type '{}' passed, accepts only bools, ints, floats and strings".format(
-            val, type(val)))
-
-    return val_str
-
-
-def conv_to_fortran_withlists(val, quote_strings=True):
-    """
-    Same as conv_to_fortran but with extra logic to handle lists
-    :param val: the value to be read and converted to a Fortran-friendly string.
-    """
-    # pylint: disable=too-many-return-statements
-
-    # Note that bool should come before integer, because a boolean matches also
-    # isinstance(...,int)
-    if isinstance(val, (list, tuple)):
-        val_str = ", ".join(conv_to_fortran(thing, quote_strings=quote_strings) for thing in val)
-        return val_str
-
-    if isinstance(val, bool):
-        if val:
-            return '.true.'
-
-        return '.false.'
-
-    if isinstance(val, six.integer_types):
-        return "{:d}".format(val)
-
-    if isinstance(val, float):
-        return "{:18.10e}".format(val).replace('e', 'd')
-
-    if isinstance(val, six.string_types):
-        if quote_strings:
-            return "'{!s}'".format(val)
-
-        return "{!s}".format(val)
-
-    raise ValueError("Invalid value passed, accepts only bools, ints, floats and strings")
-
-
 def get_unique_filename(filename, list_of_filenames):
     """
     Return a unique filename that can be added to the list_of_filenames.
@@ -297,57 +130,6 @@ def get_unique_filename(filename, list_of_filenames):
             break
         append_int += 1
     return new_filename
-
-
-def md5_file(filename, block_size_factor=128):
-    """
-    Open a file and return its md5sum (hexdigested).
-
-    :param filename: the filename of the file for which we want the md5sum
-    :param block_size_factor: the file is read at chunks of size
-        ``block_size_factor * md5.block_size``,
-        where ``md5.block_size`` is the block_size used internally by the
-        hashlib module.
-
-    :returns: a string with the hexdigest md5.
-
-    :raises: No checks are done on the file, so if it doesn't exists it may
-        raise IOError.
-    """
-    import hashlib
-
-    md5 = hashlib.md5()
-    with io.open(filename, 'rb', encoding=None) as fhandle:
-        # I read 128 bytes at a time until it returns the empty string b''
-        for chunk in iter(lambda: fhandle.read(block_size_factor * md5.block_size), b''):
-            md5.update(chunk)
-
-    return md5.hexdigest()
-
-
-def sha1_file(filename, block_size_factor=128):
-    """
-    Open a file and return its sha1sum (hexdigested).
-
-    :param filename: the filename of the file for which we want the sha1sum
-    :param block_size_factor: the file is read at chunks of size
-        ``block_size_factor * sha1.block_size``,
-        where ``sha1.block_size`` is the block_size used internally by the
-        hashlib module.
-
-    :returns: a string with the hexdigest sha1.
-
-    :raises: No checks are done on the file, so if it doesn't exists it may
-        raise IOError.
-    """
-    import hashlib
-
-    sha1 = hashlib.sha1()
-    with io.open(filename, 'rb', encoding=None) as fhandle:
-        # I read 128 bytes at a time until it returns the empty string b''
-        for chunk in iter(lambda: fhandle.read(block_size_factor * sha1.block_size), b''):
-            sha1.update(chunk)
-    return sha1.hexdigest()
 
 
 def str_timedelta(dt, max_num_fields=3, short=False, negative_to_zero=False):  # pylint: disable=invalid-name
@@ -418,30 +200,6 @@ def str_timedelta(dt, max_num_fields=3, short=False, negative_to_zero=False):  #
     return "{}{}".format(raw_string, negative_string)
 
 
-def create_display_name(field):
-    """
-    Given a string, creates the suitable "default" display name: replace
-    underscores with spaces, and capitalize each word.
-
-    :return: the converted string
-    """
-    return ' '.join(_.capitalize() for _ in field.split('_'))
-
-
-def get_object_string(obj):
-    """
-    Get a string that identifies this object which can be used to retrieve
-    it via :func:`get_object_from_string`.
-
-    :param obj: The object to get the string for
-    :return: The string that identifies the object
-    """
-    if inspect.isfunction(obj):
-        return "{}.{}".format(obj.__module__, obj.__name__)
-
-    return get_class_string(obj)
-
-
 def get_class_string(obj):
     """
     Return the string identifying the class of the object (module + object name,
@@ -492,386 +250,6 @@ def grouper(n, iterable):  # pylint: disable=invalid-name
         if not chunk:
             return
         yield chunk
-
-
-def gzip_string(to_zip):
-    """
-    Gzip string contents.
-
-    :param to_zip: a string
-    :return: a gzipped string
-    """
-    import tempfile
-    import gzip
-
-    with tempfile.NamedTemporaryFile() as fhandle:
-        with gzip.open(fhandle.name, 'wb') as zipfile:
-            zipfile.write(to_zip)
-        return fhandle.read()
-
-
-def gunzip_string(zipped_string):
-    """
-    Gunzip string contents.
-
-    :param zipped_string: a gzipped string
-    :return: a string
-    """
-    import tempfile
-    import gzip
-
-    with tempfile.NamedTemporaryFile() as fhandle:
-        fhandle.write(zipped_string)
-        fhandle.flush()
-        with gzip.open(fhandle.name, 'rb') as zipfile:
-            return zipfile.read()
-
-
-def xyz_parser_iterator(xyz_string):
-    """
-    Yields a tuple `(natoms, comment, atomiter)`for each frame
-    in a XYZ file where `atomiter` is an iterator yielding a
-    nested tuple `(symbol, (x, y, z))` for each entry.
-
-    :param xyz_string: a string containing XYZ-structured text
-    """
-
-    class BlockIterator(object):
-        """
-        An iterator for wrapping the iterator returned by `match.finditer`
-        to extract the required fields directly from the match object
-        """
-
-        def __init__(self, it, natoms):
-            self._it = it
-            self._natoms = natoms
-            self._catom = 0
-
-        def __iter__(self):
-            return self
-
-        def __next__(self):  # pylint: disable=missing-docstring
-            try:
-                match = next(self._it)
-            except StopIteration:
-                # if we reached the number of atoms declared, everything is well
-                # and we re-raise the StopIteration exception
-                if self._catom == self._natoms:
-                    raise
-                else:
-                    # otherwise we got too less entries
-                    raise TypeError("Number of atom entries ({}) is smaller than the number of atoms ({})".format(
-                        self._catom, self._natoms))
-
-            self._catom += 1
-
-            if self._catom > self._natoms:
-                raise TypeError("Number of atom entries ({}) is larger than the number of atoms ({})".format(
-                    self._catom, self._natoms))
-
-            return (match.group('sym'), (float(match.group('x')), float(match.group('y')), float(match.group('z'))))
-
-        def next(self):
-            """
-            The iterator method expected by python 2.x,
-            implemented as python 3.x style method.
-            """
-            return self.__next__()
-
-    pos_regex = re.compile(
-        r"""
-^                                                                             # Linestart
-[ \t]*                                                                        # Optional white space
-(?P<sym>[A-Za-z]+[A-Za-z0-9]*)\s+                                             # get the symbol
-(?P<x> [\+\-]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([Ee][\+\-]?\d+)? ) [ \t]+     # Get x
-(?P<y> [\+\-]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([Ee][\+\-]?\d+)? ) [ \t]+     # Get y
-(?P<z> [\+\-]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([Ee][\+\-]?\d+)? )            # Get z
-""", re.X | re.M)
-    pos_block_regex = re.compile(
-        r"""
-                                                            # First line contains an integer
-                                                            # and only an integer: the number of atoms
-^[ \t]* (?P<natoms> [0-9]+) [ \t]*[\n]                      # End first line
-(?P<comment>.*) [\n]                                        # The second line is a comment
-(?P<positions>                                              # This is the block of positions
-    (
-        (
-            \s*                                             # White space in front of the element spec is ok
-            (
-                [A-Za-z]+[A-Za-z0-9]*                       # Element spec
-                (
-                    \s+                                     # White space in front of the number
-                    [\+\-]?                                 # Plus or minus in front of the number (optional)
-                    (
-                        (
-                            \d*                             # optional decimal in the beginning .0001 is ok, for example
-                            [\.]                            # There has to be a dot followed by
-                            \d+                             # at least one decimal
-                        )
-                        |                                   # OR
-                        (
-                            \d+                             # at least one decimal, followed by
-                            [\.]?                           # an optional dot
-                            \d*                             # followed by optional decimals
-                        )
-                    )
-                    ([Ee][\+\-]?\d+)?                       # optional exponents E+03, e-05
-                ){3}                                        # I expect three float values
-                |
-                \#                                          # If a line is commented out, that is also ok
-            )
-            .*                                              # ignore what is after the comment or the position spec
-            |                                               # OR
-            \s*                                             # A line only containing white space
-         )
-        [\n]                                                # line break at the end
-    )+
-)                                                           # A positions block should be one or more lines
-                    """, re.X | re.M)
-
-    for block in pos_block_regex.finditer(xyz_string):
-        natoms = int(block.group('natoms'))
-        yield (natoms, block.group('comment'), BlockIterator(pos_regex.finditer(block.group('positions')), natoms))
-
-
-class EmptyContextManager(object):  # pylint: disable=too-few-public-methods
-    """
-    A dummy/no-op context manager.
-    """
-
-    def __enter__(self):
-        pass
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        pass
-
-
-def get_extremas_from_positions(positions):
-    """
-    returns the minimum and maximum value for each dimension in the positions given
-    """
-    return list(zip(*[(min(values), max(values)) for values in zip(*positions)]))
-
-
-def get_fortfloat(key, txt, be_case_sensitive=True):
-    """
-    Matches a fortran compatible specification of a float behind a defined key in a string.
-    :param key: The key to look for
-    :param txt: The string where to search for the key
-    :param be_case_sensitive: An optional boolean whether to search case-sensitive, defaults to ``True``
-
-    If abc is a key, and f is a float, number, than this regex
-    will match t and return f in the following cases:
-
-    *   charsbefore, abc = f, charsafter
-    *   charsbefore
-        abc = f
-        charsafter
-    *   charsbefore, abc = f
-        charsafter
-
-    and vice-versa.
-    If no float is matched, returns None
-
-    Exampes of matchable floats are:
-
-    *   0.1d2
-    *   0.D-3
-    *   .2e1
-    *   -0.23
-    *   23.
-    *   232
-    """
-    pattern = r"""
-        [\n,]                       # key - value pair can be prepended by comma or start
-        [ \t]*                      # in a new line and some optional white space
-        {}                          # the key goes here
-        [ \t]*                      # Optional white space between key and equal sign
-        =                           # Equals, you can put [=:,] if you want more specifiers
-        [ \t]*                      # optional white space between specifier and float
-        (?P<float>                  # Universal float pattern
-            [\+\-]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([EeDd][\+\-]?\d+)?
-        )
-        [ \t]*[,\n,#]               # Can be followed by comma, end of line, or a comment
-        """.format(key)
-
-    rekeys = re.X | re.M
-
-    if not be_case_sensitive:
-        rekeys |= re.I
-
-    match = re.search(pattern, txt, rekeys)
-
-    if not match:
-        return None
-
-    return float(match.group('float').replace('d', 'e').replace('D', 'e'))
-
-
-def ask_question(question, reply_type, allow_none_as_answer=True):
-    """
-    This method asks a specific question, tries to parse the given reply
-    and then it verifies the parsed answer.
-    :param question: The question to be asked.
-    :param reply_type: The type of the expected answer (int, datetime etc). It
-    is needed for the parsing of the answer.
-    :param allow_none_as_answer: Allow empty answers?
-    :return: The parsed reply.
-    """
-    final_answer = None
-
-    while True:
-        answer = query_string(question, "")
-
-        # If the reply is empty
-        if not answer:
-            if not allow_none_as_answer:
-                continue
-        # Otherwise, try to parse it
-        else:
-            try:
-                if reply_type == int:
-                    final_answer = int(answer)
-                elif reply_type == float:
-                    final_answer = float(answer)
-                elif reply_type == datetime.datetime:
-                    final_answer = parse(answer)
-                else:
-                    raise ValueError
-            # If it is not parsable...
-            except ValueError:
-                sys.stdout.write("The given value could not be parsed. " + "Type expected: {}\n".format(reply_type))
-                # If the timestamp could not have been parsed,
-                # ask again the same question.
-                continue
-
-        if query_yes_no("{} was parsed. Is it correct?".format(final_answer), default="yes"):
-            break
-    return final_answer
-
-
-def query_yes_no(question, default="yes"):
-    """Ask a yes/no question via input() and return their answer.
-
-    "question" is a string that is presented to the user.
-    "default" is the presumed answer if the user just hits <Enter>.
-    It must be "yes" (the default), "no" or None (meaning
-    an answer is required of the user).
-
-    The "answer" return value is True for "yes" or False for "no".
-    """
-    valid = {"yes": True, "y": True, "ye": True, "no": False, "n": False}
-    if default is None:
-        prompt = " [y/n] "
-    elif default == "yes":
-        prompt = " [Y/n] "
-    elif default == "no":
-        prompt = " [y/N] "
-    else:
-        raise ValueError("invalid default answer: '%s'" % default)
-
-    while True:
-        choice = input(question + prompt).lower()
-        if default is not None and not choice:
-            return valid[default]
-        elif choice in valid:
-            return valid[choice]
-        else:
-            sys.stdout.write("Please respond with 'yes' or 'no' " "(or 'y' or 'n').\n")
-
-
-def query_string(question, default):
-    """
-    Asks a question (with the option to have a default, predefined answer,
-    and depending on the default answer and the answer of the user the
-    following options are available:
-    - If the user replies (with a non empty answer), then his answer is
-    returned.
-    - If the default answer is None then the user has to reply with a non-empty
-    answer.
-    - If the default answer is not None, then it is returned if the user gives
-    an empty answer. In the case of empty default answer and empty reply from
-    the user, None is returned.
-    :param question: The question that we want to ask the user.
-    :param default: The default answer (if there is any) to the question asked.
-    :return: The returned reply.
-    """
-
-    if default is None or not default:
-        prompt = ""
-    else:
-        prompt = " [{}]".format(default)
-
-    while True:
-        reply = input(question + prompt)
-        if default is not None and not reply:
-            # If the default answer is an empty string.
-            if not default:
-                return None
-
-            return default
-        elif reply:
-            return reply
-
-        sys.stdout.write("Please provide a non empty answer.\n")
-
-
-def flatten_list(value):
-    """
-    Flattens a list or a tuple
-    In [2]: flatten_list([[[[[4],3]],[3],['a',[3]]]])
-    Out[2]: [4, 3, 3, 'a', 3]
-
-    :param value: A value, whether iterable or not
-    :returns: a list of nesting level 1
-    """
-
-    if isinstance(value, (list, tuple)):
-        return [flat for item in value for flat in flatten_list(item)]
-
-    return [value]
-
-
-class combomethod(object):  # pylint: disable=invalid-name,too-few-public-methods
-    """
-    A decorator that wraps a function that can be both a classmethod or
-    instancemethod and behaves accordingly::
-
-        class A():
-
-            @combomethod
-            def do(self, **kwargs):
-                isclass = kwargs.get('isclass')
-                if isclass:
-                    print("I am a class", self)
-                else:
-                    print("I am an instance", self)
-
-        A.do()
-        A().do()
-
-        >>> I am a class __main__.A
-        >>> I am an instance <__main__.A instance at 0x7f2efb116e60>
-
-    Attention: For ease of handling, pass keyword **isclass**
-    equal to True if this was called as a classmethod and False if this
-    was called as an instance.
-    The argument self is therefore ambiguous!
-    """
-
-    def __init__(self, method):
-        self.method = method
-
-    def __get__(self, obj=None, objtype=None):  # pylint: disable=missing-docstring
-
-        @functools.wraps(self.method)
-        def _wrapper(*args, **kwargs):  # pylint: disable=missing-docstring
-            kwargs.pop('isclass', None)
-            if obj is not None:
-                return self.method(obj, *args, isclass=False, **kwargs)
-            return self.method(objtype, *args, isclass=True, **kwargs)
-
-        return _wrapper
 
 
 class ArrayCounter(object):
@@ -927,10 +305,6 @@ def are_dir_trees_equal(dir1, dir2):
             return False, msg
 
     return True, "The given directories ({} and {}) are equal".format(dir1, dir2)
-
-
-def indent(txt, spaces=4):
-    return "\n".join(" " * spaces + ln for ln in txt.splitlines())
 
 
 class Prettifier(object):
@@ -1140,211 +514,96 @@ def join_labels(labels, join_symbol="|", threshold=1.e-6):
     return new_labels
 
 
-def get_mode_string(mode):
+class Capturing(object):
     """
-    Convert a file's mode to a string of the form '-rwxrwxrwx'.
-    Taken (simplified) from cpython 3.3 stat module: https://hg.python.org/cpython/file/3.3/Lib/stat.py
+    This class captures stdout and returns it
+    (as a list, split by lines).
+
+    Note: if you raise a SystemExit, you have to catch it outside.
+    E.g., in our tests, this works::
+
+        import sys
+        with self.assertRaises(SystemExit):
+            with Capturing() as output:
+                sys.exit()
+
+    But out of the testing environment, the code instead just exits.
+
+    To use it, access the obj.stdout_lines, or just iterate over the object
+
+    :param capture_stderr: if True, also captures sys.stderr. To access the
+        lines, use obj.stderr_lines. If False, obj.stderr_lines is None.
     """
-    # pylint: disable=invalid-name,unused-variable,too-many-locals
 
-    # Constants used as S_IFMT() for various file types
-    # (not all are implemented on all systems)
+    # pylint: disable=attribute-defined-outside-init
 
-    S_IFDIR = 0o040000  # directory
-    S_IFCHR = 0o020000  # character device
-    S_IFBLK = 0o060000  # block device
-    S_IFREG = 0o100000  # regular file
-    S_IFIFO = 0o010000  # fifo (named pipe)
-    S_IFLNK = 0o120000  # symbolic link
-    S_IFSOCK = 0o140000  # socket file
+    def __init__(self, capture_stderr=False):
+        self.stdout_lines = list()
+        super(Capturing, self).__init__()
 
-    # Names for permission bits
-
-    S_ISUID = 0o4000  # set UID bit
-    S_ISGID = 0o2000  # set GID bit
-    S_ENFMT = S_ISGID  # file locking enforcement
-    S_ISVTX = 0o1000  # sticky bit
-    S_IREAD = 0o0400  # Unix V7 synonym for S_IRUSR
-    S_IWRITE = 0o0200  # Unix V7 synonym for S_IWUSR
-    S_IEXEC = 0o0100  # Unix V7 synonym for S_IXUSR
-    S_IRWXU = 0o0700  # mask for owner permissions
-    S_IRUSR = 0o0400  # read by owner
-    S_IWUSR = 0o0200  # write by owner
-    S_IXUSR = 0o0100  # execute by owner
-    S_IRWXG = 0o0070  # mask for group permissions
-    S_IRGRP = 0o0040  # read by group
-    S_IWGRP = 0o0020  # write by group
-    S_IXGRP = 0o0010  # execute by group
-    S_IRWXO = 0o0007  # mask for others (not in group) permissions
-    S_IROTH = 0o0004  # read by others
-    S_IWOTH = 0o0002  # write by others
-    S_IXOTH = 0o0001  # execute by others
-
-    # yapf:disable
-    _filemode_table = (
-        ((S_IFLNK, "l"),
-         (S_IFREG, "-"),
-         (S_IFBLK, "b"),
-         (S_IFDIR, "d"),
-         (S_IFCHR, "c"),
-         (S_IFIFO, "p")),
-
-        ((S_IRUSR, "r"),),
-        ((S_IWUSR, "w"),),
-        ((S_IXUSR | S_ISUID, "s"),
-         (S_ISUID, "S"),
-         (S_IXUSR, "x")),
-
-        ((S_IRGRP, "r"),),
-        ((S_IWGRP, "w"),),
-        ((S_IXGRP | S_ISGID, "s"),
-         (S_ISGID, "S"),
-         (S_IXGRP, "x")),
-
-        ((S_IROTH, "r"),),
-        ((S_IWOTH, "w"),),
-        ((S_IXOTH | S_ISVTX, "t"),
-         (S_ISVTX, "T"),
-         (S_IXOTH, "x"))
-    )
-    # yapf:enable
-
-    perm = []
-    for table in _filemode_table:
-        for bit, char in table:
-            if mode & bit == bit:
-                perm.append(char)
-                break
+        self._capture_stderr = capture_stderr
+        if self._capture_stderr:
+            self.stderr_lines = list()
         else:
-            perm.append("-")
-    return "".join(perm)
-
-
-class HiddenPrints(object):  # pylint: disable=too-few-public-methods
-    """
-    Class to prevent any print to the std output.
-    Usage::
-
-        with HiddenPrints():
-            print("I won't print this")
-    """
-
-    def __init__(self):
-        self._original_stdout = None
+            self.stderr_lines = None
 
     def __enter__(self):
-        """
-        Keep track of the original sdtout location and redirect stdout
-        to /dev/null
-        """
-        from os import devnull
+        """Enter the context where all output is captured."""
+        self._stdout = sys.stdout
+        self._stringioout = StringIO()
+        sys.stdout = self._stringioout
+        if self._capture_stderr:
+            self._stderr = sys.stderr
+            self._stringioerr = StringIO()
+            sys.stderr = self._stringioerr
+        return self
 
-        self._original_stdout = sys.stdout
+    def __exit__(self, *args):
+        """Exit the context where all output is captured."""
+        self.stdout_lines.extend(self._stringioout.getvalue().splitlines())
+        sys.stdout = self._stdout
+        del self._stringioout  # free up some memory
+        if self._capture_stderr:
+            self.stderr_lines.extend(self._stringioerr.getvalue().splitlines())
+            sys.stderr = self._stderr
+            del self._stringioerr  # free up some memory
 
-        # N.B. Here we don't use io.open as we may need to swallow byte streams.
-        # In this instance, as we're just redirecting the output to dev null we
-        # don't need to worry about encoding and so we use regular system open.
-        # This will work in Python 2 or Python 3.
-        sys.stdout = open(devnull, 'w')
+    def __str__(self):
+        return str(self.stdout_lines)
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        sys.stdout = self._original_stdout
-
-
-def type_check(what, of_type):
-    if not isinstance(what, of_type):
-        raise TypeError("Got object of type '{}', expecting '{}'".format(type(what), of_type))
-
-
-# Mapping of "SQL" tokens into corresponding regex expressions
-SQL_TO_REGEX_TOKENS = [  # Remember in the strings below we have to escape backslashes as well for python...
-    # so '\\\\' is actually a string with two backslashes, '\\' a string with a single backslash, ...
-    ('\\\\', re.escape('\\')),  # Double slash should be interpreted as a literal single backslash by regex
-    ('\\%', re.escape('%')),  # literal '\%' should be interpreted as literal % by regex
-    ('\\_', re.escape('_')),  # literal '\_' should be interpreted as literal _ by regex
-    ('%', '.*'),
-    ('_', '.'),
-]
+    def __iter__(self):
+        return iter(self.stdout_lines)
 
 
-def escape_for_sql_like(string):
-    """Function that escapes % or _ symbols provided by user"""
-    return string.replace('%', '\\%').replace('_', '\\_')
+class ErrorAccumulator(object):
+    """
+    Allows to run a number of functions and collect all the errors they raise
 
+    This allows to validate multiple things and tell the user about all the
+    errors encountered at once. Works best if the individual functions do not depend on each other.
 
-def get_regex_pattern_from_sql(sql_pattern):
-    r"""
-    Convert a string providing a pattern to match in SQL
-    syntax into a string performing the same match as a regex.
-
-    SQL syntax summary:
-
-    - ``%`` -> match any number of characters
-    - ``_`` -> match exactly one character
-
-    Moreover, ``\`` is the escape character (by default), so:
-
-    - ``\\`` -> single backslash
-    - ``\%`` -> literal % symbol
-    - ``\_`` -> literal _ symbol
-
-    and moreover the string should begin at the beginning of the line
-    and end at the end of the line.
-
-    :param sql_pattern: the string with the pattern in SQL syntax
-    :return: a string with the pattern in regex syntax
+    Does not allow to trace the stack of each error, therefore do not use for debugging, but for
+    semantical checking with user friendly error messages.
     """
 
-    def tokenizer(string, tokens_to_apply):
-        """
-        Recursive function that tokenizes a string using the provided tokens
+    def __init__(self, *error_cls):
+        self.error_cls = error_cls
+        self.errors = {k: [] for k in self.error_cls}
 
-        :param string: the string to tokenize
-        :param tokens_to_apply: the list of tokens still to process (in order: the first will be processed first)
-        :return: a tokenized and escaped string for regex
-        """
-        if tokens_to_apply:
-            # We still have tokens to process
-            # find the first occurrence of the first token passed in the list
-            # note that the order of the tokens list is important, e.g. we need
-            # to match first \% and then %
-            first, sep, rest = string.partition(tokens_to_apply[0])
+    def run(self, function, *args, **kwargs):
+        try:
+            function(*args, **kwargs)
+        except self.error_cls as err:
+            self.errors[err.__class__].append(err)
 
-            # There is indeed a separator:
-            if sep:
-                # at least one token was found; therefore I have to map tokens[sep]
-                # to the corresponding regex expression (via the dictionary substitution)
-                # Moreover, the 'rest' is not empty so I apply recursively `tokenizer`,
-                # with ALL tokens passed (there could be more occurrences of tokens_to_apply[0])
-                # Instead, for the first part, we know that we found the FIRST occurrence of tokens_to_apply[0]
-                # so I pass the list without the first element
-                return tokenizer(
-                    first, tokens_to_apply=tokens_to_apply[1:]) + dict(SQL_TO_REGEX_TOKENS)[sep] + tokenizer(
-                        rest, tokens_to_apply=tokens_to_apply)
-            # Here sep is empty: it means also rest is empty, and we just
-            # return (recursively) the tokenizer on the first part, avoiding
-            # infinite loops
-            return tokenizer(first, tokens_to_apply=tokens_to_apply[1:])
-        # There is no more token to process: we now have
-        # a string that we know we want to consider literally, so
-        # we just make sure it's escaped for a regex to avoid
-        # that the user passed in weird characters that are valid
-        # regex symbols like $ ^ [ ] etc
-        return re.escape(string)
+    def success(self):
+        return bool(not any(self.errors.values()))
 
-    return "^{}$".format(tokenizer(sql_pattern, tokens_to_apply=[token_pair[0] for token_pair in SQL_TO_REGEX_TOKENS]))
+    def result(self, raise_error=Exception):
+        if raise_error:
+            self.raise_errors(raise_error)
+        return self.success(), self.errors
 
-
-def sql_string_match(string, pattern):
-    """
-    Check if the string matches the provided pattern,
-    specified using SQL syntax.
-
-    See documentation of :py:func:`~aiida.common.utils.get_regex_pattern_from_sql`
-    for an explanation of the syntax.
-
-    :param string: the string to check
-    :param pattern: the SQL pattern
-    :return: True if the string matches, False otherwise
-    """
-    return bool(re.match(get_regex_pattern_from_sql(pattern), string))
+    def raise_errors(self, raise_cls):
+        if not self.success():
+            raise raise_cls('The following errors were encountered: {}'.format(self.errors))

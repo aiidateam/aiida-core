@@ -167,7 +167,7 @@ class ArrayData(Data):
         import numpy
 
         if not isinstance(array, numpy.ndarray):
-            raise TypeError("ArrayData can only store numpy arrays. Convert " "the object to an array first")
+            raise TypeError("ArrayData can only store numpy arrays. Convert the object to an array first")
 
         # Check if the name is valid
         if not (name) or re.sub('[0-9a-zA-Z_]', '', name):

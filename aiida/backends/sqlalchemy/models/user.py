@@ -13,7 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 from sqlalchemy.schema import Column
 from sqlalchemy.types import Integer, String, Boolean, DateTime
-from aiida.utils import timezone
+from aiida.common import timezone
 from aiida.backends.sqlalchemy.models.base import Base
 
 
@@ -47,8 +47,3 @@ class DbUser(Base):
 
     def __str__(self):
         return self.email
-
-    def get_aiida_class(self):
-        from aiida.orm.implementation.sqlalchemy.users import SqlaUser
-        from aiida.manage import get_manager
-        return SqlaUser.from_dbmodel(self, get_manager().get_backend())

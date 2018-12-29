@@ -13,14 +13,12 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import functools
-import plumpy
 
-from aiida import utils
-from aiida import common
+from .configuration import get_config
 
 __all__ = 'get_manager', 'reset_manager'
 
-_manager = None  # pylint: disable=invalid-name
+MANAGER = None
 
 
 class Manager(object):
@@ -39,6 +37,37 @@ class Manager(object):
       * reset manager cache when loading a new profile
     """
 
+    def _load_backend(self, schema_check=True):
+        """Load the backend for the currently configured profile and return it.
+
+        :param schema_check: force a database schema check if the database environment has not yet been loaded
+        :return: the database backend
+        :rtype: :class:`aiida.orm.Backend`
+        """
+        from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
+        from aiida.backends.utils import is_dbenv_loaded, load_dbenv, _load_dbenv_noschemacheck
+
+        profile = self.get_profile()
+
+        if not is_dbenv_loaded():
+            if schema_check:
+                load_dbenv(profile.name)
+            else:
+                _load_dbenv_noschemacheck(profile.name)
+
+        backend_type = profile.dictionary.AIIDADB_BACKEND
+
+        if backend_type == BACKEND_DJANGO:
+            from aiida.orm.implementation.django.backend import DjangoBackend
+            self._backend = DjangoBackend()
+        elif backend_type == BACKEND_SQLA:
+            from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
+            self._backend = SqlaBackend()
+        else:
+            raise RuntimeError('Invalid backend type {} in profile: {}'.format(backend_type, profile.name))
+
+        return self._backend
+
     def get_backend(self):
         """
         Get the database backend
@@ -47,16 +76,7 @@ class Manager(object):
         :rtype: :class:`aiida.orm.Backend`
         """
         if self._backend is None:
-            from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
-            backend_type = self.get_profile().config.get('AIIDADB_BACKEND')
-            if backend_type == BACKEND_DJANGO:
-                from aiida.orm.implementation.django.backend import DjangoBackend
-                self._backend = DjangoBackend()
-            elif backend_type == BACKEND_SQLA:
-                from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
-                self._backend = SqlaBackend()
-            else:
-                raise RuntimeError("Invalid backend type in profile: {}".format(backend_type))
+            self._load_backend()
 
         return self._backend
 
@@ -65,10 +85,11 @@ class Manager(object):
         Get the current profile
 
         :return: current loaded profile instance
-        :rtype: :class:`~aiida.common.profile.Profile`
+        :rtype: :class:`~aiida.manage.configuration.profile.Profile`
         """
         if self._profile is None:
-            self._profile = common.profile.get_profile()
+            config = get_config()
+            self._profile = config.current_profile
 
         return self._profile
 
@@ -106,6 +127,7 @@ class Manager(object):
         :return: the communicator instance
         :rtype: :class:`~kiwipy.rmq.communicator.RmqThreadCommunicator`
         """
+        from aiida.common import serialize
         from aiida.work import rmq
         import kiwipy.rmq
         profile = self.get_profile()
@@ -127,8 +149,8 @@ class Manager(object):
         return kiwipy.rmq.RmqThreadCommunicator.connect(
             connection_params={'url': url},
             message_exchange=message_exchange,
-            encoder=functools.partial(utils.serialize.serialize, encoding='utf-8'),
-            decoder=utils.serialize.deserialize,
+            encoder=functools.partial(serialize.serialize, encoding='utf-8'),
+            decoder=serialize.deserialize,
             task_exchange=task_exchange,
             task_queue=task_queue,
             task_prefetch_count=task_prefetch_count,
@@ -142,6 +164,7 @@ class Manager(object):
         :return: the process controller instance
         :rtype: :class:`plumpy.RemoteProcessThreadController`
         """
+        import plumpy
         if self._process_controller is None:
             self._process_controller = plumpy.RemoteProcessThreadController(self.get_communicator())
 
@@ -182,8 +205,9 @@ class Manager(object):
         """
         from aiida.work import runners
 
-        profile = self.get_profile()
-        poll_interval = 0.0 if profile.is_test_profile else profile.get_option('runner.poll.interval')
+        config = get_config()
+        profile = config.current_profile
+        poll_interval = 0.0 if profile.is_test_profile else config.option_get('runner.poll.interval')
 
         settings = {'rmq_submit': False, 'poll_interval': poll_interval}
         settings.update(kwargs)
@@ -206,6 +230,7 @@ class Manager(object):
         :return: a runner configured to work in the daemon configuration
         :rtype: :class:`aiida.work.Runner`
         """
+        import plumpy
         from aiida.work import rmq, persistence
         runner = self.create_runner(rmq_submit=True, loop=loop)
         runner_loop = runner.loop
@@ -242,7 +267,8 @@ class Manager(object):
     def __init__(self):
         super(Manager, self).__init__()
         self._backend = None  # type: aiida.orm.Backend
-        self._profile = None  # type: aiida.common.profile.Profile
+        self._config = None  # type: aiida.manage.configuration.config.Config
+        self._profile = None  # type: aiida.manage.configuration.profile.Profile
         self._communicator = None  # type: kiwipy.rmq.RmqThreadCommunicator
         self._process_controller = None  # type: plumpy.RemoteProcessThreadController
         self._persister = None  # type: aiida.work.AiiDAPersister
@@ -250,14 +276,14 @@ class Manager(object):
 
 
 def get_manager():
-    global _manager  # pylint: disable=invalid-name, global-statement
-    if _manager is None:
-        _manager = Manager()
-    return _manager
+    global MANAGER  # pylint: disable=global-statement
+    if MANAGER is None:
+        MANAGER = Manager()
+    return MANAGER
 
 
 def reset_manager():
-    global _manager  # pylint: disable=invalid-name, global-statement
-    if _manager is not None:
-        _manager.close()
-        _manager = None
+    global MANAGER  # pylint: disable=global-statement
+    if MANAGER is not None:
+        MANAGER.close()
+        MANAGER = None

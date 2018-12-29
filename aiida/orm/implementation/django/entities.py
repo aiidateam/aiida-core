@@ -15,7 +15,7 @@ import typing
 
 from django.db.models import Model  # pylint: disable=import-error, no-name-in-module
 
-from aiida.common.utils import type_check
+from aiida.common.lang import type_check
 from . import utils
 
 ModelType = typing.TypeVar('ModelType')  # pylint: disable=invalid-name
@@ -42,8 +42,10 @@ class DjangoModelEntity(typing.Generic[ModelType]):
         :param backend: the corresponding backend
         :return: the Django entity
         """
+        from .backend import DjangoBackend
         cls._class_check()
         type_check(dbmodel, cls.MODEL_CLASS)
+        type_check(backend, DjangoBackend)
         entity = cls.__new__(cls)
         super(DjangoModelEntity, entity).__init__(backend)
         entity._dbmodel = utils.ModelWrapper(dbmodel, auto_flush=cls._auto_flush)  # pylint: disable=protected-access

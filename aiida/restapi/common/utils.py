@@ -217,13 +217,13 @@ class Utils(object):
         if path[0] == 'schema':
             query_type = path.pop(0)
             if path:
-                raise RestInputValidationError("url requesting schema resources do not " "admit further fields")
+                raise RestInputValidationError("url requesting schema resources do not admit further fields")
             else:
                 return (resource_type, page, node_id, query_type)
         elif path[0] == 'statistics':
             query_type = path.pop(0)
             if path:
-                raise RestInputValidationError("url requesting statistics resources do not " "admit further fields")
+                raise RestInputValidationError("url requesting statistics resources do not admit further fields")
             else:
                 return (resource_type, page, node_id, query_type)
         elif path[0] == "io" or path[0] == "content":
@@ -260,10 +260,10 @@ class Utils(object):
         # TODO Consider using **kwargs so to make easier to add more validations
         # 1. perpage incompatible with offset and limits
         if perpage is not None and (limit is not None or offset is not None):
-            raise RestValidationError("perpage key is incompatible with " "limit and offset")
+            raise RestValidationError("perpage key is incompatible with limit and offset")
         # 2. /page/<int: page> in path is incompatible with limit and offset
         if page is not None and (limit is not None or offset is not None):
-            raise RestValidationError("requesting a specific page is " "incompatible " "with limit and offset")
+            raise RestValidationError("requesting a specific page is incompatible with limit and offset")
         # 3. perpage requires that the path contains a page request
         if perpage is not None and page is None:
             raise RestValidationError("perpage key requires that a page is "
@@ -271,7 +271,7 @@ class Utils(object):
                                       "/page/)")
         # 4. No querystring if query type = schema'
         if query_type in ('schema') and is_querystring_defined:
-            raise RestInputValidationError("schema requests do not allow " "specifying a query string")
+            raise RestInputValidationError("schema requests do not allow specifying a query string")
 
     def paginate(self, page, perpage, total_count):
         """
@@ -366,7 +366,7 @@ class Utils(object):
         ## Input consistency
         # rel_pages cannot be defined without url
         if rel_pages is not None and url is None:
-            raise InputValidationError("'rel_pages' parameter requires 'url' " "parameter to be defined")
+            raise InputValidationError("'rel_pages' parameter requires 'url' parameter to be defined")
 
         headers = {}
 
@@ -538,29 +538,29 @@ class Utils(object):
 
         ## Check the reserved keywords
         if 'limit' in field_counts.keys() and field_counts['limit'] > 1:
-            raise RestInputValidationError("You cannot specify limit more than " "once")
+            raise RestInputValidationError("You cannot specify limit more than once")
         if 'offset' in field_counts.keys() and field_counts['offset'] > 1:
-            raise RestInputValidationError("You cannot specify offset more than " "once")
+            raise RestInputValidationError("You cannot specify offset more than once")
         if 'perpage' in field_counts.keys() and field_counts['perpage'] > 1:
-            raise RestInputValidationError("You cannot specify perpage more than " "once")
+            raise RestInputValidationError("You cannot specify perpage more than once")
         if 'orderby' in field_counts.keys() and field_counts['orderby'] > 1:
-            raise RestInputValidationError("You cannot specify orderby more than " "once")
+            raise RestInputValidationError("You cannot specify orderby more than once")
         if 'alist' in field_counts.keys() and field_counts['alist'] > 1:
-            raise RestInputValidationError("You cannot specify alist more than " "once")
+            raise RestInputValidationError("You cannot specify alist more than once")
         if 'nalist' in field_counts.keys() and field_counts['nalist'] > 1:
-            raise RestInputValidationError("You cannot specify nalist more than " "once")
+            raise RestInputValidationError("You cannot specify nalist more than once")
         if 'elist' in field_counts.keys() and field_counts['elist'] > 1:
-            raise RestInputValidationError("You cannot specify elist more than " "once")
+            raise RestInputValidationError("You cannot specify elist more than once")
         if 'nelist' in field_counts.keys() and field_counts['nelist'] > 1:
-            raise RestInputValidationError("You cannot specify nelist more than " "once")
+            raise RestInputValidationError("You cannot specify nelist more than once")
         if 'format' in field_counts.keys() and field_counts['format'] > 1:
-            raise RestInputValidationError("You cannot specify format more than " "once")
+            raise RestInputValidationError("You cannot specify format more than once")
         if 'visformat' in field_counts.keys() and field_counts['visformat'] > 1:
-            raise RestInputValidationError("You cannot specify visformat more than " "once")
+            raise RestInputValidationError("You cannot specify visformat more than once")
         if 'filename' in field_counts.keys() and field_counts['filename'] > 1:
-            raise RestInputValidationError("You cannot specify filename more than " "once")
+            raise RestInputValidationError("You cannot specify filename more than once")
         if 'rtype' in field_counts.keys() and field_counts['rtype'] > 1:
-            raise RestInputValidationError("You cannot specify rtype more than " "once")
+            raise RestInputValidationError("You cannot specify rtype more than once")
 
         ## Extract results
         for field in field_list:
@@ -569,38 +569,38 @@ class Utils(object):
                 if field[1] == '=':
                     limit = field[2]
                 else:
-                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'limit'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'limit'")
             elif field[0] == 'offset':
                 if field[1] == '=':
                     offset = field[2]
                 else:
-                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'offset'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'offset'")
             elif field[0] == 'perpage':
                 if field[1] == '=':
                     perpage = field[2]
                 else:
-                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'perpage'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'perpage'")
 
             elif field[0] == 'alist':
                 if field[1] == '=':
                     alist = field[2]
                 else:
-                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'alist'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'alist'")
             elif field[0] == 'nalist':
                 if field[1] == '=':
                     nalist = field[2]
                 else:
-                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'nalist'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'nalist'")
             elif field[0] == 'elist':
                 if field[1] == '=':
                     elist = field[2]
                 else:
-                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'elist'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'elist'")
             elif field[0] == 'nelist':
                 if field[1] == '=':
                     nelist = field[2]
                 else:
-                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'nelist'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'nelist'")
 
             elif field[0] == 'orderby':
                 if field[1] == '=':
@@ -611,31 +611,31 @@ class Utils(object):
                     else:
                         orderby.extend([field[2]])
                 else:
-                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'orderby'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'orderby'")
 
             elif field[0] == 'format':
                 if field[1] == '=':
                     downloadformat = field[2]
                 else:
-                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'format'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'format'")
 
             elif field[0] == 'visformat':
                 if field[1] == '=':
                     visformat = field[2]
                 else:
-                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'visformat'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'visformat'")
 
             elif field[0] == 'filename':
                 if field[1] == '=':
                     filename = field[2]
                 else:
-                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'filename'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'filename'")
 
             elif field[0] == 'rtype':
                 if field[1] == '=':
                     rtype = field[2]
                 else:
-                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'rtype'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'rtype'")
 
             else:
 

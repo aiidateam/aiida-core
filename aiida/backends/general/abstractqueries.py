@@ -10,28 +10,20 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from abc import ABCMeta, abstractmethod
-from six.moves import zip
 import six
 
 
 @six.add_metaclass(ABCMeta)
 class AbstractQueryManager(object):
+
     def __init__(self, backend):
         """
         :param backend: The AiiDA backend
-        :type backend: :class:`aiida.orm.implementation.backends.Backend`
+        :type backend: :class:`aiida.orm.implementation.sql.SqlBackend`
         """
         self._backend = backend
-
-    @abstractmethod
-    def raw(self, query):
-        """Execute a raw SQL statement and return the result.
-
-        :param query: a string containing a raw SQL statement
-        :return: the result of the query
-        """
-        pass
 
     def get_duplicate_node_uuids(self):
         """
@@ -43,7 +35,7 @@ class AbstractQueryManager(object):
             SELECT s.id, s.uuid FROM (SELECT *, COUNT(*) OVER(PARTITION BY uuid) AS c FROM db_dbnode)
             AS s WHERE c > 1
             """
-        return self.raw(query)
+        return self._backend.execute_raw(query)
 
     def get_creation_statistics(
             self,
@@ -136,7 +128,7 @@ class AbstractQueryManager(object):
         """
 
         import datetime
-        from aiida.utils import timezone
+        from aiida.common import timezone
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.data.structure import (get_formula, get_symbols_string)
         from aiida.orm.data.array.bands import BandsData

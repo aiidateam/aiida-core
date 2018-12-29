@@ -89,6 +89,7 @@ def inspect(archive, version, data, meta_data):
     default=False,
     show_default=True,
     help='Follow reverse CALL links (recursively) when calculating the node set to export.')
+@decorators.with_dbenv()
 def create(output_file, codes, computers, groups, nodes, input_forward, create_reversed, return_reversed, call_reversed,
            force, archive_format):
     """
@@ -96,6 +97,8 @@ def create(output_file, codes, computers, groups, nodes, input_forward, create_r
     sharing purposes.
     """
     from aiida.orm.importexport import export, export_zip
+
+    echo.echo_critical('the export functionality is currently disabled until issue #2342 is addressed')
 
     entities = []
 
@@ -154,7 +157,7 @@ def migrate(input_file, output_file, force, silent, archive_format):
 
     from aiida.common.folders import SandboxFolder
     from aiida.common.archive import extract_zip, extract_tar
-    import aiida.utils.json as json
+    import aiida.common.json as json
 
     if os.path.exists(output_file) and not force:
         echo.echo_critical('the output file already exists')

@@ -7,26 +7,22 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
-import copy
-import unittest
 
 import os
+import unittest
+
 from alembic import command
 from alembic.config import Config
 
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy import utils
 from aiida.backends.sqlalchemy.models.base import Base
-from aiida.backends.sqlalchemy.utils import (get_migration_head,
-                                             get_db_schema_version)
-from aiida.backends.testbase import AiidaTestCase
-from aiida.common.setup import set_property, get_property
-
 from aiida.backends.sqlalchemy.tests.utils import new_database
+from aiida.backends.sqlalchemy.utils import get_migration_head, get_db_schema_version
+from aiida.backends.testbase import AiidaTestCase
 
 
 alembic_root = os.path.join(os.path.dirname(__file__), 'migrations', 'alembic')
@@ -90,7 +86,7 @@ class TestMigrationApplicationSQLA(AiidaTestCase):
 
         """
         from aiida.backends.sqlalchemy.tests.migration_test import versions
-        from aiida.backends.sqlalchemy.utils import check_schema_version
+        from aiida.backends.sqlalchemy.utils import migrate_database
 
         try:
             # Constructing the versions directory
@@ -115,7 +111,7 @@ class TestMigrationApplicationSQLA(AiidaTestCase):
                                   "None (no version) since the test setUp "
                                   "method should undo all migrations")
             # Migrate the database to the latest version
-            check_schema_version(force_migration=True, alembic_cfg=alembic_cfg)
+            migrate_database(alembic_cfg=alembic_cfg)
             with sa.engine.begin() as connection:
                 alembic_cfg.attributes['connection'] = connection
                 self.assertEquals(get_db_schema_version(alembic_cfg),
@@ -146,8 +142,6 @@ class TestMigrationApplicationSQLA(AiidaTestCase):
                                               alemb_table_names)
             # Delete only the tables that exist
             for table in tables_to_drop:
-                from psycopg2 import ProgrammingError
-                from sqlalchemy.orm import sessionmaker, scoped_session
                 try:
                     with sa.engine.begin() as connection:
                         connection.execute('DROP TABLE {};'.format(table))

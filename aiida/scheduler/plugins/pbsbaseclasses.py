@@ -18,7 +18,7 @@ import logging
 
 import six
 
-from aiida.common.utils import escape_for_bash
+from aiida.common.escaping import escape_for_bash
 from aiida.scheduler import Scheduler, SchedulerError, SchedulerParsingError
 from aiida.scheduler.datastructures import (JobInfo, JOB_STATES, MachineInfo, NodeNumberJobResource)
 
@@ -148,7 +148,7 @@ class PbsBaseClass(Scheduler):
         This is done in an external function because it may change in
         different subclasses.
         """
-        raise NotImplementedError("Implement the _get_resource_lines in " " each subclass!")
+        raise NotImplementedError("Implement the _get_resource_lines in each subclass!")
 
     def _get_joblist_command(self, jobs=None, user=None):
         """
@@ -292,7 +292,7 @@ class PbsBaseClass(Scheduler):
             lines.append("#PBS -p {}".format(job_tmpl.priority))
 
         if not job_tmpl.job_resource:
-            raise ValueError("Job resources (as the num_machines) are required " "for the PBSPro scheduler plugin")
+            raise ValueError("Job resources (as the num_machines) are required for the PBSPro scheduler plugin")
 
         resource_lines = self._get_resource_lines(
             num_machines=job_tmpl.job_resource.num_machines,
@@ -316,7 +316,7 @@ class PbsBaseClass(Scheduler):
             lines.append(empty_line)
             lines.append("# ENVIRONMENT VARIABLES BEGIN ###")
             if not isinstance(job_tmpl.job_environment, dict):
-                raise ValueError("If you provide job_environment, it must be " "a dictionary")
+                raise ValueError("If you provide job_environment, it must be a dictionary")
             for key, value in job_tmpl.job_environment.items():
                 lines.append("export {}={}".format(key.strip(), escape_for_bash(value)))
             lines.append("# ENVIRONMENT VARIABLES  END  ###")
@@ -473,7 +473,7 @@ class PbsBaseClass(Scheduler):
             try:
                 this_job.title = raw_data['job_name']
             except KeyError:
-                _LOGGER.debug("No 'job_name' field for job id " "{}".format(this_job.job_id))
+                _LOGGER.debug("No 'job_name' field for job id {}".format(this_job.job_id))
 
             try:
                 this_job.annotation = raw_data['comment']
@@ -548,7 +548,7 @@ class PbsBaseClass(Scheduler):
                 # TODO: understand if this is the correct field also for
                 #       multithreaded (OpenMP) jobs.
             except KeyError:
-                _LOGGER.debug("No 'resource_list.ncpus' field for job id " "{}".format(this_job.job_id))
+                _LOGGER.debug("No 'resource_list.ncpus' field for job id {}".format(this_job.job_id))
             except ValueError:
                 _LOGGER.warning("'resource_list.ncpus' is not an integer "
                                 "({}) for job id {}!".format(raw_data['resource_list.ncpus'], this_job.job_id))
@@ -558,7 +558,7 @@ class PbsBaseClass(Scheduler):
                 # TODO: understand if this is the correct field also for
                 #       multithreaded (OpenMP) jobs.
             except KeyError:
-                _LOGGER.debug("No 'resource_list.mpiprocs' field for job id " "{}".format(this_job.job_id))
+                _LOGGER.debug("No 'resource_list.mpiprocs' field for job id {}".format(this_job.job_id))
             except ValueError:
                 _LOGGER.warning("'resource_list.mpiprocs' is not an integer "
                                 "({}) for job id {}!".format(raw_data['resource_list.mpiprocs'], this_job.job_id))
@@ -566,7 +566,7 @@ class PbsBaseClass(Scheduler):
             try:
                 this_job.num_machines = int(raw_data['resource_list.nodect'])
             except KeyError:
-                _LOGGER.debug("No 'resource_list.nodect' field for job id " "{}".format(this_job.job_id))
+                _LOGGER.debug("No 'resource_list.nodect' field for job id {}".format(this_job.job_id))
             except ValueError:
                 _LOGGER.warning("'resource_list.nodect' is not an integer "
                                 "({}) for job id {}!".format(raw_data['resource_list.nodect'], this_job.job_id))
@@ -582,14 +582,14 @@ class PbsBaseClass(Scheduler):
             try:
                 this_job.queue_name = raw_data['queue']
             except KeyError:
-                _LOGGER.debug("No 'queue' field for job id " "{}".format(this_job.job_id))
+                _LOGGER.debug("No 'queue' field for job id {}".format(this_job.job_id))
 
             try:
                 this_job.RequestedWallclockTime = (self._convert_time(raw_data['resource_list.walltime']))
             except KeyError:
-                _LOGGER.debug("No 'resource_list.walltime' field for " "job id {}".format(this_job.job_id))
+                _LOGGER.debug("No 'resource_list.walltime' field for job id {}".format(this_job.job_id))
             except ValueError:
-                _LOGGER.warning("Error parsing 'resource_list.walltime' " "for job id {}".format(this_job.job_id))
+                _LOGGER.warning("Error parsing 'resource_list.walltime' for job id {}".format(this_job.job_id))
 
             try:
                 this_job.wallclock_time_seconds = (self._convert_time(raw_data['resources_used.walltime']))
@@ -597,7 +597,7 @@ class PbsBaseClass(Scheduler):
                 # May not have started yet
                 pass
             except ValueError:
-                _LOGGER.warning("Error parsing 'resources_used.walltime' " "for job id {}".format(this_job.job_id))
+                _LOGGER.warning("Error parsing 'resources_used.walltime' for job id {}".format(this_job.job_id))
 
             try:
                 this_job.cpu_time = (self._convert_time(raw_data['resources_used.cput']))
@@ -605,7 +605,7 @@ class PbsBaseClass(Scheduler):
                 # May not have started yet
                 pass
             except ValueError:
-                _LOGGER.warning("Error parsing 'resources_used.cput' " "for job id {}".format(this_job.job_id))
+                _LOGGER.warning("Error parsing 'resources_used.cput' for job id {}".format(this_job.job_id))
 
             #
             # ctime: The time that the job was created
@@ -619,9 +619,9 @@ class PbsBaseClass(Scheduler):
             try:
                 this_job.submission_time = self._parse_time_string(raw_data['ctime'])
             except KeyError:
-                _LOGGER.debug("No 'ctime' field for job id " "{}".format(this_job.job_id))
+                _LOGGER.debug("No 'ctime' field for job id {}".format(this_job.job_id))
             except ValueError:
-                _LOGGER.warning("Error parsing 'ctime' for job id " "{}".format(this_job.job_id))
+                _LOGGER.warning("Error parsing 'ctime' for job id {}".format(this_job.job_id))
 
             try:
                 this_job.dispatch_time = self._parse_time_string(raw_data['stime'])
@@ -629,7 +629,7 @@ class PbsBaseClass(Scheduler):
                 # The job may not have been started yet
                 pass
             except ValueError:
-                _LOGGER.warning("Error parsing 'stime' for job id " "{}".format(this_job.job_id))
+                _LOGGER.warning("Error parsing 'stime' for job id {}".format(this_job.job_id))
 
             # TODO: see if we want to set also finish_time for finished jobs,
             # if there are any
@@ -649,7 +649,7 @@ class PbsBaseClass(Scheduler):
         """
         pieces = string.split(':')
         if len(pieces) != 3:
-            _LOGGER.warning("Wrong number of pieces (expected 3) for " "time string {}".format(string))
+            _LOGGER.warning("Wrong number of pieces (expected 3) for time string {}".format(string))
             raise ValueError("Wrong number of pieces for time string.")
 
         try:
@@ -690,7 +690,7 @@ class PbsBaseClass(Scheduler):
         try:
             time_struct = time.strptime(string, fmt)
         except Exception as exc:
-            _LOGGER.debug("Unable to parse time string {}, the message " "was {}".format(string, exc))
+            _LOGGER.debug("Unable to parse time string {}, the message was {}".format(string, exc))
             raise ValueError("Problem parsing the time string.")
 
         # I convert from a time_struct to a datetime object going through
@@ -714,7 +714,7 @@ class PbsBaseClass(Scheduler):
                                  "stdout={}\nstderr={}".format(retval, stdout, stderr))
 
         if stderr.strip():
-            _LOGGER.warning("in _parse_submit_output " "there was some text in stderr: {}".format(stderr))
+            _LOGGER.warning("in _parse_submit_output there was some text in stderr: {}".format(stderr))
 
         return stdout.strip()
 
@@ -742,9 +742,9 @@ class PbsBaseClass(Scheduler):
             return False
 
         if stderr.strip():
-            _LOGGER.warning("in _parse_kill_output " "there was some text in stderr: {}".format(stderr))
+            _LOGGER.warning("in _parse_kill_output there was some text in stderr: {}".format(stderr))
 
         if stdout.strip():
-            _LOGGER.warning("in _parse_kill_output " "there was some text in stdout: {}".format(stdout))
+            _LOGGER.warning("in _parse_kill_output there was some text in stdout: {}".format(stdout))
 
         return True

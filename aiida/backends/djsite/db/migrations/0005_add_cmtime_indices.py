@@ -13,7 +13,7 @@ from __future__ import unicode_literals
 from __future__ import absolute_import
 
 from django.db import models, migrations
-import aiida.utils.timezone
+import aiida.common.timezone
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
 
 
@@ -31,7 +31,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='dbnode',
             name='ctime',
-            field=models.DateTimeField(default=aiida.utils.timezone.now, editable=False, db_index=True),
+            field=models.DateTimeField(default=aiida.common.timezone.now, editable=False, db_index=True),
             preserve_default=True,
         ),
         migrations.AlterField(

@@ -7,9 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-""""
-Manipulating and printing information of nodes.
-"""
+"""`verdi node` command."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -251,7 +249,7 @@ def node_delete(nodes, follow_calls, dry_run, verbose, non_interactive):
     """
     Deletes a node and everything that originates from it.
     """
-    from aiida.utils.delete_nodes import delete_nodes
+    from aiida.manage.database.delete.nodes import delete_nodes
 
     if not nodes:
         return

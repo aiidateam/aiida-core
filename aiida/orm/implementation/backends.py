@@ -25,6 +25,10 @@ EntityType = typing.TypeVar('EntityType')  # pylint: disable=invalid-name
 class Backend(object):
     """The public interface that defines a backend factory that creates backend specific concrete objects."""
 
+    @abc.abstractmethod
+    def migrate(self):
+        """Migrate the database to the latest schema version."""
+
     @abc.abstractproperty
     def authinfos(self):
         """

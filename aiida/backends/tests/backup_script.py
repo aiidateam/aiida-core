@@ -22,9 +22,10 @@ from aiida.backends.utils import is_dbenv_loaded, load_dbenv, BACKEND_SQLA, BACK
 from aiida.backends.settings import BACKEND
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import utils
-from aiida.common.additions.backup_script import backup_setup
+from aiida.manage.backup import backup_setup
+from aiida.manage.backup import backup_utils
 from aiida.orm import Data
-import aiida.utils.json as json
+import aiida.common.json as json
 
 
 if not is_dbenv_loaded():
@@ -72,9 +73,9 @@ class TestBackupScriptUnit(AiidaTestCase):
             load_dbenv()
 
         if BACKEND == BACKEND_SQLA:
-            from aiida.common.additions.backup_script.backup_sqlalchemy import Backup
+            from aiida.manage.backup.backup_sqlalchemy import Backup
         elif BACKEND == BACKEND_DJANGO:
-            from aiida.common.additions.backup_script.backup_django import Backup
+            from aiida.manage.backup.backup_django import Backup
         else:
             self.skipTest("Unknown backend")
 
@@ -200,7 +201,7 @@ class TestBackupScriptUnit(AiidaTestCase):
         In the parsed JSON string, the endDateOfBackup & daysToBackuplimit
         are set which should lead to an exception.
         """
-        from aiida.common.additions.backup_script.backup_base import BackupError
+        from aiida.manage.backup.backup_base import BackupError
 
         backup_variables = json.loads(self._json_test_input_5)
         self._backup_setup_inst._ignore_backup_dir_existence_check = True
@@ -305,7 +306,7 @@ class TestBackupScriptIntegration(AiidaTestCase):
     _bs_instance = backup_setup.BackupSetup()
 
     def test_integration(self):
-        from aiida.utils.capturing import Capturing
+        from aiida.common.utils import Capturing
 
         # Fill in the repository with data
         self.fill_repo()
@@ -396,7 +397,7 @@ class TestBackupScriptIntegration(AiidaTestCase):
                    "",                  # is it correct?
                    "0",                 # threshold?
                    ""]                  # is it correct?
-        utils.input = lambda _: answers[ac.array_counter()]
+        backup_utils.input = lambda _: answers[ac.array_counter()]
 
         # Run the setup script
         self._bs_instance.run()

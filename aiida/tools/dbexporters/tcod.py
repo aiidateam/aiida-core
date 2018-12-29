@@ -295,22 +295,30 @@ def encode_textfield_gzip_base64(content, **kwargs):
     :param content: contents as bytes
     :return: encoded string as bytes
     """
-    from aiida.common.utils import gzip_string
+    import gzip
+    import tempfile
 
-    return encode_textfield_base64(gzip_string(content), **kwargs)
+    with tempfile.NamedTemporaryFile() as fhandle:
+        with gzip.open(fhandle.name, 'wb') as zipfile:
+            zipfile.write(content)
+        return encode_textfield_base64(fhandle.read(), **kwargs)
 
 
 def decode_textfield_gzip_base64(content):
     """
-    Decodes the contents for CIF textfield from Base64 and decompresses
-    them with gzip.
+    Decodes the contents for CIF textfield from Base64 and decompresses them with gzip.
 
     :param content: contents as bytes
     :return: decoded string as bytes
     """
-    from aiida.common.utils import gunzip_string
+    import gzip
+    import tempfile
 
-    return gunzip_string(decode_textfield_base64(content))
+    with tempfile.NamedTemporaryFile() as fhandle:
+        fhandle.write(decode_textfield_base64(content))
+        fhandle.flush()
+        with gzip.open(fhandle.name, 'rb') as zipfile:
+            return zipfile.read()
 
 
 def decode_textfield(content, method):
@@ -542,7 +550,7 @@ def _collect_files(base, path=''):
     Recursively collects files from the tree, starting at a given path.
     """
     from aiida.common.folders import Folder
-    from aiida.common.utils import md5_file,sha1_file
+    from aiida.common.files import md5_file, sha1_file
     import os
 
     def get_dict(name, full_path):
@@ -579,7 +587,7 @@ def _collect_files(base, path=''):
         files = []
         files.append(get_dict(name=path, full_path=os.path.join(base, path)))
 
-        import aiida.utils.json as json
+        import aiida.common.json as json
         with open(os.path.join(base,path)) as f:
             calcinfo = json.load(f)
         if 'local_copy_list' in calcinfo:
@@ -679,7 +687,7 @@ def _collect_tags(node, calc,parameters=None,
     from aiida.common.links import LinkType
     import os 
     import aiida
-    import aiida.utils.json as json
+    import aiida.common.json as json
 
     tags = { '_audit_creation_method': "AiiDA version {}".format(aiida.__version__) }
 
@@ -742,7 +750,7 @@ def _collect_tags(node, calc,parameters=None,
         from aiida.common.exceptions import LicensingException
         from aiida.common.folders import SandboxFolder
         from aiida.orm.importexport import export_tree
-        import aiida.utils.json as json
+        import aiida.common.json as json
 
         with SandboxFolder() as folder:
             try:
@@ -1075,8 +1083,9 @@ def deposit(what, type, author_name=None, author_email=None, url=None,
         instance.
     :raises ValueError: if any of the required parameters are not given.
     """
-    from aiida.common.setup import get_property
+    from aiida.manage import get_config
 
+    config = get_config()
     parameters = {}
 
     if not what:
@@ -1086,15 +1095,15 @@ def deposit(what, type, author_name=None, author_email=None, url=None,
                          "one of the following: 'published', "
                          "'prepublication' or 'personal'")
     if not username:
-        username = get_property('tcod.depositor_username')
+        username = config.option_get('tcod.depositor_username')
         if not username:
             raise ValueError("Depositor username is not supplied")
     if not password:
-        parameters['password'] = get_property('tcod.depositor_password')
+        parameters['password'] = config.option_get('tcod.depositor_password')
         if not parameters['password']:
             raise ValueError("Depositor password is not supplied")
     if not user_email:
-        user_email = get_property('tcod.depositor_email')
+        user_email = config.option_get('tcod.depositor_email')
         if not user_email:
             raise ValueError("Depositor email is not supplied")
 
@@ -1106,11 +1115,11 @@ def deposit(what, type, author_name=None, author_email=None, url=None,
         pass
     elif type in ['prepublication', 'personal']:
         if not author_name:
-            author_name = get_property('tcod.depositor_author_name')
+            author_name = config.option_get('tcod.depositor_author_name')
             if not author_name:
                 raise ValueError("Author name is not supplied")
         if not author_email:
-            author_email = get_property('tcod.depositor_author_email')
+            author_email = config.option_get('tcod.depositor_author_email')
             if not author_email:
                 raise ValueError("Author email is not supplied")
         if not title:

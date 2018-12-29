@@ -7,28 +7,30 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Implementation of CalcJobNode to add two numbers for testing and demonstration purposes."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import io
 
-from aiida.common.utils import classproperty
-from aiida.common.exceptions import InputValidationError, ValidationError
 from aiida.common.datastructures import CalcInfo, CodeInfo
-from aiida.orm.node.process import CalcJobNode
+from aiida.common.exceptions import InputValidationError
+from aiida.common.lang import classproperty
 from aiida.orm.data.float import Float
 from aiida.orm.data.int import Int
+from aiida.orm.node.process import CalcJobNode
 
 
 class ArithmeticAddCalculation(CalcJobNode):
-    """
-    Basic arithmetic dummy calculation to add two numbers
-    """
+    """Implementation of CalcJobNode to add two numbers for testing and demonstration purposes."""
+
+    # pylint: disable=invalid-name,abstract-method
 
     def _init_internal_params(self):
         super(ArithmeticAddCalculation, self)._init_internal_params()
 
-        self._PREFIX = 'aiida'
+        self._PREFIX = 'aiida'  # pylint: disable=invalid-name
         self._INPUT_FILE_NAME = 'aiida.in'
         self._OUTPUT_FILE_NAME = 'aiida.out'
 
@@ -44,6 +46,7 @@ class ArithmeticAddCalculation(CalcJobNode):
         """
         Define and return the available use_methods
         """
+        # pylint: disable=no-self-argument,no-member
         methods = CalcJobNode._use_methods
         methods.update({
             'x': {
@@ -62,17 +65,19 @@ class ArithmeticAddCalculation(CalcJobNode):
         return methods
 
     def _get_input_valid_types(self, key):
+        """Return the valid input types for the given key."""
         return self._use_methods[key]['valid_types']
 
     def _get_input_valid_type(self, key):
+        """Return the valid input type for the given key."""
         valid_types = self._get_input_valid_types(key)
 
         if isinstance(valid_types, tuple):
             return valid_types[0]
-        else:
-            return valid_types
 
-    def _prepare_for_submission(self, tempfolder, input_nodes_raw):
+        return valid_types
+
+    def _prepare_for_submission(self, tempfolder, inputdict):
         """
         This method is called prior to job submission with a set of calculation input nodes.
         The inputs will be validated and sanitized, after which the necessary input files will
@@ -81,10 +86,10 @@ class ArithmeticAddCalculation(CalcJobNode):
         as file lists that are to be retrieved after job completion.
 
         :param tempfolder: an aiida.common.folders.Folder to temporarily write files on disk
-        :param input_nodes_raw: a dictionary with the raw input nodes
+        :param inputdict: a dictionary with the raw input nodes
         :returns: CalcInfo instance
         """
-        input_nodes = self.validate_input_nodes(input_nodes_raw)
+        input_nodes = self.validate_input_nodes(inputdict)
         input_x = input_nodes[self.get_linkname('x')]
         input_y = input_nodes[self.get_linkname('y')]
         input_code = input_nodes[self.get_linkname('code')]
@@ -123,26 +128,24 @@ class ArithmeticAddCalculation(CalcJobNode):
 
         return retrieve_list
 
-    def get_local_copy_list(self):
+    @staticmethod
+    def get_local_copy_list():
         """
         Build the local copy list, which are files that need to be copied from the local to the remote machine
 
         :returns: list of resource copy instructions
         """
-        local_copy_list = []
+        return []
 
-        return local_copy_list
-
-    def get_remote_copy_list(self):
+    @staticmethod
+    def get_remote_copy_list():
         """
         Build the remote copy list, which are files that need to be copied from the remote machine from one place
         to the directory of the new calculation on the same remote machine
 
         :returns: list of resource copy instructions
         """
-        remote_copy_list = []
-
-        return remote_copy_list
+        return []
 
     def validate_input_nodes(self, input_nodes_raw):
         """
@@ -169,7 +172,6 @@ class ArithmeticAddCalculation(CalcJobNode):
                 input_link = self.get_linkname(input_key)
                 input_node = input_nodes_raw.pop(input_key)
             except KeyError:
-                valid_types = self._use_methods[input_key]['valid_types']
                 valid_type_class = self._get_input_valid_type(input_key)
                 input_node = valid_type_class()
 

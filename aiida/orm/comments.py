@@ -25,24 +25,13 @@ class Comment(entities.Entity):
     class Collection(entities.Collection):
         """The collection of Comment entries."""
 
-        def delete(self, comment):
+        def delete(self, comment_id):
             """
             Remove a Comment from the collection with the given id
 
-            :param comment: the id of the comment to delete
+            :param comment_id: the id of the comment to delete
             """
-            self._backend.comments.delete(comment)
-
-        def get(self, comment):
-            """
-            Return a Comment given its id
-
-            :param comment: the id of the comment to retrieve
-            :return: the comment
-            :raise NotExistent: if the comment with the given id does not exist
-            :raise MultipleObjectsError: if the id cannot be uniquely resolved to a comment
-            """
-            return self._backend.comments.get(comment)
+            self._backend.comments.delete(comment_id)
 
     def __init__(self, node, user, content=None, backend=None):
         """

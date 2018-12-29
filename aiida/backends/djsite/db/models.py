@@ -19,13 +19,11 @@ from django.contrib.auth.models import (
     AbstractBaseUser, BaseUserManager, PermissionsMixin)
 from django.utils.encoding import python_2_unicode_compatible
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models.query import QuerySet, ModelIterable
+from django.db.models.query import QuerySet
 
-from aiida.utils import timezone
+from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
-from aiida.common.exceptions import (
-    ConfigurationError, DbContentError, MissingPluginError)
-
+from aiida.common.exceptions import (ConfigurationError, DbContentError)
 from aiida.backends.djsite.settings.settings import AUTH_USER_MODEL
 import aiida.backends.djsite.db.migrations as migrations
 from aiida.backends.utils import AIIDA_ATTRIBUTE_SEP
@@ -44,24 +42,26 @@ SCHEMA_VERSION = migrations.current_schema_version()
 
 class AiidaQuerySet(QuerySet):
     def iterator(self):
+        from aiida.orm.implementation.django import convert
         for obj in super(AiidaQuerySet, self).iterator():
-            yield obj.get_aiida_class()
+            yield convert.get_backend_entity(obj, None)
 
     def __iter__(self):
         """Iterate for list comprehensions.
 
         Note: used to rely on the iterator in django 1.8 but does no longer in django 1.11.
         """
-
-        return (x.get_aiida_class() for x in super(AiidaQuerySet, self).__iter__())
+        from aiida.orm.implementation.django import convert
+        return (convert.get_backend_entity(model, None) for model in super(AiidaQuerySet, self).__iter__())
 
     def __getitem__(self, key):
         """Get item for [] operator
 
         Note: used to rely on the iterator in django 1.8 but does no longer in django 1.11.
         """
+        from aiida.orm.implementation.django import convert
         res = super(AiidaQuerySet, self).__getitem__(key)
-        return res.get_aiida_class()
+        return convert.get_backend_entity(res, None)
 
 
 class AiidaObjectManager(m.Manager):
@@ -117,11 +117,6 @@ class DbUser(AbstractBaseUser, PermissionsMixin):
     USERNAME_FIELD = 'email'
 
     objects = DbUserManager()
-
-    def get_aiida_class(self):
-        from aiida.orm.implementation.django.users import DjangoUser
-        from aiida.manage import get_manager
-        return DjangoUser.from_dbmodel(self, get_manager().get_backend())
 
 
 @python_2_unicode_compatible
@@ -183,25 +178,6 @@ class DbNode(m.Model):
     objects = m.Manager()
     # Return aiida Node instances or their subclasses instead of DbNode instances
     aiidaobjects = AiidaObjectManager()
-
-    def get_aiida_class(self):
-        """
-        Return the corresponding aiida instance of class aiida.orm.Node or a
-        appropriate subclass.
-        """
-        from aiida.common import AIIDA_LOGGER
-        from aiida.orm.node import Node
-        from aiida.plugins.loader import get_plugin_type_from_type_string, load_plugin
-
-        try:
-            plugin_type = get_plugin_type_from_type_string(self.type)
-        except DbContentError:
-            raise DbContentError("The type name of node with pk= {} is "
-                                 "not valid: '{}'".format(self.pk, self.type))
-
-        PluginClass = load_plugin(plugin_type, safe=True)
-
-        return PluginClass(dbnode=self)
 
     def get_simple_name(self, invalid_result=None):
         """
@@ -348,8 +324,8 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
     :return: the deserialized value
     :raise aiida.backends.djsite.db.models.DeserializationException: if an error occurs
     """
-    import aiida.utils.json as json
-    from aiida.utils.timezone import (
+    import aiida.common.json as json
+    from aiida.common.timezone import (
         is_naive, make_aware, get_current_timezone)
 
     from aiida.common import AIIDA_LOGGER
@@ -578,9 +554,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
     Abstract base class for tables storing attribute + value data, of
     different data types (without any association to a Node).
     """
-    from aiida.backends.djsite.utils import long_field_length
-
-    key = m.CharField(max_length=long_field_length(), db_index=True, blank=False)
+    key = m.CharField(max_length=1024, db_index=True, blank=False)
     datatype = m.CharField(max_length=10,
                            default='none',
                            choices=attrdatatype_choice, db_index=True)
@@ -746,8 +720,8 @@ class DbMultipleValueAttributeBaseClass(m.Model):
         """
         import datetime
 
-        import aiida.utils.json as json
-        from aiida.utils.timezone import is_naive, make_aware, get_current_timezone
+        import aiida.common.json as json
+        from aiida.common.timezone import is_naive, make_aware, get_current_timezone
 
         if cls._subspecifier_field_name is None:
             if subspecifier_value is not None:
@@ -903,7 +877,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
             float, bool, None, or date)
         """
         import datetime
-        from aiida.utils.timezone import (
+        from aiida.common.timezone import (
             is_naive, make_aware, get_current_timezone)
 
         if value is None:
@@ -1290,10 +1264,10 @@ class DbGroup(m.Model):
     """
     uuid = m.UUIDField(default=get_new_uuid, unique=True)
     # max_length is required by MySql to have indexes and unique constraints
-    name = m.CharField(max_length=255, db_index=True)
-    # The type of group: a user group, a pseudopotential group,...
-    # User groups have type equal to an empty string
-    type = m.CharField(default="", max_length=255, db_index=True)
+    label = m.CharField(max_length=255, db_index=True)
+    # The type_string of group: a user group, a pseudopotential group,...
+    # User groups have type_string equal to an empty string
+    type_string = m.CharField(default="", max_length=255, db_index=True)
     dbnodes = m.ManyToManyField('DbNode', related_name='dbgroups')
     # Creation time
     time = m.DateTimeField(default=timezone.now, editable=False)
@@ -1305,18 +1279,10 @@ class DbGroup(m.Model):
                         related_name='dbgroups')
 
     class Meta:
-        unique_together = (("name", "type"),)
+        unique_together = (("label", "type_string"),)
 
     def __str__(self):
-        if self.type:
-            return '<DbGroup [type: {}] "{}">'.format(self.type, self.name)
-        else:
-            return '<DbGroup [user-defined] "{}">'.format(self.name)
-
-    def get_aiida_class(self):
-        from aiida.orm.implementation.django.groups import DjangoGroup
-        from aiida.manage import get_manager
-        return DjangoGroup.from_dbmodel(self, get_manager().get_backend())
+        return '<DbGroup [type_string: {}] "{}">'.format(self.type_string, self.label)
 
 
 @python_2_unicode_compatible
@@ -1397,13 +1363,8 @@ class DbComputer(m.Model):
                 "Pass either a computer name, a DbComputer django instance, a Computer pk or a Computer object")
         return dbcomputer
 
-    def get_aiida_class(self):
-        from aiida.orm.implementation.django.computer import DjangoComputer
-        from aiida.manage import get_manager
-        return DjangoComputer.from_dbmodel(self, get_manager().get_backend())
-
     def _get_val_from_metadata(self, key):
-        import aiida.utils.json as json
+        import aiida.common.json as json
 
         try:
             metadata = json.loads(self.metadata)
@@ -1449,11 +1410,6 @@ class DbAuthInfo(m.Model):
             return "DB authorization info for {} on {}".format(self.aiidauser.email, self.dbcomputer.name)
         else:
             return "DB authorization info for {} on {} [DISABLED]".format(self.aiidauser.email, self.dbcomputer.name)
-
-    def get_aiida_class(self):
-        from aiida.orm.implementation.django.authinfo import DjangoAuthInfo
-        from aiida.manage import get_manager
-        return DjangoAuthInfo.from_dbmodel(self, get_manager().get_backend())
 
 
 @python_2_unicode_compatible
@@ -1518,14 +1474,6 @@ class DbWorkflow(m.Model):
     objects = m.Manager()
     # Return aiida Node instances or their subclasses instead of DbNode instances
     aiidaobjects = AiidaObjectManager()
-
-    def get_aiida_class(self):
-        """
-        Return the corresponding aiida instance of class aiida.workflow
-        """
-        from aiida.orm.workflow import Workflow
-
-        return Workflow.get_subclass_from_dbnode(self)
 
     def set_state(self, _state):
         self.state = _state
@@ -1621,10 +1569,10 @@ class DbWorkflow(m.Model):
         self.save()
 
     def append_to_report(self, _text):
-        from aiida.utils.timezone import utc
+        from aiida.common.timezone import UTC
         import datetime
 
-        now = datetime.datetime.utcnow().replace(tzinfo=utc)
+        now = datetime.datetime.utcnow().replace(tzinfo=UTC)
         self.report += str(now) + "] " + _text + "\n"
         self.save()
 
@@ -1677,7 +1625,7 @@ class DbWorkflowData(m.Model):
     def set_value(self, arg):
         from aiida.orm.node import Node
         from aiida.common.datastructures import wf_data_value_types
-        import aiida.utils.json as json
+        import aiida.common.json as json
 
         try:
             if isinstance(arg, Node) or issubclass(arg.__class__, Node):
@@ -1694,14 +1642,15 @@ class DbWorkflowData(m.Model):
             six.reraise(ValueError, "Cannot set the parameter {}".format(self.name), sys.exc_info()[2])
 
     def get_value(self):
-        import aiida.utils.json as json
+        from aiida.orm.convert import get_orm_entity
+        import aiida.common.json as json
 
         from aiida.common.datastructures import wf_data_value_types
 
         if self.value_type == wf_data_value_types.JSON:
             return json.loads(self.json_value)
         elif self.value_type == wf_data_value_types.AIIDA:
-            return self.aiida_obj.get_aiida_class()
+            return get_orm_entity(self.aiida_obj)
         elif self.value_type == wf_data_value_types.NONE:
             return None
         else:

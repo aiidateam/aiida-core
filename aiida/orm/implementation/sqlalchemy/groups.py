@@ -19,7 +19,7 @@ from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.group import DbGroup, table_groups_nodes
 from aiida.backends.sqlalchemy.models.node import DbNode
 from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError)
-from aiida.common.utils import type_check
+from aiida.common.lang import type_check
 from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
 
 from . import entities
@@ -38,12 +38,12 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
 
     MODEL_CLASS = DbGroup
 
-    def __init__(self, backend, name, user, description='', type_string=''):
+    def __init__(self, backend, label, user, description='', type_string=''):
         """
         Construct a new SQLA group
 
         :param backend: the backend to use
-        :param name: the group name
+        :param label: the group label
         :param user: the owner of the group
         :param description: an optional group description
         :param type_string: an optional type for the group to contain
@@ -51,30 +51,30 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
         type_check(user, users.SqlaUser)
         super(SqlaGroup, self).__init__(backend)
 
-        dbgroup = DbGroup(name=name, description=description, user=user.dbmodel, type=type_string)
+        dbgroup = DbGroup(label=label, description=description, user=user.dbmodel, type_string=type_string)
         self._dbmodel = utils.ModelWrapper(dbgroup)
 
     @property
-    def name(self):
-        return self._dbmodel.name
+    def label(self):
+        return self._dbmodel.label
 
-    @name.setter
-    def name(self, name):
+    @label.setter
+    def label(self, label):
         """
-        Attempt to change the name of the group instance. If the group is already stored
-        and the another group of the same type already exists with the desired name, a
+        Attempt to change the label of the group instance. If the group is already stored
+        and the another group of the same type already exists with the desired label, a
         UniquenessError will be raised
 
-        :param name: the new group name
-        :raises UniquenessError: if another group of same type and name already exists
+        :param label: the new group label
+        :raises UniquenessError: if another group of same type and label already exists
         """
-        self._dbmodel.name = name
+        self._dbmodel.label = label
 
         if self.is_stored:
             try:
                 self._dbmodel.save()
             except Exception:
-                raise UniquenessError('a group of the same type with the name {} already exists'.format(name))
+                raise UniquenessError('a group of the same type with the label {} already exists'.format(label))
 
     @property
     def description(self):
@@ -90,11 +90,11 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
 
     @property
     def type_string(self):
-        return self._dbmodel.type
+        return self._dbmodel.type_string
 
     @property
     def user(self):
-        return self._dbmodel.user.get_aiida_class()
+        return self._backend.users.from_dbmodel(self._dbmodel.user)
 
     @user.setter
     def user(self, new_user):
@@ -127,7 +127,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
         from sqlalchemy.exc import IntegrityError  # pylint: disable=import-error, no-name-in-module
 
         if not self.is_stored:
-            raise ModificationNotAllowed("Cannot add nodes to a group before " "storing")
+            raise ModificationNotAllowed("Cannot add nodes to a group before storing")
         from aiida.orm.implementation.sqlalchemy.node import Node
         from aiida.backends.sqlalchemy import get_scoped_session
 
@@ -151,7 +151,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
                                     "a DbNode, it is instead {}".format(str(type(node))))
 
                 if node.id is None:
-                    raise ValueError("At least one of the provided nodes is " "unstored, stopping...")
+                    raise ValueError("At least one of the provided nodes is unstored, stopping...")
                 if isinstance(node, Node):
                     to_add = node.dbnode
                 else:
@@ -177,14 +177,15 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
         class Iterator(object):
             """Nodes iterator"""
 
-            def __init__(self, dbnodes):
+            def __init__(self, dbnodes, backend):
                 self._dbnodes = dbnodes
                 self._iter = dbnodes.__iter__()
                 self.generator = self._genfunction()
+                self._backend = backend
 
             def _genfunction(self):
                 for node in self._iter:
-                    yield node.get_aiida_class()
+                    yield self._backend.get_backend_entity(node)
 
             def __iter__(self):
                 return self
@@ -199,7 +200,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
             def next(self):
                 return next(self.generator)
 
-        return Iterator(self._dbmodel.dbnodes)
+        return Iterator(self._dbmodel.dbnodes, self._backend)
 
     def remove_nodes(self, nodes):
         """
@@ -208,7 +209,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
         :param nodes: the nodes to remove
         """
         if not self.is_stored:
-            raise ModificationNotAllowed("Cannot remove nodes from a group " "before storing")
+            raise ModificationNotAllowed("Cannot remove nodes from a group before storing")
 
         from aiida.orm.implementation.sqlalchemy.node import Node
         # First convert to a list
@@ -230,7 +231,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
                                 "to add_nodes, it should be either a Node or "
                                 "a DbNode, it is instead {}".format(str(type(node))))
             if node.id is None:
-                raise ValueError("At least one of the provided nodes is " "unstored, stopping...")
+                raise ValueError("At least one of the provided nodes is unstored, stopping...")
             if isinstance(node, Node):
                 node = node.dbnode
             # If we don't check first, SqlA might issue a DELETE statement for
@@ -250,7 +251,7 @@ class SqlaGroupCollection(BackendGroupCollection):
     ENTITY_CLASS = SqlaGroup
 
     def query(self,
-              name=None,
+              label=None,
               type_string=None,
               pk=None,
               uuid=None,
@@ -258,7 +259,7 @@ class SqlaGroupCollection(BackendGroupCollection):
               user=None,
               node_attributes=None,
               past_days=None,
-              name_filters=None,
+              label_filters=None,
               **kwargs):  # pylint: disable=too-many-arguments
         # pylint: disable=too-many-branches
         from aiida.orm.implementation.sqlalchemy.node import Node
@@ -267,10 +268,10 @@ class SqlaGroupCollection(BackendGroupCollection):
 
         filters = []
 
-        if name is not None:
-            filters.append(DbGroup.name == name)
+        if label is not None:
+            filters.append(DbGroup.label == label)
         if type_string is not None:
-            filters.append(DbGroup.type == type_string)
+            filters.append(DbGroup.type_string == type_string)
         if pk is not None:
             filters.append(DbGroup.id == pk)
         if uuid is not None:
@@ -300,16 +301,16 @@ class SqlaGroupCollection(BackendGroupCollection):
                 type_check(user, users.SqlaUser)
                 filters.append(DbGroup.user == user.dbmodel)
 
-        if name_filters:
-            for key, value in name_filters.items():
+        if label_filters:
+            for key, value in label_filters.items():
                 if not value:
                     continue
                 if key == "startswith":
-                    filters.append(DbGroup.name.like("{}%".format(value)))
+                    filters.append(DbGroup.label.like("{}%".format(value)))
                 elif key == "endswith":
-                    filters.append(DbGroup.name.like("%{}".format(value)))
+                    filters.append(DbGroup.label.like("%{}".format(value)))
                 elif key == "contains":
-                    filters.append(DbGroup.name.like("%{}%".format(value)))
+                    filters.append(DbGroup.label.like("%{}%".format(value)))
 
         if node_attributes:
             _LOGGER.warning("SQLA query doesn't support node attribute filters, ignoring '%s'", node_attributes)

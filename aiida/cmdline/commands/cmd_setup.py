@@ -12,9 +12,10 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
-from aiida.control.profile import setup_profile
+from aiida.manage.configuration.setup import setup_profile
 
 
 @verdi.command('setup')
@@ -36,8 +37,14 @@ from aiida.control.profile import setup_profile
 def setup(profile_name, only_config, set_default, non_interactive, backend, db_host, db_port, db_name, db_username,
           db_password, repository, email, first_name, last_name, institution):
     """Setup and configure a new profile."""
+    from aiida.manage.configuration.utils import load_config
+    from aiida.manage.configuration.setup import create_instance_directories
+
+    create_instance_directories()
+    load_config(create=True)
+
     kwargs = dict(
-        profile=profile_name,
+        profile_name=profile_name,
         only_config=only_config,
         set_default=set_default,
         non_interactive=non_interactive,

@@ -33,7 +33,7 @@ from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida import orm
 from aiida.orm.node.process import ProcessNode, CalculationNode, WorkflowNode
-from aiida.utils import serialize
+from aiida.common import serialize
 from aiida.work.ports import InputPort, PortNamespace
 from aiida.work.process_spec import ProcessSpec, ExitCode
 from aiida.work.process_builder import ProcessBuilder
@@ -142,15 +142,6 @@ class Process(plumpy.Process):
             self.logger.warning('Disabling persistence, runner does not have a persister')
             self._enable_persistence = False
 
-    def on_create(self):
-        super(Process, self).on_create()
-        # If parent PID hasn't been supplied try to get it from the stack
-        if self._parent_pid is None and Process.current():
-            current = Process.current()
-            if isinstance(current, Process):
-                self._parent_pid = current.pid
-        self._pid = self._create_and_setup_db_record()
-
     def init(self):
         super(Process, self).init()
         if self._logger is None:
@@ -252,7 +243,16 @@ class Process(plumpy.Process):
         for key, value in out_dict.items():
             self.out(key, value)
 
-    # region Process messages
+    # region Process event hooks
+    def on_create(self):
+        super(Process, self).on_create()
+        # If parent PID hasn't been supplied try to get it from the stack
+        if self._parent_pid is None and Process.current():
+            current = Process.current()
+            if isinstance(current, Process):
+                self._parent_pid = current.pid
+        self._pid = self._create_and_setup_db_record()
+
     @override
     def on_entering(self, state):
         super(Process, self).on_entering(state)

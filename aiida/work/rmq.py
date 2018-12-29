@@ -19,7 +19,7 @@ from kiwipy import communications
 
 import plumpy
 
-from aiida.utils import serialize
+from aiida.common import serialize
 from aiida.work.exceptions import PastException
 
 __all__ = 'RemoteException', 'CommunicationTimeout', 'DeliveryFailed', 'ProcessLauncher'
@@ -68,9 +68,9 @@ def get_rmq_prefix():
 
     :returns: string prefix for the RMQ communicators
     """
-    from aiida.common.profile import get_profile
+    from aiida.manage import get_config
 
-    profile = get_profile()
+    profile = get_config().current_profile
     prefix = profile.rmq_prefix
 
     return prefix

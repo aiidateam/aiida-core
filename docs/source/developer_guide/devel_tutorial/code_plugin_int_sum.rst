@@ -1,3 +1,5 @@
+.. _DevelopDataPluginTutorialInt:
+
 Calculation plugin - Integer Summation
 ======================================
 
@@ -47,7 +49,54 @@ codes and it needs to know:
 
 It is also useful, but not necessary, to have a script that prepares the
 calculation for AiiDA with the necessary parameters and submits it. 
-Let's start to see how to prepare these components.
+
+Before we start to see how to prepare these components, let's have a look of an
+example directory structure for your plugin project.
+Different components should be includeded in a single installable python package.
+This is important as it allows the entry points to be registered when the plugin
+gets installed, otherwise ``aiida_core`` would not know where to look for these
+codes.
+Below is an example of the directory structure of our new plugin::
+
+   aiida-yourplugin/
+      aiida_yourplugin/
+         __init__.py
+         calcs/
+            __init__.py
+            sum.py
+         parsers/
+            __init__.py
+            sum_parser.py
+      setup.py
+      setup.json
+
+The code of the input plugin should be placed inside ``sum.py`` and the parser
+for the outputs are located in ``sum_parser.py``. You also have to declear the
+entry points in the ``setup.json``::
+
+   {
+      ...
+      "entry_points": {
+         "aiida.calculations": [
+            "yourplugin.sum = aiida_yourplugin.calcs.SumCalculation:"
+         ],
+         "aiida.parsers": [
+            "yourplugin.sum = aiida_yourplugin.parsers.SumParser"
+
+         ],
+         ...
+      }
+      ...
+   }
+
+You need to install your pacakge and refresh the entry points in order to make it avaliable to ``aiida_core``.
+The following commands can be used for this::
+
+  pip install -e .
+  reentry scan -r aiida
+
+.. seealso::
+   Please see the documentation about the :ref:`entry points<plugins.entry_points>` to learn more about the plugin system.
 
 Code
 ----
@@ -81,6 +130,7 @@ as parameter. The resulting file from the script will be handled by AiiDA. The
 code can be downloaded from :download:`here <sum_executable.py>`. We will now 
 proceed to prepare an AiiDA input plugin for this code.
 
+
 Input plugin
 ------------
 In abstract term, this plugin must contain the following two pieces of
@@ -98,7 +148,7 @@ summation code (a detailed description of the different sections follows)::
 
     from aiida.orm.calculation.job import JobCalculation
     from aiida.orm.data.parameter import ParameterData
-    from aiida.common.utils import classproperty
+    from aiida.common.lang import classproperty
     from aiida.common.exceptions import InputValidationError
     from aiida.common.exceptions import ValidationError
     from aiida.common.datastructures import CalcInfo, CodeInfo
@@ -190,17 +240,19 @@ summation code (a detailed description of the different sections follows)::
 The above input plugin can be downloaded from
 (:download:`here <sum_calc.py>`).
 
-In order the plugin to be automatically discoverable by AiiDA, it needs to be
-registered using the :ref:`entry point system <plugins.entry_points>`.
+In order the plugin to be automatically discoverable by AiiDA, a entry point needs to be
+registered following the guide described in the :ref:`entry point system <plugins.entry_points>` section.
 After proper installation, your plugin will be discoverable and loadable
-using ``CalculationFactory``.
+using::
+
+  SumCalculation = CalculationsFactory("myplugin.sum")
 
 When developing your calculation plugin, you should name the class inside the plugin as
-PluginnameCalculation. For example, the class name of the summation input plugin is,
-as you see above, ``SumCalculation``. The first letter must be capitalized,
-the other letters must be lowercase. Also you, make sure your calculation plugin
-inherit the class from ``JobCalculation``. At the end, you will be able
-to load your plugin using ``CalculationFactory``.
+*PluginnameCalculation*.
+For example, the class name of the summation input plugin is,
+as you see above, ``SumCalculation``.
+The first letter should be capitalized, the other letters should be lowercase.
+Also you should make sure your calculation plugin inherit the class from ``JobCalculation``.
 
 
 .. note:: The base ``Calculation`` class should only be used as the abstract
@@ -297,6 +349,7 @@ external code, creating a suitable JSON file::
     with open(input_filename, 'w') as infile:
         json.dump(input_json, infile)
 
+
 The last step: the calcinfo
 ///////////////////////////
 
@@ -391,7 +444,7 @@ For the time being, just define also the following variables as empty lists
 
 
 
-Finally, you need to specify which code executable(s) need to be called
+Finally, you need to specify which code executable(s) need to be called and 
 link the code to the ``codeinfo`` object. 
 For each code, you need to create a ``CodeInfo`` object, specify the code UUID,
 and define the command line parameters that should be passed to the code as a
@@ -400,7 +453,7 @@ Moreover, AiiDA takes care of escaping spaces and other symbols).
 In our case, our code requires the name of the input file, followed by the
 name of the output file, so we write::
 
-    codeinfo.cmdline_params = [self._DEFAULT_INPUT_FILE,self._DEFAULT_OUTPUT_FILE]
+    codeinfo.cmdline_params = [self._DEFAULT_INPUT_FILE, self._DEFAULT_OUTPUT_FILE]
 
 Finally, we link the just created ``codeinfo`` to the ``calcinfo``, and return
 it::
@@ -432,8 +485,7 @@ is ready!
   huge files, you should carefully think at how to design your plugin 
   interface. The same applies for ``calcinfo.retrieve_list``.
 
-As a final step, after copying the file in the location specified above, we
-can check if AiiDA recognised the plugin, by running the command
+As a final step, we can check if AiiDA recognised the plugin, by running the command
 ``verdi calculation plugins`` and verifying that our new ``sum`` plugin is
 now listed.
 
@@ -606,8 +658,9 @@ in the database::
   with the ``calc.res`` interface (for instance, later we will be able to get
   the results using ``print calc.res.sum``.
 
-The above `output plugin` can be downloaded from :download:`here <sum_parser.py>`
-and should be placed at ``aiida/parsers/plugins/sum.py``.
+The above `output plugin` can be downloaded from :download:`here <sum_parser.py>`.
+You will need to register the `SumParser class to an entry point using the methods described
+:ref:`here <plugins.entry_points>`.
 
 .. note:: Before continuing, it is important to restart the daemon, so that 
   it can recognize the new files added into the aiida code and use the new 

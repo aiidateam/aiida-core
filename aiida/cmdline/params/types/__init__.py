@@ -16,6 +16,7 @@ from .calculation import CalculationParamType
 from .choice import LazyChoice
 from .code import CodeParamType
 from .computer import ComputerParamType, ShebangParamType, MpirunCommandParamType
+from .config import ConfigOptionParamType
 from .data import DataParamType
 from .group import GroupParamType
 from .identifier import IdentifierParamType
@@ -32,8 +33,9 @@ from .test_module import TestModuleParamType
 from .workflow import WorkflowParamType
 
 __all__ = [
-    'LazyChoice', 'IdentifierParamType', 'CalculationParamType', 'CodeParamType', 'ComputerParamType', 'DataParamType',
-    'GroupParamType', 'NodeParamType', 'MpirunCommandParamType', 'MultipleValueParamType', 'NonEmptyStringParamType',
-    'PluginParamType', 'AbsolutePathParamType', 'ShebangParamType', 'LegacyWorkflowParamType', 'UserParamType',
-    'TestModuleParamType', 'ProfileParamType', 'WorkflowParamType', 'ProcessParamType'
+    'LazyChoice', 'IdentifierParamType', 'CalculationParamType', 'CodeParamType', 'ComputerParamType',
+    'ConfigOptionParamType', 'DataParamType', 'GroupParamType', 'NodeParamType', 'MpirunCommandParamType',
+    'MultipleValueParamType', 'NonEmptyStringParamType', 'PluginParamType', 'AbsolutePathParamType', 'ShebangParamType',
+    'LegacyWorkflowParamType', 'UserParamType', 'TestModuleParamType', 'ProfileParamType', 'WorkflowParamType',
+    'ProcessParamType'
 ]

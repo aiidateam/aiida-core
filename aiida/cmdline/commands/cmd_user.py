@@ -113,16 +113,12 @@ def user_list(color):
     List all the users.
     :param color: Show the list using colors
     """
-    from aiida.common.exceptions import ConfigurationError
     from aiida.manage import get_manager
     from aiida import orm
 
     manager = get_manager()
 
-    try:
-        current_user = manager.get_profile().default_user_email
-    except ConfigurationError:
-        current_user = None
+    current_user = manager.get_profile().default_user_email
 
     if current_user is not None:
         pass
@@ -135,7 +131,7 @@ def user_list(color):
             name_pieces.append(user.first_name)
         if user.last_name:
             name_pieces.append(user.last_name)
-        full_name = " ".join(name_pieces)
+        full_name = ' '.join(name_pieces)
         if full_name:
             full_name = " {}".format(full_name)
 

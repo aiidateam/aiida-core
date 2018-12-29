@@ -16,11 +16,11 @@ import six
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.session import make_transient
 
-from aiida.common.utils import type_check
+from aiida.common.lang import type_check
 from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.common.exceptions import InvalidOperation
 from aiida.orm.implementation.computers import BackendComputerCollection, BackendComputer
-import aiida.utils.json as json
+import aiida.common.json as json
 from . import utils
 from . import entities
 
@@ -145,7 +145,6 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
 
 
 class SqlaComputerCollection(BackendComputerCollection):
-
     ENTITY_CLASS = SqlaComputer
 
     def create(self, **attributes):

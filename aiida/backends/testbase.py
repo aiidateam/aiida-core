@@ -10,20 +10,19 @@
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
+
 import os
 import sys
 import unittest
-from unittest import (
-    TestSuite, defaultTestLoader as test_loader)
+import traceback
 
 from tornado import ioloop
-import traceback
 
 from aiida.backends import settings
 from aiida.backends.tests import get_db_test_list
 from aiida.common.exceptions import ConfigurationError, TestsNotAllowedError, InternalError
-from aiida.common.utils import classproperty
-from aiida.manage import get_manager, reset_manager
+from aiida.common.lang import classproperty
+from aiida.manage import reset_manager
 
 
 def check_if_tests_can_run():
@@ -117,6 +116,11 @@ class AiidaTestCase(unittest.TestCase):
         if not loop._closing:
             loop.close()
 
+    def reset_database(self):
+        """Reset the database to the default state deleting any content currently stored"""
+        self.clean_db()
+        self.insert_data()
+
     @classmethod
     def insert_data(cls):
         cls.__backend_instance.insert_data()
@@ -159,6 +163,10 @@ class AiidaTestCase(unittest.TestCase):
         cls.clean_db()
         cls.__backend_instance.tearDownClass_method(*args, **kwargs)
 
+    def assertClickSuccess(self, cli_result):
+        self.assertEqual(cli_result.exit_code, 0)
+        self.assertClickResultNoException(cli_result)
+
     def assertClickResultNoException(self, cli_result):
         self.assertIsNone(cli_result.exception, ''.join(traceback.format_exception(*cli_result.exc_info)))
 
@@ -169,7 +177,7 @@ def run_aiida_db_tests(tests_to_run, verbose=False):
     Return the list of test results.
     """
     # Empty test suite that will be populated
-    test_suite = TestSuite()
+    test_suite = unittest.TestSuite()
 
     actually_run_tests = []
     num_tests_expected = 0
@@ -191,7 +199,7 @@ def run_aiida_db_tests(tests_to_run, verbose=False):
         for modulename in modulenames:
             if modulename not in found_modulenames:
                 try:
-                    test_suite.addTest(test_loader.loadTestsFromName(modulename))
+                    test_suite.addTest(unittest.defaultTestLoader.loadTestsFromName(modulename))
                 except AttributeError as exception:
                     try:
                         import importlib

@@ -13,6 +13,11 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import collections
+
+try:
+    from collections.abc import Iterator, Sized  # only works on python 3.3+
+except ImportError:
+    from collections import Iterator, Sized
 import six
 
 # pylint: disable=no-name-in-module, import-error
@@ -20,10 +25,11 @@ from django.db import transaction
 from django.db.models import Q
 
 from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
-from aiida.common.utils import type_check
+from aiida.common.lang import type_check
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.backends.djsite.db import models
 from .node import Node
+
 from . import entities
 from . import users
 from . import utils
@@ -35,29 +41,29 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
     """The Django group object"""
     MODEL_CLASS = models.DbGroup
 
-    def __init__(self, backend, name, user, description='', type_string=''):
+    def __init__(self, backend, label, user, description='', type_string=''):
         """Construct a new Django group"""
         type_check(user, users.DjangoUser)
         super(DjangoGroup, self).__init__(backend)
 
         self._dbmodel = utils.ModelWrapper(
-            models.DbGroup(name=name, description=description, user=user.dbmodel, type=type_string))
+            models.DbGroup(label=label, description=description, user=user.dbmodel, type_string=type_string))
 
     @property
-    def name(self):
-        return self._dbmodel.name
+    def label(self):
+        return self._dbmodel.label
 
-    @name.setter
-    def name(self, name):
+    @label.setter
+    def label(self, label):
         """
-        Attempt to change the name of the group instance. If the group is already stored
-        and the another group of the same type already exists with the desired name, a
+        Attempt to change the label of the group instance. If the group is already stored
+        and the another group of the same type already exists with the desired label, a
         UniquenessError will be raised
 
-        :param name: the new group name
-        :raises UniquenessError: if another group of same type and name already exists
+        :param label : the new group label
+        :raises UniquenessError: if another group of same type and label already exists
         """
-        self._dbmodel.name = name
+        self._dbmodel.label = label
 
     @property
     def description(self):
@@ -69,7 +75,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
 
     @property
     def type_string(self):
-        return self._dbmodel.type
+        return self._dbmodel.type_string
 
     @property
     def user(self):
@@ -108,7 +114,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
     def add_nodes(self, nodes):
         from aiida.backends.djsite.db.models import DbNode
         if not self.is_stored:
-            raise ModificationNotAllowed("Cannot add nodes to a group before " "storing")
+            raise ModificationNotAllowed("Cannot add nodes to a group before storing")
 
         # First convert to a list
         if isinstance(nodes, (Node, DbNode)):
@@ -126,7 +132,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
                                 "to add_nodes, it should be either a Node or "
                                 "a DbNode, it is instead {}".format(str(type(node))))
             if node.pk is None:
-                raise ValueError("At least one of the provided nodes is " "unstored, stopping...")
+                raise ValueError("At least one of the provided nodes is unstored, stopping...")
             list_pk.append(node.pk)
 
         self._dbmodel.dbnodes.add(*list_pk)
@@ -135,22 +141,26 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
     def nodes(self):
         """Get an iterator to the nodes in the group"""
 
-        class Iterator(object):
+        class NodesIterator(Iterator, Sized):
             """The nodes iterator"""
 
-            def __init__(self, dbnodes):
+            def __init__(self, dbnodes, backend):
+                super(NodesIterator, self).__init__()
                 self.dbnodes = dbnodes
                 self.generator = self._genfunction()
+                self._backend = backend
 
             def _genfunction(self):
-                for node in self.dbnodes:
-                    yield node.get_aiida_class()
+                # Best to use dbnodes.iterator() so we load entities from the database as we need them
+                # see: http://blog.etianen.com/blog/2013/06/08/django-querysets/
+                for node in self.dbnodes.iterator():
+                    yield self._backend.get_backend_entity(node)
 
             def __iter__(self):
                 return self
 
             def __len__(self):
-                return self.dbnodes.count()
+                return len(self.dbnodes)
 
             # For future python-3 compatibility
             def __next__(self):
@@ -159,12 +169,12 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
             def next(self):
                 return next(self.generator)
 
-        return Iterator(self._dbmodel.dbnodes.all())
+        return NodesIterator(self._dbmodel.dbnodes.all(), self._backend)
 
     def remove_nodes(self, nodes):
         from aiida.backends.djsite.db.models import DbNode
         if not self.is_stored:
-            raise ModificationNotAllowed("Cannot remove nodes from a group " "before storing")
+            raise ModificationNotAllowed("Cannot remove nodes from a group before storing")
 
         # First convert to a list
         if isinstance(nodes, (Node, DbNode)):
@@ -182,7 +192,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
                                 "to add_nodes, it should be either a Node or "
                                 "a DbNode, it is instead {}".format(str(type(node))))
             if node.pk is None:
-                raise ValueError("At least one of the provided nodes is " "unstored, stopping...")
+                raise ValueError("At least one of the provided nodes is unstored, stopping...")
             list_pk.append(node.pk)
 
         self._dbmodel.dbnodes.remove(*list_pk)
@@ -194,7 +204,7 @@ class DjangoGroupCollection(BackendGroupCollection):
     ENTITY_CLASS = DjangoGroup
 
     def query(self,
-              name=None,
+              label=None,
               type_string=None,
               pk=None,
               uuid=None,
@@ -202,16 +212,16 @@ class DjangoGroupCollection(BackendGroupCollection):
               user=None,
               node_attributes=None,
               past_days=None,
-              name_filters=None,
+              label_filters=None,
               **kwargs):  # pylint: disable=too-many-arguments
         # pylint: disable=too-many-branches,too-many-locals
         # Analyze args and kwargs to create the query
         queryobject = Q()
-        if name is not None:
-            queryobject &= Q(name=name)
+        if label is not None:
+            queryobject &= Q(label=label)
 
         if type_string is not None:
-            queryobject &= Q(type=type_string)
+            queryobject &= Q(type_string=type_string)
 
         if pk is not None:
             queryobject &= Q(pk=pk)
@@ -243,9 +253,9 @@ class DjangoGroupCollection(BackendGroupCollection):
             else:
                 queryobject &= Q(user=user.id)
 
-        if name_filters is not None:
-            name_filters_list = {"name__" + key: value for (key, value) in name_filters.items() if value}
-            queryobject &= Q(**name_filters_list)
+        if label_filters is not None:
+            label_filters_list = {"name__" + key: value for (key, value) in label_filters.items() if value}
+            queryobject &= Q(**label_filters_list)
 
         groups_pk = set(models.DbGroup.objects.filter(queryobject, **kwargs).values_list('pk', flat=True))
 

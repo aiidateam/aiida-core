@@ -13,7 +13,7 @@ from __future__ import unicode_literals
 from __future__ import absolute_import
 
 from django.db import models, migrations
-import aiida.utils.timezone
+import aiida.common.timezone
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
 
 
@@ -37,61 +37,61 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='dbcalcstate',
             name='time',
-            field=models.DateTimeField(default=aiida.utils.timezone.now, editable=False),
+            field=models.DateTimeField(default=aiida.common.timezone.now, editable=False),
             preserve_default=True,
         ),
         migrations.AlterField(
             model_name='dbcomment',
             name='ctime',
-            field=models.DateTimeField(default=aiida.utils.timezone.now, editable=False),
+            field=models.DateTimeField(default=aiida.common.timezone.now, editable=False),
             preserve_default=True,
         ),
         migrations.AlterField(
             model_name='dbgroup',
             name='time',
-            field=models.DateTimeField(default=aiida.utils.timezone.now, editable=False),
+            field=models.DateTimeField(default=aiida.common.timezone.now, editable=False),
             preserve_default=True,
         ),
         migrations.AlterField(
             model_name='dblock',
             name='creation',
-            field=models.DateTimeField(default=aiida.utils.timezone.now, editable=False),
+            field=models.DateTimeField(default=aiida.common.timezone.now, editable=False),
             preserve_default=True,
         ),
         migrations.AlterField(
             model_name='dblog',
             name='time',
-            field=models.DateTimeField(default=aiida.utils.timezone.now, editable=False),
+            field=models.DateTimeField(default=aiida.common.timezone.now, editable=False),
             preserve_default=True,
         ),
         migrations.AlterField(
             model_name='dbnode',
             name='ctime',
-            field=models.DateTimeField(default=aiida.utils.timezone.now, editable=False),
+            field=models.DateTimeField(default=aiida.common.timezone.now, editable=False),
             preserve_default=True,
         ),
         migrations.AlterField(
             model_name='dbuser',
             name='date_joined',
-            field=models.DateTimeField(default=aiida.utils.timezone.now),
+            field=models.DateTimeField(default=aiida.common.timezone.now),
             preserve_default=True,
         ),
         migrations.AlterField(
             model_name='dbworkflow',
             name='ctime',
-            field=models.DateTimeField(default=aiida.utils.timezone.now, editable=False),
+            field=models.DateTimeField(default=aiida.common.timezone.now, editable=False),
             preserve_default=True,
         ),
         migrations.AlterField(
             model_name='dbworkflowdata',
             name='time',
-            field=models.DateTimeField(default=aiida.utils.timezone.now, editable=False),
+            field=models.DateTimeField(default=aiida.common.timezone.now, editable=False),
             preserve_default=True,
         ),
         migrations.AlterField(
             model_name='dbworkflowstep',
             name='time',
-            field=models.DateTimeField(default=aiida.utils.timezone.now, editable=False),
+            field=models.DateTimeField(default=aiida.common.timezone.now, editable=False),
             preserve_default=True,
         ),
         migrations.AlterUniqueTogether(

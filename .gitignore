@@ -16,8 +16,6 @@
 .eggs
 
 # files created by coverage
-*\,cover
-coverage/
 .cache
 .pytest_cache
 .coverage

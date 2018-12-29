@@ -15,7 +15,7 @@ from __future__ import absolute_import
 import six
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common.utils import classproperty
+from aiida.common.lang import classproperty
 from aiida.orm.data.int import Int
 from aiida.calculations.plugins.templatereplacer import TemplatereplacerCalculation
 from aiida.work.persistence import ObjectLoader

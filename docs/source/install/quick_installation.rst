@@ -4,47 +4,94 @@
 Quick installation
 ******************
 
-.. _PyPI: https://pypi.python.org/pypi/aiida
-.. _pip: https://pypi.python.org/pypi/pip/
+Prerequisites
+=============
 
-This section will install AiiDA in the fastest way possible, but will leave very little to customize and is not guaranteed to work flawlessly.
-It is highly recommended to read the full instructions in the :ref:`installation section<install>`.
-AiiDA is available through the python package index `PyPI`_ and can be installed with the python package manager `pip`_.
-In a terminal, execute the following command:
+.. toggle-header::
+    :header: **Ubuntu**
+    
+    .. code-block:: bash
+
+        sudo apt-get install git python2.7-dev python-pip virtualenv postgresql postgresql-server-dev-all postgresql-client rabbitmq-server
+        sudo reboot
+
+    See :ref:`Ubuntu instructions<details_ubuntu>` for details.
+
+
+.. toggle-header::
+    :header: **MacOS X (Homebrew)**
+    
+    .. code-block:: bash
+
+        brew install git python postgresql rabbitmq
+        pg_ctl -D /usr/local/var/postgres start
+        brew services start rabbitmq
+
+    See :ref:`MacOS X (Homebrew) instructions<details_brew>` for details.
+
+.. toggle-header::
+    :header: **MacOS X (MacPorts)**
+    
+    .. code-block:: bash
+
+        sudo port install git python postgresql96 postgresql96-server rabbitmq-server
+        pg_ctl -D /usr/local/var/postgres start
+
+    See :ref:`MacOS X (MacPorts) instructions<details_macports>` for details.
+
+.. toggle-header::
+    :header: **Gentoo Linux**
+    
+    .. code-block:: bash
+
+        emerge -av git python postgresql rabbitmq-server
+        rc-update add rabbitmq
+        sudo reboot
+
+    See :ref:`Gentoo Linux instructions<details_gentoo>` for details.
+
+.. toggle-header::
+    :header: **Windows Subsystem for Linux**
+    
+    .. code-block:: bash
+
+        sudo apt-get install git python2.7-dev python-pip virtualenv postgresql postgresql-server-dev-all postgresql-client
+        sudo service postgresql start
+        # install rabbitmq on windows
+
+    See :ref:`WSL instructions<details_wsl>` for details.
+
+
+.. _quick_install:
+
+Installation
+============
+
+Install the ``aiida`` python package:
 
 .. code-block:: bash
 
-    pip install aiida
+    pip install --pre aiida
 
-This will install the ``aiida-core`` package along with the four base plugins:
-
-    * ``aiida-ase``
-    * ``aiida-codtools``
-    * ``aiida-nwchem``
-    * ``aiida-quantumespresso``
-
-After successful installation AiiDA needs to be setup, which includes setting up a profile and creating a database
-This can be accomplished semi-automatically through AiiDA's command line interface ``verdi``.
-For maximum control and customizability one can use ``verdi setup``, which will be explained in greater detail in the :ref:`setup section<setup_aiida>`.
-For a quick installation, AiiDA provides ``verdi quicksetup`` which will try to setup all requirements with sensible defaults
+Set up your AiiDA profile:
 
 .. code-block:: bash
 
     verdi quicksetup
 
-The ``verdi quicksetup`` command will guide you through the setup process through a series of prompts.
-After completing all the prompts you should have a working installation of AiiDA.
-You can verify that the installation was successful by running
+After completing the setup, your newly created profile should show up in the list:
 
 .. code-block:: bash
 
-    verdi profile list
+    $ verdi profile list
 
-This should list the profile that was just created by the quicksetup
+    Info: configuration folder: /path.to/.aiida
+    Info: default profile is highlighted and marked by the * symbol
+    * coding_day
 
-.. code-block:: bash
+Time to :ref:`get started<get_started>`!
 
-    > quicksetup (DEFAULT) (DAEMON PROFILE)
-
-If the quick installation fails at any point, please refer to the :ref:`full installation guide<install>` for more details or the :ref:`troubleshooting section<troubleshooting>`.
+If the quick installation failed at any point, please refer 
+to the :ref:`full installation guide<installation>` for more details 
+or the :ref:`troubleshooting section<troubleshooting>`.
 For additional configuration, please refer to the :ref:`configuration section<configure_aiida>`.

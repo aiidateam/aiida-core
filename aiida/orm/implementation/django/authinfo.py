@@ -11,11 +11,10 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from aiida.backends.djsite.db import models
 from aiida.backends.djsite.db.models import DbAuthInfo
 from aiida.common import exceptions
-from aiida.common.utils import type_check
-import aiida.utils.json as json
+from aiida.common.lang import type_check
+import aiida.common.json as json
 
 from ..authinfos import BackendAuthInfo, BackendAuthInfoCollection
 from . import entities
@@ -73,10 +72,10 @@ class DjangoAuthInfoCollection(BackendAuthInfoCollection):
         return DjangoAuthInfo.from_dbmodel(dbmodel, self.backend)
 
 
-class DjangoAuthInfo(entities.DjangoModelEntity[models.DbAuthInfo], BackendAuthInfo):
+class DjangoAuthInfo(entities.DjangoModelEntity[DbAuthInfo], BackendAuthInfo):
     """AuthInfo implementation for Django."""
 
-    MODEL_CLASS = models.DbAuthInfo
+    MODEL_CLASS = DbAuthInfo
 
     @classmethod
     def get_dbmodel_attribute_name(cls, attr_name):
@@ -132,7 +131,7 @@ class DjangoAuthInfo(entities.DjangoModelEntity[models.DbAuthInfo], BackendAuthI
         """
         Replace the auth_params dictionary in the DB with the provided dictionary
         """
-        import aiida.utils.json as json
+        import aiida.common.json as json
 
         # Raises ValueError if data is not JSON-serializable
         self._dbmodel.auth_params = json.dumps(auth_params)
@@ -143,7 +142,7 @@ class DjangoAuthInfo(entities.DjangoModelEntity[models.DbAuthInfo], BackendAuthI
 
         :return: a dictionary
         """
-        import aiida.utils.json as json
+        import aiida.common.json as json
 
         try:
             return json.loads(self._dbmodel.metadata)

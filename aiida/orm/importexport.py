@@ -20,12 +20,13 @@ from aiida.common import exceptions
 from aiida.common.utils import (export_shard_uuid, get_class_string,
                                 get_object_from_string, grouper)
 from aiida.orm.computers import Computer
-from aiida.orm.groups import Group
+from aiida.orm.groups import Group, GroupTypeString
 from aiida.orm.node import Node
+from aiida.orm.querybuilder import QueryBuilder
 from aiida.orm.users import User
 
-IMPORTGROUP_TYPE = 'aiida.import'
-COMP_DUPL_SUFFIX = ' (Imported #{})'
+IMPORTGROUP_TYPE = GroupTypeString.IMPORTGROUP_TYPE
+DUPL_SUFFIX = ' (Imported #{})'
 
 # Giving names to the various entities. Attributes and links are not AiiDA
 # entities but we will refer to them as entities in the file (to simplify
@@ -237,9 +238,9 @@ def get_all_fields_info():
         "time": {
             "convert_type": "date"
         },
-        "type": {},
+        "type_string": {},
         "uuid": {},
-        "name": {}
+        "label": {}
     }
     return all_fields_info, unique_identifiers
 
@@ -311,23 +312,23 @@ def deserialize_field(k, v, fields_info, import_unique_ids_mappings,
             return ("{}_id".format(k), None)
 
 
-def import_data(in_path, ignore_unknown_nodes=False,
+def import_data(in_path, group=None, ignore_unknown_nodes=False,
                 silent=False):
     from aiida.backends.settings import BACKEND
     from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 
     if BACKEND == BACKEND_SQLA:
-        return import_data_sqla(in_path, ignore_unknown_nodes=ignore_unknown_nodes,
+        return import_data_sqla(in_path, user_group=group, ignore_unknown_nodes=ignore_unknown_nodes,
                                 silent=silent)
     elif BACKEND == BACKEND_DJANGO:
-        return import_data_dj(in_path, ignore_unknown_nodes=ignore_unknown_nodes,
+        return import_data_dj(in_path, user_group=group, ignore_unknown_nodes=ignore_unknown_nodes,
                               silent=silent)
     else:
         raise Exception("Unknown settings.BACKEND: {}".format(
             BACKEND))
 
 
-def import_data_dj(in_path, ignore_unknown_nodes=False,
+def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
                    silent=False):
     """
     Import exported AiiDA environment to the AiiDA database.
@@ -343,20 +344,19 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
     from itertools import chain
 
     from django.db import transaction
-    from aiida.utils import timezone
+    from aiida.common import timezone
 
     from aiida.orm import Node, Group
     from aiida.common.archive import extract_tree, extract_tar, extract_zip, extract_cif
     from aiida.common.links import LinkType
-    from aiida.common.exceptions import UniquenessError
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.backends.djsite.db import models
     from aiida.common.utils import get_class_string, get_object_from_string
     from aiida.common.datastructures import calc_states
-    import aiida.utils.json as json
+    import aiida.common.json as json
 
     # This is the export version expected by this function
-    expected_export_version = '0.3'
+    expected_export_version = '0.4'
 
     # The name of the subfolder in which the node files are stored
     nodes_export_subfolder = 'nodes'
@@ -570,7 +570,6 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                 objects_to_create = []
                 # This is needed later to associate the import entry with the new pk
                 import_entry_ids = {}
-                dupl_counter = 0
                 imported_comp_names = set()
                 for import_entry_id, entry_data in new_entries[model_name].items():
                     unique_id = entry_data[unique_identifier]
@@ -580,21 +579,36 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                         foreign_ids_reverse_mappings=foreign_ids_reverse_mappings)
                                        for k, v in entry_data.items())
 
-                    if Model is models.DbComputer:
+                    if Model is models.DbGroup:
+                        # Check if there is already a group with the same name
+                        dupl_counter = 0
+                        orig_label = import_data['label']
+                        while Model.objects.filter(label=import_data['label']):
+                            import_data['label'] = orig_label + DUPL_SUFFIX.format(dupl_counter)
+                            dupl_counter += 1
+                            if dupl_counter == 100:
+                                raise exceptions.UniquenessError("A group of that label ( {} ) already exists"
+                                    " and I could not create a new one".format(orig_label))
+
+                    elif Model is models.DbComputer:
                         # Check if there is already a computer with the same
                         # name in the database
                         dupl = (Model.objects.filter(name=import_data['name'])
                                 or import_data['name'] in imported_comp_names)
                         orig_name = import_data['name']
+                        dupl_counter = 0
                         while dupl:
                             # Rename the new computer
                             import_data['name'] = (
                                     orig_name +
-                                    COMP_DUPL_SUFFIX.format(dupl_counter))
+                                    DUPL_SUFFIX.format(dupl_counter))
                             dupl_counter += 1
                             dupl = (
                                     Model.objects.filter(name=import_data['name'])
                                     or import_data['name'] in imported_comp_names)
+                            if dupl_counter == 100:
+                                raise exceptions.UniquenessError("A computer of that name ( {} ) already exists"
+                                    " and I could not create a new one".format(orig_name))
 
                         # The following is done for compatibility reasons
                         # In case the export file was generate with the SQLA
@@ -794,30 +808,34 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
 
             # So that we do not create empty groups
             if pks_for_group:
-                # Get an unique name for the import group, based on the
-                # current (local) time
-                basename = timezone.localtime(timezone.now()).strftime(
-                    "%Y%m%d-%H%M%S")
-                counter = 0
-                created = False
-                while not created:
-                    if counter == 0:
-                        group_name = basename
-                    else:
-                        group_name = "{}_{}".format(basename, counter)
-                    try:
-                        group = Group(name=group_name, type_string=IMPORTGROUP_TYPE).store()
-                        created = True
-                    except (exceptions.UniquenessError, exceptions.IntegrityError):
-                        counter += 1
+                # If user specified a group, import all things in it
+                if user_group:
+                    group = user_group[0]
+                else:
+                    # Get an unique name for the import group, based on the
+                    # current (local) time
+                    basename = timezone.localtime(timezone.now()).strftime(
+                        "%Y%m%d-%H%M%S")
+                    counter = 0
+                    created = False
+                    while not created:
+                        if counter == 0:
+                            group_label = basename
+                        else:
+                            group_label = "{}_{}".format(basename, counter)
+                        try:
+                            group = Group(label=group_label, type_string=IMPORTGROUP_TYPE).store()
+                            created = True
+                        except (exceptions.UniquenessError, exceptions.IntegrityError):
+                            counter += 1
 
                 # Add all the nodes to the new group
-                # TODO: decide if we want to return the group name
+                # TODO: decide if we want to return the group label
                 group.add_nodes(models.DbNode.objects.filter(
                     pk__in=pks_for_group))
 
                 if not silent:
-                    print("IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.name))
+                    print("IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.label))
             else:
                 if not silent:
                     print("NO DBNODES TO IMPORT, SO NO GROUP CREATED")
@@ -846,7 +864,7 @@ def validate_uuid(given_uuid):
     return str(parsed_uuid) == given_uuid
 
 
-def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
+def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False, silent=False):
     """
     Import exported AiiDA environment to the AiiDA database.
     If the 'in_path' is a folder, calls export_tree; otherwise, tries to
@@ -860,19 +878,18 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
     import zipfile
     from itertools import chain
 
-    from aiida.utils import timezone
+    from aiida.common import timezone
 
     from aiida.orm import Node, Group
     from aiida.common.archive import extract_tree, extract_tar, extract_zip, extract_cif
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.common.utils import get_object_from_string
     from aiida.common.datastructures import calc_states
-    from aiida.orm.querybuilder import QueryBuilder
     from aiida.common.links import LinkType
-    import aiida.utils.json as json
+    import aiida.common.json as json
 
     # This is the export version expected by this function
-    expected_export_version = '0.3'
+    expected_export_version = '0.4'
 
     # The name of the subfolder in which the node files are stored
     nodes_export_subfolder = 'nodes'
@@ -1075,10 +1092,25 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                                 k: v.pk for k, v in
                                 relevant_db_entries.items()}
 
-                        dupl_counter = 0
                         imported_comp_names = set()
                         for k, v in data['export_data'][entity_name].items():
-                            if entity_name == COMPUTER_ENTITY_NAME:
+                            if entity_name == GROUP_ENTITY_NAME:
+                                # Check if there is already a group with the same name,
+                                # and if so, recreate the name
+                                orig_label = v["label"]
+                                dupl_counter = 0
+                                while QueryBuilder().append(entity,
+                                            filters={'label': {"==": v["label"]}}).count():
+                                    # Rename the new group
+                                    v["label"] = orig_label + DUPL_SUFFIX.format(dupl_counter)
+                                    dupl_counter += 1
+                                    if dupl_counter == 100:
+                                        raise exceptions.UniquenessError("A group of that label ( {} )"
+                                                "  already exists and I could not create a new one"
+                                                "".format(orig_label))
+
+
+                            elif entity_name == COMPUTER_ENTITY_NAME:
                                 # The following is done for compatibility
                                 # reasons in case the export file was generated
                                 # with the Django export method. In Django the
@@ -1102,13 +1134,13 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                                           project=["*"], tag="res")
                                 dupl = (qb.count()
                                         or v["name"] in imported_comp_names)
-
+                                dupl_counter = 0
                                 orig_name = v["name"]
                                 while dupl:
                                     # Rename the new computer
                                     v["name"] = (
                                             orig_name +
-                                            COMP_DUPL_SUFFIX.format(
+                                            DUPL_SUFFIX.format(
                                                 dupl_counter))
                                     dupl_counter += 1
                                     qb = QueryBuilder()
@@ -1382,30 +1414,34 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
             # So that we do not create empty groups
             if pks_for_group:
-                # Get an unique name for the import group, based on the
-                # current (local) time
-                basename = timezone.localtime(timezone.now()).strftime(
-                    "%Y%m%d-%H%M%S")
-                counter = 0
-                created = False
-                while not created:
-                    if counter == 0:
-                        group_name = basename
-                    else:
-                        group_name = "{}_{}".format(basename, counter)
+                # If user specified a group, import all things in it
+                if user_group:
+                    group = user_group[0]
+                else:
+                    # Get an unique name for the import group, based on the
+                    # current (local) time
+                    basename = timezone.localtime(timezone.now()).strftime(
+                        "%Y%m%d-%H%M%S")
+                    counter = 0
+                    created = False
+                    while not created:
+                        if counter == 0:
+                            group_label = basename
+                        else:
+                            group_label = "{}_{}".format(basename, counter)
 
-                    group = Group(name=group_name,
-                                  type_string=IMPORTGROUP_TYPE)
-                    from aiida.backends.sqlalchemy.models.group import DbGroup
-                    if session.query(DbGroup).filter(
-                            DbGroup.name == group.backend_entity._dbmodel.name).count() == 0:
-                        session.add(group.backend_entity._dbmodel)
-                        created = True
-                    else:
-                        counter += 1
+                        group = Group(label=group_label,
+                                      type_string=IMPORTGROUP_TYPE)
+                        from aiida.backends.sqlalchemy.models.group import DbGroup
+                        if session.query(DbGroup).filter(
+                                DbGroup.label == group.backend_entity._dbmodel.label).count() == 0:
+                            session.add(group.backend_entity._dbmodel)
+                            created = True
+                        else:
+                            counter += 1
 
                 # Add all the nodes to the new group
-                # TODO: decide if we want to return the group name
+                # TODO: decide if we want to return the group label 
                 from aiida.backends.sqlalchemy.models.node import DbNode
                 group.add_nodes(session.query(DbNode).filter(
                     DbNode.id.in_(pks_for_group)).distinct().all())
@@ -1414,7 +1450,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 #     pk__in=pks_for_group))
 
                 if not silent:
-                    print("IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.name))
+                    print("IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.label))
             else:
                 if not silent:
                     print("NO DBNODES TO IMPORT, SO NO GROUP CREATED")
@@ -1694,12 +1730,12 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     from aiida.common.links import LinkType
     from aiida.common.folders import RepositoryFolder
     from aiida.orm.querybuilder import QueryBuilder
-    import aiida.utils.json as json
+    import aiida.common.json as json
 
     if not silent:
         print("STARTING EXPORT...")
 
-    EXPORT_VERSION = '0.3'
+    EXPORT_VERSION = '0.4'
 
     all_fields_info, unique_identifiers = get_all_fields_info()
 

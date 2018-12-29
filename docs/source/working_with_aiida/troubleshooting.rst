@@ -19,8 +19,8 @@ level of AiiDA messages (and circus messages -- circus is the library that we
 use to manage the daemon process) using, on the command line, the two
 following commands::
 
-  verdi devel setproperty logging.circus_loglevel DEBUG
-  verdi devel setproperty logging.aiida_loglevel DEBUG
+  verdi config logging.circus_loglevel DEBUG
+  verdi config logging.aiida_loglevel DEBUG
 
 For each profile that runs a daemon, there will be two unique logfiles, one for
 AiiDA log messages and one from the circus daemonizer. These files can be found

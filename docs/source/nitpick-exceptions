@@ -109,6 +109,7 @@ py:class  abc.ABCMeta
 py:class  CalcJobExitStatus
 
 py:exc    click.BadParameter
+py:exc    click.UsageError
 py:class  click.ParamType
 py:class  click.core.Group
 py:class  click.core.Option
@@ -208,10 +209,14 @@ py:class  sphinx.ext.autodoc.ClassDocumenter
 py:class  _abcoll.Mapping
 py:class  _abcoll.MutableMapping
 py:class  _abcoll.MutableSequence
+py:class  _abcoll.Iterator
+py:class  _abcoll.Sized
 # repeat for Python 3:
 py:class  collections.abc.Mapping
 py:class  collections.abc.MutableMapping
 py:class  collections.abc.MutableSequence
+py:class  collections.abc.Iterator
+py:class  collections.abc.Sized
 
 # backend-dependent implementation
 py:class  aiida.orm.node.Node
@@ -235,3 +240,7 @@ py:class typing.TypeVar
 
 # Python 3 complains about this because of orm.Entity.Collection inner class (no idea why)
 py:class Collection
+
+
+# psychopg2
+py:class psycopg2.extensions.cursor

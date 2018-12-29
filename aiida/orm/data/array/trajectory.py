@@ -69,7 +69,6 @@ class TrajectoryData(ArrayData):
         if velocities is not None:
             if not isinstance(velocities, numpy.ndarray) or velocities.dtype != float:
                 raise TypeError("TrajectoryData.velocities must be a numpy array of floats, or None")
-
         if stepids is not None:
             numsteps = stepids.size
             if stepids.shape != (numsteps,):
@@ -85,7 +84,7 @@ class TrajectoryData(ArrayData):
                              "with s=number of steps and n=number of symbols")
         if times is not None:
             if times.shape != (numsteps,):
-                raise ValueError("TrajectoryData.times must have shape (s,), " "with s=number of steps")
+                raise ValueError("TrajectoryData.times must have shape (s,), with s=number of steps")
         if velocities is not None:
             if velocities.shape != (numsteps, numatoms, 3):
                 raise ValueError("TrajectoryData.velocities, if not None, must "
@@ -198,7 +197,7 @@ class TrajectoryData(ArrayData):
         symbols_first = [str(s.kind_name) for s in structurelist[0].sites]
         for symbols_now in [[str(s.kind_name) for s in structurelist[i].sites] for i in stepids]:
             if symbols_first != symbols_now:
-                raise ValueError("Symbol lists have to be the same for " "all of the supplied structures")
+                raise ValueError("Symbol lists have to be the same for all of the supplied structures")
         symbols = list(symbols_first)
         positions = numpy.array([[list(s.position) for s in x.sites] for x in structurelist])
         self.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions)
@@ -399,7 +398,7 @@ class TrajectoryData(ArrayData):
                                     "be a aiida.orm.data.structure.Kind object")
                 kind_names.append(k.name)
             if len(kind_names) != len(set(kind_names)):
-                raise ValueError("Multiple kinds with the same name passed " "as custom_kinds")
+                raise ValueError("Multiple kinds with the same name passed as custom_kinds")
             if set(kind_names) != set(symbols):
                 raise ValueError("If you pass custom_kinds, you have to "
                                  "pass one Kind object for each symbol "
@@ -433,7 +432,7 @@ class TrajectoryData(ArrayData):
         # Do the checks once and for all here:
         structure = self.get_step_structure(index=0)
         if structure.is_alloy or structure.has_vacancies:
-            raise NotImplementedError("XSF for alloys or systems with " "vacancies not implemented.")
+            raise NotImplementedError("XSF for alloys or systems with vacancies not implemented.")
         cells = self.get_cells()
         if cells is None:
             raise ValueError("No cell parameters have been supplied for " "TrajectoryData")
@@ -450,7 +449,7 @@ class TrajectoryData(ArrayData):
             #~ raise NotImplementedError("XSF for alloys or systems with "
             #~ "vacancies not implemented.")
             for cell_vector in cells[idx]:
-                return_string += " ".join(["{:18.5f}".format(i) for i in cell_vector])
+                return_string += ' '.join(["{:18.5f}".format(i) for i in cell_vector])
                 return_string += "\n"
             return_string += "PRIMCOORD {}\n".format(idx + 1)
             return_string += "{} 1\n".format(nat)
@@ -468,7 +467,7 @@ class TrajectoryData(ArrayData):
         """
         from aiida.orm.data.cif \
             import ase_loops, cif_from_ase, pycifrw_from_cif
-        from aiida.common.utils import HiddenPrints
+        from aiida.common.utils import Capturing
 
         cif = ""
         indices = list(range(self.numsteps))
@@ -477,7 +476,7 @@ class TrajectoryData(ArrayData):
         for idx in indices:
             structure = self.get_step_structure(idx)
             ciffile = pycifrw_from_cif(cif_from_ase(structure.get_ase()), ase_loops)
-            with HiddenPrints():
+            with Capturing():
                 cif = cif + ciffile.WriteOut()
         return cif.encode('utf-8'), {}
 
@@ -567,7 +566,7 @@ class TrajectoryData(ArrayData):
         """
 
         from aiida.common.exceptions import ValidationError
-        from aiida.common.utils import xyz_parser_iterator
+        from aiida.tools.data.structure import xyz_parser_iterator
         from numpy import array
 
         numsteps = self.numsteps
@@ -598,7 +597,7 @@ class TrajectoryData(ArrayData):
         """
 
         from aiida.common.exceptions import ValidationError
-        from aiida.common.utils import xyz_parser_iterator
+        from aiida.tools.data.structure import xyz_parser_iterator
         from numpy import array
 
         numsteps = self.numsteps

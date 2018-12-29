@@ -3,7 +3,7 @@
 """ORM class for WorkChainNode."""
 from __future__ import absolute_import
 
-from aiida.common.utils import classproperty
+from aiida.common.lang import classproperty
 
 from .workflow import WorkflowNode
 

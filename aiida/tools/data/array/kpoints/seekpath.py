@@ -10,12 +10,12 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from builtins import zip
+
 from aiida.orm.data.array.kpoints import KpointsData
 from aiida.orm.data.parameter import ParameterData
-from aiida.tools.data.structure import spglib_tuple_to_structure, structure_to_spglib_tuple
 
 __all__ = ['check_seekpath_is_installed', 'get_explicit_kpoints_path', 'get_kpoints_path']
+
 
 def check_seekpath_is_installed():
     """
@@ -28,9 +28,10 @@ def check_seekpath_is_installed():
     except ImportError:
         raise ImportError("Seekpath is not installed, please install with 'pip install seekpath'")
 
+
 def get_explicit_kpoints_path(structure, parameters):
     """
-    Return the kpoint path for band structure (in scaled and absolute 
+    Return the kpoint path for band structure (in scaled and absolute
     coordinates), given a crystal structure,
     using the paths proposed in the various publications (see description
     of the 'recipe' input parameter). The parameters are the same
@@ -39,7 +40,7 @@ def get_explicit_kpoints_path(structure, parameters):
     k-points-related information as a AiiDA KpointsData class.
 
     :param structure: The AiiDA StructureData for which we want to obtain
-        the suggested path. 
+        the suggested path.
 
     :param parameters: A dictionary whose key-value pairs are passed as
         additional kwargs to the ``seekpath.get_explicit_k_path`` function.
@@ -60,7 +61,7 @@ def get_explicit_kpoints_path(structure, parameters):
           - ``primitive_lattice``, ``primitive_positions``, ``primitive_types``
             are removed and replaced by the `primitive_structure` output node
 
-          - ``reciprocal_primitive_lattice``, ``explicit_kpoints_abs``,  
+          - ``reciprocal_primitive_lattice``, ``explicit_kpoints_abs``,
             ``explicit_kpoints_rel`` and ``explicit_kpoints_labels`` are removed
             and replaced by the ``explicit_kpoints`` output node
 
@@ -68,6 +69,8 @@ def get_explicit_kpoints_path(structure, parameters):
 
         - ``conv_structure``: A StructureData with the primitive structure
     """
+    from aiida.tools.data.structure import spglib_tuple_to_structure, structure_to_spglib_tuple
+
     check_seekpath_is_installed()
     import seekpath
 
@@ -109,16 +112,17 @@ def get_explicit_kpoints_path(structure, parameters):
 
     return result
 
+
 def get_kpoints_path(structure, parameters):
     """
-    Return the kpoint path information for band structure given a 
+    Return the kpoint path information for band structure given a
     crystal structure, using the paths from the chosen recipe/reference.
     The parameters are the same
     as get get_path in __init__, but here all structures are
     input and returned as AiiDA structures rather than tuples.
 
 
-    If you use this module, please cite the paper of the corresponding 
+    If you use this module, please cite the paper of the corresponding
     recipe (see documentation of seekpath).
 
     :param structure: The crystal structure for which we want to obtain
@@ -144,6 +148,8 @@ def get_kpoints_path(structure, parameters):
 
         - ``conv_structure``: A StructureData with the primitive structure
     """
+    from aiida.tools.data.structure import spglib_tuple_to_structure, structure_to_spglib_tuple
+
     check_seekpath_is_installed()
     import seekpath
 

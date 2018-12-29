@@ -22,15 +22,16 @@ from six.moves import range
 from sqlalchemy.exc import StatementError
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common.exceptions import InvalidOperation, ModificationNotAllowed, StoringNotAllowed, UniquenessError
+from aiida.common.exceptions import InvalidOperation, ModificationNotAllowed, StoringNotAllowed
 from aiida.common.links import LinkType
+from aiida.manage.database.delete.nodes import delete_nodes
 from aiida.orm import User, Data, Node
 from aiida.orm.node.process import ProcessNode
 from aiida.orm.node.process.calculation import CalculationNode
 from aiida.orm.node.process.workflow import WorkflowNode
 from aiida.orm.utils import load_node
-from aiida.utils.capturing import Capturing
-from aiida.utils.delete_nodes import delete_nodes
+from aiida.orm.convert import get_orm_entity
+from aiida.common.utils import Capturing
 
 
 class TestNodeIsStorable(AiidaTestCase):
@@ -38,6 +39,7 @@ class TestNodeIsStorable(AiidaTestCase):
     Test if one can store specific Node subclasses, and that Node and
     ProcessType are not storable, intead.
     """
+
     def test_storable_unstorable(self):
         """
         Test storability of Nodes
@@ -59,6 +61,7 @@ class TestNodeIsStorable(AiidaTestCase):
 
         work = WorkflowNode()
         work.store()
+
 
 class TestNodeCopyDeepcopy(AiidaTestCase):
     """Test that calling copy and deepcopy on a Node does the right thing."""
@@ -221,6 +224,7 @@ class TestTransitiveNoLoops(AiidaTestCase):
         with self.assertRaises(ValueError):  # This would generate a loop
             d1.add_incoming(c2, link_type=LinkType.CREATE, link_label='link')
 
+
 class TestTypes(AiidaTestCase):
     """
     Generic test class to test types
@@ -238,6 +242,7 @@ class TestTypes(AiidaTestCase):
         for uuid, data in results:
             self.assertTrue(isinstance(uuid, six.string_types))
             self.assertTrue(isinstance(data.uuid, six.string_types))
+
 
 class TestQueryWithAiidaObjects(AiidaTestCase):
     """
@@ -351,7 +356,6 @@ class TestNodeBasic(AiidaTestCase):
 
         with self.assertRaises((DjIntegrityError, SqlaIntegrityError)):
             b.store()
-
 
     def test_attribute_mutability(self):
         """
@@ -534,7 +538,7 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(mylist, [1, 2, 3])
 
     def test_datetime_attribute(self):
-        from aiida.utils.timezone import (get_current_timezone, is_naive, make_aware, now)
+        from aiida.common.timezone import (get_current_timezone, is_naive, make_aware, now)
 
         a = Data()
 
@@ -1205,7 +1209,7 @@ class TestNodeBasic(AiidaTestCase):
         # of directly loading datetime.datetime.now(), or you can get a
         # "can't compare offset-naive and offset-aware datetimes" error
         from datetime import timedelta
-        from aiida.utils import timezone
+        from aiida.common import timezone
         from time import sleep
 
         user = User.objects.get_default()
@@ -1548,7 +1552,7 @@ class TestNodeBasic(AiidaTestCase):
 
         ###### for node
         n1 = Data().store()
-        obj = n1.dbnode.get_aiida_class()
+        obj = get_orm_entity(n1)
         self.assertEqual(type(n1), type(obj))
 
 
@@ -1658,10 +1662,10 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # Create a link between these 2 nodes, link type CREATE so we track the provenance
         n2.add_incoming(n1, LinkType.CREATE, "N1")
 
-        self.assertTrue(n1.has_children, "It should be true since n2 is the " "child of n1.")
-        self.assertFalse(n1.has_parents, "It should be false since n1 doesn't " "have any parents.")
-        self.assertFalse(n2.has_children, "It should be false since n2 " "doesn't have any children.")
-        self.assertTrue(n2.has_parents, "It should be true since n1 is the " "parent of n2.")
+        self.assertTrue(n1.has_children, "It should be true since n2 is the child of n1.")
+        self.assertFalse(n1.has_parents, "It should be false since n1 doesn't have any parents.")
+        self.assertFalse(n2.has_children, "It should be false since n2 doesn't have any children.")
+        self.assertTrue(n2.has_parents, "It should be true since n1 is the parent of n2.")
 
     def test_use_code(self):
         from aiida.orm.node.process import CalcJobNode
@@ -1736,7 +1740,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # This shouldn't be allowed, it's an output CREATE link with 
         # the same same of an existing output CREATE link
         with self.assertRaises(ValueError):
-            d4.add_incoming(calc,  LinkType.CREATE, link_label='label2')
+            d4.add_incoming(calc, LinkType.CREATE, link_label='label2')
 
         # instead, for outputs, I can have multiple times the same label
         # (think to the case where d4 is a StructureData, and both calc2a and calc2b
@@ -2073,7 +2077,7 @@ class TestNodeDeletion(AiidaTestCase):
 
         # Shouldn't be needed, but just to avoid an exception being
         # raised from the exception management block below
-        uuid = None 
+        uuid = None
 
         try:
             for uuid in uuids_check_existence:
@@ -2086,10 +2090,10 @@ class TestNodeDeletion(AiidaTestCase):
         except Exception as exc:  # pylint: disable=broad-except
             import sys
             six.reraise(
-                type(exc), 
-                str(exc) + 
+                type(exc),
+                str(exc) +
                 "\nCurrent UUID being processed: {}\nFull uuids_check_existence: {}; full uuids_check_deleted: {}".format(
-                    uuid, uuids_check_existence, uuids_check_deleted), 
+                    uuid, uuids_check_existence, uuids_check_deleted),
                 sys.exc_info()[2])
 
     def _create_calls_n_returns_graph(self):
@@ -2134,16 +2138,16 @@ class TestNodeDeletion(AiidaTestCase):
         Testing whether I will delete the right ones.
         """
         nodes = [
-            Data(), # 0
-            CalculationNode(), CalculationNode(), CalculationNode(), # 1, 2, 3
-            Data(), Data(), Data(), # 4, 5, 6
-            CalculationNode(), CalculationNode(), CalculationNode(), # 7, 8, 9
-            Data(), # 10 
-            CalculationNode(), # 11
-            Data(), # 12
-            CalculationNode(), # 13
-            Data(), # 14
-            ]
+            Data(),  # 0
+            CalculationNode(), CalculationNode(), CalculationNode(),  # 1, 2, 3
+            Data(), Data(), Data(),  # 4, 5, 6
+            CalculationNode(), CalculationNode(), CalculationNode(),  # 7, 8, 9
+            Data(),  # 10
+            CalculationNode(),  # 11
+            Data(),  # 12
+            CalculationNode(),  # 13
+            Data(),  # 14
+        ]
         # Store all of them
         for node in nodes:
             node.store()
@@ -2213,7 +2217,7 @@ class TestNodeDeletion(AiidaTestCase):
         # I don't follow calls, so the slaves and their output are unharmed, as well as input
         uuids_check_existence = [n.uuid for n in (in1, in2, slave1, outp1, outp2, outp3, slave2, outp4)]
         # the wf and it's direct output
-        uuids_check_deleted = [n.uuid for n in (wf, )]
+        uuids_check_deleted = [n.uuid for n in (wf,)]
 
         with Capturing():
             delete_nodes([wf.pk], verbosity=2, force=True, follow_calls=False, follow_returns=False)

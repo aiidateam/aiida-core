@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Tests for the `DataParamType`."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -17,16 +18,17 @@ from aiida.orm.utils.loaders import OrmEntityLoader
 
 
 class TestDataParamType(AiidaTestCase):
+    """Tests for the `DataParamType`."""
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls, *args, **kwargs):
         """
         Create some code to test the DataParamType parameter type for the command line infrastructure
         We create an initial code with a random name and then on purpose create two code with a name
         that matches exactly the ID and UUID, respectively, of the first one. This allows us to test
         the rules implemented to solve ambiguities that arise when determing the identifier type
         """
-        super(TestDataParamType, cls).setUpClass()
+        super(TestDataParamType, cls).setUpClass(*args, **kwargs)
 
         cls.param = DataParamType()
         cls.entity_01 = Data().store()
@@ -43,7 +45,7 @@ class TestDataParamType(AiidaTestCase):
         """
         identifier = '{}'.format(self.entity_01.pk)
         result = self.param.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_01.uuid)
+        self.assertEqual(result.uuid, self.entity_01.uuid)
 
     def test_get_by_uuid(self):
         """
@@ -51,7 +53,7 @@ class TestDataParamType(AiidaTestCase):
         """
         identifier = '{}'.format(self.entity_01.uuid)
         result = self.param.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_01.uuid)
+        self.assertEqual(result.uuid, self.entity_01.uuid)
 
     def test_get_by_label(self):
         """
@@ -59,7 +61,7 @@ class TestDataParamType(AiidaTestCase):
         """
         identifier = '{}'.format(self.entity_01.label)
         result = self.param.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_01.uuid)
+        self.assertEqual(result.uuid, self.entity_01.uuid)
 
     def test_ambiguous_label_pk(self):
         """
@@ -70,11 +72,11 @@ class TestDataParamType(AiidaTestCase):
         """
         identifier = '{}'.format(self.entity_02.label)
         result = self.param.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_01.uuid)
+        self.assertEqual(result.uuid, self.entity_01.uuid)
 
         identifier = '{}{}'.format(self.entity_02.label, OrmEntityLoader.LABEL_AMBIGUITY_BREAKER_CHARACTER)
         result = self.param.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_02.uuid)
+        self.assertEqual(result.uuid, self.entity_02.uuid)
 
     def test_ambiguous_label_uuid(self):
         """
@@ -85,8 +87,8 @@ class TestDataParamType(AiidaTestCase):
         """
         identifier = '{}'.format(self.entity_03.label)
         result = self.param.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_01.uuid)
+        self.assertEqual(result.uuid, self.entity_01.uuid)
 
         identifier = '{}{}'.format(self.entity_03.label, OrmEntityLoader.LABEL_AMBIGUITY_BREAKER_CHARACTER)
         result = self.param.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_03.uuid)
+        self.assertEqual(result.uuid, self.entity_03.uuid)

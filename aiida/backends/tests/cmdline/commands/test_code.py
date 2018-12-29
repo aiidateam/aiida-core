@@ -159,13 +159,13 @@ class TestVerdiCodeCommands(AiidaTestCase):
         self.assertIsNone(result.exception, result.output)
         from aiida.orm import load_node
         new_code = load_node(self.code.pk)
-        self.assertEquals(new_code.label, 'new_code')
+        self.assertEqual(new_code.label, 'new_code')
 
     def test_relabel_code_full(self):
         self.cli_runner.invoke(relabel, [str(self.code.pk), 'new_code@comp'])
         from aiida.orm import load_node
         new_code = load_node(self.code.pk)
-        self.assertEquals(new_code.label, 'new_code')
+        self.assertEqual(new_code.label, 'new_code')
 
     def test_relabel_code_full_bad(self):
         result = self.cli_runner.invoke(relabel, [str(self.code.pk), 'new_code@otherstuff'])
@@ -228,9 +228,9 @@ class TestVerdiCodeCommands(AiidaTestCase):
 
         from aiida.orm import Code
         new_code = Code.get_from_string(label)
-        self.assertEquals(self.code.description, new_code.description)
-        self.assertEquals(self.code.get_prepend_text(), new_code.get_prepend_text())
-        self.assertEquals(self.code.get_append_text(), new_code.get_append_text())
+        self.assertEqual(self.code.description, new_code.description)
+        self.assertEqual(self.code.get_prepend_text(), new_code.get_prepend_text())
+        self.assertEqual(self.code.get_append_text(), new_code.get_append_text())
 
     def test_code_duplicate_non_interactive(self):
         label = 'code_duplicate_noninteractive'
@@ -239,7 +239,7 @@ class TestVerdiCodeCommands(AiidaTestCase):
 
         from aiida.orm import Code
         new_code = Code.get_from_string(label)
-        self.assertEquals(self.code.description, new_code.description)
-        self.assertEquals(self.code.get_prepend_text(), new_code.get_prepend_text())
-        self.assertEquals(self.code.get_append_text(), new_code.get_append_text())
-        self.assertEquals(self.code.get_input_plugin_name(), new_code.get_input_plugin_name())
+        self.assertEqual(self.code.description, new_code.description)
+        self.assertEqual(self.code.get_prepend_text(), new_code.get_prepend_text())
+        self.assertEqual(self.code.get_append_text(), new_code.get_append_text())
+        self.assertEqual(self.code.get_input_plugin_name(), new_code.get_input_plugin_name())

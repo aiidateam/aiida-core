@@ -11,14 +11,19 @@
 """
 Module to make available commonly used click arguments.
 """
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import click
 
 from aiida.cmdline.params import types
 from aiida.cmdline.params.arguments.overridable import OverridableArgument
+
+
+PROFILE = OverridableArgument('profile', type=types.ProfileParamType())
+
+PROFILES = OverridableArgument('profiles', type=types.ProfileParamType(), nargs=-1)
 
 CALCULATION = OverridableArgument('calculation', type=types.CalculationParamType())
 
@@ -61,3 +66,5 @@ LABEL = OverridableArgument('label')
 USER = OverridableArgument('user', metavar='USER', type=types.UserParamType())
 
 PROFILE_NAME = OverridableArgument('profile_name', type=click.STRING)
+
+CONFIG_OPTION = OverridableArgument('option', type=types.ConfigOptionParamType())

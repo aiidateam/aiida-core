@@ -460,7 +460,7 @@ class TestQueryHelp(AiidaTestCase):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.groups import Group
         from aiida.orm.computers import Computer
-        g = Group(name='helloworld').store()
+        g = Group(label='helloworld').store()
         for cls in (StructureData, ParameterData, Data):
             obj = cls()
             obj._set_attr('foo-qh2', 'bar')
@@ -489,10 +489,10 @@ class TestQueryHelp(AiidaTestCase):
                 sorted([uuid for uuid, in qb.all()]),
                 sorted([uuid for uuid, in qb_new.all()]))
 
-        qb = QueryBuilder().append(Group, filters={'name': 'helloworld'})
+        qb = QueryBuilder().append(Group, filters={'label': 'helloworld'})
         self.assertEqual(qb.count(), 1)
 
-        qb = QueryBuilder().append((Group,), filters={'name': 'helloworld'})
+        qb = QueryBuilder().append((Group,), filters={'label': 'helloworld'})
         self.assertEqual(qb.count(), 1)
 
         qb = QueryBuilder().append(Computer, )
@@ -630,7 +630,7 @@ class QueryBuilderDateTimeAttribute(AiidaTestCase):
                      "SQLA doesn't have full datetime support in attributes")
     def test_date(self):
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.utils import timezone
+        from aiida.common import timezone
         from datetime import timedelta
         from aiida.orm.node import Node
         n = Data()
@@ -799,7 +799,7 @@ class QueryBuilderJoinsTests(AiidaTestCase):
 
         # Create a group that belongs to that user
         from aiida.orm.groups import Group
-        group = orm.Group(name="node_group")
+        group = orm.Group(label="node_group")
         group.user = user
         group.store()
 

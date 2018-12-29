@@ -39,15 +39,16 @@ from aiida.common.exceptions import InputValidationError
 from aiida.common.links import LinkType
 from aiida.manage import get_manager
 from aiida.orm.node import Node
-from aiida.orm.utils import convert
+from aiida.common.exceptions import ConfigurationError
 
 from . import authinfos
 from . import comments
 from . import computers
-from . import entities
 from . import groups
 from . import logs
 from . import users
+from . import entities
+from . import convert
 
 __all__ = ('QueryBuilder',)
 
@@ -350,11 +351,10 @@ class QueryBuilder(object):
         When somebody hits: print(QueryBuilder) or print(str(QueryBuilder))
         I want to print the SQL-query. Because it looks cool...
         """
+        from aiida.manage import get_config
 
-        from aiida.common.setup import get_profile_config
-        from aiida.backends import settings
-
-        engine = get_profile_config(settings.AIIDADB_PROFILE)["AIIDADB_ENGINE"]
+        config = get_config()
+        engine = config.current_profile.dictionary['AIIDADB_ENGINE']
 
         if engine.startswith("mysql"):
             from sqlalchemy.dialects import mysql as mydialect
@@ -526,7 +526,7 @@ class QueryBuilder(object):
         # First of all, let's make sure the specified
         # the class or the type (not both)
         if cls and type:
-            raise InputValidationError("You cannot specify both a " "class ({}) " "and a type ({})".format(cls, type))
+            raise InputValidationError("You cannot specify both a class ({}) and a type ({})".format(cls, type))
 
         if not (cls or type):
             raise InputValidationError("You need to specify at least a class or a type")
@@ -1893,6 +1893,10 @@ class QueryBuilder(object):
                 self._hash = queryhelp_hash
         return query
 
+    @staticmethod
+    def get_aiida_entity_res(backend_entity):
+        return convert.get_orm_entity(backend_entity)
+
     def inject_query(self, query):
         """
         Manipulate the query an inject it back.
@@ -1998,8 +2002,8 @@ class QueryBuilder(object):
             # Convert to AiiDA frontend entities (if they are such)
             for i, item_entry in enumerate(item):
                 try:
-                    item[i] = convert.aiida_from_backend_entity(item_entry)
-                except ValueError:
+                    item[i] = convert.get_orm_entity(item_entry)
+                except TypeError:
                     # Keep the current value
                     pass
 
@@ -2025,8 +2029,8 @@ class QueryBuilder(object):
         for item in self._impl.iterdict(query, batch_size, self.tag_to_projected_entity_dict):
             for key, value in item.items():
                 try:
-                    item[key] = convert.aiida_from_backend_entity(value)
-                except ValueError:
+                    item[key] = convert.get_orm_entity(value)
+                except TypeError:
                     # Keep the current value
                     pass
 

@@ -10,28 +10,17 @@
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
-import six
+
+from contextlib import contextmanager
+
 from six.moves import zip
 from aiida.backends.general.abstractqueries import AbstractQueryManager
 
 
 class DjangoQueryManager(AbstractQueryManager):
+
     def __init__(self, backend):
         super(DjangoQueryManager, self).__init__(backend)
-
-    def raw(self, query):
-        """Execute a raw SQL statement and return the result.
-
-        :param query: a string containing a raw SQL statement
-        :return: the result of the query
-        """
-        from django.db import connection
-
-        with connection.cursor() as cursor:
-            cursor.execute(query)
-            results = cursor.fetchall()
-
-        return results
 
     def get_creation_statistics(
             self,
@@ -101,7 +90,7 @@ class DjangoQueryManager(AbstractQueryManager):
         :param q_object: a query object
         :param args: a namespace with parsed command line parameters.
         """
-        from aiida.utils import timezone
+        from aiida.common import timezone
         from django.db.models import Q
         import datetime
         if args.past_days is not None:
@@ -146,8 +135,8 @@ class DjangoQueryManager(AbstractQueryManager):
         self.query_past_days(q_object, args)
         self.query_group(q_object, args)
 
-        bands_list = models.DbNode.objects.filter(type__startswith=BandsData.plugin_type_string)\
-                .filter(q_object).distinct().order_by('ctime')
+        bands_list = models.DbNode.objects.filter(type__startswith=BandsData.plugin_type_string) \
+            .filter(q_object).distinct().order_by('ctime')
         bands_list_data = bands_list.values_list('pk', 'label', 'ctime')
 
         # split data in chunks

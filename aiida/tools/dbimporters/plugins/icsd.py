@@ -427,7 +427,7 @@ class IcsdDbImporter(DbImporter):
                 newv = self.keywords[k][1](k, v)
                 # Because different keys correspond to the same search field.
                 if realname in ["authors", "volume", "mineral"]:
-                    self.actual_args[realname] = self.actual_args[realname] + newv + " "
+                    self.actual_args[realname] = self.actual_args[realname] + newv + ' '
                 else:
                     self.actual_args[realname] = newv
             except KeyError as exc:

@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Tests for the `LegacyWorkflowParamType`."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -15,12 +16,13 @@ from aiida.cmdline.params.types import LegacyWorkflowParamType
 
 
 class TestLegacyWorkflowParamType(AiidaTestCase):
+    """Tests for the `LegacyWorkflowParamType`."""
 
     @classmethod
-    def setUpClass(cls):
-        from aiida.workflows.test import WFTestEmpty, WFTestSimpleWithSubWF
+    def setUpClass(cls, *args, **kwargs):
+        from aiida.workflows.test import WFTestEmpty
 
-        super(TestLegacyWorkflowParamType, cls).setUpClass()
+        super(TestLegacyWorkflowParamType, cls).setUpClass(*args, **kwargs)
 
         cls.workflow = WFTestEmpty()
         cls.workflow.label = 'Unique Label'

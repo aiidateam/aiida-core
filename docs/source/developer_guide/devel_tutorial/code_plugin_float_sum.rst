@@ -58,22 +58,56 @@ implementation can look like this::
            """
            self._set_attr('number', float(value))
 
-           
+The definition of this new data type should reside below a ``data`` sub package in your
+plugin package, with directory structure like::
+
+
+   aiida-yourplugin/
+      aiida_yourplugin/
+         __init__.py
+         calcs/
+            __init__.py
+            sum.py
+         parsers/
+            __init__.py
+            sum_parser.py
+         data/
+            __init__.py
+            float.py  <-- Put the code here
+      setup.py
+      setup.json
+
+
+And following lines should be there in the ``setup.json`` file::
+
+   {
+      ...
+      "entry_points": {
+         "aiida.data": {
+            "yourplugin.float = aiida_yourplugin.data.float:FloatData"
+         },
+         ...
+      }
+      ...
+   }
+
+.. seealso::
+   Please see the documentation about the :ref:`entry points<plugins.entry_points>` to learn more about the plugin system.
 
 
 Exercise: Modifying the calculation plugin
 ------------------------------------------
-Your exercise consists in creating a new code plugin (let's call it for instance
-``floatsum``) that will also perform the sum, but accept as input two ``FloatData``
+Your exercise consists in creating a new calculation plugin (let's call it for instance
+``SumFloatCalculation``) that will also perform the sum, but accept as input two ``FloatData``
 node and return also a ``FloatData`` node containing the sum.
 
 Below, you will find some hints on the parts you need to modify with respect
 to the :doc:`previous tutorial<code_plugin_int_sum>` using instead 
 ``ParameterData`` both as inputs and outputs.
 
-.. note:: remember to create copies of your files with a new name 
-   ``floatsum.py`` instead of ``sum.py``, and to change the class
-   name accordingly.
+.. note:: Remember to add an entry point for the ``SumFloatCalculation`` in the ``setup.json`` file and re-install the package and refresh entry points.
+   It is up to you to either put the new class in the same ``sum.py`` or create a new ``floatsum.py``.
+   The same also applies to the new parser class.
 
 Changes to the parser
 /////////////////////
@@ -92,7 +126,7 @@ To be able to run your new ``FloatsumParser``, you will need the corresponding
 input plugin (``FloatsumCalculation``). The first modification is then to link
 to the correct parser class::
 
-    self._default_parser = 'floatsum'
+    self._default_parser = 'sum.floatsum'  # Name of the entry point
 
 For consistency, we also want that the input plugin accepts two
 ``FloatData`` instead of a single ``ParameterData``.
@@ -133,7 +167,7 @@ Code
 ////
 The python code that actually performs the calculation does not need to be
 modified. We can reuse the same file, but we suggest to setup a new code
-in AiiDA, with a different name, using as default plugin the ``floatsum``
+in AiiDA, with a different name, using as default plugin the ``sum.floatsum``
 plugin.
 
 Submission script

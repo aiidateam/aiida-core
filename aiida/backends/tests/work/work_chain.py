@@ -26,7 +26,7 @@ from aiida.orm.data.bool import Bool
 from aiida.orm.data.float import Float
 from aiida.orm.data.int import Int
 from aiida.orm.data.str import Str
-from aiida.utils.capturing import Capturing
+from aiida.common.utils import Capturing
 from aiida.workflows.wf_demo import WorkflowDemo
 from aiida import work
 from aiida.work import ExitCode, Process
@@ -576,6 +576,8 @@ class TestWorkchain(AiidaTestCase):
 
             # Now bundle the thing
             bundle = plumpy.Bundle(workchain)
+            # Need to close the process before recreating a new instance
+            workchain.close()
 
             # Load from saved state
             workchain2 = bundle.unbundle()
@@ -854,7 +856,7 @@ class TestWorkChainAbort(AiidaTestCase):
             self.assertTrue(process.paused)
             process.kill()
 
-            with self.assertRaises(plumpy.KilledError):
+            with self.assertRaises(plumpy.ClosedError):
                 work.run(process)
 
         runner.schedule(process)
@@ -1262,6 +1264,33 @@ class TestWorkChainExpose(AiidaTestCase):
                 'sub.sub.sub_2.b': Float(1.2), 'sub.sub.sub_2.sub_3.c': Bool(False)
             }
         )
+
+    def test_issue_1741_expose_inputs(self):
+        """Test that expose inputs works correctly when copying a stored default value"""
+
+        stored_a = Int(5).store()
+
+        class Parent(work.WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(Parent, cls).define(spec)
+                spec.input('a', default=stored_a)
+                spec.outline(cls.step1)
+
+            def step1(self):
+                pass
+
+        class Child(work.WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super(Child, cls).define(spec)
+                spec.expose_inputs(Parent)
+                spec.outline(cls.step1)
+
+            def step1(self):
+                pass
+
+        work.run(Child)
 
 
 class TestWorkChainReturnDict(AiidaTestCase):

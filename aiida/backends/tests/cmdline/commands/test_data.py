@@ -94,7 +94,7 @@ class TestVerdiDataExportable:
         # Check that the simple command works as expected
         options = [str(ids[self.NODE_ID_STR])]
         res = self.cli_runner.invoke(export_cmd, options, catch_exceptions=False)
-        self.assertEquals(res.exit_code, 0, "The command did not finish " "correctly")
+        self.assertEqual(res.exit_code, 0, "The command did not finish correctly")
 
         dump_flags = ['-F', '--format']
         for flag in dump_flags:
@@ -103,7 +103,7 @@ class TestVerdiDataExportable:
                 options = [flag, format, str(ids[self.NODE_ID_STR])]
                 res = self.cli_runner.invoke(export_cmd, options,
                                              catch_exceptions=False)
-                self.assertEquals(res.exit_code, 0,
+                self.assertEqual(res.exit_code, 0,
                                   "The command did not finish "
                                   "correctly. Output:\n{}".format(res.output))
 
@@ -117,21 +117,21 @@ class TestVerdiDataExportable:
                 options = [flag, filepath, str(ids[self.NODE_ID_STR])]
                 res = self.cli_runner.invoke(export_cmd, options,
                                              catch_exceptions=False)
-                self.assertEquals(res.exit_code, 0,
+                self.assertEqual(res.exit_code, 0,
                                   "The command should finish correctly."
                                   "Output:\n{}".format(res.output))
 
                 # Try to export it again. It should fail because the
                 # file exists
                 res = self.cli_runner.invoke(export_cmd, options, catch_exceptions=False)
-                self.assertNotEquals(res.exit_code, 0, "The command should fail because the " "file already exists")
+                self.assertNotEquals(res.exit_code, 0, "The command should fail because the file already exists")
 
                 # Now we force the export of the file and it should overwrite
                 # existing files
                 options = [flag, filepath, '-f', str(ids[self.NODE_ID_STR])]
                 res = self.cli_runner.invoke(export_cmd, options,
                                              catch_exceptions=False)
-                self.assertEquals(res.exit_code, 0,
+                self.assertEqual(res.exit_code, 0,
                                   "The command should finish correctly."
                                   "Output: {}".format(res.output))
             finally:
@@ -288,7 +288,7 @@ class TestVerdiDataArray(AiidaTestCase):
         # with captured_output() as (out, err):
         options = [str(self.a.id)]
         res = self.cli_runner.invoke(cmd_array.array_show, options, catch_exceptions=False)
-        self.assertEquals(res.exit_code, 0, "The command did not finish " "correctly")
+        self.assertEqual(res.exit_code, 0, "The command did not finish correctly")
 
 
 class TestVerdiDataBands(AiidaTestCase, TestVerdiDataListable):
@@ -343,11 +343,11 @@ class TestVerdiDataBands(AiidaTestCase, TestVerdiDataListable):
         b = connect_structure_bands(s)
 
         # Create 2 groups and add the data to one of them
-        g_ne = Group(name='non_empty_group')
+        g_ne = Group(label='non_empty_group')
         g_ne.store()
         g_ne.add_nodes(b)
 
-        g_e = Group(name='empty_group')
+        g_e = Group(label='empty_group')
         g_e.store()
 
         return {
@@ -384,7 +384,7 @@ class TestVerdiDataBands(AiidaTestCase, TestVerdiDataListable):
     def test_bandsexport(self):
         options = [str(self.ids[TestVerdiDataListable.NODE_ID_STR])]
         res = self.cli_runner.invoke(cmd_bands.bands_export, options, catch_exceptions=False)
-        self.assertEquals(res.exit_code, 0, 'The command did not finish correctly')
+        self.assertEqual(res.exit_code, 0, 'The command did not finish correctly')
         self.assertIn(b"[1.0, 3.0]", res.output_bytes, 'The string [1.0, 3.0] was not found in the bands' 'export')
 
 
@@ -413,7 +413,7 @@ class TestVerdiDataParameter(AiidaTestCase):
         for format in supported_formats:
             options = [str(self.p.id)]
             res = self.cli_runner.invoke(cmd_parameter.parameter_show, options, catch_exceptions=False)
-            self.assertEquals(res.exit_code, 0, "The command verdi data parameter show did not" " finish correctly")
+            self.assertEqual(res.exit_code, 0, "The command verdi data parameter show did not" " finish correctly")
         self.assertIn(b'"a": 1', res.output_bytes, 'The string "a": 1 was not found in the output'
                                                    ' of verdi data parameter show')
 
@@ -448,7 +448,7 @@ class TestVerdiDataRemote(AiidaTestCase):
     def test_remoteshow(self):
         options = [str(self.r.id)]
         res = self.cli_runner.invoke(cmd_remote.remote_show, options, catch_exceptions=False)
-        self.assertEquals(res.exit_code, 0, "The command verdi data remote show did not" " finish correctly")
+        self.assertEqual(res.exit_code, 0, "The command verdi data remote show did not" " finish correctly")
         self.assertIn(b'Remote computer name:', res.output_bytes,
                       'The string "Remote computer name:" was not found in the'
                       ' output of verdi data remote show')
@@ -463,7 +463,7 @@ class TestVerdiDataRemote(AiidaTestCase):
     def test_remotels(self):
         options = ['--long', str(self.r.id)]
         res = self.cli_runner.invoke(cmd_remote.remote_ls, options, catch_exceptions=False)
-        self.assertEquals(res.exit_code, 0, "The command verdi data remote ls did not" " finish correctly")
+        self.assertEqual(res.exit_code, 0, "The command verdi data remote ls did not" " finish correctly")
         self.assertIn(b'file.txt', res.output_bytes, 'The file "file.txt" was not found in the output'
                                                      ' of verdi data remote ls')
 
@@ -474,7 +474,7 @@ class TestVerdiDataRemote(AiidaTestCase):
     def test_remotecat(self):
         options = [str(self.r.id), 'file.txt']
         res = self.cli_runner.invoke(cmd_remote.remote_cat, options, catch_exceptions=False)
-        self.assertEquals(res.exit_code, 0, "The command verdi data parameter cat did not" " finish correctly")
+        self.assertEqual(res.exit_code, 0, "The command verdi data parameter cat did not" " finish correctly")
         self.assertIn(b'test string', res.output_bytes, 'The string "test string" was not found in the output'
                                                         ' of verdi data remote cat file.txt')
 
@@ -531,11 +531,11 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable, TestVerdiDat
         n.store()
 
         # Create 2 groups and add the data to one of them
-        g_ne = Group(name='non_empty_group')
+        g_ne = Group(label='non_empty_group')
         g_ne.store()
         g_ne.add_nodes(n)
 
-        g_e = Group(name='empty_group')
+        g_e = Group(label='empty_group')
         g_e.store()
 
         return {
@@ -589,7 +589,7 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable, TestVerdiDat
         for flag in dump_flags:
             options = [flag, 'tcod', '-i', '0', str(self.ids[self.NODE_ID_STR])]
             res = self.cli_runner.invoke(trajectory_export, options, catch_exceptions=False)
-            self.assertEquals(res.exit_code, 0, 'The command did not finish correctly')
+            self.assertEqual(res.exit_code, 0, 'The command did not finish correctly')
 
 
 class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExportable):
@@ -628,11 +628,11 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable, TestVerdiData
         struc.store()
 
         # Create 2 groups and add the data to one of them
-        g_ne = Group(name='non_empty_group')
+        g_ne = Group(label='non_empty_group')
         g_ne.store()
         g_ne.add_nodes(struc)
 
-        g_e = Group(name='empty_group')
+        g_e = Group(label='empty_group')
         g_e.store()
 
         return {
@@ -745,11 +745,11 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExport
             a = CifData(file=filename, source={'version': '1234', 'db_name': 'COD', 'id': '0000001'})
             a.store()
 
-            g_ne = Group(name='non_empty_group')
+            g_ne = Group(label='non_empty_group')
             g_ne.store()
             g_ne.add_nodes(a)
 
-            g_e = Group(name='empty_group')
+            g_e = Group(label='empty_group')
             g_e.store()
 
         return {

@@ -15,7 +15,7 @@ from sqlalchemy.schema import Column
 from sqlalchemy.types import Integer, DateTime, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 
-from aiida.utils import timezone
+from aiida.common import timezone
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.common.exceptions import ValidationError
 

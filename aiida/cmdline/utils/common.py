@@ -11,21 +11,22 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import os
 import sys
+
 from tabulate import tabulate
 
 
 def get_env_with_venv_bin():
-    """
-    Create a clone of the current running environment with the AIIDA_PATH variable set to the
-    value configured in the AIIDA_CONFIG_FOLDER variable
-    """
-    from aiida.common import setup
+    """Create a clone of the current running environment with the AIIDA_PATH variable set directory of the config."""
+    from aiida.manage import get_config
+
+    config = get_config()
 
     currenv = os.environ.copy()
     currenv['PATH'] = os.path.dirname(sys.executable) + ':' + currenv['PATH']
-    currenv['AIIDA_PATH'] = os.path.abspath(os.path.expanduser(setup.AIIDA_CONFIG_FOLDER))
+    currenv['AIIDA_PATH'] = config.dirpath
     currenv['PYTHONUNBUFFERED'] = 'True'
 
     return currenv
@@ -38,7 +39,7 @@ def format_local_time(timestamp, format_str='%Y-%m-%d %H:%M:%S'):
     :param timestamp: a datetime object or a float representing a UNIX timestamp
     :param format_str: optional string format to pass to strftime
     """
-    from aiida.utils import timezone
+    from aiida.common import timezone
 
     if isinstance(timestamp, float):
         return timezone.datetime.fromtimestamp(timestamp).strftime(format_str)
@@ -56,7 +57,7 @@ def print_last_process_state_change(process_type=None):
     """
     from aiida.cmdline.utils.echo import echo_info, echo_warning
     from aiida.daemon.client import get_daemon_client
-    from aiida.utils import timezone
+    from aiida.common import timezone
     from aiida.common.utils import str_timedelta
     from aiida.work.utils import get_process_state_change_timestamp
 

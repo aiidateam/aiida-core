@@ -22,7 +22,6 @@ from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv, deprecated_command
 from aiida.cmdline.utils.multi_line_input import ensure_scripts
 from aiida.common.exceptions import InputValidationError
-from aiida.control.code import CodeBuilder
 
 
 @verdi.group('code')
@@ -59,6 +58,7 @@ def get_on_computer(ctx):
 # pylint: disable=unused-argument
 def set_code_builder(ctx, param, value):
     """Set the code spec for defaults of following options."""
+    from aiida.orm.utils.builders.code import CodeBuilder
     ctx.code_builder = CodeBuilder.from_code(value)
     return value
 
@@ -79,6 +79,7 @@ def set_code_builder(ctx, param, value):
 def setup_code(non_interactive, **kwargs):
     """Setup a new Code."""
     from aiida.common.exceptions import ValidationError
+    from aiida.orm.utils.builders.code import CodeBuilder
 
     if not non_interactive:
         try:
@@ -125,6 +126,7 @@ def setup_code(non_interactive, **kwargs):
 def code_duplicate(ctx, code, non_interactive, **kwargs):
     """Create duplicate of existing Code."""
     from aiida.common.exceptions import ValidationError
+    from aiida.orm.utils.builders.code import CodeBuilder
 
     if not non_interactive:
         try:

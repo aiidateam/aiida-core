@@ -156,12 +156,12 @@ class Code(Data):
             qb.append(Computer, filters={'name': {'==': machinename}}, with_node='code')
 
         if qb.count() == 0:
-            raise NotExistent("'{}' is not a valid code " "name.".format(label))
+            raise NotExistent("'{}' is not a valid code name.".format(label))
         elif qb.count() > 1:
             codes = [_ for [_] in qb.all()]
-            retstr = ("There are multiple codes with label '{}', " "having IDs: ".format(label))
+            retstr = ("There are multiple codes with label '{}', having IDs: ".format(label))
             retstr += ", ".join(sorted([str(c.pk) for c in codes])) + ".\n"
-            retstr += ("Relabel them (using their ID), or refer to them " "with their ID.")
+            retstr += ("Relabel them (using their ID), or refer to them with their ID.")
             raise MultipleObjectsError(retstr)
         else:
             return qb.first()[0]
@@ -191,7 +191,7 @@ class Code(Data):
             except NotExistent:
                 raise ValueError("{} is not valid code pk".format(pk))
             except MultipleObjectsError:
-                raise MultipleObjectsError("More than one code in the DB " "with pk='{}'!".format(pk))
+                raise MultipleObjectsError("More than one code in the DB with pk='{}'!".format(pk))
 
         # check if label (and machinename) is provided
         elif (label != None):
@@ -259,7 +259,7 @@ class Code(Data):
         super(Code, self)._validate()
 
         if self.is_local() is None:
-            raise ValidationError("You did not set whether the code is local " "or remote")
+            raise ValidationError("You did not set whether the code is local or remote")
 
         if self.is_local():
             if not self.get_local_executable():
@@ -346,7 +346,7 @@ class Code(Data):
         """
         from aiida import orm
         from aiida.orm.implementation.computers import BackendComputer
-        from aiida.common.utils import type_check
+        from aiida.common.lang import type_check
 
         if (not isinstance(remote_computer_exec, (list, tuple)) or len(remote_computer_exec) != 2):
             raise ValueError("remote_computer_exec must be a list or tuple "
@@ -423,7 +423,7 @@ class Code(Data):
         TODO: add filters to mask the remote machines on which a local code can run.
         """
         from aiida import orm
-        from aiida.common.utils import type_check
+        from aiida.common.lang import type_check
 
         if self.is_local():
             return True
@@ -464,7 +464,7 @@ class Code(Data):
         from aiida.orm.utils import CalculationFactory
         plugin_name = self.get_input_plugin_name()
         if plugin_name is None:
-            raise ValueError("You did not specify an input plugin " "for this code")
+            raise ValueError("You did not specify an input plugin for this code")
 
         try:
             C = CalculationFactory(plugin_name)

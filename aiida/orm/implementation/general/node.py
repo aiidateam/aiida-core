@@ -15,7 +15,7 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 import os
 import logging
 import importlib
-import collections
+from collections import Callable, Iterable, Mapping
 import numbers
 import math
 import warnings
@@ -23,16 +23,14 @@ import warnings
 import six
 
 from aiida.backends.utils import validate_attribute_key
-from aiida.common.caching import get_use_cache
-from aiida.common.exceptions import (
-    InternalError, InvalidOperation, ModificationNotAllowed, 
-    StoringNotAllowed, UniquenessError, ValidationError)
+from aiida.manage.caching import get_use_cache
+from aiida.common.exceptions import InternalError, ModificationNotAllowed, UniquenessError, ValidationError, \
+    InvalidOperation, StoringNotAllowed
 from aiida.common.folders import SandboxFolder
 from aiida.common.hashing import _HASH_EXTRA_KEY
-from aiida.common.lang import override
 from aiida.common.links import LinkType
-from aiida.common.utils import abstractclassmethod, sql_string_match
-from aiida.common.utils import combomethod, classproperty
+from aiida.common.lang import override, abstractclassmethod, combomethod, classproperty
+from aiida.common.escaping import sql_string_match
 from aiida.manage import get_manager
 from aiida.plugins.loader import get_query_type_from_type_string, get_type_string_from_class
 from aiida.orm.utils import links
@@ -44,8 +42,9 @@ def clean_value(value):
     """
     Get value from input and (recursively) replace, if needed, all occurrences
     of BaseType AiiDA data nodes with their value, and List with a standard list.
-
-    It also makes a deep copy of everything.
+    It also makes a deep copy of everything 
+    The purpose of this function is to convert data to a type which can be serialized and deserialized 
+    for storage in the DB without its value changing.      
 
     Note however that there is no logic to avoid infinite loops when the
     user passes some perverse recursive dictionary or list.
@@ -68,10 +67,10 @@ def clean_value(value):
     if isinstance(value, BaseType):
         return clean_builtin(value.value)
 
-    if isinstance(value, dict):
-        # Check dictionary before iterables
+    if isinstance(value, Mapping):
+       # Check dictionary before iterables
         return {k: clean_value(v) for k, v in value.items()}
-    if (isinstance(value, collections.Iterable) and not isinstance(value, six.string_types)):
+    if (isinstance(value, Iterable) and not isinstance(value, six.string_types)):
         # list, tuple, ... but not a string
         # This should also properly take care of dealing with the
         # basedatatypes.List object
@@ -477,7 +476,7 @@ class AbstractNode(object):
             except AttributeError:
                 raise ValueError("Unable to set '{0}', no set_{0} method "
                                  "found".format(k))
-            if not isinstance(method, collections.Callable):
+            if not isinstance(method, Callable):
                 raise ValueError("Unable to set '{0}', set_{0} is not "
                                  "callable!".format(k))
             method(v)
@@ -588,6 +587,7 @@ class AbstractNode(object):
         Get the user.
 
         :return: a User model object
+        :rtype: :class:`aiida.orm.User`
         """
         pass
 
@@ -624,7 +624,6 @@ class AbstractNode(object):
 
         from aiida.orm.utils.links import validate_link
         validate_link(source, self, link_type, link_label)
-
 
     def validate_outgoing(self, target, link_type, link_label):
         """
@@ -766,10 +765,10 @@ class AbstractNode(object):
 
         if link_direction == 'outgoing':
             builder.append(node_class, with_incoming='main', project=['*'],
-                edge_project=['type', 'label'], edge_filters=edge_filters)
+                           edge_project=['type', 'label'], edge_filters=edge_filters)
         else:
             builder.append(node_class, with_outgoing='main', project=['*'],
-                edge_project=['type', 'label'], edge_filters=edge_filters)
+                           edge_project=['type', 'label'], edge_filters=edge_filters)
 
         return [links.LinkTriple(entry[0], LinkType(entry[1]), entry[2]) for entry in builder.all()]
 
@@ -884,7 +883,8 @@ class AbstractNode(object):
                 returns all inputs of all link types.
         :return: a dictionary {label:object}
         """
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        from aiida.common.warnings import \
+            AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('get_inputs_dict method is deprecated, use get_incoming instead', DeprecationWarning)
 
         return dict(
@@ -902,7 +902,8 @@ class AbstractNode(object):
 
         :return: a dictionary {linkname:object}
         """
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        from aiida.common.warnings import \
+            AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('get_outputs_dict method is deprecated, use get_outgoing instead', DeprecationWarning)
 
         if link_type is not None and not isinstance(link_type, LinkType):
@@ -947,7 +948,8 @@ class AbstractNode(object):
         :param link_type: Only get inputs of this link type, if None then
             returns all inputs of all link types.
         """
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        from aiida.common.warnings import \
+            AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('get_inputs method is deprecated, use get_incoming instead', DeprecationWarning)
 
         if link_type is not None and not isinstance(link_type, LinkType):
@@ -1001,7 +1003,8 @@ class AbstractNode(object):
             and Node a Node instance or subclass
         :param link_type: Only return outputs connected by links of this type.
         """
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        from aiida.common.warnings import \
+            AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('get_outputs method is deprecated, use get_outgoing instead', DeprecationWarning)
 
         if link_type is not None and not isinstance(link_type, LinkType):
@@ -1486,14 +1489,13 @@ class AbstractNode(object):
         Add a new comment.
 
         :param content: string with comment
+        :param user: the user to associate with the comment, will use default if not supplied
         :return: the newly created comment
         """
         from aiida import orm
         from aiida.orm.comments import Comment
 
-        if user is None:
-            user = orm.User.objects.get_default()
-
+        user = user or orm.User.objects.get_default()
         return Comment(node=self, user=user, content=content).store()
 
     def get_comment(self, identifier):
@@ -1515,7 +1517,8 @@ class AbstractNode(object):
         :return: the list of comments, sorted by pk
         """
         from aiida.orm.comments import Comment
-        return Comment.objects.find(filters={'dbnode_id': self.pk})
+        return Comment.objects.find(filters={'dbnode_id': self.pk},
+                                    order_by=[{'id': 'asc'}])
 
     def update_comment(self, identifier, content):
         """
@@ -1848,10 +1851,10 @@ class AbstractNode(object):
                         "current_autogroup is not an AiiDA Autogroup")
 
                 if current_autogroup.is_to_be_grouped(self):
-                    group_name = current_autogroup.get_group_name()
-                    if group_name is not None:
+                    group_label = current_autogroup.get_group_name()
+                    if group_label is not None:
                         g = Group.objects.get_or_create(
-                            name=group_name, type_string=VERDIAUTOGROUP_TYPE)[0]
+                            label=group_label, type_string=VERDIAUTOGROUP_TYPE)[0]
                         g.add_nodes(self)
 
         # This is useful because in this way I can do
@@ -1945,7 +1948,7 @@ class AbstractNode(object):
                 if (
                     key not in self._hash_ignored_attributes and
                     key not in getattr(self, '_updatable_attributes', tuple())
-                )
+            )
             },
             self.folder,
             computer.uuid if computer is not None else None
@@ -2086,7 +2089,7 @@ class AbstractNode(object):
         :param filters: filters to apply
         :param project: projections
 
-        This class is a comboclass (see :func:`~aiida.common.utils.combomethod`)
+        This class is a comboclass (see :func:`~aiida.common.lang.combomethod`)
         therefore the method can be called as class or instance method.
         If called as an instance method, adds a filter on the id.
         """

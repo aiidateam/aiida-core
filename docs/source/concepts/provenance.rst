@@ -4,11 +4,11 @@
 Provenance
 **********
 
-The AiiDA provenance graph
-##########################
+The graph concept
+#################
 
-The AiiDA graph: nodes and links
-================================
+Nodes and links
+===============
 
 The two most important concepts in AiiDA are **data** and **processes**.
 The former are pieces of data, such as a simple integer or float, all the way to more complex data concepts such as a dictionary of parameters, a folder of files or a crystal structure.
@@ -49,15 +49,15 @@ The logical provenance gives additional information on why a specific calculatio
 Imagine the case in which you start from 100 structures, you have a filter operation that picks one, and then you run a simulation on it.
 The data provenance only shows the simulation you run on the structure that was picked, while the logical provenance can also show that the specific structure was not picked at random but via a specific workflow logic.
 
-Other AiiDA entities
-====================
+Other entities
+==============
 
 Beside nodes (data and processes), AiiDA defines a few more entities, like **computers** (representing a computer, supercomputer or computer cluster where calculations are run or data is stored), **groups** (that group together nodes for organizational purposes) and **users** (to keep track of the user who first generated a given node, computer or group).
 
 In the following section we describe in more detail how the general provenance concepts above are actually implemented in AiiDA, with specific reference to the python classes that implement them and the class-inheritance relationships.
 
-AiiDA provenance implementation
-###############################
+The implementation
+##################
 
 Graph nodes
 ===========
@@ -102,7 +102,7 @@ Process nodes are connected to their input and output data nodes through directe
 Calculation processes can *create* data, while workflow processes can *call* calculations and *return* their outputs.
 Consider the following graph example, where we represent **data nodes** with circles, **calculation nodes** with squares and **workflow nodes** with diamond shapes.
 
-.. figure:: include/images/graph_link_calc.png
+.. figure:: include/images/schematic_provenance_01_simple_workflow.png
 
     Figure 2: Simple provenance graph for a workflow (W\ :sub:`1`) *calling* a calculation (C\ :sub:`1`). The workflow takes a single **data node** (D\ :sub:`1`\) as input, and passes it to the calculation when *calling* it. The calculation *creates* a new **data node** (D\ :sub:`2`\) that is also *returned* by the **workflow node**.
 
@@ -110,7 +110,7 @@ Notice that the different style and names for the two links coming into D\ :sub:
 This subtle distinction has big consequences.
 By allowing workflow processes to *return* data, it can also *return* data that was among its inputs.
 
-.. figure:: include/images/graph_link_work.png
+.. figure:: include/images/schematic_provenance_02_cycle.png
 
     Figure 3: Provenance graph example of a **workflow node** that receives three **data nodes** as input and *returns* one of those inputs. The input link from D\ :sub:`3` to W\ :sub:`1` and the return link from W\ :sub:`1` to D\ :sub:`3` introduce a cycle in the graph.
 
@@ -130,14 +130,14 @@ With these basic definitions of AiiDA’s provenance graph in place, let’s tak
 Consider the sequence of computations that adds two number `a` and `b` and multiplies the result with a third number `c`.
 This sequence as represented in the provenance graph would look something like is shown in Figure 4.
 
-.. figure:: include/images/graph_example_calc.png
+.. figure:: include/images/schematic_provenance_03_data_add_multiply.png
 
     Figure 4: The DAG for computing `(a+b)*c`. We have two simple calculations: C\ :sub:`1` represents the sum and C\ :sub:`2` the multiplication. The two data nodes D\ :sub:`1` and D\ :sub:`2` are the inputs of C\ :sub:`1`, which *creates* the data node D\ :sub:`4`\. Together with D\ :sub:`3`, D\ :sub:`4` then forms the input of C\ :sub:`2` which multiplies their values in order to *creates* the product, represented by D\ :sub:`5`.
 
 In this simple example, there was no external process that controlled the exact sequence of these operations.
 When introducing a workflow, that calls the two calculations in succession, we get a graph as is shown in Figure 5.
 
-.. figure:: include/images/graph_example_workflow.png
+.. figure:: include/images/schematic_provenance_04_call_workflow.png
 
     Figure 5: The same calculation `(a+b)*c` is performed using a workflow. Here the data nodes D\ :sub:`1`, D\ :sub:`2` and D\ :sub:`3` are the inputs of the workflow W\ :sub:`1`, which *calls* calculation C\ :sub:`1` with inputs D\ :sub:`1` and D\ :sub:`2`, and then *calls* calculation C\ :sub:`2`, using as inputs D\ :sub:`3` and D\ :sub:`4` (which was *created* by C\ :sub:`2`\). Calculation C\ :sub:`2` *creates* data node D\ :sub:`5`, which is finally *returned* by workflow W\ :sub:`1`\.
 

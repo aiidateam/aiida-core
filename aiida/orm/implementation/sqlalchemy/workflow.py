@@ -13,7 +13,6 @@ from __future__ import print_function
 from __future__ import absolute_import
 import importlib
 import inspect
-import logging
 
 import six
 
@@ -26,10 +25,11 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, ValidationError,
                                      AiidaException)
 from aiida.common.folders import RepositoryFolder, SandboxFolder
-from aiida.common.utils import md5_file, str_timedelta
+from aiida.common.files import md5_file
+from aiida.common.utils import str_timedelta
 from aiida.orm.implementation.general.workflow import AbstractWorkflow
 from aiida.orm.implementation.sqlalchemy.utils import django_filter
-from aiida.utils import timezone
+from aiida.common import timezone
 
 logger = AIIDA_LOGGER.getChild('Workflow')
 
@@ -721,7 +721,6 @@ class Workflow(AbstractWorkflow):
 
         # logger.info("Adding step {0} after {1} in {2}".format(next_method_name, caller_method, self.uuid))
         method_step.set_nextcall(next_method_name)
-        #
         self.dbworkflowinstance.set_state(wf_states.RUNNING)
         method_step.set_state(wf_states.RUNNING)
 
@@ -745,14 +744,15 @@ def get_all_running_steps():
     return DbWorkflowStep.query.filter_by(state=wf_states.RUNNING).all()
 
 
-def get_workflow_info(w, tab_size=2, short=False, pre_string="",
+def get_workflow_info(workflow, tab_size=2, short=False, pre_string="",
                       depth=16):
     """
     Return a string with all the information regarding the given workflow and
     all its calculations and subworkflows.
     This is a recursive function (to print all subworkflows info as well).
 
-    :param w: a DbWorkflow instance
+    :param workflow: a workflow instance
+    :type workflow: :class:`aiida.orm.Workflow`
     :param tab_size: number of spaces to use for the indentation
     :param short: if True, provide a shorter output (only total number of
         calculations, rather than the state of each calculation)
@@ -767,7 +767,7 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
     from aiida.orm import load_node
     from aiida.common.datastructures import calc_states
     # Note: pre_string becomes larger at each call of get_workflow_info on the
-    #       subworkflows: pre_string -> pre_string + "|" + " "*(tab_size-1))
+    #       subworkflows: pre_string -> pre_string + "|" + ' ' *(tab_size-1))
 
     if tab_size < 2:
         raise ValueError("tab_size must be > 2")
@@ -777,21 +777,24 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
 
     lines = []
 
-    if w.label:
-        wf_labelstring = "'{}', ".format(w.label)
+    if workflow.label:
+        wf_labelstring = "'{}', ".format(workflow.label)
     else:
         wf_labelstring = ""
 
     lines.append(pre_string)  # put an empty line before any workflow
     lines.append(pre_string + "+ Workflow {} ({}pk: {}) is {} [{}]".format(
-        w.module_class, wf_labelstring, w.id, w.state, str_timedelta(
-            now - w.ctime, negative_to_zero=True)))
+        workflow.__class__.__name__,
+        wf_labelstring,
+        workflow.pk,
+        workflow.get_state(),
+        str_timedelta(now - workflow.ctime, negative_to_zero=True)))
 
     # print information on the steps only if depth is higher than 0
     if depth > 0:
 
         # order all steps by time and  get all the needed values
-        step_list = sorted([[_.time, _] for _ in w.steps])
+        step_list = sorted([[_.time, _] for _ in workflow.get_steps()])
         step_list = [_[1] for _ in step_list]
 
         steps_and_subwf_pks = []
@@ -828,21 +831,11 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
             if calc_pk:
                 subwfs_of_steps[step_pk]['calc_pks'].append(calc_pk)
 
-        # TODO: replace the database access using SQLAlchemy
-
-        # get all subworkflows for all steps
-        # wflows = DbWorkflow.query.filter_by(DbWorkflow.parent_workflow_step.in_(steps_pk))
-        # although the line above is equivalent to the following, has a bug of sqlalchemy.
-        #  import warnings
-        # from sqlalchemy import exc as sa_exc
-        # with warnings.catch_warnings():
-        #     warnings.simplefilter("ignore", category=sa_exc.SAWarning)
-        #     wflows = DbWorkflow.parent_workflow_step.any(DbWorkflowStep.id.in_(steps_pk))
-
-        wflows = DbWorkflow.query.join(DbWorkflow.parent_workflow_step).filter(DbWorkflowStep.id.in_(steps_pk)).all()
+        wflows = [Workflow.get_subclass_from_dbnode(wf) for wf in
+                  DbWorkflow.query.join(DbWorkflow.parent_workflow_step).filter(DbWorkflowStep.id.in_(steps_pk)).all()]
 
         # dictionary mapping pks into workflows
-        workflow_mapping = {_.id: _ for _ in wflows}
+        workflow_mapping = {_.pk: _ for _ in wflows}
 
         # get all calculations for all steps
         calcs_ids = [_[2] for _ in steps_and_subwf_pks if _[2] is not None]  # extremely inefficient!
@@ -861,7 +854,7 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
 
             # print calculations only if it is not short
             if short:
-                lines.append(pre_string + "|" + " " * (tab_size - 1) +
+                lines.append(pre_string + "|" + ' ' * (tab_size - 1) +
                              "| [{0} calculations]".format(len(calc_pks)))
             else:
                 for calc_pk in calc_pks:
@@ -890,7 +883,7 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
                                                               sched_state, when_string)
                     else:
                         remote_state = ""
-                    lines.append(pre_string + "|" + " " * (tab_size - 1) +
+                    lines.append(pre_string + "|" + ' ' * (tab_size - 1) +
                                  "| Calculation ({}pk: {}) is {}{}".format(
                                      labelstring, calc_pk, calc_state, remote_state))
 
@@ -899,7 +892,7 @@ def get_workflow_info(w, tab_size=2, short=False, pre_string="",
                 subwf = workflow_mapping[subwf_pk]
                 lines.extend(get_workflow_info(subwf,
                                                short=short, tab_size=tab_size,
-                                               pre_string=pre_string + "|" + " " * (tab_size - 1),
+                                               pre_string=pre_string + "|" + ' ' * (tab_size - 1),
                                                depth=depth - 1))
 
             lines.append(pre_string + "|")

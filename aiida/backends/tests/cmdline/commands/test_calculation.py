@@ -12,6 +12,9 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
+import unittest
+
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
@@ -25,6 +28,7 @@ def get_result_lines(result):
     return [e for e in result.output.split('\n') if e]
 
 
+@unittest.skip('reenable when issue #2342 is addressed')
 class TestVerdiCalculation(AiidaTestCase):
     """Tests for `verdi calculation`."""
 
@@ -48,7 +52,7 @@ class TestVerdiCalculation(AiidaTestCase):
             workdir='/tmp/aiida').store()
 
         cls.code = orm.Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
-        cls.group = orm.Group(name='test_group').store()
+        cls.group = orm.Group(label='test_group').store()
         cls.node = Data().store()
         cls.calcs = []
 
@@ -149,7 +153,7 @@ class TestVerdiCalculation(AiidaTestCase):
             options = ['-r', '-a', flag]
             result = self.cli_runner.invoke(command.calculation_list, options)
             self.assertIsNone(result.exception, result.output)
-            self.assertEquals(len(get_result_lines(result)), 14)
+            self.assertEqual(len(get_result_lines(result)), 14)
 
     def test_calculation_list_all(self):
         """Test verdi calculation list with the all option"""
@@ -158,13 +162,13 @@ class TestVerdiCalculation(AiidaTestCase):
         options = ['-r']
         result = self.cli_runner.invoke(command.calculation_list, options)
         self.assertIsNone(result.exception, result.output)
-        self.assertEquals(len(get_result_lines(result)), 7, result.output)
+        self.assertEqual(len(get_result_lines(result)), 7, result.output)
 
         for flag in ['-a', '--all']:
             options = ['-r', flag]
             result = self.cli_runner.invoke(command.calculation_list, options)
             self.assertIsNone(result.exception, result.output)
-            self.assertEquals(len(get_result_lines(result)), 14, result.output)
+            self.assertEqual(len(get_result_lines(result)), 14, result.output)
 
     def test_calculation_list_limit(self):
         """Test verdi calculation list with the limit option"""
@@ -173,7 +177,7 @@ class TestVerdiCalculation(AiidaTestCase):
             options = ['-r', flag, limit]
             result = self.cli_runner.invoke(command.calculation_list, options)
             self.assertIsNone(result.exception, result.output)
-            self.assertEquals(len(get_result_lines(result)), limit)
+            self.assertEqual(len(get_result_lines(result)), limit)
 
     def test_calculation_list_project(self):
         """Test verdi calculation list with the project option"""
@@ -197,9 +201,9 @@ class TestVerdiCalculation(AiidaTestCase):
                 self.assertIsNone(result.exception, result.output)
 
                 if state == 'finished':
-                    self.assertEquals(len(get_result_lines(result)), 7, result.output)
+                    self.assertEqual(len(get_result_lines(result)), 7, result.output)
                 else:
-                    self.assertEquals(len(get_result_lines(result)), 7, result.output)
+                    self.assertEqual(len(get_result_lines(result)), 7, result.output)
 
     def test_calculation_list_failed(self):
         """Test verdi calculation list with the failed filter"""
@@ -208,7 +212,7 @@ class TestVerdiCalculation(AiidaTestCase):
             result = self.cli_runner.invoke(command.calculation_list, options)
 
             self.assertIsNone(result.exception, result.output)
-            self.assertEquals(len(get_result_lines(result)), 4, result.output)
+            self.assertEqual(len(get_result_lines(result)), 4, result.output)
 
     def test_calculation_list_exit_status(self):
         """Test verdi calculation list with the exit status filter"""
@@ -218,7 +222,7 @@ class TestVerdiCalculation(AiidaTestCase):
                 result = self.cli_runner.invoke(command.calculation_list, options)
 
                 self.assertIsNone(result.exception, result.output)
-                self.assertEquals(len(get_result_lines(result)), 1)
+                self.assertEqual(len(get_result_lines(result)), 1)
 
     def test_calculation_show(self):
         """Test verdi calculation show"""
@@ -227,7 +231,7 @@ class TestVerdiCalculation(AiidaTestCase):
         options = []
         result = self.cli_runner.invoke(command.calculation_show, options)
         self.assertIsNone(result.exception, result.output)
-        self.assertEquals(len(get_result_lines(result)), 0)
+        self.assertEqual(len(get_result_lines(result)), 0)
 
         # Giving a single identifier should print a non empty string message
         options = [str(self.calcs[0].pk)]
@@ -248,7 +252,7 @@ class TestVerdiCalculation(AiidaTestCase):
         options = []
         result = self.cli_runner.invoke(command.calculation_logshow, options)
         self.assertIsNone(result.exception, result.output)
-        self.assertEquals(len(get_result_lines(result)), 0)
+        self.assertEqual(len(get_result_lines(result)), 0)
 
         # Giving a single identifier should print a non empty string message
         options = [str(self.calcs[0].pk)]
@@ -288,7 +292,7 @@ class TestVerdiCalculation(AiidaTestCase):
         options = [self.arithmetic_job.uuid]
         result = self.cli_runner.invoke(command.calculation_inputls, options)
         self.assertIsNone(result.exception, result.output)
-        self.assertEquals(len(get_result_lines(result)), 3)
+        self.assertEqual(len(get_result_lines(result)), 3)
         self.assertIn('.aiida', get_result_lines(result))
         self.assertIn('aiida.in', get_result_lines(result))
         self.assertIn('_aiidasubmit.sh', get_result_lines(result))
@@ -296,7 +300,7 @@ class TestVerdiCalculation(AiidaTestCase):
         options = [self.arithmetic_job.uuid, '.aiida']
         result = self.cli_runner.invoke(command.calculation_inputls, options)
         self.assertIsNone(result.exception, result.output)
-        self.assertEquals(len(get_result_lines(result)), 2)
+        self.assertEqual(len(get_result_lines(result)), 2)
         self.assertIn('calcinfo.json', get_result_lines(result))
         self.assertIn('job_tmpl.json', get_result_lines(result))
 
@@ -309,7 +313,7 @@ class TestVerdiCalculation(AiidaTestCase):
         options = [self.arithmetic_job.uuid]
         result = self.cli_runner.invoke(command.calculation_outputls, options)
         self.assertIsNone(result.exception, result.output)
-        self.assertEquals(len(get_result_lines(result)), 3)
+        self.assertEqual(len(get_result_lines(result)), 3)
         self.assertIn('_scheduler-stderr.txt', get_result_lines(result))
         self.assertIn('_scheduler-stdout.txt', get_result_lines(result))
         self.assertIn('aiida.out', get_result_lines(result))
@@ -317,7 +321,7 @@ class TestVerdiCalculation(AiidaTestCase):
         options = [self.arithmetic_job.uuid, 'aiida.out']
         result = self.cli_runner.invoke(command.calculation_outputls, options)
         self.assertIsNone(result.exception, result.output)
-        self.assertEquals(len(get_result_lines(result)), 1)
+        self.assertEqual(len(get_result_lines(result)), 1)
         self.assertIn('aiida.out', get_result_lines(result))
 
     def test_calculation_inputcat(self):
@@ -329,14 +333,14 @@ class TestVerdiCalculation(AiidaTestCase):
         options = [self.arithmetic_job.uuid]
         result = self.cli_runner.invoke(command.calculation_inputcat, options)
         self.assertIsNone(result.exception, result.output)
-        self.assertEquals(len(get_result_lines(result)), 1)
-        self.assertEquals(get_result_lines(result)[0], '2 3')
+        self.assertEqual(len(get_result_lines(result)), 1)
+        self.assertEqual(get_result_lines(result)[0], '2 3')
 
         options = [self.arithmetic_job.uuid, 'aiida.in']
         result = self.cli_runner.invoke(command.calculation_inputcat, options)
         self.assertIsNone(result.exception, result.output)
-        self.assertEquals(len(get_result_lines(result)), 1)
-        self.assertEquals(get_result_lines(result)[0], '2 3')
+        self.assertEqual(len(get_result_lines(result)), 1)
+        self.assertEqual(get_result_lines(result)[0], '2 3')
 
     def test_calculation_outputcat(self):
         """Test verdi calculation outputcat"""
@@ -347,14 +351,14 @@ class TestVerdiCalculation(AiidaTestCase):
         options = [self.arithmetic_job.uuid]
         result = self.cli_runner.invoke(command.calculation_outputcat, options)
         self.assertIsNone(result.exception, result.output)
-        self.assertEquals(len(get_result_lines(result)), 1)
-        self.assertEquals(get_result_lines(result)[0], '5')
+        self.assertEqual(len(get_result_lines(result)), 1)
+        self.assertEqual(get_result_lines(result)[0], '5')
 
         options = [self.arithmetic_job.uuid, 'aiida.out']
         result = self.cli_runner.invoke(command.calculation_outputcat, options)
         self.assertIsNone(result.exception, result.output)
-        self.assertEquals(len(get_result_lines(result)), 1)
-        self.assertEquals(get_result_lines(result)[0], '5')
+        self.assertEqual(len(get_result_lines(result)), 1)
+        self.assertEqual(get_result_lines(result)[0], '5')
 
     def test_calculation_cleanworkdir(self):
         """Test verdi calculation cleanworkdir"""

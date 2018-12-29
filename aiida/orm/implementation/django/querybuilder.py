@@ -341,7 +341,7 @@ class DjangoQueryBuilder(BackendQueryBuilder):
             if column_name in ('attributes', 'extras'):
                 entity = alias.id
             else:
-                raise NotImplementedError("Whatever you asked for " "({}) is not implemented" "".format(column_name))
+                raise NotImplementedError("Whatever you asked for ({}) is not implemented" "".format(column_name))
         else:
             aliased_attributes = aliased(getattr(alias, column_name).prop.mapper.class_)
 
@@ -400,12 +400,14 @@ class DjangoQueryBuilder(BackendQueryBuilder):
         elif key in ('_metadata', 'transport_params') and res is not None:
             # Metadata and transport_params are stored as json strings in the DB:
             return json_loads(res)
-        elif isinstance(res, (self.Group, self.Node, self.Computer, self.User, self.AuthInfo)):
-            returnval = res.get_aiida_class()
         elif isinstance(res, uuid.UUID):
             returnval = six.text_type(res)
         else:
-            returnval = res
+            try:
+                returnval = self._backend.get_backend_entity(res)
+            except TypeError:
+                returnval = res
+
         return returnval
 
     def yield_per(self, query, batch_size):

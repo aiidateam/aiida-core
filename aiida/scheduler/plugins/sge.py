@@ -20,7 +20,7 @@ from __future__ import absolute_import
 import xml.parsers.expat
 import xml.dom.minidom
 
-from aiida.common.utils import escape_for_bash
+from aiida.common.escaping import escape_for_bash
 import aiida.scheduler
 from aiida.scheduler import SchedulerError, SchedulerParsingError
 from aiida.scheduler.datastructures import (JobInfo, JOB_STATES, ParEnvJobResource)
@@ -240,7 +240,7 @@ class SgeScheduler(aiida.scheduler.Scheduler):
             lines.append("#$ -p {}".format(job_tmpl.priority))
 
         if not job_tmpl.job_resource:
-            raise ValueError("Job resources (as the tot_num_mpiprocs) are required " "for the SGE scheduler plugin")
+            raise ValueError("Job resources (as the tot_num_mpiprocs) are required for the SGE scheduler plugin")
         # Setting up the parallel environment
         lines.append('#$ -pe {} {}'. \
                      format(str(job_tmpl.job_resource.parallel_env), \
@@ -274,7 +274,7 @@ class SgeScheduler(aiida.scheduler.Scheduler):
             lines.append(empty_line)
             lines.append("# ENVIRONMENT VARIABLES BEGIN ###")
             if not isinstance(job_tmpl.job_environment, dict):
-                raise ValueError("If you provide job_environment, it must be " "a dictionary")
+                raise ValueError("If you provide job_environment, it must be a dictionary")
             for key, value in job_tmpl.job_environment.items():
                 lines.append("export {}={}".format(key.strip(), escape_for_bash(value)))
             lines.append("# ENVIRONMENT VARIABLES  END  ###")
@@ -312,7 +312,7 @@ class SgeScheduler(aiida.scheduler.Scheduler):
             try:
                 xmldata = xml.dom.minidom.parseString(stdout)
             except xml.parsers.expat.ExpatError:
-                self.logger.error("in sge._parse_joblist_output: " "xml parsing of stdout failed:" "{}".format(stdout))
+                self.logger.error("in sge._parse_joblist_output: xml parsing of stdout failed:" "{}".format(stdout))
                 raise SchedulerParsingError("Error during joblist retrieval," "xml parsing of stdout failed")
         else:
             self.logger.error("Error in sge._parse_joblist_output: retval={}; "
@@ -393,14 +393,14 @@ class SgeScheduler(aiida.scheduler.Scheduler):
                 element_child = job_element.childNodes.pop(0)
                 this_job.job_owner = str(element_child.data).strip()
             except IndexError:
-                self.logger.warning("No 'job_owner' field for job " "id {}".format(this_job.job_id))
+                self.logger.warning("No 'job_owner' field for job id {}".format(this_job.job_id))
 
             try:
                 job_element = job.getElementsByTagName('JB_name').pop(0)
                 element_child = job_element.childNodes.pop(0)
                 this_job.title = str(element_child.data).strip()
             except IndexError:
-                self.logger.warning("No 'title' field for job " "id {}".format(this_job.job_id))
+                self.logger.warning("No 'title' field for job id {}".format(this_job.job_id))
 
             try:
                 job_element = job.getElementsByTagName('queue_name').pop(0)
@@ -408,7 +408,7 @@ class SgeScheduler(aiida.scheduler.Scheduler):
                 this_job.queue_name = str(element_child.data).strip()
             except IndexError:
                 if this_job.job_state == JOB_STATES.RUNNING:
-                    self.logger.warning("No 'queue_name' field for job " "id {}".format(this_job.job_id))
+                    self.logger.warning("No 'queue_name' field for job id {}".format(this_job.job_id))
 
             try:
                 job_element = job.getElementsByTagName('JB_submission_time').pop(0)
@@ -441,7 +441,7 @@ class SgeScheduler(aiida.scheduler.Scheduler):
                     element_child = job_element.childNodes.pop(0)
                     this_job.num_mpiprocs = str(element_child.data).strip()
                 except IndexError:
-                    self.logger.warning("No 'slots' field for job " "id {}".format(this_job.job_id))
+                    self.logger.warning("No 'slots' field for job id {}".format(this_job.job_id))
 
             joblist.append(this_job)
         # self.logger.debug("joblist final: {}".format(joblist))
@@ -480,7 +480,7 @@ class SgeScheduler(aiida.scheduler.Scheduler):
         try:
             time_struct = time.strptime(string, fmt)
         except Exception as exc:
-            self.logger.debug("Unable to parse time string {}, the message " "was {}".format(string, exc))
+            self.logger.debug("Unable to parse time string {}, the message was {}".format(string, exc))
             raise ValueError("Problem parsing the time string.")
 
         # I convert from a time_struct to a datetime object going through

@@ -48,16 +48,16 @@ class TestVerdiUserCommand(AiidaTestCase):
         self.assertEqual(result.exit_code, 0)
 
         comment = self.node.get_comments()
-        self.assertEquals(len(comment), 1)
+        self.assertEqual(len(comment), 1)
         self.assertEqual(comment[0].content, COMMENT)
 
     def test_comment_remove(self):
         """Test removing a comment."""
         comment = self.node.add_comment(COMMENT)
 
-        self.assertEquals(len(self.node.get_comments()), 1)
+        self.assertEqual(len(self.node.get_comments()), 1)
 
         options = [str(comment.pk), '--force']
         result = self.cli_runner.invoke(cmd_comment.remove, options, catch_exceptions=False)
         self.assertEqual(result.exit_code, 0, result.output)
-        self.assertEquals(len(self.node.get_comments()), 0)
+        self.assertEqual(len(self.node.get_comments()), 0)

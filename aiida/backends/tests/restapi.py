@@ -22,7 +22,7 @@ from aiida.orm.computers import Computer
 from aiida.orm.data import Data
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.restapi.api import App, AiidaApi
-import aiida.utils.json as json
+import aiida.common.json as json
 
 StructureData = DataFactory('structure')  # pylint: disable=invalid-name
 CifData = DataFactory('cif')  # pylint: disable=invalid-name
@@ -804,6 +804,31 @@ class RESTApiTestSuite(RESTApiTestCase):
         from aiida.backends.tests.dataclasses import simplify
         node_uuid = self.get_dummy_data()["structuredata"][0]["uuid"]
         url = self.get_url_prefix() + '/structures/' + str(node_uuid) + '/content/visualization?visformat=xsf'
+        with self.app.test_client() as client:
+            rv_obj = client.get(url)
+            response = json.loads(rv_obj.data)
+            self.assertNotIn('message', response)
+
+            expected_visdata = "CRYSTAL\nPRIMVEC 1\n      2.0000000000       0.0000000000       0.0000000000\n      0.0000000000       2.0000000000       0.0000000000\n      0.0000000000       0.0000000000       2.0000000000\nPRIMCOORD 1\n1 1\n56       0.0000000000       0.0000000000       0.0000000000\n"  # pylint: disable=line-too-long
+            self.assertEqual(
+                simplify(response["data"]["visualization"]["str_viz_info"]["data"]), simplify(expected_visdata))
+            self.assertEqual(response["data"]["visualization"]["str_viz_info"]["format"], "xsf")
+            self.assertEqual(response["data"]["visualization"]["dimensionality"], {
+                u'dim': 3,
+                u'value': 8.0,
+                u'label': u'volume'
+            })
+            self.assertEqual(response["data"]["visualization"]["pbc"], [True, True, True])
+            self.assertEqual(response["data"]["visualization"]["formula"], "Ba")
+            RESTApiTestCase.compare_extra_response_data(self, "structures", url, response, uuid=node_uuid)
+
+    def test_visualization(self):
+        """
+        Get the list of given calculation inputs
+        """
+        from aiida.backends.tests.dataclasses import simplify
+        node_uuid = self.get_dummy_data()["structuredata"][0]["uuid"]
+        url = self.get_url_prefix() + '/structures/' + str(node_uuid) + '/content/visualization'
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)

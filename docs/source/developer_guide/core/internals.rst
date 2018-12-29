@@ -15,10 +15,14 @@ This means that as soon as a node is stored any attempt to alter its attributes,
 Certain subclasses of nodes need to adapt this behavior however, as for example in the case of the :py:class:`~aiida.orm.node.process.process.ProcessNode` class (see `calculation updatable attributes`_), but since the immutability
 of stored nodes is a core concept of AiiDA, this behavior is nonetheless enforced on the node level. This guarantees that any subclasses of the Node class will respect this behavior unless it is explicitly overriden.
 
+Node methods
+******************
+- :py:meth:`~aiida.orm.implementation.general.node.clean_value` takes a value and returns an object which can be serialized for storage in the database. Such an object must be able to be subsequently deserialized without changing value. If a simple datatype is passed (integer, float, etc.), a check is performed to see if it has a value of ``nan`` or ``inf``, as these cannot be stored. Otherwise, if a list, tuple, dictionary, etc., is  passed, this check is performed for each value it contains. This is done recursively, automatically handling the case of nested objects. It is important to note that iterable type objects are converted to lists during this process, and mappings, such as dictionaries, are converted to normal dictionaries. This cleaning process is used by default when setting node attributes via :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._set_attr` and :py:meth:`~aiida.orm.implementation.general.node.AbstractNode._append_to_attr`, although it can be disabled by setting ``clean=False``. Values are also cleaned when setting extras on a stored node using :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.set_extras` or :py:meth:`~aiida.orm.implementation.general.node.AbstractNode.reset_extras`, but this cannot be disabled. 
 
-Methods & properties
-********************
-In the sequel the most important methods and properties of the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class will be described.
+
+AbstractNode methods & properties
+*********************************
+In the following sections, the most important methods and properties of the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class will be described.
 
 Node subclasses organization
 ============================
@@ -313,8 +317,6 @@ DbNode
 
 The :py:class:`~aiida.backends.djsite.db.models.DbNode` is the Django class that corresponds to the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class allowing to store and retrieve the needed information from and to the database. Other classes extending the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class, like :py:class:`~aiida.orm.data.Data`, :py:class:`~aiida.orm.node.process.process.ProcessNode` and :py:class:`~aiida.orm.data.code.Code` use the :py:class:`~aiida.backends.djsite.db.models.DbNode` code too to interact with the database.  The main methods are:
 
-- :py:meth:`~aiida.backends.djsite.db.models.DbNode.get_aiida_class` which returns the corresponding AiiDA class instance.
-
 - :py:meth:`~aiida.backends.djsite.db.models.DbNode.get_simple_name` which returns a string with the type of the class (by stripping the path before the class name).
 
 - :py:meth:`~aiida.backends.djsite.db.models.DbNode.attributes` which returns the all the attributes of the specific node as a dictionary.
@@ -439,7 +441,7 @@ In case a method is renamed or removed, this is the procedure to follow:
    - User can disable our warnings (and only those) by using AiiDA
      properties with::
        
-       verdi devel setproperty warnings.showdeprecations False
+       verdi config warnings.showdeprecations False
 
 Changing the config.json structure
 ++++++++++++++++++++++++++++++++++
@@ -448,13 +450,13 @@ In general, changes to ``config.json`` should be avoided if possible. However, i
 
 1. Determine whether the change will be backwards-compatible. This means that an older version of AiiDA will still be able to run with the new ``config.json`` structure. It goes without saying that it's preferable to change ``config.json`` in a backwards-compatible way.
 
-2. In ``aiida/common/additions/config_migration/_migrations.py``, increase the ``CURRENT_CONFIG_VERSION`` by one. If the change is **not** backwards-compatible, set ``OLDEST_COMPATIBLE_CONFIG_VERSION`` to the same value.
+2. In ``aiida/manage/configuration/migrations/migrations.py``, increase the ``CURRENT_CONFIG_VERSION`` by one. If the change is **not** backwards-compatible, set ``OLDEST_COMPATIBLE_CONFIG_VERSION`` to the same value.
 
 3. Write a function which transforms the old config dict into the new version. It is possible that you need user input for the migration, in which case this should also be handled in that function.
 
 4. Add an entry in ``_MIGRATION_LOOKUP`` where the key is the version **before** the migration, and the value is a ``ConfigMigration`` object. The ``ConfigMigration`` is constructed from your migration function, and the **hard-coded** values of ``CURRENT_CONFIG_VERSION`` and ``OLDEST_COMPATIBLE_CONFIG_VERSION``. If these values are not hard-coded, the migration will break as soon as the values are changed again.
 
-5. Add tests for the migration, in ``aiida/common/additions/config_migration/test_migrations.py``. You can add two types of tests:
+5. Add tests for the migration, in ``aiida/backends/tests/manage/configuration/migrations/test_migrations.py``. You can add two types of tests:
 
     * Tests that run the entire migration, using the ``check_and_migrate_config`` function. Make sure to run it with ``store=False``, otherwise it will overwrite your ``config.json`` file. For these tests, you will have to update the reference files.
     * Tests that run a single step in the migration, using the ``ConfigMigration.apply`` method. This can be used if you need to test different edge cases of the migration.

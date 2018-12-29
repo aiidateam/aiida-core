@@ -8,30 +8,47 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """The main `verdi` click group."""
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import click
+
+from aiida.cmdline.params import options
+from aiida.common.extendeddicts import AttributeDict
+from aiida.common import exceptions
 
 
 @click.group()
-@click.option(
-    '-p', '--profile', metavar='PROFILE', help='Execute the command for this profile instead of the default profile.')
+@options.PROFILE()
 @click.option('--version', is_flag=True, default=False, help='Print the version of AiiDA that is currently installed.')
 @click.pass_context
 def verdi(ctx, profile, version):
     """The command line interface of AiiDA."""
     import sys
     import aiida
+    from aiida.backends import settings
     from aiida.cmdline.utils import echo
+    from aiida.manage import get_config
 
     if version:
         echo.echo('AiiDA version {}'.format(aiida.__version__))
         sys.exit(0)
 
-    if profile is not None:
-        from aiida.backends import settings
-        settings.AIIDADB_PROFILE = profile
+    if ctx.obj is None:
+        ctx.obj = AttributeDict()
+
+    try:
+        config = get_config()
+    except exceptions.ConfigurationError:
+        config = None
+    else:
+        if not profile:
+            profile = config.get_profile()
+
+        settings.AIIDADB_PROFILE = profile.name
+
+    ctx.obj.config = config
+    ctx.obj.profile = profile
 
     ctx.help_option_names = ['-h', '--help']

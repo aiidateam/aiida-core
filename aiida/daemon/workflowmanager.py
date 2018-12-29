@@ -14,7 +14,6 @@ from __future__ import absolute_import
 from aiida.common import AIIDA_LOGGER
 from aiida.common.datastructures import wf_states, wf_exit_call, wf_default_call
 
-
 logger = AIIDA_LOGGER.getChild('workflowmanager')
 
 
@@ -37,40 +36,40 @@ def execute_steps():
     those steps. In case or error the step is flagged in ERROR state and the 
     stack is reported in the workflow report.
     """
-
+    from aiida.orm import Workflow
     from aiida.orm.node.process import CalcJobNode
     from aiida.orm.implementation import get_all_running_steps
- 
+
     logger.debug("Querying the worflow DB")
-    
+
     running_steps = get_all_running_steps()
 
-    for s in running_steps:
-        if s.parent.state == wf_states.FINISHED:
-            s.set_state(wf_states.FINISHED)
+    for step in running_steps:
+        if step.parent.state == wf_states.FINISHED:
+            step.set_state(wf_states.FINISHED)
             continue
 
-        w = s.parent.get_aiida_class()
+        workflow = Workflow.get_subclass_from_dbnode(step.parent)
 
-        logger.info("[{0}] Found active step: {1}".format(w.pk, s.name))
+        logger.info("[{0}] Found active step: {1}".format(workflow.pk, step.name))
 
-        s_calcs_new = [c.pk for c in s.get_calculations() if c._is_new()]
-        s_calcs_finished = [c.pk for c in s.get_calculations() if c.is_finished_ok]
-        s_calcs_failed = [c.pk for c in s.get_calculations() if c.is_failed]
-        s_calcs_num = len(s.get_calculations())
+        s_calcs_new = [c.pk for c in step.get_calculations() if c._is_new()]
+        s_calcs_finished = [c.pk for c in step.get_calculations() if c.is_finished_ok]
+        s_calcs_failed = [c.pk for c in step.get_calculations() if c.is_failed]
+        s_calcs_num = len(step.get_calculations())
 
-        s_sub_wf_finished = [sw.pk for sw in s.get_sub_workflows() if sw.has_finished_ok()]
-        s_sub_wf_failed = [sw.pk for sw in s.get_sub_workflows() if sw.has_failed()]
-        s_sub_wf_num = len(s.get_sub_workflows())
+        s_sub_wf_finished = [sw.pk for sw in step.get_sub_workflows() if sw.has_finished_ok()]
+        s_sub_wf_failed = [sw.pk for sw in step.get_sub_workflows() if sw.has_failed()]
+        s_sub_wf_num = len(step.get_sub_workflows())
 
         if (s_calcs_num == (len(s_calcs_finished) + len(s_calcs_failed)) and
-            s_sub_wf_num == (len(s_sub_wf_finished) + len(s_sub_wf_failed))):
+                s_sub_wf_num == (len(s_sub_wf_finished) + len(s_sub_wf_failed))):
 
-            logger.info("[{0}] Step: {1} ready to move".format(w.pk, s.name))
+            logger.info("[{0}] Step: {1} ready to move".format(workflow.pk, step.name))
 
-            s.set_state(wf_states.FINISHED)
-            
-            advance_workflow(w, s)
+            step.set_state(wf_states.FINISHED)
+
+            advance_workflow(workflow, step)
 
         elif len(s_calcs_new) > 0:
 
@@ -79,9 +78,9 @@ def execute_steps():
                 obj_calc = CalcJobNode.get_subclass_from_pk(pk=pk)
                 try:
                     obj_calc.submit()
-                    logger.info("[{0}] Step: {1} launched calculation {2}".format(w.pk, s.name, pk))
+                    logger.info("[{0}] Step: {1} launched calculation {2}".format(workflow.pk, step.name, pk))
                 except:
-                    logger.error("[{0}] Step: {1} cannot launch calculation {2}".format(w.pk, s.name, pk))
+                    logger.error("[{0}] Step: {1} cannot launch calculation {2}".format(workflow.pk, step.name, pk))
 
 
 def advance_workflow(w, step):
@@ -125,8 +124,8 @@ def advance_workflow(w, step):
         logger.info("[{0}] Step: {1} is not finished and has no next call, waiting "
                     "for other methods to kick.".format(w.pk, step.name))
         w.append_to_report("Step: {0} is not finished and has no "
-                                      "next call, waiting for other methods "
-                                      "to kick.".format(step.name))
+                           "next call, waiting for other methods "
+                           "to kick.".format(step.name))
         return True
 
     elif not step.nextcall is None:
@@ -135,7 +134,7 @@ def advance_workflow(w, step):
                     "".format(w.pk, step.name, step.nextcall))
 
         try:
-            #w = Workflow.get_subclass_from_pk(w_superclass.pk)
+            # w = Workflow.get_subclass_from_pk(w_superclass.pk)
             getattr(w, step.nextcall)()
             return True
 
@@ -144,7 +143,7 @@ def advance_workflow(w, step):
 
             w.append_to_report("ERROR ! This workflow got an error in the {0} "
                                "method, we report down the stack trace".format(
-                                   step.nextcall))
+                step.nextcall))
             w.append_to_report("full traceback: {0}".format(traceback.format_exc()))
 
             w.get_step(step.nextcall).set_state(wf_states.ERROR)
@@ -159,5 +158,3 @@ def advance_workflow(w, step):
         w.set_state(wf_states.ERROR)
 
         return False
-
-

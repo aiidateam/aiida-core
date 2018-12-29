@@ -13,6 +13,7 @@ Controls the daemon
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import enum
 import io
 import os
@@ -22,16 +23,15 @@ import tempfile
 
 import six
 
-from aiida.common.profile import get_profile
-from aiida.common.setup import get_property
-from aiida.utils.which import which
+from aiida.common.files import which
+from aiida.manage import get_config
 
 VERDI_BIN = which('verdi')
 # Recent versions of virtualenv create the environment variable VIRTUAL_ENV
 VIRTUALENV = os.environ.get('VIRTUAL_ENV', None)
 
 
-class ControllerProtocol(enum.Enum):  #pylint: disable=too-few-public-methods
+class ControllerProtocol(enum.Enum):  # pylint: disable=too-few-public-methods
     """
     The protocol to use to for the controller of the Circus daemon
     """
@@ -42,18 +42,25 @@ class ControllerProtocol(enum.Enum):  #pylint: disable=too-few-public-methods
 
 def get_daemon_client(profile_name=None):
     """
-    Return the daemon client for the given profile or the default profile if not specified.
+    Return the daemon client for the given profile or the current profile if not specified.
 
-    :param profile_name: the profile name, will use the default profile if None
+    :param profile_name: the profile name, will use the current profile if None
     :return: the daemon client
     :rtype: :class:`aiida.daemon.client.DaemonClient`
     :raises MissingConfigurationError: if the configuration file cannot be found
-    :raises ProfileConfigurationError: if the name is not found in the configuration file
+    :raises ProfileConfigurationError: if the given profile does not exist
     """
-    return DaemonClient(get_profile(profile_name))
+    config = get_config()
+
+    if profile_name:
+        profile = config.get_profile(profile_name)
+    else:
+        profile = config.current_profile
+
+    return DaemonClient(profile)
 
 
-class DaemonClient(object):  #pylint: disable=too-many-public-methods
+class DaemonClient(object):  # pylint: disable=too-many-public-methods
     """
     Extension of the Profile which also provides handles to retrieve profile specific
     properties related to the daemon client
@@ -70,11 +77,12 @@ class DaemonClient(object):  #pylint: disable=too-many-public-methods
         """
         Construct a DaemonClient instance for a given profile
 
-        :param profile: the profile instance :class:`aiida.common.profile.Profile`
+        :param profile: the profile instance :class:`aiida.manage.configuration.profile.Profile`
         """
+        config = get_config()
         self._profile = profile
-        self._SOCKET_DIRECTORY = None  #pylint: disable=invalid-name
-        self._DAEMON_TIMEOUT = get_property('daemon.timeout')  #pylint: disable=invalid-name
+        self._SOCKET_DIRECTORY = None  # pylint: disable=invalid-name
+        self._DAEMON_TIMEOUT = config.option_get('daemon.timeout')  # pylint: disable=invalid-name
 
     @property
     def profile(self):

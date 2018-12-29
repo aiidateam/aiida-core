@@ -12,16 +12,9 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from six.moves import range
-
-try:
-    from reentry import manager as epm
-except ImportError:
-    import pkg_resources as epm
-
+from aiida.plugins.entry_point import ENTRYPOINT_MANAGER
 from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
 
-# TODO: define only folders in which tests should be put, and each
-#       file defines a new test
 db_test_list = {
     BACKEND_DJANGO: {
         'generic': ['aiida.backends.djsite.db.subtests.generic'],
@@ -48,20 +41,19 @@ db_test_list = {
         'parsers': ['aiida.backends.tests.parsers'],
         'tcodexporter': ['aiida.backends.tests.tcodexporter'],
         'query': ['aiida.backends.tests.query'],
-        'utils.serialize': ['aiida.backends.tests.utils.test_serialize'],
         'workflows': ['aiida.backends.tests.workflows'],
         'calculation_node': ['aiida.backends.tests.calculation_node'],
         'backup_script': ['aiida.backends.tests.backup_script'],
         'backup_setup_script': ['aiida.backends.tests.backup_setup_script'],
         'restapi': ['aiida.backends.tests.restapi'],
-        'examplehelpers': ['aiida.backends.tests.example_helpers'],
         'cmdline.commands.calcjob': ['aiida.backends.tests.cmdline.commands.test_calcjob'],
         'cmdline.commands.calculation': ['aiida.backends.tests.cmdline.commands.test_calculation'],
         'cmdline.commands.code': ['aiida.backends.tests.cmdline.commands.test_code'],
         'cmdline.commands.comment': ['aiida.backends.tests.cmdline.commands.test_comment'],
         'cmdline.commands.computer': ['aiida.backends.tests.cmdline.commands.test_computer'],
+        'cmdline.commands.config': ['aiida.backends.tests.cmdline.commands.test_config'],
         'cmdline.commands.data': ['aiida.backends.tests.cmdline.commands.test_data'],
-        'cmdline.commands.devel': ['aiida.backends.tests.cmdline.commands.test_devel'],
+        'cmdline.commands.database': ['aiida.backends.tests.cmdline.commands.test_database'],
         'cmdline.commands.export': ['aiida.backends.tests.cmdline.commands.test_export'],
         'cmdline.commands.graph': ['aiida.backends.tests.cmdline.commands.test_graph'],
         'cmdline.commands.group': ['aiida.backends.tests.cmdline.commands.test_group'],
@@ -85,14 +77,27 @@ db_test_list = {
         'cmdline.params.types.workflow': ['aiida.backends.tests.cmdline.params.types.test_workflow'],
         'common.archive': ['aiida.backends.tests.common.test_archive'],
         'common.datastructures': ['aiida.backends.tests.common.test_datastructures'],
+        'common.extendeddicts': ['aiida.backends.tests.common.test_extendeddicts'],
+        'common.folders': ['aiida.backends.tests.common.test_folders'],
+        'common.hashing': ['aiida.backends.tests.common.test_hashing'],
+        'common.logging': ['aiida.backends.tests.common.test_logging'],
+        'common.serialize': ['aiida.backends.tests.common.test_serialize'],
+        'common.timezone': ['aiida.backends.tests.common.test_timezone'],
+        'common.utils': ['aiida.backends.tests.common.test_utils'],
         'daemon.client': ['aiida.backends.tests.daemon.test_client'],
+        'manage.configuration.config.': ['aiida.backends.tests.manage.configuration.test_config'],
+        'manage.configuration.migrations.': ['aiida.backends.tests.manage.configuration.migrations.test_migrations'],
+        'manage.configuration.options.': ['aiida.backends.tests.manage.configuration.test_options'],
+        'manage.configuration.profile.': ['aiida.backends.tests.manage.configuration.test_profile'],
+        'manage.external.postgres.': ['aiida.backends.tests.manage.external.test_postgres'],
         'orm.authinfo': ['aiida.backends.tests.orm.authinfo'],
-        'orm.comment': ['aiida.backends.tests.orm.comment'],
+        'orm.comments': ['aiida.backends.tests.orm.comments'],
         'orm.computer': ['aiida.backends.tests.computer'],
         'orm.data.frozendict': ['aiida.backends.tests.orm.data.frozendict'],
         'orm.data.remote': ['aiida.backends.tests.orm.data.remote'],
+        'orm.data.upf': ['aiida.backends.tests.orm.data.upf'],
         'orm.entities': ['aiida.backends.tests.orm.entities'],
-        'orm.log': ['aiida.backends.tests.orm.log'],
+        'orm.logs': ['aiida.backends.tests.orm.logs'],
         'orm.mixins': ['aiida.backends.tests.orm.mixins'],
         'orm.node': ['aiida.backends.tests.orm.node.test_node'],
         'orm.utils.loaders': ['aiida.backends.tests.orm.utils.loaders'],
@@ -129,7 +134,7 @@ def get_db_test_names():
 
     # This is a temporary solution to be able to run tests in plugins. Once the plugin fixtures
     # have been made working and are released, we can replace this logic with them
-    for ep in [ep for ep in epm.iter_entry_points(group='aiida.tests')]:
+    for ep in [ep for ep in ENTRYPOINT_MANAGER.iter_entry_points(group='aiida.tests')]:
         retlist.append(ep.name)
 
     # Explode the list so that if I have a.b.c,
@@ -180,7 +185,7 @@ def get_db_test_list():
 
     # This is a temporary solution to be able to run tests in plugins. Once the plugin fixtures
     # have been made working and are released, we can replace this logic with them
-    for ep in [ep for ep in epm.iter_entry_points(group='aiida.tests')]:
+    for ep in [ep for ep in ENTRYPOINT_MANAGER.iter_entry_points(group='aiida.tests')]:
         retdict[ep.name].append(ep.module_name)
 
     # Explode the dictionary so that if I have a.b.c,

@@ -10,7 +10,6 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from functools import reduce
 
 import six
 
@@ -18,12 +17,12 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError, transaction
 from django.db.models import F
 
-from aiida.backends.djsite.db.models import DbLink
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, UniquenessError)
 from aiida.common.folders import RepositoryFolder
 from aiida.common.links import LinkType
-from aiida.common.utils import get_new_uuid, type_check
+from aiida.common.utils import get_new_uuid
+from aiida.common.lang import type_check
 from aiida.orm.implementation.general.node import AbstractNode, _HASH_EXTRA_KEY
 from . import computer as computers
 
@@ -32,9 +31,10 @@ class Node(AbstractNode):
 
     @classmethod
     def get_subclass_from_uuid(cls, uuid):
+        from .convert import get_backend_entity
         from aiida.backends.djsite.db.models import DbNode
         try:
-            node = DbNode.objects.get(uuid=uuid).get_aiida_class()
+            node = get_backend_entity(DbNode.objects.get(uuid=uuid), None)
         except ObjectDoesNotExist:
             raise NotExistent("No entry with UUID={} found".format(uuid))
         if not isinstance(node, cls):
@@ -44,9 +44,10 @@ class Node(AbstractNode):
 
     @classmethod
     def get_subclass_from_pk(cls, pk):
+        from .convert import get_backend_entity
         from aiida.backends.djsite.db.models import DbNode
         try:
-            node = DbNode.objects.get(pk=pk).get_aiida_class()
+            node = get_backend_entity(DbNode.objects.get(pk=pk), None)
         except ObjectDoesNotExist:
             raise NotExistent("No entry with pk= {} found".format(pk))
         if not isinstance(node, cls):
@@ -212,6 +213,7 @@ class Node(AbstractNode):
                 self._add_dblink_from(src, link_type, label)
 
     def _remove_dblink_from(self, label):
+        from aiida.backends.djsite.db.models import DbLink
         DbLink.objects.filter(output=self._dbnode, label=label).delete()
 
     def _add_dblink_from(self, src, link_type, label):
@@ -247,6 +249,8 @@ class Node(AbstractNode):
         self._do_create_link(src, label, link_type)
 
     def _do_create_link(self, src, label, link_type):
+        from aiida.backends.djsite.db.models import DbLink
+
         sid = None
         try:
             # transactions are needed here for Postgresql:
@@ -262,12 +266,13 @@ class Node(AbstractNode):
                                   "".format(exc))
 
     def _get_db_input_links(self, link_type):
+        from aiida.orm.convert import get_orm_entity
         from aiida.backends.djsite.db.models import DbLink
 
         link_filter = {'output': self._dbnode}
         if link_type is not None:
             link_filter['type'] = link_type.value
-        return [(i.label, i.input.get_aiida_class()) for i in
+        return [(i.label, get_orm_entity(i.input)) for i in
                 DbLink.objects.filter(**link_filter).distinct()]
 
     def _get_db_output_links(self, link_type):
@@ -276,7 +281,7 @@ class Node(AbstractNode):
         link_filter = {'input': self._dbnode}
         if link_type is not None:
             link_filter['type'] = link_type.value
-        return ((i.label, i.output.get_aiida_class()) for i in
+        return ((i.label, get_orm_entity(i.output)) for i in
                 DbLink.objects.filter(**link_filter).distinct())
 
     def get_computer(self):
@@ -412,7 +417,7 @@ class Node(AbstractNode):
           a transaction open!
         """
         from django.db import transaction
-        from aiida.common.utils import EmptyContextManager
+        from aiida.common.lang import EmptyContextManager
 
         if with_transaction:
             context_man = transaction.atomic()
@@ -429,11 +434,9 @@ class Node(AbstractNode):
         return self
 
     def get_user(self):
-        import aiida.orm.utils.convert
+        from aiida import orm
 
-        return aiida.orm.utils.convert.aiida_from_backend_entity(
-            self._backend.users.from_dbmodel(self._dbnode.user)
-        )
+        return orm.User.from_backend_entity(self._backend.users.from_dbmodel(self._dbnode.user))
 
     def set_user(self, user):
         assert user.backend == self.backend, "Passed user from different backend"
@@ -460,7 +463,7 @@ class Node(AbstractNode):
           a transaction open!
         """
         from django.db import transaction
-        from aiida.common.utils import EmptyContextManager
+        from aiida.common.lang import EmptyContextManager
 
         if with_transaction:
             context_man = transaction.atomic()
@@ -507,8 +510,7 @@ class Node(AbstractNode):
         # TODO: This needs to be generalized, allowing for flexible methods
         # for storing data and its attributes.
         from django.db import transaction
-        from aiida.common.utils import EmptyContextManager
-        from aiida.common.exceptions import ValidationError
+        from aiida.common.lang import EmptyContextManager
         from aiida.backends.djsite.db.models import DbAttribute
 
         if with_transaction:

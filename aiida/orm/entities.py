@@ -8,15 +8,15 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for all common top level AiiDA entity classes and methods"""
+from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from __future__ import absolute_import
 
 import typing
 
 from aiida.common import exceptions
 from aiida.common import datastructures
-from aiida.common.utils import classproperty, type_check
+from aiida.common.lang import classproperty, type_check
 from aiida.manage import get_manager
 
 __all__ = ('Entity', 'Collection')

@@ -13,7 +13,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import datetime
-from aiida.utils import timezone
+from aiida.common import timezone
 
 
 def get_workflow_list(pk_list=tuple(), user=None, all_states=False, n_days_ago=None):
@@ -28,6 +28,9 @@ def get_workflow_list(pk_list=tuple(), user=None, all_states=False, n_days_ago=N
     """
     from aiida.backends.sqlalchemy.models.workflow import DbWorkflow
     from aiida.common.datastructures import wf_states
+    from aiida.manage import get_manager
+
+    backend = get_manager().get_backend()
 
     if pk_list:
         query = DbWorkflow.query.filter(DbWorkflow.id.in_(pk_list))
@@ -41,5 +44,4 @@ def get_workflow_list(pk_list=tuple(), user=None, all_states=False, n_days_ago=N
             time = timezone.now() - datetime.timedelta(days=n_days_ago)
             query = query.filter(DbWorkflow.ctime >= time)
 
-    wf_list = list(query.distinct().order_by('ctime'))
-    return wf_list
+    return [backend.get_backend_entity(wf) for wf in query.distinct().order_by('ctime')]

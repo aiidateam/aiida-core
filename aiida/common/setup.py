@@ -7,427 +7,43 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Functions to interactively or non-interactively set up the AiiDA instance and a profile."""
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
-import io
-import os
-import uuid
-import logging
-import aiida.utils.json as json
 
-import six
+import os
+
 from six.moves import input
 
-import aiida
-from aiida.common.exceptions import ConfigurationError
-from aiida.utils.find_folder import find_path
-from .additions.config_migrations import check_and_migrate_config, add_config_version
+from aiida.common import exceptions
+from aiida.manage.configuration import Profile
 
 USE_TZ = True
-DEFAULT_AIIDA_USER = 'aiida@localhost'
-
-AIIDA_PATH = [os.path.expanduser(path) for path in os.environ.get('AIIDA_PATH', '').split(':') if path]
-AIIDA_PATH.append(os.path.expanduser('~'))
-
-for path in AIIDA_PATH:
-    try:
-        AIIDA_CONFIG_FOLDER = str(find_path(root=path, dir_name='.aiida'))
-        break
-    except OSError:
-        pass
-else:
-    AIIDA_CONFIG_FOLDER = '~/.aiida'
-
-CONFIG_FNAME = 'config.json'
-CONFIG_INDENT_SIZE = 4
-
-SECRET_KEY_FNAME = 'secret_key.dat'  # noqa
-
-WORKFLOWS_SUBDIR = 'workflows'
-
-# The key inside the configuration file
-DEFAULT_USER_CONFIG_FIELD = 'default_user_email'
-
-# This key will uniquely identify an AiiDA profile
-PROFILE_UUID_KEY = 'PROFILE_UUID'
-
-# The default umask for file creation under AIIDA_CONFIG_FOLDER
-DEFAULT_UMASK = 0o0077
-
-# Profile keys
-aiidadb_backend_key = 'AIIDADB_BACKEND'
-
-# Profile values
-aiidadb_backend_value_django = 'django'
 
 # Keyword that is used in test profiles, databases and repositories to
 # differentiate them from non-testing ones.
 TEST_KEYWORD = 'test_'
 
-# Default timeout in seconds for circus client calls
-DEFAULT_DAEMON_TIMEOUT = 20
 
+def validate_email(email):
+    """Validate an email address using Django's email validator.
 
-def get_aiida_dir():
-    return os.path.expanduser(AIIDA_CONFIG_FOLDER)
-
-
-def backup_config():
+    :param email: the email address
+    :return: boolean, True if email address is valid, False otherwise
     """
-    Backup the previous configuration file.
-    """
-    import shutil
-
-    aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
-    conf_file = os.path.join(aiida_dir, CONFIG_FNAME)
-    if (os.path.isfile(conf_file)):
-        old_umask = os.umask(DEFAULT_UMASK)
-        try:
-            shutil.copy(conf_file, conf_file + "~")
-        finally:
-            os.umask(old_umask)
-
-
-def get_config():
-    """
-    Return all the configurations
-    """
-    return check_and_migrate_config(_load_config())
-
-
-def _load_config():
-    """
-    Return the current configurations, without checking their version.
-    """
-    from aiida.common.exceptions import MissingConfigurationError
-    from aiida.backends.settings import IN_RT_DOC_MODE, DUMMY_CONF_FILE
-    import aiida.utils.json as json
-
-    if IN_RT_DOC_MODE:
-        return DUMMY_CONF_FILE
-
-    aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
-    conf_file = os.path.join(aiida_dir, CONFIG_FNAME)
-    try:
-        with io.open(conf_file, 'r', encoding='utf8') as json_file:
-            return json.load(json_file)
-    except IOError:
-        # No configuration file
-        raise MissingConfigurationError("No configuration file found")
-
-
-def get_or_create_config():
-    from aiida.common.exceptions import MissingConfigurationError
-    try:
-        config = get_config()
-    except MissingConfigurationError:
-        config = {}
-        store_config(config)
-    return config
-
-
-def store_config(confs):
-    """
-    Given a configuration dictionary, stores it in the configuration file.
-
-    :param confs: the dictionary to store.
-    """
-    from aiida.backends.settings import IN_RT_DOC_MODE
-    if IN_RT_DOC_MODE:
-        return
-    import aiida.utils.json as json
-
-    aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
-    conf_file = os.path.join(aiida_dir, CONFIG_FNAME)
-    old_umask = os.umask(DEFAULT_UMASK)
-    try:
-        with io.open(conf_file, 'wb') as json_file:
-            json.dump(confs, json_file, indent=CONFIG_INDENT_SIZE)
-    finally:
-        os.umask(old_umask)
-
-
-def generate_random_secret_key():
-    """
-    Generate a random secret key to put in the django settings module.
-
-    This should be the same function used by Django in
-    core/management/commands/startproject.
-    """
-    from aiida.common.hashing import get_random_string
-
-    return get_random_string(length=50)
-
-
-def try_create_secret_key():
-    """
-    Creates a new secret key file, if this does not exist, otherwise do nothing
-    (to avoid that the secret key is regenerated each time).
-
-    If you really want that the secret key is regenerated, delete the
-    secret key file, and then call this function again.
-    """
-    aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
-    secret_key_full_name = os.path.join(aiida_dir, SECRET_KEY_FNAME)
-
-    if os.path.exists(secret_key_full_name):
-        # If for some reason the file is empty, regenerate it
-        with io.open(secret_key_full_name, encoding='utf8') as fhandle:
-            if fhandle.read().strip():
-                return
-
-    old_umask = os.umask(DEFAULT_UMASK)
-    try:
-        with io.open(secret_key_full_name, 'w', encoding='utf8') as fhandle:
-            fhandle.write(six.text_type(generate_random_secret_key()))
-    finally:
-        os.umask(old_umask)
-
-
-def create_htaccess_file():
-    """
-    Creates a suitable .htaccess file in the .aiida folder (if it does not
-    exist yet), that is important
-
-    .. note:: some default Apache configurations ignore the ``.htaccess``
-        files unless otherwise specified: read the documentation on
-        how to setup properly your Apache server!
-
-    .. note:: if a ``.htaccess`` file already exists, this is not overwritten.
-    """
-    aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
-    htaccess_full_name = os.path.join(aiida_dir, ".htaccess")
-
-    if os.path.exists(htaccess_full_name):
-        return
-
-    old_umask = os.umask(DEFAULT_UMASK)
-    try:
-        with io.open(htaccess_full_name, 'w', encoding='utf8') as fhandle:
-            fhandle.write(u"""#### No one should read this folder!
-                ## Please double check, though, that your Apache configuration honors
-                ## the .htaccess files.
-                deny from all
-                """)
-    finally:
-        os.umask(old_umask)
-
-
-def get_secret_key():
-    """
-    Return the secret key.
-
-    Raise ConfigurationError if the secret key cannot be found/read from the disk.
-    """
-    from aiida.common.exceptions import ConfigurationError
-    from aiida.backends.settings import IN_RT_DOC_MODE
-
-    if IN_RT_DOC_MODE:
-        return ""
-
-    aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
-    secret_key_full_name = os.path.join(aiida_dir, SECRET_KEY_FNAME)
+    from django.core.validators import validate_email as django_validate_email  # pylint: disable=import-error,no-name-in-module
+    from django import forms  # pylint: disable=no-name-in-module
 
     try:
-        with io.open(secret_key_full_name, encoding='utf8') as fhandle:
-            secret_key = fhandle.read()
-    except (OSError, IOError):
-        raise ConfigurationError("Unable to find the secret key file "
-                                 "(or to read from it): did you run "
-                                 "'verdi install'?")
-
-    return secret_key.strip()
-
-
-def create_base_dirs(config_dir=None):
-    """
-    Create dirs for AiiDA, and install default daemon files.
-    """
-    import getpass
-    from aiida.common.profile import DAEMON_DIR, DAEMON_LOG_DIR
-
-    # For the daemon, to be hard-coded when ok
-    aiida_dir = os.path.expanduser(config_dir or AIIDA_CONFIG_FOLDER)
-    aiida_daemon_dir = os.path.join(aiida_dir, DAEMON_DIR)
-    aiida_log_dir = os.path.join(aiida_dir, DAEMON_LOG_DIR)
-    local_user = getpass.getuser()
-
-    old_umask = os.umask(DEFAULT_UMASK)
-    try:
-        if (not os.path.isdir(aiida_dir)):
-            os.makedirs(aiida_dir)
-
-        if (not os.path.isdir(aiida_daemon_dir)):
-            os.makedirs(aiida_daemon_dir)
-
-        if (not os.path.isdir(aiida_log_dir)):
-            os.makedirs(aiida_log_dir)
-    finally:
-        os.umask(old_umask)
-
-    # Create the secret key file, if needed
-    try_create_secret_key()
-
-    create_htaccess_file()
-
-
-def set_default_profile(profile, force_rewrite=False):
-    """
-    Set the default profile
-
-    :param profile: A string specifying the profile that should be used as default
-    :param force_rewrite: if False, does not change the default profile if already set
-    """
-    from aiida.common.exceptions import ProfileConfigurationError
-
-    if profile not in get_profiles_list():
-        raise ProfileConfigurationError('Profile {} has not been configured'.format(profile))
-
-    confs = get_config()
-    current_default_profile = confs.get('default_profile', None)
-
-    if current_default_profile is None or force_rewrite:
-        confs['default_profile'] = profile
-
-    backup_config()
-    store_config(confs)
-
-
-def get_default_profile():
-    """
-    Return the default profile from the configuration
-
-    :return: None if no default profile is found
-    """
-    from aiida.common.exceptions import ProfileConfigurationError
-
-    config = get_config()
-    default_profile = get_default_profile_name()
-
-    if default_profile is None:
-        return None
-
-    try:
-        profile = config['profiles'][default_profile]
-    except KeyError:
-        raise ProfileConfigurationError('the defined default profile {} does not exist'.format(default_profile))
-
-    return profile
-
-
-def get_default_profile_name():
-    """
-    Return the default profile name from the configuration
-
-    :return: None if no default profile is found
-    """
-    from aiida.common.exceptions import MissingConfigurationError
-
-    try:
-        confs = get_config()
-    except MissingConfigurationError:
-        return None
-
-    try:
-        return confs['default_profile']
-    except KeyError:
-        return None
-
-
-def get_profiles_list():
-    """
-    Return the list of names of installed configurations
-    """
-    from aiida.common.exceptions import ConfigurationError
-
-    all_config = get_config()
-    try:
-        return all_config['profiles'].keys()
-    except KeyError:
-        return ConfigurationError("Please run the setup")
-
-
-def get_profile_config(profile, conf_dict=None):
-    """
-    Return the profile specific configurations
-
-    :param conf_dict: if passed, use the provided dictionary rather than reading
-        it from file.
-    """
-    from aiida.common.exceptions import ConfigurationError, ProfileConfigurationError
-
-    if conf_dict is None:
-        confs = get_config()
+        django_validate_email(email)
+    except forms.ValidationError:
+        return False
     else:
-        confs = conf_dict
-
-    try:
-        profile_info = confs['profiles'][profile]
-    except KeyError:
-        raise ProfileConfigurationError("No profile configuration found for {}, allowed values are: {}.".format(
-            profile, ', '.join(get_profiles_list())))
-
-    return profile_info
+        return True
 
 
-key_explanation = {
-    "AIIDADB_ENGINE": "Database engine",
-    "AIIDADB_PASS": "AiiDA Database password",
-    "AIIDADB_NAME": "AiiDA Database name",
-    "AIIDADB_HOST": "Database host",
-    "AIIDADB_BACKEND": "AiiDA backend",
-    "AIIDADB_PORT": "Database port",
-    "AIIDADB_REPOSITORY_URI": "AiiDA repository directory",
-    "AIIDADB_USER": "AiiDA Database user",
-    DEFAULT_USER_CONFIG_FIELD: "Default user email",
-    PROFILE_UUID_KEY: "UUID that identifies the AiiDA profile",
-}
-
-
-def profile_exists(profile):
-    """return True if profile exists, else return False"""
-    config = get_or_create_config()
-    profiles = config.get('profiles', {})
-    return profile in profiles
-
-
-def update_config(settings, write=True):
-    '''
-    back up the config file, create or change config.
-
-    :param settings: dictionary with the new or changed configuration
-    :param write: if False, do not touch the config file (dryrun)
-    :return: the new / changed configuration
-    '''
-    config = get_or_create_config()
-    config.update(settings)
-    if write:
-        backup_config()
-        store_config(config)
-    return config
-
-
-def update_profile(profile, updates, write=True):
-    """
-    back up the config file, create or changes profile
-
-    :param profile: name of the profile
-    :param updates: dictionary with the new or changed profile
-    :param write: if False, do not touch the config file (dryrun)
-    :return: the new / changed profile
-    """
-    config = get_or_create_config()
-    config['profiles'] = config.get('profiles', {})
-    profiles = config['profiles']
-    profiles[profile] = profiles.get(profile, {})
-    profile = profiles[profile]
-    profile.update(updates)
-    update_config(config, write=write)
-    return profile
-
-
-def create_config_noninteractive(profile='default', force_overwrite=False, dry_run=False, **kwargs):
+def create_profile_noninteractive(config, profile_name='default', force_overwrite=False, **kwargs):
     """
     Non-interactively creates a profile.
     :raises: a ValueError if the profile exists.
@@ -436,124 +52,104 @@ def create_config_noninteractive(profile='default', force_overwrite=False, dry_r
     :param values: The configuration inputs
     :return: The populated profile that was also stored
     """
-    if profile_exists(profile) and not force_overwrite:
-        raise ValueError(('profile {profile} exists! '
-                          'Cannot non-interactively edit a profile.').format(profile=profile))
+    from aiida.manage.configuration.settings import DEFAULT_UMASK
 
-    new_profile = {}
+    if profile_name in config.profile_names and not force_overwrite:
+        raise ValueError(('profile {} exists, cannot non-interactively edit a profile.').format(profile_name))
+
+    profile = {}
 
     # setting backend
     backend_possibilities = ['django', 'sqlalchemy']
     backend_v = kwargs.pop('backend')
     if backend_v in backend_possibilities:
-        new_profile['AIIDADB_BACKEND'] = backend_v
+        profile['AIIDADB_BACKEND'] = backend_v
     else:
         raise ValueError('{} is not a valid backend choice.'.format(backend_v))
 
     # Setting email
-    from validate_email import validate_email
     email_v = kwargs.pop('email')
     if validate_email(email_v):
-        new_profile[DEFAULT_USER_CONFIG_FIELD] = email_v
+        profile[Profile.KEY_DEFAULT_USER] = email_v
     else:
         raise ValueError('{} is not a valid email address.'.format(email_v))
 
     # setting up db
-    new_profile['AIIDADB_ENGINE'] = 'postgresql_psycopg2'
-    new_profile['AIIDADB_HOST'] = kwargs.pop('db_host')
-    new_profile['AIIDADB_PORT'] = kwargs.pop('db_port')
-    new_profile['AIIDADB_NAME'] = kwargs.pop('db_name')
-    new_profile['AIIDADB_USER'] = kwargs.pop('db_user')
-    new_profile['AIIDADB_PASS'] = kwargs.pop('db_pass', '')
+    profile['AIIDADB_ENGINE'] = 'postgresql_psycopg2'
+    profile['AIIDADB_HOST'] = kwargs.pop('db_host')
+    profile['AIIDADB_PORT'] = kwargs.pop('db_port')
+    profile['AIIDADB_NAME'] = kwargs.pop('db_name')
+    profile['AIIDADB_USER'] = kwargs.pop('db_user')
+    profile['AIIDADB_PASS'] = kwargs.pop('db_pass', '')
 
     # setting repo
     repo_v = kwargs.pop('repo')
     repo_path = os.path.expanduser(repo_v)
     if not os.path.isabs(repo_path):
         raise ValueError('The repository path must be an absolute path')
-    if (not os.path.isdir(repo_path)):
+    if not os.path.isdir(repo_path):
         old_umask = os.umask(DEFAULT_UMASK)
         try:
             os.makedirs(repo_path)
         finally:
             os.umask(old_umask)
-    new_profile['AIIDADB_REPOSITORY_URI'] = 'file://' + repo_path
+    profile['AIIDADB_REPOSITORY_URI'] = 'file://' + repo_path
 
     # Generate the profile uuid
-    new_profile[PROFILE_UUID_KEY] = generate_new_profile_uuid()
+    profile[Profile.KEY_PROFILE_UUID] = Profile.generate_uuid()
 
-    # finalizing
-    write = not dry_run
-    old_profiles = get_profiles_list()
-    new_profile = update_profile(profile, new_profile, write=write)
-    if write:
-        if not old_profiles:
-            set_default_profile(profile)
-    return new_profile
+    return profile
 
 
-def generate_new_profile_uuid():
+def create_profile(config, profile_name='default'):
     """
-    Return a UUID for a new profile
-
-    :returns: the hexadecimal represenation of a uuid4 UUID
-    """
-    return uuid.uuid4().hex
-
-
-def create_configuration(profile='default'):
-    """
-    :param profile: The profile to be configured
+    :param profile_name: The profile to be configured
     :return: The populated profile that was also stored.
     """
+    # pylint: disable=too-many-locals,too-many-statements,too-many-branches
+    import click
     import readline
-    from aiida.common.exceptions import MissingConfigurationError
-    from validate_email import validate_email
-    from aiida.common.utils import query_yes_no
+    from aiida.manage.configuration.settings import DEFAULT_UMASK, DEFAULT_AIIDA_USER
 
-    aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
-
-    print("Setting up profile {}.".format(profile))
+    print("Setting up profile {}.".format(profile_name))
 
     is_test_profile = False
-    if profile.startswith(TEST_KEYWORD):
+    if profile_name.startswith(TEST_KEYWORD):
         print("This is a test profile. All the data that will be stored under "
               "this profile are subjected to possible deletion or "
               "modification (repository and database data).")
         is_test_profile = True
 
     try:
-        confs = get_config()
-    except MissingConfigurationError:
-        # No configuration file found
-        confs = {}
+        profile = config.get_profile(profile_name).dictionary
+    except exceptions.ProfileConfigurationError:
+        profile = {}
 
-    # First time creation check
-    try:
-        confs['profiles']
-    except KeyError:
-        confs['profiles'] = {}
+    profile_key_explanation = {
+        "AIIDADB_ENGINE": "Database engine",
+        "AIIDADB_PASS": "AiiDA Database password",
+        "AIIDADB_NAME": "AiiDA Database name",
+        "AIIDADB_HOST": "Database host",
+        "AIIDADB_BACKEND": "AiiDA backend",
+        "AIIDADB_PORT": "Database port",
+        "AIIDADB_REPOSITORY_URI": "AiiDA repository directory",
+        "AIIDADB_USER": "AiiDA Database user",
+        Profile.KEY_DEFAULT_USER: "Default user email",
+        Profile.KEY_PROFILE_UUID: "UUID that identifies the AiiDA profile",
+    }
 
-    # load the old configuration for the given profile
-    try:
-        this_existing_confs = confs['profiles'][profile]
-    except KeyError:
-        this_existing_confs = {}
-
-    # if there is an existing configuration, print it and ask if the user wants
-    # to modify it.
+    # if there is an existing configuration, print it and ask if the user wants to modify it.
     updating_existing_prof = False
-    if this_existing_confs:
-        print("The following configuration found corresponding to " "profile {}.".format(profile))
-        for k, v in this_existing_confs.items():
-            if k in key_explanation:
-                print("{}: {}".format(key_explanation.get(k), v))
+    if profile:
+        print("The following configuration found corresponding to profile {}.".format(profile_name))
+        for key, value in profile.items():
+            if key in profile_key_explanation:
+                print("{}: {}".format(profile_key_explanation.get(key), value))
             else:
-                print("{}: {}".format(k, v))
-        answ = query_yes_no("Would you like to change it?", "no")
+                print("{}: {}".format(key, value))
         # If the user doesn't want to change it, we abandon
-        if answ is False:
-            return this_existing_confs
+        if not click.prompt('Would you like to change it?'):
+            return profile
         # Otherwise, we continue.
         else:
             updating_existing_prof = True
@@ -562,14 +158,14 @@ def create_configuration(profile='default'):
 
     try:
         # Defining the backend to be used
-        aiida_backend = this_existing_confs.get('AIIDADB_BACKEND')
+        aiida_backend = profile.get('AIIDADB_BACKEND')
         if updating_existing_prof:
             print("The backend of already stored profiles can not be "
                   "changed. The current backend is {}.".format(aiida_backend))
             this_new_confs['AIIDADB_BACKEND'] = aiida_backend
         else:
             backend_possibilities = ['django', 'sqlalchemy']
-            if len(backend_possibilities) > 0:
+            if backend_possibilities:
 
                 valid_aiida_backend = False
                 while not valid_aiida_backend:
@@ -585,10 +181,10 @@ def create_configuration(profile='default'):
 
         # Setting the email
         valid_email = False
-        readline.set_startup_hook(lambda: readline.insert_text(this_existing_confs.get(DEFAULT_AIIDA_USER)))
+        readline.set_startup_hook(lambda: readline.insert_text(profile.get(DEFAULT_AIIDA_USER)))
         while not valid_email:
-            this_new_confs[DEFAULT_USER_CONFIG_FIELD] = input('Default user email: ')
-            valid_email = validate_email(this_new_confs[DEFAULT_USER_CONFIG_FIELD])
+            this_new_confs[Profile.KEY_DEFAULT_USER] = input('Default user email: ')
+            valid_email = validate_email(this_new_confs[Profile.KEY_DEFAULT_USER])
             if not valid_email:
                 print("** Invalid email provided!")
 
@@ -598,8 +194,8 @@ def create_configuration(profile='default'):
             db_possibilities.extend(['postgresql_psycopg2', 'mysql'])
         elif aiida_backend == 'sqlalchemy':
             db_possibilities.extend(['postgresql_psycopg2'])
-        if len(db_possibilities) > 0:
-            db_engine = this_existing_confs.get('AIIDADB_ENGINE', db_possibilities[0])
+        if db_possibilities:
+            db_engine = profile.get('AIIDADB_ENGINE', db_possibilities[0])
             readline.set_startup_hook(lambda: readline.insert_text(db_engine))
 
             valid_db_engine = False
@@ -616,19 +212,19 @@ def create_configuration(profile='default'):
         if 'postgresql_psycopg2' in this_new_confs['AIIDADB_ENGINE']:
             this_new_confs['AIIDADB_ENGINE'] = 'postgresql_psycopg2'
 
-            old_host = this_existing_confs.get('AIIDADB_HOST', 'localhost')
+            old_host = profile.get('AIIDADB_HOST', 'localhost')
             if not old_host:
                 old_host = 'localhost'
             readline.set_startup_hook(lambda: readline.insert_text(old_host))
             this_new_confs['AIIDADB_HOST'] = input('PostgreSQL host: ')
 
-            old_port = this_existing_confs.get('AIIDADB_PORT', '5432')
+            old_port = profile.get('AIIDADB_PORT', '5432')
             if not old_port:
                 old_port = '5432'
             readline.set_startup_hook(lambda: readline.insert_text(old_port))
             this_new_confs['AIIDADB_PORT'] = input('PostgreSQL port: ')
 
-            readline.set_startup_hook(lambda: readline.insert_text(this_existing_confs.get('AIIDADB_NAME')))
+            readline.set_startup_hook(lambda: readline.insert_text(profile.get('AIIDADB_NAME')))
             db_name = ''
             while True:
                 db_name = input('AiiDA Database name: ')
@@ -640,31 +236,31 @@ def create_configuration(profile='default'):
                       "the non-test databases should not have this prefix.".format(TEST_KEYWORD))
             this_new_confs['AIIDADB_NAME'] = db_name
 
-            old_user = this_existing_confs.get('AIIDADB_USER', 'aiida')
+            old_user = profile.get('AIIDADB_USER', 'aiida')
             if not old_user:
                 old_user = 'aiida'
             readline.set_startup_hook(lambda: readline.insert_text(old_user))
             this_new_confs['AIIDADB_USER'] = input('AiiDA Database user: ')
 
-            readline.set_startup_hook(lambda: readline.insert_text(this_existing_confs.get('AIIDADB_PASS')))
+            readline.set_startup_hook(lambda: readline.insert_text(profile.get('AIIDADB_PASS')))
             this_new_confs['AIIDADB_PASS'] = input('AiiDA Database password: ')
 
         elif 'mysql' in this_new_confs['AIIDADB_ENGINE']:
             this_new_confs['AIIDADB_ENGINE'] = 'mysql'
 
-            old_host = this_existing_confs.get('AIIDADB_HOST', 'localhost')
+            old_host = profile.get('AIIDADB_HOST', 'localhost')
             if not old_host:
                 old_host = 'localhost'
             readline.set_startup_hook(lambda: readline.insert_text(old_host))
             this_new_confs['AIIDADB_HOST'] = input('mySQL host: ')
 
-            old_port = this_existing_confs.get('AIIDADB_PORT', '3306')
+            old_port = profile.get('AIIDADB_PORT', '3306')
             if not old_port:
                 old_port = '3306'
             readline.set_startup_hook(lambda: readline.insert_text(old_port))
             this_new_confs['AIIDADB_PORT'] = input('mySQL port: ')
 
-            readline.set_startup_hook(lambda: readline.insert_text(this_existing_confs.get('AIIDADB_NAME')))
+            readline.set_startup_hook(lambda: readline.insert_text(profile.get('AIIDADB_NAME')))
             db_name = ''
             while True:
                 db_name = input('AiiDA Database name: ')
@@ -676,22 +272,22 @@ def create_configuration(profile='default'):
                       "the non-test databases should not have this prefix.".format(TEST_KEYWORD))
             this_new_confs['AIIDADB_NAME'] = db_name
 
-            old_user = this_existing_confs.get('AIIDADB_USER', 'aiida')
+            old_user = profile.get('AIIDADB_USER', 'aiida')
             if not old_user:
                 old_user = 'aiida'
             readline.set_startup_hook(lambda: readline.insert_text(old_user))
             this_new_confs['AIIDADB_USER'] = input('AiiDA Database user: ')
 
-            readline.set_startup_hook(lambda: readline.insert_text(this_existing_confs.get('AIIDADB_PASS')))
+            readline.set_startup_hook(lambda: readline.insert_text(profile.get('AIIDADB_PASS')))
             this_new_confs['AIIDADB_PASS'] = input('AiiDA Database password: ')
         else:
-            raise ValueError("You have to specify a valid database " "(valid choices are 'mysql', 'postgres')")
+            raise ValueError("You have to specify a valid database (valid choices are 'mysql', 'postgres')")
 
         # This part for the time being is a bit oddly written
         # it should change in the future to add the possibility of having a
         # remote repository. Atm, I act as only a local repo is possible
-        existing_repo = this_existing_confs.get('AIIDADB_REPOSITORY_URI',
-                                                os.path.join(aiida_dir, "repository-{}/".format(profile)))
+        repository_dirpath = os.path.join(config.dirpath, 'repository/{}/'.format(profile_name))
+        existing_repo = profile.get('AIIDADB_REPOSITORY_URI', repository_dirpath)
         default_protocol = 'file://'
         if existing_repo.startswith(default_protocol):
             existing_repo = existing_repo[len(default_protocol):]
@@ -728,256 +324,11 @@ def create_configuration(profile='default'):
         this_new_confs['AIIDADB_REPOSITORY_URI'] = 'file://' + new_repo_path
 
         # Add the profile uuid
-        this_new_confs[PROFILE_UUID_KEY] = generate_new_profile_uuid()
-
-        confs['profiles'][profile] = this_new_confs
-
-        backup_config()
-        add_config_version(confs)
-        store_config(confs)
+        this_new_confs[Profile.KEY_PROFILE_UUID] = Profile.generate_uuid()
 
         return this_new_confs
     finally:
         readline.set_startup_hook(lambda: readline.insert_text(""))
-
-
-# A table of properties.
-# The key is the property name to use in the code;
-# The value is a tuple, where:
-# - the first entry is a string used as the key in the
-# JSON config file
-# - the second is the expected data type for data
-#   conversion if the property is passed as a string.
-#   For valid data type strings, see the implementation of set_property
-# - the third entry is the description of the field
-# - the fourth entry is the default value. Use _NoDefaultValue() if you want
-#   an exception to be raised if no property is found.
-
-
-class _NoDefaultValue(object):
-    pass
-
-
-# Only properties listed here can be changed/set with the command line.
-# These properties are stored in the aiida config file.
-# Each entry key is the name of the property used on the command line;
-# the value must be a 4-tuple, whose elements are
-# 1. the key actually used in the config json file
-# 2. the type
-# 3. A human-readable description
-# 4. The default value, if no setting is found
-# 5. A list of valid values, or None if no such list makes sense
-_property_table = {
-    "runner.poll.interval": ("runner_poll_interval", "int",
-                             "The polling interval in seconds to be used by process runners", 1, None),
-    "daemon.timeout": ("daemon_timeout", "int", "The timeout in seconds for calls to the circus client",
-                       DEFAULT_DAEMON_TIMEOUT, None),
-    "verdishell.modules": ("modules_for_verdi_shell", "string",
-                           "Additional modules/functions/classes to be automaticaly loaded in the "
-                           "verdi shell (but not in the runaiida environment); it should be a "
-                           "string with the full paths for each module,"
-                           " function or class, separated by colons, e.g. "
-                           "'aiida.backends.djsite.db.models:aiida.orm.querytool.Querytool'", "", None),
-    "verdishell.calculation_list": ("projections_for_calculation_list", "list_of_str",
-                                    "A list of the projections that should be shown by default "
-                                    "when typing 'verdi calculation list'. "
-                                    "Set by passing the projections space separated as a string, for example: "
-                                    "verdi devel setproperty verdishell.calculation_list 'pk time job_state'",
-                                    ('pk', 'ctime', 'process_state', 'type', 'job_state'), None),
-    "logging.aiida_loglevel": ("logging_aiida_log_level", "string",
-                               "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
-                               "and to the DbLog table for the 'aiida' logger; for the DbLog, see "
-                               "also the logging.db_loglevel variable to further filter messages going "
-                               "to the database", "REPORT", ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO",
-                                                             "DEBUG"]),
-    "logging.tornado_loglevel":
-    ("logging_tornado_log_level", "string", "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
-     "for the 'tornado' loggers", "WARNING", ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
-    "logging.plumpy_loglevel":
-    ("logging_plumpy_log_level", "string", "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
-     "for the 'plumpy' logger", "WARNING", ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
-    "logging.kiwipy_loglevel":
-    ("logging_kiwipy_log_level", "string", "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
-     "for the 'kiwipy' logger", "WARNING", ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
-    "logging.paramiko_loglevel": ("logging_paramiko_log_level", "string",
-                                  "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
-                                  "for the 'paramiko' logger", "WARNING",
-                                  ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
-    "logging.alembic_loglevel": ("logging_alembic_log_level", "string", "Minimum level to log to the console",
-                                 "WARNING", ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
-    "logging.sqlalchemy_loglevel": ("logging_sqlalchemy_loglevel", "string", "Minimum level to log to the console",
-                                    "WARNING", ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
-    "logging.circus_loglevel": ("logging_circus_log_level", "string",
-                                "Minimum level to log to the circus daemon log file"
-                                "for the 'circus' logger", "INFO",
-                                ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
-    "logging.db_loglevel": ("logging_db_log_level", "string", "Minimum level to log to the DbLog table", "REPORT",
-                            ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"]),
-    "tcod.depositor_username": ("tcod_depositor_username", "string", "Username for TCOD deposition", None, None),
-    "tcod.depositor_password": ("tcod_depositor_password", "string", "Password for TCOD deposition", None, None),
-    "tcod.depositor_email": ("tcod_depositor_email", "string", "E-mail address for TCOD deposition", None, None),
-    "tcod.depositor_author_name": ("tcod_depositor_author_name", "string", "Author name for TCOD depositions", None,
-                                   None),
-    "tcod.depositor_author_email": ("tcod_depositor_author_email", "string", "E-mail address for TCOD depositions",
-                                    None, None),
-    "warnings.showdeprecations": ("show_deprecations", "bool", "Boolean whether to print AiiDA deprecation warnings",
-                                  True, None)
-}
-
-
-def exists_property(name):
-    """
-    Check if a property exists in the DB.
-
-    .. note:: this is useful if one wants explicitly to know if a property
-      is defined just because it has a default value, or because it is
-      explicitly defined in the config file.
-
-    :param name: the name of the property to check.
-
-    :raise ValueError: if the given name is not a valid property (as stored in
-      the _property_table dictionary).
-    """
-    from aiida.common.exceptions import MissingConfigurationError
-
-    try:
-        key, _, _, table_defval, _ = _property_table[name]
-    except KeyError:
-        raise ValueError("{} is not a recognized property".format(name))
-
-    try:
-        config = get_config()
-        return key in config
-    except MissingConfigurationError:  # No file found
-        return False
-
-
-def get_property(name, default=_NoDefaultValue()):
-    """
-    Get a property from the json file.
-
-    :param name: the name of the property to get.
-    :param default: if provided, this value is returned if no value is found
-      in the database.
-
-    :raise ValueError: if the given name is not a valid property (as stored in
-      the _property_table dictionary).
-    :raise KeyError: if the given property is not found in the config file, and
-      no default value is given or provided in _property_table.
-    """
-    from aiida.common.exceptions import MissingConfigurationError
-    from aiida.common.log import LOG_LEVELS
-
-    try:
-        key, _, _, table_defval, _ = _property_table[name]
-    except KeyError:
-        raise ValueError("{} is not a recognized property".format(name))
-
-    value = None
-    try:
-        config = get_config()
-        value = config[key]
-    except (KeyError, MissingConfigurationError):
-        if isinstance(default, _NoDefaultValue):
-            if isinstance(table_defval, _NoDefaultValue):
-                raise
-            else:
-                value = table_defval
-        else:
-            value = default
-
-    # This translation is necessary because the logging module can only
-    # accept numerical log levels (except for the predefined ones).
-    # A side-effect of this is that:
-    # verdi devel getproperty logging.[x]_loglevel
-    # will return the corresponding integer, even though a string is stored in
-    # the config.
-    if name.startswith('logging.') and name.endswith('loglevel'):
-        value = LOG_LEVELS[value]
-
-    return value
-
-
-def del_property(name):
-    """
-    Delete a property in the json file.
-
-    :param name: the name of the property to delete.
-    :raise: KeyError if the key is not found in the configuration file.
-    """
-    from aiida.common.exceptions import MissingConfigurationError
-
-    try:
-        key, _, _, _, _ = _property_table[name]
-    except KeyError:
-        raise ValueError("{} is not a recognized property".format(name))
-
-    try:
-        config = get_config()
-        del config[key]
-    except MissingConfigurationError:
-        raise KeyError("No configuration file found")
-
-    # If we are here, no exception was raised
-    store_config(config)
-
-
-def set_property(name, value):
-    """
-    Set a property in the json file.
-
-    :param name: The name of the property value to set.
-    :param value: the value to set. If it is a string, it is possibly casted
-      to the correct type according to the information in the _property_table
-      dictionary.
-
-    :raise ValueError: if the provided name is not among the set of valid
-      properties, or if the value provided as a string cannot be casted to the
-      correct type.
-    """
-    from aiida.common.exceptions import MissingConfigurationError
-
-    try:
-        key, type_string, _, _, valid_values = _property_table[name]
-    except KeyError:
-        raise ValueError("'{}' is not a recognized property".format(name))
-
-    actual_value = False
-
-    if type_string == "bool":
-        if isinstance(value, six.string_types):
-            if value.strip().lower() in ["0", "false", "f"]:
-                actual_value = False
-            elif value.strip().lower() in ["1", "true", "t"]:
-                actual_value = True
-            else:
-                raise ValueError("Invalid bool value for property {}".format(name))
-        else:
-            actual_value = bool(value)
-    elif type_string == "string":
-        actual_value = six.text_type(value)
-    elif type_string == "int":
-        actual_value = int(value)
-    elif type_string == 'list_of_str':
-        # I expect the results as a list of strings
-        actual_value = value.split()
-    else:
-        # Implement here other data types
-        raise NotImplementedError("Type string '{}' not implemented yet".format(type_string))
-
-    if valid_values is not None:
-        if actual_value not in valid_values:
-            raise ValueError("'{}' is not among the list of accepted values "
-                             "for property {}".format(actual_value, name))
-
-    try:
-        config = get_config()
-    except MissingConfigurationError:
-        config = {}
-
-    config[key] = actual_value
-
-    store_config(config)
 
 
 def parse_repository_uri(repository_uri):
@@ -993,12 +344,12 @@ def parse_repository_uri(repository_uri):
     parts = uritools.urisplit(repository_uri)
 
     if parts.scheme != u'file':
-        raise ConfigurationError("The current AiiDA version supports only a " "local repository")
+        raise exceptions.ConfigurationError("The current AiiDA version supports only a local repository")
 
     if parts.scheme == u'file':
         if not os.path.isabs(parts.path):
-            raise ConfigurationError("The current repository is specified with a "
-                                     "file protocol but with a relative path")
+            raise exceptions.ConfigurationError("The current repository is specified with a "
+                                                "file protocol but with a relative path")
 
-        # Normalize path to its absolute path
-        return parts.scheme, os.path.expanduser(parts.path)
+    # Normalize path to its absolute path
+    return parts.scheme, os.path.expanduser(parts.path)

@@ -499,8 +499,8 @@ class TrajectoryData(ArrayData):
         """
         import warnings
         from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
-        warnings.warn('This method has been deprecated and will be renamed to get_structure() in AiiDA v1.0',
-                      DeprecationWarning)
+        warnings.warn(  # pylint: disable=no-member
+            'This method has been deprecated and will be renamed to get_structure() in AiiDA v1.0', DeprecationWarning)
         return self.get_structure(store=store, **kwargs)
 
     def get_structure(self, store=False, **kwargs):
@@ -528,8 +528,8 @@ class TrajectoryData(ArrayData):
         """
         import warnings
         from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
-        warnings.warn('This method has been deprecated and will be renamed to get_cif() in AiiDA v1.0',
-                      DeprecationWarning)
+        warnings.warn(  # pylint: disable=no-member
+            'This method has been deprecated and will be renamed to get_cif() in AiiDA v1.0', DeprecationWarning)
         return self.get_cif(index=index, **kwargs)
 
     def get_cif(self, index=None, **kwargs):

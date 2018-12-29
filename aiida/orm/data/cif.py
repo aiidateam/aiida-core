@@ -850,8 +850,8 @@ class CifData(SinglefileData):
         """
         import warnings
         from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
-        warnings.warn('This method has been deprecated and will be renamed to get_structure() in AiiDA v1.0',
-                      DeprecationWarning)
+        warnings.warn(  # pylint: disable=no-member
+            'This method has been deprecated and will be renamed to get_structure() in AiiDA v1.0', DeprecationWarning)
         return self.get_structure(converter=converter, store=store, **kwargs)
 
     def get_structure(self, converter='pymatgen', store=False, **kwargs):

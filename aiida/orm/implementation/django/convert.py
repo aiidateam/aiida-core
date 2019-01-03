@@ -23,7 +23,7 @@ except ImportError:  # Python2
 from aiida.backends.djsite.db import models
 from aiida.orm.implementation.django import dummy_model as dummy_models
 from aiida.common.exceptions import DbContentError
-from aiida.plugins.loader import get_plugin_type_from_type_string, load_plugin
+from aiida.plugins.loader import get_plugin_type_from_type_string, load_node_class
 
 __all__ = ('get_backend_entity',)
 
@@ -83,8 +83,8 @@ def _(dbmodel, _backend):
     except DbContentError:
         raise DbContentError("The type name of node with pk= {} is not valid: '{}'".format(dbmodel.pk, dbmodel.type))
 
-    plugin_class = load_plugin(plugin_type, safe=True)
-    return plugin_class(dbnode=dbmodel)
+    node_class = load_node_class(plugin_type)
+    return node_class(dbnode=dbmodel)
 
 
 @get_backend_entity.register(models.DbAuthInfo)
@@ -204,8 +204,8 @@ def _(dbmodel, _):
         raise DbContentError("The type name of node with pk= {} is "
                              "not valid: '{}'".format(djnode_instance.pk, djnode_instance.type))
 
-    plugin_class = load_plugin(plugin_type, safe=True)
-    return plugin_class(dbnode=djnode_instance)
+    node_class = load_node_class(plugin_type)
+    return node_class(dbnode=djnode_instance)
 
 
 @get_backend_entity.register(dummy_models.DbAuthInfo)

@@ -24,8 +24,8 @@ from aiida.cmdline.utils import decorators, echo
 @click.option(
     '-e',
     '--entry-point',
-    type=PluginParamType(group=('node', 'calculations', 'data'), load=True),
-    default='node',
+    type=PluginParamType(group=('aiida.calculations', 'aiida.data', 'aiida.workflows'), load=True),
+    default=None,
     help='Only include nodes that are class or sub class of the class identified by this entry point.')
 @decorators.with_dbenv()
 def rehash(nodes, entry_point):
@@ -33,7 +33,13 @@ def rehash(nodes, entry_point):
 
     The set of nodes that will be rehashed can be filtered by their identifier and/or based on their class.
     """
+    from aiida.orm.data import Data
+    from aiida.orm.node.process import ProcessNode
     from aiida.orm.querybuilder import QueryBuilder
+
+    # If no explicit entry point is defined, rehash all nodes, which are either Data nodes or ProcessNodes
+    if entry_point is None:
+        entry_point = (Data, ProcessNode)
 
     if nodes:
         to_hash = [(node,) for node in nodes if isinstance(node, entry_point)]

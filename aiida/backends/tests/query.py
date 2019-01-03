@@ -35,34 +35,25 @@ class TestQueryBuilder(AiidaTestCase):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.data.structure import StructureData
         from aiida.orm import Group, User, Node, Computer, Data
-        from aiida.common.exceptions import InputValidationError
+        from aiida.common.exceptions import DbContentError
 
         qb = QueryBuilder()
 
         # Asserting that improper declarations of the class type raise an error
-        with self.assertRaises(InputValidationError):
+        with self.assertRaises(DbContentError):
             qb._get_ormclass(None, 'data')
-        with self.assertRaises(InputValidationError):
+        with self.assertRaises(DbContentError):
             qb._get_ormclass(None, 'data.Data')
-        with self.assertRaises(InputValidationError):
+        with self.assertRaises(DbContentError):
             qb._get_ormclass(None, '.')
 
         # Asserting that the query type string and plugin type string are returned:
         for cls, clstype, query_type_string in (
-                qb._get_ormclass(StructureData, None),
-                qb._get_ormclass(None, 'data.structure.StructureData.'),
+            qb._get_ormclass(StructureData, None),
+            qb._get_ormclass(None, 'data.structure.StructureData.'),
         ):
-            self.assertEqual(clstype,
-                             StructureData._plugin_type_string)
-            self.assertEqual(query_type_string,
-                             StructureData._query_type_string)
-
-        for cls, clstype, query_type_string in (
-                qb._get_ormclass(Node, None),
-                qb._get_ormclass(None, '')
-        ):
-            self.assertEqual(clstype, Node._plugin_type_string)
-            self.assertEqual(query_type_string, Node._query_type_string)
+            self.assertEqual(clstype, StructureData._plugin_type_string)
+            self.assertEqual(query_type_string, StructureData._query_type_string)
 
         for cls, clstype, query_type_string in (
                 qb._get_ormclass(Group, None),

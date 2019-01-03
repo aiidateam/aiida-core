@@ -173,10 +173,10 @@ class NodeTranslator(BaseTranslator):
         else:
             raise InputValidationError("invalid result/content value: {}".format(query_type))
 
-        ## Add input/output relation to the query help
+        # Add input/output relation to the query help
         if self._result_type != self.__label__:
             self._query_help["path"].append({
-                "type": "node.Node.",
+                "type": ("node.Node.", "data.Data."),
                 "tag": self._result_type,
                 self._result_type: self.__label__
             })

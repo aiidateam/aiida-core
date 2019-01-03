@@ -381,7 +381,7 @@ class Calculation(Node):
 
         from aiida.restapi.translator.calculation import CalculationTranslator
         self.trans = CalculationTranslator(**kwargs)
-        from aiida.orm.node.process import ProcessNode as CalculationTclass
+        from aiida.orm.node.process import CalcJobNode as CalculationTclass
         self.tclass = CalculationTclass
 
         self.parse_pk_uuid = 'uuid'

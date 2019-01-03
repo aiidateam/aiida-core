@@ -10,6 +10,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import io
 
 from aiida.orm import CalculationFactory
@@ -20,17 +21,6 @@ TemplatereplacerCalculation = CalculationFactory('templatereplacer')
 
 
 class TemplatereplacerDoublerParser(Parser):
-
-    def __init__(self, calc):
-        """
-        Initialize the Parser for a TemplatereplacerCalculation
-
-        :param calculation: instance of the TemplatereplacerCalculation
-        """
-        if not isinstance(calc, TemplatereplacerCalculation):
-            raise ValueError('Input calculation must be of type {}'.format(type(TemplatereplacerCalculation)))
-
-        super(TemplatereplacerDoublerParser, self).__init__(calc)
 
     def parse_with_retrieved(self, retrieved):
         """

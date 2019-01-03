@@ -10,76 +10,46 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from collections import namedtuple, OrderedDict
+
 from aiida.common.exceptions import DbContentError, MissingPluginError
-from aiida.common.exceptions import MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError
 from aiida.plugins.entry_point import load_entry_point, get_entry_point_from_class, entry_point_group_to_module_path_map
 
 
-EntryPoint = namedtuple('EntryPoint', ['group', 'base_class'])
-
-
-def load_plugin(plugin_type, safe=False):
+def load_node_class(plugin_type_string):
     """
-    Load a plugin class from its plugin type, which is essentially its ORM type string
-    minus the trailing period
+    Return the Node sub class that corresponds to the given plugin type string.
 
-    :param plugin_type: the plugin type string
-    :param safe: when set to True, will always attempt to return the base class closest to the plugin_type if
-        the actual entry point is not recognized
-    :return: the plugin class
-    :raises MissingPluginError: plugin_type could not be resolved to registered entry point
-    :raises LoadingPluginFailed: the entry point matching the plugin_type could not be loaded
+    :param plugin_type_string: the plugin type string of the node
+    :return: the Node sub class corresponding to the plugin type string
     """
     from aiida.orm.data import Data
-    from aiida.orm.node import Node
-    from aiida.orm.node.process import ProcessNode, CalculationNode, CalcJobNode, CalcFunctionNode, WorkChainNode, WorkFunctionNode, WorkflowNode
-
-    plugin = None
-    base_class = Node
-
-    if plugin_type == 'data.Data':
-        return Data
+    from aiida.orm.node.process import CalculationNode, CalcJobNode, CalcFunctionNode
+    from aiida.orm.node.process import WorkChainNode, WorkFunctionNode, WorkflowNode
 
     try:
-        base_path, class_name = plugin_type.rsplit('.', 1)
+        base_path, class_name = plugin_type_string.rsplit('.', 1)
     except ValueError:
         raise MissingPluginError
 
-    type_string_to_entry_point_type_map = OrderedDict([
-        ('data.', EntryPoint('aiida.data', Data)),
-        ('node.process.calculation.calcjob.', EntryPoint('aiida.calculations', CalcJobNode)),
-        ('node.process.calculation.calcfunction.', EntryPoint('aiida.node', CalcFunctionNode)),
-        ('node.process.calculation.calculation.', EntryPoint('aiida.node', CalculationNode)),
-        ('node.process.workflow.workchain.', EntryPoint('aiida.node', WorkChainNode)),
-        ('node.process.workflow.workfunction', EntryPoint('aiida.node', WorkFunctionNode)),
-        ('node.process.workflow.workflow', EntryPoint('aiida.node', WorkflowNode)),
-        ('node.process.process', EntryPoint('aiida.node', ProcessNode)),
-        ('node.', EntryPoint('aiida.node', Node)),
-    ])
-
-    if base_path.count('.') == 0:
-        base_path = '{}.{}'.format(base_path, base_path)
-
-    for prefix, entry_point_type in type_string_to_entry_point_type_map.items():
-        if base_path.startswith(prefix):
-
-            entry_point = strip_prefix(base_path, prefix)
-
-            try:
-                plugin = load_entry_point(entry_point_type.group, entry_point)
-            except (MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError) as exception:
-                base_class = entry_point_type.base_class
-            finally:
-                break
-
-    if not plugin and safe is False:
-        raise MissingPluginError
-
-    if plugin:
-        return plugin
+    if base_path == 'data':
+        return Data
+    elif base_path.startswith('data.'):
+        entry_point_name = strip_prefix(base_path, 'data.')
+        return load_entry_point('aiida.data', entry_point_name)
+    elif base_path == 'node.process.calculation.calcjob':
+        return CalcJobNode
+    elif base_path == 'node.process.calculation.calcfunction':
+        return CalcFunctionNode
+    elif base_path == 'node.process.calculation':
+        return CalculationNode
+    elif base_path == 'node.process.workflow.workchain':
+        return WorkChainNode
+    elif base_path == 'node.process.workflow.workfunction':
+        return WorkFunctionNode
+    elif base_path == 'node.process.workflow':
+        return WorkflowNode
     else:
-        return base_class
+        raise MissingPluginError('unknown type string {}'.format(plugin_type_string))
 
 
 def get_plugin_type_from_type_string(type_string):
@@ -132,7 +102,13 @@ def get_type_string_from_class(class_module, class_name):
     # If we can reverse engineer an entry point group and name, we're dealing with an external class
     if group and entry_point:
         module_base_path = entry_point_group_to_module_path_map[group]
-        orm_class = '{}.{}.{}.'.format(module_base_path, entry_point.name, class_name)
+
+        # While CalcJobNodes are still how one defines the actual process, this exception needs to be here.
+        # Once we define CalcJobProcess to run a calculation job, this exception can be removed
+        if group == 'aiida.calculations':
+            orm_class = '{}.{}.'.format(module_base_path, 'CalcJobNode')
+        else:
+            orm_class = '{}.{}.{}.'.format(module_base_path, entry_point.name, class_name)
 
     # Otherwise we are dealing with an internal class
     else:
@@ -160,6 +136,9 @@ def get_type_string_from_class_path(class_path):
 
     if class_path == 'node.Node.':
         class_path = ''
+
+    elif class_path == 'node.process.process.ProcessNode.':
+        class_path = 'node.process.ProcessNode.'
 
     return class_path
 

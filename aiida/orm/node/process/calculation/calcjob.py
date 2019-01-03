@@ -1894,7 +1894,7 @@ class CalcJobNode(CalculationNode):
         from aiida.orm import DataFactory
         from aiida.common.datastructures import CodeInfo, code_run_modes
         from aiida.orm.code import Code
-        from aiida.orm.utils import load_node
+        from aiida.orm.utils import load_node, CalculationFactory
         import aiida.common.json as json
 
         computer = self.get_computer()
@@ -1904,7 +1904,21 @@ class CalcJobNode(CalculationNode):
 
         inputdict = {entry.link_label: entry.node for entry in inputs}
 
-        calcinfo = self._prepare_for_submission(folder, inputdict)
+        # THIS IS A MASSIVE HACK: the `_prepare_for_submission` is only implemented for the sub class but this instance
+        # will be a plain `CalcJobNode`, so we have to recreate an instance of the actual sub class to call the method.
+        from importlib import import_module
+        from aiida.plugins.entry_point import is_valid_entry_point_string, load_entry_point_from_string
+
+        if is_valid_entry_point_string(self.process_type):
+            calc_class = load_entry_point_from_string(self.process_type)
+        else:
+            module_name, class_name = self.process_type.rsplit('.', 1)
+            module = import_module(module_name)
+            calc_class = getattr(module, class_name)
+
+        calc_instance = calc_class(dbnode=self._dbnode)
+
+        calcinfo = calc_instance._prepare_for_submission(folder, inputdict)
         s = computer.get_scheduler()
 
         for code in codes:

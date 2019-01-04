@@ -25,7 +25,6 @@ from aiida.cmdline.utils.decorators import with_dbenv
 @verdi.group('group')
 def verdi_group():
     """Inspect, create and manage groups."""
-    pass
 
 
 @verdi_group.command("removenodes")
@@ -332,9 +331,5 @@ def group_copy(source_group, destination_group):
 
     dest_group = orm.Group.objects.get_or_create(
         label=destination_group, type_string=GroupTypeString(source_group.type_string))[0]
-    try:
-        dest_group.add_nodes(source_group.nodes)
-        echo.echo_success("Nodes were succesfully copied from the group <{}> to the group "
-                          "<{}>".format(source_group, destination_group))
-    except:
-        raise
+    dest_group.add_nodes(source_group.nodes)
+    echo.echo_success("Nodes copied from group<{}> to group<{}>".format(source_group, destination_group))

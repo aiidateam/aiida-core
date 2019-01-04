@@ -86,10 +86,11 @@ def query_yes_no(question, default="yes"):
         choice = input(question + prompt).lower()
         if default is not None and not choice:
             return valid[default]
-        elif choice in valid:
+
+        if choice in valid:
             return valid[choice]
-        else:
-            sys.stdout.write("Please respond with 'yes' or 'no' (or 'y' or 'n').\n")
+
+        sys.stdout.write("Please respond with 'yes' or 'no' (or 'y' or 'n').\n")
 
 
 def query_string(question, default):
@@ -122,7 +123,8 @@ def query_string(question, default):
                 return None
 
             return default
-        elif reply:
+
+        if reply:
             return reply
 
         sys.stdout.write("Please provide a non empty answer.\n")

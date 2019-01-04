@@ -25,11 +25,11 @@ from aiida.restapi.common.utils import PK_DBSYNONYM
 
 
 class BaseTranslator(object):
-    # pylint: disable=too-many-instance-attributes,fixme
     """
     Generic class for translator. It contains the methods
     required to build a related QueryBuilder object
     """
+    # pylint: disable=useless-object-inheritance,too-many-instance-attributes,fixme
 
     # A label associated to the present class
     __label__ = None
@@ -463,11 +463,13 @@ class BaseTranslator(object):
 
         # TODO think how to make it less hardcoded
         if self._result_type == 'with_outgoing':
-            return {'inputs': results}
+            result = {'inputs': results}
         elif self._result_type == 'with_incoming':
-            return {'outputs': results}
+            result = {'outputs': results}
+        else:
+            result = {self.__label__: results}
 
-        return {self.__label__: results}
+        return result
 
     def get_results(self):
         """

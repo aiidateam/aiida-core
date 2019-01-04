@@ -26,7 +26,6 @@ from aiida.common.log import LOG_LEVELS
 @verdi.group('work')
 def verdi_work():
     """Inspect and manage work calculations."""
-    pass
 
 
 @verdi_work.command('list')

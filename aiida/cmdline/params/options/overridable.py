@@ -19,7 +19,7 @@ from __future__ import absolute_import
 import click
 
 
-class OverridableOption(object):
+class OverridableOption(object):  # pylint: disable=useless-object-inheritance
     """
     Wrapper around click option that increases reusability
 

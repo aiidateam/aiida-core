@@ -67,7 +67,7 @@ def has_pycifrw():
     """
     :return: True if the PyCifRW module can be imported, False otherwise.
     """
-    # pylint: disable=unused-variable
+    # pylint: disable=unused-variable,unused-import
     try:
         import CifFile
         from CifFile import CifBlock
@@ -119,10 +119,7 @@ def _get_aiida_structure_ase_inline(cif, **kwargs):
     from aiida.orm.data.parameter import ParameterData
     from aiida.orm.data.structure import StructureData
 
-    if 'parameters' in kwargs:
-        parameters = kwargs['parameters']
-    else:
-        parameters = {}
+    parameters = kwargs.get('parameters', {})
 
     if isinstance(parameters, ParameterData):
         parameters = parameters.get_dict()
@@ -149,10 +146,7 @@ def _get_aiida_structure_pymatgen_inline(cif, **kwargs):
     from aiida.orm.data.parameter import ParameterData
     from aiida.orm.data.structure import StructureData
 
-    if 'parameters' in kwargs:
-        parameters = kwargs['parameters']
-    else:
-        parameters = {}
+    parameters = kwargs.get('parameters', {})
 
     if isinstance(parameters, ParameterData):
         parameters = parameters.get_dict()
@@ -512,16 +506,16 @@ class CifData(SinglefileData):
                 return (instance, True)
             instance = cls(file=filename)
             return (instance, True)
-        else:
-            if len(cifs) > 1:
-                if use_first:
-                    return (cifs[0], False)
-                else:
-                    raise ValueError("More than one copy of a CIF file "
-                                     "with the same MD5 has been found in "
-                                     "the DB. pks={}".format(",".join([str(i.pk) for i in cifs])))
-            else:
-                return cifs[0], False
+
+        if len(cifs) > 1:
+            if use_first:
+                return (cifs[0], False)
+
+            raise ValueError("More than one copy of a CIF file "
+                             "with the same MD5 has been found in "
+                             "the DB. pks={}".format(",".join([str(i.pk) for i in cifs])))
+
+        return cifs[0], False
 
     # pylint: disable=attribute-defined-outside-init
     @property
@@ -766,7 +760,7 @@ class CifData(SinglefileData):
         for datablock in self.values.keys():
             if tag in self.values[datablock].keys():
                 for value in self.values[datablock][tag]:
-                    if value != '.' and value != '?' and value != '0':
+                    if value not in ['.', '?', '0']:
                         return True
 
         return False

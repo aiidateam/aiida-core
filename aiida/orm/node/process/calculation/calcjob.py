@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=cyclic-import
 """ORM class for CalcJobNode."""
 from __future__ import absolute_import
 from __future__ import print_function

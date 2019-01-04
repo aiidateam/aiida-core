@@ -272,7 +272,6 @@ class Computer(entities.Entity):
         Validates the description.
         """
         # The description is always valid
-        pass
 
     @classmethod
     def _transport_type_validator(cls, transport_type):
@@ -296,7 +295,6 @@ class Computer(entities.Entity):
         Validates the prepend text string.
         """
         # no validation done
-        pass
 
     @classmethod
     def _append_text_validator(cls, append_text):
@@ -304,7 +302,6 @@ class Computer(entities.Entity):
         Validates the append text string.
         """
         # no validation done
-        pass
 
     @classmethod
     def _workdir_validator(cls, workdir):
@@ -653,7 +650,6 @@ class Computer(entities.Entity):
         :return: the description
         :rtype: str
         """
-        pass
 
     def set_description(self, val):
         """

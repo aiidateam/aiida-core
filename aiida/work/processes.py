@@ -661,9 +661,9 @@ class Process(plumpy.Process):
         """Get the list of namespaces in a given namespace"""
         if not agglomerate:
             return [namespace]
-        else:
-            namespace_list = [None]
-            if namespace is not None:
-                split_ns = namespace.split('.')
-                namespace_list.extend(['.'.join(split_ns[:i]) for i in range(1, len(split_ns) + 1)])
-            return namespace_list
+
+        namespace_list = [None]
+        if namespace is not None:
+            split_ns = namespace.split('.')
+            namespace_list.extend(['.'.join(split_ns[:i]) for i in range(1, len(split_ns) + 1)])
+        return namespace_list

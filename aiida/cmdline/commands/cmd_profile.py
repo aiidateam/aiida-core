@@ -26,7 +26,6 @@ from aiida.manage.external.postgres import Postgres
 @verdi.group('profile')
 def verdi_profile():
     """Inspect and manage the configured profiles."""
-    pass
 
 
 @verdi_profile.command('list')

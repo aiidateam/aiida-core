@@ -173,14 +173,14 @@ class WorkChain(Process):
         # If the stepper said we are finished or the result is an ExitCode, we exit by returning
         if finished or isinstance(result, ExitCode):
             return result
-        else:
-            if isinstance(stepper_result, ToContext):
-                self.to_context(**stepper_result)
 
-            if self._awaitables:
-                return Wait(self._do_step, 'Waiting before next step')
+        if isinstance(stepper_result, ToContext):
+            self.to_context(**stepper_result)
 
-            return Continue(self._do_step)
+        if self._awaitables:
+            return Wait(self._do_step, 'Waiting before next step')
+
+        return Continue(self._do_step)
 
     def _store_nodes(self, data):
         """

@@ -51,13 +51,13 @@
     "kiwipy[rmq]==0.4.2",
     "circus==0.14.0",
     "tornado==4.5.3",
-    "pyblake2==1.1.2; python_version<\"3.6\"",
-    "chainmap; python_version<\"3.5\"",
-    "pathlib2; python_version<\"3.5\"",
-    "singledispatch>=3.4.0.3; python_version<\"3.5\"",
-    "enum34==1.1.6; python_version<\"3.5\"",
+    "pyblake2==1.1.2; python_version<'3.6'",
+    "chainmap; python_version<'3.5'",
+    "pathlib2; python_version<'3.5'",
+    "singledispatch>=3.4.0.3; python_version<'3.5'",
+    "enum34==1.1.6; python_version<'3.5'",
     "simplejson==3.16.0",
-    "typing==3.6.6; python_version<\"3.5\""
+    "typing==3.6.6; python_version<'3.5'"
   ],
   "extras_require": {
     "ssh_kerberos": [
@@ -101,12 +101,12 @@
       "jupyter==1.0.0"
     ],
     "testing": [
-      "unittest2==1.1.0; python_version<\"3.5\"",
+      "unittest2==1.1.0; python_version<'3.5'",
       "pgtest==1.1.0",
       "sqlalchemy-diff==0.1.3",
       "coverage==4.5.1",
       "codecov==2.0.15",
-      "futures; python_version==\"2.7\"",
+      "futures; python_version=='2.7'",
       "pytest==3.6.3",
       "pytest-cov==2.5.1"
     ],
@@ -114,7 +114,8 @@
       "pre-commit==1.13.0",
       "yapf==0.23.0",
       "prospector==1.1.5",
-      "pylint-django==0.11.1",
+      "pylint-django==0.11.1; python_version<'3.0'",
+      "pylint-django==2.0.5; python_version>='3.0'",
       "pep8-naming==0.3.3",
       "toml==0.9.4"
     ],

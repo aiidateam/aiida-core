@@ -161,9 +161,9 @@ def create_profile(config, profile_name='default'):
         # If the user doesn't want to change it, we abandon
         if not click.prompt('Would you like to change it?'):
             return profile
+
         # Otherwise, we continue.
-        else:
-            updating_existing_prof = True
+        updating_existing_prof = True
 
     this_new_confs = {}
 

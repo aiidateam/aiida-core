@@ -16,7 +16,7 @@ from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.utils import ErrorAccumulator
 
 
-class ComputerBuilder(object):
+class ComputerBuilder(object):  # pylint: disable=useless-object-inheritance
     """Build a computer with validation of attribute combinations"""
 
     @staticmethod

@@ -23,7 +23,6 @@ from aiida.cmdline.utils.decorators import with_dbenv
 @verdi.group('node')
 def verdi_node():
     """Inspect, create and manage nodes."""
-    pass
 
 
 @verdi_node.group('repo')
@@ -185,7 +184,7 @@ def tree(nodes, depth):
             echo.echo("")
 
 
-class NodeTreePrinter(object):
+class NodeTreePrinter(object):  # pylint: disable=useless-object-inheritance
     """Utility functions for printing node trees."""
 
     @classmethod

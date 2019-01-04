@@ -20,14 +20,12 @@ class AiidaException(Exception):
     Each module will have its own subclass, inherited from this
     (e.g. ExecManagerException, TransportException, ...)
     """
-    pass
 
 
 class NotExistent(AiidaException):
     """
     Raised when the required entity does not exist.
     """
-    pass
 
 
 class MultipleObjectsError(AiidaException):
@@ -35,7 +33,6 @@ class MultipleObjectsError(AiidaException):
     Raised when more than one entity is found in the DB, but only one was
     expected.
     """
-    pass
 
 
 class RemoteOperationError(AiidaException):
@@ -43,7 +40,6 @@ class RemoteOperationError(AiidaException):
     Raised when an error in a remote operation occurs, as in a failed kill()
     of a scheduler job.
     """
-    pass
 
 
 class ContentNotExistent(NotExistent):
@@ -51,21 +47,18 @@ class ContentNotExistent(NotExistent):
     Raised when trying to access an attribute, a key or a file in the result
     nodes that is not present
     """
-    pass
 
 
 class FailedError(AiidaException):
     """
     Raised when accessing a calculation that is in the FAILED status
     """
-    pass
 
 
 class StoringNotAllowed(AiidaException):
     """
     Raised when the user tries to store an unstorable node (e.g. a base Node class)
     """
-    pass
 
 
 class ModificationNotAllowed(AiidaException):
@@ -73,7 +66,6 @@ class ModificationNotAllowed(AiidaException):
     Raised when the user tries to modify a field, object, property, ... that should not
     be modified.
     """
-    pass
 
 
 class IntegrityError(AiidaException):
@@ -82,7 +74,6 @@ class IntegrityError(AiidaException):
     or a general data integrity error.  This can happen if, e.g., a foreign key check fails.
     See PEP 249 for details.
     """
-    pass
 
 
 class UniquenessError(AiidaException):
@@ -90,42 +81,36 @@ class UniquenessError(AiidaException):
     Raised when the user tries to violate a uniqueness constraint (on the
     DB, for instance).
     """
-    pass
 
 
 class MissingEntryPointError(AiidaException):
     """
     Raised when the requested entry point is not registered with the entry point manager
     """
-    pass
 
 
 class MultipleEntryPointError(AiidaException):
     """
     Raised when the requested entry point cannot uniquely be resolved by the entry point manager
     """
-    pass
 
 
 class LoadingEntryPointError(AiidaException):
     """
     Raised when the class corresponding to requested entry point cannot be loaded
     """
-    pass
 
 
 class MissingPluginError(AiidaException):
     """
     Raised when the user tries to use a plugin that is not available or does not exist.
     """
-    pass
 
 
 class LoadingPluginFailed(AiidaException):
     """
     Raised when loading a plugin through the plugin loader fails
     """
-    pass
 
 
 class InvalidOperation(AiidaException):
@@ -134,21 +119,18 @@ class InvalidOperation(AiidaException):
     before saving the entry), or deleting an entry that is protected (e.g.,
     because it is referenced by foreign keys)
     """
-    pass
 
 
 class ParsingError(AiidaException):
     """
     Generic error raised when there is a parsing error
     """
-    pass
 
 
 class InternalError(AiidaException):
     """
     Error raised when there is an internal error of AiiDA.
     """
-    pass
 
 
 class PluginInternalError(InternalError):
@@ -156,7 +138,6 @@ class PluginInternalError(InternalError):
     Error raised when there is an internal error which is due to a plugin
     and not to the AiiDA infrastructure.
     """
-    pass
 
 
 class ValidationError(AiidaException):
@@ -164,28 +145,24 @@ class ValidationError(AiidaException):
     Error raised when there is an error during the validation phase
     of a property.
     """
-    pass
 
 
 class ConfigurationError(AiidaException):
     """
     Error raised when there is a configuration error in AiiDA.
     """
-    pass
 
 
 class ProfileConfigurationError(ConfigurationError):
     """
     Configuration error raised when a wrong/inexistent profile is requested.
     """
-    pass
 
 
 class MissingConfigurationError(ConfigurationError):
     """
     Configuration error raised when the configuration file is missing.
     """
-    pass
 
 
 class ConfigurationVersionError(ConfigurationError):
@@ -193,7 +170,6 @@ class ConfigurationVersionError(ConfigurationError):
     Configuration error raised when the configuration file version is not
     compatible with the current version.
     """
-    pass
 
 
 class DbContentError(AiidaException):
@@ -202,7 +178,6 @@ class DbContentError(AiidaException):
     This should never happen if the user does not play directly
     with the DB.
     """
-    pass
 
 
 class InputValidationError(ValidationError):
@@ -210,7 +185,6 @@ class InputValidationError(ValidationError):
     The input data for a calculation did not validate (e.g., missing
     required input data, wrong data, ...)
     """
-    pass
 
 
 class WorkflowInputValidationError(ValidationError):
@@ -218,14 +192,12 @@ class WorkflowInputValidationError(ValidationError):
     The input data for a workflow did not validate (e.g., missing
     required input data, wrong data, ...)
     """
-    pass
 
 
 class FeatureNotAvailable(AiidaException):
     """
     Raised when a feature is requested from a plugin, that is not available.
     """
-    pass
 
 
 class FeatureDisabled(AiidaException):
@@ -233,14 +205,12 @@ class FeatureDisabled(AiidaException):
     Raised when a feature is requested, but the user has chosen to disable
     it (e.g., for submissions on disabled computers).
     """
-    pass
 
 
 class LicensingException(AiidaException):
     """
     Raised when requirements for data licensing are not met.
     """
-    pass
 
 
 class TestsNotAllowedError(AiidaException):
@@ -249,32 +219,27 @@ class TestsNotAllowedError(AiidaException):
 
     This is to prevent data loss.
     """
-    pass
 
 
 class UnsupportedSpeciesError(ValueError):
     """
     Raised when StructureData operations are fed species that are not supported by AiiDA such as Deuterium
     """
-    pass
 
 
 class DanglingLinkError(Exception):
     """
     Raised when an export archive is detected to contain dangling links when importing
     """
-    pass
 
 
 class TransportTaskException(Exception):
     """
     Raised when a TransportTask, an task to be completed by the engine that requires transport, fails
     """
-    pass
 
 
 class IncompatibleArchiveVersionError(Exception):
     """
     Raised when trying to import an export archive with an incompatible schema version.
     """
-    pass

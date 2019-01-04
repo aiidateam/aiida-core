@@ -130,7 +130,7 @@ class Collection(typing.Generic[EntityType]):
         return [_[0] for _ in self.query().all()]
 
 
-class Entity(object):
+class Entity(object):  # pylint: disable=useless-object-inheritance
     """An AiiDA entity"""
 
     _objects = None

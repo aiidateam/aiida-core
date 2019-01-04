@@ -24,6 +24,7 @@ def write_database_integrity_violation(results, headers, reason_message, action_
     :param reason_message: a human readable message detailing the reason of the integrity violation
     :param action_message: an optional human readable message detailing a performed action, if any
     """
+    # pylint: disable=duplicate-string-formatting-argument
     from datetime import datetime
     from tabulate import tabulate
     from tempfile import NamedTemporaryFile

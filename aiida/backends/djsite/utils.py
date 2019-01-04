@@ -75,6 +75,7 @@ def check_schema_version(profile_name=None):
     :raise ConfigurationError: if the two schema versions do not match.
       Otherwise, just return.
     """
+    # pylint: disable=duplicate-string-formatting-argument
     from django.db import connection
 
     import aiida.backends.djsite.db.models

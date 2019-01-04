@@ -23,7 +23,6 @@ from aiida.common.exceptions import TestsNotAllowedError
 @verdi.group('devel')
 def verdi_devel():
     """Commands for developers."""
-    pass
 
 
 def get_valid_test_paths():
@@ -156,7 +155,7 @@ def devel_tests(paths, verbose):  # pylint: disable=too-many-locals,too-many-sta
     echo.echo('* Tests skipped: {}'.format(len(test_skipped)))
     if test_skipped:
         echo.echo('  Reasons for skipping:')
-        for reason in sorted(set([_[1] for _ in test_skipped])):
+        for reason in sorted(set(_[1] for _ in test_skipped)):
             echo.echo('  - {}'.format(reason))
 
     echo.echo('* Tests run:     {}'.format(tot_num_tests))

@@ -32,7 +32,6 @@ VISUALIZATION_FORMATS = ['jmol', 'xcrysden', 'mpl_heatmap', 'mpl_pos']
 @verdi_data.group('trajectory')
 def trajectory():
     """View and manipulate TrajectoryData instances."""
-    pass
 
 
 @trajectory.command('list')

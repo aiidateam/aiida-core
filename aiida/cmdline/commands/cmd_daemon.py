@@ -29,7 +29,6 @@ from aiida.manage import get_config
 @verdi.group('daemon')
 def verdi_daemon():
     """Inspect and manage the daemon."""
-    pass
 
 
 @verdi_daemon.command()

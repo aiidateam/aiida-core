@@ -94,7 +94,7 @@ class TemplatereplacerCalculation(CalcJobNode):
         :param inputdict: a dictionary with the input nodes e.g. {label1: node1, ...} (with the Code!)
         """
         # pylint: disable=too-many-locals,too-many-statements,too-many-branches
-        from six.moves import StringIO as StringIO
+        from six.moves import StringIO
 
         from aiida.orm.data.singlefile import SinglefileData
         from aiida.orm.data.remote import RemoteData

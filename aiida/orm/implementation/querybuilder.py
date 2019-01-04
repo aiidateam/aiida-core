@@ -25,7 +25,7 @@ __all__ = ('BackendQueryBuilder',)
 class BackendQueryBuilder(object):
     """Backend query builder interface"""
 
-    # pylint: disable=invalid-name, too-many-public-methods
+    # pylint: disable=invalid-name,too-many-public-methods,useless-object-inheritance
 
     def __init__(self, backend):
         """
@@ -42,56 +42,48 @@ class BackendQueryBuilder(object):
         It needs to return a subclass of sqlalchemy.Base, which means that for different ORM's
         a corresponding dummy-model  must be written.
         """
-        pass
 
     @abc.abstractmethod
     def Link(self):
         """
         A property, decorated with @property. Returns the implementation for the DbLink
         """
-        pass
 
     @abc.abstractmethod
     def Computer(self):
         """
         A property, decorated with @property. Returns the implementation for the Computer
         """
-        pass
 
     @abc.abstractmethod
     def User(self):
         """
         A property, decorated with @property. Returns the implementation for the User
         """
-        pass
 
     @abc.abstractmethod
     def Group(self):
         """
         A property, decorated with @property. Returns the implementation for the Group
         """
-        pass
 
     @abc.abstractmethod
     def AuthInfo(self):
         """
         A property, decorated with @property. Returns the implementation for the Group
         """
-        pass
 
     @abc.abstractmethod
     def Comment(self):
         """
         A property, decorated with @property. Returns the implementation for the Comment
         """
-        pass
 
     @abc.abstractmethod
     def log_model_class(self):
         """
         A property, decorated with @property. Returns the implementation for the Log
         """
-        pass
 
     @abc.abstractmethod
     def table_groups_nodes(self):
@@ -99,21 +91,18 @@ class BackendQueryBuilder(object):
         A property, decorated with @property. Returns the implementation for the many-to-many
         relationship between group and nodes.
         """
-        pass
 
     @abc.abstractmethod
     def AiidaNode(self):
         """
         A property, decorated with @property. Returns the implementation for the AiiDA-class for Node
         """
-        pass
 
     @abc.abstractmethod
     def get_session(self):
         """
         :returns: a valid session, an instance of sqlalchemy.orm.session.Session
         """
-        pass
 
     @abc.abstractmethod
     def modify_expansions(self, alias, expansions):
@@ -121,7 +110,6 @@ class BackendQueryBuilder(object):
         Modify names of projections if ** was specified.
         This is important for the schema having attributes in a different table.
         """
-        pass
 
     @abstractclassmethod
     def get_filter_expr_from_attributes(cls, operator, value, attr_key, column=None, column_name=None, alias=None):  # pylint: disable=too-many-arguments
@@ -140,7 +128,6 @@ class BackendQueryBuilder(object):
 
         :returns: An instance of sqlalchemy.sql.elements.BinaryExpression
         """
-        pass
 
     @classmethod
     def get_filter_expr_from_column(cls, operator, value, column):
@@ -203,7 +190,6 @@ class BackendQueryBuilder(object):
 
         :returns: an aiida-compatible instance
         """
-        pass
 
     @abc.abstractmethod
     def yield_per(self, query, batch_size):
@@ -214,14 +200,12 @@ class BackendQueryBuilder(object):
 
         :returns: a generator
         """
-        pass
 
     @abc.abstractmethod
     def count(self, query):
         """
         :returns: the number of results
         """
-        pass
 
     @abc.abstractmethod
     def first(self, query):
@@ -231,21 +215,17 @@ class BackendQueryBuilder(object):
         :returns: One row of aiida results
         """
 
-        pass
-
     @abc.abstractmethod
     def iterall(self, query, batch_size, tag_to_index_dict):
         """
         :return: An iterator over all the results of a list of lists.
         """
-        pass
 
     @abc.abstractmethod
     def iterdict(self, query, batch_size, tag_to_projected_entity_dict):
         """
         :returns: An iterator over all the results of a list of dictionaries.
         """
-        pass
 
     def get_column(self, colname, alias):  # pylint: disable=no-self-use
         """

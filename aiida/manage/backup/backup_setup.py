@@ -35,7 +35,7 @@ if not is_dbenv_loaded():
 from aiida.backends.settings import BACKEND, AIIDADB_PROFILE  # pylint: disable=wrong-import-order,wrong-import-position
 
 
-class BackupSetup(object):
+class BackupSetup(object):  # pylint: disable=useless-object-inheritance
     """
     This class setups the main backup script related information & files like::
 
@@ -187,8 +187,8 @@ class BackupSetup(object):
         try:
             shutil.copy(template_conf_path, conf_backup_folder_abs)
         except Exception:
-            self._logger.error("Error copying the file {} ".format(template_conf_path) +
-                               "to the directory {}.".format(conf_backup_folder_abs))
+            self._logger.error("Error copying the file %s to the directory %s", template_conf_path,
+                               conf_backup_folder_abs)
             raise
 
         if utils.query_yes_no(

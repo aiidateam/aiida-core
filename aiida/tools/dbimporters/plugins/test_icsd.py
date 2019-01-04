@@ -26,8 +26,9 @@ def has_mysqldb():
     """
     :return: True if the ase module can be imported, False otherwise.
     """
+    # pylint: disable=unused-import,unused-variable
     try:
-        import MySQLdb  # pylint: disable=unused-variable
+        import MySQLdb
     except ImportError:
         try:
             import pymysql as MySQLdb

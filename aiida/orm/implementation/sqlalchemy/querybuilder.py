@@ -236,7 +236,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                                            "".format(operator, value))
 
         elif operator == 'in':
-            value_type_set = set([type(i) for i in value])
+            value_type_set = set(type(i) for i in value)
             if len(value_type_set) > 1:
                 raise InputValidationError('{}  contains more than one type'.format(value))
             elif not value_type_set:

@@ -252,7 +252,7 @@ def grouper(n, iterable):  # pylint: disable=invalid-name
         yield chunk
 
 
-class ArrayCounter(object):
+class ArrayCounter(object):  # pylint: disable=useless-object-inheritance
     """
     A counter & a method that increments it and returns its value.
     It is used in various tests.
@@ -307,7 +307,7 @@ def are_dir_trees_equal(dir1, dir2):
     return True, "The given directories ({} and {}) are equal".format(dir1, dir2)
 
 
-class Prettifier(object):
+class Prettifier(object):  # pylint: disable=useless-object-inheritance
     """
     Class to manage prettifiers (typically for labels of kpoints
     in band plots)
@@ -514,7 +514,7 @@ def join_labels(labels, join_symbol="|", threshold=1.e-6):
     return new_labels
 
 
-class Capturing(object):
+class Capturing(object):  # pylint: disable=useless-object-inheritance
     """
     This class captures stdout and returns it
     (as a list, split by lines).
@@ -575,7 +575,7 @@ class Capturing(object):
         return iter(self.stdout_lines)
 
 
-class ErrorAccumulator(object):
+class ErrorAccumulator(object):  # pylint: disable=useless-object-inheritance
     """
     Allows to run a number of functions and collect all the errors they raise
 

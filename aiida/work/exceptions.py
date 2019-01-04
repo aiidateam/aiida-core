@@ -20,4 +20,3 @@ class PastException(AiidaException):
     """
     Raised when an attempt is made to continue a Process that has already excepted before
     """
-    pass

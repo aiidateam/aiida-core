@@ -24,7 +24,6 @@ class Awaitable(AttributesDict):
     """
     An attribute dictionary that represents an action that a Process could be waiting for to finish
     """
-    pass
 
 
 class AwaitableTarget(Enum):

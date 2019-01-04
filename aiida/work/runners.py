@@ -32,7 +32,7 @@ ResultAndNode = namedtuple('ResultAndNode', ['result', 'node'])
 ResultAndPid = namedtuple('ResultAndPid', ['result', 'pid'])
 
 
-class Runner(object):
+class Runner(object):  # pylint: disable=useless-object-inheritance
     """Class that can launch processes by running in the current interpreter or by submitting them to the daemon."""
 
     _persister = None

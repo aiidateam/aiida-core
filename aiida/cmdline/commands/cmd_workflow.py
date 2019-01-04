@@ -26,7 +26,6 @@ DEPRECATION_MSG = 'Legacy workflows have been deprecated in AiiDA v1.0.'
 @verdi.group('workflow')
 def verdi_workflow():
     """Inspect and manage legacy workflows."""
-    pass
 
 
 def format_pk(workflow):

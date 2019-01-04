@@ -23,4 +23,3 @@ class AiidaDeprecationWarning(Warning):
 
       verdi config warnings.showdeprecations False
     """
-    pass

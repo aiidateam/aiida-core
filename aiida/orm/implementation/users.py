@@ -43,7 +43,6 @@ class BackendUser(backends.BackendEntity):
 
         :return: the email address
         """
-        pass
 
     @abc.abstractmethod
     @email.setter
@@ -53,7 +52,6 @@ class BackendUser(backends.BackendEntity):
 
         :param val: the new email address
         """
-        pass
 
     @abc.abstractmethod
     def get_password(self):
@@ -62,7 +60,6 @@ class BackendUser(backends.BackendEntity):
 
         :return: the password
         """
-        pass
 
     @abc.abstractmethod
     def set_password(self, new_pass):
@@ -71,7 +68,6 @@ class BackendUser(backends.BackendEntity):
 
         :param new_pass: the new password
         """
-        pass
 
     @abc.abstractproperty
     def first_name(self):
@@ -81,7 +77,6 @@ class BackendUser(backends.BackendEntity):
         :return: the first name
         :rtype: str
         """
-        pass
 
     @abc.abstractmethod
     @first_name.setter
@@ -91,7 +86,6 @@ class BackendUser(backends.BackendEntity):
 
         :param val: the new first name
         """
-        pass
 
     @abc.abstractproperty
     def last_name(self):
@@ -101,7 +95,6 @@ class BackendUser(backends.BackendEntity):
         :return: the last name
         :rtype: str
         """
-        pass
 
     @abc.abstractmethod
     @last_name.setter
@@ -121,7 +114,6 @@ class BackendUser(backends.BackendEntity):
         :return: the institution
         :rtype: str
         """
-        pass
 
     @abc.abstractmethod
     @institution.setter
@@ -131,7 +123,6 @@ class BackendUser(backends.BackendEntity):
 
         :param val: the new institution
         """
-        pass
 
     @abc.abstractproperty
     def is_active(self):

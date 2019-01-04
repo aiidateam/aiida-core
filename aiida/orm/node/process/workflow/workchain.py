@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=abstract-method,no-self-argument
+# pylint: disable=abstract-method,no-self-argument,cyclic-import
 """ORM class for WorkChainNode."""
 from __future__ import absolute_import
 

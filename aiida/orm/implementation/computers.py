@@ -73,7 +73,6 @@ class BackendComputer(backends.BackendEntity):
            data to the database! (The store method can be called multiple
            times, differently from AiiDA Node objects).
         """
-        pass
 
     @abc.abstractmethod
     def get_transport_params(self):
@@ -96,7 +95,6 @@ class BackendComputer(backends.BackendEntity):
         Get this computer hostname
         :rtype: str
         """
-        pass
 
     @abc.abstractmethod
     def set_hostname(self, val):
@@ -105,7 +103,6 @@ class BackendComputer(backends.BackendEntity):
         :param val: The new hostname
         :type val: str
         """
-        pass
 
     @abc.abstractmethod
     def get_description(self):

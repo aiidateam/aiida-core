@@ -75,7 +75,6 @@ def detect_unexpected_links(apps, schema_editor):
 
 def reverse_code(apps, schema_editor):
     """Reversing the inference of the process type is not possible and not necessary."""
-    pass
 
 
 class Migration(migrations.Migration):

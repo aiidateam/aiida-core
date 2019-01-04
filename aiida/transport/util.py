@@ -47,7 +47,7 @@ class _DetachedProxyCommand(ProxyCommand):
         from shlex import split as shlsplit
 
         self.cmd = shlsplit(command_line)
-        self.process = Popen(self.cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, bufsize=0, preexec_fn=os.setsid)
+        self.process = Popen(self.cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, bufsize=0, preexec_fn=os.setsid)  # pylint: disable=subprocess-popen-preexec-fn
         self.timeout = None
 
     def close(self):

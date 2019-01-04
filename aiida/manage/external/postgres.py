@@ -39,7 +39,7 @@ _CHECK_DB_EXISTS_COMMAND = "SELECT datname FROM pg_database WHERE datname='{}'"
 _COPY_DB_COMMAND = 'CREATE DATABASE "{}" WITH TEMPLATE "{}" OWNER "{}"'
 
 
-class Postgres(object):
+class Postgres(object):  # pylint: disable=useless-object-inheritance
     """
     Provides postgres database manipulation assuming no prior setup
 
@@ -121,7 +121,7 @@ class Postgres(object):
                 break
 
         # This will work for the default Debian postgres setup, assuming that sudo is available to the user
-        if self.pg_execute == _pg_execute_not_connected:
+        if self.pg_execute == _pg_execute_not_connected:  # pylint: disable=comparison-with-callable
             # Check if the user can find the sudo command
             if _sudo_exists():
                 dbinfo['user'] = 'postgres'
@@ -132,7 +132,7 @@ class Postgres(object):
                 echo.echo_warning('Could not find `sudo`. No way of connecting to the database could be found.')
 
         # This is to allow for any other setup
-        if self.pg_execute == _pg_execute_not_connected:
+        if self.pg_execute == _pg_execute_not_connected:  # pylint: disable=comparison-with-callable
             self.setup_fail_counter += 1
             self._no_setup_detected()
         elif not self.interactive and not self.quiet:
@@ -140,7 +140,7 @@ class Postgres(object):
                                'This may cause problems if the current user is not '
                                'allowed to create databases.'))
 
-        return bool(self.pg_execute != _pg_execute_not_connected)
+        return bool(self.pg_execute != _pg_execute_not_connected)  # pylint: disable=comparison-with-callable
 
     def create_dbuser(self, dbuser, dbpass):
         """

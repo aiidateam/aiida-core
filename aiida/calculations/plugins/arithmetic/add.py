@@ -66,7 +66,7 @@ class ArithmeticAddCalculation(CalcJobNode):
 
     def _get_input_valid_types(self, key):
         """Return the valid input types for the given key."""
-        return self._use_methods[key]['valid_types']
+        return self._use_methods[key]['valid_types']  # pylint: disable=unsubscriptable-object
 
     def _get_input_valid_type(self, key):
         """Return the valid input type for the given key."""

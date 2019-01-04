@@ -28,7 +28,7 @@ from .utils import RefObjectStore
 __all__ = tuple()
 
 
-class JobsList(object):
+class JobsList(object):  # pylint: disable=useless-object-inheritance
     """
     A list of submitted jobs on a machine connected to by transport based on the
     authorisation information.
@@ -180,12 +180,12 @@ class JobsList(object):
         """
         if old is None and new is None:
             return False
-        elif old is None or new is None:
+
+        if old is None or new is None:
             # One is None and the other isn't
             return True
 
-        return old.job_state != new.job_state or \
-               old.job_substate != new.job_substate
+        return old.job_state != new.job_state or old.job_substate != new.job_substate
 
     def _get_next_update_delay(self):
         """
@@ -220,7 +220,7 @@ class JobsList(object):
         return [str(job_id) for job_id, _ in self._job_update_requests.items()]
 
 
-class JobManager(object):
+class JobManager(object):  # pylint: disable=useless-object-inheritance
     """
     A manager for jobs on a (usually) remote resource such as a supercomputer
     """

@@ -26,7 +26,7 @@ from aiida.common.folders import SandboxFolder
 import aiida.common.json as json
 
 
-class Archive(object):
+class Archive(object):  # pylint: disable=useless-object-inheritance
     """
     Utility class to operate on exported archive files or directories.
 
@@ -382,7 +382,7 @@ def extract_cif(infile, folder, nodes_export_subfolder="nodes", aiida_export_sub
                 folder.get_subfolder(folder.get_abs_path(dest_path), create=True)
             continue
         contents = values['_tcod_file_contents'][i]
-        if contents == '?' or contents == '.':
+        if contents in ['?', '.']:
             uri = values['_tcod_file_uri'][i]
             if uri is not None and uri != '?' and uri != '.':
                 contents = urllib.request.urlopen(uri).read()

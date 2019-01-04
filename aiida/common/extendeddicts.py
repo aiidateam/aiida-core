@@ -255,8 +255,7 @@ class DefaultFieldsAttributeDict(AttributeDict):
         except KeyError:
             if key in self._default_fields:
                 return None
-            else:
-                raise
+            raise
 
     @classmethod
     def get_default_fields(cls):

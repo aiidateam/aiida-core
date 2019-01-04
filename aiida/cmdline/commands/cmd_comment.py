@@ -23,7 +23,6 @@ from aiida.common import exceptions
 @verdi.group('comment')
 def verdi_comment():
     """Inspect, create and manage node comments."""
-    pass
 
 
 @verdi_comment.command()
@@ -76,7 +75,7 @@ def show(user, nodes):
             comments = [comment for comment in all_comments if comment.user.email == user.email]
 
             if not comments:
-                valid_users = ', '.join(set([comment.user.email for comment in all_comments]))
+                valid_users = ', '.join(set(comment.user.email for comment in all_comments))
                 echo.echo_warning('no comments found for user {}'.format(user))
                 echo.echo_info('valid users found for Node<{}>: {}'.format(node.pk, valid_users))
 

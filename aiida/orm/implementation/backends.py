@@ -25,6 +25,8 @@ EntityType = typing.TypeVar('EntityType')  # pylint: disable=invalid-name
 class Backend(object):
     """The public interface that defines a backend factory that creates backend specific concrete objects."""
 
+    # pylint: disable=useless-object-inheritance
+
     @abc.abstractmethod
     def migrate(self):
         """Migrate the database to the latest schema version."""
@@ -106,6 +108,8 @@ class Backend(object):
 class BackendEntity(object):
     """An first-class entity in the backend"""
 
+    # pylint: disable=useless-object-inheritance
+
     def __init__(self, backend):
         self._backend = backend
 
@@ -117,7 +121,6 @@ class BackendEntity(object):
 
         :return: the entity id
         """
-        pass
 
     @property
     def backend(self):
@@ -135,7 +138,6 @@ class BackendEntity(object):
 
         Whether it is possible to call store more than once is delegated to the object itself
         """
-        pass
 
     @abc.abstractmethod
     def is_stored(self):
@@ -145,7 +147,6 @@ class BackendEntity(object):
         :return: True if stored, False otherwise
         :rtype: bool
         """
-        pass
 
 
 class BackendCollection(typing.Generic[EntityType]):

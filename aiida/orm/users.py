@@ -183,13 +183,15 @@ class User(entities.Entity):
         :return: the user full name
         """
         if self.first_name and self.last_name:
-            return "{} {} ({})".format(self.first_name, self.last_name, self.email)
+            full_name = "{} {} ({})".format(self.first_name, self.last_name, self.email)
         elif self.first_name:
-            return "{} ({})".format(self.first_name, self.email)
+            full_name = "{} ({})".format(self.first_name, self.email)
         elif self.last_name:
-            return "{} ({})".format(self.last_name, self.email)
+            full_name = "{} ({})".format(self.last_name, self.email)
+        else:
+            full_name = "{}".format(self.email)
 
-        return "{}".format(self.email)
+        return full_name
 
     def get_short_name(self):
         """

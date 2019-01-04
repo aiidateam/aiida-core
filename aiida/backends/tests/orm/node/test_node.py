@@ -213,7 +213,7 @@ class TestNodeLinks(AiidaTestCase):
         called.add_incoming(data, link_type=LinkType.INPUT_CALC, link_label='call')
         called.store()
 
-        uuids_incoming = set([node.uuid for node in called.get_incoming().all_nodes()])
+        uuids_incoming = set(node.uuid for node in called.get_incoming().all_nodes())
         uuids_expected = set([caller.uuid, data.uuid])
         self.assertEqual(uuids_incoming, uuids_expected)
 
@@ -232,7 +232,7 @@ class TestNodeLinks(AiidaTestCase):
         data.add_incoming(return_two, link_type=LinkType.RETURN, link_label='return')
         data.store()
 
-        uuids_incoming = set([node.uuid for node in data.get_incoming().all_nodes()])
+        uuids_incoming = set(node.uuid for node in data.get_incoming().all_nodes())
         uuids_expected = set([return_one.uuid, return_two.uuid])
         self.assertEqual(uuids_incoming, uuids_expected)
 
@@ -253,6 +253,6 @@ class TestNodeLinks(AiidaTestCase):
         data_one.store()
         data_two.store()
 
-        uuids_outgoing = set([node.uuid for node in creator.get_outgoing().all_nodes()])
+        uuids_outgoing = set(node.uuid for node in creator.get_outgoing().all_nodes())
         uuids_expected = set([data_one.uuid, data_two.uuid])
         self.assertEqual(uuids_outgoing, uuids_expected)

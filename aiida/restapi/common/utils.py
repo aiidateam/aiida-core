@@ -64,7 +64,7 @@ class CustomJSONEncoder(JSONEncoder):
 
 
 class DatetimePrecision(object):
-    # pylint: disable=too-few-public-methods
+    # pylint: disable=too-few-public-methods,useless-object-inheritance
     """
     A simple class which stores a datetime object with its precision. No
     internal check is done (cause itis not possible).
@@ -88,7 +88,7 @@ class DatetimePrecision(object):
         self.precision = precision
 
 
-class Utils(object):
+class Utils(object):  # pylint: disable=useless-object-inheritance
     """
     A class that gathers all the utility functions for parsing URI,
     validating request, pass it to the translator, and building HTTP response
@@ -139,8 +139,8 @@ class Utils(object):
 
         if path.startswith(self.prefix):
             return path[len(self.prefix):]
-        else:
-            raise ValidationError('path has to start with {}'.format(self.prefix))
+
+        raise ValidationError('path has to start with {}'.format(self.prefix))
 
     @staticmethod
     def split_path(path):
@@ -148,8 +148,6 @@ class Utils(object):
         :param path: entire path contained in flask request
         :return: list of each element separated by '/'
         """
-
-        # type: (string) -> (list_of_strings).
         return [f for f in path.split('/') if f]
 
     def parse_path(self, path_string, parse_pk_uuid=None):

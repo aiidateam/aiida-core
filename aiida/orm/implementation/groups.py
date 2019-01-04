@@ -32,7 +32,6 @@ class BackendGroup(backends.BackendEntity):
         """
         :return: the name of the group as a string
         """
-        pass
 
     @abc.abstractproperty
     @label.setter
@@ -45,14 +44,12 @@ class BackendGroup(backends.BackendEntity):
         :param name: the new group name
         :raises UniquenessError: if another group of same type and name already exists
         """
-        pass
 
     @abc.abstractproperty
     def description(self):
         """
         :return: the description of the group as a string
         """
-        pass
 
     @description.setter
     @abc.abstractmethod
@@ -60,14 +57,12 @@ class BackendGroup(backends.BackendEntity):
         """
         :return: the description of the group as a string
         """
-        pass
 
     @abc.abstractproperty
     def type_string(self):
         """
         :return: the string defining the type of the group
         """
-        pass
 
     @abc.abstractproperty
     def user(self):
@@ -75,21 +70,18 @@ class BackendGroup(backends.BackendEntity):
         :return: a backend user object, representing the user associated to this group.
         :rtype: :class:`aiida.orm.implementation.BackendUser`
         """
-        pass
 
     @abc.abstractproperty
     def id(self):  # pylint: disable=invalid-name
         """
         :return: the principal key (the ID) as an integer, or None if the node was not stored yet
         """
-        pass
 
     @abc.abstractproperty
     def uuid(self):
         """
         :return: a string with the uuid
         """
-        pass
 
     @classmethod
     def create(cls, *args, **kwargs):
@@ -116,10 +108,11 @@ class BackendGroup(backends.BackendEntity):
 
         if not res:
             return cls.create(*args, **kwargs), True
-        elif len(res) > 1:
+
+        if len(res) > 1:
             raise exceptions.MultipleObjectsError("More than one groups found in the database")
-        else:
-            return res[0], False
+
+        return res[0], False
 
     @abc.abstractmethod
     def __int__(self):
@@ -130,14 +123,12 @@ class BackendGroup(backends.BackendEntity):
 
         :return: the integer pk of the node or None if not stored.
         """
-        pass
 
     @abc.abstractproperty
     def is_stored(self):
         """
         :return: True if the respective DbNode has been already saved in the DB, False otherwise
         """
-        pass
 
     @abc.abstractmethod
     def store(self):
@@ -150,7 +141,6 @@ class BackendGroup(backends.BackendEntity):
         the respective AiiDA subclasses of Node, and also allows to ask for
         the number of nodes in the group using len().
         """
-        pass
 
     @abc.abstractmethod
     def add_nodes(self, nodes):
@@ -164,7 +154,6 @@ class BackendGroup(backends.BackendEntity):
         :param nodes: a Node or DbNode object to add to the group, or
           a list of Nodes or DbNodes to add.
         """
-        pass
 
     @abc.abstractmethod
     def remove_nodes(self, nodes):
@@ -178,7 +167,6 @@ class BackendGroup(backends.BackendEntity):
         :param nodes: a Node or DbNode object to add to the group, or
           a list of Nodes or DbNodes to add.
         """
-        pass
 
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))
@@ -197,6 +185,7 @@ class BackendGroupCollection(backends.BackendCollection[BackendGroup]):
     ENTITY_CLASS = BackendGroup
 
     @abc.abstractmethod
+    # pylint: disable=too-many-arguments
     def query(self,
               label=None,
               type_string=None,
@@ -207,7 +196,7 @@ class BackendGroupCollection(backends.BackendCollection[BackendGroup]):
               node_attributes=None,
               past_days=None,
               label_filters=None,
-              **kwargs):  # pylint: disable=too-many-arguments
+              **kwargs):
         """
         Query for groups.
 
@@ -244,7 +233,6 @@ class BackendGroupCollection(backends.BackendCollection[BackendGroup]):
                 contain at least one node for element 'Ba' and one node for element 'Ti'.
 
         """
-        pass
 
     def get(self, **filters):
         """
@@ -268,4 +256,3 @@ class BackendGroupCollection(backends.BackendCollection[BackendGroup]):
 
         :param id: the id of the group to delete
         """
-        pass

@@ -51,7 +51,7 @@ def find_path(root, dir_name):
     raise OSError('No directory found')
 
 
-class Folder(object):
+class Folder(object):  # pylint: disable=useless-object-inheritance
     """
     A class to manage generic folders, avoiding to get out of
     specific given folder borders.

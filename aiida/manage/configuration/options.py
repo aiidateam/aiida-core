@@ -8,10 +8,8 @@ import six
 __all__ = ('get_option', 'get_option_names', 'parse_option')
 
 
-class NO_DEFAULT_PLACEHOLDER(object):
+class NO_DEFAULT_PLACEHOLDER(object):  # pylint: disable=too-few-public-methods,invalid-name,useless-object-inheritance
     """A dummy class to serve as a marker for no default being specified in the `get_option` function."""
-    # pylint: disable=too-few-public-methods,invalid-name
-    pass
 
 
 NO_DEFAULT = NO_DEFAULT_PLACEHOLDER()

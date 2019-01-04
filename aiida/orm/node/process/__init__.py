@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=wildcard-import
+# pylint: disable=wildcard-import,cyclic-import
 """Package for process node ORM classes."""
 from __future__ import absolute_import
 

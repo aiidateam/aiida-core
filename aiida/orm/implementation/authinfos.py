@@ -43,7 +43,6 @@ class BackendAuthInfo(backends.BackendEntity):
         """
         Return the ID in the DB.
         """
-        pass
 
     @abc.abstractproperty
     def enabled(self):
@@ -52,7 +51,6 @@ class BackendAuthInfo(backends.BackendEntity):
 
         :rtype: bool
         """
-        pass
 
     @enabled.setter
     def enabled(self, value):
@@ -61,7 +59,6 @@ class BackendAuthInfo(backends.BackendEntity):
 
         :return: Boolean
         """
-        pass
 
     @abc.abstractproperty
     def computer(self):
@@ -71,7 +68,6 @@ class BackendAuthInfo(backends.BackendEntity):
         :return: The corresponding computer
         :rtype: :class:`aiida.orm.Computer`
         """
-        pass
 
     @abc.abstractproperty
     def user(self):
@@ -81,7 +77,6 @@ class BackendAuthInfo(backends.BackendEntity):
         :return: The corresponding user
         :rtype: :class:`aiida.orm.User`
         """
-        pass
 
     @abc.abstractproperty
     def is_stored(self):
@@ -91,7 +86,6 @@ class BackendAuthInfo(backends.BackendEntity):
         :return: Boolean
         :rtype: bool
         """
-        pass
 
     @abc.abstractmethod
     def get_auth_params(self):
@@ -100,7 +94,6 @@ class BackendAuthInfo(backends.BackendEntity):
 
         :return: a dictionary
         """
-        pass
 
     @abc.abstractmethod
     def set_auth_params(self, auth_params):
@@ -109,7 +102,6 @@ class BackendAuthInfo(backends.BackendEntity):
 
         :param auth_params: a dictionary with the new auth_params
         """
-        pass
 
     @abc.abstractmethod
     def _get_metadata(self):
@@ -118,14 +110,12 @@ class BackendAuthInfo(backends.BackendEntity):
 
         :return: a dictionary
         """
-        pass
 
     @abc.abstractmethod
     def _set_metadata(self, metadata):
         """
         Replace the metadata dictionary in the DB with the provided dictionary
         """
-        pass
 
     def get_property(self, name):
         try:
@@ -154,7 +144,6 @@ class BackendAuthInfoCollection(backends.BackendCollection[BackendAuthInfo]):
         :param user: a User instance
         :return: a AuthInfo object associated to the given computer and user
         """
-        pass
 
     @abc.abstractmethod
     def delete(self, authinfo_id):
@@ -162,7 +151,6 @@ class BackendAuthInfoCollection(backends.BackendCollection[BackendAuthInfo]):
         Remove an AuthInfo from the collection with the given id
         :param authinfo_id: The ID of the authinfo to delete
         """
-        pass
 
     @abc.abstractmethod
     def get(self, computer, user):
@@ -176,4 +164,3 @@ class BackendAuthInfoCollection(backends.BackendCollection[BackendAuthInfo]):
         :raise sqlalchemy.orm.exc.MultipleResultsFound: if the user is configured
             more than once to use the computer! Should never happen
         """
-        pass

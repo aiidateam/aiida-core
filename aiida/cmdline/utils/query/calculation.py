@@ -15,7 +15,7 @@ from aiida.common.lang import classproperty
 from aiida.cmdline.utils.query.mapping import CalculationProjectionMapper
 
 
-class CalculationQueryBuilder(object):
+class CalculationQueryBuilder(object):  # pylint: disable=useless-object-inheritance
     """Utility class to construct a QueryBuilder instance for Calculation nodes and project the query set."""
 
     _default_projections = ('pk', 'ctime', 'process_state', 'process_label', 'process_status')

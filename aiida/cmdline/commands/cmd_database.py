@@ -22,7 +22,6 @@ from aiida.cmdline.utils import decorators, echo
 @verdi.group('database')
 def verdi_database():
     """Inspect and manage the database."""
-    pass
 
 
 @verdi_database.command('migrate')
@@ -48,7 +47,6 @@ def database_migrate(force):
 @verdi_database.group('integrity')
 def verdi_database_integrity():
     """Various commands that will check the integrity of the database and fix potential issues when asked."""
-    pass
 
 
 @verdi_database_integrity.command('detect-duplicate-node-uuid')

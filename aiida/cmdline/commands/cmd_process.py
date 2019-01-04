@@ -24,7 +24,6 @@ from aiida.manage import get_manager
 @verdi.group('process')
 def verdi_process():
     """Inspect and manage processes."""
-    pass
 
 
 @verdi_process.command('list')

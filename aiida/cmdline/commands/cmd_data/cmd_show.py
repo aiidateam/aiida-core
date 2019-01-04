@@ -132,7 +132,7 @@ def _show_ase(exec_name, structure_list):
         from ase.visualize import view
         for structure in structure_list:
             view(structure.get_ase())
-    except ImportError:
+    except ImportError:  # pylint: disable=try-except-raise
         raise
 
 

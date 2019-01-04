@@ -25,7 +25,6 @@ from aiida.cmdline.params import options
 @verdi.group('user')
 def verdi_user():
     """Inspect and manage users."""
-    pass
 
 
 def get_default(value, ctx):
@@ -81,7 +80,7 @@ def configure(user, first_name, last_name, institution, password, non_interactiv
     """
     Create or update a user.  Email address us taken as the user identiier.
     """
-    # pylint: disable=W0612,W0613
+    # pylint: disable=unused-argument,unused-variable
 
     if first_name is not None:
         user.first_name = first_name

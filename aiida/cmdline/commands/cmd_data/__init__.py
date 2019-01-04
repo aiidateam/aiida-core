@@ -15,14 +15,13 @@ import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.commands.cmd_plugin import verdi_plugin
-from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils import decorators
 from aiida.cmdline.utils.pluginable import Pluginable
 
 
 @verdi.group('data', entry_point_group='aiida.cmdline.data', cls=Pluginable)
 def verdi_data():
     """Inspect, create and manage data nodes."""
-    pass
 
 
 @verdi_data.command('plugins')

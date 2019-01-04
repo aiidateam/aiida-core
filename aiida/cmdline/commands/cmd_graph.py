@@ -24,7 +24,6 @@ def verdi_graph():
     Create visual representations of part of the provenance graph.
     Requires that `graphviz<https://graphviz.org/download>` be installed.
     """
-    pass
 
 
 @verdi_graph.command('generate')

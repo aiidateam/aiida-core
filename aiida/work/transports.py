@@ -23,14 +23,14 @@ _LOGGER = logging.getLogger(__name__)
 class TransportRequest(object):
     """ Information kept about request for a transport object """
 
-    # pylint: disable=too-few-public-methods
+    # pylint: disable=too-few-public-methods,useless-object-inheritance
     def __init__(self):
         super(TransportRequest, self).__init__()
         self.future = concurrent.Future()
         self.count = 0
 
 
-class TransportQueue(object):
+class TransportQueue(object):  # pylint: disable=useless-object-inheritance
     """
     A queue to get transport objects from authinfo.  This class allows clients
     to register their interest in a transport object which will be provided at

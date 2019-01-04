@@ -34,7 +34,6 @@ class BackendLog(backends.BackendEntity):
         :return: The entry timestamp
         :rtype: :class:`!datetime.datetime`
         """
-        pass
 
     @abc.abstractproperty
     def loggername(self):
@@ -44,7 +43,6 @@ class BackendLog(backends.BackendEntity):
         :return: The entry loggername
         :rtype: basestring
         """
-        pass
 
     @abc.abstractproperty
     def levelname(self):
@@ -54,7 +52,6 @@ class BackendLog(backends.BackendEntity):
         :return: The entry log level name
         :rtype: basestring
         """
-        pass
 
     @abc.abstractproperty
     def objpk(self):
@@ -64,7 +61,6 @@ class BackendLog(backends.BackendEntity):
         :return: The entry timestamp
         :rtype: int
         """
-        pass
 
     @abc.abstractproperty
     def objname(self):
@@ -74,7 +70,6 @@ class BackendLog(backends.BackendEntity):
         :return: The entry object name
         :rtype: basestring
         """
-        pass
 
     @abc.abstractproperty
     def message(self):
@@ -84,7 +79,6 @@ class BackendLog(backends.BackendEntity):
         :return: The entry message
         :rtype: basestring
         """
-        pass
 
     @abc.abstractproperty
     def metadata(self):
@@ -94,7 +88,6 @@ class BackendLog(backends.BackendEntity):
         :return: The entry metadata
         :rtype: :class:`!json.json`
         """
-        pass
 
 
 @six.add_metaclass(abc.ABCMeta)

@@ -134,7 +134,6 @@ class AiiDADumper(yaml.Dumper):
 
 class AiiDALoader(yaml.Loader):
     """AiiDA specific YAML loader"""
-    pass
 
 
 def represent_mapping(tag, dumper, mapping):

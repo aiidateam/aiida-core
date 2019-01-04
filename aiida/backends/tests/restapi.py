@@ -612,7 +612,6 @@ class RESTApiTestSuite(RESTApiTestCase):
                                   -hostname",
                                   expected_list_ids=[1,0,4,3,2])
         """
-        pass
 
     ############### list filter combinations #######################
     def test_computers_filter_mixed1(self):
@@ -675,7 +674,6 @@ class RESTApiTestSuite(RESTApiTestCase):
         from aiida.common.exceptions import InputValidationError
         RESTApiTestCase.node_exception(self, "/computers?aa=bb&id=2", InputValidationError)
         """
-        pass
 
     ############### single calculation ########################
     def test_calculations_details(self):

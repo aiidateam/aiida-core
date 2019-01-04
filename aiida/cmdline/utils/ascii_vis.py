@@ -246,7 +246,7 @@ def format_tree_descending(tree, prefix=u"", pos=-1):
     if isinstance(tree, tuple):
         _, value = tree
         num_entries = len(value)
-        if pos == -1 or pos == 2:
+        if pos in [-1, 2]:
             new_prefix = u'{}    '.format(prefix)
         else:
             new_prefix = u'{}\u2502   '.format(prefix)

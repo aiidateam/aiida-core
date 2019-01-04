@@ -122,10 +122,10 @@ class ArrayData(Data):
         # always re-read from disk
         if not self.is_stored:
             return get_array_from_file(self, name)
-        else:
-            if name not in self._cached_arrays:
-                self._cached_arrays[name] = get_array_from_file(self, name)
-            return self._cached_arrays[name]
+
+        if name not in self._cached_arrays:
+            self._cached_arrays[name] = get_array_from_file(self, name)
+        return self._cached_arrays[name]
 
     def clear_internal_cache(self):
         """

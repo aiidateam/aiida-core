@@ -21,7 +21,7 @@ __all__ = 'get_manager', 'reset_manager'
 MANAGER = None
 
 
-class Manager(object):
+class Manager(object):  # pylint: disable=useless-object-inheritance
     """
     Manager singleton to provide global versions of commonly used profile/settings related objects
     and methods to facilitate their construction.

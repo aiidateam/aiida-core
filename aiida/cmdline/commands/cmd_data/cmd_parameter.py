@@ -19,7 +19,6 @@ from aiida.cmdline.params import arguments, types
 @verdi_data.group('parameter')
 def parameter():
     """View and manipulate ParameterData objects."""
-    pass
 
 
 @parameter.command('show')

@@ -29,7 +29,6 @@ from aiida.common.exceptions import DanglingLinkError
 @verdi.group('export')
 def verdi_export():
     """Create and manage export archives."""
-    pass
 
 
 @verdi_export.command('inspect')
@@ -202,7 +201,7 @@ def migrate(input_file, output_file, force, silent, archive_format):
         with io.open(folder.get_abs_path('metadata.json'), 'wb') as fhandle:
             json.dump(metadata, fhandle)
 
-        if archive_format == 'zip' or archive_format == 'zip-uncompressed':
+        if archive_format in ['zip', 'zip-uncompressed']:
             compression = zipfile.ZIP_DEFLATED if archive_format == 'zip' else zipfile.ZIP_STORED
             with zipfile.ZipFile(output_file, mode='w', compression=compression, allowZip64=True) as archive:
                 src = folder.abspath
@@ -280,7 +279,7 @@ def migrate_v1_to_v2(metadata, data):
     try:
         verify_metadata_version(metadata, old_version)
         update_metadata(metadata, new_version)
-    except ValueError:
+    except ValueError:  # pylint: disable=try-except-raise
         raise
 
     def get_new_string(old_string):
@@ -364,7 +363,7 @@ def migrate_v2_to_v3(metadata, data):  # pylint: disable=too-many-locals,too-man
     try:
         verify_metadata_version(metadata, old_version)
         update_metadata(metadata, new_version)
-    except ValueError:
+    except ValueError:  # pylint: disable=try-except-raise
         raise
 
     # Create a mapping from node uuid to node type
@@ -407,15 +406,13 @@ def migrate_v2_to_v3(metadata, data):  # pylint: disable=too-many-locals,too-man
         # (CALC)       -> (DATA)       : CREATE
         # (WORK)       -> (DATA)       : RETURN
         # (WORK)       -> (CALC, WORK) : CALL
-        if (input_type == NodeType.CODE or input_type == NodeType.DATA) \
-            and (output_type == NodeType.CALC or output_type == NodeType.WORK):
+        if input_type in [NodeType.CODE, NodeType.DATA] and output_type in [NodeType.CALC, NodeType.WORK]:
             link['type'] = LinkType.INPUT.value
         elif input_type == NodeType.CALC and output_type == NodeType.DATA:
             link['type'] = LinkType.CREATE.value
         elif input_type == NodeType.WORK and output_type == NodeType.DATA:
             link['type'] = LinkType.RETURN.value
-        elif input_type == NodeType.WORK \
-            and (output_type == NodeType.CALC or output_type == NodeType.WORK):
+        elif input_type == NodeType.WORK and output_type in [NodeType.CALC, NodeType.WORK]:
             link['type'] = LinkType.CALL.value
         else:
             link['type'] = LinkType.UNSPECIFIED.value

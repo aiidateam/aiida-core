@@ -31,7 +31,7 @@ CIRCUS_PUBSUB_SOCKET_TEMPLATE = 'circus.p.sock'
 CIRCUS_STATS_SOCKET_TEMPLATE = 'circus.s.sock'
 
 
-class Profile(object):
+class Profile(object):  # pylint: disable=useless-object-inheritance
     """
     Convenience class that loads the current profile name and corresponding configuration and
     can subsequently provide profile specific information

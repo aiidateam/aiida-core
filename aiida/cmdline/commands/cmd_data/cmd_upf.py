@@ -23,7 +23,6 @@ from aiida.cmdline.utils import decorators, echo
 @verdi_data.group('upf')
 def upf():
     """Manipulation of the upf families."""
-    pass
 
 
 @upf.command('uploadfamily')

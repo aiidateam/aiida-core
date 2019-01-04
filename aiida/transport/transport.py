@@ -25,13 +25,13 @@ from aiida.common.lang import classproperty
 DEFAULT_TRANSPORT_INTERVAL = 30.
 
 
-# pylint: disable=too-many-public-methods
 @six.add_metaclass(ABCMeta)
 class Transport(object):
     """
     Abstract class for a generic transport (ssh, local, ...)
     Contains the set of minimal methods
     """
+    # pylint: disable=too-many-public-methods,useless-object-inheritance,bad-option-value
 
     # To be defined in the subclass
     # See the ssh or local plugin to see the format
@@ -658,10 +658,10 @@ class Transport(object):
             if stderr.strip():
                 self.logger.warning("There was nonempty stderr in the whoami command: {}".format(stderr))
             return username.strip()
-        else:
-            self.logger.error("Problem executing whoami. Exit code: {}, stdout: '{}', "
-                              "stderr: '{}'".format(retval, username, stderr))
-            raise IOError("Error while executing whoami. Exit code: {}".format(retval))
+
+        self.logger.error("Problem executing whoami. Exit code: {}, stdout: '{}', "
+                          "stderr: '{}'".format(retval, username, stderr))
+        raise IOError("Error while executing whoami. Exit code: {}".format(retval))
 
     def path_exists(self, path):
         """
@@ -751,4 +751,3 @@ class TransportInternalError(InternalError):
     Raised if there is a transport error that is raised to an internal error (e.g.
     a transport method called without opening the channel first).
     """
-    pass

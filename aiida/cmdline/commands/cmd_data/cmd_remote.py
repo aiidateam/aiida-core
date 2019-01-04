@@ -24,7 +24,6 @@ from aiida.common.files import get_mode_string
 @verdi_data.group('remote')
 def remote():
     """Managing RemoteData objects."""
-    pass
 
 
 @remote.command('ls')

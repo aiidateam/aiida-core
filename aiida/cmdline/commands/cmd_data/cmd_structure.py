@@ -32,7 +32,6 @@ VISUALIZATION_FORMATS = ['ase', 'jmol', 'vesta', 'vmd', 'xcrysden']
 @verdi_data.group('structure')
 def structure():
     """Manipulation of StructureData objects."""
-    pass
 
 
 # pylint: disable=too-many-locals,too-many-branches

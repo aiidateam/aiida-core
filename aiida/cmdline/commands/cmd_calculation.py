@@ -31,7 +31,6 @@ LIST_CMDLINE_PROJECT_CHOICES = ('pk', 'ctime', 'process_state', 'job_state', 'sc
 @verdi.group('calculation')
 def verdi_calculation():
     """Inspect and manage calculations."""
-    pass
 
 
 @verdi_calculation.command('gotocomputer')

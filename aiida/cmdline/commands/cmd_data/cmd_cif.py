@@ -31,7 +31,6 @@ VISUALIZATION_FORMATS = ['jmol', 'vesta']
 @verdi_data.group('cif')
 def cif():
     """Manipulation of CIF data objects."""
-    pass
 
 
 @cif.command('list')

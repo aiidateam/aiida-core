@@ -81,10 +81,11 @@ class Group(entities.Entity):
 
             if not res:
                 return Group(label, backend=self.backend, **kwargs).store(), True
-            elif len(res) > 1:
+
+            if len(res) > 1:
                 raise exceptions.MultipleObjectsError("More than one groups found in the database")
-            else:
-                return res[0], False
+
+            return res[0], False
 
         def delete(self, id):  # pylint: disable=invalid-name, redefined-builtin
             """

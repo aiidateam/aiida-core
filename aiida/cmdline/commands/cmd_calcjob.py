@@ -25,7 +25,6 @@ from aiida.cmdline.utils import decorators, echo
 @verdi.group('calcjob')
 def verdi_calcjob():
     """Inspect and manage calcjobs."""
-    pass
 
 
 @verdi_calcjob.command('gotocomputer')

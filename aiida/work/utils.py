@@ -275,7 +275,7 @@ def get_process_state_change_timestamp(process_type=None):
     return max(timestamps)
 
 
-class RefObjectStore(object):
+class RefObjectStore(object):  # pylint: disable=useless-object-inheritance
     """
     An object store that has a reference count based on a context manager.
     Basic usage::
@@ -292,11 +292,8 @@ class RefObjectStore(object):
     store (and therefore eventually garbage collected).
     """
 
-    class Reference(object):
-        """
-        A reference to store the context reference count and the object
-        itself.
-        """
+    class Reference(object):  # pylint: disable=useless-object-inheritance
+        """A reference to store the context reference count and the object itself."""
 
         def __init__(self, obj):
             self._count = 0
@@ -306,6 +303,7 @@ class RefObjectStore(object):
         def count(self):
             """
             Get the reference count for the object
+
             :return: The reference count
             :rtype: int
             """
@@ -314,8 +312,8 @@ class RefObjectStore(object):
         @contextlib.contextmanager
         def get(self):
             """
-            Get the object itself.  This will up the reference count for the duration of
-            the context.
+            Get the object itself, which will up the reference count for the duration of the context.
+
             :return: The object
             """
             self._count += 1

@@ -298,8 +298,7 @@ class Node(Resource):
                             results["download"]["filename"])
                         return response
 
-                    else:
-                        results = results["download"]["data"]
+                    results = results["download"]["data"]
 
                 if query_type in ["retrieved_inputs", "retrieved_outputs"] and results:
                     try:
@@ -317,8 +316,7 @@ class Node(Resource):
                             results[query_type]["filename"])
                         return response
 
-                    elif status == 500:
-                        results = results[query_type]["data"]
+                    results = results[query_type]["data"]
 
                 headers = self.utils.build_headers(url=request.url, total_count=total_count)
 

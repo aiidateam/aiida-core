@@ -114,7 +114,6 @@ class AiiDAPersister(plumpy.Persister):
 
         :return: list of PersistedCheckpoint tuples
         """
-        pass
 
     def get_process_checkpoints(self, pid):
         """
@@ -125,7 +124,6 @@ class AiiDAPersister(plumpy.Persister):
         :param pid: the process pid
         :return: list of PersistedCheckpoint tuples
         """
-        pass
 
     def delete_checkpoint(self, pid, tag=None):
         """
@@ -145,7 +143,6 @@ class AiiDAPersister(plumpy.Persister):
 
         :param pid: the process id of the :class:`aiida.work.processes.Process`
         """
-        pass
 
 
 class ObjectLoader(plumpy.DefaultObjectLoader):

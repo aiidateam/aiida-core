@@ -20,7 +20,7 @@ from aiida.common.lang import override
 from aiida.common.lang import classproperty
 
 
-class FunctionCalculationMixin(object):
+class FunctionCalculationMixin(object):  # pylint: disable=useless-object-inheritance
     """
     This mixin should be used for ProcessNode subclasses that are used to record the execution
     of a python function. For example the process nodes that are used for a function that
@@ -136,7 +136,7 @@ class FunctionCalculationMixin(object):
         self.folder.create_file_from_filelike(source_file_handle, self.FUNCTION_SOURCE_FILE_PATH)
 
 
-class Sealable(object):
+class Sealable(object):  # pylint: disable=useless-object-inheritance
     """Mixin to mark a Node as `sealable`."""
     # pylint: disable=no-member,unsupported-membership-test
 

@@ -21,7 +21,6 @@ from aiida.plugins.entry_point import entry_point_group_to_module_path_map
 @verdi.group('plugin')
 def verdi_plugin():
     """Inspect installed plugins for various entry point categories."""
-    pass
 
 
 @verdi_plugin.command('list')

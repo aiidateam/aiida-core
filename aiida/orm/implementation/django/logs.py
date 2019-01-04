@@ -97,5 +97,4 @@ class DjangoLogCollection(BackendLogCollection):
         if not filters:
             models.DbLog.objects.all().delete()
         else:
-            raise NotImplementedError("Only deleting all by passing an empty filer dictionary is "
-                                      "currently supported")
+            raise NotImplementedError("Only deleting all by passing an empty filer dictionary is currently supported")

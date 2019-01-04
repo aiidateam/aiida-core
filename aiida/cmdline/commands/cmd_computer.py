@@ -33,7 +33,6 @@ from aiida.transport import cli as transport_cli
 @verdi.group('computer')
 def verdi_computer():
     """Setup and manage computers."""
-    pass
 
 
 def get_computer_names():
@@ -161,8 +160,8 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
     if not transport.path_exists(remote_file_path):
         echo.echo_error("* ERROR! The file was not found!")
         return False
-    else:
-        echo.echo("      [OK]")
+
+    echo.echo("      [OK]")
     echo.echo("  `-> Retrieving the file and checking its content...")
 
     handle, destfile = tempfile.mkstemp()
@@ -179,8 +178,8 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
             echo.echo("** Found:")
             echo.echo(read_string)
             return False
-        else:
-            echo.echo("      [Content OK]")
+
+        echo.echo("      [Content OK]")
     finally:
         os.remove(destfile)
 
@@ -621,7 +620,6 @@ def computer_delete(computer):
 @verdi_computer.group('configure')
 def computer_configure():
     """Configure a computer with one of the available transport types."""
-    pass
 
 
 @computer_configure.command('show')

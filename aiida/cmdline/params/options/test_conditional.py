@@ -170,10 +170,11 @@ class ConditionalOptionTest(unittest.TestCase):
         """
         if not value:
             return -1
-        elif value != 42:
+
+        if value != 42:
             raise click.BadParameter('invalid', param=param)
-        else:
-            return value
+
+        return value
 
     @staticmethod
     def setup_flag_cond(**kwargs):

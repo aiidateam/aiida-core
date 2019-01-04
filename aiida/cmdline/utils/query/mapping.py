@@ -14,7 +14,7 @@ from __future__ import absolute_import
 from aiida.cmdline.utils.query import formatting
 
 
-class ProjectionMapper(object):
+class ProjectionMapper(object):  # pylint: disable=useless-object-inheritance
     """
     Class to map projection names from the CLI to entity labels, attributes and formatters.
 

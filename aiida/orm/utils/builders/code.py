@@ -20,7 +20,7 @@ from aiida.cmdline.params.types.plugin import PluginParamType
 from aiida.common.utils import ErrorAccumulator
 
 
-class CodeBuilder(object):
+class CodeBuilder(object):  # pylint: disable=useless-object-inheritance
     """Build a code with validation of attribute combinations"""
 
     def __init__(self, **kwargs):
@@ -49,7 +49,7 @@ class CodeBuilder(object):
         from aiida.orm import Code
 
         # Will be used at the end to check if all keys are known (those that are not None)
-        passed_keys = set([k for k in self._code_spec.keys() if self._code_spec[k] is not None])
+        passed_keys = set(k for k in self._code_spec.keys() if self._code_spec[k] is not None)
         used = set()
 
         if self._get_and_count('code_type', used) == self.CodeType.STORE_AND_UPLOAD:

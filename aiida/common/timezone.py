@@ -70,11 +70,11 @@ def make_aware(value, timezone=None, is_dst=None):
         timezone = get_current_timezone()
     if hasattr(timezone, 'localize'):
         return timezone.localize(value, is_dst=is_dst)
-    else:
-        if is_aware(value):
-            raise ValueError("make_aware expects a naive datetime, got %s" % value)
-        # This may be wrong around DST changes!
-        return value.replace(tzinfo=timezone)
+
+    if is_aware(value):
+        raise ValueError("make_aware expects a naive datetime, got %s" % value)
+    # This may be wrong around DST changes!
+    return value.replace(tzinfo=timezone)
 
 
 def localtime(value, timezone=None):

@@ -27,7 +27,6 @@ from aiida.common.exceptions import InputValidationError
 @verdi.group('code')
 def verdi_code():
     """Setup and manage codes."""
-    pass
 
 
 def get_default(key, ctx):
@@ -215,7 +214,6 @@ def reveal(codes):
 # pylint: disable=unused-argument
 def update(code):
     """Update an existing code."""
-    pass
 
 
 @verdi_code.command()

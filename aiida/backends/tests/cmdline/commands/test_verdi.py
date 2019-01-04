@@ -7,28 +7,26 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""`verdi data array` command."""
+"""Tests for `verdi`."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+from click.testing import CliRunner
 
-from aiida.cmdline.commands.cmd_data import verdi_data
-from aiida.cmdline.params import arguments, types
-
-
-@verdi_data.group('array')
-def array():
-    """Manipulate ArrayData objects."""
+from aiida import get_version
+from aiida.backends.testbase import AiidaTestCase
+from aiida.cmdline.commands import cmd_verdi
 
 
-@array.command('show')
-@arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:array',)))
-def array_show(data):
-    """Visualize ArrayData objects."""
-    from aiida.cmdline.utils.echo import echo_dictionary
+class TestVerdi(AiidaTestCase):
+    """Tests for `verdi run`."""
 
-    for node in data:
-        the_dict = {}
-        for arrayname in node.get_arraynames():
-            the_dict[arrayname] = node.get_array(arrayname).tolist()
-        echo_dictionary(the_dict, 'json+date')
+    def setUp(self):
+        super(TestVerdi, self).setUp()
+        self.cli_runner = CliRunner()
+
+    def test_verdi_version(self):
+        """Regression test for #2238: verify that `verdi --version` prints the current version"""
+        result = self.cli_runner.invoke(cmd_verdi.verdi, ['--version'])
+        self.assertIsNone(result.exception, result.output)
+        self.assertIn(get_version(), result.output)

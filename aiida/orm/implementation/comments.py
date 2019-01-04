@@ -77,7 +77,6 @@ class BackendCommentCollection(backends.BackendCollection[BackendComment]):
         :param content: the comment content
         :return: a Comment object associated to the given node and user
         """
-        pass
 
     @abc.abstractmethod
     def delete(self, comment):
@@ -86,4 +85,3 @@ class BackendCommentCollection(backends.BackendCollection[BackendComment]):
 
         :param comment: the id of the comment to delete
         """
-        pass

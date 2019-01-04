@@ -53,9 +53,17 @@ def create_profile_noninteractive(config, profile_name='default', force_overwrit
     :return: The populated profile that was also stored
     """
     from aiida.manage.configuration.settings import DEFAULT_UMASK
+    from aiida.manage.configuration import load_config
 
-    if profile_name in config.profile_names and not force_overwrite:
-        raise ValueError(('profile {} exists, cannot non-interactively edit a profile.').format(profile_name))
+    config = load_config()
+
+    try:
+        existing_profile = config.get_profile(profile_name)
+    except exceptions.ProfileConfigurationError:
+        existing_profile = None
+
+    if existing_profile and not force_overwrite:
+        raise ValueError(('profile {} exists! Cannot non-interactively edit a profile.').format(profile_name))
 
     profile = {}
 
@@ -95,8 +103,11 @@ def create_profile_noninteractive(config, profile_name='default', force_overwrit
             os.umask(old_umask)
     profile['AIIDADB_REPOSITORY_URI'] = 'file://' + repo_path
 
-    # Generate the profile uuid
-    profile[Profile.KEY_PROFILE_UUID] = Profile.generate_uuid()
+    # Generate a new profile UUID or get it from the existing profile that is being overwritten
+    if existing_profile:
+        profile[Profile.KEY_PROFILE_UUID] = existing_profile.uuid
+    else:
+        profile[Profile.KEY_PROFILE_UUID] = Profile.generate_uuid()
 
     return profile
 
@@ -150,9 +161,9 @@ def create_profile(config, profile_name='default'):
         # If the user doesn't want to change it, we abandon
         if not click.prompt('Would you like to change it?'):
             return profile
+
         # Otherwise, we continue.
-        else:
-            updating_existing_prof = True
+        updating_existing_prof = True
 
     this_new_confs = {}
 

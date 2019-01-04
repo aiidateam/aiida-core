@@ -77,7 +77,6 @@ class IdentifierParamType(click.ParamType):
 
         :return: the orm entity loader class for this ParamType
         """
-        pass
 
     @with_dbenv()
     def convert(self, value, param, ctx):

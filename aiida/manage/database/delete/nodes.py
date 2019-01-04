@@ -80,13 +80,11 @@ def delete_nodes(pks,
     while operational_set:
         # new_pks_set are the the pks of all nodes that are connected to the operational node set
         # with the links specified.
-        new_pks_set = set([
-            i for i, in QueryBuilder().append(Node, filters={
-                'id': {
-                    'in': operational_set
-                }
-            }).append(Node, project='id', edge_filters=edge_filters).iterall()
-        ])
+        new_pks_set = set(i for i, in QueryBuilder().append(Node, filters={
+            'id': {
+                'in': operational_set
+            }
+        }).append(Node, project='id', edge_filters=edge_filters).iterall())
         # The operational set is only those pks that haven't been yet put into the pks_set_to_delete.
         operational_set = new_pks_set.difference(pks_set_to_delete)
 

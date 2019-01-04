@@ -112,9 +112,8 @@ class LocalTransport(Transport):
         """
         if self._is_open:
             return os.path.realpath(self._internal_dir)
-        else:
-            raise TransportInternalError("Error, local method called for LocalTransport "
-                                         "without opening the channel first")
+
+        raise TransportInternalError("Error, local method called for LocalTransport without opening the channel first")
 
     def chdir(self, path):
         """
@@ -676,20 +675,20 @@ class LocalTransport(Transport):
 
     def _local_listdir(self, path, pattern=None):  # pylint: disable=no-self-use
         """Act on the local folder, for the rest, same as listdir."""
+        import re
+
         if not pattern:
             return os.listdir(path)
+
+        if path.startswith('/'):  # always this is the case in the local plugin
+            base_dir = path
         else:
-            import re
+            base_dir = os.path.join(os.getcwd(), path)
 
-            if path.startswith('/'):  # always this is the case in the local plugin
-                base_dir = path
-            else:
-                base_dir = os.path.join(os.getcwd(), path)
-
-            filtered_list = glob.glob(os.path.join(base_dir, pattern))
-            if not base_dir.endswith(os.sep):
-                base_dir += os.sep
-            return [re.sub(base_dir, '', i) for i in filtered_list]
+        filtered_list = glob.glob(os.path.join(base_dir, pattern))
+        if not base_dir.endswith(os.sep):
+            base_dir += os.sep
+        return [re.sub(base_dir, '', i) for i in filtered_list]
 
     def listdir(self, path='.', pattern=None):
         """
@@ -751,6 +750,7 @@ class LocalTransport(Transport):
             proc is the process object as returned by the
             subprocess.Popen() class.
         """
+        # pylint: disable=subprocess-popen-preexec-fn
         from aiida.common.escaping import escape_for_bash
 
         # Note: The outer shell will eat one level of escaping, while

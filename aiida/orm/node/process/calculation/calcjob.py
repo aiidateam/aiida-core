@@ -1743,12 +1743,13 @@ class CalcJobNode(CalculationNode):
 
     def _get_authinfo(self):
         from aiida.common.exceptions import NotExistent
+        from aiida.orm.authinfos import AuthInfo
 
         computer = self.get_computer()
         if computer is None:
             raise NotExistent("No computer has been set for this calculation")
 
-        return self.backend.authinfos.get(computer=computer, user=self.get_user())
+        return AuthInfo.from_backend_entity(self.backend.authinfos.get(computer=computer, user=self.get_user()))
 
     def _get_transport(self):
         """
@@ -2082,7 +2083,7 @@ class CalcJobNode(CalculationNode):
 
         for (remote_computer_uuid, remote_abs_path, dest_rel_path) in remote_copy_list:
             try:
-                remote_computer = self.backend.computers.get(uuid=remote_computer_uuid)
+                remote_computer = Computer.objects.get(uuid=remote_computer_uuid)
             except NotExistent:
                 raise PluginInternalError("[presubmission of calc {}] "
                                           "The remote copy requires a computer with UUID={}"
@@ -2198,7 +2199,7 @@ class CalcJobNode(CalculationNode):
                 with io.open(os.path.join(subfolder.abspath, '_aiida_remote_copy_list.txt'), 'w', encoding='utf8') as f:
                     for (remote_computer_uuid, remote_abs_path, dest_rel_path) in remote_copy_list:
                         try:
-                            remote_computer = self.backend.computers.get(uuid=remote_computer_uuid)
+                            remote_computer = Computer.objects.get(uuid=remote_computer_uuid)
                         except NotExistent:
                             remote_computer = "[unknown]"
                         f.write(u"* I WOULD REMOTELY COPY "
@@ -2211,7 +2212,7 @@ class CalcJobNode(CalculationNode):
                         os.path.join(subfolder.abspath, '_aiida_remote_symlink_list.txt'), 'w', encoding='utf8') as f:
                     for (remote_computer_uuid, remote_abs_path, dest_rel_path) in remote_symlink_list:
                         try:
-                            remote_computer = self.backend.computers.get(uuid=remote_computer_uuid)
+                            remote_computer = Computer.objects.get(uuid=remote_computer_uuid)
                         except NotExistent:
                             remote_computer = "[unknown]"
                         f.write(u"* I WOULD PUT SYMBOLIC LINKS FOR "

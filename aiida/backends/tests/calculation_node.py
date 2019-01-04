@@ -50,6 +50,7 @@ class TestProcessNode(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         super(TestProcessNode, cls).setUpClass(*args, **kwargs)
+        cls.computer.configure()  # pylint: disable=no-member
         cls.construction_options = {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}}
 
         cls.calcjob = CalcJobNode()
@@ -147,3 +148,15 @@ class TestProcessNode(AiidaTestCase):
 
     def test_get_description(self):
         self.assertEqual(self.calcjob.get_desc(), self.calcjob.get_state())
+
+    def test_get_authinfo(self):
+        """Test that we can get the AuthInfo object from the calculation instance."""
+        from aiida.orm import AuthInfo
+        authinfo = self.calcjob._get_authinfo()  # pylint: disable=protected-access
+        self.assertIsInstance(authinfo, AuthInfo)
+
+    def test_get_transport(self):
+        """Test that we can get the Transport object from the calculation instance."""
+        from aiida.transport import Transport
+        transport = self.calcjob._get_transport()  # pylint: disable=protected-access
+        self.assertIsInstance(transport, Transport)

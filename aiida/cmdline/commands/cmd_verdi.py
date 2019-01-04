@@ -19,20 +19,20 @@ from aiida.common.extendeddicts import AttributeDict
 from aiida.common import exceptions
 
 
-@click.group()
+@click.group(invoke_without_command=True)
 @options.PROFILE()
-@click.option('--version', is_flag=True, default=False, help='Print the version of AiiDA that is currently installed.')
+@click.option('--version', is_flag=True, is_eager=True, help='Print the version of AiiDA that is currently installed.')
 @click.pass_context
 def verdi(ctx, profile, version):
     """The command line interface of AiiDA."""
     import sys
-    import aiida
+    from aiida import get_version
     from aiida.backends import settings
     from aiida.cmdline.utils import echo
     from aiida.manage import get_config
 
     if version:
-        echo.echo('AiiDA version {}'.format(aiida.__version__))
+        echo.echo('AiiDA version {}'.format(get_version()))
         sys.exit(0)
 
     if ctx.obj is None:

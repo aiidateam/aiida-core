@@ -101,6 +101,9 @@ class ConvertIterator(Iterator, Sized):
     def __len__(self):
         return len(self._backend_iterator)
 
+    def __getitem__(self, value):
+        return self._backend_iterator[value]
+
     # For future python-3 compatibility
     def __next__(self):
         return get_orm_entity(next(self._backend_iterator))

@@ -178,10 +178,10 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
             """Nodes iterator"""
 
             def __init__(self, dbnodes, backend):
+                self._backend = backend
                 self._dbnodes = dbnodes
                 self._iter = dbnodes.__iter__()
                 self.generator = self._genfunction()
-                self._backend = backend
 
             def _genfunction(self):
                 for node in self._iter:
@@ -192,6 +192,12 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
 
             def __len__(self):
                 return self._dbnodes.count()
+
+            def __getitem__(self, value):
+                if isinstance(value, slice):
+                    return [self._backend.get_backend_entity(n) for n in self._dbnodes[value]]
+
+                return self._backend.get_backend_entity(self._dbnodes[value])
 
             # For future python-3 compatibility
             def __next__(self):

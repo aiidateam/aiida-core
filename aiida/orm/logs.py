@@ -90,6 +90,14 @@ class Log(entities.Entity):
             filters = {'objpk': objpk, 'objname': objname}
             return self.find(filters, order_by=order_by)
 
+        def delete(self, log_id):
+            """
+            Remove a Log entry from the collection with the given id
+
+            :param log_id: id of the log to delete
+            """
+            self._backend.logs.delete(log_id)
+
         def delete_many(self, filters):
             """
             Delete all the log entries matching the given filters

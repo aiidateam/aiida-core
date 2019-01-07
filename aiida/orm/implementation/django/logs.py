@@ -13,7 +13,9 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.backends.djsite.db import models
-import aiida.common.json as json
+from aiida.common import exceptions
+from aiida.common import json
+
 from . import entities
 from .. import BackendLog, BackendLogCollection
 
@@ -90,6 +92,20 @@ class DjangoLogCollection(BackendLogCollection):
 
     ENTITY_CLASS = DjangoLog
 
+    def delete(self, log_id):
+        """
+        Remove a Log entry from the collection with the given id
+
+        :param log_id: id of the log to delete
+        """
+        # pylint: disable=no-name-in-module,import-error
+        from django.core.exceptions import ObjectDoesNotExist
+        assert log_id is not None
+        try:
+            models.DbLog.objects.get(pk=log_id).delete()
+        except ObjectDoesNotExist:
+            raise exceptions.NotExistent("Log with id '{}' not found".format(log_id))
+
     def delete_many(self, filters):
         """
         Delete all log entries in the table
@@ -97,4 +113,4 @@ class DjangoLogCollection(BackendLogCollection):
         if not filters:
             models.DbLog.objects.all().delete()
         else:
-            raise NotImplementedError("Only deleting all by passing an empty filer dictionary is currently supported")
+            raise NotImplementedError('Only deleting all by passing an empty filer dictionary is currently supported')

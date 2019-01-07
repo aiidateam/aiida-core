@@ -64,7 +64,7 @@ class SqlaAuthInfoCollection(BackendAuthInfoCollection):
 
         session = get_scoped_session()
         try:
-            session.query(DbAuthInfo).filter_by(id=authinfo_id).delete()
+            session.query(DbAuthInfo).filter_by(id=authinfo_id).one().delete()
             session.commit()
         except NoResultFound:
             raise exceptions.NotExistent("AuthInfo with id '{}' not found".format(authinfo_id))

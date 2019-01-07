@@ -114,7 +114,7 @@ class SqlaCommentCollection(BackendCommentCollection):
         session = get_scoped_session()
 
         try:
-            session.query(models.DbComment).filter_by(id=comment).delete()
+            session.query(models.DbComment).filter_by(id=comment).one().delete()
             session.commit()
         except NoResultFound:
             raise exceptions.NotExistent("Comment with id '{}' not found".format(comment))

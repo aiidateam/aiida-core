@@ -18,10 +18,13 @@ from aiida.cmdline.utils.query.mapping import CalculationProjectionMapper
 class CalculationQueryBuilder(object):  # pylint: disable=useless-object-inheritance
     """Utility class to construct a QueryBuilder instance for Calculation nodes and project the query set."""
 
-    _default_projections = ('pk', 'ctime', 'process_state', 'process_label', 'process_status')
-    _valid_projections = ('pk', 'uuid', 'ctime', 'mtime', 'process_state', 'process_status', 'exit_status', 'sealed',
-                          'process_label', 'label', 'description', 'type', 'paused', 'process_type', 'job_state',
-                          'scheduler_state')
+    # This tuple serves to mark compound projections that cannot explicitly be projected in the QueryBuilder, but will
+    # have to be manually projected from composing its individual projection constituents
+    _compound_projections = ('state',)
+    _default_projections = ('pk', 'ctime', 'state', 'process_label', 'process_status')
+    _valid_projections = ('pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'process_status', 'exit_status',
+                          'sealed', 'process_label', 'label', 'description', 'type', 'paused', 'process_type',
+                          'job_state', 'scheduler_state')
 
     def __init__(self, mapper=None):
         if mapper is None:
@@ -96,7 +99,12 @@ class CalculationQueryBuilder(object):  # pylint: disable=useless-object-inherit
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.common import timezone
 
-        projected_attributes = [self.mapper.get_attribute(projection) for projection in self._valid_projections]
+        # Define the list of projections for the QueryBuilder, which are all valid minus the compound projections
+        projected_attributes = [
+            self.mapper.get_attribute(projection)
+            for projection in self._valid_projections
+            if projection not in self._compound_projections
+        ]
 
         if filters is None:
             filters = {}

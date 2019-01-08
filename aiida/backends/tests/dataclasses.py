@@ -783,6 +783,38 @@ _tag   {}
 
         self.assertNotEquals(f1, f2)
 
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
+    def test_has_partial_occupancies(self):
+        import tempfile
+        from aiida.orm.data.cif import CifData
+
+        tests = [
+            # Unreadable occupations should not count as a partial occupancy
+            ('O 0.5 0.5(1) 0.5 ?', False),
+            # The default epsilon for deviation of unity for an occupation to be considered partial is 1E-6
+            ('O 0.5 0.5(1) 0.5 1.0(000000001)', False),
+            # Partial occupancies should be able to deal with parentheses in the value
+            ('O 0.5 0.5(1) 0.5 1.0(000132)', True),
+            # Partial occupancies should be able to deal with parentheses in the value
+            ('O 0.5 0.5(1) 0.5 0.9(0000132)', True),
+        ]
+
+        for test_string, result in tests:
+            with tempfile.NamedTemporaryFile(mode='w+') as handle:
+                handle.write("""
+                    data_test
+                    loop_
+                    _atom_site_label
+                    _atom_site_fract_x
+                    _atom_site_fract_y
+                    _atom_site_fract_z
+                    _atom_site_occupancy
+                    {}
+                """.format(test_string))
+                handle.flush()
+                cif = CifData(file=handle.name)
+                self.assertEqual(cif.has_partial_occupancies, result)
+
 
 class TestKindValidSymbols(AiidaTestCase):
     """

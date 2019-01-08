@@ -146,21 +146,27 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
 
             def __init__(self, dbnodes, backend):
                 super(NodesIterator, self).__init__()
-                self.dbnodes = dbnodes
-                self.generator = self._genfunction()
                 self._backend = backend
+                self._dbnodes = dbnodes
+                self.generator = self._genfunction()
 
             def _genfunction(self):
                 # Best to use dbnodes.iterator() so we load entities from the database as we need them
                 # see: http://blog.etianen.com/blog/2013/06/08/django-querysets/
-                for node in self.dbnodes.iterator():
+                for node in self._dbnodes.iterator():
                     yield self._backend.get_backend_entity(node)
 
             def __iter__(self):
                 return self
 
             def __len__(self):
-                return len(self.dbnodes)
+                return len(self._dbnodes)
+
+            def __getitem__(self, value):
+                if isinstance(value, slice):
+                    return [self._backend.get_backend_entity(n) for n in self._dbnodes[value]]
+
+                return self._backend.get_backend_entity(self._dbnodes[value])
 
             # For future python-3 compatibility
             def __next__(self):

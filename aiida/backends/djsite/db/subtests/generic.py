@@ -120,40 +120,6 @@ class TestGroupsDjango(AiidaTestCase):
         res = backend.groups.query(user=default_user, type_string='')
         self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g1, g2]))
 
-    def test_rename_existing(self):
-        """
-        Test that renaming to an already existing name is not permitted
-        """
-        backend = self.backend
-
-        label_group_a = 'group_a'
-        label_group_c = 'group_c'
-
-        default_user = backend.users.create("{}@aiida.net".format(self.id())).store()
-
-        group_a = backend.groups.create(label=label_group_a, description='I am the Original G', user=default_user).store()
-        self.addCleanup(lambda: backend.groups.delete(group_a.id))
-
-        # Before storing everything should be fine
-        group_b = backend.groups.create(label=label_group_a, description='They will try to rename me', user=default_user)
-        group_c = backend.groups.create(label=label_group_c, description='They will try to rename me', user=default_user)
-
-        # Storing for duplicate group name should trigger UniquenessError
-        with self.assertRaises(exceptions.IntegrityError):
-            group_b.store()
-
-        # Before storing everything should be fine
-        group_c.label = label_group_a
-
-        # Reverting to unique name before storing
-        group_c.label = label_group_c
-        group_c.store()
-        self.addCleanup(lambda: backend.groups.delete(group_c.id))
-
-        # After storing name change to existing should raise
-        with self.assertRaises(exceptions.IntegrityError):
-            group_c.label = label_group_a
-
     def test_creation_from_dbgroup(self):
         backend = self.backend
 

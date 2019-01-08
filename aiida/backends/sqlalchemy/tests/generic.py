@@ -131,48 +131,6 @@ class TestGroupsSqla(AiidaTestCase):
 
         self.assertSetEqual(set(_.pk for _ in res), set(_.pk for _ in [g1, g2]))
 
-    def test_rename_existing(self):
-        """Test that renaming to an already existing label is not permitted."""
-        from aiida.backends.sqlalchemy import get_scoped_session
-
-        backend = self.backend
-        user = backend.users.create(email="{}@aiida.net".format(self.id())).store()
-
-        label_group_a = 'group_a'
-        label_group_c = 'group_c'
-
-        group_a = backend.groups.create(label=label_group_a, description='I am the Original G', user=user)
-        group_a.store()
-
-        # Before storing everything should be fine
-        group_b = backend.groups.create(label=label_group_a, description='They will try to rename me', user=user)
-        group_c = backend.groups.create(label=label_group_c, description='They will try to rename me', user=user)
-
-        session = get_scoped_session()
-
-        # Storing for duplicate group label should trigger Integrity
-        try:
-            session.begin_nested()
-            with self.assertRaises(exceptions.IntegrityError):
-                group_b.store()
-        finally:
-            session.rollback()
-
-        # Before storing everything should be fine
-        group_c.label = label_group_a
-
-        # Reverting to unique label before storing
-        group_c.label = label_group_c
-        group_c.store()
-
-        # After storing label change to existing should raise
-        try:
-            session.begin_nested()
-            with self.assertRaises(exceptions.IntegrityError):
-                group_c.label = label_group_a
-        finally:
-            session.rollback()
-
 
 class TestDbExtrasSqla(AiidaTestCase):
     """

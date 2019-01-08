@@ -13,22 +13,24 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.backends.sqlalchemy import get_scoped_session
-from aiida.backends.sqlalchemy.models.log import DbLog
+from aiida.backends.sqlalchemy.models import log as models
+from aiida.common import exceptions
+
 from .. import BackendLog, BackendLogCollection
 from . import entities
 from . import utils
 
 
-class SqlaLog(entities.SqlaModelEntity[DbLog], BackendLog):
+class SqlaLog(entities.SqlaModelEntity[models.DbLog], BackendLog):
     """SQLA Log backend entity"""
 
-    MODEL_CLASS = DbLog
+    MODEL_CLASS = models.DbLog
 
     def __init__(self, backend, time, loggername, levelname, objname, objpk=None, message="", metadata=None):
         # pylint: disable=too-many-arguments
         super(SqlaLog, self).__init__(backend)
         self._dbmodel = utils.ModelWrapper(
-            DbLog(
+            models.DbLog(
                 time=time,
                 loggername=loggername,
                 levelname=levelname,
@@ -92,14 +94,29 @@ class SqlaLogCollection(BackendLogCollection):
 
     ENTITY_CLASS = SqlaLog
 
+    def delete(self, log_id):
+        """
+        Remove a Log entry from the collection with the given id
+
+        :param log_id: id of the log to delete
+        """
+        # pylint: disable=no-name-in-module,import-error
+        from sqlalchemy.orm.exc import NoResultFound
+        session = get_scoped_session()
+
+        try:
+            session.query(models.DbLog).filter_by(id=log_id).one().delete()
+            session.commit()
+        except NoResultFound:
+            raise exceptions.NotExistent("Log with id '{}' not found".format(log_id))
+
     def delete_many(self, filters):
         """
         Delete all log entries in the table
         """
         if not filters:
-            for entry in DbLog.query.all():
+            for entry in models.DbLog.query.all():
                 entry.delete()
             get_scoped_session().commit()
         else:
-            raise NotImplementedError("Only deleting all by passing an empty filer dictionary is "
-                                      "currently supported")
+            raise NotImplementedError('Only deleting all by passing an empty filer dictionary is currently supported')

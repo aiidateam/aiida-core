@@ -16,6 +16,7 @@ import logging
 from six.moves import range
 
 from aiida.backends.testbase import AiidaTestCase
+from aiida.common import exceptions
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida import orm
 from aiida.orm.node.process.calculation import CalculationNode
@@ -27,7 +28,7 @@ class TestBackendLog(AiidaTestCase):
 
     def setUp(self):
         super(TestBackendLog, self).setUp()
-        self._record = {
+        self.record = {
             'time': now(),
             'loggername': 'loggername',
             'levelname': logging.getLevelName(LOG_LEVEL_REPORT),
@@ -46,6 +47,36 @@ class TestBackendLog(AiidaTestCase):
         super(TestBackendLog, self).tearDown()
         orm.Log.objects.delete_many({})
 
+    def test_create_log_message(self):
+        """
+        Test the manual creation of a log entry
+        """
+        entry = orm.Log(**self.record)
+
+        self.assertEqual(entry.time, self.record['time'])
+        self.assertEqual(entry.loggername, self.record['loggername'])
+        self.assertEqual(entry.levelname, self.record['levelname'])
+        self.assertEqual(entry.objname, self.record['objname'])
+        self.assertEqual(entry.objpk, self.record['objpk'])
+        self.assertEqual(entry.message, self.record['message'])
+        self.assertEqual(entry.metadata, self.record['metadata'])
+
+    def test_log_delete_single(self):
+        """Test that a single log entry can be deleted through the collection."""
+        entry = orm.Log(**self.record)
+
+        log_id = entry.id
+
+        self.assertEqual(len(orm.Log.objects.all()), 1)
+
+        # Deleting the entry
+        orm.Log.objects.delete(log_id)
+        self.assertEqual(len(orm.Log.objects.all()), 0)
+
+        # Deleting a non-existing entry should raise
+        with self.assertRaises(exceptions.NotExistent):
+            orm.Log.objects.delete(log_id)
+
     def test_delete_many(self):
         """
         Test deleting all log entries
@@ -54,32 +85,16 @@ class TestBackendLog(AiidaTestCase):
         """
         count = 10
         for _ in range(count):
-            orm.Log(**self._record)
+            orm.Log(**self.record)
 
         self.assertEqual(len(orm.Log.objects.all()), count)
         orm.Log.objects.delete_many({})
         self.assertEqual(len(orm.Log.objects.all()), 0)
 
-    def test_create_log_message(self):
-        """
-        Test the manual creation of a log entry
-        """
-        record = self._record
-        entry = orm.Log(record['time'], record['loggername'], record['levelname'], record['objname'], record['objpk'],
-                        record['message'], record['metadata'])
-
-        self.assertEqual(entry.time, record['time'])
-        self.assertEqual(entry.loggername, record['loggername'])
-        self.assertEqual(entry.levelname, record['levelname'])
-        self.assertEqual(entry.objname, record['objname'])
-        self.assertEqual(entry.objpk, record['objpk'])
-        self.assertEqual(entry.message, record['message'])
-        self.assertEqual(entry.metadata, record['metadata'])
-
     def test_objects_find(self):
         """Put logs in and find them"""
         for pk in range(10):
-            record = self._record
+            record = self.record
             record['objpk'] = pk
             orm.Log(**record)
 
@@ -94,7 +109,7 @@ class TestBackendLog(AiidaTestCase):
         from aiida.orm.logs import OrderSpecifier, ASCENDING, DESCENDING
 
         for pk in range(10):
-            record = self._record
+            record = self.record
             record['objpk'] = pk
             orm.Log(**record)
 
@@ -114,7 +129,7 @@ class TestBackendLog(AiidaTestCase):
         """
         limit = 2
         for _ in range(limit * 2):
-            orm.Log(**self._record)
+            orm.Log(**self.record)
 
         entries = orm.Log.objects.find(limit=limit)
         self.assertEqual(len(entries), limit)
@@ -125,7 +140,7 @@ class TestBackendLog(AiidaTestCase):
         """
         target_pk = 5
         for pk in range(10):
-            record = self._record
+            record = self.record
             record['objpk'] = pk
             orm.Log(**record)
 

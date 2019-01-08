@@ -68,6 +68,9 @@ class TestComment(AiidaTestCase):
         Comment.objects.delete(comment.pk)
 
         with self.assertRaises(exceptions.NotExistent):
+            Comment.objects.delete(comment_pk)
+
+        with self.assertRaises(exceptions.NotExistent):
             Comment.objects.get(id=comment_pk)
 
     def test_comment_querybuilder(self):

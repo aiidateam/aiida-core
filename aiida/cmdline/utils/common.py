@@ -251,8 +251,8 @@ def get_calcjob_report(calcjob):
         report.append('*** 0 LOG MESSAGES')
 
     for log in log_messages:
-        report.append('+-> {} at {}'.format(log['levelname'], log['time']))
-        for message in log['message'].splitlines():
+        report.append('+-> {} at {}'.format(log.levelname, log.time))
+        for message in log.message.splitlines():
             report.append(' | {}'.format(message))
 
     return '\n'.join(report)

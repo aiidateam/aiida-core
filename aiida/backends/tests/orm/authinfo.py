@@ -11,16 +11,18 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from aiida.backends.testbase import AiidaTestCase
+from aiida.common import exceptions
+from aiida.orm import authinfos
 
 
 class TestAuthinfo(AiidaTestCase):
     """Unit tests for the AuthInfo ORM class."""
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        super(TestAuthinfo, cls).setUpClass(*args, **kwargs)
-        cls.auth_info = cls.computer.configure()  # pylint: disable=no-member
+    def setUp(self):
+        super(TestAuthinfo, self).setUp()
+        self.auth_info = self.computer.configure()  # pylint: disable=no-member
 
     def test_set_auth_params(self):
         """Test the auth_params setter."""
@@ -28,3 +30,14 @@ class TestAuthinfo(AiidaTestCase):
 
         self.auth_info.set_auth_params(auth_params)
         self.assertEqual(self.auth_info.get_auth_params(), auth_params)
+
+    def test_delete(self):
+        """Test deleting a single AuthInfo."""
+        pk = self.auth_info.pk
+
+        self.assertEqual(len(authinfos.AuthInfo.objects.all()), 1)
+        authinfos.AuthInfo.objects.delete(pk)
+        self.assertEqual(len(authinfos.AuthInfo.objects.all()), 0)
+
+        with self.assertRaises(exceptions.NotExistent):
+            authinfos.AuthInfo.objects.delete(pk)

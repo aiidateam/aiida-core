@@ -97,6 +97,14 @@ class BackendLogCollection(backends.BackendCollection[BackendLog]):
     ENTITY_CLASS = BackendLog
 
     @abc.abstractmethod
+    def delete(self, log_id):
+        """
+        Remove a Log entry from the collection with the given id
+
+        :param log_id: id of the log to delete
+        """
+
+    @abc.abstractmethod
     def delete_many(self, filters):
         """
         Delete multiple log entries in the table

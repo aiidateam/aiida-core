@@ -815,6 +815,27 @@ _tag   {}
                 cif = CifData(file=handle.name)
                 self.assertEqual(cif.has_partial_occupancies, result)
 
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
+    def test_has_unknown_species(self):
+        import tempfile
+        from aiida.orm.data.cif import CifData
+
+        tests = [
+            ('H2 O', False),  # No unknown species
+            ('OsAx', True),   # Ax is an unknown specie
+            ('UX', True),     # X counts as unknown specie despite being defined in aiida.common.constants.elements
+            ('', None),       # If no chemical formula is defined, None should be returned
+        ]
+
+        for formula, result in tests:
+            # Unreadable occupations should not count as a partial occupancy
+            with tempfile.NamedTemporaryFile(mode='w+') as handle:
+                formula_string = "_chemical_formula_sum '{}'".format(formula) if formula else '\n'
+                handle.write("""data_test\n{}\n""".format(formula_string))
+                handle.flush()
+                cif = CifData(file=handle.name)
+                self.assertEqual(cif.has_unknown_species, result, formula_string)
+
 
 class TestKindValidSymbols(AiidaTestCase):
     """

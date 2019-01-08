@@ -414,7 +414,7 @@ def parse_formula(formula):
     return contents
 
 
-# pylint: disable=abstract-method
+# pylint: disable=abstract-method,too-many-public-methods
 # Note:  Method 'query' is abstract in class 'Node' but is not overridden
 class CifData(SinglefileData):
     """
@@ -770,6 +770,46 @@ class CifData(SinglefileData):
                         return True
 
         return False
+
+    @property
+    def has_undefined_atomic_sites(self):
+        """
+        Return whether the cif data contains any undefined atomic sites.
+
+        An undefined atomic site is defined as a site where at least one of the fractional coordinates specified in the
+        `_atom_site_fract_*` tags, cannot be successfully interpreted as a float. If the cif data contains any site that
+        matches this description, or it does not contain any atomic site tags at all, the cif data is said to have
+        undefined atomic sites.
+
+        :return: boolean, True if no atomic sites are defined or if any of the defined sites contain undefined positions
+            and False otherwise
+        """
+        import re
+
+        tag_x = '_atom_site_fract_x'
+        tag_y = '_atom_site_fract_y'
+        tag_z = '_atom_site_fract_z'
+
+        # Some CifData files do not even contain a single `_atom_site_fract_*` tag
+        has_tags = False
+
+        for datablock in self.values.keys():
+            for tag in [tag_x, tag_y, tag_z]:
+                if tag in self.values[datablock].keys():
+                    for position in self.values[datablock][tag]:
+
+                        # The CifData contains at least one `_atom_site_fract_*` tag
+                        has_tags = True
+
+                        try:
+                            # First remove any parentheses to support value like 1.134(56) and then cast to float
+                            float(re.sub(r'[\(\)]', '', position))
+                        except ValueError:
+                            # Position cannot be converted to a float value, so we have undefined atomic sites
+                            return True
+
+        # At this point the file either has no tags at all, or it does and all coordinates were valid floats
+        return not has_tags
 
     @property
     def has_atomic_sites(self):

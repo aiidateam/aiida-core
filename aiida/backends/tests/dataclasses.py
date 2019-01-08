@@ -776,7 +776,7 @@ _tag   {}
             # but it does not have a file
             with self.assertRaises(AttributeError):
                 a.filename
-            #now it has
+            # now it has
             a.set_file(tmpf.name)
             a.parse()
             a.filename
@@ -828,13 +828,32 @@ _tag   {}
         ]
 
         for formula, result in tests:
-            # Unreadable occupations should not count as a partial occupancy
             with tempfile.NamedTemporaryFile(mode='w+') as handle:
                 formula_string = "_chemical_formula_sum '{}'".format(formula) if formula else '\n'
                 handle.write("""data_test\n{}\n""".format(formula_string))
                 handle.flush()
                 cif = CifData(file=handle.name)
                 self.assertEqual(cif.has_unknown_species, result, formula_string)
+
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
+    def test_has_undefined_atomic_sites(self):
+        import tempfile
+        from aiida.orm.data.cif import CifData
+
+        tests = [
+            ('C 0.0 0.0 0.0', False),  # Should return False because all sites have valid coordinates
+            ('C 0.0 0.0 ?', True),     # Should return True because one site has an undefined coordinate
+            ('', True),                # Should return True if no sites defined at all
+        ]
+
+        for test_string, result in tests:
+            with tempfile.NamedTemporaryFile(mode='w+') as handle:
+                base = 'loop_\n_atom_site_label\n_atom_site_fract_x\n_atom_site_fract_y\n_atom_site_fract_z'
+                atomic_site_string = '{}\n{}'.format(base, test_string) if test_string else ''
+                handle.write("""data_test\n{}\n""".format(atomic_site_string))
+                handle.flush()
+                cif = CifData(file=handle.name)
+                self.assertEqual(cif.has_undefined_atomic_sites, result)
 
 
 class TestKindValidSymbols(AiidaTestCase):

@@ -725,26 +725,32 @@ class CifData(SinglefileData):
     @property
     def has_partial_occupancies(self):
         """
-        Check if there are float values in the atomic occupancies
+        Return if the cif data contains partial occupancies
 
-        :returns: True if there are partial occupancies, False otherwise
+        A partial occupancy is defined as site with an occupancy that differs from unity, within a precision of 1E-6
+
+        .. note: occupancies that cannot be parsed into a float are ignored
+
+        :return: True if there are partial occupancies, False otherwise
         """
-        epsilon = 1e-6
+        import re
+
         tag = '_atom_site_occupancy'
+
+        epsilon = 1e-6
         partial_occupancies = False
+
         for datablock in self.values.keys():
             if tag in self.values[datablock].keys():
-                for site in self.values[datablock][tag]:
-                    # find the float number in the string
-                    bracket = site.find('(')
-                    if bracket == -1:
-                        # no bracket found
-                        if abs(float(site) - 1) > epsilon:
-                            partial_occupancies = True
+                for position in self.values[datablock][tag]:
+                    try:
+                        # First remove any parentheses to support value like 1.134(56) and then cast to float
+                        occupancy = float(re.sub(r'[\(\)]', '', position))
+                    except ValueError:
+                        pass
                     else:
-                        # bracket, cut string
-                        if abs(float(site[0:bracket]) - 1) > epsilon:
-                            partial_occupancies = True
+                        if abs(occupancy - 1) > epsilon:
+                            return True
 
         return partial_occupancies
 

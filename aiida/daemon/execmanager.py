@@ -22,13 +22,13 @@ from six.moves import zip
 
 from aiida.common import AIIDA_LOGGER
 from aiida.common import exceptions
-from aiida.common.datastructures import calc_states
+from aiida.common.datastructures import CalcJobState
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
 from aiida.common.log import get_dblogger_extra
 from aiida.orm import DataFactory
 from aiida.orm.data.folder import FolderData
-from aiida.scheduler.datastructures import JOB_STATES
+from aiida.scheduler.datastructures import JobState
 
 REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
 
@@ -261,7 +261,7 @@ def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
 
     # Create the FolderData node to attach everything to
     retrieved_files = FolderData()
-    retrieved_files.add_incoming(calculation, link_type=LinkType.CREATE, link_label=calculation._get_linkname_retrieved())
+    retrieved_files.add_incoming(calculation, link_type=LinkType.CREATE, link_label=calculation.link_label_retrieved)
 
     with transport:
         transport.chdir(workdir)
@@ -321,7 +321,7 @@ def kill_calculation(calculation, transport):
         job = running_jobs.get(job_id, None)
 
         # If the job is returned it is still running and the kill really failed, so we raise
-        if job is not None and job.job_state != JOB_STATES.DONE:
+        if job is not None and job.job_state != JobState.DONE:
             raise exceptions.RemoteOperationError('scheduler.kill({}) was unsuccessful'.format(job_id))
         else:
             execlogger.warning('scheduler.kill() failed but job<{%s}> no longer seems to be running regardless', job_id)
@@ -335,10 +335,10 @@ def parse_results(job, retrieved_temporary_folder=None):
 
     :returns: integer exit code, where 0 indicates success and non-zero failure
     """
-    from aiida.orm.node.process.calculation.calcjob import CalcJobExitStatus
     from aiida.work import ExitCode
 
-    assert job.get_state() == calc_states.PARSING, 'the job should be in the PARSING state when calling this function'
+    assert job.get_state() == CalcJobState.PARSING, \
+        'the job should be in the PARSING state when calling this function yet it is {}'.format(job.get_state())
 
     Parser = job.get_parserclass()
     exit_code = ExitCode()
@@ -366,12 +366,12 @@ def parse_results(job, retrieved_temporary_folder=None):
 
         # Some implementations of parse_from_calc may still return a plain boolean or integer for the exit_code.
         # In the case of a boolean: True should be mapped to the default ExitCode which corresponds to an exit
-        # status of 0. False values are mapped to the value that is mapped onto the FAILED calculation state
-        # throught the CalcJobExitStatus. Plain integers are directly used to construct an ExitCode tuple
+        # status of 0. False values are mapped to the value that is mapped onto the default `CalcJob` exit code
+        # `ERROR_FAILED`.
         if isinstance(exit_code, bool) and exit_code is True:
             exit_code = ExitCode(0)
         elif isinstance(exit_code, bool) and exit_code is False:
-            exit_code = ExitCode(CalcJobExitStatus[calc_states.FAILED].value)
+            exit_code = ExitCode(job.process().exit_codes.ERROR_FAILED)
         elif isinstance(exit_code, int):
             exit_code = ExitCode(exit_code)
         elif isinstance(exit_code, ExitCode):
@@ -383,16 +383,6 @@ def parse_results(job, retrieved_temporary_folder=None):
         for label, n in new_nodes_tuple:
             n.add_incoming(job, link_type=LinkType.CREATE, link_label=label)
             n.store()
-
-    try:
-        if exit_code.status == 0:
-            job._set_state(calc_states.FINISHED)
-        else:
-            job._set_state(calc_states.FAILED)
-    except exceptions.ModificationNotAllowed:
-        # I should have been the only one to set it, but
-        # in order to avoid useless error messages, I just ignore
-        pass
 
     if exit_code.status is not 0:
         execlogger.error("[parsing of calc {}] "

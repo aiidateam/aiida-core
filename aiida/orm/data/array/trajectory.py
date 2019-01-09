@@ -465,7 +465,7 @@ class TrajectoryData(ArrayData):
 
         param = ParameterData(dict=kwargs)
 
-        ret_dict = _get_aiida_structure_inline(trajectory=self, parameters=param, store_provenance=store)  # pylint: disable=unexpected-keyword-arg
+        ret_dict = _get_aiida_structure_inline(trajectory=self, parameters=param, metadata={'store_provenance': store})  # pylint: disable=unexpected-keyword-arg
         return ret_dict['structure']
 
     def _get_cif(self, index=None, **kwargs):

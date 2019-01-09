@@ -28,7 +28,8 @@ from aiida.work import test_utils, Process
 
 
 class NameSpacedProcess(work.Process):
-    _calc_class = WorkflowNode
+
+    _node_class = WorkflowNode
 
     @classmethod
     def define(cls, spec):
@@ -65,13 +66,13 @@ class TestProcessNamespace(AiidaTestCase):
         self.assertEquals(input_node.value, 5)
 
         # Check that the link of the process node has the correct link name
-        self.assertTrue('some_name_space_a' in proc.calc.get_incoming().all_link_labels())
-        self.assertEquals(proc.calc.get_incoming().get_node_by_label('some_name_space_a'), 5)
+        self.assertTrue('some_name_space_a' in proc.node.get_incoming().all_link_labels())
+        self.assertEquals(proc.node.get_incoming().get_node_by_label('some_name_space_a'), 5)
 
 
 class ProcessStackTest(work.Process):
 
-    _calc_class = WorkflowNode
+    _node_class = WorkflowNode
 
     @override
     def run(self):
@@ -111,10 +112,10 @@ class TestProcess(AiidaTestCase):
         dummy_inputs = ["1", "2", "3", "4"]
 
         inputs = {l: Int(l) for l in dummy_inputs}
-        inputs['store_provenance'] = True
-        p = test_utils.DummyProcess(inputs)
+        inputs['metadata'] = {'store_provenance': True}
+        process = test_utils.DummyProcess(inputs)
 
-        for entry in p._calc.get_incoming().all():
+        for entry in process.node.get_incoming().all():
             self.assertTrue(entry.link_label in inputs)
             self.assertEqual(int(entry.link_label), int(entry.node.value))
             dummy_inputs.remove(entry.link_label)
@@ -131,24 +132,24 @@ class TestProcess(AiidaTestCase):
         self.assertTrue(load_node(pk=pid).is_sealed)
 
     def test_description(self):
-        dp = test_utils.DummyProcess(inputs={'description': "Rockin' process"})
-        self.assertEquals(dp.calc.description, "Rockin' process")
+        dp = test_utils.DummyProcess(inputs={'metadata': {'description': "Rockin' process"}})
+        self.assertEquals(dp.node.description, "Rockin' process")
 
         with self.assertRaises(ValueError):
-            test_utils.DummyProcess(inputs={'description': 5})
+            test_utils.DummyProcess(inputs={'metadata': {'description': 5}})
 
     def test_label(self):
-        dp = test_utils.DummyProcess(inputs={'label': 'My label'})
-        self.assertEquals(dp.calc.label, 'My label')
+        dp = test_utils.DummyProcess(inputs={'metadata': {'label': 'My label'}})
+        self.assertEquals(dp.node.label, 'My label')
 
         with self.assertRaises(ValueError):
             test_utils.DummyProcess(inputs={'label': 5})
 
     def test_work_calc_finish(self):
         p = test_utils.DummyProcess()
-        self.assertFalse(p.calc.is_finished_ok)
+        self.assertFalse(p.node.is_finished_ok)
         work.launch.run(p)
-        self.assertTrue(p.calc.is_finished_ok)
+        self.assertTrue(p.node.is_finished_ok)
 
     def test_calculation_input(self):
         @work.calcfunction
@@ -161,7 +162,7 @@ class TestProcess(AiidaTestCase):
         dp = test_utils.DummyProcess(inputs={'calc': calc})
         work.launch.run(dp)
 
-        input_calc = dp.calc.get_incoming().get_node_by_label('calc')
+        input_calc = dp.node.get_incoming().get_node_by_label('calc')
         self.assertTrue(isinstance(input_calc, FrozenDict))
         self.assertEqual(input_calc['a'], outputs['a'])
 
@@ -170,7 +171,7 @@ class TestProcess(AiidaTestCase):
         # Save the instance state
         bundle = plumpy.Bundle(proc)
         proc.close()
-        proc2 = bundle.unbundle()
+        bundle.unbundle()
 
     def test_process_type_with_entry_point(self):
         """
@@ -196,20 +197,21 @@ class TestProcess(AiidaTestCase):
             'code': code,
             'parameters': parameters,
             'template': template,
-            'options': options,
+            'metadata': {
+                'options': options,
+            }
         }
 
         entry_point = 'templatereplacer'
-        calculation = CalculationFactory(entry_point)
-        job_process = calculation.process()
-        process = job_process(inputs=inputs)
+        process_class = CalculationFactory(entry_point)
+        process = process_class(inputs=inputs)
 
         expected_process_type = 'aiida.calculations:{}'.format(entry_point)
-        self.assertEqual(process.calc.process_type, expected_process_type)
+        self.assertEqual(process.node.process_type, expected_process_type)
 
         # Verify that load_process_class on the calculation node returns the original entry point class
-        recovered_process = process.calc.load_process_class()
-        self.assertEqual(recovered_process, calculation)
+        recovered_process = process.node.load_process_class()
+        self.assertEqual(recovered_process, process_class)
 
     def test_process_type_without_entry_point(self):
         """
@@ -218,10 +220,10 @@ class TestProcess(AiidaTestCase):
         """
         process = test_utils.DummyProcess()
         expected_process_type = '{}.{}'.format(process.__class__.__module__, process.__class__.__name__)
-        self.assertEqual(process.calc.process_type, expected_process_type)
+        self.assertEqual(process.node.process_type, expected_process_type)
 
         # Verify that load_process_class on the calculation node returns the original entry point class
-        recovered_process = process.calc.load_process_class()
+        recovered_process = process.node.load_process_class()
         self.assertEqual(recovered_process, process.__class__)
 
     def test_validation_error(self):
@@ -235,4 +237,4 @@ class TestProcess(AiidaTestCase):
 
         with self.assertRaises(ValueError) as context:
             TestProc({'a': {'b': Int(5)}})
-        self.assertIn("inputs.a.b", str(context.exception))
+        self.assertIn('inputs.a.b', str(context.exception))

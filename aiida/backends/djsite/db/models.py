@@ -841,8 +841,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
             try:
                 jsondata = json.dumps(value)
             except TypeError:
-                raise ValueError("Unable to store the value: it must be "
-                                 "either a basic datatype, or json-serializable")
+                raise ValueError("Unable to store the value: it must be either a basic datatype, or json-serializable: {}".format(value))
 
             new_entry.datatype = 'json'
             new_entry.tval = jsondata

@@ -20,7 +20,7 @@ import six
 import aiida.scheduler
 from aiida.common.escaping import escape_for_bash
 from aiida.scheduler import SchedulerError, SchedulerParsingError
-from aiida.scheduler.datastructures import (JobInfo, JOB_STATES, JobResource)
+from aiida.scheduler.datastructures import (JobInfo, JobState, JobResource)
 
 # This maps LSF status codes to our own state list
 #
@@ -73,17 +73,17 @@ from aiida.scheduler.datastructures import (JobInfo, JOB_STATES, JobResource)
 #         as local ZOMBI jobs. In addition, it notifies the submission cluster
 #         that the job is in ZOMBI state and the submission cluster requeues the job.
 _MAP_STATUS_LSF = {
-    'PEND': JOB_STATES.QUEUED,
-    'PROV': JOB_STATES.QUEUED,
-    'PSUSP': JOB_STATES.QUEUED_HELD,
-    'USUSP': JOB_STATES.SUSPENDED,
-    'SSUSP': JOB_STATES.SUSPENDED,
-    'RUN': JOB_STATES.RUNNING,
-    'DONE': JOB_STATES.DONE,
-    'EXIT': JOB_STATES.DONE,
-    'UNKWN': JOB_STATES.UNDETERMINED,
-    'WAIT': JOB_STATES.QUEUED,
-    'ZOMBI': JOB_STATES.UNDETERMINED,
+    'PEND': JobState.QUEUED,
+    'PROV': JobState.QUEUED,
+    'PSUSP': JobState.QUEUED_HELD,
+    'USUSP': JobState.SUSPENDED,
+    'SSUSP': JobState.SUSPENDED,
+    'RUN': JobState.RUNNING,
+    'DONE': JobState.DONE,
+    'EXIT': JobState.DONE,
+    'UNKWN': JobState.UNDETERMINED,
+    'WAIT': JobState.QUEUED,
+    'ZOMBI': JobState.UNDETERMINED,
 }
 
 # Separator between fields in the output of bjobs
@@ -540,7 +540,7 @@ fi
             except KeyError:
                 self.logger.warning("Unrecognized job_state '{}' for job "
                                     "id {}".format(job_state_raw, this_job.job_id))
-                job_state_string = JOB_STATES.UNDETERMINED
+                job_state_string = JobState.UNDETERMINED
 
             this_job.job_state = job_state_string
 
@@ -574,7 +574,7 @@ fi
             # therefore it requires some parsing, that is unnecessary now.
             # I just store is as a raw string for the moment, and I leave
             # this_job.allocated_machines undefined
-            if this_job.job_state == JOB_STATES.RUNNING:
+            if this_job.job_state == JobState.RUNNING:
                 this_job.allocated_machines_raw = allocated_machines
 
             this_job.queue_name = partition
@@ -586,7 +586,7 @@ fi
             # Now get the time in seconds which has been used
             # Only if it is RUNNING; otherwise it is not meaningful,
             # and may be not set (in my test, it is set to zero)
-            if this_job.job_state == JOB_STATES.RUNNING:
+            if this_job.job_state == JobState.RUNNING:
                 try:
                     requested_walltime = psd_finish_time - psd_start_time
                     # fix of a weird bug. Since the year is not parsed, it is assumed

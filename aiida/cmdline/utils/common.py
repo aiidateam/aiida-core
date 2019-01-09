@@ -85,6 +85,7 @@ def get_node_summary(node):
     :return: a string summary of the node
     """
     from plumpy import ProcessState
+    from aiida.orm.data.code import Code
     from aiida.orm.node.process import ProcessNode
 
     table_headers = ['Property', 'Value']
@@ -122,12 +123,11 @@ def get_node_summary(node):
             table.append(['computer', '[{}] {}'.format(node.get_computer().pk, node.get_computer().name)])
 
     try:
-        code = node.get_code()
-    except AttributeError:
+        code = node.get_incoming(node_class=Code).first()
+    except ValueError:
         pass
     else:
-        if code is not None:
-            table.append(['code', code.label])
+        table.append(['code', code.label])
 
     return tabulate(table, headers=table_headers)
 
@@ -211,7 +211,7 @@ def get_calcjob_report(calcjob):
     :return: a string representation of the log messages and scheduler output
     """
     from aiida import orm
-    from aiida.common.datastructures import calc_states
+    from aiida.common.datastructures import CalcJobState
 
     log_messages = orm.Log.objects.get_logs_for(calcjob)
     scheduler_out = calcjob.get_scheduler_output()
@@ -221,7 +221,7 @@ def get_calcjob_report(calcjob):
 
     report = []
 
-    if calcjob_state == calc_states.WITHSCHEDULER:
+    if calcjob_state == CalcJobState.WITHSCHEDULER:
         state_string = '{}, scheduler state: {}'.format(calcjob_state, scheduler_state
                                                         if scheduler_state else '(unknown)')
     else:

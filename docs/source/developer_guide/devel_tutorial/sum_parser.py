@@ -33,7 +33,7 @@ class SumParser(Parser):
         # select the folder object
         # Check that the retrieved folder is there 
         try:
-            out_folder = retrieved[self._calc._get_linkname_retrieved()]
+            out_folder = retrieved[self._calc.link_label_retrieved]
         except KeyError:
             self.logger.error("No retrieved folder found")
             return False, ()

@@ -15,8 +15,6 @@ from __future__ import absolute_import
 
 import six
 
-from aiida.orm.calculation.inline import optional_inline
-
 
 class DbImporter(object):
     """

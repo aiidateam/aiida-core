@@ -18,7 +18,6 @@ from .data import *
 from .data.code import Code
 
 from .authinfos import *
-from .calculation import *
 from .computers import *
 from .entities import *
 from .groups import *
@@ -40,7 +39,6 @@ _local = 'Code', 'CalculationFactory', 'DataFactory', 'WorkflowFactory', \
 
 __all__ = (_local +
            authinfos.__all__ +
-           calculation.__all__ +
            computers.__all__ +
            entities.__all__ +
            groups.__all__ +

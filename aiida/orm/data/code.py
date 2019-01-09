@@ -441,49 +441,6 @@ class Code(Data):
         else:
             return self.get_remote_exec_path()
 
-    def new_calc(self, *args, **kwargs):
-        """
-        Create and return a new Calculation object (unstored) with the correct
-        plugin subclass, as obtained by the self.get_input_plugin_name() method.
-
-        Parameters are passed to the calculation __init__ method.
-
-        :note: it also directly creates the link to this code (that will of
-            course be cached, since the new node is not stored yet).
-
-        :raise MissingPluginError: if the specified plugin does not exist.
-        :raise ValueError: if no default plugin was specified in the code.
-        """
-        import warnings
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
-        warnings.warn(
-            'directly creating and submitting calculations is deprecated, use the {}\nSee:{}'.format(
-                'ProcessBuilder', DEPRECATION_DOCS_URL), DeprecationWarning)
-
-        from aiida.orm.utils import CalculationFactory
-        plugin_name = self.get_input_plugin_name()
-        if plugin_name is None:
-            raise ValueError("You did not specify an input plugin for this code")
-
-        try:
-            C = CalculationFactory(plugin_name)
-
-        except MissingPluginError:
-            raise MissingPluginError("The input_plugin name for this code is "
-                                     "'{}', but it is not an existing plugin"
-                                     "name".format(plugin_name))
-
-        # For remote codes, automatically set the computer,
-        # unless explicitly set by the user
-        if not self.is_local():
-            if 'computer' not in kwargs:
-                kwargs['computer'] = self.get_remote_computer()
-
-        new_calc = C(*args, **kwargs)
-        # I link to the code
-        new_calc.use_code(self)
-        return new_calc
-
     def get_builder(self):
         """
         Create and return a new ProcessBuilder for the default Calculation

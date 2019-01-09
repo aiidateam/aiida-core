@@ -33,8 +33,8 @@ class ProcessNode(Sealable, Node):
     EXCEPTION_KEY = 'exception'
     EXIT_MESSAGE_KEY = 'exit_message'
     EXIT_STATUS_KEY = 'exit_status'
-    PROCESS_LABEL_KEY = '_process_label'
     PROCESS_PAUSED_KEY = 'paused'
+    PROCESS_LABEL_KEY = 'process_label'
     PROCESS_STATE_KEY = 'process_state'
     PROCESS_STATUS_KEY = 'process_status'
 

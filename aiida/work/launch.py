@@ -91,7 +91,7 @@ def submit(process, **inputs):
     # Do not wait for the future's result, because in the case of a single worker this would cock-block itself
     controller.continue_process(process.pid, nowait=False, no_reply=True)
 
-    return process.calc
+    return process.node
 
 
 # Allow one to also use run.get_node and run.get_pid as a shortcut, without having to import the functions themselves

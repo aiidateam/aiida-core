@@ -24,6 +24,8 @@ __all__ = 'AiiDAPersister', 'ObjectLoader', 'get_object_loader'
 LOGGER = logging.getLogger(__name__)
 OBJECT_LOADER = None
 
+ObjectLoader = plumpy.DefaultObjectLoader
+
 
 def get_object_loader():
     """
@@ -65,7 +67,7 @@ class AiiDAPersister(plumpy.Persister):
                 process, traceback.format_exc()))
 
         try:
-            process.calc.set_checkpoint(serialize.serialize(bundle))
+            process.node.set_checkpoint(serialize.serialize(bundle))
         except Exception:
             raise plumpy.PersistenceError("Failed to store a checkpoint for '{}': {}".format(
                 process, traceback.format_exc()))
@@ -143,32 +145,3 @@ class AiiDAPersister(plumpy.Persister):
 
         :param pid: the process id of the :class:`aiida.work.processes.Process`
         """
-
-
-class ObjectLoader(plumpy.DefaultObjectLoader):
-    """
-    The AiiDA specific object loader.
-    """
-
-    @staticmethod
-    def is_wrapped_job_calculation(name):
-        from aiida.work.job_processes import JobProcess
-        return name.find(JobProcess.__name__) != -1
-
-    def load_object(self, identifier):
-        """
-        Given an identifier load an object.
-
-        :param identifier: The identifier
-        :return: The loaded object
-        :raises: ValueError if the object cannot be loaded
-        """
-        from aiida.work.job_processes import JobProcess
-
-        if self.is_wrapped_job_calculation(identifier):
-            idx = identifier.find(JobProcess.__name__)
-            wrapped_class = identifier[idx + len(JobProcess.__name__) + 1:]
-            # Recreate the class
-            return JobProcess.build(super(ObjectLoader, self).load_object(wrapped_class))
-
-        return super(ObjectLoader, self).load_object(identifier)

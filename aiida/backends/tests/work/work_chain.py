@@ -79,7 +79,7 @@ def run_and_check_success(process_class, **kwargs):
     """
     process = process_class(inputs=kwargs)
     work.run(process)
-    assert process.calc.is_finished_ok is True
+    assert process.node.is_finished_ok is True
 
     return process
 
@@ -782,9 +782,9 @@ class TestWorkChainAbort(AiidaTestCase):
         runner.schedule(process)
         runner.loop.run_sync(lambda: run_async())
 
-        self.assertEquals(process.calc.is_finished_ok, False)
-        self.assertEquals(process.calc.is_excepted, True)
-        self.assertEquals(process.calc.is_killed, False)
+        self.assertEquals(process.node.is_finished_ok, False)
+        self.assertEquals(process.node.is_excepted, True)
+        self.assertEquals(process.node.is_killed, False)
 
     def test_simple_kill_through_process(self):
         """
@@ -808,9 +808,9 @@ class TestWorkChainAbort(AiidaTestCase):
         runner.schedule(process)
         runner.loop.run_sync(lambda: run_async())
 
-        self.assertEquals(process.calc.is_finished_ok, False)
-        self.assertEquals(process.calc.is_excepted, False)
-        self.assertEquals(process.calc.is_killed, True)
+        self.assertEquals(process.node.is_finished_ok, False)
+        self.assertEquals(process.node.is_excepted, False)
+        self.assertEquals(process.node.is_killed, True)
 
 
 class TestWorkChainAbortChildren(AiidaTestCase):
@@ -876,9 +876,9 @@ class TestWorkChainAbortChildren(AiidaTestCase):
             with self.assertRaises(RuntimeError):
                 work.run(process)
 
-        self.assertEquals(process.calc.is_finished_ok, False)
-        self.assertEquals(process.calc.is_excepted, True)
-        self.assertEquals(process.calc.is_killed, False)
+        self.assertEquals(process.node.is_finished_ok, False)
+        self.assertEquals(process.node.is_excepted, True)
+        self.assertEquals(process.node.is_killed, False)
 
     def test_simple_kill_through_process(self):
         """
@@ -900,14 +900,14 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         runner.schedule(process)
         runner.loop.run_sync(lambda: run_async())
 
-        child = process.calc.get_outgoing(link_type=LinkType.CALL_WORK).first().node
+        child = process.node.get_outgoing(link_type=LinkType.CALL_WORK).first().node
         self.assertEquals(child.is_finished_ok, False)
         self.assertEquals(child.is_excepted, False)
         self.assertEquals(child.is_killed, True)
 
-        self.assertEquals(process.calc.is_finished_ok, False)
-        self.assertEquals(process.calc.is_excepted, False)
-        self.assertEquals(process.calc.is_killed, True)
+        self.assertEquals(process.node.is_finished_ok, False)
+        self.assertEquals(process.node.is_excepted, False)
+        self.assertEquals(process.node.is_killed, True)
 
 
 class TestImmutableInputWorkchain(AiidaTestCase):

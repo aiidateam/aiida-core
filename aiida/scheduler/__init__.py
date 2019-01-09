@@ -23,7 +23,7 @@ from aiida.common.lang import classproperty
 from aiida.common.escaping import escape_for_bash
 from aiida.common.exceptions import AiidaException, FeatureNotAvailable
 from aiida.plugins.factory import BaseFactory
-from aiida.scheduler.datastructures import JobTemplate, JobInfo, JOB_STATES
+from aiida.scheduler.datastructures import JobTemplate, JobInfo, JobState
 
 
 def SchedulerFactory(entry_point):
@@ -214,7 +214,7 @@ class Scheduler(object):
           cmdline_params, stdin_name, stdout_name, stderr_name, join_files.
           See the documentation of JobTemplate and CodeInfo
         :parameter codes_run_mode: contains the information on how to launch the
-          multiple codes. As described in aiida.common.datastructures.code_run_modes
+          multiple codes. As described in aiida.common.datastructures.CodeRunMode
 
 
             argv: an array with the executable and the command line arguments.
@@ -234,7 +234,7 @@ class Scheduler(object):
         Return a string with the following format:
         [executable] [args] {[ < stdin ]} {[ < stdout ]} {[2>&1 | 2> stderr]}
         """
-        from aiida.common.datastructures import code_run_modes
+        from aiida.common.datastructures import CodeRunMode
 
         list_of_runlines = []
 
@@ -258,10 +258,10 @@ class Scheduler(object):
             list_of_runlines.append(output_string)
 
         self.logger.debug('_get_run_line output: {}'.format(list_of_runlines))
-        if codes_run_mode == code_run_modes.PARALLEL:
+        if codes_run_mode == CodeRunMode.PARALLEL:
             list_of_runlines.append('wait\n')
             return " &\n\n".join(list_of_runlines)
-        elif codes_run_mode == code_run_modes.SERIAL:
+        elif codes_run_mode == CodeRunMode.SERIAL:
             return "\n\n".join(list_of_runlines)
         else:
             raise NotImplementedError('Unrecognized code run mode')

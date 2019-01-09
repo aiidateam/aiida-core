@@ -64,6 +64,7 @@ class TestVerdiProcessDaemon(AiidaTestCase):
         """
         Test the pause/play/kill commands
         """
+        # pylint: disable=no-member
         from aiida.orm import load_node
 
         calc = self.runner.submit(test_utils.WaitProcess)

@@ -20,7 +20,7 @@ from aiida.work.processes import Process
 class DummyProcess(Process):
     """A Process that does nothing when it runs."""
 
-    _calc_class = WorkflowNode
+    _node_class = WorkflowNode
 
     @classmethod
     def define(cls, spec):
@@ -35,7 +35,7 @@ class DummyProcess(Process):
 class AddProcess(Process):
     """A simple Process that adds two integers."""
 
-    _calc_class = WorkflowNode
+    _node_class = WorkflowNode
 
     @classmethod
     def define(cls, spec):
@@ -51,7 +51,7 @@ class AddProcess(Process):
 class BadOutput(Process):
     """A Process that emits an output that isn't an AiiDA Data type."""
 
-    _calc_class = WorkflowNode
+    _node_class = WorkflowNode
 
     @classmethod
     def define(cls, spec):
@@ -65,7 +65,7 @@ class BadOutput(Process):
 class ExceptionProcess(Process):
     """A Process that raises a RuntimeError when run."""
 
-    _calc_class = WorkflowNode
+    _node_class = WorkflowNode
 
     def run(self):  # pylint: disable=no-self-use
         raise RuntimeError('CRASH')
@@ -74,7 +74,7 @@ class ExceptionProcess(Process):
 class WaitProcess(Process):
     """A Process that waits until it is asked to continue."""
 
-    _calc_class = WorkflowNode
+    _node_class = WorkflowNode
 
     def run(self):
         return plumpy.Wait(self.next_step)

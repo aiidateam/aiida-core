@@ -22,8 +22,8 @@ class TestSealable(AiidaTestCase):
         """
         from aiida.orm.node.process import CalcJobNode
 
-        resources = {'num_machines': 1, 'num_mpiprocs_per_machine': 1}
-        job = CalcJobNode(computer=self.computer, resources=resources)
+        job = CalcJobNode(computer=self.computer)
+        job.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         job.store()
 
         for attr in CalcJobNode._updatable_attributes:

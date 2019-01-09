@@ -37,7 +37,7 @@ class TestWf(AiidaTestCase):
         work.run(process)
         calc_node = runner.run_until_complete(gen.with_timeout(self.TIMEOUT, future))
 
-        self.assertEqual(process.calc.pk, calc_node.pk)
+        self.assertEqual(process.node.pk, calc_node.pk)
 
     def test_calculation_future_polling(self):
         runner = get_manager().get_runner()
@@ -52,4 +52,4 @@ class TestWf(AiidaTestCase):
         runner.run(process)
         calc_node = runner.run_until_complete(gen.with_timeout(self.TIMEOUT, future))
 
-        self.assertEqual(process.calc.pk, calc_node.pk)
+        self.assertEqual(process.node.pk, calc_node.pk)

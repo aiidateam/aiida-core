@@ -33,18 +33,16 @@ class TestComputer(AiidaTestCase):
             name="testdeletioncomputer",
             hostname='localhost',
             transport_type='local',
-            scheduler_type='pbspro').store()
+            scheduler_type='pbspro')
+        newcomputer.store()
 
-        # # This should be possible, because nothing is using this computer
+        # This should be possible, because nothing is using this computer
         self.backend.computers.delete(newcomputer.id)
 
-        calc_params = {
-            'computer': self.computer,
-            'resources': {'num_machines': 1,
-                          'num_mpiprocs_per_machine': 1}
-        }
-
-        _ = CalcJobNode(**calc_params).store()
+        node = CalcJobNode()
+        node.set_computer(self.computer)
+        node.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+        node.store()
 
         session = aiida.backends.sqlalchemy.get_scoped_session()
 

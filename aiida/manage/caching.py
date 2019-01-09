@@ -15,6 +15,7 @@ from __future__ import absolute_import
 import io
 import os
 import copy
+from enum import Enum
 from functools import wraps
 from contextlib import contextmanager
 
@@ -23,17 +24,23 @@ import six
 
 from aiida.backends.utils import get_current_profile
 from aiida.common import exceptions
-from aiida.common.extendeddicts import Enumerate
 from aiida.common.utils import get_object_from_string
 
 __all__ = ['get_use_cache', 'enable_caching', 'disable_caching']
 
-CONFIG_KEYS = Enumerate(('default', 'enabled', 'disabled'))
+
+class ConfigKeys(Enum):
+    """Valid keys for caching configuration."""
+
+    DEFAULT = 'default'
+    ENABLED = 'enabled'
+    DISABLED = 'disabled'
+
 
 DEFAULT_CONFIG = {
-    CONFIG_KEYS.default: False,
-    CONFIG_KEYS.enabled: [],
-    CONFIG_KEYS.disabled: [],
+    ConfigKeys.DEFAULT.value: False,
+    ConfigKeys.ENABLED.value: [],
+    ConfigKeys.DISABLED.value: [],
 }
 
 
@@ -61,7 +68,7 @@ def _get_config(config_file):
 
     # load classes
     try:
-        for key in [CONFIG_KEYS.enabled, CONFIG_KEYS.disabled]:
+        for key in [ConfigKeys.ENABLED.value, ConfigKeys.DISABLED.value]:
             config[key] = [get_object_from_string(c) for c in config[key]]
     except (ValueError) as err:
         six.raise_from(
@@ -109,15 +116,15 @@ def get_use_cache(node_class=None):
     :raises ValueError: if the configuration is invalid by defining the class both enabled and disabled
     """
     if node_class is not None:
-        enabled = node_class in _CONFIG[CONFIG_KEYS.enabled]
-        disabled = node_class in _CONFIG[CONFIG_KEYS.disabled]
+        enabled = node_class in _CONFIG[ConfigKeys.ENABLED.value]
+        disabled = node_class in _CONFIG[ConfigKeys.DISABLED.value]
         if enabled and disabled:
             raise ValueError('Invalid configuration: Caching for {} is both enabled and disabled.'.format(node_class))
         elif enabled:
             return True
         elif disabled:
             return False
-    return _CONFIG[CONFIG_KEYS.default]
+    return _CONFIG[ConfigKeys.DEFAULT.value]
 
 
 @contextmanager
@@ -142,11 +149,11 @@ def enable_caching(node_class=None):
     """
     with _reset_config():
         if node_class is None:
-            _CONFIG[CONFIG_KEYS.default] = True
+            _CONFIG[ConfigKeys.DEFAULT.value] = True
         else:
-            _CONFIG[CONFIG_KEYS.enabled].append(node_class)
+            _CONFIG[ConfigKeys.ENABLED.value].append(node_class)
             try:
-                _CONFIG[CONFIG_KEYS.disabled].remove(node_class)
+                _CONFIG[ConfigKeys.DISABLED.value].remove(node_class)
             except ValueError:
                 pass
         yield
@@ -162,11 +169,11 @@ def disable_caching(node_class=None):
     """
     with _reset_config():
         if node_class is None:
-            _CONFIG[CONFIG_KEYS.default] = False
+            _CONFIG[ConfigKeys.DEFAULT.value] = False
         else:
-            _CONFIG[CONFIG_KEYS.disabled].append(node_class)
+            _CONFIG[ConfigKeys.DISABLED.value].append(node_class)
             try:
-                _CONFIG[CONFIG_KEYS.enabled].remove(node_class)
+                _CONFIG[ConfigKeys.ENABLED.value].remove(node_class)
             except ValueError:
                 pass
         yield

@@ -900,7 +900,7 @@ class CifData(SinglefileData):
         except AttributeError:
             raise ValueError("No such converter '{}' available".format(converter))
 
-        result = convert_function(cif=self, parameters=parameters, store_provenance=store)
+        result = convert_function(cif=self, parameters=parameters, metadata={'store_provenance': store})
 
         return result['structure']
 

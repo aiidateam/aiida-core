@@ -256,12 +256,12 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         from aiida.orm.node.process import CalcJobNode
 
         extra_name = self.__class__.__name__ + "/test_with_subclasses"
-        calc_params = {'computer': self.computer, 'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}}
 
-        TemplateReplacerCalc = CalculationFactory('templatereplacer')
         ParameterData = DataFactory('parameter')
 
-        a1 = CalcJobNode(**calc_params).store()
+        a1 = CalcJobNode(computer=self.computer)
+        a1.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+        a1.store()
         # To query only these nodes later
         a1.set_extra(extra_name, True)
         a3 = Data().store()
@@ -270,8 +270,9 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         a4.set_extra(extra_name, True)
         # I don't set the extras, just to be sure that the filtering works
         # The filtering is needed because other tests will put stuff int he DB
-        a6 = CalcJobNode(**calc_params)
-        a6.store()
+        a6 = CalcJobNode(computer=self.computer)
+        a6.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+        a1.store()
         a7 = Data()
         a7.store()
 
@@ -1492,11 +1493,10 @@ class TestNodeBasic(AiidaTestCase):
         from aiida.orm import CalculationFactory
         from aiida.orm.node.process import CalcJobNode
 
-        ###### for calculation
-        calc_params = {'computer': self.computer, 'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}}
-
         TemplateReplacerCalc = CalculationFactory('templatereplacer')
-        testcalc = TemplateReplacerCalc(**calc_params).store()
+        testcalc = TemplateReplacerCalc(computer=self.computer)
+        testcalc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+        testcalc.store()
 
         # compare if plugin exist
         obj = load_node(uuid=testcalc.uuid)
@@ -1509,8 +1509,13 @@ class TestNodeBasic(AiidaTestCase):
         TestCalculation._plugin_type_string = 'node.process.calculation.calcjob.notexisting.TemplatereplacerCalculation.'
         TestCalculation._query_type_string = 'node.process.calculation.calcjob.notexisting.TemplatereplacerCalculation'
 
-        jobcalc = CalcJobNode(**calc_params).store()
-        testcalc = TestCalculation(**calc_params).store()
+        jobcalc = CalcJobNode(computer=self.computer)
+        jobcalc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+        jobcalc.store()
+
+        testcalc = TestCalculation(computer=self.computer)
+        testcalc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+        testcalc.store()
 
         # Changed node should return CalcJobNode type as its plugin does not exist
         obj = load_node(uuid=testcalc.uuid)
@@ -1659,55 +1664,18 @@ class TestSubNodesAndLinks(AiidaTestCase):
         self.assertFalse(n2.has_children, "It should be false since n2 doesn't have any children.")
         self.assertTrue(n2.has_parents, "It should be true since n1 is the parent of n2.")
 
-    def test_use_code(self):
-        from aiida.orm.node.process import CalcJobNode
-        from aiida.orm.code import Code
-
-        computer = self.computer
-
-        code = Code(remote_computer_exec=(computer, '/bin/true'))  # .store()
-
-        unstoredcalc = CalcJobNode(computer=computer, resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1})
-        calc = CalcJobNode(computer=computer, resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
-
-        # calc is not stored, and also code is not
-        unstoredcalc.use_code(code)
-
-        # calc is stored, but code is not
-        calc.use_code(code)
-
-        self.assertEqual(calc.get_code().uuid, code.uuid)
-        self.assertEqual(unstoredcalc.get_code().uuid, code.uuid)
-
-        # calc is not stored, but code is
-        code.store()
-
-        self.assertEqual(calc.get_code().uuid, code.uuid)
-        self.assertEqual(unstoredcalc.get_code().uuid, code.uuid)
-
-        unstoredcalc.store()
-
-        self.assertEqual(calc.get_code().uuid, code.uuid)
-        self.assertEqual(unstoredcalc.get_code().uuid, code.uuid)
-
     # pylint: disable=unused-variable,no-member,no-self-use
     def test_calculation_load(self):
         from aiida.orm.node.process import CalcJobNode
 
         # I check with a string, with an object and with the computer pk/id
-        calc = CalcJobNode(
-            computer=self.computer, resources={
-                'num_machines': 1,
-                'num_mpiprocs_per_machine': 1
-            }).store()
+        calc = CalcJobNode(computer=self.computer)
+        calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+        calc.store()
+
         with self.assertRaises(Exception):
-            # I should get an error if I ask for a computer id/pk that doesn't
-            # exist
-            _ = CalcJobNode(
-                computer=self.computer.id + 100000, resources={
-                    'num_machines': 2,
-                    'num_mpiprocs_per_machine': 1
-                }).store()
+            # I should get an error if I ask for a computer id/pk that doesn't exist
+            CalcJobNode(computer=self.computer.id + 100000).store()
 
     def test_links_label_constraints(self):
         d1 = Data().store()
@@ -1867,8 +1835,6 @@ class TestSubNodesAndLinks(AiidaTestCase):
         from aiida import orm
         from aiida.orm import DataFactory
         from aiida.orm.node.process import CalcJobNode
-        from aiida.orm.code import Code
-        from aiida.common.datastructures import calc_states
 
         SinglefileData = DataFactory('singlefile')
 
@@ -1877,37 +1843,23 @@ class TestSubNodesAndLinks(AiidaTestCase):
         with tempfile.NamedTemporaryFile('w+') as tmpf:
             d2 = SinglefileData(file=tmpf.name).store()
 
-        code = Code()
-        code._set_remote()
-        code.set_computer(self.computer)
-        code.set_remote_computer_exec((self.computer, '/bin/true'))
-        code.store()
-
         unsavedcomputer = orm.Computer(name='localhost2', hostname='localhost')
 
         with self.assertRaises(ValueError):
             # I need to save the localhost entry first
-            _ = CalcJobNode(
-                computer=unsavedcomputer, resources={
-                    'num_machines': 1,
-                    'num_mpiprocs_per_machine': 1
-                }).store()
+            CalcJobNode(computer=unsavedcomputer).store()
 
         # Load calculations with two different ways
-        calc = CalcJobNode(
-            computer=self.computer, resources={
-                'num_machines': 1,
-                'num_mpiprocs_per_machine': 1
-            }).store()
-        calc2 = CalcJobNode(
-            computer=self.computer, resources={
-                'num_machines': 1,
-                'num_mpiprocs_per_machine': 1
-            }).store()
+        calc = CalcJobNode(computer=self.computer)
+        calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+        calc.store()
+
+        calc2 = CalcJobNode(computer=self.computer)
+        calc2.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+        calc2.store()
 
         calc.add_incoming(d1, link_type=LinkType.INPUT_CALC, link_label='link')
         calc.add_incoming(d2, link_type=LinkType.INPUT_CALC, link_label='some_label')
-        calc.use_code(code)
 
         # Cannot link to itself
         with self.assertRaises(ValueError):
@@ -1921,81 +1873,40 @@ class TestSubNodesAndLinks(AiidaTestCase):
             d1.add_incoming(d2, link_type=LinkType.INPUT_CALC, link_label='link')
 
         with self.assertRaises(ValueError):
-            d1.add_incoming(code, link_type=LinkType.INPUT_CALC, link_label='link')
-
-        with self.assertRaises(ValueError):
-            code.add_incoming(d1, link_type=LinkType.INPUT_CALC, link_label='link')
-
-        with self.assertRaises(ValueError):
             calc.add_incoming(calc2, link_type=LinkType.INPUT_CALC, link_label='link')
 
-        calc_a = CalcJobNode(
-            computer=self.computer, resources={
-                'num_machines': 1,
-                'num_mpiprocs_per_machine': 1
-            }).store()
-        calc_b = CalcJobNode(
-            computer=self.computer, resources={
-                'num_machines': 1,
-                'num_mpiprocs_per_machine': 1
-            }).store()
+        calc_a = CalcJobNode(computer=self.computer)
+        calc_a.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+        calc_a.store()
+        calc_b = CalcJobNode(computer=self.computer)
+        calc_b.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+        calc_b.store()
 
         data_node = Data().store()
-
-        # I do a trick to set it to a state that allows writing
-        calc_a._set_state(calc_states.RETRIEVING)
-        calc_b._set_state(calc_states.RETRIEVING)
-
         data_node.add_incoming(calc_a, link_type=LinkType.CREATE, link_label='link')
         # A data cannot have two input calculations
         with self.assertRaises(ValueError):
             data_node.add_incoming(calc_b, link_type=LinkType.CREATE, link_label='link')
 
-        newdata = Data()
-        # Cannot add an input link if the calculation is not in status NEW
-        with self.assertRaises(ModificationNotAllowed):
-            calc_a.add_incoming(newdata, link_type=LinkType.INPUT_CALC, link_label='link')
-
-        # Cannot replace input nodes if the calculation is not in status NEW
-        with self.assertRaises(ModificationNotAllowed):
-            calc_a._replace_link_from(d2, LinkType.INPUT_CALC, link_label='some_label')
-
-        # Cannot (re)set the code if the calculation is not in status NEW
-        with self.assertRaises(ModificationNotAllowed):
-            calc_a.use_code(code)
-
         calculation_inputs = calc.get_incoming().all()
 
-        # This calculation has three inputs (2 data and one code)
-        self.assertEquals(len(calculation_inputs), 3)
+        # This calculation has two data inputs
+        self.assertEquals(len(calculation_inputs), 2)
 
     def test_check_single_calc_source(self):
         """
         Each data node can only have one input calculation
         """
         from aiida.orm.node.process import CalcJobNode
-        from aiida.common.datastructures import calc_states
 
         d1 = Data().store()
 
-        calc = CalcJobNode(
-            computer=self.computer, resources={
-                'num_machines': 1,
-                'num_mpiprocs_per_machine': 1
-            }).store()
-        calc2 = CalcJobNode(
-            computer=self.computer, resources={
-                'num_machines': 1,
-                'num_mpiprocs_per_machine': 1
-            }).store()
-
-        # I cannot, calc it is in state NEW
-        with self.assertRaises(ModificationNotAllowed):
-            d1.add_incoming(calc, link_type=LinkType.CREATE, link_label='link')
-
-        # I do a trick to set it to a state that allows setting the link
-        calc._set_state(calc_states.RETRIEVING)
-        calc2._set_state(calc_states.RETRIEVING)
+        calc = CalcJobNode(computer=self.computer)
+        calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+        calc.store()
+        calc2 = CalcJobNode(computer=self.computer)
+        calc2.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+        calc2.store()
 
         d1.add_incoming(calc, link_type=LinkType.CREATE, link_label='link')
 

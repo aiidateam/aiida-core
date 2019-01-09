@@ -80,17 +80,18 @@ class RESTApiTestCase(AiidaTestCase):
 
         resources = {'num_machines': 1, 'num_mpiprocs_per_machine': 1}
 
-        calc = CalcJobNode(computer=cls.computer, resources=resources)
+        calc = CalcJobNode(computer=cls.computer)
+        calc.set_option('resources', resources)
         calc._set_attr("attr1", "OK")  # pylint: disable=protected-access
         calc._set_attr("attr2", "OK")  # pylint: disable=protected-access
         calc.store()
 
         calc.add_incoming(structure, link_type=LinkType.INPUT_CALC, link_label='link_structure')
         calc.add_incoming(parameter1, link_type=LinkType.INPUT_CALC, link_label='link_parameter')
-        calc._set_state('PARSING')  # pylint: disable=protected-access
         kpoint.add_incoming(calc, link_type=LinkType.CREATE, link_label='create')
 
-        calc1 = CalcJobNode(computer=cls.computer, resources=resources)
+        calc1 = CalcJobNode(computer=cls.computer)
+        calc1.set_option('resources', resources)
         calc1.store()
 
         dummy_computers = [{
@@ -739,13 +740,10 @@ class RESTApiTestSuite(RESTApiTestCase):
         attributes = {
             'attr1': 'OK',
             'attr2': 'OK',
-            'jobresource_params': {
+            'resources': {
                 'num_machines': 1,
                 'num_mpiprocs_per_machine': 1
             },
-            'linkname_retrieved': 'retrieved',
-            'parser': None,
-            'state': 'PARSING'
         }
         node_uuid = self.get_dummy_data()["calculations"][1]["uuid"]
         url = self.get_url_prefix() + "/calculations/" + str(node_uuid) + "/content/attributes"
@@ -762,13 +760,10 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         attributes = {
             'attr2': 'OK',
-            'jobresource_params': {
+            'resources': {
                 'num_machines': 1,
                 'num_mpiprocs_per_machine': 1
             },
-            'linkname_retrieved': 'retrieved',
-            'parser': None,
-            'state': 'PARSING'
         }
         node_uuid = self.get_dummy_data()["calculations"][1]["uuid"]
         url = self.get_url_prefix() + '/calculations/' + str(node_uuid) + '/content/attributes?nalist="attr1"'

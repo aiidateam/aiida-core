@@ -147,9 +147,6 @@
         aiida/orm/autogroup.py|
         aiida/orm/backend.py|
         aiida/orm/querybuilder.py|
-        aiida/orm/calculation/__init__.py|
-        aiida/orm/calculation/inline.py|
-        aiida/orm/calculation/job/__init__.py|
         aiida/orm/code.py|
         aiida/orm/data/array/bands.py|
         aiida/orm/data/array/kpoints.py|

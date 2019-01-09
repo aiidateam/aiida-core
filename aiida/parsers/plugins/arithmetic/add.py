@@ -41,15 +41,15 @@ class ArithmeticAddParser(Parser):
         output_nodes = []
 
         try:
-            output_folder = retrieved[self._calc._get_linkname_retrieved()]
+            output_folder = retrieved[self._calc.link_label_retrieved]
         except KeyError:
             self.logger.error("no retrieved folder found")
             return False, ()
 
         # Verify the standard output file is present, parse the value and attach as output node
         try:
-            filepath_stdout = output_folder.get_abs_path(self._calc._OUTPUT_FILE_NAME)
-        except OSError as exception:
+            filepath_stdout = output_folder.get_abs_path(self._calc.get_attr('output_filename'))
+        except OSError:
             self.logger.error("expected output file '{}' was not found".format(filepath_stdout))
             return False, ()
 

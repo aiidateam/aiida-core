@@ -10,27 +10,29 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import aiida
-from aiida.work import Process
+
 from aiida.backends.testbase import AiidaTestCase
-from aiida.calculations.plugins.templatereplacer import TemplatereplacerCalculation
+from aiida.orm import CalculationFactory
+from aiida.work import Process
 
 
-class TestJobProcess(AiidaTestCase):
+class TestCalcJob(AiidaTestCase):
     def setUp(self):
-        super(TestJobProcess, self).setUp()
+        super(TestCalcJob, self).setUp()
         self.assertIsNone(Process.current())
 
     def tearDown(self):
-        super(TestJobProcess, self).tearDown()
+        super(TestCalcJob, self).tearDown()
         self.assertIsNone(Process.current())
 
     def test_class_loader(self):
-        templatereplacer_process = aiida.work.JobProcess.build(TemplatereplacerCalculation)
+        process = CalculationFactory('templatereplacer')
         loader = aiida.work.get_object_loader()
 
-        class_name = loader.identify_object(templatereplacer_process)
+        class_name = loader.identify_object(process)
         loaded_class = loader.load_object(class_name)
 
-        self.assertEqual(templatereplacer_process.__name__, loaded_class.__name__)
+        self.assertEqual(process.__name__, loaded_class.__name__)
         self.assertEqual(class_name, loader.identify_object(loaded_class))

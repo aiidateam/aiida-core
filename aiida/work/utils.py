@@ -218,15 +218,15 @@ def set_process_state_change_timestamp(process):
     from aiida.orm.node.process import ProcessNode, CalculationNode, WorkflowNode
     from aiida.common import timezone
 
-    if isinstance(process.calc, CalculationNode):
+    if isinstance(process.node, CalculationNode):
         process_type = 'calculation'
-    elif isinstance(process.calc, WorkflowNode):
+    elif isinstance(process.node, WorkflowNode):
         process_type = 'work'
-    elif isinstance(process.calc, ProcessNode):
+    elif isinstance(process.node, ProcessNode):
         # This will only occur for testing, as in general users cannot launch plain Process classes
         return
     else:
-        raise ValueError('unsupported calculation node type {}'.format(type(process.calc)))
+        raise ValueError('unsupported calculation node type {}'.format(type(process.node)))
 
     key = PROCESS_STATE_CHANGE_KEY.format(process_type)
     description = PROCESS_STATE_CHANGE_DESCRIPTION.format(process_type)

@@ -13,7 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 import unittest
 import uuid
-from aiida.scheduler.datastructures import JOB_STATES
+from aiida.scheduler.datastructures import JobState
 from aiida.scheduler.plugins.torque import *
 
 text_qstat_f_to_test = """Job Id: 68350.mycluster
@@ -780,27 +780,27 @@ class TestParserQstat(unittest.TestCase):
 
         job_running = 2
         job_running_parsed = len([j for j in job_list if j.job_state \
-                                  and j.job_state == JOB_STATES.RUNNING])
+                                  and j.job_state == JobState.RUNNING])
         self.assertEquals(job_running, job_running_parsed)
 
         job_held = 2
         job_held_parsed = len([j for j in job_list if j.job_state \
-                               and j.job_state == JOB_STATES.QUEUED_HELD])
+                               and j.job_state == JobState.QUEUED_HELD])
         self.assertEquals(job_held, job_held_parsed)
 
         job_queued = 2
         job_queued_parsed = len([j for j in job_list if j.job_state \
-                                 and j.job_state == JOB_STATES.QUEUED])
+                                 and j.job_state == JobState.QUEUED])
         self.assertEquals(job_queued, job_queued_parsed)
 
         running_users = ['user02', 'user3']
         parsed_running_users = [j.job_owner for j in job_list if j.job_state \
-                                and j.job_state == JOB_STATES.RUNNING]
+                                and j.job_state == JobState.RUNNING]
         self.assertEquals(set(running_users), set(parsed_running_users))
 
         running_jobs = ['69301.mycluster', '74164.mycluster']
         parsed_running_jobs = [j.job_id for j in job_list if j.job_state \
-                               and j.job_state == JOB_STATES.RUNNING]
+                               and j.job_state == JobState.RUNNING]
         self.assertEquals(set(running_jobs), set(parsed_running_jobs))
 
         for j in job_list:
@@ -835,27 +835,27 @@ class TestParserQstat(unittest.TestCase):
 
         job_running = 2
         job_running_parsed = len([j for j in job_list if j.job_state \
-                                  and j.job_state == JOB_STATES.RUNNING])
+                                  and j.job_state == JobState.RUNNING])
         self.assertEquals(job_running, job_running_parsed)
 
         job_held = 1
         job_held_parsed = len([j for j in job_list if j.job_state \
-                               and j.job_state == JOB_STATES.QUEUED_HELD])
+                               and j.job_state == JobState.QUEUED_HELD])
         self.assertEquals(job_held, job_held_parsed)
 
         job_queued = 5
         job_queued_parsed = len([j for j in job_list if j.job_state \
-                                 and j.job_state == JOB_STATES.QUEUED])
+                                 and j.job_state == JobState.QUEUED])
         self.assertEquals(job_queued, job_queued_parsed)
 
         running_users = ['somebody', 'user_556491']
         parsed_running_users = [j.job_owner for j in job_list if j.job_state \
-                                and j.job_state == JOB_STATES.RUNNING]
+                                and j.job_state == JobState.RUNNING]
         self.assertEquals(set(running_users), set(parsed_running_users))
 
         running_jobs = ['555716', '556491']
         parsed_running_jobs = [j.job_id for j in job_list if j.job_state \
-                               and j.job_state == JOB_STATES.RUNNING]
+                               and j.job_state == JobState.RUNNING]
         self.assertEquals(set(running_jobs), set(parsed_running_jobs))
 
         for j in job_list:
@@ -878,7 +878,7 @@ class TestSubmitScript(unittest.TestCase):
         Test to verify if scripts works fine with default options
         """
         from aiida.scheduler.datastructures import JobTemplate
-        from aiida.common.datastructures import CodeInfo, code_run_modes
+        from aiida.common.datastructures import CodeInfo, CodeRunMode
 
         s = TorqueScheduler()
 
@@ -891,7 +891,7 @@ class TestSubmitScript(unittest.TestCase):
         code_info.cmdline_params = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
         code_info.stdin_name = 'aiida.in'
         job_tmpl.codes_info = [code_info]
-        job_tmpl.codes_run_mode = code_run_modes.SERIAL
+        job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
         submit_script_text = s.get_submit_script(job_tmpl)
 
@@ -907,7 +907,7 @@ class TestSubmitScript(unittest.TestCase):
         num_cores_per_machine value.
         """
         from aiida.scheduler.datastructures import JobTemplate
-        from aiida.common.datastructures import CodeInfo, code_run_modes
+        from aiida.common.datastructures import CodeInfo, CodeRunMode
 
         s = TorqueScheduler()
 
@@ -921,7 +921,7 @@ class TestSubmitScript(unittest.TestCase):
         code_info.cmdline_params = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
         code_info.stdin_name = 'aiida.in'
         job_tmpl.codes_info = [code_info]
-        job_tmpl.codes_run_mode = code_run_modes.SERIAL
+        job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
         submit_script_text = s.get_submit_script(job_tmpl)
 
@@ -936,7 +936,7 @@ class TestSubmitScript(unittest.TestCase):
         num_cores_per_mpiproc value
         """
         from aiida.scheduler.datastructures import JobTemplate
-        from aiida.common.datastructures import CodeInfo, code_run_modes
+        from aiida.common.datastructures import CodeInfo, CodeRunMode
 
         scheduler = TorqueScheduler()
 
@@ -950,7 +950,7 @@ class TestSubmitScript(unittest.TestCase):
         code_info.cmdline_params = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
         code_info.stdin_name = 'aiida.in'
         job_tmpl.codes_info = [code_info]
-        job_tmpl.codes_run_mode = code_run_modes.SERIAL
+        job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
         submit_script_text = scheduler.get_submit_script(job_tmpl)
 
@@ -967,7 +967,7 @@ class TestSubmitScript(unittest.TestCase):
         res.num_cores_per_mpiproc * res.num_mpiprocs_per_machine = res.num_cores_per_machine
         """
         from aiida.scheduler.datastructures import JobTemplate
-        from aiida.common.datastructures import CodeInfo, code_run_modes
+        from aiida.common.datastructures import CodeInfo, CodeRunMode
 
         scheduler = TorqueScheduler()
 
@@ -981,7 +981,7 @@ class TestSubmitScript(unittest.TestCase):
         code_info.cmdline_params = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
         code_info.stdin_name = 'aiida.in'
         job_tmpl.codes_info = [code_info]
-        job_tmpl.codes_run_mode = code_run_modes.SERIAL
+        job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
         submit_script_text = scheduler.get_submit_script(job_tmpl)
 

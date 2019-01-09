@@ -19,7 +19,7 @@ import six
 import aiida.scheduler
 from aiida.common.escaping import escape_for_bash
 from aiida.scheduler import SchedulerError
-from aiida.scheduler.datastructures import (JobInfo, JOB_STATES, NodeNumberJobResource)
+from aiida.scheduler.datastructures import (JobInfo, JobState, NodeNumberJobResource)
 
 ## From the ps man page on Mac OS X 10.12
 #     state     The state is given by a sequence of characters, for example,
@@ -51,20 +51,20 @@ from aiida.scheduler.datastructures import (JobInfo, JOB_STATES, NodeNumberJobRe
 #                    its parent
 
 _MAP_STATUS_PS = {
-    'D': JOB_STATES.RUNNING,
-    'I': JOB_STATES.RUNNING,
-    'R': JOB_STATES.RUNNING,
-    'S': JOB_STATES.RUNNING,
-    'T': JOB_STATES.SUSPENDED,
-    'U': JOB_STATES.RUNNING,
-    'W': JOB_STATES.RUNNING,
-    'X': JOB_STATES.DONE,
-    'Z': JOB_STATES.DONE,
+    'D': JobState.RUNNING,
+    'I': JobState.RUNNING,
+    'R': JobState.RUNNING,
+    'S': JobState.RUNNING,
+    'T': JobState.SUSPENDED,
+    'U': JobState.RUNNING,
+    'W': JobState.RUNNING,
+    'X': JobState.DONE,
+    'Z': JobState.DONE,
     # Not sure about these three, I comment them out (they used to be in
     # here, but they don't appear neither on ubuntu nor on Mac)
-    #    'F': JOB_STATES.DONE,
-    #    'H': JOB_STATES.QUEUED_HELD,
-    #    'Q': JOB_STATES.QUEUED,
+    #    'F': JobState.DONE,
+    #    'H': JobState.QUEUED_HELD,
+    #    'Q': JobState.QUEUED,
 }
 
 
@@ -250,7 +250,7 @@ class DirectScheduler(aiida.scheduler.Scheduler):
                 job_state_string = job[1][0]  # I just check the first character
             except IndexError:
                 self.logger.debug("No 'job_state' field for job id {}".format(this_job.job_id))
-                this_job.job_state = JOB_STATES.UNDETERMINED
+                this_job.job_state = JobState.UNDETERMINED
             else:
                 try:
                     this_job.job_state = \
@@ -258,7 +258,7 @@ class DirectScheduler(aiida.scheduler.Scheduler):
                 except KeyError:
                     self.logger.warning("Unrecognized job_state '{}' for job "
                                         "id {}".format(job_state_string, this_job.job_id))
-                    this_job.job_state = JOB_STATES.UNDETERMINED
+                    this_job.job_state = JobState.UNDETERMINED
 
             try:
                 # I strip the part after the @: is this always ok?
@@ -298,7 +298,7 @@ class DirectScheduler(aiida.scheduler.Scheduler):
         for job_id in not_found_jobs:
             job = JobInfo()
             job.job_id = job_id
-            job.job_state = JOB_STATES.DONE
+            job.job_state = JobState.DONE
             # Owner and wallclock time is unknown
             if as_dict:
                 job_stats[job_id] = job

@@ -535,8 +535,8 @@ def _collect_calculation_data(calc):
         this_calc['files'].append(f)
 
     for f in files_out:
-        if os.path.basename(f['name']) != calc._SCHED_OUTPUT_FILE and \
-           os.path.basename(f['name']) != calc._SCHED_ERROR_FILE:
+        if os.path.basename(f['name']) != calc.get_option('scheduler_stdout') and \
+           os.path.basename(f['name']) != calc.get_option('scheduler_stderr'):
             if 'role' not in f.keys():
                 f['role'] = 'output'
             this_calc['files'].append(f)
@@ -1052,13 +1052,13 @@ def export_cifnode(what, parameters=None, trajectory_index=None,
 
     if reduce_symmetry:
         from aiida.orm.data.cif import refine_inline
-        ret_dict = refine_inline(node=node, store_provenance=store)
+        ret_dict = refine_inline(node=node, metadata={'store_provenance': store})
         node = ret_dict['cif']
 
     # Addition of the metadata
 
     args = ParameterData(dict=kwargs)
-    function_args = {'what': what, 'args': args, 'store_provenance': store}
+    function_args = {'what': what, 'args': args, 'metadata': {'store_provenance': store}}
     if node != what:
         function_args['node'] = node
     if parameters is not None:

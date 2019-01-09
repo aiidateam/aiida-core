@@ -464,7 +464,6 @@ class TestSimple(AiidaTestCase):
         from aiida.orm.node.process import CalcJobNode
         from aiida.orm.data.structure import StructureData
         from aiida.orm.importexport import export
-        from aiida.common.datastructures import calc_states
         from aiida.common.links import LinkType
         from aiida.manage import get_manager
 
@@ -490,7 +489,6 @@ class TestSimple(AiidaTestCase):
             jc1.label = 'jc1'
             jc1.store()
             jc1.add_incoming(sd1, link_type=LinkType.INPUT_CALC, link_label='link')
-            jc1._set_state(calc_states.PARSING)
 
             # Create some nodes from a different user
             sd2 = StructureData()
@@ -505,7 +503,6 @@ class TestSimple(AiidaTestCase):
             jc2.label = 'jc2'
             jc2.store()
             jc2.add_incoming(sd2, link_type=LinkType.INPUT_CALC, link_label='l2')
-            jc2._set_state(calc_states.PARSING)
 
             sd3 = StructureData()
             sd3.label = 'sd3'
@@ -548,7 +545,6 @@ class TestSimple(AiidaTestCase):
         from aiida.orm.node.process import CalcJobNode
         from aiida.orm.data.structure import StructureData
         from aiida.orm.importexport import export
-        from aiida.common.datastructures import calc_states
         from aiida.common.links import LinkType
         from aiida.manage import get_manager
 
@@ -574,7 +570,6 @@ class TestSimple(AiidaTestCase):
             jc1.label = 'jc1'
             jc1.store()
             jc1.add_incoming(sd1, link_type=LinkType.INPUT_CALC, link_label='link')
-            jc1._set_state(calc_states.PARSING)
 
             # Create some nodes from a different user
             sd2 = StructureData()
@@ -582,9 +577,6 @@ class TestSimple(AiidaTestCase):
             sd2.label = 'sd2'
             sd2.store()
             sd2.add_incoming(jc1, link_type=LinkType.CREATE, link_label='l1')
-
-            # Set the jc1 to FINISHED
-            jc1._set_state(calc_states.FINISHED)
 
             # At this point we export the generated data
             filename1 = os.path.join(temp_folder, "export1.tar.gz")
@@ -609,15 +601,11 @@ class TestSimple(AiidaTestCase):
             jc2.label = 'jc2'
             jc2.store()
             jc2.add_incoming(sd2_imp, link_type=LinkType.INPUT_CALC, link_label='l2')
-            jc2._set_state(calc_states.PARSING)
 
             sd3 = StructureData()
             sd3.label = 'sd3'
             sd3.store()
             sd3.add_incoming(jc2, link_type=LinkType.CREATE, link_label='l3')
-
-            # Set the jc2 to FINISHED
-            jc2._set_state(calc_states.FINISHED)
 
             # Store the UUIDs of the nodes that should be checked
             # if they can be imported correctly.
@@ -654,7 +642,6 @@ class TestSimple(AiidaTestCase):
         from aiida.orm.node.process import CalcJobNode
         from aiida.orm.data.structure import StructureData
         from aiida.orm.importexport import export
-        from aiida.common.datastructures import calc_states
         from aiida.orm.querybuilder import QueryBuilder
 
         # Creating a folder for the import/export files
@@ -678,7 +665,6 @@ class TestSimple(AiidaTestCase):
             jc1.label = 'jc1'
             jc1.store()
             jc1.add_incoming(sd1, link_type=LinkType.INPUT_CALC, link_label='link')
-            jc1._set_state(calc_states.PARSING)
 
             # Create a group and add the data inside
             from aiida.orm.groups import Group
@@ -1070,7 +1056,6 @@ class TestComplex(AiidaTestCase):
             calc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             calc1.label = "calc1"
             calc1.store()
-            calc1._set_state(u'RETRIEVING')
 
             pd1 = ParameterData()
             pd1.label = "pd1"
@@ -1095,7 +1080,6 @@ class TestComplex(AiidaTestCase):
             calc2.add_incoming(pd1, link_type=LinkType.INPUT_CALC, link_label='link1')
             calc2.add_incoming(pd2, link_type=LinkType.INPUT_CALC, link_label='link2')
             calc2.add_incoming(rd1, link_type=LinkType.INPUT_CALC, link_label='link3')
-            calc2._set_state(u'SUBMITTING')
 
             fd1 = FolderData()
             fd1.label = "fd1"
@@ -1166,7 +1150,6 @@ class TestComputer(AiidaTestCase):
                                            "num_mpiprocs_per_machine": 1})
             calc1.label = calc1_label
             calc1.store()
-            calc1._set_state(u'RETRIEVING')
 
             calc2_label = "calc2"
             calc2 = CalcJobNode()
@@ -1175,7 +1158,6 @@ class TestComputer(AiidaTestCase):
                                            "num_mpiprocs_per_machine": 2})
             calc2.label = calc2_label
             calc2.store()
-            calc2._set_state(u'RETRIEVING')
 
             # Store locally the computer name
             comp_name = six.text_type(self.computer.name)
@@ -1290,7 +1272,6 @@ class TestComputer(AiidaTestCase):
                                            "num_mpiprocs_per_machine": 1})
             calc1.label = calc1_label
             calc1.store()
-            calc1._set_state(u'RETRIEVING')
 
             # Store locally the computer name
             comp1_name = six.text_type(self.computer.name)
@@ -1310,7 +1291,6 @@ class TestComputer(AiidaTestCase):
                                            "num_mpiprocs_per_machine": 2})
             calc2.label = calc2_label
             calc2.store()
-            calc2._set_state(u'RETRIEVING')
 
             # Export the second job calculation
             filename2 = os.path.join(export_file_tmp_folder, "export2.tar.gz")
@@ -1400,7 +1380,6 @@ class TestComputer(AiidaTestCase):
                                            "num_mpiprocs_per_machine": 1})
             calc1.label = calc1_label
             calc1.store()
-            calc1._set_state(u'RETRIEVING')
 
             # Export the first job calculation
             filename1 = os.path.join(export_file_tmp_folder, "export1.tar.gz")
@@ -1421,7 +1400,6 @@ class TestComputer(AiidaTestCase):
                                            "num_mpiprocs_per_machine": 2})
             calc2.label = calc2_label
             calc2.store()
-            calc2._set_state(u'RETRIEVING')
 
             # Export the second job calculation
             filename2 = os.path.join(export_file_tmp_folder, "export2.tar.gz")
@@ -1442,7 +1420,6 @@ class TestComputer(AiidaTestCase):
                                            "num_mpiprocs_per_machine": 2})
             calc3.label = calc3_label
             calc3.store()
-            calc3._set_state(u'RETRIEVING')
 
             # Export the third job calculation
             filename3 = os.path.join(export_file_tmp_folder, "export3.tar.gz")
@@ -1529,7 +1506,6 @@ class TestComputer(AiidaTestCase):
                                            "num_mpiprocs_per_machine": 1})
             calc1.label = calc1_label
             calc1.store()
-            calc1._set_state(u'RETRIEVING')
 
             # Export the first job calculation
             filename1 = os.path.join(export_file_tmp_folder, "export1.tar.gz")
@@ -1661,7 +1637,6 @@ class TestLinks(AiidaTestCase):
         from aiida.orm.data.base import Int
         from aiida.orm.node.process import CalcJobNode
         from aiida.orm.node.process import WorkChainNode
-        from aiida.common.datastructures import calc_states
         from aiida.common.links import LinkType
 
         if export_combination < 0 or export_combination > 8:
@@ -1698,7 +1673,6 @@ class TestLinks(AiidaTestCase):
 
         pw1.add_incoming(d1, LinkType.INPUT_CALC, 'input')
         pw1.add_incoming(wc2, LinkType.CALL_CALC, 'call')
-        pw1._set_state(calc_states.PARSING)
 
         d3.add_incoming(pw1, LinkType.CREATE, 'create1')
         d3.add_incoming(wc2, LinkType.RETURN, 'return1')
@@ -1707,7 +1681,6 @@ class TestLinks(AiidaTestCase):
         d4.add_incoming(wc2, LinkType.RETURN, 'return2')
 
         pw2.add_incoming(d4, LinkType.INPUT_CALC, 'input')
-        pw2._set_state(calc_states.PARSING)
 
         d5.add_incoming(pw2, LinkType.CREATE, 'create5')
         d6.add_incoming(pw2, LinkType.CREATE, 'create6')
@@ -1738,7 +1711,6 @@ class TestLinks(AiidaTestCase):
         import shutil
         import tempfile
 
-        from aiida.common.datastructures import calc_states
         from aiida.orm import Data, Group
         from aiida.orm.data.base import Int
         from aiida.orm.node.process import CalcJobNode
@@ -1758,7 +1730,6 @@ class TestLinks(AiidaTestCase):
             calc.store()
 
             calc.add_incoming(data_input, LinkType.INPUT_CALC, 'input')
-            calc._set_state(calc_states.PARSING)
             data_output.add_incoming(calc, LinkType.CREATE, 'create')
 
             group = orm.Group(label='test_group').store()

@@ -49,7 +49,7 @@ def calculation_gotocomputer(ctx, calculation):
 
 @verdi_calculation.command('list')
 @arguments.CALCULATIONS()
-@options.CALCULATION_STATE()
+@options.CALC_JOB_STATE()
 @options.PROCESS_STATE()
 @options.EXIT_STATUS()
 @options.FAILED()
@@ -71,7 +71,7 @@ def calculation_gotocomputer(ctx, calculation):
 @click.pass_context
 @decorators.with_dbenv()
 @decorators.deprecated_command("This command is deprecated. Use 'verdi process list' instead.")
-def calculation_list(ctx, calculations, past_days, groups, all_entries, calculation_state, process_state, exit_status,
+def calculation_list(ctx, calculations, past_days, groups, all_entries, calc_job_state, process_state, exit_status,
                      failed, limit, order_by, project, all_users, raw, absolute_time):
     """Return a list of job calculations that are still running."""
     # pylint: disable=unused-argument

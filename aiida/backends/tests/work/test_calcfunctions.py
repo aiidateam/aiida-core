@@ -100,7 +100,7 @@ class TestCalcFunction(AiidaTestCase):
     def test_calcfunction_do_not_store_provenance(self):
         """Run the function without storing the provenance."""
         data = Int(1)
-        result, node = self.test_calcfunction.run_get_node(data, store_provenance=False)  # pylint: disable=unexpected-keyword-arg
+        result, node = self.test_calcfunction.run_get_node(data, metadata={'store_provenance': False})  # pylint: disable=unexpected-keyword-arg
         self.assertFalse(result.is_stored)
         self.assertFalse(data.is_stored)
         self.assertFalse(node.is_stored)

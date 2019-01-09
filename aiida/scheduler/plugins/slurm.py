@@ -22,7 +22,7 @@ from six.moves import zip
 import aiida.scheduler
 from aiida.common.escaping import escape_for_bash
 from aiida.scheduler import SchedulerError
-from aiida.scheduler.datastructures import (JobInfo, JOB_STATES, NodeNumberJobResource)
+from aiida.scheduler.datastructures import (JobInfo, JobState, NodeNumberJobResource)
 
 # This maps SLURM state codes to our own status list
 
@@ -47,17 +47,17 @@ from aiida.scheduler.datastructures import (JobInfo, JOB_STATES, NodeNumberJobRe
 ## TO  TIMEOUT         Job terminated upon reaching its time limit.
 
 _MAP_STATUS_SLURM = {
-    'CA': JOB_STATES.DONE,
-    'CD': JOB_STATES.DONE,
-    'CF': JOB_STATES.QUEUED,
-    'CG': JOB_STATES.RUNNING,
-    'F': JOB_STATES.DONE,
-    'NF': JOB_STATES.DONE,
-    'PD': JOB_STATES.QUEUED,
-    'PR': JOB_STATES.DONE,
-    'R': JOB_STATES.RUNNING,
-    'S': JOB_STATES.SUSPENDED,
-    'TO': JOB_STATES.DONE,
+    'CA': JobState.DONE,
+    'CD': JobState.DONE,
+    'CF': JobState.QUEUED,
+    'CG': JobState.RUNNING,
+    'F': JobState.DONE,
+    'NF': JobState.DONE,
+    'PD': JobState.QUEUED,
+    'PR': JobState.DONE,
+    'R': JobState.RUNNING,
+    'S': JobState.SUSPENDED,
+    'TO': JobState.DONE,
 }
 
 # From the manual,
@@ -519,7 +519,7 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
             except KeyError:
                 self.logger.warning("Unrecognized job_state '{}' for job "
                                     "id {}".format(job_state_raw, this_job.job_id))
-                job_state_string = JOB_STATES.UNDETERMINED
+                job_state_string = JobState.UNDETERMINED
             # QUEUED_HELD states are not specific states in SLURM;
             # they are instead set with state QUEUED, and then the
             # annotation tells if the job is held.
@@ -535,9 +535,9 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
             # There are actually a few others, like possible
             # failures, or partition-related reasons, but for the moment I
             # leave them in the QUEUED state.
-            if (job_state_string == JOB_STATES.QUEUED and
+            if (job_state_string == JobState.QUEUED and
                     this_job.annotation in ['Dependency', 'JobHeldUser', 'JobHeldAdmin', 'BeginTime']):
-                job_state_string = JOB_STATES.QUEUED_HELD
+                job_state_string = JobState.QUEUED_HELD
 
             this_job.job_state = job_state_string
 
@@ -580,7 +580,7 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
             # therefore it requires some parsing, that is unnecessary now.
             # I just store is as a raw string for the moment, and I leave
             # this_job.allocated_machines undefined
-            if this_job.job_state == JOB_STATES.RUNNING:
+            if this_job.job_state == JobState.RUNNING:
                 this_job.allocated_machines_raw = thisjob_dict['allocated_machines']
 
             this_job.queue_name = thisjob_dict['partition']
@@ -592,7 +592,7 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
 
             # Only if it is RUNNING; otherwise it is not meaningful,
             # and may be not set (in my test, it is set to zero)
-            if this_job.job_state == JOB_STATES.RUNNING:
+            if this_job.job_state == JobState.RUNNING:
                 try:
                     this_job.wallclock_time_seconds = (self._convert_time(thisjob_dict['time_used']))
                 except ValueError:

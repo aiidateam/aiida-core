@@ -28,10 +28,10 @@ def valid_process_states():
     return tuple(state.value for state in ProcessState)
 
 
-def valid_calculation_states():
+def valid_calc_job_states():
     """Return a list of valid values for the CalcState enum."""
-    from aiida.common.datastructures import calc_states
-    return tuple(state for state in calc_states)
+    from aiida.common.datastructures import CalcJobState
+    return tuple(state.value for state in CalcJobState)
 
 
 def active_process_states():
@@ -229,10 +229,10 @@ INPUT_PLUGIN = OverridableOption(
     type=types.PluginParamType(group='calculations'),
     help='Calculation input plugin string.')
 
-CALCULATION_STATE = OverridableOption(
-    '-s', '--calculation-state', 'calculation_state',
-    type=types.LazyChoice(valid_calculation_states), cls=MultipleValueOption,
-    help='Only include entries with this calculation state.')
+CALC_JOB_STATE = OverridableOption(
+    '-s', '--calc-job-state', 'calc_job_state',
+    type=types.LazyChoice(valid_calc_job_states), cls=MultipleValueOption,
+    help='Only include entries with this calculation job state.')
 
 PROCESS_STATE = OverridableOption(
     '-S', '--process-state', 'process_state',

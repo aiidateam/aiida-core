@@ -92,21 +92,11 @@ class _AbstractNodeMeta(ABCMeta):
     def __new__(cls, name, bases, attrs):
 
         newcls = ABCMeta.__new__(cls, name, bases, attrs)
+        newcls._logger = logging.getLogger('{}.{}'.format(attrs['__module__'], name))
 
-        # Configure the logger by inheriting from the aiida logger
-        if not attrs['__module__'].startswith('aiida.'):
-            newcls._logger = logging.getLogger('aiida.{:s}.{:s}'.format(attrs['__module__'], name))
-        else:
-            newcls._logger = logging.getLogger('{:s}.{:s}'.format(attrs['__module__'], name))
-
-        # Set the plugin type string
-        plugin_type_string = get_type_string_from_class(attrs['__module__'], name)
-
-        # Set the query type string based on the plugin type string
-        query_type_string = get_query_type_from_type_string(plugin_type_string)
-
-        newcls._plugin_type_string = plugin_type_string
-        newcls._query_type_string = query_type_string
+        # Set the plugin type string and query type string based on the plugin type string
+        newcls._plugin_type_string = get_type_string_from_class(attrs['__module__'], name)
+        newcls._query_type_string = get_query_type_from_type_string(newcls._plugin_type_string)
 
         return newcls
 

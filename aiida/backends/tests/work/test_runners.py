@@ -21,7 +21,7 @@ from aiida.orm.node.process.workflow import WorkflowNode
 
 class Proc(work.Process):
 
-    _calc_class = WorkflowNode
+    _node_class = WorkflowNode
 
     def run(self):
         pass
@@ -46,11 +46,11 @@ class TestWorkchain(AiidaTestCase):
         future = plumpy.Future()
 
         def calc_done(pk):
-            self.assertEqual(pk, proc.calc.pk)
+            self.assertEqual(pk, proc.node.pk)
             loop.stop()
             future.set_result(True)
 
-        self.runner.call_on_calculation_finish(proc.calc.pk, calc_done)
+        self.runner.call_on_calculation_finish(proc.node.pk, calc_done)
 
         # Run the calculation
         self.runner.loop.add_callback(proc.step_until_terminated)

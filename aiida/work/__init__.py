@@ -14,7 +14,6 @@ from __future__ import absolute_import
 from .exceptions import *
 from .exit_code import *
 from .futures import *
-from .job_processes import *
 from .launch import *
 from .persistence import *
 from .processes import *
@@ -28,7 +27,6 @@ from . import test_utils
 __all__ = (exceptions.__all__ +
         exit_code.__all__ +
         futures.__all__ +
-        job_processes.__all__ +
         launch.__all__ +
         persistence.__all__ +
         processes.__all__ +

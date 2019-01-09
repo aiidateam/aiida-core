@@ -40,7 +40,7 @@ The most common ones are the following:
     
     Other, more specific "failed" states are possible, including ``SUBMISSIONFAILED``, ``RETRIEVALFAILED`` and ``PARSINGFAILED``.
 
-5. For very short times, when the job completes on the remote computer and AiiDA retrieves and parses it, you may happen to see a calculation in the ``COMPUTED``, ``RETRIEVING`` and ``PARSING`` states.
+5. For very short times, when the job completes on the remote computer and AiiDA retrieves and parses it, you may happen to see a calculation in the ``RETRIEVING`` and ``PARSING`` states.
 
 Eventually, when the calculation has finished, you will find the computed quantities in the database, and you will be able to query the database for the results that were parsed.
 

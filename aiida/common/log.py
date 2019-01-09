@@ -12,8 +12,9 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-import copy
+import collections
 import logging
+import types
 
 from aiida.manage import get_config_option
 
@@ -115,44 +116,44 @@ LOGGING = {
             'filters': ['testing']
         },
         'dblogger': {
-            'level': get_config_option('logging.db_loglevel'),
+            'level': lambda: get_config_option('logging.db_loglevel'),
             'class': 'aiida.common.log.DBLogHandler',
         },
     },
     'loggers': {
         'aiida': {
             'handlers': ['console', 'dblogger'],
-            'level': get_config_option('logging.aiida_loglevel'),
+            'level': lambda: get_config_option('logging.aiida_loglevel'),
             'propagate': False,
         },
         'tornado': {
             'handlers': ['console'],
-            'level': get_config_option('logging.tornado_loglevel'),
+            'level': lambda: get_config_option('logging.tornado_loglevel'),
             'propagate': False,
         },
         'plumpy': {
             'handlers': ['console'],
-            'level': get_config_option('logging.plumpy_loglevel'),
+            'level': lambda: get_config_option('logging.plumpy_loglevel'),
             'propagate': False,
         },
         'kiwipy': {
             'handlers': ['console'],
-            'level': get_config_option('logging.kiwipy_loglevel'),
+            'level': lambda: get_config_option('logging.kiwipy_loglevel'),
             'propagate': False,
         },
         'paramiko': {
             'handlers': ['console'],
-            'level': get_config_option('logging.paramiko_loglevel'),
+            'level': lambda: get_config_option('logging.paramiko_loglevel'),
             'propagate': False,
         },
         'alembic': {
             'handlers': ['console'],
-            'level': get_config_option('logging.alembic_loglevel'),
+            'level': lambda: get_config_option('logging.alembic_loglevel'),
             'propagate': False,
         },
         'sqlalchemy': {
             'handlers': ['console'],
-            'level': get_config_option('logging.sqlalchemy_loglevel'),
+            'level': lambda: get_config_option('logging.sqlalchemy_loglevel'),
             'propagate': False,
             'qualname': 'sqlalchemy.engine',
         },
@@ -161,6 +162,26 @@ LOGGING = {
         },
     },
 }
+
+
+def evaluate_logging_configuration(dictionary):
+    """Recursively evaluate the logging configuration, calling lambdas when encountered.
+
+    This allows the configuration options that are dependent on the active profile to be loaded lazily.
+
+    :return: evaluated logging configuration dictionary
+    """
+    result = {}
+
+    for key, value in dictionary.items():
+        if isinstance(value, collections.Mapping):
+            result[key] = evaluate_logging_configuration(value)
+        elif isinstance(value, types.LambdaType):
+            result[key] = value()
+        else:
+            result[key] = value
+
+    return result
 
 
 def configure_logging(daemon=False, daemon_log_file=None):
@@ -177,7 +198,7 @@ def configure_logging(daemon=False, daemon_log_file=None):
     """
     from logging.config import dictConfig
 
-    config = copy.deepcopy(LOGGING)
+    config = evaluate_logging_configuration(LOGGING)
     daemon_handler_name = 'daemon_log_file'
 
     # Add the daemon file handler to all loggers if daemon=True

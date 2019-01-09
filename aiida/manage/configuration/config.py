@@ -6,7 +6,6 @@ import io
 import os
 import shutil
 
-from aiida.common import exceptions
 from aiida.common import json
 
 from .migrations import CURRENT_CONFIG_VERSION, OLDEST_COMPATIBLE_CONFIG_VERSION
@@ -146,6 +145,8 @@ class Config(object):  # pylint: disable=useless-object-inheritance
         :param name: name of the profile:
         :raises ProfileConfigurationError: if the name is not found in the configuration file
         """
+        from aiida.common import exceptions
+
         if name not in self.profile_names:
             raise exceptions.ProfileConfigurationError('profile `{}` does not exist'.format(name))
 

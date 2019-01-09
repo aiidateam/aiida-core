@@ -13,7 +13,9 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
+from aiida.backends.tests.utils.configuration import with_temporary_config_instance
 from aiida.manage.configuration.options import get_option, get_option_names, parse_option, Option, CONFIG_OPTIONS
+from aiida.manage.configuration import get_config, get_config_option
 
 
 class TestConfigurationOptions(AiidaTestCase):
@@ -52,3 +54,40 @@ class TestConfigurationOptions(AiidaTestCase):
             self.assertEqual(option.valid_values, option_settings['valid_values'])
             self.assertEqual(option.default, option_settings['default'])
             self.assertEqual(option.description, option_settings['description'])
+
+    @with_temporary_config_instance
+    def test_get_config_option_default(self):
+        """Tests that `get_option` return option default if not specified globally or for current profile."""
+        option_name = 'logging.aiida_loglevel'
+        option = get_option(option_name)
+
+        # If we haven't set the option explicitly, `get_config_option` should return the option default
+        option_value = get_config_option(option_name)
+        self.assertEqual(option_value, option.default)
+
+    @with_temporary_config_instance
+    def test_get_config_option_profile_specific(self):
+        """Tests that `get_option` correctly gets a configuration option if specified for the current profile."""
+        config = get_config()
+        profile = config.current_profile
+
+        option_name = 'logging.aiida_loglevel'
+        option_value_profile = 'WARNING'
+
+        # Setting a specific value for the current profile which should then be returned by `get_config_option`
+        config.option_set(option_name, option_value_profile, scope=profile.name)
+        option_value = get_config_option(option_name)
+        self.assertEqual(option_value, option_value_profile)
+
+    @with_temporary_config_instance
+    def test_get_config_option_global(self):
+        """Tests that `get_option` correctly agglomerates upwards and so retrieves globally set config options."""
+        config = get_config()
+
+        option_name = 'logging.aiida_loglevel'
+        option_value_global = 'CRITICAL'
+
+        # Setting a specific value globally which should then be returned by `get_config_option` due to agglomeration
+        config.option_set(option_name, option_value_global)
+        option_value = get_config_option(option_name)
+        self.assertEqual(option_value, option_value_global)

@@ -25,6 +25,7 @@ def load_profile(profile=None):
     Load the profile. This function is called by load_dbenv and SHOULD NOT
     be called by the user by hand.
     """
+    from aiida.common.log import configure_logging
     from aiida.manage import get_config
 
     if settings.LOAD_PROFILE_CALLED:
@@ -42,6 +43,9 @@ def load_profile(profile=None):
             profile = config.default_profile_name
 
         settings.AIIDADB_PROFILE = profile
+
+    # Reconfigure the logging to make sure that profile specific logging configuration options are taken into account
+    configure_logging()
 
     profile = config.get_profile(profile)
 

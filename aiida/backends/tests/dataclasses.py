@@ -989,8 +989,8 @@ class TestKindTestGeneral(AiidaTestCase):
         from aiida.orm.data.structure import Kind
 
         a = Kind(symbols=['Ba', 'C'], weights=[1. / 3., 2. / 3.])
-        self.assertTrue(a.is_alloy())
-        self.assertFalse(a.has_vacancies())
+        self.assertTrue(a.is_alloy)
+        self.assertFalse(a.has_vacancies)
 
     def test_sum_less_one_general(self):
         """
@@ -999,8 +999,8 @@ class TestKindTestGeneral(AiidaTestCase):
         from aiida.orm.data.structure import Kind
 
         a = Kind(symbols=['Ba', 'C'], weights=[1. / 3., 1. / 3.])
-        self.assertTrue(a.is_alloy())
-        self.assertTrue(a.has_vacancies())
+        self.assertTrue(a.is_alloy)
+        self.assertTrue(a.has_vacancies)
 
     def test_no_position(self):
         """
@@ -1018,16 +1018,16 @@ class TestKindTestGeneral(AiidaTestCase):
         from aiida.orm.data.structure import Kind
 
         a = Kind(symbols='Ba')
-        self.assertFalse(a.is_alloy())
-        self.assertFalse(a.has_vacancies())
+        self.assertFalse(a.is_alloy)
+        self.assertFalse(a.has_vacancies)
 
         b = Kind(symbols='Ba', weights=1.)
-        self.assertFalse(b.is_alloy())
-        self.assertFalse(b.has_vacancies())
+        self.assertFalse(b.is_alloy)
+        self.assertFalse(b.has_vacancies)
 
         c = Kind(symbols='Ba', weights=None)
-        self.assertFalse(c.is_alloy())
-        self.assertFalse(c.has_vacancies())
+        self.assertFalse(c.is_alloy)
+        self.assertFalse(c.has_vacancies)
 
     def test_automatic_name(self):
         """
@@ -1253,24 +1253,24 @@ class TestStructureData(AiidaTestCase):
         a.append_atom(position=(0., 0., 0.), symbols=['Ba'])
         a.append_atom(position=(1., 1., 1.), symbols=['Ti'])
         a.append_atom(position=(1.2, 1.4, 1.6), symbols=['Ti'])
-        self.assertFalse(a.is_alloy())
-        self.assertFalse(a.has_vacancies())
+        self.assertFalse(a.is_alloy)
+        self.assertFalse(a.has_vacancies)
         # There should be only two kinds! (two atoms of kind Ti should
         # belong to the same kind)
         self.assertEquals(len(a.kinds), 2)
 
         a.append_atom(position=(0.5, 1., 1.5), symbols=['O', 'C'], weights=[0.5, 0.5])
-        self.assertTrue(a.is_alloy())
-        self.assertFalse(a.has_vacancies())
+        self.assertTrue(a.is_alloy)
+        self.assertFalse(a.has_vacancies)
 
         a.append_atom(position=(0.5, 1., 1.5), symbols=['O'], weights=[0.5])
-        self.assertTrue(a.is_alloy())
-        self.assertTrue(a.has_vacancies())
+        self.assertTrue(a.is_alloy)
+        self.assertTrue(a.has_vacancies)
 
         a.clear_kinds()
         a.append_atom(position=(0.5, 1., 1.5), symbols=['O'], weights=[0.5])
-        self.assertFalse(a.is_alloy())
-        self.assertTrue(a.has_vacancies())
+        self.assertFalse(a.is_alloy)
+        self.assertTrue(a.has_vacancies)
 
     def test_cell_ok_and_unknown_atoms(self):
         """
@@ -1288,24 +1288,24 @@ class TestStructureData(AiidaTestCase):
         a.append_atom(position=(0., 0., 0.), symbols=['Ba'])
         a.append_atom(position=(1., 1., 1.), symbols=['X'])
         a.append_atom(position=(1.2, 1.4, 1.6), symbols=['X'])
-        self.assertFalse(a.is_alloy())
-        self.assertFalse(a.has_vacancies())
+        self.assertFalse(a.is_alloy)
+        self.assertFalse(a.has_vacancies)
         # There should be only two kinds! (two atoms of kind X should
         # belong to the same kind)
         self.assertEquals(len(a.kinds), 2)
 
         a.append_atom(position=(0.5, 1., 1.5), symbols=['O', 'C'], weights=[0.5, 0.5])
-        self.assertTrue(a.is_alloy())
-        self.assertFalse(a.has_vacancies())
+        self.assertTrue(a.is_alloy)
+        self.assertFalse(a.has_vacancies)
 
         a.append_atom(position=(0.5, 1., 1.5), symbols=['O'], weights=[0.5])
-        self.assertTrue(a.is_alloy())
-        self.assertTrue(a.has_vacancies())
+        self.assertTrue(a.is_alloy)
+        self.assertTrue(a.has_vacancies)
 
         a.clear_kinds()
         a.append_atom(position=(0.5, 1., 1.5), symbols=['X'], weights=[0.5])
-        self.assertFalse(a.is_alloy())
-        self.assertTrue(a.has_vacancies())
+        self.assertFalse(a.is_alloy)
+        self.assertTrue(a.has_vacancies)
 
     def test_kind_1(self):
         """
@@ -2043,8 +2043,8 @@ class TestStructureDataLock(AiidaTestCase):
             a.pbc = [True, True, True]
 
         _ = a.get_cell_volume()
-        _ = a.is_alloy()
-        _ = a.has_vacancies()
+        _ = a.is_alloy
+        _ = a.has_vacancies
 
         b = a.clone()
         # I check that clone returned an unstored copy and so can be altered

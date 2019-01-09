@@ -80,11 +80,11 @@ The following line instead::
 would create a site with 90% probability of being occupied by Calcium, and
 10% of being a vacancy.
 
-Utility methods ``s.is_alloy()`` and ``s.has_vacancies()`` can be used to
+Utility methods ``s.is_alloy`` and ``s.has_vacancies`` can be used to
 verify, respectively, if more than one element if given in the symbols list,
 and if the sum of all weights is smaller than one.
 
-.. note:: if you pass more than one symbol, the method ``s.is_alloy()`` will 
+.. note:: if you pass more than one symbol, the method ``s.is_alloy`` will 
   always return ``True``, even if only one symbol has occupancy 1. and 
   all others have occupancy zero::
     

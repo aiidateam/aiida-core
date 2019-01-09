@@ -997,7 +997,7 @@ class StructureData(Data):
         """
         Write the given structure to a string of format XSF (for XCrySDen).
         """
-        if self.is_alloy() or self.has_vacancies():
+        if self.is_alloy or self.has_vacancies:
             raise NotImplementedError("XSF for alloys or systems with "
                                       "vacancies not implemented.")
 
@@ -1111,7 +1111,7 @@ class StructureData(Data):
         """
         Write the given structure to a string of format XYZ.
         """
-        if self.is_alloy() or self.has_vacancies():
+        if self.is_alloy or self.has_vacancies:
             raise NotImplementedError("XYZ for alloys or systems with "
                                       "vacancies not implemented.")
 
@@ -1857,21 +1857,21 @@ class StructureData(Data):
     def set_cell_angles(self, value):
         raise NotImplementedError("Modification is not implemented yet")
 
+    @property
     def is_alloy(self):
-        """
-        To understand if there are alloys in the structure.
+        """Return whether the structure contains any alloy kinds.
 
         :return: a boolean, True if at least one kind is an alloy
         """
-        return any(s.is_alloy() for s in self.kinds)
+        return any(kind.is_alloy for kind in self.kinds)
 
+    @property
     def has_vacancies(self):
-        """
-        To understand if there are vacancies in the structure.
+        """Return whether the structure has vacancies in the structure.
 
         :return: a boolean, True if at least one kind has a vacancy
         """
-        return any(s.has_vacancies() for s in self.kinds)
+        return any(kind.has_vacancies for kind in self.kinds)
 
     def get_cell_volume(self):
         """
@@ -2186,23 +2186,6 @@ class Kind(object):
             'name': self.name,
         }
 
-        # def get_ase(self):
-
-    # """
-    #         Return a ase.Atom object for this kind, setting the position to
-    #         the origin.
-    #
-    #         Note: If any site is an alloy or has vacancies, a ValueError is
-    #             raised (from the site.get_ase() routine).
-    #         """
-    #         import ase
-    #         if self.is_alloy() or self.has_vacancies():
-    #             raise ValueError("Cannot convert to ASE if the site is an alloy "
-    #                              "or has vacancies.")
-    #         aseatom = ase.Atom(position=[0.,0.,0.], symbol=self.symbols[0],
-    #                            mass=self.mass)
-    #         return aseatom
-
     def reset_mass(self):
         """
         Reset the mass to the automatic calculated value.
@@ -2421,21 +2404,21 @@ class Kind(object):
         self._symbols = symbols_tuple
         self._weights = weights_tuple
 
+    @property
     def is_alloy(self):
-        """
-        To understand if kind is an alloy.
+        """Return whether the Kind is an alloy, i.e. contains more than one element
 
-        :return: True if the kind has more than one element (i.e.,
-            len(self.symbols) != 1), False otherwise.
+        :return: boolean, True if the kind has more than one element, False otherwise.
         """
         return len(self._symbols) != 1
 
+    @property
     def has_vacancies(self):
-        """
-        Returns True if the sum of the weights is less than one.
-        It uses the internal variable _sum_threshold as a threshold.
+        """Return whether the Kind contains vacancies, i.e. when the sum of the weights is less than one.
 
-        :return: a boolean
+        .. note:: the property uses the internal variable `_sum_threshold` as a threshold.
+
+        :return: boolean, True if the sum of the weights is less than one, False otherwise
         """
         return has_vacancies(self._weights)
 
@@ -2530,7 +2513,7 @@ class Site(object):
         used_tags = defaultdict(list)
         for k in kinds:
             # Skip alloys and vacancies
-            if k.is_alloy() or k.has_vacancies():
+            if k.is_alloy or k.has_vacancies:
                 tag_list.append(None)
             # If the kind name is equal to the specie name,
             # then no tag should be set
@@ -2575,7 +2558,7 @@ class Site(object):
             raise ValueError("No kind '{}' has been found in the list of kinds"
                              "".format(self.kind_name))
 
-        if kind.is_alloy() or kind.has_vacancies():
+        if kind.is_alloy or kind.has_vacancies:
             raise ValueError("Cannot convert to ASE if the kind represents "
                              "an alloy or it has vacancies.")
         aseatom = ase.Atom(position=self.position,

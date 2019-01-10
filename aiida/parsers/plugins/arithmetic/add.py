@@ -10,12 +10,12 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import io
 
 from aiida.orm import CalculationFactory
 from aiida.parsers.parser import Parser
 from aiida.orm.data.int import Int
-from aiida.orm.data.parameter import ParameterData
 
 ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
 
@@ -23,19 +23,6 @@ ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
 class ArithmeticAddParser(Parser):
 
     _linkname_output = 'sum'
-
-    def __init__(self, calculation):
-        """
-        Initialize the Parser for an ArithmeticAddCalculation
-
-        :param calculation: instance of the ArithmeticAddCalculation
-        """
-        if not isinstance(calculation, ArithmeticAddCalculation):
-            raise ValueError('Input calculation must be of type {}'.format(type(ArithmeticAddCalculation)))
-
-        self.calculation = calculation
-
-        super(ArithmeticAddParser, self).__init__(calculation)
 
     @classmethod
     def get_linkname_output(self):
@@ -54,14 +41,14 @@ class ArithmeticAddParser(Parser):
         output_nodes = []
 
         try:
-            output_folder = retrieved[self.calculation._get_linkname_retrieved()]
+            output_folder = retrieved[self._calc._get_linkname_retrieved()]
         except KeyError:
             self.logger.error("no retrieved folder found")
             return False, ()
 
         # Verify the standard output file is present, parse the value and attach as output node
         try:
-            filepath_stdout = output_folder.get_abs_path(self.calculation._OUTPUT_FILE_NAME)
+            filepath_stdout = output_folder.get_abs_path(self._calc._OUTPUT_FILE_NAME)
         except OSError as exception:
             self.logger.error("expected output file '{}' was not found".format(filepath_stdout))
             return False, ()

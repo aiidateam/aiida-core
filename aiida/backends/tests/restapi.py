@@ -17,7 +17,7 @@ from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 from aiida.orm import DataFactory
-from aiida.orm.node.process import ProcessNode, CalculationNode
+from aiida.orm.node.process import CalcJobNode
 from aiida.orm.computers import Computer
 from aiida.orm.data import Data
 from aiida.orm.querybuilder import QueryBuilder
@@ -78,16 +78,19 @@ class RESTApiTestCase(AiidaTestCase):
         kpoint.set_kpoints_mesh([4, 4, 4])
         kpoint.store()
 
-        calc = CalculationNode()
+        resources = {'num_machines': 1, 'num_mpiprocs_per_machine': 1}
+
+        calc = CalcJobNode(computer=cls.computer, resources=resources)
         calc._set_attr("attr1", "OK")  # pylint: disable=protected-access
         calc._set_attr("attr2", "OK")  # pylint: disable=protected-access
         calc.store()
 
         calc.add_incoming(structure, link_type=LinkType.INPUT_CALC, link_label='link_structure')
         calc.add_incoming(parameter1, link_type=LinkType.INPUT_CALC, link_label='link_parameter')
+        calc._set_state('PARSING')  # pylint: disable=protected-access
         kpoint.add_incoming(calc, link_type=LinkType.CREATE, link_label='create')
 
-        calc1 = CalculationNode()
+        calc1 = CalcJobNode(computer=cls.computer, resources=resources)
         calc1.store()
 
         dummy_computers = [{
@@ -155,7 +158,7 @@ class RESTApiTestCase(AiidaTestCase):
 
         calculation_projections = ["id", "uuid", "user_id", "type"]
         calculations = QueryBuilder().append(
-            ProcessNode, tag="calc", project=calculation_projections).order_by({
+            CalcJobNode, tag="calc", project=calculation_projections).order_by({
                 'calc': [{
                     'id': {
                         'order': 'desc'
@@ -733,19 +736,40 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         Get list of calculation attributes
         """
+        attributes = {
+            'attr1': 'OK',
+            'attr2': 'OK',
+            'jobresource_params': {
+                'num_machines': 1,
+                'num_mpiprocs_per_machine': 1
+            },
+            'linkname_retrieved': 'retrieved',
+            'parser': None,
+            'state': 'PARSING'
+        }
         node_uuid = self.get_dummy_data()["calculations"][1]["uuid"]
         url = self.get_url_prefix() + "/calculations/" + str(node_uuid) + "/content/attributes"
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
             self.assertNotIn('message', response)
-            self.assertEqual(response["data"]["attributes"], {'attr2': 'OK', 'attr1': 'OK'})
+            self.assertEqual(response["data"]["attributes"], attributes)
             RESTApiTestCase.compare_extra_response_data(self, "calculations", url, response, uuid=node_uuid)
 
     def test_calculation_attributes_nalist_filter(self):
         """
         Get list of calculation attributes with filter nalist
         """
+        attributes = {
+            'attr2': 'OK',
+            'jobresource_params': {
+                'num_machines': 1,
+                'num_mpiprocs_per_machine': 1
+            },
+            'linkname_retrieved': 'retrieved',
+            'parser': None,
+            'state': 'PARSING'
+        }
         node_uuid = self.get_dummy_data()["calculations"][1]["uuid"]
         url = self.get_url_prefix() + '/calculations/' + str(node_uuid) + '/content/attributes?nalist="attr1"'
         with self.app.test_client() as client:
@@ -753,7 +777,7 @@ class RESTApiTestSuite(RESTApiTestCase):
             response = json.loads(rv_obj.data)
             self.assertNotIn('message', response)
 
-            self.assertEqual(response["data"]["attributes"], {'attr2': 'OK'})
+            self.assertEqual(response["data"]["attributes"], attributes)
             RESTApiTestCase.compare_extra_response_data(self, "calculations", url, response, uuid=node_uuid)
 
     def test_calculation_attributes_alist_filter(self):

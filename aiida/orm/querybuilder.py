@@ -144,46 +144,28 @@ def get_querybuilder_classifiers_from_type(ormclasstype, obj):
     """
     Same as above get_querybuilder_classifiers_from_cls, but accepts a string instead of a class.
     """
-    from aiida.common.exceptions import (DbContentError, MissingPluginError, InputValidationError)
+    from aiida.plugins.loader import get_query_type_from_type_string
 
     if ormclasstype.lower() == 'group':
-        ormclasstype = ormclasstype.lower()
+        plugin_type_string = ormclasstype.lower()
         query_type_string = None
         ormclass = obj.Group
     elif ormclasstype.lower() == 'computer':
-        ormclasstype = ormclasstype.lower()
+        plugin_type_string = ormclasstype.lower()
         query_type_string = None
         ormclass = obj.Computer
     elif ormclasstype.lower() == 'user':
-        ormclasstype = ormclasstype.lower()
+        plugin_type_string = ormclasstype.lower()
         query_type_string = None
         ormclass = obj.User
     else:
-        # At this point, it has to be a node.
-        # The only valid string at this point is a string
-        # that matches exactly the _plugin_type_string
-        # of a node class
-        from aiida.plugins.loader import get_plugin_type_from_type_string, load_plugin
+        # At this point, it has to be a node. The only valid string at this point is a string
+        # that matches exactly the _plugin_type_string of a node class
         ormclass = obj.Node
-        try:
-            plugin_type = get_plugin_type_from_type_string(ormclasstype)
+        plugin_type_string = ormclasstype
+        query_type_string = get_query_type_from_type_string(ormclasstype)
 
-            # I want to check at this point if that is a valid class,
-            # so I use the load_plugin to load the plugin class
-            # and use the classes _plugin_type_string attribute
-            # In the future, assuming the user knows what he or she is doing
-            # we could remove that check
-            PluginClass = load_plugin(plugin_type)
-        except (DbContentError, MissingPluginError) as e:
-            raise InputValidationError("\nYou provide a vertice of the path with\n"
-                                       "type={}\n"
-                                       "But that string is not a valid type string\n"
-                                       "Exception raise during check\n"
-                                       "{}".format(ormclasstype, e))
-
-        ormclasstype = PluginClass._plugin_type_string
-        query_type_string = PluginClass._query_type_string
-    return ormclasstype, query_type_string, ormclass
+    return plugin_type_string, query_type_string, ormclass
 
 
 class QueryBuilder(object):
@@ -615,6 +597,7 @@ class QueryBuilder(object):
             if ormclass == self._impl.Node:
                 plugin_type_string = ormclasstype
                 self._add_type_filter(tag, query_type_string, plugin_type_string, subclassing)
+
             # The order has to be first _add_type_filter and then add_filter.
             # If the user adds a query on the type column, it overwrites what I did
             # if the user specified a filter, add it:

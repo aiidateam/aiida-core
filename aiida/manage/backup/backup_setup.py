@@ -137,7 +137,7 @@ class BackupSetup(object):  # pylint: disable=useless-object-inheritance
    oldest object that was backed up. If you are not aware of this value or if it
    is the first time that you start a backup up for this repository, then set
    this value to ``null``. Then the script will search the creation date of the
-   oldest workflow or node object in the database and it will start
+   oldest node object in the database and it will start
    the backup from that date. E.g. ``"oldest_object_backedup":
    "2015-07-20 11:13:08.145804+02:00"``
 

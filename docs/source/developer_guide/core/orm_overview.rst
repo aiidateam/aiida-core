@@ -52,12 +52,6 @@ Node
 .. autoclass:: aiida.orm.node.Node
    :noindex:
 
-Workflow
-++++++++
-.. automodule:: aiida.orm.implementation.general.workflow
-   :members:
-   :noindex:
-
 
 Code
 ++++

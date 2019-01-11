@@ -15,11 +15,9 @@ import os
 
 import aiida.backends.sqlalchemy
 from aiida.backends.sqlalchemy.models.node import DbNode
-from aiida.backends.sqlalchemy.models.workflow import DbWorkflow
 from aiida.manage.backup.backup_base import AbstractBackup, BackupError
 from aiida.common.folders import RepositoryFolder
 from aiida.orm.node import Node
-from aiida.orm.workflow import Workflow
 
 
 class Backup(AbstractBackup):
@@ -27,18 +25,6 @@ class Backup(AbstractBackup):
     Backup for sqlalchemy backend
     """
     _batch_size = 50
-
-    def _query_first_workflow(self):
-        """
-        Query first workflow
-        :return:
-        """
-        res = aiida.backends.sqlalchemy.get_scoped_session().query(DbWorkflow).order_by(DbWorkflow.ctime).first()
-
-        if res is None:
-            return list()
-
-        return [res]
 
     def _query_first_node(self):
         """
@@ -70,10 +56,7 @@ class Backup(AbstractBackup):
         q_nodes = aiida.backends.sqlalchemy.get_scoped_session().query(DbNode).filter(
             DbNode.mtime >= start_of_backup).filter(DbNode.mtime <= backup_end_for_this_round)
 
-        q_workflows = aiida.backends.sqlalchemy.get_scoped_session().query(DbWorkflow).filter(
-            DbWorkflow.mtime >= start_of_backup).filter(DbWorkflow.mtime <= backup_end_for_this_round)
-
-        return [q_nodes, q_workflows]
+        return [q_nodes]
 
     def _get_query_set_iterator(self, query_set):
         """
@@ -90,9 +73,7 @@ class Backup(AbstractBackup):
         :return:
         """
         # pylint: disable=protected-access
-        if isinstance(item, DbWorkflow):
-            source_dir = os.path.normpath(RepositoryFolder(section=Workflow._section_name, uuid=item.uuid).abspath)
-        elif isinstance(item, DbNode):
+        if isinstance(item, DbNode):
             source_dir = os.path.normpath(RepositoryFolder(section=Node._section_name, uuid=item.uuid).abspath)
         else:
             # Raise exception

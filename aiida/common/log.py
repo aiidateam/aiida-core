@@ -18,9 +18,8 @@ import types
 
 from aiida.manage import get_config_option
 
-# Custom logging level, intended specifically for informative log messages
-# reported during WorkChains and Workflows. We want the level between INFO(20)
-# and WARNING(30) such that it will be logged for the default loglevel, however
+# Custom logging level, intended specifically for informative log messages reported during WorkChains.
+# We want the level between INFO(20) and WARNING(30) such that it will be logged for the default loglevel, however
 # the value 25 is already reserved for SUBWARNING by the multiprocessing module.
 LOG_LEVEL_REPORT = 23
 logging.addLevelName(LOG_LEVEL_REPORT, 'REPORT')

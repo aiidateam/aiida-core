@@ -12,12 +12,14 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from collections import namedtuple
 import logging
-import plumpy
 import tornado.ioloop
 
-from aiida.orm import load_node, load_workflow
+import plumpy
+
+from aiida.orm import load_node
 from aiida.work.processes import instantiate_process
 from . import job_calcs
 from . import futures
@@ -228,16 +230,6 @@ class Runner(object):  # pylint: disable=useless-object-inheritance
         result, node = self._run(process, *args, **inputs)
         return ResultAndPid(result, node.pk)
 
-    def call_on_legacy_workflow_finish(self, pk, callback):
-        """
-        Callback to be called when the workflow of the given pk is terminated
-
-        :param pk: the pk of the workflow
-        :param callback: the function to be called upon workflow termination
-        """
-        workflow = load_workflow(pk=pk)
-        self._poll_legacy_wf(workflow, callback)
-
     def call_on_calculation_finish(self, pk, callback):
         """
         Callback to be called when the calculation of the given pk is terminated
@@ -256,12 +248,6 @@ class Runner(object):  # pylint: disable=useless-object-inheritance
         :return: A future representing the completion of the calculation node
         """
         return futures.CalculationFuture(pk, self._loop, self._poll_interval, self._communicator)
-
-    def _poll_legacy_wf(self, workflow, callback):
-        if workflow.has_finished_ok() or workflow.has_failed():
-            self._loop.add_callback(callback, workflow.pk)
-        else:
-            self._loop.call_later(self._poll_interval, self._poll_legacy_wf, workflow, callback)
 
     def _poll_calculation(self, calc_node, callback):
         if calc_node.is_terminated:

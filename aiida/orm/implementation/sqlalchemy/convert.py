@@ -25,7 +25,6 @@ from aiida.backends.sqlalchemy.models.group import DbGroup
 from aiida.backends.sqlalchemy.models.log import DbLog
 from aiida.backends.sqlalchemy.models.node import DbNode
 from aiida.backends.sqlalchemy.models.user import DbUser
-from aiida.backends.sqlalchemy.models.workflow import DbWorkflow
 from aiida.common.exceptions import DbContentError
 from aiida.plugins.loader import get_plugin_type_from_type_string, load_node_class
 
@@ -98,15 +97,6 @@ def _(dbmodel, backend):
     """
     from . import authinfo
     return authinfo.SqlaAuthInfo.from_dbmodel(dbmodel, backend)
-
-
-@get_backend_entity.register(DbWorkflow)
-def _(dbmodel, backend):
-    """
-    Get the workflow from the model
-    """
-    from . import workflow
-    return workflow.Workflow.get_subclass_from_dbnode(dbmodel)
 
 
 @get_backend_entity.register(DbComment)

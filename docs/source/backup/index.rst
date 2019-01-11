@@ -71,7 +71,7 @@ and the ``repository`` directory, is properly backed up by
 your backup software (under Ubuntu, Backup -> check the "Folders" tab).
 
 .. note:: If your database is very large (more than a few hundreds of thousands 
-  of nodes and workflows), a standard backup of your repository folder will be
+  of nodes), a standard backup of your repository folder will be
   very slow (up to days), thus slowing down your computer dramatically. To fix
   this problem you can set up an incremental backup of your repository by following
   the instructions :ref:`here<repository_backup>`.
@@ -237,7 +237,7 @@ by the script, and then ``backup_info.json`` will be created based on you answer
 
 The main script backs up the AiiDA repository that is referenced by the current
 AiiDA database. The script will start from the ``oldest_object_backedup`` date
-or the date of the oldest node/workflow object found and it will periodically
+or the date of the oldest node object found and it will periodically
 backup (in periods of ``periodicity`` days) until the ending date of the backup
 specified by ``end_date_of_backup`` or ``days_to_backup``
 
@@ -257,7 +257,7 @@ The backup parameters to be set in the ``backup_info.json`` are:
    oldest object that was backed up. If you are not aware of this value or if it
    is the first time that you start a backup up for this repository, then set
    this value to ``null``. Then the script will search the creation date of the
-   oldest workflow or node object in the database and it will start
+   oldest node object in the database and it will start
    the backup from that date. E.g. ``"oldest_object_backedup": "2015-07-20 11:13:08.145804+02:00"``
 
  * ``end_date_of_backup``: If set, the backup script will backup files that

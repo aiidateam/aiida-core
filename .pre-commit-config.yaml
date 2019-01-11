@@ -104,7 +104,6 @@
         aiida/backends/tests/cmdline/commands/test_node.py|
         aiida/backends/tests/cmdline/commands/test_user.py|
         aiida/backends/tests/cmdline/commands/test_work.py|
-        aiida/backends/tests/cmdline/commands/test_workflow.py|
         aiida/backends/tests/common/test_datastructures.py|
         aiida/backends/tests/computer.py|
         aiida/backends/tests/control/test_computer_ctrl.py|
@@ -129,7 +128,6 @@
         aiida/backends/tests/utils/fixtures.py|
         aiida/backends/tests/work/class_loader.py|
         aiida/backends/tests/work/daemon.py|
-        aiida/backends/tests/workflows.py|
         aiida/backends/tests/work/job_processes.py|
         aiida/backends/tests/work/persistence.py|
         aiida/backends/tests/work/process.py|
@@ -147,7 +145,6 @@
         aiida/backends/utils.py|
         aiida/common/datastructures.py|
         aiida/daemon/execmanager.py|
-        aiida/daemon/workflowmanager.py|
         aiida/manage/backup/backup_base.py|
         aiida/orm/authinfo.py|
         aiida/orm/autogroup.py|
@@ -189,10 +186,8 @@
         aiida/orm/implementation/django/node.py|
         aiida/orm/implementation/django/user.py|
         aiida/orm/implementation/django/utils.py|
-        aiida/orm/implementation/django/workflow.py|
         aiida/orm/implementation/general/__init__.py|
         aiida/orm/implementation/general/node.py|
-        aiida/orm/implementation/general/workflow.py|
         aiida/orm/implementation/__init__.py|
         aiida/orm/implementation/sqlalchemy/authinfo.py|
         aiida/orm/implementation/sqlalchemy/backend.py|
@@ -202,7 +197,6 @@
         aiida/orm/implementation/sqlalchemy/node.py|
         aiida/orm/implementation/sqlalchemy/querytool.py|
         aiida/orm/implementation/sqlalchemy/utils.py|
-        aiida/orm/implementation/sqlalchemy/workflow.py|
         aiida/orm/__init__.py|
         aiida/orm/importexport.py|
         aiida/orm/node/process/calculation/calcjob.py|
@@ -210,7 +204,6 @@
         aiida/orm/utils/__init__.py|
         aiida/orm/utils/loaders.py|
         aiida/orm/utils/remote.py|
-        aiida/orm/workflow.py|
         aiida/parsers/exceptions.py|
         aiida/parsers/__init__.py|
         aiida/parsers/parser.py|
@@ -270,10 +263,6 @@
         aiida/transport/plugins/test_all_plugins.py|
         aiida/transport/plugins/test_local.py|
         aiida/transport/plugins/test_ssh.py|
-        aiida/workflows/__init__.py|
-        aiida/workflows/test.py|
-        aiida/workflows/user/__init__.py|
-        aiida/workflows/wf_demo.py|
         aiida/work/__init__.py|
         aiida/work/job_processes.py|
         utils/create_requirements.py|

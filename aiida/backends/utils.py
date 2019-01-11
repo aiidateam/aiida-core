@@ -95,19 +95,6 @@ def _load_dbenv_noschemacheck(profile=None, *args, **kwargs):
     return to_return
 
 
-def get_workflow_list(*args, **kwargs):
-    if settings.BACKEND == BACKEND_SQLA:
-        from aiida.backends.sqlalchemy.cmdline import (
-            get_workflow_list as get_workflow_list_sqla)
-        return get_workflow_list_sqla(*args, **kwargs)
-    elif settings.BACKEND == BACKEND_DJANGO:
-        from aiida.backends.djsite.cmdline import (
-            get_workflow_list as get_workflow_list_dj)
-        return get_workflow_list_dj(*args, **kwargs)
-    else:
-        raise ValueError("This method doesn't exist for this backend")
-
-
 def get_global_setting(key):
     if settings.BACKEND == BACKEND_DJANGO:
         from aiida.backends.djsite.globalsettings import get_global_setting

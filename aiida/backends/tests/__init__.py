@@ -41,7 +41,6 @@ db_test_list = {
         'parsers': ['aiida.backends.tests.parsers'],
         'tcodexporter': ['aiida.backends.tests.tcodexporter'],
         'query': ['aiida.backends.tests.query'],
-        'workflows': ['aiida.backends.tests.workflows'],
         'calculation_node': ['aiida.backends.tests.calculation_node'],
         'backup_script': ['aiida.backends.tests.backup_script'],
         'backup_setup_script': ['aiida.backends.tests.backup_setup_script'],
@@ -67,7 +66,6 @@ db_test_list = {
         'cmdline.commands.user': ['aiida.backends.tests.cmdline.commands.test_user'],
         'cmdline.commands.verdi': ['aiida.backends.tests.cmdline.commands.test_verdi'],
         'cmdline.commands.work': ['aiida.backends.tests.cmdline.commands.test_work'],
-        'cmdline.commands.workflow': ['aiida.backends.tests.cmdline.commands.test_workflow'],
         'cmdline.params.types.calculation': ['aiida.backends.tests.cmdline.params.types.test_calculation'],
         'cmdline.params.types.code': ['aiida.backends.tests.cmdline.params.types.test_code'],
         'cmdline.params.types.computer': ['aiida.backends.tests.cmdline.params.types.test_computer'],
@@ -76,7 +74,6 @@ db_test_list = {
         'cmdline.params.types.identifier': ['aiida.backends.tests.cmdline.params.types.test_identifier'],
         'cmdline.params.types.node': ['aiida.backends.tests.cmdline.params.types.test_node'],
         'cmdline.params.types.plugin': ['aiida.backends.tests.cmdline.params.types.test_plugin'],
-        'cmdline.params.types.workflow': ['aiida.backends.tests.cmdline.params.types.test_workflow'],
         'common.archive': ['aiida.backends.tests.common.test_archive'],
         'common.datastructures': ['aiida.backends.tests.common.test_datastructures'],
         'common.extendeddicts': ['aiida.backends.tests.common.test_extendeddicts'],
@@ -123,7 +120,6 @@ db_test_list = {
         'work.workfunctions': ['aiida.backends.tests.work.test_workfunctions'],
         'work.job_processes': ['aiida.backends.tests.work.job_processes'],
         'plugin_loader': ['aiida.backends.tests.test_plugin_loader'],
-        'daemon': ['aiida.backends.tests.daemon'],
         'caching_config': ['aiida.backends.tests.test_caching_config'],
     }
 }

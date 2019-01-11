@@ -96,12 +96,6 @@ def _(dbmodel, backend):
     return authinfo.DjangoAuthInfo.from_dbmodel(dbmodel, backend)
 
 
-@get_backend_entity.register(models.DbWorkflow)
-def _(dbmodel, _backend):
-    from . import workflow
-    return workflow.Workflow.get_subclass_from_dbnode(dbmodel)
-
-
 @get_backend_entity.register(models.DbComment)
 def _(dbmodel, backend):
     from . import comments

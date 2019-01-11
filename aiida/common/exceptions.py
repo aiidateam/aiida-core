@@ -187,13 +187,6 @@ class InputValidationError(ValidationError):
     """
 
 
-class WorkflowInputValidationError(ValidationError):
-    """
-    The input data for a workflow did not validate (e.g., missing
-    required input data, wrong data, ...)
-    """
-
-
 class FeatureNotAvailable(AiidaException):
     """
     Raised when a feature is requested from a plugin, that is not available.

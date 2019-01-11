@@ -11,12 +11,11 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from aiida.common.exceptions import AiidaException
 
 __all__ = ('PastException',)
 
 
 class PastException(AiidaException):
-    """
-    Raised when an attempt is made to continue a Process that has already excepted before
-    """
+    """Raised when an attempt is made to continue a Process that has already excepted before."""

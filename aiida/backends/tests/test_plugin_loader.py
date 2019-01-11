@@ -13,7 +13,6 @@ from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.plugins.entry_point import get_entry_points
 from aiida.orm import CalculationFactory, DataFactory, WorkflowFactory
-from aiida.orm import Workflow
 from aiida.parsers import Parser, ParserFactory
 from aiida.orm.data import Data
 from aiida.orm.node.process import CalculationNode
@@ -27,6 +26,7 @@ from aiida.work import WorkChain
 class TestExistingPlugins(AiidaTestCase):
     """
     Test the get_entry_points function and the plugin Factories.
+
     Will fail when:
 
         * If get_entry_points returns something other than a list
@@ -35,9 +35,7 @@ class TestExistingPlugins(AiidaTestCase):
     """
 
     def test_existing_calculations(self):
-        """
-        Test listing all preinstalled calculations
-        """
+        """Test listing all preinstalled calculations."""
         entry_points = get_entry_points('aiida.calculations')
         self.assertIsInstance(entry_points, list)
 
@@ -47,9 +45,7 @@ class TestExistingPlugins(AiidaTestCase):
                 'Calculation plugin class {} is not subclass of {}'.format(cls, CalculationNode))
 
     def test_existing_data(self):
-        """
-        Test listing all preinstalled data classes
-        """
+        """Test listing all preinstalled data classes."""
         entry_points = get_entry_points('aiida.data')
         self.assertIsInstance(entry_points, list)
 
@@ -59,9 +55,7 @@ class TestExistingPlugins(AiidaTestCase):
                 'Data plugin class {} is not subclass of {}'.format(cls, Data))
 
     def test_existing_parsers(self):
-        """
-        Test listing all preinstalled parsers
-        """
+        """Test listing all preinstalled parsers."""
         entry_points = get_entry_points('aiida.parsers')
         self.assertIsInstance(entry_points, list)
 
@@ -71,9 +65,7 @@ class TestExistingPlugins(AiidaTestCase):
                 'Parser plugin class {} is not subclass of {}'.format(cls, Parser))
 
     def test_existing_schedulers(self):
-        """
-        Test listing all preinstalled schedulers
-        """
+        """Test listing all preinstalled schedulers."""
         entry_points = get_entry_points('aiida.schedulers')
         self.assertIsInstance(entry_points, list)
 
@@ -83,9 +75,7 @@ class TestExistingPlugins(AiidaTestCase):
                 'Scheduler plugin class {} is not subclass of {}'.format(cls, Scheduler))
 
     def test_existing_transports(self):
-        """
-        Test listing all preinstalled transports
-        """
+        """Test listing all preinstalled transports."""
         entry_points = get_entry_points('aiida.transports')
         self.assertIsInstance(entry_points, list)
 
@@ -95,21 +85,17 @@ class TestExistingPlugins(AiidaTestCase):
                 'Transport plugin class {} is not subclass of {}'.format(cls, Transport))
 
     def test_existing_workflows(self):
-        """
-        Test listing all preinstalled workflows
-        """
+        """Test listing all preinstalled workflows."""
         entry_points = get_entry_points('aiida.workflows')
         self.assertIsInstance(entry_points, list)
 
         for entry_point in entry_points:
             cls = WorkflowFactory(entry_point.name)
-            self.assertTrue(issubclass(cls, (Workflow, WorkChain)),
-                'Workflow plugin class {} is neither a subclass of {} nor {}'.format(cls, Workflow, WorkChain))
+            self.assertTrue(issubclass(cls, WorkChain),
+                'Workflow plugin class {} is not a subclass of {}'.format(cls, WorkChain))
 
     def test_existing_tcod_plugins(self):
-        """
-        Test listing all preinstalled tcod exporter plugins
-        """
+        """Test listing all preinstalled tcod exporter plugins."""
         entry_points = get_entry_points('aiida.tools.dbexporters.tcod_plugins')
         self.assertIsInstance(entry_points, list)
 
@@ -119,9 +105,7 @@ class TestExistingPlugins(AiidaTestCase):
                 'TcodExporter plugin class {} is not subclass of {}'.format(cls, BaseTcodtranslator))
 
     def test_existing_dbimporters(self):
-        """
-        Test listing all preinstalled dbimporter plugins
-        """
+        """Test listing all preinstalled dbimporter plugins."""
         entry_points = get_entry_points('aiida.tools.dbimporters')
         self.assertIsInstance(entry_points, list)
 

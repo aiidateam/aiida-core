@@ -28,6 +28,6 @@ The log can also be retrieved through ``verdi`` with the command::
 
   verdi daemon logshow
 
-The daemon is a fundamental component of AiiDA, and it is for example in charge of submitting new calculations, checking their status on the cluster, retrieving and parsing the results of finished calculations, and managing the workflow steps.
+The daemon is a fundamental component of AiiDA, and it is for example in charge of submitting new calculations, checking their status on the cluster, retrieving and parsing the results of finished calculations.
 But in order to actually be able to launch calculations on a computer, we will first have to register them with AiiDA.
 This will be shown in detail in the next section.

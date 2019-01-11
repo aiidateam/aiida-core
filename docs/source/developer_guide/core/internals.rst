@@ -364,11 +364,11 @@ Objects of this class correspond to the repository folders. The :py:class:`~aiid
 
 - :py:meth:`~aiida.common.folders.RepositoryFolder.get_topdir` returns the top directory.
 
-- :py:meth:`~aiida.common.folders.RepositoryFolder.section` returns the section to which the ``folder`` belongs. This can be for the moment a ``workflow`` or ``node``.
+- :py:meth:`~aiida.common.folders.RepositoryFolder.section` returns the section to which the ``folder`` belongs. This can be for the moment only  ``node``.
 
 - :py:meth:`~aiida.common.folders.RepositoryFolder.subfolder` returns the subfolder within the section/uuid folder.
 
-- :py:meth:`~aiida.common.folders.RepositoryFolder.uuid` the UUID of the corresponding ``node`` or ``workflow``.
+- :py:meth:`~aiida.common.folders.RepositoryFolder.uuid` the UUID of the corresponding ``node``.
 
 
 :py:class:`~aiida.common.folders.SandboxFolder`

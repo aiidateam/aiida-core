@@ -12,32 +12,26 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from enum import Enum
+
 from plumpy.utils import AttributesDict
 from aiida.orm.node.process import ProcessNode
-from aiida.orm.workflow import Workflow
 
 __all__ = ['Awaitable', 'AwaitableTarget', 'AwaitableAction', 'construct_awaitable']
 
 
 class Awaitable(AttributesDict):
-    """
-    An attribute dictionary that represents an action that a Process could be waiting for to finish
-    """
+    """An attribute dictionary that represents an action that a Process could be waiting for to finish."""
 
 
 class AwaitableTarget(Enum):
-    """
-    Enum that describes the class of the target a given awaitable
-    """
+    """Enum that describes the class of the target a given awaitable."""
     PROCESS = 'process'
-    WORKFLOW = 'workflow'
 
 
 class AwaitableAction(Enum):
-    """
-    Enum that describes the action to be taken for a given awaitable
-    """
+    """Enum that describes the action to be taken for a given awaitable."""
     ASSIGN = 'assign'
     APPEND = 'append'
 
@@ -62,8 +56,6 @@ def construct_awaitable(target):
 
     if isinstance(target, ProcessNode):
         awaitable_target = AwaitableTarget.PROCESS
-    elif isinstance(target, Workflow):
-        awaitable_target = AwaitableTarget.WORKFLOW
     else:
         raise ValueError('invalid class for awaitable target: {}'.format(type(target)))
 

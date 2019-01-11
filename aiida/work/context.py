@@ -11,6 +11,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from .awaitable import construct_awaitable, AwaitableAction
 
 __all__ = ['ToContext', 'assign_', 'append_']
@@ -24,7 +25,7 @@ def assign_(target):
     with the context action set to ASSIGN. When the awaitable target is completed
     it will be assigned to the context for a key that is to be defined later
 
-    :param target: an instance of Calculation, Workflow or Awaitable
+    :param target: an instance of a Process or Awaitable
     :returns: the awaitable
     :rtype: Awaitable
     """
@@ -39,7 +40,7 @@ def append_(target):
     with the context action set to APPEND. When the awaitable target is completed
     it will be appended to a list in the context for a key that is to be defined later
 
-    :param target: an instance of Calculation, Workflow or Awaitable
+    :param target: an instance of a Process or Awaitable
     :returns: the awaitable
     :rtype: Awaitable
     """

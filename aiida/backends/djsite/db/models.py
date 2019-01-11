@@ -1448,10 +1448,64 @@ class DbLog(m.Model):
                                                self.objname, self.objpk, self.message)
 
 
+# Issue 2380 will take care of dropping these models, which will have to be accompanied by a migration.
+# The datastructures can then also be removed
+
+class Enumerate(frozenset):
+    """Custom implementation of enum.Enum."""
+
+    def __getattr__(self, name):
+        if name in self:
+            return six.text_type(name)  # always return unicode in Python 2
+        raise AttributeError("No attribute '{}' in Enumerate '{}'".format(name, self.__class__.__name__))
+
+    def __setattr__(self, name, value):
+        raise AttributeError("Cannot set attribute in Enumerate '{}'".format(self.__class__.__name__))
+
+    def __delattr__(self, name):
+        raise AttributeError("Cannot delete attribute in Enumerate '{}'".format(self.__class__.__name__))
+
+
+class WorkflowState(Enumerate):
+    pass
+
+
+wf_states = WorkflowState((
+    'CREATED',
+    'INITIALIZED',
+    'RUNNING',
+    'FINISHED',
+    'SLEEP',
+    'ERROR'
+))
+
+
+class WorkflowDataType(Enumerate):
+    pass
+
+
+wf_data_types = WorkflowDataType((
+    'PARAMETER',
+    'RESULT',
+    'ATTRIBUTE',
+))
+
+
+class WorkflowDataValueType(Enumerate):
+    pass
+
+
+wf_data_value_types = WorkflowDataValueType((
+    'NONE',
+    'JSON',
+    'AIIDA',
+))
+
+wf_start_call = "start"
+wf_exit_call = "exit"
+wf_default_call = "none"
 @python_2_unicode_compatible
 class DbWorkflow(m.Model):
-    from aiida.common.datastructures import wf_states
-
     uuid = m.UUIDField(default=get_new_uuid, unique=True)
     ctime = m.DateTimeField(default=timezone.now, editable=False)
     mtime = m.DateTimeField(auto_now=True, editable=False)
@@ -1607,8 +1661,6 @@ class DbWorkflow(m.Model):
 
 @python_2_unicode_compatible
 class DbWorkflowData(m.Model):
-    from aiida.common.datastructures import wf_data_types, wf_data_value_types
-
     parent = m.ForeignKey(DbWorkflow, related_name='data')
     name = m.CharField(max_length=255, blank=False)
     time = m.DateTimeField(default=timezone.now, editable=False)
@@ -1663,8 +1715,6 @@ class DbWorkflowData(m.Model):
 
 @python_2_unicode_compatible
 class DbWorkflowStep(m.Model):
-    from aiida.common.datastructures import wf_states, wf_default_call
-
     parent = m.ForeignKey(DbWorkflow, related_name='steps')
     name = m.CharField(max_length=255, blank=False)
     user = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.PROTECT)

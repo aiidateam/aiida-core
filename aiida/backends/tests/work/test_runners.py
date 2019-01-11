@@ -7,16 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import plumpy
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida import work
-from aiida.daemon.workflowmanager import execute_steps
-from aiida.workflows.wf_demo import WorkflowDemo
+from aiida.backends.testbase import AiidaTestCase
 from aiida.manage import get_manager
 from aiida.orm.node.process.workflow import WorkflowNode
 
@@ -24,6 +22,7 @@ from aiida.orm.node.process.workflow import WorkflowNode
 class Proc(work.Process):
 
     _calc_class = WorkflowNode
+
     def run(self):
         pass
 
@@ -57,28 +56,6 @@ class TestWorkchain(AiidaTestCase):
         self.runner.loop.add_callback(proc.step_until_terminated)
         self._run_loop_for(5.)
 
-        self.assertTrue(future.result())
-
-    def test_call_on_wf_finish(self):
-        loop = self.runner.loop
-        future = plumpy.Future()
-
-        # Need to start() so it's stored
-        wf = WorkflowDemo()
-        wf.start()
-
-        def wf_done(pk):
-            self.assertEqual(pk, wf.pk)
-            loop.stop()
-            future.set_result(True)
-
-        self.runner.call_on_legacy_workflow_finish(wf.pk, wf_done)
-
-        # Run the wf
-        while wf.is_running():
-            execute_steps()
-
-        self._run_loop_for(10.)
         self.assertTrue(future.result())
 
     def _run_loop_for(self, seconds):

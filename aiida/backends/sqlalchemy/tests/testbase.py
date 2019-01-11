@@ -19,10 +19,8 @@ from sqlalchemy.orm import sessionmaker
 
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.backends.sqlalchemy.models.computer import DbComputer
-from aiida.backends.sqlalchemy.models.user import DbUser
 from aiida.backends.sqlalchemy.utils import install_tc
 from aiida.backends.testimplbase import AiidaTestImplementation
-from aiida.manage import get_manager
 from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
 
 # Querying for expired objects automatically doesn't seem to work.
@@ -40,7 +38,7 @@ Session = sessionmaker(expire_on_commit=expire_on_commit)
 # in place, and these are implemented in the AiidaTestCase
 class SqlAlchemyTests(AiidaTestImplementation):
     # Specify the need to drop the table at the beginning of a test case
-    # If True, completely drops the tables and recreates the schema, 
+    # If True, completely drops the tables and recreates the schema,
     # but this is usually unnecessary and pretty slow
     # Also, if the tests are interrupted, there is the risk that the
     # DB remains dropped, so you have to do 'verdi -p test_xxx setup' again to
@@ -85,22 +83,11 @@ class SqlAlchemyTests(AiidaTestImplementation):
 
     def clean_db(self):
         from aiida.backends.sqlalchemy.models.computer import DbComputer
-        from aiida.backends.sqlalchemy.models.workflow import DbWorkflow, table_workflowstep_calc, \
-            table_workflowstep_subworkflow, DbWorkflowStep, DbWorkflowData
         from aiida.backends.sqlalchemy.models.group import DbGroup
         from aiida.backends.sqlalchemy.models.node import DbLink
         from aiida.backends.sqlalchemy.models.node import DbNode
         from aiida.backends.sqlalchemy.models.log import DbLog
         from aiida.backends.sqlalchemy.models.user import DbUser
-
-        # Delete the workflows
-        # Complicated way to make sure we 'unwind' all the relationships
-        # between workflows and their children.
-        self.test_session.connection().execute(table_workflowstep_calc.delete())
-        self.test_session.connection().execute(table_workflowstep_subworkflow.delete())
-        self.test_session.query(DbWorkflowData).delete()
-        self.test_session.query(DbWorkflowStep).delete()
-        self.test_session.query(DbWorkflow).delete()
 
         # Empty the relationship dbgroup.dbnode
         dbgroups = self.test_session.query(DbGroup).all()
@@ -110,22 +97,14 @@ class SqlAlchemyTests(AiidaTestImplementation):
         # Delete the groups
         self.test_session.query(DbGroup).delete()
 
-        # I first need to delete the links, because in principle I could
-        # not delete input nodes, only outputs. For simplicity, since
-        # I am deleting everything, I delete the links first
+        # I first need to delete the links, because in principle I could not delete input nodes, only outputs.
+        # For simplicity, since I am deleting everything, I delete the links first
         self.test_session.query(DbLink).delete()
 
-        # Then I delete the nodes, otherwise I cannot
-        # delete computers and users
+        # Then I delete the nodes, otherwise I cannot delete computers and users
         self.test_session.query(DbNode).delete()
-
-        # Delete the users
         self.test_session.query(DbUser).delete()
-
-        # Delete the computers
         self.test_session.query(DbComputer).delete()
-
-        # Delete the logs
         self.test_session.query(DbLog).delete()
 
         self.test_session.commit()

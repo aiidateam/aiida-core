@@ -20,7 +20,6 @@ from .config import ConfigOptionParamType
 from .data import DataParamType
 from .group import GroupParamType
 from .identifier import IdentifierParamType
-from .legacy_workflow import LegacyWorkflowParamType
 from .multiple import MultipleValueParamType
 from .node import NodeParamType
 from .process import ProcessParamType
@@ -36,6 +35,5 @@ __all__ = [
     'LazyChoice', 'IdentifierParamType', 'CalculationParamType', 'CodeParamType', 'ComputerParamType',
     'ConfigOptionParamType', 'DataParamType', 'GroupParamType', 'NodeParamType', 'MpirunCommandParamType',
     'MultipleValueParamType', 'NonEmptyStringParamType', 'PluginParamType', 'AbsolutePathParamType', 'ShebangParamType',
-    'LegacyWorkflowParamType', 'UserParamType', 'TestModuleParamType', 'ProfileParamType', 'WorkflowParamType',
-    'ProcessParamType'
+    'UserParamType', 'TestModuleParamType', 'ProfileParamType', 'WorkflowParamType', 'ProcessParamType'
 ]

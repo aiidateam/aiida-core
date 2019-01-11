@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Issue 2380 will take care of dropping this model, which will have to be accompanied by a migration."""
 
 from __future__ import division
 from __future__ import print_function
@@ -23,10 +24,65 @@ from sqlalchemy_utils.types.choice import ChoiceType
 
 from aiida.backends.sqlalchemy.models.base import Base, _QueryProperty, _AiidaQuery
 from aiida.backends.sqlalchemy.models.utils import uuid_func
-from aiida.common.datastructures import (wf_states, wf_data_types,
-                                         wf_data_value_types, wf_default_call)
 from aiida.common import timezone
 import aiida.common.json as json
+
+import six
+
+
+class Enumerate(frozenset):
+    """Custom implementation of enum.Enum."""
+
+    def __getattr__(self, name):
+        if name in self:
+            return six.text_type(name)  # always return unicode in Python 2
+        raise AttributeError("No attribute '{}' in Enumerate '{}'".format(name, self.__class__.__name__))
+
+    def __setattr__(self, name, value):
+        raise AttributeError("Cannot set attribute in Enumerate '{}'".format(self.__class__.__name__))
+
+    def __delattr__(self, name):
+        raise AttributeError("Cannot delete attribute in Enumerate '{}'".format(self.__class__.__name__))
+
+
+class WorkflowState(Enumerate):
+    pass
+
+
+wf_states = WorkflowState((
+    'CREATED',
+    'INITIALIZED',
+    'RUNNING',
+    'FINISHED',
+    'SLEEP',
+    'ERROR'
+))
+
+
+class WorkflowDataType(Enumerate):
+    pass
+
+
+wf_data_types = WorkflowDataType((
+    'PARAMETER',
+    'RESULT',
+    'ATTRIBUTE',
+))
+
+
+class WorkflowDataValueType(Enumerate):
+    pass
+
+
+wf_data_value_types = WorkflowDataValueType((
+    'NONE',
+    'JSON',
+    'AIIDA',
+))
+
+wf_start_call = "start"
+wf_exit_call = "exit"
+wf_default_call = "none"
 
 
 class DbWorkflow(Base):

@@ -173,52 +173,6 @@ class TestSessionSqla(AiidaTestCase):
 
         self.drop_connection()
 
-    def test_session_wfdata(self):
-        """
-        This test checks that the
-        aiida.backends.sqlalchemy.models.workflow.DbWorkflowData#set_value
-        method works as expected. There were problems with the DbNode object
-        that was added as a value to a DbWorkflowData object. If there was
-        an older version of the dbnode in the session than the one given to
-        to the DbWorkflowData#set_value then there was a collision in the
-        session and SQLA identity map.
-        """
-        from aiida.orm import Data
-        from aiida.workflows.test import WFTestSimpleWithSubWF
-        from aiida.backends.sqlalchemy import get_scoped_session
-        from aiida.orm.utils import load_node
-
-        # Create a node and store it
-        n = Data()
-        n.store()
-
-        # Keep some useful information
-        n_id = n.id
-        old_dbnode = n._dbnode
-
-        # Get the session
-        sess = get_scoped_session()
-        # Remove everything from the session
-        sess.expunge_all()
-
-        # Create a workflow and store it
-        wf = WFTestSimpleWithSubWF()
-        wf.store()
-
-        # Load a new version of the node
-        n_reloaded = load_node(n_id)
-
-        # Remove everything from the session
-        sess.expunge_all()
-
-        # Add the dbnode that was originally added to the session
-        sess.add(old_dbnode)
-
-        # Add as attribute the node that was added after the first cleanup
-        # of the session
-        # At this point the following command should not fail
-        wf.add_attribute('a', n_reloaded)
-
     def test_node_access_with_sessions(self):
         """
         This checks that changes to a node from a different session (e.g. different interpreter,

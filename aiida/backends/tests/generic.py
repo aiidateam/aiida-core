@@ -92,38 +92,6 @@ class TestCode(AiidaTestCase):
         self.assertFalse(code.can_run_on(othercomputer))
 
 
-class TestWfBasic(AiidaTestCase):
-    """
-    Tests for the workflows
-    """
-
-    def test_versioning_lowlevel(self):
-        """
-        Checks the versioning.
-        """
-        from aiida.workflows.test import WFTestEmpty
-
-        w = WFTestEmpty().store()
-
-        # Even if I stored many attributes, this should stay at 1
-        self.assertEquals(w._dbworkflowinstance.nodeversion, 1)
-        self.assertEquals(w.dbworkflowinstance.nodeversion, 1)
-        self.assertEquals(w._dbworkflowinstance.nodeversion, 1)
-
-        w.label = "label1"
-        w.label = "label2"
-        self.assertEquals(w._dbworkflowinstance.nodeversion, 3)
-        self.assertEquals(w.dbworkflowinstance.nodeversion, 3)
-        self.assertEquals(w._dbworkflowinstance.nodeversion, 3)
-
-        w.description = "desc1"
-        w.description = "desc2"
-        w.description = "desc3"
-        self.assertEquals(w._dbworkflowinstance.nodeversion, 6)
-        self.assertEquals(w.dbworkflowinstance.nodeversion, 6)
-        self.assertEquals(w._dbworkflowinstance.nodeversion, 6)
-
-
 class TestBool(AiidaTestCase):
 
     def test_bool_conversion(self):

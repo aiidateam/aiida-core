@@ -834,14 +834,11 @@ class TestVerdiDataUpf(AiidaTestCase):
         super(TestVerdiDataUpf, cls).setUpClass()
 
     def setUp(self):
-        self.this_folder = os.path.dirname(__file__)
-        self.this_file = os.path.basename(__file__)
-        self.pseudos_dir = "../../../../../examples/testdata/qepseudos/"
-
+        self.filepath_pseudos = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, 'fixtures', 'pseudos')
         self.cli_runner = CliRunner()
 
     def upload_family(self):
-        options = [self.this_folder + '/' + self.pseudos_dir, "test_group", "test description"]
+        options = [self.filepath_pseudos, "test_group", "test description"]
         res = self.cli_runner.invoke(cmd_upf.upf_uploadfamily, options, catch_exceptions=False)
         self.assertIn(b'UPF files found: 3', res.output_bytes, 'The string "UPF files found: 3" was not found in the'
                                                                ' output of verdi data upf uploadfamily')
@@ -852,9 +849,9 @@ class TestVerdiDataUpf(AiidaTestCase):
 
     def test_uploadfamily(self):
         self.upload_family()
-        options = [self.this_folder + '/' + self.pseudos_dir, "test_group", "test description", "--stop-if-existing"]
+        options = [self.filepath_pseudos, "test_group", "test description", "--stop-if-existing"]
         with self.assertRaises(ValueError):
-            res = self.cli_runner.invoke(cmd_upf.upf_uploadfamily, options, catch_exceptions=False)
+            self.cli_runner.invoke(cmd_upf.upf_uploadfamily, options, catch_exceptions=False)
 
     def test_exportfamilyhelp(self):
         output = sp.check_output(['verdi', 'data', 'upf', 'exportfamily', '--help'])
@@ -901,7 +898,7 @@ class TestVerdiDataUpf(AiidaTestCase):
         self.assertIn(b'Usage:', output, "Sub-command verdi data upf listfamilies --help failed.")
 
     def test_import(self):
-        options = [self.this_folder + '/' + self.pseudos_dir + '/' + 'Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF']
+        options = [os.path.join(self.filepath_pseudos, 'Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF')]
         res = self.cli_runner.invoke(cmd_upf.upf_import, options, catch_exceptions=False)
 
         self.assertIn(b'Imported', res.output_bytes, 'The string "Imported" was not'

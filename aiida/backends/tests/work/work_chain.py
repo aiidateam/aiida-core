@@ -19,7 +19,6 @@ from tornado import gen
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
-from aiida.daemon.workflowmanager import execute_steps
 from aiida import orm
 from aiida.orm import load_node
 from aiida.orm.data.bool import Bool
@@ -27,7 +26,6 @@ from aiida.orm.data.float import Float
 from aiida.orm.data.int import Int
 from aiida.orm.data.str import Str
 from aiida.common.utils import Capturing
-from aiida.workflows.wf_demo import WorkflowDemo
 from aiida import work
 from aiida.work import ExitCode, Process
 from aiida.work.persistence import ObjectLoader
@@ -733,58 +731,6 @@ class TestWorkchain(AiidaTestCase):
             inputs = {}
         proc = run_and_check_success(wf_class, **inputs)
         return proc.finished_steps
-
-
-class TestWorkchainWithOldWorkflows(AiidaTestCase):
-    def setUp(self):
-        super(TestWorkchainWithOldWorkflows, self).setUp()
-        self.assertIsNone(Process.current())
-
-    def tearDown(self):
-        super(TestWorkchainWithOldWorkflows, self).tearDown()
-        self.assertIsNone(Process.current())
-
-    def test_call_old_wf(self):
-        wf = WorkflowDemo()
-        wf.start()
-        while wf.is_running():
-            execute_steps()
-
-        class _TestWf(WorkChain):
-            @classmethod
-            def define(cls, spec):
-                super(_TestWf, cls).define(spec)
-                spec.outline(cls.begin, cls.check)
-
-            def begin(self):
-                return ToContext(wf=wf)
-
-            def check(self):
-                assert self.ctx.wf is not None
-
-        run_and_check_success(_TestWf)
-
-    def test_old_wf_results(self):
-        wf = WorkflowDemo()
-        wf.start()
-        while wf.is_running():
-            execute_steps()
-
-        test_case = self
-
-        class _TestWf(WorkChain):
-            @classmethod
-            def define(cls, spec):
-                super(_TestWf, cls).define(spec)
-                spec.outline(cls.begin, cls.check)
-
-            def begin(self):
-                return ToContext(res=wf)
-
-            def check(self):
-                test_case.assertEquals(self.ctx.res.pk, wf.pk)
-
-        run_and_check_success(_TestWf)
 
 
 class TestWorkChainAbort(AiidaTestCase):

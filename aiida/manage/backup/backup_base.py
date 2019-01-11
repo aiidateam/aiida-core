@@ -122,17 +122,14 @@ class AbstractBackup(object):
             # query_node_res = qb.first()
 
             query_node_res = self._query_first_node()
-            query_workflow_res = self._query_first_workflow()
 
-            if (not query_node_res) and (not query_workflow_res):
+            if (not query_node_res):
                 self._logger.error("The oldest modification date was not found.")
                 raise BackupError("The oldest modification date was not found.")
 
             oldest_timestamps = []
             if query_node_res:
                 oldest_timestamps.append(query_node_res[0].ctime)
-            if query_workflow_res:
-                oldest_timestamps.append(query_workflow_res[0].ctime)
 
             self._oldest_object_bk = min(oldest_timestamps)
             self._logger.info("Setting the oldest modification date to the "
@@ -404,13 +401,6 @@ class AbstractBackup(object):
             if item_sets_to_backup[0] == -2:
                 self._logger.info("Threshold is 0. Backed up one round and exiting.")
                 break
-
-    @abstractmethod
-    def _query_first_workflow(self):
-        """
-        Query first workflow
-        """
-        pass
 
     @abstractmethod
     def _query_first_node(self):

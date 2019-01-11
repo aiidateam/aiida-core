@@ -8,19 +8,18 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+This example illustrates in a very minimal way how a WorkChain can be defined and how it can be run. This mostly
+illustrates how the spec of the WorkChain is defined and how functions in the outline of the spec have to be defined.
+"""
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
+
+from aiida import work
 from aiida.orm.data.base import NumericType
 from aiida.orm.data.float import Float
 from aiida.orm.data.int import Int
-from aiida import work
-
-"""
-This example illustrates in a very minimal way how a WorkChain can be defined
-and how it can be run. This mostly illustrates how the spec of the WorkChain
-is defined and how functions in the outline of the spec have to be defined.
-"""
 
 
 class SumWorkChain(work.WorkChain):
@@ -53,7 +52,7 @@ class ProductWorkChain(work.WorkChain):
 
     def product(self):
         self.out('product', self.inputs.a * self.inputs.b)
-    
+
 
 class SumProductWorkChain(work.WorkChain):
 

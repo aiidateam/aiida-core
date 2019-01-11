@@ -24,7 +24,7 @@ from .logs import *
 from .querybuilder import *
 from .users import *
 
-_local = 'Node', 'Workflow', 'kill_all', 'get_all_running_steps', 'get_workflow_info', 'delete_code',
+_local = 'Node', 'delete_code',
 
 __all__ = (_local +
            authinfos.__all__ +
@@ -38,12 +38,9 @@ __all__ = (_local +
 
 if BACKEND == BACKEND_SQLA:
     from aiida.orm.implementation.sqlalchemy.node import Node
-    from aiida.orm.implementation.sqlalchemy.workflow import Workflow, kill_all, get_workflow_info, \
-        get_all_running_steps
     from aiida.orm.implementation.sqlalchemy.code import delete_code
 elif BACKEND == BACKEND_DJANGO:
     from aiida.orm.implementation.django.node import Node
-    from aiida.orm.implementation.django.workflow import Workflow, kill_all, get_workflow_info, get_all_running_steps
     from aiida.orm.implementation.django.code import delete_code
 elif BACKEND is None:
     raise ConfigurationError("settings.BACKEND has not been set.\n"

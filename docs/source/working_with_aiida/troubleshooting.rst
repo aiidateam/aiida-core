@@ -47,7 +47,7 @@ Tips to ease the life of the hard drive (for large databases)
 =============================================================
 
 Those tips are useful when your database is very large, i.e. several hundreds of
-thousands of nodes and workflows or more. With such large databases the hard drive
+thousands of nodes or more. With such large databases the hard drive
 may be constantly working and the computer slowed down a lot. Below are some
 solutions to take care of the most typical reasons.
 
@@ -56,7 +56,7 @@ Repository backup
 
 The backup of the repository takes an extensively long time if it is done through
 a standard rsync or backup software, since it contains as many folders as the number
-of nodes plus the number of workflows (and each folder can contain many files!).
+of nodes (and each folder can contain many files!).
 A solution is to use instead the incremental
 backup described in the :ref:`repository backup section<repository_backup>`.
 

@@ -244,46 +244,6 @@ class CodeInfo(DefaultFieldsAttributeDict):
                        )
 
 
-class WorkflowState(Enumerate):
-    pass
-
-
-wf_states = WorkflowState((
-    'CREATED',
-    'INITIALIZED',
-    'RUNNING',
-    'FINISHED',
-    'SLEEP',
-    'ERROR'
-))
-
-
-class WorkflowDataType(Enumerate):
-    pass
-
-
-wf_data_types = WorkflowDataType((
-    'PARAMETER',
-    'RESULT',
-    'ATTRIBUTE',
-))
-
-
-class WorkflowDataValueType(Enumerate):
-    pass
-
-
-wf_data_value_types = WorkflowDataValueType((
-    'NONE',
-    'JSON',
-    'AIIDA',
-))
-
-wf_start_call = "start"
-wf_exit_call = "exit"
-wf_default_call = "none"
-
-
 class LazyStore(object):
     """
     A container that provides a mapping to objects based on a key, if the object is not

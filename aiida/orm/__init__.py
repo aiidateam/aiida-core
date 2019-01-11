@@ -16,7 +16,6 @@ from __future__ import absolute_import
 
 from .data import *
 from .data.code import Code
-from .workflow import Workflow
 
 from .authinfos import *
 from .calculation import *
@@ -37,7 +36,7 @@ log = logs
 user = users
 
 _local = 'Code', 'CalculationFactory', 'DataFactory', 'WorkflowFactory', \
-         'Workflow', 'Group', 'user', 'Computer', 'group', 'computers', 'authinfo'
+         'Group', 'user', 'Computer', 'group', 'computers', 'authinfo'
 
 __all__ = (_local +
            authinfos.__all__ +

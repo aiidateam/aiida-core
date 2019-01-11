@@ -28,7 +28,6 @@ But ``verdi`` is very versatile and provides a wealth of other functionalities; 
 * :ref:`shell<shell>`:               Start a python shell with preloaded AiiDA environment.
 * :ref:`user<user>`:                 Inspect and manage users.
 * :ref:`work<work>`:                 Inspect and manage work calculations.
-* :ref:`workflow<workflow>`:         [deprecated: since v1.0.0] Inspect and manage legacy workflows.
 
 
 Concepts
@@ -540,19 +539,3 @@ Manage work calculations.
   * **pause**: [deprecated: use ``verdi process pause`` instead] pause a work calculation
   * **play**: [deprecated: use ``verdi process play`` instead] play a paused work calculation
   * **watch**: [deprecated: use ``verdi process watch`` instead] dynamically print the state transitions for the given work calculation
-
-
-.. _workflow:
-
-``verdi workflow``
-------------------
-
-.. warning::
-  As of v1.0.0 this command is deprecated, as legacy workflows are no longer maintained
-
-Manage legacy workflows:
-
-  * **kill**: kills a workflow
-  * **list**: lists the workflows present in the database. By default, shows only the running ones
-  * **logshow**: shows the log messages for the workflow
-  * **report**: display the information on how the workflow is evolving

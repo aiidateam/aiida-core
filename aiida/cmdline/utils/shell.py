@@ -22,7 +22,6 @@ DEFAULT_MODULES_LIST = [
     ('aiida.orm.node.process', 'WorkflowNode', 'WorkflowNode'),
     ('aiida.orm.node.process', 'WorkChainNode', 'WorkChainNode'),
     ('aiida.orm.node.process', 'WorkFunctionNode', 'WorkFunctionNode'),
-    ('aiida.orm', 'load_workflow', 'load_workflow'),
     ('aiida.orm', 'Data', 'Data'),
     ('aiida.orm', 'CalculationFactory', 'CalculationFactory'),
     ('aiida.orm', 'DataFactory', 'DataFactory'),
@@ -30,7 +29,6 @@ DEFAULT_MODULES_LIST = [
     ('aiida.orm', 'Code', 'Code'),
     ('aiida.orm', 'Computer', 'Computer'),
     ('aiida.orm', 'Group', 'Group'),
-    ('aiida.orm.workflow', 'Workflow', 'Workflow'),
     ('aiida.orm', 'QueryBuilder', 'QueryBuilder'),
     ('aiida.orm.utils', 'load_node', 'load_node'),
 ]

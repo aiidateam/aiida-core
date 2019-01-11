@@ -266,10 +266,9 @@ class TestNnincDbImporter(AiidaTestCase):
         results = NnincSearchResults([{'id': upf}])
         entry = results.at(0)
 
-        with io.open(os.path.join(
-                os.path.split(aiida.__file__)[0], os.pardir,
-                "examples", "testdata", "qepseudos", "{}.UPF".format(upf))
-                , 'r', encoding='utf8') as f:
+        path_root = os.path.split(aiida.__file__)[0]
+        path_pseudos = os.path.join(path_root, 'backends', 'tests', 'fixtures', 'pseudos')
+        with io.open(os.path.join(path_pseudos, '{}.UPF'.format(upf)), 'r', encoding='utf8') as f:
             entry._contents = f.read()
 
         upfnode = entry.get_upf_node()

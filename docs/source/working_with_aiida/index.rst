@@ -89,16 +89,6 @@ Querying data
     ../querying/index.rst
 
 
-================
-Legacy workflows
-================
-
-.. toctree::
-    :maxdepth: 4
-
-    ../old_workflows/index.rst
-
-
 =======
 Backups
 =======

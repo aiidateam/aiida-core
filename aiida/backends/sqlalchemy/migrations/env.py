@@ -11,6 +11,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import with_statement
 from __future__ import absolute_import
+
 from alembic import context
 from aiida.backends.settings import IN_DOC_MODE
 
@@ -23,11 +24,11 @@ from aiida.backends.sqlalchemy.models.log import DbLog
 from aiida.backends.sqlalchemy.models.node import DbComputer, DbLink, DbNode
 from aiida.backends.sqlalchemy.models.settings import DbSetting
 from aiida.backends.sqlalchemy.models.user import DbUser
-from aiida.backends.sqlalchemy.models.workflow import (
-    DbWorkflow, DbWorkflowData, DbWorkflowStep)
+from aiida.backends.sqlalchemy.models.workflow import DbWorkflow
 from aiida.common.exceptions import DbContentError
 from aiida.backends.sqlalchemy.models.base import Base
 target_metadata = Base.metadata
+
 
 def run_migrations_offline():
     """Run migrations in 'offline' mode.
@@ -72,6 +73,7 @@ def run_migrations_online():
 
         with context.begin_transaction():
             context.run_migrations()
+
 
 if not IN_DOC_MODE:
     if context.is_offline_mode():

@@ -15,25 +15,15 @@ from __future__ import absolute_import
 import os
 
 from aiida.backends.djsite.db.models import DbNode
-from aiida.backends.djsite.db.models import DbWorkflow
 from aiida.manage.backup.backup_base import AbstractBackup, BackupError
 from aiida.common.folders import RepositoryFolder
 from aiida.orm.node import Node
-from aiida.orm.workflow import Workflow
 
 
 class Backup(AbstractBackup):
     """
     Backup for django backend
     """
-
-    def _query_first_workflow(self):
-        """
-        Query first workflow
-        :return:
-        """
-        # pylint: disable=no-member
-        return DbWorkflow.objects.all().order_by('ctime')[:1]
 
     def _query_first_node(self):
         """
@@ -56,10 +46,7 @@ class Backup(AbstractBackup):
         :param backup_end_for_this_round:
         :return:
         """
-        query_sets = [
-            DbNode.objects.filter(mtime__gte=start_of_backup, mtime__lte=backup_end_for_this_round),
-            DbWorkflow.objects.filter(mtime__gte=start_of_backup, mtime__lte=backup_end_for_this_round)
-        ]
+        query_sets = [DbNode.objects.filter(mtime__gte=start_of_backup, mtime__lte=backup_end_for_this_round)]
 
         return query_sets
 
@@ -78,9 +65,7 @@ class Backup(AbstractBackup):
         :return:
         """
         # pylint: disable=protected-access
-        if isinstance(item, DbWorkflow):
-            source_dir = os.path.normpath(RepositoryFolder(section=Workflow._section_name, uuid=item.uuid).abspath)
-        elif isinstance(item, DbNode):
+        if isinstance(item, DbNode):
             source_dir = os.path.normpath(RepositoryFolder(section=Node._section_name, uuid=item.uuid).abspath)
         else:
             # Raise exception

@@ -1811,7 +1811,7 @@ class StructureData(Data):
 
     def get_cif(self, converter='ase', store=False, **kwargs):
         """
-        Creates :py:class:`aiida.orm.data.cif.CifData`.
+        Creates :py:class:`aiida.orm.node.data.cif.CifData`.
 
         .. versionadded:: 1.0
            Renamed from _get_cif
@@ -1819,7 +1819,7 @@ class StructureData(Data):
         :param converter: specify the converter. Default 'ase'.
         :param store: If True, intermediate calculation gets stored in the
             AiiDA database for record. Default False.
-        :return: :py:class:`aiida.orm.data.cif.CifData` node.
+        :return: :py:class:`aiida.orm.node.data.cif.CifData` node.
         """
         from .parameter import ParameterData
         from . import structure  # This same module

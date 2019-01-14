@@ -97,7 +97,7 @@ class TestVerdiProfileSetup(AiidaTestCase):
 
     @with_temporary_config_instance
     def test_show(self):
-        """Test the `verdi profile show` command"""
+        """Test the `verdi profile show` command."""
         self.mock_profiles()
 
         config = get_config()
@@ -112,21 +112,16 @@ class TestVerdiProfileSetup(AiidaTestCase):
 
     @with_temporary_config_instance
     def test_delete(self):
-        """Test the `verdi profile delete` command."""
+        """Test the `verdi profile delete` command.
+
+        .. note:: we skip deleting the database as this might require sudo rights and this is tested in the CI tests
+            defined in the file `.ci/test_profile.py`
+        """
         self.mock_profiles()
 
-        result = self.cli_runner.invoke(cmd_profile.profile_delete, ['--force', self.profile_list[1]])
+        result = self.cli_runner.invoke(cmd_profile.profile_delete, ['--force', '--skip-db', self.profile_list[1]])
         self.assertClickSuccess(result)
 
         result = self.cli_runner.invoke(cmd_profile.profile_list)
         self.assertClickSuccess(result)
         self.assertNotIn(self.profile_list[1], result.output)
-
-        result = self.cli_runner.invoke(cmd_profile.profile_delete,
-                                        ['--force', self.profile_list[2], self.profile_list[3]])
-        self.assertClickSuccess(result)
-
-        result = self.cli_runner.invoke(cmd_profile.profile_list)
-        self.assertClickSuccess(result)
-        self.assertNotIn(self.profile_list[2], result.output)
-        self.assertNotIn(self.profile_list[3], result.output)

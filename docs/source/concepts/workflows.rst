@@ -913,3 +913,15 @@ However, these workchains can be updated with just a few minor updates that we w
 * The import ``aiida.work.workfunction.workfunction`` has been moved to ``aiida.work.process_function.workfunction``.
 * The ``input_group`` has been deprecated and been replaced by namespaces. See the section on :ref:`port namespaces<ports_portnamespaces>` on how to use them.
 * The use of a ``.`` (period) in output keys is not supported in ``Process.out`` because that is now reserved to indicate namespaces.
+* The method ``ArrayData.iterarrayas()`` has been renamed to ``ArrayData.get_iterarrays()``.
+* The method ``TrajectoryData._get_cif()`` has been renamed to ``TrajectoryData.get_cif()``.
+* The method ``TrajectoryData._get_aiida_structure()`` has been renamed to ``TrajectoryData.get_structure()``.
+* The method ``StructureData._get_cif()`` has been renamed to ``StructureData.get_cif()``.
+* The method ``Code.full_text_info()`` has been renamed to ``Code.get_full_text_info()``.
+* The method ``Code.is_hidden()`` has been changed and is now accessed through the ``Code.hidden`` property.
+* The method ``RemoteData.is_empty()`` has been changes and is now accessed through the ``RemoteData.is_empty``.
+* The method ``.is_alloy()`` for classes ``StructureData`` and ``Kind`` is now accessed through the ``.is_alloy`` property.
+* The method ``.has_vacancies()`` for classes ``StructureData`` and ``Kind`` is now accessed through the ``.has_vacancies`` property.
+* The arguments ``stepids`` and ``cells`` of the :meth:`TrajectoryData.set_trajectory()<aiida.orm.data.array.trajectory.TrajectoryData.set_trajectory>` method are made optional
+  which has implications on the ordering of the arguments passed to this method. 
+* The list of atomic symbols for trajectories is no longer stored as array data but is now accessible through the ``TrajectoryData.symbols`` attribute.

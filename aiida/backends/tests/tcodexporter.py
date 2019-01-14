@@ -156,7 +156,7 @@ class TestTcodDbExporter(AiidaTestCase):
             tmpf.flush()
             a = CifData(file=tmpf.name)
 
-        c = a._get_aiida_structure()
+        c = a.get_structure()
         c.store()
         pd = ParameterData()
 
@@ -249,7 +249,7 @@ class TestTcodDbExporter(AiidaTestCase):
             tmpf.flush()
             a = CifData(file=tmpf.name)
 
-        s = a._get_aiida_structure(store=True)
+        s = a.get_structure(store=True)
         val = export_values(s)
         script = val.first_block()['_tcod_file_contents'][1]
         function = '_get_aiida_structure_pymatgen_inline'

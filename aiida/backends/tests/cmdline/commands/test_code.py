@@ -146,13 +146,13 @@ class TestVerdiCodeCommands(AiidaTestCase):
         result = self.cli_runner.invoke(hide, [str(self.code.pk)])
         self.assertIsNone(result.exception, result.output)
 
-        self.assertTrue(self.code.is_hidden())
+        self.assertTrue(self.code.hidden)
 
     def test_reveal_one(self):
         result = self.cli_runner.invoke(reveal, [str(self.code.pk)])
         self.assertIsNone(result.exception, result.output)
 
-        self.assertFalse(self.code.is_hidden())
+        self.assertFalse(self.code.hidden)
 
     def test_relabel_code(self):
         result = self.cli_runner.invoke(relabel, [str(self.code.pk), 'new_code'])

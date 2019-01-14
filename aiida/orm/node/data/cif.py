@@ -425,6 +425,7 @@ class CifData(SinglefileData):
         when setting ``ase`` or ``values``, a physical CIF file is generated
         first, the values are updated from the physical CIF file.
     """
+    # pylint: disable=abstract-method, too-many-public-methods
     _set_incompatibilities = [('ase', 'file'), ('ase', 'values'), ('file', 'values')]
     _scan_types = ['standard', 'flex']
     _parse_policies = ['eager', 'lazy']
@@ -889,6 +890,30 @@ class CifData(SinglefileData):
         :param site_tolerance: This tolerance is used to determine if two sites are sitting in the same position,
             in which case they will be combined to a single disordered site. Defaults to 1e-4. (pymatgen only)
         :return: :py:class:`aiida.orm.node.data.structure.StructureData` node.
+        """
+        import warnings
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        warnings.warn(  # pylint: disable=no-member
+            'This method has been deprecated and will be renamed to get_structure() in AiiDA v1.0', DeprecationWarning)
+        return self.get_structure(converter=converter, store=store, **kwargs)
+
+    def get_structure(self, converter='pymatgen', store=False, **kwargs):
+        """
+        Creates :py:class:`aiida.orm.data.structure.StructureData`.
+
+        .. versionadded:: 1.0
+           Renamed from _get_aiida_structure
+
+        :param converter: specify the converter. Default 'pymatgen'.
+        :param store: if True, intermediate calculation gets stored in the
+            AiiDA database for record. Default False.
+        :param primitive_cell: if True, primitive cell is returned,
+            conventional cell if False. Default False.
+        :param occupancy_tolerance: If total occupancy of a site is between 1 and occupancy_tolerance,
+            the occupancies will be scaled down to 1. (pymatgen only)
+        :param site_tolerance: This tolerance is used to determine if two sites are sitting in the same position,
+            in which case they will be combined to a single disordered site. Defaults to 1e-4. (pymatgen only)
+        :return: :py:class:`aiida.orm.data.structure.StructureData` node.
         """
         from . import cif  # pylint: disable=import-self
         from aiida.orm.node.data.parameter import ParameterData

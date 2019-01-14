@@ -957,7 +957,7 @@ class StructureData(Data):
         Write the given structure to a string of format XSF (for XCrySDen).
         """
         if self.is_alloy or self.has_vacancies:
-            raise NotImplementedError("XSF for alloys or systems with " "vacancies not implemented.")
+            raise NotImplementedError("XSF for alloys or systems with vacancies not implemented.")
 
         sites = self.sites
 
@@ -1061,7 +1061,7 @@ class StructureData(Data):
         Write the given structure to a string of format XYZ.
         """
         if self.is_alloy or self.has_vacancies:
-            raise NotImplementedError("XYZ for alloys or systems with " "vacancies not implemented.")
+            raise NotImplementedError("XYZ for alloys or systems with vacancies not implemented.")
 
         sites = self.sites
         cell = self.cell
@@ -1804,7 +1804,24 @@ class StructureData(Data):
             AiiDA database for record. Default False.
         :return: :py:class:`aiida.orm.node.data.cif.CifData` node.
         """
-        from aiida.orm.node.data.parameter import ParameterData
+        import warnings
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        warnings.warn('This method has been deprecated and will be renamed to get_cif() in AiiDA v1.0', DeprecationWarning)
+        return self.get_cif(converter=converter, store=store, **kwargs)
+
+    def get_cif(self, converter='ase', store=False, **kwargs):
+        """
+        Creates :py:class:`aiida.orm.data.cif.CifData`.
+
+        .. versionadded:: 1.0
+           Renamed from _get_cif
+
+        :param converter: specify the converter. Default 'ase'.
+        :param store: If True, intermediate calculation gets stored in the
+            AiiDA database for record. Default False.
+        :return: :py:class:`aiida.orm.data.cif.CifData` node.
+        """
+        from .parameter import ParameterData
         from . import structure  # This same module
 
         param = ParameterData(dict=kwargs)

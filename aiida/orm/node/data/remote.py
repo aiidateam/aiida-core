@@ -43,6 +43,7 @@ class RemoteData(Data):
 
         raise ModificationNotAllowed("Cannot add files or directories to a RemoteData object")
 
+    @property
     def is_empty(self):
         """
         Check if remote folder is empty

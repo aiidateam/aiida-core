@@ -499,7 +499,7 @@ class TrajectoryData(ArrayData):
 
     def get_structure(self, store=False, **kwargs):
         """
-        Creates :py:class:`aiida.orm.data.structure.StructureData`.
+        Creates :py:class:`aiida.orm.node.data.structure.StructureData`.
 
         .. versionadded:: 1.0
            Renamed from _get_aiida_structure
@@ -507,7 +507,7 @@ class TrajectoryData(ArrayData):
         :param converter: specify the converter. Default 'ase'.
         :param store: If True, intermediate calculation gets stored in the
             AiiDA database for record. Default False.
-        :return: :py:class:`aiida.orm.data.structure.StructureData` node.
+        :return: :py:class:`aiida.orm.node.data.structure.StructureData` node.
         """
         from aiida.orm.node.data.parameter import ParameterData
 
@@ -528,7 +528,7 @@ class TrajectoryData(ArrayData):
 
     def get_cif(self, index=None, **kwargs):
         """
-        Creates :py:class:`aiida.orm.data.cif.CifData`
+        Creates :py:class:`aiida.orm.node.data.cif.CifData`
 
         .. versionadded:: 1.0
            Renamed from _get_cif

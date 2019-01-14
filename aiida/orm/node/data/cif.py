@@ -899,7 +899,7 @@ class CifData(SinglefileData):
 
     def get_structure(self, converter='pymatgen', store=False, **kwargs):
         """
-        Creates :py:class:`aiida.orm.data.structure.StructureData`.
+        Creates :py:class:`aiida.orm.node.data.structure.StructureData`.
 
         .. versionadded:: 1.0
            Renamed from _get_aiida_structure
@@ -913,7 +913,7 @@ class CifData(SinglefileData):
             the occupancies will be scaled down to 1. (pymatgen only)
         :param site_tolerance: This tolerance is used to determine if two sites are sitting in the same position,
             in which case they will be combined to a single disordered site. Defaults to 1e-4. (pymatgen only)
-        :return: :py:class:`aiida.orm.data.structure.StructureData` node.
+        :return: :py:class:`aiida.orm.node.data.structure.StructureData` node.
         """
         from . import cif  # pylint: disable=import-self
         from aiida.orm.node.data.parameter import ParameterData

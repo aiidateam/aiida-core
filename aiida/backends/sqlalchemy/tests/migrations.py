@@ -7,10 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Tests for the migration engine (Alembic) as well as for the AiiDA migrations
-for SQLAlchemy.
-"""
+# pylint: disable=too-many-lines
+"""Tests for the migration engine (Alembic) as well as for the AiiDA migrations for SQLAlchemy."""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -28,6 +26,7 @@ from aiida.backends.sqlalchemy import utils
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.backends.sqlalchemy.tests.utils import new_database
 from aiida.backends.testbase import AiidaTestCase
+from aiida.orm import load_node
 
 
 class TestMigrationsSQLA(AiidaTestCase):
@@ -603,6 +602,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
                                                   unknown_exp_logs_no)
 
                 # Getting the serialized legacy workflow logs
+                # yapf: disable
                 leg_wf = session.query(DbLog).filter(DbLog.objpk == leg_workf.id).filter(
                     DbLog.objname == 'aiida.workflows.user.topologicalworkflows.topo.TopologicalWorkflow'
                 ).with_entities(*cols_to_project).one()
@@ -900,5 +900,100 @@ class TestDataMoveWithinNodeMigration(TestMigrationsSQLA):
                 # The calc node by contrast should not have been changed
                 node_calc = session.query(DbNode).filter(DbNode.id == self.node_calc_id).one()
                 self.assertEqual(node_calc.type, 'node.process.calculation.calcjob.CalcJobNode.')
+            finally:
+                session.close()
+
+
+class TestTrajectoryDataMigration(TestMigrationsSQLA):
+    """Test the migration of the symbols from numpy array to attribute for TrajectoryData nodes."""
+    import numpy
+
+    migrate_from = '37f3d4882837'  # 37f3d4882837_make_all_uuid_columns_unique
+    migrate_to = 'ce56d84bcc35'  # ce56d84bcc35_delete_trajectory_symbols_array
+
+    # I create sample data
+    stepids = numpy.array([60, 70])
+    times = stepids * 0.01
+    positions = numpy.array([[[0., 0., 0.], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]], [[0., 0., 0.], [0.5, 0.5, 0.5],
+                                                                                [1.5, 1.5, 1.5]]])
+    velocities = numpy.array([[[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]], [[0.5, 0.5, 0.5], [0.5, 0.5, 0.5],
+                                                                           [-0.5, -0.5, -0.5]]])
+    cells = numpy.array([[[
+        2.,
+        0.,
+        0.,
+    ], [
+        0.,
+        2.,
+        0.,
+    ], [
+        0.,
+        0.,
+        2.,
+    ]], [[
+        3.,
+        0.,
+        0.,
+    ], [
+        0.,
+        3.,
+        0.,
+    ], [
+        0.,
+        0.,
+        3.,
+    ]]])
+
+    def setUpBeforeMigration(self):
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
+        with sa.engine.begin() as connection:
+            try:
+                session = Session(connection.engine)
+                import numpy
+                from aiida.plugins.factory import DataFactory
+
+                TrajectoryData = DataFactory('array.trajectory')  # pylint: disable=invalid-name
+                symbols = numpy.array(['H', 'O', 'C'])
+
+                # Create a TrajectoryData node
+                node = TrajectoryData()
+
+                # I set the node
+                node.set_array('steps', self.stepids)
+                node.set_array('cells', self.cells)
+                node.set_array('symbols', symbols)
+                node.set_array('positions', self.positions)
+                node.set_array('times', self.times)
+                node.set_array('velocities', self.velocities)
+
+                # Reset validate to avoid raising of validation error according to the new TrajectoryData definition
+                node._validate = lambda: True  # pylint: disable=protected-access
+
+                node.store()
+
+                self.trajectory_pk = node.pk
+            finally:
+                session.close()
+
+    def test_trajectory_symbols(self):
+        """Verify that migration of symbols from repository array to attribute works properly."""
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+        from aiida.backends.sqlalchemy.models.node import DbNode
+
+        with sa.engine.begin() as connection:
+            try:
+                session = Session(connection.engine)
+
+                trajectory = session.query(DbNode).filter(DbNode.id == self.trajectory_pk).one()
+
+                self.assertSequenceEqual(trajectory.attributes['symbols'], ['H', 'O', 'C'])
+                self.assertSequenceEqual(
+                    load_node(pk=trajectory.id).get_array('velocities').tolist(), self.velocities.tolist())
+                self.assertSequenceEqual(
+                    load_node(pk=trajectory.id).get_array('positions').tolist(), self.positions.tolist())
+                with self.assertRaises(KeyError):
+                    load_node(pk=trajectory.id).get_array('symbols')
+
             finally:
                 session.close()

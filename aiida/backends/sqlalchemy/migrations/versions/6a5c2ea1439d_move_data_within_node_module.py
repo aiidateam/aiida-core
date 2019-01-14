@@ -1,7 +1,7 @@
 """Data migration for `Data` nodes after it was moved in the `aiida.orm.node` module changing the type string.
 
 Revision ID: 6a5c2ea1439d
-Revises: 041a79fc615f
+Revises: 375c2db70663
 Create Date: 2019-01-18 19:44:32.156083
 
 """

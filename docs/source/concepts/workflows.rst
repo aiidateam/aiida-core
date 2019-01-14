@@ -922,6 +922,6 @@ However, these workchains can be updated with just a few minor updates that we w
 * The method ``RemoteData.is_empty()`` has been changes and is now accessed through the ``RemoteData.is_empty``.
 * The method ``.is_alloy()`` for classes ``StructureData`` and ``Kind`` is now accessed through the ``.is_alloy`` property.
 * The method ``.has_vacancies()`` for classes ``StructureData`` and ``Kind`` is now accessed through the ``.has_vacancies`` property.
-* The arguments ``stepids`` and ``cells`` of the :meth:`TrajectoryData.set_trajectory()<aiida.orm.data.array.trajectory.TrajectoryData.set_trajectory>` method are made optional
+* The arguments ``stepids`` and ``cells`` of the :meth:`TrajectoryData.set_trajectory()<aiida.orm.node.data.array.trajectory.TrajectoryData.set_trajectory>` method are made optional
   which has implications on the ordering of the arguments passed to this method. 
 * The list of atomic symbols for trajectories is no longer stored as array data but is now accessible through the ``TrajectoryData.symbols`` attribute.

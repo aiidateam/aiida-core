@@ -10,8 +10,10 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from six.moves import range
 
+import numpy
 import tempfile
 
 from django.apps import apps
@@ -587,3 +589,72 @@ class TestDataMoveWithinNodeMigration(TestMigrations):
 
         self.assertEqual(node_data.type, 'node.data.int.Int.')
         self.assertEqual(node_calc.type, 'node.process.calculation.calcjob.CalcJobNode.')
+
+
+class TestTrajectoryDataMigration(TestMigrations):
+
+    migrate_from = '0025_move_data_within_node_module'
+    migrate_to = '0027_delete_trajectory_symbols_array'
+
+    # I create sample data
+    stepids = numpy.array([60, 70])
+    times = stepids * 0.01
+    positions = numpy.array([[[0., 0., 0.], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]], [[0., 0., 0.], [0.5, 0.5, 0.5],
+                                                                                     [1.5, 1.5, 1.5]]])
+    velocities = numpy.array([[[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]], [[0.5, 0.5, 0.5], [0.5, 0.5, 0.5],
+                                                                                [-0.5, -0.5, -0.5]]])
+    cells = numpy.array([[[
+        2.,
+        0.,
+        0.,
+    ], [
+        0.,
+        2.,
+        0.,
+    ], [
+        0.,
+        0.,
+        2.,
+    ]], [[
+        3.,
+        0.,
+        0.,
+    ], [
+        0.,
+        3.,
+        0.,
+    ], [
+        0.,
+        0.,
+        3.,
+    ]]])
+
+    def setUpBeforeMigration(self):
+        from aiida.orm.node.data.array.trajectory import TrajectoryData
+
+        # Create a TrajectoryData node
+        node = TrajectoryData()
+        symbols = numpy.array(['H', 'O', 'C'])
+
+        # I set the node
+        node.set_array('steps', self.stepids)
+        node.set_array('cells', self.cells)
+        node.set_array('symbols', symbols)
+        node.set_array('positions', self.positions)
+        node.set_array('times', self.times)
+        node.set_array('velocities', self.velocities)
+
+        # Reset validate to avoid raising of validation error according to the new TrajectoryData definition
+        node._validate = lambda: True
+        node.store()
+
+        self.trajectory_pk = node.pk
+
+    def test_trajectory_symbols(self):
+        from aiida.orm import load_node
+        trajectory = load_node(self.trajectory_pk)
+        self.assertSequenceEqual(trajectory.get_attr('symbols'), ['H', 'O', 'C'])
+        self.assertSequenceEqual(trajectory.get_array('velocities').tolist(), self.velocities.tolist())
+        self.assertSequenceEqual(trajectory.get_array('positions').tolist(), self.positions.tolist())
+        with self.assertRaises(KeyError):
+            trajectory.get_array('symbols')

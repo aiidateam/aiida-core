@@ -1,4 +1,4 @@
-Mofidying the schema
+Modifying the schema
 ++++++++++++++++++++
 
 Django

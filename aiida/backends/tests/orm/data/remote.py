@@ -58,6 +58,6 @@ class TestRemoteData(AiidaTestCase):
 
     def test_clean(self):
         """Try cleaning a RemoteData node."""
-        self.assertFalse(self.remote.is_empty())
+        self.assertFalse(self.remote.is_empty)
         self.remote._clean()
-        self.assertTrue(self.remote.is_empty())
+        self.assertTrue(self.remote.is_empty)

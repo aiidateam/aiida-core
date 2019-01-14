@@ -14,6 +14,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
+import collections
 import six
 from six.moves import range, zip
 
@@ -50,31 +51,34 @@ class TrajectoryData(ArrayData):
         """
         import numpy
 
-        if not isinstance(stepids, numpy.ndarray) or stepids.dtype != int:
-            raise TypeError("TrajectoryData.stepids must be a numpy array of integers")
-        if not isinstance(cells, numpy.ndarray) or cells.dtype != float:
-            raise TypeError("TrajectoryData.cells must be a numpy array of floats")
-        if not isinstance(symbols, numpy.ndarray):
-            raise TypeError("TrajectoryData.symbols must be a numpy array")
+        if not isinstance(symbols, collections.Iterable):
+            raise TypeError("TrajectoryData.symbols must be of type list")
         if any([not isinstance(i, six.string_types) for i in symbols]):
-            raise TypeError("TrajectoryData.symbols must be a numpy array of strings")
+            raise TypeError("TrajectoryData.symbols must be a 1d list of strings")
         if not isinstance(positions, numpy.ndarray) or positions.dtype != float:
             raise TypeError("TrajectoryData.positions must be a numpy array of floats")
+        if stepids is not None:
+            if not isinstance(stepids, numpy.ndarray) or stepids.dtype != int:
+                raise TypeError("TrajectoryData.stepids must be a numpy array of integers")
+        if cells is not None:
+            if not isinstance(cells, numpy.ndarray) or cells.dtype != float:
+                raise TypeError("TrajectoryData.cells must be a numpy array of floats")
         if times is not None:
             if not isinstance(times, numpy.ndarray) or times.dtype != float:
                 raise TypeError("TrajectoryData.times must be a numpy array of floats")
         if velocities is not None:
             if not isinstance(velocities, numpy.ndarray) or velocities.dtype != float:
                 raise TypeError("TrajectoryData.velocities must be a numpy array of floats, or None")
-
-        numsteps = stepids.size
-        if stepids.shape != (numsteps,):
-            raise ValueError("TrajectoryData.stepids must be a 1d array")
-        if cells.shape != (numsteps, 3, 3):
-            raise ValueError("TrajectoryData.cells must have shape (s,3,3), with s=number of steps")
-        numatoms = symbols.size
-        if symbols.shape != (numatoms,):
-            raise ValueError("TrajectoryData.symbols must be a 1d array")
+        if stepids is not None:
+            numsteps = stepids.size
+            if stepids.shape != (numsteps,):
+                raise ValueError("TrajectoryData.stepids must be a 1d array")
+        else:
+            numsteps = positions.shape[0]
+        if cells is not None:
+            if cells.shape != (numsteps, 3, 3):
+                raise ValueError("TrajectoryData.cells must have shape (s,3,3), " "with s=number of steps")
+        numatoms = len(symbols)
         if positions.shape != (numsteps, numatoms, 3):
             raise ValueError("TrajectoryData.positions must have shape (s,n,3), "
                              "with s=number of steps and n=number of symbols")
@@ -87,33 +91,20 @@ class TrajectoryData(ArrayData):
                                  "have shape (s,n,3), "
                                  "with s=number of steps and n=number of symbols")
 
-    def set_trajectory(self, stepids, cells, symbols, positions, times=None, velocities=None):  # pylint: disable=too-many-arguments
+    def set_trajectory(self, symbols, positions, stepids=None, cells=None, times=None, velocities=None):  # pylint: disable=too-many-arguments
         r"""
         Store the whole trajectory, after checking that types and dimensions
         are correct.
-        Velocities are optional, if they are not passed, nothing is stored.
 
-        :param stepids: integer array with dimension ``s``, where ``s`` is the
-                      number of steps. Typically represents an internal counter
-                      within the code. For instance, if you want to store a
-                      trajectory with one step every 10, starting from step 65,
-                      the array will be ``[65,75,85,...]``.
-                      No checks are done on duplicate elements
-                      or on the ordering, but anyway this array should be
-                      sorted in ascending order, without duplicate elements.
-                      If your code does not provide an internal counter, just
-                      provide for instance ``arange(s)``.
-                      It is internally stored as an array named 'steps'.
-        :param cells: float array with dimension :math:`s \times 3 \times 3`,
-                      where ``s`` is the
-                      length of the ``stepids`` array. Units are angstrom.
-                      In particular,
-                      ``cells[i,j,k]`` is the ``k``-th component of the ``j``-th
-                      cell vector at the time step with index ``i`` (identified
-                      by step number ``stepid[i]`` and with timestamp ``times[i]``).
-        :param symbols: string array with dimension ``n``, where ``n`` is the
+        Parameters ``stepids``, ``cells`` and ``velocities`` are optional
+        variables. If nothing is passed for ``cells`` or ``velocities``
+        nothing will be stored. However, if no input is given for ``stepids``
+        a consecutive sequence [0,1,2,...,len(positions)-1] will be assumed.
+
+
+        :param symbols: string list with dimension ``n``, where ``n`` is the
                       number of atoms (i.e., sites) in the structure.
-                      The same array is used for each step. Normally, the string
+                      The same list is used for each step. Normally, the string
                       should be a valid chemical symbol, but actually any unique
                       string works and can be used as the name of the atomic kind
                       (see also the :py:meth:`.get_step_structure()` method).
@@ -126,6 +117,23 @@ class TrajectoryData(ArrayData):
                       ``j``-th atom (or site) in the structure at the time step
                       with index ``i`` (identified
                       by step number ``step[i]`` and with timestamp ``times[i]``).
+        :param stepids: integer array with dimension ``s``, where ``s`` is the
+                      number of steps. Typically represents an internal counter
+                      within the code. For instance, if you want to store a
+                      trajectory with one step every 10, starting from step 65,
+                      the array will be ``[65,75,85,...]``.
+                      No checks are done on duplicate elements
+                      or on the ordering, but anyway this array should be
+                      sorted in ascending order, without duplicate elements.
+                      (If not specified, stepids will be set to ``numpy.arange(s)``
+                      by default) It is internally stored as an array named 'steps'.
+        :param cells: if specified float array with dimension
+                      :math:`s \times 3 \times 3`, where ``s`` is the
+                      length of the ``stepids`` array. Units are angstrom.
+                      In particular, ``cells[i,j,k]`` is the ``k``-th component
+                      of the ``j``-th cell vector at the time step with index
+                      ``i`` (identified by step number ``stepid[i]`` and with
+                      timestamp ``times[i]``).
         :param times: if specified, float array with dimension ``s``, where
                       ``s`` is the length of the ``stepids`` array. Contains the
                       timestamp of each step in picoseconds (ps).
@@ -135,11 +143,25 @@ class TrajectoryData(ArrayData):
 
         .. todo :: Choose suitable units for velocities
         """
+
+        import numpy
+
         self._internal_validate(stepids, cells, symbols, positions, times, velocities)
-        self.set_array('steps', stepids)
-        self.set_array('cells', cells)
-        self.set_array('symbols', symbols)
+        # set symbols as attribute for easier querying
+        self._set_attr('symbols', list(symbols))
         self.set_array('positions', positions)
+        if stepids is not None:  # use input stepids
+            self.set_array('steps', stepids)
+        else:  # use consecutive sequence if not given
+            self.set_array('steps', numpy.arange(positions.shape[0]))
+        if cells is not None:
+            self.set_array('cells', cells)
+        else:
+            # Delete cells array, if it was present
+            try:
+                self.delete_array('cells')
+            except KeyError:
+                pass
         if times is not None:
             self.set_array('times', times)
         else:
@@ -176,9 +198,9 @@ class TrajectoryData(ArrayData):
         for symbols_now in [[str(s.kind_name) for s in structurelist[i].sites] for i in stepids]:
             if symbols_first != symbols_now:
                 raise ValueError("Symbol lists have to be the same for all of the supplied structures")
-        symbols = numpy.array(symbols_first)
+        symbols = list(symbols_first)
         positions = numpy.array([[list(s.position) for s in x.sites] for x in structurelist])
-        self.set_trajectory(stepids, cells, symbols, positions)
+        self.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions)
 
     def _validate(self):
         """
@@ -189,7 +211,7 @@ class TrajectoryData(ArrayData):
         from aiida.common.exceptions import ValidationError
 
         try:
-            self._internal_validate(self.get_stepids(), self.get_cells(), self.get_symbols(), self.get_positions(),
+            self._internal_validate(self.get_stepids(), self.get_cells(), self.symbols, self.get_positions(),
                                     self.get_times(), self.get_velocities())
         # Should catch TypeErrors, ValueErrors, and KeyErrors for missing arrays
         except Exception as exception:
@@ -212,7 +234,7 @@ class TrajectoryData(ArrayData):
         Return the number of stored sites, or zero if nothing has been stored yet.
         """
         try:
-            return self.get_shape('symbols')[0]
+            return len(self.symbols)
         except (AttributeError, KeyError, IndexError):
             return 0
 
@@ -244,15 +266,19 @@ class TrajectoryData(ArrayData):
 
         :raises KeyError: if the trajectory has not been set yet.
         """
-        return self.get_array('cells')
+        try:
+            return self.get_array('cells')
+        except (AttributeError, KeyError):
+            return None
 
-    def get_symbols(self):
+    @property
+    def symbols(self):
         """
         Return the array of symbols, if it has already been set.
 
         :raises KeyError: if the trajectory has not been set yet.
         """
-        return self.get_array('symbols')
+        return self.get_attr('symbols')
 
     def get_positions(self):
         """
@@ -331,8 +357,10 @@ class TrajectoryData(ArrayData):
         time = self.get_times()
         if time is not None:
             time = time[index]
-        return (self.get_stepids()[index], time, self.get_cells()[index, :, :], self.get_symbols(),
-                self.get_positions()[index, :, :], vel)
+        cells = self.get_cells()
+        if cells is not None:
+            cell = cells[index, :, :]
+        return (self.get_stepids()[index], time, cell, self.symbols, self.get_positions()[index, :, :], vel)
 
     def get_step_structure(self, index, custom_kinds=None):
         """
@@ -406,8 +434,10 @@ class TrajectoryData(ArrayData):
         if structure.is_alloy or structure.has_vacancies:
             raise NotImplementedError("XSF for alloys or systems with vacancies not implemented.")
         cells = self.get_cells()
+        if cells is None:
+            raise ValueError("No cell parameters have been supplied for " "TrajectoryData")
         positions = self.get_positions()
-        symbols = self.get_symbols()
+        symbols = self.symbols
         atomic_numbers_list = [_atomic_numbers[s] for s in symbols]
         nat = len(symbols)
 
@@ -461,6 +491,24 @@ class TrajectoryData(ArrayData):
             AiiDA database for record. Default False.
         :return: :py:class:`aiida.orm.node.data.structure.StructureData` node.
         """
+        import warnings
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        warnings.warn(  # pylint: disable=no-member
+            'This method has been deprecated and will be renamed to get_structure() in AiiDA v1.0', DeprecationWarning)
+        return self.get_structure(store=store, **kwargs)
+
+    def get_structure(self, store=False, **kwargs):
+        """
+        Creates :py:class:`aiida.orm.data.structure.StructureData`.
+
+        .. versionadded:: 1.0
+           Renamed from _get_aiida_structure
+
+        :param converter: specify the converter. Default 'ase'.
+        :param store: If True, intermediate calculation gets stored in the
+            AiiDA database for record. Default False.
+        :return: :py:class:`aiida.orm.data.structure.StructureData` node.
+        """
         from aiida.orm.node.data.parameter import ParameterData
 
         param = ParameterData(dict=kwargs)
@@ -472,8 +520,21 @@ class TrajectoryData(ArrayData):
         """
         Creates :py:class:`aiida.orm.node.data.cif.CifData`
         """
-        struct = self._get_aiida_structure(index=index, **kwargs)
-        cif = struct._get_cif(**kwargs)  # pylint: disable=protected-access
+        import warnings
+        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
+        warnings.warn(  # pylint: disable=no-member
+            'This method has been deprecated and will be renamed to get_cif() in AiiDA v1.0', DeprecationWarning)
+        return self.get_cif(index=index, **kwargs)
+
+    def get_cif(self, index=None, **kwargs):
+        """
+        Creates :py:class:`aiida.orm.data.cif.CifData`
+
+        .. versionadded:: 1.0
+           Renamed from _get_cif
+        """
+        struct = self.get_structure(index=index, **kwargs)
+        cif = struct.get_cif(**kwargs)  # pylint: disable=protected-access
         return cif
 
     def _parse_xyz_pos(self, inputstring):
@@ -574,7 +635,7 @@ class TrajectoryData(ArrayData):
         # Reading the arrays I need:
         positions = self.get_positions()
         times = self.get_times()
-        symbols = self.get_symbols()
+        symbols = self.symbols
 
         # Try to get the units.
         try:
@@ -703,11 +764,15 @@ class TrajectoryData(ArrayData):
         except KeyError:
             pass
 
-        symbols = self.get_symbols()
+        symbols = self.symbols
         if elements is None:
             elements = set(symbols)
 
-        cell = np.array(self.get_cells()[0])
+        cells = self.get_cells()
+        if cells is None:
+            raise ValueError("No cell parameters have been supplied for " "TrajectoryData")
+        else:
+            cell = np.array(cells[0])
         storage_dict = {s: {} for s in elements}
         for ele in elements:
             storage_dict[ele] = [np.array([]), np.array([]), np.array([])]

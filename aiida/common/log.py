@@ -175,7 +175,7 @@ def evaluate_logging_configuration(dictionary):
     for key, value in dictionary.items():
         if isinstance(value, collections.Mapping):
             result[key] = evaluate_logging_configuration(value)
-        elif isinstance(value, types.LambdaType):
+        elif isinstance(value, types.LambdaType):  # pylint: disable=no-member
             result[key] = value()
         else:
             result[key] = value

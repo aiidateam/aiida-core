@@ -78,9 +78,6 @@
         aiida/backends/sqlalchemy/queries.py|
         aiida/backends/sqlalchemy/tests/generic.py|
         aiida/backends/sqlalchemy/tests/__init__.py|
-        aiida/backends/sqlalchemy/tests/migrations.py|
-        aiida/backends/sqlalchemy/tests/migration_test/versions/470e57bc0936_create_account_table.py|
-        aiida/backends/sqlalchemy/tests/migration_test/versions/b947a8821295_add_a_column.py|
         aiida/backends/sqlalchemy/tests/nodes.py|
         aiida/backends/sqlalchemy/tests/query.py|
         aiida/backends/sqlalchemy/tests/schema.py|

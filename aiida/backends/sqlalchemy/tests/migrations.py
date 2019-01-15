@@ -7,6 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+Tests for the migration engine (Alembic) as well as for the AiiDA migrations
+for SQLAlchemy.
+"""
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
@@ -21,17 +25,10 @@ from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy import utils
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.backends.sqlalchemy.tests.utils import new_database
-from aiida.backends.sqlalchemy.utils import get_migration_head, get_db_schema_version
 from aiida.backends.testbase import AiidaTestCase
 
 
-alembic_root = os.path.join(os.path.dirname(__file__), 'migrations', 'alembic')
-
-
-TEST_ALEMBIC_REL_PATH = 'migration_test'
-
-
-class TestMigrationApplicationSQLA(AiidaTestCase):
+class TestMigrationsSQLA(AiidaTestCase):
     """
     This class contains tests for the migration mechanism of SQLAlchemy called
     alembic. It checks if the migrations can be applied and removed correctly.
@@ -43,114 +40,215 @@ class TestMigrationApplicationSQLA(AiidaTestCase):
     # the testing)
     alembic_dpath = None
 
+    migrate_from = None
+    migrate_to = None
+
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        super(TestMigrationApplicationSQLA, cls).setUpClass(*args, **kwargs)
-        cls.migr_method_dir_path = os.path.dirname(
-            os.path.realpath(utils.__file__))
+        """
+        Prepare the test class with the alembivc configuration
+        """
+        super(TestMigrationsSQLA, cls).setUpClass(*args, **kwargs)
+        cls.migr_method_dir_path = os.path.dirname(os.path.realpath(utils.__file__))
+        alembic_dpath = os.path.join(cls.migr_method_dir_path, utils.ALEMBIC_REL_PATH)
+        cls.alembic_cfg = Config()
+        cls.alembic_cfg.set_main_option('script_location', alembic_dpath)
 
     def setUp(self):
-        self.migrate_db_with_non_testing_migrations("base")
-
-    def tearDown(self):
-        self.migrate_db_with_non_testing_migrations("head")
-
-    def migrate_db_with_non_testing_migrations(self, destination):
-        if destination not in ["head", "base"]:
-            raise TypeError("Only head & base are accepted as destination "
-                            "values.")
-        # Set the alembic script directory location
-        self.alembic_dpath = os.path.join(self.migr_method_dir_path,
-                                     utils.ALEMBIC_REL_PATH)
-        alembic_cfg = Config()
-        alembic_cfg.set_main_option('script_location', self.alembic_dpath)
-
-        # Undo all previous real migration of the database
-        with sa.engine.begin() as connection:
-            alembic_cfg.attributes['connection'] = connection
-            if destination == "head":
-                command.upgrade(alembic_cfg, "head")
-            else:
-                command.downgrade(alembic_cfg, "base")
-
-    def test_migrations_forward_backward(self):
         """
-        This is a very broad test that checks that the migration mechanism
-        works. More specifically, it checks that::
-
-            - Alembic database migrations to specific versions work (upgrade &
-              downgrade)
-
-            - The methods that are checking the database schema version and perform
-              the migration procedure to the last version work correctly.
-
+        Go to the migrate_from revision, applhy setUpBeforeMigration, then
+        run the migration.
         """
-        from aiida.backends.sqlalchemy.tests.migration_test import versions
-        from aiida.backends.sqlalchemy.utils import migrate_database
+        super(TestMigrationsSQLA, self).setUp()
+        from aiida.orm import autogroup
+
+        self.current_autogroup = autogroup.current_autogroup
+        autogroup.current_autogroup = None
+        assert self.migrate_from and self.migrate_to, \
+            "TestCase '{}' must define migrate_from and migrate_to properties".format(type(self).__name__)
 
         try:
-            # Constructing the versions directory
-            versions_dpath = os.path.join(
-                os.path.dirname(versions.__file__))
+            self.migrate_db_down(self.migrate_from)
+            self.setUpBeforeMigration()
+            self.migrate_db_up(self.migrate_to)
+        except Exception:
+            # Bring back the DB to the correct state if this setup part fails
+            self._reset_database_and_schema()
+            raise
 
-            # Setting dynamically the the path to the alembic configuration
-            # (this is where the env.py file can be found)
-            alembic_cfg = Config()
-            alembic_cfg.set_main_option('script_location', self.alembic_dpath)
-            # Setting dynamically the versions directory. These are the
-            # migration scripts to pass from one version to the other. The
-            # default ones are overridden with test-specific migrations.
-            alembic_cfg.set_main_option('version_locations', versions_dpath)
+    def migrate_db_up(self, destination):
+        """
+        Perform a migration upwards (upgrade) with alembic
 
-            # Using the connection initialized by the tests
-            with sa.engine.begin() as connection:
-                alembic_cfg.attributes['connection'] = connection
+        :param destination: the name of the destination migration
+        """
+        # Undo all previous real migration of the database
+        with sa.engine.begin() as connection:
+            self.alembic_cfg.attributes['connection'] = connection  # pylint: disable=unsupported-assignment-operation
+            command.upgrade(self.alembic_cfg, destination)
 
-                self.assertIsNone(get_db_schema_version(alembic_cfg),
-                                  "The initial database version should be "
-                                  "None (no version) since the test setUp "
-                                  "method should undo all migrations")
-            # Migrate the database to the latest version
-            migrate_database(alembic_cfg=alembic_cfg)
-            with sa.engine.begin() as connection:
-                alembic_cfg.attributes['connection'] = connection
-                self.assertEquals(get_db_schema_version(alembic_cfg),
-                                  get_migration_head(alembic_cfg),
-                                  "The latest database version is not the "
-                                  "expected one.")
-            with sa.engine.begin() as connection:
-                alembic_cfg.attributes['connection'] = connection
-                # Migrating the database to the base version
-                command.downgrade(alembic_cfg, "base")
-                self.assertIsNone(get_db_schema_version(alembic_cfg),
-                                  "The database version is not the expected "
-                                  "one. It should be None (initial).")
+    def migrate_db_down(self, destination):
+        """
+        Perform a migration downwards (downgrade) with alembic
 
-        except Exception as test_ex:
-            # If there is an exception, clean the alembic related tables
-            from sqlalchemy.engine import reflection
+        :param destination: the name of the destination migration
+        """
+        with sa.engine.begin() as connection:
+            self.alembic_cfg.attributes['connection'] = connection  # pylint: disable=unsupported-assignment-operation
+            command.downgrade(self.alembic_cfg, destination)
 
-            # Getting the current database table names
-            inspector = reflection.Inspector.from_engine(
-                sa.get_scoped_session().bind)
-            db_table_names = set(inspector.get_table_names())
-            # The alembic related database names
-            alemb_table_names = set(['account', 'alembic_version'])
+    def tearDown(self):
+        """
+        Resets both the database content and the schema to prepare for the
+        next test
+        """
+        from aiida.orm import autogroup
+        self._reset_database_and_schema()
+        autogroup.current_autogroup = self.current_autogroup
+        super(TestMigrationsSQLA, self).tearDown()
 
-            # Get the intersection of the above tables
-            tables_to_drop = set.intersection(db_table_names,
-                                              alemb_table_names)
-            # Delete only the tables that exist
-            for table in tables_to_drop:
-                try:
-                    with sa.engine.begin() as connection:
-                        connection.execute('DROP TABLE {};'.format(table))
-                except Exception as db_ex:
-                    print("The following error occured during the cleaning of"
-                          "the database: {}".format(db_ex))
-            # Since the database cleaning is over, raise the test
-            # exception that was caught
-            raise test_ex
+    def setUpBeforeMigration(self):  # pylint: disable=invalid-name
+        """
+        Anything to do before running the migrations.
+        This is typically implemented in test subclasses.
+        """
+
+    def _reset_database_and_schema(self):
+        """
+        Bring back the DB to the correct state.
+
+        It is important to also reset the database content to avoid hanging
+        of tests.
+        """
+        self.reset_database()
+        self.migrate_db_up("head")
+
+    @property
+    def current_rev(self):
+        """
+        Utility method to get the current revision string
+        """
+        from alembic.migration import MigrationContext  # pylint: disable=import-error
+        with sa.engine.begin() as connection:
+            context = MigrationContext.configure(connection)
+            current_rev = context.get_current_revision()
+        return current_rev
+
+    @staticmethod
+    def get_auto_base():
+        """
+        Return the automap_base class that automatically inspects the current
+        database and return SQLAlchemy Models.
+
+        Note that these are NOT the ones in AiiDA SQLAlchemy models, so do not
+        have the special methods that we define there (like .save()).
+        """
+        from alembic.migration import MigrationContext  # pylint: disable=import-error
+        from sqlalchemy.ext.automap import automap_base  # pylint: disable=import-error,no-name-in-module
+
+        with sa.engine.begin() as connection:
+            context = MigrationContext.configure(connection)
+            bind = context.bind
+
+            base = automap_base()
+            # reflect the tables
+            base.prepare(bind.engine, reflect=True)
+
+            return base
+
+
+class TestMigrationEngine(TestMigrationsSQLA):
+    """
+    Just a simple test to verify that the TestMigrationsSQLA class indeed
+    works and moves between the expected migration revisions
+    """
+    migrate_from = 'b8b23ddefad4'  # b8b23ddefad4_dbgroup_name_to_label_type_to_type_string.py
+    migrate_to = 'e72ad251bcdb'  # e72ad251bcdb_dbgroup_class_change_type_string_values.py
+
+    def setUpBeforeMigration(self):
+        """
+        Cache the start revision
+        """
+        self.start_revision = self.current_rev
+
+    def test_revision_numbers(self):
+        """
+        Check that we went to the correct version
+        """
+        self.assertEqual(self.start_revision, self.migrate_from)
+        self.assertEqual(self.current_rev, self.migrate_to)
+
+
+class TestGroupRenamingMigration(TestMigrationsSQLA):
+    """
+    Test the migration that renames the DbGroup type strings
+    """
+    # b8b23ddefad4_dbgroup_name_to_label_type_to_type_string.py
+    # e72ad251bcdb_dbgroup_class_change_type_string_values.py
+    migrate_from = 'b8b23ddefad4'  # b8b23ddefad4_dbgroup_name_to_label_type_to_type_string.py
+    migrate_to = 'e72ad251bcdb'  # e72ad251bcdb_dbgroup_class_change_type_string_values.py
+
+    def setUpBeforeMigration(self):
+        """
+        Create the DbGroups with the old type strings
+        """
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
+        # Create group
+        DbGroup = self.get_auto_base().classes.db_dbgroup  # pylint: disable=invalid-name
+        DbUser = self.get_auto_base().classes.db_dbuser  # pylint: disable=invalid-name
+
+        with sa.engine.begin() as connection:
+            session = Session(connection.engine)
+            default_user = DbUser(is_superuser=False, email="{}@aiida.net".format(self.id()))
+            session.add(default_user)
+            session.commit()
+
+            # test user group type_string: '' -> 'user'
+            group_user = DbGroup(label='test_user_group', user_id=default_user.id, type_string='')
+            session.add(group_user)
+            # test data.upf group type_string: 'data.upf.family' -> 'data.upf'
+            group_data_upf = DbGroup(
+                label='test_data_upf_group', user_id=default_user.id, type_string='data.upf.family')
+            session.add(group_data_upf)
+            # test auto.import group type_string: 'aiida.import' -> 'auto.import'
+            group_autoimport = DbGroup(label='test_import_group', user_id=default_user.id, type_string='aiida.import')
+            session.add(group_autoimport)
+            # test auto.run group type_string: 'autogroup.run' -> 'auto.run'
+            group_autorun = DbGroup(label='test_autorun_group', user_id=default_user.id, type_string='autogroup.run')
+            session.add(group_autorun)
+
+            session.commit()
+            self.group_user_pk = group_user.id
+            self.group_data_upf_pk = group_data_upf.id
+            self.group_autoimport_pk = group_autoimport.id
+            self.group_autorun_pk = group_autorun.id
+
+    def test_group_string_update(self):
+        """
+        Test that the type strings are properly migrated
+        """
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+        DbGroup = self.get_auto_base().classes.db_dbgroup  # pylint: disable=invalid-name
+
+        with sa.engine.begin() as connection:
+            session = Session(connection.engine)
+
+            # test user group type_string: '' -> 'user'
+            group_user = session.query(DbGroup).filter(DbGroup.id == self.group_user_pk).one()
+            self.assertEqual(group_user.type_string, 'user')
+
+            # test data.upf group type_string: 'data.upf.family' -> 'data.upf'
+            group_data_upf = session.query(DbGroup).filter(DbGroup.id == self.group_data_upf_pk).one()
+            self.assertEqual(group_data_upf.type_string, 'data.upf')
+
+            # test auto.import group type_string: 'aiida.import' -> 'auto.import'
+            group_autoimport = session.query(DbGroup).filter(DbGroup.id == self.group_autoimport_pk).one()
+            self.assertEqual(group_autoimport.type_string, 'auto.import')
+
+            # test auto.run group type_string: 'autogroup.run' -> 'auto.run'
+            group_autorun = session.query(DbGroup).filter(DbGroup.id == self.group_autorun_pk).one()
+            self.assertEqual(group_autorun.type_string, 'auto.run')
 
 
 class TestMigrationSchemaVsModelsSchema(unittest.TestCase):
@@ -178,15 +276,12 @@ class TestMigrationSchemaVsModelsSchema(unittest.TestCase):
         from sqlalchemydiff.util import get_temporary_uri
         from aiida.backends.sqlalchemy.migrations import versions
 
-        self.migr_method_dir_path = os.path.dirname(
-            os.path.realpath(utils.__file__))
+        self.migr_method_dir_path = os.path.dirname(os.path.realpath(utils.__file__))
         # Set the alembic script directory location
-        self.alembic_dpath = os.path.join(self.migr_method_dir_path,
-                                     utils.ALEMBIC_REL_PATH)
+        self.alembic_dpath = os.path.join(self.migr_method_dir_path, utils.ALEMBIC_REL_PATH)
 
         # Constructing the versions directory
-        versions_dpath = os.path.join(
-            os.path.dirname(versions.__file__))
+        versions_dpath = os.path.join(os.path.dirname(versions.__file__))
 
         # Setting dynamically the the path to the alembic configuration
         # (this is where the env.py file can be found)
@@ -206,8 +301,7 @@ class TestMigrationSchemaVsModelsSchema(unittest.TestCase):
         self.db_url_right = get_temporary_uri(str(curr_db_url))
 
         # Put the correct database url to the database used by alembic
-        self.alembic_cfg_left.set_main_option("sqlalchemy.url",
-                                              self.db_url_left)
+        self.alembic_cfg_left.set_main_option("sqlalchemy.url", self.db_url_left)
 
         # Database creation
         new_database(self.db_url_left)
@@ -218,28 +312,25 @@ class TestMigrationSchemaVsModelsSchema(unittest.TestCase):
         destroy_database(self.db_url_left)
         destroy_database(self.db_url_right)
 
-    def test_model_and_migration_schemas_are_the_same(self):
+    def test_model_and_migration_schemas_are_the_same(self):  # pylint: disable=invalid-name
         """Compare two databases.
 
         Compares the database obtained with all migrations against the
         one we get out of the models.  It produces a text file with the
         results to help debug differences.
         """
-        from sqlalchemy.engine import create_engine
+        from sqlalchemy.engine import create_engine  # pylint: disable=import-error,no-name-in-module
         from sqlalchemydiff import compare
 
         with create_engine(self.db_url_left).begin() as connection:
-            self.alembic_cfg_left.attributes['connection'] = connection
+            self.alembic_cfg_left.attributes['connection'] = connection  # pylint: disable=unsupported-assignment-operation
             command.upgrade(self.alembic_cfg_left, "head")
 
         engine_right = create_engine(self.db_url_right)
         Base.metadata.create_all(engine_right)
         engine_right.dispose()
 
-        result = compare(
-            self.db_url_left, self.db_url_right, set(['alembic_version']))
+        result = compare(self.db_url_left, self.db_url_right, set(['alembic_version']))
 
-        self.assertTrue(result.is_match,
-                        "The migration database doesn't match to the one "
-                        "created by the models.\nDifferences: " +
-                        result._dump_data(result.errors))
+        self.assertTrue(result.is_match, "The migration database doesn't match to the one "
+                        "created by the models.\nDifferences: " + result._dump_data(result.errors))  # pylint: disable=protected-access

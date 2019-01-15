@@ -14,6 +14,7 @@ from __future__ import absolute_import
 from contextlib import contextmanager
 
 from aiida.orm.implementation.sql import SqlBackend
+from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models import base
 from aiida.backends.sqlalchemy.queries import SqlaQueryManager
 from . import authinfo
@@ -107,3 +108,19 @@ class SqlaBackend(SqlBackend[base.Base]):
             yield connection.cursor()
         finally:
             self.get_connection().close()
+
+    @contextmanager
+    def transaction(self):
+        session = get_scoped_session()
+        nested = session.transaction.nested
+        try:
+            session.begin_nested()
+            yield session
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            if not nested:
+                # Make sure to commit the outermost session
+                session.commit()

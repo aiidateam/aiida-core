@@ -186,6 +186,10 @@ If you need to change the database schema follow these steps:
    as you run your first verdi command. You can also migrate it manually with
    the help of the alembic_manage.py script as you can see below.
 
+5. Prepare tests for your migrations. An example of a test can be found here:
+   ``aiida_core/aiida/backends/sqlalchemy/tests/migrations.py``
+
+
 Overview of alembic_manage.py commands
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 The alembic_manage.py provides several options to control your SQLAlchemy

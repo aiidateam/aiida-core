@@ -12,7 +12,6 @@ import datetime
 import six
 
 from aiida.common.datastructures import CalcJobState
-from aiida.common.exceptions import MissingPluginError
 from aiida.common.lang import classproperty
 from aiida.common.utils import str_timedelta
 from aiida.plugins.loader import get_plugin_type_from_type_string
@@ -22,7 +21,7 @@ from aiida.common import timezone
 
 from .calculation import CalculationNode
 
-__all__ = ('CalcJobNode', 'CalculationResultManager')
+__all__ = ('CalcJobNode', )
 
 SEALED_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
 CALC_JOB_STATE_KEY = 'attributes.state'
@@ -98,7 +97,8 @@ class CalcJobNode(CalculationNode):
         return super(CalcJobNode, self).get_hash(
             ignore_errors=ignore_errors, ignored_folder_content=ignored_folder_content, **kwargs)
 
-    def process(self):
+    @property
+    def process_class(self):
         """Return the CalcJob class that was used to create this node.
 
         :return: CalcJob class
@@ -116,7 +116,7 @@ class CalcJobNode(CalculationNode):
             raise ValueError('process type for CalcJobNode<{}> contains an invalid entry point string: {}'.format(
                 self.pk, self.process_type))
         except (MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError) as exception:
-            raise ValueError('could not process class for {} for CalcJobNode<{}>: {}'.format(
+            raise ValueError('could not load process class for entry point {} for CalcJobNode<{}>: {}'.format(
                 self.pk, self.process_type, exception))
 
         return process_class
@@ -139,13 +139,13 @@ class CalcJobNode(CalculationNode):
         """
         from aiida.work.ports import PortNamespace
 
-        process = self.process()
+        process_class = self.process_class
         inputs = self.get_incoming()
         options = self.get_options()
-        builder = process.get_builder()
+        builder = process_class.get_builder()
 
-        for port_name, port in self.process().spec().inputs.items():
-            if port_name == process.spec().metadata_key:
+        for port_name, port in process_class.spec().inputs.items():
+            if port_name == process_class.spec().metadata_key:
                 builder.metadata.options = options
             elif isinstance(port, PortNamespace):
                 namespace = port_name + '_'
@@ -222,7 +222,7 @@ class CalcJobNode(CalculationNode):
     @property
     def options(self):
         try:
-            return self.process().spec().inputs._ports['metadata']['options']
+            return self.process_class.spec().inputs._ports['metadata']['options']
         except ValueError:
             return {}
 
@@ -270,6 +270,18 @@ class CalcJobNode(CalculationNode):
         for name, value in options.items():
             self.set_option(name, value)
 
+    def get_state(self):
+        """Return the state of the calculation job.
+
+        :return: the calculation job state
+        """
+        state = self.get_attr(self.CALC_JOB_STATE_KEY, None)
+
+        if state:
+            return CalcJobState(state)
+
+        return None
+
     def _set_state(self, state):
         """
         Set the state of the calculation job.
@@ -282,18 +294,12 @@ class CalcJobNode(CalculationNode):
 
         self._set_attr(self.CALC_JOB_STATE_KEY, state.value)
 
-    def get_state(self):
-        """
-        Return the state of the calculation job.
-
-        :return: the calculation job state
-        """
-        state = self.get_attr(self.CALC_JOB_STATE_KEY, None)
-
-        if state:
-            return CalcJobState(state)
-
-        return None
+    def _del_state(self):
+        """Delete the calculation job state attribute if it exists."""
+        try:
+            self._del_attr(self.CALC_JOB_STATE_KEY)
+        except AttributeError:
+            pass
 
     def _set_remote_workdir(self, remote_workdir):
         self._set_attr('remote_workdir', remote_workdir)
@@ -503,13 +509,14 @@ class CalcJobNode(CalculationNode):
         """
         To be used to get direct access to the parsed parameters.
 
-        :return: an instance of the CalculationResultManager.
+        :return: an instance of the CalcJobResultManager.
 
         :note: a practical example on how it is meant to be used: let's say that there is a key 'energy'
-          in the dictionary of the parsed results which contains a list of floats.
-          The command `calc.res.energy` will return such a list.
+            in the dictionary of the parsed results which contains a list of floats.
+            The command `calc.res.energy` will return such a list.
         """
-        return CalculationResultManager(self)
+        from aiida.orm.utils.calcjob import CalcJobResultManager
+        return CalcJobResultManager(self)
 
     def get_scheduler_output(self):
         """
@@ -936,83 +943,3 @@ class CalcJobNode(CalculationNode):
             returnresult = qb.all()
             returnresult = next(zip(*returnresult))
         return returnresult
-
-
-class CalculationResultManager(object):
-    """
-    An object used internally to interface the calculation object with the Parser
-    and consequentially with the ParameterData object result.
-    It shouldn't be used explicitly by a user.
-    """
-
-    def __init__(self, calc):
-        """
-        :param calc: the calculation object.
-        """
-        # Import parser base class
-        from aiida.parsers import Parser
-
-        # Possibly add checks here
-        self._calc = calc
-        try:
-            ParserClass = calc.get_parserclass()
-            if ParserClass is None:
-                # raise AttributeError("No output parser is attached to the calculation")
-                self._parser = Parser(calc)
-            else:
-                self._parser = ParserClass(calc)
-        except MissingPluginError:
-            self._parser = Parser(calc)  # Use base class
-
-    def __dir__(self):
-        """
-        Allow to list all valid attributes
-        """
-        from aiida.common.exceptions import UniquenessError
-
-        try:
-            calc_attributes = self._parser.get_result_keys()
-        except UniquenessError:
-            calc_attributes = []
-
-        return sorted(set(list(dir(type(self))) + list(calc_attributes)))
-
-    def __iter__(self):
-        from aiida.common.exceptions import UniquenessError
-
-        try:
-            calc_attributes = self._parser.get_result_keys()
-        except UniquenessError:
-            calc_attributes = []
-
-        for k in calc_attributes:
-            yield k
-
-    def _get_dict(self):
-        """
-        Return a dictionary of all results
-        """
-        return self._parser.get_result_dict()
-
-    def __getattr__(self, name):
-        """
-        interface to get to the parser results as an attribute.
-
-        :param name: name of the attribute to be asked to the parser results.
-        """
-        try:
-            return self._parser.get_result(name)
-        except AttributeError:
-            raise AttributeError("Parser '{}' did not provide a result '{}'".format(self._parser.__class__.__name__,
-                                                                                    name))
-
-    def __getitem__(self, name):
-        """
-        interface to get to the parser results as a dictionary.
-
-        :param name: name of the attribute to be asked to the parser results.
-        """
-        try:
-            return self._parser.get_result(name)
-        except AttributeError:
-            raise KeyError("Parser '{}' did not provide a result '{}'".format(self._parser.__class__.__name__, name))

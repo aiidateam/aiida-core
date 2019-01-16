@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=undefined-variable,wildcard-import
+# pylint: disable=undefined-variable,wildcard-import,cyclic-import
 """
 Managing an AiiDA instance:
 

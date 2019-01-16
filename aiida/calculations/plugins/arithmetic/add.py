@@ -12,7 +12,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-import io
 import six
 
 from aiida.common.datastructures import CalcInfo, CodeInfo
@@ -32,6 +31,12 @@ class ArithmeticAddCalculation(CalcJob):
         spec.input('metadata.options.parser_name', valid_type=six.string_types, default='arithmetic.add', non_db=True)
         spec.input('x', valid_type=(Int, Float), help='The left operand.')
         spec.input('y', valid_type=(Int, Float), help='The right operand.')
+        spec.output('sum', valid_type=(Int, Float), help='The sum of the left and right operand.')
+        spec.exit_code(
+            100, 'ERROR_NO_RETRIEVED_FOLDER', message='The retrieved folder data node could not be accessed.')
+        spec.exit_code(
+            110, 'ERROR_READING_OUTPUT_FILE', message='The output file could not be read from the retrieved folder.')
+        spec.exit_code(120, 'ERROR_INVALID_OUTPUT', message='The output file contains invalid output.')
 
     def prepare_for_submission(self, folder):
         """
@@ -105,7 +110,5 @@ class ArithmeticAddCalculation(CalcJob):
         :param input_x: the numeric node representing the left operand of the summation
         :param input_y: the numeric node representing the right operand of the summation
         """
-        filename = folder.get_abs_path(self.options.input_filename)
-
-        with io.open(filename, 'w', encoding='utf8') as handle:
+        with folder.open(self.options.input_filename, 'w', encoding='utf8') as handle:
             handle.write(u'{} {}\n'.format(input_x.value, input_y.value))

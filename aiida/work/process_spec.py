@@ -16,13 +16,14 @@ import six
 import plumpy
 
 from aiida.work.exit_code import ExitCode, ExitCodesNamespace
-from aiida.work.ports import InputPort, PortNamespace
+from aiida.work.ports import InputPort, PortNamespace, CalcJobOutputPort
 
 
 class ProcessSpec(plumpy.ProcessSpec):
-    """
-    Sub classes plumpy.ProcessSpec to define the INPUT_PORT_TYPE and PORT_NAMESPACE_TYPE
-    with the variants implemented in AiiDA
+    """Default process spec for process classes defined in `aiida-core`.
+
+    This sub class defines custom classes for input ports and port namespaces. It also adds support for the definition
+    of exit codes and retrieving them subsequently.
     """
 
     METADATA_KEY = 'metadata'
@@ -72,3 +73,33 @@ class ProcessSpec(plumpy.ProcessSpec):
             raise TypeError('message should be of basestring type and not of {}'.format(type(message)))
 
         self._exit_codes[label] = ExitCode(status, message)
+
+
+class CalcJobProcessSpec(ProcessSpec):
+    """Process spec intended for the `CalcJob` process class."""
+
+    OUTPUT_PORT_TYPE = CalcJobOutputPort
+
+    def __init__(self):
+        super(CalcJobProcessSpec, self).__init__()
+        self._default_output_node = None
+
+    @property
+    def default_output_node(self):
+        return self._default_output_node
+
+    @default_output_node.setter
+    def default_output_node(self, port_name):
+        from aiida.orm.data.parameter import ParameterData
+
+        if port_name not in self.outputs:
+            raise ValueError('{} is not a registered output port'.format(port_name))
+
+        valid_type_port = self.outputs[port_name].valid_type
+        valid_type_required = ParameterData
+
+        if valid_type_port is not valid_type_required:
+            raise ValueError('the valid type of a default output has to be a {} but it is {}'.format(
+                valid_type_port, valid_type_required))
+
+        self._default_output_node = port_name

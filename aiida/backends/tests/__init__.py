@@ -100,6 +100,7 @@ db_test_list = {
         'orm.logs': ['aiida.backends.tests.orm.logs'],
         'orm.mixins': ['aiida.backends.tests.orm.mixins'],
         'orm.node': ['aiida.backends.tests.orm.node.test_node'],
+        'orm.utils.calcjob': ['aiida.backends.tests.orm.utils.calcjob'],
         'orm.utils.loaders': ['aiida.backends.tests.orm.utils.loaders'],
         'work.calcfunctions': ['aiida.backends.tests.work.test_calcfunctions'],
         'work.class_loader': ['aiida.backends.tests.work.class_loader'],

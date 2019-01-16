@@ -16,12 +16,15 @@ from aiida.orm.node.process import CalcJobNode
 
 from .job_processes import Waiting, UPLOAD_COMMAND
 from .processes import Process, ProcessState
+from .process_spec import CalcJobProcessSpec
 
 
 class CalcJob(Process):
     """Implementation of the CalcJob process."""
 
     _node_class = CalcJobNode
+    _spec_type = CalcJobProcessSpec
+    link_label_retrieved = 'retrieved'
 
     @classmethod
     def define(cls, spec):
@@ -77,8 +80,11 @@ class CalcJob(Process):
         spec.input('metadata.options.parser_name', valid_type=six.string_types[0], non_db=True, required=False,
             help='Set a string for the output parser. Can be None if no output plugin is available or needed')
 
-        spec.output('remote_folder', valid_type=RemoteData)
-        spec.output('retrieved', valid_type=FolderData)
+        spec.output('remote_folder', valid_type=RemoteData,
+            help='Input files necessary to run the process will be stored in this folder node.')
+        spec.output(cls.link_label_retrieved, valid_type=FolderData, pass_to_parser=True,
+            help='Files that are retrieved by the daemon will be stored in this node. By default the stdout and stderr '
+                 'of the scheduler will be added, but one can add more by specifying them in `CalcInfo.retrieve_list`.')
 
         spec.exit_code(10, 'ERROR_PARSING_FAILED', message='the parsing of the job failed')
         spec.exit_code(20, 'ERROR_FAILED', message='the job failed for an unspecified reason')
@@ -89,6 +95,15 @@ class CalcJob(Process):
         states_map = super(CalcJob, cls).get_state_classes()
         states_map[ProcessState.WAITING] = Waiting
         return states_map
+
+    @override
+    def on_terminated(self):
+        """Cleanup the node by deleting the calulation job state.
+
+        .. note:: This has to be done before calling the super because that will seal the node after we cannot change it
+        """
+        self.node._del_state()  # pylint: disable=protected-access
+        super(CalcJob, self).on_terminated()
 
     @override
     def run(self):
@@ -127,16 +142,17 @@ class CalcJob(Process):
         """Docs."""
         raise NotImplementedError
 
-    def retrieved(self, retrieved_temporary_folder=None):
+    def parse(self, retrieved_temporary_folder=None):
         """
-        Parse a retrieved job calculation.  This is called once it's finished waiting
-        for the calculation to be finished and the data has been retrieved.
+        Parse a retrieved job calculation.
+
+        This is called once it's finished waiting for the calculation to be finished and the data has been retrieved.
         """
         import shutil
         from aiida.daemon import execmanager
 
         try:
-            exit_code = execmanager.parse_results(self.node, retrieved_temporary_folder)
+            exit_code = execmanager.parse_results(self, retrieved_temporary_folder)
         finally:
             # Delete the temporary folder
             try:

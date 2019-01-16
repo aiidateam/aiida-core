@@ -3,9 +3,9 @@ Retrieving results
 ==================
 
 In this section, we describe how to get the results of a calculation after it has been parsed by AiiDA, or the input and output of a generic Node.
-When a calculation is done on the remote computer, AiiDA will retrieve the results and try to parse the results with the default parser, if one is available for the given calculation. These results are stored in new nodes, and connected as output of the calculation. Of course, it is possible to :ref:`directly check the output nodes <db_input_output>` for a given calculation and get their content. However, AiiDA provides a way to directly access the results, using the :py:class:`CalculationResultManager<aiida.orm.node.process.calculation.calcjob.CalculationResultManager>` class, described in the next section.
+When a calculation is done on the remote computer, AiiDA will retrieve the results and try to parse the results with the default parser, if one is available for the given calculation. These results are stored in new nodes, and connected as output of the calculation. Of course, it is possible to :ref:`directly check the output nodes <db_input_output>` for a given calculation and get their content. However, AiiDA provides a way to directly access the results, using the :py:class:`CalcJobResultManager<aiida.orm.utils.calcjob.CalcJobResultManager>` class, described in the next section.
 
-The CalculationResultManager
+The CalcJobResultManager
 +++++++++++++++++++++++++++++
 
 Prerequisites
@@ -24,11 +24,11 @@ You can load such a calculation -- we'll call it ``calc`` -- with the command
 either in ``verdi shell``, or in a python script (as described :doc:`here <../working_with_aiida/scripting>`).
 ``YOURPK`` should be substituted by a valid calculation PK in your database.
 
-Using the CalculationResultManager instance
+Using the CalcJobResultManager instance
 -------------------------------------------
 
 Each :class:`CalcJobNode<aiida.orm.node.process.calculation.calcjob.CalcJobNode>` has a ``res`` attribute that is a 
-:class:`~aiida.orm.node.process.calculation.calcjob.CalculationResultManager` instance and
+:class:`~aiida.orm.utils.calcjob.CalcJobResultManager` instance and
 gives direct access to parsed data. You can access it as
 ::
 
@@ -48,7 +48,7 @@ you will get something like this::
 keys).
 
 Once you know which keys have been parsed, you can access the parsed
-value simply as an attribute of the ``res`` :class:`~aiida.orm.node.process.calculation.calcjob.CalculationResultManager`. For instance, to get the final total energy, you can use
+value simply as an attribute of the ``res`` :class:`~aiida.orm.utils.calcjob.CalcJobResultManager`. For instance, to get the final total energy, you can use
 ::
 
     print calc.res.energy
@@ -62,7 +62,7 @@ Similarly, you can get any other parsed value, for any code that
 provides a parser.
 
 .. hint:: 
-    The :class:`~aiida.orm.node.process.calculation.calcjob.CalculationResultManager` is also integrated with the iPython/verdi shell completion mechanism: if ``calc`` is a valid :class:`CalcJobNode<aiida.orm.node.process.calculation.calcjob.CalcJobNode>`, you can type
+    The :class:`~aiida.orm.utils.calcjob.CalcJobResultManager` is also integrated with the iPython/verdi shell completion mechanism: if ``calc`` is a valid :class:`CalcJobNode<aiida.orm.node.process.calculation.calcjob.CalcJobNode>`, you can type
     ::
 
         calc.res.

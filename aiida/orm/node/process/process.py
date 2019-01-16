@@ -44,6 +44,8 @@ class ProcessNode(Sealable, Node):
     # Specific sub classes should be marked as cacheable when appropriate
     _cacheable = False
 
+    _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
+
     def __str__(self):
         base = super(ProcessNode, self).__str__()
         if self.process_type:

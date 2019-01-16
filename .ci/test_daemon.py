@@ -93,7 +93,7 @@ def validate_calculations(expected_results):
         try:
             actual_dict = calc.out.output_parameters.get_dict()
         except exceptions.NotExistent:
-            print('Could not retrieve output_parameters node for Calculation<{}>'.format(pk))
+            print('Could not retrieve `output_parameters` node for Calculation<{}>'.format(pk))
             print_report(pk)
             valid = False
 

@@ -64,6 +64,7 @@ class Data(Node):
 
     # Data nodes are storable
     _storable = True
+    _unstorable_message = 'storing for this node has been disabled'
 
     def __copy__(self):
         """Copying a Data node is not supported, use copy.deepcopy or call Data.clone()."""
@@ -415,10 +416,7 @@ class BaseType(Data):
         self._set_attr('value', self._type(value))
 
     def __str__(self):
-        return self.value.__str__()
-
-    def __repr__(self):
-        return self.value.__repr__()
+        return super(BaseType, self).__str__() + ' value: {}'.format(self.value)
 
     def __eq__(self, other):
         if isinstance(other, BaseType):

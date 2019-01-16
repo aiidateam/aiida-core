@@ -11,79 +11,42 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-import io
-
-from aiida.orm import CalculationFactory
-from aiida.parsers.parser import Parser
+from aiida.common import exceptions
 from aiida.orm.data.int import Int
-
-ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+from aiida.parsers.parser import Parser
 
 
 class ArithmeticAddParser(Parser):
 
-    _linkname_output = 'sum'
-
-    @classmethod
-    def get_linkname_output(self):
-        """
-        The name of the link used for the output node
-        """
-        return self._linkname_output
-
-    def parse_with_retrieved(self, retrieved):
-        """
-        Parse the contents of the output file
-
-        :param retrieved: a dictionary of retrieved nodes
-        """
-        is_success = True
-        output_nodes = []
+    def parse(self, **kwargs):
+        """Parse the contents of the output files retrieved in the `FolderData`."""
+        try:
+            output_folder = self.retrieved
+        except exceptions.NotExistent:
+            return self.exit_codes.ERROR_NO_RETRIEVED_FOLDER
 
         try:
-            output_folder = retrieved[self._calc.link_label_retrieved]
-        except KeyError:
-            self.logger.error("no retrieved folder found")
-            return False, ()
+            with output_folder.open(self.node.get_attr('output_filename'), 'r') as handle:
+                result = self.parse_stdout(handle)
+        except (OSError, IOError):
+            return self.exit_codes.ERROR_READING_OUTPUT_FILE
 
-        # Verify the standard output file is present, parse the value and attach as output node
-        try:
-            filepath_stdout = output_folder.get_abs_path(self._calc.get_attr('output_filename'))
-        except OSError:
-            self.logger.error("expected output file '{}' was not found".format(filepath_stdout))
-            return False, ()
+        if result is None:
+            return self.exit_codes.ERROR_INVALID_OUTPUT
 
-        is_success, output_node = self.parse_stdout(filepath_stdout)
+        self.out('sum', Int(result))
 
-        if not is_success:
-            self.logger.error('failed to parse the result from the output file {}'.format(filepath_stdout))
-            return False, ()
-
-        output_nodes.append((self.get_linkname_output(), output_node))
-
-        return 0, output_nodes
-
-    def parse_stdout(self, filepath):
+    @staticmethod
+    def parse_stdout(filelike):
         """
         Parse the sum from the output of the ArithmeticAddcalculation written to standard out
 
-        :param filepath: path to file containing output written to stdout
-        :returns: boolean representing success status of parsing, True equals parsing was successful
-        :returns: the sum as a node
+        :param filelike: filelike object containing the output
+        :returns: the sum
         """
-        is_successful = True
-
         try:
-            with io.open(filepath, 'r', encoding='utf8') as handle:
-                output = handle.read()
-        except IOError:
-            return False, None
-
-        try:
-            result = int(output)
+            result = int(filelike.read())
         except ValueError:
-            return False, None
+            result = None
 
-        output_node = Int(result)
-
-        return is_successful, output_node
+        return result

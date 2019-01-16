@@ -12,59 +12,49 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import io
+import os
 
+from aiida.common import exceptions
 from aiida.orm import CalculationFactory
-from aiida.parsers.parser import Parser
 from aiida.orm.data.parameter import ParameterData
+from aiida.parsers.parser import Parser
 
 TemplatereplacerCalculation = CalculationFactory('templatereplacer')
 
 
 class TemplatereplacerDoublerParser(Parser):
 
-    def parse_with_retrieved(self, retrieved):
-        """
-        Parse the output nodes for a PwCalculations from a dictionary of retrieved nodes.
-        Two nodes that are expected are the default 'retrieved' FolderData node which will
-        store the retrieved files permanently in the repository. The second required node
-        is the unstored FolderData node with the temporary retrieved files, which should
-        be passed under the key 'retrieved_temporary_folder_key' of the Parser class.
-
-        :param retrieved: a dictionary of retrieved nodes
-        """
-        import os
-
-        output_nodes = []
+    def parse(self, **kwargs):
+        """Parse the contents of the output files retrieved in the `FolderData`."""
+        template = self.node.inp.template.get_dict()
 
         try:
-            output_file = self._calc.inp.template.get_dict()['output_file_name']
+            output_folder = self.retrieved
+        except exceptions.NotExistent:
+            return self.exit_codes.ERROR_NO_RETRIEVED_FOLDER
+
+        try:
+            output_file = template['output_file_name']
         except KeyError:
-            self.logger.error("the output file name 'output_file_name' was not specified in the 'template' input node")
-            return False, ()
-
-        retrieved_folder = retrieved[self._calc.link_label_retrieved]
-        try:
-            parsed_value = int(retrieved_folder.get_file_content(output_file).strip())
-        except (AttributeError, IOError, ValueError) as e:
-            self.logger.error("* UNABLE TO RETRIEVE VALUE for calc pk={}: I got {}: {}".format(
-                self._calc.pk, type(e), e))
-            return False, ()
-
-        output_dict = {'value': parsed_value, 'retrieved_temporary_files': []}
+            return self.exit_codes.ERROR_NO_OUTPUT_FILE_NAME_DEFINED
 
         try:
-            retrieve_temporary_files = self._calc.inp.template.get_dict()['retrieve_temporary_files']
-        except KeyError:
-            retrieve_temporary_files = None
+            with output_folder.open(output_file, 'r') as handle:
+                result = self.parse_stdout(handle)
+        except (OSError, IOError):
+            self.logger.exception('unable to parse the output for CalcJobNode<{}>'.format(self.node.pk))
+            return self.exit_codes.ERROR_READING_OUTPUT_FILE
 
-        # If the 'retrieve_temporary_files' key was set in the template input node, we expect a temporary
-        # FolderData node in the 'retrieved' arguments
+        output_dict = {'value': result, 'retrieved_temporary_files': []}
+        retrieve_temporary_files = template.get('retrieve_temporary_files', None)
+
+        # If the 'retrieve_temporary_files' key was set in the template input node, we expect a temporary directory
+        # to have been passed in the keyword arguments under the name `retrieved_temporary_folder`.
         if retrieve_temporary_files is not None:
             try:
-                retrieved_temporary_folder = retrieved[self.retrieved_temporary_folder_key]
+                retrieved_temporary_folder = kwargs['retrieved_temporary_folder']
             except KeyError:
-                self.logger.error('the {} was not passed as an argument'.format(self.retrieved_temporary_folder_key))
-                return False, ()
+                return self.exit_codes.ERROR_NO_TEMPORARY_RETRIEVED_FOLDER
 
             for retrieved_file in retrieve_temporary_files:
 
@@ -73,7 +63,7 @@ class TemplatereplacerDoublerParser(Parser):
                 if not os.path.isfile(file_path):
                     self.logger.error('the file {} was not found in the temporary retrieved folder {}'.format(
                         retrieved_file, retrieved_temporary_folder))
-                    return False, ()
+                    return self.exit_codes.ERROR_READING_TEMPORARY_RETRIEVED_FILE
 
                 with io.open(file_path, 'r', encoding='utf8') as handle:
                     parsed_value = handle.read().strip()
@@ -81,7 +71,21 @@ class TemplatereplacerDoublerParser(Parser):
                 # We always strip the content of the file from whitespace to simplify testing for expected output
                 output_dict['retrieved_temporary_files'].append((retrieved_file, parsed_value))
 
-        output_parameters = ParameterData(dict=output_dict)
-        output_nodes.append((self.get_linkname_outparams(), output_parameters))
+        self.out(self.node.process_class.spec().default_output_node, ParameterData(dict=output_dict))
 
-        return True, output_nodes
+        return
+
+    @staticmethod
+    def parse_stdout(filelike):
+        """
+        Parse the sum from the output of the ArithmeticAddcalculation written to standard out
+
+        :param filelike: filelike object containing the output
+        :returns: the sum
+        """
+        try:
+            result = int(filelike.read())
+        except ValueError:
+            result = None
+
+        return result

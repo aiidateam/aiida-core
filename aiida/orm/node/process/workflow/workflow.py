@@ -15,3 +15,4 @@ class WorkflowNode(ProcessNode):
 
     # Workflow nodes are storable
     _storable = True
+    _unstorable_message = 'storing for this node has been disabled'

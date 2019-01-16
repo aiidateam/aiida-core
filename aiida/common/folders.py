@@ -323,15 +323,18 @@ class Folder(object):  # pylint: disable=useless-object-inheritance
 
         return dest_abs_path
 
-    def open(self, name, mode='r', encoding='utf8'):
+    def open(self, name, mode='r', encoding='utf8', check_existence=False):
         """
-        Open a file in the current folder and return the corresponding
-        file object.
+        Open a file in the current folder and return the corresponding file object.
+
+        :param check_existence: if False, just return the file path.
+            Otherwise, also check if the file or directory actually exists.
+            Raise OSError if it does not.
         """
         if 'b' in mode:
             encoding = None
 
-        return io.open(self.get_abs_path(name), mode, encoding=encoding)
+        return io.open(self.get_abs_path(name, check_existence=check_existence), mode, encoding=encoding)
 
     @property
     def abspath(self):

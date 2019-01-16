@@ -7,14 +7,16 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Definition of the `ParserFactory`."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from aiida.parsers.parser import Parser
 from aiida.plugins.factory import BaseFactory
 
 
-def ParserFactory(entry_point):
+def ParserFactory(entry_point):  # pylint: disable=invalid-name
     """
     Return the Parser plugin class for a given entry point
 

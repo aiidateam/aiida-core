@@ -197,9 +197,6 @@
         aiida/orm/utils/__init__.py|
         aiida/orm/utils/loaders.py|
         aiida/orm/utils/remote.py|
-        aiida/parsers/exceptions.py|
-        aiida/parsers/__init__.py|
-        aiida/parsers/parser.py|
         aiida/parsers/plugins/arithmetic/add.py|
         aiida/parsers/plugins/templatereplacer/doubler.py|
         aiida/parsers/plugins/templatereplacer/__init__.py|

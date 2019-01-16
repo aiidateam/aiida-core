@@ -20,6 +20,7 @@ from click.testing import CliRunner
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_calculation as command
 from aiida.common.datastructures import CalcJobState
+from aiida.plugins.entry_point import get_entry_point_string_from_class
 
 
 def get_result_lines(result):
@@ -56,10 +57,14 @@ class TestVerdiCalculation(AiidaTestCase):
         authinfo = orm.AuthInfo(computer=cls.computer, user=user)
         authinfo.store()
 
+        process_class = CalculationFactory('templatereplacer')
+        process_type = get_entry_point_string_from_class(process_class.__module__, process_class.__name__)
+
         # Create 5 CalcJobNodes (one for each CalculationState)
         for calculation_state in CalcJobState:
 
             calc = CalcJobNode(computer=cls.computer)
+            calc.dbnode.process_type = process_type
             calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
             calc.store()
 

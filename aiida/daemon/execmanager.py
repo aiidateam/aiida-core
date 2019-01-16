@@ -329,7 +329,7 @@ def kill_calculation(calculation, transport):
     return True
 
 
-def parse_results(job, retrieved_temporary_folder=None):
+def parse_results(process, retrieved_temporary_folder=None):
     """
     Parse the results for a given CalcJobNode (job)
 
@@ -337,12 +337,12 @@ def parse_results(job, retrieved_temporary_folder=None):
     """
     from aiida.work import ExitCode
 
-    assert job.get_state() == CalcJobState.PARSING, \
-        'the job should be in the PARSING state when calling this function yet it is {}'.format(job.get_state())
+    assert process.node.get_state() == CalcJobState.PARSING, \
+        'the job should be in the PARSING state when calling this function yet it is {}'.format(process.node.get_state())
 
-    Parser = job.get_parserclass()
+    parser_class = process.node.get_parserclass()
     exit_code = ExitCode()
-    logger_extra = get_dblogger_extra(job)
+    logger_extra = get_dblogger_extra(process.node)
 
     if retrieved_temporary_folder:
         files = []
@@ -354,42 +354,38 @@ def parse_results(job, retrieved_temporary_folder=None):
 
         execlogger.debug("[parsing of calc {}] "
                          "Content of the retrieved_temporary_folder: \n"
-                         "{}".format(job.pk, "\n".join(files)), extra=logger_extra)
+                         "{}".format(process.node.pk, "\n".join(files)), extra=logger_extra)
     else:
         execlogger.debug("[parsing of calc {}] "
-                         "No retrieved_temporary_folder.".format(job.pk), extra=logger_extra)
+                         "No retrieved_temporary_folder.".format(process.node.pk), extra=logger_extra)
 
-    if Parser is not None:
+    if parser_class is not None:
 
-        parser = Parser(job)
-        exit_code, new_nodes_tuple = parser.parse_from_calc(retrieved_temporary_folder)
+        parser = parser_class(process.node)
+        parse_kwargs = parser.get_outputs_for_parsing()
 
-        # Some implementations of parse_from_calc may still return a plain boolean or integer for the exit_code.
-        # In the case of a boolean: True should be mapped to the default ExitCode which corresponds to an exit
-        # status of 0. False values are mapped to the value that is mapped onto the default `CalcJob` exit code
-        # `ERROR_FAILED`.
-        if isinstance(exit_code, bool) and exit_code is True:
+        if retrieved_temporary_folder:
+            parse_kwargs['retrieved_temporary_folder'] = retrieved_temporary_folder
+
+        exit_code = parser.parse(**parse_kwargs)
+
+        if exit_code is None:
             exit_code = ExitCode(0)
-        elif isinstance(exit_code, bool) and exit_code is False:
-            exit_code = ExitCode(job.process().exit_codes.ERROR_FAILED)
-        elif isinstance(exit_code, int):
-            exit_code = ExitCode(exit_code)
-        elif isinstance(exit_code, ExitCode):
-            pass
-        else:
-            raise ValueError("parse_from_calc returned an 'exit_code' of invalid_type: {}. It should "
-                             "return a boolean, integer or ExitCode instance".format(type(exit_code)))
 
-        for label, n in new_nodes_tuple:
-            n.add_incoming(job, link_type=LinkType.CREATE, link_label=label)
-            n.store()
+        if not isinstance(exit_code, ExitCode):
+            raise ValueError("parse_from_calc returned an 'exit_code' of invalid_type: {}. It should be an ExitCode "
+                "instance or None".format(type(exit_code)))
 
-    if exit_code.status is not 0:
+        for link_label, node in parser.outputs.items():
+            node.add_incoming(process.node, link_type=LinkType.CREATE, link_label=link_label)
+            node.store()
+
+    if exit_code.status != 0:
         execlogger.error("[parsing of calc {}] "
                          "The parser returned an error, but it should have "
                          "created an output node with some partial results "
                          "and warnings. Check there for more information on "
-                         "the problem".format(job.pk), extra=logger_extra)
+                         "the problem".format(process.node.pk), extra=logger_extra)
 
     return exit_code
 

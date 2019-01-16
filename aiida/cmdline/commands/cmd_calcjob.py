@@ -62,13 +62,16 @@ def calcjob_res(calcjob, fmt, keys):
     """Print data from the result output node of a calcjob."""
     from aiida.cmdline.utils.echo import echo_dictionary
 
-    results = calcjob.res._get_dict()
+    try:
+        results = calcjob.res.get_results()
+    except ValueError as exception:
+        echo.echo_critical(str(exception))
 
     if keys is not None:
         try:
             result = {k: results[k] for k in keys}
         except KeyError as exc:
-            echo.echo_critical("key '{}' was not found in the .res dictionary".format(exc.args[0]))
+            echo.echo_critical("key '{}' was not found in the results dictionary".format(exc.args[0]))
     else:
         result = results
 
@@ -90,7 +93,7 @@ def calcjob_inputcat(calcjob, path):
 
     if path is None:
 
-        path = calcjob._DEFAULT_INPUT_FILE
+        path = calcjob.get_option('input_filename')
 
         if path is None:
             cls = calcjob.__class__
@@ -127,7 +130,7 @@ def calcjob_outputcat(calcjob, path):
 
     if path is None:
 
-        path = calcjob._DEFAULT_OUTPUT_FILE
+        path = calcjob.get_option('output_filename')
 
         if path is None:
             cls = calcjob.__class__

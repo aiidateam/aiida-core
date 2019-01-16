@@ -118,6 +118,11 @@ def process_function(node_class):
             # Close the runner properly
             runner.close()
 
+            store_provenance = inputs.get('metadata', {}).get('store_provenance', True)
+            if not store_provenance:
+                process.node._storable = False  # pylint: disable=protected-access
+                process.node._unstorable_message = 'cannot store node because it was run with `store_provenance=False`'  # pylint: disable=protected-access
+
             return result, process.node
 
         @functools.wraps(function)

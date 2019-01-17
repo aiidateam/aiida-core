@@ -1745,33 +1745,6 @@ class TestSubNodesAndLinks(AiidaTestCase):
         """
         raise NotImplementedError
 
-    @unittest.skip('remove this test once #2219 is addressed')
-    def test_link_replace(self):
-        from aiida.orm.node.process import CalculationNode
-        from aiida.orm import Data
-
-        n1 = CalculationNode().store()
-        n2 = CalculationNode().store()
-        n3 = Data().store()
-        n4 = Data().store()
-
-        n3.add_incoming(n1, link_type=LinkType.CREATE, link_label='the_label')
-        with self.assertRaises(ValueError):
-            # A link with the same name already exists
-            n3.add_incoming(n1, link_type=LinkType.CREATE, link_label='the_label')
-
-        # I can replace the link and check that it was replaced
-        n3._replace_link_from(n2, LinkType.CREATE, link_label='the_label')
-        the_parent = [_.node.uuid for _ in n3.get_incoming() if _.link_label == 'the_label']
-        self.assertEquals(len(the_parent), 1, "There are multiple input links with the same label (the_label)!")
-        self.assertEquals(n2.uuid, the_parent[0])
-
-        # _replace_link_from should work also if there is no previous link
-        n2._replace_link_from(n1, LinkType.CREATE, link_label='the_label_2')
-        the_parent_2 = [_.node.uuid for _ in n4.get_incoming() if _.link_label == 'the_label_2']
-        self.assertEquals(len(the_parent_2), 1, "There are multiple input links with the same label (the_label_2)!")
-        self.assertEquals(n1.uuid, the_parent_2[0])
-
     def test_link_with_unstored(self):
         """
         It is possible to store links between nodes even if they are unstored these links are cached.

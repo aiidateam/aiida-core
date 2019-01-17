@@ -203,19 +203,6 @@ class Node(AbstractNode):
                 self._dbnode.save()
                 self._increment_version_number_db()
 
-    def _replace_dblink_from(self, src, link_type, label):
-        try:
-            self._add_dblink_from(src, link_type, label)
-        except UniquenessError:
-            # I have to replace the link; I do it within a transaction
-            with transaction.atomic():
-                self._remove_dblink_from(label)
-                self._add_dblink_from(src, link_type, label)
-
-    def _remove_dblink_from(self, label):
-        from aiida.backends.djsite.db.models import DbLink
-        DbLink.objects.filter(output=self._dbnode, label=label).delete()
-
     def _add_dblink_from(self, src, link_type, label):
         from aiida.orm.querybuilder import QueryBuilder
         if not isinstance(src, Node):

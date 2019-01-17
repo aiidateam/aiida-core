@@ -236,28 +236,6 @@ class Node(AbstractNode):
             session.add(self._dbnode)
             self._increment_version_number_db()
 
-    def _replace_dblink_from(self, src, link_type, label):
-        from aiida.backends.sqlalchemy import get_scoped_session
-        session = get_scoped_session()
-        try:
-            self._add_dblink_from(src, link_type, label)
-        except UniquenessError:
-            # I have to replace the link; I do it within a transaction
-            try:
-                self._remove_dblink_from(label)
-                self._add_dblink_from(src, link_type, label)
-                session.commit()
-            except:
-                session.rollback()
-                raise
-
-    def _remove_dblink_from(self, label):
-        from aiida.backends.sqlalchemy import get_scoped_session
-        session = get_scoped_session()
-        link = DbLink.query.filter_by(label=label).first()
-        if link is not None:
-            session.delete(link)
-
     def _add_dblink_from(self, src, link_type, label):
         from aiida.backends.sqlalchemy import get_scoped_session
         from aiida.orm.querybuilder import QueryBuilder

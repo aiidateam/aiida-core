@@ -45,12 +45,15 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunSQL(
-            sql="""
+            sql=r"""
             UPDATE db_dbattribute AS attribute
             SET key =  regexp_replace(attribute.key, '^custom_environment_variables', 'environment_variables')
             FROM db_dbnode AS node
             WHERE
-                attribute.key like 'custom_environment_variables%' AND
+                (
+                    attribute.key = 'custom_environment_variables' OR
+                    attribute.key LIKE 'custom\_environment\_variables.%'
+                ) AND
                 node.type = 'node.process.calculation.calcjob.CalcJobNode.';
             -- custom_environment_variables -> environment_variables
 
@@ -58,7 +61,10 @@ class Migration(migrations.Migration):
             SET key =  regexp_replace(attribute.key, '^jobresource_params', 'resources')
             FROM db_dbnode AS node
             WHERE
-                attribute.key like 'jobresource_params%' AND
+                (
+                    attribute.key = 'jobresource_params' OR
+                    attribute.key LIKE 'jobresource\_params.%'
+                ) AND
                 node.type = 'node.process.calculation.calcjob.CalcJobNode.';
             -- jobresource_params -> resources
 
@@ -66,24 +72,27 @@ class Migration(migrations.Migration):
             SET key =  regexp_replace(attribute.key, '^_process_label', 'process_label')
             FROM db_dbnode AS node
             WHERE
-                attribute.key like '_process_label' AND
-                node.type like 'node.process.%';
+                attribute.key = '_process_label' AND
+                node.type LIKE 'node.process.%';
             -- _process_label -> process_label
 
             UPDATE db_dbattribute AS attribute
             SET key =  regexp_replace(attribute.key, '^parser', 'parser_name')
             FROM db_dbnode AS node
             WHERE
-                attribute.key like 'parser%' AND
+                attribute.key = 'parser' AND
                 node.type = 'node.process.calculation.calcjob.CalcJobNode.';
             -- parser -> parser_name
             """,
-            reverse_sql="""
+            reverse_sql=r"""
             UPDATE db_dbattribute AS attribute
             SET key =  regexp_replace(attribute.key, '^environment_variables', 'custom_environment_variables')
             FROM db_dbnode AS node
             WHERE
-                attribute.key like 'environment_variables%' AND
+                (
+                    attribute.key = 'environment_variables' OR
+                    attribute.key LIKE 'environment\_variables.%'
+                ) AND
                 node.type = 'node.process.calculation.calcjob.CalcJobNode.';
             -- environment_variables -> custom_environment_variables
 
@@ -91,7 +100,10 @@ class Migration(migrations.Migration):
             SET key =  regexp_replace(attribute.key, '^resources', 'jobresource_params')
             FROM db_dbnode AS node
             WHERE
-                attribute.key like 'resources%' AND
+                (
+                    attribute.key = 'resources' OR
+                    attribute.key LIKE 'resources.%'
+                ) AND
                 node.type = 'node.process.calculation.calcjob.CalcJobNode.';
             -- resources -> jobresource_params
 
@@ -99,15 +111,15 @@ class Migration(migrations.Migration):
             SET key =  regexp_replace(attribute.key, '^process_label', '_process_label')
             FROM db_dbnode AS node
             WHERE
-                attribute.key like 'process_label%' AND
-                node.type like 'node.process.%';
+                attribute.key = 'process_label' AND
+                node.type LIKE 'node.process.%';
             -- process_label -> _process_label
 
             UPDATE db_dbattribute AS attribute
             SET key =  regexp_replace(attribute.key, '^parser_name', 'parser')
             FROM db_dbnode AS node
             WHERE
-                attribute.key like 'parser_name%' AND
+                attribute.key = 'parser_name' AND
                 node.type = 'node.process.calculation.calcjob.CalcJobNode.';
             -- parser_name -> parser
             """),

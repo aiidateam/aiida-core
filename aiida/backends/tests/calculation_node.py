@@ -120,32 +120,6 @@ class TestProcessNode(AiidaTestCase):
         with self.assertRaises(ModificationNotAllowed):
             node._del_attr(CalculationNode.PROCESS_STATE_KEY)
 
-    def test_calcjob_get_option(self):
-        """Verify that options used during process_node construction can be retrieved with `get_option`."""
-        for name in self.calcjob.options:  # pylint: disable=not-an-iterable
-
-            if name in self.construction_options:
-                self.assertEqual(self.calcjob.get_option(name), self.construction_options[name])
-
-    def test_calcjob_get_options_only_set(self):
-        """Verify that `get_options only` returns explicitly set options if `only_actually_set=True`."""
-        set_options = self.calcjob.get_options(only_actually_set=True)
-        self.assertEqual(set(set_options.keys()), set(self.construction_options.keys()))
-
-    def test_calcjob_get_options_defaults(self):
-        """Verify that `get_options` returns all options with defaults if `only_actually_set=False`."""
-        get_options = self.calcjob.get_options()
-
-        for name, attributes in self.calcjob.options.items():  # pylint: disable=no-member
-
-            # If the option was specified in construction options, verify that `get_options` returns same value
-            if name in self.construction_options:
-                self.assertEqual(get_options[name], self.construction_options[name])
-
-            # Otherwise, if the option defines a default that is not `None`, verify that that is returned correctly
-            elif 'default' in attributes and attributes['default'] is not None:
-                self.assertEqual(get_options[name], attributes['default'])
-
     def test_get_description(self):
         self.assertEqual(self.calcjob.get_desc(), self.calcjob.get_state())
 

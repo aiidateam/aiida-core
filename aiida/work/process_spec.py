@@ -25,12 +25,22 @@ class ProcessSpec(plumpy.ProcessSpec):
     with the variants implemented in AiiDA
     """
 
+    METADATA_KEY = 'metadata'
+    METADATA_OPTIONS_KEY = 'options'
     INPUT_PORT_TYPE = InputPort
     PORT_NAMESPACE_TYPE = PortNamespace
 
     def __init__(self):
         super(ProcessSpec, self).__init__()
         self._exit_codes = ExitCodesNamespace()
+
+    @property
+    def metadata_key(self):
+        return self.METADATA_KEY
+
+    @property
+    def options_key(self):
+        return self.METADATA_OPTIONS_KEY
 
     @property
     def exit_codes(self):

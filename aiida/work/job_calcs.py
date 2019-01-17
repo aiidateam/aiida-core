@@ -25,7 +25,7 @@ from aiida import scheduler as schedulers
 from aiida.common import exceptions
 from .utils import RefObjectStore
 
-__all__ = tuple()
+__all__ = ('JobsList', 'JobManager')
 
 
 class JobsList(object):  # pylint: disable=useless-object-inheritance
@@ -93,7 +93,7 @@ class JobsList(object):  # pylint: disable=useless-object-inheritance
             for job_id, job_info in iteritems(scheduler_response):
                 # If the job is done then get detailed job information
                 detailed_job_info = None
-                if job_info.job_state == schedulers.JOB_STATES.DONE:
+                if job_info.job_state == schedulers.JobState.DONE:
                     try:
                         detailed_job_info = scheduler.get_detailed_jobinfo(job_id)
                     except exceptions.FeatureNotAvailable:

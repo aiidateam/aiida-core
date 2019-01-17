@@ -118,6 +118,8 @@ def get_type_string_from_class(class_module, class_name):
 
     return type_string
 
+    # orm_class = '{}.{}.'.format(class_module, class_name)
+    # return get_type_string_from_class_path(orm_class)
 
 def get_type_string_from_class_path(class_path):
     """

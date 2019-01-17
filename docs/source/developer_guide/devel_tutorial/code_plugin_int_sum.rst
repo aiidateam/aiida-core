@@ -422,8 +422,8 @@ For the time being, just define also the following variables as empty lists
   * ``codes_run_mode``: a string, only necessary if you want to run more than one code
     in the same scheduling job. Determines the order in which the multiple 
     codes are run (i.e. sequentially or all at the same time.
-    It assumes one of the values of ``aiida.common.datastructures.code_run_modes``,
-    like ``code_run_modes.PARALLEL`` or ``code_run_modes.SERIAL``
+    It assumes one of the values of ``aiida.common.datastructures.CodeRunMode``,
+    like ``CodeRunMode.PARALLEL`` or ``CodeRunMode.SERIAL``
 
   * ``stdin_name``: the name of the standard input.
 
@@ -470,8 +470,8 @@ it::
  ``calcinfo.codes_info``. This makes ``JobCalculation`` very flexible and 
  it is possible to pack multiple run in a single ``JobCalculation`` run.
  The mode of execution is controlled by ``codes_run_mode`` of the ``CalcInfo``.
- It assumes one of the values of ``aiida.common.datastructures.code_run_modes``,
- like ``code_run_modes.PARALLEL`` or ``code_run_modes.SERIAL``. The former will 
+ It assumes one of the values of ``aiida.common.datastructures.CodeRunMode``,
+ like ``CodeRunMode.PARALLEL`` or ``CodeRunMode.SERIAL``. The former will 
  execute the codes in parallel and the latter will execute one after another.
 
 By doing all the above, we have clarified what parameters should be passed
@@ -587,7 +587,7 @@ detail later::
             # select the folder object
             # Check that the retrieved folder is there
             try:
-                out_folder = retrieved[self._calc._get_linkname_retrieved()]
+                out_folder = retrieved[self._calc.link_label_retrieved]
             except KeyError:
                 self.logger.error("No retrieved folder found")
                 return False, ()
@@ -623,7 +623,7 @@ that will receive as a single parameter ``retrieved``, a dictionary of retrieved
 nodes. The default behavior is to create a single FolderData node, that can
 be retrieved using::
 
-    out_folder = retrieved[self._calc._get_linkname_retrieved()]
+    out_folder = retrieved[self._calc.link_label_retrieved]
 
 We then read and parse the output file that will contain the result::
 

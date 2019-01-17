@@ -134,7 +134,6 @@ class TestTcodDbExporter(AiidaTestCase):
         from aiida.orm.data.upf import UpfData
         from aiida.orm.data.folder import FolderData
         from aiida.common.folders import SandboxFolder
-        from aiida.common.datastructures import calc_states
         import tempfile
 
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
@@ -190,22 +189,19 @@ class TestTcodDbExporter(AiidaTestCase):
             calc.add_incoming(cif, LinkType.INPUT_CALC, "cif")
 
         calc.store()
-        calc._set_state(calc_states.TOSUBMIT)
         with SandboxFolder() as fhandle:
             calc._store_raw_input_folder(fhandle.abspath)
 
         fd = FolderData()
-        with io.open(fd._get_folder_pathsubfolder.get_abs_path(
-                calc._SCHED_OUTPUT_FILE), 'w', encoding='utf8') as fhandle:
+        subfolder = fd._get_folder_pathsubfolder
+        with io.open(subfolder.get_abs_path('_scheduler-stdout.txt'), 'w', encoding='utf8') as fhandle:
             fhandle.write(u"standard output")
 
-        with io.open(fd._get_folder_pathsubfolder.get_abs_path(
-                calc._SCHED_ERROR_FILE), 'w', encoding='utf8') as fhandle:
+        with io.open(subfolder.get_abs_path('_scheduler-stderr.txt'), 'w', encoding='utf8') as fhandle:
             fhandle.write(u"standard error")
 
         fd.store()
-        calc._set_state(calc_states.PARSING)
-        fd.add_incoming(calc, LinkType.CREATE, calc._get_linkname_retrieved())
+        fd.add_incoming(calc, LinkType.CREATE, calc.link_label_retrieved)
 
         pd.add_incoming(calc, LinkType.CREATE, "create1")
         pd.store()

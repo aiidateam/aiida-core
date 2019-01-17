@@ -11,7 +11,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-LATEST_MIGRATION = '0022_dbgroup_type_string_change_content'
+LATEST_MIGRATION = '0023_calc_job_option_attribute_keys'
+
 
 def _update_schema_version(version, apps, schema_editor):
     from aiida.backends.djsite.utils import set_db_schema_version
@@ -31,7 +32,7 @@ def current_schema_version():
     # Have to use this ugly way of importing because the django migration
     # files start with numbers which are not a valid package name
     latest_migration = __import__(
-        "aiida.backends.djsite.db.migrations.{}".format(LATEST_MIGRATION),
+        'aiida.backends.djsite.db.migrations.{}'.format(LATEST_MIGRATION),
         fromlist=['REVISION']
     )
     return latest_migration.REVISION

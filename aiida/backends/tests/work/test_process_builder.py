@@ -7,10 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm import CalculationFactory
 from aiida.orm.data.parameter import ParameterData
@@ -23,6 +23,7 @@ DEFAULT_INT = 256
 
 
 class TestWorkChain(WorkChain):
+
     @classmethod
     def define(cls, spec):
         super(TestWorkChain, cls).define(spec)
@@ -37,8 +38,7 @@ class TestProcessBuilder(AiidaTestCase):
     def setUp(self):
         super(TestProcessBuilder, self).setUp()
         self.assertIsNone(Process.current())
-        self.calculation_class = CalculationFactory('templatereplacer')
-        self.process_class = self.calculation_class.process()
+        self.process_class = CalculationFactory('templatereplacer')
         self.builder = self.process_class.get_builder()
 
     def tearDown(self):
@@ -59,11 +59,11 @@ class TestProcessBuilder(AiidaTestCase):
         label = 'Test label'
         description = 'Test description'
 
-        self.builder.label = label
-        self.builder.description = description
+        self.builder.metadata.label = label
+        self.builder.metadata.description = description
 
-        self.assertEquals(self.builder.label, label)
-        self.assertEquals(self.builder.description, description)
+        self.assertEquals(self.builder.metadata.label, label)
+        self.assertEquals(self.builder.metadata.description, description)
 
     def test_workchain(self):
         """
@@ -73,7 +73,7 @@ class TestProcessBuilder(AiidaTestCase):
         builder.a = Int(2)
         builder.b = Float(2.3)
         builder.c.d = Bool(True)
-        self.assertEquals(builder, {'a': Int(2), 'b': Float(2.3), 'c': {'d': Bool(True)}})
+        self.assertEquals(builder, {'a': Int(2), 'b': Float(2.3), 'c': {'d': Bool(True)}, 'metadata': {'options': {}}})
 
     def test_invalid_setattr_raises(self):
         """
@@ -125,9 +125,14 @@ class TestProcessBuilder(AiidaTestCase):
         original.label = 'original'
         original.store()
 
+        # Have to set the process type manually, because usually this will be done automatically when the node is
+        # instantiated by the process itself. Since we hack it here and instantiate the node directly ourselves we
+        # have to set the process type for the restart builder to be able to recreatem the process class.
+        original.dbnode.process_type = 'aiida.calculations:templatereplacer'
+
         builder = original.get_builder_restart()
 
-        self.assertDictEqual(builder.options, original.get_options(only_actually_set=True))
+        self.assertDictEqual(builder.metadata.options, original.get_options())
 
     def test_code_get_builder(self):
         """

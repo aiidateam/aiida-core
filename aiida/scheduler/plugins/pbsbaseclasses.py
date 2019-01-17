@@ -20,7 +20,7 @@ import six
 
 from aiida.common.escaping import escape_for_bash
 from aiida.scheduler import Scheduler, SchedulerError, SchedulerParsingError
-from aiida.scheduler.datastructures import (JobInfo, JOB_STATES, MachineInfo, NodeNumberJobResource)
+from aiida.scheduler.datastructures import (JobInfo, JobState, MachineInfo, NodeNumberJobResource)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -53,20 +53,20 @@ _LOGGER = logging.getLogger(__name__)
 # S -  (Unicos only) job is suspend. [as above]
 
 _MAP_STATUS_PBS_COMMON = {
-    'B': JOB_STATES.RUNNING,
-    'E': JOB_STATES.RUNNING,  # If exiting, for our purposes it is still running
-    'F': JOB_STATES.DONE,
-    'H': JOB_STATES.QUEUED_HELD,
-    'M': JOB_STATES.UNDETERMINED,  # TODO: check if this is ok?
-    'Q': JOB_STATES.QUEUED,
-    'R': JOB_STATES.RUNNING,
-    'S': JOB_STATES.SUSPENDED,
-    'T': JOB_STATES.QUEUED,  # We assume that from the AiiDA point of view
+    'B': JobState.RUNNING,
+    'E': JobState.RUNNING,  # If exiting, for our purposes it is still running
+    'F': JobState.DONE,
+    'H': JobState.QUEUED_HELD,
+    'M': JobState.UNDETERMINED,  # TODO: check if this is ok?
+    'Q': JobState.QUEUED,
+    'R': JobState.RUNNING,
+    'S': JobState.SUSPENDED,
+    'T': JobState.QUEUED,  # We assume that from the AiiDA point of view
     # it is still queued
-    'U': JOB_STATES.SUSPENDED,
-    'W': JOB_STATES.QUEUED,
-    'X': JOB_STATES.DONE,
-    'C': JOB_STATES.DONE,  # This is the completed state of PBS/Torque
+    'U': JobState.SUSPENDED,
+    'W': JobState.QUEUED,
+    'X': JobState.DONE,
+    'C': JobState.DONE,  # This is the completed state of PBS/Torque
 }
 
 
@@ -490,10 +490,10 @@ class PbsBaseClass(Scheduler):
                 except KeyError:
                     _LOGGER.warning("Unrecognized job_state '{}' for job "
                                     "id {}".format(job_state_string, this_job.job_id))
-                    this_job.job_state = JOB_STATES.UNDETERMINED
+                    this_job.job_state = JobState.UNDETERMINED
             except KeyError:
                 _LOGGER.debug("No 'job_state' field for job id {}".format(this_job.job_id))
-                this_job.job_state = JOB_STATES.UNDETERMINED
+                this_job.job_state = JobState.UNDETERMINED
 
             try:
                 this_job.job_substate = raw_data['substate']

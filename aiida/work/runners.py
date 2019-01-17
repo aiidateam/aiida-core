@@ -157,7 +157,7 @@ class Runner(object):  # pylint: disable=useless-object-inheritance
         else:
             self.loop.add_callback(process.step_until_terminated)
 
-        return process.calc
+        return process.node
 
     def schedule(self, process, *args, **inputs):
         """
@@ -172,7 +172,7 @@ class Runner(object):  # pylint: disable=useless-object-inheritance
 
         process = instantiate_process(self, process, *args, **inputs)
         self.loop.add_callback(process.step_until_terminated)
-        return process.calc
+        return process.node
 
     def _run(self, process, *args, **inputs):
         """
@@ -192,7 +192,7 @@ class Runner(object):  # pylint: disable=useless-object-inheritance
         with utils.loop_scope(self.loop):
             process = instantiate_process(self, process, *args, **inputs)
             process.execute()
-            return process.outputs, process.calc
+            return process.outputs, process.node
 
     def run(self, process, *args, **inputs):
         """

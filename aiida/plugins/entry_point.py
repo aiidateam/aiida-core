@@ -248,13 +248,6 @@ def get_entry_point_from_class(class_module, class_name):
     :param class_name: name of the class
     :return: a tuple of the corresponding group and entry point or None if not found
     """
-    prefix = 'JobProcess_'
-
-    # Curiosity of the dynamically generated JobProcess classes
-    if class_name.startswith(prefix):
-        class_path = class_name[len(prefix):]
-        class_module, class_name = class_path.rsplit('.', 1)
-
     for group in ENTRYPOINT_MANAGER.get_entry_map().keys():
         for entry_point in ENTRYPOINT_MANAGER.iter_entry_points(group):
 

@@ -27,7 +27,7 @@ The following table describes which processes exist in AiiDA and what node type 
 Process               Database record               Used for
 ===================   =======================       =====================
 ``WorkChain``         ``WorkChainNode``             Workchain
-``JobProcess``        ``CalcJobNode``               CalcJob
+``CalcJob``           ``CalcJobNode``               CalcJob
 ``FunctionProcess``   ``WorkFunctionNode``          Workfunction
 ``FunctionProcess``   ``CalcFunctionNode``          Calcfunction
 ===================   =======================       =====================
@@ -161,7 +161,7 @@ For more details please refer to the :ref:`process builder section <running_work
 Submit test
 -----------
 The ``ProcessBuilder`` of a ``CalcJobNode`` has one additional feature.
-It has the method :py:meth:`~aiida.work.process_builder.JobProcessBuilder.submit_test()`.
+It has the method :py:meth:`~aiida.work.process_builder.CalcJobBuilder.submit_test()`.
 When this method is called, provided that the inputs are valid, a directory will be created locally with all the inputs files and scripts that would be created if the builder were to be submitted for real.
 This gives you a chance to inspect the generated files before actually sending them to the remote computer.
 This action also will not create an actual calculation node in the database, nor do the input nodes have to be stored, allowing you to check that everything is correct without polluting the database.

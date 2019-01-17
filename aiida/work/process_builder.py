@@ -15,7 +15,7 @@ from __future__ import absolute_import
 from collections import Mapping
 from aiida.work.ports import PortNamespace
 
-__all__ = ['ProcessBuilder', 'JobProcessBuilder', 'ProcessBuilderNamespace']
+__all__ = ['ProcessBuilder', 'CalcJobBuilder', 'ProcessBuilderNamespace']
 
 
 class ProcessBuilderNamespace(Mapping):
@@ -103,9 +103,7 @@ class ProcessBuilderNamespace(Mapping):
 
 
 class ProcessBuilder(ProcessBuilderNamespace):
-    """
-    A process builder that helps creating a new calculation
-    """
+    """A process builder that helps setting up the inputs for creating a new process."""
 
     def __init__(self, process_class):
         self._process_class = process_class
@@ -117,14 +115,11 @@ class ProcessBuilder(ProcessBuilderNamespace):
         return self._process_class
 
 
-class JobProcessBuilder(ProcessBuilder):
-    """
-    A process builder specific to CalcJobNode classes, that provides
-    also the submit_test functionality
-    """
+class CalcJobBuilder(ProcessBuilder):
+    """A process builder specific to CalcJob implementations that provides also the `submit_test` functionality."""
 
     def __dir__(self):
-        return super(JobProcessBuilder, self).__dir__() + ['submit_test']
+        return super(CalcJobBuilder, self).__dir__() + ['submit_test']
 
     def submit_test(self, folder=None, subfolder_name=None):
         """
@@ -142,4 +137,4 @@ class JobProcessBuilder(ProcessBuilder):
         inputs.update(**self)
         process = self._process_class(inputs=inputs)
 
-        return process.calc.submit_test(folder, subfolder_name)
+        return process.node.submit_test(folder, subfolder_name)

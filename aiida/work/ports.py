@@ -77,7 +77,7 @@ class InputPort(WithSerialize, WithNonDb, ports.InputPort):
         return description
 
 
-class PortNamespace(ports.PortNamespace):
+class PortNamespace(WithNonDb, ports.PortNamespace):
     """
     Sub class of plumpy.PortNamespace which implements the serialize method to support automatic recursive
     serialization of a given mapping onto the ports of the PortNamespace.

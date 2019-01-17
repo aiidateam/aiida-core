@@ -19,16 +19,13 @@ from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_calculation as command
-from aiida.common.datastructures import calc_states
-from aiida.orm.node.process.calculation.calcjob import CalcJobExitStatus
-from aiida.work import runners, rmq
+from aiida.common.datastructures import CalcJobState
 
 
 def get_result_lines(result):
     return [e for e in result.output.split('\n') if e]
 
 
-@unittest.skip('reenable when issue #2342 is addressed')
 class TestVerdiCalculation(AiidaTestCase):
     """Tests for `verdi calculation`."""
 
@@ -36,9 +33,8 @@ class TestVerdiCalculation(AiidaTestCase):
     def setUpClass(cls, *args, **kwargs):
         super(TestVerdiCalculation, cls).setUpClass(*args, **kwargs)
         from aiida.backends.tests.utils.fixtures import import_archive_fixture
-        from aiida.common.exceptions import ModificationNotAllowed
         from aiida.common.links import LinkType
-        from aiida.orm import Node, CalculationFactory, Data
+        from aiida.orm import CalculationFactory, Data
         from aiida.orm.node.process import CalcJobNode
         from aiida.orm.data.parameter import ParameterData
         from aiida.work.processes import ProcessState
@@ -60,35 +56,17 @@ class TestVerdiCalculation(AiidaTestCase):
         authinfo = orm.AuthInfo(computer=cls.computer, user=user)
         authinfo.store()
 
-        # Create 13 CalcJobNodes (one for each CalculationState)
-        for calculation_state in calc_states:
+        # Create 5 CalcJobNodes (one for each CalculationState)
+        for calculation_state in CalcJobState:
 
-            calc = CalcJobNode(
-                computer=cls.computer, resources={
-                    'num_machines': 1,
-                    'num_mpiprocs_per_machine': 1
-                }).store()
+            calc = CalcJobNode(computer=cls.computer)
+            calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+            calc.store()
 
-            # Trying to set NEW will raise, but in this case we don't need to change the state
-            try:
-                calc._set_state(calculation_state)
-            except ModificationNotAllowed:
-                pass
-
-            try:
-                exit_status = CalcJobExitStatus[calculation_state]
-            except KeyError:
-                if calculation_state == 'IMPORTED':
-                    calc._set_process_state(ProcessState.FINISHED)
-                else:
-                    calc._set_process_state(ProcessState.RUNNING)
-            else:
-                calc._set_exit_status(exit_status)
-                calc._set_process_state(ProcessState.FINISHED)
-
+            calc._set_process_state(ProcessState.RUNNING)
             cls.calcs.append(calc)
 
-            if calculation_state == 'PARSING':
+            if calculation_state == CalcJobState.PARSING:
                 cls.KEY_ONE = 'key_one'
                 cls.KEY_TWO = 'key_two'
                 cls.VAL_ONE = 'val_one'
@@ -107,13 +85,23 @@ class TestVerdiCalculation(AiidaTestCase):
                 # Add a single calc to a group
                 cls.group.add_nodes([calc])
 
-        # Load the fixture containing a single ArithmeticAddCalculation node
-        import_archive_fixture('calcjob/arithmetic.add.aiida')
+        # Create a single failed CalcJobNode
+        cls.EXIT_STATUS = 100
+        calc = CalcJobNode(computer=cls.computer)
+        calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+        calc.store()
+        calc._set_exit_status(cls.EXIT_STATUS)
+        calc._set_process_state(ProcessState.FINISHED)
+        cls.calcs.append(calc)
 
-        # Get the imported ArithmeticAddCalculation node
-        ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
-        calculations = orm.QueryBuilder().append(ArithmeticAddCalculation).all()[0]
-        cls.arithmetic_job = calculations[0]
+        # Uncomment when issue 2342 is addressed
+        # # Load the fixture containing a single ArithmeticAddCalculation node
+        # import_archive_fixture('calcjob/arithmetic.add.aiida')
+
+        # # Get the imported ArithmeticAddCalculation node
+        # ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+        # calculations = orm.QueryBuilder().append(ArithmeticAddCalculation).all()[0]
+        # cls.arithmetic_job = calculations[0]
 
     def setUp(self):
         self.cli_runner = CliRunner()
@@ -153,22 +141,22 @@ class TestVerdiCalculation(AiidaTestCase):
             options = ['-r', '-a', flag]
             result = self.cli_runner.invoke(command.calculation_list, options)
             self.assertIsNone(result.exception, result.output)
-            self.assertEqual(len(get_result_lines(result)), 14)
+            self.assertEqual(len(get_result_lines(result)), 6)
 
     def test_calculation_list_all(self):
         """Test verdi calculation list with the all option"""
 
-        # Without the flag I should only get the "active" states, which should be seven
+        # Without the flag I should only get the "active" states, which should be five
         options = ['-r']
         result = self.cli_runner.invoke(command.calculation_list, options)
         self.assertIsNone(result.exception, result.output)
-        self.assertEqual(len(get_result_lines(result)), 7, result.output)
+        self.assertEqual(len(get_result_lines(result)), 5, result.output)
 
         for flag in ['-a', '--all']:
             options = ['-r', flag]
             result = self.cli_runner.invoke(command.calculation_list, options)
             self.assertIsNone(result.exception, result.output)
-            self.assertEqual(len(get_result_lines(result)), 14, result.output)
+            self.assertEqual(len(get_result_lines(result)), 6, result.output)
 
     def test_calculation_list_limit(self):
         """Test verdi calculation list with the limit option"""
@@ -201,9 +189,9 @@ class TestVerdiCalculation(AiidaTestCase):
                 self.assertIsNone(result.exception, result.output)
 
                 if state == 'finished':
-                    self.assertEqual(len(get_result_lines(result)), 7, result.output)
+                    self.assertEqual(len(get_result_lines(result)), 1, result.output)
                 else:
-                    self.assertEqual(len(get_result_lines(result)), 7, result.output)
+                    self.assertEqual(len(get_result_lines(result)), 5, result.output)
 
     def test_calculation_list_failed(self):
         """Test verdi calculation list with the failed filter"""
@@ -212,13 +200,13 @@ class TestVerdiCalculation(AiidaTestCase):
             result = self.cli_runner.invoke(command.calculation_list, options)
 
             self.assertIsNone(result.exception, result.output)
-            self.assertEqual(len(get_result_lines(result)), 4, result.output)
+            self.assertEqual(len(get_result_lines(result)), 1, result.output)
 
     def test_calculation_list_exit_status(self):
         """Test verdi calculation list with the exit status filter"""
         for flag in ['-E', '--exit-status']:
-            for exit_status in CalcJobExitStatus:
-                options = ['-r', flag, exit_status.value]
+            for exit_status in [self.EXIT_STATUS]:
+                options = ['-r', flag, exit_status]
                 result = self.cli_runner.invoke(command.calculation_list, options)
 
                 self.assertIsNone(result.exception, result.output)
@@ -266,6 +254,7 @@ class TestVerdiCalculation(AiidaTestCase):
         self.assertIsNone(result.exception, result.output)
         self.assertTrue(len(get_result_lines(result)) > 0)
 
+    @unittest.skip('reenable when issue #2342 is addressed')
     def test_calculation_plugins(self):
         """Test verdi calculation plugins"""
         from aiida.plugins.entry_point import get_entry_points
@@ -283,6 +272,7 @@ class TestVerdiCalculation(AiidaTestCase):
         self.assertIsNone(result.exception, result.output)
         self.assertTrue(len(get_result_lines(result)) > len(calculation_plugins))
 
+    @unittest.skip('reenable when issue #2342 is addressed')
     def test_calculation_inputls(self):
         """Test verdi calculation inputls"""
         options = []
@@ -304,6 +294,7 @@ class TestVerdiCalculation(AiidaTestCase):
         self.assertIn('calcinfo.json', get_result_lines(result))
         self.assertIn('job_tmpl.json', get_result_lines(result))
 
+    @unittest.skip('reenable when issue #2342 is addressed')
     def test_calculation_outputls(self):
         """Test verdi calculation outputls"""
         options = []
@@ -324,6 +315,7 @@ class TestVerdiCalculation(AiidaTestCase):
         self.assertEqual(len(get_result_lines(result)), 1)
         self.assertIn('aiida.out', get_result_lines(result))
 
+    @unittest.skip('reenable when issue #2342 is addressed')
     def test_calculation_inputcat(self):
         """Test verdi calculation inputcat"""
         options = []
@@ -342,6 +334,7 @@ class TestVerdiCalculation(AiidaTestCase):
         self.assertEqual(len(get_result_lines(result)), 1)
         self.assertEqual(get_result_lines(result)[0], '2 3')
 
+    @unittest.skip('reenable when issue #2342 is addressed')
     def test_calculation_outputcat(self):
         """Test verdi calculation outputcat"""
         options = []

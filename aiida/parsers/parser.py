@@ -34,20 +34,7 @@ class Parser(object):
 
     def __init__(self, calc):
         self._logger = AIIDA_LOGGER.getChild('parser').getChild(self.__class__.__name__)
-
-        # THIS IS A MASSIVE HACK: the `_prepare_for_submission` is only implemented for the sub class but this instance
-        # will be a plain `CalcJobNode`, so we have to recreate an instance of the actual sub class to call the method.
-        from importlib import import_module
-        from aiida.plugins.entry_point import is_valid_entry_point_string, load_entry_point_from_string
-
-        if is_valid_entry_point_string(calc.process_type):
-            calc_class = load_entry_point_from_string(calc.process_type)
-        else:
-            module_name, class_name = calc.process_type.rsplit('.', 1)
-            module = import_module(module_name)
-            calc_class = getattr(module, class_name)
-
-        self._calc = calc_class(dbnode=calc._dbnode)
+        self._calc = calc
 
     @property
     def logger(self):
@@ -96,7 +83,7 @@ class Parser(object):
             self.logger.error('No retrieved folder found')
             return False, ()
 
-        retrieved = {self._calc._get_linkname_retrieved(): out_folder}
+        retrieved = {self._calc.link_label_retrieved: out_folder}
 
         if retrieved_temporary_folder is not None:
             key = self.retrieved_temporary_folder_key

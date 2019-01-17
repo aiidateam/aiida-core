@@ -334,3 +334,85 @@ class TestMigrationSchemaVsModelsSchema(unittest.TestCase):
 
         self.assertTrue(result.is_match, "The migration database doesn't match to the one "
                         "created by the models.\nDifferences: " + result._dump_data(result.errors))  # pylint: disable=protected-access
+
+
+class TestCalcAttributeKeysMigration(TestMigrationsSQLA):
+    """Test the migration of the keys of certain attribute for ProcessNodes and CalcJobNodes."""
+
+    migrate_from = 'e72ad251bcdb'  # e72ad251bcdb_dbgroup_class_change_type_string_values
+    migrate_to = '7ca08c391c49'  # 7ca08c391c49_calc_job_option_attribute_keys
+
+    KEY_RESOURCES_OLD = 'jobresource_params'
+    KEY_RESOURCES_NEW = 'resources'
+    KEY_PARSER_NAME_OLD = 'parser'
+    KEY_PARSER_NAME_NEW = 'parser_name'
+    KEY_PROCESS_LABEL_OLD = '_process_label'
+    KEY_PROCESS_LABEL_NEW = 'process_label'
+    KEY_ENVIRONMENT_VARIABLES_OLD = 'custom_environment_variables'
+    KEY_ENVIRONMENT_VARIABLES_NEW = 'environment_variables'
+
+    def setUpBeforeMigration(self):
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
+        DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
+        DbUser = self.get_auto_base().classes.db_dbuser  # pylint: disable=invalid-name
+
+        with sa.engine.begin() as connection:
+            session = Session(connection.engine)
+
+            user = DbUser(is_superuser=False, email="{}@aiida.net".format(self.id()))
+            session.add(user)
+            session.commit()
+
+            self.resources = {'number_machines': 1}
+            self.parser_name = 'aiida.parsers:parser'
+            self.process_label = 'TestLabel'
+            self.environment_variables = {}
+
+            attributes = {
+                self.KEY_RESOURCES_OLD: self.resources,
+                self.KEY_PARSER_NAME_OLD: self.parser_name,
+                self.KEY_PROCESS_LABEL_OLD: self.process_label,
+                self.KEY_ENVIRONMENT_VARIABLES_OLD: self.environment_variables,
+            }
+            node_work = DbNode(type='node.process.workflow.WorkflowNode.', attributes=attributes, user_id=user.id)
+            node_calc = DbNode(
+                type='node.process.calculation.calcjob.CalcJobNode.', attributes=attributes, user_id=user.id)
+
+            session.add(node_work)
+            session.add(node_calc)
+            session.commit()
+
+            self.node_work_id = node_work.id
+            self.node_calc_id = node_calc.id
+
+    def test_attribute_key_changes(self):
+        """Verify that the keys are successfully changed of the affected attributes."""
+        import ast
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
+        DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
+
+        not_found = tuple([0])
+
+        with sa.engine.begin() as connection:
+            session = Session(connection.engine)
+
+            node_work = session.query(DbNode).filter(DbNode.id == self.node_work_id).one()
+            self.assertEqual(node_work.attributes.get(self.KEY_PROCESS_LABEL_NEW), self.process_label)
+            self.assertEqual(node_work.attributes.get(self.KEY_PROCESS_LABEL_OLD, not_found), not_found)
+
+            node_calc = session.query(DbNode).filter(DbNode.id == self.node_calc_id).one()
+
+            # The dictionaries need to be cast with ast.literal_eval, because the `get` will return a string
+            # representation of the dictionary that the attribute contains
+            self.assertEqual(node_calc.attributes.get(self.KEY_PROCESS_LABEL_NEW), self.process_label)
+            self.assertEqual(node_calc.attributes.get(self.KEY_PARSER_NAME_NEW), self.parser_name)
+            self.assertEqual(ast.literal_eval(node_calc.attributes.get(self.KEY_RESOURCES_NEW)), self.resources)
+            self.assertEqual(
+                ast.literal_eval(node_calc.attributes.get(self.KEY_ENVIRONMENT_VARIABLES_NEW)),
+                self.environment_variables)
+            self.assertEqual(node_calc.attributes.get(self.KEY_PROCESS_LABEL_OLD, not_found), not_found)
+            self.assertEqual(node_calc.attributes.get(self.KEY_PARSER_NAME_OLD, not_found), not_found)
+            self.assertEqual(node_calc.attributes.get(self.KEY_RESOURCES_OLD, not_found), not_found)
+            self.assertEqual(node_calc.attributes.get(self.KEY_ENVIRONMENT_VARIABLES_OLD, not_found), not_found)

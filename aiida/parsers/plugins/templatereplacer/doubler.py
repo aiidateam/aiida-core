@@ -42,7 +42,7 @@ class TemplatereplacerDoublerParser(Parser):
             self.logger.error("the output file name 'output_file_name' was not specified in the 'template' input node")
             return False, ()
 
-        retrieved_folder = retrieved[self._calc._get_linkname_retrieved()]
+        retrieved_folder = retrieved[self._calc.link_label_retrieved]
         try:
             parsed_value = int(retrieved_folder.get_file_content(output_file).strip())
         except (AttributeError, IOError, ValueError) as e:

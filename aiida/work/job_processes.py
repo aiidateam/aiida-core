@@ -12,7 +12,6 @@ from __future__ import print_function
 from __future__ import absolute_import
 import functools
 import logging
-import shutil
 import sys
 import tempfile
 
@@ -20,21 +19,14 @@ import six
 from tornado.gen import coroutine, Return
 
 import plumpy
-from plumpy.ports import PortNamespace
-from aiida.common.datastructures import calc_states, is_progressive_state_change
+from aiida.common.datastructures import CalcJobState
 from aiida.common.exceptions import TransportTaskException
-from aiida.common import exceptions
-from aiida.common.lang import override
 from aiida.daemon import execmanager
-from aiida.orm.node.process import CalcJobNode
-from aiida.scheduler.datastructures import JOB_STATES
-from aiida.work.process_builder import JobProcessBuilder
+from aiida.scheduler.datastructures import JobState
 from aiida.work.utils import exponential_backoff_retry, interruptable_task
 
-from . import persistence
 from . import processes
 
-__all__ = ('JobProcess',)
 
 UPLOAD_COMMAND = 'upload'
 SUBMIT_COMMAND = 'submit'
@@ -67,17 +59,14 @@ def task_upload_job(node, transport_queue, calc_info, script_filename, cancellab
     :raises: Return if the tasks was successfully completed
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
+    if node.get_state() == CalcJobState.SUBMITTING:
+        logger.warning('calculation<{}> already marked as SUBMITTING, skipping task_update_job'.format(node.pk))
+        raise Return(True)
+
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
     max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
 
     authinfo = node.get_computer().get_authinfo(node.get_user())
-
-    state_pending = calc_states.SUBMITTING
-
-    if is_progressive_state_change(node.get_state(), state_pending):
-        node._set_state(state_pending)
-    else:
-        logger.warning('ignored invalid proposed state change: {} to {}'.format(node.get_state(), state_pending))
 
     @coroutine
     def do_upload():
@@ -97,6 +86,7 @@ def task_upload_job(node, transport_queue, calc_info, script_filename, cancellab
         raise TransportTaskException('upload_calculation failed {} times consecutively'.format(max_attempts))
     else:
         logger.info('uploading calculation<{}> successful'.format(node.pk))
+        node._set_state(CalcJobState.SUBMITTING)
         raise Return(result)
 
 
@@ -119,7 +109,7 @@ def task_submit_job(node, transport_queue, calc_info, script_filename, cancellab
     :raises: Return if the tasks was successfully completed
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
-    if node.get_state() == calc_states.WITHSCHEDULER:
+    if node.get_state() == CalcJobState.WITHSCHEDULER:
         assert node.get_job_id() is not None, 'job is WITHSCHEDULER, however, it does not have a job id'
         logger.warning('calculation<{}> already marked as WITHSCHEDULER, skipping task_submit_job'.format(node.pk))
         raise Return(node.get_job_id())
@@ -147,7 +137,7 @@ def task_submit_job(node, transport_queue, calc_info, script_filename, cancellab
         raise TransportTaskException('submit_calculation failed {} times consecutively'.format(max_attempts))
     else:
         logger.info('submitting calculation<{}> successful'.format(node.pk))
-        node._set_state(calc_states.WITHSCHEDULER)
+        node._set_state(CalcJobState.WITHSCHEDULER)
         raise Return(result)
 
 
@@ -162,15 +152,15 @@ def task_update_job(node, job_manager, cancellable):
     If all retries fail, the task will raise a TransportTaskException
 
     :param node: the node that represents the job calculation
-    :type node: :class:`aiida.orm.calculation.CalcJobNode`
+    :type node: :class:`aiida.orm.node.process.calculation.calcjob.CalcJobNode`
     :param job_manager: The job manager
     :type job_manager: :class:`aiida.work.job_calcs.JobManager`
     :param cancellable: A cancel flag
     :type cancellable: :class:`aiida.work.utils.InterruptableFuture`
     :raises: Return containing True if the tasks was successfully completed, False otherwise
     """
-    if node.get_state() == calc_states.COMPUTED:
-        logger.warning('calculation<{}> already marked as COMPUTED, skipping task_update_job'.format(node.pk))
+    if node.get_state() == CalcJobState.RETRIEVING:
+        logger.warning('calculation<{}> already marked as RETRIEVING, skipping task_update_job'.format(node.pk))
         raise Return(True)
 
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
@@ -187,12 +177,12 @@ def task_update_job(node, job_manager, cancellable):
 
         if job_info is None:
             # If the job is computed or not found assume it's done
-            node._set_scheduler_state(JOB_STATES.DONE)
+            node._set_scheduler_state(JobState.DONE)
             job_done = True
         else:
             node._set_last_jobinfo(job_info)
             node._set_scheduler_state(job_info.job_state)
-            job_done = job_info.job_state == JOB_STATES.DONE
+            job_done = job_info.job_state == JobState.DONE
 
         raise Return(job_done)
 
@@ -207,7 +197,7 @@ def task_update_job(node, job_manager, cancellable):
     else:
         logger.info('updating calculation<{}> successful'.format(node.pk))
         if job_done:
-            node._set_state(calc_states.COMPUTED)
+            node._set_state(CalcJobState.RETRIEVING)
 
         raise Return(job_done)
 
@@ -229,7 +219,7 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
     :raises: Return if the tasks was successfully completed
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
-    if node.get_state() == calc_states.PARSING:
+    if node.get_state() == CalcJobState.PARSING:
         logger.warning('calculation<{}> already marked as PARSING, skipping task_retrieve_job'.format(node.pk))
         raise Return(True)
 
@@ -246,13 +236,6 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
             logger.info('retrieving calculation<{}>'.format(node.pk))
             raise Return(execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder))
 
-    state_pending = calc_states.RETRIEVING
-
-    if is_progressive_state_change(node.get_state(), state_pending):
-        node._set_state(state_pending)
-    else:
-        logger.warning('ignored invalid proposed state change: {} to {}'.format(node.get_state(), state_pending))
-
     try:
         result = yield exponential_backoff_retry(
             do_retrieve, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption)
@@ -262,7 +245,7 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
         logger.warning('retrieving calculation<{}> failed'.format(node.pk))
         raise TransportTaskException('retrieve_calculation failed {} times consecutively'.format(max_attempts))
     else:
-        node._set_state(calc_states.PARSING)
+        node._set_state(CalcJobState.PARSING)
         logger.info('retrieving calculation<{}> successful'.format(node.pk))
         raise Return(result)
 
@@ -287,7 +270,7 @@ def task_kill_job(node, transport_queue, cancellable):
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
     max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
 
-    if node.get_state() in [calc_states.NEW, calc_states.TOSUBMIT, calc_states.SUBMITTING]:
+    if node.get_state() in [CalcJobState.UPLOADING, CalcJobState.SUBMITTING]:
         logger.warning('calculation<{}> killed, it was in the {} state'.format(node.pk, node.get_state()))
         raise Return(True)
 
@@ -309,7 +292,7 @@ def task_kill_job(node, transport_queue, cancellable):
         raise TransportTaskException('kill_calculation failed {} times consecutively'.format(max_attempts))
     else:
         logger.info('killing calculation<{}> successful'.format(node.pk))
-        node._set_scheduler_state(JOB_STATES.DONE)
+        node._set_scheduler_state(JobState.DONE)
         raise Return(result)
 
 
@@ -331,7 +314,7 @@ class Waiting(plumpy.Waiting):
     @coroutine
     def execute(self):
 
-        calculation = self.process.calc
+        calculation = self.process.node
         transport_queue = self.process.runner.transport
 
         if isinstance(self.data, tuple):
@@ -450,8 +433,8 @@ class Waiting(plumpy.Waiting):
     def retrieved(self, retrieved_temporary_folder):
         """
         Create the next state to go to after retrieving
-        :param retrieved_temporary_folder: The temporary folder used in retrieving, this will
-            be used in parsing.
+
+        :param retrieved_temporary_folder: The temporary folder used in retrieving, this will be used in parsing.
         :return: The appropriate RUNNING state
         """
         return self.create_state(
@@ -468,244 +451,3 @@ class Waiting(plumpy.Waiting):
             if self._killing is None:
                 self._killing = plumpy.Future()
             return self._killing
-
-
-class JobProcess(processes.Process):
-    TRANSPORT_OPERATION = 'TRANSPORT_OPERATION'
-    CALC_NODE_LABEL = 'calc_node'
-    OPTIONS_INPUT_LABEL = 'options'
-
-    _calc_class = None
-
-    @classmethod
-    def get_builder(cls):
-        return JobProcessBuilder(cls)
-
-    @classmethod
-    def build(cls, calc_class):
-        from aiida.orm.data import Data
-
-        def define(cls_, spec):
-            super(JobProcess, cls_).define(spec)
-
-            spec.input_namespace(cls.OPTIONS_INPUT_LABEL, help='various options')
-            for key, option in calc_class.options.items():
-                spec.input(
-                    '{}.{}'.format(cls.OPTIONS_INPUT_LABEL, key),
-                    required=option.get('required', True),
-                    valid_type=option.get('valid_type', object),  # Should match everything, as in all types are valid
-                    non_db=option.get('non_db', True),
-                    help=option.get('help', '')
-                )
-
-            # Define the actual inputs based on the use methods of the calculation class
-            for key, use_method in calc_class._use_methods.items():
-
-                valid_type = use_method['valid_types']
-                docstring = use_method.get('docstring', None)
-                additional_parameter = use_method.get('additional_parameter')
-
-                if additional_parameter:
-                    spec.input_namespace(key, help=docstring, valid_type=valid_type, required=False, dynamic=True)
-                else:
-                    spec.input(key, help=docstring, valid_type=valid_type, required=False)
-
-            # Outputs
-            spec.outputs.valid_type = Data
-
-        dynamic_class_name = persistence.get_object_loader().identify_object(calc_class)
-        class_name = '{}_{}'.format(cls.__name__, dynamic_class_name)
-
-        # Dynamically create the type for this Process
-        return type(
-            class_name, (cls,),
-            {
-                plumpy.Process.define.__name__: classmethod(define),
-                '_calc_class': calc_class
-            }
-        )
-
-    @classmethod
-    def get_state_classes(cls):
-        # Overwrite the waiting state
-        states_map = super(JobProcess, cls).get_state_classes()
-        states_map[processes.ProcessState.WAITING] = Waiting
-        return states_map
-
-    # region Process overrides
-
-    @override
-    def on_killed(self):
-        super(JobProcess, self).on_killed()
-        self.calc._set_state(calc_states.FAILED)
-
-    @override
-    def update_outputs(self):
-        # DO NOT REMOVE:
-        # Don't do anything, this is taken care of by the job calculation node itself
-        pass
-
-    @override
-    def get_or_create_db_record(self):
-        return self._calc_class()
-
-    @property
-    def process_class(self):
-        """
-        Return the class that represents this Process, for the JobProcess this is CalcJobNode class it wraps.
-
-        For a standard Process or sub class of Process, this is the class itself. However, for legacy reasons,
-        the Process class is a wrapper around another class. This function returns that original class, i.e. the
-        class that really represents what was being executed.
-        """
-        return self._calc_class
-
-    @override
-    def _setup_db_inputs(self):
-        """
-        Create the links that connect the inputs to the calculation node that represents this Process
-
-        For a JobProcess, the inputs also need to be mapped onto the `use_` and `set_` methods of the
-        legacy CalcJobNode class. If a code is defined in the inputs and no computer has been set
-        yet for the calculation node, the computer configured for the code is used to set on the node.
-        """
-        for name, input_value in self.get_provenance_inputs_iterator():
-
-            port = self.spec().inputs[name]
-
-            if input_value is None or getattr(port, 'non_db', False):
-                continue
-
-            # Call the 'set' attribute methods for the contents of the 'option' namespace
-            if name == self.OPTIONS_INPUT_LABEL:
-                for option_name, option_value in input_value.items():
-                    self.calc.set_option(option_name, option_value)
-                continue
-
-            # Call the 'use' methods to set up the data-calc links
-            if isinstance(port, PortNamespace):
-                additional = self._calc_class._use_methods[name]['additional_parameter']
-
-                for k, v in input_value.items():
-                    try:
-                        getattr(self.calc, 'use_{}'.format(name))(v, **{additional: k})
-                    except AttributeError:
-                        raise AttributeError(
-                            "You have provided for an input the key '{}' but"
-                            "the CalcJobNode has no such use_{} method".format(name, name))
-
-            else:
-                getattr(self.calc, 'use_{}'.format(name))(input_value)
-
-        # Get the computer from the code if necessary
-        if self.calc.get_computer() is None and 'code' in self.inputs:
-            code = self.inputs['code']
-            if not code.is_local():
-                self.calc.set_computer(code.get_remote_computer())
-
-    # endregion
-
-    @override
-    def run(self):
-        """
-        Run the calculation, we put it in the TOSUBMIT state and then wait for it
-        to be copied over, submitted, retrieved, etc.
-        """
-        from aiida.orm import Code, load_node
-        from aiida.common.folders import SandboxFolder
-        from aiida.common.exceptions import InputValidationError
-
-        # Note that the caching mechanism relies on this as it will always enter the run method, even when finished
-        if self.calc.get_state() == calc_states.FINISHED:
-            return 0
-
-        state_current = self.calc.get_state()
-        state_pending = calc_states.TOSUBMIT
-
-        if is_progressive_state_change(state_current, state_pending):
-            self.calc._set_state(state_pending)
-        else:
-            logger.warning('ignored invalid proposed state change: {} to {}'.format(state_current, state_pending))
-
-        with SandboxFolder() as folder:
-            computer = self.calc.get_computer()
-            if self.calc.has_cached_links():
-                raise exceptions.InvalidOperation("This calculation still has links in cache that "
-                                                  "are not stored in database yet")
-            calc_info, script_filename = self.calc._presubmit(folder)
-            input_codes = [load_node(_.code_uuid, sub_classes=(Code,)) for _ in calc_info.codes_info]
-
-            for code in input_codes:
-                if not code.can_run_on(computer):
-                    raise InputValidationError(
-                        'The selected code {} for calculation {} cannot run on computer {}'.format(
-                            code.pk, self.calc.pk, computer.name))
-
-            # After this call, no modifications to the folder should be done
-            self.calc._store_raw_input_folder(folder.abspath)
-
-        # Launch the upload operation
-        return plumpy.Wait(msg='Waiting to upload', data=(UPLOAD_COMMAND, calc_info, script_filename))
-
-    def retrieved(self, retrieved_temporary_folder=None):
-        """
-        Parse a retrieved job calculation.  This is called once it's finished waiting
-        for the calculation to be finished and the data has been retrieved.
-        """
-        try:
-            exit_code = execmanager.parse_results(self.calc, retrieved_temporary_folder)
-        except Exception:
-            try:
-                self.calc._set_state(calc_states.PARSINGFAILED)
-            except exceptions.ModificationNotAllowed:
-                pass
-            raise
-        finally:
-            # Delete the temporary folder
-            try:
-                shutil.rmtree(retrieved_temporary_folder)
-            except OSError as exception:
-                if exception.errno != 2:
-                    raise
-
-        # Finally link up the outputs and we're done
-        for entry in self.calc.get_outgoing():
-            self.out(entry.link_label, entry.node)
-
-        return exit_code
-
-
-class ContinueCalcJob(JobProcess):
-
-    @classmethod
-    def define(cls, spec):
-        super(ContinueCalcJob, cls).define(spec)
-        spec.input('_calc', valid_type=CalcJobNode, required=True, non_db=False)
-
-    def run(self):
-        state = self.calc.get_state()
-
-        if state == calc_states.NEW:
-            return super(ContinueCalcJob, self).run()
-
-        if state in [calc_states.TOSUBMIT, calc_states.SUBMITTING]:
-            return plumpy.Wait(msg='Waiting to submit', data=SUBMIT_COMMAND)
-
-        elif state in calc_states.WITHSCHEDULER:
-            return plumpy.Wait(msg='Waiting for scheduler', data=UPDATE_COMMAND)
-
-        elif state in [calc_states.COMPUTED, calc_states.RETRIEVING]:
-            return plumpy.Wait(msg='Waiting to retrieve', data=RETRIEVE_COMMAND)
-
-        elif state == calc_states.PARSING:
-            return self.retrieved(True)
-
-            # Otherwise nothing to do...
-
-    def get_or_create_db_record(self):
-        return self.inputs._calc
-
-    @override
-    def _setup_db_record(self):
-        self._calc_class = self.inputs._calc.__class__
-        super(ContinueCalcJob, self)._setup_db_record()

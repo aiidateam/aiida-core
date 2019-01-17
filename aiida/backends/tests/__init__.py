@@ -75,7 +75,6 @@ db_test_list = {
         'cmdline.params.types.node': ['aiida.backends.tests.cmdline.params.types.test_node'],
         'cmdline.params.types.plugin': ['aiida.backends.tests.cmdline.params.types.test_plugin'],
         'common.archive': ['aiida.backends.tests.common.test_archive'],
-        'common.datastructures': ['aiida.backends.tests.common.test_datastructures'],
         'common.extendeddicts': ['aiida.backends.tests.common.test_extendeddicts'],
         'common.folders': ['aiida.backends.tests.common.test_folders'],
         'common.hashing': ['aiida.backends.tests.common.test_hashing'],
@@ -119,7 +118,6 @@ db_test_list = {
         'work.utils': ['aiida.backends.tests.work.test_utils'],
         'work.work_chain': ['aiida.backends.tests.work.work_chain'],
         'work.workfunctions': ['aiida.backends.tests.work.test_workfunctions'],
-        'work.job_processes': ['aiida.backends.tests.work.job_processes'],
         'plugin_loader': ['aiida.backends.tests.test_plugin_loader'],
         'caching_config': ['aiida.backends.tests.test_caching_config'],
     }

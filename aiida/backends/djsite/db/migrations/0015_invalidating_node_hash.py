@@ -22,6 +22,7 @@ DOWN_REVISION = '1.0.14'
 # Currently valid hash key
 _HASH_EXTRA_KEY = '_aiida_hash'
 
+
 def notify_user(apps, schema_editor):
     echo_warning("Invalidating all the hashes of all the nodes. Please run verdi rehash", bold=True)
 
@@ -37,7 +38,6 @@ class Migration(migrations.Migration):
         migrations.RunPython(notify_user, reverse_code=notify_user),
         migrations.RunSQL(
             """ DELETE FROM db_dbextra WHERE key='""" + _HASH_EXTRA_KEY + """';""",
-            reverse_sql=""" DELETE FROM db_dbextra 
-                          WHERE key='""" + _HASH_EXTRA_KEY + """';"""),
+            reverse_sql=""" DELETE FROM db_dbextra WHERE key='""" + _HASH_EXTRA_KEY + """';"""),
         upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

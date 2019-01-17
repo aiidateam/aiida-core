@@ -66,37 +66,37 @@ class TestParserBjobs(unittest.TestCase):
 
         job_queued = 2
         job_queue_name = ['8nm', 'test']
-        job_queued_parsed = len([j for j in job_list if j.job_state and j.job_state == JOB_STATES.QUEUED])
-        job_queue_name_parsed = [j.queue_name for j in job_list if j.job_state and j.job_state == JOB_STATES.QUEUED]
+        job_queued_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.QUEUED])
+        job_queue_name_parsed = [j.queue_name for j in job_list if j.job_state and j.job_state == JobState.QUEUED]
         self.assertEquals(job_queued, job_queued_parsed)
         self.assertEquals(job_queue_name, job_queue_name_parsed)
 
         job_done = 2
         job_done_title = ['aiida-1033269', 'test']
         job_done_annotation = ['TERM_RUNLIMIT: job killed after reaching LSF run time limit', '-']
-        job_done_parsed = len([j for j in job_list if j.job_state and j.job_state == JOB_STATES.DONE])
-        job_done_title_parsed = [j.title for j in job_list if j.job_state and j.job_state == JOB_STATES.DONE]
-        job_done_annotation_parsed = [j.annotation for j in job_list if j.job_state and j.job_state == JOB_STATES.DONE]
+        job_done_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.DONE])
+        job_done_title_parsed = [j.title for j in job_list if j.job_state and j.job_state == JobState.DONE]
+        job_done_annotation_parsed = [j.annotation for j in job_list if j.job_state and j.job_state == JobState.DONE]
         self.assertEquals(job_done, job_done_parsed)
         self.assertEquals(job_done_title, job_done_title_parsed)
         self.assertEquals(job_done_annotation, job_done_annotation_parsed)
 
         job_running = 3
         job_running_parsed = len([j for j in job_list if j.job_state \
-                                  and j.job_state == JOB_STATES.RUNNING])
+                                  and j.job_state == JobState.RUNNING])
         self.assertEquals(job_running, job_running_parsed)
 
         running_users = ['inewton', 'inewton', 'dbowie']
-        parsed_running_users = [j.job_owner for j in job_list if j.job_state and j.job_state == JOB_STATES.RUNNING]
+        parsed_running_users = [j.job_owner for j in job_list if j.job_state and j.job_state == JobState.RUNNING]
         self.assertEquals(running_users, parsed_running_users)
 
         running_jobs = ['764254593', '764255172', '764245175']
         num_machines = [1, 1, 1]
         allocated_machines = ['lxbsu2710', 'b68ac74822', 'b68ac74822']
-        parsed_running_jobs = [j.job_id for j in job_list if j.job_state and j.job_state == JOB_STATES.RUNNING]
-        parsed_num_machines = [j.num_machines for j in job_list if j.job_state and j.job_state == JOB_STATES.RUNNING]
+        parsed_running_jobs = [j.job_id for j in job_list if j.job_state and j.job_state == JobState.RUNNING]
+        parsed_num_machines = [j.num_machines for j in job_list if j.job_state and j.job_state == JobState.RUNNING]
         parsed_allocated_machines = [
-            j.allocated_machines_raw for j in job_list if j.job_state and j.job_state == JOB_STATES.RUNNING
+            j.allocated_machines_raw for j in job_list if j.job_state and j.job_state == JobState.RUNNING
         ]
         self.assertEquals(running_jobs, parsed_running_jobs)
         self.assertEquals(num_machines, parsed_num_machines)
@@ -120,7 +120,7 @@ class TestSubmitScript(unittest.TestCase):
         Test the creation of a simple submission script.
         """
         from aiida.scheduler.datastructures import JobTemplate
-        from aiida.common.datastructures import CodeInfo, code_run_modes
+        from aiida.common.datastructures import CodeInfo, CodeRunMode
 
         scheduler = LsfScheduler()
 
@@ -133,7 +133,7 @@ class TestSubmitScript(unittest.TestCase):
         code_info.cmdline_params = ["mpirun", "-np", "2", "pw.x", "-npool", "1"]
         code_info.stdin_name = 'aiida.in'
         job_tmpl.codes_info = [code_info]
-        job_tmpl.codes_run_mode = code_run_modes.SERIAL
+        job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
         submit_script_text = scheduler.get_submit_script(job_tmpl)
 

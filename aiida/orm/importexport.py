@@ -17,8 +17,7 @@ import six
 from six.moves import zip
 from six.moves.html_parser import HTMLParser
 from aiida.common import exceptions
-from aiida.common.utils import (export_shard_uuid, get_class_string,
-                                get_object_from_string, grouper)
+from aiida.common.utils import export_shard_uuid, get_class_string, grouper
 from aiida.orm.computers import Computer
 from aiida.orm.groups import Group, GroupTypeString
 from aiida.orm.node import Node
@@ -351,8 +350,7 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
     from aiida.common.links import LinkType
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.backends.djsite.db import models
-    from aiida.common.utils import get_class_string, get_object_from_string
-    from aiida.common.datastructures import calc_states
+    from aiida.common.utils import get_object_from_string
     import aiida.common.json as json
 
     # This is the export version expected by this function
@@ -884,7 +882,6 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False, silen
     from aiida.common.archive import extract_tree, extract_tar, extract_zip, extract_cif
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.common.utils import get_object_from_string
-    from aiida.common.datastructures import calc_states
     from aiida.common.links import LinkType
     import aiida.common.json as json
 

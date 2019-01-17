@@ -115,7 +115,6 @@
         aiida/backends/tests/nodes.py|
         aiida/backends/tests/orm/data/frozendict.py|
         aiida/backends/tests/orm/data/remote.py|
-        aiida/backends/tests/orm/mixins.py|
         aiida/backends/tests/orm/utils/loaders.py|
         aiida/backends/tests/parsers.py|
         aiida/backends/tests/query.py|
@@ -147,9 +146,6 @@
         aiida/orm/autogroup.py|
         aiida/orm/backend.py|
         aiida/orm/querybuilder.py|
-        aiida/orm/calculation/__init__.py|
-        aiida/orm/calculation/inline.py|
-        aiida/orm/calculation/job/__init__.py|
         aiida/orm/code.py|
         aiida/orm/data/array/bands.py|
         aiida/orm/data/array/kpoints.py|

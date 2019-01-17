@@ -18,33 +18,27 @@ the data structure that is returned when querying for jobs in the scheduler
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
-from aiida.common.extendeddicts import (DefaultFieldsAttributeDict, Enumerate)
+
+from enum import Enum
 
 from aiida.common import AIIDA_LOGGER
+from aiida.common.extendeddicts import DefaultFieldsAttributeDict
 
 SCHEDULER_LOGGER = AIIDA_LOGGER.getChild('scheduler')
 
 
-class JobState(Enumerate):
-    pass
+class JobState(Enum):
+    """Enumeration of possible scheduler states of a CalcJob.
 
+    There is no FAILED state as every completed job is put in DONE, regardless of success.
+    """
 
-# This is the list of possible job states
-# Note on names: Jobs are the entities on a
-# scheduler; Calcs are the calculations in
-#   the AiiDA database (whose list of possible
-#   statuses is defined in aida.common.datastructures
-#   with the calc_states Enumerate).
-# NOTE: for the moment, I don't define FAILED
-# (I put everything in DONE)
-JOB_STATES = JobState((
-    'UNDETERMINED',
-    'QUEUED',
-    'QUEUED_HELD',
-    'RUNNING',
-    'SUSPENDED',
-    'DONE',
-))
+    UNDETERMINED = 'undetermined'
+    QUEUED = 'queued'
+    QUEUED_HELD = 'queued held'
+    RUNNING = 'running'
+    SUSPENDED = 'suspended'
+    DONE = 'done'
 
 
 class JobResource(DefaultFieldsAttributeDict):
@@ -378,7 +372,7 @@ class JobTemplate(DefaultFieldsAttributeDict):
           wait
 
         The serial execution would be without the &'s.
-        Values are given by aiida.common.datastructures.code_run_modes.
+        Values are given by aiida.common.datastructures.CodeRunMode.
     """
 
     # #TODO: validation key? also call the validate function in the proper
@@ -401,8 +395,6 @@ class JobTemplate(DefaultFieldsAttributeDict):
         'account',
         'qos',
         'job_resource',
-        #        'num_machines',
-        #        'num_mpiprocs_per_machine',
         'priority',
         'max_memory_kb',
         'max_wallclock_seconds',
@@ -410,11 +402,6 @@ class JobTemplate(DefaultFieldsAttributeDict):
         'prepend_text',
         'append_text',
         'import_sys_environment',
-        #        'stderr_name', # this 5 5keys have been moved to codes_info
-        #        'join_files',
-        #        'argv',
-        #        'stdin_name',
-        #        'stdout_name',
         'codes_run_mode',
         'codes_info',
     )
@@ -459,7 +446,7 @@ class JobInfo(DefaultFieldsAttributeDict):
        * ``annotation``: human-readable description of the reason for the job
          being in the current state or substate.
        * ``job_state``: the job state (one of those defined in
-         ``aiida.scheduler.datastructures.JOB_STATES``)
+         ``aiida.scheduler.datastructures.JobState``)
        * ``job_substate``: a string with the implementation-specific sub-state
        * ``allocated_machines``: a list of machines used for the current job.
          This is a list of :py:class:`MachineInfo` objects.
@@ -501,7 +488,21 @@ class JobInfo(DefaultFieldsAttributeDict):
         'submission_time': 'date',
         'dispatch_time': 'date',
         'finish_time': 'date',
+        'job_state': 'job_state',
     }
+
+    @staticmethod
+    def _serialize_job_state(job_state):
+        """Return the serialized value of the JobState instance."""
+        if not isinstance(job_state, JobState):
+            raise TypeError('invalid type for value {}, should be an instance of `JobState`'.format(job_state))
+
+        return job_state.value
+
+    @staticmethod
+    def _deserialize_job_state(job_state):
+        """Return an instance of JobState from the job_state string."""
+        return JobState(job_state)
 
     @staticmethod
     def _serialize_date(value):

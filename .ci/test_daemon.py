@@ -177,49 +177,6 @@ def validate_cached(cached_calcs):
     return valid
 
 
-def create_calculation(code, counter, inputval, use_cache=False):
-    parameters = ParameterData(dict={'value': inputval})
-    template = ParameterData(dict={
-        # The following line adds a significant sleep time.
-        # I set it to 1 second to speed up tests
-        # I keep it to a non-zero value because I want
-        # To test the case when AiiDA finds some calcs
-        # in a queued state
-        # 'cmdline_params': ["{}".format(counter % 3)], # Sleep time
-        'cmdline_params': ["1"],
-        'input_file_template': "{value}",  # File just contains the value to double
-        'input_file_name': 'value_to_double.txt',
-        'output_file_name': 'output.txt',
-        'retrieve_temporary_files': ['triple_value.tmp']
-    })
-    calc = code.new_calc()
-    calc.set_option('max_wallclock_seconds', 5 * 60)  # 5 min
-    calc.set_option('resources', {"num_machines": 1})
-    calc.set_option('withmpi', False)
-    calc.set_option('parser_name', 'templatereplacer.doubler')
-
-    calc.use_parameters(parameters)
-    calc.use_template(template)
-    calc.store_all(use_cache=use_cache)
-    expected_result = {
-        'value': 2 * inputval,
-        'retrieved_temporary_files': {
-            'triple_value.tmp': str(inputval * 3)
-        }
-    }
-    print("[{}] created calculation {}, pk={}".format(counter, calc.uuid, calc.pk))
-    return calc, expected_result
-
-
-def submit_calculation(code, counter, inputval):
-    calc, expected_result = create_calculation(
-        code=code, counter=counter, inputval=inputval
-    )
-    calc.submit()
-    print("[{}] calculation submitted.".format(counter))
-    return calc, expected_result
-
-
 def launch_calculation(code, counter, inputval):
     """
     Launch calculations to the daemon through the Process layer
@@ -245,8 +202,6 @@ def create_calculation_process(code, inputval):
     Create the process and inputs for a submitting / running a calculation.
     """
     TemplatereplacerCalculation = CalculationFactory('templatereplacer')
-    process = TemplatereplacerCalculation.process()
-
     parameters = ParameterData(dict={'value': inputval})
     template = ParameterData(dict={
         # The following line adds a significant sleep time.
@@ -281,17 +236,11 @@ def create_calculation_process(code, inputval):
         'code': code,
         'parameters': parameters,
         'template': template,
-        'options': options,
+        'metadata': {
+            'options': options,
+        }
     }
-    return process, inputs, expected_result
-
-
-def create_cache_calc(code, counter, inputval):
-    calc, expected_result = create_calculation(
-        code=code, counter=counter, inputval=inputval, use_cache=True
-    )
-    print("[{}] created cached calculation.".format(counter))
-    return calc, expected_result
+    return TemplatereplacerCalculation, inputs, expected_result
 
 
 def main():
@@ -299,17 +248,8 @@ def main():
     expected_results_workchains = {}
     code = Code.get_from_string(codename)
 
-    # Submitting the Calculations the old way, creating and storing a JobCalc first and submitting it
-    print("Submitting {} old style calculations to the daemon".format(number_calculations))
-    for counter in range(1, number_calculations + 1):
-        inputval = counter
-        calc, expected_result = submit_calculation(
-            code=code, counter=counter, inputval=inputval
-        )
-        expected_results_calculations[calc.pk] = expected_result
-
     # Submitting the Calculations the new way directly through the launchers
-    print("Submitting {} new style calculations to the daemon".format(number_calculations))
+    print("Submitting {} calculations to the daemon".format(number_calculations))
     for counter in range(1, number_calculations + 1):
         inputval = counter
         calc, expected_result = launch_calculation(
@@ -416,18 +356,12 @@ def main():
         print("Timeout!! Calculation did not complete after {} seconds".format(timeout_secs))
         sys.exit(2)
     else:
-        # create cached calculations -- these should be FINISHED immediately
+        # Launch the same calculations but with caching enabled -- these should be FINISHED immediately
         cached_calcs = []
-        for counter in range(1, number_calculations + 1):
-            calc, expected_result = create_cache_calc(
-                code=code, counter=counter, inputval=counter
-            )
-            cached_calcs.append(calc)
-            expected_results_calculations[calc.pk] = expected_result
-        # new style cached calculations, with 'run'
-        with enable_caching():
+        with enable_caching(node_class=CalcJobNode):
             for counter in range(1, number_calculations + 1):
-                calc, expected_result = run_calculation(code=code, counter=counter, inputval=counter)
+                inputval = counter
+                calc, expected_result = run_calculation(code=code, counter=counter, inputval=inputval)
                 cached_calcs.append(calc)
                 expected_results_calculations[calc.pk] = expected_result
 

@@ -10,14 +10,13 @@
 """
 Generic tests that need the use of the DB
 """
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from aiida.backends.testbase import AiidaTestCase
-from aiida.common import exceptions
-from aiida.orm import Node, Data
+
 from aiida import orm
+from aiida.backends.testbase import AiidaTestCase
+from aiida.orm import Data
 
 
 class TestComputer(AiidaTestCase):
@@ -36,13 +35,9 @@ class TestComputer(AiidaTestCase):
         # # This should be possible, because nothing is using this computer
         orm.Computer.objects.delete(newcomputer.id)
 
-        calc_params = {
-            'computer': self.computer,
-            'resources': {'num_machines': 1,
-                          'num_mpiprocs_per_machine': 1}
-        }
-
-        _ = CalcJobNode(**calc_params).store()
+        calc = CalcJobNode(computer=self.computer)
+        calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+        calc.store()
 
         # This should fail, because there is at least a calculation
         # using this computer (the one created just above)

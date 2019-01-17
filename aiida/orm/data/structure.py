@@ -1899,7 +1899,7 @@ class StructureData(Data):
         except AttributeError:
             raise ValueError(
                 "No such converter '{}' available".format(converter))
-        ret_dict = conv_f(struct=self, parameters=param, store_provenance=store)
+        ret_dict = conv_f(struct=self, parameters=param, metadata={'store_provenance': store})
         return ret_dict['cif']
 
     def _get_object_phonopyatoms(self):

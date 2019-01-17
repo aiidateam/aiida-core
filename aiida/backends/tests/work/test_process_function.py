@@ -76,7 +76,11 @@ class TestProcessFunction(AiidaTestCase):
             return {'data_a': data_a, 'data_b': data_b}
 
         @workfunction
-        def function_defaults(data_a=Int(DEFAULT_INT), label=DEFAULT_LABEL, description=DEFAULT_DESCRIPTION):  # pylint: disable=unused-argument
+        def function_defaults(
+                data_a=Int(DEFAULT_INT), metadata={
+                    'label': DEFAULT_LABEL,
+                    'description': DEFAULT_DESCRIPTION
+                }):  # pylint: disable=unused-argument,dangerous-default-value,missing-docstring
             return data_a
 
         @workfunction
@@ -231,36 +235,37 @@ class TestProcessFunction(AiidaTestCase):
 
     def test_function_set_label_description(self):
         """Verify that the label and description can be set for all process function variants."""
-        _, node = self.function_args.run_get_node(
-            data_a=Int(DEFAULT_INT), label=CUSTOM_LABEL, description=CUSTOM_DESCRIPTION)
+        metadata = {'label': CUSTOM_LABEL, 'description': CUSTOM_DESCRIPTION}
+
+        _, node = self.function_args.run_get_node(data_a=Int(DEFAULT_INT), metadata=metadata)
         self.assertEqual(node.label, CUSTOM_LABEL)
         self.assertEqual(node.description, CUSTOM_DESCRIPTION)
 
-        _, node = self.function_args_with_default.run_get_node(label=CUSTOM_LABEL, description=CUSTOM_DESCRIPTION)
+        _, node = self.function_args_with_default.run_get_node(metadata=metadata)
         self.assertEqual(node.label, CUSTOM_LABEL)
         self.assertEqual(node.description, CUSTOM_DESCRIPTION)
 
-        _, node = self.function_kwargs.run_get_node(label=CUSTOM_LABEL, description=CUSTOM_DESCRIPTION)
+        _, node = self.function_kwargs.run_get_node(metadata=metadata)
         self.assertEqual(node.label, CUSTOM_LABEL)
         self.assertEqual(node.description, CUSTOM_DESCRIPTION)
 
-        _, node = self.function_args_and_kwargs.run_get_node(
-            data_a=Int(DEFAULT_INT), label=CUSTOM_LABEL, description=CUSTOM_DESCRIPTION)
+        _, node = self.function_args_and_kwargs.run_get_node(data_a=Int(DEFAULT_INT), metadata=metadata)
         self.assertEqual(node.label, CUSTOM_LABEL)
         self.assertEqual(node.description, CUSTOM_DESCRIPTION)
 
-        _, node = self.function_args_and_default.run_get_node(
-            data_a=Int(DEFAULT_INT), label=CUSTOM_LABEL, description=CUSTOM_DESCRIPTION)
+        _, node = self.function_args_and_default.run_get_node(data_a=Int(DEFAULT_INT), metadata=metadata)
         self.assertEqual(node.label, CUSTOM_LABEL)
         self.assertEqual(node.description, CUSTOM_DESCRIPTION)
 
     def test_function_defaults(self):
         """Verify that a process function can define a default label and description but can be overriden."""
+        metadata = {'label': CUSTOM_LABEL, 'description': CUSTOM_DESCRIPTION}
+
         _, node = self.function_defaults.run_get_node(data_a=Int(DEFAULT_INT))
         self.assertEqual(node.label, DEFAULT_LABEL)
         self.assertEqual(node.description, DEFAULT_DESCRIPTION)
 
-        _, node = self.function_defaults.run_get_node(label=CUSTOM_LABEL, description=CUSTOM_DESCRIPTION)
+        _, node = self.function_defaults.run_get_node(metadata=metadata)
         self.assertEqual(node.label, CUSTOM_LABEL)
         self.assertEqual(node.description, CUSTOM_DESCRIPTION)
 

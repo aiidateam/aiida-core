@@ -53,23 +53,23 @@ class TestParserSqueue(unittest.TestCase):
 
         job_running = 3
         job_running_parsed = len([j for j in job_list if j.job_state \
-                                  and j.job_state == JOB_STATES.RUNNING])
+                                  and j.job_state == JobState.RUNNING])
         self.assertEquals(job_running, job_running_parsed)
 
         job_held = 2
-        job_held_parsed = len([j for j in job_list if j.job_state and j.job_state == JOB_STATES.QUEUED_HELD])
+        job_held_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.QUEUED_HELD])
         self.assertEquals(job_held, job_held_parsed)
 
         job_queued = 2
-        job_queued_parsed = len([j for j in job_list if j.job_state and j.job_state == JOB_STATES.QUEUED])
+        job_queued_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.QUEUED])
         self.assertEquals(job_queued, job_queued_parsed)
 
         running_users = ['user5', 'user6']
-        parsed_running_users = [j.job_owner for j in job_list if j.job_state and j.job_state == JOB_STATES.RUNNING]
+        parsed_running_users = [j.job_owner for j in job_list if j.job_state and j.job_state == JobState.RUNNING]
         self.assertEquals(set(running_users), set(parsed_running_users))
 
         running_jobs = ['862538', '861352', '863553']
-        parsed_running_jobs = [j.job_id for j in job_list if j.job_state and j.job_state == JOB_STATES.RUNNING]
+        parsed_running_jobs = [j.job_id for j in job_list if j.job_state and j.job_state == JobState.RUNNING]
         self.assertEquals(set(running_jobs), set(parsed_running_jobs))
 
         self.assertEquals([j.requested_wallclock_time_seconds for j in job_list if j.job_id == '863553'][0], 30 * 60)
@@ -152,7 +152,7 @@ class TestSubmitScript(unittest.TestCase):
         Test the creation of a simple submission script.
         """
         from aiida.scheduler.datastructures import JobTemplate
-        from aiida.common.datastructures import CodeInfo, code_run_modes
+        from aiida.common.datastructures import CodeInfo, CodeRunMode
 
         scheduler = SlurmScheduler()
 
@@ -165,7 +165,7 @@ class TestSubmitScript(unittest.TestCase):
         code_info.cmdline_params = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
         code_info.stdin_name = 'aiida.in'
         job_tmpl.codes_info = [code_info]
-        job_tmpl.codes_run_mode = code_run_modes.SERIAL
+        job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
         submit_script_text = scheduler.get_submit_script(job_tmpl)
 
@@ -180,7 +180,7 @@ class TestSubmitScript(unittest.TestCase):
 
     def test_submit_script_bad_shebang(self):
         from aiida.scheduler.datastructures import JobTemplate
-        from aiida.common.datastructures import CodeInfo, code_run_modes
+        from aiida.common.datastructures import CodeInfo, CodeRunMode
 
         scheduler = SlurmScheduler()
         code_info = CodeInfo()
@@ -195,7 +195,7 @@ class TestSubmitScript(unittest.TestCase):
                 job_tmpl.shebang = shebang
             job_tmpl.job_resource = scheduler.create_job_resource(num_machines=1, num_mpiprocs_per_machine=1)
             job_tmpl.codes_info = [code_info]
-            job_tmpl.codes_run_mode = code_run_modes.SERIAL
+            job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
             submit_script_text = scheduler.get_submit_script(job_tmpl)
 
@@ -208,7 +208,7 @@ class TestSubmitScript(unittest.TestCase):
         num_cores_per_machine value.
         """
         from aiida.scheduler.datastructures import JobTemplate
-        from aiida.common.datastructures import CodeInfo, code_run_modes
+        from aiida.common.datastructures import CodeInfo, CodeRunMode
 
         scheduler = SlurmScheduler()
 
@@ -222,7 +222,7 @@ class TestSubmitScript(unittest.TestCase):
         code_info.cmdline_params = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
         code_info.stdin_name = 'aiida.in'
         job_tmpl.codes_info = [code_info]
-        job_tmpl.codes_run_mode = code_run_modes.SERIAL
+        job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
         submit_script_text = scheduler.get_submit_script(job_tmpl)
 
@@ -240,7 +240,7 @@ class TestSubmitScript(unittest.TestCase):
         Test to verify if scripts works fine if we pass only num_cores_per_mpiproc value
         """
         from aiida.scheduler.datastructures import JobTemplate
-        from aiida.common.datastructures import CodeInfo, code_run_modes
+        from aiida.common.datastructures import CodeInfo, CodeRunMode
 
         scheduler = SlurmScheduler()
 
@@ -254,7 +254,7 @@ class TestSubmitScript(unittest.TestCase):
         code_info.cmdline_params = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
         code_info.stdin_name = 'aiida.in'
         job_tmpl.codes_info = [code_info]
-        job_tmpl.codes_run_mode = code_run_modes.SERIAL
+        job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
         submit_script_text = scheduler.get_submit_script(job_tmpl)
 
@@ -275,7 +275,7 @@ class TestSubmitScript(unittest.TestCase):
         res.num_cores_per_mpiproc * res.num_mpiprocs_per_machine = res.num_cores_per_machine
         """
         from aiida.scheduler.datastructures import JobTemplate
-        from aiida.common.datastructures import CodeInfo, code_run_modes
+        from aiida.common.datastructures import CodeInfo, CodeRunMode
 
         scheduler = SlurmScheduler()
 
@@ -289,7 +289,7 @@ class TestSubmitScript(unittest.TestCase):
         code_info.cmdline_params = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
         code_info.stdin_name = 'aiida.in'
         job_tmpl.codes_info = [code_info]
-        job_tmpl.codes_run_mode = code_run_modes.SERIAL
+        job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
         submit_script_text = scheduler.get_submit_script(job_tmpl)
 

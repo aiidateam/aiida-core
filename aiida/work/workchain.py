@@ -20,7 +20,6 @@ from plumpy.workchains import if_, while_, return_, _PropagateReturn
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import override
-from aiida.common.lang import classproperty
 from aiida.orm import Node
 from aiida.orm.node.process import WorkChainNode
 from aiida.orm.utils import load_node
@@ -43,7 +42,7 @@ class WorkChain(Process):
     """
     A WorkChain, the base class for AiiDA workflows.
     """
-    _calc_class = WorkChainNode
+    _node_class = WorkChainNode
     _spec_type = _WorkChainSpec
     _STEPPER_STATE = 'stepper_state'
     _CONTEXT = 'CONTEXT'
@@ -89,25 +88,14 @@ class WorkChain(Process):
         if stepper_state is not None:
             self._stepper = self.spec().get_outline().recreate_stepper(stepper_state, self)
 
-        self.set_logger(self._calc.logger)
+        self.set_logger(self.node.logger)
 
         if self._awaitables:
             self.action_awaitables()
 
     def on_run(self):
         super(WorkChain, self).on_run()
-        self.calc.set_stepper_state_info(str(self._stepper))
-
-    @classproperty
-    def exit_codes(self):
-        """
-        Return the namespace of exit codes defined for this WorkChain through its ProcessSpec.
-        The namespace supports getitem and getattr operations with an ExitCode label to retrieve a specific code.
-        Additionally, the namespace can also be called with either the exit code integer status to retrieve it.
-
-        :returns: ExitCodesNamespace of ExitCode named tuples
-        """
-        return self.spec().exit_codes
+        self.node.set_stepper_state_info(str(self._stepper))
 
     def insert_awaitable(self, awaitable):
         """

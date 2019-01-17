@@ -136,7 +136,7 @@ function-name-hint=(([a-z][a-z0-9_]{2,40})|(_[a-z0-9_]*))$
 function-rgx=(([a-z][a-z0-9_]{2,30})|(_[a-z0-9_]*))$
 
 # Good variable names which should always be accepted, separated by a comma
-good-names=i,j,k,ex,Run,_, _INPUT_FILE_NAME, _OUTPUT_FILE_NAME, pk
+good-names=i,j,k,ex,Run,_,pk
 
 # Include a hint for the correct naming format with invalid-name
 include-naming-hint=no
@@ -409,7 +409,7 @@ defining-attr-methods=__init__,__new__,setUp
 
 # List of member names, which should be excluded from the protected access
 # warning.
-exclude-protected=_asdict,_fields,_replace,_source,_make,_get_linkname_retrieved
+exclude-protected=_asdict,_fields,_replace,_source,_make
 
 # List of valid names for the first argument in a class method.
 valid-classmethod-first-arg=cls

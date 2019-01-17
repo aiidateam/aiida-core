@@ -65,7 +65,7 @@ ${outline}
             'code': self.inputs.code,
             'x': self.ctx.result,
             'y': Int(operand),
-            'options': get_default_options(),
+            'metadata': {'options': get_default_options()},
         }
 
         running = self.submit(ArithmeticAddCalculation, **inputs)

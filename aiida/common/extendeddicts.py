@@ -12,24 +12,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-import six
-
-from aiida.common.exceptions import ValidationError
-
-
-class Enumerate(frozenset):
-    """Custom implementation of enum.Enum."""
-
-    def __getattr__(self, name):
-        if name in self:
-            return six.text_type(name)  # always return unicode in Python 2
-        raise AttributeError("No attribute '{}' in Enumerate '{}'".format(name, self.__class__.__name__))
-
-    def __setattr__(self, name, value):
-        raise AttributeError("Cannot set attribute in Enumerate '{}'".format(self.__class__.__name__))
-
-    def __delattr__(self, name):
-        raise AttributeError("Cannot delete attribute in Enumerate '{}'".format(self.__class__.__name__))
+from aiida.common import exceptions
 
 
 class AttributeDict(dict):
@@ -233,7 +216,7 @@ class DefaultFieldsAttributeDict(AttributeDict):
                 try:
                     validator(self[key])
                 except Exception as exc:
-                    raise ValidationError("Invalid value for key '{}' [{}]: {}".format(
+                    raise exceptions.ValidationError("Invalid value for key '{}' [{}]: {}".format(
                         key, exc.__class__.__name__, exc))
 
     def __setattr__(self, attr, value):

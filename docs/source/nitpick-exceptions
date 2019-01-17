@@ -106,8 +106,6 @@ py:obj bool
 # as types or rtypes without actually being imported
 py:class  abc.ABCMeta
 
-py:class  CalcJobExitStatus
-
 py:exc    click.BadParameter
 py:exc    click.UsageError
 py:class  click.ParamType
@@ -127,6 +125,7 @@ py:class  distutils.version.Version
 py:class  docutils.parsers.rst.Directive
 
 py:class  enum.Enum
+py:class  enum.IntEnum
 
 py:class  flask.app.Flask
 py:class  flask.json.JSONEncoder
@@ -143,6 +142,7 @@ py:class  logging.LoggerAdapter
 
 py:class  paramiko.proxy.ProxyCommand
 
+py:class  StateMachine
 py:class  plumpy.futures.Future
 py:class  plumpy.processes.Process
 py:class  plumpy.process_comms.ProcessLauncher
@@ -161,6 +161,7 @@ py:class  plumpy.ports.PortNamespace
 py:class  plumpy.utils.AttributesDict
 py:class  plumpy.loaders.DefaultObjectLoader
 py:class  plumpy.ObjectLoader
+py:class  plumpy.process_states.Waiting
 py:class  plumpy.process_comms.RemoteProcessThreadController
 py:exc    plumpy.TaskRejected
 py:meth   plumpy.process_spec.ProcessSpec.expose_inputs

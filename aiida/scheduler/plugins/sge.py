@@ -23,7 +23,7 @@ import xml.dom.minidom
 from aiida.common.escaping import escape_for_bash
 import aiida.scheduler
 from aiida.scheduler import SchedulerError, SchedulerParsingError
-from aiida.scheduler.datastructures import (JobInfo, JOB_STATES, ParEnvJobResource)
+from aiida.scheduler.datastructures import (JobInfo, JobState, ParEnvJobResource)
 
 # 'http://www.loni.ucla.edu/twiki/bin/view/Infrastructure/GridComputing?skin=plain':
 # Jobs Status:
@@ -63,28 +63,28 @@ from aiida.scheduler.datastructures import (JobInfo, JOB_STATES, ParEnvJobResour
 #                                                                ds, dS, dT, dRs,
 #                                                                dRS, dRT
 _MAP_STATUS_SGE = {
-    'qw': JOB_STATES.QUEUED,
-    'w': JOB_STATES.QUEUED,
-    'hqw': JOB_STATES.QUEUED_HELD,
-    'hRwq': JOB_STATES.QUEUED_HELD,
-    'r': JOB_STATES.RUNNING,
-    't': JOB_STATES.RUNNING,
-    'R': JOB_STATES.RUNNING,
-    'Rr': JOB_STATES.RUNNING,
-    'Rt': JOB_STATES.RUNNING,
-    's': JOB_STATES.SUSPENDED,
-    'st': JOB_STATES.SUSPENDED,
-    'Rs': JOB_STATES.SUSPENDED,
-    'Rts': JOB_STATES.SUSPENDED,
-    'dr': JOB_STATES.UNDETERMINED,
-    'dt': JOB_STATES.UNDETERMINED,
-    'ds': JOB_STATES.UNDETERMINED,
-    'dRr': JOB_STATES.UNDETERMINED,
-    'dRt': JOB_STATES.UNDETERMINED,
-    'dRs': JOB_STATES.UNDETERMINED,
-    'Eqw': JOB_STATES.UNDETERMINED,
-    'Ehqw': JOB_STATES.UNDETERMINED,
-    'EhRqw': JOB_STATES.UNDETERMINED
+    'qw': JobState.QUEUED,
+    'w': JobState.QUEUED,
+    'hqw': JobState.QUEUED_HELD,
+    'hRwq': JobState.QUEUED_HELD,
+    'r': JobState.RUNNING,
+    't': JobState.RUNNING,
+    'R': JobState.RUNNING,
+    'Rr': JobState.RUNNING,
+    'Rt': JobState.RUNNING,
+    's': JobState.SUSPENDED,
+    'st': JobState.SUSPENDED,
+    'Rs': JobState.SUSPENDED,
+    'Rts': JobState.SUSPENDED,
+    'dr': JobState.UNDETERMINED,
+    'dt': JobState.UNDETERMINED,
+    'ds': JobState.UNDETERMINED,
+    'dRr': JobState.UNDETERMINED,
+    'dRt': JobState.UNDETERMINED,
+    'dRs': JobState.UNDETERMINED,
+    'Eqw': JobState.UNDETERMINED,
+    'Ehqw': JobState.UNDETERMINED,
+    'EhRqw': JobState.UNDETERMINED
 }
 
 
@@ -383,10 +383,10 @@ class SgeScheduler(aiida.scheduler.Scheduler):
                 except KeyError:
                     self.logger.warning("Unrecognized job_state '{}' for job "
                                         "id {}".format(job_state_string, this_job.job_id))
-                    this_job.job_state = JOB_STATES.UNDETERMINED
+                    this_job.job_state = JobState.UNDETERMINED
             except IndexError:
                 self.logger.warning("No 'job_state' field for job id {} in" "stdout={}".format(this_job.job_id, stdout))
-                this_job.job_state = JOB_STATES.UNDETERMINED
+                this_job.job_state = JobState.UNDETERMINED
 
             try:
                 job_element = job.getElementsByTagName('JB_owner').pop(0)
@@ -407,7 +407,7 @@ class SgeScheduler(aiida.scheduler.Scheduler):
                 element_child = job_element.childNodes.pop(0)
                 this_job.queue_name = str(element_child.data).strip()
             except IndexError:
-                if this_job.job_state == JOB_STATES.RUNNING:
+                if this_job.job_state == JobState.RUNNING:
                     self.logger.warning("No 'queue_name' field for job id {}".format(this_job.job_id))
 
             try:
@@ -435,7 +435,7 @@ class SgeScheduler(aiida.scheduler.Scheduler):
                                         "id {}".format(this_job.job_id))
 
             # There is also cpu_usage, mem_usage, io_usage information available:
-            if this_job.job_state == JOB_STATES.RUNNING:
+            if this_job.job_state == JobState.RUNNING:
                 try:
                     job_element = job.getElementsByTagName('slots').pop(0)
                     element_child = job_element.childNodes.pop(0)

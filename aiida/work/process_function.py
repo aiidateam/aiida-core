@@ -112,13 +112,13 @@ def process_function(node_class):
             if kwargs and not process_class.spec().inputs.dynamic:
                 raise ValueError('{} does not support these kwargs: {}'.format(function.__name__, kwargs.keys()))
 
-            proc = process_class(inputs=inputs, runner=runner)
-            result = proc.execute()
+            process = process_class(inputs=inputs, runner=runner)
+            result = process.execute()
 
             # Close the runner properly
             runner.close()
 
-            return result, proc.calc
+            return result, process.node
 
         @functools.wraps(function)
         def decorated_function(*args, **kwargs):
@@ -259,7 +259,7 @@ class FunctionProcess(processes.Process):
     def _setup_db_record(self):
         """Set up the database record for the process."""
         super(FunctionProcess, self)._setup_db_record()
-        self.calc.store_source_info(self._func)
+        self.node.store_source_info(self._func)
 
     @override
     def run(self):

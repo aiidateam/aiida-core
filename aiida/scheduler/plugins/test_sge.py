@@ -244,23 +244,23 @@ class TestCommand(unittest.TestCase):
         # Check if different job states are realized:
         job_running = 1
         job_running_parsed = len([j for j in job_list if j.job_state \
-                                  and j.job_state == JOB_STATES.RUNNING])
+                                  and j.job_state == JobState.RUNNING])
         self.assertEquals(job_running, job_running_parsed)
 
         job_held = 1
         job_held_parsed = len([j for j in job_list if j.job_state \
-                               and j.job_state == JOB_STATES.QUEUED_HELD])
+                               and j.job_state == JobState.QUEUED_HELD])
         self.assertEquals(job_held, job_held_parsed)
 
         job_queued = 1
         job_queued_parsed = len([j for j in job_list if j.job_state \
-                                 and j.job_state == JOB_STATES.QUEUED])
+                                 and j.job_state == JobState.QUEUED])
         self.assertEquals(job_queued, job_queued_parsed)
 
         # check if job id is recognized:
         running_jobs = ['1212299']
         parsed_running_jobs = [j.job_id for j in job_list if j.job_state \
-                               and j.job_state == JOB_STATES.RUNNING]
+                               and j.job_state == JobState.RUNNING]
         self.assertEquals(set(running_jobs), set(parsed_running_jobs))
 
         dispatch_time = [self._parse_time_string('2013-06-18T12:08:23')]
@@ -276,7 +276,7 @@ class TestCommand(unittest.TestCase):
 
         running_jobs = [test_raw_data]
         parsed_running_jobs = [j.raw_data for j in job_list if j.job_state \
-                               and j.job_state == JOB_STATES.RUNNING]
+                               and j.job_state == JobState.RUNNING]
         self.assertEquals(set(running_jobs), set(parsed_running_jobs))
 
         # job_list_raise=sge._parse_joblist_output(retval, \

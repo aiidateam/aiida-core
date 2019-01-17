@@ -28,7 +28,8 @@ import plumpy
 from plumpy import ProcessState
 
 from aiida.common import exceptions
-from aiida.common.lang import override, protected
+from aiida.common.extendeddicts import AttributeDict
+from aiida.common.lang import classproperty, override, protected
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida import orm
@@ -48,7 +49,6 @@ def instantiate_process(runner, process, *args, **inputs):
     of the `process`:
 
         * Process instance: will simply return the instance
-        * CalcJobNode class: will construct the JobProcess and instantiate it
         * ProcessBuilder instance: will instantiate the Process from the class and inputs defined within it
         * Process class: will instantiate with the specified inputs
 
@@ -57,8 +57,6 @@ def instantiate_process(runner, process, *args, **inputs):
     :param process: Process instance or class, CalcJobNode class or ProcessBuilder instance
     :param inputs: the inputs for the process to be instantiated with
     """
-    from aiida.orm.node.process import CalcJobNode
-
     if isinstance(process, Process):
         assert not args
         assert not inputs
@@ -69,12 +67,10 @@ def instantiate_process(runner, process, *args, **inputs):
         builder = process
         process_class = builder.process_class
         inputs.update(**builder)
-    elif issubclass(process, CalcJobNode):
-        process_class = process.process()
     elif issubclass(process, Process):
         process_class = process
     else:
-        raise ValueError('invalid process {}, needs to be Process, CalcJobNode or ProcessBuilder'.format(type(process)))
+        raise ValueError('invalid process {}, needs to be Process or ProcessBuilder'.format(type(process)))
 
     process = process_class(runner=runner, inputs=inputs)
 
@@ -90,8 +86,8 @@ class Process(plumpy.Process):
     """
     # pylint: disable=too-many-public-methods
 
+    _node_class = ProcessNode
     _spec_type = ProcessSpec
-    _calc_class = ProcessNode
 
     SINGLE_OUTPUT_LINKNAME = 'result'
 
@@ -105,9 +101,12 @@ class Process(plumpy.Process):
     @classmethod
     def define(cls, spec):
         super(Process, cls).define(spec)
-        spec.input('store_provenance', valid_type=bool, default=True, non_db=True)
-        spec.input('description', valid_type=six.string_types[0], required=False, non_db=True)
-        spec.input('label', valid_type=six.string_types[0], required=False, non_db=True)
+        spec.input_namespace(spec.metadata_key, required=False, non_db=True, default={})
+        spec.input_namespace('{}.{}'.format(spec.metadata_key, spec.options_key), required=False)
+        spec.input('{}.store_provenance'.format(spec.metadata_key), valid_type=bool, default=True, non_db=True)
+        spec.input(
+            '{}.description'.format(spec.metadata_key), valid_type=six.string_types[0], required=False, non_db=True)
+        spec.input('{}.label'.format(spec.metadata_key), valid_type=six.string_types[0], required=False, non_db=True)
         spec.inputs.valid_type = (orm.Data, ProcessNode)
         spec.outputs.valid_type = (orm.Data,)
 
@@ -122,7 +121,7 @@ class Process(plumpy.Process):
         this process.
         :return: A calculation
         """
-        return cls._calc_class()
+        return cls._node_class()
 
     def __init__(self, inputs=None, logger=None, runner=None, parent_pid=None, enable_persistence=True):
         from aiida.manage import manager
@@ -135,7 +134,7 @@ class Process(plumpy.Process):
             loop=self._runner.loop,
             communicator=self.runner.communicator)
 
-        self._calc = None
+        self._node = None
         self._parent_pid = parent_pid
         self._enable_persistence = enable_persistence
         if self._enable_persistence and self.runner.persister is None:
@@ -145,11 +144,48 @@ class Process(plumpy.Process):
     def init(self):
         super(Process, self).init()
         if self._logger is None:
-            self.set_logger(self._calc.logger)
+            self.set_logger(self.node.logger)
+
+    @classproperty
+    def exit_codes(self):
+        """
+        Return the namespace of exit codes defined for this WorkChain through its ProcessSpec.
+        The namespace supports getitem and getattr operations with an ExitCode label to retrieve a specific code.
+        Additionally, the namespace can also be called with either the exit code integer status to retrieve it.
+
+        :returns: ExitCodesNamespace of ExitCode named tuples
+        """
+        return self.spec().exit_codes
 
     @property
-    def calc(self):
-        return self._calc
+    def node(self):
+        """Return the ProcessNode used by this process to represent itself in the database.
+
+        :return: instance of sub class of ProcessNode
+        """
+        return self._node
+
+    @property
+    def metadata(self):
+        """Return the metadata passed when launching this process.
+
+        :return: metadata dictionary
+        """
+        try:
+            return self.inputs.metadata
+        except AttributeError:
+            return AttributeDict()
+
+    @property
+    def options(self):
+        """Return the options of the metadata passed when launching this process.
+
+        :return: options dictionary
+        """
+        try:
+            return self.metadata.options
+        except AttributeError:
+            return AttributeDict()
 
     def _save_checkpoint(self):
         """
@@ -168,8 +204,8 @@ class Process(plumpy.Process):
     def save_instance_state(self, out_state, save_context):
         super(Process, self).save_instance_state(out_state, save_context)
 
-        if self.inputs.store_provenance:
-            assert self.calc.is_stored
+        if self.metadata.store_provenance:
+            assert self.node.is_stored
 
         out_state[self.SaveKeys.CALC_ID.value] = self.pid
 
@@ -189,18 +225,18 @@ class Process(plumpy.Process):
         super(Process, self).load_instance_state(saved_state, load_context)
 
         if self.SaveKeys.CALC_ID.value in saved_state:
-            self._calc = orm.load_node(saved_state[self.SaveKeys.CALC_ID.value])
-            self._pid = self.calc.pk
+            self._node = orm.load_node(saved_state[self.SaveKeys.CALC_ID.value])
+            self._pid = self.node.pk
         else:
             self._pid = self._create_and_setup_db_record()
 
-        self.calc.logger.info('Loaded process<{}> from saved state'.format(self.calc.pk))
+        self.node.logger.info('Loaded process<{}> from saved state'.format(self.node.pk))
 
     def kill(self, msg=None):
         """
         Kill the process and all the children calculations it called
         """
-        self._calc.logger.debug('Request to kill Process<{}>'.format(self._calc.pk))
+        self.node.logger.debug('Request to kill Process<{}>'.format(self.node.pk))
 
         had_been_terminated = self.has_terminated()
 
@@ -209,9 +245,9 @@ class Process(plumpy.Process):
         # Only kill children if we could be killed ourselves
         if result is not False and not had_been_terminated:
             killing = []
-            for child in self.calc.called:
+            for child in self.node.called:
                 try:
-                    result = self.runner.controller.kill_process(child.pk, 'Killed by parent<{}>'.format(self.calc.pk))
+                    result = self.runner.controller.kill_process(child.pk, 'Killed by parent<{}>'.format(self.node.pk))
                     if isinstance(result, plumpy.Future):
                         killing.append(result)
                 except ConnectionClosed:
@@ -278,7 +314,7 @@ class Process(plumpy.Process):
                 self.logger.exception('Failed to delete checkpoint')
 
         try:
-            self.calc.seal()
+            self.node.seal()
         except exceptions.ModificationNotAllowed:
             pass
 
@@ -291,7 +327,7 @@ class Process(plumpy.Process):
         :param exc_info: the sys.exc_info() object
         """
         super(Process, self).on_except(exc_info)
-        self.calc._set_exception(''.join(traceback.format_exception(exc_info[0], exc_info[1], None)))  # pylint: disable=protected-access
+        self.node._set_exception(''.join(traceback.format_exception(exc_info[0], exc_info[1], None)))  # pylint: disable=protected-access
         self.report(''.join(traceback.format_exception(*exc_info)))
 
     @override
@@ -302,10 +338,10 @@ class Process(plumpy.Process):
         super(Process, self).on_finish(result, successful)
 
         if result is None or isinstance(result, int):
-            self.calc._set_exit_status(result)  # pylint: disable=protected-access
+            self.node._set_exit_status(result)  # pylint: disable=protected-access
         elif isinstance(result, ExitCode):
-            self.calc._set_exit_status(result.status)  # pylint: disable=protected-access
-            self.calc._set_exit_message(result.message)  # pylint: disable=protected-access
+            self.node._set_exit_status(result.status)  # pylint: disable=protected-access
+            self.node._set_exit_message(result.message)  # pylint: disable=protected-access
         else:
             raise ValueError('the result should be an integer, ExitCode or None, got {} {} {}'.format(
                 type(result), result, self.pid))
@@ -317,7 +353,7 @@ class Process(plumpy.Process):
         """
         super(Process, self).on_paused(msg)
         self._save_checkpoint()
-        self.calc.pause()
+        self.node.pause()
 
     @override
     def on_playing(self):
@@ -325,7 +361,7 @@ class Process(plumpy.Process):
         The Process was unpaused so remove the paused attribute on the process node
         """
         super(Process, self).on_playing()
-        self.calc.unpause()
+        self.node.unpause()
 
     @override
     def on_output_emitting(self, output_port, value):
@@ -350,7 +386,7 @@ class Process(plumpy.Process):
         :param status: the status message
         """
         super(Process, self).set_status(status)
-        self.calc._set_process_status(status)  # pylint: disable=protected-access
+        self.node._set_process_status(status)  # pylint: disable=protected-access
 
     def submit(self, process, *args, **kwargs):
         return self.runner.submit(process, *args, **kwargs)
@@ -380,7 +416,7 @@ class Process(plumpy.Process):
         database through the attached DbLogHandler. The class name and function
         name of the caller are prepended to the given message
         """
-        message = '[{}|{}|{}]: {}'.format(self.calc.pk, self.__class__.__name__, inspect.stack()[1][3], msg)
+        message = '[{}|{}|{}]: {}'.format(self.node.pk, self.__class__.__name__, inspect.stack()[1][3], msg)
         self.logger.log(LOG_LEVEL_REPORT, message, *args, **kwargs)
 
     def _create_and_setup_db_record(self):
@@ -389,29 +425,29 @@ class Process(plumpy.Process):
 
         :return: the uuid of the process
         """
-        self._calc = self.get_or_create_db_record()
+        self._node = self.get_or_create_db_record()
         self._setup_db_record()
-        if self.inputs.store_provenance:
+        if self.metadata.store_provenance:
             try:
-                self.calc.store_all()
-                if self.calc.is_finished_ok:
+                self.node.store_all()
+                if self.node.is_finished_ok:
                     self._state = ProcessState.FINISHED
-                    for entry in self.calc.get_outgoing(link_type=LinkType.RETURN):
+                    for entry in self.node.get_outgoing(link_type=LinkType.RETURN):
                         if entry.link_label.endswith('_{pk}'.format(pk=entry.node.pk)):
                             continue
                         self.out(entry.link_label, entry.node)
-                    # This is needed for JobProcess. In that case, the outputs are
+                    # This is needed for CalcJob. In that case, the outputs are
                     # returned regardless of whether they end in '_pk'
-                    for entry in self.calc.get_outgoing(link_type=LinkType.CREATE):
+                    for entry in self.node.get_outgoing(link_type=LinkType.CREATE):
                         self.out(entry.link_label, entry.node)
             except exceptions.ModificationNotAllowed:
                 # The calculation was already stored
                 pass
 
-        if self.calc.pk is not None:
-            return self.calc.pk
+        if self.node.pk is not None:
+            return self.node.pk
 
-        return uuid.UUID(self.calc.uuid)
+        return uuid.UUID(self.node.uuid)
 
     @override
     def encode_input_args(self, inputs):
@@ -435,37 +471,26 @@ class Process(plumpy.Process):
 
     def update_node_state(self, state):
         self.update_outputs()
-        self.calc._set_process_state(state.LABEL)  # pylint: disable=protected-access
+        self.node._set_process_state(state.LABEL)  # pylint: disable=protected-access
 
     def update_outputs(self):
         """Attach any new outputs to the node since the last time this was called, if store provenance is True."""
-        if self.inputs.store_provenance is False:
+        if self.metadata.store_provenance is False:
             return
 
-        outputs_stored = self.calc.get_outgoing(link_type=(LinkType.CREATE, LinkType.RETURN)).all_link_labels()
+        outputs_stored = self.node.get_outgoing(link_type=(LinkType.CREATE, LinkType.RETURN)).all_link_labels()
         outputs_new = set(self.outputs.keys()) - set(outputs_stored)
 
         for link_label in outputs_new:
 
             output = self.outputs[link_label]
 
-            if isinstance(self.calc, CalculationNode):
-                output.add_incoming(self.calc, LinkType.CREATE, link_label)
-            elif isinstance(self.calc, WorkflowNode):
-                output.add_incoming(self.calc, LinkType.RETURN, link_label)
+            if isinstance(self.node, CalculationNode):
+                output.add_incoming(self.node, LinkType.CREATE, link_label)
+            elif isinstance(self.node, WorkflowNode):
+                output.add_incoming(self.node, LinkType.RETURN, link_label)
 
             output.store()
-
-    @property
-    def process_class(self):
-        """
-        Return the class that represents this Process.
-
-        For a standard Process or sub class of Process, this is the class itself. However, for legacy reasons,
-        the Process class is a wrapper around another class. This function returns that original class, i.e. the
-        class that really represents what was being executed.
-        """
-        return self.__class__
 
     def _setup_db_record(self):
         """
@@ -481,12 +506,12 @@ class Process(plumpy.Process):
         linked up as well.
         """
         assert self.inputs is not None
-        assert not self.calc.is_sealed, 'process node cannot be sealed when setting up the database record'
+        assert not self.node.is_sealed, 'process node cannot be sealed when setting up the database record'
 
         # Store important process attributes in the node proxy
-        self.calc._set_process_state(None)  # pylint: disable=protected-access
-        self.calc._set_process_label(self.process_class.__name__)  # pylint: disable=protected-access
-        self.calc._set_process_type(self.process_class)  # pylint: disable=protected-access
+        self.node._set_process_state(None)  # pylint: disable=protected-access
+        self.node._set_process_label(self.__class__.__name__)  # pylint: disable=protected-access
+        self.node._set_process_type(self.__class__)  # pylint: disable=protected-access
 
         parent_calc = self.get_parent_calc()
 
@@ -495,52 +520,64 @@ class Process(plumpy.Process):
             if isinstance(parent_calc, CalculationNode):
                 raise exceptions.InvalidOperation('calling processes from a calculation type process is forbidden.')
 
-            if isinstance(self.calc, CalculationNode):
-                self.calc.add_incoming(parent_calc, LinkType.CALL_CALC, 'CALL_CALC')
+            if isinstance(self.node, CalculationNode):
+                self.node.add_incoming(parent_calc, LinkType.CALL_CALC, 'CALL_CALC')
 
-            elif isinstance(self.calc, WorkflowNode):
-                self.calc.add_incoming(parent_calc, LinkType.CALL_WORK, 'CALL_WORK')
+            elif isinstance(self.node, WorkflowNode):
+                self.node.add_incoming(parent_calc, LinkType.CALL_WORK, 'CALL_WORK')
 
-        self._setup_db_inputs()
-        self._add_description_and_label()
+        self._setup_metadata()
+        self._setup_inputs()
 
-    def _setup_db_inputs(self):
-        """
-        Create the links that connect the inputs to the calculation node that represents this Process
-        """
-        for name, input_value in self._flat_inputs().items():
+    def _setup_metadata(self):
+        """Store the metadata on the ProcessNode."""
+        for name, metadata in self.metadata.items():
+            if name == 'store_provenance':
+                continue
+            elif name == 'label':
+                self.node.label = metadata
+            elif name == 'description':
+                self.node.description = metadata
+            elif name == 'options':
+                for option_name, option_value in metadata.items():
+                    self.node.set_option(option_name, option_value)
+            else:
+                raise RuntimeError('unsupported metadata key: {}'.format(name))
 
-            if isinstance(input_value, ProcessNode):
-                input_value = utils.get_or_create_output_group(input_value)
+    def _setup_inputs(self):
+        """Create the links between the input nodes and the ProcessNode that represents this process."""
+        from aiida.orm.data.code import Code
+
+        for name, node in self._flat_inputs().items():
+
+            # Special exception: set computer if node is a remote Code and our node does not yet have a computer set
+            if isinstance(node, Code) and not node.is_local() and not self.node.get_computer():
+                self.node.set_computer(node.get_remote_computer())
+
+            if isinstance(node, ProcessNode):
+                node = utils.get_or_create_output_group(node)
 
             # Need this special case for tests that use ProcessNodes as classes
-            if isinstance(self.calc, ProcessNode) and not isinstance(self.calc, (CalculationNode, WorkflowNode)):
-                self.calc.add_incoming(input_value, LinkType.INPUT_WORK, name)
+            if isinstance(self.node, ProcessNode) and not isinstance(self.node, (CalculationNode, WorkflowNode)):
+                self.node.add_incoming(node, LinkType.INPUT_WORK, name)
 
-            elif isinstance(self.calc, CalculationNode):
-                self.calc.add_incoming(input_value, LinkType.INPUT_CALC, name)
+            elif isinstance(self.node, CalculationNode):
+                self.node.add_incoming(node, LinkType.INPUT_CALC, name)
 
-            elif isinstance(self.calc, WorkflowNode):
-                self.calc.add_incoming(input_value, LinkType.INPUT_WORK, name)
-
-    def _add_description_and_label(self):
-        """Add the description and label to the calculation node"""
-        if self.inputs:
-            description = self.inputs.get('description', None)
-            if description is not None:
-                self._calc.description = description
-            label = self.inputs.get('label', None)
-            if label is not None:
-                self._calc.label = label
+            elif isinstance(self.node, WorkflowNode):
+                self.node.add_incoming(node, LinkType.INPUT_WORK, name)
 
     def _flat_inputs(self):
         """
-        Return a flattened version of the parsed inputs dictionary. The eventual
-        keys will be a concatenation of the nested keys
+        Return a flattened version of the parsed inputs dictionary.
+
+        The eventual keys will be a concatenation of the nested keys. Note that the `metadata` dictionary, if present,
+        is not passed, as those are dealt with separately in `_setup_metadata`.
 
         :return: flat dictionary of parsed inputs
         """
-        return dict(self._flatten_inputs(self.spec().inputs, self.inputs))
+        inputs = {key: value for key, value in self.inputs.items() if key != self.spec().metadata_key}
+        return dict(self._flatten_inputs(self.spec().inputs, inputs))
 
     def _flatten_inputs(self, port, port_value, parent_name='', separator='_'):
         """
@@ -559,6 +596,7 @@ class Process(plumpy.Process):
         if (port is None and isinstance(port_value, collections.Mapping) or isinstance(port, PortNamespace)):
             items = []
             for name, value in port_value.items():
+
                 prefixed_key = parent_name + separator + name if parent_name else name
 
                 try:

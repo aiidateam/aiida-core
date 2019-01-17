@@ -159,7 +159,7 @@ def create_profile(config, profile_name='default'):
             else:
                 print("{}: {}".format(key, value))
         # If the user doesn't want to change it, we abandon
-        if not click.prompt('Would you like to change it?'):
+        if not click.confirm('Would you like to change it?'):
             return profile
 
         # Otherwise, we continue.

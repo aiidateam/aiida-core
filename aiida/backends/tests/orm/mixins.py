@@ -7,25 +7,46 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Tests for the ORM mixin classes."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from aiida.backends.testbase import AiidaTestCase
+from aiida.common import exceptions
+from aiida.common.links import LinkType
+from aiida.orm.data.int import Int
+from aiida.orm.node.process import CalculationNode
 from aiida.orm.mixins import Sealable
 
 
 class TestSealable(AiidaTestCase):
+    """Tests for the `Sealable` mixin class."""
 
-    def test_change_updatable_attrs_after_store(self):
-        """
-        Verify that a Sealable node can alter updatable attributes even after storing
-        """
-        from aiida.orm.node.process import CalcJobNode
+    @staticmethod
+    def test_change_updatable_attrs_after_store():
+        """Verify that a Sealable node can alter updatable attributes even after storing."""
 
-        job = CalcJobNode(computer=self.computer)
-        job.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
-        job.store()
+        node = CalculationNode().store()
 
-        for attr in CalcJobNode._updatable_attributes:
+        for attr in CalculationNode._updatable_attributes:  # pylint: disable=protected-access,not-an-iterable
             if attr != Sealable.SEALED_KEY:
-                job._set_attr(attr, 'a')
+                node._set_attr(attr, 'a')  # pylint: disable=protected-access
+
+    def test_validate_incoming_sealed(self):
+        """Verify that trying to add a link to a sealed node will raise."""
+        data = Int(1).store()
+        node = CalculationNode().store()
+        node.seal()
+
+        with self.assertRaises(exceptions.ModificationNotAllowed):
+            node.validate_incoming(data, link_type=LinkType.INPUT_CALC, link_label='input')
+
+    def test_validate_outgoing_sealed(self):
+        """Verify that trying to add a link from a sealed node will raise."""
+        data = Int(1).store()
+        node = CalculationNode().store()
+        node.seal()
+
+        with self.assertRaises(exceptions.ModificationNotAllowed):
+            node.validate_outgoing(data, link_type=LinkType.CREATE, link_label='create')

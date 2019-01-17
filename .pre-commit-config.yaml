@@ -115,7 +115,6 @@
         aiida/backends/tests/nodes.py|
         aiida/backends/tests/orm/data/frozendict.py|
         aiida/backends/tests/orm/data/remote.py|
-        aiida/backends/tests/orm/mixins.py|
         aiida/backends/tests/orm/utils/loaders.py|
         aiida/backends/tests/parsers.py|
         aiida/backends/tests/query.py|

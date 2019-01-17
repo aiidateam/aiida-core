@@ -146,21 +146,37 @@ class Sealable(object):  # pylint: disable=useless-object-inheritance
     def _updatable_attributes(cls):  # pylint: disable=no-self-argument
         return (cls.SEALED_KEY,)
 
-    def add_incoming(self, source, link_type, link_label):
+    def validate_incoming(self, source, link_type, link_label):
         """
-        Add a link of the given type from a given node to ourself.
+        Validate adding a link of the given type from a given node to ourself.
+
+        Adding an incoming link to a sealed node is forbidden.
 
         :param source: the node from which the link is coming
-        :param link_type: the type of link
-        :param link_label: link label
-        :return: True if the proposed link is allowed, False otherwise
-        :raise TypeError: if `source` is not a Node instance or `link_type` is not a `LinkType` enum
-        :raise ValueError: if the proposed link is invalid
+        :param link_type: the link type
+        :param link_label: the link label
+        :raise ModificationNotAllowed: if the target node (self) is sealed
+        """
+        if self.is_sealed:
+            raise ModificationNotAllowed('Cannot add a link to a sealed node')
+
+        super(Sealable, self).validate_incoming(source, link_type=link_type, link_label=link_label)
+
+    def validate_outgoing(self, target, link_type, link_label):
+        """
+        Validate adding a link of the given type from ourself to a given node.
+
+        Adding an outgoing link from a sealed node is forbidden.
+
+        :param target: the node to which the link is going
+        :param link_type: the link type
+        :param link_label: the link label
+        :raise ModificationNotAllowed: if the source node (self) is sealed
         """
         if self.is_sealed:
             raise ModificationNotAllowed('Cannot add a link from a sealed node')
 
-        super(Sealable, self).add_incoming(source, link_type=link_type, link_label=link_label)
+        super(Sealable, self).validate_outgoing(target, link_type=link_type, link_label=link_label)
 
     @property
     def is_sealed(self):

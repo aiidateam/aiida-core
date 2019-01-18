@@ -20,7 +20,7 @@ import six
 
 import aiida.orm.users
 from aiida.common.lang import classproperty
-from aiida.orm.data.singlefile import SinglefileData
+from aiida.orm.node.data.singlefile import SinglefileData
 from aiida.orm import GroupTypeString
 
 
@@ -248,7 +248,7 @@ def parse_upf(fname, check_filename=True):
     from aiida.common.exceptions import ParsingError
     from aiida.common import AIIDA_LOGGER
     # TODO: move these data in a 'chemistry' module
-    from aiida.orm.data.structure import _valid_symbols
+    from aiida.orm.node.data.structure import _valid_symbols
 
     parsed_data = {}
 

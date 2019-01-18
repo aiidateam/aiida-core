@@ -201,7 +201,7 @@ def _show_xmgrace(exec_name, list_bands):
     import sys
     import subprocess
     import tempfile
-    from aiida.orm.data.array.bands import max_num_agr_colors
+    from aiida.orm.node.data.array.bands import max_num_agr_colors
 
     list_files = []
     current_band_number = 0

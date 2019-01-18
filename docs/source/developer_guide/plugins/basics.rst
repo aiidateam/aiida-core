@@ -23,8 +23,8 @@ Design guidelines
 
  * **Start simple.** Make use of existing classes like
    :py:class:`CalcJobNode <aiida.orm.node.process.calculation.calcjob.CalcJobNode>`,
-   :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>`,
-   :py:class:`SinglefileData <aiida.orm.data.singlefile.SinglefileData>`,
+   :py:class:`ParameterData <aiida.orm.node.data.parameter.ParameterData>`,
+   :py:class:`SinglefileData <aiida.orm.node.data.singlefile.SinglefileData>`,
    ...
    Write only what is necessary to pass information from and to AiiDA. 
  * **Don't break data provenance.** Store what is needed for full reproducibility.

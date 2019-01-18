@@ -394,7 +394,7 @@ class CodeEntityLoader(OrmEntityLoader):
 
         :returns: the orm base class
         """
-        from aiida.orm.data.code import Code
+        from aiida.orm.node.data.code import Code
         return Code
 
     @classmethod
@@ -468,7 +468,7 @@ class DataEntityLoader(OrmEntityLoader):
 
         :returns: the orm base class
         """
-        from aiida.orm.data import Data
+        from aiida.orm.node.data import Data
         return Data
 
     @classmethod

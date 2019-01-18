@@ -10,10 +10,10 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import enum
-import traceback
 
+import enum
 import six
+import traceback
 
 try:
     from reentry.default_manager import PluginManager
@@ -55,7 +55,7 @@ class EntryPointFormat(enum.Enum):
 
 entry_point_group_to_module_path_map = {
     'aiida.calculations': 'aiida.orm.node.process.calculation.calcjob',
-    'aiida.data': 'aiida.orm.data',
+    'aiida.data': 'aiida.orm.node.data',
     'aiida.node': 'aiida.orm.node',
     'aiida.parsers': 'aiida.parsers.plugins',
     'aiida.schedulers': 'aiida.scheduler.plugins',
@@ -104,7 +104,7 @@ def parse_entry_point_string(entry_point_string):
 
     try:
         group, name = entry_point_string.split(ENTRY_POINT_STRING_SEPARATOR)
-    except ValueError as exception:
+    except ValueError:
         raise ValueError('invalid entry_point_string format')
 
     return group, name
@@ -121,7 +121,7 @@ def get_entry_point_string_format(entry_point_string):
     """
     try:
         group, name = entry_point_string.split(ENTRY_POINT_STRING_SEPARATOR)
-    except ValueError as exception:
+    except ValueError:
         return EntryPointFormat.MINIMAL
     else:
         if group.startswith(ENTRY_POINT_GROUP_PREFIX):
@@ -178,7 +178,7 @@ def load_entry_point(group, name):
 
     try:
         loaded_entry_point = entry_point.load()
-    except ImportError as exception:
+    except ImportError:
         raise LoadingEntryPointError("Failed to load entry point '{}':\n{}".format(name, traceback.format_exc()))
 
     return loaded_entry_point

@@ -75,7 +75,7 @@ def validate_link(source, target, link_type, link_label):
     :raise ValueError: if the proposed link is invalid
     """
     from aiida.common.links import LinkType
-    from aiida.orm.data import Data
+    from aiida.orm.node.data import Data
     from aiida.orm.implementation.general.node import AbstractNode
     from aiida.orm.node import CalculationNode, WorkflowNode
 

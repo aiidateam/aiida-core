@@ -14,7 +14,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.plugins.entry_point import get_entry_points
 from aiida.orm import CalculationFactory, DataFactory, WorkflowFactory
 from aiida.parsers import Parser, ParserFactory
-from aiida.orm.data import Data
+from aiida.orm.node.data import Data
 from aiida.scheduler import Scheduler, SchedulerFactory
 from aiida.transport import Transport, TransportFactory
 from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator, TcodExporterFactory

@@ -282,10 +282,10 @@ class CifEntry(DbEntry):
         Returns ASE representation of the CIF.
 
         .. note:: To be removed, as it is duplicated in
-            :py:class:`aiida.orm.data.cif.CifData`.
+            :py:class:`aiida.orm.node.data.cif.CifData`.
         """
         from six.moves import cStringIO as StringIO
-        from aiida.orm.data.cif import CifData
+        from aiida.orm.node.data.cif import CifData
         return CifData.read_cif(StringIO(self.cif))
 
     def get_cif_node(self, store=False, parse_policy='lazy'):
@@ -293,10 +293,10 @@ class CifEntry(DbEntry):
 
         Creates a CIF node, that can be used in AiiDA workflow.
 
-        :return: :py:class:`aiida.orm.data.cif.CifData` object
+        :return: :py:class:`aiida.orm.node.data.cif.CifData` object
         """
         from aiida.common.files import md5_file
-        from aiida.orm.data.cif import CifData
+        from aiida.orm.node.data.cif import CifData
         import tempfile
 
         cifnode = None
@@ -340,10 +340,10 @@ class UpfEntry(DbEntry):
         """
         Creates an UPF node, that can be used in AiiDA workflow.
 
-        :return: :py:class:`aiida.orm.data.upf.UpfData` object
+        :return: :py:class:`aiida.orm.node.data.upf.UpfData` object
         """
         from aiida.common.files import md5_file
-        from aiida.orm.data.upf import UpfData
+        from aiida.orm.node.data.upf import UpfData
         import tempfile
 
         upfnode = None

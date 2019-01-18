@@ -240,75 +240,6 @@ class TestMigrationEngine(TestMigrationsSQLA):
         self.assertEqual(self.current_rev, self.migrate_to)
 
 
-class TestGroupRenamingMigration(TestMigrationsSQLA):
-    """
-    Test the migration that renames the DbGroup type strings
-    """
-    # b8b23ddefad4_dbgroup_name_to_label_type_to_type_string.py
-    # e72ad251bcdb_dbgroup_class_change_type_string_values.py
-    migrate_from = 'b8b23ddefad4'  # b8b23ddefad4_dbgroup_name_to_label_type_to_type_string.py
-    migrate_to = 'e72ad251bcdb'  # e72ad251bcdb_dbgroup_class_change_type_string_values.py
-
-    def setUpBeforeMigration(self):
-        """
-        Create the DbGroups with the old type strings
-        """
-        # Create group
-        DbGroup = self.get_current_table('db_dbgroup')  # pylint: disable=invalid-name
-        DbUser = self.get_current_table('db_dbuser')  # pylint: disable=invalid-name
-
-        with self.get_session() as session:
-            default_user = DbUser(is_superuser=False, email="{}@aiida.net".format(self.id()))
-            session.add(default_user)
-            session.commit()
-
-            # test user group type_string: '' -> 'user'
-            group_user = DbGroup(label='test_user_group', user_id=default_user.id, type_string='')
-            session.add(group_user)
-            # test data.upf group type_string: 'data.upf.family' -> 'data.upf'
-            group_data_upf = DbGroup(
-                label='test_data_upf_group', user_id=default_user.id, type_string='data.upf.family')
-            session.add(group_data_upf)
-            # test auto.import group type_string: 'aiida.import' -> 'auto.import'
-            group_autoimport = DbGroup(label='test_import_group', user_id=default_user.id, type_string='aiida.import')
-            session.add(group_autoimport)
-            # test auto.run group type_string: 'autogroup.run' -> 'auto.run'
-            group_autorun = DbGroup(label='test_autorun_group', user_id=default_user.id, type_string='autogroup.run')
-            session.add(group_autorun)
-
-            session.commit()
-
-            # Store values for later tests
-            self.group_user_pk = group_user.id
-            self.group_data_upf_pk = group_data_upf.id
-            self.group_autoimport_pk = group_autoimport.id
-            self.group_autorun_pk = group_autorun.id
-
-    def test_group_string_update(self):
-        """
-        Test that the type strings are properly migrated
-        """
-        DbGroup = self.get_current_table('db_dbgroup')  # pylint: disable=invalid-name
-
-        with self.get_session() as session:
-
-            # test user group type_string: '' -> 'user'
-            group_user = session.query(DbGroup).filter(DbGroup.id == self.group_user_pk).one()
-            self.assertEqual(group_user.type_string, 'user')
-
-            # test data.upf group type_string: 'data.upf.family' -> 'data.upf'
-            group_data_upf = session.query(DbGroup).filter(DbGroup.id == self.group_data_upf_pk).one()
-            self.assertEqual(group_data_upf.type_string, 'data.upf')
-
-            # test auto.import group type_string: 'aiida.import' -> 'auto.import'
-            group_autoimport = session.query(DbGroup).filter(DbGroup.id == self.group_autoimport_pk).one()
-            self.assertEqual(group_autoimport.type_string, 'auto.import')
-
-            # test auto.run group type_string: 'autogroup.run' -> 'auto.run'
-            group_autorun = session.query(DbGroup).filter(DbGroup.id == self.group_autorun_pk).one()
-            self.assertEqual(group_autorun.type_string, 'auto.run')
-
-
 class TestMigrationSchemaVsModelsSchema(unittest.TestCase):
     """
     This class checks that the schema that results from a migration is the
@@ -391,6 +322,82 @@ class TestMigrationSchemaVsModelsSchema(unittest.TestCase):
 
         self.assertTrue(result.is_match, "The migration database doesn't match to the one "
                         "created by the models.\nDifferences: " + result._dump_data(result.errors))  # pylint: disable=protected-access
+
+
+class TestGroupRenamingMigration(TestMigrationsSQLA):
+    """
+    Test the migration that renames the DbGroup type strings
+    """
+
+    migrate_from = 'b8b23ddefad4'  # b8b23ddefad4_dbgroup_name_to_label_type_to_type_string.py
+    migrate_to = 'e72ad251bcdb'  # e72ad251bcdb_dbgroup_class_change_type_string_values.py
+
+    def setUpBeforeMigration(self):
+        """
+        Create the DbGroups with the old type strings
+        """
+        # Create group
+        DbGroup = self.get_current_table('db_dbgroup')  # pylint: disable=invalid-name
+        DbUser = self.get_current_table('db_dbuser')  # pylint: disable=invalid-name
+
+        with self.get_session() as session:
+            try:
+                default_user = DbUser(is_superuser=False, email="{}@aiida.net".format(self.id()))
+                session.add(default_user)
+                session.commit()
+
+                # test user group type_string: '' -> 'user'
+                group_user = DbGroup(label='test_user_group', user_id=default_user.id, type_string='')
+                session.add(group_user)
+                # test data.upf group type_string: 'data.upf.family' -> 'data.upf'
+                group_data_upf = DbGroup(
+                    label='test_data_upf_group', user_id=default_user.id, type_string='data.upf.family')
+                session.add(group_data_upf)
+                # test auto.import group type_string: 'aiida.import' -> 'auto.import'
+                group_autoimport = DbGroup(
+                    label='test_import_group', user_id=default_user.id, type_string='aiida.import')
+                session.add(group_autoimport)
+                # test auto.run group type_string: 'autogroup.run' -> 'auto.run'
+                group_autorun = DbGroup(
+                    label='test_autorun_group', user_id=default_user.id, type_string='autogroup.run')
+                session.add(group_autorun)
+
+                session.commit()
+
+                # Store values for later tests
+                self.group_user_pk = group_user.id
+                self.group_data_upf_pk = group_data_upf.id
+                self.group_autoimport_pk = group_autoimport.id
+                self.group_autorun_pk = group_autorun.id
+
+            finally:
+                session.close()
+
+    def test_group_string_update(self):
+        """
+        Test that the type strings are properly migrated
+        """
+        DbGroup = self.get_current_table('db_dbgroup')  # pylint: disable=invalid-name
+
+        with self.get_session() as session:
+            try:
+                # test user group type_string: '' -> 'user'
+                group_user = session.query(DbGroup).filter(DbGroup.id == self.group_user_pk).one()
+                self.assertEqual(group_user.type_string, 'user')
+
+                # test data.upf group type_string: 'data.upf.family' -> 'data.upf'
+                group_data_upf = session.query(DbGroup).filter(DbGroup.id == self.group_data_upf_pk).one()
+                self.assertEqual(group_data_upf.type_string, 'data.upf')
+
+                # test auto.import group type_string: 'aiida.import' -> 'auto.import'
+                group_autoimport = session.query(DbGroup).filter(DbGroup.id == self.group_autoimport_pk).one()
+                self.assertEqual(group_autoimport.type_string, 'auto.import')
+
+                # test auto.run group type_string: 'autogroup.run' -> 'auto.run'
+                group_autorun = session.query(DbGroup).filter(DbGroup.id == self.group_autorun_pk).one()
+                self.assertEqual(group_autorun.type_string, 'auto.run')
+            finally:
+                session.close()
 
 
 class TestCalcAttributeKeysMigration(TestMigrationsSQLA):
@@ -484,7 +491,7 @@ class TestCalcAttributeKeysMigration(TestMigrationsSQLA):
 class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
     """Test the migration of the keys of certain attribute for ProcessNodes and CalcJobNodes."""
 
-    migrate_from = '7ca08c391c49'  # e72ad251bcdb_dbgroup_class_change_type_string_values
+    migrate_from = '7ca08c391c49'  # 7ca08c391c49_calc_job_option_attribute_keys
     migrate_to = '041a79fc615f'  # 041a79fc615f_dblog_cleaning
 
     def setUpBeforeMigration(self):
@@ -837,5 +844,61 @@ class TestDbLogUUIDAddition(TestMigrationsSQLA):
                 l_uuids = list(session.query(DbLog).with_entities(getattr(DbLog, 'uuid')).all())
                 s_uuids = set(l_uuids)
                 self.assertEqual(len(l_uuids), len(s_uuids), "The UUIDs are not all unique.")
+            finally:
+                session.close()
+
+
+class TestDataMoveWithinNodeMigration(TestMigrationsSQLA):
+    """Test the migration of Data nodes after the data module was moved within the node moduel."""
+
+    migrate_from = '041a79fc615f'  # 041a79fc615f_dblog_update
+    migrate_to = '6a5c2ea1439d'  # 6a5c2ea1439d_move_data_within_node_module
+
+    def setUpBeforeMigration(self):
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
+        DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
+        DbUser = self.get_auto_base().classes.db_dbuser  # pylint: disable=invalid-name
+
+        with sa.engine.begin() as connection:
+            try:
+                session = Session(connection.engine)
+
+                user = DbUser(is_superuser=False, email="{}@aiida.net".format(self.id()))
+                session.add(user)
+                session.commit()
+
+                node_calc = DbNode(type='node.process.calculation.calcjob.CalcJobNode.', user_id=user.id)
+                node_data = DbNode(type='data.int.Int.', user_id=user.id)
+
+                session.add(node_data)
+                session.add(node_calc)
+                session.commit()
+
+                self.node_calc_id = node_calc.id
+                self.node_data_id = node_data.id
+            except:
+                session.rollback()
+                raise
+            finally:
+                session.close()
+
+    def test_data_node_type_string(self):
+        """Verify that type string of the Data node was successfully adapted."""
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
+        DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
+
+        with sa.engine.begin() as connection:
+            try:
+                session = Session(connection.engine)
+
+                # The data node should have been touched and migrated
+                node_data = session.query(DbNode).filter(DbNode.id == self.node_data_id).one()
+                self.assertEqual(node_data.type, 'node.data.int.Int.')
+
+                # The calc node by contrast should not have been changed
+                node_calc = session.query(DbNode).filter(DbNode.id == self.node_calc_id).one()
+                self.assertEqual(node_calc.type, 'node.process.calculation.calcjob.CalcJobNode.')
             finally:
                 session.close()

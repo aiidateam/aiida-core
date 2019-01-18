@@ -22,7 +22,7 @@ def calcfunction(function):
     A decorator to turn a standard python function into a calcfunction.
     Example usage:
 
-    >>> from aiida.orm.data.int import Int
+    >>> from aiida.orm.node.data.int import Int
     >>>
     >>> # Define the calcfunction
     >>> @calcfunction
@@ -48,7 +48,7 @@ def workfunction(function):
     A decorator to turn a standard python function into a workfunction.
     Example usage:
 
-    >>> from aiida.orm.data.int import Int
+    >>> from aiida.orm.node.data.int import Int
     >>>
     >>> # Define the workfunction
     >>> @workfunction
@@ -269,7 +269,7 @@ class FunctionProcess(processes.Process):
     @override
     def run(self):
         """Run the process"""
-        from aiida.orm.data import Data
+        from aiida.orm.node.data import Data
         from .exit_code import ExitCode
 
         args = []

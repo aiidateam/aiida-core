@@ -21,7 +21,7 @@ import six
 from six.moves import range, zip
 
 import numpy as np
-from aiida.orm.data.array import ArrayData
+from aiida.orm.node.data.array import ArrayData
 from aiida.common.exceptions import InputValidationError, NotExistent
 
 

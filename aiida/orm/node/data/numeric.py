@@ -7,35 +7,42 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Module for defintion of base `Data` sub class for numeric based data types."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from aiida.orm.data import to_aiida_type, BaseType
+from aiida.orm.node.data import to_aiida_type, BaseType
 
 
 def _left_operator(func):
+    """Function decorator to treat a method as the left operator."""
+
     def inner(self, other):
-        l = self.value
+        """Decorator wrapper."""
+        left = self.value
         if isinstance(other, NumericType):
-            r = other.value
+            right = other.value
         else:
-            r = other
-        return to_aiida_type(func(l, r))
+            right = other
+        return to_aiida_type(func(left, right))
+
     return inner
 
 
 def _right_operator(func):
+    """Function decorator to treat a method as the right operator."""
+
     def inner(self, other):
+        """Decorator wrapper."""
         assert not isinstance(other, NumericType)
         return to_aiida_type(func(self.value, other))
+
     return inner
 
 
 class NumericType(BaseType):
-    """
-    Specific subclass of :py:class:`aiida.orm.data.BaseType` to store numbers,
-    overloading common operators (``+``, ``*``, ...)
-    """
+    """Sub class of Data to store numbers, overloading common operators (``+``, ``*``, ...)."""
+
     @_left_operator
     def __add__(self, other):
         return self + other
@@ -62,7 +69,7 @@ class NumericType(BaseType):
 
     @_left_operator
     def __pow__(self, power):
-        return self ** power
+        return self**power
 
     @_left_operator
     def __lt__(self, other):

@@ -20,7 +20,6 @@ from django.db import connection
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import IntegrityError
 from aiida.manage.database.integrity.duplicate_uuid import deduplicate_node_uuids, verify_node_uuid_uniqueness
-from aiida.common.utils import Capturing
 
 
 class TestMigrations(AiidaTestCase):
@@ -58,6 +57,7 @@ class TestMigrations(AiidaTestCase):
         except Exception:
             # Bring back the DB to the correct state if this setup part fails
             self._revert_database_schema()
+            raise
 
     def tearDown(self):
         """At the end make sure we go back to the latest schema version."""
@@ -66,11 +66,7 @@ class TestMigrations(AiidaTestCase):
         autogroup.current_autogroup = self.current_autogroup
 
     def setUpBeforeMigration(self):
-        """
-        Anything to do before running the migrations.
-        This is typically implemented in test subclasses.
-        """
-        pass
+        """Anything to do before running the migrations, which should be implemented in test subclasses."""
 
     def _revert_database_schema(self):
         """Bring back the DB to the correct state."""
@@ -80,13 +76,26 @@ class TestMigrations(AiidaTestCase):
         executor.migrate(self.migrate_to)
 
 
+class TestNoMigrations(AiidaTestCase):
+
+    def test_no_remaining_migrations(self):
+        """Verify that no django migrations remain.
+
+        Equivalent to python manage.py makemigrations --check"""
+
+        from django.core.management import call_command
+
+        # Raises SystemExit, if migrations remain
+        call_command('makemigrations', '--check', verbosity=0)
+
+
 class TestDuplicateNodeUuidMigration(TestMigrations):
     migrate_from = '0013_django_1_8'
     migrate_to = '0014_add_node_uuid_unique_constraint'
 
     def setUpBeforeMigration(self):
-        from aiida.orm.data.bool import Bool
-        from aiida.orm.data.int import Int
+        from aiida.orm.node.data.bool import Bool
+        from aiida.orm.node.data.int import Int
 
         self.file_name = 'test.temp'
         self.file_content = '#!/bin/bash\n\necho test run\n'
@@ -174,7 +183,113 @@ class TestUuidMigration(TestMigrations):
         self.assertEqual(self.node_uuid, n.uuid)
 
 
+class TestGroupRenamingMigration(TestMigrations):
+
+    migrate_from = '0021_dbgroup_name_to_label_type_to_type_string'
+    migrate_to = '0022_dbgroup_type_string_change_content'
+
+    def setUpBeforeMigration(self):
+        # Create group
+        DbGroup = self.apps.get_model('db', 'DbGroup')
+        default_user = self.backend.users.create("{}@aiida.net".format(self.id())).store()
+
+        # test user group type_string: '' -> 'user'
+        group_user = DbGroup(label='test_user_group', user_id=default_user.id, type_string='')
+        group_user.save()
+        self.group_user_pk = group_user.pk
+
+        # test data.upf group type_string: 'data.upf.family' -> 'data.upf'
+        group_data_upf = DbGroup(label='test_data_upf_group', user_id=default_user.id, type_string='data.upf.family')
+        group_data_upf.save()
+        self.group_data_upf_pk = group_data_upf.pk
+
+        # test auto.import group type_string: 'aiida.import' -> 'auto.import'
+        group_autoimport = DbGroup(label='test_import_group', user_id=default_user.id, type_string='aiida.import')
+        group_autoimport.save()
+        self.group_autoimport_pk = group_autoimport.pk
+
+        # test auto.run group type_string: 'autogroup.run' -> 'auto.run'
+        group_autorun = DbGroup(label='test_autorun_group', user_id=default_user.id, type_string='autogroup.run')
+        group_autorun.save()
+        self.group_autorun_pk = group_autorun.pk
+
+    def test_group_string_update(self):
+        DbGroup = self.apps.get_model('db', 'DbGroup')
+
+        # test user group type_string: '' -> 'user'
+        group_user = DbGroup.objects.get(pk=self.group_user_pk)
+        self.assertEqual(group_user.type_string, 'user')
+
+        # test data.upf group type_string: 'data.upf.family' -> 'data.upf'
+        group_data_upf = DbGroup.objects.get(pk=self.group_data_upf_pk)
+        self.assertEqual(group_data_upf.type_string, 'data.upf')
+
+        # test auto.import group type_string: 'aiida.import' -> 'auto.import'
+        group_autoimport = DbGroup.objects.get(pk=self.group_autoimport_pk)
+        self.assertEqual(group_autoimport.type_string, 'auto.import')
+
+        # test auto.run group type_string: 'autogroup.run' -> 'auto.run'
+        group_autorun = DbGroup.objects.get(pk=self.group_autorun_pk)
+        self.assertEqual(group_autorun.type_string, 'auto.run')
+
+
+class TestCalcAttributeKeysMigration(TestMigrations):
+
+    migrate_from = '0022_dbgroup_type_string_change_content'
+    migrate_to = '0023_calc_job_option_attribute_keys'
+
+    KEY_RESOURCES_OLD = 'jobresource_params'
+    KEY_RESOURCES_NEW = 'resources'
+    KEY_PARSER_NAME_OLD = 'parser'
+    KEY_PARSER_NAME_NEW = 'parser_name'
+    KEY_PROCESS_LABEL_OLD = '_process_label'
+    KEY_PROCESS_LABEL_NEW = 'process_label'
+    KEY_ENVIRONMENT_VARIABLES_OLD = 'custom_environment_variables'
+    KEY_ENVIRONMENT_VARIABLES_NEW = 'environment_variables'
+
+    def setUpBeforeMigration(self):
+        from aiida.orm.node import WorkflowNode, CalcJobNode
+
+        self.process_label = 'TestLabel'
+        self.resources = {'number_machines': 1}
+        self.environment_variables = {}
+        self.parser_name = 'aiida.parsers:parser'
+
+        self.node_work = WorkflowNode()
+        self.node_work._set_attr(self.KEY_PROCESS_LABEL_OLD, self.process_label)
+        self.node_work.store()
+
+        self.node_calc = CalcJobNode(computer=self.computer)
+        self.node_calc._validate = lambda: True  # Need to disable the validation because we cannot set `resources`
+        self.node_calc._set_attr(self.KEY_PROCESS_LABEL_OLD, self.process_label)
+        self.node_calc._set_attr(self.KEY_RESOURCES_OLD, self.resources)
+        self.node_calc._set_attr(self.KEY_ENVIRONMENT_VARIABLES_OLD, self.environment_variables)
+        self.node_calc._set_attr(self.KEY_PARSER_NAME_OLD, self.parser_name)
+        self.node_calc.store()
+
+    def test_attribute_key_changes(self):
+        """Verify that the keys are successfully changed of the affected attributes."""
+        from aiida.orm import load_node
+
+        NOT_FOUND = tuple([0])
+
+        node_work = load_node(self.node_work.pk)
+        self.assertEqual(node_work.get_attr(self.KEY_PROCESS_LABEL_NEW), self.process_label)
+        self.assertEqual(node_work.get_attr(self.KEY_PROCESS_LABEL_OLD, default=NOT_FOUND), NOT_FOUND)
+
+        node_calc = load_node(self.node_calc.pk)
+        self.assertEqual(node_calc.get_attr(self.KEY_PROCESS_LABEL_NEW), self.process_label)
+        self.assertEqual(node_calc.get_attr(self.KEY_RESOURCES_NEW), self.resources)
+        self.assertEqual(node_calc.get_attr(self.KEY_ENVIRONMENT_VARIABLES_NEW), self.environment_variables)
+        self.assertEqual(node_calc.get_attr(self.KEY_PARSER_NAME_NEW), self.parser_name)
+        self.assertEqual(node_calc.get_attr(self.KEY_PROCESS_LABEL_OLD, default=NOT_FOUND), NOT_FOUND)
+        self.assertEqual(node_calc.get_attr(self.KEY_RESOURCES_OLD, default=NOT_FOUND), NOT_FOUND)
+        self.assertEqual(node_calc.get_attr(self.KEY_ENVIRONMENT_VARIABLES_OLD, default=NOT_FOUND), NOT_FOUND)
+        self.assertEqual(node_calc.get_attr(self.KEY_PARSER_NAME_OLD, default=NOT_FOUND), NOT_FOUND)
+
+
 class TestDbLogMigrationRecordCleaning(TestMigrations):
+
     migrate_from = '0023_calc_job_option_attribute_keys'
     migrate_to = '0024_dblog_update'
 
@@ -499,64 +614,30 @@ class TestCalcAttributeKeysMigration(TestMigrations):
         self.assertEqual(node_calc.get_attr(self.KEY_PARSER_NAME_OLD, default=NOT_FOUND), NOT_FOUND)
 
 
-class TestGroupRenamingMigration(TestMigrations):
-    migrate_from = '0021_dbgroup_name_to_label_type_to_type_string'
-    migrate_to = '0022_dbgroup_type_string_change_content'
+class TestDataMoveWithinNodeMigration(TestMigrations):
+
+    migrate_from = '0024_dblog_update'
+    migrate_to = '0025_move_data_within_node_module'
 
     def setUpBeforeMigration(self):
+        DbNode = self.apps.get_model('db', 'DbNode')
 
-        # Create group
-        DbGroup = self.apps.get_model('db', 'DbGroup')
         default_user = self.backend.users.create("{}@aiida.net".format(self.id())).store()
 
-        # test user group type_string: '' -> 'user'
-        group_user = DbGroup(label='test_user_group', user_id=default_user.id, type_string='')
-        group_user.save()
-        self.group_user_pk = group_user.pk
+        node_calc = DbNode(type='node.process.calculation.calcjob.CalcJobNode.', user_id=default_user.id)
+        node_data = DbNode(type='data.int.Int.', user_id=default_user.id)
+        node_calc.save()
+        node_data.save()
 
-        # test data.upf group type_string: 'data.upf.family' -> 'data.upf'
-        group_data_upf = DbGroup(label='test_data_upf_group', user_id=default_user.id, type_string='data.upf.family')
-        group_data_upf.save()
-        self.group_data_upf_pk = group_data_upf.pk
+        self.node_calc_id = node_calc.id
+        self.node_data_id = node_data.id
 
-        # test auto.import group type_string: 'aiida.import' -> 'auto.import'
-        group_autoimport = DbGroup(label='test_import_group', user_id=default_user.id, type_string='aiida.import')
-        group_autoimport.save()
-        self.group_autoimport_pk = group_autoimport.pk
+    def test_data_node_type_string(self):
+        """Verify that type string of the Data node was successfully adapted."""
+        from aiida.orm import load_node
 
-        # test auto.run group type_string: 'autogroup.run' -> 'auto.run'
-        group_autorun = DbGroup(label='test_autorun_group', user_id=default_user.id, type_string='autogroup.run')
-        group_autorun.save()
-        self.group_autorun_pk = group_autorun.pk
+        node_calc = load_node(self.node_calc_id)
+        node_data = load_node(self.node_data_id)
 
-    def test_group_string_update(self):
-        from aiida.backends.djsite.db.models import DbGroup
-
-        # test user group type_string: '' -> 'user'
-        group_user = DbGroup.objects.get(pk=self.group_user_pk)
-        self.assertEqual(group_user.type_string, 'user')
-
-        # test data.upf group type_string: 'data.upf.family' -> 'data.upf'
-        group_data_upf = DbGroup.objects.get(pk=self.group_data_upf_pk)
-        self.assertEqual(group_data_upf.type_string, 'data.upf')
-
-        # test auto.import group type_string: 'aiida.import' -> 'auto.import'
-        group_autoimport = DbGroup.objects.get(pk=self.group_autoimport_pk)
-        self.assertEqual(group_autoimport.type_string, 'auto.import')
-
-        # test auto.run group type_string: 'autogroup.run' -> 'auto.run'
-        group_autorun = DbGroup.objects.get(pk=self.group_autorun_pk)
-        self.assertEqual(group_autorun.type_string, 'auto.run')
-
-
-class TestNoMigrations(AiidaTestCase):
-
-    def test_no_remaining_migrations(self):
-        """Verify that no django migrations remain.
-
-        Equivalent to python manage.py makemigrations --check"""
-
-        from django.core.management import call_command
-
-        # Raises SystemExit, if migrations remain
-        call_command('makemigrations', '--check', verbosity=0)
+        self.assertEqual(node_data.type, 'node.data.int.Int.')
+        self.assertEqual(node_calc.type, 'node.process.calculation.calcjob.CalcJobNode.')

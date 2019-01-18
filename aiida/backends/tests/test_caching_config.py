@@ -18,9 +18,9 @@ import yaml
 
 from aiida.backends.utils import get_current_profile
 from aiida.manage.caching import configure, get_use_cache, enable_caching, disable_caching
-from aiida.orm.data.bool import Bool
-from aiida.orm.data.float import Float
-from aiida.orm.data.int import Int
+from aiida.orm.node.data.bool import Bool
+from aiida.orm.node.data.float import Float
+from aiida.orm.node.data.int import Int
 from aiida.calculations.plugins.templatereplacer import TemplatereplacerCalculation
 
 class CacheConfigTest(unittest.TestCase):
@@ -34,8 +34,8 @@ class CacheConfigTest(unittest.TestCase):
         self.config_reference = {
             get_current_profile(): {
                 'default': True,
-                'enabled': ['aiida.orm.data.bool.Bool', 'aiida.orm.data.float.Float'],
-                'disabled': ['aiida.calculations.plugins.templatereplacer.TemplatereplacerCalculation', 'aiida.orm.data.bool.Bool']
+                'enabled': ['aiida.orm.node.data.bool.Bool', 'aiida.orm.node.data.float.Float'],
+                'disabled': ['aiida.calculations.plugins.templatereplacer.TemplatereplacerCalculation', 'aiida.orm.node.data.bool.Bool']
             }
         }
         with tempfile.NamedTemporaryFile() as tmpf:
@@ -64,7 +64,7 @@ class CacheConfigTest(unittest.TestCase):
             self.assertFalse(get_use_cache(Int))
 
     def test_disable_caching(self):
-        from aiida.orm.data.float import Float
+        from aiida.orm.node.data.float import Float
         with disable_caching(Float):
             self.assertFalse(get_use_cache(Float))
         self.assertTrue(get_use_cache(Float))

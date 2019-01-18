@@ -11,7 +11,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from collections import MutableSequence
-from aiida.orm.data import Data
+from aiida.orm.node.data import Data
 
 
 class List(Data, MutableSequence):

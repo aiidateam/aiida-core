@@ -21,10 +21,10 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 from aiida import orm
 from aiida.orm import load_node
-from aiida.orm.data.bool import Bool
-from aiida.orm.data.float import Float
-from aiida.orm.data.int import Int
-from aiida.orm.data.str import Str
+from aiida.orm.node.data.bool import Bool
+from aiida.orm.node.data.float import Float
+from aiida.orm.node.data.int import Int
+from aiida.orm.node.data.str import Str
 from aiida.common.utils import Capturing
 from aiida import work
 from aiida.work import ExitCode, Process

@@ -14,7 +14,7 @@ Introducing a new data type
 ---------------------------
 We will start by describing what is a data plugin, and by creating a new one.
 
-A data plugin is a subclass of :py:class:`Data<aiida.orm.data.Data>`.
+A data plugin is a subclass of :py:class:`Data<aiida.orm.node.data.Data>`.
 In the class, you should provide methods that the end user should use to store
 high-level objects (for instance, for a crystal structure, there can be a method
 for setting the unit cell, one for adding an atom in a given position, ...).
@@ -38,7 +38,7 @@ imagine that we want to introduce a new type of data node that simply
 stores a float number. We will call it ``FloatData``, and the class 
 implementation can look like this::
 
-   from aiida.orm.data import Data
+   from aiida.orm.node.data import Data
 
    class FloatData(Data):
 

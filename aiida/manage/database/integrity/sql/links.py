@@ -47,7 +47,7 @@ SELECT_MULTIPLE_INCOMING_CREATE = """
     FROM db_dbnode AS node
     JOIN db_dblink AS link
     ON node.id = link.output_id
-    WHERE node.type LIKE 'data.%'
+    WHERE node.type LIKE 'node.data.%'
     AND link.type = 'create'
     GROUP BY node.id
     HAVING COUNT(link.id) > 1;

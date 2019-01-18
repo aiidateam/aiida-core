@@ -33,7 +33,7 @@ def rehash(nodes, entry_point):
 
     The set of nodes that will be rehashed can be filtered by their identifier and/or based on their class.
     """
-    from aiida.orm.data import Data
+    from aiida.orm.node.data import Data
     from aiida.orm.node import ProcessNode
     from aiida.orm.querybuilder import QueryBuilder
 

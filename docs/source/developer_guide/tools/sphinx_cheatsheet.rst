@@ -60,13 +60,13 @@ Here is an example of a :ref:`self-reference` to something on the same page
 Cross Reference Classes and Methods
 ===================================
 
-Reference to the :py:class:`aiida.orm.data.structure.StructureData` class, showing the full path.
+Reference to the :py:class:`aiida.orm.node.data.structure.StructureData` class, showing the full path.
 
-Reference to the :py:class:`~aiida.orm.data.structure.StructureData` class (with preceding tilde), showing only the class name.
+Reference to the :py:class:`~aiida.orm.node.data.structure.StructureData` class (with preceding tilde), showing only the class name.
 
 .. note:: Always point to the actual definition of a class, e.g. ``aiida.backends.querybuild.querybuilder_base.AbstractQueryBuilder``, **not** an alias like ``aiida.orm.QueryBuilder`` (or sphinx will complain).
 
-Reference to the :py:meth:`~aiida.orm.data.structure.StructureData.append_atom`
+Reference to the :py:meth:`~aiida.orm.node.data.structure.StructureData.append_atom`
 method.
 
 .. note:: In the docstring of a class, you can 

@@ -4,10 +4,10 @@ General comments
 ----------------
 
 This section contains an example of how you can use the
-:py:class:`~aiida.orm.data.structure.StructureData` object
+:py:class:`~aiida.orm.node.data.structure.StructureData` object
 to create complex crystals.
 
-With the :py:class:`~aiida.orm.data.structure.StructureData` class we did not
+With the :py:class:`~aiida.orm.node.data.structure.StructureData` class we did not
 try to have a full set of features to manipulate crystal structures.
 Indeed, other libraries such as `ASE <https://wiki.fysik.dtu.dk/ase/>`_ exist,
 and we simply provide easy
@@ -44,7 +44,7 @@ In this way, any periodic structure can be defined. If you want to import
 from ASE in order to specify the coordinates, e.g., in terms of the crystal
 lattice vectors, see the guide on the conversion to/from ASE below.
 
-When using the :py:meth:`~aiida.orm.data.structure.StructureData.append_atom`
+When using the :py:meth:`~aiida.orm.node.data.structure.StructureData.append_atom`
 method, further parameters can be passed. In particular, one can specify 
 the mass of the atom, particularly important if you want e.g. to run a
 phonon calculation. If no mass is specified, the mass provided by
@@ -53,7 +53,7 @@ is going to be used. The list of
 masses is stored in the module :py:mod:`aiida.common.constants`, in the
 ``elements`` dictionary. 
 
-Moreover, in the :py:class:`~aiida.orm.data.structure.StructureData` class
+Moreover, in the :py:class:`~aiida.orm.node.data.structure.StructureData` class
 of AiiDA we also support the storage of crystal structures with alloys,
 vacancies or partial occupancies. 
 In this case, the argument of the parameter ``symbols``
@@ -96,30 +96,30 @@ and if the sum of all weights is smaller than one.
    
 Internals: Kinds and Sites
 --------------------------
-Internally, the :py:meth:`~aiida.orm.data.structure.StructureData.append_atom`
+Internally, the :py:meth:`~aiida.orm.node.data.structure.StructureData.append_atom`
 method works by manipulating the kinds and sites of the current structure.
-Kinds are instances of the :py:class:`~aiida.orm.data.structure.Kind` class and
+Kinds are instances of the :py:class:`~aiida.orm.node.data.structure.Kind` class and
 represent a chemical species, with given properties (composing element or 
 elements, occupancies, mass, ...) and identified
 by a label (normally, simply the element chemical symbol).
 
-Sites are instances of the :py:class:`~aiida.orm.data.structure.Site` class
+Sites are instances of the :py:class:`~aiida.orm.node.data.structure.Site` class
 and represent instead each single site. Each site refers
-to a :py:class:`~aiida.orm.data.structure.Kind`  to
+to a :py:class:`~aiida.orm.node.data.structure.Kind`  to
 identify its properties (which element it is, the mass, ...) and to its three
 spatial coordinates.
 
-The :py:meth:`~aiida.orm.data.structure.StructureData.append_atom` works in
+The :py:meth:`~aiida.orm.node.data.structure.StructureData.append_atom` works in
 the following way:
 
-* It creates a new :py:class:`~aiida.orm.data.structure.Kind` 
+* It creates a new :py:class:`~aiida.orm.node.data.structure.Kind` 
   class with the properties passed as parameters 
   (i.e., all parameters except ``position``).
 
 * It tries to identify if an identical Kind already exists in the list
   of kinds of the structure (e.g., in the same atom with the same mass was
   already previously added). Comparison of kinds is performed using
-  :py:meth:`aiida.orm.data.structure.Kind.compare_with`, and in particular
+  :py:meth:`aiida.orm.node.data.structure.Kind.compare_with`, and in particular
   it returns ``True`` if the mass and the list of symbols and of weights are 
   identical (within a threshold). If an identical kind ``k`` is found,
   it simply adds a new site referencing to kind ``k`` and with the provided
@@ -165,12 +165,12 @@ the following way:
     method will raise an exception.
   
   .. note:: If you prefer to work with the 
-    internal :py:class:`~aiida.orm.data.structure.Kind` 
-    and :py:class:`~aiida.orm.data.structure.Site` classes,
+    internal :py:class:`~aiida.orm.node.data.structure.Kind` 
+    and :py:class:`~aiida.orm.node.data.structure.Site` classes,
     you can obtain the same
     result of the two lines above with::
     
-      from aiida.orm.data.structure import Kind, Site
+      from aiida.orm.node.data.structure import Kind, Site
       s.append_kind(Kind(symbols='Fe', mass=55.845, name='Fe1'))
       s.append_kind(Kind(symbols='Fe', mass=55.845, name='Fe1'))
       s.append_site(Site(kind_name='Fe1', position=[0.,0.,0.]))
@@ -181,7 +181,7 @@ Conversion to/from ASE
 ----------------------
 
 If you have an AiiDA structure, you can get an ``ase.Atom`` object by
-just calling the :py:class:`~aiida.orm.data.structure.StructureData.get_ase`
+just calling the :py:class:`~aiida.orm.node.data.structure.StructureData.get_ase`
 method::
     
     ase_atoms = aiida_structure.get_ase()
@@ -194,7 +194,7 @@ from it, just pass it when initializing the class::
 
       StructureData = DataFactory('structure')
       # or:
-      # from aiida.orm.data.structure import StructureData
+      # from aiida.orm.node.data.structure import StructureData
       aiida_structure = StructureData(ase = ase_atoms)
       
 Creating multiple species
@@ -242,16 +242,16 @@ Conversion to/from pymatgen
 
 AiiDA structure can be converted to pymatgen's `Molecule`_ and
 `Structure`_ objects by using, accordingly,
-:py:class:`~aiida.orm.data.structure.StructureData.get_pymatgen_molecule`
+:py:class:`~aiida.orm.node.data.structure.StructureData.get_pymatgen_molecule`
 and
-:py:class:`~aiida.orm.data.structure.StructureData.get_pymatgen_structure`
+:py:class:`~aiida.orm.node.data.structure.StructureData.get_pymatgen_structure`
 methods::
 
     pymatgen_molecule  = aiida_structure.get_pymatgen_molecule()
     pymatgen_structure = aiida_structure.get_pymatgen_structure()
 
 A single method
-:py:class:`~aiida.orm.data.structure.StructureData.get_pymatgen` can be
+:py:class:`~aiida.orm.node.data.structure.StructureData.get_pymatgen` can be
 used for both tasks: converting periodic structures (periodic boundary
 conditions are met in all three directions) to pymatgen's Structure and
 other structures to pymatgen's Molecule::

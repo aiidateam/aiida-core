@@ -86,7 +86,7 @@ def get_node_summary(node):
     :return: a string summary of the node
     """
     from plumpy import ProcessState
-    from aiida.orm.data.code import Code
+    from aiida.orm.node.data.code import Code
     from aiida.orm.node import ProcessNode
 
     table_headers = ['Property', 'Value']

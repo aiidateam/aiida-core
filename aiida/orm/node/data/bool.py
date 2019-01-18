@@ -11,8 +11,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import numpy
-from aiida.orm.data import BaseType
-from aiida.orm.data import to_aiida_type
+from aiida.orm.node.data import BaseType
+from aiida.orm.node.data import to_aiida_type
 
 
 class Bool(BaseType):

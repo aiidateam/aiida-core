@@ -48,7 +48,7 @@ def delete_nodes(pks,
     from aiida.common.links import LinkType
     from aiida.orm.node import Node
     from aiida.orm.node import ProcessNode
-    from aiida.orm.data import Data
+    from aiida.orm.node.data import Data
     from aiida.orm import load_node
     from aiida.backends.utils import delete_nodes_and_connections
 

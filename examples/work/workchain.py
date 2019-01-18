@@ -17,9 +17,9 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 from aiida import work
-from aiida.orm.data.base import NumericType
-from aiida.orm.data.float import Float
-from aiida.orm.data.int import Int
+from aiida.orm.node.data.base import NumericType
+from aiida.orm.node.data.float import Float
+from aiida.orm.node.data.int import Int
 
 
 class SumWorkChain(work.WorkChain):

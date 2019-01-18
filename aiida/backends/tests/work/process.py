@@ -19,10 +19,10 @@ from aiida import work
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.lang import override
 from aiida.orm import load_node
-from aiida.orm.data.int import Int
-from aiida.orm.data.str import Str
-from aiida.orm.data.frozendict import FrozenDict
-from aiida.orm.data.parameter import ParameterData
+from aiida.orm.node.data.int import Int
+from aiida.orm.node.data.str import Str
+from aiida.orm.node.data.frozendict import FrozenDict
+from aiida.orm.node.data.parameter import ParameterData
 from aiida.orm.node import WorkflowNode
 from aiida.work import test_utils, Process
 

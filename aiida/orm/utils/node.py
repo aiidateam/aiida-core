@@ -14,7 +14,7 @@ def load_node_class(type_string):
     :param type_string: the `type` string of the node
     :return: a sub class of `Node`
     """
-    from aiida.orm.data import Data
+    from aiida.orm.node.data import Data
     from aiida.plugins.entry_point import load_entry_point
 
     if not type_string.endswith('.'):
@@ -25,19 +25,19 @@ def load_node_class(type_string):
     except ValueError:
         raise exceptions.MissingPluginError
 
-    if base_path == 'data':
+    if base_path == 'node.data':
         return Data
 
     # Data nodes are the only ones with sub classes that are still external, so if the plugin is not available
     # we fall back on the base node type
-    if base_path.startswith('data.'):
-        entry_point_name = strip_prefix(base_path, 'data.')
+    if base_path.startswith('node.data.'):
+        entry_point_name = strip_prefix(base_path, 'node.data.')
         try:
             return load_entry_point('aiida.data', entry_point_name)
         except exceptions.MissingEntryPointError:
             return Data
 
-    if base_path.startswith('node.'):
+    if base_path.startswith('node.process'):
         entry_point_name = strip_prefix(base_path, 'node.')
         return load_entry_point('aiida.node', entry_point_name)
 
@@ -72,9 +72,9 @@ def get_type_string_from_class(class_module, class_name):
     for prefix in prefixes:
         type_string = strip_prefix(type_string, prefix)
 
-    # This needs to be here as long as `aiida.orm.data` does not live in `aiida.orm.node.data` because all the `Data`
-    # instances will have a type string that starts with `data.` instead of `node.`, so in order to match any `Node`
-    # we have to look for any type string essentially.
+    # This needs to be here as long as `aiida.orm.node.data` does not live in `aiida.orm.node.data` because all the
+    # `Data` instances will have a type string that starts with `data.` instead of `node.`, so in order to match any
+    # `Node` we have to look for any type string essentially.
     if type_string == 'node.Node.':
         type_string = ''
 

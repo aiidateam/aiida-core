@@ -10,12 +10,11 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import io
+
 import os
 
 from aiida.orm import Data
 from aiida.common.exceptions import ModificationNotAllowed
-
 
 
 class FolderData(Data):
@@ -54,10 +53,12 @@ class FolderData(Data):
         from aiida.common.exceptions import NotExistent
 
         try:
-            with io.open(self._get_folder_pathsubfolder.get_abs_path(
-                    path, check_existence=True), encoding='utf8') as f:
-                return f.read()
+            with self.open(path, check_existence=True) as handle:
+                return handle.read()
         except (OSError, IOError):
             raise NotExistent("Error reading the file '{}' inside node with "
                               "pk= {}, it probably does not exist?".format(path, self.pk))
 
+    def open(self, path, check_existence=False):
+        """Docs."""
+        return self._get_folder_pathsubfolder.open(path, check_existence=check_existence)

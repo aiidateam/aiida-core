@@ -77,6 +77,22 @@ class TemplatereplacerCalculation(CalcJob):
             help='Parameters used to replace placeholders in the template.')
         spec.input_namespace('files', valid_type=(RemoteData, SinglefileData), required=False)
 
+        spec.output('output_parameters', valid_type=ParameterData, required=True)
+        spec.default_output_node = 'output_parameters'
+
+        spec.exit_code(100, 'ERROR_NO_RETRIEVED_FOLDER',
+            message='The retrieved folder data node could not be accessed.')
+        spec.exit_code(101, 'ERROR_NO_TEMPORARY_RETRIEVED_FOLDER',
+            message='The temporary retrieved folder data node could not be accessed.')
+        spec.exit_code(105, 'ERROR_NO_OUTPUT_FILE_NAME_DEFINED',
+            message='The `template` input node did not specify the key `output_file_name`.')
+        spec.exit_code(110, 'ERROR_READING_OUTPUT_FILE',
+            message='The output file could not be read from the retrieved folder.')
+        spec.exit_code(111, 'ERROR_READING_TEMPORARY_RETRIEVED_FILE',
+            message='A temporary retrieved file could not be read from the temporary retrieved folder.')
+        spec.exit_code(120, 'ERROR_INVALID_OUTPUT',
+            message='The output file contains invalid output.')
+
     def prepare_for_submission(self, folder):
         """
         This is the routine to be called when you want to create the input files and related stuff with a plugin.

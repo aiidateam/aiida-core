@@ -44,7 +44,7 @@ class List(Data, MutableSequence):
         return len(self.get_list())
 
     def __str__(self):
-        return self.get_list().__str__()
+        return super(List, self).__str__() + ' value: {}'.format(self.get_list())
 
     def __eq__(self, other):
         try:

@@ -157,6 +157,7 @@ py:class  plumpy.persistence.Persister
 py:class  plumpy.PersistenceError
 py:class  plumpy.ports.Port
 py:class  plumpy.ports.InputPort
+py:class  plumpy.ports.OutputPort
 py:class  plumpy.ports.PortNamespace
 py:class  plumpy.utils.AttributesDict
 py:class  plumpy.loaders.DefaultObjectLoader

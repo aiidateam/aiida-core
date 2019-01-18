@@ -5,6 +5,6 @@ from __future__ import absolute_import
 
 from .calculation import CalculationNode
 from .calcfunction import CalcFunctionNode
-from .calcjob import CalcJobNode, CalculationResultManager
+from .calcjob import CalcJobNode
 
-__all__ = ('CalculationNode', 'CalcFunctionNode', 'CalcJobNode', 'CalculationResultManager')
+__all__ = ('CalculationNode', 'CalcFunctionNode', 'CalcJobNode')

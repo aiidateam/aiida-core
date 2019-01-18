@@ -147,6 +147,7 @@ class AbstractNode(object):
     # all subclasses (WorkflowNode, CalculationNode, Data and their subclasses)
     # are storable. This flag is checked in store()
     _storable = False
+    _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
 
     def get_desc(self):
         """
@@ -1721,9 +1722,8 @@ class AbstractNode(object):
 
         # As a first thing, I check if the data is storable
         if not self._storable:
-            raise StoringNotAllowed(
-                "You are not allowed to store a base Node or ProcessNode, you can "
-                "only store Data, WorkflowNode, CalculationNode or their subclasses")
+            raise StoringNotAllowed(self._unstorable_message)
+
         # Second thing: check if it's valid
         self._validate()
 

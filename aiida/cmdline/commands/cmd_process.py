@@ -96,7 +96,7 @@ def process_report(processes, levelname, indent_size, max_depth):
     for process in processes:
         if isinstance(process, CalcJobNode):
             echo.echo(get_calcjob_report(process))
-        if isinstance(process, WorkChainNode):
+        elif isinstance(process, WorkChainNode):
             echo.echo(get_workchain_report(process, levelname, indent_size, max_depth))
         else:
             echo.echo('Nothing to show for node type {}'.format(process.__class__))

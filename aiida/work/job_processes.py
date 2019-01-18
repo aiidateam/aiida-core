@@ -111,7 +111,7 @@ def task_submit_job(node, transport_queue, calc_info, script_filename, cancellab
     """
     if node.get_state() == CalcJobState.WITHSCHEDULER:
         assert node.get_job_id() is not None, 'job is WITHSCHEDULER, however, it does not have a job id'
-        logger.warning('calculation<{}> already marked as WITHSCHEDULER, skipping task_submit_job'.format(node.pk))
+        logger.warning('CalcJob<{}> already marked as WITHSCHEDULER, skipping task_submit_job'.format(node.pk))
         raise Return(node.get_job_id())
 
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
@@ -124,7 +124,7 @@ def task_submit_job(node, transport_queue, calc_info, script_filename, cancellab
         with transport_queue.request_transport(authinfo) as request:
             transport = yield cancellable.with_interrupt(request)
 
-            logger.info('submitting calculation<{}>'.format(node.pk))
+            logger.info('submitting CalcJob<{}>'.format(node.pk))
             raise Return(execmanager.submit_calculation(node, transport, calc_info, script_filename))
 
     try:
@@ -133,10 +133,10 @@ def task_submit_job(node, transport_queue, calc_info, script_filename, cancellab
     except plumpy.Interruption:
         pass
     except Exception:
-        logger.warning('submitting calculation<{}> failed'.format(node.pk))
+        logger.warning('submitting CalcJob<{}> failed'.format(node.pk))
         raise TransportTaskException('submit_calculation failed {} times consecutively'.format(max_attempts))
     else:
-        logger.info('submitting calculation<{}> successful'.format(node.pk))
+        logger.info('submitting CalcJob<{}> successful'.format(node.pk))
         node._set_state(CalcJobState.WITHSCHEDULER)
         raise Return(result)
 
@@ -160,7 +160,7 @@ def task_update_job(node, job_manager, cancellable):
     :raises: Return containing True if the tasks was successfully completed, False otherwise
     """
     if node.get_state() == CalcJobState.RETRIEVING:
-        logger.warning('calculation<{}> already marked as RETRIEVING, skipping task_update_job'.format(node.pk))
+        logger.warning('CalcJob<{}> already marked as RETRIEVING, skipping task_update_job'.format(node.pk))
         raise Return(True)
 
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
@@ -192,10 +192,10 @@ def task_update_job(node, job_manager, cancellable):
     except plumpy.Interruption:
         raise
     except Exception:
-        logger.warning('updating calculation<{}> failed'.format(node.pk))
+        logger.warning('updating CalcJob<{}> failed'.format(node.pk))
         raise TransportTaskException('update_calculation failed {} times consecutively'.format(max_attempts))
     else:
-        logger.info('updating calculation<{}> successful'.format(node.pk))
+        logger.info('updating CalcJob<{}> successful'.format(node.pk))
         if job_done:
             node._set_state(CalcJobState.RETRIEVING)
 
@@ -220,7 +220,7 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
     if node.get_state() == CalcJobState.PARSING:
-        logger.warning('calculation<{}> already marked as PARSING, skipping task_retrieve_job'.format(node.pk))
+        logger.warning('CalcJob<{}> already marked as PARSING, skipping task_retrieve_job'.format(node.pk))
         raise Return(True)
 
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
@@ -233,7 +233,7 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
         with transport_queue.request_transport(authinfo) as request:
             transport = yield cancellable.with_interrupt(request)
 
-            logger.info('retrieving calculation<{}>'.format(node.pk))
+            logger.info('retrieving CalcJob<{}>'.format(node.pk))
             raise Return(execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder))
 
     try:
@@ -242,11 +242,11 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
     except plumpy.Interruption:
         raise
     except Exception:
-        logger.warning('retrieving calculation<{}> failed'.format(node.pk))
+        logger.warning('retrieving CalcJob<{}> failed'.format(node.pk))
         raise TransportTaskException('retrieve_calculation failed {} times consecutively'.format(max_attempts))
     else:
         node._set_state(CalcJobState.PARSING)
-        logger.info('retrieving calculation<{}> successful'.format(node.pk))
+        logger.info('retrieving CalcJob<{}> successful'.format(node.pk))
         raise Return(result)
 
 
@@ -271,7 +271,7 @@ def task_kill_job(node, transport_queue, cancellable):
     max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
 
     if node.get_state() in [CalcJobState.UPLOADING, CalcJobState.SUBMITTING]:
-        logger.warning('calculation<{}> killed, it was in the {} state'.format(node.pk, node.get_state()))
+        logger.warning('CalcJob<{}> killed, it was in the {} state'.format(node.pk, node.get_state()))
         raise Return(True)
 
     authinfo = node.get_computer().get_authinfo(node.get_user())
@@ -280,7 +280,7 @@ def task_kill_job(node, transport_queue, cancellable):
     def do_kill():
         with transport_queue.request_transport(authinfo) as request:
             transport = yield cancellable.with_interrupt(request)
-            logger.info('killing calculation<{}>'.format(node.pk))
+            logger.info('killing CalcJob<{}>'.format(node.pk))
             raise Return(execmanager.kill_calculation(node, transport))
 
     try:
@@ -288,18 +288,16 @@ def task_kill_job(node, transport_queue, cancellable):
     except plumpy.Interruption:
         raise
     except Exception:
-        logger.warning('killing calculation<{}> failed'.format(node.pk))
+        logger.warning('killing CalcJob<{}> failed'.format(node.pk))
         raise TransportTaskException('kill_calculation failed {} times consecutively'.format(max_attempts))
     else:
-        logger.info('killing calculation<{}> successful'.format(node.pk))
+        logger.info('killing CalcJob<{}> successful'.format(node.pk))
         node._set_scheduler_state(JobState.DONE)
         raise Return(result)
 
 
 class Waiting(plumpy.Waiting):
-    """
-    The waiting state for the CalcJobNode.
-    """
+    """The waiting state for the `CalcJob` process."""
 
     def __init__(self, process, done_callback, msg=None, data=None):
         super(Waiting, self).__init__(process, done_callback, msg, data)
@@ -314,7 +312,7 @@ class Waiting(plumpy.Waiting):
     @coroutine
     def execute(self):
 
-        calculation = self.process.node
+        node = self.process.node
         transport_queue = self.process.runner.transport
 
         if isinstance(self.data, tuple):
@@ -323,33 +321,32 @@ class Waiting(plumpy.Waiting):
         else:
             command = self.data
 
-        calculation._set_process_status('Waiting for transport task: {}'.format(command))
+        node._set_process_status('Waiting for transport task: {}'.format(command))
 
         try:
 
             if command == UPLOAD_COMMAND:
-                calc_info, script_filename = yield self._launch_task(task_upload_job, calculation, transport_queue,
+                calc_info, script_filename = yield self._launch_task(task_upload_job, node, transport_queue,
                                                                      *args)
                 raise Return(self.submit(calc_info, script_filename))
 
             elif command == SUBMIT_COMMAND:
-                yield self._launch_task(task_submit_job, calculation, transport_queue, *args)
-                raise Return(self.scheduler_update())
+                yield self._launch_task(task_submit_job, node, transport_queue, *args)
+                raise Return(self.update())
 
             elif self.data == UPDATE_COMMAND:
                 job_done = False
 
                 while not job_done:
-                    job_done = yield self._launch_task(task_update_job, calculation,
-                                                       self.process.runner.job_manager)
+                    job_done = yield self._launch_task(task_update_job, node, self.process.runner.job_manager)
 
                 raise Return(self.retrieve())
 
             elif self.data == RETRIEVE_COMMAND:
                 # Create a temporary folder that has to be deleted by JobProcess.retrieved after successful parsing
                 temp_folder = tempfile.mkdtemp()
-                yield self._launch_task(task_retrieve_job, calculation, transport_queue, temp_folder)
-                raise Return(self.retrieved(temp_folder))
+                yield self._launch_task(task_retrieve_job, node, transport_queue, temp_folder)
+                raise Return(self.parse(temp_folder))
 
             else:
                 raise RuntimeError('Unknown waiting command')
@@ -358,14 +355,14 @@ class Waiting(plumpy.Waiting):
             raise plumpy.PauseInterruption('Pausing after failed transport task: {}'.format(exception))
         except plumpy.KillInterruption:
             exc_info = sys.exc_info()
-            yield self._launch_task(task_kill_job, calculation, transport_queue)
+            yield self._launch_task(task_kill_job, node, transport_queue)
             self._killing.set_result(True)
             six.reraise(*exc_info)
         except Return:
-            calculation._set_process_status(None)
+            node._set_process_status(None)
             raise
         except (plumpy.Interruption, plumpy.CancelledError):
-            calculation._set_process_status('Transport task {} was interrupted'.format(command))
+            node._set_process_status('Transport task {} was interrupted'.format(command))
             raise
         finally:
             # If we were trying to kill but we didn't deal with it, make sure it's set here
@@ -383,11 +380,7 @@ class Waiting(plumpy.Waiting):
             self._task = None
 
     def upload(self, calc_info, script_filename):
-        """
-        Create the next state to go to
-
-        :return: The appropriate WAITING state
-        """
+        """Return the `Waiting` state that will `upload` the `CalcJob`."""
         return self.create_state(
             processes.ProcessState.WAITING,
             None,
@@ -395,23 +388,15 @@ class Waiting(plumpy.Waiting):
             data=(UPLOAD_COMMAND, calc_info, script_filename))
 
     def submit(self, calc_info, script_filename):
-        """
-        Create the next state to go to
-
-        :return: The appropriate WAITING state
-        """
+        """Return the `Waiting` state that will `submit` the `CalcJob`."""
         return self.create_state(
             processes.ProcessState.WAITING,
             None,
             msg='Waiting for scheduler submission',
             data=(SUBMIT_COMMAND, calc_info, script_filename))
 
-    def scheduler_update(self):
-        """
-        Create the next state to go to
-
-        :return: The appropriate WAITING state
-        """
+    def update(self):
+        """Return the `Waiting` state that will `update` the `CalcJob`."""
         return self.create_state(
             processes.ProcessState.WAITING,
             None,
@@ -419,31 +404,25 @@ class Waiting(plumpy.Waiting):
             data=UPDATE_COMMAND)
 
     def retrieve(self):
-        """
-        Create the next state to go to in order to retrieve
-
-        :return: The appropriate WAITING state
-        """
+        """Return the `Waiting` state that will `retrieve` the `CalcJob`."""
         return self.create_state(
             processes.ProcessState.WAITING,
             None,
             msg='Waiting to retrieve',
             data=RETRIEVE_COMMAND)
 
-    def retrieved(self, retrieved_temporary_folder):
-        """
-        Create the next state to go to after retrieving
+    def parse(self, retrieved_temporary_folder):
+        """Return the `Running` state that will `parse` the `CalcJob`.
 
-        :param retrieved_temporary_folder: The temporary folder used in retrieving, this will be used in parsing.
-        :return: The appropriate RUNNING state
+        :param retrieved_temporary_folder: temporary folder used in retrieving that can be used during parsing.
         """
         return self.create_state(
             processes.ProcessState.RUNNING,
-            self.process.retrieved,
+            self.process.parse,
             retrieved_temporary_folder)
 
     def interrupt(self, reason):
-        """Interrupt the Waiting state by calling interrupt on the transport task InterruptableFuture."""
+        """Interrupt the `Waiting` state by calling interrupt on the transport task `InterruptableFuture`."""
         if self._task is not None:
             self._task.interrupt(reason)
 

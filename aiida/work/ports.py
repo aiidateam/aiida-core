@@ -11,6 +11,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from plumpy import ports
 
 
@@ -75,6 +76,19 @@ class InputPort(WithSerialize, WithNonDb, ports.InputPort):
         description['non_db'] = '{}'.format(self.non_db)
 
         return description
+
+
+class CalcJobOutputPort(ports.OutputPort):
+    """Sub class of plumpy.OutputPort which adds the `_pass_to_parser` attribute."""
+
+    def __init__(self, *args, **kwargs):
+        pass_to_parser = kwargs.pop('pass_to_parser', False)
+        super(CalcJobOutputPort, self).__init__(*args, **kwargs)
+        self._pass_to_parser = pass_to_parser
+
+    @property
+    def pass_to_parser(self):
+        return self._pass_to_parser
 
 
 class PortNamespace(WithNonDb, ports.PortNamespace):

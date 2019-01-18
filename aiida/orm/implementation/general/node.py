@@ -32,8 +32,8 @@ from aiida.common.links import LinkType
 from aiida.common.lang import override, abstractclassmethod, combomethod, classproperty
 from aiida.common.escaping import sql_string_match
 from aiida.manage import get_manager
-from aiida.plugins.loader import get_query_type_from_type_string, get_type_string_from_class
 from aiida.orm.utils import links
+from aiida.orm.utils.node import get_type_string_from_class, get_query_type_from_type_string
 
 _NO_DEFAULT = tuple()
 
@@ -42,9 +42,9 @@ def clean_value(value):
     """
     Get value from input and (recursively) replace, if needed, all occurrences
     of BaseType AiiDA data nodes with their value, and List with a standard list.
-    It also makes a deep copy of everything 
-    The purpose of this function is to convert data to a type which can be serialized and deserialized 
-    for storage in the DB without its value changing.      
+    It also makes a deep copy of everything
+    The purpose of this function is to convert data to a type which can be serialized and deserialized
+    for storage in the DB without its value changing.
 
     Note however that there is no logic to avoid infinite loops when the
     user passes some perverse recursive dictionary or list.
@@ -68,7 +68,7 @@ def clean_value(value):
         return clean_builtin(value.value)
 
     if isinstance(value, Mapping):
-       # Check dictionary before iterables
+        # Check dictionary before iterables
         return {k: clean_value(v) for k, v in value.items()}
     if (isinstance(value, Iterable) and not isinstance(value, six.string_types)):
         # list, tuple, ... but not a string

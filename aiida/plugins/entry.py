@@ -13,11 +13,11 @@ Cached information for each plugin.
 This module and the RegistryEntry class should be the sole
 location for the (implicit) definition of the registry format.
 """
-
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
+
 class InvalidPluginEntryError(Exception):
     def __init__(self, msg=''):
         msg = 'Error: Invalid Plugin Registry Entry: {}'.format(msg)

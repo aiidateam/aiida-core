@@ -25,7 +25,7 @@ class TestComputer(AiidaTestCase):
     """
 
     def test_deletion(self):
-        from aiida.orm.node.process import CalcJobNode
+        from aiida.orm.node import CalcJobNode
         from aiida.common.exceptions import InvalidOperation
         import aiida.backends.sqlalchemy
 

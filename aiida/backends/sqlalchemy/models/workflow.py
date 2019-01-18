@@ -234,7 +234,7 @@ class DbWorkflow(Base):
         self.save()
 
     def get_calculations(self):
-        from aiida.orm.node.process import CalcJobNode
+        from aiida.orm.node import CalcJobNode
         return CalcJobNode.query(workflow_step=self.steps)
 
     def get_sub_workflows(self):
@@ -372,7 +372,7 @@ class DbWorkflowStep(Base):
     )
 
     def add_calculation(self, step_calculation):
-        from aiida.orm.node.process import CalcJobNode
+        from aiida.orm.node import CalcJobNode
         if (not isinstance(step_calculation, CalcJobNode)):
             raise ValueError("Cannot add a non-Calculation object to a workflow step")
 

@@ -26,9 +26,9 @@ from aiida.common.exceptions import InvalidOperation, ModificationNotAllowed, St
 from aiida.common.links import LinkType
 from aiida.manage.database.delete.nodes import delete_nodes
 from aiida.orm import User, Data, Node
-from aiida.orm.node.process import ProcessNode
-from aiida.orm.node.process.calculation import CalculationNode
-from aiida.orm.node.process.workflow import WorkflowNode
+from aiida.orm.node import ProcessNode
+from aiida.orm.node import CalculationNode
+from aiida.orm.node import WorkflowNode
 from aiida.orm.utils import load_node
 from aiida.orm.convert import get_orm_entity
 from aiida.common.utils import Capturing
@@ -253,7 +253,7 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
     def test_with_subclasses(self):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import CalculationFactory, DataFactory
-        from aiida.orm.node.process import CalcJobNode
+        from aiida.orm.node import CalcJobNode
 
         extra_name = self.__class__.__name__ + "/test_with_subclasses"
 
@@ -1491,7 +1491,7 @@ class TestNodeBasic(AiidaTestCase):
         For the case where, e.g., the user doesn't have the necessary plugin.
         """
         from aiida.orm import CalculationFactory
-        from aiida.orm.node.process import CalcJobNode
+        from aiida.orm.node import CalcJobNode
 
         TemplateReplacerCalc = CalculationFactory('templatereplacer')
         testcalc = TemplateReplacerCalc(computer=self.computer)
@@ -1666,7 +1666,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
     # pylint: disable=unused-variable,no-member,no-self-use
     def test_calculation_load(self):
-        from aiida.orm.node.process import CalcJobNode
+        from aiida.orm.node import CalcJobNode
 
         # I check with a string, with an object and with the computer pk/id
         calc = CalcJobNode(computer=self.computer)
@@ -1749,7 +1749,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         """
         It is possible to store links between nodes even if they are unstored these links are cached.
         """
-        from aiida.orm.node.process import CalculationNode, WorkflowNode
+        from aiida.orm.node import CalculationNode, WorkflowNode
         from aiida.orm import Data
 
         n1 = Data()
@@ -1792,7 +1792,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         Cannot have two CREATE links for the same node.
         """
         from aiida.orm.data import Data
-        from aiida.orm.node.process import CalculationNode
+        from aiida.orm.node import CalculationNode
 
         n1 = CalculationNode()
         n2 = CalculationNode()
@@ -1807,7 +1807,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         import tempfile
         from aiida import orm
         from aiida.orm import DataFactory
-        from aiida.orm.node.process import CalcJobNode
+        from aiida.orm.node import CalcJobNode
 
         SinglefileData = DataFactory('singlefile')
 
@@ -1870,7 +1870,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         """
         Each data node can only have one input calculation
         """
-        from aiida.orm.node.process import CalcJobNode
+        from aiida.orm.node import CalcJobNode
 
         d1 = Data().store()
 

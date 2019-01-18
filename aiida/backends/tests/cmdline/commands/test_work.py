@@ -19,7 +19,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_work
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
-from aiida.orm.node.process import WorkChainNode, WorkFunctionNode
+from aiida.orm.node import WorkChainNode, WorkFunctionNode
 
 
 def get_result_lines(result):

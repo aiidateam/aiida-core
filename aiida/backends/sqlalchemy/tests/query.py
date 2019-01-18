@@ -19,7 +19,7 @@ from aiida.backends.testbase import AiidaTestCase
 class TestQueryBuilderSQLA(AiidaTestCase):
     def test_clsf_sqla(self):
         from aiida.orm import Group, User, Computer, Node, Data
-        from aiida.orm.node.process import ProcessNode
+        from aiida.orm.node import ProcessNode
         from aiida.backends.sqlalchemy.models.node import DbNode
         from aiida.backends.sqlalchemy.models.group import DbGroup
         from aiida.backends.sqlalchemy.models.user import DbUser

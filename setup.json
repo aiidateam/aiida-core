@@ -166,10 +166,10 @@
       "orbital = aiida.orm.data.orbital:OrbitalData"
     ],
     "aiida.node": [
-      "process.calculation = aiida.orm.node.process.calculation.calculation:CalculationNode",
+      "process.calculation = aiida.orm.node.process.calculation:CalculationNode",
       "process.calculation.calcfunction = aiida.orm.node.process.calculation.calcfunction:CalcFunctionNode",
       "process.calculation.calcjob = aiida.orm.node.process.calculation.calcjob:CalcJobNode",
-      "process.workflow = aiida.orm.node.process.workflow.workflow:WorkflowNode",
+      "process.workflow = aiida.orm.node.process.workflow:WorkflowNode",
       "process.workflow.workchain = aiida.orm.node.process.workflow.workchain:WorkChainNode",
       "process.workflow.workfunction = aiida.orm.node.process.workflow.workfunction:WorkFunctionNode"
     ],

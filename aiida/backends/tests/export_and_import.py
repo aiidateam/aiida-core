@@ -87,7 +87,7 @@ class TestSpecificImport(AiidaTestCase):
         """
         import tempfile
         from aiida.common.links import LinkType
-        from aiida.orm.node.process import CalculationNode
+        from aiida.orm.node import CalculationNode
         from aiida.orm.data.structure import StructureData
         from aiida.orm.data.remote import RemoteData
         from aiida.orm.importexport import export, import_data
@@ -231,7 +231,7 @@ class TestSimple(AiidaTestCase):
         from aiida.common.links import LinkType
         from aiida.orm import DataFactory
         from aiida.orm import load_node
-        from aiida.orm.node.process import CalcJobNode
+        from aiida.orm.node import CalcJobNode
         from aiida.orm.importexport import export
 
         # Creating a folder for the import/export files
@@ -462,7 +462,7 @@ class TestSimple(AiidaTestCase):
         import tempfile
 
         from aiida.orm import load_node
-        from aiida.orm.node.process import CalcJobNode
+        from aiida.orm.node import CalcJobNode
         from aiida.orm.data.structure import StructureData
         from aiida.orm.importexport import export
         from aiida.common.links import LinkType
@@ -543,7 +543,7 @@ class TestSimple(AiidaTestCase):
         import tempfile
 
         from aiida.orm import load_node
-        from aiida.orm.node.process import CalcJobNode
+        from aiida.orm.node import CalcJobNode
         from aiida.orm.data.structure import StructureData
         from aiida.orm.importexport import export
         from aiida.common.links import LinkType
@@ -640,7 +640,7 @@ class TestSimple(AiidaTestCase):
 
         from aiida.common.links import LinkType
         from aiida.orm import load_node
-        from aiida.orm.node.process import CalcJobNode
+        from aiida.orm.node import CalcJobNode
         from aiida.orm.data.structure import StructureData
         from aiida.orm.importexport import export
         from aiida.orm.querybuilder import QueryBuilder
@@ -864,7 +864,7 @@ class TestSimple(AiidaTestCase):
     def test_workcalculation_2(self):
         import shutil, os, tempfile
 
-        from aiida.orm.node.process import WorkChainNode
+        from aiida.orm.node import WorkChainNode
         from aiida.orm.data.int import Int
         from aiida.orm import load_node
         from aiida.common.links import LinkType
@@ -917,7 +917,7 @@ class TestSimple(AiidaTestCase):
         from aiida.orm import load_node, Group
         from aiida.orm.data.array import ArrayData
         from aiida.orm.data.parameter import ParameterData
-        from aiida.orm.node.process import CalculationNode
+        from aiida.orm.node import CalculationNode
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.importexport import export
         from aiida.common.hashing import make_hash
@@ -1035,7 +1035,7 @@ class TestComplex(AiidaTestCase):
         import shutil
         import os
 
-        from aiida.orm.node.process import CalcJobNode
+        from aiida.orm.node import CalcJobNode
         from aiida.orm.data.folder import FolderData
         from aiida.orm.data.parameter import ParameterData
         from aiida.orm.data.remote import RemoteData
@@ -1130,7 +1130,7 @@ class TestComputer(AiidaTestCase):
         from aiida.orm.importexport import export
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.computers import Computer
-        from aiida.orm.node.process import CalcJobNode
+        from aiida.orm.node import CalcJobNode
 
         # Creating a folder for the import/export files
         export_file_tmp_folder = tempfile.mkdtemp()
@@ -1252,7 +1252,7 @@ class TestComputer(AiidaTestCase):
         from aiida.orm.importexport import export
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.computers import Computer
-        from aiida.orm.node.process import CalcJobNode
+        from aiida.orm.node import CalcJobNode
 
         # Creating a folder for the import/export files
         export_file_tmp_folder = tempfile.mkdtemp()
@@ -1355,7 +1355,7 @@ class TestComputer(AiidaTestCase):
         from aiida.orm.importexport import export
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.computers import Computer
-        from aiida.orm.node.process import CalcJobNode
+        from aiida.orm.node import CalcJobNode
         from aiida.orm.importexport import DUPL_SUFFIX
 
         # Creating a folder for the import/export files
@@ -1473,7 +1473,7 @@ class TestComputer(AiidaTestCase):
         from aiida.orm.importexport import export
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.computers import Computer
-        from aiida.orm.node.process import CalcJobNode
+        from aiida.orm.node import CalcJobNode
 
         # Creating a folder for the import/export files
         export_file_tmp_folder = tempfile.mkdtemp()
@@ -1592,7 +1592,7 @@ class TestLinks(AiidaTestCase):
 
         from aiida.orm.data.int import Int
         from aiida.orm.importexport import export
-        from aiida.orm.node.process import CalculationNode
+        from aiida.orm.node import CalculationNode
         from aiida.common.links import LinkType
 
         tmp_folder = tempfile.mkdtemp()
@@ -1630,8 +1630,8 @@ class TestLinks(AiidaTestCase):
         predecessors, desuccessors).
         """
         from aiida.orm.data.base import Int
-        from aiida.orm.node.process import CalcJobNode
-        from aiida.orm.node.process import WorkChainNode
+        from aiida.orm.node import CalcJobNode
+        from aiida.orm.node import WorkChainNode
         from aiida.common.links import LinkType
 
         if export_combination < 0 or export_combination > 8:
@@ -1708,7 +1708,7 @@ class TestLinks(AiidaTestCase):
 
         from aiida.orm import Data, Group
         from aiida.orm.data.base import Int
-        from aiida.orm.node.process import CalcJobNode
+        from aiida.orm.node import CalcJobNode
         from aiida.orm.importexport import export
         from aiida.common.links import LinkType
         from aiida.orm.querybuilder import QueryBuilder
@@ -1847,7 +1847,7 @@ class TestLinks(AiidaTestCase):
         from aiida.orm import Node
         from aiida.orm.data.base import Int
         from aiida.orm.importexport import export
-        from aiida.orm.node.process import CalculationNode, WorkflowNode
+        from aiida.orm.node import CalculationNode, WorkflowNode
         from aiida.common.links import LinkType
         from aiida.orm.querybuilder import QueryBuilder
         tmp_folder = tempfile.mkdtemp()
@@ -1930,7 +1930,7 @@ class TestLinks(AiidaTestCase):
 
         from aiida.orm.data.base import Int
         from aiida.orm.importexport import export
-        from aiida.orm.node.process import WorkChainNode
+        from aiida.orm.node import WorkChainNode
         from aiida.common.links import LinkType
         tmp_folder = tempfile.mkdtemp()
 
@@ -1978,7 +1978,7 @@ class TestLinks(AiidaTestCase):
 
         from aiida.orm.data.base import Int
         from aiida.orm.importexport import export
-        from aiida.orm.node.process import WorkChainNode
+        from aiida.orm.node import WorkChainNode
         from aiida.common.links import LinkType
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.node import Node
@@ -2063,7 +2063,7 @@ class TestLinks(AiidaTestCase):
         from aiida.orm.utils import load_node
         from aiida.orm.importexport import export
         from aiida.common.links import LinkType
-        from aiida.orm.node.process import CalcJobNode
+        from aiida.orm.node import CalcJobNode
         from aiida.orm.code import Code
         from aiida.orm.querybuilder import QueryBuilder
 
@@ -2157,7 +2157,7 @@ class TestLogs(AiidaTestCase):
 
     def test_export_import_of_log_entries(self):
         import os, shutil, tempfile
-        from aiida.orm.node.process import CalculationNode
+        from aiida.orm.node import CalculationNode
         from aiida.orm.importexport import export
 
         tmp_folder = tempfile.mkdtemp()

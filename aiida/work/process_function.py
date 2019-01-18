@@ -39,7 +39,7 @@ def calcfunction(function):
     [4, 5]
 
     """
-    from aiida.orm.node.process import CalcFunctionNode
+    from aiida.orm.node import CalcFunctionNode
     return process_function(node_class=CalcFunctionNode)(function)
 
 
@@ -65,7 +65,7 @@ def workfunction(function):
     [4, 5]
 
     """
-    from aiida.orm.node.process import WorkFunctionNode
+    from aiida.orm.node import WorkFunctionNode
     return process_function(node_class=WorkFunctionNode)(function)
 
 
@@ -168,7 +168,7 @@ class FunctionProcess(processes.Process):
         :rtype: :class:`FunctionProcess`
         """
         from aiida import orm
-        from aiida.orm.node.process import ProcessNode
+        from aiida.orm.node import ProcessNode
         from aiida.orm.mixins import FunctionCalculationMixin
 
         if not issubclass(node_class, ProcessNode) or not issubclass(node_class, FunctionCalculationMixin):

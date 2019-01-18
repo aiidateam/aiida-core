@@ -195,7 +195,7 @@ class TestCalcAttributeKeysMigration(TestMigrations):
     KEY_ENVIRONMENT_VARIABLES_NEW = 'environment_variables'
 
     def setUpBeforeMigration(self, apps):
-        from aiida.orm.node.process import WorkflowNode, CalcJobNode
+        from aiida.orm.node import WorkflowNode, CalcJobNode
 
         self.process_label = 'TestLabel'
         self.resources = {'number_machines': 1}

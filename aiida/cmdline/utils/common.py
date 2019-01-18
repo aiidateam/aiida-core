@@ -86,7 +86,7 @@ def get_node_summary(node):
     """
     from plumpy import ProcessState
     from aiida.orm.data.code import Code
-    from aiida.orm.node.process import ProcessNode
+    from aiida.orm.node import ProcessNode
 
     table_headers = ['Property', 'Value']
     table = []
@@ -142,7 +142,7 @@ def get_node_info(node, include_summary=True):
     """
     from aiida.common.links import LinkType
     from aiida import orm
-    from aiida.orm.node.process import WorkChainNode
+    from aiida.orm.node import WorkChainNode
 
     if include_summary:
         result = get_node_summary(node)
@@ -270,7 +270,7 @@ def get_workchain_report(node, levelname, indent_size=4, max_depth=None):
     from aiida.common.log import LOG_LEVELS
     from aiida import orm
     from aiida.orm.querybuilder import QueryBuilder
-    from aiida.orm.node.process import WorkChainNode
+    from aiida.orm.node import WorkChainNode
 
     def get_report_messages(uuid, depth, levelname):
         """Return list of log messages with given levelname and their depth for a node with a given uuid."""

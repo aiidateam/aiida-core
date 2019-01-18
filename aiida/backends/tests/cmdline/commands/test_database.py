@@ -22,7 +22,7 @@ from aiida.cmdline.commands import cmd_database
 from aiida.common.links import LinkType
 from aiida.orm.data import Data
 from aiida.orm.node import Node
-from aiida.orm.node.process import CalculationNode, WorkflowNode
+from aiida.orm.node import CalculationNode, WorkflowNode
 
 
 class TestVerdiDatabasaIntegrity(AiidaTestCase):

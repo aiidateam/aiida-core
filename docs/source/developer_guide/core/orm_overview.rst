@@ -224,7 +224,7 @@ ORM documentation: Calculations
 .. note:: This list only includes the classes included in AiiDA-core. For all the plugin subclasses,
   check the corresponding plugin repositories.
 
-.. automodule:: aiida.orm.node.process.process
+.. automodule:: aiida.orm.node.process
    :members:
    :noindex:
    :special-members: __init__

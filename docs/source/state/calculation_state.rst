@@ -4,7 +4,7 @@ AiiDA calculations can be of two kinds:
 
 * :py:class:`CalcJobNode <aiida.orm.node.process.calculation.calcjob.CalcJobNode>`: those who need to be run on a scheduler
 
-* :py:class:`CalcFunctionNode <aiida.orm.node.process.CalcFunctionNode>`: rapid executions that are executed by the daemon itself, on your local machine.
+* :py:class:`CalcFunctionNode <aiida.orm.node.process.calculation.calcfunction.CalcFunctionNode>`: rapid executions that are executed by the daemon itself, on your local machine.
 
 In the following, we will refer to the CalcJobNodes as a Calculation for the sake of simplicity, unless we explicitly say otherwise. In the same way, the command ``verdi calculation`` refers to CalcJobNodes.
 
@@ -62,7 +62,7 @@ If you prefer, you can check the state of a calculation from within python. For 
     from aiida import load_dbenv
     load_dbenv()
 
-    from aiida.orm.node.process import CalcJobNode
+    from aiida.orm.node import CalcJobNode
 
     ## pk must be a valid integer pk
     calc = load_node(pk)

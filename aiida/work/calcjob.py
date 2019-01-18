@@ -12,7 +12,7 @@ from aiida.common.links import LinkType
 from aiida.orm.data.folder import FolderData
 from aiida.orm.data.remote import RemoteData
 from aiida.orm.data.singlefile import SinglefileData
-from aiida.orm.node.process import CalcJobNode
+from aiida.orm.node import CalcJobNode
 
 from .job_processes import Waiting, UPLOAD_COMMAND
 from .processes import Process, ProcessState

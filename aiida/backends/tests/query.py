@@ -19,7 +19,7 @@ from aiida.backends.testbase import AiidaTestCase
 import aiida.backends.settings as settings
 from aiida.common.links import LinkType
 from aiida.orm import Node, Data
-from aiida.orm.node.process.calculation import CalculationNode
+from aiida.orm.node import CalculationNode
 
 class TestQueryBuilder(AiidaTestCase):
 
@@ -92,7 +92,7 @@ class TestQueryBuilder(AiidaTestCase):
         """
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import Node, Data
-        from aiida.orm.node.process import CalculationNode
+        from aiida.orm.node import CalculationNode
         from datetime import datetime
         from aiida.common.links import LinkType
 
@@ -163,7 +163,7 @@ class TestQueryBuilder(AiidaTestCase):
     def test_simple_query_2(self):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import Node, Data
-        from aiida.orm.node.process.calculation import CalculationNode
+        from aiida.orm.node import CalculationNode
         from datetime import datetime
         from aiida.common.exceptions import MultipleObjectsError, NotExistent
         n0 = Data()
@@ -366,7 +366,7 @@ class TestQueryBuilder(AiidaTestCase):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.data.structure import StructureData
         from aiida.common.exceptions import InputValidationError
-        from aiida.orm.node.process import ProcessNode
+        from aiida.orm.node import ProcessNode
 
         # So here I am giving two times the same tag
         with self.assertRaises(InputValidationError):
@@ -406,7 +406,7 @@ class TestQueryBuilder(AiidaTestCase):
     def test_tags(self):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.node import Node
-        from aiida.orm.node.process import ProcessNode
+        from aiida.orm.node import ProcessNode
         from aiida.orm.data.structure import StructureData
         from aiida.orm.data.parameter import ParameterData
         from aiida.orm.computers import Computer
@@ -507,7 +507,7 @@ class TestQueryBuilderCornerCases(AiidaTestCase):
         under Django).
         """
         from aiida.orm import Node, Data, Computer
-        from aiida.orm.node.process import ProcessNode
+        from aiida.orm.node import ProcessNode
         from aiida.orm.querybuilder import QueryBuilder
 
         n1 = CalculationNode()
@@ -1004,7 +1004,7 @@ class TestConsistency(AiidaTestCase):
         SQLAlchemy has a deduplication strategy that leads to strange behavior, tested against here
         """
         from aiida.orm import Data
-        from aiida.orm.node.process import CalculationNode
+        from aiida.orm.node import CalculationNode
         from aiida.orm.querybuilder import QueryBuilder
 
         parent = CalculationNode().store()
@@ -1026,7 +1026,7 @@ class TestManager(AiidaTestCase):
         I try to implement it in a way that does not depend on the past state.
         """
         from aiida.orm import Node, DataFactory
-        from aiida.orm.node.process import ProcessNode
+        from aiida.orm.node import ProcessNode
         from collections import defaultdict
 
         def store_and_add(n, statistics):
@@ -1071,7 +1071,7 @@ class TestManager(AiidaTestCase):
         I try to implement it in a way that does not depend on the past state.
         """
         from aiida.orm import Node, DataFactory
-        from aiida.orm.node.process import ProcessNode
+        from aiida.orm.node import ProcessNode
         from collections import defaultdict
 
         def store_and_add(n, statistics):

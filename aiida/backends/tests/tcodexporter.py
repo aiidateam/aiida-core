@@ -128,7 +128,7 @@ class TestTcodDbExporter(AiidaTestCase):
     def test_cif_structure_roundtrip(self):
         from aiida.tools.dbexporters.tcod import export_cif, export_values
         from aiida.orm import Code
-        from aiida.orm.node.process import CalcJobNode
+        from aiida.orm.node import CalcJobNode
         from aiida.orm.data.cif import CifData
         from aiida.orm.data.parameter import ParameterData
         from aiida.orm.data.upf import UpfData

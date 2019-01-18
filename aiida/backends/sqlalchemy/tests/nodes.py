@@ -15,8 +15,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm import Node, Data 
-from aiida.orm.node.process.calculation import CalculationNode
+from aiida.orm import Data
 from aiida import orm
 
 

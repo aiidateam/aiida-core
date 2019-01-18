@@ -352,13 +352,13 @@ def _get_calculation(node):
 
     :param node: an instance of subclass of :py:class:`aiida.orm.node.Node`
     :return: an instance of subclass of
-        :py:class:`aiida.orm.node.process.process.ProcessNode`
+        :py:class:`aiida.orm.node.process.ProcessNode`
     :raises MultipleObjectsError: if the node has more than one calculation
         attached.
     """
     from aiida.common.exceptions import MultipleObjectsError
     from aiida.common.links import LinkType
-    from aiida.orm.node.process import ProcessNode
+    from aiida.orm.node import ProcessNode
 
     parent_calculations = node.get_incoming(node_class=ProcessNode, link_type=LinkType.CREATE).all()
 
@@ -450,7 +450,7 @@ def _collect_calculation_data(calc):
     """
     from aiida.common.links import LinkType
     from aiida.orm.data import Data
-    from aiida.orm.node.process import CalculationNode, CalcJobNode, CalcFunctionNode, WorkflowNode
+    from aiida.orm.node import CalculationNode, CalcJobNode, CalcFunctionNode, WorkflowNode
     import hashlib
     import os
     calcs_now = []

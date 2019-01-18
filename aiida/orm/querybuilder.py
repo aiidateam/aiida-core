@@ -144,8 +144,7 @@ def get_querybuilder_classifiers_from_type(ormclasstype, obj):
     """
     Same as above get_querybuilder_classifiers_from_cls, but accepts a string instead of a class.
     """
-    from aiida.plugins.loader import get_query_type_from_type_string
-
+    from aiida.orm.utils.node import get_query_type_from_type_string
     if ormclasstype.lower() == 'group':
         plugin_type_string = ormclasstype.lower()
         query_type_string = None
@@ -163,7 +162,7 @@ def get_querybuilder_classifiers_from_type(ormclasstype, obj):
         # that matches exactly the _plugin_type_string of a node class
         ormclass = obj.Node
         plugin_type_string = ormclasstype
-        query_type_string = get_query_type_from_type_string(ormclasstype)
+        query_type_string = get_query_type_from_type_string(plugin_type_string)
 
     return plugin_type_string, query_type_string, ormclass
 

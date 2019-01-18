@@ -114,7 +114,7 @@ AiiDA object(s) you want to request. The following resources are available:
 +--------------------------------------------------------------------------------------------+-------------------+
 | Class                                                                                      | Resource          |
 +============================================================================================+===================+
-| :py:class:`ProcessNode <aiida.orm.node.process.process.ProcessNode>`                       | ``/calculations`` |
+| :py:class:`ProcessNode <aiida.orm.node.process.ProcessNode>`                               | ``/calculations`` |
 +--------------------------------------------------------------------------------------------+-------------------+
 | :py:class:`Computer <aiida.orm.Computer>`                                                  | ``/computers``    |
 +--------------------------------------------------------------------------------------------+-------------------+

@@ -5,7 +5,8 @@ from __future__ import absolute_import
 
 from aiida.common.links import LinkType
 from aiida.orm.mixins import FunctionCalculationMixin
-from .calculation import CalculationNode
+
+from . import CalculationNode
 
 __all__ = ('CalcFunctionNode',)
 

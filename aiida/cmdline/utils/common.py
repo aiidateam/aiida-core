@@ -272,21 +272,24 @@ def get_workchain_report(node, levelname, indent_size=4, max_depth=None):
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.orm.node.process import WorkChainNode
 
-    def get_report_messages(pk, depth, levelname):
-        """Return list of log messages with given levelname and their depth for a node with a given pk."""
-        filters = {'objpk': pk}
+    def get_report_messages(uuid, depth, levelname):
+        """Return list of log messages with given levelname and their depth for a node with a given uuid."""
+        filters = {'objuuid': uuid}
 
         entries = orm.Log.objects.find(filters)
         entries = [entry for entry in entries if LOG_LEVELS[entry.levelname] >= LOG_LEVELS[levelname]]
         return [(_, depth) for _ in entries]
 
-    def get_subtree(pk, level=0):
-        """Get a nested tree of work calculation nodes and their nesting level starting from this pk."""
+    def get_subtree(uuid, level=0):
+        """
+        Get a nested tree of work calculation nodes and their nesting level starting from this uuid.
+        The result is a list of uuid of these nodes.
+        """
         builder = QueryBuilder()
-        builder.append(cls=WorkChainNode, filters={'id': pk}, tag='workcalculation')
+        builder.append(cls=WorkChainNode, filters={'uuid': uuid}, tag='workcalculation')
         builder.append(
             cls=WorkChainNode,
-            project=['id'],
+            project=['uuid'],
             # In the future, we should specify here the type of link
             # for now, CALL links are the only ones allowing calc-calc
             # (we here really want instead to follow CALL links)
@@ -297,14 +300,16 @@ def get_workchain_report(node, levelname, indent_size=4, max_depth=None):
         # This will return a single flat list of tuples, where the first element
         # corresponds to the WorkChain pk and the second element is an integer
         # that represents its level of nesting within the chain
-        return [(pk, level)] + list(itertools.chain(*[get_subtree(subpk, level=level + 1) for subpk in result]))
+        return [(uuid, level)] + list(itertools.chain(*[get_subtree(subuuid, level=level + 1) for subuuid in result]))
 
-    workchain_tree = get_subtree(node.pk)
+    workchain_tree = get_subtree(node.uuid)
 
     if max_depth:
-        report_list = [get_report_messages(pk, depth, levelname) for pk, depth in workchain_tree if depth < max_depth]
+        report_list = [
+            get_report_messages(uuid, depth, levelname) for uuid, depth in workchain_tree if depth < max_depth
+        ]
     else:
-        report_list = [get_report_messages(pk, depth, levelname) for pk, depth in workchain_tree]
+        report_list = [get_report_messages(uuid, depth, levelname) for uuid, depth in workchain_tree]
 
     reports = list(itertools.chain(*report_list))
     reports.sort(key=lambda r: r[0].time)

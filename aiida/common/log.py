@@ -56,10 +56,6 @@ class DBLogHandler(logging.Handler):
         if not is_dbenv_loaded():
             return
 
-        if not hasattr(record, 'objpk'):
-            # Only log records with an object id
-            return
-
         if record.exc_info:
             # We do this because if there is exc_info this will put an appropriate string in exc_text.
             # See:
@@ -70,9 +66,12 @@ class DBLogHandler(logging.Handler):
         from django.core.exceptions import ImproperlyConfigured  # pylint: disable=no-name-in-module, import-error
 
         try:
-            backend = record.backend
-            delattr(record, 'backend')  # We've consumed the backend, don't want it to get logged
-            orm.Log.objects(backend).create_entry_from_record(record)
+            try:
+                backend = record.__dict__.pop('backend')
+                orm.Log.objects(backend).create_entry_from_record(record)
+            except KeyError:
+                # The backend should be set. We silently absorb this error
+                pass
 
         except ImproperlyConfigured:
             # Probably, the logger was called without the
@@ -231,14 +230,18 @@ def get_dblogger_extra(obj):
     from aiida.orm import Node
 
     if isinstance(obj, Node):
+        # If the object if not stored, then the corresponding log records will
+        # not be stored (objname and objuuid should be set to store a log record)
+        if not obj.is_stored:
+            return dict()
+
         if obj._plugin_type_string:  # pylint: disable=protected-access
             objname = "node." + obj._plugin_type_string  # pylint: disable=protected-access
         else:
             objname = "node"
     else:
         objname = obj.__class__.__module__ + "." + obj.__class__.__name__
-    objpk = obj.pk
-    return {'objpk': objpk, 'objname': objname, 'backend': obj.backend}
+    return {'objuuid': obj.uuid, 'objname': objname, 'backend': obj.backend}
 
 
 def create_logger_adapter(logger, entity):
@@ -251,6 +254,4 @@ def create_logger_adapter(logger, entity):
     :rtype: :class:`logging.LoggerAdapter`
     """
     extra = get_dblogger_extra(entity)
-    # Further augment with the backend so the logger handler knows which backend to log to
-    extra['backend'] = entity.backend
     return logging.LoggerAdapter(logger=logger, extra=extra)

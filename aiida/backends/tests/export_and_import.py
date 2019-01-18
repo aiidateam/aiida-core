@@ -23,6 +23,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.importexport import import_data
 from aiida.common.utils import get_new_uuid
 from aiida import orm
+from unittest import skip
 
 
 class TestSpecificImport(AiidaTestCase):
@@ -759,8 +760,6 @@ class TestSimple(AiidaTestCase):
         import shutil
         import tempfile
 
-        from aiida.common.exceptions import UniquenessError
-        from aiida.orm import load_node
         from aiida.orm.groups import Group
         from aiida.orm.data.structure import StructureData
         from aiida.orm.importexport import export
@@ -785,7 +784,6 @@ class TestSimple(AiidaTestCase):
             g1 = Group(label=grouplabel)
             g1.store()
             g1.add_nodes([sd1])
-            g1_uuid = g1.uuid
 
             # At this point we export the generated data
             filename1 = os.path.join(temp_folder, "export1.tar.gz")
@@ -801,7 +799,7 @@ class TestSimple(AiidaTestCase):
             # I check for this:
             qb = QueryBuilder().append(Group, filters={'label':{'like':grouplabel+'%'}})
             self.assertEqual(qb.count(),2)
-            #Now I check for the group having one member, and whether the name is different:
+            # Now I check for the group having one member, and whether the name is different:
             qb = QueryBuilder()
             qb.append(Group, filters={'label':{'like':grouplabel+'%'}}, tag='g', project='label')
             qb.append(StructureData, with_group='g')
@@ -820,7 +818,6 @@ class TestSimple(AiidaTestCase):
 
     def test_calcfunction_1(self):
         import shutil, os, tempfile
-
         from aiida.work import calcfunction
         from aiida.orm.data.float import Float
         from aiida.orm import load_node
@@ -868,13 +865,11 @@ class TestSimple(AiidaTestCase):
         import shutil, os, tempfile
 
         from aiida.orm.node.process import WorkChainNode
-        from aiida.orm.data.float import Float
         from aiida.orm.data.int import Int
         from aiida.orm import load_node
         from aiida.common.links import LinkType
         from aiida.orm.importexport import export
 
-        from aiida.common.exceptions import NotExistent
         # Creating a folder for the import/export files
         temp_folder = tempfile.mkdtemp()
 
@@ -927,6 +922,7 @@ class TestSimple(AiidaTestCase):
         from aiida.orm.importexport import export
         from aiida.common.hashing import make_hash
         from aiida.common.links import LinkType
+
         def get_hash_from_db_content(grouplabel):
             qb = QueryBuilder()
             qb.append(ParameterData, tag='p', project='*')
@@ -1026,7 +1022,6 @@ class TestSimple(AiidaTestCase):
 
 
 class TestComplex(AiidaTestCase):
-
     def test_complex_graph_import_export(self):
         """
         This test checks that a small and bit complex graph can be correctly
@@ -2111,5 +2106,88 @@ class TestLinks(AiidaTestCase):
                               "Expected to find one and only one link from "
                               "code to the calculation node. {} found."
                               .format(qb.count()))
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)
+
+    def test_that_solo_code_is_exported_correctly(self):
+        """
+        This test checks that when a calculation is exported then the
+        corresponding code is also exported.
+        """
+        import os, shutil, tempfile
+
+        from aiida.orm.utils import load_node
+        from aiida.orm.importexport import export
+        from aiida.orm.code import Code
+
+        tmp_folder = tempfile.mkdtemp()
+
+        try:
+            code_label = 'test_code1'
+
+            code = Code()
+            code.set_remote_computer_exec((self.computer, '/bin/true'))
+            code.label = code_label
+            code.store()
+
+            code_uuid = code.uuid
+
+            export_file = os.path.join(tmp_folder, 'export.tar.gz')
+            export([code], outfile=export_file, silent=True)
+
+            self.clean_db()
+            self.insert_data()
+
+            import_data(export_file, silent=True)
+
+            self.assertEquals(load_node(code_uuid).label, code_label)
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)
+
+
+class TestLogs(AiidaTestCase):
+
+    def tearDown(self):
+        """
+        Delete all the created log entries
+        """
+        from aiida import orm
+        super(TestLogs, self).tearDown()
+        orm.Log.objects.delete_many({})
+
+    def test_export_import_of_log_entries(self):
+        import os, shutil, tempfile
+        from aiida.orm.node.process import CalculationNode
+        from aiida.orm.importexport import export
+
+        tmp_folder = tempfile.mkdtemp()
+
+        try:
+            message = 'Testing logging of critical failure'
+            calc = CalculationNode()
+
+            # Firing a log for an unstored node should not end up in the database
+            calc.logger.critical(message)
+            # There should be no log messages for the unstored object
+            self.assertEquals(len(orm.Log.objects.all()), 0)
+
+            # After storing the node, logs above log level should be stored
+            calc.store()
+            calc.logger.critical(message)
+
+            export_file = os.path.join(tmp_folder, 'export.tar.gz')
+            export([calc], outfile=export_file, silent=True)
+
+            self.clean_db()
+            self.insert_data()
+
+            import_data(export_file, silent=True)
+
+            # Finding all the log messages
+            logs = orm.Log.objects.all()
+
+            self.assertEquals(len(logs), 1)
+            self.assertEquals(logs[0].message, message)
+
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)

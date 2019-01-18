@@ -17,7 +17,7 @@ from aiida.manage import get_manager
 from . import entities
 from . import node
 
-__all__ = ('Log',)
+__all__ = ('Log', 'OrderSpecifier', 'ASCENDING', 'DESCENDING')
 
 ASCENDING = 'asc'
 DESCENDING = 'desc'
@@ -50,22 +50,24 @@ class Log(entities.Entity):
             """
             from datetime import datetime
 
-            objpk = record.__dict__.get('objpk', None)
+            objuuid = record.__dict__.get('objuuid', None)
             objname = record.__dict__.get('objname', None)
 
             # Do not store if objpk and objname are not set
-            if objpk is None or objname is None:
+            if objuuid is None or objname is None:
                 return None
 
             metadata = dict(record.__dict__)
+
             # Get rid of the exc info because this is usually not serializable
             metadata['exc_info'] = None
+
             return Log(
                 time=timezone.make_aware(datetime.fromtimestamp(record.created)),
                 loggername=record.name,
                 levelname=record.levelname,
                 objname=objname,
-                objpk=objpk,
+                objuuid=objuuid,
                 message=record.getMessage(),
                 metadata=metadata)
 
@@ -86,8 +88,8 @@ class Log(entities.Entity):
                     objname = "node"
             else:
                 objname = entity.__class__.__module__ + "." + entity.__class__.__name__
-            objpk = entity.pk
-            filters = {'objpk': objpk, 'objname': objname}
+            objuuid = entity.uuid
+            filters = {'objuuid': objuuid, 'objname': objname}
             return self.find(filters, order_by=order_by)
 
         def delete(self, log_id):
@@ -104,7 +106,7 @@ class Log(entities.Entity):
             """
             self._backend.logs.delete_many(filters)
 
-    def __init__(self, time, loggername, levelname, objname, objpk=None, message='', metadata=None, backend=None):  # pylint: disable=too-many-arguments
+    def __init__(self, time, loggername, levelname, objname, objuuid=None, message='', metadata=None, backend=None):  # pylint: disable=too-many-arguments
         """Construct a new computer"""
         backend = backend or get_manager().get_backend()
         model = backend.logs.create(
@@ -112,7 +114,7 @@ class Log(entities.Entity):
             loggername=loggername,
             levelname=levelname,
             objname=objname,
-            objpk=objpk,
+            objuuid=objuuid,
             message=message,
             metadata=metadata)
         super(Log, self).__init__(model)
@@ -149,14 +151,14 @@ class Log(entities.Entity):
         return self._backend_entity.levelname
 
     @property
-    def objpk(self):
+    def objuuid(self):
         """
-        Get the id of the object that created the log entry
+        Get the uuid of the object that created the log entry
 
-        :return: The entry timestamp
-        :rtype: int
+        :return: The UUID of the object that created the log entry
+        :rtype: uuid.UUID
         """
-        return self._backend_entity.objpk
+        return self._backend_entity.objuuid
 
     @property
     def objname(self):

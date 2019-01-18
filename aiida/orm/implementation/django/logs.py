@@ -25,7 +25,7 @@ class DjangoLog(entities.DjangoModelEntity[models.DbLog], BackendLog):
 
     MODEL_CLASS = models.DbLog
 
-    def __init__(self, backend, time, loggername, levelname, objname, objpk=None, message="", metadata=None):
+    def __init__(self, backend, time, loggername, levelname, objname, objuuid=None, message="", metadata=None):
         # pylint: disable=too-many-arguments
         super(DjangoLog, self).__init__(backend)
         self._dbmodel = models.DbLog(
@@ -33,9 +33,16 @@ class DjangoLog(entities.DjangoModelEntity[models.DbLog], BackendLog):
             loggername=loggername,
             levelname=levelname,
             objname=objname,
-            objpk=objpk,
+            objuuid=objuuid,
             message=message,
             metadata=json.dumps(metadata))
+
+    @property
+    def uuid(self):
+        """
+        Get the uuid of the object that created the log entry
+        """
+        return self._dbmodel.uuid
 
     @property
     def time(self):
@@ -59,11 +66,11 @@ class DjangoLog(entities.DjangoModelEntity[models.DbLog], BackendLog):
         return self._dbmodel.levelname
 
     @property
-    def objpk(self):
+    def objuuid(self):
         """
-        Get the id of the object that created the log entry
+        Get the uuid of the object that created the log entry
         """
-        return self._dbmodel.objpk
+        return self._dbmodel.objuuid
 
     @property
     def objname(self):

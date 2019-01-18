@@ -23,6 +23,7 @@ from aiida.orm.groups import Group, GroupTypeString
 from aiida.orm.node import Node
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.orm.users import User
+from aiida.orm.logs import Log
 
 IMPORTGROUP_TYPE = GroupTypeString.IMPORTGROUP_TYPE
 DUPL_SUFFIX = ' (Imported #{})'
@@ -36,6 +37,7 @@ GROUP_ENTITY_NAME = "Group"
 ATTRIBUTE_ENTITY_NAME = "Attribute"
 COMPUTER_ENTITY_NAME = "Computer"
 USER_ENTITY_NAME = "User"
+LOG_ENTITY_NAME = "Log"
 
 # The signatures used to reference the entities in the import/export file
 NODE_SIGNATURE = "aiida.backends.djsite.db.models.DbNode"
@@ -44,6 +46,7 @@ GROUP_SIGNATURE = "aiida.backends.djsite.db.models.DbGroup"
 COMPUTER_SIGNATURE = "aiida.backends.djsite.db.models.DbComputer"
 USER_SIGNATURE = "aiida.backends.djsite.db.models.DbUser"
 ATTRIBUTE_SIGNATURE = "aiida.backends.djsite.db.models.DbAttribute"
+LOG_SIGNATURE = "aiida.backends.djsite.db.models.DbLog"
 
 # Mapping from entity names to signatures (used by the SQLA import/export)
 entity_names_to_signatures = {
@@ -53,6 +56,7 @@ entity_names_to_signatures = {
     COMPUTER_ENTITY_NAME: COMPUTER_SIGNATURE,
     USER_ENTITY_NAME: USER_SIGNATURE,
     ATTRIBUTE_ENTITY_NAME: ATTRIBUTE_SIGNATURE,
+    LOG_ENTITY_NAME: LOG_SIGNATURE,
 }
 
 # Mapping from signatures to entity names (used by the SQLA import/export)
@@ -63,6 +67,7 @@ signatures_to_entity_names = {
     COMPUTER_SIGNATURE: COMPUTER_ENTITY_NAME,
     USER_SIGNATURE: USER_ENTITY_NAME,
     ATTRIBUTE_SIGNATURE: ATTRIBUTE_ENTITY_NAME,
+    LOG_SIGNATURE: LOG_ENTITY_NAME,
 }
 
 # Mapping from entity names to AiiDA classes (used by the SQLA import/export)
@@ -70,7 +75,8 @@ entity_names_to_entities = {
     NODE_ENTITY_NAME: Node,
     GROUP_ENTITY_NAME: Group,
     COMPUTER_ENTITY_NAME: Computer,
-    USER_ENTITY_NAME: User
+    USER_ENTITY_NAME: User,
+    LOG_ENTITY_NAME: Log,
 }
 
 
@@ -109,8 +115,10 @@ entity_names_to_sqla_schema = {
     NODE_ENTITY_NAME: "aiida.backends.sqlalchemy.models.node.DbNode",
     LINK_ENTITY_NAME: "aiida.backends.sqlalchemy.models.node.DbLink",
     GROUP_ENTITY_NAME: "aiida.backends.sqlalchemy.models.group.DbGroup",
-    COMPUTER_ENTITY_NAME: "aiida.backends.sqlalchemy.models.computer.DbComputer",
-    USER_ENTITY_NAME: "aiida.backends.sqlalchemy.models.user.DbUser"
+    COMPUTER_ENTITY_NAME:
+        "aiida.backends.sqlalchemy.models.computer.DbComputer",
+    USER_ENTITY_NAME: "aiida.backends.sqlalchemy.models.user.DbUser",
+    LOG_ENTITY_NAME: "aiida.backends.sqlalchemy.models.log.DbLog",
 }
 
 # Mapping of the export file fields (that coincide with the Django fields) to
@@ -159,6 +167,7 @@ def get_all_fields_info():
         NODE_ENTITY_NAME: "uuid",
         ATTRIBUTE_ENTITY_NAME: None,
         GROUP_ENTITY_NAME: "uuid",
+        LOG_ENTITY_NAME: "uuid",
     }
 
     all_fields_info = dict()
@@ -229,17 +238,28 @@ def get_all_fields_info():
         "ival": {}
     }
     all_fields_info[GROUP_ENTITY_NAME] = {
-        "description": {},
-        "user": {
+         "description": {},
+         "user": {
             "related_name": "dbgroups",
             "requires": USER_ENTITY_NAME
-        },
-        "time": {
-            "convert_type": "date"
-        },
-        "type_string": {},
-        "uuid": {},
-        "label": {}
+         },
+         "time": {
+            "convert_type" : "date"
+         },
+         "type_string": {},
+         "uuid": {},
+         "label": {}
+    }
+    all_fields_info[LOG_ENTITY_NAME] = {
+         "id": {},
+         "uuid": {},
+         "time": {},
+         "loggername": {},
+         "levelname": {},
+         "objname": {},
+         "objuuid": {},
+         "message": {},
+         "metadata": {},
     }
     return all_fields_info, unique_identifiers
 
@@ -453,7 +473,7 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
         # I hardcode here the model order, for simplicity; in any case, this is
         # fixed by the export version
 
-        model_order = (USER_ENTITY_NAME, COMPUTER_ENTITY_NAME, NODE_ENTITY_NAME, GROUP_ENTITY_NAME)
+        model_order = (USER_ENTITY_NAME, COMPUTER_ENTITY_NAME, NODE_ENTITY_NAME, GROUP_ENTITY_NAME, LOG_ENTITY_NAME)
         # Models that do appear in the import file, but whose import is
         # managed manually
         model_manual = (LINK_ENTITY_NAME, ATTRIBUTE_ENTITY_NAME)
@@ -987,11 +1007,11 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False, silen
         # ['aiida.backends.djsite.db.models.DbUser', 'aiida.backends.djsite.db.models.DbComputer', 'aiida.backends.djsite.db.models.DbNode', 'aiida.backends.djsite.db.models.DbGroup']
         entity_sig_order = [entity_names_to_signatures[m]
                             for m in (USER_ENTITY_NAME, COMPUTER_ENTITY_NAME,
-                                      NODE_ENTITY_NAME, GROUP_ENTITY_NAME)]
+                                      NODE_ENTITY_NAME, GROUP_ENTITY_NAME, LOG_ENTITY_NAME)]
         # "Entities" that do appear in the import file, but whose import is
         # managed manually
         entity_sig_manual = [entity_names_to_signatures[m]
-                             for m in (LINK_ENTITY_NAME, ATTRIBUTE_ENTITY_NAME)]
+                         for m in (LINK_ENTITY_NAME, ATTRIBUTE_ENTITY_NAME)]
 
         all_known_entity_sigs = entity_sig_order + entity_sig_manual
 
@@ -1025,7 +1045,7 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False, silen
         ###################################################
         # CREATE IMPORT DATA DIRECT UNIQUE_FIELD MAPPINGS #
         ###################################################
-        # This is ndested dictionary of entity_name:{id:uuid}
+        # This is nested dictionary of entity_name:{id:uuid}
         # to map one id (the pk) to a different one.
         # One of the things to remove for v0.4
         # {
@@ -1058,11 +1078,11 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False, silen
             for entity_sig in entity_sig_order:
                 entity_name = signatures_to_entity_names[entity_sig]
                 entity = entity_names_to_entities[entity_name]
-                # I get the unique identifier, since v0.3 stored under enity_name
+                # I get the unique identifier, since v0.3 stored under entity_name
                 unique_identifier = metadata['unique_identifiers'].get(entity_name, None)
 
-                # so, new_entries. Also,since v0.3 it makes more sense to used the entity_name
-                # ~ new_entries[entity_sig] = {}
+                # so, new_entries. Also, since v0.3 it makes more sense to use the entity_name
+                #~ new_entries[entity_sig] = {}
                 new_entries[entity_name] = {}
                 # existing_entries[entity_sig] = {}
                 existing_entries[entity_name] = {}
@@ -1721,13 +1741,14 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     """
     import os
     import aiida
-    from aiida.orm import Node, Data, Group
+    from aiida.orm import Node, Data, Group, Log
     from aiida.orm.node.process import ProcessNode
     from aiida.common.exceptions import ContentNotExistent
     from aiida.common.links import LinkType
     from aiida.common.folders import RepositoryFolder
     from aiida.orm.querybuilder import QueryBuilder
     import aiida.common.json as json
+    from django.core.exceptions import ImproperlyConfigured
 
     if not silent:
         print("STARTING EXPORT...")
@@ -1991,6 +2012,52 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 except KeyError:
                     export_data[current_entity] = temp_d2
 
+    ##############################################
+    # Export DbLog entries outside of QueryBuilder
+    ##############################################
+
+    # I use .get because there may be no nodes to export
+    all_nodes_pk = list()
+    if NODE_ENTITY_NAME in export_data:
+        all_nodes_pk.extend(export_data.get(NODE_ENTITY_NAME).keys())
+
+    all_nodes_uuids = list()
+    uuid_qb = QueryBuilder()
+    uuid_qb.append(Node, filters={'id': {'in': all_nodes_pk}}, project=['uuid'])
+
+    for [el] in uuid_qb.all():
+        all_nodes_uuids.append(el)
+
+    # EXPORTING THE LOGS
+    try:
+        log_entries = Log.objects.find(filters={'objuuid': {'in': all_nodes_uuids}})
+        from aiida.orm.logs import Log
+        for log_entry in log_entries:
+            export_data[LOG_ENTITY_NAME] = {
+                log_entry.id : {
+                    "uuid": six.text_type(log_entry.uuid),
+                    "time": str(log_entry.time),
+                    "loggername": log_entry.loggername,
+                    "levelname": log_entry.levelname,
+                    "objuuid": six.text_type(log_entry.objuuid),
+                    "objname": log_entry.objname,
+                    "message": log_entry.message,
+                    "metadata": log_entry.metadata
+                }
+            }
+
+    except ImproperlyConfigured:
+        # Probably, the logger was called without the
+        # Django settings module loaded. Then,
+        # This ignore should be a no-op.
+        pass
+    except Exception:
+        # To avoid loops with the error handler, I just print.
+        # Hopefully, though, this should not happen!
+        import traceback
+        traceback.print_exc()
+
+
     ######################################
     # Manually manage links and attributes
     ######################################
@@ -2230,6 +2297,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
 
     # N.B. We're really calling zipfolder.open
     with folder.open('data.json', mode='w') as fhandle:
+        # fhandle.write(json.dumps(data, cls=UUIDEncoder))
         fhandle.write(json.dumps(data))
 
     # Add proper signature to unique identifiers & all_fields_info

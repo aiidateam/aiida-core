@@ -249,7 +249,7 @@ def _(dbmodel, backend):
         loggername=dbmodel.loggername,
         levelname=dbmodel.levelname,
         objname=dbmodel.objname,
-        objpk=dbmodel.objpk,
+        objuuid=dbmodel.objuuid,
         message=dbmodel.message,
         metadata=dbmodel._metadata  # pylint: disable=protected-access
     )

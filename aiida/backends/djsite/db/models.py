@@ -1430,13 +1430,14 @@ class DbComment(m.Model):
 @python_2_unicode_compatible
 class DbLog(m.Model):
     # Creation time
+    uuid = m.UUIDField(default=get_new_uuid, unique=True)
     time = m.DateTimeField(default=timezone.now, editable=False)
     loggername = m.CharField(max_length=255, db_index=True)
     levelname = m.CharField(max_length=50, db_index=True)
     # A string to know what is the referred object (e.g. a Calculation,
     # or other)
     objname = m.CharField(max_length=255, blank=True, db_index=True)
-    objpk = m.IntegerField(db_index=True, null=True)  # It is not a ForeignKey
+    objuuid = m.UUIDField(db_index=True, null=True)  # It is not a ForeignKey
     # because it may be in different
     # tables
     message = m.TextField(blank=True)
@@ -1444,7 +1445,7 @@ class DbLog(m.Model):
 
     def __str__(self):
         return "[Log: {} for {} {}] {}".format(self.levelname,
-                                               self.objname, self.objpk, self.message)
+                                               self.objname, self.objuuid, self.message)
 
 
 # Issue 2380 will take care of dropping these models, which will have to be accompanied by a migration.

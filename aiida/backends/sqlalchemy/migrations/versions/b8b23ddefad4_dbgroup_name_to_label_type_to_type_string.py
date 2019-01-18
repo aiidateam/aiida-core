@@ -11,7 +11,7 @@
 """DbGroup class: Rename name with label and type with type_string
 
 Revision ID: b8b23ddefad4
-Revises: 162b99bca4a2
+Revises: 239cea6d2452
 Create Date: 2018-12-06 15:25:32.865136
 
 """

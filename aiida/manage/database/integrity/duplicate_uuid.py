@@ -15,7 +15,9 @@ from __future__ import absolute_import
 from aiida.manage import get_manager
 from aiida.common.exceptions import IntegrityError
 
-__all__ = ('verify_uuid_uniqueness', 'get_duplicate_uuids', 'deduplicate_node_uuids')
+__all__ = ('verify_uuid_uniqueness', 'get_duplicate_uuids', 'deduplicate_uuids', 'TABLES_UUID_DEDUPLICATION')
+
+TABLES_UUID_DEDUPLICATION = ['db_dbcomment', 'db_dbcomputer', 'db_dbgroup', 'db_dbnode']
 
 
 def get_duplicate_uuids(table):
@@ -48,27 +50,39 @@ def verify_uuid_uniqueness(table):
             'run `verdi database integrity duplicate-node-uuid` to return to a consistent state'.format(table))
 
 
-def deduplicate_node_uuids(dry_run=True):
-    """Detect and solve nodes with duplicate UUIDs.
+def deduplicate_uuids(table=None, dry_run=True):
+    """Detect and solve entities with duplicate UUIDs in a given database table.
 
-    Before aiida-core v1.0.0, there was no uniqueness constraint on the UUID column of the Node table in the database.
-    This made it possible to store multiple nodes with identical UUIDs without the database complaining. This was bug
-    was fixed in aiida-core=1.0.0 by putting an explicit uniqueness constraint on node UUIDs on the database level.
-    However, this would leave databases created before this patch with duplicate UUIDs in an inconsistent state. This
-    command will run an analysis to detect duplicate UUIDs in the node table and solve it by generating new UUIDs. Note
-    that it will not delete or merge any nodes.
+    Before aiida-core v1.0.0, there was no uniqueness constraint on the UUID column of the node table in the database
+    and a few other tables as well. This made it possible to store multiple entities with identical UUIDs in the same
+    table without the database complaining. This bug was fixed in aiida-core=1.0.0 by putting an explicit uniqueness
+    constraint on UUIDs on the database level. However, this would leave databases created before this patch with
+    duplicate UUIDs in an inconsistent state. This command will run an analysis to detect duplicate UUIDs in a given
+    table and solve it by generating new UUIDs. Note that it will not delete or merge any rows.
 
     :param dry_run: when True, no actual changes will be made
     :return: list of strings denoting the performed operations, or those that would have been applied for dry_run=False
+    :raises ValueError: if the specified table is invalid
     """
     from collections import defaultdict
 
-    from aiida.orm import load_node
     from aiida.common.utils import get_new_uuid
+    from aiida.orm import load_computer, load_group, load_node
+    from aiida.orm.node import Node
+
+    if table not in TABLES_UUID_DEDUPLICATION:
+        raise ValueError('invalid table {}: choose from {}'.format(table, ', '.join(TABLES_UUID_DEDUPLICATION)))
+
+    # A mapping of table to the corresponding entity loader, note that a loader for Comment is not implemented yet.
+    loaders = {
+        'db_dbcomputer': load_computer,
+        'db_dbgroup': load_group,
+        'db_dbnode': load_node,
+    }
 
     mapping = defaultdict(list)
 
-    for pk, uuid in get_duplicate_uuids(table='db_dbnode'):
+    for pk, uuid in get_duplicate_uuids(table=table):
         mapping[uuid].append(int(pk))
 
     def copy_repo_folder(node_source, uuid):
@@ -84,28 +98,41 @@ def deduplicate_node_uuids(dry_run=True):
 
     messages = []
 
-    for uuid, nodes in mapping.items():
+    try:
+        load_entity = loaders[table]
+    except KeyError:
+        raise ValueError('no entity loader has been implemented yet for table {}'.format(table))
+
+    for uuid, rows in mapping.items():
 
         uuid_old = None
 
-        for pk in nodes:
+        for pk in rows:
 
-            # We don't have to change all nodes that have the same UUID, the first one can keep the original
+            # We don't have to change all rows that have the same UUID, the first one can keep the original
             if uuid_old is None:
-                node_source = load_node(pk)
+                entity_reference = load_entity(pk)
                 uuid_old = uuid
                 continue
 
-            node = load_node(pk)
+            entity = load_entity(pk)
             uuid_new = str(get_new_uuid())
 
             if dry_run:
-                messages.append('would update UUID of Node<{}> from {} to {}'.format(pk, uuid_old, uuid_new))
+                messages.append('would update UUID of {} row<{}> from {} to {}'.format(table, pk, uuid_old, uuid_new))
             else:
-                node._dbnode.uuid = uuid_new  # pylint: disable=protected-access
-                node._dbnode.save()  # pylint: disable=protected-access
-                copy_repo_folder(node_source, uuid_new)
-                messages.append('updated UUID of Node<{}> from {} to {}'.format(pk, uuid_old, uuid_new))
+
+                # When Node is migrated to the new backend system, this will have to be adapted as well!
+                # Then the only exception should be that for Node the repository should be copied.
+                if isinstance(entity, Node):
+                    entity._dbnode.uuid = uuid_new  # pylint: disable=protected-access
+                    entity._dbnode.save()  # pylint: disable=protected-access
+                    copy_repo_folder(entity_reference, uuid_new)
+                else:
+                    entity._backend_entity._dbmodel.uuid = uuid_new  # pylint: disable=protected-access
+                    entity._backend_entity._dbmodel.save()  # pylint: disable=protected-access
+
+                messages.append('updated UUID of {} row<{}> from {} to {}'.format(table, pk, uuid_old, uuid_new))
 
     if not messages:
         messages = ['no duplicate UUIDs found']

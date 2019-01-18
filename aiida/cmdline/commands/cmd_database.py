@@ -17,6 +17,7 @@ import click
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import decorators, echo
+from aiida.manage.database.integrity.duplicate_uuid import TABLES_UUID_DEDUPLICATION
 
 
 @verdi.group('database')
@@ -49,30 +50,33 @@ def verdi_database_integrity():
     """Various commands that will check the integrity of the database and fix potential issues when asked."""
 
 
-@verdi_database_integrity.command('detect-duplicate-node-uuid')
+@verdi_database_integrity.command('detect-duplicate-uuid')
 @click.option(
-    '-a',
-    '--apply-patch',
-    is_flag=True,
-    help='Apply the proposed changes. If this flag is not passed, a dry run is performed instead.')
-def detect_duplicate_node_uuid(apply_patch):
-    """Detect and solve nodes with duplicate UUIDs.
+    '-t',
+    '--table',
+    type=click.Choice(TABLES_UUID_DEDUPLICATION),
+    default='db_dbnode',
+    help='The database table to operate on.')
+@click.option(
+    '-a', '--apply-patch', is_flag=True, help='Actually apply the proposed changes instead of performing a dry run.')
+def detect_duplicate_uuid(table, apply_patch):
+    """Detect and solve entities with duplicate UUIDs in a given database table.
 
-    Before aiida-core v1.0.0, there was no uniqueness constraint on the UUID column of the Node table in the database.
-    This made it possible to store multiple nodes with identical UUIDs without the database complaining. This was bug
-    was fixed in aiida-core=1.0.0 by putting an explicit uniqueness constraint on node UUIDs on the database level.
-    However, this would leave databases created before this patch with duplicate UUIDs in an inconsistent state. This
-    command will run an analysis to detect duplicate UUIDs in the node table and solve it by generating new UUIDs. Note
-    that it will not delete or merge any nodes.
+    Before aiida-core v1.0.0, there was no uniqueness constraint on the UUID column of the node table in the database
+    and a few other tables as well. This made it possible to store multiple entities with identical UUIDs in the same
+    table without the database complaining. This bug was fixed in aiida-core=1.0.0 by putting an explicit uniqueness
+    constraint on UUIDs on the database level. However, this would leave databases created before this patch with
+    duplicate UUIDs in an inconsistent state. This command will run an analysis to detect duplicate UUIDs in a given
+    table and solve it by generating new UUIDs. Note that it will not delete or merge any rows.
     """
-    from aiida.manage.database.integrity.duplicate_uuid import deduplicate_node_uuids
+    from aiida.manage.database.integrity.duplicate_uuid import deduplicate_uuids
     from aiida.manage.manager import get_manager
 
     manager = get_manager()
     manager._load_backend(schema_check=False)  # pylint: disable=protected-access
 
     try:
-        messages = deduplicate_node_uuids(dry_run=not apply_patch)
+        messages = deduplicate_uuids(table=table, dry_run=not apply_patch)
     except Exception as exception:  # pylint: disable=broad-except
         echo.echo_critical('integrity check failed: {}'.format(str(exception)))
     else:

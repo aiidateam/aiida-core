@@ -19,7 +19,7 @@ from django.db.migrations.executor import MigrationExecutor
 from django.db import connection
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import IntegrityError
-from aiida.manage.database.integrity.duplicate_uuid import deduplicate_node_uuids, verify_uuid_uniqueness
+from aiida.manage.database.integrity.duplicate_uuid import deduplicate_uuids, verify_uuid_uniqueness
 
 
 class TestMigrations(AiidaTestCase):
@@ -139,8 +139,8 @@ class TestDuplicateNodeUuidMigration(TestMigrations):
             verify_uuid_uniqueness(table='db_dbnode')
 
         # Now run the function responsible for solving duplicate UUIDs which would also be called by the user
-        # through the `verdi database integrity detect-duplicate-node-uuid` command
-        deduplicate_node_uuids(dry_run=False)
+        # through the `verdi database integrity detect-duplicate-uuid` command
+        deduplicate_uuids(table='db_dbnode', dry_run=False)
 
     def test_deduplicated_uuids(self):
         """Verify that after the migration, all expected nodes are still there with unique UUIDs."""
@@ -558,60 +558,6 @@ class TestDbLogMigrationBackward(TestMigrations):
                              "The type ({}) of the linked node of the 0024 schema version should be identical to the "
                              "objname ({}) of the 0023 schema version stored in the metadata.".format(
                                  node_type, json.loads(log_entry.metadata)['objname']))
-
-
-class TestCalcAttributeKeysMigration(TestMigrations):
-    migrate_from = '0022_dbgroup_type_string_change_content'
-    migrate_to = '0023_calc_job_option_attribute_keys'
-
-    KEY_RESOURCES_OLD = 'jobresource_params'
-    KEY_RESOURCES_NEW = 'resources'
-    KEY_PARSER_NAME_OLD = 'parser'
-    KEY_PARSER_NAME_NEW = 'parser_name'
-    KEY_PROCESS_LABEL_OLD = '_process_label'
-    KEY_PROCESS_LABEL_NEW = 'process_label'
-    KEY_ENVIRONMENT_VARIABLES_OLD = 'custom_environment_variables'
-    KEY_ENVIRONMENT_VARIABLES_NEW = 'environment_variables'
-
-    def setUpBeforeMigration(self):
-        from aiida.orm.node import WorkflowNode, CalcJobNode
-
-        self.process_label = 'TestLabel'
-        self.resources = {'number_machines': 1}
-        self.environment_variables = {}
-        self.parser_name = 'aiida.parsers:parser'
-
-        self.node_work = WorkflowNode()
-        self.node_work._set_attr(self.KEY_PROCESS_LABEL_OLD, self.process_label)
-        self.node_work.store()
-
-        self.node_calc = CalcJobNode(computer=self.computer)
-        self.node_calc._validate = lambda: True  # Need to disable the validation because we cannot set `resources`
-        self.node_calc._set_attr(self.KEY_PROCESS_LABEL_OLD, self.process_label)
-        self.node_calc._set_attr(self.KEY_RESOURCES_OLD, self.resources)
-        self.node_calc._set_attr(self.KEY_ENVIRONMENT_VARIABLES_OLD, self.environment_variables)
-        self.node_calc._set_attr(self.KEY_PARSER_NAME_OLD, self.parser_name)
-        self.node_calc.store()
-
-    def test_attribute_key_changes(self):
-        """Verify that the keys are successfully changed of the affected attributes."""
-        from aiida.orm import load_node
-
-        NOT_FOUND = tuple([0])
-
-        node_work = load_node(self.node_work.pk)
-        self.assertEqual(node_work.get_attr(self.KEY_PROCESS_LABEL_NEW), self.process_label)
-        self.assertEqual(node_work.get_attr(self.KEY_PROCESS_LABEL_OLD, default=NOT_FOUND), NOT_FOUND)
-
-        node_calc = load_node(self.node_calc.pk)
-        self.assertEqual(node_calc.get_attr(self.KEY_PROCESS_LABEL_NEW), self.process_label)
-        self.assertEqual(node_calc.get_attr(self.KEY_RESOURCES_NEW), self.resources)
-        self.assertEqual(node_calc.get_attr(self.KEY_ENVIRONMENT_VARIABLES_NEW), self.environment_variables)
-        self.assertEqual(node_calc.get_attr(self.KEY_PARSER_NAME_NEW), self.parser_name)
-        self.assertEqual(node_calc.get_attr(self.KEY_PROCESS_LABEL_OLD, default=NOT_FOUND), NOT_FOUND)
-        self.assertEqual(node_calc.get_attr(self.KEY_RESOURCES_OLD, default=NOT_FOUND), NOT_FOUND)
-        self.assertEqual(node_calc.get_attr(self.KEY_ENVIRONMENT_VARIABLES_OLD, default=NOT_FOUND), NOT_FOUND)
-        self.assertEqual(node_calc.get_attr(self.KEY_PARSER_NAME_OLD, default=NOT_FOUND), NOT_FOUND)
 
 
 class TestDataMoveWithinNodeMigration(TestMigrations):

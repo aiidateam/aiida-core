@@ -15,13 +15,13 @@ from __future__ import absolute_import
 
 DEFAULT_MODULES_LIST = [
     ('aiida.orm', 'Node', 'Node'),
-    ('aiida.orm.node.process', 'ProcessNode', 'ProcessNode'),
-    ('aiida.orm.node.process', 'CalculationNode', 'CalculationNode'),
-    ('aiida.orm.node.process', 'CalcJobNode', 'CalcJobNode'),
-    ('aiida.orm.node.process', 'CalcFunctionNode', 'CalcFunctionNode'),
-    ('aiida.orm.node.process', 'WorkflowNode', 'WorkflowNode'),
-    ('aiida.orm.node.process', 'WorkChainNode', 'WorkChainNode'),
-    ('aiida.orm.node.process', 'WorkFunctionNode', 'WorkFunctionNode'),
+    ('aiida.orm.node', 'ProcessNode', 'ProcessNode'),
+    ('aiida.orm.node', 'CalculationNode', 'CalculationNode'),
+    ('aiida.orm.node', 'CalcJobNode', 'CalcJobNode'),
+    ('aiida.orm.node', 'CalcFunctionNode', 'CalcFunctionNode'),
+    ('aiida.orm.node', 'WorkflowNode', 'WorkflowNode'),
+    ('aiida.orm.node', 'WorkChainNode', 'WorkChainNode'),
+    ('aiida.orm.node', 'WorkFunctionNode', 'WorkFunctionNode'),
     ('aiida.orm', 'Data', 'Data'),
     ('aiida.orm', 'CalculationFactory', 'CalculationFactory'),
     ('aiida.orm', 'DataFactory', 'DataFactory'),
@@ -30,6 +30,8 @@ DEFAULT_MODULES_LIST = [
     ('aiida.orm', 'Computer', 'Computer'),
     ('aiida.orm', 'Group', 'Group'),
     ('aiida.orm', 'QueryBuilder', 'QueryBuilder'),
+    ('aiida.orm.utils', 'load_code', 'load_code'),
+    ('aiida.orm.utils', 'load_group', 'load_group'),
     ('aiida.orm.utils', 'load_node', 'load_node'),
 ]
 

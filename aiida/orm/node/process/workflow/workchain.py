@@ -5,7 +5,7 @@ from __future__ import absolute_import
 
 from aiida.common.lang import classproperty
 
-from .workflow import WorkflowNode
+from . import WorkflowNode
 
 __all__ = ('WorkChainNode',)
 

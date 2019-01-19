@@ -91,7 +91,7 @@ def process_show(processes):
 def process_report(processes, levelname, indent_size, max_depth):
     """Show the log report for one or multiple processes."""
     from aiida.cmdline.utils.common import get_calcjob_report, get_workchain_report
-    from aiida.orm.node.process import CalcJobNode, WorkChainNode
+    from aiida.orm.node import CalcJobNode, WorkChainNode
 
     for process in processes:
         if isinstance(process, CalcJobNode):

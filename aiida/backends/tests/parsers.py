@@ -80,7 +80,7 @@ def output_test(pk, testname, skip_uuids_from_inputs=[]):
     import aiida.common.json as json
 
     from aiida.common.folders import Folder
-    from aiida.orm.node.process import CalcJobNode
+    from aiida.orm.node import CalcJobNode
     from aiida.orm.utils import load_node
     from aiida.orm.importexport import export_tree
     
@@ -175,7 +175,7 @@ class TestParsers(AiidaTestCase):
         import importlib
         import aiida.common.json as json
 
-        from aiida.orm.node.process import CalcJobNode
+        from aiida.orm.node import CalcJobNode
         from aiida.orm.utils import load_node
         from aiida.orm.importexport import import_data
 

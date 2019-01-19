@@ -194,8 +194,8 @@ class OrmEntityLoader(object):
         except MultipleObjectsError:
             error = 'multiple {} entries found with {}<{}>'.format(classes, identifier_type, identifier)
             raise MultipleObjectsError(error)
-        except NotExistent:
-            error = 'no {} found with {}<{}>'.format(classes, identifier_type, identifier)
+        except NotExistent as exception:
+            error = 'no {} found with {}<{}>: {}'.format(classes, identifier_type, identifier, exception)
             raise NotExistent(error)
 
         return entity
@@ -298,7 +298,7 @@ class ProcessEntityLoader(OrmEntityLoader):
 
         :returns: the orm base class
         """
-        from aiida.orm.node.process import ProcessNode
+        from aiida.orm.node import ProcessNode
         return ProcessNode
 
     @classmethod
@@ -330,7 +330,7 @@ class CalculationEntityLoader(OrmEntityLoader):
 
         :returns: the orm base class
         """
-        from aiida.orm.node.process import CalculationNode
+        from aiida.orm.node import CalculationNode
         return CalculationNode
 
     @classmethod
@@ -362,7 +362,7 @@ class WorkflowEntityLoader(OrmEntityLoader):
 
         :returns: the orm base class
         """
-        from aiida.orm.node.process import WorkflowNode
+        from aiida.orm.node import WorkflowNode
         return WorkflowNode
 
     @classmethod

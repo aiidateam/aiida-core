@@ -14,12 +14,11 @@ import six
 from aiida.common.datastructures import CalcJobState
 from aiida.common.lang import classproperty
 from aiida.common.utils import str_timedelta
-from aiida.plugins.loader import get_plugin_type_from_type_string
-from aiida.orm.node.process import ProcessNode
+from aiida.orm.node import ProcessNode
 from aiida.orm.mixins import Sealable
 from aiida.common import timezone
 
-from .calculation import CalculationNode
+from . import CalculationNode
 
 __all__ = ('CalcJobNode', )
 
@@ -803,8 +802,7 @@ class CalcJobNode(CalculationNode):
         try:
             prefix = 'node.process.calculation.calcjob.'
             calculation_type = d['calculation']['type']
-            calculation_class = get_plugin_type_from_type_string(calculation_type)
-            module, class_name = calculation_class.rsplit('.', 1)
+            module, class_name = calculation_type.rsplit('.', 2)[:2]
 
             # For the base class 'mode.process.calculation.calcjob.CalcJobNode' the module at this point equals
             # 'node.process.calculation.calcjob'. For this case we should simply set the type to the base module

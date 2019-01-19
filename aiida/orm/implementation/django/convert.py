@@ -22,8 +22,7 @@ except ImportError:  # Python2
 
 from aiida.backends.djsite.db import models
 from aiida.orm.implementation.django import dummy_model as dummy_models
-from aiida.common.exceptions import DbContentError
-from aiida.plugins.loader import get_plugin_type_from_type_string, load_node_class
+from aiida.orm.utils.node import load_node_class
 
 __all__ = ('get_backend_entity',)
 
@@ -78,12 +77,7 @@ def _(dbmodel, _backend):
     get_backend_entity for Django DbNode. It will return an ORM instance since
     there is not Node backend entity yet.
     """
-    try:
-        plugin_type = get_plugin_type_from_type_string(dbmodel.type)
-    except DbContentError:
-        raise DbContentError("The type name of node with pk= {} is not valid: '{}'".format(dbmodel.pk, dbmodel.type))
-
-    node_class = load_node_class(plugin_type)
+    node_class = load_node_class(dbmodel.type)
     return node_class(dbnode=dbmodel)
 
 
@@ -192,13 +186,7 @@ def _(dbmodel, _):
         public=dbmodel.public,
         nodeversion=dbmodel.nodeversion)
 
-    try:
-        plugin_type = get_plugin_type_from_type_string(djnode_instance.type)
-    except DbContentError:
-        raise DbContentError("The type name of node with pk= {} is "
-                             "not valid: '{}'".format(djnode_instance.pk, djnode_instance.type))
-
-    node_class = load_node_class(plugin_type)
+    node_class = load_node_class(djnode_instance.type)
     return node_class(dbnode=djnode_instance)
 
 

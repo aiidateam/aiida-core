@@ -56,12 +56,12 @@ Terms
 Interfaces
 ----------
 
-Pluginloader (aiida/plugins/loader.py)
+Pluginloader (aiida/plugins/entry_point.py)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The plugin loader relies on the `reentry PyPI package <https://github.com/dropd/reentry>`_ to find and load entry points. ``reentry`` has been added to setup_requires for AiiDA in order to enable scanning for existing plugins when AiiDA is installed. If for some reason ``reentry`` is uninstalled or is not found, the plugin system will fall back on ``pkg_resources`` from setuptools, which is slower.
 
-The API docs are found at the following link: :py:mod:`aiida.plugins.loader`.
+The API docs are found at the following link: :py:mod:`aiida.plugins.entry_point`.
 
 Registry Tools (aiida/plugins)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -5,7 +5,8 @@ from __future__ import absolute_import
 
 from aiida.common.links import LinkType
 from aiida.orm.mixins import FunctionCalculationMixin
-from .workflow import WorkflowNode
+
+from . import WorkflowNode
 
 __all__ = ('WorkFunctionNode',)
 

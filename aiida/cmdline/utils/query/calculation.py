@@ -95,7 +95,7 @@ class CalculationQueryBuilder(object):  # pylint: disable=useless-object-inherit
         """
         import datetime
 
-        from aiida.orm.node.process import ProcessNode
+        from aiida.orm.node import ProcessNode
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.common import timezone
 

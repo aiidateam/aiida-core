@@ -22,7 +22,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.common.utils import get_new_uuid
-from aiida.orm.node.process.calculation import CalculationNode
+from aiida.orm.node import CalculationNode
 from aiida.common.timezone import now
 
 

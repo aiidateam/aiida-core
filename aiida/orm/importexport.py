@@ -1742,7 +1742,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     import os
     import aiida
     from aiida.orm import Node, Data, Group, Log
-    from aiida.orm.node.process import ProcessNode
+    from aiida.orm.node import ProcessNode
     from aiida.common.exceptions import ContentNotExistent
     from aiida.common.links import LinkType
     from aiida.common.folders import RepositoryFolder

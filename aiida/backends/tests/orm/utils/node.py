@@ -7,21 +7,20 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Package for node ORM classes."""
+"""Tests for the `Node` utils."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from aiida.orm.implementation import Node
-from aiida.orm.implementation.general.node import AttributeManager
+from aiida.backends.testbase import AiidaTestCase
+from aiida.orm.data import Data
+from aiida.orm.utils.node import load_node_class
 
-from .process import ProcessNode
-from .process.calculation import CalculationNode
-from .process.calculation.calcjob import CalcJobNode
-from .process.calculation.calcfunction import CalcFunctionNode
-from .process.workflow import WorkflowNode
-from .process.workflow.workchain import WorkChainNode
-from .process.workflow.workfunction import WorkFunctionNode
 
-__all__ = ('ProcessNode', 'CalculationNode', 'CalcJobNode', 'CalcFunctionNode', 'WorkflowNode', 'WorkChainNode',
-           'WorkFunctionNode')
+class TestLoadNodeClass(AiidaTestCase):
+    """Tests for the node plugin type generator and loaders."""
+
+    def test_load_node_class_fallback(self):
+        """Verify that `load_node_class` will fall back to `Data` class if entry point cannot be loaded."""
+        loaded_class = load_node_class('data.some.non.existing.plugin.')
+        self.assertEqual(loaded_class, Data)

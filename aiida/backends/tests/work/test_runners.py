@@ -16,7 +16,7 @@ import plumpy
 from aiida import work
 from aiida.backends.testbase import AiidaTestCase
 from aiida.manage import get_manager
-from aiida.orm.node.process.workflow import WorkflowNode
+from aiida.orm.node import WorkflowNode
 
 
 class Proc(work.Process):

@@ -128,11 +128,10 @@ def group_description(group, description):
 @with_dbenv()
 def group_show(group, raw, uuid):
     """Show information on a given group. Pass the GROUP as a parameter."""
+    from tabulate import tabulate
 
     from aiida.common.utils import str_timedelta
     from aiida.common import timezone
-    from aiida.plugins.loader import get_plugin_type_from_type_string
-    from tabulate import tabulate
 
     if raw:
         if uuid:
@@ -161,7 +160,7 @@ def group_show(group, raw, uuid):
             if uuid:
                 row.append(node.uuid)
             row.append(node.pk)
-            row.append(get_plugin_type_from_type_string(node.type).rsplit(".", 1)[1])
+            row.append(node.type.rsplit('.', 2)[1])
             row.append(str_timedelta(now - node.ctime, short=True, negative_to_zero=True))
             table.append(row)
         echo.echo(tabulate(table, headers=header))

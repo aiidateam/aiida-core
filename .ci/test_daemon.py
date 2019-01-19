@@ -24,7 +24,7 @@ from aiida.orm import Code, CalculationFactory, DataFactory
 from aiida.orm.data.int import Int
 from aiida.orm.data.str import Str
 from aiida.orm.data.list import List
-from aiida.orm.node.process import CalcJobNode
+from aiida.orm.node import CalcJobNode
 from aiida.work.launch import run_get_node, submit
 from aiida.work.persistence import ObjectLoader
 from workchains import (

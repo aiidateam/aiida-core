@@ -16,7 +16,7 @@ from __future__ import absolute_import
 from enum import Enum
 
 from plumpy.utils import AttributesDict
-from aiida.orm.node.process import ProcessNode
+from aiida.orm.node import ProcessNode
 
 __all__ = ['Awaitable', 'AwaitableTarget', 'AwaitableAction', 'construct_awaitable']
 

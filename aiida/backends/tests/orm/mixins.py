@@ -16,7 +16,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
 from aiida.common.links import LinkType
 from aiida.orm.data.int import Int
-from aiida.orm.node.process import CalculationNode
+from aiida.orm.node import CalculationNode
 from aiida.orm.mixins import Sealable
 
 

@@ -15,7 +15,7 @@ from aiida.backends.testbase import AiidaTestCase
 
 from aiida.orm.data.int import Int
 from aiida.orm.data.str import Str
-from aiida.orm.node.process import ProcessNode
+from aiida.orm.node import ProcessNode
 from aiida.work.launch import run, run_get_node
 from aiida.work.test_utils import DummyProcess
 

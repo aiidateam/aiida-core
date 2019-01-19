@@ -77,7 +77,7 @@ def validate_link(source, target, link_type, link_label):
     from aiida.common.links import LinkType
     from aiida.orm.data import Data
     from aiida.orm.implementation.general.node import AbstractNode
-    from aiida.orm.node.process import CalculationNode, WorkflowNode
+    from aiida.orm.node import CalculationNode, WorkflowNode
 
     if not isinstance(link_type, LinkType):
         raise TypeError('the link_type should be a value from the LinkType enum')

@@ -15,6 +15,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
+from contextlib import contextmanager
 import os
 import unittest
 
@@ -156,6 +157,35 @@ class TestMigrationsSQLA(AiidaTestCase):
 
             return base
 
+    @staticmethod
+    @contextmanager
+    def get_session():
+        """
+        Return a session that is properly closed after use.
+        """
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
+        with sa.engine.begin() as connection:
+            session = Session(connection.engine)
+            yield session
+            session.close()
+
+    def get_current_table(self, table_name):
+        """
+        Return a Model instantiated at the correct migration.
+        Note that this is obtained by inspecting the database and not
+        by looking into the models file. So, special methods possibly defined
+        in the models files/classes are not present.
+
+        For instance, you can do::
+
+          DbGroup = self.get_current_table('db_dbgroup')
+
+        :param table_name: the name of the table.
+        """
+        base = self.get_auto_base()
+        return getattr(base.classes, table_name)
+
 
 class TestMigrationEngine(TestMigrationsSQLA):
     """
@@ -192,14 +222,11 @@ class TestGroupRenamingMigration(TestMigrationsSQLA):
         """
         Create the DbGroups with the old type strings
         """
-        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
-
         # Create group
-        DbGroup = self.get_auto_base().classes.db_dbgroup  # pylint: disable=invalid-name
-        DbUser = self.get_auto_base().classes.db_dbuser  # pylint: disable=invalid-name
+        DbGroup = self.get_current_table('db_dbgroup')  # pylint: disable=invalid-name
+        DbUser = self.get_current_table('db_dbuser')  # pylint: disable=invalid-name
 
-        with sa.engine.begin() as connection:
-            session = Session(connection.engine)
+        with self.get_session() as session:
             default_user = DbUser(is_superuser=False, email="{}@aiida.net".format(self.id()))
             session.add(default_user)
             session.commit()
@@ -219,6 +246,8 @@ class TestGroupRenamingMigration(TestMigrationsSQLA):
             session.add(group_autorun)
 
             session.commit()
+
+            # Store values for later tests
             self.group_user_pk = group_user.id
             self.group_data_upf_pk = group_data_upf.id
             self.group_autoimport_pk = group_autoimport.id
@@ -228,11 +257,9 @@ class TestGroupRenamingMigration(TestMigrationsSQLA):
         """
         Test that the type strings are properly migrated
         """
-        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
-        DbGroup = self.get_auto_base().classes.db_dbgroup  # pylint: disable=invalid-name
+        DbGroup = self.get_current_table('db_dbgroup')  # pylint: disable=invalid-name
 
-        with sa.engine.begin() as connection:
-            session = Session(connection.engine)
+        with self.get_session() as session:
 
             # test user group type_string: '' -> 'user'
             group_user = session.query(DbGroup).filter(DbGroup.id == self.group_user_pk).one()

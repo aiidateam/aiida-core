@@ -143,62 +143,7 @@ class Node(AbstractNode):
     def query(cls, *args, **kwargs):
         from aiida.common.exceptions import FeatureNotAvailable
         raise FeatureNotAvailable("The node query method is not supported in SQLAlchemy. Please use QueryBuilder.")
-
-    @property
-    def type(self):
-        # Type is immutable so no need to ensure the model is up to date
-        return self._dbnode.type
-
-    @property
-    def ctime(self):
-        """
-        Return the creation time of the node.
-        """
-        self._ensure_model_uptodate(attribute_names=['ctime'])
-        return self._dbnode.ctime
-
-    @property
-    def mtime(self):
-        """
-        Return the modification time of the node.
-        """
-        self._ensure_model_uptodate(attribute_names=['mtime'])
-        return self._dbnode.mtime
-
-    def get_user(self):
-        """
-        Get the user.
-
-        :return: an aiida user model object
-        """
-        from aiida import orm
-
-        self._ensure_model_uptodate(attribute_names=['user'])
-        backend_user = self._backend.users.from_dbmodel(self._dbnode.user)
-        return orm.User.from_backend_entity(backend_user)
-
-    def set_user(self, user):
-        from aiida import orm
-
-        type_check(user, orm.User)
-        backend_user = user.backend_entity
-        self._dbnode.user = backend_user.dbmodel
-
-    def get_computer(self):
-        """
-        Get the computer associated to the node.
-
-        :return: the Computer object or None.
-        """
-        from aiida import orm
-
-        self._ensure_model_uptodate(attribute_names=['dbcomputer'])
-        if self._dbnode.dbcomputer is None:
-            return None
-
-        return orm.Computer.from_backend_entity(
-            self.backend.computers.from_dbmodel(self._dbnode.dbcomputer))
-
+   
     def _get_db_label_field(self):
         """
         Get the label of the node.
@@ -262,9 +207,9 @@ class Node(AbstractNode):
                     Node, filters={
                         'id': self.pk
                     }, tag='parent').append(
-                Node, filters={
-                    'id': src.pk
-                }, tag='child', with_ancestors='parent').count() > 0:
+                        Node, filters={
+                            'id': src.pk
+                        }, tag='child', with_ancestors='parent').count() > 0:
                 raise ValueError("The link you are attempting to create would generate a loop")
 
         self._do_create_link(src, label, link_type)
@@ -304,9 +249,7 @@ class Node(AbstractNode):
             link_filter['type'] = link_type.value
         return ((i.label, get_orm_entity(i.output)) for i in DbLink.query.filter_by(**link_filter).distinct().all())
 
-    def _set_db_computer(self, computer):
-        type_check(computer, computers.SqlaComputer)
-        self._dbnode.dbcomputer = computer.dbmodel
+    
 
     def _set_db_attr(self, key, value):
         """
@@ -343,51 +286,7 @@ class Node(AbstractNode):
         except (KeyError, IndexError):
             raise AttributeError("Attribute '{}' does not exist".format(key))
 
-    def _set_db_extra(self, key, value, exclusive=False):
-        if exclusive:
-            raise NotImplementedError("exclusive=True not implemented yet in SQLAlchemy backend")
-
-        try:
-            self._dbnode.set_extra(key, value)
-            self._increment_version_number_db()
-        except:
-            from aiida.backends.sqlalchemy import get_scoped_session
-            session = get_scoped_session()
-            session.rollback()
-            raise
-
-    def _reset_db_extras(self, new_extras):
-        try:
-            self._dbnode.reset_extras(new_extras)
-            self._increment_version_number_db()
-        except:
-            from aiida.backends.sqlalchemy import get_scoped_session
-            session = get_scoped_session()
-            session.rollback()
-            raise
-
-    def _get_db_extra(self, key):
-        try:
-            return get_attr(self._extras(), key)
-        except (KeyError, AttributeError):
-            raise AttributeError("DbExtra {} does not exist".format(key))
-
-    def _del_db_extra(self, key):
-        try:
-            self._dbnode.del_extra(key)
-            self._increment_version_number_db()
-        except:
-            from aiida.backends.sqlalchemy import get_scoped_session
-            session = get_scoped_session()
-            session.rollback()
-            raise
-
-    def _db_iterextras(self):
-        extras = self._extras()
-        if extras is None:
-            return iter(dict().items())
-
-        return iter(extras.items())
+    
 
     def _db_iterattrs(self):
         for key, val in self._attributes().items():

@@ -2,10 +2,20 @@
 """Utilities to operate on `Node` classes."""
 from __future__ import absolute_import
 
+from abc import ABCMeta
+from collections import Iterable, Mapping
+import logging
+import math
+import numbers
+
+import six
+
 from aiida.common import exceptions
+from aiida.common.utils import strip_prefix
 
-__all__ = ('load_node_class', 'get_type_string_from_class', 'get_query_type_from_type_string')
+__all__ = ('load_node_class', 'get_type_string_from_class', 'get_query_type_from_type_string', 'AbstractNodeMeta', '_NO_DEFAULT')
 
+_NO_DEFAULT = tuple()
 
 def load_node_class(type_string):
     """
@@ -100,16 +110,69 @@ def get_query_type_from_type_string(type_string):
     return type_string
 
 
-def strip_prefix(string, prefix):
+def clean_value(value):
     """
-    Strip the prefix from the given string and return it. If the prefix is not present
-    the original string will be returned unaltered
+    Get value from input and (recursively) replace, if needed, all occurrences
+    of BaseType AiiDA data nodes with their value, and List with a standard list.
+    It also makes a deep copy of everything
+    The purpose of this function is to convert data to a type which can be serialized and deserialized
+    for storage in the DB without its value changing.
 
-    :param string: the string from which to remove the prefix
-    :param prefix: the prefix to remove
-    :return: the string with prefix removed
+    Note however that there is no logic to avoid infinite loops when the
+    user passes some perverse recursive dictionary or list.
+    In any case, however, this would not be storable by AiiDA...
+
+    :param value: A value to be set as an attribute or an extra
+    :return: a "cleaned" value, potentially identical to value, but with
+        values replaced where needed.
     """
-    if string.startswith(prefix):
-        return string.rsplit(prefix)[1]
+    # Must be imported in here to avoid recursive imports
+    from aiida.orm.data import BaseType
 
-    return string
+    def clean_builtin(val):
+        """
+        A function to clean build-in python values (`BaseType`).
+
+        It mainly checks that we don't store NaN or Inf.
+        """
+        if isinstance(val, numbers.Real) and (math.isnan(val) or math.isinf(val)):
+            # see https://www.postgresql.org/docs/current/static/datatype-json.html#JSON-TYPE-MAPPING-TABLE
+            raise exceptions.ValidationError("nan and inf/-inf can not be serialized to the database")
+
+        return val
+
+    if isinstance(value, BaseType):
+        return clean_builtin(value.value)
+
+    if isinstance(value, Mapping):
+        # Check dictionary before iterables
+        return {k: clean_value(v) for k, v in value.items()}
+    if (isinstance(value, Iterable) and not isinstance(value, six.string_types)):
+        # list, tuple, ... but not a string
+        # This should also properly take care of dealing with the
+        # basedatatypes.List object
+        return [clean_value(v) for v in value]
+
+    # If I don't know what to do I just return the value
+    # itself - it's not super robust, but relies on duck typing
+    # (e.g. if there is something that behaves like an integer
+    # but is not an integer, I still accept it)
+
+    return clean_builtin(value)
+
+
+class AbstractNodeMeta(ABCMeta): # pylint: disable=too-few-public-methods
+    """
+    Some python black magic to set correctly the logger also in subclasses.
+    """
+
+    def __new__(mcs, name, bases, attrs):
+
+        newcls = ABCMeta.__new__(mcs, name, bases, attrs)
+        newcls._logger = logging.getLogger('{}.{}'.format(attrs['__module__'], name))  # pylint: disable=protected-access
+
+        # Set the plugin type string and query type string based on the plugin type string
+        newcls._plugin_type_string = get_type_string_from_class(attrs['__module__'], name)  # pylint: disable=protected-access
+        newcls._query_type_string = get_query_type_from_type_string(newcls._plugin_type_string)  # pylint: disable=protected-access
+
+        return newcls

@@ -92,7 +92,7 @@ class BackendLog(backends.BackendEntity):
 
 @six.add_metaclass(abc.ABCMeta)
 class BackendLogCollection(backends.BackendCollection[BackendLog]):
-    """The collection of Group entries."""
+    """The collection of Log entries."""
 
     ENTITY_CLASS = BackendLog
 

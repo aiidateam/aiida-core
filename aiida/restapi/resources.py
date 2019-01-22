@@ -41,7 +41,7 @@ class ServerInfo(Resource):
         url = unquote(request.url)
         url_root = unquote(request.url_root)
 
-        pathlist = self.utils.split_path(self.utils.strip_prefix(path))
+        pathlist = self.utils.split_path(self.utils.strip_api_prefix(path))
 
         if len(pathlist) > 1:
             resource_type = pathlist.pop(1)

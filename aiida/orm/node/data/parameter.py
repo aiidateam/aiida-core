@@ -93,7 +93,7 @@ class ParameterData(Data):
 
         :return: an instance of the AttributeResultManager.
         """
-        from aiida.orm.node import AttributeManager
+        from aiida.orm.utils.managers import AttributeManager
 
         return AttributeManager(self)
 

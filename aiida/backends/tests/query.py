@@ -28,7 +28,7 @@ class TestQueryBuilder(AiidaTestCase):
         self.clean_db()
         self.insert_data()
 
-    def test_classification(self):
+    def test_ormclass_type_classification(self):
         """
         This tests the classifications of the QueryBuilder
         """
@@ -48,43 +48,97 @@ class TestQueryBuilder(AiidaTestCase):
             qb._get_ormclass(None, '.')
 
         # Asserting that the query type string and plugin type string are returned:
-        for cls, clstype, query_type_string in (
+        for cls, classifiers in (
             qb._get_ormclass(StructureData, None),
             qb._get_ormclass(None, 'node.data.structure.StructureData.'),
         ):
-            self.assertEqual(clstype, StructureData._plugin_type_string)
-            self.assertEqual(query_type_string, StructureData._query_type_string)
+            self.assertEqual(classifiers['ormclass_type_string'], StructureData._plugin_type_string)
 
-        for cls, clstype, query_type_string in (
+        for cls, classifiers in (
                 qb._get_ormclass(Group, None),
                 qb._get_ormclass(None, 'group'),
                 qb._get_ormclass(None, 'Group'),
         ):
-            self.assertEqual(clstype, 'group')
-            self.assertEqual(query_type_string, None)
+            self.assertEqual(classifiers['ormclass_type_string'], 'group')
 
-        for cls, clstype, query_type_string in (
+        for cls, classifiers in (
                 qb._get_ormclass(User, None),
                 qb._get_ormclass(None, "user"),
                 qb._get_ormclass(None, "User"),
         ):
-            self.assertEqual(clstype, 'user')
-            self.assertEqual(query_type_string, None)
+            self.assertEqual(classifiers['ormclass_type_string'], 'user')
 
-        for cls, clstype, query_type_string in (
+        for cls, classifiers in (
                 qb._get_ormclass(Computer, None),
                 qb._get_ormclass(None, 'computer'),
                 qb._get_ormclass(None, 'Computer'),
         ):
-            self.assertEqual(clstype, 'computer')
-            self.assertEqual(query_type_string, None)
+            self.assertEqual(classifiers['ormclass_type_string'], 'computer')
 
-        for cls, clstype, query_type_string in (
+        for cls, classifiers in (
                 qb._get_ormclass(Data, None),
                 qb._get_ormclass(None, 'node.data.Data.'),
         ):
-            self.assertEqual(clstype, Data._plugin_type_string)
-            self.assertEqual(query_type_string, Data._query_type_string)
+            self.assertEqual(classifiers['ormclass_type_string'], Data._plugin_type_string)
+
+    def test_process_type_classification(self):
+        """
+        This tests the classifications of the QueryBuilder
+        """
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.work import WorkChain
+        from aiida.work.workchain import WorkChainNode
+        from aiida.orm import CalculationFactory
+
+        ArithmeticAdd = CalculationFactory('arithmetic.add')
+
+        qb = QueryBuilder()
+
+        # When passing a WorkChain class, it should return the type of the corresponding Node
+        # including the appropriate filter on the process_type
+        cls, classifiers = qb._get_ormclass(WorkChain, None)
+        self.assertEqual(classifiers['ormclass_type_string'], 'node.process.workflow.workchain.WorkChainNode.')
+        self.assertEqual(classifiers['process_type_string'], 'aiida.work.workchain.WorkChain')
+
+        # When passing a WorkChainNode, no process_type filter is applied
+        cls, classifiers = qb._get_ormclass(WorkChainNode, None)
+        self.assertEqual(classifiers['ormclass_type_string'], 'node.process.workflow.workchain.WorkChainNode.')
+        self.assertEqual(classifiers['process_type_string'], None)
+
+        # Same tests for a calculation
+        cls, classifiers = qb._get_ormclass(ArithmeticAdd, None)
+        self.assertEqual(classifiers['ormclass_type_string'], 'node.process.calculation.calcjob.CalcJobNode.')
+        self.assertEqual(classifiers['process_type_string'], 'aiida.calculations:arithmetic.add')
+
+    def test_process_query(self):
+        """
+        Test querying for a process class.
+        """
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.backends.tests.work.work_chain import Wf, PotentialFailureWorkChain
+        from aiida.orm.node.data.base import Str, Int
+        from aiida.work import run
+        from aiida.work.workchain import WorkChainNode
+
+        # Run a simple test WorkChain
+        A = Str('A')
+        three = Int(3)
+        _future = run(Wf, value=A, n=three)
+
+        # Query for nodes associated with this type of WorkChain
+        qb = QueryBuilder()
+        qb.append(Wf)
+
+        # There should be one result of type WorkChainNode
+        self.assertEqual(qb.count(), 1)
+        self.assertTrue(isinstance(qb.all()[0][0], WorkChainNode))
+
+        # Query for nodes of a different type of WorkChain
+        qb = QueryBuilder()
+        qb.append(PotentialFailureWorkChain)
+
+        # There should be no result
+        self.assertEqual(qb.count(), 0)
 
     def test_simple_query_1(self):
         """
@@ -336,6 +390,10 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(qb.count(), 2)
         qb = QueryBuilder().append(type=('node.data.structure.StructureData.', 'node.data.Data.'),
                                    filters={'attributes.cat': 'miau'}, subclassing=False)
+        self.assertEqual(qb.count(), 2)
+
+        # Just for safety, also test for using a list instead of a tuple
+        qb = QueryBuilder().append(cls=[StructureData, ParameterData], filters={'attributes.cat': 'miau'})
         self.assertEqual(qb.count(), 2)
 
     def test_list_behavior(self):

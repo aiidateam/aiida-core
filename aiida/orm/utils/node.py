@@ -81,6 +81,28 @@ def get_type_string_from_class(class_module, class_name):
     return type_string
 
 
+def is_valid_node_type_string(type_string, raise_on_false=False):
+    """
+    Checks whether type string of a Node is valid.
+
+    :param type_string: the plugin_type_string attribute of a Node
+    :return: True if type string is valid, else false
+    """
+    # Currently the type string for the top-level node is empty.
+    # Change this when a consistent type string hierarchy is introduced.
+    if type_string == '':
+        return True
+
+    # Note: this allows for the user-defined type strings like 'group' in the QueryBuilder
+    # as well as the usual type strings like 'data.parameter.ParameterData.'
+    if type_string.count('.') == 1 or not type_string.endswith('.'):
+        if raise_on_false:
+            raise exceptions.DbContentError('The type string {} is invalid'.format(type_string))
+        return False
+
+    return True
+
+
 def get_query_type_from_type_string(type_string):
     """
     Take the type string of a Node and create the queryable type string
@@ -88,11 +110,12 @@ def get_query_type_from_type_string(type_string):
     :param type_string: the plugin_type_string attribute of a Node
     :return: the type string that can be used to query for
     """
+    is_valid_node_type_string(type_string, raise_on_false=True)
+
+    # Currently the type string for the top-level node is empty.
+    # Change this when a consistent type string hierarchy is introduced.
     if type_string == '':
         return ''
-
-    if not type_string.endswith('.') or type_string.count('.') == 1:
-        raise exceptions.DbContentError('The type string {} is invalid'.format(type_string))
 
     type_path = type_string.rsplit('.', 2)[0]
     type_string = type_path + '.'

@@ -409,6 +409,31 @@ class Process(plumpy.Process):
 
         return orm.load_node(pk=self._parent_pid)
 
+    @classmethod
+    def get_process_type(cls):
+        """
+        The process type.
+
+        :return: string of the process type
+        :rtype: str
+
+        Note: This could be made into a property 'process_type' but in order to have it be a property of the class
+        it would need to be defined in the metaclass, see https://bugs.python.org/issue20659
+        """
+        from aiida.plugins.entry_point import get_entry_point_string_from_class
+
+        class_module = cls.__module__
+        class_name = cls.__name__
+
+        # If the process is a registered plugin the corresponding entry point will be used as process type
+        process_type = get_entry_point_string_from_class(class_module, class_name)
+
+        # If no entry point was found, default to fully qualified path name
+        if process_type is None:
+            return '{}.{}'.format(class_module, class_name)
+
+        return process_type
+
     @protected
     def report(self, msg, *args, **kwargs):
         """

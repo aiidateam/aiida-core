@@ -273,6 +273,7 @@ def get_entry_point_string_from_class(class_module, class_name):
     by splitting on the separator, which will give the group and entry point, which should
     the corresponding factory to uniquely determine and load the class
 
+    :rtype:
     :param class_module: module of the class
     :param class_name: name of the class
     :return: the corresponding entry point string or None

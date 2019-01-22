@@ -76,21 +76,13 @@ class ProcessNode(Sealable, Node):
 
     def _set_process_type(self, process_class):
         """
-        Set the process type
+        Set the process type.
 
         :param process_class: the process class using this process node as storage
+
+
         """
-        class_module = process_class.__module__
-        class_name = process_class.__name__
-
-        # If the process is a registered plugin the corresponding entry point will be used as process type
-        process_type = get_entry_point_string_from_class(class_module, class_name)
-
-        # If no entry point was found, default to fully qualified path name
-        if process_type is None:
-            self.dbnode.process_type = '{}.{}'.format(class_module, class_name)
-        else:
-            self.dbnode.process_type = process_type
+        self.dbnode.process_type = process_class.get_process_type()
 
     @property
     def process_label(self):

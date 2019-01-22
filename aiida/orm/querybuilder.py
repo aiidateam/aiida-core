@@ -1467,6 +1467,22 @@ class QueryBuilder(object):
         self._query = self._query.join(
             entity_to_join, joined_entity.dbnode_id == entity_to_join.id, isouter=isouterjoin)
 
+    def _join_user_comment(self, joined_entity, entity_to_join, isouterjoin):
+        """
+        :param joined_entity: An aliased user
+        :param entity_to_join: aliased comment
+        """
+        self._check_dbentities((joined_entity, self._impl.User), (entity_to_join, self._impl.Comment), 'with_user')
+        self._query = self._query.join(entity_to_join, joined_entity.id == entity_to_join.user_id, isouter=isouterjoin)
+
+    def _join_comment_user(self, joined_entity, entity_to_join, isouterjoin):
+        """
+        :param joined_entity: An aliased comment
+        :param entity_to_join: aliased user
+        """
+        self._check_dbentities((joined_entity, self._impl.Comment), (entity_to_join, self._impl.User), 'with_comment')
+        self._query = self._query.join(entity_to_join, joined_entity.user_id == entity_to_join.id, isouter=isouterjoin)
+
     def _get_function_map(self):
         """
         Map relationship type keywords to functions
@@ -1499,6 +1515,7 @@ class QueryBuilder(object):
                 'computer_of': self._deprecate(self._join_computer, 'computer_of', 'with_node')
             },
             'user': {
+                'with_comment': self._join_comment_user,
                 'with_node': self._join_creator_of,
                 'with_group': self._join_group_user,
                 'direction': None,
@@ -1513,6 +1530,7 @@ class QueryBuilder(object):
                 'belongs_to': self._deprecate(self._join_user_group, 'belongs_to', 'with_user')
             },
             'comment': {
+                'with_user': self._join_user_comment,
                 'with_node': self._join_node_comment,
                 'direction': None
             },

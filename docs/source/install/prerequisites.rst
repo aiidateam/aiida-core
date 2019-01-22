@@ -152,8 +152,17 @@ To start the ``rabbitmq`` server, run:
 
     sudo launchctl load -w /Library/LaunchDaemons/org.macports.rabbitmq-server.plist
 
+You can check whether it is running as follows:
+
+.. code-block:: bash
+
+    sudo rabbitmqctl status
+    # this starts ``rabbitmq`` at system startup:
+    sudo port load rabbitmq-server
+
 .. note::
-    As of Dec 2018, there is an `unresolved issue <https://trac.macports.org/ticket/56928>`_ with ``rabbitmq-server 3.6.15``. Please see the instructions at the bottom of the issue in order to downgrade to ``erlang 20.3`` as needed for ``rabbitmq-server``.
+    Be sure to install ``rabbitmq-server 3.7.9`` or later. If ``rabbitmqctl status`` returns an error "Hostname mismatch", the easiest solution
+    can be to simply ``sudo port uninstall`` the package and install it again.
 
 
 .. _details_gentoo:

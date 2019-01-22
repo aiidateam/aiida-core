@@ -50,11 +50,10 @@ class Log(entities.Entity):
             """
             from datetime import datetime
 
-            objuuid = record.__dict__.get('objuuid', None)
-            objname = record.__dict__.get('objname', None)
+            dbnode_id = record.__dict__.get('dbnode_id', None)
 
-            # Do not store if objpk and objname are not set
-            if objuuid is None or objname is None:
+            # Do not store if dbnode_id is not set
+            if dbnode_id is None:
                 return None
 
             metadata = dict(record.__dict__)
@@ -66,8 +65,7 @@ class Log(entities.Entity):
                 time=timezone.make_aware(datetime.fromtimestamp(record.created)),
                 loggername=record.name,
                 levelname=record.levelname,
-                objname=objname,
-                objuuid=objuuid,
+                dbnode_id=dbnode_id,
                 message=record.getMessage(),
                 metadata=metadata)
 
@@ -81,15 +79,9 @@ class Log(entities.Entity):
             :return: the list of log entries
             :rtype: list
             """
-            if isinstance(entity, node.Node):
-                if entity._plugin_type_string:  # pylint: disable=protected-access
-                    objname = "node." + entity._plugin_type_string  # pylint: disable=protected-access
-                else:
-                    objname = "node"
-            else:
-                objname = entity.__class__.__module__ + "." + entity.__class__.__name__
-            objuuid = entity.uuid
-            filters = {'objuuid': objuuid, 'objname': objname}
+            if not isinstance(entity, node.Node):
+                raise Exception("Only node logs are stored")
+            filters = {'dbnode_id': entity.pk}
             return self.find(filters, order_by=order_by)
 
         def delete(self, log_id):
@@ -106,15 +98,14 @@ class Log(entities.Entity):
             """
             self._backend.logs.delete_many(filters)
 
-    def __init__(self, time, loggername, levelname, objname, objuuid=None, message='', metadata=None, backend=None):  # pylint: disable=too-many-arguments
+    def __init__(self, time, loggername, levelname, dbnode_id, message='', metadata=None, backend=None):  # pylint: disable=too-many-arguments
         """Construct a new computer"""
         backend = backend or get_manager().get_backend()
         model = backend.logs.create(
             time=time,
             loggername=loggername,
             levelname=levelname,
-            objname=objname,
-            objuuid=objuuid,
+            dbnode_id=dbnode_id,
             message=message,
             metadata=metadata)
         super(Log, self).__init__(model)
@@ -151,24 +142,14 @@ class Log(entities.Entity):
         return self._backend_entity.levelname
 
     @property
-    def objuuid(self):
+    def dbnode_id(self):
         """
-        Get the uuid of the object that created the log entry
+        Get the id of the object that created the log entry
 
-        :return: The UUID of the object that created the log entry
-        :rtype: uuid.UUID
+        :return: The id of the object that created the log entry
+        :rtype: int
         """
-        return self._backend_entity.objuuid
-
-    @property
-    def objname(self):
-        """
-        Get the name of the object that created the log entry
-
-        :return: The entry object name
-        :rtype: basestring
-        """
-        return self._backend_entity.objname
+        return self._backend_entity.dbnode_id
 
     @property
     def message(self):

@@ -133,8 +133,8 @@ def delete_nodes(pks,
                 len(calculation_pks_losing_called), 's' if len(calculation_pks_losing_called) > 1 else '', 'would'
                 if dry_run else 'will'))
             if verbosity > 1:
-                print("These are the calculations that {} lose a called instance:"
-                      .format('would' if dry_run else 'will'))
+                print(
+                    "These are the calculations that {} lose a called instance:".format('would' if dry_run else 'will'))
                 for calc_losing_called_pk in calculation_pks_losing_called:
                     print('  ', load_node(calc_losing_called_pk))
 
@@ -158,8 +158,8 @@ def delete_nodes(pks,
                 len(calculation_pks_losing_created), 's' if len(calculation_pks_losing_created) > 1 else '', 'would'
                 if dry_run else 'will'))
             if verbosity > 1:
-                print("These are the calculations that {} lose a created data-instance:"
-                      .format('would' if dry_run else 'will'))
+                print("These are the calculations that {} lose a created data-instance:".format('would'
+                                                                                                if dry_run else 'will'))
                 for calc_losing_created_pk in calculation_pks_losing_created:
                     print('  ', load_node(calc_losing_created_pk))
 

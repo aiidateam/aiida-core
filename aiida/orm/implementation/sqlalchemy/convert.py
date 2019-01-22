@@ -40,8 +40,8 @@ def get_backend_entity(dbmodel, backend):  # pylint: disable=unused-argument
     """
     Default get_backend_entity
     """
-    raise TypeError("No corresponding AiiDA backend class exists for the model class '{}'"
-                    .format(dbmodel.__class__.__name__))
+    raise TypeError("No corresponding AiiDA backend class exists for the model class '{}'".format(
+        dbmodel.__class__.__name__))
 
 
 ################################

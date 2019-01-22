@@ -14,14 +14,12 @@ from __future__ import print_function
 
 import logging
 
-import six
 from six.moves import range
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
 from aiida.common.log import LOG_LEVEL_REPORT
-from aiida.common.utils import get_new_uuid
 from aiida.orm.node import CalculationNode
 from aiida.common.timezone import now
 
@@ -31,12 +29,11 @@ class TestBackendLog(AiidaTestCase):
 
     def setUp(self):
         super(TestBackendLog, self).setUp()
-        self.record = {
+        self.log_record = {
             'time': now(),
             'loggername': 'loggername',
             'levelname': logging.getLevelName(LOG_LEVEL_REPORT),
-            'objname': 'objname',
-            'objuuid': get_new_uuid(),
+            'dbnode_id': None,
             'message': 'This is a template record message',
             'metadata': {
                 'content': 'test'
@@ -54,19 +51,22 @@ class TestBackendLog(AiidaTestCase):
         """
         Test the manual creation of a log entry
         """
-        entry = orm.Log(**self.record)
+        node = orm.Data().store()
+        self.log_record['dbnode_id'] = node.id
+        entry = orm.Log(**self.log_record)
 
-        self.assertEqual(entry.time, self.record['time'])
-        self.assertEqual(entry.loggername, self.record['loggername'])
-        self.assertEqual(entry.levelname, self.record['levelname'])
-        self.assertEqual(entry.objname, self.record['objname'])
-        self.assertEqual(six.text_type(entry.objuuid), self.record['objuuid'])
-        self.assertEqual(entry.message, self.record['message'])
-        self.assertEqual(entry.metadata, self.record['metadata'])
+        self.assertEqual(entry.time, self.log_record['time'])
+        self.assertEqual(entry.loggername, self.log_record['loggername'])
+        self.assertEqual(entry.levelname, self.log_record['levelname'])
+        self.assertEqual(entry.dbnode_id, self.log_record['dbnode_id'])
+        self.assertEqual(entry.message, self.log_record['message'])
+        self.assertEqual(entry.metadata, self.log_record['metadata'])
 
     def test_log_delete_single(self):
         """Test that a single log entry can be deleted through the collection."""
-        entry = orm.Log(**self.record)
+        node = orm.Data().store()
+        self.log_record['dbnode_id'] = node.id
+        entry = orm.Log(**self.log_record)
 
         log_id = entry.id
 
@@ -87,8 +87,10 @@ class TestBackendLog(AiidaTestCase):
         anyway if this method does not work properly
         """
         count = 10
+        node = orm.Data().store()
         for _ in range(count):
-            orm.Log(**self.record)
+            self.log_record['dbnode_id'] = node.id
+            orm.Log(**self.log_record)
 
         self.assertEqual(len(orm.Log.objects.all()), count)
         orm.Log.objects.delete_many({})
@@ -96,9 +98,10 @@ class TestBackendLog(AiidaTestCase):
 
     def test_objects_find(self):
         """Put logs in and find them"""
+        node = orm.Data().store()
         for _ in range(10):
-            record = self.record
-            record['objuuid'] = get_new_uuid()
+            record = self.log_record
+            record['dbnode_id'] = node.id
             orm.Log(**record)
 
         entries = orm.Log.objects.all()
@@ -111,34 +114,36 @@ class TestBackendLog(AiidaTestCase):
         """
         from aiida.orm.logs import OrderSpecifier, ASCENDING, DESCENDING
 
-        first_time, last_time = None, None
+        min_id, max_id = None, None
         for counter in range(10):
-            record = self.record
-            record['time'] = now()
+            node = orm.Data().store()
+            if counter == 0:
+                min_id = node.id
+            elif counter == 9:
+                max_id = node.id
+            record = self.log_record
+            record['dbnode_id'] = node.id
             orm.Log(**record)
 
-            if counter == 0:
-                first_time = record['time']
-            elif counter == 9:
-                last_time = record['time']
-
-        order_by = [OrderSpecifier('time', ASCENDING)]
+        order_by = [OrderSpecifier('dbnode_id', ASCENDING)]
         entries = orm.Log.objects.find(order_by=order_by)
 
-        self.assertEqual(six.text_type(entries[0].time), six.text_type(first_time))
+        self.assertEqual(entries[0].dbnode_id, min_id)
 
-        order_by = [OrderSpecifier('time', DESCENDING)]
+        order_by = [OrderSpecifier('dbnode_id', DESCENDING)]
         entries = orm.Log.objects.find(order_by=order_by)
 
-        self.assertEqual(six.text_type(entries[0].time), six.text_type(last_time))
+        self.assertEqual(entries[0].dbnode_id, max_id)
 
     def test_find_limit(self):
         """
         Test the limit option of log.find
         """
+        node = orm.Data().store()
         limit = 2
         for _ in range(limit * 2):
-            orm.Log(**self.record)
+            self.log_record['dbnode_id'] = node.id
+            orm.Log(**self.log_record)
 
         entries = orm.Log.objects.find(limit=limit)
         self.assertEqual(len(entries), limit)
@@ -147,18 +152,18 @@ class TestBackendLog(AiidaTestCase):
         """
         Test the filter option of log.find
         """
-        target_uuid = get_new_uuid()
+        node_id = None
         for counter in range(10):
-            record = self.record
-            if counter == 5:
-                record['objuuid'] = target_uuid
-            else:
-                record['objuuid'] = get_new_uuid()
+            node = orm.Data().store()
+            record = self.log_record
+            record['dbnode_id'] = node.id
             orm.Log(**record)
+            if counter == 5:
+                node_id = node.id
 
-        entries = orm.Log.objects.find(filters={'objuuid': target_uuid})
+        entries = orm.Log.objects.find(filters={'dbnode_id': node_id})
         self.assertEqual(len(entries), 1)
-        self.assertEqual(six.text_type(entries[0].objuuid), target_uuid)
+        self.assertEqual(entries[0].dbnode_id, node_id)
 
     def test_db_log_handler(self):
         """

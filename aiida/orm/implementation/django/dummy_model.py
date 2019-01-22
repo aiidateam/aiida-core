@@ -237,8 +237,8 @@ class DbLog(Base):
     loggername = Column(String(255), index=True)
     levelname = Column(String(255), index=True)
 
-    objname = Column(String(255), index=True)
-    objuuid = Column(UUID(as_uuid=True), default=uuid_func)
+    dbnode_id = Column(Integer, ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED"), nullable=True)
+    dbnode = relationship('DbNode', backref=backref('dblogs', passive_deletes=True))
 
     message = Column(Text(), nullable=True)
     _metadata = Column('metadata', String(255), default="{}")

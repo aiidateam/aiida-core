@@ -231,17 +231,10 @@ def get_dblogger_extra(obj):
 
     if isinstance(obj, Node):
         # If the object if not stored, then the corresponding log records will
-        # not be stored (objname and objuuid should be set to store a log record)
+        # not be stored (dbnode_id should be set to store a log record)
         if not obj.is_stored:
             return dict()
-
-        if obj._plugin_type_string:  # pylint: disable=protected-access
-            objname = "node." + obj._plugin_type_string  # pylint: disable=protected-access
-        else:
-            objname = "node"
-    else:
-        objname = obj.__class__.__module__ + "." + obj.__class__.__name__
-    return {'objuuid': obj.uuid, 'objname': objname, 'backend': obj.backend}
+    return {'dbnode_id': obj.id, 'backend': obj.backend}
 
 
 def create_logger_adapter(logger, entity):

@@ -63,21 +63,12 @@ class BackendLog(backends.BackendEntity):
         """
 
     @abc.abstractproperty
-    def objuuid(self):
+    def dbnode_id(self):
         """
-        Get the UUID of the object that created the log entry
+        Get the id of the object that created the log entry
 
-        :return: The UUID of the object that created the log entry
-        :rtype: uuid.UUID
-        """
-
-    @abc.abstractproperty
-    def objname(self):
-        """
-        Get the name of the object that created the log entry
-
-        :return: The name of the object
-        :rtype: basestring
+        :return: The id of the object that created the log entry
+        :rtype: int
         """
 
     @abc.abstractproperty

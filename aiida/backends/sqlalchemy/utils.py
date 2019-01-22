@@ -379,7 +379,7 @@ def migrate_database(alembic_cfg=None):
     if alembic_cfg is None:
         alembic_cfg = get_alembic_conf()
 
-    with sa.engine.begin() as connection:
+    with sa.engine.connect() as connection:
         alembic_cfg.attributes['connection'] = connection
         command.upgrade(alembic_cfg, "head")
 

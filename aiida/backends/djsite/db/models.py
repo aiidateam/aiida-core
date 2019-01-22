@@ -1436,16 +1436,14 @@ class DbLog(m.Model):
     levelname = m.CharField(max_length=50, db_index=True)
     # A string to know what is the referred object (e.g. a Calculation,
     # or other)
-    objname = m.CharField(max_length=255, blank=True, db_index=True)
-    objuuid = m.UUIDField(db_index=True, null=True)  # It is not a ForeignKey
+    dbnode = m.ForeignKey(DbNode, related_name='dblogs', on_delete=m.CASCADE)
     # because it may be in different
     # tables
     message = m.TextField(blank=True)
     metadata = m.TextField(default="{}")  # Will store a json
 
     def __str__(self):
-        return "[Log: {} for {} {}] {}".format(self.levelname,
-                                               self.objname, self.objuuid, self.message)
+        return 'DbLog: {} for node {}: {}'.format(self.levelname, self.dbnode.id, self.message)
 
 
 # Issue 2380 will take care of dropping these models, which will have to be accompanied by a migration.

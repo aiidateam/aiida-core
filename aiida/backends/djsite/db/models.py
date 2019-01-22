@@ -1499,9 +1499,6 @@ wf_data_value_types = WorkflowDataValueType((
     'AIIDA',
 ))
 
-wf_start_call = "start"
-wf_exit_call = "exit"
-wf_default_call = "none"
 @python_2_unicode_compatible
 class DbWorkflow(m.Model):
     uuid = m.UUIDField(default=get_new_uuid, unique=True)
@@ -1527,127 +1524,6 @@ class DbWorkflow(m.Model):
     # Return aiida Node instances or their subclasses instead of DbNode instances
     aiidaobjects = AiidaObjectManager()
 
-    def set_state(self, _state):
-        self.state = _state
-        self.save()
-
-    def set_script_md5(self, _md5):
-
-        self.script_md5 = _md5
-        self.save()
-
-    def add_data(self, dict, d_type):
-        try:
-            for k in dict.keys():
-                p, create = self.data.get_or_create(name=k, data_type=d_type)
-                p.set_value(dict[k])
-        except Exception as e:
-            raise
-
-    def get_data(self, d_type):
-        try:
-            dict = {}
-            for p in self.data.filter(parent=self, data_type=d_type):
-                dict[p.name] = p.get_value()
-            return dict
-        except Exception as e:
-            raise
-
-    def add_parameters(self, dict, force=False):
-        from aiida.common.datastructures import wf_states, wf_data_types
-
-        if not self.state == wf_states.INITIALIZED and not force:
-            raise ValueError("Cannot add initial parameters to an already initialized workflow")
-
-        self.add_data(dict, wf_data_types.PARAMETER)
-
-    def add_parameter(self, name, value):
-        self.add_parameters({name: value})
-
-    def get_parameters(self):
-        from aiida.common.datastructures import wf_data_types
-
-        return self.get_data(wf_data_types.PARAMETER)
-
-    def get_parameter(self, name):
-        res = self.get_parameters()
-        if name in res:
-            return res[name]
-        else:
-            raise ValueError("Error retrieving results: {0}".format(name))
-
-    def add_results(self, dict):
-        from aiida.common.datastructures import wf_data_types
-
-        self.add_data(dict, wf_data_types.RESULT)
-
-    def add_result(self, name, value):
-        self.add_results({name: value})
-
-    def get_results(self):
-        from aiida.common.datastructures import wf_data_types
-
-        return self.get_data(wf_data_types.RESULT)
-
-    def get_result(self, name):
-        res = self.get_results()
-        if name in res:
-            return res[name]
-        else:
-            raise ValueError("Error retrieving results: {0}".format(name))
-
-    def add_attributes(self, dict):
-        from aiida.common.datastructures import wf_data_types
-
-        self.add_data(dict, wf_data_types.ATTRIBUTE)
-
-    def add_attribute(self, name, value):
-        self.add_attributes({name: value})
-
-    def get_attributes(self):
-        from aiida.common.datastructures import wf_data_types
-
-        return self.get_data(wf_data_types.ATTRIBUTE)
-
-    def get_attribute(self, name):
-        res = self.get_attributes()
-        if name in res:
-            return res[name]
-        else:
-            raise ValueError("Error retrieving results: {0}".format(name))
-
-    def clear_report(self):
-        self.report = ''
-        self.save()
-
-    def append_to_report(self, _text):
-        from aiida.common.timezone import UTC
-        import datetime
-
-        now = datetime.datetime.utcnow().replace(tzinfo=UTC)
-        self.report += str(now) + "] " + _text + "\n"
-        self.save()
-
-    def get_calculations(self):
-        from aiida.orm.node import CalcJobNode
-
-        return CalcJobNode.query(workflow_step=self.steps)
-
-    def get_sub_workflows(self):
-        return DbWorkflow.objects.filter(parent_workflow_step=self.steps.all())
-
-    def is_subworkflow(self):
-        """
-        Return True if this is a subworkflow, False if it is a root workflow,
-        launched by the user.
-        """
-        return len(self.parent_workflow_step.all()) > 0
-
-    def finish(self):
-        from aiida.common.datastructures import wf_states
-
-        self.state = wf_states.FINISHED
-
     def __str__(self):
         simplename = self.module_class
         # node pk + type
@@ -1672,40 +1548,6 @@ class DbWorkflowData(m.Model):
     class Meta:
         unique_together = (("parent", "name", "data_type"))
 
-    def set_value(self, arg):
-        from aiida.orm.node import Node
-        from aiida.common.datastructures import wf_data_value_types
-        import aiida.common.json as json
-
-        try:
-            if isinstance(arg, Node) or issubclass(arg.__class__, Node):
-                if arg.pk is None:
-                    raise ValueError("Cannot add an unstored node as an attribute of a Workflow!")
-                self.aiida_obj = arg.dbnode
-                self.value_type = wf_data_value_types.AIIDA
-                self.save()
-            else:
-                self.json_value = json.dumps(arg)
-                self.value_type = wf_data_value_types.JSON
-                self.save()
-        except Exception as exc:
-            six.reraise(ValueError, "Cannot set the parameter {}".format(self.name), sys.exc_info()[2])
-
-    def get_value(self):
-        from aiida.orm.convert import get_orm_entity
-        import aiida.common.json as json
-
-        from aiida.common.datastructures import wf_data_value_types
-
-        if self.value_type == wf_data_value_types.JSON:
-            return json.loads(self.json_value)
-        elif self.value_type == wf_data_value_types.AIIDA:
-            return get_orm_entity(self.aiida_obj)
-        elif self.value_type == wf_data_value_types.NONE:
-            return None
-        else:
-            raise ValueError("Cannot rebuild the parameter {}".format(self.name))
-
     def __str__(self):
         return "Data for workflow {} [{}]: {}".format(
             self.parent.module_class, self.parent.pk, self.name)
@@ -1729,68 +1571,6 @@ class DbWorkflowStep(m.Model):
 
     class Meta:
         unique_together = (("parent", "name"))
-
-    def add_calculation(self, step_calculation):
-        from aiida.orm.node import CalcJobNode
-
-        if (not isinstance(step_calculation, CalcJobNode)):
-            raise ValueError("Cannot add a non-Calculation object to a workflow step")
-
-        try:
-            self.calculations.add(step_calculation)
-        except:
-            raise ValueError("Error adding calculation to step")
-
-    def get_calculations(self, state=None):
-        from aiida.orm.node import CalcJobNode
-
-        if (state == None):
-            return CalcJobNode.query(workflow_step=self)
-        else:
-            return CalcJobNode.query(workflow_step=self).filter(
-                dbattributes__key="state", dbattributes__tval=state)
-
-    def remove_calculations(self):
-        self.calculations.all().delete()
-
-    def add_sub_workflow(self, sub_wf):
-        from aiida.orm.workflow import Workflow
-
-        if (not issubclass(sub_wf.__class__, Workflow) and not isinstance(sub_wf, Workflow)):
-            raise ValueError("Cannot add a workflow not of type Workflow")
-        try:
-            self.sub_workflows.add(sub_wf.dbworkflowinstance)
-        except:
-            raise ValueError("Error adding calculation to step")
-
-    def get_sub_workflows(self):
-        return self.sub_workflows(manager='aiidaobjects').all()
-
-    def remove_sub_workflows(self):
-        self.sub_workflows.all().delete()
-
-    def is_finished(self):
-        from aiida.common.datastructures import wf_states
-
-        return self.state == wf_states.FINISHED
-
-    def set_nextcall(self, _nextcall):
-        self.nextcall = _nextcall
-        self.save()
-
-    def set_state(self, _state):
-        self.state = _state
-        self.save()
-
-    def reinitialize(self):
-        from aiida.common.datastructures import wf_states
-
-        self.set_state(wf_states.INITIALIZED)
-
-    def finish(self):
-        from aiida.common.datastructures import wf_states
-
-        self.set_state(wf_states.FINISHED)
 
     def __str__(self):
         return "Step {} for workflow {} [{}]".format(self.name,

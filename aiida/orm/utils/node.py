@@ -15,8 +15,6 @@ from aiida.common.utils import strip_prefix
 
 __all__ = ('load_node_class', 'get_type_string_from_class', 'get_query_type_from_type_string', 'AbstractNodeMeta', '_NO_DEFAULT')
 
-_NO_DEFAULT = tuple()
-
 def load_node_class(type_string):
     """
     Return the `Node` sub class that corresponds to the given type string.

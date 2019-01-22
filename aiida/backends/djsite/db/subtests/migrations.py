@@ -24,7 +24,6 @@ from aiida.common.utils import Capturing
 
 
 class TestMigrations(AiidaTestCase):
-
     @property
     def app(self):
         return apps.get_containing_app_config(type(self).__module__).name.split('.')[-1]
@@ -43,13 +42,13 @@ class TestMigrations(AiidaTestCase):
         self.migrate_from = [(self.app, self.migrate_from)]
         self.migrate_to = [(self.app, self.migrate_to)]
         executor = MigrationExecutor(connection)
-        old_apps = executor.loader.project_state(self.migrate_from).apps
+        self.apps = executor.loader.project_state(self.migrate_from).apps
 
         # Reverse to the original migration
         executor.migrate(self.migrate_from)
 
         try:
-            self.setUpBeforeMigration(old_apps)
+            self.setUpBeforeMigration()
             # Run the migration to test
             executor = MigrationExecutor(connection)
             executor.loader.build_graph()
@@ -59,19 +58,16 @@ class TestMigrations(AiidaTestCase):
         except Exception:
             # Bring back the DB to the correct state if this setup part fails
             self._revert_database_schema()
-            raise
-
 
     def tearDown(self):
         """At the end make sure we go back to the latest schema version."""
         from aiida.orm import autogroup
         self._revert_database_schema()
         autogroup.current_autogroup = self.current_autogroup
-        
 
-    def setUpBeforeMigration(self, apps):
+    def setUpBeforeMigration(self):
         """
-        Anything to do before running the migrations. 
+        Anything to do before running the migrations.
         This is typically implemented in test subclasses.
         """
         pass
@@ -85,11 +81,10 @@ class TestMigrations(AiidaTestCase):
 
 
 class TestDuplicateNodeUuidMigration(TestMigrations):
-
     migrate_from = '0013_django_1_8'
     migrate_to = '0014_add_node_uuid_unique_constraint'
 
-    def setUpBeforeMigration(self, apps):
+    def setUpBeforeMigration(self):
         from aiida.orm.data.bool import Bool
         from aiida.orm.data.int import Int
 
@@ -161,11 +156,10 @@ class TestDuplicateNodeUuidMigration(TestMigrations):
 
 
 class TestUuidMigration(TestMigrations):
-
     migrate_from = '0017_drop_dbcalcstate'
     migrate_to = '0018_django_1_11'
 
-    def setUpBeforeMigration(self, apps):
+    def setUpBeforeMigration(self):
         from aiida.orm import Data
 
         n = Data().store()
@@ -180,8 +174,278 @@ class TestUuidMigration(TestMigrations):
         self.assertEqual(self.node_uuid, n.uuid)
 
 
-class TestCalcAttributeKeysMigration(TestMigrations):
+class TestDbLogMigrationRecordCleaning(TestMigrations):
+    migrate_from = '0023_calc_job_option_attribute_keys'
+    migrate_to = '0024_dblog_update'
 
+    def setUpBeforeMigration(self):
+        import json
+        import importlib
+        from aiida.backends.sqlalchemy.utils import dumps_json
+
+        update_024 = importlib.import_module('aiida.backends.djsite.db.migrations.0024_dblog_update')
+
+        DbUser = self.apps.get_model('db', 'DbUser')
+        DbNode = self.apps.get_model('db', 'DbNode')
+        DbWorkflow = self.apps.get_model('db', 'DbWorkflow')
+        DbLog = self.apps.get_model('db', 'DbLog')
+
+        # Creating the user & saving it
+        user = DbUser(is_superuser=False, email="{}@aiida.net".format(self.id()))
+        user.save()
+
+        # Creating the needed nodes & workflows
+        calc_1 = DbNode(type="node.process.calculation.CalculationNode.", user_id=user.id)
+        param = DbNode(type="data.parameter.ParameterData.", user_id=user.id)
+        leg_workf = DbWorkflow(label="Legacy WorkflowNode", user_id=user.id)
+        calc_2 = DbNode(type="node.process.calculation.CalculationNode.", user_id=user.id)
+
+        # Storing them
+        calc_1.save()
+        param.save()
+        leg_workf.save()
+        calc_2.save()
+
+        # Creating the corresponding log records and storing them
+        log_1 = DbLog(
+            loggername='CalculationNode logger',
+            objpk=calc_1.pk,
+            objname='node.calculation.job.quantumespresso.pw.',
+            message='calculation node 1',
+            metadata=json.dumps({
+                "msecs": 719.0849781036377,
+                "objpk": calc_1.pk,
+                "lineno": 350,
+                "thread": 140011612940032,
+                "asctime": "10/21/2018 12:39:51 PM",
+                "created": 1540118391.719085,
+                "levelno": 23,
+                "message": "calculation node 1",
+                "objname": "node.calculation.job.quantumespresso.pw.",
+            }))
+        log_2 = DbLog(
+            loggername='something.else logger',
+            objpk=param.pk,
+            objname='something.else.',
+            message='parameter data with log message')
+        log_3 = DbLog(
+            loggername='TopologicalWorkflow logger',
+            objpk=leg_workf.pk,
+            objname='aiida.workflows.user.topologicalworkflows.topo.TopologicalWorkflow',
+            message='parameter data with log message')
+        log_4 = DbLog(
+            loggername='CalculationNode logger',
+            objpk=calc_2.pk,
+            objname='node.calculation.job.quantumespresso.pw.',
+            message='calculation node 2',
+            metadata=json.dumps({
+                "msecs": 719.0849781036377,
+                "objpk": calc_2.pk,
+                "lineno": 360,
+                "levelno": 23,
+                "message": "calculation node 1",
+                "objname": "node.calculation.job.quantumespresso.pw.",
+            }))
+
+        # Storing the log records
+        log_1.save()
+        log_2.save()
+        log_3.save()
+        log_4.save()
+
+        # Storing temporarily information needed for the check at the test
+        self.to_check = dict()
+
+        # Keeping calculation & calculation log ids
+        self.to_check['CalculationNode'] = (
+            calc_1.pk,
+            log_1.pk,
+            calc_2.pk,
+            log_4.pk,
+        )
+
+        # Getting the serialized ParameterData logs
+        param_data = DbLog.objects.filter(objpk=param.pk).filter(objname='something.else.').values(
+            *update_024.values_to_export)[:1]
+        serialized_param_data = dumps_json(list(param_data))
+        # Getting the serialized logs for the unknown entity logs (as the export migration fuction
+        # provides them) - this should coincide to the above
+        serialized_unknown_exp_logs = update_024.get_serialized_unknown_entity_logs(DbLog)
+        # Getting their number
+        unknown_exp_logs_no = update_024.get_unknown_entity_log_no(DbLog)
+        self.to_check['ParameterData'] = (serialized_param_data, serialized_unknown_exp_logs,
+                                          unknown_exp_logs_no)
+
+        # Getting the serialized legacy workflow logs
+        leg_wf = DbLog.objects.filter(
+            objpk=leg_workf.pk).filter(
+            objname='aiida.workflows.user.topologicalworkflows.topo.TopologicalWorkflow').values(
+            *update_024.values_to_export)[:1]
+        serialized_leg_wf_logs = dumps_json(list(leg_wf))
+        # Getting the serialized logs for the legacy workflow logs (as the export migration function
+        # provides them) - this should coincide to the above
+        serialized_leg_wf_exp_logs = update_024.get_serialized_legacy_workflow_logs(DbLog)
+        eg_wf_exp_logs_no = update_024.get_legacy_workflow_log_no(DbLog)
+        self.to_check['WorkflowNode'] = (serialized_leg_wf_logs, serialized_leg_wf_exp_logs, eg_wf_exp_logs_no)
+
+    def tearDown(self):
+        """Cleaning the DbLog, DbUser, DbWorkflow and DbNode records"""
+        DbUser = self.apps.get_model('db', 'DbUser')
+        DbNode = self.apps.get_model('db', 'DbNode')
+        DbWorkflow = self.apps.get_model('db', 'DbWorkflow')
+        DbLog = self.apps.get_model('db', 'DbLog')
+
+        DbLog.objects.all().delete()
+        DbNode.objects.all().delete()  # pylint: disable=no-member
+        DbWorkflow.objects.all().delete()  # pylint: disable=no-member
+        DbUser.objects.all().delete()  # pylint: disable=no-member
+        super(TestDbLogMigrationRecordCleaning, self).tearDown()
+
+    def test_dblog_calculation_node(self):
+        """
+        Verify that after the migration there is only two log records left and verify that they corresponds to
+        the CalculationNodes.
+        """
+        import importlib
+        DbLog = self.apps.get_model('db', 'DbLog')
+
+        # Check that only two log records exist
+        self.assertEqual(DbLog.objects.count(), 2, "There should be two log records left")
+
+        # Get the node id of the log record referencing the node and verify that it is the correct one
+        dbnode_id_1 = DbLog.objects.filter(
+            pk=self.to_check['CalculationNode'][1]).values('dbnode_id')[:1].get()['dbnode_id']
+        self.assertEquals(dbnode_id_1, self.to_check['CalculationNode'][0], "The referenced node is not "
+                          "the expected one")
+        dbnode_id_2 = DbLog.objects.filter(
+            pk=self.to_check['CalculationNode'][3]).values('dbnode_id')[:1].get()['dbnode_id']
+        self.assertEquals(dbnode_id_2, self.to_check['CalculationNode'][2], "The referenced node is not "
+                          "the expected one")
+
+    def test_dblog_correct_export_of_logs(self):
+        """
+        Verify that export log methods for legacy workflows and unknown entities work as expected
+        """
+        self.assertEquals(self.to_check['ParameterData'][0], self.to_check['ParameterData'][1])
+        self.assertEquals(self.to_check['ParameterData'][2], 1)
+
+        self.assertEquals(self.to_check['WorkflowNode'][0], self.to_check['WorkflowNode'][1])
+        self.assertEquals(self.to_check['WorkflowNode'][2], 1)
+
+    def test_dblog_unique_uuids(self):
+        """
+        Verify that the UUIDs of the log records are unique
+        """
+        DbLog = self.apps.get_model('db', 'DbLog')
+
+        l_uuids = list(_['uuid'] for _ in DbLog.objects.values('uuid'))
+        s_uuids = set(l_uuids)
+        self.assertEqual(len(l_uuids), len(s_uuids), "The UUIDs are not all unique.")
+
+    def test_metadata_correctness(self):
+        """
+        Verify that the metadata of the remaining records don't have an objpk and objmetadata values.
+        """
+        import json
+
+        DbLog = self.apps.get_model('db', 'DbLog')
+
+        metadata = list(json.loads(_['metadata']) for _ in DbLog.objects.values('metadata'))
+        # Verify that the objpk and objname are no longer part of the metadata
+        for m_res in metadata:
+            self.assertNotIn('objpk', m_res.keys(), "objpk should not exist any more in metadata")
+            self.assertNotIn('objname', m_res.keys(), "objname should not exist any more in metadata")
+
+
+class TestDbLogMigrationBackward(TestMigrations):
+    """
+    Check that backward migrations work also for the DbLog migration(s).
+    """
+    migrate_from = '0024_dblog_update'
+    migrate_to = '0023_calc_job_option_attribute_keys'
+
+    def setUpBeforeMigration(self):
+        import json
+
+        DbUser = self.apps.get_model('db', 'DbUser')
+        DbNode = self.apps.get_model('db', 'DbNode')
+        DbLog = self.apps.get_model('db', 'DbLog')
+
+        # Creating the user & saving it
+        user = DbUser(is_superuser=False, email="{}@aiida.net".format(self.id()))
+        user.save()
+
+        # Creating the needed nodes & workflows
+        calc_1 = DbNode(type="node.process.calculation.CalculationNode.1", user_id=user.id)
+        calc_2 = DbNode(type="node.process.calculation.CalculationNode.2", user_id=user.id)
+
+        # Storing them
+        calc_1.save()
+        calc_2.save()
+
+        # Creating the corresponding log records and storing them
+        log_1 = DbLog(
+            loggername='CalculationNode logger',
+            dbnode_id=calc_1.pk,
+            message='calculation node 1',
+            metadata=json.dumps({
+                "msecs": 719.0849781036377,
+                "lineno": 350,
+                "thread": 140011612940032,
+                "asctime": "10/21/2018 12:39:51 PM",
+                "created": 1540118391.719085,
+                "levelno": 23,
+                "message": "calculation node 1",
+            }))
+        log_2 = DbLog(
+            loggername='CalculationNode logger',
+            dbnode_id=calc_2.pk,
+            message='calculation node 2',
+            metadata=json.dumps({
+                "msecs": 719.0849781036377,
+                "lineno": 360,
+                "levelno": 23,
+                "message": "calculation node 1",
+            }))
+
+        # Storing the log records
+        log_1.save()
+        log_2.save()
+
+        # Keeping what is needed to be verified at the test
+        self.to_check = dict()
+        self.to_check[log_1.pk] = (log_1.dbnode_id, calc_1.type)
+        self.to_check[log_2.pk] = (log_2.dbnode_id, calc_2.type)
+
+    def test_objpk_objname(self):
+        """
+        This test verifies that the objpk and objname have the right values
+        after a forward and a backward migration.
+        """
+        import json
+        DbLog = self.apps.get_model('db', 'DbLog')
+
+        # Check that only two log records exist with the correct objpk objname
+        for log_pk in self.to_check.keys():
+            log_entry = DbLog.objects.filter(pk=log_pk)[:1].get()
+            log_dbnode_id, node_type = self.to_check[log_pk]
+            self.assertEqual(log_dbnode_id, log_entry.objpk,
+                             "The dbnode_id ({}) of the 0024 schema version should be identical to the objpk ({}) of "
+                             "the 0023 schema version.".format(log_dbnode_id, log_entry.objpk))
+            self.assertEqual(node_type, log_entry.objname,
+                             "The type ({}) of the linked node of the 0024 schema version should be identical to the "
+                             "objname ({}) of the 0023 schema version.".format(node_type, log_entry.objname))
+            self.assertEqual(log_dbnode_id, json.loads(log_entry.metadata)['objpk'],
+                             "The dbnode_id ({}) of the 0024 schema version should be identical to the objpk ({}) of "
+                             "the 0023 schema version stored in the metadata.".format(
+                                 log_dbnode_id, json.loads(log_entry.metadata)['objpk']))
+            self.assertEqual(node_type, json.loads(log_entry.metadata)['objname'],
+                             "The type ({}) of the linked node of the 0024 schema version should be identical to the "
+                             "objname ({}) of the 0023 schema version stored in the metadata.".format(
+                                 node_type, json.loads(log_entry.metadata)['objname']))
+
+
+class TestCalcAttributeKeysMigration(TestMigrations):
     migrate_from = '0022_dbgroup_type_string_change_content'
     migrate_to = '0023_calc_job_option_attribute_keys'
 
@@ -194,7 +458,7 @@ class TestCalcAttributeKeysMigration(TestMigrations):
     KEY_ENVIRONMENT_VARIABLES_OLD = 'custom_environment_variables'
     KEY_ENVIRONMENT_VARIABLES_NEW = 'environment_variables'
 
-    def setUpBeforeMigration(self, apps):
+    def setUpBeforeMigration(self):
         from aiida.orm.node import WorkflowNode, CalcJobNode
 
         self.process_label = 'TestLabel'
@@ -236,56 +500,54 @@ class TestCalcAttributeKeysMigration(TestMigrations):
 
 
 class TestGroupRenamingMigration(TestMigrations):
-
     migrate_from = '0021_dbgroup_name_to_label_type_to_type_string'
     migrate_to = '0022_dbgroup_type_string_change_content'
 
-    def setUpBeforeMigration(self, apps):
-        from aiida.orm import Node
+    def setUpBeforeMigration(self):
 
         # Create group
-        DbGroup = apps.get_model('db', 'DbGroup')
+        DbGroup = self.apps.get_model('db', 'DbGroup')
         default_user = self.backend.users.create("{}@aiida.net".format(self.id())).store()
 
         # test user group type_string: '' -> 'user'
-        group_user = DbGroup(label='test_user_group', user_id = default_user.id, type_string='')
+        group_user = DbGroup(label='test_user_group', user_id=default_user.id, type_string='')
         group_user.save()
         self.group_user_pk = group_user.pk
 
         # test data.upf group type_string: 'data.upf.family' -> 'data.upf'
-        group_data_upf = DbGroup(label='test_data_upf_group', user_id = default_user.id, type_string='data.upf.family')
+        group_data_upf = DbGroup(label='test_data_upf_group', user_id=default_user.id, type_string='data.upf.family')
         group_data_upf.save()
         self.group_data_upf_pk = group_data_upf.pk
 
         # test auto.import group type_string: 'aiida.import' -> 'auto.import'
-        group_autoimport = DbGroup(label='test_import_group', user_id = default_user.id, type_string='aiida.import')
+        group_autoimport = DbGroup(label='test_import_group', user_id=default_user.id, type_string='aiida.import')
         group_autoimport.save()
         self.group_autoimport_pk = group_autoimport.pk
 
         # test auto.run group type_string: 'autogroup.run' -> 'auto.run'
-        group_autorun = DbGroup(label='test_autorun_group', user_id = default_user.id, type_string='autogroup.run')
+        group_autorun = DbGroup(label='test_autorun_group', user_id=default_user.id, type_string='autogroup.run')
         group_autorun.save()
         self.group_autorun_pk = group_autorun.pk
-
 
     def test_group_string_update(self):
         from aiida.backends.djsite.db.models import DbGroup
 
         # test user group type_string: '' -> 'user'
-        group_user = DbGroup.objects.get(pk = self.group_user_pk)
+        group_user = DbGroup.objects.get(pk=self.group_user_pk)
         self.assertEqual(group_user.type_string, 'user')
 
         # test data.upf group type_string: 'data.upf.family' -> 'data.upf'
-        group_data_upf = DbGroup.objects.get(pk = self.group_data_upf_pk)
+        group_data_upf = DbGroup.objects.get(pk=self.group_data_upf_pk)
         self.assertEqual(group_data_upf.type_string, 'data.upf')
 
         # test auto.import group type_string: 'aiida.import' -> 'auto.import'
-        group_autoimport = DbGroup.objects.get(pk = self.group_autoimport_pk)
+        group_autoimport = DbGroup.objects.get(pk=self.group_autoimport_pk)
         self.assertEqual(group_autoimport.type_string, 'auto.import')
 
         # test auto.run group type_string: 'autogroup.run' -> 'auto.run'
-        group_autorun = DbGroup.objects.get(pk = self.group_autorun_pk)
+        group_autorun = DbGroup.objects.get(pk=self.group_autorun_pk)
         self.assertEqual(group_autorun.type_string, 'auto.run')
+
 
 class TestNoMigrations(AiidaTestCase):
 

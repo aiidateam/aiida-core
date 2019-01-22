@@ -67,7 +67,7 @@ class DbNode(Base):
     # this is probably a ON DELETE inside the DB. On removing node with id=x,
     # we would remove all link with x as an output.
 
-    ######### RELATIONSSHIPS ################
+    ######### RELATIONSSHIPS #########
 
     dbcomputer = relationship(
         'DbComputer',

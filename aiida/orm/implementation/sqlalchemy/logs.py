@@ -26,7 +26,7 @@ class SqlaLog(entities.SqlaModelEntity[models.DbLog], BackendLog):
 
     MODEL_CLASS = models.DbLog
 
-    def __init__(self, backend, time, loggername, levelname, objname, objuuid=None, message="", metadata=None):
+    def __init__(self, backend, time, loggername, levelname, dbnode_id, message="", metadata=None):
         # pylint: disable=too-many-arguments
         super(SqlaLog, self).__init__(backend)
         self._dbmodel = utils.ModelWrapper(
@@ -34,8 +34,7 @@ class SqlaLog(entities.SqlaModelEntity[models.DbLog], BackendLog):
                 time=time,
                 loggername=loggername,
                 levelname=levelname,
-                objname=objname,
-                objuuid=objuuid,
+                dbnode_id=dbnode_id,
                 message=message,
                 metadata=metadata))
 
@@ -68,18 +67,11 @@ class SqlaLog(entities.SqlaModelEntity[models.DbLog], BackendLog):
         return self._dbmodel.levelname
 
     @property
-    def objuuid(self):
+    def dbnode_id(self):
         """
-        Get the uuid of the object that created the log entry
+        Get the id of the object that created the log entry
         """
-        return self._dbmodel.objuuid
-
-    @property
-    def objname(self):
-        """
-        Get the name of the object that created the log entry
-        """
-        return self._dbmodel.objname
+        return self._dbmodel.dbnode_id
 
     @property
     def message(self):

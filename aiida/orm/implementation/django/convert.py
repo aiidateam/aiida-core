@@ -37,8 +37,8 @@ def get_backend_entity(dbmodel, backend):  # pylint: disable=unused-argument
 
     :param dbmodel: the db model instance
     """
-    raise TypeError("No corresponding AiiDA backend class exists for the DbModel instance {}"
-                    .format(dbmodel.__class__.__name__))
+    raise TypeError("No corresponding AiiDA backend class exists for the DbModel instance {}".format(
+        dbmodel.__class__.__name__))
 
 
 ##################################
@@ -236,8 +236,7 @@ def _(dbmodel, backend):
         time=dbmodel.time,
         loggername=dbmodel.loggername,
         levelname=dbmodel.levelname,
-        objname=dbmodel.objname,
-        objuuid=dbmodel.objuuid,
+        dbnode_id=dbmodel.dbnode_id,
         message=dbmodel.message,
         metadata=dbmodel._metadata  # pylint: disable=protected-access
     )

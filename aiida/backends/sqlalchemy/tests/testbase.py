@@ -88,6 +88,7 @@ class SqlAlchemyTests(AiidaTestImplementation):
         from aiida.backends.sqlalchemy.models.node import DbNode
         from aiida.backends.sqlalchemy.models.log import DbLog
         from aiida.backends.sqlalchemy.models.user import DbUser
+        from aiida.backends.sqlalchemy.models.workflow import DbWorkflow
 
         # Empty the relationship dbgroup.dbnode
         dbgroups = self.test_session.query(DbGroup).all()
@@ -103,6 +104,7 @@ class SqlAlchemyTests(AiidaTestImplementation):
 
         # Then I delete the nodes, otherwise I cannot delete computers and users
         self.test_session.query(DbNode).delete()
+        self.test_session.query(DbWorkflow).delete()
         self.test_session.query(DbUser).delete()
         self.test_session.query(DbComputer).delete()
         self.test_session.query(DbLog).delete()

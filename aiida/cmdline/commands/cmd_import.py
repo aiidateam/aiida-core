@@ -11,6 +11,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+from enum import Enum
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -18,6 +19,18 @@ from aiida.cmdline.params.options import MultipleValueOption
 from aiida.cmdline.params.types import GroupParamType
 from aiida.cmdline.utils import decorators, echo
 from aiida.common import exceptions
+
+EXTRAS_IMPORT_MODES = ['keep_existing', 'update_existing', 'mirror', 'none', 'ask']
+
+
+# pylint: disable=too-few-public-methods
+class ExtrasImportCode(Enum):
+    """Exit codes for the verdi command line."""
+    keep_existing = 'kcl'
+    update_existing = 'kcu'
+    mirror = 'ncu'
+    none = 'knl'
+    ask = 'kca'
 
 
 @verdi.command('import')
@@ -35,8 +48,18 @@ from aiida.common import exceptions
     type=GroupParamType(create_if_not_exist=True),
     help='Specify group to which all the import nodes will be added. If such a group does not exist, it will be'
     ' created automatically.')
+@click.option(
+    '-e',
+    '--extras_import_mode',
+    type=click.Choice(EXTRAS_IMPORT_MODES),
+    default='keep_existing',
+    help="keep_existing: in case of a name collision keep the original value. "
+    "update_existing: in case of a name collision take the updated value. "
+    "mirror: keep the imported extras only and remove the extras that are not present in the imported node. "
+    "none: do not import the new extras. "
+    "ask: ask what to do in case of a name collision. ")
 @decorators.with_dbenv()
-def cmd_import(archives, webpages, group):
+def cmd_import(archives, webpages, group, extras_import_mode):
     """Import one or multiple exported AiiDA archives
 
     The ARCHIVES can be specified by their relative or absolute file path, or their HTTP URL.
@@ -78,7 +101,7 @@ def cmd_import(archives, webpages, group):
         echo.echo_info('importing archive {}'.format(archive))
 
         try:
-            import_data(archive, group)
+            import_data(archive, group, extras_mode=ExtrasImportCode[extras_import_mode].value)
         except exceptions.IncompatibleArchiveVersionError as exception:
             echo.echo_warning('{} cannot be imported: {}'.format(archive, exception))
             echo.echo_warning('run `verdi export migrate {}` to update it'.format(archive))
@@ -105,7 +128,8 @@ def cmd_import(archives, webpages, group):
             echo.echo_success('archive downloaded, proceeding with import')
 
             try:
-                import_data(temp_folder.get_abs_path(temp_file), group)
+                import_data(
+                    temp_folder.get_abs_path(temp_file), group, extras_mode=ExtrasImportCode[extras_import_mode].value)
             except exceptions.IncompatibleArchiveVersionError as exception:
                 echo.echo_warning('{} cannot be imported: {}'.format(archive, exception))
                 echo.echo_warning('download the archive file and run `verdi export migrate` to update it')

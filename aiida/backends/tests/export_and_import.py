@@ -2458,3 +2458,110 @@ class TestComments(AiidaTestCase):
 
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)
+
+class TestExtras(AiidaTestCase):
+    """Test extras import"""
+
+    @classmethod
+    def setUpClass(cls, *args, **kwargs):
+        """Only run to prepare an export file"""
+        import os 
+        import tempfile
+        from aiida.orm.data import Data
+        from aiida.orm.importexport import export
+        super(TestExtras, cls).setUpClass()
+        d = Data()
+        d.label = 'my_test_data_node'
+        d.store()
+        d.set_extras({'b': 2, 'c': 3})
+        tmp_folder = tempfile.mkdtemp()
+        cls.export_file = os.path.join(tmp_folder, 'export.aiida')
+        export([d], outfile=cls.export_file, silent=True)
+
+    def setUp(self):
+        """This function runs before every test execution"""
+        from aiida.orm.data import Data
+        from aiida.orm.importexport import import_data
+        from aiida.orm.querybuilder import QueryBuilder
+        self.clean_db()
+        self.insert_data()
+        import_data(self.export_file, silent=True)
+        q = QueryBuilder().append(Data, filters={'label': 'my_test_data_node'})
+        self.assertEquals(q.count(), 1)
+        self.imported_node = q.all()[0][0]
+
+    def modify_extras(self, mode):
+        from aiida.orm.data import Data
+        from aiida.orm.querybuilder import QueryBuilder
+        self.imported_node.set_extra('a', 1)
+        self.imported_node.set_extra('b', 1000)
+        self.imported_node.del_extra('c')
+
+        import_data(self.export_file, silent=True, extras_mode=mode)
+
+        # Query again the database
+        q = QueryBuilder().append(Data, filters={'label': 'my_test_data_node'})
+        self.assertEquals(q.count(), 1)
+        return q.all()[0][0]
+
+    def tearDown(self):
+        pass
+
+
+    def test_import_of_extras(self):
+        """Check if extras are properly imported"""
+        # check that extras are imported correctly
+        self.assertEquals(self.imported_node.get_extra('b'), 2)
+        self.assertEquals(self.imported_node.get_extra('c'), 3)
+        
+    def test_extras_import_mode_keep_existing(self):
+        """Check if old extras are not modified in case of name collision"""
+        imported_node = self.modify_extras(mode='kcl')
+
+        # Check that extras are imported correctly
+        self.assertEquals(imported_node.get_extra('a'), 1)
+        self.assertEquals(imported_node.get_extra('b'), 1000)
+        self.assertEquals(imported_node.get_extra('c'), 3)
+
+    def test_extras_import_mode_update_existing(self):
+        """Check if old extras are modified in case of name collision"""
+        imported_node = self.modify_extras(mode='kcu')
+
+        # Check that extras are imported correctly
+        self.assertEquals(imported_node.get_extra('a'), 1)
+        self.assertEquals(imported_node.get_extra('b'), 2)
+        self.assertEquals(imported_node.get_extra('c'), 3)
+    
+    def test_extras_import_mode_mirror(self):
+        """Check if old extras are fully overwritten by the imported ones"""
+        imported_node = self.modify_extras(mode='ncu')
+
+        # Check that extras are imported correctly
+        with self.assertRaises(AttributeError): # the extra 
+            # 'a' should not exist, as the extras were fully mirrored with respect to
+            # the imported node
+            imported_node.get_extra('a')
+        self.assertEquals(imported_node.get_extra('b'), 2)
+        self.assertEquals(imported_node.get_extra('c'), 3)
+    
+    def test_extras_import_mode_none(self):
+        """Check if old extras are fully overwritten by the imported ones"""
+        imported_node = self.modify_extras(mode='knl')
+
+        # Check if extras are imported correctly
+        self.assertEquals(imported_node.get_extra('b'), 1000)
+        self.assertEquals(imported_node.get_extra('a'), 1)
+        with self.assertRaises(AttributeError): # the extra
+            # 'c' should not exist, as the extras were keept untached
+            imported_node.get_extra('c')
+    
+    def test_extras_import_mode_strange(self):
+        """Check a mode that is probably does not make much sense but is still available"""
+        imported_node = self.modify_extras(mode='kcd')
+
+        # Check if extras are imported correctly
+        self.assertEquals(imported_node.get_extra('a'), 1)
+        self.assertEquals(imported_node.get_extra('c'), 3)
+        with self.assertRaises(AttributeError): # the extra
+            # 'b' should not exist, as the collided extras are deleted
+            imported_node.get_extra('b')

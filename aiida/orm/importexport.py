@@ -410,11 +410,12 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
 
     :param in_path: the path to a file or folder that can be imported in AiiDA
     :param extras_mode: 3 letter code that will identify what to do with the extras import. The first letter acts on
-    extras that are present in the original node and not present in the imported node. Can be either k (keep it) or n
-    (do not keep it). The second letter acts on the imported extras that are not present in the original node. Can be
-    either c (create it) or n (do not create it). The third letter says what to do in case of a name collision. Can be
-    l (leave the old value), u (update with a new value), d (delete the extra), a (ask what to do if the content is
-    different).
+                        extras that are present in the original node and not present in the imported node. Can be
+                        either k (keep it) or n (do not keep it). The second letter acts on the imported extras that
+                        are not present in the original node. Can be either c (create it) or n (do not create it). The
+                        third letter says what to do in case of a name collision. Can be l (leave the old value), u
+                        (update with a new value), d (delete the extra), a (ask what to do if the content is
+                        different).
     """
     import os
     import tarfile
@@ -1077,11 +1078,12 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
 
     :param in_path: the path to a file or folder that can be imported in AiiDA
     :param extras_mode: 3 letter code that will identify what to do with the extras import. The first letter acts on
-    extras that are present in the original node and not present in the imported node. Can be either k (keep it) or n
-    (do not keep it). The second letter acts on the imported extras that are not present in the original node. Can be
-    either c (create it) or n (do not create it). The third letter says what to do in case of a name collision. Can be
-    l (leave the old value), u (update with a new value), d (delete the extra), a (ask what to do if the content is
-    different).
+                        extras that are present in the original node and not present in the imported node. Can be
+                        either k (keep it) or n (do not keep it). The second letter acts on the imported extras that
+                        are not present in the original node. Can be either c (create it) or n (do not create it). The
+                        third letter says what to do in case of a name collision. Can be l (leave the old value), u
+                        (update with a new value), d (delete the extra), a (ask what to do if the content is
+                        different).
     """
     import os
     import tarfile

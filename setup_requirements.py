@@ -98,7 +98,7 @@ extras_require = {
     # Requirements for non-core functionalities that rely on external atomic manipulation/processing software
     'atomic_tools': [
         'spglib==1.10.3.65',
-        'pymatgen==2019.1.24',
+        'pymatgen==2018.12.12',  # last version with py2 support
         'ase==3.12.0',  # Updating breaks tests
         'PyMySQL==0.8.0',  # Required by ICSD tools
         'PyCifRW==4.2.1',  # Updating breaks tests

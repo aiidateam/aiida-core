@@ -39,7 +39,7 @@ install_requires = [
     'portalocker==1.1.0',
     'psutil==5.4.5',
     'meld3==1.0.2',
-    'numpy==1.14.3',
+    'numpy==1.16.0',
     'SQLAlchemy==1.0.19',  # Upgrade to SQLalchemy 1.1.5 does break tests, see #465
     'SQLAlchemy-Utils==0.33.0',
     'alembic==0.9.9',

@@ -118,7 +118,7 @@ extras_require = {
         'codecov==2.0.15'
     ],
     'dev_precommit': [
-        'pre-commit==1.8.2',
+        'pre-commit==1.13.0',
         'yapf==0.21.0',
         'prospector==0.12.7',
         'pylint==1.8.4',

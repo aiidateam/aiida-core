@@ -40,7 +40,7 @@ itsdangerous==0.24
 marshmallow-sqlalchemy==0.13.2
 meld3==1.0.2
 mock==2.0.0
-numpy==1.14.3
+numpy==1.15.4
 paramiko==2.4.2
 passlib==1.7.1
 pathlib2==2.3.0
@@ -48,7 +48,7 @@ pgtest==1.1.0
 plumpy==0.7.12
 portalocker==1.1.0
 psutil==5.4.5
-pymatgen==2018.4.20
+pymatgen==2018.12.12
 pyparsing==2.2.0
 python-dateutil==2.7.2
 python-memcached==1.59
@@ -56,6 +56,7 @@ python-mimeparse==1.6.0
 pytz==2018.4
 qe-tools==1.1.0
 reentry==1.2.2
+scipy==1.1.0
 seekpath==1.8.1
 singledispatch >= 3.4.0.3
 six==1.11.0

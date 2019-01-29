@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Common utility functions for command line commands."""
+# pylint: disable=import-error
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -274,7 +275,8 @@ def get_workchain_report(node, levelname, indent_size=4, max_depth=None):
 
     def get_report_messages(uuid, depth, levelname):
         """Return list of log messages with given levelname and their depth for a node with a given uuid."""
-        filters = {'objuuid': uuid}
+        node_id = orm.load_node(uuid).id
+        filters = {'dbnode_id': node_id}
 
         entries = orm.Log.objects.find(filters)
         entries = [entry for entry in entries if LOG_LEVELS[entry.levelname] >= LOG_LEVELS[levelname]]
@@ -317,9 +319,9 @@ def get_workchain_report(node, levelname, indent_size=4, max_depth=None):
     if not reports:
         return 'No log messages recorded for this entry'
 
-    object_ids = [entry[0].id for entry in reports]
+    log_ids = [entry[0].id for entry in reports]
     levelnames = [len(entry[0].levelname) for entry in reports]
-    width_id = len(str(max(object_ids)))
+    width_id = len(str(max(log_ids)))
     width_levelname = max(levelnames)
     report = []
 

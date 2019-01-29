@@ -16,12 +16,13 @@ import logging
 
 from six.moves import range
 
-from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
 from aiida.common.log import LOG_LEVEL_REPORT
-from aiida.orm.node import CalculationNode
 from aiida.common.timezone import now
+from aiida.orm import Data
+from aiida.orm import Log
+from aiida.orm.node import CalculationNode
 
 
 class TestBackendLog(AiidaTestCase):
@@ -45,15 +46,19 @@ class TestBackendLog(AiidaTestCase):
         Delete all the created log entries
         """
         super(TestBackendLog, self).tearDown()
-        orm.Log.objects.delete_many({})
+        Log.objects.delete_many({})
+
+    def create_log(self):
+        node = CalculationNode().store()
+        record = self.log_record
+        record['dbnode_id'] = node.id
+        return Log(**record), node
 
     def test_create_log_message(self):
         """
         Test the manual creation of a log entry
         """
-        node = orm.Data().store()
-        self.log_record['dbnode_id'] = node.id
-        entry = orm.Log(**self.log_record)
+        entry, _ = self.create_log()
 
         self.assertEqual(entry.time, self.log_record['time'])
         self.assertEqual(entry.loggername, self.log_record['loggername'])
@@ -64,21 +69,18 @@ class TestBackendLog(AiidaTestCase):
 
     def test_log_delete_single(self):
         """Test that a single log entry can be deleted through the collection."""
-        node = orm.Data().store()
-        self.log_record['dbnode_id'] = node.id
-        entry = orm.Log(**self.log_record)
-
+        entry, _ = self.create_log()
         log_id = entry.id
 
-        self.assertEqual(len(orm.Log.objects.all()), 1)
+        self.assertEqual(len(Log.objects.all()), 1)
 
         # Deleting the entry
-        orm.Log.objects.delete(log_id)
-        self.assertEqual(len(orm.Log.objects.all()), 0)
+        Log.objects.delete(log_id)
+        self.assertEqual(len(Log.objects.all()), 0)
 
         # Deleting a non-existing entry should raise
         with self.assertRaises(exceptions.NotExistent):
-            orm.Log.objects.delete(log_id)
+            Log.objects.delete(log_id)
 
     def test_delete_many(self):
         """
@@ -87,26 +89,24 @@ class TestBackendLog(AiidaTestCase):
         anyway if this method does not work properly
         """
         count = 10
-        node = orm.Data().store()
         for _ in range(count):
-            self.log_record['dbnode_id'] = node.id
-            orm.Log(**self.log_record)
+            self.create_log()
 
-        self.assertEqual(len(orm.Log.objects.all()), count)
-        orm.Log.objects.delete_many({})
-        self.assertEqual(len(orm.Log.objects.all()), 0)
+        self.assertEqual(len(Log.objects.all()), count)
+        Log.objects.delete_many({})
+        self.assertEqual(len(Log.objects.all()), 0)
 
     def test_objects_find(self):
         """Put logs in and find them"""
-        node = orm.Data().store()
+        node = Data().store()
         for _ in range(10):
             record = self.log_record
             record['dbnode_id'] = node.id
-            orm.Log(**record)
+            Log(**record)
 
-        entries = orm.Log.objects.all()
+        entries = Log.objects.all()
         self.assertEqual(10, len(entries))
-        self.assertIsInstance(entries[0], orm.Log)
+        self.assertIsInstance(entries[0], Log)
 
     def test_find_orderby(self):
         """
@@ -114,56 +114,48 @@ class TestBackendLog(AiidaTestCase):
         """
         from aiida.orm.logs import OrderSpecifier, ASCENDING, DESCENDING
 
-        min_id, max_id = None, None
-        for counter in range(10):
-            node = orm.Data().store()
-            if counter == 0:
-                min_id = node.id
-            elif counter == 9:
-                max_id = node.id
-            record = self.log_record
-            record['dbnode_id'] = node.id
-            orm.Log(**record)
+        node_ids = []
+        for _ in range(10):
+            _, node = self.create_log()
+            node_ids.append(node.id)
+        node_ids.sort()
 
         order_by = [OrderSpecifier('dbnode_id', ASCENDING)]
-        entries = orm.Log.objects.find(order_by=order_by)
-
-        self.assertEqual(entries[0].dbnode_id, min_id)
+        res_entries = Log.objects.find(order_by=order_by)
+        self.assertEqual(res_entries[0].dbnode_id, node_ids[0])
 
         order_by = [OrderSpecifier('dbnode_id', DESCENDING)]
-        entries = orm.Log.objects.find(order_by=order_by)
-
-        self.assertEqual(entries[0].dbnode_id, max_id)
+        res_entries = Log.objects.find(order_by=order_by)
+        self.assertEqual(res_entries[0].dbnode_id, node_ids[-1])
 
     def test_find_limit(self):
         """
         Test the limit option of log.find
         """
-        node = orm.Data().store()
+        node = Data().store()
         limit = 2
         for _ in range(limit * 2):
             self.log_record['dbnode_id'] = node.id
-            orm.Log(**self.log_record)
-
-        entries = orm.Log.objects.find(limit=limit)
+            Log(**self.log_record)
+        entries = Log.objects.find(limit=limit)
         self.assertEqual(len(entries), limit)
 
     def test_find_filter(self):
         """
         Test the filter option of log.find
         """
-        node_id = None
-        for counter in range(10):
-            node = orm.Data().store()
-            record = self.log_record
-            record['dbnode_id'] = node.id
-            orm.Log(**record)
-            if counter == 5:
-                node_id = node.id
+        from random import randint
 
-        entries = orm.Log.objects.find(filters={'dbnode_id': node_id})
+        node_ids = []
+        for _ in range(10):
+            _, node = self.create_log()
+            node_ids.append(node.id)
+
+        node_id_of_choice = node_ids.pop(randint(0, 9))
+
+        entries = Log.objects.find(filters={'dbnode_id': node_id_of_choice})
         self.assertEqual(len(entries), 1)
-        self.assertEqual(entries[0].dbnode_id, node_id)
+        self.assertEqual(entries[0].dbnode_id, node_id_of_choice)
 
     def test_db_log_handler(self):
         """
@@ -179,14 +171,14 @@ class TestBackendLog(AiidaTestCase):
         # Firing a log for an unstored should not end up in the database
         node.logger.critical(message)
 
-        logs = orm.Log.objects.find()
+        logs = Log.objects.find()
 
         self.assertEqual(len(logs), 0)
 
         # After storing the node, logs above log level should be stored
         node.store()
         node.logger.critical(message)
-        logs = orm.Log.objects.find()
+        logs = Log.objects.find()
 
         self.assertEqual(len(logs), 1)
         self.assertEqual(logs[0].message, message)
@@ -194,11 +186,41 @@ class TestBackendLog(AiidaTestCase):
         # Launching a second log message ensuring that both messages are correctly stored
         message2 = message + " - Second message"
         node.logger.critical(message2)
-        # logs = orm.Log.objects.find()
+        # logs = Log.objects.find()
 
         order_by = [OrderSpecifier('time', ASCENDING)]
-        logs = orm.Log.objects.find(order_by=order_by)
+        logs = Log.objects.find(order_by=order_by)
 
         self.assertEqual(len(logs), 2)
         self.assertEqual(logs[0].message, message)
         self.assertEqual(logs[1].message, message2)
+
+    def test_log_querybuilder(self):
+        """ Test querying for logs by joining on nodes in the QueryBuilder """
+        # pylint: disable=invalid-name
+        from aiida.orm import QueryBuilder
+
+        # Setup nodes
+        log_1, calc = self.create_log()
+        log_2 = Log(now(), 'loggername', logging.getLevelName(LOG_LEVEL_REPORT), calc.id, 'log message #2')
+        log_3 = Log(now(), 'loggername', logging.getLevelName(LOG_LEVEL_REPORT), calc.id, 'log message #3')
+
+        # Retrieve a node by joining on a specific log ('log_1')
+        builder = QueryBuilder()
+        builder.append(Log, tag='log', filters={'id': log_2.id})
+        builder.append(CalculationNode, with_log='log', project=['uuid'])
+        nodes = builder.all()
+
+        self.assertEqual(len(nodes), 1)
+        for node in nodes:
+            self.assertIn(str(node[0]), [calc.uuid])
+
+        # Retrieve all logs for a specific node by joining on a said node
+        builder = QueryBuilder()
+        builder.append(CalculationNode, tag='calc', filters={'id': calc.id})
+        builder.append(Log, with_node='calc', project=['uuid'])
+        logs = builder.all()
+
+        self.assertEqual(len(logs), 3)
+        for log in logs:
+            self.assertIn(str(log[0]), [str(log_1.uuid), str(log_2.uuid), str(log_3.uuid)])

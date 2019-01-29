@@ -63,7 +63,7 @@ class DjangoQueryBuilder(BackendQueryBuilder):
         return dummy_model.DbComment
 
     @property
-    def log_model_class(self):
+    def Log(self):
         return dummy_model.DbLog
 
     @property

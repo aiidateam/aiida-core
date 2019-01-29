@@ -111,7 +111,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         return aiida.backends.sqlalchemy.models.comment.DbComment
 
     @property
-    def log_model_class(self):
+    def Log(self):
         import aiida.backends.sqlalchemy.models.log
         return aiida.backends.sqlalchemy.models.log.DbLog
 
@@ -133,7 +133,9 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         For sqlalchemy, there are no additional expansions for now, so
         I am returning an empty list
         """
-        if issubclass(alias._sa_class_manager.class_, self.Computer):  # pylint: disable=protected-access
+        # pylint: disable=protected-access
+        if issubclass(alias._sa_class_manager.class_, self.Computer) or \
+            issubclass(alias._sa_class_manager.class_, self.Log):
             try:
                 expansions.remove('metadata')
                 expansions.append('_metadata')

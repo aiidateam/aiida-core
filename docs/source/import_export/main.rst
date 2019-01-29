@@ -152,6 +152,20 @@ Let's have a look at the contents of the metadata.json::
                 },
                 "type": {},
                 "uuid": {}
+            },
+            "Log": {
+                "time": {
+                    "convert_type": "date"
+                },
+                "loggername": {},
+                "levelname": {},
+                "message": {},
+                "metadata": {},
+                "dbnode": {
+                    "requires": "Node",
+                    "related_name": "dblogs"
+                },
+                "uuid": {}
             }
         }
     }

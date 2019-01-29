@@ -221,30 +221,32 @@ def configure_logging(daemon=False, daemon_log_file=None):
     dictConfig(config)
 
 
-def get_dblogger_extra(obj):
-    """
-    Given an object (Node, Calculation, ...) return a dictionary to be passed
-    as extra to the aiidalogger in order to store the exception also in the DB.
-    If no such extra is passed, the exception is only logged on file.
+def get_dblogger_extra(node):
+    """Return the additional information necessary to attach any log records to the given node instance.
+
+    :param node: a Node instance
     """
     from aiida.orm import Node
 
-    if isinstance(obj, Node):
-        # If the object if not stored, then the corresponding log records will
-        # not be stored (dbnode_id should be set to store a log record)
-        if not obj.is_stored:
-            return dict()
-    return {'dbnode_id': obj.id, 'backend': obj.backend}
+    # If the object is not a Node or it is not stored, then any associated log records should bot be stored. This is
+    # accomplished by returning an empty dictionary because the `dbnode_id` is required to successfully store it.
+    if not isinstance(node, Node) or not node.is_stored:
+        return dict()
+
+    return {'dbnode_id': node.id, 'backend': node.backend}
 
 
-def create_logger_adapter(logger, entity):
-    """
-    Create a logger adapter for a particular AiiDA entity
+def create_logger_adapter(logger, node):
+    """Create a logger adapter for the given Node instance.
 
     :param logger: the logger to adapt
-    :param entity: the entity to create the adapter for
+    :param node: the node instance to create the adapter for
     :return: the logger adapter
     :rtype: :class:`logging.LoggerAdapter`
     """
-    extra = get_dblogger_extra(entity)
-    return logging.LoggerAdapter(logger=logger, extra=extra)
+    from aiida.orm import Node
+
+    if not isinstance(node, Node):
+        raise TypeError('node should be an instance of `Node`')
+
+    return logging.LoggerAdapter(logger=logger, extra=get_dblogger_extra(node))

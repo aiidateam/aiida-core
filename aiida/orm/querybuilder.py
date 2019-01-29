@@ -125,14 +125,14 @@ def get_querybuilder_classifiers_from_cls(cls, obj):
         ormclass = obj.Comment
 
     # Log
-    elif issubclass(cls, obj.log_model_class):
+    elif issubclass(cls, obj.Log):
         ormclasstype = 'log'
         query_type_string = None
         ormclass = cls
     elif issubclass(cls, logs.Log):
         ormclasstype = 'log'
         query_type_string = None
-        ormclass = obj.log_model_class
+        ormclass = obj.Log
 
     else:
         raise InputValidationError("I do not know what to do with {}".format(cls))
@@ -1449,6 +1449,24 @@ class QueryBuilder(object):
         self._query = self._query.join(
             entity_to_join, joined_entity.dbnode_id == entity_to_join.id, isouter=isouterjoin)
 
+    def _join_node_log(self, joined_entity, entity_to_join, isouterjoin):
+        """
+        :param joined_entity: An aliased node
+        :param entity_to_join: aliased log
+        """
+        self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.Log), 'with_node')
+        self._query = self._query.join(
+            entity_to_join, joined_entity.id == entity_to_join.dbnode_id, isouter=isouterjoin)
+
+    def _join_log_node(self, joined_entity, entity_to_join, isouterjoin):
+        """
+        :param joined_entity: An aliased log
+        :param entity_to_join: aliased node
+        """
+        self._check_dbentities((joined_entity, self._impl.Log), (entity_to_join, self._impl.Node), 'with_log')
+        self._query = self._query.join(
+            entity_to_join, joined_entity.dbnode_id == entity_to_join.id, isouter=isouterjoin)
+
     def _get_function_map(self):
         """
         Map relationship type keywords to functions
@@ -1457,6 +1475,7 @@ class QueryBuilder(object):
         """
         mapping = {
             'node': {
+                'with_log': self._join_log_node,
                 'with_comment': self._join_comment_node,
                 'with_incoming': self._join_outputs,
                 'with_outgoing': self._join_inputs,
@@ -1495,8 +1514,12 @@ class QueryBuilder(object):
             },
             'comment': {
                 'with_node': self._join_node_comment,
-                'direction': None,
+                'direction': None
             },
+            'log': {
+                'with_node': self._join_node_log,
+                'direction': None
+            }
         }
 
         return mapping
@@ -1511,7 +1534,7 @@ class QueryBuilder(object):
         :param joining_value: the tag of the nodes to be joined
         """
         # Set the calling entity - to allow for the correct join relation to be set
-        if self._path[index]['type'] not in ['computer', 'user', 'group', 'comment']:
+        if self._path[index]['type'] not in ['computer', 'user', 'group', 'comment', 'log']:
             calling_entity = 'node'
         else:
             calling_entity = self._path[index]['type']

@@ -10,10 +10,10 @@
 """
 Tests for the export and import routines.
 """
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import io
 import six
 from six.moves import range, zip
@@ -23,7 +23,6 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.importexport import import_data
 from aiida.common.utils import get_new_uuid
 from aiida import orm
-from unittest import skip
 
 
 class TestSpecificImport(AiidaTestCase):
@@ -2146,18 +2145,20 @@ class TestLinks(AiidaTestCase):
 
 
 class TestLogs(AiidaTestCase):
+    """ Tests for export/import of nodes with logs """
 
     def tearDown(self):
         """
         Delete all the created log entries
         """
-        from aiida import orm
+        from aiida.orm import Log
         super(TestLogs, self).tearDown()
-        orm.Log.objects.delete_many({})
+        Log.objects.delete_many({})
 
-    def test_export_import_of_log_entries(self):
+    def test_export_import_of_critical_log_msg(self):
+        """ Testing logging of critical message """
         import os, shutil, tempfile
-        from aiida.orm.node import CalculationNode
+        from aiida.orm import Log, CalculationNode
         from aiida.orm.importexport import export
 
         tmp_folder = tempfile.mkdtemp()
@@ -2169,7 +2170,7 @@ class TestLogs(AiidaTestCase):
             # Firing a log for an unstored node should not end up in the database
             calc.logger.critical(message)
             # There should be no log messages for the unstored object
-            self.assertEquals(len(orm.Log.objects.all()), 0)
+            self.assertEquals(len(Log.objects.all()), 0)
 
             # After storing the node, logs above log level should be stored
             calc.store()
@@ -2178,16 +2179,58 @@ class TestLogs(AiidaTestCase):
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
             export([calc], outfile=export_file, silent=True)
 
-            self.clean_db()
-            self.insert_data()
+            self.reset_database()
 
             import_data(export_file, silent=True)
 
             # Finding all the log messages
-            logs = orm.Log.objects.all()
+            logs = Log.objects.all()
 
             self.assertEquals(len(logs), 1)
             self.assertEquals(logs[0].message, message)
+
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)
+
+    def test_exclude_logs_flag(self):
+        """Test that the `include_logs` argument for `export` works."""
+        import os, shutil, tempfile
+        from aiida.orm import Log, CalculationNode, QueryBuilder
+        from aiida.orm.importexport import export
+
+        tmp_folder = tempfile.mkdtemp()
+
+        log_msg = 'Testing logging of critical failure'
+
+        try:
+            # Create node
+            calc = CalculationNode()
+            calc.store()
+
+            # Create log message
+            calc.logger.critical(log_msg)
+
+            # Save uuids prior to export
+            calc_uuid = calc.uuid
+
+            # Export, excluding logs
+            export_file = os.path.join(tmp_folder, 'export.tar.gz')
+            export([calc], outfile=export_file, silent=True, include_logs=False)
+
+            # Clean database and reimport exported data
+            self.reset_database()
+            import_data(export_file, silent=True)
+
+            # Finding all the log messages
+            import_calcs = QueryBuilder().append(CalculationNode, project=['uuid']).all()
+            import_logs = QueryBuilder().append(Log, project=['uuid']).all()
+
+            # There should be exactly: 1 CalculationNode, 0 Logs
+            self.assertEqual(len(import_calcs), 1)
+            self.assertEqual(len(import_logs), 0)
+
+            # Check it's the correct node
+            self.assertEqual(str(import_calcs[0][0]), calc_uuid)
 
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)

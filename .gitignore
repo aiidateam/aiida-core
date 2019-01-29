@@ -14,6 +14,7 @@
 /.idea/
 *.egg-info
 .eggs
+.vscode
 
 # files created by coverage
 .cache

@@ -255,10 +255,10 @@ There are also some advanced operators:
     |            |             |                                          | **(currently implemented only    |
     |            |             |                                          | in the SQLA backend)**           |
     +------------+-------------+------------------------------------------+----------------------------------+
-    | contains   |    lists    | | 'attributes.mykey': {'contains': 'a'}  | Check that a list (typically     |
-    |            |             |                                          | stored in the attributes or in   |
-    |            |             |                                          | the extras) contains a specific  |
-    |            |             |                                          | element or value                 |
+    | contains   |    lists    | | 'attributes.mykey': {'contains':       | Check that a list (typically     |
+    |            |             |   ['a','b']}                             | stored in the attributes or in   |
+    |            |             |                                          | the extras) contains some        |
+    |            |             |                                          | specific elements or values      |
     |            |             |                                          | **(currently implemented only    |
     |            |             |                                          | in the SQLA backend)**           |
     +------------+-------------+------------------------------------------+----------------------------------+

@@ -88,6 +88,7 @@ def schema_to_entity_names(class_string):
     """
     if class_string is None or len(class_string) == 0:
         return
+
     if (class_string == "aiida.backends.djsite.db.models.DbNode" or
             class_string == "aiida.backends.sqlalchemy.models.node.DbNode"):
         return NODE_ENTITY_NAME
@@ -105,9 +106,14 @@ def schema_to_entity_names(class_string):
             class_string ==
             "aiida.backends.sqlalchemy.models.computer.DbComputer"):
         return COMPUTER_ENTITY_NAME
+
     if (class_string == "aiida.backends.djsite.db.models.DbUser" or
             class_string == "aiida.backends.sqlalchemy.models.user.DbUser"):
         return USER_ENTITY_NAME
+
+    if (class_string == "aiida.backends.djsite.db.models.DbLog" or
+            class_string == "aiida.backends.sqlalchemy.models.log.DbLog"):
+        return LOG_ENTITY_NAME
 
 
 # Mapping of entity names to SQLA class paths
@@ -133,7 +139,11 @@ file_fields_to_model_fields = {
         "user": "user_id"
     },
     COMPUTER_ENTITY_NAME: {
-        "metadata": "_metadata"}
+        "metadata": "_metadata"},
+    LOG_ENTITY_NAME: {
+        "dbnode": "dbnode_id",
+        "metadata": "_metadata"
+    }
 }
 
 # As above but the opposite procedure
@@ -147,7 +157,11 @@ model_fields_to_file_fields = {
     },
     COMPUTER_ENTITY_NAME: {
         "_metadata": "metadata"},
-    USER_ENTITY_NAME: {}
+    USER_ENTITY_NAME: {},
+    LOG_ENTITY_NAME: {
+        "dbnode_id": "dbnode",
+        "_metadata": "metadata"
+    }
 }
 
 
@@ -244,22 +258,25 @@ def get_all_fields_info():
             "requires": USER_ENTITY_NAME
          },
          "time": {
-            "convert_type" : "date"
+            "convert_type": "date"
          },
          "type_string": {},
          "uuid": {},
          "label": {}
     }
     all_fields_info[LOG_ENTITY_NAME] = {
-         "id": {},
          "uuid": {},
-         "time": {},
+         "time": {
+             "convert_type": "date"
+         },
          "loggername": {},
          "levelname": {},
-         "objname": {},
-         "objuuid": {},
          "message": {},
          "metadata": {},
+         "dbnode": {
+             "related_name": "dblogs",
+             "requires": NODE_ENTITY_NAME
+         }
     }
     return all_fields_info, unique_identifiers
 
@@ -1181,6 +1198,7 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False, silen
                         # Why the copy:
                         new_entries[entity_name] = data['export_data'][entity_name].copy()
 
+
             # I import data from the given model
             for entity_sig in entity_sig_order:
                 entity_name = signatures_to_entity_names[entity_sig]
@@ -1222,8 +1240,16 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False, silen
                     # compatible with the SQLA schema and they don't need any
                     # further conversion.
                     if entity_name in file_fields_to_model_fields:
-                        for file_fkey in (
-                                file_fields_to_model_fields[entity_name].keys()):
+                        for file_fkey in file_fields_to_model_fields[entity_name].keys():
+
+                            # This is an exception because the DbLog model defines the `_metadata` column instead of the
+                            # `metadata` column used in the Django model. This is because the SqlAlchemy model base
+                            # class already has a metadata attribute that cannot be overridden. For consistency, the
+                            # `DbLog` class however expects the `metadata` keyword in its constructor, so we should
+                            # ignore the mapping here
+                            if entity_name == LOG_ENTITY_NAME and file_fkey == 'metadata':
+                                continue
+
                             model_fkey = file_fields_to_model_fields[entity_name][file_fkey]
                             if model_fkey in import_data.keys():
                                 continue
@@ -1232,6 +1258,7 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False, silen
 
                     db_entity = get_object_from_string(
                         entity_names_to_sqla_schema[entity_name])
+
                     objects_to_create.append(db_entity(**import_data))
                     import_entry_ids[unique_id] = import_entry_id
 
@@ -1658,7 +1685,8 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str,
         "Node": {
             "Computer": "with_computer",
             "Group": "with_group",
-            "User": "with_user"
+            "User": "with_user",
+            "Log": "with_log"
         },
         "Group": {
             "Node": "with_node"
@@ -1669,6 +1697,9 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str,
         "User": {
             "Node": "with_node",
             "Group": "with_group"
+        },
+        "Log": {
+            "Node": "with_node"
         }
     }
 
@@ -1710,9 +1741,10 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str,
                       new_tag_suffixes)
 
 
-def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
+def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
                 silent=False, input_forward=False, create_reversed=True,
-                return_reversed=False, call_reversed=False, **kwargs):
+                return_reversed=False, call_reversed=False, include_logs=True,
+                **kwargs):
     """
     Export the entries passed in the 'what' list to a file tree.
     :todo: limit the export to finished or failed calculations.
@@ -1735,6 +1767,8 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     whether all licenses of Data nodes are in the list. If a function,
     then calls function for licenses of Data nodes expecting True if
     license is allowed, False otherwise.
+    :param include_logs: Bool: In-/exclude export of logs for given node(s).
+    Default: True, *include* logs in export.
     :param silent: suppress debug prints
     :raises LicensingException: if any node is licensed under forbidden
     license
@@ -1765,6 +1799,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     given_group_entry_ids = set()
     given_computer_entry_ids = set()
     given_groups = set()
+    given_log_entry_ids = set()
 
     # I store a list of the actual dbnodes
     for entry in what:
@@ -1921,6 +1956,15 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 res = {_[0] for _ in qb.all()}
                 given_calculation_entry_ids.update(res - to_be_exported)
 
+        ## Universal "entities" attributed to all types of nodes
+        if include_logs:
+            # Get related log(s) - universal for all nodes
+            qb = QueryBuilder()
+            qb.append(Node, tag='node', filters={'id': curr_node_id})
+            qb.append(Log, with_node='node', project=['id'])
+            res = {_[0] for _ in qb.all()}
+            given_log_entry_ids.update(res)
+
     # Here we get all the columns that we plan to project per entity that we
     # would like to extract
     given_entities = list()
@@ -1930,6 +1974,8 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
         given_entities.append(NODE_ENTITY_NAME)
     if len(given_computer_entry_ids) > 0:
         given_entities.append(COMPUTER_ENTITY_NAME)
+    if len(given_log_entry_ids) > 0:
+        given_entities.append(LOG_ENTITY_NAME)
 
     entries_to_add = dict()
     for given_entity in given_entities:
@@ -1953,6 +1999,8 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             entry_ids_to_add = to_be_exported
         elif given_entity == COMPUTER_ENTITY_NAME:
             entry_ids_to_add = given_computer_entry_ids
+        elif given_entity == LOG_ENTITY_NAME:
+            entry_ids_to_add = given_log_entry_ids
 
         qb = QueryBuilder()
         qb.append(entity_names_to_entities[given_entity],
@@ -2011,52 +2059,6 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                     export_data[current_entity].update(temp_d2)
                 except KeyError:
                     export_data[current_entity] = temp_d2
-
-    ##############################################
-    # Export DbLog entries outside of QueryBuilder
-    ##############################################
-
-    # I use .get because there may be no nodes to export
-    all_nodes_pk = list()
-    if NODE_ENTITY_NAME in export_data:
-        all_nodes_pk.extend(export_data.get(NODE_ENTITY_NAME).keys())
-
-    all_nodes_uuids = list()
-    uuid_qb = QueryBuilder()
-    uuid_qb.append(Node, filters={'id': {'in': all_nodes_pk}}, project=['uuid'])
-
-    for [el] in uuid_qb.all():
-        all_nodes_uuids.append(el)
-
-    # EXPORTING THE LOGS
-    try:
-        log_entries = Log.objects.find(filters={'objuuid': {'in': all_nodes_uuids}})
-        from aiida.orm.logs import Log
-        for log_entry in log_entries:
-            export_data[LOG_ENTITY_NAME] = {
-                log_entry.id : {
-                    "uuid": six.text_type(log_entry.uuid),
-                    "time": str(log_entry.time),
-                    "loggername": log_entry.loggername,
-                    "levelname": log_entry.levelname,
-                    "objuuid": six.text_type(log_entry.objuuid),
-                    "objname": log_entry.objname,
-                    "message": log_entry.message,
-                    "metadata": log_entry.metadata
-                }
-            }
-
-    except ImproperlyConfigured:
-        # Probably, the logger was called without the
-        # Django settings module loaded. Then,
-        # This ignore should be a no-op.
-        pass
-    except Exception:
-        # To avoid loops with the error handler, I just print.
-        # Hopefully, though, this should not happen!
-        import traceback
-        traceback.print_exc()
-
 
     ######################################
     # Manually manage links and attributes

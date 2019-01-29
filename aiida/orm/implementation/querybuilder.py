@@ -80,7 +80,7 @@ class BackendQueryBuilder(object):
         """
 
     @abc.abstractmethod
-    def log_model_class(self):
+    def Log(self):
         """
         A property, decorated with @property. Returns the implementation for the Log
         """

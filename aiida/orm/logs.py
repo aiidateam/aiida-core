@@ -99,7 +99,12 @@ class Log(entities.Entity):
             self._backend.logs.delete_many(filters)
 
     def __init__(self, time, loggername, levelname, dbnode_id, message='', metadata=None, backend=None):  # pylint: disable=too-many-arguments
-        """Construct a new computer"""
+        """Construct a new log"""
+        from aiida.common import exceptions
+
+        if not loggername or not levelname:
+            raise exceptions.ValidationError('The loggername and levelname cannot be empty')
+
         backend = backend or get_manager().get_backend()
         model = backend.logs.create(
             time=time,

@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments,import-error
 """`verdi export` command."""
 from __future__ import division
 from __future__ import print_function
@@ -88,9 +88,14 @@ def inspect(archive, version, data, meta_data):
     default=False,
     show_default=True,
     help='Follow reverse CALL links (recursively) when calculating the node set to export.')
+@click.option(
+    '--include-logs/--exclude-logs',
+    default=True,
+    show_default=True,
+    help='Include or exclude logs for node(s) in export.')
 @decorators.with_dbenv()
 def create(output_file, codes, computers, groups, nodes, input_forward, create_reversed, return_reversed, call_reversed,
-           force, archive_format):
+           include_logs, force, archive_format):
     """
     Export various entities, such as Codes, Computers, Groups and Nodes, to an archive file for backup or
     sharing purposes.
@@ -118,7 +123,8 @@ def create(output_file, codes, computers, groups, nodes, input_forward, create_r
         'create_reversed': create_reversed,
         'return_reversed': return_reversed,
         'call_reversed': call_reversed,
-        'overwrite': force,
+        'include_logs': include_logs,
+        'overwrite': force
     }
 
     if archive_format == 'zip':
@@ -154,9 +160,9 @@ def migrate(input_file, output_file, force, silent, archive_format):
     import tarfile
     import zipfile
 
+    from aiida.common import json
     from aiida.common.folders import SandboxFolder
     from aiida.common.archive import extract_zip, extract_tar
-    import aiida.common.json as json
 
     if os.path.exists(output_file) and not force:
         echo.echo_critical('the output file already exists')

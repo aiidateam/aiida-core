@@ -39,7 +39,7 @@ install_requires = [
     'portalocker==1.1.0',
     'psutil==5.4.5',
     'meld3==1.0.2',
-    'numpy==1.14.3',
+    'numpy==1.15.4',
     'SQLAlchemy==1.0.19',  # Upgrade to SQLalchemy 1.1.5 does break tests, see #465
     'SQLAlchemy-Utils==0.33.0',
     'alembic==0.9.9',
@@ -98,7 +98,7 @@ extras_require = {
     # Requirements for non-core functionalities that rely on external atomic manipulation/processing software
     'atomic_tools': [
         'spglib==1.10.3.65',
-        'pymatgen==2018.4.20',
+        'pymatgen==2018.12.12',  # last version with py2 support
         'ase==3.12.0',  # Updating breaks tests
         'PyMySQL==0.8.0',  # Required by ICSD tools
         'PyCifRW==4.2.1',  # Updating breaks tests
@@ -118,7 +118,7 @@ extras_require = {
         'codecov==2.0.15'
     ],
     'dev_precommit': [
-        'pre-commit==1.8.2',
+        'pre-commit==1.13.0',
         'yapf==0.21.0',
         'prospector==0.12.7',
         'pylint==1.8.4',

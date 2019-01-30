@@ -404,9 +404,14 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
         # PRELIMINARY CHECKS #
         ######################
         if metadata['export_version'] != expected_export_version:
-            raise ValueError("File export version is {}, but I can import only "
-                             "version {}".format(metadata['export_version'],
-                                                 expected_export_version))
+            msg = "Export file version is {}, can import only version {}"\
+                    .format(metadata['export_version'], expected_export_version)
+            if metadata['export_version'] < expected_export_version:
+                msg += "\nUse 'verdi export migrate' to update this export file."
+            else:
+                msg += "\nUpdate your AiiDA version in order to import this file."
+
+            raise ValueError(msg)
 
         ##########################################################################
         # CREATE UUID REVERSE TABLES AND CHECK IF I HAVE ALL NODES FOR THE LINKS #
@@ -927,10 +932,14 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
         # PRELIMINARY CHECKS #
         ######################
         if metadata['export_version'] != expected_export_version:
-            raise ValueError("File export version is {}, but I can "
-                             "import only version {}"
-                             .format(metadata['export_version'],
-                                     expected_export_version))
+            msg = "Export file version is {}, can import only version {}"\
+                    .format(metadata['export_version'], expected_export_version)
+            if metadata['export_version'] < expected_export_version:
+                msg += "\nUse 'verdi export migrate' to update this export file."
+            else:
+                msg += "\nUpdate your AiiDA version in order to import this file."
+
+            raise ValueError(msg)
 
         ###################################################################
         #           CREATE UUID REVERSE TABLES AND CHECK IF               #

@@ -99,7 +99,6 @@ extras_require = {
     'atomic_tools': [
         'spglib==1.10.3.65',
         'pymatgen==2018.12.12',  # last version with py2 support
-        'scipy==1.1.0',  # required by pymatgen 2018.12.12
         'ase==3.12.0',  # Updating breaks tests
         'PyMySQL==0.8.0',  # Required by ICSD tools
         'PyCifRW==4.2.1',  # Updating breaks tests

@@ -939,6 +939,8 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
             else:
                 msg += "\nUpdate your AiiDA version in order to import this file."
 
+            raise ValueError(msg)
+
         ###################################################################
         #           CREATE UUID REVERSE TABLES AND CHECK IF               #
         #              I HAVE ALL NODES FOR THE LINKS                     #

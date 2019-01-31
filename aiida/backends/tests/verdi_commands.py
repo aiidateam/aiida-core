@@ -125,23 +125,27 @@ class TestVerdiCalculationCommands(AiidaTestCase):
             calc_cmd.calculation_list()
 
         out_str = ''.join(output)
-        self.assertTrue(calc_states.TOSUBMIT in out_str,
-                        "The TOSUBMIT calculations should be part fo the "
-                        "simple calculation list.")
-        self.assertTrue(calc_states.COMPUTED in out_str,
-                        "The COMPUTED calculations should be part fo the "
-                        "simple calculation list.")
-        self.assertFalse(calc_states.FINISHED in out_str,
-                         "The FINISHED calculations should not be part fo the "
-                         "simple calculation list.")
+        self.assertTrue(
+            calc_states.TOSUBMIT in out_str,
+            "The TOSUBMIT calculations should be part fo the "
+            "simple calculation list.")
+        self.assertTrue(
+            calc_states.COMPUTED in out_str,
+            "The COMPUTED calculations should be part fo the "
+            "simple calculation list.")
+        self.assertFalse(
+            calc_states.FINISHED in out_str,
+            "The FINISHED calculations should not be part fo the "
+            "simple calculation list.")
 
         with Capturing() as output:
             calc_cmd.calculation_list(*['-a'])
 
         out_str = ''.join(output)
-        self.assertTrue(calc_states.FINISHED in out_str,
-                        "The FINISHED calculations should be part fo the "
-                        "simple calculation list.")
+        self.assertTrue(
+            calc_states.FINISHED in out_str,
+            "The FINISHED calculations should be part fo the "
+            "simple calculation list.")
 
 
 class TestVerdiCodeCommands(AiidaTestCase):
@@ -193,12 +197,14 @@ class TestVerdiCodeCommands(AiidaTestCase):
         with Capturing() as output:
             code_cmd.code_list()
         out_str_1 = ''.join(output)
-        self.assertTrue(computer_name_1 in out_str_1,
-                        "The computer 1 name should be included into this list")
+        self.assertTrue(
+            computer_name_1 in out_str_1,
+            "The computer 1 name should be included into this list")
         self.assertTrue(code_name_1 in out_str_1,
                         "The code 1 name should be included into this list")
-        self.assertTrue(computer_name_2 in out_str_1,
-                        "The computer 2 name should be included into this list")
+        self.assertTrue(
+            computer_name_2 in out_str_1,
+            "The computer 2 name should be included into this list")
         self.assertTrue(code_name_2 in out_str_1,
                         "The code 2 name should be included into this list")
 
@@ -207,16 +213,18 @@ class TestVerdiCodeCommands(AiidaTestCase):
         with Capturing() as output:
             code_cmd.code_list(*['-a'])
         out_str_2 = ''.join(output)
-        self.assertEqual(out_str_1, out_str_2,
-                         "verdi code list & verdi code list -a should provide "
-                         "the same output in this experiment.")
+        self.assertEqual(
+            out_str_1, out_str_2,
+            "verdi code list & verdi code list -a should provide "
+            "the same output in this experiment.")
 
         # Run a verdi code list -c, capture the output and check the result
         with Capturing() as output:
             code_cmd.code_list(*['-c', computer_name_1])
         out_str = ''.join(output)
-        self.assertTrue(computer_name_1 in out_str,
-                        "The computer 1 name should be included into this list")
+        self.assertTrue(
+            computer_name_1 in out_str,
+            "The computer 1 name should be included into this list")
         self.assertFalse(
             computer_name_2 in out_str,
             "The computer 2 name should not be included into this list")
@@ -228,8 +236,9 @@ class TestVerdiCodeCommands(AiidaTestCase):
         with Capturing() as output:
             code_cmd.code_list()
         out_str_3 = ''.join(output)
-        self.assertTrue(computer_name_1 in out_str_3,
-                        "The computer 1 name should be included into this list")
+        self.assertTrue(
+            computer_name_1 in out_str_3,
+            "The computer 1 name should be included into this list")
         self.assertTrue(code_name_1 in out_str_3,
                         "The code 1 name should be included into this list")
         self.assertFalse(
@@ -665,12 +674,12 @@ class TestVerdiDataCommands(AiidaTestCase):
 
             for nid in self.cmd_to_nodeid_map[sub_cmd]:
                 if str(nid) not in out_str:
-                    self.fail("The data objects ({}) with ids {} and {} "
-                              "were not found. "
-                              .format(sub_cmd,
-                                      str(self.cmd_to_nodeid_map[sub_cmd][0]),
-                                      str(self.cmd_to_nodeid_map[sub_cmd][1])) +
-                              "The output was {}".format(out_str))
+                    self.fail(
+                        "The data objects ({}) with ids {} and {} "
+                        "were not found. ".format(
+                            sub_cmd, str(self.cmd_to_nodeid_map[sub_cmd][0]),
+                            str(self.cmd_to_nodeid_map[sub_cmd][1])) +
+                        "The output was {}".format(out_str))
 
     def test_trajectory_all_user_listing(self):
         from aiida.cmdline.commands.data import _Bands
@@ -742,10 +751,10 @@ class TestVerdiDataCommands(AiidaTestCase):
         from aiida.cmdline.commands.data import _Cif
         from aiida.cmdline.commands.data import _Trajectory
 
-        args_to_test = [['-g', self.group_name], [
-            '--group-name', self.group_name
-        ], ['-G', str(self.group_id)], ['--group-pk',
-                                        str(self.group_id)]]
+        args_to_test = [['-g', self.group_name],
+                        ['--group-name', self.group_name],
+                        ['-G', str(self.group_id)],
+                        ['--group-pk', str(self.group_id)]]
 
         sub_cmds = [_Bands, _Structure, _Cif, _Trajectory]
         for sub_cmd in sub_cmds:
@@ -755,8 +764,8 @@ class TestVerdiDataCommands(AiidaTestCase):
                     curr_scmd.list(*arg)
                 out_str = ' '.join(output)
 
-                if str(self.cmd_to_nodeid_map_for_groups[
-                        sub_cmd]) not in out_str:
+                if str(self.
+                       cmd_to_nodeid_map_for_groups[sub_cmd]) not in out_str:
                     self.fail(
                         "The data object ({}) with id {} "
                         "was not found. ".format(

@@ -15,6 +15,7 @@ functionality from within python without knowing details about how postgres is
 installed by default on various systems. If the postgres setup is not the
 default installation, additional information needs to be provided.
 """
+
 try:
     import subprocess32 as subprocess
 except ImportError:
@@ -24,7 +25,9 @@ import click
 
 _CREATE_USER_COMMAND = 'CREATE USER "{}" WITH PASSWORD \'{}\''
 _DROP_USER_COMMAND = 'DROP USER "{}"'
-_CREATE_DB_COMMAND = 'CREATE DATABASE "{}" OWNER "{}"'
+_CREATE_DB_COMMAND = ('CREATE DATABASE "{}" OWNER "{}" ENCODING \'UTF8\' '
+                      'LC_COLLATE=\'en_US.UTF-8\' LC_CTYPE=\'en_US.UTF-8\' '
+                      'TEMPLATE=template0')
 _DROP_DB_COMMAND = 'DROP DATABASE "{}"'
 _GRANT_PRIV_COMMAND = 'GRANT ALL PRIVILEGES ON DATABASE "{}" TO "{}"'
 _GET_USERS_COMMAND = "SELECT usename FROM pg_user WHERE usename='{}'"
@@ -64,16 +67,23 @@ class Postgres(object):
             print('setup sucessful!')
     """
 
-    def __init__(self, port=None, interactive=False, quiet=True):
+    def __init__(self,
+                 host='localhost',
+                 port=None,
+                 interactive=False,
+                 quiet=True):
         self.interactive = interactive
         self.quiet = quiet
         self.pg_execute = _pg_execute_not_connected
         self.dbinfo = {}
-        if port:
-            self.set_port(port)
         self.setup_fail_callback = None
         self.setup_fail_counter = 0
         self.setup_max_tries = 1
+
+        if host:
+            self.set_host(host)
+        if port:
+            self.set_port(port)
 
     def set_setup_fail_callback(self, callback):
         """
@@ -82,6 +92,10 @@ class Postgres(object):
         :param callback: a callable with signature ``callback(interactive, dbinfo)``
         """
         self.setup_fail_callback = callback
+
+    def set_host(self, host):
+        """Set the host manually"""
+        self.dbinfo['host'] = host
 
     def set_port(self, port):
         """Set the port manually"""
@@ -106,13 +120,19 @@ class Postgres(object):
                 self.dbinfo = local_dbinfo
                 break
 
-        # This will work for the default Debian postgres setup
+        # This will work for the default Debian postgres setup, assuming that sudo is available to the user
         if self.pg_execute == _pg_execute_not_connected:
-            dbinfo['user'] = 'postgres'
-            if _try_subcmd(
-                    non_interactive=bool(not self.interactive), **dbinfo):
-                self.pg_execute = _pg_execute_sh
-                self.dbinfo = dbinfo
+            # Check if the user can find the sudo command
+            if _sudo_exists():
+                dbinfo['user'] = 'postgres'
+                if _try_subcmd(
+                        non_interactive=bool(not self.interactive), **dbinfo):
+                    self.pg_execute = _pg_execute_sh
+                    self.dbinfo = dbinfo
+            else:
+                click.echo(
+                    'Warning: Could not find `sudo`. No way of connecting to the database could be found.'
+                )
 
         # This is to allow for any other setup
         if self.pg_execute == _pg_execute_not_connected:
@@ -192,9 +212,9 @@ class Postgres(object):
     def _no_setup_detected(self):
         """Print a warning message and calls the failed setup callback"""
         message = '\n'.join([
-            'Detected no known postgres setup, some information is needed to create the aiida database and grant aiida access to it.',
-            'If you feel unsure about the following parameters, first check if postgresql is installed.',
-            'If postgresql is not installed please exit and install it, then run verdi quicksetup again.',
+            'Detected no known postgres setup, some information is needed to create the aiida database and grant ',
+            'aiida access to it. If you feel unsure about the following parameters, first check if postgresql is ',
+            'installed. If postgresql is not installed please exit and install it, then run verdi quicksetup again.',
             'If postgresql is installed, please ask your system manager to provide you with the following parameters:'
         ])
         if not self.quiet:
@@ -269,6 +289,22 @@ def _try_connect(**kwargs):
     return success
 
 
+def _sudo_exists():
+    """
+    Check that the sudo command can be found
+
+    :return: True if successful, False otherwise
+    """
+    try:
+        subprocess.check_output(['sudo', '-V'])
+    except subprocess.CalledProcessError:
+        return False
+    except OSError:
+        return False
+
+    return True
+
+
 def _try_subcmd(**kwargs):
     """
     try to run psql in a subprocess.
@@ -286,12 +322,12 @@ def _try_subcmd(**kwargs):
 
 
 def _pg_execute_psyco(command, **kwargs):
-    '''
+    """
     executes a postgres commandline through psycopg2
 
     :param command: A psql command line as a str
     :param kwargs: will be forwarded to psycopg2.connect
-    '''
+    """
     from psycopg2 import connect, ProgrammingError
     conn = connect(**kwargs)
     conn.autocommit = True
@@ -316,7 +352,7 @@ def _pg_execute_sh(command, user='postgres', **kwargs):
     :param kwargs: connection details to forward to psql, signature as in psycopg2.connect
 
     To stop `sudo` from asking for a password and fail if one is required,
-    pass `noninteractive=True` as a kwarg.
+    pass `non_interactive=True` as a kwarg.
     """
     options = ''
     database = kwargs.pop('database', None)
@@ -330,7 +366,7 @@ def _pg_execute_sh(command, user='postgres', **kwargs):
     if port:
         options += '-p {}'.format(port)
 
-    ## build command line
+    # Build command line
     sudo_cmd = ['sudo']
     non_interactive = kwargs.pop('non_interactive', None)
     if non_interactive:
@@ -343,10 +379,9 @@ def _pg_execute_sh(command, user='postgres', **kwargs):
     ]
     sudo_su_psql = sudo_cmd + su_cmd + psql_cmd
     result = subprocess.check_output(sudo_su_psql, **kwargs)
+    result = result.decode('utf-8').strip().split('\n')
+    result = [i for i in result if i]
 
-    if isinstance(result, str):
-        result = result.strip().split('\n')
-        result = [i for i in result if i]
     return result
 
 

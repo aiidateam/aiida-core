@@ -364,8 +364,8 @@ class CifData(SinglefileData):
         when setting ``ase`` or ``values``, a physical CIF file is generated
         first, the values are updated from the physical CIF file.
     """
-    _set_incompatibilities = [('ase', 'file'), ('ase', 'values'), ('file',
-                                                                   'values')]
+    _set_incompatibilities = [('ase', 'file'), ('ase', 'values'),
+                              ('file', 'values')]
     _scan_types = ['standard', 'flex']
     _parse_policies = ['eager', 'lazy']
 
@@ -453,8 +453,8 @@ class CifData(SinglefileData):
                 else:
                     raise ValueError("More than one copy of a CIF file "
                                      "with the same MD5 has been found in "
-                                     "the DB. pks={}".format(
-                                         ",".join([str(i.pk) for i in cifs])))
+                                     "the DB. pks={}".format(",".join(
+                                         [str(i.pk) for i in cifs])))
             else:
                 return cifs[0], False
 

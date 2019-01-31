@@ -89,15 +89,12 @@ class FixtureManager(object):
     Usage (pytest)::
 
         import pytest
-        from aiida.utils.fixtures import fixture_manager
-
 
         @pytest.fixture(scope='session')
         def aiida_profile():
             # set up a test profile for the duration of the tests
-            with fixture_manager() as fixture_mgr:
+            with aiida.utils.fixtures.fixture_manager() as fixture_mgr:
                 yield fixture_mgr
-
 
         @pytest.fixture(scope='function')
         def new_database(aiida_profile):

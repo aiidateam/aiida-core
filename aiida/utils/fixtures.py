@@ -88,62 +88,61 @@ class FixtureManager(object):
 
     Usage (pytest)::
 
-
-    import pytest
-    from aiida.utils.fixtures import fixture_manager
-
-
-    @pytest.fixture(scope='session')
-    def aiida_profile():
-        # set up a test profile for the duration of the tests
-        with fixture_manager() as fixture_mgr:
-        yield fixture_mgr
+        import pytest
+        from aiida.utils.fixtures import fixture_manager
 
 
-    @pytest.fixture(scope='function')
-    def new_database(aiida_profile):
-        # clear the database after each test
-        yield aiida_profile
-        aiida_profile.reset_db()
+        @pytest.fixture(scope='session')
+        def aiida_profile():
+            # set up a test profile for the duration of the tests
+            with fixture_manager() as fixture_mgr:
+            yield fixture_mgr
 
-        def test_my_stuff(test_data):
-            # run a test
 
-    @pytest.fixture(scope='function')
-    def new_database_with_daemon(aiida_profile):
-        # Configure and start daemon before running JobProcesses
-            #
-            # Note: While the global daemon implementation makes this necessary in aiida-core 0.12.x,
-            # it is no longer necessary for aiida-core 1.0.x with its "runners" (mini-daemons)
+        @pytest.fixture(scope='function')
+        def new_database(aiida_profile):
+            # clear the database after each test
+            yield aiida_profile
+            aiida_profile.reset_db()
 
-        import os
-        from aiida import get_strict_version
-        from distutils.version import StrictVersion
+            def test_my_stuff(test_data):
+                # run a test
 
-        if get_strict_version() < StrictVersion('1.0.0a1'):
-            from aiida.backends.utils import set_daemon_user
-            from aiida.cmdline.commands.daemon import Daemon
-            from aiida.common import setup
+        @pytest.fixture(scope='function')
+        def new_database_with_daemon(aiida_profile):
+            # Configure and start daemon before running JobProcesses
+                #
+                # Note: While the global daemon implementation makes this necessary in aiida-core 0.12.x,
+                # it is no longer necessary for aiida-core 1.0.x with its "runners" (mini-daemons)
 
-            set_daemon_user(aiida_profile.email)
-            daemon = Daemon()
-            daemon.logfile = os.path.join(aiida_profile.config_dir,
-                              setup.LOG_SUBDIR, setup.CELERY_LOG_FILE)
-            daemon.pidfile = os.path.join(aiida_profile.config_dir,
-                              setup.LOG_SUBDIR, setup.CELERY_PID_FILE)
-            daemon.celerybeat_schedule = os.path.join(aiida_profile.config_dir,
-                                  setup.DAEMON_SUBDIR, 'celerybeat-schedule')
+            import os
+            from aiida import get_strict_version
+            from distutils.version import StrictVersion
 
-            if daemon.get_daemon_pid() is None:
-                daemon.daemon_start()
+            if get_strict_version() < StrictVersion('1.0.0a1'):
+                from aiida.backends.utils import set_daemon_user
+                from aiida.cmdline.commands.daemon import Daemon
+                from aiida.common import setup
+
+                set_daemon_user(aiida_profile.email)
+                daemon = Daemon()
+                daemon.logfile = os.path.join(aiida_profile.config_dir,
+                                  setup.LOG_SUBDIR, setup.CELERY_LOG_FILE)
+                daemon.pidfile = os.path.join(aiida_profile.config_dir,
+                                  setup.LOG_SUBDIR, setup.CELERY_PID_FILE)
+                daemon.celerybeat_schedule = os.path.join(aiida_profile.config_dir,
+                                      setup.DAEMON_SUBDIR, 'celerybeat-schedule')
+
+                if daemon.get_daemon_pid() is None:
+                    daemon.daemon_start()
+                else:
+                    daemon.daemon_restart()
+                yield aiida_profile
+                daemon.kill_daemon()
+                aiida_profile.reset_db()
             else:
-                daemon.daemon_restart()
-            yield aiida_profile
-            daemon.kill_daemon()
-            aiida_profile.reset_db()
-        else:
-            yield aiida_profile
-            aiida_profile.reset_db()
+                yield aiida_profile
+                aiida_profile.reset_db()
 
     """
 

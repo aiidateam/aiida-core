@@ -294,7 +294,7 @@ class Help(VerdiCommand):
             print ""
             print ("Use '{} help <command>' for more information "
                    "on a specific command.".format(execname))
-            sys.exit(1)
+            sys.exit(0)
 
         if command in short_doc:
             print "Description for '%s %s'" % (execname, command)

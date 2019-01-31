@@ -93,8 +93,9 @@ class FixtureManager(object):
         @pytest.fixture(scope='session')
         def aiida_profile():
             # set up a test profile for the duration of the tests
-            with aiida.utils.fixtures.fixture_manager() as fixture_mgr:
-                yield fixture_mgr
+            from aiida.utils.fixtures import fixture_manager
+            with fixture_manager():
+                yield fixture_manager
 
         @pytest.fixture(scope='function')
         def new_database(aiida_profile):
@@ -136,10 +137,10 @@ class FixtureManager(object):
                     daemon.daemon_restart()
                 yield aiida_profile
                 daemon.kill_daemon()
-                aiida_profile.reset_db()
             else:
                 yield aiida_profile
-                aiida_profile.reset_db()
+
+            aiida_profile.reset_db()
 
     """
 

@@ -2480,24 +2480,28 @@ class TestExtras(AiidaTestCase):
 
     def setUp(self):
         """This function runs before every test execution"""
-        from aiida.orm.data import Data
         from aiida.orm.importexport import import_data
-        from aiida.orm.querybuilder import QueryBuilder
         self.clean_db()
         self.insert_data()
-        import_data(self.export_file, silent=True)
+
+    def import_extras(self, mode_new='import'):
+        """Import an aiida database"""
+        from aiida.orm.data import Data
+        from aiida.orm.querybuilder import QueryBuilder
+        import_data(self.export_file, silent=True, extras_mode_new=mode_new)
         q = QueryBuilder().append(Data, filters={'label': 'my_test_data_node'})
         self.assertEquals(q.count(), 1)
         self.imported_node = q.all()[0][0]
 
-    def modify_extras(self, mode):
+    def modify_extras(self, mode_existing):
+        """Import the same aiida database again"""
         from aiida.orm.data import Data
         from aiida.orm.querybuilder import QueryBuilder
         self.imported_node.set_extra('a', 1)
         self.imported_node.set_extra('b', 1000)
         self.imported_node.del_extra('c')
 
-        import_data(self.export_file, silent=True, extras_mode=mode)
+        import_data(self.export_file, silent=True, extras_mode_existing=mode_existing)
 
         # Query again the database
         q = QueryBuilder().append(Data, filters={'label': 'my_test_data_node'})
@@ -2510,13 +2514,24 @@ class TestExtras(AiidaTestCase):
 
     def test_import_of_extras(self):
         """Check if extras are properly imported"""
-        # check that extras are imported correctly
+        self.import_extras()
         self.assertEquals(self.imported_node.get_extra('b'), 2)
         self.assertEquals(self.imported_node.get_extra('c'), 3)
+
+    def test_absence_of_extras(self):
+        """Check whether extras are not imported if the mode is set to 'none'"""
+        self.import_extras(mode_new='none')
+        with self.assertRaises(AttributeError):
+            # the extra 'b' should not exist
+            self.imported_node.get_extra('b')
+        with self.assertRaises(AttributeError):
+            # the extra 'c' should not exist
+            self.imported_node.get_extra('c')
         
     def test_extras_import_mode_keep_existing(self):
         """Check if old extras are not modified in case of name collision"""
-        imported_node = self.modify_extras(mode='kcl')
+        self.import_extras()
+        imported_node = self.modify_extras(mode_existing='kcl')
 
         # Check that extras are imported correctly
         self.assertEquals(imported_node.get_extra('a'), 1)
@@ -2525,7 +2540,8 @@ class TestExtras(AiidaTestCase):
 
     def test_extras_import_mode_update_existing(self):
         """Check if old extras are modified in case of name collision"""
-        imported_node = self.modify_extras(mode='kcu')
+        self.import_extras()
+        imported_node = self.modify_extras(mode_existing='kcu')
 
         # Check that extras are imported correctly
         self.assertEquals(imported_node.get_extra('a'), 1)
@@ -2534,7 +2550,8 @@ class TestExtras(AiidaTestCase):
     
     def test_extras_import_mode_mirror(self):
         """Check if old extras are fully overwritten by the imported ones"""
-        imported_node = self.modify_extras(mode='ncu')
+        self.import_extras()
+        imported_node = self.modify_extras(mode_existing='ncu')
 
         # Check that extras are imported correctly
         with self.assertRaises(AttributeError): # the extra 
@@ -2546,7 +2563,8 @@ class TestExtras(AiidaTestCase):
     
     def test_extras_import_mode_none(self):
         """Check if old extras are fully overwritten by the imported ones"""
-        imported_node = self.modify_extras(mode='knl')
+        self.import_extras()
+        imported_node = self.modify_extras(mode_existing='knl')
 
         # Check if extras are imported correctly
         self.assertEquals(imported_node.get_extra('b'), 1000)
@@ -2557,7 +2575,8 @@ class TestExtras(AiidaTestCase):
     
     def test_extras_import_mode_strange(self):
         """Check a mode that is probably does not make much sense but is still available"""
-        imported_node = self.modify_extras(mode='kcd')
+        self.import_extras()
+        imported_node = self.modify_extras(mode_existing='kcd')
 
         # Check if extras are imported correctly
         self.assertEquals(imported_node.get_extra('a'), 1)

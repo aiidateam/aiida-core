@@ -20,7 +20,8 @@ from aiida.cmdline.params.types import GroupParamType
 from aiida.cmdline.utils import decorators, echo
 from aiida.common import exceptions
 
-EXTRAS_IMPORT_MODES = ['keep_existing', 'update_existing', 'mirror', 'none', 'ask']
+EXTRAS_MODE_EXISTING = ['keep_existing', 'update_existing', 'mirror', 'none', 'ask']
+EXTRAS_MODE_NEW = ['import', 'none']
 
 
 # pylint: disable=too-few-public-methods
@@ -50,16 +51,26 @@ class ExtrasImportCode(Enum):
     ' created automatically.')
 @click.option(
     '-e',
-    '--extras_import_mode',
-    type=click.Choice(EXTRAS_IMPORT_MODES),
+    '--extras-mode-existing',
+    type=click.Choice(EXTRAS_MODE_EXISTING),
     default='keep_existing',
-    help="keep_existing: in case of a name collision keep the original value. "
-    "update_existing: in case of a name collision take the updated value. "
-    "mirror: keep the imported extras only and remove the extras that are not present in the imported node. "
-    "none: do not import the new extras. "
-    "ask: ask what to do in case of a name collision. ")
+    help="Specify which extras from the export archive should be imported for nodes that are already contained in the "
+    "database: "
+    "ask: import all extras and prompt what to do for existing extras. "
+    "keep_existing: import all extras and keep original value of existing extras. "
+    "update_existing: import all extras and overwrite value of existing extras. "
+    "mirror: import all extras and remove any existing extras that are not present in the archive. "
+    "none: do not import any extras.")
+@click.option(
+    '-n',
+    '--extras-mode-new',
+    type=click.Choice(EXTRAS_MODE_NEW),
+    default='import',
+    help="Specify whether to import extras of new nodes: "
+    "import: import extras. "
+    "none: do not import extras.")
 @decorators.with_dbenv()
-def cmd_import(archives, webpages, group, extras_import_mode):
+def cmd_import(archives, webpages, group, extras_mode_existing, extras_mode_new):
     """Import one or multiple exported AiiDA archives
 
     The ARCHIVES can be specified by their relative or absolute file path, or their HTTP URL.
@@ -101,7 +112,11 @@ def cmd_import(archives, webpages, group, extras_import_mode):
         echo.echo_info('importing archive {}'.format(archive))
 
         try:
-            import_data(archive, group, extras_mode=ExtrasImportCode[extras_import_mode].value)
+            import_data(
+                archive,
+                group,
+                extras_mode_existing=ExtrasImportCode[extras_mode_existing].value,
+                extras_mode_new=extras_mode_new)
         except exceptions.IncompatibleArchiveVersionError as exception:
             echo.echo_warning('{} cannot be imported: {}'.format(archive, exception))
             echo.echo_warning('run `verdi export migrate {}` to update it'.format(archive))
@@ -129,7 +144,10 @@ def cmd_import(archives, webpages, group, extras_import_mode):
 
             try:
                 import_data(
-                    temp_folder.get_abs_path(temp_file), group, extras_mode=ExtrasImportCode[extras_import_mode].value)
+                    temp_folder.get_abs_path(temp_file),
+                    group,
+                    extras_mode_existing=ExtrasImportCode[extras_mode_existing].value,
+                    extras_mode_new=extras_mode_new)
             except exceptions.IncompatibleArchiveVersionError as exception:
                 echo.echo_warning('{} cannot be imported: {}'.format(archive, exception))
                 echo.echo_warning('download the archive file and run `verdi export migrate` to update it')

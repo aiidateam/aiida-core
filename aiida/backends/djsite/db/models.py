@@ -1072,11 +1072,7 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
             stored in the Db table, correctly converted
             to the right type.
         """
-        if isinstance(dbnode, six.integer_types):
-            dbnode_node = DbNode(id=dbnode)
-        else:
-            dbnode_node = dbnode
-        return cls.get_all_values_for_nodepk(dbnode_node.pk)
+        return cls.get_all_values_for_nodepk(dbnode.pk)
 
     @classmethod
     def get_all_values_for_nodepk(cls, dbnodepk):

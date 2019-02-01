@@ -119,7 +119,7 @@ extras_require = {
     ],
     'dev_precommit': [
         'pre-commit==1.13.0',
-        'yapf==0.21.0',
+        'yapf==0.24.0',
         'prospector==0.12.7',
         'pylint==1.8.4',
         'toml==0.9.4'

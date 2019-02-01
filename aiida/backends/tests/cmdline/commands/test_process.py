@@ -73,6 +73,17 @@ class TestVerdiProcessDaemon(AiidaTestCase):
             if time.time() - start_time >= self.TEST_TIMEOUT:
                 self.fail('Timed out waiting for process to enter waiting state')
 
+        # Make sure that calling any command on a non-existing process id will not except but print an error
+        # To simulate a process without a corresponding task, we simply create a node and store it. This node will not
+        # have an associated task at RabbitMQ, but it will be a valid `ProcessNode` so it will pass the initial
+        # filtering of the `verdi process` commands
+        orphaned_node = WorkFunctionNode().store()
+        non_existing_process_id = str(orphaned_node.pk)
+        for command in [cmd_process.process_pause, cmd_process.process_play, cmd_process.process_kill]:
+            result = self.cli_runner.invoke(command, [non_existing_process_id])
+            self.assertClickResultNoException(result)
+            self.assertIn('Error:', result.output)
+
         self.assertFalse(calc.paused)
         result = self.cli_runner.invoke(cmd_process.process_pause, [str(calc.pk)])
         self.assertIsNone(result.exception, result.output)

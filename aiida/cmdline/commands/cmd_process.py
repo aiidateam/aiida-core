@@ -12,7 +12,11 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import click
+
+from kiwipy import communications
+
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.utils import decorators, echo
@@ -134,8 +138,12 @@ def process_kill(processes, timeout, wait):
             echo.echo_error('Process<{}> is already terminated'.format(process.pk))
             continue
 
-        future = controller.kill_process(process.pk, msg='Killed through `verdi process kill`')
-        futures[future] = process
+        try:
+            future = controller.kill_process(process.pk, msg='Killed through `verdi process kill`')
+        except communications.UnroutableError:
+            echo.echo_error('Process<{}> is unreachable'.format(process.pk))
+        else:
+            futures[future] = process
 
     process_actions(futures, 'kill', 'killing', 'killed', wait, timeout)
 
@@ -161,8 +169,12 @@ def process_pause(processes, timeout, wait):
             echo.echo_error('Process<{}> is already terminated'.format(process.pk))
             continue
 
-        future = controller.pause_process(process.pk, msg='Paused through `verdi process pause`')
-        futures[future] = process
+        try:
+            future = controller.pause_process(process.pk, msg='Paused through `verdi process pause`')
+        except communications.UnroutableError:
+            echo.echo_error('Process<{}> is unreachable'.format(process.pk))
+        else:
+            futures[future] = process
 
     process_actions(futures, 'pause', 'pausing', 'paused', wait, timeout)
 
@@ -188,8 +200,12 @@ def process_play(processes, timeout, wait):
             echo.echo_error('Process<{}> is already terminated'.format(process.pk))
             continue
 
-        future = controller.play_process(process.pk)
-        futures[future] = process
+        try:
+            future = controller.play_process(process.pk)
+        except communications.UnroutableError:
+            echo.echo_error('Process<{}> is unreachable'.format(process.pk))
+        else:
+            futures[future] = process
 
     process_actions(futures, 'play', 'playing', 'played', wait, timeout)
 

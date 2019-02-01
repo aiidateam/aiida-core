@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import collections
+import six
 from ast import literal_eval
 from plum.util import AttributesFrozendict
 from aiida.common.extendeddicts import AttributeDict
@@ -42,7 +43,7 @@ def decode_key(key):
     :param key: the key to decode
     :return: the decoded key
     """
-    if key.startswith(_PREFIX_KEY_TUPLE):
+    if isinstance(key, six.string_types) and key.startswith(_PREFIX_KEY_TUPLE):
         return literal_eval(key[len(_PREFIX_KEY_TUPLE):])
     else:
         return key

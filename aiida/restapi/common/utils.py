@@ -510,7 +510,8 @@ class Utils(object):
         rtype = None
 
         # io tree limit parameters
-        tree_limit = None
+        tree_in_limit = None
+        tree_out_limit = None
 
         ## Count how many time a key has been used for the filters and check if
         # reserved keyword
@@ -578,9 +579,12 @@ class Utils(object):
             raise RestInputValidationError(
                 "You cannot specify rtype more than "
                 "once")
-        if 'tree_limit' in field_counts.keys() and field_counts['tree_limit'] > 1:
+        if 'in_limit' in field_counts.keys() and field_counts['in_limit'] > 1:
             raise RestInputValidationError(
-                "You cannot specify tree_limit more than once")
+                "You cannot specify in_limit more than once")
+        if 'out_limit' in field_counts.keys() and field_counts['out_limit'] > 1:
+            raise RestInputValidationError(
+                "You cannot specify out_limit more than once")
 
         ## Extract results
         for field in field_list:
@@ -681,12 +685,19 @@ class Utils(object):
                         "only assignment operator '=' "
                         "is permitted after 'rtype'")
 
-            elif field[0] == 'tree_limit':
+            elif field[0] == 'in_limit':
                 if field[1] == '=':
-                    tree_limit = field[2]
+                    tree_in_limit = field[2]
                 else:
                     raise RestInputValidationError(
-                        "only assignment operator '=' is permitted after 'tree_limit'")
+                        "only assignment operator '=' is permitted after 'in_limit'")
+
+            elif field[0] == 'out_limit':
+                if field[1] == '=':
+                    tree_out_limit = field[2]
+                else:
+                    raise RestInputValidationError(
+                        "only assignment operator '=' is permitted after 'out_limit'")
 
             else:
 
@@ -720,7 +731,7 @@ class Utils(object):
         #     limit = self.LIMIT_DEFAULT
 
         return (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-                nelist, downloadformat, visformat, filename, rtype, tree_limit)
+                nelist, downloadformat, visformat, filename, rtype, tree_in_limit, tree_out_limit)
 
     def parse_query_string(self, query_string):
         """

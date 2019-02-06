@@ -124,7 +124,7 @@ class BaseResource(Resource):
             path, parse_pk_uuid=self.parse_pk_uuid)
         (limit, offset, perpage, orderby, filters, _alist, _nalist, _elist,
          _nelist, _downloadformat, _visformat, _filename,
-         _rtype) = self.utils.parse_query_string(query_string)
+         _rtype, tree_limit) = self.utils.parse_query_string(query_string)
 
         ## Validate request
         self.utils.validate_request(
@@ -226,7 +226,7 @@ class Node(Resource):
 
         (limit, offset, perpage, orderby, filters, alist, nalist, elist, nelist,
          downloadformat, visformat, filename,
-         rtype) = self.utils.parse_query_string(query_string)
+         rtype, tree_limit) = self.utils.parse_query_string(query_string)
 
         ## Validate request
         self.utils.validate_request(
@@ -250,7 +250,7 @@ class Node(Resource):
         elif query_type == "statistics":
             (limit, offset, perpage, orderby, filters, alist, nalist, elist,
              nelist, downloadformat, visformat, filename,
-             rtype) = self.utils.parse_query_string(query_string)
+             rtype, tree_limit) = self.utils.parse_query_string(query_string)
             headers = self.utils.build_headers(url=request.url, total_count=0)
             if filters:
                 usr = filters["user"]["=="]
@@ -261,7 +261,7 @@ class Node(Resource):
         # TODO Might need to be improved
         elif query_type == "tree":
             headers = self.utils.build_headers(url=request.url, total_count=0)
-            results = self.trans.get_io_tree(id)
+            results = self.trans.get_io_tree(id, tree_limit)
         else:
             ## Initialize the translator
             self.trans.set_query(

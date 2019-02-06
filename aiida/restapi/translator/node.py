@@ -519,7 +519,7 @@ class NodeTranslator(BaseTranslator):
         return qmanager.get_creation_statistics(user_pk=user_pk)
 
 
-    def get_io_tree(self, uuid_pattern):
+    def get_io_tree(self, uuid_pattern, tree_limit):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.node import Node
 
@@ -569,12 +569,61 @@ class NodeTranslator(BaseTranslator):
             })
         nodeCount += 1
 
+        # check tree limit parameter
+        if tree_limit is None:
+            from aiida.restapi.common.config import IOTREE_LIMIT_DEFAULT
+            tree_limit = IOTREE_LIMIT_DEFAULT
+
+        # number of input nodes
+        qb = QueryBuilder()
+        qb.append(Node, tag="main", project=['id'],
+                  filters=self._id_filter)
+        qb.append(Node, tag="in", project=['id'], input_of='main')
+        no_of_inputs = qb.count()
+
+        # number of output nodes
+        qb = QueryBuilder()
+        qb.append(Node, tag="main", project=['id'],
+                  filters=self._id_filter)
+        qb.append(Node, tag="out", project=['id'], output_of='main')
+        no_of_outputs = qb.count()
+
+        # calculate in_limit and out_limit
+        # if tree_limit is odd (e.g. 11): return main node + 5 input nodes + 5 output nodes.
+        # if tree_limit is even (e.g. 10): return main node + 5 input nodes + 4 output nodes
+        if ((tree_limit % 2) == 0):  # tree_limit is a even number
+            out_limit = tree_limit / 2
+            in_limit = tree_limit - (out_limit + 1)
+        else:  # tree_limit is a odd number
+            in_limit = out_limit = tree_limit / 2
+
+        # cases:
+        # 1. no_of_inputs < in_limit and no_of_outputs < out_limit
+        #       return all input and output nodes
+        # 2. no_of_inputs > in_limit and no_of_outputs > out_limit
+        #       apply in_limit and out_limit to return no of inputs and outputs
+        # 3. no_of_inputs < in_limit and no_of_outputs > out_limit
+        #       return all input nodes (in_limit= no_of_inputs); out_limit = tree_limit - (in_limit + 1)
+        # 4. no_of_inputs > in_limit and no_of_outputs < out_limit
+        #       return all output nodes (out_limit = no_of_outputs); in_limit = tree_limit - (out_limit + 1)
+        if(no_of_inputs < in_limit and no_of_outputs < out_limit) or (no_of_inputs > in_limit and no_of_outputs > out_limit):
+            pass
+        elif (no_of_inputs < in_limit and no_of_outputs > out_limit):
+            out_limit += in_limit - no_of_inputs
+            in_limit = no_of_inputs
+        if (no_of_inputs > in_limit and no_of_outputs < out_limit):
+            in_limit += out_limit - no_of_outputs
+            out_limit = no_of_outputs
+
+        print ("no_of_inputs, in_limit, no_of_outputs, out_limit: ", no_of_inputs, in_limit, no_of_outputs, out_limit)
+
         # get all inputs
         qb = QueryBuilder()
         qb.append(Node, tag="main", project=['*'],
                   filters=self._id_filter)
         qb.append(Node, tag="in", project=['*'], edge_project=['label', 'type'],
                   input_of='main')
+        qb.limit(in_limit)
 
         input_node_pks = {}
 
@@ -625,6 +674,7 @@ class NodeTranslator(BaseTranslator):
                   filters=self._id_filter)
         qb.append(Node, tag="out", project=['*'], edge_project=['label', 'type'],
                   output_of='main')
+        qb.limit(out_limit)
 
         output_node_pks = {}
 

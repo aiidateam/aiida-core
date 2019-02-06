@@ -509,6 +509,9 @@ class Utils(object):
         filename = None
         rtype = None
 
+        # io tree limit parameters
+        tree_limit = None
+
         ## Count how many time a key has been used for the filters and check if
         # reserved keyword
         # have been used twice,
@@ -575,6 +578,9 @@ class Utils(object):
             raise RestInputValidationError(
                 "You cannot specify rtype more than "
                 "once")
+        if 'tree_limit' in field_counts.keys() and field_counts['tree_limit'] > 1:
+            raise RestInputValidationError(
+                "You cannot specify tree_limit more than once")
 
         ## Extract results
         for field in field_list:
@@ -675,6 +681,13 @@ class Utils(object):
                         "only assignment operator '=' "
                         "is permitted after 'rtype'")
 
+            elif field[0] == 'tree_limit':
+                if field[1] == '=':
+                    tree_limit = field[2]
+                else:
+                    raise RestInputValidationError(
+                        "only assignment operator '=' is permitted after 'tree_limit'")
+
             else:
 
                 ## Construct the filter entry.
@@ -707,7 +720,7 @@ class Utils(object):
         #     limit = self.LIMIT_DEFAULT
 
         return (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-                nelist, downloadformat, visformat, filename, rtype)
+                nelist, downloadformat, visformat, filename, rtype, tree_limit)
 
     def parse_query_string(self, query_string):
         """

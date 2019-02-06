@@ -11,6 +11,8 @@
 LIMIT_DEFAULT = 400
 PERPAGE_DEFAULT = 20
 
+IOTREE_LIMIT_DEFAULT = 21
+
 ##Version prefix for all the URLs
 PREFIX="/api/v2"
 

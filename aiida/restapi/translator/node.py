@@ -673,5 +673,16 @@ class NodeTranslator(BaseTranslator):
                     "label": linktype
                 })
 
+        # count total no of nodes
+        qb = QueryBuilder()
+        qb.append(Node, tag="main", project=['id'], filters=self._id_filter)
+        qb.append(Node, tag="in", project=['id'], input_of='main')
+        no_of_inputs = qb.count()
 
-        return {"nodes": nodes, "edges": edges}
+        qb = QueryBuilder()
+        qb.append(Node, tag="main", project=['id'], filters=self._id_filter)
+        qb.append(Node, tag="out", project=['id'], output_of='main')
+        no_of_outputs = qb.count()
+
+
+        return {"nodes": nodes, "edges": edges, "total_no_of_incomings": no_of_inputs, "total_no_of_outgoings": no_of_outputs}

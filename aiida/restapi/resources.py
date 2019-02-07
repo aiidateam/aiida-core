@@ -24,9 +24,7 @@ class ServerInfo(Resource):
         # Configure utils
         utils_conf_keys = ('PREFIX', 'PERPAGE_DEFAULT', 'LIMIT_DEFAULT')
         self.utils_confs = {
-            k: kwargs[k]
-            for k in utils_conf_keys
-            if k in kwargs
+            k: kwargs[k] for k in utils_conf_keys if k in kwargs
         }
         self.utils = Utils(**self.utils_confs)
 
@@ -103,9 +101,7 @@ class BaseResource(Resource):
         # Configure utils
         utils_conf_keys = ('PREFIX', 'PERPAGE_DEFAULT', 'LIMIT_DEFAULT')
         self.utils_confs = {
-            k: kwargs[k]
-            for k in utils_conf_keys
-            if k in kwargs
+            k: kwargs[k] for k in utils_conf_keys if k in kwargs
         }
         self.utils = Utils(**self.utils_confs)
         self.method_decorators = {'get': kwargs.get('get_decorators', [])}
@@ -207,9 +203,7 @@ class Node(Resource):
         # Configure utils
         utils_conf_keys = ('PREFIX', 'PERPAGE_DEFAULT', 'LIMIT_DEFAULT')
         self.utils_confs = {
-            k: kwargs[k]
-            for k in utils_conf_keys
-            if k in kwargs
+            k: kwargs[k] for k in utils_conf_keys if k in kwargs
         }
         self.utils = Utils(**self.utils_confs)
         self.method_decorators = {'get': kwargs.get('get_decorators', [])}

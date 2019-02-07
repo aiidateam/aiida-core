@@ -49,6 +49,7 @@
     "ipython>=4.0,<6.0",
     "plumpy==0.12.1",
     "kiwipy[rmq]==0.4.2",
+    "pika==1.0.0b1",
     "circus==0.14.0",
     "tornado==4.5.3",
     "pyblake2==1.1.2; python_version<'3.6'",

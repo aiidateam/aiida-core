@@ -10,20 +10,15 @@
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
+
 import io
-import sys
 
 import six
 from six.moves import zip
 from six.moves.html_parser import HTMLParser
 from aiida.common import exceptions
 from aiida.common.utils import export_shard_uuid, get_class_string, grouper
-from aiida.orm.computers import Computer
-from aiida.orm.groups import Group, GroupTypeString
-from aiida.orm.node import Node
-from aiida.orm.querybuilder import QueryBuilder
-from aiida.orm.users import User
-from aiida.orm.logs import Log
+from aiida.orm import Computer, Group, GroupTypeString, Node, QueryBuilder, User, Log, Comment
 
 IMPORTGROUP_TYPE = GroupTypeString.IMPORTGROUP_TYPE
 DUPL_SUFFIX = ' (Imported #{})'
@@ -38,6 +33,7 @@ ATTRIBUTE_ENTITY_NAME = "Attribute"
 COMPUTER_ENTITY_NAME = "Computer"
 USER_ENTITY_NAME = "User"
 LOG_ENTITY_NAME = "Log"
+COMMENT_ENTITY_NAME = "Comment"
 
 # The signatures used to reference the entities in the import/export file
 NODE_SIGNATURE = "aiida.backends.djsite.db.models.DbNode"
@@ -47,6 +43,7 @@ COMPUTER_SIGNATURE = "aiida.backends.djsite.db.models.DbComputer"
 USER_SIGNATURE = "aiida.backends.djsite.db.models.DbUser"
 ATTRIBUTE_SIGNATURE = "aiida.backends.djsite.db.models.DbAttribute"
 LOG_SIGNATURE = "aiida.backends.djsite.db.models.DbLog"
+COMMENT_SIGNATURE = "aiida.backends.djsite.db.models.DbComment"
 
 # Mapping from entity names to signatures (used by the SQLA import/export)
 entity_names_to_signatures = {
@@ -57,6 +54,7 @@ entity_names_to_signatures = {
     USER_ENTITY_NAME: USER_SIGNATURE,
     ATTRIBUTE_ENTITY_NAME: ATTRIBUTE_SIGNATURE,
     LOG_ENTITY_NAME: LOG_SIGNATURE,
+    COMMENT_ENTITY_NAME: COMMENT_SIGNATURE
 }
 
 # Mapping from signatures to entity names (used by the SQLA import/export)
@@ -68,6 +66,7 @@ signatures_to_entity_names = {
     USER_SIGNATURE: USER_ENTITY_NAME,
     ATTRIBUTE_SIGNATURE: ATTRIBUTE_ENTITY_NAME,
     LOG_SIGNATURE: LOG_ENTITY_NAME,
+    COMMENT_SIGNATURE: COMMENT_ENTITY_NAME
 }
 
 # Mapping from entity names to AiiDA classes (used by the SQLA import/export)
@@ -77,6 +76,7 @@ entity_names_to_entities = {
     COMPUTER_ENTITY_NAME: Computer,
     USER_ENTITY_NAME: User,
     LOG_ENTITY_NAME: Log,
+    COMMENT_ENTITY_NAME: Comment
 }
 
 
@@ -115,16 +115,20 @@ def schema_to_entity_names(class_string):
             class_string == "aiida.backends.sqlalchemy.models.log.DbLog"):
         return LOG_ENTITY_NAME
 
+    if (class_string == "aiida.backends.djsite.db.models.DbComment" or
+            class_string == "aiida.backends.sqlalchemy.models.comment.DbComment"):
+        return COMMENT_ENTITY_NAME
+
 
 # Mapping of entity names to SQLA class paths
 entity_names_to_sqla_schema = {
     NODE_ENTITY_NAME: "aiida.backends.sqlalchemy.models.node.DbNode",
     LINK_ENTITY_NAME: "aiida.backends.sqlalchemy.models.node.DbLink",
     GROUP_ENTITY_NAME: "aiida.backends.sqlalchemy.models.group.DbGroup",
-    COMPUTER_ENTITY_NAME:
-        "aiida.backends.sqlalchemy.models.computer.DbComputer",
+    COMPUTER_ENTITY_NAME: "aiida.backends.sqlalchemy.models.computer.DbComputer",
     USER_ENTITY_NAME: "aiida.backends.sqlalchemy.models.user.DbUser",
     LOG_ENTITY_NAME: "aiida.backends.sqlalchemy.models.log.DbLog",
+    COMMENT_ENTITY_NAME: "aiida.backends.sqlalchemy.models.comment.DbComment"
 }
 
 # Mapping of the export file fields (that coincide with the Django fields) to
@@ -134,15 +138,21 @@ entity_names_to_sqla_schema = {
 file_fields_to_model_fields = {
     NODE_ENTITY_NAME: {
         "dbcomputer": "dbcomputer_id",
-        "user": "user_id"},
+        "user": "user_id"
+    },
     GROUP_ENTITY_NAME: {
         "user": "user_id"
     },
     COMPUTER_ENTITY_NAME: {
-        "metadata": "_metadata"},
+        "metadata": "_metadata"
+    },
     LOG_ENTITY_NAME: {
         "dbnode": "dbnode_id",
         "metadata": "_metadata"
+    },
+    COMMENT_ENTITY_NAME: {
+        "dbnode": "dbnode_id",
+        "user": "user_id"
     }
 }
 
@@ -150,17 +160,23 @@ file_fields_to_model_fields = {
 model_fields_to_file_fields = {
     NODE_ENTITY_NAME: {
         "dbcomputer_id": "dbcomputer",
-        "user_id": "user"},
+        "user_id": "user"
+    },
     LINK_ENTITY_NAME: {},
     GROUP_ENTITY_NAME: {
         "user_id": "user"
     },
     COMPUTER_ENTITY_NAME: {
-        "_metadata": "metadata"},
+        "_metadata": "metadata"
+    },
     USER_ENTITY_NAME: {},
     LOG_ENTITY_NAME: {
         "dbnode_id": "dbnode",
         "_metadata": "metadata"
+    },
+    COMMENT_ENTITY_NAME: {
+        "dbnode_id": "dbnode",
+        "user_id": "user"
     }
 }
 
@@ -182,6 +198,7 @@ def get_all_fields_info():
         ATTRIBUTE_ENTITY_NAME: None,
         GROUP_ENTITY_NAME: "uuid",
         LOG_ENTITY_NAME: "uuid",
+        COMMENT_ENTITY_NAME: "uuid"
     }
 
     all_fields_info = dict()
@@ -278,6 +295,24 @@ def get_all_fields_info():
              "requires": NODE_ENTITY_NAME
          }
     }
+    all_fields_info[COMMENT_ENTITY_NAME] = {
+         "uuid": {},
+         "ctime": {
+             "convert_type": "date"
+         },
+         "mtime": {
+             "convert_type": "date"
+         },
+         "content": {},
+         "dbnode": {
+             "related_name": "dbcomments",
+             "requires": NODE_ENTITY_NAME
+         },
+         "user": {
+             "related_name": "dbcomments",
+             "requires": USER_ENTITY_NAME
+         }
+    }
     return all_fields_info, unique_identifiers
 
 
@@ -368,7 +403,7 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
                    silent=False):
     """
     Import exported AiiDA environment to the AiiDA database.
-    If the 'in_path' is a folder, calls export_tree; otherwise, tries to
+    If the 'in_path' is a folder, calls extract_tree; otherwise, tries to
     detect the compression format (zip, tar.gz, tar.bz2, ...) and calls the
     correct function.
 
@@ -405,7 +440,7 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
     # The sandbox has to remain open until the end
     with SandboxFolder() as folder:
         if os.path.isdir(in_path):
-            extract_tree(in_path, folder, silent=silent)
+            extract_tree(in_path, folder)
         else:
             if tarfile.is_tarfile(in_path):
                 extract_tar(in_path, folder, silent=silent,
@@ -472,7 +507,8 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
             import_nodes_uuid = set()
 
         # the combined set of linked_nodes and group_nodes was obtained from looking at all the links
-        # the combined set of db_nodes_uuid and import_nodes_uuid was received from the staff actually referred to in export_data
+        # the combined set of db_nodes_uuid and import_nodes_uuid was received from the staff
+        # actually referred to in export_data
         unknown_nodes = linked_nodes.union(group_nodes) - db_nodes_uuid.union(
             import_nodes_uuid)
 
@@ -490,9 +526,9 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
         # I hardcode here the model order, for simplicity; in any case, this is
         # fixed by the export version
 
-        model_order = (USER_ENTITY_NAME, COMPUTER_ENTITY_NAME, NODE_ENTITY_NAME, GROUP_ENTITY_NAME, LOG_ENTITY_NAME)
-        # Models that do appear in the import file, but whose import is
-        # managed manually
+        model_order = (USER_ENTITY_NAME, COMPUTER_ENTITY_NAME, NODE_ENTITY_NAME,
+                      GROUP_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME)
+        # Models that do appear in the import file, but whose import is managed manually
         model_manual = (LINK_ENTITY_NAME, ATTRIBUTE_ENTITY_NAME)
 
         all_known_models = model_order + model_manual
@@ -902,7 +938,7 @@ def validate_uuid(given_uuid):
 def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False, silent=False):
     """
     Import exported AiiDA environment to the AiiDA database.
-    If the 'in_path' is a folder, calls export_tree; otherwise, tries to
+    If the 'in_path' is a folder, calls extract_tree; otherwise, tries to
     detect the compression format (zip, tar.gz, tar.bz2, ...) and calls the
     correct function.
 
@@ -937,7 +973,7 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False, silen
     # The sandbox has to remain open until the end
     with SandboxFolder() as folder:
         if os.path.isdir(in_path):
-            extract_tree(in_path, folder, silent=silent)
+            extract_tree(in_path, folder)
         else:
             if tarfile.is_tarfile(in_path):
                 extract_tar(in_path, folder, silent=silent,
@@ -1024,7 +1060,8 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False, silen
         # ['aiida.backends.djsite.db.models.DbUser', 'aiida.backends.djsite.db.models.DbComputer', 'aiida.backends.djsite.db.models.DbNode', 'aiida.backends.djsite.db.models.DbGroup']
         entity_sig_order = [entity_names_to_signatures[m]
                             for m in (USER_ENTITY_NAME, COMPUTER_ENTITY_NAME,
-                                      NODE_ENTITY_NAME, GROUP_ENTITY_NAME, LOG_ENTITY_NAME)]
+                                      NODE_ENTITY_NAME, GROUP_ENTITY_NAME,
+                                      LOG_ENTITY_NAME, COMMENT_ENTITY_NAME)]
         # "Entities" that do appear in the import file, but whose import is
         # managed manually
         entity_sig_manual = [entity_names_to_signatures[m]
@@ -1686,7 +1723,8 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str,
             "Computer": "with_computer",
             "Group": "with_group",
             "User": "with_user",
-            "Log": "with_log"
+            "Log": "with_log",
+            "Comment": "with_comment"
         },
         "Group": {
             "Node": "with_node"
@@ -1696,10 +1734,15 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str,
         },
         "User": {
             "Node": "with_node",
-            "Group": "with_group"
+            "Group": "with_group",
+            "Comment": "with_comment",
         },
         "Log": {
             "Node": "with_node"
+        },
+        "Comment": {
+            "Node": "with_node",
+            "User": "with_user"
         }
     }
 
@@ -1743,7 +1786,7 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str,
 
 def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
                 silent=False, input_forward=False, create_reversed=True,
-                return_reversed=False, call_reversed=False, include_logs=True,
+                return_reversed=False, call_reversed=False, include_comments=True, include_logs=True,
                 **kwargs):
     """
     Export the entries passed in the 'what' list to a file tree.
@@ -1767,6 +1810,8 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
     whether all licenses of Data nodes are in the list. If a function,
     then calls function for licenses of Data nodes expecting True if
     license is allowed, False otherwise.
+    :param include_comments: Bool: In-/exclude export of comments for given node(s).
+    Default: True, *include* comments in export (as well as relevant users).
     :param include_logs: Bool: In-/exclude export of logs for given node(s).
     Default: True, *include* logs in export.
     :param silent: suppress debug prints
@@ -1775,7 +1820,7 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
     """
     import os
     import aiida
-    from aiida.orm import Node, Data, Group, Log
+    from aiida.orm import Node, Data, Group, Log, Comment
     from aiida.orm.node import ProcessNode
     from aiida.common.exceptions import ContentNotExistent
     from aiida.common.links import LinkType
@@ -1800,6 +1845,7 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
     given_computer_entry_ids = set()
     given_groups = set()
     given_log_entry_ids = set()
+    given_comment_entry_ids = set()
 
     # I store a list of the actual dbnodes
     for entry in what:
@@ -1819,7 +1865,8 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
         elif issubclass(entry.__class__, Computer):
             given_computer_entry_ids.add(entry.pk)
         else:
-            raise ValueError("I was given {} ({}), which is not a DbNode or DbGroup instance".format(entry, type(entry)))
+            raise ValueError("I was given {} ({}), which is not a Node, Computer, or Group instance"
+                            .format(entry, type(entry)))
 
     # Add all the nodes contained within the specified groups
     for group in given_groups:
@@ -1956,7 +2003,7 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
                 res = {_[0] for _ in qb.all()}
                 given_calculation_entry_ids.update(res - to_be_exported)
 
-        ## Universal "entities" attributed to all types of nodes
+        # Universal "entities" attributed to all types of nodes
         if include_logs:
             # Get related log(s) - universal for all nodes
             qb = QueryBuilder()
@@ -1964,6 +2011,14 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
             qb.append(Log, with_node='node', project=['id'])
             res = {_[0] for _ in qb.all()}
             given_log_entry_ids.update(res)
+
+        if include_comments:
+            # Get related comment(s) - universal for all nodes
+            qb = QueryBuilder()
+            qb.append(Node, tag='node', filters={'id': curr_node_id})
+            qb.append(Comment, with_node='node', project=['id'])
+            res = {_[0] for _ in qb.all()}
+            given_comment_entry_ids.update(res)
 
     # Here we get all the columns that we plan to project per entity that we
     # would like to extract
@@ -1976,6 +2031,8 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
         given_entities.append(COMPUTER_ENTITY_NAME)
     if len(given_log_entry_ids) > 0:
         given_entities.append(LOG_ENTITY_NAME)
+    if len(given_comment_entry_ids) > 0:
+        given_entities.append(COMMENT_ENTITY_NAME)
 
     entries_to_add = dict()
     for given_entity in given_entities:
@@ -2001,6 +2058,8 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
             entry_ids_to_add = given_computer_entry_ids
         elif given_entity == LOG_ENTITY_NAME:
             entry_ids_to_add = given_log_entry_ids
+        elif given_entity == COMMENT_ENTITY_NAME:
+            entry_ids_to_add = given_comment_entry_ids
 
         qb = QueryBuilder()
         qb.append(entity_names_to_entities[given_entity],
@@ -2286,7 +2345,6 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
 
     if not silent:
         print("STORING DATA...")
-    
 
     data = {
         'node_attributes': node_attributes,

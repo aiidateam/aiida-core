@@ -93,9 +93,14 @@ def inspect(archive, version, data, meta_data):
     default=True,
     show_default=True,
     help='Include or exclude logs for node(s) in export.')
+@click.option(
+    '--include-comments/--exclude-comments',
+    default=True,
+    show_default=True,
+    help='Include or exclude comments for node(s) in export. (Will also export extra users who commented).')
 @decorators.with_dbenv()
 def create(output_file, codes, computers, groups, nodes, input_forward, create_reversed, return_reversed, call_reversed,
-           include_logs, force, archive_format):
+           include_comments, include_logs, force, archive_format):
     """
     Export various entities, such as Codes, Computers, Groups and Nodes, to an archive file for backup or
     sharing purposes.
@@ -123,6 +128,7 @@ def create(output_file, codes, computers, groups, nodes, input_forward, create_r
         'create_reversed': create_reversed,
         'return_reversed': return_reversed,
         'call_reversed': call_reversed,
+        'include_comments': include_comments,
         'include_logs': include_logs,
         'overwrite': force
     }

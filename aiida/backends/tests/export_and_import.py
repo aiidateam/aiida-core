@@ -2234,3 +2234,227 @@ class TestLogs(AiidaTestCase):
 
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)
+
+
+class TestComments(AiidaTestCase):
+    """ Tests for export/import of nodes with comments """
+
+    def setUp(self):
+        super(TestComments, self).setUp()
+        self.comments = [
+            "We're no strangers to love",
+            "You know the rules and so do I",
+            "A full commitment's what I'm thinking of",
+            "You wouldn't get this from any other guy"
+        ]
+
+    def tearDown(self):
+        super(TestComments, self).tearDown()
+        from aiida.orm import Comment
+        comments = Comment.objects.all()
+        for comment in comments:
+            Comment.objects.delete(comment.id)
+
+    def test_exclude_comments_flag(self):
+        """Test comments and associated commenting users are not exported when using `include_comments=False`."""
+        import os, shutil, tempfile
+        from aiida.orm import Comment, User, Data, QueryBuilder, Node
+        from aiida.orm.importexport import export
+
+        tmp_folder = tempfile.mkdtemp()
+
+        try:
+            # Create users, node, and comments
+            user_one = User.objects.get_default()
+            user_two = User(email="commenting@user.s").store()
+
+            node = Data().store()
+
+            comment_one = Comment(node, user_one, self.comments[0]).store()
+            comment_two = Comment(node, user_one, self.comments[1]).store()
+
+            comment_three = Comment(node, user_two, self.comments[2]).store()
+            comment_four = Comment(node, user_two, self.comments[3]).store()
+
+            # Get values prior to export
+            users_email = [u.email for u in [user_one, user_two]]
+            node_uuid = node.uuid
+            user_one_comments_uuid = [c.uuid for c in [comment_one, comment_two]]
+            user_two_comments_uuid = [c.uuid for c in [comment_three, comment_four]]
+
+            # Check that node belongs to user_one
+            self.assertEqual(node.get_user().email, users_email[0])
+
+            # Export nodes, excluding comments
+            export_file = os.path.join(tmp_folder, 'export.tar.gz')
+            export([node], outfile=export_file, silent=True, include_comments=False)
+
+            # Clean database and reimport exported file
+            self.reset_database()
+            import_data(export_file, silent=True)
+
+            # Get node, users, and comments
+            import_nodes = QueryBuilder().append(Node, project=['uuid']).all()
+            import_comments = QueryBuilder().append(Comment, project=['uuid']).all()
+            import_users = QueryBuilder().append(User, project=['email']).all()
+
+            # There should be exactly: 1 Node, 0 Comments, 1 User
+            self.assertEqual(len(import_nodes), 1)
+            self.assertEqual(len(import_comments), 0)
+            self.assertEqual(len(import_users), 1)
+
+            # Check it's the correct user (and node)
+            self.assertEqual(str(import_nodes[0][0]), node_uuid)
+            self.assertEqual(str(import_users[0][0]), users_email[0])
+
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)
+
+    def test_calc_and_data_nodes_with_comments(self):
+        """ Test comments for CalculatioNode and Data node are correctly ex-/imported """
+        import os, shutil, tempfile
+        from aiida.orm import CalculationNode, Comment, User, Data, QueryBuilder, Node
+        from aiida.orm.importexport import export
+
+        tmp_folder = tempfile.mkdtemp()
+
+        try:
+            # Create user, nodes, and comments
+            user = User.objects.get_default()
+
+            calc_node = CalculationNode().store()
+            data_node = Data().store()
+
+            comment_one = Comment(calc_node, user, self.comments[0]).store()
+            comment_two = Comment(calc_node, user, self.comments[1]).store()
+
+            comment_three = Comment(data_node, user, self.comments[2]).store()
+            comment_four = Comment(data_node, user, self.comments[3]).store()
+
+            # Get values prior to export
+            user_email = user.email
+            calc_uuid = calc_node.uuid
+            data_uuid = data_node.uuid
+            calc_comments_uuid = [c.uuid for c in [comment_one, comment_two]]
+            data_comments_uuid = [c.uuid for c in [comment_three, comment_four]]
+
+            # Export nodes
+            export_file = os.path.join(tmp_folder, 'export.tar.gz')
+            export([calc_node, data_node], outfile=export_file, silent=True)
+
+            # Clean database and reimport exported file
+            self.reset_database()
+            import_data(export_file, silent=True)
+
+            # Get nodes and comments
+            builder = QueryBuilder()
+            builder.append(Node, tag='node', project=['uuid'])
+            builder.append(Comment, with_node='node', project=['uuid'])
+            nodes_and_comments = builder.all()
+
+            self.assertEqual(len(nodes_and_comments), len(self.comments))
+            for entry in nodes_and_comments:
+                self.assertEqual(len(entry), 2)  # 1 Node + 1 Comment
+
+                import_node_uuid = str(entry[0])
+                import_comment_uuid = str(entry[1])
+
+                self.assertIn(import_node_uuid, [calc_uuid, data_uuid])
+                if import_node_uuid == calc_uuid:
+                    # Calc node comments
+                    self.assertIn(import_comment_uuid, calc_comments_uuid)
+                else:
+                    # Data node comments
+                    self.assertIn(import_comment_uuid, data_comments_uuid)
+
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)
+
+    def test_multiple_user_comments_for_single_node(self):
+        """ Test multiple users commenting on a single CalculationNode """
+        import os, shutil, tempfile
+        from aiida.orm import CalculationNode, Comment, User, Node, QueryBuilder
+        from aiida.orm.importexport import export
+
+        tmp_folder = tempfile.mkdtemp()
+
+        try:
+            # Create users, node, and comments
+            user_one = User.objects.get_default()
+            user_two = User(email="commenting@user.s").store()
+
+            node = CalculationNode().store()
+
+            comment_one = Comment(node, user_one, self.comments[0]).store()
+            comment_two = Comment(node, user_one, self.comments[1]).store()
+
+            comment_three = Comment(node, user_two, self.comments[2]).store()
+            comment_four = Comment(node, user_two, self.comments[3]).store()
+
+            # Get values prior to export
+            users_email = [u.email for u in [user_one, user_two]]
+            node_uuid = str(node.uuid)
+            user_one_comments_uuid = [str(c.uuid) for c in [comment_one, comment_two]]
+            user_two_comments_uuid = [str(c.uuid) for c in [comment_three, comment_four]]
+
+            # Export node, along with comments and users recursively
+            export_file = os.path.join(tmp_folder, 'export.tar.gz')
+            export([node], outfile=export_file, silent=True)
+
+            # Clean database and reimport exported file
+            self.reset_database()
+            import_data(export_file, silent=True)
+
+            # Get node, users, and comments
+            builder = QueryBuilder()
+            builder.append(Node, tag='node', project=['uuid'])
+            builder.append(Comment, tag='comment', with_node='node', project=['uuid'])
+            builder.append(User, with_comment='comment', project=['email'])
+            entries = builder.all()
+
+            # Check that all 4 comments are retrieved, along with their respective node and user
+            self.assertEqual(len(entries), len(self.comments))
+
+            # Go through [Node.uuid, Comment.uuid, User.email]-entries
+            imported_node_uuids = set()
+            imported_user_one_comment_uuids = set()
+            imported_user_two_comment_uuids = set()
+            imported_user_emails = set()
+            for entry in entries:
+                self.assertEqual(len(entry), 3)  # 1 Node + 1 Comment + 1 User
+
+                # Add node to set of imported nodes
+                imported_node_uuids.add(str(entry[0]))
+
+                # Add user to set of imported users
+                import_user_email = entry[2]
+                imported_user_emails.add(str(import_user_email))
+
+                # Add comment to set of imported comments pertaining to correct user
+                if import_user_email == users_email[0]:
+                    # User_one comments
+                    imported_user_one_comment_uuids.add(str(entry[1]))
+                else:
+                    # User_two comments
+                    imported_user_two_comment_uuids.add(str(entry[1]))
+
+            # Check same number of nodes (1) and users (2) were ex- and imported
+            self.assertEqual(len(imported_node_uuids), 1)
+            self.assertEqual(len(imported_user_emails), len(users_email))
+
+            # Check imported node equals exported node
+            self.assertSetEqual(imported_node_uuids, {node_uuid})
+
+            # Check imported user is part of exported users
+            self.assertSetEqual(imported_user_emails, set(users_email))
+
+            # Check same number of comments (2) pertaining to each user were ex- and imported
+            self.assertEqual(len(imported_user_one_comment_uuids), len(user_one_comments_uuid))
+            self.assertEqual(len(imported_user_two_comment_uuids), len(user_two_comments_uuid))
+
+            # Check imported comments equal exported comments pertaining to specific user
+            self.assertSetEqual(imported_user_one_comment_uuids, set(user_one_comments_uuid))
+            self.assertSetEqual(imported_user_two_comment_uuids, set(user_two_comments_uuid))
+
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)

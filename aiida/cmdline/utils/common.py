@@ -128,7 +128,7 @@ def get_node_summary(node):
     except ValueError:
         pass
     else:
-        table.append(['code', code.label])
+        table.append(['code', code.node.label])
 
     return tabulate(table, headers=table_headers)
 
@@ -255,6 +255,23 @@ def get_calcjob_report(calcjob):
         report.append('+-> {} at {}'.format(log.levelname, log.time))
         for message in log.message.splitlines():
             report.append(' | {}'.format(message))
+
+    return '\n'.join(report)
+
+
+def get_process_function_report(node):
+    """
+    Return a multi line string representation of the log messages and output of a given process function node
+
+    :param node: the node
+    :return: a string representation of the log messages
+    """
+    from aiida import orm
+
+    report = []
+
+    for log in orm.Log.objects.get_logs_for(node):
+        report.append('{time:%Y-%m-%d %H:%M:%S} [{id}]: {msg}'.format(id=log.id, msg=log.message, time=log.time))
 
     return '\n'.join(report)
 

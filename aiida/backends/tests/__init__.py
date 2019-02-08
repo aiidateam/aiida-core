@@ -74,6 +74,7 @@ db_test_list = {
         'cmdline.params.types.identifier': ['aiida.backends.tests.cmdline.params.types.test_identifier'],
         'cmdline.params.types.node': ['aiida.backends.tests.cmdline.params.types.test_node'],
         'cmdline.params.types.plugin': ['aiida.backends.tests.cmdline.params.types.test_plugin'],
+        'cmdline.utils.common': ['aiida.backends.tests.cmdline.utils.test_common'],
         'common.archive': ['aiida.backends.tests.common.test_archive'],
         'common.extendeddicts': ['aiida.backends.tests.common.test_extendeddicts'],
         'common.folders': ['aiida.backends.tests.common.test_folders'],

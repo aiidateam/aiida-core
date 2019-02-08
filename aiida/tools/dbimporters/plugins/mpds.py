@@ -296,7 +296,7 @@ class StructuresCollection(object):
 
         :param query: a dictionary with the query parameters
         """
-        for result in self.engine.find(query, filters=fmt):
+        for result in self.engine.find(query, fmt=fmt):
 
             if fmt != ApiFormat.CIF and ('object_type' not in result or result['object_type'] != 'S'):
                 continue
@@ -330,7 +330,7 @@ class MpdsCifEntry(CifEntry, MpdsEntry):
     def __init__(self, url, **kwargs):
         """
         The DbSearchResults base class instantiates a new DbEntry by explicitly passing the url
-        of the entry as an argument. In this case it is the same as the 'uri' value that is 
+        of the entry as an argument. In this case it is the same as the 'uri' value that is
         already contained in the source dictionary so we just copy it
         """
         cif = kwargs.pop('cif', None)

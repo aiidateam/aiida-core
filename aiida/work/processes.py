@@ -515,7 +515,7 @@ class Process(plumpy.Process):
 
         parent_calc = self.get_parent_calc()
 
-        if parent_calc:
+        if parent_calc and self.metadata.store_provenance:
 
             if isinstance(parent_calc, CalculationNode):
                 raise exceptions.InvalidOperation('calling processes from a calculation type process is forbidden.')

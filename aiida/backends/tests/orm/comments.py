@@ -74,35 +74,83 @@ class TestComment(AiidaTestCase):
             Comment.objects.get(id=comment_pk)
 
     def test_comment_querybuilder(self):
+        # pylint: disable=too-many-locals
         """Test querying for comments by joining on nodes in the QueryBuilder."""
+        user_one = self.user
+        user_two = orm.User(email="commenting@user.s").store()
+
         node_one = orm.Data().store()
-        comment_one = Comment(node_one, self.user, 'comment_one').store()
+        comment_one = Comment(node_one, user_one, 'comment_one').store()
 
         node_two = orm.Data().store()
-        comment_three = Comment(node_two, self.user, 'comment_three').store()
-        comment_four = Comment(node_two, self.user, 'comment_four').store()
+        comment_two = Comment(node_two, user_one, 'comment_two').store()
+        comment_three = Comment(node_two, user_one, 'comment_three').store()
+
+        node_three = orm.CalculationNode().store()
+        comment_four = Comment(node_three, user_two, 'new_user_comment').store()
+
+        node_four = orm.CalculationNode().store()
+        comment_five = Comment(node_four, user_one, 'user one comment').store()
+        comment_six = Comment(node_four, user_two, 'user two comment').store()
 
         # Retrieve a node by joining on a specific comment
-        nodes = orm.QueryBuilder().append(
-            Comment, tag='comment', filters={
-                'id': comment_one.id
-            }).append(
-                orm.Node, with_comment='comment', project=['uuid']).all()
+        builder = orm.QueryBuilder()
+        builder.append(Comment, tag='comment', filters={'id': comment_one.id})
+        builder.append(orm.Node, with_comment='comment', project=['uuid'])
+        nodes = builder.all()
 
         self.assertEqual(len(nodes), 1)
         for node in nodes:
             self.assertIn(str(node[0]), [node_one.uuid])
 
         # Retrieve a comment by joining on a specific node
-        comments = orm.QueryBuilder().append(
-            orm.Node, tag='node', filters={
-                'id': node_two.id
-            }).append(
-                Comment, with_node='node', project=['uuid']).all()
+        builder = orm.QueryBuilder()
+        builder.append(orm.Node, tag='node', filters={'id': node_two.id})
+        builder.append(Comment, with_node='node', project=['uuid'])
+        comments = builder.all()
 
         self.assertEqual(len(comments), 2)
         for comment in comments:
-            self.assertIn(str(comment[0]), [comment_three.uuid, comment_four.uuid])
+            self.assertIn(str(comment[0]), [comment_two.uuid, comment_three.uuid])
+
+        # Retrieve a user by joining on a specific comment
+        builder = orm.QueryBuilder()
+        builder.append(Comment, tag='comment', filters={'id': comment_four.id})
+        builder.append(orm.User, with_comment='comment', project=['email'])
+        users = builder.all()
+
+        self.assertEqual(len(users), 1)
+        for user in users:
+            self.assertEqual(str(user[0]), user_two.email)
+
+        # Retrieve a comment by joining on a specific user
+        builder = orm.QueryBuilder()
+        builder.append(orm.User, tag='user', filters={'email': user_one.email})
+        builder.append(Comment, with_user='user', project=['uuid'])
+        comments = builder.all()
+
+        self.assertEqual(len(comments), 5)
+        for comment in comments:
+            self.assertIn(
+                str(comment[0]),
+                [self.comment.uuid, comment_one.uuid, comment_two.uuid, comment_three.uuid, comment_five.uuid])
+
+        # Retrieve users from comments of a single node by joining specific node
+        builder = orm.QueryBuilder()
+        builder.append(orm.Node, tag='node', filters={'id': node_four.id})
+        builder.append(Comment, tag='comments', with_node='node', project=['uuid'])
+        builder.append(orm.User, with_comment='comments', project=['email'])
+        comments_and_users = builder.all()
+
+        self.assertEqual(len(comments_and_users), 2)
+        for entry in comments_and_users:
+            self.assertEqual(len(entry), 2)
+
+            comment_uuid = str(entry[0])
+            user_email = str(entry[1])
+
+            self.assertIn(comment_uuid, [comment_five.uuid, comment_six.uuid])
+            self.assertIn(user_email, [user_one.email, user_two.email])
 
     def test_objects_get(self):
         """Test getting a comment from the collection"""

@@ -115,3 +115,19 @@ class TestCalcFunction(AiidaTestCase):
 
         with self.assertRaises(exceptions.InvalidOperation):
             test_calcfunction_caller(self.default_int)
+
+    def test_calculation_call_store_provenance_false(self):  # pylint: disable=invalid-name
+        """Verify that a `calcfunction` can call another calcfunction as long as `store_provenance` is False."""
+
+        @calcfunction
+        def test_calcfunction_caller(data):
+            return self.test_calcfunction(data, metadata={'store_provenance': False})  # pylint: disable=unexpected-keyword-arg
+
+        result, node = test_calcfunction_caller.run_get_node(self.default_int)
+
+        self.assertTrue(isinstance(result, Int))
+        self.assertTrue(isinstance(node, CalcFunctionNode))
+
+        # The node of the outermost `calcfunction` should have a single `CREATE` link and no `CALL_CALC` links
+        self.assertEqual(len(node.get_outgoing(link_type=LinkType.CREATE).all()), 1)
+        self.assertEqual(len(node.get_outgoing(link_type=LinkType.CALL_CALC).all()), 0)

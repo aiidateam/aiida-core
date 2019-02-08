@@ -15,8 +15,8 @@ from __future__ import absolute_import
 import six
 
 from aiida.common.datastructures import CalcInfo, CodeInfo
-from aiida.orm.data.float import Float
-from aiida.orm.data.int import Int
+from aiida.orm.node.data.float import Float
+from aiida.orm.node.data.int import Int
 from aiida.work.calcjob import CalcJob
 
 

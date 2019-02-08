@@ -15,9 +15,9 @@ from __future__ import absolute_import
 import io
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm.data.bool import get_true_node
-from aiida.orm.data.int import Int
-from aiida.orm.data.str import Str
+from aiida.orm.node.data.bool import get_true_node
+from aiida.orm.node.data.int import Int
+from aiida.orm.node.data.str import Str
 from aiida.orm.node import WorkFunctionNode
 from aiida.orm.node import CalcFunctionNode
 from aiida.work import run, run_get_node, submit, calcfunction, workfunction, Process, ExitCode

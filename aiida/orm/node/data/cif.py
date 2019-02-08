@@ -15,7 +15,7 @@ from __future__ import division
 
 from six.moves import range
 
-from aiida.orm.data.singlefile import SinglefileData
+from aiida.orm.node.data.singlefile import SinglefileData
 from aiida.work import calcfunction
 from aiida.common.utils import Capturing
 
@@ -111,13 +111,13 @@ def symop_string_from_symop_matrix_tr(matrix, tr=(0, 0, 0), eps=0):
 @calcfunction
 def _get_aiida_structure_ase_inline(cif, **kwargs):
     """
-    Creates :py:class:`aiida.orm.data.structure.StructureData` using ASE.
+    Creates :py:class:`aiida.orm.node.data.structure.StructureData` using ASE.
 
     .. note:: unable to correctly import structures of alloys.
     .. note:: requires ASE module.
     """
-    from aiida.orm.data.parameter import ParameterData
-    from aiida.orm.data.structure import StructureData
+    from aiida.orm.node.data.parameter import ParameterData
+    from aiida.orm.node.data.structure import StructureData
 
     parameters = kwargs.get('parameters', {})
 
@@ -133,7 +133,7 @@ def _get_aiida_structure_ase_inline(cif, **kwargs):
 @calcfunction
 def _get_aiida_structure_pymatgen_inline(cif, **kwargs):
     """
-    Creates :py:class:`aiida.orm.data.structure.StructureData` using pymatgen.
+    Creates :py:class:`aiida.orm.node.data.structure.StructureData` using pymatgen.
 
     :param occupancy_tolerance: If total occupancy of a site is between 1 and occupancy_tolerance,
         the occupancies will be scaled down to 1.
@@ -143,8 +143,8 @@ def _get_aiida_structure_pymatgen_inline(cif, **kwargs):
     .. note:: requires pymatgen module.
     """
     from pymatgen.io.cif import CifParser
-    from aiida.orm.data.parameter import ParameterData
-    from aiida.orm.data.structure import StructureData
+    from aiida.orm.node.data.parameter import ParameterData
+    from aiida.orm.node.data.structure import StructureData
 
     parameters = kwargs.get('parameters', {})
 
@@ -329,15 +329,15 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
 @calcfunction
 def refine_inline(node):
     """
-    Refine (reduce) the cell of :py:class:`aiida.orm.data.cif.CifData`,
+    Refine (reduce) the cell of :py:class:`aiida.orm.node.data.cif.CifData`,
     find and remove symmetrically equivalent atoms.
 
-    :param node: a :py:class:`aiida.orm.data.cif.CifData` instance.
-    :return: dict with :py:class:`aiida.orm.data.cif.CifData`
+    :param node: a :py:class:`aiida.orm.node.data.cif.CifData` instance.
+    :return: dict with :py:class:`aiida.orm.node.data.cif.CifData`
 
     .. note:: can be used as inline calculation.
     """
-    from aiida.orm.data.structure import StructureData, ase_refine_cell
+    from aiida.orm.node.data.structure import StructureData, ase_refine_cell
 
     if len(node.values.keys()) > 1:
         raise ValueError("CifData seems to contain more than one data "
@@ -877,7 +877,7 @@ class CifData(SinglefileData):
 
     def _get_aiida_structure(self, converter='pymatgen', store=False, **kwargs):
         """
-        Creates :py:class:`aiida.orm.data.structure.StructureData`.
+        Creates :py:class:`aiida.orm.node.data.structure.StructureData`.
 
         :param converter: specify the converter. Default 'pymatgen'.
         :param store: if True, intermediate calculation gets stored in the
@@ -888,10 +888,10 @@ class CifData(SinglefileData):
             the occupancies will be scaled down to 1. (pymatgen only)
         :param site_tolerance: This tolerance is used to determine if two sites are sitting in the same position,
             in which case they will be combined to a single disordered site. Defaults to 1e-4. (pymatgen only)
-        :return: :py:class:`aiida.orm.data.structure.StructureData` node.
+        :return: :py:class:`aiida.orm.node.data.structure.StructureData` node.
         """
         from . import cif  # pylint: disable=import-self
-        from aiida.orm.data.parameter import ParameterData
+        from aiida.orm.node.data.parameter import ParameterData
 
         parameters = ParameterData(dict=kwargs)
 

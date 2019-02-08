@@ -11,7 +11,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from aiida.orm import Data
-from aiida.orm.data import to_aiida_type
+from aiida.orm.node.data import to_aiida_type
 
 
 class ParameterData(Data):

@@ -15,7 +15,7 @@ from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
 from aiida.common.links import LinkType
-from aiida.orm.data.int import Int
+from aiida.orm.node.data.int import Int
 from aiida.orm.node import CalculationNode
 from aiida.orm.mixins import Sealable
 

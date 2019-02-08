@@ -14,7 +14,7 @@ from __future__ import absolute_import
 import six
 from six.moves import zip
 
-from aiida.orm.data.structure import Site as site_class
+from aiida.orm.node.data.structure import Site as site_class
 from aiida.orm import Data
 from aiida.common.exceptions import ValidationError, InputValidationError
 from aiida.tools.data.orbital import OrbitalFactory, Orbital

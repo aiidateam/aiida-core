@@ -25,8 +25,8 @@ from aiida.common.links import LinkType
 
 class TestTcodDbExporter(AiidaTestCase):
     """Tests for TcodDbExporter class."""
-    from aiida.orm.data.structure import has_ase, has_spglib
-    from aiida.orm.data.cif import has_pycifrw
+    from aiida.orm.node.data.structure import has_ase, has_spglib
+    from aiida.orm.node.data.cif import has_pycifrw
 
     def test_contents_encoding_1(self):
         """
@@ -129,10 +129,10 @@ class TestTcodDbExporter(AiidaTestCase):
         from aiida.tools.dbexporters.tcod import export_cif, export_values
         from aiida.orm import Code
         from aiida.orm.node import CalcJobNode
-        from aiida.orm.data.cif import CifData
-        from aiida.orm.data.parameter import ParameterData
-        from aiida.orm.data.upf import UpfData
-        from aiida.orm.data.folder import FolderData
+        from aiida.orm.node.data.cif import CifData
+        from aiida.orm.node.data.parameter import ParameterData
+        from aiida.orm.node.data.upf import UpfData
+        from aiida.orm.node.data.folder import FolderData
         from aiida.common.folders import SandboxFolder
         import tempfile
 
@@ -225,7 +225,7 @@ class TestTcodDbExporter(AiidaTestCase):
     @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_inline_export(self):
-        from aiida.orm.data.cif import CifData
+        from aiida.orm.node.data.cif import CifData
         from aiida.tools.dbexporters.tcod import export_values
         import tempfile
 
@@ -259,7 +259,7 @@ class TestTcodDbExporter(AiidaTestCase):
     @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_symmetry_reduction(self):
-        from aiida.orm.data.structure import StructureData
+        from aiida.orm.node.data.structure import StructureData
         from aiida.tools.dbexporters.tcod import export_values
         from ase import Atoms
 
@@ -310,8 +310,8 @@ class TestTcodDbExporter(AiidaTestCase):
     @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_export_trajectory(self):
-        from aiida.orm.data.structure import StructureData
-        from aiida.orm.data.array.trajectory import TrajectoryData
+        from aiida.orm.node.data.structure import StructureData
+        from aiida.orm.node.data.array.trajectory import TrajectoryData
         from aiida.tools.dbexporters.tcod import export_values
 
         cells = [

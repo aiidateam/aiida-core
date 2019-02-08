@@ -16,7 +16,7 @@ from six.moves import range, zip
 import numpy
 
 from aiida.common.lang import classproperty
-from aiida.orm.data.array import ArrayData
+from aiida.orm.node.data.array import ArrayData
 
 
 DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/datatypes/kpoints.html#deprecated-methods'
@@ -84,7 +84,7 @@ class KpointsData(ArrayData):
         :param value: something compatible with a 3x3 tuple of floats
         """
         from aiida.common.exceptions import ModificationNotAllowed
-        from aiida.orm.data.structure import _get_valid_cell
+        from aiida.orm.node.data.structure import _get_valid_cell
 
         if self.is_stored:
             raise ModificationNotAllowed(
@@ -119,7 +119,7 @@ class KpointsData(ArrayData):
         validate the pbc, then store them
         """
         from aiida.common.exceptions import ModificationNotAllowed
-        from aiida.orm.data.structure import get_valid_pbc
+        from aiida.orm.node.data.structure import get_valid_pbc
 
         if self.is_stored:
             raise ModificationNotAllowed(
@@ -205,7 +205,7 @@ class KpointsData(ArrayData):
 
         :param structuredata: an instance of StructureData
         """
-        from aiida.orm.data.structure import StructureData
+        from aiida.orm.node.data.structure import StructureData
 
         if not isinstance(structuredata, StructureData):
             raise ValueError("An instance of StructureData should be passed to "

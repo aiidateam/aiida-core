@@ -58,7 +58,7 @@ be performed with Groups:
 
     From python interface::
 
-      In [3]: from aiida.orm.data.parameter import ParameterData
+      In [3]: from aiida.orm.node.data.parameter import ParameterData
 
       In [4]: p = ParameterData().store()
 

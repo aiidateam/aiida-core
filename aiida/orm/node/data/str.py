@@ -11,9 +11,19 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from aiida.orm.data.numeric import NumericType
-from aiida.orm.data.bool import Bool
-from aiida.orm.data.float import Float
-from aiida.orm.data.int import Int
-from aiida.orm.data.str import Str
-from aiida.orm.data.list import List
+import six
+
+from aiida.orm.node.data import BaseType
+from aiida.orm.node.data import to_aiida_type
+
+
+class Str(BaseType):
+    """
+    Class to store strings as AiiDA nodes
+    """
+    _type = str
+
+
+@to_aiida_type.register(six.string_types[0])
+def _(value):
+    return Str(value)

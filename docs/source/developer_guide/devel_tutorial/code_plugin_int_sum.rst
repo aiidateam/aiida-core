@@ -147,7 +147,7 @@ summation code (a detailed description of the different sections follows)::
     # -*- coding: utf-8 -*-
 
     from aiida.orm.calculation.job import JobCalculation
-    from aiida.orm.data.parameter import ParameterData
+    from aiida.orm.node.data.parameter import ParameterData
     from aiida.common.lang import classproperty
     from aiida.common.exceptions import InputValidationError
     from aiida.common.exceptions import ValidationError
@@ -400,7 +400,7 @@ be available during the parsing of the calculation. After the parsing is complet
 files will be deleted. This is useful if during parsing, one wants to analyze the contents of big files and
 parse a small subset of the data to keep permanently, but does not want to have the store the raw files themselves
 which would unnecessarily increase the size of the repository. The files that are retrieved will be stored in
-a temporary :class:`aiida.orm.data.folder.FolderData` and be passed as an argument to the ``parse_with_retrieved`` method of the :class:`aiida.parsers.parser.Parser`
+a temporary :class:`aiida.orm.node.data.folder.FolderData` and be passed as an argument to the ``parse_with_retrieved`` method of the :class:`aiida.parsers.parser.Parser`
 class, which is implemented by the specific plugin. It will be passed under the key ``retrieved_temporary_folder``.
 
 For the time being, just define also the following variables as empty lists
@@ -568,7 +568,7 @@ detail later::
     from aiida.orm.calculation.job.sum import SumCalculation
     from aiida.parsers.parser import Parser
     from aiida.parsers.exceptions import OutputParsingError
-    from aiida.orm.data.parameter import ParameterData
+    from aiida.orm.node.data.parameter import ParameterData
 
     import json
 

@@ -19,7 +19,7 @@ from aiida.common.links import LinkType
 from aiida.orm import DataFactory
 from aiida.orm.node import CalcJobNode
 from aiida.orm.computers import Computer
-from aiida.orm.data import Data
+from aiida.orm.node.data import Data
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.restapi.api import App, AiidaApi
 import aiida.common.json as json
@@ -726,7 +726,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         node_uuid = self.get_dummy_data()["calculations"][1]["uuid"]
         self.process_test(
             "calculations",
-            '/calculations/' + str(node_uuid) + '/io/inputs?type="data.parameter.ParameterData."',
+            '/calculations/' + str(node_uuid) + '/io/inputs?type="node.data.parameter.ParameterData."',
             expected_list_ids=[2],
             uuid=node_uuid,
             result_node_type="data",

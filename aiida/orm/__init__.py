@@ -14,8 +14,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from .data import *
-from .data.code import Code
+from .node.data import *
+from .node.data.code import Code
 
 from .authinfos import *
 from .computers import *

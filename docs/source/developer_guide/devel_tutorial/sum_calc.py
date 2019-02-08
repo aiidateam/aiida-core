@@ -12,7 +12,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from aiida.orm.calculation.job import JobCalculation
-from aiida.orm.data.parameter import ParameterData 
+from aiida.orm.node.data.parameter import ParameterData 
 from aiida.common.lang import classproperty
 from aiida.common.exceptions import InputValidationError
 from aiida.common.exceptions import ValidationError

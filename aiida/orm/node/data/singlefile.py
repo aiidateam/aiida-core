@@ -27,7 +27,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 import os
 
-from aiida.orm.data import Data
+from aiida.orm.node.data import Data
 
 
 

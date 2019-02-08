@@ -3,9 +3,9 @@ from numpy import prod
 from copy import deepcopy
 from aiida.orm import CalculationFactory
 from aiida.orm import Code
-from aiida.orm.data.int import Int
-from aiida.orm.data.str import Str
-from aiida.orm.data.parameter import ParameterData
+from aiida.orm.node.data.int import Int
+from aiida.orm.node.data.str import Str
+from aiida.orm.node.data.parameter import ParameterData
 from aiida.work.run import submit
 from aiida.work.workchain import WorkChain, if_, while_, append_, ToContext
 from aiida.work import calcfunction

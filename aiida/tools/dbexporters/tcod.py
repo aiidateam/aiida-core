@@ -18,7 +18,7 @@ from six.moves import range
 import io
 
 from aiida.orm import DataFactory
-from aiida.orm.data.parameter import ParameterData
+from aiida.orm.node.data.parameter import ParameterData
 from aiida.work import calcfunction
 
 aiida_executable_name = '_aiidasubmit.sh'
@@ -449,7 +449,7 @@ def _collect_calculation_data(calc):
     calculation.
     """
     from aiida.common.links import LinkType
-    from aiida.orm.data import Data
+    from aiida.orm.node.data import Data
     from aiida.orm.node import CalculationNode, CalcJobNode, CalcFunctionNode, WorkflowNode
     import hashlib
     import os
@@ -848,7 +848,7 @@ def _collect_tags(node, calc,parameters=None,
     # Describing Brillouin zone (if used)
 
     if calc is not None:
-        from aiida.orm.data.array.kpoints import KpointsData
+        from aiida.orm.node.data.array.kpoints import KpointsData
         kpoints_list = calc.get_incoming(node_class=KpointsData, link_type=LinkType.INPUT_CALC).all()
         # TODO: stop if more than one KpointsData is used?
         if len(kpoints_list) == 1:
@@ -891,21 +891,21 @@ def add_metadata_inline(what, node, parameters, args):
     Add metadata of original exported node to the produced TCOD CIF.
 
     :param what: an original exported node.
-    :param node: a :py:class:`aiida.orm.data.cif.CifData` instance.
-    :param parameters: a :py:class:`aiida.orm.data.parameter.ParameterData`
+    :param node: a :py:class:`aiida.orm.node.data.cif.CifData` instance.
+    :param parameters: a :py:class:`aiida.orm.node.data.parameter.ParameterData`
         instance, produced by the same calculation as the original exported
         node.
-    :param args: a :py:class:`aiida.orm.data.parameter.ParameterData`
+    :param args: a :py:class:`aiida.orm.node.data.parameter.ParameterData`
         instance, containing parameters for the control of metadata
         collection and inclusion in the produced
-        :py:class:`aiida.orm.data.cif.CifData`.
-    :return: dict with :py:class:`aiida.orm.data.cif.CifData`
+        :py:class:`aiida.orm.node.data.cif.CifData`.
+    :return: dict with :py:class:`aiida.orm.node.data.cif.CifData`
     :raises ValueError: if tags present in
         ``args.get_dict()['additional_tags']`` are not valid CIF tags.
 
     .. note:: can be used as inline calculation.
     """
-    from aiida.orm.data.cif import pycifrw_from_cif
+    from aiida.orm.node.data.cif import pycifrw_from_cif
     CifData = DataFactory('cif')
 
     if not node:
@@ -980,16 +980,16 @@ def export_cifnode(what, parameters=None, trajectory_index=None,
                    **kwargs):
     """
     The main exporter function. Exports given coordinate-containing \*Data
-    node to :py:class:`aiida.orm.data.cif.CifData` node, ready to be
+    node to :py:class:`aiida.orm.node.data.cif.CifData` node, ready to be
     exported to TCOD. All \*Data types, having method ``_get_cif()``, are
-    supported in addition to :py:class:`aiida.orm.data.cif.CifData`.
+    supported in addition to :py:class:`aiida.orm.node.data.cif.CifData`.
 
     :param what: data node to be exported.
-    :param parameters: a :py:class:`aiida.orm.data.parameter.ParameterData`
+    :param parameters: a :py:class:`aiida.orm.node.data.parameter.ParameterData`
         instance, produced by the same calculation as the original exported
         node.
     :param trajectory_index: a step to be converted and exported in case a
-        :py:class:`aiida.orm.data.array.trajectory.TrajectoryData` is
+        :py:class:`aiida.orm.node.data.array.trajectory.TrajectoryData` is
         exported.
     :param store: boolean indicating whether to store intermediate nodes or
         not. Default False.
@@ -1005,7 +1005,7 @@ def export_cifnode(what, parameters=None, trajectory_index=None,
     :param gzip_threshold: integer indicating the maximum size (in bytes) of
         uncompressed CIF text fields when the **gzip** option is in action.
         Default 1024.
-    :return: a :py:class:`aiida.orm.data.cif.CifData` node.
+    :return: a :py:class:`aiida.orm.node.data.cif.CifData` node.
     """
     from aiida.common.links import LinkType
     from aiida.common.exceptions import MultipleObjectsError
@@ -1051,7 +1051,7 @@ def export_cifnode(what, parameters=None, trajectory_index=None,
     # Reduction of the symmetry
 
     if reduce_symmetry:
-        from aiida.orm.data.cif import refine_inline
+        from aiida.orm.node.data.cif import refine_inline
         ret_dict = refine_inline(node=node, metadata={'store_provenance': store})
         node = ret_dict['cif']
 

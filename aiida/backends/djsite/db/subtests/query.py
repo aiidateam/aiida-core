@@ -24,25 +24,25 @@ class TestQueryBuilderDjango(AiidaTestCase):
             DbGroup,
         )
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm.data.structure import StructureData
+        from aiida.orm.node.data.structure import StructureData
         from aiida.orm import Group, Node, Computer, Data
         from aiida.common.exceptions import DbContentError
         qb = QueryBuilder()
 
         with self.assertRaises(DbContentError):
-            qb._get_ormclass(None, 'data')
+            qb._get_ormclass(None, 'node.data')
         with self.assertRaises(DbContentError):
-            qb._get_ormclass(None, 'data.Data')
+            qb._get_ormclass(None, 'node.data.Data')
         with self.assertRaises(DbContentError):
             qb._get_ormclass(None, '.')
 
         for cls, clstype, query_type_string in (
                 qb._get_ormclass(StructureData, None),
-                qb._get_ormclass(None, 'data.structure.StructureData.'),
+                qb._get_ormclass(None, 'node.data.structure.StructureData.'),
         ):
-            self.assertEqual(clstype, 'data.structure.StructureData.')
+            self.assertEqual(clstype, 'node.data.structure.StructureData.')
             self.assertTrue(issubclass(cls, DbNode))
-            self.assertEqual(clstype, 'data.structure.StructureData.')
+            self.assertEqual(clstype, 'node.data.structure.StructureData.')
             self.assertEqual(query_type_string,
                              StructureData._query_type_string)
 
@@ -85,7 +85,7 @@ class TestQueryBuilderDjango(AiidaTestCase):
 
         for cls, clstype, query_type_string in (
                 qb._get_ormclass(Data, None),
-                qb._get_ormclass(None, 'data.Data.'),
+                qb._get_ormclass(None, 'node.data.Data.'),
         ):
             self.assertEqual(clstype, Data._plugin_type_string)
             self.assertEqual(query_type_string, Data._query_type_string)

@@ -5,7 +5,7 @@ AiiDA internals
 Node
 ++++
 
-The :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class is the basic class that represents all the possible objects at the AiiDA world. More precisely it is inherited by many classes including (among others) the :py:class:`~aiida.orm.node.process.ProcessNode` class, representing computations that convert data into a different form, the :py:class:`~aiida.orm.data.code.Code` class representing executables and file collections that are used by calculations and the :py:class:`~aiida.orm.data.Data` class which represents data that can be input or output of calculations.
+The :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class is the basic class that represents all the possible objects at the AiiDA world. More precisely it is inherited by many classes including (among others) the :py:class:`~aiida.orm.node.process.ProcessNode` class, representing computations that convert data into a different form, the :py:class:`~aiida.orm.node.data.code.Code` class representing executables and file collections that are used by calculations and the :py:class:`~aiida.orm.node.data.Data` class which represents data that can be input or output of calculations.
 
 
 Immutability concept
@@ -33,7 +33,7 @@ The :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class has tw
 
 The convention for all the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` subclasses is that if a ``class B`` is inherited by a ``class A`` then there should be a package ``A`` under ``aiida/orm`` that has a file ``__init__.py`` and a ``B.py`` in that directory (or a ``B`` package with the corresponding ``__init__.py``)
 
-An example of this is the :py:class:`~aiida.orm.data.array.ArrayData` and the :py:class:`~aiida.orm.data.array.kpoints.KpointsData`. :py:class:`~aiida.orm.data.array.ArrayData` is placed in ``aiida/orm/data/array/__init__.py`` and :py:class:`~aiida.orm.data.array.kpoints.KpointsData` which inherits from :py:class:`~aiida.orm.data.array.ArrayData` is placed in ``aiida/orm/data/array/kpoints.py``
+An example of this is the :py:class:`~aiida.orm.node.data.array.ArrayData` and the :py:class:`~aiida.orm.node.data.array.kpoints.KpointsData`. :py:class:`~aiida.orm.node.data.array.ArrayData` is placed in ``aiida/orm/data/array/__init__.py`` and :py:class:`~aiida.orm.node.data.array.kpoints.KpointsData` which inherits from :py:class:`~aiida.orm.node.data.array.ArrayData` is placed in ``aiida/orm/data/array/kpoints.py``
 
 This is an implicit & quick way to check the inheritance of the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` subclasses.
 
@@ -307,7 +307,7 @@ Store & deletion
 DbNode
 ++++++
 
-The :py:class:`~aiida.backends.djsite.db.models.DbNode` is the Django class that corresponds to the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class allowing to store and retrieve the needed information from and to the database. Other classes extending the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class, like :py:class:`~aiida.orm.data.Data`, :py:class:`~aiida.orm.node.process.ProcessNode` and :py:class:`~aiida.orm.data.code.Code` use the :py:class:`~aiida.backends.djsite.db.models.DbNode` code too to interact with the database.  The main methods are:
+The :py:class:`~aiida.backends.djsite.db.models.DbNode` is the Django class that corresponds to the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class allowing to store and retrieve the needed information from and to the database. Other classes extending the :py:class:`~aiida.orm.implementation.general.node.AbstractNode` class, like :py:class:`~aiida.orm.node.data.Data`, :py:class:`~aiida.orm.node.process.ProcessNode` and :py:class:`~aiida.orm.node.data.code.Code` use the :py:class:`~aiida.backends.djsite.db.models.DbNode` code too to interact with the database.  The main methods are:
 
 - :py:meth:`~aiida.backends.djsite.db.models.DbNode.get_simple_name` which returns a string with the type of the class (by stripping the path before the class name).
 

@@ -28,7 +28,7 @@ def draw_parents(node, node_label=None, show_pk=True, dist=2, follow_links_of_ty
     Print an ASCII tree of the parents of the given node.
 
     :param node: The node to draw for
-    :type node: :class:`aiida.orm.data.Data`
+    :type node: :class:`aiida.orm.node.data.Data`
     :param node_label: The label to use for the nodes
     :type node_label: str
     :param show_pk: Show the PK of nodes alongside the label
@@ -47,7 +47,7 @@ def draw_children(node, node_label=None, show_pk=True, dist=2, follow_links_of_t
     Print an ASCII tree of the parents of the given node.
 
     :param node: The node to draw for
-    :type node: :class:`aiida.orm.data.Data`
+    :type node: :class:`aiida.orm.node.data.Data`
     :param node_label: The label to use for the nodes
     :type node_label: str
     :param show_pk: Show the PK of nodes alongside the label

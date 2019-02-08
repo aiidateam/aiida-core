@@ -17,14 +17,14 @@ from __future__ import print_function
 import six
 from six.moves import range, zip
 
-from aiida.orm.data.array import ArrayData
+from aiida.orm.node.data.array import ArrayData
 from aiida.work import calcfunction
 
 
 @calcfunction
 def _get_aiida_structure_inline(trajectory, parameters):
     """
-    Creates :py:class:`aiida.orm.data.structure.StructureData` using ASE.
+    Creates :py:class:`aiida.orm.node.data.structure.StructureData` using ASE.
 
     .. note:: requires ASE module.
     """
@@ -160,10 +160,10 @@ class TrajectoryData(ArrayData):
     def set_structurelist(self, structurelist):
         """
         Create trajectory from the list of
-        :py:class:`aiida.orm.data.structure.StructureData` instances.
+        :py:class:`aiida.orm.node.data.structure.StructureData` instances.
 
         :param structurelist: a list of
-            :py:class:`aiida.orm.data.structure.StructureData` instances.
+            :py:class:`aiida.orm.node.data.structure.StructureData` instances.
 
         :raises ValueError: if symbol lists of supplied structures are
             different
@@ -336,7 +336,7 @@ class TrajectoryData(ArrayData):
 
     def get_step_structure(self, index, custom_kinds=None):
         """
-        Return an AiiDA :py:class:`aiida.orm.data.structure.StructureData` node
+        Return an AiiDA :py:class:`aiida.orm.node.data.structure.StructureData` node
         (not stored yet!) with the coordinates of the given step, identified by
         its index. If you know only the step value, use the
         :py:meth:`.get_index_from_stepid` method to get the corresponding index.
@@ -349,15 +349,15 @@ class TrajectoryData(ArrayData):
         :param index: The index of the step that you want to retrieve, from
            0 to ``self.numsteps- 1``.
         :param custom_kinds: (Optional) If passed must be a list of
-          :py:class:`aiida.orm.data.structure.Kind` objects. There must be one
+          :py:class:`aiida.orm.node.data.structure.Kind` objects. There must be one
           kind object for each different string in the ``symbols`` array, with
           ``kind.name`` set to this string.
           If this parameter is omitted, the automatic kind generation of AiiDA
-          :py:class:`aiida.orm.data.structure.StructureData` nodes is used,
+          :py:class:`aiida.orm.node.data.structure.StructureData` nodes is used,
           meaning that the strings in the ``symbols`` array must be valid
           chemical symbols.
         """
-        from aiida.orm.data.structure import StructureData, Kind, Site
+        from aiida.orm.node.data.structure import StructureData, Kind, Site
 
         # ignore step, time, and velocities
         _, _, cell, symbols, positions, _ = self.get_step_data(index)
@@ -367,7 +367,7 @@ class TrajectoryData(ArrayData):
             for k in custom_kinds:
                 if not isinstance(k, Kind):
                     raise TypeError("Each element of the custom_kinds list must "
-                                    "be a aiida.orm.data.structure.Kind object")
+                                    "be a aiida.orm.node.data.structure.Kind object")
                 kind_names.append(k.name)
             if len(kind_names) != len(set(kind_names)):
                 raise ValueError("Multiple kinds with the same name passed as custom_kinds")
@@ -430,7 +430,7 @@ class TrajectoryData(ArrayData):
         """
         Write the given trajectory to a string of format CIF.
         """
-        from aiida.orm.data.cif \
+        from aiida.orm.node.data.cif \
             import ase_loops, cif_from_ase, pycifrw_from_cif
         from aiida.common.utils import Capturing
 
@@ -454,14 +454,14 @@ class TrajectoryData(ArrayData):
 
     def _get_aiida_structure(self, store=False, **kwargs):
         """
-        Creates :py:class:`aiida.orm.data.structure.StructureData`.
+        Creates :py:class:`aiida.orm.node.data.structure.StructureData`.
 
         :param converter: specify the converter. Default 'ase'.
         :param store: If True, intermediate calculation gets stored in the
             AiiDA database for record. Default False.
-        :return: :py:class:`aiida.orm.data.structure.StructureData` node.
+        :return: :py:class:`aiida.orm.node.data.structure.StructureData` node.
         """
-        from aiida.orm.data.parameter import ParameterData
+        from aiida.orm.node.data.parameter import ParameterData
 
         param = ParameterData(dict=kwargs)
 
@@ -470,7 +470,7 @@ class TrajectoryData(ArrayData):
 
     def _get_cif(self, index=None, **kwargs):
         """
-        Creates :py:class:`aiida.orm.data.cif.CifData`
+        Creates :py:class:`aiida.orm.node.data.cif.CifData`
         """
         struct = self._get_aiida_structure(index=index, **kwargs)
         cif = struct._get_cif(**kwargs)  # pylint: disable=protected-access
@@ -490,7 +490,7 @@ class TrajectoryData(ArrayData):
 
         Usage::
 
-            from aiida.orm.data.array.trajectory import TrajectoryData
+            from aiida.orm.node.data.array.trajectory import TrajectoryData
 
             t = TrajectoryData()
             # get sites and number of timesteps

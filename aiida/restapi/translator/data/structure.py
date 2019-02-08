@@ -28,10 +28,10 @@ class StructureDataTranslator(DataTranslator):
     # A label associated to the present class (coincides with the resource name)
     __label__ = "structures"
     # The AiiDA class one-to-one associated to the present class
-    from aiida.orm.data.structure import StructureData
+    from aiida.orm.node.data.structure import StructureData
     _aiida_class = StructureData
     # The string name of the AiiDA class
-    _aiida_type = "data.structure.StructureData"
+    _aiida_type = "node.data.structure.StructureData"
     # The string associated to the AiiDA class in the query builder lexicon
     _qb_type = _aiida_type + '.'
 

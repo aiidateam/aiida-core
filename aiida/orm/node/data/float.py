@@ -11,8 +11,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import numbers
-from aiida.orm.data import to_aiida_type
-from aiida.orm.data.numeric import NumericType
+from aiida.orm.node.data import to_aiida_type
+from aiida.orm.node.data.numeric import NumericType
 
 
 class Float(NumericType):

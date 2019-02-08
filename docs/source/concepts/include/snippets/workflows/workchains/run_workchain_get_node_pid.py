@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from aiida.orm.data.int import Int
+from aiida.orm.node.data.int import Int
 from aiida.work.launch import run_get_node, run_get_pid
 from aiida.work.workchain import WorkChain
 

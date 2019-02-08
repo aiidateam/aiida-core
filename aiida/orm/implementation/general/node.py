@@ -55,7 +55,7 @@ def clean_value(value):
         values replaced where needed.
     """
     # Must be imported in here to avoid recursive imports
-    from aiida.orm.data import BaseType
+    from aiida.orm.node.data import BaseType
 
     def clean_builtin(val):
         if isinstance(val, numbers.Real) and (math.isnan(val) or math.isinf(val)):

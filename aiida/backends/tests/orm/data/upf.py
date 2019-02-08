@@ -20,7 +20,7 @@ import shutil
 import os
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm.data.upf import parse_upf
+from aiida.orm.node.data.upf import parse_upf
 from aiida.common.exceptions import ParsingError
 
 

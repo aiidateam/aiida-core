@@ -14,7 +14,7 @@ import os
 
 import six
 
-from aiida.orm.data import Data
+from aiida.orm.node.data import Data
 from aiida.common.exceptions import (ValidationError, MissingPluginError, InputValidationError)
 from aiida.common.links import LinkType
 

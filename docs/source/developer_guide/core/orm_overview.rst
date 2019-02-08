@@ -55,7 +55,7 @@ Node
 
 Code
 ++++
-.. automodule:: aiida.orm.data.code
+.. automodule:: aiida.orm.node.data.code
    :members:
    :noindex:
    :special-members: __init__
@@ -76,7 +76,7 @@ ORM documentation: Data
 .. note:: This list only includes the classes included in AiiDA-core. For all the plugin subclasses,
   check the corresponding plugin repositories.
 
-.. automodule:: aiida.orm.data
+.. automodule:: aiida.orm.node.data
    :members:
    :noindex:
    :private-members: _exportcontent
@@ -85,56 +85,56 @@ ORM documentation: Data
 
 Structure
 +++++++++
-.. automodule:: aiida.orm.data.structure
+.. automodule:: aiida.orm.node.data.structure
    :members:
    :noindex:
    :special-members: __init__
 
 Folder
 ++++++
-.. automodule:: aiida.orm.data.folder
+.. automodule:: aiida.orm.node.data.folder
    :members:
    :noindex:
 
 Singlefile
 ++++++++++
-.. automodule:: aiida.orm.data.singlefile
+.. automodule:: aiida.orm.node.data.singlefile
    :members:
    :noindex:
 
 Upf
 +++
-.. automodule:: aiida.orm.data.upf
+.. automodule:: aiida.orm.node.data.upf
    :members:
    :noindex:
 
 Cif
 +++
-.. automodule:: aiida.orm.data.cif
+.. automodule:: aiida.orm.node.data.cif
    :members:
    :noindex:
 
 Parameter
 +++++++++
-.. automodule:: aiida.orm.data.parameter
+.. automodule:: aiida.orm.node.data.parameter
    :members:
    :noindex:
 
 Remote
 ++++++
-.. automodule:: aiida.orm.data.remote
+.. automodule:: aiida.orm.node.data.remote
    :members:
    :noindex:
 
 OrbitalData
 +++++++++++
-.. automodule:: aiida.orm.data.orbital
+.. automodule:: aiida.orm.node.data.orbital
    :members:
    :noindex:
 
 ArrayData
 +++++++++
-.. automodule:: aiida.orm.data.array
+.. automodule:: aiida.orm.node.data.array
    :members:
    :noindex:
 
@@ -144,32 +144,32 @@ The following are Data classes inheriting from ArrayData.
 
 KpointsData
 ...........
-.. automodule:: aiida.orm.data.array.kpoints
+.. automodule:: aiida.orm.node.data.array.kpoints
    :members:
    :noindex:
    :private-members:
 
 BandsData
 .........
-.. automodule:: aiida.orm.data.array.bands
+.. automodule:: aiida.orm.node.data.array.bands
    :members:
    :noindex:
 
 ProjectionData
 ..............
-.. automodule:: aiida.orm.data.array.projection
+.. automodule:: aiida.orm.node.data.array.projection
    :members:
    :noindex:
 
 TrajectoryData
 ..............
-.. automodule:: aiida.orm.data.array.trajectory
+.. automodule:: aiida.orm.node.data.array.trajectory
    :members:
    :noindex:
 
 XyData
 ..............
-.. automodule:: aiida.orm.data.array.xy
+.. automodule:: aiida.orm.node.data.array.xy
    :members:
    :noindex:
 
@@ -178,41 +178,41 @@ Base data types
 
 BaseType and NumericType
 ------------------------
-.. automodule:: aiida.orm.data.base
+.. automodule:: aiida.orm.node.data.base
    :members:
    :noindex:
 
 List
 ----
-.. autoclass:: aiida.orm.data.list.List
+.. autoclass:: aiida.orm.node.data.list.List
    :members:
    :noindex:
 
 
 Bool
 ----
-.. automodule:: aiida.orm.data.bool
+.. automodule:: aiida.orm.node.data.bool
    :members:
    :noindex:
 
 
 Float
 -----
-.. automodule:: aiida.orm.data.float
+.. automodule:: aiida.orm.node.data.float
    :members:
    :noindex:
 
 
 Int
 ---
-.. automodule:: aiida.orm.data.int
+.. automodule:: aiida.orm.node.data.int
    :members:
    :noindex:
 
 
 Str
 ---
-.. automodule:: aiida.orm.data.str
+.. automodule:: aiida.orm.node.data.str
    :members:
    :noindex:
 

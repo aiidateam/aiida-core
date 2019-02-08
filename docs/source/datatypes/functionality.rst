@@ -2,11 +2,11 @@
 
 Export data nodes to various formats
 ====================================
-Each data node has a :py:meth:`~aiida.orm.data.Data.export()` method
+Each data node has a :py:meth:`~aiida.orm.node.data.Data.export()` method
 that allows to export the given data node to file in a variety of available formats,
 e.g. to pass it to a visualization software.
 
-The :py:meth:`~aiida.orm.data.Data.export()` method asks for a filename, and it will
+The :py:meth:`~aiida.orm.node.data.Data.export()` method asks for a filename, and it will
 write to file the result. It is possible that more than one file is written (example:
 if you produce a gnuplot script, the data will typically be in a different .dat file).
 The return value of the function is a list of files that have been created.
@@ -14,13 +14,13 @@ The return value of the function is a list of files that have been created.
 The list of export formats depends on the specific Data plugin. The export format is
 typically inferred from the file extension, but if this is not possible (or you
 want to specify a given format), you can pass an additional ``fileformat`` parameter
-to :py:meth:`~aiida.orm.data.Data.export()`.
+to :py:meth:`~aiida.orm.node.data.Data.export()`.
 The list of all valid export formats can be obtained calling
 ``Data.get_export_formats()`` method, that returns a list of strings with all valid
 formats.
 
 If you don't want to export directly to a file, but want to get simply the content
-of the file as a string, then you can call the :py:meth:`~aiida.orm.data.Data._exportcontent()`
+of the file as a string, then you can call the :py:meth:`~aiida.orm.node.data.Data._exportcontent()`
 method, passing also a ``fileformat`` parameter.
 The return value is a tuple of length 2: the first element is a string
 with the content of the "main" file, while the second is a dictionary (possibly empty)
@@ -144,7 +144,7 @@ The prettifiers should be chosen depending on two aspects:
 
 Most export formats already decide which prettifier is best to use, but if you need
 to change it, you can do it passing the ``prettify_format`` parameter to the
-:py:meth:`~aiida.orm.data.Data.export()` method. Valid prettifiers include:
+:py:meth:`~aiida.orm.node.data.Data.export()` method. Valid prettifiers include:
 
 * ``'agr_seekpath``: format for Xmgrace, using ``seekpath`` raw label syntax
 * ``agr_simple``: format for Xmgrace, using ``simple`` raw label syntax

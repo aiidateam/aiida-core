@@ -752,6 +752,8 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExport
             g_e = Group(label='empty_group')
             g_e.store()
 
+        cls.cif = a
+
         return {
             TestVerdiDataListable.NODE_ID_STR: a.id,
             TestVerdiDataListable.NON_EMPTY_GROUP_ID_STR: g_ne.id,
@@ -814,6 +816,14 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExport
             res = self.cli_runner.invoke(cmd_cif.cif_import, options, catch_exceptions=False)
             self.assertIn(b'imported uuid', res.output_bytes, 'The string "imported uuid" was not found in the output'
                                                               ' of verdi data import.')
+
+    def test_content(self):
+        """Test that `verdi data cif content` returns the content of the file."""
+        options = [str(self.cif.uuid)]
+        result = self.cli_runner.invoke(cmd_cif.cif_content, options, catch_exceptions=False)
+
+        for line in result.output.split('\n'):
+            self.assertIn(line, self.valid_sample_cif_str)
 
     def test_export(self):
         """

@@ -22,14 +22,10 @@ except ImportError:  # Python2
 
 from aiida.backends.djsite.db import models
 from aiida.orm.implementation.django import dummy_model as dummy_models
-from aiida.orm.utils.node import load_node_class
 
 __all__ = ('get_backend_entity',)
 
 
-#####################################################################
-# Singledispatch to get the backend instance from the Models instance
-#####################################################################
 @singledispatch
 def get_backend_entity(dbmodel, backend):  # pylint: disable=unused-argument
     """
@@ -37,13 +33,10 @@ def get_backend_entity(dbmodel, backend):  # pylint: disable=unused-argument
 
     :param dbmodel: the db model instance
     """
-    raise TypeError("No corresponding AiiDA backend class exists for the DbModel instance {}".format(
+    raise TypeError('No corresponding AiiDA backend class exists for the DbModel instance {}'.format(
         dbmodel.__class__.__name__))
 
 
-##################################
-# Singledispatch for Django Models
-##################################
 @get_backend_entity.register(models.DbUser)
 def _(dbmodel, backend):
     """
@@ -72,13 +65,13 @@ def _(dbmodel, backend):
 
 
 @get_backend_entity.register(models.DbNode)
-def _(dbmodel, _backend):
+def _(dbmodel, backend):
     """
     get_backend_entity for Django DbNode. It will return an ORM instance since
     there is not Node backend entity yet.
     """
-    node_class = load_node_class(dbmodel.type)
-    return node_class(dbnode=dbmodel)
+    from . import nodes
+    return nodes.DjangoNode.from_dbmodel(dbmodel, backend)
 
 
 @get_backend_entity.register(models.DbAuthInfo)
@@ -102,9 +95,6 @@ def _(dbmodel, backend):
     return logs.DjangoLog.from_dbmodel(dbmodel, backend)
 
 
-########################################
-# Singledispatch for Dummy Django Models
-########################################
 @get_backend_entity.register(dummy_models.DbUser)
 def _(dbmodel, backend):
     """
@@ -167,7 +157,7 @@ def _(dbmodel, backend):
 
 
 @get_backend_entity.register(dummy_models.DbNode)
-def _(dbmodel, _):
+def _(dbmodel, backend):
     """
     get_backend_entity for DummyModel DbNode.
     DummyModel instances are created when QueryBuilder queries the Django backend.
@@ -186,8 +176,8 @@ def _(dbmodel, _):
         public=dbmodel.public,
         nodeversion=dbmodel.nodeversion)
 
-    node_class = load_node_class(djnode_instance.type)
-    return node_class(dbnode=djnode_instance)
+    from . import nodes
+    return nodes.DjangoNode.from_dbmodel(djnode_instance, backend)
 
 
 @get_backend_entity.register(dummy_models.DbAuthInfo)

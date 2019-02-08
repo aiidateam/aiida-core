@@ -43,7 +43,7 @@ class Comment(entities.Entity):
         :return: a Comment object associated to the given node and user
         """
         backend = backend or get_manager().get_backend()
-        model = backend.comments.create(node=node, user=user.backend_entity, content=content)
+        model = backend.comments.create(node=node.backend_entity, user=user.backend_entity, content=content)
         super(Comment, self).__init__(model)
 
     def __str__(self):
@@ -70,7 +70,7 @@ class Comment(entities.Entity):
         return users.User.from_backend_entity(self._backend_entity.user)
 
     def set_user(self, value):
-        self._backend_entity.set_user(value.backend_entity)
+        self._backend_entity.user = value.backend_entity
 
     @property
     def content(self):

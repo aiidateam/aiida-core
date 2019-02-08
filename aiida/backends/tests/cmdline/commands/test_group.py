@@ -170,11 +170,11 @@ class TestVerdiGroupSetup(AiidaTestCase):
         """
         Test group addnotes command
         """
-        from aiida.orm.node import CalculationNode
+        from aiida.orm import CalculationNode
 
         node = CalculationNode()
-        node._set_attr('attr1', 'OK')  # pylint: disable=protected-access
-        node._set_attr('attr2', 'OK')  # pylint: disable=protected-access
+        node.set_attribute('attr1', 'OK')  # pylint: disable=protected-access
+        node.set_attribute('attr2', 'OK')  # pylint: disable=protected-access
         node.store()
 
         result = self.cli_runner.invoke(group_addnodes, ['--force', '--group=dummygroup1', node.uuid])

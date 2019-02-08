@@ -13,7 +13,9 @@ import six
 from aiida.common import exceptions
 from aiida.common.utils import strip_prefix
 
-__all__ = ('load_node_class', 'get_type_string_from_class', 'get_query_type_from_type_string', 'AbstractNodeMeta', '_NO_DEFAULT')
+__all__ = ('load_node_class', 'get_type_string_from_class', 'get_query_type_from_type_string', 'AbstractNodeMeta',
+           'clean_value')
+
 
 def load_node_class(type_string):
     """
@@ -125,7 +127,7 @@ def clean_value(value):
         values replaced where needed.
     """
     # Must be imported in here to avoid recursive imports
-    from aiida.orm.data import BaseType
+    from aiida.orm.node.data import BaseType
 
     def clean_builtin(val):
         """
@@ -159,18 +161,19 @@ def clean_value(value):
     return clean_builtin(value)
 
 
-class AbstractNodeMeta(ABCMeta): # pylint: disable=too-few-public-methods
+class AbstractNodeMeta(ABCMeta):  # pylint: disable=too-few-public-methods
     """
     Some python black magic to set correctly the logger also in subclasses.
     """
 
-    def __new__(mcs, name, bases, attrs):
+    # pylint: disable=arguments-differ,protected-access,too-many-function-args
 
-        newcls = ABCMeta.__new__(mcs, name, bases, attrs)
-        newcls._logger = logging.getLogger('{}.{}'.format(attrs['__module__'], name))  # pylint: disable=protected-access
+    def __new__(mcs, name, bases, namespace):
+        newcls = ABCMeta.__new__(mcs, name, bases, namespace)
+        newcls._logger = logging.getLogger('{}.{}'.format(namespace['__module__'], name))
 
         # Set the plugin type string and query type string based on the plugin type string
-        newcls._plugin_type_string = get_type_string_from_class(attrs['__module__'], name)  # pylint: disable=protected-access
-        newcls._query_type_string = get_query_type_from_type_string(newcls._plugin_type_string)  # pylint: disable=protected-access
+        newcls._plugin_type_string = get_type_string_from_class(namespace['__module__'], name)
+        newcls._query_type_string = get_query_type_from_type_string(newcls._plugin_type_string)
 
         return newcls

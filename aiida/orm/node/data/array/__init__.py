@@ -33,9 +33,10 @@ class ArrayData(Data):
       cache with the :py:meth:`.clear_internal_cache` method.
     """
     array_prefix = "array|"
+    _cached_arrays = None
 
-    def __init__(self, *args, **kwargs):
-        super(ArrayData, self).__init__(*args, **kwargs)
+    def initialize(self):
+        super(ArrayData, self).initialize()
         self._cached_arrays = {}
 
     def delete_array(self, name):
@@ -45,16 +46,15 @@ class ArrayData(Data):
         :param name: The name of the array to delete from the node.
         """
         fname = '{}.npy'.format(name)
-        if fname not in self.get_folder_list():
+        if fname not in self.repository.get_folder_list():
             raise KeyError("Array with name '{}' not found in node pk= {}".format(name, self.pk))
 
         # remove both file and attribute
-        self.remove_path(fname)
+        self.repository.remove_path(fname)
         try:
-            self._del_attr("{}{}".format(self.array_prefix, name))
+            self.delete_attribute("{}{}".format(self.array_prefix, name))
         except (KeyError, AttributeError):
-            # Should not happen, but do not crash if for some reason the
-            # property was not set.
+            # Should not happen, but do not crash if for some reason the property was not set.
             pass
 
     def get_arraynames(self):
@@ -72,14 +72,14 @@ class ArrayData(Data):
         Return a list of all arrays stored in the node, listing the files (and
         not relying on the properties).
         """
-        return [i[:-4] for i in self.get_folder_list() if i.endswith('.npy')]
+        return [i[:-4] for i in self.repository.get_folder_list() if i.endswith('.npy')]
 
     def _arraynames_from_properties(self):
         """
         Return a list of all arrays stored in the node, listing the attributes
         starting with the correct prefix.
         """
-        return [i[len(self.array_prefix):] for i in self.attrs() if i.startswith(self.array_prefix)]
+        return [i[len(self.array_prefix):] for i in self.attributes.keys() if i.startswith(self.array_prefix)]
 
     def get_shape(self, name):
         """
@@ -88,7 +88,7 @@ class ArrayData(Data):
 
         :param name: The name of the array.
         """
-        return tuple(self.get_attr("{}{}".format(self.array_prefix, name)))
+        return tuple(self.get_attribute("{}{}".format(self.array_prefix, name)))
 
     def iterarrays(self):
         """
@@ -126,10 +126,10 @@ class ArrayData(Data):
             Return the array stored in a .npy file
             """
             fname = '{}.npy'.format(name)
-            if fname not in self.get_folder_list():
+            if fname not in self.repository.get_folder_list():
                 raise KeyError("Array with name '{}' not found in node pk= {}".format(name, self.pk))
 
-            array = numpy.load(self.get_abs_path(fname))
+            array = numpy.load(self.repository.get_abs_path(fname))
             return array
 
         # Return with proper caching, but only after storing. Before, instead,
@@ -181,11 +181,11 @@ class ArrayData(Data):
             numpy.save(_file, array)
             _file.flush()  # Important to flush here, otherwise the next copy command
             # will just copy an empty file
-            self.add_path(_file.name, fname)
+            self.repository.add_path(_file.name, fname)
 
         # Mainly for convenience, for querying purposes (both stores the fact
         # that there is an array with that name, and its shape)
-        self._set_attr("{}{}".format(self.array_prefix, name), list(array.shape))
+        self.set_attribute("{}{}".format(self.array_prefix, name), list(array.shape))
 
     def _validate(self):
         """

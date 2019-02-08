@@ -10,7 +10,6 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import sys
 
 import six
 from six.moves import zip, range
@@ -1498,6 +1497,10 @@ wf_data_value_types = WorkflowDataValueType((
     'JSON',
     'AIIDA',
 ))
+
+wf_start_call = "start"
+wf_exit_call = "exit"
+wf_default_call = "none"
 
 @python_2_unicode_compatible
 class DbWorkflow(m.Model):

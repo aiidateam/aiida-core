@@ -26,7 +26,7 @@ class ArithmeticAddParser(Parser):
             return self.exit_codes.ERROR_NO_RETRIEVED_FOLDER
 
         try:
-            with output_folder.open(self.node.get_attr('output_filename'), 'r') as handle:
+            with output_folder.open(self.node.get_attribute('output_filename'), 'r') as handle:
                 result = self.parse_stdout(handle)
         except (OSError, IOError):
             return self.exit_codes.ERROR_READING_OUTPUT_FILE

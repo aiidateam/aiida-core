@@ -427,22 +427,46 @@ class CifData(SinglefileData):
     """
     # pylint: disable=abstract-method, too-many-public-methods
     _set_incompatibilities = [('ase', 'file'), ('ase', 'values'), ('file', 'values')]
-    _scan_types = ['standard', 'flex']
-    _parse_policies = ['eager', 'lazy']
+    _scan_types = ('standard', 'flex')
+    _parse_policies = ('eager', 'lazy')
+    _values = None
+    _ase = None
 
-    @property
-    def _set_defaults(self):
-        """
-        Add defaults for some attributes.
+    def __init__(self,
+                 ase=None,
+                 file=None,
+                 values=None,
+                 source=None,
+                 scan_type='standard',
+                 parse_policy='eager',
+                 **kwargs):
+        # pylint: disable=too-many-arguments, redefined-builtin
 
-        """
-        parent_dict = super(CifData, self)._set_defaults
-        parent_dict.update({
-            'scan_type': self._scan_types[0],
-            'parse_policy': 'eager',
-        })
+        args = {
+            'ase': ase,
+            'file': file,
+            'values': values,
+        }
 
-        return parent_dict
+        for left, right in self._set_incompatibilities:
+            if args[left] is not None and args[right] is not None:
+                raise ValueError('cannot pass {} and {} at the same time'.format(left, right))
+
+        super(CifData, self).__init__(file, **kwargs)
+        self.set_scan_type(scan_type)
+        self.set_parse_policy(parse_policy)
+
+        if source is not None:
+            self.set_source(source)
+
+        if ase is not None:
+            self.set_ase(ase)
+
+        if values is not None:
+            self.set_values(values)
+
+        if not self.is_stored and file is not None and self.get_attribute('parse_policy') == 'eager':
+            self.parse()
 
     @staticmethod
     def read_cif(fileobj, index=-1, **kwargs):
@@ -540,7 +564,7 @@ class CifData(SinglefileData):
         """
         if not kwargs and self._ase:
             return self.ase
-        return CifData.read_cif(self._get_folder_pathsubfolder.open(self.filename), **kwargs)
+        return CifData.read_cif(self.repository._get_folder_pathsubfolder.open(self.filename), **kwargs)  # pylint: disable=protected-access
 
     def set_ase(self, aseatoms):
         """
@@ -571,7 +595,7 @@ class CifData(SinglefileData):
             import CifFile
             from CifFile import CifBlock  # pylint: disable=no-name-in-module
 
-            c = CifFile.ReadCif(self.get_file_abs_path(), scantype=self.get_attr('scan_type'))  # pylint: disable=no-member
+            c = CifFile.ReadCif(self.get_file_abs_path(), scantype=self.get_attribute('scan_type'))  # pylint: disable=no-member
             for k, v in c.items():
                 c.dictionary[k] = CifBlock(v)
             self._values = c
@@ -600,19 +624,6 @@ class CifData(SinglefileData):
     def values(self, values):
         self.set_values(values)
 
-    def __init__(self, **kwargs):
-        """
-        Initialises an instance of CifData.
-        """
-        # Note: this will set attributes, if specified as kwargs
-        super(CifData, self).__init__(**kwargs)
-        self._values = None
-        self._ase = None
-
-        if not self.is_stored and 'file' in kwargs \
-                and self.get_attr('parse_policy') == 'eager':
-            self.parse()
-
     def parse(self, scan_type=None):
         """
         Parses CIF file and sets attributes.
@@ -623,8 +634,8 @@ class CifData(SinglefileData):
             self.set_scan_type(scan_type)
 
         # Note: this causes parsing, if not already parsed
-        self._set_attr('formulae', self.get_formulae())
-        self._set_attr('spacegroup_numbers', self.get_spacegroup_numbers())
+        self.set_attribute('formulae', self.get_formulae())
+        self.set_attribute('spacegroup_numbers', self.get_spacegroup_numbers())
 
     # pylint: disable=arguments-differ
     def store(self, *args, **kwargs):
@@ -632,7 +643,7 @@ class CifData(SinglefileData):
         Store the node.
         """
         if not self.is_stored:
-            self._set_attr('md5', self.generate_md5())
+            self.set_attribute('md5', self.generate_md5())
 
         return super(CifData, self).store(*args, **kwargs)
 
@@ -650,12 +661,12 @@ class CifData(SinglefileData):
                 self.source.get('source_md5', None) is not None and \
                 self.source['source_md5'] != md5sum:
             self.source = {}
-        self._set_attr('md5', md5sum)
+        self.set_attribute('md5', md5sum)
 
         self._values = None
         self._ase = None
-        self._set_attr('formulae', None)
-        self._set_attr('spacegroup_numbers', None)
+        self.set_attribute('formulae', None)
+        self.set_attribute('spacegroup_numbers', None)
 
     def set_scan_type(self, scan_type):
         """
@@ -668,7 +679,7 @@ class CifData(SinglefileData):
         :param scan_type: Either 'standard' or 'flex' (see _scan_types)
         """
         if scan_type in self._scan_types:
-            self._set_attr('scan_type', scan_type)
+            self.set_attribute('scan_type', scan_type)
         else:
             raise ValueError("Got unknown scan_type {}".format(scan_type))
 
@@ -680,7 +691,7 @@ class CifData(SinglefileData):
             or 'lazy' (defer parsing until needed)
         """
         if parse_policy in self._parse_policies:
-            self._set_attr('parse_policy', parse_policy)
+            self.set_attribute('parse_policy', parse_policy)
         else:
             raise ValueError("Got unknown parse_policy {}".format(parse_policy))
 
@@ -943,7 +954,7 @@ class CifData(SinglefileData):
             # Note: this overwrites the CIF file!
             self.set_values(self._values)
 
-        with self._get_folder_pathsubfolder.open(self.filename) as f:
+        with self.repository._get_folder_pathsubfolder.open(self.filename) as f:  # pylint: disable=protected-access
             return f.read().encode('utf-8'), {}
 
     # pylint: disable=unused-argument
@@ -979,7 +990,7 @@ class CifData(SinglefileData):
         super(CifData, self)._validate()
 
         try:
-            attr_md5 = self.get_attr('md5')
+            attr_md5 = self.get_attribute('md5')
         except AttributeError:
             raise ValidationError("attribute 'md5' not set.")
         md5 = self.generate_md5()

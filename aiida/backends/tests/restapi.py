@@ -17,7 +17,7 @@ from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 from aiida.orm import DataFactory
-from aiida.orm.node import CalcJobNode
+from aiida.orm import CalcJobNode
 from aiida.orm.computers import Computer
 from aiida.orm.node.data import Data
 from aiida.orm.querybuilder import QueryBuilder
@@ -82,8 +82,8 @@ class RESTApiTestCase(AiidaTestCase):
 
         calc = CalcJobNode(computer=cls.computer)
         calc.set_option('resources', resources)
-        calc._set_attr("attr1", "OK")  # pylint: disable=protected-access
-        calc._set_attr("attr2", "OK")  # pylint: disable=protected-access
+        calc.set_attribute("attr1", "OK")  # pylint: disable=protected-access
+        calc.set_attribute("attr2", "OK")  # pylint: disable=protected-access
         calc.store()
 
         calc.add_incoming(structure, link_type=LinkType.INPUT_CALC, link_label='link_structure')

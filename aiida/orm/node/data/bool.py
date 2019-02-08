@@ -48,7 +48,7 @@ def get_true_node():
     of AiiDA) a user is not yet defined in the DB (but a user is mandatory in the
     DB before you can create new Nodes in AiiDA).
     """
-    TRUE = Bool(typevalue=(bool, True))
+    TRUE = Bool(True)
     return TRUE
 
 
@@ -61,5 +61,5 @@ def get_false_node():
     of AiiDA) a user is not yet defined in the DB (but a user is mandatory in the
     DB before you can create new Nodes in AiiDA).
     """
-    FALSE = Bool(typevalue=(bool, False))
+    FALSE = Bool(False)
     return FALSE

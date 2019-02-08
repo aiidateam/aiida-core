@@ -43,6 +43,11 @@ class TrajectoryData(ArrayData):
     possibly with velocities).
     """
 
+    def __init__(self, structurelist=None, **kwargs):
+        super(TrajectoryData, self).__init__(**kwargs)
+        if structurelist is not None:
+            self.set_structurelist(structurelist)
+
     def _internal_validate(self, stepids, cells, symbols, positions, times, velocities):  # pylint: disable=too-many-arguments,too-many-locals,no-self-use,too-many-branches
         """
         Internal function to validate the type and shape of the arrays. See
@@ -148,7 +153,7 @@ class TrajectoryData(ArrayData):
 
         self._internal_validate(stepids, cells, symbols, positions, times, velocities)
         # set symbols as attribute for easier querying
-        self._set_attr('symbols', list(symbols))
+        self.set_attribute('symbols', list(symbols))
         self.set_array('positions', positions)
         if stepids is not None:  # use input stepids
             self.set_array('steps', stepids)
@@ -278,7 +283,7 @@ class TrajectoryData(ArrayData):
 
         :raises KeyError: if the trajectory has not been set yet.
         """
-        return self.get_attr('symbols')
+        return self.get_attribute('symbols')
 
     def get_positions(self):
         """
@@ -639,11 +644,11 @@ class TrajectoryData(ArrayData):
 
         # Try to get the units.
         try:
-            positions_unit = self.get_attr('units|positions')
+            positions_unit = self.get_attribute('units|positions')
         except KeyError:
             positions_unit = 'A'
         try:
-            times_unit = self.get_attr('units|times')
+            times_unit = self.get_attribute('units|times')
         except KeyError:
             times_unit = 'ps'
 
@@ -758,7 +763,7 @@ class TrajectoryData(ArrayData):
         positions = self.get_positions()[minindex:maxindex:stepsize]
 
         try:
-            if self.get_attr('units|positions') in ('bohr', 'atomic'):
+            if self.get_attribute('units|positions') in ('bohr', 'atomic'):
                 from aiida.common.constants import bohr_to_ang
                 positions *= bohr_to_ang
         except KeyError:

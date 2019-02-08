@@ -228,7 +228,7 @@ def upload_upf_family(folder, group_label, group_description,
                 pseudo.uuid, pseudo.filename))
 
     # Add elements to the group all togetehr
-    group.add_nodes(pseudo for pseudo, created in pseudo_and_created)
+    group.add_nodes([pseudo for pseudo, created in pseudo_and_created])
 
     nuploaded = len([_ for _, created in pseudo_and_created if created])
 
@@ -310,6 +310,13 @@ class UpfData(SinglefileData):
     Function not yet documented.
     """
 
+    def __init__(self, file=None, source=None, **kwargs):
+
+        super(UpfData, self).__init__(file, **kwargs)
+
+        if source is not None:
+            self.set_source(source)
+
     @classmethod
     def get_or_create(cls, filename, use_first=False, store_upf=True):
         """
@@ -365,7 +372,7 @@ class UpfData(SinglefileData):
         from aiida.common.exceptions import ParsingError, ValidationError
         from aiida.common.files import md5_file
 
-        if self._to_be_stored is False:
+        if self.is_stored:
             return self
 
         upf_abspath = self.get_file_abs_path()
@@ -381,8 +388,8 @@ class UpfData(SinglefileData):
             raise ParsingError("No 'element' parsed in the UPF file {};"
                                " unable to store".format(self.filename))
 
-        self._set_attr('element', str(element))
-        self._set_attr('md5', md5sum)
+        self.set_attribute('element', str(element))
+        self.set_attribute('md5', md5sum)
 
         return super(UpfData, self).store(*args, **kwargs)
 
@@ -417,8 +424,8 @@ class UpfData(SinglefileData):
 
         super(UpfData, self).set_file(filename)
 
-        self._set_attr('element', str(element))
-        self._set_attr('md5', md5sum)
+        self.set_attribute('element', str(element))
+        self.set_attribute('md5', md5sum)
 
     def get_upf_family_names(self):
         """Get the list of all upf family names to which the pseudo belongs."""
@@ -432,11 +439,11 @@ class UpfData(SinglefileData):
 
     @property
     def element(self):
-        return self.get_attr('element', None)
+        return self.get_attribute('element', None)
 
     @property
     def md5sum(self):
-        return self.get_attr('md5', None)
+        return self.get_attribute('md5', None)
 
     def _validate(self):
         from aiida.common.exceptions import ValidationError, ParsingError
@@ -462,12 +469,12 @@ class UpfData(SinglefileData):
                                   "file {}".format(upf_abspath))
 
         try:
-            attr_element = self.get_attr('element')
+            attr_element = self.get_attribute('element')
         except AttributeError:
             raise ValidationError("attribute 'element' not set.")
 
         try:
-            attr_md5 = self.get_attr('md5')
+            attr_md5 = self.get_attribute('md5')
         except AttributeError:
             raise ValidationError("attribute 'md5' not set.")
 

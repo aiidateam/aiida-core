@@ -381,7 +381,7 @@ class Calculation(Node):
 
         from aiida.restapi.translator.calculation import CalculationTranslator
         self.trans = CalculationTranslator(**kwargs)
-        from aiida.orm.node import CalcJobNode as CalculationTclass
+        from aiida.orm import CalcJobNode as CalculationTclass
         self.tclass = CalculationTclass
 
         self.parse_pk_uuid = 'uuid'
@@ -395,7 +395,7 @@ class Code(Node):
 
         from aiida.restapi.translator.code import CodeTranslator
         self.trans = CodeTranslator(**kwargs)
-        from aiida.orm import Code as CodeTclass
+        from aiida.orm.node.data.code import Code as CodeTclass
         self.tclass = CodeTclass
 
         self.parse_pk_uuid = 'uuid'

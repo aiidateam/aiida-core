@@ -33,7 +33,7 @@ from aiida.common.lang import classproperty, override, protected
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida import orm
-from aiida.orm.node import ProcessNode, CalculationNode, WorkflowNode
+from aiida.orm import ProcessNode, CalculationNode, WorkflowNode
 from aiida.common import serialize
 from aiida.work.ports import InputPort, PortNamespace
 from aiida.work.process_spec import ProcessSpec, ExitCode
@@ -551,8 +551,8 @@ class Process(plumpy.Process):
         for name, node in self._flat_inputs().items():
 
             # Special exception: set computer if node is a remote Code and our node does not yet have a computer set
-            if isinstance(node, Code) and not node.is_local() and not self.node.get_computer():
-                self.node.set_computer(node.get_remote_computer())
+            if isinstance(node, Code) and not node.is_local() and not self.node.computer:
+                self.node.computer = node.get_remote_computer()
 
             if isinstance(node, ProcessNode):
                 node = utils.get_or_create_output_group(node)

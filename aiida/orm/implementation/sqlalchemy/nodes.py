@@ -7,538 +7,440 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""SqlAlchemy implementation of the `BackendNode` and `BackendNodeCollection` classes."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-import six
-
+# pylint: disable=no-name-in-module,import-error
+from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.exc import SQLAlchemyError
 
-from aiida.backends.sqlalchemy.models import node as models
-from aiida.backends.sqlalchemy.models import link as link_models
 from aiida.backends.sqlalchemy import get_scoped_session
+from aiida.backends.sqlalchemy.models import node as models
 from aiida.common import exceptions
-from aiida.common.links import LinkType
-from aiida.common.hashing import _HASH_EXTRA_KEY
+from aiida.common.lang import type_check
 
 from .. import BackendNode, BackendNodeCollection
 from . import entities
 from . import utils
+from .computer import SqlaComputer
+from .users import SqlaUser
 
 
 class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
     """SQLA Node backend entity"""
 
+    # pylint: disable=too-many-public-methods
+
     MODEL_CLASS = models.DbNode
-    LINK_CLASS = link_models.DbLink
 
-    # TODO: check how many parameters we want to expose in the init
-    # and if we need to define here some defaults
-    def __init__(self, backend, type, process_type, label, description):
+    def __init__(self, backend, node_type, user, computer=None, process_type=None, label='', description=''):
+        """Construct a new `BackendNode` instance wrapping a new `DbNode` instance.
+
+        :param backend: the backend
+        :param node_type: the node type string
+        :param user: associated `BackendUser`
+        :param computer: associated `BackendComputer`
+        :param label: string label
+        :param description: string description
+        """
+        # pylint: disable=too-many-arguments
         super(SqlaNode, self).__init__(backend)
-        self._dbmodel = utils.ModelWrapper(
-            models.DbNode(
-                type=type,
-                process_type=process_type,
-                label=label,
-                description=description,
-            ))
-        self._init_backend_node()
 
-    def _increment_version_number(self):
+        arguments = {
+            'type': node_type,
+            'user': user.dbmodel,
+            'process_type': process_type,
+            'label': label,
+            'description': description,
+        }
+
+        type_check(user, SqlaUser)
+
+        if computer:
+            type_check(computer, SqlaComputer, 'computer is of type {}'.format(type(computer)))
+            arguments['dbcomputer'] = computer.dbmodel
+
+        self._dbmodel = utils.ModelWrapper(models.DbNode(**arguments))
+
+    def clone(self):
+        """Return an unstored clone of ourselves.
+
+        :return: an unstored `BackendNode` with the exact same attributes and extras as self
         """
-        Increment the node version number of this node by one
-        directly in the database
+        arguments = {
+            'type': self._dbmodel.type,
+            'user': self._dbmodel.user,
+            'dbcomputer': self._dbmodel.dbcomputer,
+            'process_type': self._dbmodel.process_type,
+            'label': self._dbmodel.label,
+            'description': self._dbmodel.description,
+            'attributes': self._dbmodel.attributes,
+            'extras': self._dbmodel.extras,
+        }
+
+        clone = self.__class__.__new__(self.__class__)  # pylint: disable=no-value-for-parameter
+        clone.__init__(self.backend, self.type, self.user)
+        clone._dbmodel = utils.ModelWrapper(models.DbNode(**arguments))  # pylint: disable=protected-access
+        return clone
+
+    @property
+    def computer(self):
+        """Return the computer of this node.
+
+        :return: the computer or None
+        :rtype: `BackendComputer` or None
         """
-        self._dbmodel.nodeversion = self.nodeversion + 1
         try:
-            self._dbmodel.save()
-        except:
+            return self.backend.computers.from_dbmodel(self._dbmodel.dbcomputer)
+        except TypeError:
+            return None
+
+    @computer.setter
+    def computer(self, computer):
+        """Set the computer of this node.
+
+        :param computer: a `BackendComputer`
+        """
+        type_check(computer, SqlaComputer, allow_none=True)
+
+        if computer is not None:
+            computer = computer.dbmodel
+
+        self._dbmodel.dbcomputer = computer
+
+    @property
+    def user(self):
+        """Return the user of this node.
+
+        :return: the user
+        :rtype: `BackendUser`
+        """
+        return self.backend.users.from_dbmodel(self._dbmodel.user)
+
+    @user.setter
+    def user(self, user):
+        """Set the user of this node.
+
+        :param user: a `BackendUser`
+        """
+        type_check(user, SqlaUser)
+        self._dbmodel.user = user.dbmodel
+
+    def get_attribute(self, key):
+        """Return an attribute.
+
+        :param key: name of the attribute
+        :return: the value of the attribute
+        :raises AttributeError: if the attribute does not exist
+        """
+        try:
+            return utils.get_attr(self._dbmodel.attributes, key)
+        except (KeyError, IndexError):
+            raise AttributeError('Attribute `{}` does not exist'.format(key))
+
+    def get_attributes(self, keys):
+        """Return a set of attributes.
+
+        :param keys: names of the attributes
+        :return: the values of the attributes
+        :raises AttributeError: if at least one attribute does not exist
+        """
+        raise NotImplementedError
+
+    def set_attribute(self, key, value):
+        """Set an attribute to the given value.
+
+        :param key: name of the attribute
+        :param value: value of the attribute
+        """
+        try:
+            self.dbmodel.set_attr(key, value)
+            self._increment_version_number()
+        except Exception:  # pylint: disable=bare-except
             session = get_scoped_session()
             session.rollback()
             raise
 
-    def _ensure_model_uptodate(self, attribute_names=None):
-        """
-        Expire specific fields of the dbmodel (or, if attribute_names
-        is not specified, all of them), so they will be re-fetched
-        from the DB.
+    def set_attributes(self, attributes):
+        """Set attributes.
 
-        :param attribute_names: by default, expire all columns.
-             If you want to expire only specific columns, pass
-             a list of strings with the column names.
-        """
-        if self.is_stored:
-            self._dbmodel.session.expire(self._dbmodel, attribute_names=attribute_names)
+        .. note:: This will override any existing attributes that are present in the new dictionary.
 
-    def _attributes(self):
-        """
-        Return the attributes, ensuring first that the model
-        is up to date.
-        """
-        self._ensure_model_uptodate(['attributes'])
-        return self._dbmodel.attributes
-
-    def _extras(self):
-        """
-        Return the extras, ensuring first that the model
-        is up to date.
-        """
-        self._ensure_model_uptodate(['extras'])
-        return self._dbmodel.extras
-
-    def _get_db_attrs_items(self):
-        """
-        Iterator over the attributes, returning tuples (key, value),
-        that actually performs the job directly on the DB.
-
-        :return: a generator of the (key, value) pairs
-        """
-        for key, val in self._attributes().items():
-            yield (key, val)
-
-    def _get_db_attrs_keys(self):
-        """
-        Iterator over the attributes, returning the attribute keys only,
-        that actually performs the job directly on the DB.
-
-        Note: It is independent of the _get_db_attrs_items
-        because it is typically faster to retrieve only the keys
-        from the database, especially if the values are big.
-
-        :return: a generator of the keys
-        """
-        for key in self._attributes().keys():
-            yield key
-
-    def _set_db_attr(self, key, value):
-        """
-        Set the value directly in the DB, without checking if it is stored, or
-        using the cache.
-
-        :param key: key name
-        :param value: its value
+        :param attributes: the new attributes to set
         """
         try:
-            self._dbmodel.set_attr(key, value)
-        except Exception:
+            self.dbmodel.set_attributes(attributes)
+            self._increment_version_number()
+        except Exception:  # pylint: disable=bare-except
             session = get_scoped_session()
             session.rollback()
             raise
 
-    def _del_db_attr(self, key):
-        """
-        Delete an attribute directly from the DB
+    def reset_attributes(self, attributes):
+        """Reset the attributes.
 
-        :param key: The key of the attribute to delete
+        .. note:: This will completely reset any existing attributes and replace them with the new dictionary.
+
+        :param attributes: the new attributes to set
+        """
+        try:
+            self.dbmodel.reset_attributes(attributes)
+            self._increment_version_number()
+        except Exception:  # pylint: disable=bare-except
+            session = get_scoped_session()
+            session.rollback()
+            raise
+
+    def delete_attribute(self, key):
+        """Delete an attribute.
+
+        :param key: name of the attribute
+        :raises AttributeError: if the attribute does not exist
         """
         try:
             self._dbmodel.del_attr(key)
-        except Exception:
+            self._increment_version_number()
+        except Exception:  # pylint: disable=bare-except
             session = get_scoped_session()
             session.rollback()
             raise
 
-    def _get_db_attr(self, key):
-        """
-        Return the attribute value, directly from the DB.
+    def delete_attributes(self, keys):
+        """Delete multiple attributes.
 
-        :param key: the attribute key
-        :return: the attribute value
-        :raise AttributeError: if the attribute does not exist.
+        .. note:: The implementation should guarantee that all the keys that are to be deleted actually exist or the
+            entire operation should be canceled without any change and an ``AttributeError`` should be raised.
+
+        :param keys: names of the attributes to delete
+        :raises AttributeError: if at least on of the attribute does not exist
+        """
+        raise NotImplementedError
+
+    def clear_attributes(self):
+        """Delete all attributes."""
+        raise NotImplementedError
+
+    def attributes_items(self):
+        """Return an iterator over the attribute items.
+
+        :return: an iterator with attribute key value pairs
+        """
+        for key, value in self._dbmodel.attributes.items():
+            yield key, value
+
+    def attributes_keys(self):
+        """Return an iterator over the attribute keys.
+
+        :return: an iterator with attribute keys
+        """
+        for key in self._dbmodel.attributes.keys():
+            yield key
+
+    def get_extra(self, key):
+        """Return an extra.
+
+        :param key: name of the extra
+        :return: the value of the extra
+        :raises AttributeError: if the extra does not exist
         """
         try:
-            return utils.get_attr(self._attributes(), key)
+            return utils.get_attr(self._dbmodel.extras, key)
         except (KeyError, IndexError):
-            raise AttributeError("Attribute '{}' does not exist".format(key))
+            raise AttributeError('Extra `{}` does not exist'.format(key))
 
-    @property
-    def uuid(self):
+    def get_extras(self, keys):
+        """Return a set of extras.
+
+        :param keys: names of the extras
+        :return: the values of the extras
+        :raises AttributeError: if at least one extra does not exist
         """
-        Get the UUID of the log entry
+        raise NotImplementedError
+
+    def set_extra(self, key, value, increase_version=True):
+        """Set an extra to the given value.
+
+        :param key: name of the extra
+        :param value: value of the extra
+        :param increase_version: boolean, if True will increase the node version upon successfully setting the extra
         """
-        return six.text_type(self._dbmodel.uuid)
-
-    def process_type(self):
-        """
-        The node process_type
-
-        :return: the process type
-        """
-
-    def nodeversion(self):
-        """
-        Get the version number for this node
-
-        :return: the version number
-        :rtype: int
-        """
-        self._ensure_model_uptodate(attribute_names=['nodeversion'])
-        return self._dbmodel.nodeversion
-
-    @property
-    def ctime(self):
-        """
-        Return the creation time of the node.
-        """
-        self._ensure_model_uptodate(attribute_names=['ctime'])
-        return self._dbmodel.ctime
-
-    @property
-    def mtime(self):
-        """
-        Return the modification time of the node.
-        """
-        self._ensure_model_uptodate(attribute_names=['mtime'])
-        return self._dbmodel.mtime
-
-    @property
-    def type(self):
-        """
-        Get the type of the node.
-
-        :return: a string.
-        """
-        # Type is immutable so no need to ensure the model is up to date
-        return self._dbmodel.type
-
-    def get_computer(self):
-        """
-        Get the computer associated to the node.
-
-        :return: the Computer object or None.
-        """
-        from aiida import orm
-
-        self._ensure_model_uptodate(attribute_names=['dbcomputer'])
-        if self._dbmodel.dbcomputer is None:
-            return None
-
-        return orm.Computer.from_backend_entity(self.backend.computers.from_dbmodel(self._dbmodel.dbcomputer))
-
-    def _set_db_computer(self, computer):
-        """
-        Set the computer directly inside the dbnode member, in the DB.
-
-        DO NOT USE DIRECTLY.
-
-        :param computer: the computer object
-        """
-        type_check(computer, computers.SqlaComputer)
-        self._dbmodel.dbcomputer = computer.dbmodel
-
-    def get_user(self):
-        """
-        Get the user.
-
-        :return: an aiida user model object
-        """
-        from aiida import orm
-
-        self._ensure_model_uptodate(attribute_names=['user'])
-        backend_user = self._backend.users.from_dbmodel(self._dbmodel.user)
-        return orm.User.from_backend_entity(backend_user)
-
-    def set_user(self, user):
-        """
-        Set the user
-
-        :param user: The new user
-        """
-        from aiida import orm
-
-        type_check(user, orm.User)
-        backend_user = user.backend_entity
-        self._dbmodel.user = backend_user.dbmodel
-
-    def _get_db_label_field(self):
-        """
-        Get the label field acting directly on the DB
-
-        :return: a string.
-        """
-        self._ensure_model_uptodate(attribute_names=['label'])
-        return self._dbmodel.label
-
-    def _update_db_label_field(self, field_value):
-        """
-        Set the label field acting directly on the DB
-
-        :param field_value: the new value of the label field
-        """
-        from aiida.backends.sqlalchemy import get_scoped_session
-        session = get_scoped_session()
-
-        self._dbmodel.label = field_value
-        if self.is_stored:
-            session.add(self._dbmodel)
-            self._increment_version_number_db()
-
-    def _get_db_description_field(self):
-        """
-        Get the description of the node.
-
-        :return: a string
-        :rtype: str
-        """
-        self._ensure_model_uptodate(attribute_names=['description'])
-        return self._dbmodel.description
-
-    def _update_db_description_field(self, field_value):
-        """
-        Update the description of this node, acting directly at the DB level
-
-        :param field_value: the new value of the description field
-        """
-        from aiida.backends.sqlalchemy import get_scoped_session
-        session = get_scoped_session()
-
-        self._dbmodel.description = field_value
-        if self.is_stored:
-            session.add(self._dbmodel)
-            self._increment_version_number_db()
-
-
-    def _set_db_extra(self, key, value, exclusive=False):
-        """
-        Store extra directly in the DB, without checks.
-
-        DO NOT USE DIRECTLY.
-
-        :param key: key name
-        :param value: key value
-        :param exclusive: (default=False).
-            If exclusive is True, it raises a UniquenessError if an Extra with
-            the same name already exists in the DB (useful e.g. to "lock" a
-            node and avoid to run multiple times the same computation on it).
-        """
-        if exclusive:
-            raise NotImplementedError("exclusive=True not implemented yet in SQLAlchemy backend")
-
         try:
             self._dbmodel.set_extra(key, value)
-        except Exception:
+            if increase_version:
+                self._increment_version_number()
+        except Exception:  # pylint: disable=bare-except
             session = get_scoped_session()
             session.rollback()
             raise
 
-    def _reset_db_extras(self, new_extras):
-        """
-        Resets the extras (replacing existing ones) directly in the DB
+    def set_extras(self, extras):
+        """Set extras.
 
-        DO NOT USE DIRECTLY!
+        .. note:: This will override any existing extras that are present in the new dictionary.
 
-        :param new_extras: dictionary with new extras
+        :param extras: the new extras to set
         """
         try:
-            self._dbmodel.reset_extras(new_extras)
-        except Exception:
+            self.dbmodel.set_extras(extras)
+            self._increment_version_number()
+        except Exception:  # pylint: disable=bare-except
             session = get_scoped_session()
             session.rollback()
             raise
 
-    def _get_db_extra(self, key):
-        """
-        Get an extra, directly from the DB.
+    def reset_extras(self, extras):
+        """Reset the extras.
 
-        DO NOT USE DIRECTLY.
+        .. note:: This will completely reset any existing extras and replace them with the new dictionary.
 
-        :param key: key name
-        :return: the key value
-        :raise AttributeError: if the key does not exist
+        :param extras: the new extras to set
         """
         try:
-            return utils.get_attr(self._extras(), key)
-        except (KeyError, AttributeError):
-            raise AttributeError("DbExtra {} does not exist".format(key))
+            self._dbmodel.reset_extras(extras)
+            self._increment_version_number()
+        except Exception:  # pylint: disable=bare-except
+            session = get_scoped_session()
+            session.rollback()
+            raise
 
-    def _del_db_extra(self, key):
-        """
-        Delete an extra, directly on the DB.
+    def delete_extra(self, key):
+        """Delete an extra.
 
-        DO NOT USE DIRECTLY.
-
-        :param key: key name
+        :param key: name of the extra
+        :raises AttributeError: if the extra does not exist
         """
         try:
             self._dbmodel.del_extra(key)
-        except:
+            self._increment_version_number()
+        except Exception:  # pylint: disable=bare-except
             session = get_scoped_session()
             session.rollback()
             raise
 
-    def _db_extras_items(self):
+    def delete_extras(self, keys):
+        """Delete multiple extras.
+
+        .. note:: The implementation should guarantee that all the keys that are to be deleted actually exist or the
+            entire operation should be canceled without any change and an ``AttributeError`` should be raised.
+
+        :param keys: names of the extras to delete
+        :raises AttributeError: if at least on of the extra does not exist
         """
-        Iterator over the extras (directly in the DB!)
+        raise NotImplementedError
 
-        DO NOT USE DIRECTLY.
+    def clear_extras(self):
+        """Delete all extras."""
+        raise NotImplementedError
+
+    def extras_items(self):
+        """Return an iterator over the extra items.
+
+        :return: an iterator with extra key value pairs
         """
-        extras = self._extras()
-        if extras is None:
-            return iter(dict().items())
+        for key, value in self._dbmodel.extras.items():
+            yield key, value
 
-        return iter(extras.items())
+    def extras_keys(self):
+        """Return an iterator over the extras keys.
 
-    def _add_db_link_from(self, src, link_type, label):
+        :return: an iterator with extras keys
         """
-        Add a link to the current node from the 'src' node.
-        Both nodes must be a Node instance (or a subclass of Node)
+        for key in self._dbmodel.extras.keys():
+            yield key
 
-        :note: this function should not be called directly; it acts directly on
-            the database.
+    def add_incoming(self, source, link_type, link_label):
+        """Add a link of the given type from a given node to ourself.
 
-        :param src: the source object
-        :param str label: the name of the label to set the link from src.
+        :param source: the node from which the link is coming
+        :param link_type: the link type
+        :param link_label: the link label
+        :return: True if the proposed link is allowed, False otherwise
+        :raise ModificationNotAllowed: if either source or target node is not stored
         """
-        from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm.nodes import Node
-
         session = get_scoped_session()
-        utils.type_check(src, Node)
-        if self.uuid == src.uuid:
-            raise ValueError("Cannot link to itself")
+
+        type_check(source, SqlaNode)
 
         if not self.is_stored:
-            raise exceptions.ModificationNotAllowed("Cannot call the internal _add_dblink_from if the "
-                                                    "destination node is not stored")
-        if not src.is_stored:
-            raise exceptions.ModificationNotAllowed("Cannot call the internal _add_dblink_from if the "
-                                                    "source node is not stored")
+            raise exceptions.ModificationNotAllowed('node has to be stored when adding an incoming link')
 
-        # Check for cycles. This works if the transitive closure is enabled; if
-        # it isn't, this test will never fail, but then having a circular link
-        # is not meaningful but does not pose a huge threat
-        #
-        # I am linking src->self; a loop would be created if a DbPath exists
-        # already in the TC table from self to src
-        if link_type is LinkType.CREATE or link_type is LinkType.INPUT_CALC or link_type is LinkType.INPUT_WORK:
-            if QueryBuilder().append(
-                    Node, filters={
-                        'id': self.pk
-                    }, tag='parent').append(
-                        Node, filters={
-                            'id': src.pk
-                        }, tag='child', with_ancestors='parent').count() > 0:
-                raise ValueError("The link you are attempting to create would generate a loop")
+        if not source.is_stored:
+            raise exceptions.ModificationNotAllowed('source node has to be stored when adding a link from it')
 
-        self._do_create_link(src, label, link_type)
+        self._add_link(source, link_type, link_label)
         session.commit()
 
-    def _do_create_link(self, src, label, link_type):
-        """
-        Create a link from a source node with label and a link type
+    def _add_link(self, source, link_type, link_label):
+        """Add a link of the given type from a given node to ourself.
 
-        :param src: The source node
-        :type src: :class:`~aiida.orm.implementation.sqlalchemy.node.Node`
-        :param label: The link label
-        :param link_type: The link type
+        :param source: the node from which the link is coming
+        :param link_type: the link type
+        :param link_label: the link label
         """
+        from aiida.backends.sqlalchemy.models.node import DbLink
+
         session = get_scoped_session()
+
         try:
             with session.begin_nested():
-                link = self.LINK_CLASS(input_id=src.id, output_id=self.id, label=label, type=link_type.value)
+                link = DbLink(input_id=source.id, output_id=self.id, label=link_label, type=link_type.value)
                 session.add(link)
-        except SQLAlchemyError as exc:
-            raise exceptions.UniquenessError(
-                "There is already a link with the same name (raw message was {})".format(exc))
+        except SQLAlchemyError as exception:
+            raise exceptions.UniquenessError('failed to create the link: {}'.format(exception))
 
-    def _db_store(self, with_transaction=True):
+    def store(self, attributes=None, links=None, with_transaction=True):
+        """Store the node in the database.
+
+        :param attributes: optional attributes to set before storing, will override any existing attributes
+        :param links: optional links to add before storing
         """
-        Store a new node in the DB, also saving its repository directory
-        and attributes.
-
-        After being called attributes cannot be
-        changed anymore! Instead, extras can be changed only AFTER calling
-        this store() function.
-
-        :note: After successful storage, those links that are in the cache, and
-            for which also the parent node is already stored, will be
-            automatically stored. The others will remain unstored.
-
-        :parameter with_transaction: if False, no transaction is used. This
-          is meant to be used ONLY if the outer calling function has already
-          a transaction open!
-        """
-        from aiida.backends.sqlalchemy import get_scoped_session
         session = get_scoped_session()
 
-        # TODO: unify as much as possible the logic.
-        ## This probably should only be a "DBSTORE", not dealing
-        ## with how the repository is stored. See also notes
-        ## in the django case.
+        session.add(self._dbmodel)
 
-        # I save the corresponding model entry
-        # I set the folder
-        # NOTE: I first store the files, then only if this is successful,
-        # I store the DB entry. In this way,
-        # I assume that if a node exists in the DB, its folder is in place.
-        # On the other hand, periodically the user might need to run some
-        # bookkeeping utility to check for lone folders.
-        self._repository_folder.replace_with_folder(self._get_temp_folder().abspath, move=True, overwrite=True)
+        if attributes:
+            self._dbmodel.attributes = attributes
 
-        try:
-            session.add(self._dbmodel)
-            # Save its attributes 'manually' without incrementing
-            # the version for each add.
-            self._dbmodels.attributes = self._attrs_cache
-            flag_modified(self._dbnode, "attributes")
-            # This should not be used anymore: I delete it to
-            # possibly free memory
-            del self._attrs_cache
+        if links:
+            for link_triple in links:
+                self._add_link(*link_triple)
 
-            self._temp_folder = None
-            self._to_be_stored = False
+        if with_transaction:
+            try:
+                session.commit()
+            except SQLAlchemyError:
+                session.rollback()
+                raise
 
-            # Here, I store those links that were in the cache and
-            # that are between stored nodes.
-            self._store_cached_input_links(with_transaction=False)
-
-            if with_transaction:
-                try:
-                    # aiida.backends.sqlalchemy.get_scoped_session().commit()
-                    session.commit()
-                except SQLAlchemyError:
-                    # print "Cannot store the node. Original exception: {" \
-                    #      "}".format(e)
-                    session.rollback()
-                    raise
-
-        # This is one of the few cases where it is ok to do a 'global'
-        # except, also because I am re-raising the exception
-        except:
-            # I put back the files in the sandbox folder since the
-            # transaction did not succeed
-            self._get_temp_folder().replace_with_folder(self._repository_folder.abspath, move=True, overwrite=True)
-            raise
-
-        self._dbmodel.set_extra(_HASH_EXTRA_KEY, self.get_hash())
         return self
 
-    # region Deprecated
-    def _get_db_input_links(self, link_type):
-        from aiida.orm.convert import get_orm_entity
-
-        link_filter = {'output': self._dbnode}
-        if link_type is not None:
-            link_filter['type'] = link_type.value
-        return [
-            (i.label, get_orm_entity(i.input)) for i in self.LINK_CLASS.query.filter_by(**link_filter).distinct().all()
-        ]
-
-    def _get_db_output_links(self, link_type):
-        from aiida.orm.convert import get_orm_entity
-
-        link_filter = {'input': self._dbnode}
-        if link_type is not None:
-            link_filter['type'] = link_type.value
-        return ((i.label, get_orm_entity(i.output))
-                for i in self.LINK_CLASS.query.filter_by(**link_filter).distinct().all())
-
-    # endregion
+    def _increment_version_number(self):
+        """Increment the node version number of this node by one directly in the database."""
+        self._dbmodel.nodeversion = self.version + 1
+        try:
+            self._dbmodel.save()
+        except Exception:  # pylint: disable=bare-except
+            session = get_scoped_session()
+            session.rollback()
+            raise
 
 
 class SqlaNodeCollection(BackendNodeCollection):
-    """The SQLA collection for nodes"""
+    """The collection of Node entries."""
 
     ENTITY_CLASS = SqlaNode
+
+    def delete(self, pk):
+        """Remove a Node entry from the collection with the given id
+
+        :param pk: id of the node to delete
+        """
+        session = get_scoped_session()
+
+        try:
+            session.query(models.DbNode).filter_by(id=pk).one().delete()
+            session.commit()
+        except NoResultFound:
+            raise exceptions.NotExistent("Node with pk '{}' not found".format(pk))

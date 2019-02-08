@@ -437,7 +437,7 @@ class TestVerdiDataRemote(AiidaTestCase):
         self.r.set_remote_path(p)
         with io.open(p + '/file.txt', 'w', encoding='utf8') as fhandle:
             fhandle.write(u"test string")
-        self.r.set_computer(comp)
+        self.r.computer = comp
         self.r.store()
 
         self.cli_runner = CliRunner()

@@ -28,7 +28,7 @@ class CalculationTranslator(NodeTranslator):
     # A label associated to the present class (coincides with the resource name)
     __label__ = "calculations"
     # The AiiDA class one-to-one associated to the present class
-    from aiida.orm.node import CalcJobNode
+    from aiida.orm import CalcJobNode
     _aiida_class = CalcJobNode
     # The string name of the AiiDA class
     _aiida_type = "node.process.calculation.calcjob.CalcJobNode"

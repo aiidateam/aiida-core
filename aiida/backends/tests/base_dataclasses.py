@@ -10,7 +10,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import unittest
+
 import operator
 
 from six.moves import range, zip
@@ -27,83 +27,86 @@ from aiida.orm.node.data.str import Str
 
 
 class TestList(AiidaTestCase):
+
     def test_creation(self):
-        l = List()
-        self.assertEqual(len(l), 0)
+        node = List()
+        self.assertEqual(len(node), 0)
         with self.assertRaises(IndexError):
-            l[0]
+            node[0]
 
     def test_append(self):
-        def do_checks(l):
-            self.assertEqual(len(l), 1)
-            self.assertEqual(l[0], 4)
+        def do_checks(node):
+            self.assertEqual(len(node), 1)
+            self.assertEqual(node[0], 4)
 
-        l = List()
-        l.append(4)
-        do_checks(l)
+        node = List()
+        node.append(4)
+        do_checks(node)
 
         # Try the same after storing
-        l = List()
-        l.append(4)
-        l.store()
-        do_checks(l)
+        node = List()
+        node.append(4)
+        node.store()
+        do_checks(node)
 
     def test_extend(self):
         lst = [1, 2, 3]
 
-        def do_checks(l):
-            self.assertEqual(len(l), len(lst))
+        def do_checks(node):
+            self.assertEqual(len(node), len(lst))
             # Do an element wise comparison
-            for x, y in zip(lst, l):
+            for x, y in zip(lst, node):
                 self.assertEqual(x, y)
 
-        l = List()
-        l.extend(lst)
-        do_checks(l)
+        node = List()
+        node.extend(lst)
+        do_checks(node)
         # Further extend
-        l.extend(lst)
-        self.assertEqual(len(l), len(lst) * 2)
+        node.extend(lst)
+        self.assertEqual(len(node), len(lst) * 2)
 
         # Do an element wise comparison
         for i in range(len(lst)):
-            self.assertEqual(lst[i], l[i])
-            self.assertEqual(lst[i], l[i % len(lst)])
+            self.assertEqual(lst[i], node[i])
+            self.assertEqual(lst[i], node[i % len(lst)])
 
-        # Now try after strogin
-        l = List()
-        l.extend(lst)
-        l.store()
-        do_checks(l)
+        # Now try after storing
+        node = List()
+        node.extend(lst)
+        node.store()
+        do_checks(node)
 
     def test_mutability(self):
-        l = List()
-        l.append(5)
-        l.store()
+        node = List()
+        node.append(5)
+        node.store()
 
         # Test all mutable calls are now disallowed
         with self.assertRaises(ModificationNotAllowed):
-            l.append(5)
+            node.append(5)
         with self.assertRaises(ModificationNotAllowed):
-            l.extend([5])
+            node.extend([5])
         with self.assertRaises(ModificationNotAllowed):
-            l.insert(0, 2)
+            node.insert(0, 2)
         with self.assertRaises(ModificationNotAllowed):
-            l.remove(0)
+            node.remove(0)
         with self.assertRaises(ModificationNotAllowed):
-            l.pop()
+            node.pop()
         with self.assertRaises(ModificationNotAllowed):
-            l.sort()
+            node.sort()
         with self.assertRaises(ModificationNotAllowed):
-            l.reverse()
+            node.reverse()
 
     def test_store_load(self):
-        l = List(list=[1, 2, 3])
-        l.store()
+        node = List(list=[1, 2, 3])
+        node.store()
 
-        l_loaded = load_node(l.pk)
-        assert l.get_list() == l_loaded.get_list()
+        node_loaded = load_node(node.pk)
+        assert node.get_list() == node_loaded.get_list()
+
 
 class TestFloat(AiidaTestCase):
+
     def setUp(self):
         super(TestFloat, self).setUp()
         self.value = Float()
@@ -217,6 +220,7 @@ class TestFloat(AiidaTestCase):
 
 
 class TestFloatIntMix(AiidaTestCase):
+
     def test_operator(self):
         a = Float(2.2)
         b = Int(3)

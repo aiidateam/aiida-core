@@ -18,7 +18,7 @@ from aiida.backends.sqlalchemy.models.user import DbUser
 from aiida.backends.sqlalchemy.models.node import DbNode
 from aiida.common.links import LinkType
 from aiida.orm import Data
-from aiida.orm.node import CalculationNode
+from aiida.orm import CalculationNode
 import aiida
 
 from aiida.common.utils import get_new_uuid
@@ -51,16 +51,16 @@ class TestRelationshipsSQLA(AiidaTestCase):
         n3.add_incoming(n2, link_type=LinkType.CREATE, link_label="N2")
 
         # Check that the result of outputs is a list
-        self.assertIsInstance(n1.dbnode.outputs, list,
+        self.assertIsInstance(n1.backend_entity.dbmodel.outputs, list,
                               "This is expected to be a list")
 
         # Check that the result of outputs_q is a query
         from sqlalchemy.orm.dynamic import AppenderQuery
-        self.assertIsInstance(n1.dbnode.outputs_q, AppenderQuery,
+        self.assertIsInstance(n1.backend_entity.dbmodel.outputs_q, AppenderQuery,
                               "This is expected to be an AppenderQuery")
 
         # Check that the result of outputs is correct
-        out = set([_.pk for _ in n1.dbnode.outputs])
+        out = set([_.pk for _ in n1.backend_entity.dbmodel.outputs])
         self.assertEqual(out, set([n2.pk]))
 
     def test_inputs_parents_relationship(self):
@@ -77,16 +77,16 @@ class TestRelationshipsSQLA(AiidaTestCase):
         n3.add_incoming(n2, link_type=LinkType.CREATE, link_label="N2")
 
         # Check that the result of outputs is a list
-        self.assertIsInstance(n1.dbnode.inputs, list,
+        self.assertIsInstance(n1.backend_entity.dbmodel.inputs, list,
                               "This is expected to be a list")
 
         # Check that the result of outputs_q is a query
         from sqlalchemy.orm.dynamic import AppenderQuery
-        self.assertIsInstance(n1.dbnode.inputs_q, AppenderQuery,
+        self.assertIsInstance(n1.backend_entity.dbmodel.inputs_q, AppenderQuery,
                               "This is expected to be an AppenderQuery")
 
         # Check that the result of inputs is correct
-        out = set([_.pk for _ in n3.dbnode.inputs])
+        out = set([_.pk for _ in n3.backend_entity.dbmodel.inputs])
         self.assertEqual(out, set([n2.pk]))
 
     def test_User_node_1(self):

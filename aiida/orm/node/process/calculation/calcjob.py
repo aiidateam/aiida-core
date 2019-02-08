@@ -14,10 +14,10 @@ import six
 from aiida.common.datastructures import CalcJobState
 from aiida.common.lang import classproperty
 from aiida.common.utils import str_timedelta
-from aiida.orm.node import ProcessNode
-from aiida.orm.mixins import Sealable
+from aiida.orm.utils.mixins import Sealable
 from aiida.common import timezone
 
+from .. import ProcessNode
 from . import CalculationNode
 
 __all__ = ('CalcJobNode', )
@@ -39,7 +39,7 @@ class CalcJobNode(CalculationNode):
     CALC_JOB_STATE_KEY = 'state'
     CALC_JOB_STATE_ATTRIBUTE_KEY = 'attributes.{}'.format(CALC_JOB_STATE_KEY)
 
-    _cacheable = True
+    _cachable = True
 
     # An optional entry point for a CalculationTools instance
     _tools = None
@@ -167,7 +167,7 @@ class CalcJobNode(CalculationNode):
 
         super(CalcJobNode, self)._validate()
 
-        if self.get_computer() is None:
+        if self.computer is None:
             raise ValidationError("You did not specify a computer")
 
         if self.get_state() and self.get_state() not in CalcJobState:
@@ -180,7 +180,7 @@ class CalcJobNode(CalculationNode):
                                   "Set the parser to None if you do not need an automatic "
                                   "parser.".format(self.get_option('parser_name')))
 
-        computer = self.get_computer()
+        computer = self.computer
         s = computer.get_scheduler()
         resources = self.get_option('resources')
         def_cpus_machine = computer.get_default_mpiprocs_per_machine()
@@ -199,7 +199,7 @@ class CalcJobNode(CalculationNode):
         :param folder_path: the path to the folder from which the content
                should be taken
         """
-        _raw_input_folder = self.folder.get_subfolder(_input_subfolder, create=True)
+        _raw_input_folder = self.repository._get_folder_pathsubfolder.get_subfolder(_input_subfolder, create=True)
         _raw_input_folder.replace_with_folder(folder_path, move=False, overwrite=True)
 
     @property
@@ -212,7 +212,7 @@ class CalcJobNode(CalculationNode):
         """
         from aiida.common.exceptions import NotExistent
 
-        return_folder = self.folder.get_subfolder(_input_subfolder)
+        return_folder = self.repository._get_folder_pathsubfolder.get_subfolder(_input_subfolder)
         if return_folder.exists():
             return return_folder
         else:
@@ -233,7 +233,7 @@ class CalcJobNode(CalculationNode):
         :return: the option value or None
         :raises: ValueError for unknown option
         """
-        return self.get_attr(name, None)
+        return self.get_attribute(name, None)
 
     def set_option(self, name, value):
         """
@@ -244,7 +244,7 @@ class CalcJobNode(CalculationNode):
         :raises: ValueError for unknown option
         :raises: TypeError for values with invalid type
         """
-        self._set_attr(name, value)
+        self.set_attribute(name, value)
 
     def get_options(self):
         """
@@ -274,7 +274,7 @@ class CalcJobNode(CalculationNode):
 
         :return: the calculation job state
         """
-        state = self.get_attr(self.CALC_JOB_STATE_KEY, None)
+        state = self.get_attribute(self.CALC_JOB_STATE_KEY, None)
 
         if state:
             return CalcJobState(state)
@@ -291,17 +291,17 @@ class CalcJobNode(CalculationNode):
         if state not in CalcJobState:
             raise ValueError('{} is not a valid CalcJobState'.format(state))
 
-        self._set_attr(self.CALC_JOB_STATE_KEY, state.value)
+        self.set_attribute(self.CALC_JOB_STATE_KEY, state.value)
 
     def _del_state(self):
         """Delete the calculation job state attribute if it exists."""
         try:
-            self._del_attr(self.CALC_JOB_STATE_KEY)
+            self.delete_attribute(self.CALC_JOB_STATE_KEY)
         except AttributeError:
             pass
 
     def _set_remote_workdir(self, remote_workdir):
-        self._set_attr('remote_workdir', remote_workdir)
+        self.set_attribute('remote_workdir', remote_workdir)
 
     def _get_remote_workdir(self):
         """
@@ -310,7 +310,7 @@ class CalcJobNode(CalculationNode):
 
         :return: a string with the remote path
         """
-        return self.get_attr('remote_workdir', None)
+        return self.get_attribute('remote_workdir', None)
 
     def _set_retrieve_list(self, retrieve_list):
         if not (isinstance(retrieve_list, (tuple, list))):
@@ -325,7 +325,7 @@ class CalcJobNode(CalculationNode):
                                      "lists, with remotepath(string), "
                                      "localpath(string) and depth (integer)")
 
-        self._set_attr('retrieve_list', retrieve_list)
+        self.set_attribute('retrieve_list', retrieve_list)
 
     def _get_retrieve_list(self):
         """
@@ -334,7 +334,7 @@ class CalcJobNode(CalculationNode):
 
         :return: a list of strings for file/directory names
         """
-        return self.get_attr('retrieve_list', None)
+        return self.get_attribute('retrieve_list', None)
 
     def _set_retrieve_temporary_list(self, retrieve_temporary_list):
         """
@@ -354,7 +354,7 @@ class CalcJobNode(CalculationNode):
                     raise ValueError('You have to pass a list (or tuple) of lists, with remotepath(string), '
                                      'localpath(string) and depth (integer)')
 
-        self._set_attr('retrieve_temporary_list', retrieve_temporary_list)
+        self.set_attribute('retrieve_temporary_list', retrieve_temporary_list)
 
     def _get_retrieve_temporary_list(self):
         """
@@ -363,7 +363,7 @@ class CalcJobNode(CalculationNode):
 
         :return: a list of strings for file/directory names
         """
-        return self.get_attr('retrieve_temporary_list', None)
+        return self.get_attribute('retrieve_temporary_list', None)
 
     def _set_retrieve_singlefile_list(self, retrieve_singlefile_list):
         """
@@ -375,7 +375,7 @@ class CalcJobNode(CalculationNode):
             if (not (isinstance(j, (tuple, list))) or not (all(isinstance(i, six.string_types) for i in j))):
                 raise ValueError("You have to pass a list (or tuple) of lists "
                                  "of strings as retrieve_singlefile_list")
-        self._set_attr('retrieve_singlefile_list', retrieve_singlefile_list)
+        self.set_attribute('retrieve_singlefile_list', retrieve_singlefile_list)
 
     def _get_retrieve_singlefile_list(self):
         """
@@ -386,13 +386,13 @@ class CalcJobNode(CalculationNode):
         :return: a list of lists of strings for 1) linknames,
                  2) Singlefile subclass name 3) file names
         """
-        return self.get_attr('retrieve_singlefile_list', None)
+        return self.get_attribute('retrieve_singlefile_list', None)
 
     def _set_job_id(self, job_id):
         """
         Always set as a string
         """
-        return self._set_attr('job_id', six.text_type(job_id))
+        return self.set_attribute('job_id', six.text_type(job_id))
 
     def get_job_id(self):
         """
@@ -400,7 +400,7 @@ class CalcJobNode(CalculationNode):
 
         :return: a string
         """
-        return self.get_attr('job_id', None)
+        return self.get_attribute('job_id', None)
 
     def _set_scheduler_state(self, state):
         from aiida.common import timezone
@@ -409,8 +409,8 @@ class CalcJobNode(CalculationNode):
         if not isinstance(state, JobState):
             raise ValueError('scheduler state should be an instance of JobState, got: {}'.format())
 
-        self._set_attr('scheduler_state', state.value)
-        self._set_attr('scheduler_lastchecktime', timezone.now())
+        self.set_attribute('scheduler_state', state.value)
+        self.set_attribute('scheduler_lastchecktime', timezone.now())
 
     def get_scheduler_state(self):
         """
@@ -420,7 +420,7 @@ class CalcJobNode(CalculationNode):
         """
         from aiida.scheduler.datastructures import JobState
 
-        state = self.get_attr('scheduler_state', None)
+        state = self.get_attribute('scheduler_state', None)
 
         if state is None:
             return state
@@ -434,10 +434,10 @@ class CalcJobNode(CalculationNode):
 
         :return: a datetime object.
         """
-        return self.get_attr('scheduler_lastchecktime', None)
+        return self.get_attribute('scheduler_lastchecktime', None)
 
     def _set_last_jobinfo(self, last_jobinfo):
-        self._set_attr('last_jobinfo', last_jobinfo.serialize())
+        self.set_attribute('last_jobinfo', last_jobinfo.serialize())
 
     def _get_last_jobinfo(self):
         """
@@ -448,7 +448,7 @@ class CalcJobNode(CalculationNode):
         """
         from aiida.scheduler.datastructures import JobInfo
 
-        last_jobinfo_serialized = self.get_attr('last_jobinfo', None)
+        last_jobinfo_serialized = self.get_attribute('last_jobinfo', None)
         if last_jobinfo_serialized is not None:
             jobinfo = JobInfo()
             jobinfo.load_from_serialized(last_jobinfo_serialized)
@@ -460,11 +460,11 @@ class CalcJobNode(CalculationNode):
         from aiida.common.exceptions import NotExistent
         from aiida.orm.authinfos import AuthInfo
 
-        computer = self.get_computer()
+        computer = self.computer
         if computer is None:
             raise NotExistent("No computer has been set for this calculation")
 
-        return AuthInfo.from_backend_entity(self.backend.authinfos.get(computer=computer, user=self.get_user()))
+        return AuthInfo.from_backend_entity(self.backend.authinfos.get(computer=computer, user=self.user))
 
     def _get_transport(self):
         """
@@ -573,7 +573,7 @@ class CalcJobNode(CalculationNode):
 
         return errfile_content
 
-    def get_desc(self):
+    def get_description(self):
         """
         Returns a string with infos retrieved from a CalcJobNode node's
         properties.

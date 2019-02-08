@@ -25,7 +25,7 @@ class TestComputer(AiidaTestCase):
     """
 
     def test_deletion(self):
-        from aiida.orm.node import CalcJobNode
+        from aiida.orm import CalcJobNode
         from aiida.common.exceptions import InvalidOperation
 
         newcomputer = orm.Computer(name="testdeletioncomputer", hostname='localhost',
@@ -66,10 +66,10 @@ class TestGroupsDjango(AiidaTestCase):
         g2 = backend.groups.create(label='testquery2', user=default_user).store()
         self.addCleanup(lambda: backend.groups.delete(g2.id))
 
-        n1 = Data().store()
-        n2 = Data().store()
-        n3 = Data().store()
-        n4 = Data().store()
+        n1 = Data().store().backend_entity
+        n2 = Data().store().backend_entity
+        n3 = Data().store().backend_entity
+        n4 = Data().store().backend_entity
 
         g1.add_nodes([n1, n2])
         g2.add_nodes([n1, n3])
@@ -126,7 +126,7 @@ class TestGroupsDjango(AiidaTestCase):
         self.addCleanup(lambda: backend.groups.delete(g.id))
 
         g.store()
-        g.add_nodes(n)
+        g.add_nodes([n.backend_entity])
 
         dbgroup = g.dbmodel
         gcopy = backend.groups.from_dbmodel(dbgroup)
@@ -144,26 +144,26 @@ class TestDbExtrasDjango(AiidaTestCase):
         n1 = Data().store()
         n2 = Data().store()
 
-        DbExtra.set_value_for_node(n1._dbnode, "pippo", [1, 2, 'a'])
-        DbExtra.set_value_for_node(n1._dbnode, "pippobis", [5, 6, 'c'])
-        DbExtra.set_value_for_node(n2._dbnode, "pippo2", [3, 4, 'b'])
+        DbExtra.set_value_for_node(n1.backend_entity.dbmodel, "pippo", [1, 2, 'a'])
+        DbExtra.set_value_for_node(n1.backend_entity.dbmodel, "pippobis", [5, 6, 'c'])
+        DbExtra.set_value_for_node(n2.backend_entity.dbmodel, "pippo2", [3, 4, 'b'])
 
-        self.assertEquals(n1.get_extras(), {'pippo': [1, 2, 'a'],
+        self.assertEquals(n1.extras, {'pippo': [1, 2, 'a'],
                                             'pippobis': [5, 6, 'c'],
                                             '_aiida_hash': n1.get_hash()
                                             })
-        self.assertEquals(n2.get_extras(), {'pippo2': [3, 4, 'b'],
+        self.assertEquals(n2.extras, {'pippo2': [3, 4, 'b'],
                                             '_aiida_hash': n2.get_hash()
                                             })
 
         new_attrs = {"newval1": "v", "newval2": [1, {"c": "d", "e": 2}]}
 
-        DbExtra.reset_values_for_node(n1._dbnode, attributes=new_attrs)
-        self.assertEquals(n1.get_extras(), new_attrs)
-        self.assertEquals(n2.get_extras(), {'pippo2': [3, 4, 'b'], '_aiida_hash': n2.get_hash()})
+        DbExtra.reset_values_for_node(n1.backend_entity.dbmodel, attributes=new_attrs)
+        self.assertEquals(n1.extras, new_attrs)
+        self.assertEquals(n2.extras, {'pippo2': [3, 4, 'b'], '_aiida_hash': n2.get_hash()})
 
-        DbExtra.del_value_for_node(n1._dbnode, key='newval2')
+        DbExtra.del_value_for_node(n1.backend_entity.dbmodel, key='newval2')
         del new_attrs['newval2']
-        self.assertEquals(n1.get_extras(), new_attrs)
+        self.assertEquals(n1.extras, new_attrs)
         # Also check that other nodes were not damaged
-        self.assertEquals(n2.get_extras(), {'pippo2': [3, 4, 'b'], '_aiida_hash': n2.get_hash()})
+        self.assertEquals(n2.extras, {'pippo2': [3, 4, 'b'], '_aiida_hash': n2.get_hash()})

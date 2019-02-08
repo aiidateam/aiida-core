@@ -67,7 +67,7 @@ class UpfDataTranslator(DataTranslator):
         response = {}
 
         if node.folder.exists():
-            folder_node = node._get_folder_pathsubfolder  # pylint: disable=protected-access
+            folder_node = node.repository._get_folder_pathsubfolder  # pylint: disable=protected-access
             filename = node.filename
 
             try:

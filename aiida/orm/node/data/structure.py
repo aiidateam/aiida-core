@@ -744,13 +744,46 @@ class StructureData(Data):
 
     _dimensionality_label = {0: "", 1: "length", 2: "surface", 3: "volume"}
 
-    @property
-    def _set_defaults(self):
-        parent_dict = super(StructureData, self)._set_defaults
+    def __init__(self, cell=None, pbc=None, ase=None, pymatgen=None, pymatgen_structure=None, pymatgen_molecule=None, **kwargs):
 
-        parent_dict.update({"pbc": [True, True, True], "cell": [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]]})
+        args = {
+            'cell': cell,
+            'pbc': pbc,
+            'ase': ase,
+            'pymatgen': pymatgen,
+            'pymatgen_structure': pymatgen_structure,
+            'pymatgen_molecule': pymatgen_molecule,
+        }
 
-        return parent_dict
+        for left, right in self._set_incompatibilities:
+            if args[left] is not None and args[right] is not None:
+                raise ValueError('cannot pass {} and {} at the same time'.format(left, right))
+
+        super(StructureData, self).__init__(**kwargs)
+
+        if any([ext is not None for ext in [ase, pymatgen, pymatgen_structure, pymatgen_molecule]]):
+
+            if ase is not None:
+                self.set_ase(ase)
+
+            if pymatgen is not None:
+                self.set_pymatgen(pymatgen)
+
+            if pymatgen_structure is not None:
+                self.set_pymatgen_structure(pymatgen_structure)
+
+            if pymatgen_molecule is not None:
+                self.set_pymatgen_molecule(pymatgen_molecule)
+
+        else:
+            if cell is None:
+                cell = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]]
+
+            if pbc is None:
+                pbc = [True, True, True]
+
+            self.set_cell(cell)
+            self.set_pbc(pbc)
 
     def get_dimensionality(self):
         """
@@ -1002,8 +1035,8 @@ class StructureData(Data):
         supercell_factors = [1, 1, 1]
 
         # Get cell vectors and atomic position
-        lattice_vectors = np.array(self.get_attr('cell'))
-        base_sites = self.get_attr('sites')
+        lattice_vectors = np.array(self.get_attribute('cell'))
+        base_sites = self.get_attribute('sites')
 
         start1 = -int(supercell_factors[0] / 2)
         start2 = -int(supercell_factors[1] / 2)
@@ -1126,7 +1159,7 @@ class StructureData(Data):
         # Translate the structure to the origin, such that the minimal values in each dimension
         # amount to (0,0,0)
         positions -= position_min
-        for index, site in enumerate(self.get_attr('sites')):
+        for index, site in enumerate(self.get_attribute('sites')):
             site['position'] = list(positions[index])
 
         # The orthorhombic cell that (just) accomodates the whole structure is now given by the
@@ -1139,10 +1172,10 @@ class StructureData(Data):
         newcell = np.diag(minimal_orthorhombic_cell_dimensions)
         self.set_cell(newcell.tolist())
 
-    def get_desc(self):
+    def get_description(self):
         """
-        Returns a string with infos retrieved from StructureData node's 
-        properties
+        Returns a string with infos retrieved from StructureData node's properties
+
         :param self: the StructureData node
         :return: retsrt: the description string
         """
@@ -1326,12 +1359,12 @@ class StructureData(Data):
             raise ValueError("A kind with the same name ({}) already exists." "".format(kind.name))
 
         # If here, no exceptions have been raised, so I add the site.
-        self._append_to_attr('kinds', new_kind.get_raw())
+        self.append_to_attr('kinds', new_kind.get_raw())
         # Note, this is a dict (with integer keys) so it allows for empty
         # spots!
         if not hasattr(self, '_internal_kind_tags'):
             self._internal_kind_tags = {}
-        self._internal_kind_tags[len(self.get_attr('kinds')) - 1] = kind._internal_tag
+        self._internal_kind_tags[len(self.get_attribute('kinds')) - 1] = kind._internal_tag
 
     def append_site(self, site):
         """
@@ -1353,7 +1386,7 @@ class StructureData(Data):
                              "{}".format(site.kind_name, [k.name for k in self.kinds]))
 
         # If here, no exceptions have been raised, so I add the site.
-        self._append_to_attr('sites', new_site.get_raw())
+        self.append_to_attr('sites', new_site.get_raw())
 
     def append_atom(self, **kwargs):
         """
@@ -1455,74 +1488,6 @@ class StructureData(Data):
         site = Site(kind_name=kind.name, position=position)
         self.append_site(site)
 
-        # def _set_site_type(self, new_site, reset_type_if_needed):
-
-    # """
-    #         Check if the site can be added (i.e., if no other sites with the same type exist, or if
-    #         they exist, then they are equal) and possibly sets its type.
-    #
-    #         Args:
-    #             new_site: the new site to check, must be a Site object.
-    #             reset_type_if_needed: if False, an exception is raised if a site with same type but different
-    #                 properties (mass, symbols, weights, ...) is found.
-    #                 If True, and an atom with same type but different properties is found, all the sites
-    #                 already present in self.sites are checked to see if there is a site with the same properties.
-    #                 Then, the same type is set. Otherwise, a new type name is chosen adding a number to the site
-    #                 name such that the type is different from the existing ones.
-    #         """
-    #         from aiida.common.exceptions import ModificationNotAllowed
-    #
-    #         if not self._to_be_stored:
-    #             raise ModificationNotAllowed("The StructureData object cannot be modified, "
-    #                 "it has already been stored")
-    #
-    #         type_list = self.get_types()
-    #         if type_list:
-    #             types, positions = zip(*type_list)
-    #         else:
-    #             types = []
-    #             positions = []
-    #
-    #         if new_site.type not in types:
-    #             # There is no element with this type, OK to insert
-    #             return
-    #
-    #         # I get the index of the type, and the
-    #         # first atom of this type (there should always be at least one!)
-    #         type_idx = types.index(new_site.type)
-    #         site_idx = positions[type_idx][0]
-    #
-    #         # If it is of the same type, I am happy
-    #         is_same_type, differences_str = new_site.compare_type(self.sites[site_idx])
-    #         if is_same_type:
-    #             return
-    #
-    #         # If I am here, the type string is the same, but they are actually of different type!
-    #
-    #         if not reset_type_if_needed:
-    #             errstr = ("The site you are trying to insert is of type '{}'. However, another site already "
-    #                       "exists with same type, but with different properties! ({})".format(
-    #                          new_site.type, differences_str))
-    #             raise ValueError(errstr)
-    #
-    #         # I check if there is a atom of the same type
-    #         for site in self.sites:
-    #             is_same_type, _ = new_site.compare_type(site)
-    #             if is_same_type:
-    #                 new_site.type = site.type
-    #                 return
-    #
-    #         # If I am here, I didn't find any existing site which is of the same type
-    #         existing_type_names = [the_type for the_type in types if the_type.startswith(new_site.type)]
-    #
-    #         append_int = 1
-    #         while True:
-    #             new_typename = "{:s}{:d}".format(new_site.type, append_int)
-    #             if new_typename not in existing_type_names:
-    #                 break
-    #             append_int += 1
-    #         new_site.type = new_typename
-
     def clear_kinds(self):
         """
         Removes all kinds for the StructureData object.
@@ -1534,7 +1499,7 @@ class StructureData(Data):
         if self.is_stored:
             raise ModificationNotAllowed("The StructureData object cannot be modified, " "it has already been stored")
 
-        self._set_attr('kinds', [])
+        self.set_attribute('kinds', [])
         self._internal_kind_tags = {}
         self.clear_sites()
 
@@ -1547,7 +1512,7 @@ class StructureData(Data):
         if self.is_stored:
             raise ModificationNotAllowed("The StructureData object cannot be modified, " "it has already been stored")
 
-        self._set_attr('sites', [])
+        self.set_attribute('sites', [])
 
     @property
     def sites(self):
@@ -1555,7 +1520,7 @@ class StructureData(Data):
         Returns a list of sites.
         """
         try:
-            raw_sites = self.get_attr('sites')
+            raw_sites = self.get_attribute('sites')
         except AttributeError:
             raw_sites = []
         return [Site(raw=i) for i in raw_sites]
@@ -1566,7 +1531,7 @@ class StructureData(Data):
         Returns a list of kinds.
         """
         try:
-            raw_kinds = self.get_attr('kinds')
+            raw_kinds = self.get_attribute('kinds')
         except AttributeError:
             raw_kinds = []
         return [Kind(raw=i) for i in raw_kinds]
@@ -1617,7 +1582,7 @@ class StructureData(Data):
 
         :return: a 3x3 list of lists.
         """
-        return copy.deepcopy(self.get_attr('cell'))
+        return copy.deepcopy(self.get_attribute('cell'))
 
     @cell.setter
     def cell(self, value):
@@ -1630,7 +1595,7 @@ class StructureData(Data):
             raise ModificationNotAllowed("The StructureData object cannot be modified, " "it has already been stored")
 
         the_cell = _get_valid_cell(value)
-        self._set_attr('cell', the_cell)
+        self.set_attribute('cell', the_cell)
 
     def reset_cell(self, new_cell):
         """
@@ -1646,7 +1611,7 @@ class StructureData(Data):
         if self.is_stored:
             raise ModificationNotAllowed()
 
-        self._set_attr('cell', new_cell)
+        self.set_attribute('cell', new_cell)
 
     def reset_sites_positions(self, new_positions, conserve_particle=True):
         """
@@ -1708,7 +1673,7 @@ class StructureData(Data):
             boundary conditions for the i-th real-space direction (i=1,2,3)
         """
         # return copy.deepcopy(self._pbc)
-        return (self.get_attr('pbc1'), self.get_attr('pbc2'), self.get_attr('pbc3'))
+        return (self.get_attribute('pbc1'), self.get_attribute('pbc2'), self.get_attribute('pbc3'))
 
     @pbc.setter
     def pbc(self, value):
@@ -1722,9 +1687,9 @@ class StructureData(Data):
         the_pbc = get_valid_pbc(value)
 
         # self._pbc = the_pbc
-        self._set_attr('pbc1', the_pbc[0])
-        self._set_attr('pbc2', the_pbc[1])
-        self._set_attr('pbc3', the_pbc[2])
+        self.set_attribute('pbc1', the_pbc[0])
+        self.set_attribute('pbc2', the_pbc[1])
+        self.set_attribute('pbc3', the_pbc[2])
 
     @property
     def cell_lengths(self):

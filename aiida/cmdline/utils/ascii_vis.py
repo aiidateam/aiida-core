@@ -158,7 +158,7 @@ def _generate_node_label(node, node_attr, show_pk):
             label = str(getattr(node, node_attr))
         except AttributeError:
             try:
-                label = node.get_attr(node_attr)
+                label = node.get_attribute(node_attr)
             except AttributeError:
                 pass
 
@@ -174,7 +174,7 @@ def _generate_node_label(node, node_attr, show_pk):
 
 def calc_info(calc_node):
     """Return a string with the summary of the state of a CalculationNode."""
-    from aiida.orm.node import CalculationNode, CalcJobNode, WorkChainNode, WorkflowNode
+    from aiida.orm import CalculationNode, CalcJobNode, WorkChainNode, WorkflowNode
 
     if isinstance(calc_node, WorkChainNode):
         plabel = calc_node.process_label

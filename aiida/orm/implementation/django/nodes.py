@@ -7,480 +7,397 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Django implementation of the `BackendNode` and `BackendNodeCollection` classes."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-import six
+# pylint: disable=import-error,no-name-in-module
+from django.core.exceptions import ObjectDoesNotExist
+from django.db import transaction, IntegrityError
 
 from aiida.backends.djsite.db import models
-from aiida.common.hashing import _HASH_EXTRA_KEY
+from aiida.common import exceptions
+from aiida.common.lang import type_check
 
 from .. import BackendNode, BackendNodeCollection
 from . import entities
+from . import utils
+from .computer import DjangoComputer
+from .users import DjangoUser
 
 
-class DjangoNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
+class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
     """Django Node backend entity"""
+
+    # pylint: disable=too-many-public-methods
 
     MODEL_CLASS = models.DbNode
     ATTRIBUTE_CLASS = models.DbAttribute
     EXTRA_CLASS = models.DbExtra
     LINK_CLASS = models.DbLink
 
-    # TODO: check how many parameters we want to expose in the init
-    # and if we need to define here some defaults
-    def __init__(self, backend, type, process_type, label, description):
+    def __init__(self, backend, node_type, user, computer=None, process_type=None, label='', description=''):
+        """Construct a new `BackendNode` instance wrapping a new `DbNode` instance.
+
+        :param backend: the backend
+        :param node_type: the node type string
+        :param user: associated `BackendUser`
+        :param computer: associated `BackendComputer`
+        :param label: string label
+        :param description: string description
+        """
         # pylint: disable=too-many-arguments
         super(DjangoNode, self).__init__(backend)
-        self._dbmodel = models.DbNode(
-            type=type,
-            process_type=process_type,
-            label=label,
-            description=description,
-        )
-        self._init_backend_node()
 
-    def _increment_version_number(self):
+        arguments = {
+            'type': node_type,
+            'user': user.dbmodel,
+            'process_type': process_type,
+            'label': label,
+            'description': description,
+        }
+
+        type_check(user, DjangoUser)
+
+        if computer:
+            type_check(computer, DjangoComputer, 'computer is of type {}'.format(type(computer)))
+            arguments['dbcomputer'] = computer.dbmodel
+
+        self._dbmodel = utils.ModelWrapper(models.DbNode(**arguments))
+
+    def clone(self):
+        """Return an unstored clone of ourselves.
+
+        :return: an unstored `BackendNode` with the exact same attributes and extras as self
         """
-        Increment the node version number of this node by one
-        directly in the database
-        """
-        from django.db.models import F
+        arguments = {
+            'type': self._dbmodel.type,
+            'user': self._dbmodel.user,
+            'dbcomputer': self._dbmodel.dbcomputer,
+            'process_type': self._dbmodel.process_type,
+            'label': self._dbmodel.label,
+            'description': self._dbmodel.description,
+        }
 
-        # I increment the node number using a filter
-        self._dbmodel.nodeversion = F('nodeversion') + 1
-        self._dbmodel.save()
-
-        # This reload internally the node of self._dbmodel
-        # Note: I have to reload the object (to have the right values in memory),
-        # otherwise I only get the Django Field F object as a result!
-        self._dbmodel = self.MODEL_CLASS.objects.get(pk=self._dbmodel.pk)
-
-    def _ensure_model_uptodate(self, attribute_names=None):
-        """
-        Expire specific fields of the dbmodel (or, if attribute_names
-        is not specified, all of them), so they will be re-fetched
-        from the DB.
-
-        :param attribute_names: by default, expire all columns.
-             If you want to expire only specific columns, pass
-             a list of strings with the column names.
-        """
-        pass
-
-    def _get_db_attrs_items(self):
-        """
-        Iterator over the attributes, returning tuples (key, value),
-        that actually performs the job directly on the DB.
-
-        :return: a generator of the (key, value) pairs
-        """
-        all_attrs = self.ATTRIBUTE_CLASS.get_all_values_for_node(self._dbmodel)
-        for attr in all_attrs:
-            yield (attr, all_attrs[attr])
-
-    def _get_db_attrs_keys(self):
-        """
-        Iterator over the attributes, returning the attribute keys only,
-        that actually performs the job directly on the DB.
-
-        Note: It is independent of the _get_db_attrs_items
-        because it is typically faster to retrieve only the keys
-        from the database, especially if the values are big.    
-
-        :return: a generator of the keys
-        """
-        attrlist = self.ATTRIBUTE_CLASS.list_all_node_elements(self._dbmodel)
-        for attr in attrlist:
-            yield attr.key
-
-    def _set_db_attr(self, key, value):
-        """
-        Set the value directly in the DB, without checking if it is stored, or
-        using the cache.
-
-        :param key: key name
-        :param value: its value
-        """
-        self.ATTRIBUTE_CLASS.set_value_for_node(self._dbmodel, key, value)
-
-    def _del_db_attr(self, key):
-        """
-        Delete an attribute directly from the DB
-
-        :param key: The key of the attribute to delete
-        """
-        if not self.ATTRIBUTE_CLASS.has_key(self._dbmodel, key):
-            raise AttributeError("DbAttribute {} does not exist".format(key))
-        self.ATTRIBUTE_CLASS.del_value_for_node(self._dbmodel, key)
-
-    def _get_db_attr(self, key):
-        """
-        Return the attribute value, directly from the DB.
-
-        :param key: the attribute key
-        :return: the attribute value
-        :raise AttributeError: if the attribute does not exist.
-        """
-        return self.ATTRIBUTE_CLASS.get_value_for_node(dbnode=self._dbmodel, key=key)
+        clone = self.__class__.__new__(self.__class__)  # pylint: disable=no-value-for-parameter
+        clone.__init__(self.backend, self.type, self.user)
+        clone._dbmodel = utils.ModelWrapper(models.DbNode(**arguments))  # pylint: disable=protected-access
+        return clone
 
     @property
-    def uuid(self):
-        """
-        Get the UUID of the log entry
-        """
-        return six.text_type(self._dbmodel.uuid)
+    def computer(self):
+        """Return the computer of this node.
 
-    def process_type(self):
+        :return: the computer or None
+        :rtype: `BackendComputer` or None
         """
-        The node process_type
-
-        :return: the process type
-        """
-        return self._dbmodel.process_type
-
-    def nodeversion(self):
-        """
-        Get the version number for this node
-
-        :return: the version number
-        :rtype: int
-        """
-        return self._dbmodel.nodeversion
-
-    @property
-    def ctime(self):
-        """
-        Return the creation time of the node.
-        """
-        return self._dbmodel.ctime
-
-    @property
-    def mtime(self):
-        """
-        Return the modification time of the node.
-        """
-        return self._dbmodel.mtime
-
-    @property
-    def type(self):
-        """
-        Get the type of the node.
-
-        :return: a string.
-        """
-        return self._dbmodel.type
-
-    def get_computer(self):
-        """
-        Get the computer associated to the node.
-
-        :return: the Computer object or None.
-        """
-        from aiida import orm
-
-        if self._dbmodel.dbcomputer is None:
+        try:
+            return self.backend.computers.from_dbmodel(self._dbmodel.dbcomputer)
+        except TypeError:
             return None
 
-        return orm.Computer.from_backend_entity(self._backend.computers.from_dbmodel(self._dbmodel.dbcomputer))
+    @computer.setter
+    def computer(self, computer):
+        """Set the computer of this node.
 
-    def _set_db_computer(self, computer):
+        :param computer: a `BackendComputer`
         """
-        Set the computer directly inside the dbnode member, in the DB.
+        type_check(computer, DjangoComputer, allow_none=True)
 
-        DO NOT USE DIRECTLY.
+        if computer is not None:
+            computer = computer.dbmodel
 
-        :param computer: the computer object
+        self._dbmodel.dbcomputer = computer
+
+    @property
+    def user(self):
+        """Return the user of this node.
+
+        :return: the user
+        :rtype: `BackendUser`
         """
-        type_check(computer, computers.DjangoComputer)
-        self._dbmodel.dbcomputer = computer.dbmodel
+        return self.backend.users.from_dbmodel(self._dbmodel.user)
 
-    def get_user(self):
+    @user.setter
+    def user(self, user):
+        """Set the user of this node.
+
+        :param user: a `BackendUser`
         """
-        Get the user.
+        type_check(user, DjangoUser)
+        self._dbmodel.user = user.dbmodel
 
-        :return: a User model object
-        :rtype: :class:`aiida.orm.User`
+    def get_attribute(self, key):
+        """Return an attribute.
+
+        :param key: name of the attribute
+        :return: the value of the attribute
+        :raises AttributeError: if the attribute does not exist
         """
-        from aiida import orm
+        try:
+            return self.ATTRIBUTE_CLASS.get_value_for_node(dbnode=self.dbmodel, key=key)
+        except AttributeError:
+            raise AttributeError('Attribute `{}` does not exist'.format(key))
 
-        return orm.User.from_backend_entity(self._backend.users.from_dbmodel(self._dbmodel.user))
+    def get_attributes(self, keys):
+        """Return a set of attributes.
 
-    def set_user(self, user):
+        :param keys: names of the attributes
+        :return: the values of the attributes
+        :raises AttributeError: if at least one attribute does not exist
         """
-        Set the user
+        raise NotImplementedError
 
-        :param user: The new user
+    def set_attribute(self, key, value):
+        """Set an attribute to the given value.
+
+        :param key: name of the attribute
+        :param value: value of the attribute
         """
-        type_check(user, user.User)
-        assert user.backend == self.backend, "Passed user from different backend"
-        self._dbmodel.user = user.backend_entity.dbmodel
+        self.ATTRIBUTE_CLASS.set_value_for_node(self.dbmodel, key, value)
+        self._increment_version_number()
 
-    def _get_db_label_field(self):
+    def set_attributes(self, attributes):
+        """Set attributes.
+
+        .. note:: This will override any existing attributes that are present in the new dictionary.
+
+        :param attributes: the new attributes to set
         """
-        Get the label field acting directly on the DB
+        for key, value in attributes.items():
+            self.ATTRIBUTE_CLASS.set_value_for_node(self.dbmodel, key, value)
+        self._increment_version_number()
 
-        :return: a string.
+    def reset_attributes(self, attributes):
+        """Reset the attributes.
+
+        .. note:: This will completely reset any existing attributes and replace them with the new dictionary.
+
+        :param attributes: the new attributes to set
         """
-        return self._dbmodel.label
+        self.ATTRIBUTE_CLASS.reset_values_for_node(self.dbmodel, attributes)
+        self._increment_version_number()
 
-    def _update_db_label_field(self, field_value):
+    def delete_attribute(self, key):
+        """Delete an attribute.
+
+        :param key: name of the attribute
+        :raises AttributeError: if the attribute does not exist
         """
-        Set the label field acting directly on the DB
+        if not self.ATTRIBUTE_CLASS.has_key(self.dbmodel, key):
+            raise AttributeError('Attribute `{}` does not exist'.format(key))
 
-        :param field_value: the new value of the label field
+        self.ATTRIBUTE_CLASS.del_value_for_node(self.dbmodel, key)
+
+    def delete_attributes(self, keys):
+        """Delete multiple attributes.
+
+        .. note:: The implementation should guarantee that all the keys that are to be deleted actually exist or the
+            entire operation should be canceled without any change and an ``AttributeError`` should be raised.
+
+        :param keys: names of the attributes to delete
+        :raises AttributeError: if at least on of the attribute does not exist
         """
-        self._dbmodel.label = field_value
-        if self.is_stored:
-            with transaction.atomic():
-                self._dbmodel.save()
-                self._increment_version_number()
+        raise NotImplementedError
 
-    def _get_db_description_field(self):
+    def clear_attributes(self):
+        """Delete all attributes."""
+        raise NotImplementedError
+
+    def attributes_items(self):
+        """Return an iterator over the attribute items.
+
+        :return: an iterator with attribute key value pairs
         """
-        Get the description of this node, acting directly at the DB level
+        for key, value in self._dbmodel.attributes.items():
+            yield key, value
+
+    def attributes_keys(self):
+        """Return an iterator over the attribute keys.
+
+        :return: an iterator with attribute keys
         """
-        return self._dbmodel.description
+        for key in self._dbmodel.attributes.keys():
+            yield key
 
-    def _update_db_description_field(self, field_value):
+    def get_extra(self, key):
+        """Return an extra.
+
+        :param key: name of the extra
+        :return: the value of the extra
+        :raises AttributeError: if the extra does not exist
         """
-        Update the description of this node, acting directly at the DB level
+        try:
+            return self.EXTRA_CLASS.get_value_for_node(dbnode=self.dbmodel, key=key)
+        except AttributeError:
+            raise AttributeError('Extra `{}` does not exist'.format(key))
 
-        :param field_value: the new value of the description field
+    def get_extras(self, keys):
+        """Return a set of extras.
+
+        :param keys: names of the extras
+        :return: the values of the extras
+        :raises AttributeError: if at least one extra does not exist
         """
-        self._dbmodel.description = field_value
-        if self.is_stored:
-            with transaction.atomic():
-                self._dbmodel.save()
-                self._increment_version_number()
+        raise NotImplementedError
 
-    def _set_db_extra(self, key, value, exclusive=False):
+    def set_extra(self, key, value, increase_version=True):
+        """Set an extra to the given value.
+
+        :param key: name of the extra
+        :param value: value of the extra
+        :param increase_version: boolean, if True will increase the node version upon successfully setting the extra
         """
-        Store extra directly in the DB, without checks.
+        self.EXTRA_CLASS.set_value_for_node(self.dbmodel, key, value)
+        if increase_version:
+            self._increment_version_number()
 
-        DO NOT USE DIRECTLY.
+    def set_extras(self, extras):
+        """Set extras.
 
-        :param key: key name
-        :param value: key value
-        :param exclusive: (default=False).
-            If exclusive is True, it raises a UniquenessError if an Extra with
-            the same name already exists in the DB (useful e.g. to "lock" a
-            node and avoid to run multiple times the same computation on it).
+        .. note:: This will override any existing extras that are present in the new dictionary.
+
+        :param extras: the new extras to set
         """
-        self.EXTRA_CLASS.set_value_for_node(self._dbmodel, key, value, stop_if_existing=exclusive)
+        for key, value in extras.items():
+            self.EXTRA_CLASS.set_value_for_node(self.dbmodel, key, value)
+        self._increment_version_number()
 
-    def _reset_db_extras(self, new_extras):
+    def reset_extras(self, extras):
+        """Reset the extras.
+
+        .. note:: This will completely reset any existing extras and replace them with the new dictionary.
+
+        :param extras: the new extras to set
         """
-        Resets the extras (replacing existing ones) directly in the DB
+        raise NotImplementedError
 
-        DO NOT USE DIRECTLY!
+    def delete_extra(self, key):
+        """Delete an extra.
 
-        :param new_extras: dictionary with new extras
+        :param key: name of the extra
+        :raises AttributeError: if the extra does not exist
         """
-        raise NotImplementedError("Reset of extras has not been implemented" "for Django backend.")
+        if not self.EXTRA_CLASS.has_key(self.dbmodel, key):
+            raise AttributeError('Extra `{}` does not exist'.format(key))
 
-    def _get_db_extra(self, key):
+        self.EXTRA_CLASS.del_value_for_node(self.dbmodel, key)
+
+    def delete_extras(self, keys):
+        """Delete multiple extras.
+
+        .. note:: The implementation should guarantee that all the keys that are to be deleted actually exist or the
+            entire operation should be canceled without any change and an ``AttributeError`` should be raised.
+
+        :param keys: names of the extras to delete
+        :raises AttributeError: if at least on of the extra does not exist
         """
-        Get an extra, directly from the DB.
+        raise NotImplementedError
 
-        DO NOT USE DIRECTLY.
+    def clear_extras(self):
+        """Delete all extras."""
+        raise NotImplementedError
 
-        :param key: key name
-        :return: the key value
-        :raise AttributeError: if the key does not exist
+    def extras_items(self):
+        """Return an iterator over the extra items.
+
+        :return: an iterator with extra key value pairs
         """
-        return self.EXTRA_CLASS.get_value_for_node(dbnode=self._dbmodel, key=key)
+        for key, value in self._dbmodel.extras.items():
+            yield key, value
 
-    def _del_db_extra(self, key):
+    def extras_keys(self):
+        """Return an iterator over the extras keys.
+
+        :return: an iterator with extras keys
         """
-        Delete an extra, directly on the DB.
+        for key in self._dbmodel.extras.keys():
+            yield key
 
-        DO NOT USE DIRECTLY.
+    def add_incoming(self, source, link_type, link_label):
+        """Add a link of the given type from a given node to ourself.
 
-        :param key: key name
+        :param source: the node from which the link is coming
+        :param link_type: the link type
+        :param link_label: the link label
+        :return: True if the proposed link is allowed, False otherwise
+        :raise ModificationNotAllowed: if either source or target node is not stored
         """
-        if not self.EXTRA_CLASS.has_key(self._dbmodel, key):
-            raise AttributeError("DbExtra {} does not exist".format(key))
-        return self.EXTRA_CLASS.del_value_for_node(self._dbmodel, key)
-
-    def _db_extras_items(self):
-        """
-        Iterator over the extras (directly in the DB!)
-
-        DO NOT USE DIRECTLY.
-        """
-        extraslist = self.EXTRA_CLASS.list_all_node_elements(self._dbmodel)
-        for e in extraslist:
-            yield (e.key, e.getvalue())
-
-    def _add_db_link_from(self, src, link_type, label):
-        """
-        Add a link to the current node from the 'src' node.
-        Both nodes must be a Node instance (or a subclass of Node)
-
-        :note: this function should not be called directly; it acts directly on
-            the database.
-
-        :param src: the source object
-        :param str label: the name of the label to set the link from src.
-        """
-        from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm.nodes import Node
-
-        if not isinstance(src, Node):
-            raise ValueError("src must be a Node instance")
-        if self.uuid == src.uuid:
-            raise ValueError("Cannot link to itself")
-
-        if not src.is_stored:
-            raise ModificationNotAllowed("Cannot call the internal _add_dblink_from if the "
-                                         "source node is not stored")
+        type_check(source, DjangoNode)
 
         if not self.is_stored:
-            raise ModificationNotAllowed("Cannot call the internal _add_dblink_from if the "
-                                         "destination node is not stored")
+            raise exceptions.ModificationNotAllowed('node has to be stored when adding an incoming link')
 
-        if link_type is LinkType.CREATE or link_type is LinkType.INPUT_CALC or link_type is LinkType.INPUT_WORK:
-            # Check for cycles. This works if the transitive closure is enabled; if it
-            # isn't, this test will never fail, but then having a circular link is not
-            # meaningful but does not pose a huge threat
-            #
-            # I am linking src->self; a loop would be created if a DbPath exists already
-            # in the TC table from self to src
-            if QueryBuilder().append(
-                    Node, filters={
-                        'id': self.pk
-                    }, tag='parent').append(
-                        Node, filters={
-                            'id': src.pk
-                        }, tag='child', with_ancestors='parent').count() > 0:
-                raise ValueError("The link you are attempting to create would generate a loop")
+        if not source.is_stored:
+            raise exceptions.ModificationNotAllowed('source node has to be stored when adding a link from it')
 
-        self._do_create_link(src, label, link_type)
+        self._add_link(source, link_type, link_label)
 
-    def _do_create_link(self, src, label, link_type):
+    def _add_link(self, source, link_type, link_label):
+        """Add a link of the given type from a given node to ourself.
+
+        :param source: the node from which the link is coming
+        :param link_type: the link type
+        :param link_label: the link label
         """
-        Create a link from a source node with label and a link type
+        savepoint_id = None
 
-        :param src: The source node
-        :type src: :class:`~aiida.orm.implementation.sqlalchemy.node.Node`
-        :param label: The link label
-        :param link_type: The link type
-        """
-        sid = None
         try:
-            # transactions are needed here for Postgresql:
+            # Transactions are needed here for Postgresql:
             # https://docs.djangoproject.com/en/1.5/topics/db/transactions/#handling-exceptions-within-postgresql-transactions
-            sid = transaction.savepoint()
-            self.LINK_CLASS.objects.create(input=src._dbnode, output=self._dbnode, label=label, type=link_type.value)
-            transaction.savepoint_commit(sid)
-        except IntegrityError as exc:
-            transaction.savepoint_rollback(sid)
-            raise UniquenessError("There is already a link with the same " "name (raw message was {})" "".format(exc))
+            savepoint_id = transaction.savepoint()
+            self.LINK_CLASS(input_id=source.id, output_id=self.id, label=link_label, type=link_type.value).save()
+            transaction.savepoint_commit(savepoint_id)
+        except IntegrityError as exception:
+            transaction.savepoint_rollback(savepoint_id)
+            raise exceptions.UniquenessError('failed to create the link: {}'.format(exception))
 
-    def _db_store(self, with_transaction=True):
+    def store(self, attributes=None, links=None, with_transaction=True):
+        """Store the node in the database.
+
+        :param attributes: optional attributes to set before storing, will override any existing attributes
+        :param links: optional links to add before storing
         """
-        Store a new node in the DB, also saving its repository directory
-        and attributes.
-
-        After being called attributes cannot be
-        changed anymore! Instead, extras can be changed only AFTER calling
-        this store() function.
-
-        :note: After successful storage, those links that are in the cache, and
-            for which also the parent node is already stored, will be
-            automatically stored. The others will remain unstored.
-
-        :parameter with_transaction: if False, no transaction is used. This
-          is meant to be used ONLY if the outer calling function has already
-          a transaction open!
-        """
-        # TODO: This needs to be generalized, allowing for flexible methods
-        # for storing data and its attributes.
-        from django.db import transaction
         from aiida.common.lang import EmptyContextManager
-        from aiida.backends.djsite.db.models import DbAttribute
 
         if with_transaction:
-            context_man = transaction.atomic()
+            context_manager = transaction.atomic()
         else:
-            context_man = EmptyContextManager()
+            context_manager = EmptyContextManager()
 
-        # I save the corresponding django entry
-        # I set the folder
-        # NOTE: I first store the files, then only if this is successful,
-        # I store the DB entry. In this way,
-        # I assume that if a node exists in the DB, its folder is in place.
-        # On the other hand, periodically the user might need to run some
-        # bookkeeping utility to check for lone folders.
-        self._repository_folder.replace_with_folder(self._get_temp_folder().abspath, move=True, overwrite=True)
+        with context_manager:
 
-        # I do the transaction only during storage on DB to avoid timeout
-        # problems, especially with SQLite
-        try:
-            with context_man:
-                # Save the row
-                self._dbmodel.save()
-                # Save its attributes 'manually' without incrementing
-                # the version for each add.
-                self.ATTRIBUTE_CLASS.reset_values_for_node(
-                    self._dbmodel, attributes=self._attrs_cache, with_transaction=False)
-                # This should not be used anymore: I delete it to
-                # possibly free memory
-                ## TODO: this should not be done probably, in case
-                ## of a failed transaction!
-                del self._attrs_cache
+            # We need to save the node model instance itself first such that it has a pk that can be used in the foreign
+            # keys that will be needed for setting the attributes and links
+            self.dbmodel.save()
 
-                self._temp_folder = None
-                self._to_be_stored = False
+            if attributes:
+                self.ATTRIBUTE_CLASS.reset_values_for_node(self.dbmodel, attributes, with_transaction=False)
 
-                # Here, I store those links that were in the cache and
-                # that are between stored nodes.
-                self._store_cached_input_links()
-
-        # This is one of the few cases where it is ok to do a 'global'
-        # except, also because I am re-raising the exception
-        except:
-            # I put back the files in the sandbox folder since the
-            # transaction did not succeed
-            self._get_temp_folder().replace_with_folder(self._repository_folder.abspath, move=True, overwrite=True)
-
-            ## TODO: check if this is the right thing to do, not only
-            ## when .store() fails (e.g. for we are setting self._temp_folder
-            ## to None) but also when multiple nodes are stored in the same
-            ## transaction and only one fails
-            raise
-
-        # I store the hash without cleaning and without incrementing the nodeversion number
-        self.EXTRA_CLASS.set_value_for_node(self._dbmodel, _HASH_EXTRA_KEY, self.get_hash())
+            if links:
+                for link_triple in links:
+                    self._add_link(*link_triple)
 
         return self
 
-    # region Deprecated
-
-    def _get_db_input_links(self, link_type):
-        from aiida.orm.convert import get_orm_entity
-        from aiida.backends.djsite.db.models import DbLink
-
-        link_filter = {'output': self._dbnode}
-        if link_type is not None:
-            link_filter['type'] = link_type.value
-        return [(i.label, get_orm_entity(i.input)) for i in DbLink.objects.filter(**link_filter).distinct()]
-
-    def _get_db_output_links(self, link_type):
-        from aiida.orm.convert import get_orm_entity
-        from aiida.backends.djsite.db.models import DbLink
-
-        link_filter = {'input': self._dbnode}
-        if link_type is not None:
-            link_filter['type'] = link_type.value
-        return ((i.label, get_orm_entity(i.output)) for i in DbLink.objects.filter(**link_filter).distinct())
-
-    # endregion
+    def _increment_version_number(self):
+        """Increment the node version number of this node by one directly in the database."""
+        self._dbmodel.nodeversion = self.version + 1
+        self._dbmodel.save()
 
 
 class DjangoNodeCollection(BackendNodeCollection):
-    """The Django collection for nodes"""
+    """The collection of Node entries."""
 
     ENTITY_CLASS = DjangoNode
+
+    def delete(self, pk):
+        """Remove a Node entry from the collection with the given id
+
+        :param pk: id of the node to delete
+        """
+        try:
+            models.DbNode.objects.filter(pk=pk).delete()  # pylint: disable=no-member
+        except ObjectDoesNotExist:
+            raise exceptions.NotExistent("Node with pk '{}' not found".format(pk))

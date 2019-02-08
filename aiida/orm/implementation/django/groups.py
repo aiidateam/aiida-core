@@ -8,10 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Django Group entity"""
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import collections
 
 try:
@@ -26,9 +26,7 @@ from django.db.models import Q
 
 from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
 from aiida.common.lang import type_check
-from aiida.common.exceptions import ModificationNotAllowed
 from aiida.backends.djsite.db import models
-from .node import Node
 
 from . import entities
 from . import users
@@ -111,32 +109,6 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
         # To allow to do directly g = Group(...).store()
         return self
 
-    def add_nodes(self, nodes):
-        from aiida.backends.djsite.db.models import DbNode
-        if not self.is_stored:
-            raise ModificationNotAllowed("Cannot add nodes to a group before storing")
-
-        # First convert to a list
-        if isinstance(nodes, (Node, DbNode)):
-            nodes = [nodes]
-
-        if isinstance(nodes, six.string_types) or not isinstance(nodes, collections.Iterable):
-            raise TypeError("Invalid type passed as the 'nodes' parameter to "
-                            "add_nodes, can only be a Node, DbNode, or a list "
-                            "of such objects, it is instead {}".format(str(type(nodes))))
-
-        list_pk = []
-        for node in nodes:
-            if not isinstance(node, (Node, DbNode)):
-                raise TypeError("Invalid type of one of the elements passed "
-                                "to add_nodes, it should be either a Node or "
-                                "a DbNode, it is instead {}".format(str(type(node))))
-            if node.pk is None:
-                raise ValueError("At least one of the provided nodes is unstored, stopping...")
-            list_pk.append(node.pk)
-
-        self._dbmodel.dbnodes.add(*list_pk)
-
     @property
     def nodes(self):
         """Get an iterator to the nodes in the group"""
@@ -177,31 +149,43 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
 
         return NodesIterator(self._dbmodel.dbnodes.all(), self._backend)
 
-    def remove_nodes(self, nodes):
-        from aiida.backends.djsite.db.models import DbNode
-        if not self.is_stored:
-            raise ModificationNotAllowed("Cannot remove nodes from a group before storing")
+    def add_nodes(self, nodes):
+        from .nodes import DjangoNode
 
-        # First convert to a list
-        if isinstance(nodes, (Node, DbNode)):
-            nodes = [nodes]
+        super(DjangoGroup, self).add_nodes(nodes)
 
-        if isinstance(nodes, six.string_types) or not isinstance(nodes, collections.Iterable):
-            raise TypeError("Invalid type passed as the 'nodes' parameter to "
-                            "remove_nodes, can only be a Node, DbNode, or a "
-                            "list of such objects, it is instead {}".format(str(type(nodes))))
+        node_pks = []
 
-        list_pk = []
         for node in nodes:
-            if not isinstance(node, (Node, DbNode)):
-                raise TypeError("Invalid type of one of the elements passed "
-                                "to add_nodes, it should be either a Node or "
-                                "a DbNode, it is instead {}".format(str(type(node))))
-            if node.pk is None:
-                raise ValueError("At least one of the provided nodes is unstored, stopping...")
-            list_pk.append(node.pk)
 
-        self._dbmodel.dbnodes.remove(*list_pk)
+            if not isinstance(node, DjangoNode):
+                raise TypeError('invalid type {}, has to be {}'.format(type(node), DjangoNode))
+
+            if not node.is_stored:
+                raise ValueError('At least one of the provided nodes is unstored, stopping...')
+
+            node_pks.append(node.pk)
+
+        self._dbmodel.dbnodes.add(*node_pks)
+
+    def remove_nodes(self, nodes):
+        from .nodes import DjangoNode
+
+        super(DjangoGroup, self).remove_nodes(nodes)
+
+        node_pks = []
+
+        for node in nodes:
+
+            if not isinstance(node, DjangoNode):
+                raise TypeError('invalid type {}, has to be {}'.format(type(node), DjangoNode))
+
+            if not node.is_stored:
+                raise ValueError('At least one of the provided nodes is unstored, stopping...')
+
+            node_pks.append(node.pk)
+
+        self._dbmodel.dbnodes.remove(*node_pks)
 
 
 class DjangoGroupCollection(BackendGroupCollection):
@@ -221,6 +205,8 @@ class DjangoGroupCollection(BackendGroupCollection):
               label_filters=None,
               **kwargs):  # pylint: disable=too-many-arguments
         # pylint: disable=too-many-branches,too-many-locals
+        from .nodes import DjangoNode
+
         # Analyze args and kwargs to create the query
         queryobject = Q()
         if label is not None:
@@ -245,7 +231,7 @@ class DjangoGroupCollection(BackendGroupCollection):
                 nodes = [nodes]
 
             for node in nodes:
-                if not isinstance(node, (Node, models.DbNode)):
+                if not isinstance(node, (DjangoNode, models.DbNode)):
                     raise TypeError("At least one of the elements passed as "
                                     "nodes for the query on Group is neither "
                                     "a Node nor a DbNode")

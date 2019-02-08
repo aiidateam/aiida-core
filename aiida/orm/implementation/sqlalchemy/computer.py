@@ -16,7 +16,6 @@ import six
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.session import make_transient
 
-from aiida.common.lang import type_check
 from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.common.exceptions import InvalidOperation
 from aiida.orm.implementation.computers import BackendComputerCollection, BackendComputer

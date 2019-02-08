@@ -112,11 +112,11 @@ class TestDuplicateNodeUuidMigration(TestMigrations):
             self.n_int_duplicates = 4
 
             node_bool = Bool(True)
-            node_bool.add_path(handle.name, self.file_name)
+            node_bool.repository.add_path(handle.name, self.file_name)
             node_bool.store()
 
             node_int = Int(1)
-            node_int.add_path(handle.name, self.file_name)
+            node_int.repository.add_path(handle.name, self.file_name)
             node_int.store()
 
             self.nodes_boolean.append(node_bool)
@@ -124,15 +124,15 @@ class TestDuplicateNodeUuidMigration(TestMigrations):
 
             for i in range(self.n_bool_duplicates):
                 node = Bool(True)
-                node.dbnode.uuid = node_bool.uuid
-                node.add_path(handle.name, self.file_name)
+                node.backend_entity.dbmodel.uuid = node_bool.uuid
+                node.repository.add_path(handle.name, self.file_name)
                 node.store()
                 self.nodes_boolean.append(node)
 
             for i in range(self.n_int_duplicates):
                 node = Int(1)
-                node.dbnode.uuid = node_int.uuid
-                node.add_path(handle.name, self.file_name)
+                node.backend_entity.dbmodel.uuid = node_int.uuid
+                node.repository.add_path(handle.name, self.file_name)
                 node.store()
                 self.nodes_integer.append(node)
 
@@ -161,7 +161,7 @@ class TestDuplicateNodeUuidMigration(TestMigrations):
         self.assertEqual(len(set(uuids_integer)), len(nodes_integer))
 
         for node in nodes_boolean:
-            with node._get_folder_pathsubfolder.open(self.file_name) as handle:
+            with node.repository._get_folder_pathsubfolder.open(self.file_name) as handle:
                 content = handle.read()
                 self.assertEqual(content, self.file_content)
 
@@ -250,7 +250,7 @@ class TestCalcAttributeKeysMigration(TestMigrations):
     KEY_ENVIRONMENT_VARIABLES_NEW = 'environment_variables'
 
     def setUpBeforeMigration(self):
-        from aiida.orm.node import WorkflowNode, CalcJobNode
+        from aiida.orm import WorkflowNode, CalcJobNode
 
         self.process_label = 'TestLabel'
         self.resources = {'number_machines': 1}
@@ -258,15 +258,15 @@ class TestCalcAttributeKeysMigration(TestMigrations):
         self.parser_name = 'aiida.parsers:parser'
 
         self.node_work = WorkflowNode()
-        self.node_work._set_attr(self.KEY_PROCESS_LABEL_OLD, self.process_label)
+        self.node_work.set_attribute(self.KEY_PROCESS_LABEL_OLD, self.process_label)
         self.node_work.store()
 
         self.node_calc = CalcJobNode(computer=self.computer)
         self.node_calc._validate = lambda: True  # Need to disable the validation because we cannot set `resources`
-        self.node_calc._set_attr(self.KEY_PROCESS_LABEL_OLD, self.process_label)
-        self.node_calc._set_attr(self.KEY_RESOURCES_OLD, self.resources)
-        self.node_calc._set_attr(self.KEY_ENVIRONMENT_VARIABLES_OLD, self.environment_variables)
-        self.node_calc._set_attr(self.KEY_PARSER_NAME_OLD, self.parser_name)
+        self.node_calc.set_attribute(self.KEY_PROCESS_LABEL_OLD, self.process_label)
+        self.node_calc.set_attribute(self.KEY_RESOURCES_OLD, self.resources)
+        self.node_calc.set_attribute(self.KEY_ENVIRONMENT_VARIABLES_OLD, self.environment_variables)
+        self.node_calc.set_attribute(self.KEY_PARSER_NAME_OLD, self.parser_name)
         self.node_calc.store()
 
     def test_attribute_key_changes(self):
@@ -276,18 +276,18 @@ class TestCalcAttributeKeysMigration(TestMigrations):
         NOT_FOUND = tuple([0])
 
         node_work = load_node(self.node_work.pk)
-        self.assertEqual(node_work.get_attr(self.KEY_PROCESS_LABEL_NEW), self.process_label)
-        self.assertEqual(node_work.get_attr(self.KEY_PROCESS_LABEL_OLD, default=NOT_FOUND), NOT_FOUND)
+        self.assertEqual(node_work.get_attribute(self.KEY_PROCESS_LABEL_NEW), self.process_label)
+        self.assertEqual(node_work.get_attribute(self.KEY_PROCESS_LABEL_OLD, default=NOT_FOUND), NOT_FOUND)
 
         node_calc = load_node(self.node_calc.pk)
-        self.assertEqual(node_calc.get_attr(self.KEY_PROCESS_LABEL_NEW), self.process_label)
-        self.assertEqual(node_calc.get_attr(self.KEY_RESOURCES_NEW), self.resources)
-        self.assertEqual(node_calc.get_attr(self.KEY_ENVIRONMENT_VARIABLES_NEW), self.environment_variables)
-        self.assertEqual(node_calc.get_attr(self.KEY_PARSER_NAME_NEW), self.parser_name)
-        self.assertEqual(node_calc.get_attr(self.KEY_PROCESS_LABEL_OLD, default=NOT_FOUND), NOT_FOUND)
-        self.assertEqual(node_calc.get_attr(self.KEY_RESOURCES_OLD, default=NOT_FOUND), NOT_FOUND)
-        self.assertEqual(node_calc.get_attr(self.KEY_ENVIRONMENT_VARIABLES_OLD, default=NOT_FOUND), NOT_FOUND)
-        self.assertEqual(node_calc.get_attr(self.KEY_PARSER_NAME_OLD, default=NOT_FOUND), NOT_FOUND)
+        self.assertEqual(node_calc.get_attribute(self.KEY_PROCESS_LABEL_NEW), self.process_label)
+        self.assertEqual(node_calc.get_attribute(self.KEY_RESOURCES_NEW), self.resources)
+        self.assertEqual(node_calc.get_attribute(self.KEY_ENVIRONMENT_VARIABLES_NEW), self.environment_variables)
+        self.assertEqual(node_calc.get_attribute(self.KEY_PARSER_NAME_NEW), self.parser_name)
+        self.assertEqual(node_calc.get_attribute(self.KEY_PROCESS_LABEL_OLD, default=NOT_FOUND), NOT_FOUND)
+        self.assertEqual(node_calc.get_attribute(self.KEY_RESOURCES_OLD, default=NOT_FOUND), NOT_FOUND)
+        self.assertEqual(node_calc.get_attribute(self.KEY_ENVIRONMENT_VARIABLES_OLD, default=NOT_FOUND), NOT_FOUND)
+        self.assertEqual(node_calc.get_attribute(self.KEY_PARSER_NAME_OLD, default=NOT_FOUND), NOT_FOUND)
 
 
 class TestDbLogMigrationRecordCleaning(TestMigrations):
@@ -653,7 +653,7 @@ class TestTrajectoryDataMigration(TestMigrations):
     def test_trajectory_symbols(self):
         from aiida.orm import load_node
         trajectory = load_node(self.trajectory_pk)
-        self.assertSequenceEqual(trajectory.get_attr('symbols'), ['H', 'O', 'C'])
+        self.assertSequenceEqual(trajectory.get_attribute('symbols'), ['H', 'O', 'C'])
         self.assertSequenceEqual(trajectory.get_array('velocities').tolist(), self.velocities.tolist())
         self.assertSequenceEqual(trajectory.get_array('positions').tolist(), self.positions.tolist())
         with self.assertRaises(KeyError):

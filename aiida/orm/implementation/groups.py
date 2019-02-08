@@ -8,15 +8,17 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Backend group module"""
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import abc
 import six
 
 from aiida.common import exceptions
+
 from . import backends
+from .nodes import BackendNode
 
 __all__ = 'BackendGroup', 'BackendGroupCollection'
 
@@ -142,31 +144,37 @@ class BackendGroup(backends.BackendEntity):
         the number of nodes in the group using len().
         """
 
-    @abc.abstractmethod
     def add_nodes(self, nodes):
+        """Add a set of nodes to the group.
+
+        :note: all the nodes *and* the group itself have to be stored.
+
+        :param nodes: a list of `BackendNode` instances to be added to this group
         """
-        Add a node or a set of nodes to the group.
+        if not self.is_stored:
+            raise ValueError('group has to be stored before nodes can be added')
 
-        :note: The group must be already stored.
+        if not isinstance(nodes, (list, tuple)):
+            raise TypeError('nodes has to be a list or tuple')
 
-        :note: each of the nodes passed to add_nodes must be already stored.
+        if any([not isinstance(node, BackendNode) for node in nodes]):
+            raise TypeError('nodes have to be of type {}'.format(BackendNode))
 
-        :param nodes: a Node or DbNode object to add to the group, or
-          a list of Nodes or DbNodes to add.
-        """
-
-    @abc.abstractmethod
     def remove_nodes(self, nodes):
+        """Remove a set of nodes from the group.
+
+        :note: all the nodes *and* the group itself have to be stored.
+
+        :param nodes: a list of `BackendNode` instances to be removed from this group
         """
-        Remove a node or a set of nodes to the group.
+        if not self.is_stored:
+            raise ValueError('group has to be stored before nodes can be removed')
 
-        :note: The group must be already stored.
+        if not isinstance(nodes, (list, tuple)):
+            raise TypeError('nodes has to be a list or tuple')
 
-        :note: each of the nodes passed to add_nodes must be already stored.
-
-        :param nodes: a Node or DbNode object to add to the group, or
-          a list of Nodes or DbNodes to add.
-        """
+        if any([not isinstance(node, BackendNode) for node in nodes]):
+            raise TypeError('nodes have to be of type {}'.format(BackendNode))
 
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))

@@ -17,7 +17,7 @@ from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 from aiida.orm import Data, Node
-from aiida.orm.node import CalculationNode
+from aiida.orm import CalculationNode
 
 
 class TestNodeBasicDjango(AiidaTestCase):
@@ -69,27 +69,31 @@ class TestNodeBasicDjango(AiidaTestCase):
         # that have no deepness, no junk is left in the DB (i.e., no
         # 'dict.a', 'list.3.h', ...
         self.assertEquals(len(DbExtra.objects.filter(
-            dbnode=a, key__startswith=('list' + DbExtra._sep))), 0)
+            dbnode=a.backend_entity.dbmodel, key__startswith=('list' + DbExtra._sep))), 0)
         self.assertEquals(len(DbExtra.objects.filter(
-            dbnode=a, key__startswith=('dict' + DbExtra._sep))), 0)
+            dbnode=a.backend_entity.dbmodel, key__startswith=('dict' + DbExtra._sep))), 0)
 
     def test_attrs_and_extras_wrong_keyname(self):
         """
         Attribute keys cannot include the separator symbol in the key
         """
         from aiida.backends.djsite.db.models import DbAttributeBaseClass
-        from aiida.common.exceptions import ValidationError
+        from aiida.common.exceptions import ModificationNotAllowed, ValidationError
 
         separator = DbAttributeBaseClass._sep
 
-        a = Data()
+        a = Data().store()
+
+        with self.assertRaises(ModificationNotAllowed):
+            # Cannot change an attribute on a stored node
+            a.set_attribute('name' + separator, 'blablabla')
 
         with self.assertRaises(ValidationError):
-            # I did not store, I cannot modify
-            a._set_attr('name' + separator, 'blablabla')
+            # Cannot change an attribute on a stored node
+            a.set_attribute('name' + separator, 'blablabla', stored_check=False)
 
         with self.assertRaises(ValidationError):
-            # I did not store, I cannot modify
+            # Passing an attribute key separator directly in the key is not allowed
             a.set_extra('bool' + separator, 'blablabla')
 
     def test_settings(self):

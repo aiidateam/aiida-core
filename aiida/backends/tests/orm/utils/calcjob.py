@@ -15,7 +15,7 @@ from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 from aiida.orm.node.data.parameter import ParameterData
-from aiida.orm.node import CalcJobNode
+from aiida.orm import CalcJobNode
 from aiida.orm.utils import CalculationFactory
 from aiida.orm.utils.calcjob import CalcJobResultManager
 from aiida.plugins.entry_point import get_entry_point_string_from_class
@@ -34,9 +34,8 @@ class TestCalcJobResultManager(AiidaTestCase):
         super(TestCalcJobResultManager, cls).setUpClass(*args, **kwargs)
         cls.process_class = CalculationFactory('templatereplacer')
         cls.process_type = get_entry_point_string_from_class(cls.process_class.__module__, cls.process_class.__name__)
-        cls.node = CalcJobNode(computer=cls.computer)
+        cls.node = CalcJobNode(computer=cls.computer, process_type=cls.process_type)
         cls.node.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
-        cls.node.dbnode.process_type = cls.process_type
         cls.node.store()
 
         cls.key_one = 'key_one'
@@ -62,8 +61,7 @@ class TestCalcJobResultManager(AiidaTestCase):
 
     def test_invalid_process_type(self):
         """`get_results` should raise `ValueError` if `CalcJobNode` has invalid `process_type`"""
-        node = CalcJobNode(computer=self.computer)
-        node.dbnode.process_type = 'aiida.calculations:not_existent'
+        node = CalcJobNode(computer=self.computer, process_type='aiida.calculations:not_existent')
         manager = CalcJobResultManager(node)
 
         with self.assertRaises(ValueError):
@@ -71,12 +69,11 @@ class TestCalcJobResultManager(AiidaTestCase):
 
     def test_process_class_no_default_node(self):
         """`get_results` should raise `ValueError` if process class does not define default output node."""
-        node = CalcJobNode(computer=self.computer)
-
         # This is a valid process class however ArithmeticAddCalculation does define a default output node
         process_class = CalculationFactory('arithmetic.add')
         process_type = get_entry_point_string_from_class(process_class.__module__, process_class.__name__)
-        node.dbnode.process_type = process_type
+        node = CalcJobNode(computer=self.computer, process_type=process_type)
+
         manager = CalcJobResultManager(node)
 
         with self.assertRaises(ValueError):

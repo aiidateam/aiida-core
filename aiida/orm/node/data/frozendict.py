@@ -10,12 +10,14 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from collections import Mapping
+
+import collections
+
 from aiida.orm.node.data import Data
 from aiida.orm import load_node
 
 
-class FrozenDict(Data, Mapping):
+class FrozenDict(Data, collections.Mapping):
     """
     An immutable dictionary containing only Data nodes as values.
 
@@ -24,33 +26,39 @@ class FrozenDict(Data, Mapping):
     """
 
     def __init__(self, **kwargs):
-        self._cache = {}
-        self._initialised = False
+        self._initialized = False
+        dictionary = kwargs.pop('dict', None)
         super(FrozenDict, self).__init__(**kwargs)
-        self._initialised = True
+        self.set_dictionary(dictionary)
+        self._initialized = True
 
-    def set_dict(self, dict):
-        assert not self._initialised
+    def initialize(self):
+        super(FrozenDict, self).initialize()
+        self._cache = {}
 
-        for value in dict.values():
+    def set_dictionary(self, dictionary):
+        assert not self._initialized
+
+        for value in dictionary.values():
             assert isinstance(value, Data)
             assert value.is_stored
 
-        for k, v in dict.items():
-            self._set_attr(k, v.pk)
+        attributes = {key: value.pk for key, value in dictionary.items()}
+        self.set_attributes(attributes)
 
     def __getitem__(self, key):
         return self._get(key)
 
     def __iter__(self):
-        return iter(self.get_attrs().keys())
+        for key in self.attributes_keys():
+            yield key
 
     def __len__(self):
-        return len(self.get_attrs())
+        return len(list(self.attributes_keys()))
 
     def _get(self, key):
         val = self._cache.get(key, None)
         if val is None:
-            val = load_node(self.get_attr(key))
+            val = load_node(self.get_attribute(key))
             self._cache[key] = val
         return val

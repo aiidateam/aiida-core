@@ -4,7 +4,7 @@
 from __future__ import absolute_import
 
 from aiida.common.links import LinkType
-from aiida.orm.mixins import FunctionCalculationMixin
+from aiida.orm.utils.mixins import FunctionCalculationMixin
 
 from . import CalculationNode
 

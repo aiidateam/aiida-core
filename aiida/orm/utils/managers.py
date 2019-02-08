@@ -18,7 +18,8 @@ from __future__ import absolute_import
 
 __all__ = ('NodeInputManager', 'NodeOutputManager', 'AttributeManager')
 
-class NodeInputManager(object):  # pylint: disable=too-few-public-methods
+
+class NodeInputManager(object):  # pylint: disable=too-few-public-methods,useless-object-inheritance
     """
     A manager that allows to do node.inp.xxx to get the input named 'xxx'
     of a given node.
@@ -50,9 +51,7 @@ class NodeInputManager(object):  # pylint: disable=too-few-public-methods
         try:
             return self._node.get_incoming().get_node_by_label(name)
         except KeyError:
-            raise AttributeError(
-                "Node '{}' does not have an input with link '{}'".format(
-                    self._node.pk, name))
+            raise AttributeError("Node '{}' does not have an input with link '{}'".format(self._node.pk, name))
 
     def __getitem__(self, name):
         """
@@ -63,11 +62,10 @@ class NodeInputManager(object):  # pylint: disable=too-few-public-methods
         try:
             return self._node.get_incoming().get_node_by_label(name)
         except KeyError:
-            raise KeyError("Node '{}' does not have an input with link '{}'"
-                           .format(self._node.pk, name))
+            raise KeyError("Node '{}' does not have an input with link '{}'".format(self._node.pk, name))
 
 
-class NodeOutputManager(object): # pylint: disable=too-few-public-methods
+class NodeOutputManager(object):  # pylint: disable=too-few-public-methods,useless-object-inheritance
     """
     A manager that allows to do node.out.xxx to get the output named 'xxx'
     of a given node.
@@ -99,8 +97,7 @@ class NodeOutputManager(object): # pylint: disable=too-few-public-methods
         try:
             return self._node.get_outgoing().get_node_by_label(name)
         except KeyError:
-            raise AttributeError("Node {} does not have an output with link {}"
-                                 .format(self._node.pk, name))
+            raise AttributeError("Node {} does not have an output with link {}".format(self._node.pk, name))
 
     def __getitem__(self, name):
         """
@@ -111,14 +108,13 @@ class NodeOutputManager(object): # pylint: disable=too-few-public-methods
         try:
             return self._node.get_outgoing().get_node_by_label(name)
         except KeyError:
-            raise KeyError("Node {} does not have an output with link {}"
-                           .format(self._node.pk, name))
+            raise KeyError("Node {} does not have an output with link {}".format(self._node.pk, name))
 
 
-class AttributeManager(object):  # pylint: disable=too-few-public-methods
+class AttributeManager(object):  # pylint: disable=too-few-public-methods,useless-object-inheritance
     """
     An object used internally to return the attributes as a dictionary.
-    This is currently used in :py:class:`~aiida.orm.data.parameter.ParameterData`,
+    This is currently used in :py:class:`~aiida.orm.node.data.parameter.ParameterData`,
     for instance.
 
     :note: Important! It cannot be used to change variables, just to read
@@ -136,20 +132,20 @@ class AttributeManager(object):  # pylint: disable=too-few-public-methods
         """
         Allow to list the keys of the dictionary
         """
-        return sorted(self._node.attrs())
+        return sorted(self._node.attributes_items())
 
     def __iter__(self):
         """
         Return the keys as an iterator
         """
-        for k in self._node.attrs():
+        for k in self._node.attributes_keys():
             yield k
 
     def _get_dict(self):
         """
         Return the internal dictionary
         """
-        return dict(self._node.iterattrs())
+        return dict(self._node.attributes_items())
 
     def __getattr__(self, name):
         """
@@ -160,7 +156,7 @@ class AttributeManager(object):  # pylint: disable=too-few-public-methods
 
         :param name: name of the key whose value is required.
         """
-        return self._node.get_attr(name)
+        return self._node.get_attribute(name)
 
     def __getitem__(self, name):
         """
@@ -169,6 +165,6 @@ class AttributeManager(object):  # pylint: disable=too-few-public-methods
         :param name: name of the key whose value is required.
         """
         try:
-            return self._node.get_attr(name)
+            return self._node.get_attribute(name)
         except AttributeError as err:
             raise KeyError(str(err))

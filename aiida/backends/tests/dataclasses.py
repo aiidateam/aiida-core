@@ -79,23 +79,23 @@ class TestSinglefileData(AiidaTestCase):
 
         the_uuid = a.uuid
 
-        self.assertEquals(a.get_folder_list(), [basename])
+        self.assertEquals(a.repository.get_folder_list(), [basename])
 
-        with io.open(a.get_abs_path(basename), encoding='utf8') as fhandle:
+        with io.open(a.repository.get_abs_path(basename), encoding='utf8') as fhandle:
             self.assertEquals(fhandle.read(), file_content)
 
         a.store()
 
-        with io.open(a.get_abs_path(basename), encoding='utf8') as fhandle:
+        with io.open(a.repository.get_abs_path(basename), encoding='utf8') as fhandle:
             self.assertEquals(fhandle.read(), file_content)
-        self.assertEquals(a.get_folder_list(), [basename])
+        self.assertEquals(a.repository.get_folder_list(), [basename])
 
         b = load_node(the_uuid)
 
         # I check the retrieved object
         self.assertTrue(isinstance(b, SinglefileData))
-        self.assertEquals(b.get_folder_list(), [basename])
-        with io.open(b.get_abs_path(basename), encoding='utf8') as fhandle:
+        self.assertEquals(b.repository.get_folder_list(), [basename])
+        with io.open(b.repository.get_abs_path(basename), encoding='utf8') as fhandle:
             self.assertEquals(fhandle.read(), file_content)
 
 
@@ -169,9 +169,9 @@ class TestCifData(AiidaTestCase):
 
         the_uuid = a.uuid
 
-        self.assertEquals(a.get_folder_list(), [basename])
+        self.assertEquals(a.repository.get_folder_list(), [basename])
 
-        with io.open(a.get_abs_path(basename), encoding='utf8') as fhandle:
+        with io.open(a.repository.get_abs_path(basename), encoding='utf8') as fhandle:
             self.assertEquals(fhandle.read(), file_content)
 
         a.store()
@@ -182,16 +182,16 @@ class TestCifData(AiidaTestCase):
             'version': '1234',
         })
 
-        with io.open(a.get_abs_path(basename), encoding='utf8') as fhandle:
+        with io.open(a.repository.get_abs_path(basename), encoding='utf8') as fhandle:
             self.assertEquals(fhandle.read(), file_content)
-        self.assertEquals(a.get_folder_list(), [basename])
+        self.assertEquals(a.repository.get_folder_list(), [basename])
 
         b = load_node(the_uuid)
 
         # I check the retrieved object
         self.assertTrue(isinstance(b, CifData))
-        self.assertEquals(b.get_folder_list(), [basename])
-        with io.open(b.get_abs_path(basename), encoding='utf8') as fhandle:
+        self.assertEquals(b.repository.get_folder_list(), [basename])
+        with io.open(b.repository.get_abs_path(basename), encoding='utf8') as fhandle:
             self.assertEquals(fhandle.read(), file_content)
 
         # Checking the get_or_create() method:
@@ -763,8 +763,8 @@ _tag   {}
 
             # this should reset formulae and spacegroup_numbers
             a.set_file(tmpf.name)
-            self.assertIs(a.get_attr('formulae'), None)
-            self.assertIs(a.get_attr('spacegroup_numbers'), None)
+            self.assertIs(a.get_attribute('formulae'), None)
+            self.assertIs(a.get_attribute('spacegroup_numbers'), None)
 
             # this should populate formulae
             a.parse()
@@ -3837,7 +3837,7 @@ class TestSpglibTupleConversion(AiidaTestCase):
         roundtrip_struc = spglib_tuple_to_structure(struc_tuple, kind_info, kinds)
 
         self.assertAlmostEqual(np.sum(np.abs(np.array(struc.cell) - np.array(roundtrip_struc.cell))), 0.)
-        self.assertEqual(struc.get_attr('kinds'), roundtrip_struc.get_attr('kinds'))
+        self.assertEqual(struc.get_attribute('kinds'), roundtrip_struc.get_attribute('kinds'))
         self.assertEqual([_.kind_name for _ in struc.sites], [_.kind_name for _ in roundtrip_struc.sites])
         self.assertEqual(
             np.sum(

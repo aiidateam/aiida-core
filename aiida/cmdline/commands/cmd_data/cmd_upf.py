@@ -13,6 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import io
+import os
 import click
 
 from aiida.cmdline.commands.cmd_data import verdi_data
@@ -43,8 +44,8 @@ def upf_uploadfamily(folder, group_label, group_description, stop_if_existing):
 
     Call without parameters to get some help.
     """
-    import aiida.orm.node.data.upf as upf_
-    files_found, files_uploaded = upf_.upload_upf_family(folder, group_label, group_description, stop_if_existing)
+    from aiida.orm.node.data.upf import upload_upf_family
+    files_found, files_uploaded = upload_upf_family(folder, group_label, group_description, stop_if_existing)
     echo.echo_success("UPF files found: {}. New files uploaded: {}".format(files_found, files_uploaded))
 
 
@@ -108,17 +109,17 @@ def upf_exportfamily(folder, group):
     Export a pseudopotential family into a folder.
     Call without parameters to get some help.
     """
-    import os
+    if group.is_empty:
+        echo.echo_critical('Group<{}> contains no pseudos'.format(group.label))
 
-    # pylint: disable=protected-access
     for node in group.nodes:
         dest_path = os.path.join(folder, node.filename)
         if not os.path.isfile(dest_path):
             with io.open(dest_path, 'w', encoding='utf8') as dest:
-                with node._get_folder_pathsubfolder.open(node.filename) as source:
+                with node.repository._get_folder_pathsubfolder.open(node.filename) as source:  # pylint: disable=protected-access
                     dest.write(source.read())
         else:
-            echo.echo_warning("File {} is already present in the destination folder".format(node.filename))
+            echo.echo_warning('File {} is already present in the destination folder'.format(node.filename))
 
 
 @upf.command('import')

@@ -118,7 +118,7 @@ class EmptyContextManager(object):  # pylint: disable=too-few-public-methods,use
         pass
 
 
-def type_check(what, of_type, msg=None):
+def type_check(what, of_type, msg=None, allow_none=False):
     """
     Check if object 'what' is of type 'of_type'.
     If not, raise a TypeError.
@@ -127,9 +127,12 @@ def type_check(what, of_type, msg=None):
     :param of_type: the type (or tuple of types) to compare to
     :param msg: if specified, allows to customize the message that
         is passed within the TypeError exception
+    :param allow_none: boolean, if True will not raise if the passed `what` is `None`
     """
+    if allow_none and what is None:
+        return
 
     if not isinstance(what, of_type):
         if msg is None:
-            "Got object of type '{}', expecting '{}'".format(type(what), of_type)
+            msg = "Got object of type '{}', expecting '{}'".format(type(what), of_type)
         raise TypeError(msg)

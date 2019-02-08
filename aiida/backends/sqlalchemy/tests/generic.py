@@ -25,7 +25,7 @@ class TestComputer(AiidaTestCase):
     """
 
     def test_deletion(self):
-        from aiida.orm.node import CalcJobNode
+        from aiida.orm import CalcJobNode
         from aiida.common.exceptions import InvalidOperation
         import aiida.backends.sqlalchemy
 
@@ -40,7 +40,7 @@ class TestComputer(AiidaTestCase):
         self.backend.computers.delete(newcomputer.id)
 
         node = CalcJobNode()
-        node.set_computer(self.computer)
+        node.computer = self.computer
         node.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         node.store()
 
@@ -81,10 +81,10 @@ class TestGroupsSqla(AiidaTestCase):
         g2 = backend.groups.create(label='testquery2', user=simple_user).store()
         self.addCleanup(lambda: backend.groups.delete(g2.id))
 
-        n1 = Data().store()
-        n2 = Data().store()
-        n3 = Data().store()
-        n4 = Data().store()
+        n1 = Data().store().backend_entity
+        n2 = Data().store().backend_entity
+        n3 = Data().store().backend_entity
+        n4 = Data().store().backend_entity
 
         g1.add_nodes([n1, n2])
         g2.add_nodes([n1, n3])
@@ -145,19 +145,19 @@ class TestDbExtrasSqla(AiidaTestCase):
 
         n2.set_extra("pippo2", [3, 4, u'b'])
 
-        self.assertEqual(n1.get_extras(),
+        self.assertEqual(n1.extras,
                          {'pippo': [1, 2, u'a'], 'pippobis': [5, 6, u'c'], '_aiida_hash': n1.get_hash()})
 
-        self.assertEquals(n2.get_extras(), {'pippo2': [3, 4, 'b'], '_aiida_hash': n2.get_hash()})
+        self.assertEquals(n2.extras, {'pippo2': [3, 4, 'b'], '_aiida_hash': n2.get_hash()})
 
         new_attrs = {"newval1": "v", "newval2": [1, {"c": "d", "e": 2}]}
 
         n1.reset_extras(new_attrs)
-        self.assertEquals(n1.get_extras(), new_attrs)
-        self.assertEquals(n2.get_extras(), {'pippo2': [3, 4, 'b'], '_aiida_hash': n2.get_hash()})
+        self.assertEquals(n1.extras, new_attrs)
+        self.assertEquals(n2.extras, {'pippo2': [3, 4, 'b'], '_aiida_hash': n2.get_hash()})
 
-        n1.del_extra('newval2')
+        n1.delete_extra('newval2')
         del new_attrs['newval2']
-        self.assertEquals(n1.get_extras(), new_attrs)
+        self.assertEquals(n1.extras, new_attrs)
         # Also check that other nodes were not damaged
-        self.assertEquals(n2.get_extras(), {'pippo2': [3, 4, 'b'], '_aiida_hash': n2.get_hash()})
+        self.assertEquals(n2.extras, {'pippo2': [3, 4, 'b'], '_aiida_hash': n2.get_hash()})

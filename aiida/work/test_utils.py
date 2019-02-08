@@ -13,7 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 import plumpy
 
-from aiida.orm.node import WorkflowNode
+from aiida.orm import WorkflowNode
 from aiida.work.processes import Process
 
 

@@ -24,6 +24,7 @@ from . import computer
 from . import convert
 from . import groups
 from . import logs
+from . import nodes
 from . import querybuilder
 from . import users
 
@@ -38,6 +39,7 @@ class DjangoBackend(SqlBackend[models.Model]):
         self._computers = computer.DjangoComputerCollection(self)
         self._groups = groups.DjangoGroupCollection(self)
         self._logs = logs.DjangoLogCollection(self)
+        self._nodes = nodes.DjangoNodeCollection(self)
         self._query_manager = DjangoQueryManager(self)
         self._users = users.DjangoUserCollection(self)
 
@@ -64,6 +66,10 @@ class DjangoBackend(SqlBackend[models.Model]):
     @property
     def logs(self):
         return self._logs
+
+    @property
+    def nodes(self):
+        return self._nodes
 
     @property
     def query_manager(self):

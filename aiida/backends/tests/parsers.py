@@ -80,7 +80,7 @@ def output_test(pk, testname, skip_uuids_from_inputs=[]):
     import aiida.common.json as json
 
     from aiida.common.folders import Folder
-    from aiida.orm.node import CalcJobNode
+    from aiida.orm import CalcJobNode
     from aiida.orm.utils import load_node
     from aiida.orm.importexport import export_tree
     
@@ -98,7 +98,7 @@ def output_test(pk, testname, skip_uuids_from_inputs=[]):
     inputs = []
     for entry in c.get_incoming().all():
         if entry.node.uuid not in skip_uuids_from_inputs:
-            inputs.append(entry.node.dbnode)
+            inputs.append(entry.node.dbmodel)
 
     folder = Folder(outfolder)
     to_export = [c.dbnode] + inputs
@@ -175,7 +175,7 @@ class TestParsers(AiidaTestCase):
         import importlib
         import aiida.common.json as json
 
-        from aiida.orm.node import CalcJobNode
+        from aiida.orm import CalcJobNode
         from aiida.orm.utils import load_node
         from aiida.orm.importexport import import_data
 
@@ -241,7 +241,7 @@ class TestParsers(AiidaTestCase):
                     # attr_test is the name of the attribute
                     for attr_test in tests[test_node_name]:
                         try:
-                            dbdata = test_node.get_attr(attr_test)
+                            dbdata = test_node.get_attribute(attr_test)
                         except AttributeError:
                             raise AssertionError("Attribute '{}' not found in "
                                                  "parsed node '{}'".format(attr_test, test_node_name))

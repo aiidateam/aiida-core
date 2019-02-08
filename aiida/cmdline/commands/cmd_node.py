@@ -151,7 +151,7 @@ def show(nodes, print_groups):
         if print_groups:
             from aiida.orm.querybuilder import QueryBuilder
             from aiida.orm.groups import Group
-            from aiida.orm.node import Node  # pylint: disable=redefined-outer-name
+            from aiida.orm import Node  # pylint: disable=redefined-outer-name
 
             # pylint: disable=invalid-name
             qb = QueryBuilder()

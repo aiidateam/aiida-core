@@ -30,8 +30,6 @@ import os
 from aiida.orm.node.data import Data
 
 
-
-
 class SinglefileData(Data):
     """
     Pass as input a file parameter with the (absolute) path of a file
@@ -42,18 +40,23 @@ class SinglefileData(Data):
     the filename in the 'filename' attribute.
     """
 
+    def __init__(self, file, **kwargs):
+        super(SinglefileData, self).__init__(**kwargs)
+        if file is not None:
+            self.set_file(file)
+
     @property
     def filename(self):
         """
         Returns the name of the file stored
         """
-        return self.get_attr('filename')
+        return self.get_attribute('filename')
 
     def get_file_abs_path(self):
         """
         Return the absolute path to the file in the repository
         """
-        return os.path.join(self._get_folder_pathsubfolder.abspath, self.filename)
+        return self.repository.get_abs_path(self.filename)
 
     def set_file(self, filename):
         """
@@ -67,13 +70,13 @@ class SinglefileData(Data):
         Remove a file from SingleFileData
         :param filename: name of the file stored in the DB
         """
-        self.remove_path(filename)
+        self.repository.remove_path(filename)
 
     def add_path(self, src_abs, dst_filename=None):
         """
         Add a single file
         """
-        old_file_list = self.get_folder_list()
+        old_file_list = self.repository.get_folder_list()
 
         if not os.path.isabs(src_abs):
             raise ValueError("Pass an absolute path for src_abs")
@@ -95,19 +98,19 @@ class SinglefileData(Data):
             # to delete it
             pass
 
-        super(SinglefileData, self).add_path(src_abs, final_filename)
+        super(SinglefileData, self).repository.add_path(src_abs, final_filename)
 
         for delete_me in old_file_list:
-            self.remove_path(delete_me)
+            self.repository.remove_path(delete_me)
 
-        self._set_attr('filename', final_filename)
+        self.set_attribute('filename', final_filename)
 
     def remove_path(self, filename):
-        if filename == self.get_attr('filename', None):
+        if filename == self.get_attribute('filename', None):
             try:
-                self._del_attr('filename')
+                self.delete_attribute('filename')
             except AttributeError:
-                ## There was not file set
+                # There was not file set
                 pass
 
     def _validate(self):
@@ -120,10 +123,8 @@ class SinglefileData(Data):
         except AttributeError:
             raise ValidationError("attribute 'filename' not set.")
 
-        if [filename] != self.get_folder_list():
+        if [filename] != self.repository.get_folder_list():
             raise ValidationError("The list of files in the folder does not "
                                   "match the 'filename' attribute. "
                                   "_filename='{}', content: {}".format(
-                filename, self.get_folder_list()))
-
-
+                filename, self.repository.get_folder_list()))

@@ -71,7 +71,7 @@ class FunctionCalculationMixin(object):  # pylint: disable=useless-object-inheri
 
         :returns: the function name or None
         """
-        return self.get_attr(self.FUNCTION_NAME_KEY, None)
+        return self.get_attribute(self.FUNCTION_NAME_KEY, None)
 
     def _set_function_name(self, function_name):
         """
@@ -79,7 +79,7 @@ class FunctionCalculationMixin(object):  # pylint: disable=useless-object-inheri
 
         :param function_name: the function name
         """
-        self._set_attr(self.FUNCTION_NAME_KEY, function_name)
+        self.set_attribute(self.FUNCTION_NAME_KEY, function_name)
 
     @property
     def function_namespace(self):
@@ -88,7 +88,7 @@ class FunctionCalculationMixin(object):  # pylint: disable=useless-object-inheri
 
         :returns: the function namespace or None
         """
-        return self.get_attr(self.FUNCTION_NAMESPACE_KEY, None)
+        return self.get_attribute(self.FUNCTION_NAMESPACE_KEY, None)
 
     def _set_function_namespace(self, function_namespace):
         """
@@ -96,7 +96,7 @@ class FunctionCalculationMixin(object):  # pylint: disable=useless-object-inheri
 
         :param function_namespace: the function namespace
         """
-        self._set_attr(self.FUNCTION_NAMESPACE_KEY, function_namespace)
+        self.set_attribute(self.FUNCTION_NAMESPACE_KEY, function_namespace)
 
     @property
     def function_starting_line_number(self):
@@ -105,7 +105,7 @@ class FunctionCalculationMixin(object):  # pylint: disable=useless-object-inheri
 
         :returns: the starting line number or None
         """
-        return self.get_attr(self.FUNCTION_STARTING_LINE_KEY, None)
+        return self.get_attribute(self.FUNCTION_STARTING_LINE_KEY, None)
 
     def _set_function_starting_line_number(self, function_starting_line_number):
         """
@@ -113,7 +113,7 @@ class FunctionCalculationMixin(object):  # pylint: disable=useless-object-inheri
 
         :param function_starting_line_number: the starting line number
         """
-        self._set_attr(self.FUNCTION_STARTING_LINE_KEY, function_starting_line_number)
+        self.set_attribute(self.FUNCTION_STARTING_LINE_KEY, function_starting_line_number)
 
     @property
     def function_source_file(self):
@@ -123,7 +123,7 @@ class FunctionCalculationMixin(object):  # pylint: disable=useless-object-inheri
         :returns: the absolute path of the source file in the repository, or None if it does not exist
         """
         try:
-            return self.folder.get_abs_path(self.FUNCTION_SOURCE_FILE_PATH, check_existence=True)
+            return self.repository.get_abs_path(self.FUNCTION_SOURCE_FILE_PATH, check_existence=True)
         except OSError:
             return None
 
@@ -133,7 +133,7 @@ class FunctionCalculationMixin(object):  # pylint: disable=useless-object-inheri
 
         :param source_file_handle: a file like object with the source file
         """
-        self.folder.create_file_from_filelike(source_file_handle, self.FUNCTION_SOURCE_FILE_PATH)
+        self.repository.create_file_from_filelike(source_file_handle, self.FUNCTION_SOURCE_FILE_PATH)
 
 
 class Sealable(object):  # pylint: disable=useless-object-inheritance
@@ -183,17 +183,17 @@ class Sealable(object):  # pylint: disable=useless-object-inheritance
         """
         Returns whether the node is sealed, i.e. whether the sealed attribute has been set to True
         """
-        return self.get_attr(self.SEALED_KEY, False)
+        return self.get_attribute(self.SEALED_KEY, False)
 
     def seal(self):
         """
         Seal the node by setting the sealed attribute to True
         """
         if not self.is_sealed:
-            self._set_attr(self.SEALED_KEY, True)
+            self.set_attribute(self.SEALED_KEY, True)
 
     @override
-    def _set_attr(self, key, value, **kwargs):
+    def set_attribute(self, key, value, **kwargs):
         """
         Set a new attribute
 
@@ -208,10 +208,10 @@ class Sealable(object):  # pylint: disable=useless-object-inheritance
         if self.is_stored and key not in self._updatable_attributes:
             raise ModificationNotAllowed('Cannot change the immutable attributes of a stored node')
 
-        super(Sealable, self)._set_attr(key, value, stored_check=False, **kwargs)
+        super(Sealable, self).set_attribute(key, value, stored_check=False, **kwargs)
 
     @override
-    def _del_attr(self, key):
+    def delete_attribute(self, key):
         """
         Delete an attribute
 
@@ -226,4 +226,4 @@ class Sealable(object):  # pylint: disable=useless-object-inheritance
         if self.is_stored and key not in self._updatable_attributes:
             raise ModificationNotAllowed('Cannot change the immutable attributes of a stored node')
 
-        super(Sealable, self)._del_attr(key, stored_check=False)
+        super(Sealable, self).delete_attribute(key, stored_check=False)

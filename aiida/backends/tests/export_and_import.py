@@ -122,10 +122,10 @@ class TestSpecificImport(AiidaTestCase):
 
         # pylint: disable=protected-access
         parent_process = CalculationNode()
-        parent_process._set_attr('key', 'value')
+        parent_process.set_attribute('key', 'value')
         parent_process.store()
         child_calculation = CalculationNode()
-        child_calculation._set_attr('key', 'value')
+        child_calculation.set_attribute('key', 'value')
         child_calculation.store()
         remote_folder = RemoteData(computer=self.computer, remote_path='/').store()
 
@@ -152,8 +152,8 @@ class TestSpecificImport(AiidaTestCase):
             # Verify that CalculationNodes have non-empty attribute dictionaries
             builder = QueryBuilder().append(CalculationNode)
             for [calculation] in builder.iterall():
-                self.assertIsInstance(calculation.get_attrs(), dict)
-                self.assertNotEqual(len(calculation.get_attrs()), 0)
+                self.assertIsInstance(calculation.attributes, dict)
+                self.assertNotEqual(len(calculation.attributes), 0)
 
             # Verify that the structure data maintained its label, cell and kinds
             builder = QueryBuilder().append(StructureData)
@@ -222,7 +222,7 @@ class TestSimple(AiidaTestCase):
         """Simple ex-/import of CalcJobNode with input StructureData"""
         from aiida.common.links import LinkType
         from aiida.orm import DataFactory
-        from aiida.orm.node import CalcJobNode
+        from aiida.orm import CalcJobNode
 
         # Creating a folder for the import/export files
         temp_folder = tempfile.mkdtemp()
@@ -232,7 +232,7 @@ class TestSimple(AiidaTestCase):
             struct.store()
 
             calc = CalcJobNode()
-            calc.set_computer(self.computer)
+            calc.computer = self.computer
             calc.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             calc.store()
 
@@ -244,8 +244,8 @@ class TestSimple(AiidaTestCase):
             for pk in pks:
                 node = load_node(pk)
                 attrs[node.uuid] = dict()
-                for k in node.attrs():
-                    attrs[node.uuid][k] = node.get_attr(k)
+                for k in node.attributes.keys():
+                    attrs[node.uuid][k] = node.get_attribute(k)
 
             filename = os.path.join(temp_folder, "export.tar.gz")
 
@@ -259,9 +259,8 @@ class TestSimple(AiidaTestCase):
             import_data(filename, silent=True)
             for uuid in attrs:
                 node = load_node(uuid)
-                # for k in node.attrs():
                 for k in attrs[uuid].keys():
-                    self.assertEqual(attrs[uuid][k], node.get_attr(k))
+                    self.assertEqual(attrs[uuid][k], node.get_attribute(k))
         finally:
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
@@ -388,11 +387,11 @@ class TestUsers(AiidaTestCase):
         This test checks that nodes belonging to different users are correctly
         exported & imported.
         """
-        from aiida.orm.node import CalcJobNode
+        from aiida.orm import User
+        from aiida.orm import CalcJobNode
         from aiida.orm.node.data.structure import StructureData
         from aiida.common.links import LinkType
         from aiida.manage import get_manager
-        from aiida.orm import User
 
         manager = get_manager()
 
@@ -405,27 +404,27 @@ class TestUsers(AiidaTestCase):
 
             # Create a structure data node that has a calculation as output
             sd1 = StructureData()
-            sd1.set_user(user)
+            sd1.user = user
             sd1.label = 'sd1'
             sd1.store()
 
             jc1 = CalcJobNode()
-            jc1.set_computer(self.computer)
+            jc1.computer = self.computer
             jc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
-            jc1.set_user(user)
+            jc1.user = user
             jc1.label = 'jc1'
             jc1.store()
             jc1.add_incoming(sd1, link_type=LinkType.INPUT_CALC, link_label='link')
 
             # Create some nodes from a different user
             sd2 = StructureData()
-            sd2.set_user(user)
+            sd2.user = user
             sd2.label = 'sd2'
             sd2.store()
             sd2.add_incoming(jc1, link_type=LinkType.CREATE, link_label='l1')  # I assume jc1 CREATED sd2
 
             jc2 = CalcJobNode()
-            jc2.set_computer(self.computer)
+            jc2.computer = self.computer
             jc2.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             jc2.label = 'jc2'
             jc2.store()
@@ -449,9 +448,9 @@ class TestUsers(AiidaTestCase):
             # the user assigned to the nodes is the right one
             for uuid in uuids_u1:
                 node = load_node(uuid=uuid)
-                self.assertEqual(node.get_user().email, new_email)
+                self.assertEqual(node.user.email, new_email)
             for uuid in uuids_u2:
-                self.assertEqual(load_node(uuid).get_user().email, manager.get_profile().default_user_email)
+                self.assertEqual(load_node(uuid).user.email, manager.get_profile().default_user_email)
         finally:
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
@@ -464,11 +463,11 @@ class TestUsers(AiidaTestCase):
         all the nodes that have been finally imported belonging to the right
         users.
         """
-        from aiida.orm.node import CalcJobNode
+        from aiida.orm import User
+        from aiida.orm import CalcJobNode
         from aiida.orm.node.data.structure import StructureData
         from aiida.common.links import LinkType
         from aiida.manage import get_manager
-        from aiida.orm import User
 
         manager = get_manager()
 
@@ -481,24 +480,25 @@ class TestUsers(AiidaTestCase):
 
             # Create a structure data node that has a calculation as output
             sd1 = StructureData()
-            sd1.set_user(user)
+            sd1.user = user
             sd1.label = 'sd1'
             sd1.store()
 
             jc1 = CalcJobNode()
-            jc1.set_computer(self.computer)
+            jc1.computer = self.computer
             jc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
-            jc1.set_user(user)
+            jc1.user = user
             jc1.label = 'jc1'
             jc1.store()
             jc1.add_incoming(sd1, link_type=LinkType.INPUT_CALC, link_label='link')
 
             # Create some nodes from a different user
             sd2 = StructureData()
-            sd2.set_user(user)
+            sd2.user = user
             sd2.label = 'sd2'
             sd2.store()
             sd2.add_incoming(jc1, link_type=LinkType.CREATE, link_label='l1')
+            sd2_uuid = sd2.uuid
 
             # At this point we export the generated data
             filename1 = os.path.join(temp_folder, "export1.tar.gz")
@@ -511,14 +511,14 @@ class TestUsers(AiidaTestCase):
             # Check that the imported nodes are correctly imported and that
             # the user assigned to the nodes is the right one
             for uuid in uuids1:
-                self.assertEqual(load_node(uuid).get_user().email, new_email)
+                self.assertEqual(load_node(uuid).user.email, new_email)
 
             # Now we continue to generate more data based on the imported
             # data
-            sd2_imp = load_node(sd2.uuid)
+            sd2_imp = load_node(sd2_uuid)
 
             jc2 = CalcJobNode()
-            jc2.set_computer(self.computer)
+            jc2.computer = self.computer
             jc2.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             jc2.label = 'jc2'
             jc2.store()
@@ -542,9 +542,9 @@ class TestUsers(AiidaTestCase):
             # Check that the imported nodes are correctly imported and that
             # the user assigned to the nodes is the right one
             for uuid in uuids1:
-                self.assertEqual(load_node(uuid).get_user().email, new_email)
+                self.assertEqual(load_node(uuid).user.email, new_email)
             for uuid in uuids2:
-                self.assertEqual(load_node(uuid).get_user().email, manager.get_profile().default_user_email)
+                self.assertEqual(load_node(uuid).user.email, manager.get_profile().default_user_email)
 
         finally:
             # Deleting the created temporary folder
@@ -579,14 +579,14 @@ class TestGroups(AiidaTestCase):
 
             # Create a structure data node that has a calculation as output
             sd1 = StructureData()
-            sd1.set_user(user)
+            sd1.user = user
             sd1.label = 'sd1'
             sd1.store()
 
             jc1 = CalcJobNode()
-            jc1.set_computer(self.computer)
+            jc1.computer = self.computer
             jc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
-            jc1.set_user(user)
+            jc1.user = user
             jc1.label = 'jc1'
             jc1.store()
             jc1.add_incoming(sd1, link_type=LinkType.INPUT_CALC, link_label='link')
@@ -610,7 +610,7 @@ class TestGroups(AiidaTestCase):
             # Check that the imported nodes are correctly imported and that
             # the user assigned to the nodes is the right one
             for uuid in n_uuids:
-                self.assertEqual(load_node(uuid).get_user().email, new_email)
+                self.assertEqual(load_node(uuid).user.email, new_email)
 
             # Check that the exported group is imported correctly
             builder = QueryBuilder()
@@ -635,7 +635,7 @@ class TestGroups(AiidaTestCase):
 
             # Create a structure data node
             sd1 = StructureData()
-            sd1.set_user(user)
+            sd1.user = user
             sd1.label = 'sd1'
             sd1.store()
 
@@ -656,7 +656,7 @@ class TestGroups(AiidaTestCase):
             # Check that the imported nodes are correctly imported and that
             # the user assigned to the nodes is the right one
             for uuid in n_uuids:
-                self.assertEqual(load_node(uuid).get_user().email, new_email)
+                self.assertEqual(load_node(uuid).user.email, new_email)
 
             # Check that the exported group is imported correctly
             builder = QueryBuilder()
@@ -685,7 +685,7 @@ class TestGroups(AiidaTestCase):
 
             # Create a structure data node
             sd1 = StructureData()
-            sd1.set_user(user)
+            sd1.user = user
             sd1.label = 'sd'
             sd1.store()
 
@@ -781,7 +781,7 @@ class TestCalculations(AiidaTestCase):
 
     def test_workcalculation(self):
         """Test simple master/slave WorkChainNodes"""
-        from aiida.orm.node import WorkChainNode
+        from aiida.orm import WorkChainNode
         from aiida.orm.node.data.int import Int
         from aiida.common.links import LinkType
 
@@ -844,7 +844,7 @@ class TestComplex(AiidaTestCase):
         temp_folder = tempfile.mkdtemp()
         try:
             calc1 = CalcJobNode()
-            calc1.set_computer(self.computer)
+            calc1.computer = self.computer
             calc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             calc1.label = "calc1"
             calc1.store()
@@ -860,12 +860,12 @@ class TestComplex(AiidaTestCase):
             rd1 = RemoteData()
             rd1.label = "rd1"
             rd1.set_remote_path("/x/y.py")
-            rd1.set_computer(self.computer)
+            rd1.computer = self.computer
             rd1.store()
             rd1.add_incoming(calc1, link_type=LinkType.CREATE, link_label='link')
 
             calc2 = CalcJobNode()
-            calc2.set_computer(self.computer)
+            calc2.computer = self.computer
             calc2.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             calc2.label = "calc2"
             calc2.store()
@@ -933,13 +933,13 @@ class TestComplex(AiidaTestCase):
             # The hash is given from the preservable entries in an export-import cycle,
             # uuids, attributes, labels, descriptions, arrays, link-labels, link-types:
             hash_ = make_hash([(
-                item['p']['*'].get_attrs(),
+                item['p']['*'].attributes,
                 item['p']['*'].uuid,
                 item['p']['*'].label,
                 item['p']['*'].description,
                 item['c']['*'].uuid,
-                item['c']['*'].get_attrs(),
-                item['a']['*'].get_attrs(),
+                item['c']['*'].attributes,
+                item['a']['*'].attributes,
                 [item['a']['*'].get_array(name) for name in item['a']['*'].get_arraynames()],
                 item['a']['*'].uuid,
                 item['g']['*'].uuid,
@@ -980,7 +980,7 @@ class TestComplex(AiidaTestCase):
             p.store()
             c = CalculationNode()
             # setting also trial dict as attributes, but randomizing the keys)
-            (c._set_attr(str(int(k) + np.random.randint(10)), v) for k, v in trial_dict.items())
+            (c.set_attribute(str(int(k) + np.random.randint(10)), v) for k, v in trial_dict.items())
             c.store()
             a = ArrayData()
             a.set_array('array', nparr)
@@ -1052,7 +1052,7 @@ class TestComputer(AiidaTestCase):
             # Store two job calculation related to the same computer
             calc1_label = "calc1"
             calc1 = CalcJobNode()
-            calc1.set_computer(comp)
+            calc1.computer = comp
             calc1.set_option('resources', {"num_machines": 1,
                                            "num_mpiprocs_per_machine": 1})
             calc1.label = calc1_label
@@ -1060,7 +1060,7 @@ class TestComputer(AiidaTestCase):
 
             calc2_label = "calc2"
             calc2 = CalcJobNode()
-            calc2.set_computer(comp)
+            calc2.computer = comp
             calc2.set_option('resources', {"num_machines": 2,
                                            "num_mpiprocs_per_machine": 2})
             calc2.label = calc2_label
@@ -1170,7 +1170,7 @@ class TestComputer(AiidaTestCase):
             # Store a calculation
             calc1_label = "calc1"
             calc1 = CalcJobNode()
-            calc1.set_computer(comp1)
+            calc1.computer = self.computer
             calc1.set_option('resources', {"num_machines": 1,
                                            "num_mpiprocs_per_machine": 1})
             calc1.label = calc1_label
@@ -1189,7 +1189,7 @@ class TestComputer(AiidaTestCase):
             # Store a second calculation
             calc2_label = "calc2"
             calc2 = CalcJobNode()
-            calc2.set_computer(comp1)
+            calc2.computer = self.computer
             calc2.set_option('resources', {"num_machines": 2,
                                            "num_mpiprocs_per_machine": 2})
             calc2.label = calc2_label
@@ -1271,7 +1271,7 @@ class TestComputer(AiidaTestCase):
             # Store a calculation
             calc1_label = "calc1"
             calc1 = CalcJobNode()
-            calc1.set_computer(self.computer)
+            calc1.computer = self.computer
             calc1.set_option('resources', {"num_machines": 1,
                                            "num_mpiprocs_per_machine": 1})
             calc1.label = calc1_label
@@ -1291,7 +1291,7 @@ class TestComputer(AiidaTestCase):
             # Store a second calculation
             calc2_label = "calc2"
             calc2 = CalcJobNode()
-            calc2.set_computer(self.computer)
+            calc2.computer = self.computer
             calc2.set_option('resources', {"num_machines": 2,
                                            "num_mpiprocs_per_machine": 2})
             calc2.label = calc2_label
@@ -1311,7 +1311,7 @@ class TestComputer(AiidaTestCase):
             # Store a third calculation
             calc3_label = "calc3"
             calc3 = CalcJobNode()
-            calc3.set_computer(self.computer)
+            calc3.computer = self.computer
             calc3.set_option('resources', {"num_machines": 2,
                                            "num_mpiprocs_per_machine": 2})
             calc3.label = calc3_label
@@ -1390,7 +1390,7 @@ class TestComputer(AiidaTestCase):
             # Store a calculation
             calc1_label = "calc1"
             calc1 = CalcJobNode()
-            calc1.set_computer(self.computer)
+            calc1.computer = self.computer
             calc1.set_option('resources', {"num_machines": 1,
                                            "num_mpiprocs_per_machine": 1})
             calc1.label = calc1_label
@@ -1493,6 +1493,7 @@ class TestLinks(AiidaTestCase):
             sd = StructureData()
             sd.label = str(node_label)
             sd.store()
+            sd_uuid = sd.uuid
 
             filename = os.path.join(temp_folder, "export.tar.gz")
             export([sd], outfile=filename, silent=True)
@@ -1524,7 +1525,7 @@ class TestLinks(AiidaTestCase):
                 import_data(filename, silent=True)
 
             import_data(filename, ignore_unknown_nodes=True, silent=True)
-            self.assertEqual(load_node(sd.uuid).label, node_label)
+            self.assertEqual(load_node(sd_uuid).label, node_label)
 
         finally:
             # Deleting the created temporary folder
@@ -1609,7 +1610,7 @@ class TestLinks(AiidaTestCase):
             calc1.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         else:
             calc1 = string_to_class[calc_nodes[0]]()
-        calc1.set_computer(self.computer)
+        calc1.computer = self.computer
         calc1.store()
 
         # Waiting to store Data nodes until they have been "created" with the links below,
@@ -1622,7 +1623,7 @@ class TestLinks(AiidaTestCase):
             calc2.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         else:
             calc2 = string_to_class[calc_nodes[1]]()
-        calc2.set_computer(self.computer)
+        calc2.computer = self.computer
         calc2.store()
 
         # Waiting to store Data nodes until they have been "created" with the links below,
@@ -1693,12 +1694,13 @@ class TestLinks(AiidaTestCase):
             data_output = Int(2).store()
 
             calc = CalcJobNode()
-            calc.set_computer(self.computer)
+            calc.computer = self.computer
             calc.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             calc.store()
 
             calc.add_incoming(data_input, LinkType.INPUT_CALC, 'input')
             data_output.add_incoming(calc, LinkType.CREATE, 'create')
+            data_output_uuid = data_output.uuid
 
             group = Group(label='test_group').store()
             group.add_nodes(data_output)
@@ -1713,7 +1715,7 @@ class TestLinks(AiidaTestCase):
             builder = QueryBuilder()
             builder.append(Data)
             self.assertEqual(builder.count(), 1, 'Expected a single Data node but got {}'.format(builder.count()))
-            self.assertEqual(builder.all()[0][0].uuid, data_output.uuid)
+            self.assertEqual(builder.all()[0][0].uuid, data_output_uuid)
 
             builder = QueryBuilder()
             builder.append(CalcJobNode)
@@ -1770,8 +1772,8 @@ class TestLinks(AiidaTestCase):
 
         for export_conf in range(0, 9):
 
-            _, (export_node, export_target) = (
-                self.construct_complex_graph(export_conf))
+            _, (export_node, export_target) = self.construct_complex_graph(export_conf)
+            export_target_uuids = set(str(_.uuid) for _ in export_target)
 
             tmp_folder = tempfile.mkdtemp()
             try:
@@ -1787,8 +1789,6 @@ class TestLinks(AiidaTestCase):
                 builder = QueryBuilder()
                 builder.append(Node, project='uuid')
                 imported_node_uuids = set(str(_[0]) for _ in builder.all())
-
-                export_target_uuids = set(str(_.uuid) for _ in export_target)
 
                 self.assertSetEqual(
                     export_target_uuids,
@@ -2004,7 +2004,7 @@ class TestCode(AiidaTestCase):
         This test checks that when a calculation is exported then the
         corresponding code is also exported.
         """
-        from aiida.orm.code import Code
+        from aiida.orm import Code
 
         tmp_folder = tempfile.mkdtemp()
 
@@ -2051,7 +2051,7 @@ class TestCode(AiidaTestCase):
             code_uuid = code.uuid
 
             jc = CalcJobNode()
-            jc.set_computer(self.computer)
+            jc.computer = self.computer
             jc.set_option('resources',
                           {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             jc.store()
@@ -2090,7 +2090,7 @@ class TestCode(AiidaTestCase):
         This test checks that when a calculation is exported then the
         corresponding code is also exported.
         """
-        from aiida.orm.code import Code
+        from aiida.orm import Code
 
         tmp_folder = tempfile.mkdtemp()
 
@@ -2253,7 +2253,7 @@ class TestComments(AiidaTestCase):
             user_two_comments_uuid = [c.uuid for c in [comment_three, comment_four]]
 
             # Check that node belongs to user_one
-            self.assertEqual(node.get_user().email, users_email[0])
+            self.assertEqual(node.user.email, users_email[0])
 
             # Export nodes, excluding comments
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
@@ -2466,7 +2466,7 @@ class TestExtras(AiidaTestCase):
         from aiida.orm.querybuilder import QueryBuilder
         self.imported_node.set_extra('a', 1)
         self.imported_node.set_extra('b', 1000)
-        self.imported_node.del_extra('c')
+        self.imported_node.delete_extra('c')
 
         import_data(self.export_file, silent=True, extras_mode_existing=mode_existing)
 
@@ -2624,6 +2624,7 @@ class TestProvenanceRedesign(AiidaTestCase):
             list_node = List()
             list_node.set_list(nodes)
             list_node.store()
+            list_node_uuid = list_node.uuid
             export_nodes.append(list_node)
 
             # Export nodes
@@ -2637,7 +2638,7 @@ class TestProvenanceRedesign(AiidaTestCase):
             import_data(filename, silent=True)
 
             # Check whether types are correctly imported
-            nlist = load_node(list_node.uuid)  # List
+            nlist = load_node(list_node_uuid)  # List
             for uuid, list_value, refval, reftype in zip(uuids, nlist.get_list(), test_content, test_types):
                 # Str, Int, Float, Bool
                 n = load_node(uuid)

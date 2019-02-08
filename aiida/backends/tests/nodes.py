@@ -2055,6 +2055,23 @@ class TestNodeDeletion(AiidaTestCase):
 
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
+    def test_deletion_non_existing_pk(self):
+        """Verify that passing a non-existing pk should not raise."""
+        nodes = self._create_calls_n_returns_graph()
+        existing_pks = [node.pk for node in nodes]
+
+        non_existing_pk = 1
+
+        # Starting from pk=1, find a pk that does not exist
+        while(True):
+            if non_existing_pk not in existing_pks:
+                break
+
+            non_existing_pk += 1
+
+        with Capturing():
+            delete_nodes([non_existing_pk], verbosity=2, force=True)
+
     def test_deletion_with_calls_with_returns(self):
         """
         Checking the case where I follow calls and return links for deletion

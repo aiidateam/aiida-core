@@ -12,8 +12,11 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from six.moves import zip, input
+from six.moves import zip
 
+import click
+
+from aiida.cmdline.utils import echo
 from aiida.orm import User
 
 
@@ -44,21 +47,30 @@ def delete_nodes(pks,
         The verbosity levels, 0 prints nothing, 1 prints just sums and total, 2 prints individual nodes.
     """
     # pylint: disable=too-many-arguments,too-many-branches,too-many-locals,too-many-statements
-    from aiida.orm.querybuilder import QueryBuilder
+    from aiida.common import exceptions
     from aiida.common.links import LinkType
     from aiida.orm.node import Node
     from aiida.orm.node import ProcessNode
     from aiida.orm.node.data import Data
+    from aiida.orm.querybuilder import QueryBuilder
     from aiida.orm import load_node
     from aiida.backends.utils import delete_nodes_and_connections
 
     user_email = User.objects.get_default().email
 
-    if not pks:
-        # If I was passed an empty list, I don't to anything
+    starting_pks = []
+    for pk in pks:
+        try:
+            load_node(pk)
+        except exceptions.NotExistent:
+            echo.echo_warning('warning: node with pk<{}> does not exist, skipping'.format(pk))
+        else:
+            starting_pks.append(pk)
+
+    if not starting_pks:
         # I prefer checking explicitly, an empty set might be problematic for the queries done below.
         if verbosity:
-            print("Nothing to delete")
+            echo.echo("Nothing to delete")
         return
 
     # The following code is just for the querying of downwards provenance.
@@ -75,8 +87,8 @@ def delete_nodes(pks,
     edge_filters = {'type': {'in': link_types_to_follow}}
 
     # Operational set always includes the recently (in the last iteration added) nodes.
-    operational_set = set().union(set(pks))  # Union to copy the set!
-    pks_set_to_delete = set().union(set(pks))
+    operational_set = set().union(set(starting_pks))  # Union to copy the set!
+    pks_set_to_delete = set().union(set(starting_pks))
     while operational_set:
         # new_pks_set are the the pks of all nodes that are connected to the operational node set
         # with the links specified.
@@ -92,20 +104,20 @@ def delete_nodes(pks,
         pks_set_to_delete = pks_set_to_delete.union(new_pks_set)
 
     if verbosity > 0:
-        print("I {} delete {} node{}".format('would' if dry_run else 'will', len(pks_set_to_delete), 's'
-                                             if len(pks_set_to_delete) > 1 else ''))
+        echo.echo("I {} delete {} node{}".format('would' if dry_run else 'will', len(pks_set_to_delete), 's'
+                                                 if len(pks_set_to_delete) > 1 else ''))
         if verbosity > 1:
             builder = QueryBuilder().append(
                 Node, filters={'id': {
                     'in': pks_set_to_delete
                 }}, project=('uuid', 'id', 'type', 'label'))
-            print("The nodes I {} delete:".format('would' if dry_run else 'will'))
+            echo.echo("The nodes I {} delete:".format('would' if dry_run else 'will'))
             for uuid, pk, type_string, label in builder.iterall():
                 try:
                     short_type_string = type_string.split('.')[-2]
                 except IndexError:
                     short_type_string = type_string
-                print("   {} {} {} {}".format(uuid, pk, short_type_string, label))
+                echo.echo("   {} {} {} {}".format(uuid, pk, short_type_string, label))
 
     # Here I am checking whether I am deleting
     # A data instance without also deleting the creator, which brakes relationship between a calculation and its data
@@ -129,14 +141,14 @@ def delete_nodes(pks,
 
         if verbosity > 0 and caller_to_called2delete:
             calculation_pks_losing_called = set(next(zip(*caller_to_called2delete)))
-            print("\n{} calculation{} {} lose at least one called instance".format(
+            echo.echo("\n{} calculation{} {} lose at least one called instance".format(
                 len(calculation_pks_losing_called), 's' if len(calculation_pks_losing_called) > 1 else '', 'would'
                 if dry_run else 'will'))
             if verbosity > 1:
-                print(
+                echo.echo(
                     "These are the calculations that {} lose a called instance:".format('would' if dry_run else 'will'))
                 for calc_losing_called_pk in calculation_pks_losing_called:
-                    print('  ', load_node(calc_losing_called_pk))
+                    echo.echo('  ', load_node(calc_losing_called_pk))
 
         created_qb = QueryBuilder()
         created_qb.append(ProcessNode, filters={'id': {'!in': pks_set_to_delete}}, project='id')
@@ -154,34 +166,32 @@ def delete_nodes(pks,
         creator_to_created2delete = created_qb.all()
         if verbosity > 0 and creator_to_created2delete:
             calculation_pks_losing_created = set(next(zip(*creator_to_created2delete)))
-            print("\n{} calculation{} {} lose at least one created data-instance".format(
+            echo.echo("\n{} calculation{} {} lose at least one created data-instance".format(
                 len(calculation_pks_losing_created), 's' if len(calculation_pks_losing_created) > 1 else '', 'would'
                 if dry_run else 'will'))
             if verbosity > 1:
-                print("These are the calculations that {} lose a created data-instance:".format('would'
-                                                                                                if dry_run else 'will'))
+                echo.echo("These are the calculations that {} lose a created data-instance:".format('would' if dry_run
+                                                                                                    else 'will'))
                 for calc_losing_created_pk in calculation_pks_losing_created:
-                    print('  ', load_node(calc_losing_created_pk))
+                    echo.echo('  ', load_node(calc_losing_created_pk))
 
     if dry_run:
         if verbosity > 0:
-            print("\nThis was a dry run, exiting without deleting anything")
+            echo.echo("\nThis was a dry run, exiting without deleting anything")
         return
 
     # Asking for user confirmation here
     if force:
         pass
     else:
-        print("YOU ARE ABOUT TO DELETE {} NODES! THIS CANNOT BE UNDONE!".format(len(pks_set_to_delete)))
-        if input("Shall I continue? [Y/N] ").lower() != 'y':
-            print("Exiting without deleting")
+        echo.echo_warning("YOU ARE ABOUT TO DELETE {} NODES! THIS CANNOT BE UNDONE!".format(len(pks_set_to_delete)))
+        if not click.confirm("Shall I continue?"):
+            echo.echo("Exiting without deleting")
             return
 
-    # Recover the list of folders to delete before actually deleting
-    # the nodes.  I will delete the folders only later, so that if
-    # there is a problem during the deletion of the nodes in
-    # the DB, I don't delete the folders
-    folders = [load_node(_).folder for _ in pks_set_to_delete]
+    # Recover the list of folders to delete before actually deleting the nodes. I will delete the folders only later,
+    # so that if there is a problem during the deletion of the nodes in the DB, I don't delete the folders
+    folders = [load_node(pk).folder for pk in pks_set_to_delete]
 
     delete_nodes_and_connections(pks_set_to_delete)
 

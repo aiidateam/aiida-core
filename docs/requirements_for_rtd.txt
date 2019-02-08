@@ -45,6 +45,7 @@ passlib==1.7.1
 pathlib2; python_version<'3.5'
 pg8000<1.13.0
 pgtest==1.1.0
+pika==1.0.0b1
 plumpy==0.12.1
 psutil==5.4.5
 pyblake2==1.1.2; python_version<'3.6'

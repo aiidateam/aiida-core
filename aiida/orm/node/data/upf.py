@@ -133,10 +133,11 @@ def upload_upf_family(folder, group_label, group_description,
     """
     import os
 
-    import aiida.common
-    from aiida.common import AIIDA_LOGGER
     from aiida import orm
-    from aiida.common.exceptions import UniquenessError, NotExistent
+    from aiida.common import AIIDA_LOGGER
+    from aiida.common.exceptions import UniquenessError
+    from aiida.common.files import md5_file
+
     if not os.path.isdir(folder):
         raise ValueError("folder must be a directory")
 
@@ -167,7 +168,7 @@ def upload_upf_family(folder, group_label, group_description,
     pseudo_and_created = []
 
     for f in files:
-        md5sum = aiida.common.files.md5_file(f)
+        md5sum = md5_file(f)
         qb = orm.QueryBuilder()
         qb.append(UpfData, filters={'attributes.md5': {'==': md5sum}})
         existing_upf = qb.first()
@@ -325,12 +326,12 @@ class UpfData(SinglefileData):
             True if the object was created, or False if the object was retrieved\
             from the DB.
         """
-        import aiida.common.utils
         import os
+        from aiida.common.files import md5_file
 
         if not os.path.isabs(filename):
             raise ValueError("filename must be an absolute path")
-        md5 = aiida.common.files.md5_file(filename)
+        md5 = md5_file(filename)
 
         pseudos = cls.from_md5(md5)
         if len(pseudos) == 0:
@@ -362,7 +363,7 @@ class UpfData(SinglefileData):
         are correctly reset.
         """
         from aiida.common.exceptions import ParsingError, ValidationError
-        import aiida.common.utils
+        from aiida.common.files import md5_file
 
         if self._to_be_stored is False:
             return self
@@ -372,7 +373,7 @@ class UpfData(SinglefileData):
             raise ValidationError("No valid UPF was passed!")
 
         parsed_data = parse_upf(upf_abspath)
-        md5sum = aiida.common.files.md5_file(upf_abspath)
+        md5sum = md5_file(upf_abspath)
 
         try:
             element = parsed_data['element']
@@ -403,10 +404,10 @@ class UpfData(SinglefileData):
         I pre-parse the file to store the attributes.
         """
         from aiida.common.exceptions import ParsingError
-        import aiida.common.utils
+        from aiida.common.files import md5_file
 
         parsed_data = parse_upf(filename)
-        md5sum = aiida.common.files.md5_file(filename)
+        md5sum = md5_file(filename)
 
         try:
             element = parsed_data['element']
@@ -439,7 +440,7 @@ class UpfData(SinglefileData):
 
     def _validate(self):
         from aiida.common.exceptions import ValidationError, ParsingError
-        import aiida.common.utils
+        from aiida.common.files import md5_file
 
         super(UpfData, self)._validate()
 
@@ -452,7 +453,7 @@ class UpfData(SinglefileData):
         except ParsingError:
             raise ValidationError("The file '{}' could not be "
                                   "parsed".format(upf_abspath))
-        md5 = aiida.common.files.md5_file(upf_abspath)
+        md5 = md5_file(upf_abspath)
 
         try:
             element = parsed_data['element']

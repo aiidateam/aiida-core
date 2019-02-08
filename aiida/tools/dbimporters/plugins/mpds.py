@@ -296,7 +296,7 @@ class StructuresCollection(object):
 
         :param query: a dictionary with the query parameters
         """
-        for result in self.engine.find(filters=fmt):
+        for result in self.engine.find(query, filters=fmt):
 
             if fmt != ApiFormat.CIF and ('object_type' not in result or result['object_type'] != 'S'):
                 continue

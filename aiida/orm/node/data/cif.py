@@ -492,12 +492,12 @@ class CifData(SinglefileData):
             True if the object was created, or False if the object was retrieved\
             from the DB.
         """
-        import aiida.common.utils
         import os
+        from aiida.common.files import md5_file
 
         if not os.path.abspath(filename):
             raise ValueError("filename must be an absolute path")
-        md5 = aiida.common.files.md5_file(filename)
+        md5 = md5_file(filename)
 
         cifs = cls.from_md5(md5)
         if not cifs:
@@ -866,14 +866,14 @@ class CifData(SinglefileData):
         """
         Computes and returns MD5 hash of the CIF file.
         """
-        import aiida.common.utils
         from aiida.common.exceptions import ValidationError
+        from aiida.common.files import md5_file
 
         abspath = self.get_file_abs_path()
         if not abspath:
             raise ValidationError("No valid CIF was passed!")
 
-        return aiida.common.files.md5_file(abspath)
+        return md5_file(abspath)
 
     def _get_aiida_structure(self, converter='pymatgen', store=False, **kwargs):
         """

@@ -94,14 +94,16 @@ def process_show(processes):
 @decorators.with_dbenv()
 def process_report(processes, levelname, indent_size, max_depth):
     """Show the log report for one or multiple processes."""
-    from aiida.cmdline.utils.common import get_calcjob_report, get_workchain_report
-    from aiida.orm.node import CalcJobNode, WorkChainNode
+    from aiida.cmdline.utils.common import get_calcjob_report, get_workchain_report, get_process_function_report
+    from aiida.orm.node import CalcJobNode, WorkChainNode, CalcFunctionNode, WorkFunctionNode
 
     for process in processes:
         if isinstance(process, CalcJobNode):
             echo.echo(get_calcjob_report(process))
         elif isinstance(process, WorkChainNode):
             echo.echo(get_workchain_report(process, levelname, indent_size, max_depth))
+        elif isinstance(process, (CalcFunctionNode, WorkFunctionNode)):
+            echo.echo(get_process_function_report(process))
         else:
             echo.echo('Nothing to show for node type {}'.format(process.__class__))
 

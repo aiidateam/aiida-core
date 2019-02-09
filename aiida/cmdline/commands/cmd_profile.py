@@ -37,21 +37,29 @@ def profile_list():
 
     echo.echo_info('configuration folder: {}'.format(config.dirpath))
 
-    default_profile = config.default_profile_name
+    if not config.profiles:
+        echo.echo_info('no profiles configured')
+    else:
 
-    for profile in sorted(config.profiles, key=lambda p: p.name):
-        if profile.name == default_profile:
-            click.secho('{} {}'.format('*', profile.name), fg='green')
-        else:
-            click.secho('{} {}'.format(' ', profile.name))
+        default_profile = config.default_profile_name
+
+        for profile in sorted(config.profiles, key=lambda p: p.name):
+            if profile.name == default_profile:
+                click.secho('{} {}'.format('*', profile.name), fg='green')
+            else:
+                click.secho('{} {}'.format(' ', profile.name))
 
 
 @verdi_profile.command('show')
 @arguments.PROFILE(required=False, callback=defaults.get_default_profile)
 def profile_show(profile):
     """Show details for PROFILE or, when not specified, the default profile."""
+    if not profile:
+        echo.echo_critical('no profile to show')
+
+    echo.echo_info('Configuration for: {}'.format(profile.name))
     data = sorted([(k.lower(), v) for k, v in profile.dictionary.items()])
-    echo.echo(tabulate.tabulate(data, headers=('Attribute', 'Value')))
+    echo.echo(tabulate.tabulate(data))
 
 
 @verdi_profile.command('setdefault')

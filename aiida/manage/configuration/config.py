@@ -156,6 +156,11 @@ class Config(object):  # pylint: disable=useless-object-inheritance
         :return: the profile instance or None if it does not exist
         :raises ProfileConfigurationError: if the name is not found in the configuration file
         """
+        from aiida.common import exceptions
+
+        if not name and not self.default_profile_name:
+            raise exceptions.ProfileConfigurationError('no default profile defined')
+
         if not name:
             name = self.default_profile_name
 

@@ -88,6 +88,19 @@ def cif_show(data, fmt):
     show_function(fmt, data)
 
 
+@cif.command('content')
+@arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:cif',)))
+@decorators.with_dbenv()
+def cif_content(data):
+    """Show the content of the file behind CifData objects."""
+    for node in data:
+        try:
+            with open(node.get_file_abs_path(), 'r') as handle:
+                echo.echo(handle.read())
+        except IOError as exception:
+            echo.echo_warning('could not read the content for CifData<{}>: {}'.format(node.pk, str(exception)))
+
+
 @cif.command('export')
 @arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:cif',)))
 @options.EXPORT_FORMAT(type=click.Choice(EXPORT_FORMATS), default='cif')

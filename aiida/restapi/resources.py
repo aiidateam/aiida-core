@@ -260,7 +260,7 @@ class Node(Resource):
                 usr = None
             results = self.trans.get_statistics(usr)
 
-        # TODO Might need to be improved
+        # TODO improve the performance of tree endpoint by getting the data from database faster
         # TODO add pagination for this endpoint
         elif query_type == "tree":
             headers = self.utils.build_headers(url=request.url, total_count=0)

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+u -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -1290,6 +1290,7 @@ class TestExecuteCommandWait(unittest.TestCase):
     It also checks for escaping of the folder names.
     """
 
+    @unittest.skip('reenable when issue #2460 has been addressed')
     @run_for_all_plugins
     def test_exec_pwd(self, custom_transport):
         """
@@ -1332,6 +1333,7 @@ class TestExecuteCommandWait(unittest.TestCase):
                 t.chdir(location)
                 t.rmdir(subfolder)
 
+    @unittest.skip('reenable when issue #2460 has been addressed')
     @run_for_all_plugins
     def test_exec_with_stdin_string(self, custom_transport):
         test_string = str("some_test String")
@@ -1342,6 +1344,7 @@ class TestExecuteCommandWait(unittest.TestCase):
             self.assertEquals(stdout, test_string)
             self.assertEquals(stderr, "")
 
+    @unittest.skip('reenable when issue #2460 has been addressed')
     @run_for_all_plugins
     def test_exec_with_stdin_unicode(self, custom_transport):
         test_string = u"some_test String"
@@ -1352,6 +1355,7 @@ class TestExecuteCommandWait(unittest.TestCase):
             self.assertEquals(stdout, test_string)
             self.assertEquals(stderr, "")
 
+    @unittest.skip('reenable when issue #2460 has been addressed')
     @run_for_all_plugins
     def test_exec_with_stdin_filelike(self, custom_transport):
         import StringIO

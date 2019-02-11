@@ -2467,7 +2467,7 @@ class TestExtras(AiidaTestCase):
         """Only run to prepare an export file"""
         import os 
         import tempfile
-        from aiida.orm.data import Data
+        from aiida.orm import Data
         from aiida.orm.importexport import export
         super(TestExtras, cls).setUpClass()
         d = Data()
@@ -2486,7 +2486,7 @@ class TestExtras(AiidaTestCase):
 
     def import_extras(self, mode_new='import'):
         """Import an aiida database"""
-        from aiida.orm.data import Data
+        from aiida.orm import Data
         from aiida.orm.querybuilder import QueryBuilder
         import_data(self.export_file, silent=True, extras_mode_new=mode_new)
         q = QueryBuilder().append(Data, filters={'label': 'my_test_data_node'})
@@ -2495,7 +2495,7 @@ class TestExtras(AiidaTestCase):
 
     def modify_extras(self, mode_existing):
         """Import the same aiida database again"""
-        from aiida.orm.data import Data
+        from aiida.orm import Data
         from aiida.orm.querybuilder import QueryBuilder
         self.imported_node.set_extra('a', 1)
         self.imported_node.set_extra('b', 1000)
@@ -2584,3 +2584,24 @@ class TestExtras(AiidaTestCase):
         with self.assertRaises(AttributeError): # the extra
             # 'b' should not exist, as the collided extras are deleted
             imported_node.get_extra('b')
+    
+    def test_extras_import_mode_correct(self):
+        """Test all possible import modes except 'ask' """
+        self.import_extras()
+        for l1 in ['k', 'n']: # keep or not keep old extras
+            for l2 in ['n', 'c']: # create or not create new extras
+                for l3 in ['l', 'u', 'd']: # leave old, update or delete collided extras
+                    mode = l1 + l2 + l3
+                    import_data(self.export_file, silent=True, extras_mode_existing=mode)
+    
+    def test_extras_import_mode_wrong(self):
+        """Check a mode that is wrong"""
+        self.import_extras()
+        with self.assertRaises(ValueError):
+            import_data(self.export_file, silent=True, extras_mode_existing='xnd') # first letter is wrong
+            import_data(self.export_file, silent=True, extras_mode_existing='nxd') # second letter is wrong
+            import_data(self.export_file, silent=True, extras_mode_existing='nnx') # third letter is wrong
+            import_data(self.export_file, silent=True, extras_mode_existing='n') # too short
+            import_data(self.export_file, silent=True, extras_mode_existing='nndnn') # too long
+        with self.assertRaises(TypeError):
+            import_data(self.export_file, silent=True, extras_mode_existing=5) # wrong type

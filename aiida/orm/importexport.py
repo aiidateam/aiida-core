@@ -384,7 +384,23 @@ def deserialize_field(k, v, fields_info, import_unique_ids_mappings,
             return ("{}_id".format(k), None)
 
 def merge_extras(old_extras, new_extras, mode):
-    
+    """
+    :param old_extras: a dictionary containing the old extras of an already existing node
+    :param new_extras: a dictionary containing the new extras of an imported node
+    :param extras_mode_existing: 3 letter code that will identify what to do with the extras import. The first letter acts on
+                        extras that are present in the original node and not present in the imported node. Can be
+                        either k (keep it) or n (do not keep it). The second letter acts on the imported extras that
+                        are not present in the original node. Can be either c (create it) or n (do not create it). The
+                        third letter says what to do in case of a name collision. Can be l (leave the old value), u
+                        (update with a new value), d (delete the extra), a (ask what to do if the content is
+                        different).
+    """
+    from six import string_types
+    if not isinstance(mode, string_types):
+        raise TypeError("Parameter 'mode' should be of string type, you provided '{}' type".format(type(mode)))
+    elif not len(mode) == 3:
+        raise ValueError("Parameter 'mode' should be a 3-letter string, you provided: '{}'".format(mode))
+
     old_keys = set(old_extras.keys())
     new_keys = set(new_extras.keys())
     
@@ -431,13 +447,13 @@ def merge_extras(old_extras, new_extras, mode):
             for key in old_keys_only:
                 final_extras[key] = old_extras[key]
         elif mode[0] != 'n':
-            raise Exception("Unknown update extras mode: {}".format(mode))
+            raise ValueError("Unknown first letter of the update extras mode: '{}'. Should be either 'k' or 'n'".format(mode))
     
         if mode[1] == 'c':
             for key in new_keys_only:
                 final_extras[key] = new_extras[key]
         elif mode[1] != 'n':
-            raise Exception("Unknown update extras mode: {}".format(mode))
+            raise ValueError("Unknown second letter of the update extras mode: '{}'. Should be either 'c' or 'n'".format(mode))
     
         if mode[2] == 'u':
             for key in collided_keys:
@@ -455,7 +471,7 @@ def merge_extras(old_extras, new_extras, mode):
                     else:
                         final_extras[key] = old_extras[key]
         elif mode[2] != 'd':
-            raise Exception("Unknown update extras mode: {}".format(mode))
+            raise ValueError("Unknown third letter of the update extras mode: '{}'. Should be one of 'u'/'l'/'a'/'d'".format(mode))
 
     return final_extras
 

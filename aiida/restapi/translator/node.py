@@ -519,7 +519,7 @@ class NodeTranslator(BaseTranslator):
         return qmanager.get_creation_statistics(user_pk=user_pk)
 
 
-    def get_io_tree(self, uuid_pattern, tree_in_limit=20, tree_out_limit=20):
+    def get_io_tree(self, uuid_pattern, tree_in_limit, tree_out_limit):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.node import Node
 

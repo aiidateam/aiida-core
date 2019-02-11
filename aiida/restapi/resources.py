@@ -261,7 +261,7 @@ class Node(Resource):
             results = self.trans.get_statistics(usr)
 
         # TODO improve the performance of tree endpoint by getting the data from database faster
-        # TODO add pagination for this endpoint
+        # TODO add pagination for this endpoint (add default max limit)
         elif query_type == "tree":
             headers = self.utils.build_headers(url=request.url, total_count=0)
             results = self.trans.get_io_tree(id, tree_in_limit, tree_out_limit)

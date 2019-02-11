@@ -519,7 +519,7 @@ class NodeTranslator(BaseTranslator):
         return qmanager.get_creation_statistics(user_pk=user_pk)
 
 
-    def get_io_tree(self, uuid_pattern):
+    def get_io_tree(self, uuid_pattern, tree_in_limit, tree_out_limit):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.node import Node
 
@@ -569,12 +569,15 @@ class NodeTranslator(BaseTranslator):
             })
         nodeCount += 1
 
+
         # get all inputs
         qb = QueryBuilder()
         qb.append(Node, tag="main", project=['*'],
                   filters=self._id_filter)
         qb.append(Node, tag="in", project=['*'], edge_project=['label', 'type'],
                   input_of='main')
+        if tree_in_limit is not None:
+            qb.limit(tree_in_limit)
 
         input_node_pks = {}
 
@@ -625,6 +628,8 @@ class NodeTranslator(BaseTranslator):
                   filters=self._id_filter)
         qb.append(Node, tag="out", project=['*'], edge_project=['label', 'type'],
                   output_of='main')
+        if tree_out_limit is not None:
+            qb.limit(tree_out_limit)
 
         output_node_pks = {}
 
@@ -668,5 +673,16 @@ class NodeTranslator(BaseTranslator):
                     "label": linktype
                 })
 
+        # count total no of nodes
+        qb = QueryBuilder()
+        qb.append(Node, tag="main", project=['id'], filters=self._id_filter)
+        qb.append(Node, tag="in", project=['id'], input_of='main')
+        no_of_inputs = qb.count()
 
-        return {"nodes": nodes, "edges": edges}
+        qb = QueryBuilder()
+        qb.append(Node, tag="main", project=['id'], filters=self._id_filter)
+        qb.append(Node, tag="out", project=['id'], output_of='main')
+        no_of_outputs = qb.count()
+
+
+        return {"nodes": nodes, "edges": edges, "no_of_incomings": no_of_inputs, "no_of_outgoings": no_of_outputs}

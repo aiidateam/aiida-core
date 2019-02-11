@@ -727,6 +727,22 @@ class RESTApiTestSuite(RESTApiTestCase):
                           result_node_type="data",
                           result_name="inputs")
 
+    def test_calculation_iotree(self):
+        """
+        Get filtered inputs list for given calculations
+        """
+        node_uuid = self.get_dummy_data()["calculations"][1]["uuid"]
+        url = self.get_url_prefix() + '/calculations/' + str(
+            node_uuid) + '/io/tree?in_limit=1&out_limit=1'
+        with self.app.test_client() as client:
+            rv = client.get(url)
+            response = json.loads(rv.data)
+            self.assertEqual(len(response["data"]["nodes"]), 3)
+            self.assertEqual(len(response["data"]["edges"]),2)
+            RESTApiTestCase.compare_extra_response_data(self, "calculations",
+                                                        url,
+                                                        response, uuid=node_uuid)
+
     ############### calculation attributes #############
     def test_calculation_attributes(self):
         """

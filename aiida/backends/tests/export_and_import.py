@@ -2599,9 +2599,13 @@ class TestExtras(AiidaTestCase):
         self.import_extras()
         with self.assertRaises(ValueError):
             import_data(self.export_file, silent=True, extras_mode_existing='xnd') # first letter is wrong
+        with self.assertRaises(ValueError):
             import_data(self.export_file, silent=True, extras_mode_existing='nxd') # second letter is wrong
+        with self.assertRaises(ValueError):
             import_data(self.export_file, silent=True, extras_mode_existing='nnx') # third letter is wrong
+        with self.assertRaises(ValueError):
             import_data(self.export_file, silent=True, extras_mode_existing='n') # too short
+        with self.assertRaises(ValueError):
             import_data(self.export_file, silent=True, extras_mode_existing='nndnn') # too long
         with self.assertRaises(TypeError):
             import_data(self.export_file, silent=True, extras_mode_existing=5) # wrong type

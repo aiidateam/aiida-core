@@ -74,15 +74,15 @@ class ProcessNode(Sealable, Node):
         from aiida.common.log import create_logger_adapter
         return create_logger_adapter(self._logger, self)
 
-    def _set_process_type(self, process_class):
+    def _set_process_type(self, process_type_string):
         """
         Set the process type.
 
-        :param process_class: the process class using this process node as storage
+        :param process_type_string: the process type string to set in the DB
 
 
         """
-        self.dbnode.process_type = process_class.get_process_type()
+        self.dbnode.process_type = process_type_string
 
     @property
     def process_label(self):

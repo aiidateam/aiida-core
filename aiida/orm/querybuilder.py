@@ -138,7 +138,7 @@ def get_querybuilder_classifiers_from_cls(cls, qb):
     # We need to deduce the ORM class used by the Process.
     elif issubclass(cls, Process):
         classifiers['ormclass_type_string'] = cls._node_class._plugin_type_string
-        classifiers['process_type_string'] = cls.get_process_type()
+        classifiers['process_type_string'] = cls.build_process_type()
         ormclass = qb.Node
 
     else:
@@ -230,13 +230,13 @@ def get_process_type_filter(classifiers, subclassing):
     if not subclassing:
         filter = {'==': value}
     else:
-        if value.find(":") != -1:
+        if ":" in value:
             # if value is an entry point, do usual subclassing
             filter = {'or': [
                 {'==': value},
                 {'like': '{}.%'.format(escape_for_sql_like(value))},
             ]}
-        elif  value.startswith('aiida.work'):
+        elif value.startswith('aiida.work'):
             # For core process types, a filter is not is needed since each process type has a corresponding
             # ormclass type that already specifies everything.
             # Note: This solution is fragile and will break as soon as there is not an exact one-to-one correspondence

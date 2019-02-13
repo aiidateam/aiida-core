@@ -86,7 +86,11 @@ Querying data
 .. toctree::
     :maxdepth: 4
 
-    ../querying/index.rst
+    ../querying/querybuilder/intro
+    ../querying/querybuilder/append
+    ../querying/querybuilder/queryhelp
+    ../querying/backend
+
 
 
 =======

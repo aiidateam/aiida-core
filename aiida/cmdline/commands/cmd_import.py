@@ -11,6 +11,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+from enum import Enum
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -18,6 +19,19 @@ from aiida.cmdline.params.options import MultipleValueOption
 from aiida.cmdline.params.types import GroupParamType
 from aiida.cmdline.utils import decorators, echo
 from aiida.common import exceptions
+
+EXTRAS_MODE_EXISTING = ['keep_existing', 'update_existing', 'mirror', 'none', 'ask']
+EXTRAS_MODE_NEW = ['import', 'none']
+
+
+# pylint: disable=too-few-public-methods
+class ExtrasImportCode(Enum):
+    """Exit codes for the verdi command line."""
+    keep_existing = 'kcl'
+    update_existing = 'kcu'
+    mirror = 'ncu'
+    none = 'knl'
+    ask = 'kca'
 
 
 @verdi.command('import')
@@ -35,8 +49,28 @@ from aiida.common import exceptions
     type=GroupParamType(create_if_not_exist=True),
     help='Specify group to which all the import nodes will be added. If such a group does not exist, it will be'
     ' created automatically.')
+@click.option(
+    '-e',
+    '--extras-mode-existing',
+    type=click.Choice(EXTRAS_MODE_EXISTING),
+    default='keep_existing',
+    help="Specify which extras from the export archive should be imported for nodes that are already contained in the "
+    "database: "
+    "ask: import all extras and prompt what to do for existing extras. "
+    "keep_existing: import all extras and keep original value of existing extras. "
+    "update_existing: import all extras and overwrite value of existing extras. "
+    "mirror: import all extras and remove any existing extras that are not present in the archive. "
+    "none: do not import any extras.")
+@click.option(
+    '-n',
+    '--extras-mode-new',
+    type=click.Choice(EXTRAS_MODE_NEW),
+    default='import',
+    help="Specify whether to import extras of new nodes: "
+    "import: import extras. "
+    "none: do not import extras.")
 @decorators.with_dbenv()
-def cmd_import(archives, webpages, group):
+def cmd_import(archives, webpages, group, extras_mode_existing, extras_mode_new):
     """Import one or multiple exported AiiDA archives
 
     The ARCHIVES can be specified by their relative or absolute file path, or their HTTP URL.
@@ -78,7 +112,11 @@ def cmd_import(archives, webpages, group):
         echo.echo_info('importing archive {}'.format(archive))
 
         try:
-            import_data(archive, group)
+            import_data(
+                archive,
+                group,
+                extras_mode_existing=ExtrasImportCode[extras_mode_existing].value,
+                extras_mode_new=extras_mode_new)
         except exceptions.IncompatibleArchiveVersionError as exception:
             echo.echo_warning('{} cannot be imported: {}'.format(archive, exception))
             echo.echo_warning('run `verdi export migrate {}` to update it'.format(archive))
@@ -105,7 +143,11 @@ def cmd_import(archives, webpages, group):
             echo.echo_success('archive downloaded, proceeding with import')
 
             try:
-                import_data(temp_folder.get_abs_path(temp_file), group)
+                import_data(
+                    temp_folder.get_abs_path(temp_file),
+                    group,
+                    extras_mode_existing=ExtrasImportCode[extras_mode_existing].value,
+                    extras_mode_new=extras_mode_new)
             except exceptions.IncompatibleArchiveVersionError as exception:
                 echo.echo_warning('{} cannot be imported: {}'.format(archive, exception))
                 echo.echo_warning('download the archive file and run `verdi export migrate` to update it')

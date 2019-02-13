@@ -43,9 +43,14 @@ def verdi(ctx, profile, version):
     except exceptions.ConfigurationError:
         config = None
     else:
-        if not profile:
-            profile = config.get_profile()
 
+        if not profile:
+            try:
+                profile = config.get_profile()
+            except exceptions.ProfileConfigurationError:
+                profile = None
+
+    if profile:
         settings.AIIDADB_PROFILE = profile.name
 
     ctx.obj.config = config

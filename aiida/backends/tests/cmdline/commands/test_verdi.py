@@ -30,3 +30,17 @@ class TestVerdi(AiidaTestCase):
         result = self.cli_runner.invoke(cmd_verdi.verdi, ['--version'])
         self.assertIsNone(result.exception, result.output)
         self.assertIn(get_version(), result.output)
+
+    def test_verdi_with_empty_profile_list(self):
+        # pylint: disable=protected-access
+        """Test for #2424: verify that verdi remains operable even if profile list is empty"""
+        from aiida.manage.configuration import CONFIG
+
+        # Run verdi command with updated CONFIG featuring an empty profile list
+        config_dict = dict(CONFIG._dictionary)
+        CONFIG._dictionary[CONFIG.KEY_PROFILES] = {}
+        result = self.cli_runner.invoke(cmd_verdi.verdi, [])
+        self.assertIsNone(result.exception, result.output)
+
+        # Restore original CONFIG contents
+        CONFIG._dictionary = config_dict

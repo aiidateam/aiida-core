@@ -12,6 +12,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 import unittest
+import warnings
 
 from six.moves import range, zip
 
@@ -119,6 +120,7 @@ class TestQueryBuilder(AiidaTestCase):
         from aiida.orm.node.data.base import Str, Int
         from aiida.work import run, WorkChain
         from aiida.work.workchain import WorkChainNode
+        from aiida.common.warnings import AiidaEntryPointWarning
 
         # Run a simple test WorkChain
         A = Str('A')
@@ -127,7 +129,16 @@ class TestQueryBuilder(AiidaTestCase):
 
         # Query for nodes associated with this type of WorkChain
         qb = QueryBuilder()
-        qb.append(Wf)
+
+        with warnings.catch_warnings(record=True) as w:
+            # Cause all warnings to always be triggered.
+            warnings.simplefilter("always")
+
+            qb.append(Wf)
+
+            # Verify some things
+            assert len(w) == 1
+            assert issubclass(w[-1].category, AiidaEntryPointWarning)
 
         # There should be one result of type WorkChainNode
         self.assertEqual(qb.count(), 1)
@@ -135,7 +146,16 @@ class TestQueryBuilder(AiidaTestCase):
 
         # Query for nodes of a different type of WorkChain
         qb = QueryBuilder()
-        qb.append(PotentialFailureWorkChain)
+
+        with warnings.catch_warnings(record=True) as w:
+            # Cause all warnings to always be triggered.
+            warnings.simplefilter("always")
+
+            qb.append(PotentialFailureWorkChain)
+
+            # Verify some things
+            assert len(w) == 1
+            assert issubclass(w[-1].category, AiidaEntryPointWarning)
 
         # There should be no result
         self.assertEqual(qb.count(), 0)

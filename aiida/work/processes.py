@@ -42,6 +42,7 @@ from . import utils
 
 __all__ = ('Process', 'ProcessState')
 
+
 def instantiate_process(runner, process, *args, **inputs):
     """
     Return an instance of the process with the given inputs. The function can deal with various types
@@ -730,3 +731,16 @@ class Process(plumpy.Process):
             namespace_list.extend(['.'.join(split_ns[:i]) for i in range(1, len(split_ns) + 1)])
         return namespace_list
 
+
+def get_query_string_from_process_type_string(process_type_string):  # pylint: disable=invalid-name
+    """
+    Take the type string of a Node and create the queryable type string
+
+    :param process_type_string: the process type string
+    :return: string that can be used to query for subclasses of the process type using 'LIKE <string>'
+    """
+    if ":" in process_type_string:
+        return process_type_string + "."
+
+    path = process_type_string.rsplit('.', 2)[0]
+    return path + "."

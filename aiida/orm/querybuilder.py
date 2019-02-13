@@ -224,6 +224,9 @@ def get_process_type_filter(classifiers, subclassing):
 
     """
     from aiida.common.escaping import escape_for_sql_like
+    from aiida.common.warnings import AiidaEntryPointWarning
+    from aiida.work.processes import get_query_string_from_process_type_string
+    import warnings
 
     value = classifiers['process_type_string']
 
@@ -234,17 +237,26 @@ def get_process_type_filter(classifiers, subclassing):
             # if value is an entry point, do usual subclassing
             filter = {'or': [
                 {'==': value},
-                {'like': '{}.%'.format(escape_for_sql_like(value))},
+                {'like': escape_for_sql_like(get_query_string_from_process_type_string(value))},
             ]}
         elif value.startswith('aiida.work'):
             # For core process types, a filter is not is needed since each process type has a corresponding
             # ormclass type that already specifies everything.
             # Note: This solution is fragile and will break as soon as there is not an exact one-to-one correspondence
             # between process classes and node classes
+
+            # Note: Improve this when issue #2475 is addressed
             filter = {'like': '%'}
         else:
-            raise InputValidationError("Process type '{}' neither has a registered entry point nor is a built-in type."
-                                       " Register an entry point for it in order to query for it.".format(value))
+            warnings.warn("Process type '{}' does not correspond to a registered entry. "
+                          "This risks queries to fail once the location of the process class changes. "
+                          "Add an entry point for '{}' to remove this warning.".format(value, value),
+                          AiidaEntryPointWarning)
+            filter = {'or': [
+                {'==': value},
+                {'like': escape_for_sql_like(get_query_string_from_process_type_string(value))},
+            ]}
+
 
     return filter
 

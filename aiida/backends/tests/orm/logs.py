@@ -67,6 +67,31 @@ class TestBackendLog(AiidaTestCase):
         self.assertEqual(entry.message, self.log_record['message'])
         self.assertEqual(entry.metadata, self.log_record['metadata'])
 
+    def test_create_log_unserializable_metadata(self):
+        """Test that unserializable data will be removed before reaching the database causing an error."""
+        import functools
+
+        def unbound_method(argument):
+            return argument
+
+        partial = functools.partial(unbound_method, 'argument')
+
+        node = CalculationNode().store()
+
+        # An unbound method in the `args` of the metadata
+        node.logger.error('problem occurred in method %s', unbound_method)
+
+        # A partial in the `args` of the metadata
+        node.logger.error('problem occurred in partial %s', partial)
+
+        # An exception which will include an `exc_info` object
+        try:
+            raise ValueError
+        except ValueError:
+            node.logger.exception('caught an exception')
+
+        self.assertEqual(len(Log.objects.all()), 3)
+
     def test_log_delete_single(self):
         """Test that a single log entry can be deleted through the collection."""
         entry, _ = self.create_log()
@@ -186,7 +211,6 @@ class TestBackendLog(AiidaTestCase):
         # Launching a second log message ensuring that both messages are correctly stored
         message2 = message + " - Second message"
         node.logger.critical(message2)
-        # logs = Log.objects.find()
 
         order_by = [OrderSpecifier('time', ASCENDING)]
         logs = Log.objects.find(order_by=order_by)

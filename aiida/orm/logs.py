@@ -58,8 +58,10 @@ class Log(entities.Entity):
 
             metadata = dict(record.__dict__)
 
-            # Get rid of the exc info because this is usually not serializable
-            metadata['exc_info'] = None
+            # Stringify the content of `exc_info` and `args` if they exist in the metadata to ensure serializability
+            for key in ['exc_info', 'args']:
+                if key in metadata:
+                    metadata[key] = str(metadata[key])
 
             return Log(
                 time=timezone.make_aware(datetime.fromtimestamp(record.created)),

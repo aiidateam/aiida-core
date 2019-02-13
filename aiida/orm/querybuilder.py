@@ -54,7 +54,6 @@ __all__ = ('QueryBuilder',)
 
 _LOGGER = logging.getLogger(__name__)
 
-
 def get_querybuilder_classifiers_from_cls(cls, qb):
     """
     Return the correct classifiers for the QueryBuilder from an ORM class.
@@ -200,28 +199,54 @@ def get_type_filter(classifiers, subclassing):
 
     """
     from aiida.orm.utils.node import get_query_type_from_type_string
+    from aiida.common.escaping import escape_for_sql_like
     value = classifiers['ormclass_type_string']
 
     if not subclassing:
         filter = {'==': value}
     else:
-        filter = {'like': '{}%'.format(get_query_type_from_type_string(value))}
+        filter = {'like': '{}%'.format(escape_for_sql_like(get_query_type_from_type_string(value)))}
 
     return filter
 
-def get_process_type_filter(classifiers):
+def get_process_type_filter(classifiers, subclassing):
     """
     Return filter dictionaries given a set of classifiers.
 
     :param classifiers: a dictionary with classifiers (note: does *not* support lists)
+    :param subclassing: if True, allow for subclasses of the process type
+            This is activated only, if an entry point can be found for the process type
+            (as well as for a selection of built-in process types)
+
 
     :returns: dictionary in QueryBuilder filter language to pass into {"process_type": ... }
     :rtype: dict
 
     """
-    # process_type_string
+    from aiida.common.escaping import escape_for_sql_like
+
     value = classifiers['process_type_string']
-    return {'==': value}
+
+    if not subclassing:
+        filter = {'==': value}
+    else:
+        if value.find(":") != -1:
+            # if value is an entry point, do usual subclassing
+            filter = {'or': [
+                {'==': value},
+                {'like': '{}.%'.format(escape_for_sql_like(value))},
+            ]}
+        elif  value.startswith('aiida.work'):
+            # For core process types, a filter is not is needed since each process type has a corresponding
+            # ormclass type that already specifies everything.
+            # Note: This solution is fragile and will break as soon as there is not an exact one-to-one correspondence
+            # between process classes and node classes
+            filter = {'like': '%'}
+        else:
+            raise InputValidationError("Process type '{}' neither has a registered entry point nor is a built-in type."
+                                       " Register an entry point for it in order to query for it.".format(value))
+
+    return filter
 
 
 class QueryBuilder(object):
@@ -664,7 +689,7 @@ class QueryBuilder(object):
             # this has to be added
             if ormclass == self._impl.Node:
                 self._add_type_filter(tag, classifiers, subclassing)
-                self._add_process_type_filter(tag, classifiers)
+                self._add_process_type_filter(tag, classifiers, subclassing)
 
             # The order has to be first _add_type_filter and then add_filter.
             # If the user adds a query on the type column, it overwrites what I did
@@ -971,14 +996,15 @@ class QueryBuilder(object):
 
         self.add_filter(tagspec, {'type': node_type_filter})
 
-    def _add_process_type_filter(self, tagspec, classifiers):
+    def _add_process_type_filter(self, tagspec, classifiers, subclassing):
         """
         Add a filter based on process type.
 
         :param tagspec: The tag, which has to exist already as a key in self._filters
         :param classifiers: a dictionary with classifiers
+        :param subclassing: if True, allow for subclasses of the process type
 
-        Note: This function handles cases when process_type_string is None.
+        Note: This function handles the case when process_type_string is None.
         """
         tag = self._get_tag_from_specification(tagspec)
 
@@ -987,14 +1013,14 @@ class QueryBuilder(object):
             process_type_filter = {'or': []}
             for c in classifiers:
                 if c['process_type_string'] is not None:
-                    process_type_filter['or'].append(get_process_type_filter(c))
+                    process_type_filter['or'].append(get_process_type_filter(c, subclassing))
 
             if len(process_type_filter['or']) > 0:
                 self.add_filter(tagspec, {'process_type': process_type_filter})
 
         else:
             if classifiers['process_type_string'] is not None:
-                process_type_filter = get_process_type_filter(classifiers)
+                process_type_filter = get_process_type_filter(classifiers, subclassing)
                 self.add_filter(tagspec, {'process_type': process_type_filter})
 
 

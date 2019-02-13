@@ -42,7 +42,6 @@ from . import utils
 
 __all__ = ('Process', 'ProcessState')
 
-
 def instantiate_process(runner, process, *args, **inputs):
     """
     Return an instance of the process with the given inputs. The function can deal with various types
@@ -730,3 +729,4 @@ class Process(plumpy.Process):
             split_ns = namespace.split('.')
             namespace_list.extend(['.'.join(split_ns[:i]) for i in range(1, len(split_ns) + 1)])
         return namespace_list
+

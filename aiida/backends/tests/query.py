@@ -117,7 +117,7 @@ class TestQueryBuilder(AiidaTestCase):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.backends.tests.work.work_chain import Wf, PotentialFailureWorkChain
         from aiida.orm.node.data.base import Str, Int
-        from aiida.work import run
+        from aiida.work import run, WorkChain
         from aiida.work.workchain import WorkChainNode
 
         # Run a simple test WorkChain
@@ -139,6 +139,13 @@ class TestQueryBuilder(AiidaTestCase):
 
         # There should be no result
         self.assertEqual(qb.count(), 0)
+
+        # Query for all WorkChain nodes
+        qb = QueryBuilder()
+        qb.append(WorkChain)
+
+        # There should be one result
+        self.assertEqual(qb.count(), 1)
 
     def test_simple_query_1(self):
         """

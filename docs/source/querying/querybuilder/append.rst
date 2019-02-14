@@ -6,13 +6,18 @@ The appender method
 Selecting entities
 ++++++++++++++++++
 
-The first thing to know is how to choose entities that you want to query::
+Let's suppose you want to query for calculation nodes in your database::
 
     from aiida.orm.querybuilder import QueryBuilder
     qb = QueryBuilder()       # Instantiating instance. One instance -> one query
     qb.append(CalcJobNode)    # Setting first vertex of path
 
-The first thing to know is how to choose entities that you want to query::
+.. note ::
+    Calculations are more tricky than Data, since they have both a run-time ``Process`` that steers them
+    and a ``Node`` that stores their metadata in the database.
+    The QueryBuilder allows you to pass either the ``Node`` class (e.g. ``CalcJobNode``)
+    or the ``Process`` class (e.g. ``CalcJob``, ``PwCalculation``),
+    which will automatically apply the correct filters for the type of calculation.
 
 If you are interested in instances of different classes, you can also pass a tuple, list or set of classes. 
 However, they have to be of the same ORM-type (e.g. all have to be subclasses of Node)::

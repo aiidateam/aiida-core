@@ -53,3 +53,8 @@ class DjangoTests(AiidaTestImplementation):
         models.DbUser.objects.all().delete()  # pylint: disable=no-member
         models.DbComputer.objects.all().delete()
         models.DbGroup.objects.all().delete()
+
+    def tearDownClass_method(self):
+        """
+        Backend-specific tasks for tearing down the test environment.
+        """

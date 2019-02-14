@@ -113,11 +113,7 @@ class SqlAlchemyTests(AiidaTestImplementation):
 
     def tearDownClass_method(self):
         """
-        Tear down test environment.
-
-         Clean up file repository and close session.
+        Backend-specific tasks for tearing down the test environment.
         """
-        super(SqlAlchemyTests, self).tearDown_method()
-
         self.test_session.close()
         self.test_session = None

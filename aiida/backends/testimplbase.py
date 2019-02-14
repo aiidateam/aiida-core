@@ -51,7 +51,6 @@ class AiidaTestImplementation(object):
         You have also to set a self.computer and a self.user_email as explained in the docstring of the
         AiidaTestImplemention docstring.
         """
-        pass
 
     def setUp_method(self):
         pass
@@ -59,39 +58,17 @@ class AiidaTestImplementation(object):
     def tearDown_method(self):
         pass
 
+    @abstractmethod
     def tearDownClass_method(self):
         """
-        Tear down test environment.
-
-          * clean up file repository
-          * reset AiiDA manager cache
+        Backend-specific tasks for tearing down the test environment.
         """
-        from aiida.settings import REPOSITORY_PATH
-        from aiida.common.setup import TEST_KEYWORD
-        from aiida.common.exceptions import InvalidOperation
-        from aiida.manage import reset_manager
-
-        base_repo_path = os.path.basename(os.path.normpath(REPOSITORY_PATH))
-        if TEST_KEYWORD not in base_repo_path:
-            raise InvalidOperation("Warning: The repository folder {} does not "
-                                   "seem to belong to a test profile and will therefore not be deleted.\n"
-                                   "Full repository path: "
-                                   "{}".format(base_repo_path, REPOSITORY_PATH))
-
-        # I clean the test repository
-        shutil.rmtree(REPOSITORY_PATH, ignore_errors=True)
-        os.makedirs(REPOSITORY_PATH)
-
-        # The manager provides various caches, which may be invalidated by database resets between tests.
-        reset_manager()
-
 
     @abstractmethod
     def clean_db(self):
         """
         This method implements the logic to fully clean the DB.
         """
-        pass
 
     def insert_data(self):
         """

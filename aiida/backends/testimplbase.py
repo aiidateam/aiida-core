@@ -61,9 +61,23 @@ class AiidaTestImplementation(object):
 
     def tearDownClass_method(self):
         """
-        This class implements the tear down methods (e.g. cleans up the DB).
+        Tear down test environment (clean up file repository).
         """
-        pass
+        from aiida.settings import REPOSITORY_PATH
+        from aiida.common.setup import TEST_KEYWORD
+        from aiida.common.exceptions import InvalidOperation
+
+        base_repo_path = os.path.basename(os.path.normpath(REPOSITORY_PATH))
+        if TEST_KEYWORD not in base_repo_path:
+            raise InvalidOperation("Warning: The repository folder {} does not "
+                                   "seem to belong to a test profile and will therefore not be deleted.\n"
+                                   "Full repository path: "
+                                   "{}".format(base_repo_path, REPOSITORY_PATH))
+
+        # I clean the test repository
+        shutil.rmtree(REPOSITORY_PATH, ignore_errors=True)
+        os.makedirs(REPOSITORY_PATH)
+
 
     @abstractmethod
     def clean_db(self):

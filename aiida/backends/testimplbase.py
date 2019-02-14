@@ -61,11 +61,15 @@ class AiidaTestImplementation(object):
 
     def tearDownClass_method(self):
         """
-        Tear down test environment (clean up file repository).
+        Tear down test environment.
+
+          * clean up file repository
+          * reset AiiDA manager cache
         """
         from aiida.settings import REPOSITORY_PATH
         from aiida.common.setup import TEST_KEYWORD
         from aiida.common.exceptions import InvalidOperation
+        from aiida.manage import reset_manager
 
         base_repo_path = os.path.basename(os.path.normpath(REPOSITORY_PATH))
         if TEST_KEYWORD not in base_repo_path:
@@ -77,6 +81,9 @@ class AiidaTestImplementation(object):
         # I clean the test repository
         shutil.rmtree(REPOSITORY_PATH, ignore_errors=True)
         os.makedirs(REPOSITORY_PATH)
+
+        # The manager provides various caches, which may be invalidated by database resets between tests.
+        reset_manager()
 
 
     @abstractmethod

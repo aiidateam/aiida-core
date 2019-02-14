@@ -7,6 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Base implementation of unittest classes for AiiDA.
+
+The base implementation is extended by the different backends.
+"""
+
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -45,7 +50,7 @@ class AiidaTestImplementation(object):
     user_email = None  # type: str
 
     @abstractmethod
-    def setUpClass_method(self):
+    def setUpClass_method(self):  # pylint: disable=invalid-name
         """
         This class prepares the database (cleans it up and installs some basic entries).
         You have also to set a self.computer and a self.user_email as explained in the docstring of the
@@ -53,13 +58,14 @@ class AiidaTestImplementation(object):
         """
         pass
 
-    def setUp_method(self):
+    def setUp_method(self):  # pylint: disable=invalid-name
         pass
 
-    def tearDown_method(self):
+    def tearDown_method(self):  # pylint: disable=invalid-name
+
         pass
 
-    def tearDownClass_method(self):
+    def tearDownClass_method(self):  # pylint: disable=invalid-name
         """
         This class implements the tear down methods (e.g. cleans up the DB).
         """
@@ -84,8 +90,7 @@ class AiidaTestImplementation(object):
             transport_type='local',
             scheduler_type='pbspro',
             workdir='/tmp/aiida',
-            backend=self.backend
-        ).store()
+            backend=self.backend).store()
 
         self.user_email = get_config().current_profile.default_user_email
 

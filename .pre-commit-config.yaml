@@ -87,7 +87,6 @@
         aiida/backends/sqlalchemy/transition_06dj_to_07sqla.py|
         aiida/backends/sqlalchemy/utils.py|
         aiida/backends/testbase.py|
-        aiida/backends/testimplbase.py|
         aiida/backends/tests/backup_script.py|
         aiida/backends/tests/backup_setup_script.py|
         aiida/backends/tests/base_dataclasses.py|

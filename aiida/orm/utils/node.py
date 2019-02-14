@@ -122,6 +122,7 @@ def get_query_type_from_type_string(type_string):
 
     return type_string
 
+
 def strip_prefix(string, prefix):
     """
     Strip the prefix from the given string and return it. If the prefix is not present

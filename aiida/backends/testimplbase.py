@@ -14,7 +14,7 @@ from abc import ABCMeta, abstractmethod
 
 import six
 
-from aiida.common.exceptions import InternalError
+from aiida.common.exceptions import InternalError, NotExistent
 from aiida import orm
 
 
@@ -87,10 +87,15 @@ class AiidaTestImplementation(object):
             backend=self.backend
         ).store()
 
-        config = get_config()
-        email = config.current_profile.default_user_email
-        self.user = orm.User(email=email).store()
-        self.user_email = email
+        # Since the default user is needed for many operations in AiiDA, it is not deleted by clean_db.
+        # In principle, it should therefore always exist - if not we create it anyhow.
+        default_user_email = get_config().current_profile.default_user_email
+        try:
+            self.user = orm.User.objects.get(email=default_user_email)
+        except NotExistent:
+            self.user = orm.User(email=email).store()
+
+        self.user_email = self.user.email
 
     def get_computer(self):
         """

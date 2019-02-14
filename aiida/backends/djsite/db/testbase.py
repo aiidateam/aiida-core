@@ -43,6 +43,9 @@ class DjangoTests(AiidaTestImplementation):
 
     def clean_db(self):
         from aiida.backends.djsite.db import models
+        from aiida.manage import get_config
+
+        email = get_config().current_profile.default_user_email
 
         # I first need to delete the links, because in principle I could not delete input nodes, only outputs.
         # For simplicity, since I am deleting everything, I delete the links first
@@ -52,7 +55,8 @@ class DjangoTests(AiidaTestImplementation):
         models.DbLog.objects.all().delete()
         models.DbNode.objects.all().delete()  # pylint: disable=no-member
         models.DbWorkflow.objects.all().delete()  # pylint: disable=no-member
-        models.DbUser.objects.all().delete()  # pylint: disable=no-member
+        # The default user is needed for many operations in AiiDA; do not delete it.
+        models.DbUser.objects.exclude(email=email).delete()  # pylint: disable=no-member
         models.DbComputer.objects.all().delete()
         models.DbGroup.objects.all().delete()
 

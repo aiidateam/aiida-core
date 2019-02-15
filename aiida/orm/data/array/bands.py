@@ -804,7 +804,11 @@ class BandsData(KpointsData):
         the_bands = numpy.transpose(bands)
         labels = plot_info['labels']
         # prepare xticks labels
-        tick_pos, tick_labels = zip(*labels)
+        if labels:
+            tick_pos, tick_labels = zip(*labels)
+        else:
+            tick_pos = []
+            tick_labels = []
 
         #all_data['bands'] = the_bands.tolist()
         all_data['paths'] = plot_info['paths']

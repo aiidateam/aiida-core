@@ -252,7 +252,8 @@ def get_all_fields_info():
             "requires": COMPUTER_ENTITY_NAME,
             "related_name": "dbnodes"
         },
-        "description": {}
+        "description": {},
+        "process_type": {}
     }
     all_fields_info[ATTRIBUTE_ENTITY_NAME] = {
         "dbnode": {
@@ -1955,13 +1956,6 @@ def serialize_dict(datadict, remove_fields=[], rename_fields={},
         return (ret_dict, conversions)
     else:
         return ret_dict
-
-
-fields_to_export = {
-    'aiida.backends.djsite.db.models.DbNode':
-        ['description', 'public', 'nodeversion', 'uuid', 'mtime', 'user',
-         'ctime', 'dbcomputer', 'label', 'type'],
-}
 
 
 def fill_in_query(partial_query, originating_entity_str, current_entity_str,

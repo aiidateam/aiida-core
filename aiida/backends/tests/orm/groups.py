@@ -111,24 +111,13 @@ class TestGroups(AiidaTestCase):
         node_01 = orm.Data().store()
         node_02 = orm.Data().store()
         node_03 = orm.Data().store()
-        node_04 = orm.Data().store()
-        node_05 = orm.Data().store()
-        node_06 = orm.Data().store()
-        node_07 = orm.Data().store()
-        node_08 = orm.Data().store()
-        nodes = [node_01, node_02, node_03, node_04, node_05, node_06, node_07, node_08]
+        nodes = [node_01, node_02, node_03]
 
         group = orm.Group(label='test_adding_nodes').store()
         # Single node
         group.add_nodes(node_01)
         # List of nodes
         group.add_nodes([node_02, node_03])
-        # Single DbNode
-        group.add_nodes(node_04.dbnode)
-        # List of DbNodes
-        group.add_nodes([node_05.dbnode, node_06.dbnode])
-        # List of orm.Nodes and DbNodes
-        group.add_nodes([node_07, node_08.dbnode])
 
         # Check
         self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))
@@ -143,12 +132,7 @@ class TestGroups(AiidaTestCase):
         node_02 = orm.Data().store()
         node_03 = orm.Data().store()
         node_04 = orm.Data().store()
-        node_05 = orm.Data().store()
-        node_06 = orm.Data().store()
-        node_07 = orm.Data().store()
-        node_08 = orm.Data().store()
-        node_09 = orm.Data().store()
-        nodes = [node_01, node_02, node_03, node_04, node_05, node_06, node_07, node_08]
+        nodes = [node_01, node_02, node_03]
         group = orm.Group(label='test_remove_nodes').store()
 
         # Add initial nodes
@@ -156,36 +140,19 @@ class TestGroups(AiidaTestCase):
         self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))
 
         # Remove a node that is not in the group: nothing should happen
-        group.remove_nodes(node_09)
-        self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))
-
-        # Remove one orm.Node
-        nodes.remove(node_04)
         group.remove_nodes(node_04)
         self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))
 
-        # Remove one DbNode
-        nodes.remove(node_07)
-        group.remove_nodes(node_07.dbnode)
+        # Remove one orm.Node
+        nodes.remove(node_03)
+        group.remove_nodes(node_03)
         self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))
 
         # Remove a list of Nodes and check
         nodes.remove(node_01)
-        nodes.remove(node_08)
-        group.remove_nodes([node_01, node_08])
-        self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))
-
-        # Remove a list of DbNodes and check
         nodes.remove(node_02)
-        nodes.remove(node_05)
-        group.remove_nodes([node_02.dbnode, node_05.dbnode])
+        group.remove_nodes([node_01, node_02])
         self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))
-
-        # Remove a mixed list of orm.Nodes and DbNodes and check
-        nodes.remove(node_03)
-        nodes.remove(node_06)
-        group.remove_nodes([node_03, node_06.dbnode])
-        self.assertEqual(set(), set(_.pk for _ in group.nodes))
 
     def test_name_desc(self):
         """Test Group description."""

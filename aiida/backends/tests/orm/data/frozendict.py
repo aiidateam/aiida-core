@@ -10,6 +10,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.node.data.frozendict import FrozenDict
 from aiida.orm.node.data.int import Int
@@ -17,25 +18,26 @@ from aiida.orm.node.data.str import Str
 
 
 class TestFrozenDict(AiidaTestCase):
+
     def test_create(self):
-        d = FrozenDict(dict={})
+        FrozenDict(dict={})
 
     def test_create_invalid(self):
         with self.assertRaises(AssertionError):
-            d = FrozenDict(dict={'a': 5})
+            FrozenDict(dict={'a': 5})
 
     def test_get_value(self):
-        input = {'a': Int(5).store()}
-        d = FrozenDict(dict=input)
-        self.assertEqual(d['a'], input['a'])
+        inputs = {'a': Int(5).store()}
+        dictionary = FrozenDict(dict=inputs)
+        self.assertEqual(dictionary['a'], inputs['a'])
 
     def test_iterate(self):
-        input = {'a': Int(5).store(), 'b': Str('testing').store()}
-        d = FrozenDict(dict=input)
-        for k, v in d.items():
-            self.assertEqual(input[k], v)
+        inputs = {'a': Int(5).store(), 'b': Str('testing').store()}
+        dictionary = FrozenDict(dict=inputs)
+        for key, value in dictionary.items():
+            self.assertEqual(inputs[key], value)
 
     def test_length(self):
-        input = {'a': Int(5).store(), 'b': Str('testing').store()}
-        d = FrozenDict(dict=input)
-        self.assertEqual(len(input), len(d))
+        inputs = {'a': Int(5).store(), 'b': Str('testing').store()}
+        dictionary = FrozenDict(dict=inputs)
+        self.assertEqual(len(inputs), len(dictionary))

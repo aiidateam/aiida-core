@@ -76,8 +76,8 @@ class XyData(ArrayData):
         :param x_units: the units of x
         """
         self._arrayandname_validator(x_array, x_name, x_units)
-        self._set_attr("x_name", x_name)
-        self._set_attr("x_units", x_units)
+        self.set_attribute("x_name", x_name)
+        self.set_attribute("x_units", x_units)
         self.set_array("x_array", x_array)
 
         
@@ -118,8 +118,8 @@ class XyData(ArrayData):
             self.set_array("y_array_{}".format(num), y_array)
 
         # if the y_arrays pass the initial validation, sets each
-        self._set_attr("y_names", y_names)
-        self._set_attr("y_units", y_units)
+        self.set_attribute("y_names", y_names)
+        self.set_attribute("y_units", y_units)
 
     def get_x(self):
         """
@@ -130,9 +130,9 @@ class XyData(ArrayData):
         :return x_units: the x units set earlier
         """
         try:
-            x_name = self.get_attr("x_name")
+            x_name = self.get_attribute("x_name")
             x_array = self.get_array("x_array")
-            x_units = self.get_attr("x_units")
+            x_units = self.get_attribute("x_units")
         except (KeyError, AttributeError):
             raise NotExistent("No x array has been set yet!")
         return x_name, x_array, x_units
@@ -147,11 +147,11 @@ class XyData(ArrayData):
         :return y_units: list of strings giving the units for the y_arrays
         """
         try:
-            y_names = self.get_attr("y_names")
+            y_names = self.get_attribute("y_names")
         except (KeyError, AttributeError):
             raise NotExistent("No y names has been set yet!")
         try:
-            y_units = self.get_attr("y_units")
+            y_units = self.get_attribute("y_units")
         except (KeyError, AttributeError):
             raise NotExistent("No y units has been set yet!")
         y_arrays = []

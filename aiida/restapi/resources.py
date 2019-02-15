@@ -41,7 +41,7 @@ class ServerInfo(Resource):
         url = unquote(request.url)
         url_root = unquote(request.url_root)
 
-        pathlist = self.utils.split_path(self.utils.strip_prefix(path))
+        pathlist = self.utils.split_path(self.utils.strip_api_prefix(path))
 
         if len(pathlist) > 1:
             resource_type = pathlist.pop(1)
@@ -381,7 +381,7 @@ class Calculation(Node):
 
         from aiida.restapi.translator.calculation import CalculationTranslator
         self.trans = CalculationTranslator(**kwargs)
-        from aiida.orm.node import CalcJobNode as CalculationTclass
+        from aiida.orm import CalcJobNode as CalculationTclass
         self.tclass = CalculationTclass
 
         self.parse_pk_uuid = 'uuid'
@@ -395,7 +395,7 @@ class Code(Node):
 
         from aiida.restapi.translator.code import CodeTranslator
         self.trans = CodeTranslator(**kwargs)
-        from aiida.orm import Code as CodeTclass
+        from aiida.orm.node.data.code import Code as CodeTclass
         self.tclass = CodeTclass
 
         self.parse_pk_uuid = 'uuid'

@@ -41,7 +41,7 @@ class TestRemoteData(AiidaTestCase):
         with io.open(os.path.join(self.tmp_path, 'file.txt'), 'w', encoding='utf8') as fhandle:
             fhandle.write(u'test string')
 
-        self.remote.set_computer(self.computer)
+        self.remote.computer = self.computer
         self.remote.store()
 
     def tearDown(self):

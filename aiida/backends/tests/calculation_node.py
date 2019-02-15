@@ -14,7 +14,7 @@ from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed
-from aiida.orm.node import CalculationNode, CalcJobNode
+from aiida.orm import CalculationNode, CalcJobNode
 
 
 class TestProcessNode(AiidaTestCase):
@@ -54,7 +54,7 @@ class TestProcessNode(AiidaTestCase):
         cls.construction_options = {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}}
 
         cls.calcjob = CalcJobNode()
-        cls.calcjob.set_computer(cls.computer)
+        cls.calcjob.computer = cls.computer
         cls.calcjob.set_options(cls.construction_options)
         cls.calcjob.store()
 
@@ -86,42 +86,42 @@ class TestProcessNode(AiidaTestCase):
         }
 
         for key, value in attrs_to_set.items():
-            node._set_attr(key, value)
+            node.set_attribute(key, value)
 
         # Check before storing
-        node._set_attr(CalculationNode.PROCESS_STATE_KEY, self.stateval)
-        self.assertEqual(node.get_attr(CalculationNode.PROCESS_STATE_KEY), self.stateval)
+        node.set_attribute(CalculationNode.PROCESS_STATE_KEY, self.stateval)
+        self.assertEqual(node.get_attribute(CalculationNode.PROCESS_STATE_KEY), self.stateval)
 
         node.store()
 
         # Check after storing
-        self.assertEqual(node.get_attr(CalculationNode.PROCESS_STATE_KEY), self.stateval)
+        self.assertEqual(node.get_attribute(CalculationNode.PROCESS_STATE_KEY), self.stateval)
 
         # I should be able to mutate the updatable attribute but not the others
-        node._set_attr(CalculationNode.PROCESS_STATE_KEY, 'FINISHED')
-        node._del_attr(CalculationNode.PROCESS_STATE_KEY)
+        node.set_attribute(CalculationNode.PROCESS_STATE_KEY, 'FINISHED')
+        node.delete_attribute(CalculationNode.PROCESS_STATE_KEY)
 
         # Deleting non-existing attribute should raise attribute error
         with self.assertRaises(AttributeError):
-            node._del_attr(CalculationNode.PROCESS_STATE_KEY)
+            node.delete_attribute(CalculationNode.PROCESS_STATE_KEY)
 
         with self.assertRaises(ModificationNotAllowed):
-            node._set_attr('bool', False)
+            node.set_attribute('bool', False)
 
         with self.assertRaises(ModificationNotAllowed):
-            node._del_attr('bool')
+            node.delete_attribute('bool')
 
         node.seal()
 
         # After sealing, even updatable attributes should be immutable
         with self.assertRaises(ModificationNotAllowed):
-            node._set_attr(CalculationNode.PROCESS_STATE_KEY, 'FINISHED')
+            node.set_attribute(CalculationNode.PROCESS_STATE_KEY, 'FINISHED')
 
         with self.assertRaises(ModificationNotAllowed):
-            node._del_attr(CalculationNode.PROCESS_STATE_KEY)
+            node.delete_attribute(CalculationNode.PROCESS_STATE_KEY)
 
     def test_get_description(self):
-        self.assertEqual(self.calcjob.get_desc(), self.calcjob.get_state())
+        self.assertEqual(self.calcjob.get_description(), self.calcjob.get_state())
 
     def test_get_authinfo(self):
         """Test that we can get the AuthInfo object from the calculation instance."""

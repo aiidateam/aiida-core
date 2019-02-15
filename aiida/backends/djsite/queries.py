@@ -135,7 +135,7 @@ class DjangoQueryManager(AbstractQueryManager):
         self.query_past_days(q_object, args)
         self.query_group(q_object, args)
 
-        bands_list = models.DbNode.objects.filter(type__startswith=BandsData.plugin_type_string) \
+        bands_list = models.DbNode.objects.filter(type__startswith=BandsData.class_node_type) \
             .filter(q_object).distinct().order_by('ctime')
         bands_list_data = bands_list.values_list('pk', 'label', 'ctime')
 

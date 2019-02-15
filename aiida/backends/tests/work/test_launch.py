@@ -13,7 +13,7 @@ from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.node.data.int import Int
-from aiida.orm.node import WorkChainNode, CalcFunctionNode
+from aiida.orm import WorkChainNode, CalcFunctionNode
 from aiida.work import run, run_get_node, run_get_pid, Process, WorkChain, calcfunction
 
 

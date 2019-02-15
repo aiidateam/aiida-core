@@ -19,7 +19,7 @@ from aiida.backends.testbase import AiidaTestCase
 class TestQueryBuilderSQLA(AiidaTestCase):
     def test_clsf_sqla(self):
         from aiida.orm import Group, User, Computer, Node, Data
-        from aiida.orm.node import ProcessNode
+        from aiida.orm import ProcessNode
         from aiida.backends.sqlalchemy.models.node import DbNode
         from aiida.backends.sqlalchemy.models.group import DbGroup
         from aiida.backends.sqlalchemy.models.user import DbUser
@@ -46,7 +46,7 @@ class QueryBuilderLimitOffsetsTestSQLA(AiidaTestCase):
         # Creating 10 nodes with an attribute that can be ordered
         for i in range(10):
             n = Data()
-            n._set_attr('foo', i)
+            n.set_attribute('foo', i)
             n.store()
         qb = QueryBuilder().append(
             Node, project='attributes.foo'

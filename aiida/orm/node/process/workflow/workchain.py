@@ -13,7 +13,7 @@ __all__ = ('WorkChainNode',)
 class WorkChainNode(WorkflowNode):
     """ORM class for all nodes representing the execution of a WorkChain."""
 
-    _cacheable = False
+    _cachable = False
 
     STEPPER_STATE_INFO_KEY = 'stepper_state_info'
 
@@ -28,7 +28,7 @@ class WorkChainNode(WorkflowNode):
 
         :returns: string representation of the stepper state info
         """
-        return self.get_attr(self.STEPPER_STATE_INFO_KEY, None)
+        return self.get_attribute(self.STEPPER_STATE_INFO_KEY, None)
 
     def set_stepper_state_info(self, stepper_state_info):
         """
@@ -36,4 +36,4 @@ class WorkChainNode(WorkflowNode):
 
         :param state: string representation of the stepper state info
         """
-        return self._set_attr(self.STEPPER_STATE_INFO_KEY, stepper_state_info)
+        return self.set_attribute(self.STEPPER_STATE_INFO_KEY, stepper_state_info)

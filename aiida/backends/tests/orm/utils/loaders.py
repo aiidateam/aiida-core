@@ -12,7 +12,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import NotExistent
-from aiida.orm import Group, Data
+from aiida.orm import Node, Group, Data
 from aiida.orm.utils import load_entity, load_code, load_computer, load_group, load_node
 from aiida.orm.utils.loaders import NodeEntityLoader
 
@@ -45,7 +45,7 @@ class TestOrmUtils(AiidaTestCase):
 
     def test_load_code(self):
         """Test the functionality of load_code."""
-        from aiida.orm.code import Code
+        from aiida.orm import Code
 
         label = 'compy'
         code = Code()
@@ -181,26 +181,32 @@ class TestOrmUtils(AiidaTestCase):
 
         # Load through uuid
         loaded_node = load_node(node.uuid)
+        self.assertIsInstance(loaded_node, Node)
         self.assertEquals(loaded_node.uuid, node.uuid)
 
         # Load through pk
         loaded_node = load_node(node.pk)
+        self.assertIsInstance(loaded_node, Node)
         self.assertEquals(loaded_node.uuid, node.uuid)
 
         # Load through uuid explicitly
         loaded_node = load_node(uuid=node.uuid)
+        self.assertIsInstance(loaded_node, Node)
         self.assertEquals(loaded_node.uuid, node.uuid)
 
         # Load through pk explicitly
         loaded_node = load_node(pk=node.pk)
+        self.assertIsInstance(loaded_node, Node)
         self.assertEquals(loaded_node.uuid, node.uuid)
 
         # Load through partial uuid without a dash
         loaded_node = load_node(uuid=node.uuid[:8])
+        self.assertIsInstance(loaded_node, Node)
         self.assertEquals(loaded_node.uuid, node.uuid)
 
         # Load through partial uuid including a dashs
         loaded_node = load_node(uuid=node.uuid[:10])
+        self.assertIsInstance(loaded_node, Node)
         self.assertEquals(loaded_node.uuid, node.uuid)
 
         with self.assertRaises(NotExistent):

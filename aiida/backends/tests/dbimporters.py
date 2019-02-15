@@ -151,7 +151,7 @@ class TestCodDbImporter(AiidaTestCase):
 
         cif = entry.get_cif_node()
         self.assertEquals(isinstance(cif, CifData), True)
-        self.assertEquals(cif.get_attr('md5'),
+        self.assertEquals(cif.get_attribute('md5'),
                           '070711e8e99108aade31d20cd5c94c48')
         self.assertEquals(cif.source, {
             'db_name': 'Crystallography Open Database',

@@ -19,9 +19,9 @@ from aiida.common import exceptions
 from aiida.common import lang
 
 from ..comments import BackendComment, BackendCommentCollection
-from .utils import ModelWrapper
 from . import entities
 from . import users
+from . import utils
 
 
 class SqlaComment(entities.SqlaModelEntity[models.DbComment], BackendComment):
@@ -40,7 +40,7 @@ class SqlaComment(entities.SqlaModelEntity[models.DbComment], BackendComment):
         """
         super(SqlaComment, self).__init__(backend)
         lang.type_check(user, users.SqlaUser)  # pylint: disable=no-member
-        self._dbmodel = ModelWrapper(models.DbComment(dbnode=node.dbnode, user=user.dbmodel, content=content))
+        self._dbmodel = utils.ModelWrapper(models.DbComment(dbnode=node.dbmodel, user=user.dbmodel, content=content))
 
     def store(self):
         """Can only store if both the node and user are stored as well."""
@@ -67,12 +67,11 @@ class SqlaComment(entities.SqlaModelEntity[models.DbComment], BackendComment):
 
     @property
     def node(self):
-        from aiida.orm import Node
-        return Node(dbnode=self._dbmodel.dbnode)
+        return self.backend.nodes.from_dbmodel(self.dbmodel.dbnode)
 
     @property
     def user(self):
-        return self._backend.users.from_dbmodel(self._dbmodel.user)
+        return self.backend.users.from_dbmodel(self.dbmodel.user)
 
     def set_user(self, value):
         self._dbmodel.user = value

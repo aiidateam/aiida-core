@@ -436,7 +436,7 @@ class TestVerdiDataRemote(AiidaTestCase):
         self.r.set_remote_path(p)
         with io.open(p + '/file.txt', 'w', encoding='utf8') as fhandle:
             fhandle.write(u"test string")
-        self.r.set_computer(comp)
+        self.r.computer = comp
         self.r.store()
 
         self.cli_runner = CliRunner()
@@ -855,7 +855,7 @@ class TestVerdiDataUpf(AiidaTestCase):
 
     def test_uploadfamilyhelp(self):
         output = sp.check_output(['verdi', 'data', 'upf', 'uploadfamily', '--help'])
-        self.assertIn(b'Usage:', output, "Sub-command verdi data upf uploadfamily --help failed.")
+        self.assertIn(b'Usage:', output, "Sub-command verdi data upf uploadfamily --help failed: {}".format(output))
 
     def test_uploadfamily(self):
         self.upload_family()
@@ -873,9 +873,10 @@ class TestVerdiDataUpf(AiidaTestCase):
         p = tempfile.mkdtemp()
         options = [p, 'test_group']
         res = self.cli_runner.invoke(cmd_upf.upf_exportfamily, options, catch_exceptions=False)
+        self.assertClickResultNoException(res)
         output = sp.check_output(['ls', p])
         self.assertIn(b'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF', output,
-                      "Sub-command verdi data upf exportfamily --help failed.")
+                      "Sub-command verdi data upf exportfamily --help failed: {}".format(output))
         self.assertIn(b'O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF', output,
                       "Sub-command verdi data upf exportfamily --help failed.")
         self.assertIn(b'Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF', output,
@@ -892,7 +893,7 @@ class TestVerdiDataUpf(AiidaTestCase):
         res = self.cli_runner.invoke(cmd_upf.upf_listfamilies, options, catch_exceptions=False)
 
         self.assertIn(b'test_group', res.output_bytes, 'The string "test_group" was not found in the'
-                                                       ' output of verdi data upf listfamilies')
+                                                       ' output of verdi data upf listfamilies: {}'.format(res.output))
 
         self.assertIn(b'test description', res.output_bytes, 'The string "test_group" was not found in the'
                                                              ' output of verdi data upf listfamilies')

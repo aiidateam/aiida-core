@@ -23,7 +23,7 @@ import six
 from aiida.common.exceptions import InvalidOperation
 from aiida.common.links import LinkType
 from aiida.common.lang import override
-from aiida.orm.node import Node
+from aiida.orm import Node
 
 
 @singledispatch
@@ -84,17 +84,15 @@ class Data(Node):
 
         :returns: an unstored clone of this Data node
         """
-        clone = self.__class__()
-        clone.dbnode.dbcomputer = self._dbnode.dbcomputer
-        clone.dbnode.type = self._dbnode.type
-        clone.label = self.label
-        clone.description = self.description
+        import copy
 
-        for key, value in self.iterattrs():
-            clone._set_attr(key, value)
+        backend_clone = self.backend_entity.clone()
+        clone = self.__class__.from_backend_entity(backend_clone)
 
-        for path in self.get_folder_list():
-            clone.add_path(self.get_abs_path(path), path)
+        clone.set_attributes(copy.deepcopy(self.attributes))
+
+        for path in self.repository.get_folder_list():
+            clone.repository.add_path(self.repository.get_abs_path(path), path)
 
         return clone
 
@@ -117,7 +115,7 @@ class Data(Node):
 
         :return: dictionary describing the source of Data object.
         """
-        return self.get_attr('source', None)
+        return self.get_attribute('source', None)
 
     @source.setter
     def source(self, source):
@@ -133,7 +131,7 @@ class Data(Node):
         if unknown_attrs:
             raise KeyError("Unknown source parameters: {}".format(", ".join(unknown_attrs)))
 
-        self._set_attr('source', source)
+        self.set_attribute('source', source)
 
     def set_source(self, source):
         """
@@ -395,25 +393,24 @@ class BaseType(Data):
         try:
             getattr(self, '_type')
         except AttributeError:
-            raise RuntimeError("Derived class must define the _type class member")
+            raise RuntimeError('Derived class must define the _type class member')
 
-        super(BaseType, self).__init__(**self._create_init_args(*args, **kwargs))
+        super(BaseType, self).__init__(**kwargs)
 
-    def set_typevalue(self, typevalue):
-        _type, value = typevalue
-        self._type = _type
-        if value:
-            self.value = value
-        else:
-            self.value = _type()
+        try:
+            value = args[0]
+        except IndexError:
+            value = self._type()
+
+        self.value = value
 
     @property
     def value(self):
-        return self.get_attr('value')
+        return self.get_attribute('value', None)
 
     @value.setter
     def value(self, value):
-        self._set_attr('value', self._type(value))
+        self.set_attribute('value', self._type(value))
 
     def __str__(self):
         return super(BaseType, self).__str__() + ' value: {}'.format(self.value)
@@ -431,27 +428,4 @@ class BaseType(Data):
             return self.value != other
 
     def new(self, value=None):
-        return self.__class__(typevalue=(self._type, value))
-
-    def _create_init_args(self, *args, **kwargs):
-        if args:
-            assert not kwargs, "Cannot have positional arguments and kwargs"
-            assert len(args) == 1, \
-                "Simple data can only take at most one positional argument"
-
-            kwargs['typevalue'] = (self._type, self._type(args[0]))
-
-        elif 'dbnode' not in kwargs:
-            if 'typevalue' in kwargs:
-                assert kwargs['typevalue'][0] is self._type
-                if kwargs['typevalue'][1] is not None:
-                    kwargs['typevalue'] = \
-                        (self._type, self._type(kwargs['typevalue'][1]))
-            else:
-                kwargs['typevalue'] = (self._type, None)
-
-        else:
-            assert len(kwargs) == 1, \
-                "When specifying dbnode it can be the only kwarg"
-
-        return kwargs
+        return self.__class__(value)

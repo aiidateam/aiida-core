@@ -42,7 +42,7 @@ class DjangoComment(entities.DjangoModelEntity[models.DbComment], BackendComment
         super(DjangoComment, self).__init__(backend)
         lang.type_check(user, users.DjangoUser)  # pylint: disable=no-member
         self._dbmodel = ModelWrapper(
-            models.DbComment(dbnode=node.dbnode, user=user.dbmodel, content=content), auto_flush=self._auto_flush)
+            models.DbComment(dbnode=node.dbmodel, user=user.dbmodel, content=content), auto_flush=self._auto_flush)
 
     def store(self):
         """Can only store if both the node and user are stored as well."""
@@ -68,8 +68,7 @@ class DjangoComment(entities.DjangoModelEntity[models.DbComment], BackendComment
 
     @property
     def node(self):
-        from aiida.orm import Node
-        return Node(dbnode=self._dbmodel.dbnode)
+        return self._backend.nodes.from_dbmodel(self._dbmodel.dbnode)
 
     @property
     def user(self):

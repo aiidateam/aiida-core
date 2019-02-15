@@ -45,7 +45,7 @@ class KpointsData(ArrayData):
         except AttributeError:
             pass
 
-    def get_desc(self):
+    def get_description(self):
         """
         Returns a string with infos retrieved from  kpoints node's properties.
         :param node:
@@ -68,7 +68,7 @@ class KpointsData(ArrayData):
         The crystal unit cell. Rows are the crystal vectors in Angstroms.
         :return: a 3x3 numpy.array
         """
-        return numpy.array(self.get_attr('cell'))
+        return numpy.array(self.get_attribute('cell'))
 
     @cell.setter
     def cell(self, value):
@@ -92,7 +92,7 @@ class KpointsData(ArrayData):
 
         the_cell = _get_valid_cell(value)
 
-        self._set_attr('cell', the_cell)
+        self.set_attribute('cell', the_cell)
 
     @property
     def pbc(self):
@@ -104,7 +104,7 @@ class KpointsData(ArrayData):
         """
         # return copy.deepcopy(self._pbc)
         return (
-        self.get_attr('pbc1'), self.get_attr('pbc2'), self.get_attr('pbc3'))
+        self.get_attribute('pbc1'), self.get_attribute('pbc2'), self.get_attribute('pbc3'))
 
     @pbc.setter
     def pbc(self, value):
@@ -125,9 +125,9 @@ class KpointsData(ArrayData):
             raise ModificationNotAllowed(
                 "The KpointsData object cannot be modified, it has already been stored")
         the_pbc = get_valid_pbc(value)
-        self._set_attr('pbc1', the_pbc[0])
-        self._set_attr('pbc2', the_pbc[1])
-        self._set_attr('pbc3', the_pbc[2])
+        self.set_attribute('pbc1', the_pbc[0])
+        self.set_attribute('pbc2', the_pbc[1])
+        self.set_attribute('pbc3', the_pbc[2])
 
     @property
     def labels(self):
@@ -135,8 +135,8 @@ class KpointsData(ArrayData):
         Labels associated with the list of kpoints.
         List of tuples with kpoint index and kpoint name: ``[(0,'G'),(13,'M'),...]``
         """
-        label_numbers = self.get_attr('label_numbers', None)
-        labels = self.get_attr('labels', None)
+        label_numbers = self.get_attribute('label_numbers', None)
+        labels = self.get_attribute('labels', None)
         if labels is None or label_numbers is None:
             return None
         return list(zip(label_numbers, labels))
@@ -168,8 +168,8 @@ class KpointsData(ArrayData):
         if any([i > len(self.get_kpoints()) - 1 for i in label_numbers]):
             raise ValueError("Index of label exceeding the list of kpoints")
 
-        self._set_attr('label_numbers', label_numbers)
-        self._set_attr('labels', labels)    
+        self.set_attribute('label_numbers', label_numbers)
+        self.set_attribute('labels', labels)    
 
     def _change_reference(self, kpoints, to_cartesian=True):
         """
@@ -274,8 +274,8 @@ class KpointsData(ArrayData):
             pass
 
         # store
-        self._set_attr('mesh', the_mesh)
-        self._set_attr('offset', the_offset)
+        self.set_attribute('mesh', the_mesh)
+        self.set_attribute('offset', the_offset)
 
     def get_kpoints_mesh(self, print_list=False):
         """
@@ -289,8 +289,8 @@ class KpointsData(ArrayData):
         :return kpoints: (if print_list = True) an explicit list of kpoints coordinates,
                 similar to what returned by get_kpoints()
         """
-        mesh = self.get_attr('mesh')
-        offset = self.get_attr('offset')
+        mesh = self.get_attribute('mesh')
+        offset = self.get_attribute('offset')
         if not print_list:
             return mesh, offset
         else:
@@ -477,7 +477,7 @@ class KpointsData(ArrayData):
             the_kpoints = self._change_reference(the_kpoints, to_cartesian=False)
 
         # check that we did not saved a mesh already
-        if self.get_attr('mesh', None) is not None:
+        if self.get_attribute('mesh', None) is not None:
             raise ModificationNotAllowed(
                 "KpointsData has already a mesh stored")
 
@@ -529,7 +529,7 @@ class KpointsData(ArrayData):
         import warnings
         from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
         warnings.warn('the bravais_lattice method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
-        return self.get_attr('bravais_lattice')
+        return self.get_attribute('bravais_lattice')
 
     @bravais_lattice.setter
     def bravais_lattice(self, value):
@@ -575,7 +575,7 @@ class KpointsData(ArrayData):
         except KeyError:
             pass
 
-        self._set_attr('bravais_lattice', bravais_lattice)
+        self.set_attribute('bravais_lattice', bravais_lattice)
 
     def _get_or_create_bravais_lattice(self,
                                        epsilon_length=_default_epsilon_length,

@@ -39,7 +39,7 @@ def calcfunction(function):
     [4, 5]
 
     """
-    from aiida.orm.node import CalcFunctionNode
+    from aiida.orm import CalcFunctionNode
     return process_function(node_class=CalcFunctionNode)(function)
 
 
@@ -65,7 +65,7 @@ def workfunction(function):
     [4, 5]
 
     """
-    from aiida.orm.node import WorkFunctionNode
+    from aiida.orm import WorkFunctionNode
     return process_function(node_class=WorkFunctionNode)(function)
 
 
@@ -162,14 +162,14 @@ class FunctionProcess(processes.Process):
 
         :param func: The function to build a process from
         :param node_class: Provide a custom node class to be used, has to be constructable with no arguments. It has to
-            be a sub class of `ProcessNode` as well as mixin the :class:`~aiida.orm.mixins.FunctionCalculationMixin`.
+            be a sub class of `ProcessNode` and the mixin :class:`~aiida.orm.utils.mixins.FunctionCalculationMixin`.
         :type node_class: :class:`aiida.orm.node.process.ProcessNode`
         :return: A Process class that represents the function
         :rtype: :class:`FunctionProcess`
         """
         from aiida import orm
-        from aiida.orm.node import ProcessNode
-        from aiida.orm.mixins import FunctionCalculationMixin
+        from aiida.orm import ProcessNode
+        from aiida.orm.utils.mixins import FunctionCalculationMixin
 
         if not issubclass(node_class, ProcessNode) or not issubclass(node_class, FunctionCalculationMixin):
             raise TypeError('the node_class should be a sub class of `ProcessNode` and `FunctionCalculationMixin`')

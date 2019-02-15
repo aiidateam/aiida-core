@@ -40,7 +40,7 @@ class FolderData(Data):
         # TODO: implement the logic on the folder? Or set a 'locked' flag on folders?
 
         if not self.is_stored:
-            self._get_folder_pathsubfolder.replace_with_folder(folder, move=False, overwrite=overwrite)
+            self.repository._get_folder_pathsubfolder.replace_with_folder(folder, move=False, overwrite=overwrite)
         else:
             raise ModificationNotAllowed("You cannot change the files after the node has been stored")
 
@@ -61,4 +61,4 @@ class FolderData(Data):
 
     def open(self, path, check_existence=False):
         """Docs."""
-        return self._get_folder_pathsubfolder.open(path, check_existence=check_existence)
+        return self.repository._get_folder_pathsubfolder.open(path, check_existence=check_existence)

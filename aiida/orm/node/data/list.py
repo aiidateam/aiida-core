@@ -10,7 +10,9 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from collections import MutableSequence
+
 from aiida.orm.node.data import Data
 
 
@@ -18,12 +20,13 @@ class List(Data, MutableSequence):
     """
     Class to store python lists as AiiDA nodes
     """
+
     _LIST_KEY = 'list'
 
     def __init__(self, **kwargs):
-        if 'list' not in kwargs and 'dbnode' not in kwargs:
-            kwargs['list'] = list()
+        data = kwargs.pop('list', list())
         super(List, self).__init__(**kwargs)
+        self.set_list(data)
 
     def __getitem__(self, item):
         return self.get_list()[item]
@@ -102,15 +105,15 @@ class List(Data, MutableSequence):
 
     def get_list(self):
         try:
-            return self.get_attr(self._LIST_KEY)
+            return self.get_attribute(self._LIST_KEY)
         except AttributeError:
             self.set_list(list())
-            return self.get_attr(self._LIST_KEY)
+            return self.get_attribute(self._LIST_KEY)
 
     def set_list(self, list_):
         if not isinstance(list_, list):
             raise TypeError('Must supply list type')
-        self._set_attr(self._LIST_KEY, list_)
+        self.set_attribute(self._LIST_KEY, list_)
 
     def _using_list_reference(self):
         """

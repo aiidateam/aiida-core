@@ -23,6 +23,7 @@ from . import computer
 from . import convert
 from . import groups
 from . import logs
+from . import nodes
 from . import querybuilder
 from . import users
 
@@ -37,6 +38,7 @@ class SqlaBackend(SqlBackend[base.Base]):
         self._computers = computer.SqlaComputerCollection(self)
         self._groups = groups.SqlaGroupCollection(self)
         self._logs = logs.SqlaLogCollection(self)
+        self._nodes = nodes.SqlaNodeCollection(self)
         self._query_manager = SqlaQueryManager(self)
         self._users = users.SqlaUserCollection(self)
 
@@ -63,6 +65,10 @@ class SqlaBackend(SqlBackend[base.Base]):
     @property
     def logs(self):
         return self._logs
+
+    @property
+    def nodes(self):
+        return self._nodes
 
     @property
     def query_manager(self):

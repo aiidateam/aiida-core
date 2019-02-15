@@ -23,17 +23,22 @@ class RemoteData(Data):
     Remember to pass a computer!
     """
 
+    def __init__(self, remote_path=None, **kwargs):
+        super(RemoteData, self).__init__(**kwargs)
+        if remote_path is not None:
+            self.set_remote_path(remote_path)
+
     def get_dbcomputer(self):
         return self.dbnode.dbmodel
 
     def get_computer_name(self):
-        return self.get_computer().name
+        return self.computer.name
 
     def get_remote_path(self):
-        return self.get_attr('remote_path')
+        return self.get_attribute('remote_path')
 
     def set_remote_path(self, val):
-        self._set_attr('remote_path', val)
+        self.set_attribute('remote_path', val)
 
     def add_path(self, src_abs, dst_filename=None):
         """
@@ -78,7 +83,7 @@ class RemoteData(Data):
             except IOError as e:
                 if e.errno == 2:  # file not existing
                     raise IOError("The required remote file {} on {} does not exist or has been deleted.".format(
-                        full_path, self.get_computer().name
+                        full_path, self.computer.name
                     ))
                 else:
                     raise
@@ -103,7 +108,7 @@ class RemoteData(Data):
                 if e.errno == 2 or e.errno == 20:  # directory not existing or not a directory
                     exc = IOError(
                         "The required remote folder {} on {} does not exist, is not a directory or has been deleted.".format(
-                            full_path, self.get_computer().name
+                            full_path, self.computer.name
                         ))
                     exc.errno = e.errno
                     raise exc
@@ -116,7 +121,7 @@ class RemoteData(Data):
                 if e.errno == 2 or e.errno == 20:  # directory not existing or not a directory
                     exc = IOError(
                         "The required remote folder {} on {} does not exist, is not a directory or has been deleted.".format(
-                            full_path, self.get_computer().name
+                            full_path, self.computer.name
                         ))
                     exc.errno = e.errno
                     raise exc
@@ -141,7 +146,7 @@ class RemoteData(Data):
                 if e.errno == 2 or e.errno == 20:  # directory not existing or not a directory
                     exc = IOError(
                         "The required remote folder {} on {} does not exist, is not a directory or has been deleted.".format(
-                            full_path, self.get_computer().name
+                            full_path, self.computer.name
                         ))
                     exc.errno = e.errno
                     raise exc
@@ -154,7 +159,7 @@ class RemoteData(Data):
                 if e.errno == 2 or e.errno == 20:  # directory not existing or not a directory
                     exc = IOError(
                         "The required remote folder {} on {} does not exist, is not a directory or has been deleted.".format(
-                            full_path, self.get_computer().name
+                            full_path, self.computer.name
                         ))
                     exc.errno = e.errno
                     raise exc
@@ -184,9 +189,9 @@ class RemoteData(Data):
         except AttributeError:
             raise ValidationError("attribute 'remote_path' not set.")
 
-        computer = self.get_computer()
+        computer = self.computer
         if computer is None:
             raise ValidationError("Remote computer not set.")
 
     def _get_authinfo(self):
-        return AuthInfo.objects.get(dbcomputer=self.get_computer(), aiidauser=self.get_user())
+        return AuthInfo.objects.get(dbcomputer=self.computer, aiidauser=self.user)

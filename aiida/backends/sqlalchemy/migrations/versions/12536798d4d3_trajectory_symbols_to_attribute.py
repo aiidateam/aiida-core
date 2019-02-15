@@ -49,7 +49,7 @@ def downgrade():
     session = Session(bind=op.get_bind())
     trajectories = session.query(DbNode).filter_by(type='node.data.array.trajectory.TrajectoryData.').all()
     for t in trajectories:
-        t.del_attr('symbols')
+        t.delete_attribute('symbols')
         flag_modified(t, 'attributes')
         session.add(t)
     session.commit()

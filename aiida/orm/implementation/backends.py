@@ -68,6 +68,15 @@ class Backend(object):
         """
 
     @abc.abstractproperty
+    def nodes(self):
+        """
+        Return the collection of nodes
+
+        :return: the nodes collection
+        :rtype: :class:`aiida.orm.implementation.BackendNodeCollection`
+        """
+
+    @abc.abstractproperty
     def logs(self):
         """
         Return the collection of log entries
@@ -122,37 +131,49 @@ class BackendEntity(object):
 
     def __init__(self, backend):
         self._backend = backend
-
-    @abc.abstractproperty
-    def id(self):  # pylint: disable=invalid-name
-        """
-        Get the id for this entity.  This is unique only amongst entities of this type
-        for a particular backend
-
-        :return: the entity id
-        """
+        self._dbmodel = None
 
     @property
     def backend(self):
-        """
-        Get the backend this entity belongs to
+        """Return the backend this entity belongs to
 
         :return: the backend instance
         """
         return self._backend
 
+    @property
+    def dbmodel(self):
+        return self._dbmodel
+
+    @abc.abstractproperty
+    def id(self):  # pylint: disable=invalid-name
+        """Return the id for this entity.
+
+        This is unique only amongst entities of this type for a particular backend.
+
+        :return: the entity id
+        """
+
+    @property
+    def pk(self):
+        """Return the id for this entity.
+
+        This is unique only amongst entities of this type for a particular backend.
+
+        :return: the entity id
+        """
+        return self.id
+
     @abc.abstractmethod
     def store(self):
-        """
-        Store this object.
+        """Store this entity in the backend.
 
         Whether it is possible to call store more than once is delegated to the object itself
         """
 
-    @abc.abstractmethod
+    @abc.abstractproperty
     def is_stored(self):
-        """
-        Is the object stored?
+        """Return whether the entity is stored.
 
         :return: True if stored, False otherwise
         :rtype: bool
@@ -169,7 +190,7 @@ class BackendCollection(typing.Generic[EntityType]):
         :param backend: the backend this collection belongs to
         :type backend: :class:`aiida.orm.implementation.Backend`
         """
-        assert issubclass(self.ENTITY_CLASS, BackendEntity), "Must set the ENTRY_CLASS class variable to an entity type"
+        assert issubclass(self.ENTITY_CLASS, BackendEntity), 'Must set the ENTRY_CLASS class variable to an entity type'
         self._backend = backend
 
     @property

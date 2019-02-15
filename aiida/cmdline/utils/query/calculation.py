@@ -64,8 +64,8 @@ class CalculationQueryBuilder(object):  # pylint: disable=useless-object-inherit
 
         if node_types is not None:
             filters['or'] = []
-            for node_type in node_types:
-                filters['or'].append({'type': node_type.plugin_type_string})
+            for node_class in node_types:
+                filters['or'].append({'type': node_class.class_node_type})
 
         if process_state and not all_entries:
             filters[process_state_attribute] = {'in': process_state}
@@ -95,7 +95,7 @@ class CalculationQueryBuilder(object):  # pylint: disable=useless-object-inherit
         """
         import datetime
 
-        from aiida.orm.node import ProcessNode
+        from aiida.orm import ProcessNode
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.common import timezone
 

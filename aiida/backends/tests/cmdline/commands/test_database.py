@@ -21,8 +21,8 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_database
 from aiida.common.links import LinkType
 from aiida.orm.node.data import Data
-from aiida.orm.node import Node
-from aiida.orm.node import CalculationNode, WorkflowNode
+from aiida.orm import Node
+from aiida.orm import CalculationNode, WorkflowNode
 
 
 class TestVerdiDatabasaIntegrity(AiidaTestCase):
@@ -41,10 +41,10 @@ class TestVerdiDatabasaIntegrity(AiidaTestCase):
         self.assertClickResultNoException(result)
 
         # Create an invalid link: outgoing `create` from a workflow
-        data = Data().store()
-        workflow = WorkflowNode().store()
+        data = Data().store().backend_entity
+        workflow = WorkflowNode().store().backend_entity
 
-        data._add_dblink_from(workflow, link_type=LinkType.CREATE, label='create')
+        data.add_incoming(workflow, link_type=LinkType.CREATE, link_label='create')
 
         result = self.cli_runner.invoke(cmd_database.detect_invalid_links, [])
         self.assertNotEqual(result.exit_code, 0)
@@ -57,10 +57,10 @@ class TestVerdiDatabasaIntegrity(AiidaTestCase):
         self.assertClickResultNoException(result)
 
         # Create an invalid link: outgoing `return` from a calculation
-        data = Data().store()
-        calculation = CalculationNode().store()
+        data = Data().store().backend_entity
+        calculation = CalculationNode().store().backend_entity
 
-        data._add_dblink_from(calculation, link_type=LinkType.RETURN, label='return')
+        data.add_incoming(calculation, link_type=LinkType.RETURN, link_label='return')
 
         result = self.cli_runner.invoke(cmd_database.detect_invalid_links, [])
         self.assertNotEqual(result.exit_code, 0)
@@ -73,10 +73,10 @@ class TestVerdiDatabasaIntegrity(AiidaTestCase):
         self.assertClickResultNoException(result)
 
         # Create an invalid link: outgoing `call` from a calculation
-        worklow = WorkflowNode().store()
-        calculation = CalculationNode().store()
+        worklow = WorkflowNode().store().backend_entity
+        calculation = CalculationNode().store().backend_entity
 
-        worklow._add_dblink_from(calculation, link_type=LinkType.CALL_WORK, label='call')
+        worklow.add_incoming(calculation, link_type=LinkType.CALL_WORK, link_label='call')
 
         result = self.cli_runner.invoke(cmd_database.detect_invalid_links, [])
         self.assertNotEqual(result.exit_code, 0)
@@ -89,11 +89,11 @@ class TestVerdiDatabasaIntegrity(AiidaTestCase):
         self.assertClickResultNoException(result)
 
         # Create an invalid link: two `create` links
-        data = Data().store()
-        calculation = CalculationNode().store()
+        data = Data().store().backend_entity
+        calculation = CalculationNode().store().backend_entity
 
-        data._add_dblink_from(calculation, link_type=LinkType.CREATE, label='create')
-        data._add_dblink_from(calculation, link_type=LinkType.CREATE, label='create')
+        data.add_incoming(calculation, link_type=LinkType.CREATE, link_label='create')
+        data.add_incoming(calculation, link_type=LinkType.CREATE, link_label='create')
 
         result = self.cli_runner.invoke(cmd_database.detect_invalid_links, [])
         self.assertNotEqual(result.exit_code, 0)
@@ -106,11 +106,11 @@ class TestVerdiDatabasaIntegrity(AiidaTestCase):
         self.assertClickResultNoException(result)
 
         # Create an invalid link: two `call` links
-        workflow = WorkflowNode().store()
-        calculation = CalculationNode().store()
+        workflow = WorkflowNode().store().backend_entity
+        calculation = CalculationNode().store().backend_entity
 
-        calculation._add_dblink_from(workflow, link_type=LinkType.CALL_CALC, label='call')
-        calculation._add_dblink_from(workflow, link_type=LinkType.CALL_CALC, label='call')
+        calculation.add_incoming(workflow, link_type=LinkType.CALL_CALC, link_label='call')
+        calculation.add_incoming(workflow, link_type=LinkType.CALL_CALC, link_label='call')
 
         result = self.cli_runner.invoke(cmd_database.detect_invalid_links, [])
         self.assertNotEqual(result.exit_code, 0)
@@ -127,10 +127,10 @@ class TestVerdiDatabasaIntegrity(AiidaTestCase):
             WRONG_CREATE = 'wrong_create'
 
         # Create an invalid link: invalid link type
-        data = Data().store()
-        calculation = CalculationNode().store()
+        data = Data().store().backend_entity
+        calculation = CalculationNode().store().backend_entity
 
-        data._add_dblink_from(calculation, link_type=WrongLinkType.WRONG_CREATE, label='create')
+        data.add_incoming(calculation, link_type=WrongLinkType.WRONG_CREATE, link_label='create')
 
         result = self.cli_runner.invoke(cmd_database.detect_invalid_links, [])
         self.assertNotEqual(result.exit_code, 0)

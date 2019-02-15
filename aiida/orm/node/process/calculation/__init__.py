@@ -12,7 +12,7 @@ class CalculationNode(ProcessNode):
     """Base class for all nodes representing the execution of a calculation process."""
     # pylint: disable=too-few-public-methods
 
-    _cacheable = True
+    _cachable = True
 
     # Calculation nodes are storable
     _storable = True

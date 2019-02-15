@@ -10,13 +10,12 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import os
 
+import os
 import six
 
 from aiida.orm.node.data import Data
 from aiida.common.exceptions import (ValidationError, MissingPluginError, InputValidationError)
-from aiida.common.links import LinkType
 
 DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/concepts/processes.html#the-process-builder'
 
@@ -38,13 +37,25 @@ class Code(Data):
     for the code to be run).
     """
 
-    HIDDEN_KEY = 'hidden'
+    def __init__(self, remote_computer_exec=None, local_executable=None, input_plugin_name=None, files=None, **kwargs):
+        super(Code, self).__init__(**kwargs)
 
-    def _init_internal_params(self):
-        """
-        This function is called by the init method
-        """
-        self._set_incompatibilities = [('remote_computer_exec', 'local_executable')]
+        if remote_computer_exec and local_executable:
+            raise ValueError('cannot set `remote_computer_exec` and `local_executable` at the same time')
+
+        if remote_computer_exec:
+            self.set_remote_computer_exec(remote_computer_exec)
+
+        if local_executable:
+            self.set_local_executable(local_executable)
+
+        if input_plugin_name:
+            self.set_input_plugin_name(input_plugin_name)
+
+        if files:
+            self.set_files(files)
+
+    HIDDEN_KEY = 'hidden'
 
     def hide(self):
         """
@@ -79,7 +90,7 @@ class Code(Data):
         if isinstance(files, six.string_types):
             files = [files]
         for f in files:
-            self.add_path(f, os.path.split(f)[1])
+            self.repository.add_path(f, os.path.split(f)[1])
 
     def __str__(self):
         local_str = "Local" if self.is_local() else "Remote"
@@ -92,8 +103,8 @@ class Code(Data):
         if self.is_local():
             computer_str = "repository"
         else:
-            if self.get_computer() is not None:
-                computer_str = self.get_computer().name
+            if self.computer is not None:
+                computer_str = self.computer.name
             else:
                 computer_str = "[unknown]"
 
@@ -102,7 +113,7 @@ class Code(Data):
     @property
     def full_label(self):
         """Get full label of this code.
-        
+
         Returns label of the form <code-label>@<computer-name>.
         """
         return '{}@{}'.format(self.label, self.get_computer_name())
@@ -127,12 +138,10 @@ class Code(Data):
 
         self.label = new_label
 
-    def get_desc(self):
-        """
-        Returns a string with infos retrieved from  PwCalculation node's 
-        properties.
-        :param node:
-        :return: retsrt:
+    def get_description(self):
+        """Return a string description of this Code instance.
+
+        :return: string description of this Code instance
         """
         return '{}'.format(self.label)
 
@@ -182,12 +191,13 @@ class Code(Data):
         :raise InputValidationError: if neither a pk nor a label was passed in
         """
         from aiida.common.exceptions import (NotExistent, MultipleObjectsError, InputValidationError)
+        from aiida.orm.utils import load_code
 
         # first check if code pk is provided
         if (pk):
             code_int = int(pk)
             try:
-                return cls.get_subclass_from_pk(code_int)
+                return load_code(pk=code_int)
             except NotExistent:
                 raise ValueError("{} is not valid code pk".format(pk))
             except MultipleObjectsError:
@@ -266,11 +276,11 @@ class Code(Data):
                 raise ValidationError("You have to set which file is the local executable "
                                       "using the set_exec_filename() method")
                 # c[1] is True if the element is a file
-            if self.get_local_executable() not in self.get_folder_list():
+            if self.get_local_executable() not in self.repository.get_folder_list():
                 raise ValidationError("The local executable '{}' is not in the list of "
                                       "files of this code".format(self.get_local_executable()))
         else:
-            if self.get_folder_list():
+            if self.repository.get_folder_list():
                 raise ValidationError("The code is remote but it has files inside")
             if not self.get_remote_computer():
                 raise ValidationError("You did not specify a remote computer")
@@ -282,14 +292,14 @@ class Code(Data):
         Pass a string of code that will be put in the scheduler script before the
         execution of the code.
         """
-        self._set_attr('prepend_text', six.text_type(code))
+        self.set_attribute('prepend_text', six.text_type(code))
 
     def get_prepend_text(self):
         """
         Return the code that will be put in the scheduler script before the
         execution, or an empty string if no pre-exec code was defined.
         """
-        return self.get_attr('prepend_text', u"")
+        return self.get_attribute('prepend_text', u"")
 
     def set_input_plugin_name(self, input_plugin):
         """
@@ -297,29 +307,29 @@ class Code(Data):
         generation of a new calculation.
         """
         if input_plugin is None:
-            self._set_attr('input_plugin', None)
+            self.set_attribute('input_plugin', None)
         else:
-            self._set_attr('input_plugin', six.text_type(input_plugin))
+            self.set_attribute('input_plugin', six.text_type(input_plugin))
 
     def get_input_plugin_name(self):
         """
         Return the name of the default input plugin (or None if no input plugin
         was set.
         """
-        return self.get_attr('input_plugin', None)
+        return self.get_attribute('input_plugin', None)
 
     def set_append_text(self, code):
         """
         Pass a string of code that will be put in the scheduler script after the
         execution of the code.
         """
-        self._set_attr('append_text', six.text_type(code))
+        self.set_attribute('append_text', six.text_type(code))
 
     def get_append_text(self):
         """
         Return the postexec_code, or an empty string if no post-exec code was defined.
         """
-        return self.get_attr('append_text', u"")
+        return self.get_attribute('append_text', u"")
 
     def set_local_executable(self, exec_name):
         """
@@ -327,25 +337,20 @@ class Code(Data):
         Implicitly set the code as local.
         """
         self._set_local()
-        self._set_attr('local_executable', exec_name)
+        self.set_attribute('local_executable', exec_name)
 
     def get_local_executable(self):
-        return self.get_attr('local_executable', u"")
+        return self.get_attribute('local_executable', u"")
 
     def set_remote_computer_exec(self, remote_computer_exec):
         """
         Set the code as remote, and pass the computer on which it resides
         and the absolute path on that computer.
 
-        Args:
-            remote_computer_exec: a tuple (computer, remote_exec_path), where
-              computer is a aiida.orm.Computer or an
-              aiida.backends.djsite.db.models.DbComputer object, and
-              remote_exec_path is the absolute path of the main executable on
-              remote computer.
+        :param remote_computer_exec: a tuple (computer, remote_exec_path), where computer is a aiida.orm.Computer and
+            remote_exec_path is the absolute path of the main executable on remote computer.
         """
         from aiida import orm
-        from aiida.orm.implementation.computers import BackendComputer
         from aiida.common.lang import type_check
 
         if (not isinstance(remote_computer_exec, (list, tuple)) or len(remote_computer_exec) != 2):
@@ -358,24 +363,22 @@ class Code(Data):
         if not os.path.isabs(remote_exec_path):
             raise ValueError("exec_path must be an absolute path (on the remote machine)")
 
-        if isinstance(computer, orm.Computer):
-            computer = computer.backend_entity
-        type_check(computer, BackendComputer)
+        type_check(computer, orm.Computer)
 
         self._set_remote()
-        self.set_computer(computer)
-        self._set_attr('remote_exec_path', remote_exec_path)
+        self.computer = computer
+        self.set_attribute('remote_exec_path', remote_exec_path)
 
     def get_remote_exec_path(self):
         if self.is_local():
             raise ValueError("The code is local")
-        return self.get_attr('remote_exec_path', "")
+        return self.get_attribute('remote_exec_path', "")
 
     def get_remote_computer(self):
         if self.is_local():
             raise ValueError("The code is local")
 
-        return self.get_computer()
+        return self.computer
 
     def _set_local(self):
         """
@@ -385,10 +388,10 @@ class Code(Data):
 
         It also deletes the flags related to the local case (if any)
         """
-        self._set_attr('is_local', True)
-        self.dbnode.dbcomputer = None
+        self.set_attribute('is_local', True)
+        self.computer = None
         try:
-            self._del_attr('remote_exec_path')
+            self.delete_attribute('remote_exec_path')
         except AttributeError:
             pass
 
@@ -400,9 +403,9 @@ class Code(Data):
 
         It also deletes the flags related to the local case (if any)
         """
-        self._set_attr('is_local', False)
+        self.set_attribute('is_local', False)
         try:
-            self._del_attr('local_executable')
+            self.delete_attribute('local_executable')
         except AttributeError:
             pass
 
@@ -411,7 +414,7 @@ class Code(Data):
         Return True if the code is 'local', False if it is 'remote' (see also documentation
         of the set_local and set_remote functions).
         """
-        return self.get_attr('is_local', None)
+        return self.get_attribute('is_local', None)
 
     def can_run_on(self, computer):
         """
@@ -498,8 +501,8 @@ class Code(Data):
             result.append(['Type', 'local'])
             result.append(['Exec name', self.get_execname()])
             result.append(['List of files/folders:', ''])
-            for fname in self._get_folder_pathsubfolder.get_content_list():
-                if self._get_folder_pathsubfolder.isdir(fname):
+            for fname in self.repository._get_folder_pathsubfolder.get_content_list():
+                if self.repository._get_folder_pathsubfolder.isdir(fname):
                     result.append(['directory', fname])
                 else:
                     result.append(['file', fname])
@@ -535,18 +538,3 @@ class Code(Data):
         except ValidationError as exc:
             raise ValidationError("Unable to store the computer: {}.".format(exc))
         return code
-
-
-def delete_code(code):
-    """
-    Delete a code from the DB.
-    Check before that there are no output nodes.
-
-    NOTE! Not thread safe... Do not use with many users accessing the DB
-    at the same time.
-
-    Implemented as a function on purpose, otherwise complicated logic would be
-    needed to set the internal state of the object after calling
-    computer.delete().
-    """
-    raise NotImplementedError

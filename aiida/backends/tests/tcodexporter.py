@@ -128,7 +128,7 @@ class TestTcodDbExporter(AiidaTestCase):
     def test_cif_structure_roundtrip(self):
         from aiida.tools.dbexporters.tcod import export_cif, export_values
         from aiida.orm import Code
-        from aiida.orm.node import CalcJobNode
+        from aiida.orm import CalcJobNode
         from aiida.orm.node.data.cif import CifData
         from aiida.orm.node.data.parameter import ParameterData
         from aiida.orm.node.data.upf import UpfData
@@ -164,7 +164,7 @@ class TestTcodDbExporter(AiidaTestCase):
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write("#/bin/bash\n\necho test run\n")
             tmpf.flush()
-            code.add_path(tmpf.name, 'test.sh')
+            code.repository.add_path(tmpf.name, 'test.sh')
 
         code.store()
 
@@ -193,7 +193,7 @@ class TestTcodDbExporter(AiidaTestCase):
             calc._store_raw_input_folder(fhandle.abspath)
 
         fd = FolderData()
-        subfolder = fd._get_folder_pathsubfolder
+        subfolder = fd.repository._get_folder_pathsubfolder
         with io.open(subfolder.get_abs_path('_scheduler-stdout.txt'), 'w', encoding='utf8') as fhandle:
             fhandle.write(u"standard output")
 

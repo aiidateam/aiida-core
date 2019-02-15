@@ -66,7 +66,7 @@ def task_upload_job(node, transport_queue, calc_info, script_filename, cancellab
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
     max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
 
-    authinfo = node.get_computer().get_authinfo(node.get_user())
+    authinfo = node.computer.get_authinfo(node.user)
 
     @coroutine
     def do_upload():
@@ -117,7 +117,7 @@ def task_submit_job(node, transport_queue, calc_info, script_filename, cancellab
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
     max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
 
-    authinfo = node.get_computer().get_authinfo(node.get_user())
+    authinfo = node.computer.get_authinfo(node.user)
 
     @coroutine
     def do_submit():
@@ -166,7 +166,7 @@ def task_update_job(node, job_manager, cancellable):
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
     max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
 
-    authinfo = node.get_computer().get_authinfo(node.get_user())
+    authinfo = node.computer.get_authinfo(node.user)
     job_id = node.get_job_id()
 
     @coroutine
@@ -226,7 +226,7 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
     max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
 
-    authinfo = node.get_computer().get_authinfo(node.get_user())
+    authinfo = node.computer.get_authinfo(node.user)
 
     @coroutine
     def do_retrieve():
@@ -274,7 +274,7 @@ def task_kill_job(node, transport_queue, cancellable):
         logger.warning('CalcJob<{}> killed, it was in the {} state'.format(node.pk, node.get_state()))
         raise Return(True)
 
-    authinfo = node.get_computer().get_authinfo(node.get_user())
+    authinfo = node.computer.get_authinfo(node.user)
 
     @coroutine
     def do_kill():

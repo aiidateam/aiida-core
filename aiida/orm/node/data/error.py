@@ -10,8 +10,8 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from aiida.orm import Data
 
+from aiida.orm import Data
 
 
 class Error(Data):

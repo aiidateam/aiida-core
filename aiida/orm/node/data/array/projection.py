@@ -79,7 +79,7 @@ class ProjectionData(OrbitalData, ArrayData):
                                       "set_reference_bandsdata was not "
                                       "associated to any bandsdata")
                     
-        self._set_attr('reference_bandsdata_uuid', uuid)
+        self.set_attribute('reference_bandsdata_uuid', uuid)
 
     def get_reference_bandsdata(self):
         """
@@ -91,7 +91,7 @@ class ProjectionData(OrbitalData, ArrayData):
         :raise NotExistent: if the bandsdata uuid did not retrieve bandsdata
         """
         try:
-            uuid = self.get_attr('reference_bandsdata_uuid')
+            uuid = self.get_attribute('reference_bandsdata_uuid')
         except AttributeError:
             raise AttributeError("BandsData has not been set for this instance")
         try:
@@ -252,7 +252,7 @@ class ProjectionData(OrbitalData, ArrayData):
                 raise ValueError("The orbital with dict {} "
                                  "failed.".format(orbital_dict))
             list_of_orbital_dicts.append(test_orbital.get_orbital_dict())
-        self._set_attr('orbital_dicts', list_of_orbital_dicts)
+        self.set_attribute('orbital_dicts', list_of_orbital_dicts)
 
         # verifies and sets the projections
         if list_of_projections:
@@ -290,7 +290,7 @@ class ProjectionData(OrbitalData, ArrayData):
 
             if not all([isinstance(_,six.string_types) for _ in tags]):
                 raise ValidationError("Tags must set a list of strings")
-            self._set_attr('tags', tags)
+            self.set_attribute('tags', tags)
 
     def set_orbitals(self, **kwargs):
         """

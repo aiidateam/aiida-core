@@ -25,7 +25,6 @@ from aiida.backends.sqlalchemy.models.group import DbGroup
 from aiida.backends.sqlalchemy.models.log import DbLog
 from aiida.backends.sqlalchemy.models.node import DbNode
 from aiida.backends.sqlalchemy.models.user import DbUser
-from aiida.orm.utils.node import load_node_class
 
 __all__ = ('get_backend_entity',)
 
@@ -75,13 +74,13 @@ def _(dbmodel, backend):
 
 
 @get_backend_entity.register(DbNode)
-def _(dbmodel, _backend):
+def _(dbmodel, backend):
     """
     get_backend_entity for SQLA DbNode. It will return an ORM instance since
     there is not Node backend entity yet.
     """
-    node_class = load_node_class(dbmodel.type)
-    return node_class(dbnode=dbmodel)
+    from . import nodes
+    return nodes.SqlaNode.from_dbmodel(dbmodel, backend)
 
 
 @get_backend_entity.register(DbAuthInfo)

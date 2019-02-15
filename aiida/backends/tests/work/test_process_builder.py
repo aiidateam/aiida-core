@@ -116,19 +116,15 @@ class TestProcessBuilder(AiidaTestCase):
         """
         Test the get_builder_restart method of CalcJobNode class
         """
-        from aiida.orm.node import CalcJobNode
-
-        original = CalcJobNode()
-        original.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
-        original.set_option('max_wallclock_seconds', 1800)
-        original.set_computer(self.computer)
-        original.label = 'original'
-        original.store()
+        from aiida.orm import CalcJobNode
 
         # Have to set the process type manually, because usually this will be done automatically when the node is
         # instantiated by the process itself. Since we hack it here and instantiate the node directly ourselves we
-        # have to set the process type for the restart builder to be able to recreatem the process class.
-        original.dbnode.process_type = 'aiida.calculations:templatereplacer'
+        # have to set the process type for the restart builder to be able to recreate the process class.
+        original = CalcJobNode(computer=self.computer, process_type='aiida.calculations:templatereplacer', label='original')
+        original.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+        original.set_option('max_wallclock_seconds', 1800)
+        original.store()
 
         builder = original.get_builder_restart()
 

@@ -38,13 +38,6 @@ User
 Node
 ++++
 
-.. automodule:: aiida.orm.implementation.general.node
-   :members:
-   :noindex:
-   :private-members:
-   :special-members:
-
-
 .. automodule:: aiida.orm.node
    :members:
    :noindex:
@@ -63,11 +56,11 @@ Code
 
 Mixins
 ++++++
-.. automodule:: aiida.orm.mixins
+.. automodule:: aiida.orm.utils.mixins
    :members:
    :noindex:
 
-.. autoclass:: aiida.orm.mixins.Sealable
+.. autoclass:: aiida.orm.utils.mixins.Sealable
    :noindex:
 
 ORM documentation: Data

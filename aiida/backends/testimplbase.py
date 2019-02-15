@@ -108,4 +108,4 @@ class AiidaTestImplementation(object):
         try:
             return self.user_email
         except AttributeError:
-            raise InternalError("The AiiDA Test implementation should define a self.computer in the setUpClass_method")
+            raise InternalError("The AiiDA Test implementation should define a self.user_email in the setUpClass_method")

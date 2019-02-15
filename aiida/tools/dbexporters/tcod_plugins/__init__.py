@@ -64,7 +64,7 @@ class BaseTcodtranslator(object):
         try:
             code = calc.inp.code
             if not code.is_local():
-                return code.get_attr('remote_exec_path')
+                return code.get_attribute('remote_exec_path')
         except Exception:
             return None
         return None

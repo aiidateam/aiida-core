@@ -20,11 +20,11 @@ from six.moves import range
 from aiida.common import exceptions
 from aiida.manage.caching import enable_caching
 from aiida.daemon.client import get_daemon_client
-from aiida.orm import Code, CalculationFactory, DataFactory
+from aiida.orm import Code, CalculationFactory, DataFactory, load_node
 from aiida.orm.node.data.int import Int
 from aiida.orm.node.data.str import Str
 from aiida.orm.node.data.list import List
-from aiida.orm.node import CalcJobNode
+from aiida.orm import CalcJobNode
 from aiida.work.launch import run_get_node, submit
 from aiida.work.persistence import ObjectLoader
 from workchains import (
@@ -55,7 +55,6 @@ def print_daemon_log():
 
 
 def jobs_have_finished(pks):
-    global load_node  # instantiated by the verdi run command
     finished_list = [load_node(pk).is_terminated for pk in pks]
     node_list = [load_node(pk) for pk in pks]
     num_finished = len([_ for _ in finished_list if _])
@@ -79,7 +78,6 @@ def print_report(pk):
 
 
 def validate_calculations(expected_results):
-    global load_node  # instantiated by the verdi run command
     valid = True
     actual_dict = {}
     for pk, expected_dict in expected_results.items():
@@ -112,7 +110,6 @@ def validate_calculations(expected_results):
 
 
 def validate_workchains(expected_results):
-    global load_node  # instantiated by the verdi run command
     valid = True
     for pk, expected_value in expected_results.items():
         this_valid = True
@@ -148,7 +145,6 @@ def validate_cached(cached_calcs):
     """
     Check that the calculations with created with caching are indeed cached.
     """
-    global load_node  # instantiated by the verdi run command
     valid = True
     for calc in cached_calcs:
 
@@ -158,18 +154,18 @@ def validate_cached(cached_calcs):
             print_report(calc.pk)
             valid = False
 
-        if '_aiida_cached_from' not in calc.extras() or calc.get_hash() != calc.get_extra('_aiida_hash'):
+        if '_aiida_cached_from' not in calc.extras or calc.get_hash() != calc.get_extra('_aiida_hash'):
             print('Cached calculation<{}> has invalid hash'.format(calc.pk))
             print_report(calc.pk)
             valid = False
 
         if isinstance(calc, CalcJobNode):
-            if 'raw_input' not in calc.folder.get_content_list():
+            if 'raw_input' not in calc.repository._get_folder_pathsubfolder.get_content_list():
                 print("Cached calculation <{}> does not have a 'raw_input' folder".format(calc.pk))
                 print_report(calc.pk)
                 valid = False
             original_calc = load_node(calc.get_extra('_aiida_cached_from'))
-            if 'raw_input' not in original_calc.folder.get_content_list():
+            if 'raw_input' not in original_calc.repository._get_folder_pathsubfolder.get_content_list():
                 print("Original calculation <{}> does not have a 'raw_input' folder after being cached from."
                       .format(original_calc.pk))
                 valid = False
@@ -183,7 +179,7 @@ def launch_calculation(code, counter, inputval):
     """
     process, inputs, expected_result = create_calculation_process(code=code, inputval=inputval)
     calc = submit(process, **inputs)
-    print("[{}] launched calculation {}, pk={}".format(counter, calc.uuid, calc.dbnode.pk))
+    print("[{}] launched calculation {}, pk={}".format(counter, calc.uuid, calc.pk))
     return calc, expected_result
 
 

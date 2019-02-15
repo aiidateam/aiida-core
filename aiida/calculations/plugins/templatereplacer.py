@@ -141,7 +141,7 @@ class TemplatereplacerCalculation(CalcJob):
             if isinstance(fileobj, SinglefileData):
                 local_copy_list.append((fileobj.get_file_abs_path(), dest_rel_path))
             elif isinstance(fileobj, RemoteData):  # can be a folder
-                remote_copy_list.append((fileobj.get_computer().uuid, fileobj.get_remote_path(), dest_rel_path))
+                remote_copy_list.append((fileobj.computer.uuid, fileobj.get_remote_path(), dest_rel_path))
             else:
                 raise exceptions.InputValidationError(
                     "If you ask to copy a file link {}, "

@@ -22,7 +22,7 @@ from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.common.timezone import now
 from aiida.orm import Data
 from aiida.orm import Log
-from aiida.orm.node import CalculationNode
+from aiida.orm import CalculationNode
 
 
 class TestBackendLog(AiidaTestCase):

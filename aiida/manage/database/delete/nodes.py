@@ -49,8 +49,8 @@ def delete_nodes(pks,
     # pylint: disable=too-many-arguments,too-many-branches,too-many-locals,too-many-statements
     from aiida.common import exceptions
     from aiida.common.links import LinkType
-    from aiida.orm.node import Node
-    from aiida.orm.node import ProcessNode
+    from aiida.orm import Node
+    from aiida.orm import ProcessNode
     from aiida.orm.node.data import Data
     from aiida.orm.querybuilder import QueryBuilder
     from aiida.orm import load_node
@@ -191,7 +191,7 @@ def delete_nodes(pks,
 
     # Recover the list of folders to delete before actually deleting the nodes. I will delete the folders only later,
     # so that if there is a problem during the deletion of the nodes in the DB, I don't delete the folders
-    folders = [load_node(pk).folder for pk in pks_set_to_delete]
+    folders = [load_node(pk).repository.folder for pk in pks_set_to_delete]
 
     delete_nodes_and_connections(pks_set_to_delete)
 

@@ -15,7 +15,7 @@ from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 from aiida.orm import Code
-from aiida.orm.node import CalculationNode, CalcFunctionNode
+from aiida.orm import CalculationNode, CalcFunctionNode
 
 
 class TestCommonUtilities(AiidaTestCase):
@@ -36,7 +36,7 @@ class TestCommonUtilities(AiidaTestCase):
         code.store()
 
         node = CalculationNode()
-        node.set_computer(self.computer)
+        node.computer = self.computer
         node.add_incoming(code, link_type=LinkType.INPUT_CALC, link_label='code')
         node.store()
 

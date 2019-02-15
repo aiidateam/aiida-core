@@ -23,7 +23,7 @@ from aiida.orm.node.data.int import Int
 from aiida.orm.node.data.str import Str
 from aiida.orm.node.data.frozendict import FrozenDict
 from aiida.orm.node.data.parameter import ParameterData
-from aiida.orm.node import WorkflowNode
+from aiida.orm import WorkflowNode
 from aiida.work import test_utils, Process
 
 

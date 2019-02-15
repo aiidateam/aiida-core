@@ -13,10 +13,10 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from enum import Enum
-from aiida.common import exceptions
-from aiida.common.exceptions import ValidationError
-from aiida.common.lang import type_check
+
 from aiida.cmdline.utils import echo
+from aiida.common import exceptions
+from aiida.common.lang import type_check
 from aiida.manage import get_manager
 
 from . import convert
@@ -74,8 +74,8 @@ class Group(entities.Entity):
                 if isinstance(kwargs['type_string'], GroupTypeString):
                     filters['type_string'] = kwargs['type_string'].value
                 else:
-                    raise ValidationError("type_string must be {}, you provided an object of type "
-                                          "{}".format(GroupTypeString, type(kwargs['type_string'])))
+                    raise exceptions.ValidationError("type_string must be {}, you provided an object of type "
+                                                     "{}".format(GroupTypeString, type(kwargs['type_string'])))
 
             res = self.find(filters=filters)
 
@@ -134,8 +134,8 @@ class Group(entities.Entity):
 
         # Check that chosen type_string is allowed
         if not isinstance(type_string, GroupTypeString):
-            raise ValidationError("type_string must be {}, you provided an object of type "
-                                  "{}".format(GroupTypeString, system_type(type_string)))
+            raise exceptions.ValidationError("type_string must be {}, you provided an object of type "
+                                             "{}".format(GroupTypeString, system_type(type_string)))
 
         backend = backend or get_manager().get_backend()
         user = user or users.User.objects(backend).get_default()
@@ -251,19 +251,6 @@ class Group(entities.Entity):
         """
         return self._backend_entity.uuid
 
-    def add_nodes(self, nodes):
-        """
-        Add a node or a set of nodes to the group.
-
-        :note: The group must be already stored.
-
-        :note: each of the nodes passed to add_nodes must be already stored.
-
-        :param nodes: a Node or DbNode object to add to the group, or
-          a list of Nodes or DbNodes to add.
-        """
-        self._backend_entity.add_nodes(nodes)
-
     @property
     def nodes(self):
         """
@@ -273,18 +260,60 @@ class Group(entities.Entity):
         """
         return convert.ConvertIterator(self._backend_entity.nodes)
 
+    @property
+    def is_empty(self):
+        """Return whether the group is empty, i.e. it does not contain any nodes.
+
+        :return: boolean, True if it contains no nodes, False otherwise
+        """
+        try:
+            self.nodes[0]
+        except IndexError:
+            return True
+        else:
+            return False
+
+    def add_nodes(self, nodes):
+        """Add a node or a set of nodes to the group.
+
+        :note: all the nodes *and* the group itself have to be stored.
+
+        :param nodes: a single `Node` or a list of `Nodes`
+        """
+        from .node import Node
+
+        if not self.is_stored:
+            raise exceptions.ModificationNotAllowed('cannot add nodes to an unstored group')
+
+        # Cannot use `collections.Iterable` here, because that would also match iterable `Node` sub classes like `List`
+        if not isinstance(nodes, (list, tuple)):
+            nodes = [nodes]
+
+        for node in nodes:
+            type_check(node, Node)
+
+        self._backend_entity.add_nodes([node.backend_entity for node in nodes])
+
     def remove_nodes(self, nodes):
+        """Remove a node or a set of nodes to the group.
+
+        :note: all the nodes *and* the group itself have to be stored.
+
+        :param nodes: a single `Node` or a list of `Nodes`
         """
-        Remove a node or a set of nodes to the group.
+        from .node import Node
 
-        :note: The group must be already stored.
+        if not self.is_stored:
+            raise exceptions.ModificationNotAllowed('cannot add nodes to an unstored group')
 
-        :note: each of the nodes passed to add_nodes must be already stored.
+        # Cannot use `collections.Iterable` here, because that would also match iterable `Node` sub classes like `List`
+        if not isinstance(nodes, (list, tuple)):
+            nodes = [nodes]
 
-        :param nodes: a Node or DbNode object to add to the group, or
-          a list of Nodes or DbNodes to add.
-        """
-        self._backend_entity.remove_nodes(nodes)
+        for node in nodes:
+            type_check(node, Node)
+
+        self._backend_entity.remove_nodes([node.backend_entity for node in nodes])
 
     @classmethod
     def get(cls, **kwargs):
@@ -315,8 +344,8 @@ class Group(entities.Entity):
             if isinstance(kwargs['type_string'], GroupTypeString):
                 filters['type_string'] = kwargs.pop('type_string').value
             else:
-                raise ValidationError("type_string must be {}, you provided an object of type "
-                                      "{}".format(GroupTypeString, type(kwargs['type_string'])))
+                raise exceptions.ValidationError("type_string must be {}, you provided an object of type "
+                                                 "{}".format(GroupTypeString, type(kwargs['type_string'])))
 
         query = QueryBuilder()
         for key, val in kwargs.items():

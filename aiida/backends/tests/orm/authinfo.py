@@ -22,6 +22,9 @@ class TestAuthinfo(AiidaTestCase):
 
     def setUp(self):
         super(TestAuthinfo, self).setUp()
+        for auth_info in authinfos.AuthInfo.objects.all():
+            authinfos.AuthInfo.objects.delete(auth_info.pk)
+
         self.auth_info = self.computer.configure()  # pylint: disable=no-member
 
     def test_set_auth_params(self):

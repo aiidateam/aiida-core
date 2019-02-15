@@ -16,8 +16,8 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
 from aiida.common.links import LinkType
 from aiida.orm.node.data.int import Int
-from aiida.orm.node import CalculationNode
-from aiida.orm.mixins import Sealable
+from aiida.orm import CalculationNode
+from aiida.orm.utils.mixins import Sealable
 
 
 class TestSealable(AiidaTestCase):
@@ -31,7 +31,7 @@ class TestSealable(AiidaTestCase):
 
         for attr in CalculationNode._updatable_attributes:  # pylint: disable=protected-access,not-an-iterable
             if attr != Sealable.SEALED_KEY:
-                node._set_attr(attr, 'a')  # pylint: disable=protected-access
+                node.set_attribute(attr, 'a')
 
     def test_validate_incoming_sealed(self):
         """Verify that trying to add a link to a sealed node will raise."""

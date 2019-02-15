@@ -358,7 +358,7 @@ def _get_calculation(node):
     """
     from aiida.common.exceptions import MultipleObjectsError
     from aiida.common.links import LinkType
-    from aiida.orm.node import ProcessNode
+    from aiida.orm import ProcessNode
 
     parent_calculations = node.get_incoming(node_class=ProcessNode, link_type=LinkType.CREATE).all()
 
@@ -450,7 +450,7 @@ def _collect_calculation_data(calc):
     """
     from aiida.common.links import LinkType
     from aiida.orm.node.data import Data
-    from aiida.orm.node import CalculationNode, CalcJobNode, CalcFunctionNode, WorkflowNode
+    from aiida.orm import CalculationNode, CalcJobNode, CalcFunctionNode, WorkflowNode
     import hashlib
     import os
     calcs_now = []
@@ -467,7 +467,7 @@ def _collect_calculation_data(calc):
     }
 
     if isinstance(calc, CalcJobNode):
-        retrieved_abspath = calc.get_retrieved_node().get_abs_path()
+        retrieved_abspath = calc.get_retrieved_node().repository.folder.abspath
         files_in  = _collect_files(calc._raw_input_folder.abspath)
         files_out = _collect_files(os.path.join(retrieved_abspath, 'path'))
         this_calc['env'] = calc.get_option('environment_variables')

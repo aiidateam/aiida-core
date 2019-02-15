@@ -24,7 +24,7 @@ class TestCode(AiidaTestCase):
     def test_code_local(self):
         import tempfile
 
-        from aiida.orm.code import Code
+        from aiida.orm import Code
         from aiida.common.exceptions import ValidationError
 
         code = Code(local_executable='test.sh')
@@ -35,7 +35,7 @@ class TestCode(AiidaTestCase):
         with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
             fhandle.write("#/bin/bash\n\necho test run\n")
             fhandle.flush()
-            code.add_path(fhandle.name, 'test.sh')
+            code.repository.add_path(fhandle.name, 'test.sh')
 
         code.store()
         self.assertTrue(code.can_run_on(self.computer))
@@ -45,7 +45,7 @@ class TestCode(AiidaTestCase):
     def test_remote(self):
         import tempfile
 
-        from aiida.orm.code import Code
+        from aiida.orm import Code
         from aiida.common.exceptions import ValidationError
 
         with self.assertRaises(ValueError):
@@ -68,14 +68,14 @@ class TestCode(AiidaTestCase):
         with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
             fhandle.write("#/bin/bash\n\necho test run\n")
             fhandle.flush()
-            code.add_path(fhandle.name, 'test.sh')
+            code.repository.add_path(fhandle.name, 'test.sh')
 
         with self.assertRaises(ValidationError):
             # There are files inside
             code.store()
 
         # If there are no files, I can store
-        code.remove_path('test.sh')
+        code.repository.remove_path('test.sh')
         code.store()
 
         self.assertEquals(code.get_remote_computer().pk, self.computer.pk)

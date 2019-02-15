@@ -31,7 +31,7 @@ class OrbitalData(Data):
         Remove all orbitals that were added to the class
         Cannot work if OrbitalData has been already stored
         """
-        self._set_attr('orbital_dicts', [])
+        self.set_attribute('orbital_dicts', [])
 
     def _get_orbital_class_from_orbital_dict(self, orbital_dict):
         """
@@ -81,7 +81,7 @@ class OrbitalData(Data):
         """
 
         import copy
-        orbital_dicts = copy.deepcopy(self.get_attr('orbital_dicts', None))
+        orbital_dicts = copy.deepcopy(self.get_attribute('orbital_dicts', None))
         if orbital_dicts is None:
             raise AttributeError('Orbitals must be set before')
 
@@ -103,7 +103,7 @@ class OrbitalData(Data):
                 raise ValueError("Could not reconstruct orbital from data")
             list_of_outputs.append(orbital)
         if with_tags:
-            tags = copy.deepcopy(self.get_attr('tags', None))
+            tags = copy.deepcopy(self.get_attribute('tags', None))
             list_of_outputs.append(tags)
         return list_of_outputs
 
@@ -149,9 +149,9 @@ class OrbitalData(Data):
             orbital_dict = test_orbital.get_orbital_dict()
             list_of_tags_to_be_stored.append(this_tag)
             list_of_orbitaldicts_to_be_stored.append(orbital_dict)
-        self._set_attr('orbital_dicts', list_of_orbitaldicts_to_be_stored)
+        self.set_attribute('orbital_dicts', list_of_orbitaldicts_to_be_stored)
         if tag is not None:
-            self._set_attr('tags', list_of_tags_to_be_stored)
+            self.set_attribute('tags', list_of_tags_to_be_stored)
 
 ##########################################################################
 #     Here are some ideas for potential future convenience methods

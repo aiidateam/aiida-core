@@ -19,7 +19,7 @@ from aiida.backends.testbase import AiidaTestCase
 import aiida.backends.settings as settings
 from aiida.common.links import LinkType
 from aiida.orm import Node, Data
-from aiida.orm.node import CalculationNode
+from aiida.orm import CalculationNode
 
 class TestQueryBuilder(AiidaTestCase):
 
@@ -92,33 +92,33 @@ class TestQueryBuilder(AiidaTestCase):
         """
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import Node, Data
-        from aiida.orm.node import CalculationNode
+        from aiida.orm import CalculationNode
         from datetime import datetime
         from aiida.common.links import LinkType
 
         n1 = Data()
         n1.label = 'node1'
-        n1._set_attr('foo', ['hello', 'goodbye'])
+        n1.set_attribute('foo', ['hello', 'goodbye'])
         n1.store()
 
         n2 = CalculationNode()
         n2.label = 'node2'
-        n2._set_attr('foo', 1)
+        n2.set_attribute('foo', 1)
         n2.store()
 
         n3 = Data()
         n3.label = 'node3'
-        n3._set_attr('foo', 1.0000)  # Stored as fval
+        n3.set_attribute('foo', 1.0000)  # Stored as fval
         n3.store()
 
         n4 = CalculationNode()
         n4.label = 'node4'
-        n4._set_attr('foo', 'bar')
+        n4.set_attribute('foo', 'bar')
         n4.store()
 
         n5 = Data()
         n5.label = 'node5'
-        n5._set_attr('foo', None)
+        n5.set_attribute('foo', None)
         n5.store()
 
         n2.add_incoming(n1, link_type=LinkType.INPUT_CALC, link_label='link1')
@@ -163,13 +163,13 @@ class TestQueryBuilder(AiidaTestCase):
     def test_simple_query_2(self):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import Node, Data
-        from aiida.orm.node import CalculationNode
+        from aiida.orm import CalculationNode
         from datetime import datetime
         from aiida.common.exceptions import MultipleObjectsError, NotExistent
         n0 = Data()
         n0.label = 'hello'
         n0.description = ''
-        n0._set_attr('foo', 'bar')
+        n0.set_attribute('foo', 'bar')
 
         n1 = CalculationNode()
         n1.label = 'foo'
@@ -265,14 +265,14 @@ class TestQueryBuilder(AiidaTestCase):
 
         nodes = [Data() for _ in range(8)]
 
-        nodes[0]._set_attr('fa', 1)
-        nodes[1]._set_attr('fa', 1.0)
-        nodes[2]._set_attr('fa', 1.01)
-        nodes[3]._set_attr('fa', 1.02)
-        nodes[4]._set_attr('fa', 1.03)
-        nodes[5]._set_attr('fa', 1.04)
-        nodes[6]._set_attr('fa', 1.05)
-        nodes[7]._set_attr('fa', 1.06)
+        nodes[0].set_attribute('fa', 1)
+        nodes[1].set_attribute('fa', 1.0)
+        nodes[2].set_attribute('fa', 1.01)
+        nodes[3].set_attribute('fa', 1.02)
+        nodes[4].set_attribute('fa', 1.03)
+        nodes[5].set_attribute('fa', 1.04)
+        nodes[6].set_attribute('fa', 1.05)
+        nodes[7].set_attribute('fa', 1.06)
 
         [n.store() for n in nodes]
 
@@ -289,11 +289,11 @@ class TestQueryBuilder(AiidaTestCase):
         from aiida.orm import Node, Data
         from aiida.orm.querybuilder import QueryBuilder
         s = StructureData()
-        s._set_attr('cat', 'miau')
+        s.set_attribute('cat', 'miau')
         s.store()
 
         d = Data()
-        d._set_attr('cat', 'miau')
+        d.set_attribute('cat', 'miau')
         d.store()
 
         p = ParameterData(dict=dict(cat='miau'))
@@ -366,7 +366,7 @@ class TestQueryBuilder(AiidaTestCase):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.node.data.structure import StructureData
         from aiida.common.exceptions import InputValidationError
-        from aiida.orm.node import ProcessNode
+        from aiida.orm import ProcessNode
 
         # So here I am giving two times the same tag
         with self.assertRaises(InputValidationError):
@@ -405,8 +405,8 @@ class TestQueryBuilder(AiidaTestCase):
 
     def test_tags(self):
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm.node import Node
-        from aiida.orm.node import ProcessNode
+        from aiida.orm import Node
+        from aiida.orm import ProcessNode
         from aiida.orm.node.data.structure import StructureData
         from aiida.orm.node.data.parameter import ParameterData
         from aiida.orm.computers import Computer
@@ -454,7 +454,7 @@ class TestQueryHelp(AiidaTestCase):
         g = Group(label='helloworld').store()
         for cls in (StructureData, ParameterData, Data):
             obj = cls()
-            obj._set_attr('foo-qh2', 'bar')
+            obj.set_attribute('foo-qh2', 'bar')
             obj.store()
             g.add_nodes(obj)
 
@@ -507,12 +507,12 @@ class TestQueryBuilderCornerCases(AiidaTestCase):
         under Django).
         """
         from aiida.orm import Node, Data, Computer
-        from aiida.orm.node import ProcessNode
+        from aiida.orm import ProcessNode
         from aiida.orm.querybuilder import QueryBuilder
 
         n1 = CalculationNode()
         n1.label = 'node2'
-        n1._set_attr('foo', 1)
+        n1.set_attribute('foo', 1)
         n1.store()
 
         # Checking the correct retrieval of transport_params which is
@@ -535,13 +535,13 @@ class TestQueryBuilderCornerCases(AiidaTestCase):
 class TestAttributes(AiidaTestCase):
     def test_attribute_existence(self):
         # I'm storing a value under key whatever:
-        from aiida.orm.node import Node
+        from aiida.orm import Node
         from aiida.orm.querybuilder import QueryBuilder
         val = 1.
         res_uuids = set()
         n1 = Data()
-        n1._set_attr("whatever", 3.)
-        n1._set_attr("test_case", "test_attribute_existence")
+        n1.set_attribute("whatever", 3.)
+        n1.set_attribute("test_case", "test_attribute_existence")
         n1.store()
 
         # I want all the nodes where whatever is smaller than 1. or there is no such value:
@@ -557,16 +557,16 @@ class TestAttributes(AiidaTestCase):
         self.assertEqual(res_query, res_uuids)
 
     def test_attribute_type(self):
-        from aiida.orm.node import Node
+        from aiida.orm import Node
         from aiida.orm.querybuilder import QueryBuilder
         key = 'value_test_attr_type'
         n_int, n_float, n_str, n_str2, n_bool, n_arr = [Data() for _ in range(6)]
-        n_int._set_attr(key, 1)
-        n_float._set_attr(key, 1.0)
-        n_bool._set_attr(key, True)
-        n_str._set_attr(key, '1')
-        n_str2._set_attr(key, 'one')
-        n_arr._set_attr(key, [4, 3, 5])
+        n_int.set_attribute(key, 1)
+        n_float.set_attribute(key, 1.0)
+        n_bool.set_attribute(key, True)
+        n_str.set_attribute(key, '1')
+        n_str2.set_attribute(key, 'one')
+        n_arr.set_attribute(key, [4, 3, 5])
         [n.store() for n in (n_str2, n_str, n_int, n_float, n_bool, n_arr)]
         # Here I am testing which values contain a number 1.
         # Both 1 and 1.0 are legitimate values if ask for either 1 or 1.0
@@ -623,10 +623,10 @@ class QueryBuilderDateTimeAttribute(AiidaTestCase):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.common import timezone
         from datetime import timedelta
-        from aiida.orm.node import Node
+        from aiida.orm import Node
         n = Data()
         now = timezone.now()
-        n._set_attr('now', now)
+        n.set_attribute('now', now)
         n.store()
 
         qb = QueryBuilder().append(Node,
@@ -645,7 +645,7 @@ class QueryBuilderLimitOffsetsTest(AiidaTestCase):
         # Creating 10 nodes with an attribute that can be ordered
         for i in range(10):
             n = Data()
-            n._set_attr('foo', i)
+            n.set_attribute('foo', i)
             n.store()
 
         qb = QueryBuilder().append(
@@ -712,11 +712,11 @@ class QueryBuilderJoinsTests(AiidaTestCase):
 
         good_child = CalculationNode()
         good_child.label = 'good_child'
-        good_child._set_attr('is_good', True)
+        good_child.set_attribute('is_good', True)
 
         bad_child = CalculationNode()
         bad_child.label = 'bad_child'
-        bad_child._set_attr('is_good', False)
+        bad_child.set_attribute('is_good', False)
 
         unrelated = CalculationNode()
         unrelated.label = 'unrelated'
@@ -747,7 +747,7 @@ class QueryBuilderJoinsTests(AiidaTestCase):
         advisors = [CalculationNode() for i in range(3)]
         for i, a in enumerate(advisors):
             a.label = 'advisor {}'.format(i)
-            a._set_attr('advisor_id', i)
+            a.set_attribute('advisor_id', i)
 
         for n in advisors + students:
             n.store()
@@ -1004,7 +1004,7 @@ class TestConsistency(AiidaTestCase):
         SQLAlchemy has a deduplication strategy that leads to strange behavior, tested against here
         """
         from aiida.orm import Data
-        from aiida.orm.node import CalculationNode
+        from aiida.orm import CalculationNode
         from aiida.orm.querybuilder import QueryBuilder
 
         parent = CalculationNode().store()
@@ -1026,7 +1026,7 @@ class TestManager(AiidaTestCase):
         I try to implement it in a way that does not depend on the past state.
         """
         from aiida.orm import Node, DataFactory
-        from aiida.orm.node import ProcessNode
+        from aiida.orm import ProcessNode
         from collections import defaultdict
 
         def store_and_add(n, statistics):
@@ -1071,7 +1071,7 @@ class TestManager(AiidaTestCase):
         I try to implement it in a way that does not depend on the past state.
         """
         from aiida.orm import Node, DataFactory
-        from aiida.orm.node import ProcessNode
+        from aiida.orm import ProcessNode
         from collections import defaultdict
 
         def store_and_add(n, statistics):

@@ -6,7 +6,7 @@ from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
-from aiida.orm.node import CalculationNode
+from aiida.orm import CalculationNode
 from aiida.orm.node.data import Data
 
 

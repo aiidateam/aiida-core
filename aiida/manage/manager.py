@@ -221,7 +221,7 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         from aiida.work import runners
 
         config = get_config()
-        profile = config.current_profile
+        profile = self.get_profile()
         poll_interval = 0.0 if profile.is_test_profile else config.option_get('runner.poll.interval')
 
         settings = {'rmq_submit': False, 'poll_interval': poll_interval}

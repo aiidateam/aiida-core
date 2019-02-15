@@ -85,6 +85,17 @@ class Postgres(object):  # pylint: disable=useless-object-inheritance
         if port:
             self.set_port(port)
 
+    @classmethod
+    def from_profile(cls, profile):
+        """Create Postgres instance from AiiDA profile.
+
+        Prefills postgres host and port.
+        """
+        return Postgres(
+            host=profile.dictionary['AIIDADB_HOST'],
+            port=profile.dictionary['AIIDADB_PORT'],
+        )
+
     def set_setup_fail_callback(self, callback):
         """
         Set a callback to be called when setup cannot be determined automatically

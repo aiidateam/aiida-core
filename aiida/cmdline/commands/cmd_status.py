@@ -16,15 +16,17 @@ from enum import IntEnum
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.common import exceptions
 from aiida.cmdline.utils.daemon import get_daemon_status
 from aiida.manage import get_manager
+from aiida.cmdline.utils import decorators
+from aiida.common.utils import Capturing, get_repository_folder
+from aiida.manage.external.postgres import Postgres
 
 
 class ServiceStatus(IntEnum):
     """Describe status of services for 'verdi status' command.
     """
-    UP = 0
+    UP = 0  # pylint: disable=invalid-name
     ERROR = 1
     DOWN = 2
 
@@ -37,8 +39,10 @@ STATUS_COLOR_MAP = {
 
 
 @verdi.command('status')
+@decorators.with_dbenv()  # currently needed only for get_communicator (to fix)
 def verdi_status():
     """Print status of AiiDA services."""
+    # pylint: disable=broad-except
 
     manager = get_manager()
 
@@ -48,6 +52,42 @@ def verdi_status():
         print_status(ServiceStatus.UP, 'profile', "On profile {}".format(profile.name))
     except Exception as exc:
         print_status(ServiceStatus.ERROR, 'profile', "Unable to read AiiDA profile")
+        print(exc)
+        return 1  # without a profile, we cannot access anything
+
+    # getting the repository
+    try:
+        repo_folder = get_repository_folder()
+        print_status(ServiceStatus.UP, 'repository', repo_folder)
+    except Exception as exc:
+        print_status(ServiceStatus.ERROR, 'repository', "Error with repo folder")
+        print(exc)
+
+    # getting the postgres status
+    try:
+        postgres = Postgres.from_profile(profile)
+        pg_connected = postgres.determine_setup()
+
+        dbinfo = postgres.dbinfo
+        if pg_connected:
+            print_status(ServiceStatus.UP, 'postgres', "Connected to {}@{}:{}".format(
+                dbinfo['user'], dbinfo['host'], dbinfo['port']))
+        else:
+            print_status(ServiceStatus.DOWN, 'postgres', "Unable to connect to {}@{}:{}".format(
+                dbinfo['user'], dbinfo['host'], dbinfo['port']))
+    except Exception as exc:
+        pd_dict = profile.dictionary
+        print_status(ServiceStatus.ERROR, 'postgres', "Error connecting to {}:{}".format(
+            pd_dict['AIIDADB_HOST'], pd_dict['AIIDADB_PORT']))
+        print(exc)
+
+    # getting the rmq status
+    try:
+        with Capturing():
+            manager.get_communicator()
+        print_status(ServiceStatus.UP, 'rabbitmq', "Connected to rabbitmq")
+    except Exception as exc:
+        print_status(ServiceStatus.ERROR, 'rabbitmq', "Unable to connect to rabbitmq")
         print(exc)
 
     # getting the daemon status
@@ -64,7 +104,7 @@ def verdi_status():
         print_status(ServiceStatus.ERROR, 'daemon', "Error getting daemon status")
         print(exc)
 
-    # getting the postgres status
+    return 0
 
 
 def print_status(status, service, msg=""):
@@ -78,5 +118,5 @@ def print_status(status, service, msg=""):
 
     """
     click.secho(u'  \u2B24  ', fg=STATUS_COLOR_MAP[status], nl=False)
-    click.secho('{}: '.format(service), nl=False)
+    click.secho('{:10s}: '.format(service), nl=False)
     click.secho(msg)

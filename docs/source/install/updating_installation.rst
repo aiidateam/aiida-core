@@ -86,3 +86,13 @@ To find the update instructions for older versions of AiiDA follow the following
   SQLAlchemy backend. In case you were using SQLAlchemy before the introduction
   of Alembic, you may experience problems during your first migration. If it is
   the case, please see :ref:`this section <first_alembic_migration>`.
+
+
+
+.. _backward_incompatible_changes_beta_release:
+
+Backward incompatible changes in ``v1.0.0``
+===========================================
+ 
+The list of all backward-incompatible changes between the 0.x series and AiiDA 1.0 is 
+maintained `here <https://github.com/aiidateam/aiida_core/wiki/Backward-incompatible-changes-in-1.0.0>`_.

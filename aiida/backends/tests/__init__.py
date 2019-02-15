@@ -113,6 +113,7 @@ db_test_list = {
         'orm.groups': ['aiida.backends.tests.orm.test_groups'],
         'orm.implementation.backend': ['aiida.backends.tests.orm.implementation.test_backend'],
         'orm.implementation.nodes': ['aiida.backends.tests.orm.implementation.test_nodes'],
+        'orm.implementation.comments': ['aiida.backends.tests.orm.implementation.test_comments'],
         'orm.logs': ['aiida.backends.tests.orm.test_logs'],
         'orm.mixins': ['aiida.backends.tests.orm.test_mixins'],
         'orm.node': ['aiida.backends.tests.orm.node.test_node'],

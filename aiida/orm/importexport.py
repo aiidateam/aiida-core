@@ -18,7 +18,7 @@ import six
 from six.moves import zip
 from six.moves.html_parser import HTMLParser
 from aiida.common import exceptions
-from aiida.common.utils import export_shard_uuid, get_class_string, grouper
+from aiida.common.utils import export_shard_uuid, get_class_string, grouper, get_new_uuid
 from aiida.orm import Computer, Group, GroupTypeString, Node, QueryBuilder, User, Log, Comment
 from aiida.orm.utils.repository import Repository
 
@@ -405,58 +405,58 @@ def merge_extras(old_extras, new_extras, mode):
 
     old_keys = set(old_extras.keys())
     new_keys = set(new_extras.keys())
-    
+
     collided_keys = old_keys.intersection(new_keys)
     old_keys_only = old_keys.difference(collided_keys)
     new_keys_only = new_keys.difference(collided_keys)
-    
+
     final_extras = {}
-    
+
     # Fast implementations for the common operations:
     if mode == 'ncu': # 'mirror' operation: remove old extras, put only the new ones
         return new_extras
-    
-    elif mode == 'knl': # 'none': keep old extras, do not add imported ones
+
+    if mode == 'knl': # 'none': keep old extras, do not add imported ones
         return old_extras
-    
-    elif mode == 'kcu': # 'update_existing' operation: if an extra already exists,
-                               # overwrite its new value with a new one
+
+    if mode == 'kcu': # 'update_existing' operation: if an extra already exists,
+                      # overwrite its new value with a new one
         final_extras = new_extras
         for key in old_keys_only:
             final_extras[key] = old_extras[key]
-    
+
     elif mode == 'kcl': # 'keep_existing': if an extra already exists, keep its original value
         final_extras = old_extras
         for key in new_keys_only:
             final_extras[key] = new_extras[key]
-    
-    elif mode == 'kca': # 'ask': if an extra already exists ask a user whether
-                               # to update its value
+
+    elif mode == 'kca': # 'ask': if an extra already exists ask a user whether to update its value
         final_extras = old_extras
         for key in new_keys_only:
-                final_extras[key] = new_extras[key]
+            final_extras[key] = new_extras[key]
         for key in collided_keys:
             if old_extras[key] != new_extras[key]:
                 if click.confirm('The extra {} collided, would you'
                         ' like to overwrite its value?\nOld value: {}\nNew value: {}\n'.format(key,
                             old_extras[key], new_extras[key])):
                     final_extras[key] = new_extras[key]
-    
+
     # Slow, but more general implementation
     else:
-        final_keys = set()
         if mode[0] == 'k':
             for key in old_keys_only:
                 final_extras[key] = old_extras[key]
         elif mode[0] != 'n':
-            raise ValueError("Unknown first letter of the update extras mode: '{}'. Should be either 'k' or 'n'".format(mode))
-    
+            raise ValueError("Unknown first letter of the update extras mode: '{}'. " \
+                             "Should be either 'k' or 'n'".format(mode))
+
         if mode[1] == 'c':
             for key in new_keys_only:
                 final_extras[key] = new_extras[key]
         elif mode[1] != 'n':
-            raise ValueError("Unknown second letter of the update extras mode: '{}'. Should be either 'c' or 'n'".format(mode))
-    
+            raise ValueError("Unknown second letter of the update extras mode: '{}'. " \
+                             "Should be either 'c' or 'n'".format(mode))
+
         if mode[2] == 'u':
             for key in collided_keys:
                 final_extras[key] = new_extras[key]
@@ -473,46 +473,136 @@ def merge_extras(old_extras, new_extras, mode):
                     else:
                         final_extras[key] = old_extras[key]
         elif mode[2] != 'd':
-            raise ValueError("Unknown third letter of the update extras mode: '{}'. Should be one of 'u'/'l'/'a'/'d'".format(mode))
+            raise ValueError("Unknown third letter of the update extras mode: '{}'. " \
+                             "Should be one of 'u'/'l'/'a'/'d'".format(mode))
 
     return final_extras
 
 
-def import_data(in_path, group=None, ignore_unknown_nodes=False,
-                extras_mode_existing='kcl', extras_mode_new='import', silent=False):
+def _merge_comment(incoming_comment, comment_mode):
+    """ Merge comment according comment_mode
+    :return: New UUID if new Comment should be created, else None.
+    """
+
+    # Get incoming Comment's UUID, 'mtime', and 'comment'
+    incoming_uuid = str(incoming_comment['uuid'])
+    incoming_mtime = incoming_comment['mtime']
+    incoming_content = incoming_comment['content']
+
+    # Compare modification time 'mtime'
+    if comment_mode == 'newest':
+        # Get existing Comment's 'mtime' and 'content'
+        builder = QueryBuilder().append(Comment,
+            filters={'uuid': incoming_uuid},
+            project=['mtime', 'content'])
+        if builder.count() != 1:
+            raise exceptions.ValidationError("Multiple Comments with the same "
+                                             "UUID: {}".format(incoming_uuid))
+        builder = builder.all()
+
+        existing_mtime = builder[0][0]
+        existing_content = builder[0][1]
+
+        # Existing Comment is "newer" than imported Comment: KEEP existing
+        if existing_mtime > incoming_mtime:
+            return None
+
+        # Existing Comment is "older" than imported Comment: OVERWRITE existing
+        if existing_mtime < incoming_mtime:
+            cmt = Comment.objects.get(uuid=incoming_uuid)
+            cmt.set_content(incoming_content)
+            cmt.set_mtime(incoming_mtime)
+            return None
+
+        # Existing Comment has the same modification time as the imported Comment
+        # Check content. If the same, ignore Comment. If different, add as new Comment.
+        if existing_mtime == incoming_mtime:
+            if existing_content == incoming_content:
+                # Ignore
+                return None
+
+            # ELSE: Add it as a new comment
+            return get_new_uuid()
+
+    # Overwrite existing Comment
+    elif comment_mode == 'overwrite':
+        cmt = Comment.objects.get(uuid=incoming_uuid)
+        cmt.set_content(incoming_content)
+        cmt.set_mtime(incoming_mtime)
+        return None
+
+    # Invalid comment_mode
+    else:
+        raise ValueError("Unknown comment_mode value: {}. Should be "
+                         "either 'newest' or 'overwrite'".format(comment_mode))
+
+
+def import_data(in_path, group=None, silent=False, **kwargs):
+    """
+    Import exported AiiDA environment to the AiiDA database.
+    If the 'in_path' is a folder, calls extract_tree; otherwise, tries to
+    detect the compression format (zip, tar.gz, tar.bz2, ...) and calls the
+    correct function.
+    :param in_path: the path to a file or folder that can be imported in AiiDA
+    :param extras_mode_existing: 3 letter code that will identify what to do with the extras import.
+    The first letter acts on extras that are present in the original node and not present in the imported node.
+    Can be either:
+    'k' (keep it) or
+    'n' (do not keep it).
+    The second letter acts on the imported extras that are not present in the original node.
+    Can be either:
+    'c' (create it) or
+    'n' (do not create it).
+    The third letter defines what to do in case of a name collision.
+    Can be either:
+    'l' (leave the old value),
+    'u' (update with a new value),
+    'd' (delete the extra),
+    'a' (ask what to do if the content is different).
+    :param extras_mode_new: 'import' to import extras of new nodes or 'none' to ignore them
+    :param comment_node_existing: Similar to param extras_mode_existing, but for Comments.
+    :param comment_mode_new: Similar to param extras_mode_new, but for Comments.
+    """
     from aiida.backends.settings import BACKEND
     from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 
     if BACKEND == BACKEND_SQLA:
-        return import_data_sqla(in_path, user_group=group, ignore_unknown_nodes=ignore_unknown_nodes,
-                                extras_mode_existing=extras_mode_existing, extras_mode_new=extras_mode_new,
-                                silent=silent)
+        return import_data_sqla(in_path, user_group=group, silent=silent, **kwargs)
     elif BACKEND == BACKEND_DJANGO:
-        return import_data_dj(in_path, user_group=group, ignore_unknown_nodes=ignore_unknown_nodes,
-                              extras_mode_existing=extras_mode_existing, extras_mode_new=extras_mode_new,
-                              silent=silent)
+        return import_data_dj(in_path, user_group=group, silent=silent, **kwargs)
     else:
         raise Exception("Unknown settings.BACKEND: {}".format(
             BACKEND))
 
 
 def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
-                   extras_mode_existing='kcl', extras_mode_new='import', silent=False):
+                   extras_mode_existing='kcl', extras_mode_new='import',
+                   comment_mode='newest', silent=False):
     """
     Import exported AiiDA environment to the AiiDA database.
     If the 'in_path' is a folder, calls extract_tree; otherwise, tries to
     detect the compression format (zip, tar.gz, tar.bz2, ...) and calls the
     correct function.
-
     :param in_path: the path to a file or folder that can be imported in AiiDA
-    :param extras_mode_existing: 3 letter code that will identify what to do with the extras import. The first letter acts on
-                        extras that are present in the original node and not present in the imported node. Can be
-                        either k (keep it) or n (do not keep it). The second letter acts on the imported extras that
-                        are not present in the original node. Can be either c (create it) or n (do not create it). The
-                        third letter says what to do in case of a name collision. Can be l (leave the old value), u
-                        (update with a new value), d (delete the extra), a (ask what to do if the content is
-                        different).
-    :param extras_mode_new: 'import' to import extras of new nodes, 'none' to ignore them
+    :param extras_mode_existing: 3 letter code that will identify what to do with the extras import.
+    The first letter acts on extras that are present in the original node and not present in the imported node.
+    Can be either:
+    'k' (keep it) or
+    'n' (do not keep it).
+    The second letter acts on the imported extras that are not present in the original node.
+    Can be either:
+    'c' (create it) or
+    'n' (do not create it).
+    The third letter defines what to do in case of a name collision.
+    Can be either:
+    'l' (leave the old value),
+    'u' (update with a new value),
+    'd' (delete the extra),
+    'a' (ask what to do if the content is different).
+    :param extras_mode_new: 'import' to import extras of new nodes or 'none' to ignore them
+    :param comment_mode: Comment import modes (when same UUIDs are found):
+    'newest': Will keep the Comment with the most recent modification time (mtime)
+    'overwrite': Will overwrite existing Comments with the ones from the import file
     """
     import os
     import tarfile
@@ -522,13 +612,13 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
     from django.db import transaction
     from aiida.common import timezone
 
-    from aiida.orm import Node, Group
     from aiida.common.archive import extract_tree, extract_tar, extract_zip, extract_cif
     from aiida.common.links import LinkType
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.backends.djsite.db import models
     from aiida.common.utils import get_object_from_string
     from aiida.common import json
+    from aiida.backends.djsite.db.models import suppress_auto_now
 
     # This is the export version expected by this function
     expected_export_version = '0.4'
@@ -702,8 +792,8 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
                         relevant_db_entries_result = Model.objects.filter(
                             **{'{}__in'.format(unique_identifier): import_unique_ids})
                         # Note: uuids need to be converted to strings
-                        relevant_db_entries = { str(getattr(n, unique_identifier)): 
-                                n for n in relevant_db_entries_result }
+                        relevant_db_entries = {str(getattr(n, unique_identifier)):
+                                n for n in relevant_db_entries_result}
 
                         foreign_ids_reverse_mappings[model_name] = {
                             k: v.pk for k, v in relevant_db_entries.items()}
@@ -734,7 +824,19 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
                 for import_entry_id, entry_data in existing_entries[model_name].items():
                     unique_id = entry_data[unique_identifier]
                     existing_entry_id = foreign_ids_reverse_mappings[model_name][unique_id]
+                    import_data = dict(deserialize_field(
+                        k, v, fields_info=fields_info,
+                        import_unique_ids_mappings=import_unique_ids_mappings,
+                        foreign_ids_reverse_mappings=foreign_ids_reverse_mappings)
+                                       for k, v in entry_data.items())
                     # TODO COMPARE, AND COMPARE ATTRIBUTES
+
+                    if Model is models.DbComment:
+                        new_entry_uuid = _merge_comment(import_data, comment_mode)
+                        if new_entry_uuid is not None:
+                            entry_data[unique_identifier] = new_entry_uuid
+                            new_entries[model_name][import_entry_id] = entry_data
+
                     if model_name not in ret_dict:
                         ret_dict[model_name] = {'new': [], 'existing': []}
                     ret_dict[model_name]['existing'].append((import_entry_id,
@@ -772,8 +874,7 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
                                     " and I could not create a new one".format(orig_label))
 
                     elif Model is models.DbComputer:
-                        # Check if there is already a computer with the same
-                        # name in the database
+                        # Check if there is already a computer with the same name in the database
                         dupl = (Model.objects.filter(name=import_data['name'])
                                 or import_data['name'] in imported_comp_names)
                         orig_name = import_data['name']
@@ -783,10 +884,9 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
                             import_data['name'] = (
                                     orig_name +
                                     DUPL_SUFFIX.format(dupl_counter))
-                            dupl_counter += 1
-                            dupl = (
-                                    Model.objects.filter(name=import_data['name'])
+                            dupl = (Model.objects.filter(name=import_data['name'])
                                     or import_data['name'] in imported_comp_names)
+                            dupl_counter += 1
                             if dupl_counter == 100:
                                 raise exceptions.UniquenessError("A computer of that name ( {} ) already exists"
                                     " and I could not create a new one".format(orig_name))
@@ -794,14 +894,18 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
                         # The following is done for compatibility reasons
                         # In case the export file was generate with the SQLA
                         # export method
-                        if type(import_data['metadata']) is dict:
-                            import_data['metadata'] = json.dumps(
-                                import_data['metadata'])
-                        if type(import_data['transport_params']) is dict:
-                            import_data['transport_params'] = json.dumps(
-                                import_data['transport_params'])
+                        if isinstance(import_data['metadata'], dict):
+                            import_data['metadata'] = json.dumps(import_data['metadata'])
+                        if isinstance(import_data['transport_params'], dict):
+                            import_data['transport_params'] = json.dumps(import_data['transport_params'])
 
                         imported_comp_names.add(import_data['name'])
+
+                    elif Model is models.DbLog:
+                        # Django requires metadata as a string.
+                        # A JSON-serializable string.
+                        if isinstance(import_data['metadata'], dict):
+                            import_data['metadata'] = json.dumps(import_data['metadata'])
 
                     objects_to_create.append(Model(**import_data))
                     import_entry_ids[unique_id] = import_entry_id
@@ -830,8 +934,14 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
                         destdir.replace_with_folder(subfolder.abspath,
                                                     move=True, overwrite=True)
 
-                # Store them all in once; however, the PK are not set in this way...
-                Model.objects.bulk_create(objects_to_create)
+                # If there is an mtime in the field, disable the automatic update
+                # to keep the mtime that we have set here
+                if 'mtime' in [field.name for field in Model._meta.local_fields]:
+                    with suppress_auto_now([(Model, ['mtime'])]):
+                        # Store them all in once; however, the PK are not set in this way...
+                        Model.objects.bulk_create(objects_to_create)
+                else:
+                    Model.objects.bulk_create(objects_to_create)
 
                 # Get back the just-saved entries
                 just_saved_queryset = Model.objects.filter(
@@ -841,7 +951,7 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
                 just_saved = { str(k) : v for k,v in just_saved_queryset }
 
                 # Now I have the PKs, print the info
-                # Moreover, set the foreing_ids_reverse_mappings
+                # Moreover, set the foreign_ids_reverse_mappings
                 for unique_id, new_pk in just_saved.items():
                     import_entry_id = import_entry_ids[unique_id]
                     foreign_ids_reverse_mappings[model_name][unique_id] = new_pk
@@ -870,8 +980,7 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
                                 str(import_entry_id)]
                         except KeyError:
                             raise ValueError("Unable to find attribute info "
-                                             "for DbNode with UUID = {}".format(
-                                unique_id))
+                                             "for DbNode with UUID = {}".format(unique_id))
 
                         # Here I have to deserialize the attributes
                         deserialized_attributes = deserialize_attributes(
@@ -897,8 +1006,7 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
                                     str(import_entry_id)]
                             except KeyError:
                                 raise ValueError("Unable to find extras info "
-                                                 "for DbNode with UUID = {}".format(
-                                    unique_id))
+                                                 "for DbNode with UUID = {}".format(unique_id))
                             deserialized_extras = deserialize_attributes(extras, extras_conversion)
                             # TODO: remove when aiida extras will be moved somewhere else
                             # from here
@@ -918,7 +1026,7 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
                     else:
                         raise ValueError("Unknown extras_mode_new value: {}, should be either 'import' or "
                                 "'none'".format(extras_mode_new))
-                       
+
                     # For the existing DbNodes we may want to choose the import mode
                     if not silent:
                         print("UPDATING EXISTING NODE EXTRAS (mode: {})".format(extras_mode_existing))
@@ -935,8 +1043,7 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
                                 str(import_entry_id)]
                         except KeyError:
                             raise ValueError("Unable to find extras info "
-                                             "for DbNode with UUID = {}".format(
-                                unique_id))
+                                             "for DbNode with UUID = {}".format(unique_id))
 
                         # Here I have to deserialize the extras
                         old_extras = models.DbExtra.get_all_values_for_nodepk(existing_entry_id)
@@ -1121,22 +1228,33 @@ def validate_uuid(given_uuid):
 
 
 def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
-        extras_mode_existing='kcl', extras_mode_new='ignore', silent=False):
+        extras_mode_existing='kcl', extras_mode_new='import',
+        comment_mode='newest', silent=False):
     """
     Import exported AiiDA environment to the AiiDA database.
     If the 'in_path' is a folder, calls extract_tree; otherwise, tries to
     detect the compression format (zip, tar.gz, tar.bz2, ...) and calls the
     correct function.
-
     :param in_path: the path to a file or folder that can be imported in AiiDA
-    :param extras_mode_existing: 3 letter code that will identify what to do with the extras import. The first letter acts on
-                        extras that are present in the original node and not present in the imported node. Can be
-                        either k (keep it) or n (do not keep it). The second letter acts on the imported extras that
-                        are not present in the original node. Can be either c (create it) or n (do not create it). The
-                        third letter says what to do in case of a name collision. Can be l (leave the old value), u
-                        (update with a new value), d (delete the extra), a (ask what to do if the content is
-                        different).
-    :param extras_mode_new: 'import' to import extras of new nodes, 'none' to ignore them
+    :param extras_mode_existing: 3 letter code that will identify what to do with the extras import.
+    The first letter acts on extras that are present in the original node and not present in the imported node.
+    Can be either:
+    'k' (keep it) or
+    'n' (do not keep it).
+    The second letter acts on the imported extras that are not present in the original node.
+    Can be either:
+    'c' (create it) or
+    'n' (do not create it).
+    The third letter defines what to do in case of a name collision.
+    Can be either:
+    'l' (leave the old value),
+    'u' (update with a new value),
+    'd' (delete the extra), or
+    'a' (ask what to do if the content is different).
+    :param extras_mode_new: 'import' to import extras of new nodes or 'none' to ignore them
+    :param comment_mode: Comment import modes (when same UUIDs are found):
+    'newest': Will keep the Comment with the most recent modification time (mtime)
+    'overwrite': Will overwrite existing Comments with the ones from the import file
     """
     import os
     import tarfile
@@ -1145,7 +1263,6 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
 
     from aiida.common import timezone
 
-    from aiida.orm import Node, Group
     from aiida.backends.sqlalchemy.models.node import DbNode
     from aiida.backends.sqlalchemy.utils import flag_modified
     from aiida.common.archive import extract_tree, extract_tar, extract_zip, extract_cif
@@ -1352,7 +1469,7 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
                                 unique_identifier: {"in": import_unique_ids}},
                                       project=["*"], tag="res")
                             relevant_db_entries = {
-                                getattr(v[0], unique_identifier):
+                                str(getattr(v[0], unique_identifier)):  # str() to convert UUID() to string
                                     v[0] for v in qb.all()}
 
                             foreign_ids_reverse_mappings[entity_name] = {
@@ -1420,7 +1537,7 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
 
                                 imported_comp_names.add(v["name"])
 
-                            if v[unique_identifier] in (relevant_db_entries.keys()):
+                            if v[unique_identifier] in relevant_db_entries:
                                 # Already in DB
                                 # again, switched to entity_name in v0.3
                                 existing_entries[entity_name][k] = v
@@ -1443,10 +1560,22 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
                 fields_info = metadata['all_fields_info'].get(entity_name, {})
                 unique_identifier = metadata['unique_identifiers'].get(entity_name, None)
 
-                for import_entry_id, entry_data in (existing_entries[entity_name].items()):
+                for import_entry_id, entry_data in existing_entries[entity_name].items():
                     unique_id = entry_data[unique_identifier]
                     existing_entry_id = foreign_ids_reverse_mappings[entity_name][unique_id]
+                    import_data = dict(deserialize_field(
+                        k, v, fields_info=fields_info,
+                        import_unique_ids_mappings=import_unique_ids_mappings,
+                        foreign_ids_reverse_mappings=foreign_ids_reverse_mappings)
+                                       for k, v in entry_data.items())
                     # TODO COMPARE, AND COMPARE ATTRIBUTES
+
+                    if entity_sig is entity_names_to_signatures[COMMENT_ENTITY_NAME]:
+                        new_entry_uuid = _merge_comment(import_data, comment_mode)
+                        if new_entry_uuid is not None:
+                            entry_data[unique_identifier] = new_entry_uuid
+                            new_entries[entity_name][import_entry_id] = entry_data
+
                     if entity_name not in ret_dict:
                         ret_dict[entity_name] = {'new': [], 'existing': []}
                     ret_dict[entity_name]['existing'].append((import_entry_id, existing_entry_id))
@@ -1462,7 +1591,7 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
                 # This is needed later to associate the import entry with the new pk
                 import_entry_ids = dict()
 
-                for import_entry_id, entry_data in (new_entries[entity_name].items()):
+                for import_entry_id, entry_data in new_entries[entity_name].items():
                     unique_id = entry_data[unique_identifier]
                     import_data = dict(deserialize_field(
                         k, v, fields_info=fields_info,
@@ -1477,7 +1606,7 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
                     # compatible with the SQLA schema and they don't need any
                     # further conversion.
                     if entity_name in file_fields_to_model_fields:
-                        for file_fkey in file_fields_to_model_fields[entity_name].keys():
+                        for file_fkey in file_fields_to_model_fields[entity_name]:
 
                             # This is an exception because the DbLog model defines the `_metadata` column instead of the
                             # `metadata` column used in the Django model. This is because the SqlAlchemy model base
@@ -1488,7 +1617,7 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
                                 continue
 
                             model_fkey = file_fields_to_model_fields[entity_name][file_fkey]
-                            if model_fkey in import_data.keys():
+                            if model_fkey in import_data:
                                 continue
                             import_data[model_fkey] = import_data[file_fkey]
                             import_data.pop(file_fkey, None)
@@ -1539,7 +1668,7 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
                             raise ValueError(
                                 "Unable to find attribute info "
                                 "for DbNode with UUID = {}".format(
-                                    unique_id))
+                                    o.uuid))
 
                         # Here I have to deserialize the attributes
                         deserialized_attributes = deserialize_attributes(
@@ -1566,12 +1695,12 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
                                 raise ValueError(
                                     "Unable to find extras info "
                                     "for DbNode with UUID = {}".format(
-                                        unique_id))
+                                        o.uuid))
                             # Here I have to deserialize the extras
                             deserialized_extras = deserialize_attributes(extras, extras_conversion)
                             # TODO: remove when aiida extras will be moved somewhere else
                             # from here
-                            deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
+                            deserialized_extras = {key:value for key, value in deserialized_extras.items() if not
                                     key.startswith('_aiida_')}
                             if o.node_type.endswith('code.Code.'):
                                 deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
@@ -1590,8 +1719,8 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
                     if not silent:
                         print("UPDATING EXISTING NODE EXTRAS (mode: {})".format(extras_mode_existing))
 
-                    uuid_import_pk_match = {entry_data[unique_identifier]:import_entry_id for import_entry_id, entry_data in
-                            existing_entries[entity_name].items()}
+                    uuid_import_pk_match = {entry_data[unique_identifier]:import_entry_id for
+                            import_entry_id, entry_data in existing_entries[entity_name].items()}
                     for db_node in session.query(DbNode).filter(DbNode.uuid.in_(uuid_import_pk_match)).distinct().all():
                         import_entry_id = uuid_import_pk_match[str(db_node.uuid)]
                         # Get extras from import file
@@ -1603,15 +1732,14 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
                                 str(import_entry_id)]
                         except KeyError:
                             raise ValueError("Unable to find extras info "
-                                             "for DbNode with UUID = {}".format(
-                                unique_id))
+                                             "for DbNode with UUID = {}".format(db_node.uuid))
 
                         # Here I have to deserialize the extras
                         old_extras = db_node.extras
                         deserialized_extras = deserialize_attributes(extras, extras_conversion)
                         # TODO: remove when aiida extras will be moved somewhere else
                         # from here
-                        deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
+                        deserialized_extras = {key:value for key, value in deserialized_extras.items() if not
                                 key.startswith('_aiida_')}
                         if db_node.node_type.endswith('code.Code.'):
                             deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
@@ -1637,7 +1765,7 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
                     just_saved = dict()
 
                 # Now I have the PKs, print the info
-                # Moreover, set the foreing_ids_reverse_mappings
+                # Moreover, set the foreign_ids_reverse_mappings
                 for unique_id, new_pk in just_saved.items():
                     from uuid import UUID
                     if isinstance(unique_id, UUID):
@@ -2045,8 +2173,8 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str,
 
 def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
                 silent=False, input_forward=False, create_reversed=True,
-                return_reversed=False, call_reversed=False, include_comments=True, include_logs=True,
-                **kwargs):
+                return_reversed=False, call_reversed=False, include_comments=True,
+                include_logs=True, **kwargs):
     """
     Export the entries passed in the 'what' list to a file tree.
     :todo: limit the export to finished or failed calculations.

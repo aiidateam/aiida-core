@@ -13,6 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 # pylint: disable=import-error,no-name-in-module
+from datetime import datetime
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction, IntegrityError
 
@@ -37,7 +38,16 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
     EXTRA_CLASS = models.DbExtra
     LINK_CLASS = models.DbLink
 
-    def __init__(self, backend, node_type, user, computer=None, process_type=None, label='', description=''):
+    def __init__(self,
+                 backend,
+                 node_type,
+                 user,
+                 computer=None,
+                 process_type=None,
+                 label='',
+                 description='',
+                 ctime=None,
+                 mtime=None):
         """Construct a new `BackendNode` instance wrapping a new `DbNode` instance.
 
         :param backend: the backend
@@ -46,6 +56,8 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         :param computer: associated `BackendComputer`
         :param label: string label
         :param description: string description
+        :param ctime: The creation time as datetime object
+        :param mtime: The modification time as datetime object
         """
         # pylint: disable=too-many-arguments
         super(DjangoNode, self).__init__(backend)
@@ -63,6 +75,14 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         if computer:
             type_check(computer, DjangoComputer, 'computer is of type {}'.format(type(computer)))
             arguments['dbcomputer'] = computer.dbmodel
+
+        if ctime:
+            type_check(ctime, datetime, 'the given ctime is of type {}'.format(type(ctime)))
+            arguments['ctime'] = ctime
+
+        if mtime:
+            type_check(mtime, datetime, 'the given mtime is of type {}'.format(type(mtime)))
+            arguments['mtime'] = mtime
 
         self._dbmodel = utils.ModelWrapper(models.DbNode(**arguments))
 
@@ -360,24 +380,21 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         :param links: optional links to add before storing
         """
         from aiida.common.lang import EmptyContextManager
+        from aiida.backends.djsite.db.models import suppress_auto_now
 
-        if with_transaction:
-            context_manager = transaction.atomic()
-        else:
-            context_manager = EmptyContextManager()
+        with transaction.atomic() if with_transaction else EmptyContextManager():
+            with suppress_auto_now([(models.DbNode, ['mtime'])]) if self.mtime else EmptyContextManager():
+                # We need to save the node model instance itself first such that it has a pk
+                # that can be used in the foreign keys that will be needed for setting the
+                # attributes and links
+                self.dbmodel.save()
 
-        with context_manager:
+                if attributes:
+                    self.ATTRIBUTE_CLASS.reset_values_for_node(self.dbmodel, attributes, with_transaction=False)
 
-            # We need to save the node model instance itself first such that it has a pk that can be used in the foreign
-            # keys that will be needed for setting the attributes and links
-            self.dbmodel.save()
-
-            if attributes:
-                self.ATTRIBUTE_CLASS.reset_values_for_node(self.dbmodel, attributes, with_transaction=False)
-
-            if links:
-                for link_triple in links:
-                    self._add_link(*link_triple)
+                if links:
+                    for link_triple in links:
+                        self._add_link(*link_triple)
 
         return self
 

@@ -221,7 +221,6 @@ class TestBackendLog(AiidaTestCase):
 
     def test_log_querybuilder(self):
         """ Test querying for logs by joining on nodes in the QueryBuilder """
-        # pylint: disable=invalid-name
         from aiida.orm import QueryBuilder
 
         # Setup nodes
@@ -248,3 +247,71 @@ class TestBackendLog(AiidaTestCase):
         self.assertEqual(len(logs), 3)
         for log in logs:
             self.assertIn(str(log[0]), [str(log_1.uuid), str(log_2.uuid), str(log_3.uuid)])
+
+    def test_raise_wrong_metadata_type_error(self):
+        """
+        Test a TypeError exception is thrown with string metadata.
+        Also test that metadata is correctly created.
+        """
+        from aiida.common import json
+
+        # Create CalculationNode
+        calc = CalculationNode().store()
+
+        # dict metadata
+        correct_metadata_format = {
+            'msg': 'Life is like riding a bicycle.',
+            'args': '()',
+            'name': 'aiida.orm.node.process.calculation.CalculationNode'
+        }
+
+        # str of dict metadata
+        wrong_metadata_format = str(correct_metadata_format)
+
+        # JSON-serialized-deserialized dict metadata
+        json_metadata_format = json.loads(json.dumps(correct_metadata_format))
+
+        # Check an error is raised when creating a Log with wrong metadata
+        with self.assertRaises(TypeError):
+            Log(now(),
+                'loggername',
+                logging.getLevelName(LOG_LEVEL_REPORT),
+                calc.id,
+                'To keep your balance, you must keep moving',
+                metadata=wrong_metadata_format)
+
+        # Check no error is raised when creating a Log with dict metadata
+        correct_metadata_log = Log(
+            now(),
+            'loggername',
+            logging.getLevelName(LOG_LEVEL_REPORT),
+            calc.id,
+            'To keep your balance, you must keep moving',
+            metadata=correct_metadata_format)
+
+        # Check metadata is correctly created
+        self.assertEqual(correct_metadata_log.metadata, correct_metadata_format)
+
+        # Create Log with json metadata, making sure TypeError is NOT raised
+        json_metadata_log = Log(
+            now(),
+            'loggername',
+            logging.getLevelName(LOG_LEVEL_REPORT),
+            calc.id,
+            'To keep your balance, you must keep moving',
+            metadata=json_metadata_format)
+
+        # Check metadata is correctly created
+        self.assertEqual(json_metadata_log.metadata, json_metadata_format)
+
+        # Check no error is raised if no metadata is given
+        no_metadata_log = Log(
+            now(),
+            'loggername',
+            logging.getLevelName(LOG_LEVEL_REPORT),
+            calc.id,
+            'To keep your balance, you must keep moving',
+            metadata=None)
+
+        # Check metadata is an empty dict for no_metadata_log
+        self.assertEqual(no_metadata_log.metadata, {})

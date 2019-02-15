@@ -13,6 +13,7 @@ from __future__ import print_function
 
 import io
 
+import click
 import six
 from six.moves import zip
 from six.moves.html_parser import HTMLParser
@@ -382,17 +383,111 @@ def deserialize_field(k, v, fields_info, import_unique_ids_mappings,
         else:
             return ("{}_id".format(k), None)
 
+def merge_extras(old_extras, new_extras, mode):
+    """
+    :param old_extras: a dictionary containing the old extras of an already existing node
+    :param new_extras: a dictionary containing the new extras of an imported node
+    :param extras_mode_existing: 3 letter code that will identify what to do with the extras import. The first letter acts on
+                        extras that are present in the original node and not present in the imported node. Can be
+                        either k (keep it) or n (do not keep it). The second letter acts on the imported extras that
+                        are not present in the original node. Can be either c (create it) or n (do not create it). The
+                        third letter says what to do in case of a name collision. Can be l (leave the old value), u
+                        (update with a new value), d (delete the extra), a (ask what to do if the content is
+                        different).
+    """
+    from six import string_types
+    if not isinstance(mode, string_types):
+        raise TypeError("Parameter 'mode' should be of string type, you provided '{}' type".format(type(mode)))
+    elif not len(mode) == 3:
+        raise ValueError("Parameter 'mode' should be a 3-letter string, you provided: '{}'".format(mode))
+
+    old_keys = set(old_extras.keys())
+    new_keys = set(new_extras.keys())
+    
+    collided_keys = old_keys.intersection(new_keys)
+    old_keys_only = old_keys.difference(collided_keys)
+    new_keys_only = new_keys.difference(collided_keys)
+    
+    final_extras = {}
+    
+    # Fast implementations for the common operations:
+    if mode == 'ncu': # 'mirror' operation: remove old extras, put only the new ones
+        return new_extras
+    
+    elif mode == 'knl': # 'none': keep old extras, do not add imported ones
+        return old_extras
+    
+    elif mode == 'kcu': # 'update_existing' operation: if an extra already exists,
+                               # overwrite its new value with a new one
+        final_extras = new_extras
+        for key in old_keys_only:
+            final_extras[key] = old_extras[key]
+    
+    elif mode == 'kcl': # 'keep_existing': if an extra already exists, keep its original value
+        final_extras = old_extras
+        for key in new_keys_only:
+            final_extras[key] = new_extras[key]
+    
+    elif mode == 'kca': # 'ask': if an extra already exists ask a user whether
+                               # to update its value
+        final_extras = old_extras
+        for key in new_keys_only:
+                final_extras[key] = new_extras[key]
+        for key in collided_keys:
+            if old_extras[key] != new_extras[key]:
+                if click.confirm('The extra {} collided, would you'
+                        ' like to overwrite its value?\nOld value: {}\nNew value: {}\n'.format(key,
+                            old_extras[key], new_extras[key])):
+                    final_extras[key] = new_extras[key]
+    
+    # Slow, but more general implementation
+    else:
+        final_keys = set()
+        if mode[0] == 'k':
+            for key in old_keys_only:
+                final_extras[key] = old_extras[key]
+        elif mode[0] != 'n':
+            raise ValueError("Unknown first letter of the update extras mode: '{}'. Should be either 'k' or 'n'".format(mode))
+    
+        if mode[1] == 'c':
+            for key in new_keys_only:
+                final_extras[key] = new_extras[key]
+        elif mode[1] != 'n':
+            raise ValueError("Unknown second letter of the update extras mode: '{}'. Should be either 'c' or 'n'".format(mode))
+    
+        if mode[2] == 'u':
+            for key in collided_keys:
+                final_extras[key] = new_extras[key]
+        elif mode[2] == 'l':
+            for key in collided_keys:
+                final_extras[key] = old_extras[key]
+        elif mode[2] == 'a':
+            for key in collided_keys:
+                if old_extras[key] != new_extras[key]:
+                    if click.confirm('The extra {} collided, would you'
+                            ' like to overwrite its value?\nOld value: {}\nNew value: {}\n'.format(key,
+                                old_extras[key], new_extras[key])):
+                        final_extras[key] = new_extras[key]
+                    else:
+                        final_extras[key] = old_extras[key]
+        elif mode[2] != 'd':
+            raise ValueError("Unknown third letter of the update extras mode: '{}'. Should be one of 'u'/'l'/'a'/'d'".format(mode))
+
+    return final_extras
+
 
 def import_data(in_path, group=None, ignore_unknown_nodes=False,
-                silent=False):
+                extras_mode_existing='kcl', extras_mode_new='import', silent=False):
     from aiida.backends.settings import BACKEND
     from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 
     if BACKEND == BACKEND_SQLA:
         return import_data_sqla(in_path, user_group=group, ignore_unknown_nodes=ignore_unknown_nodes,
+                                extras_mode_existing=extras_mode_existing, extras_mode_new=extras_mode_new,
                                 silent=silent)
     elif BACKEND == BACKEND_DJANGO:
         return import_data_dj(in_path, user_group=group, ignore_unknown_nodes=ignore_unknown_nodes,
+                              extras_mode_existing=extras_mode_existing, extras_mode_new=extras_mode_new,
                               silent=silent)
     else:
         raise Exception("Unknown settings.BACKEND: {}".format(
@@ -400,7 +495,7 @@ def import_data(in_path, group=None, ignore_unknown_nodes=False,
 
 
 def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
-                   silent=False):
+                   extras_mode_existing='kcl', extras_mode_new='import', silent=False):
     """
     Import exported AiiDA environment to the AiiDA database.
     If the 'in_path' is a folder, calls extract_tree; otherwise, tries to
@@ -408,6 +503,14 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
     correct function.
 
     :param in_path: the path to a file or folder that can be imported in AiiDA
+    :param extras_mode_existing: 3 letter code that will identify what to do with the extras import. The first letter acts on
+                        extras that are present in the original node and not present in the imported node. Can be
+                        either k (keep it) or n (do not keep it). The second letter acts on the imported extras that
+                        are not present in the original node. Can be either c (create it) or n (do not create it). The
+                        third letter says what to do in case of a name collision. Can be l (leave the old value), u
+                        (update with a new value), d (delete the extra), a (ask what to do if the content is
+                        different).
+    :param extras_mode_new: 'import' to import extras of new nodes, 'none' to ignore them
     """
     import os
     import tarfile
@@ -745,7 +848,7 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
                                                        import_entry_id,
                                                        new_pk))
 
-                # For DbNodes, we also have to store Attributes!
+                # For DbNodes, we also have to store its attributes
                 if model_name == NODE_ENTITY_NAME:
                     if not silent:
                         print("STORING NEW NODE ATTRIBUTES...")
@@ -769,6 +872,81 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
                         models.DbAttribute.reset_values_for_node(
                             dbnode=new_pk,
                             attributes=deserialized_attributes,
+                            with_transaction=False)
+
+                # For DbNodes, we also have to store its extras
+                if model_name == NODE_ENTITY_NAME:
+                    if extras_mode_new == 'import':
+                        if not silent:
+                            print("STORING NEW NODE EXTRAS...")
+                        for unique_id, new_pk in just_saved.items():
+                            import_entry_id = import_entry_ids[unique_id]
+                            # Get extras from import file
+                            try:
+                                extras = data['node_extras'][
+                                    str(import_entry_id)]
+                                extras_conversion = data[
+                                    'node_extras_conversion'][
+                                    str(import_entry_id)]
+                            except KeyError:
+                                raise ValueError("Unable to find extras info "
+                                                 "for DbNode with UUID = {}".format(
+                                    unique_id))
+                            deserialized_extras = deserialize_attributes(extras, extras_conversion)
+                            # TODO: remove when aiida extras will be moved somewhere else
+                            # from here
+                            deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
+                                    key.startswith('_aiida_')}
+                            if models.DbNode.objects.filter(uuid=unique_id)[0].type.endswith('code.Code.'):
+                                deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
+                                        key == 'hidden'}
+                            # till here
+                            models.DbExtra.reset_values_for_node(
+                                dbnode=new_pk,
+                                attributes=deserialized_extras,
+                                with_transaction=False)
+                    elif extras_mode_new == 'none':
+                        if not silent:
+                            print("SKIPPING NEW NODE EXTRAS...")
+                    else:
+                        raise ValueError("Unknown extras_mode_new value: {}, should be either 'import' or "
+                                "'none'".format(extras_mode_new))
+                       
+                    # For the existing DbNodes we may want to choose the import mode
+                    if not silent:
+                        print("UPDATING EXISTING NODE EXTRAS (mode: {})".format(extras_mode_existing))
+
+                    for import_entry_id, entry_data in existing_entries[model_name].items():
+                        unique_id = entry_data[unique_identifier]
+                        existing_entry_id = foreign_ids_reverse_mappings[model_name][unique_id]
+                        # Get extras from import file
+                        try:
+                            extras = data['node_extras'][
+                                str(import_entry_id)]
+                            extras_conversion = data[
+                                'node_extras_conversion'][
+                                str(import_entry_id)]
+                        except KeyError:
+                            raise ValueError("Unable to find extras info "
+                                             "for DbNode with UUID = {}".format(
+                                unique_id))
+
+                        # Here I have to deserialize the extras
+                        old_extras = models.DbExtra.get_all_values_for_nodepk(existing_entry_id)
+                        deserialized_extras = deserialize_attributes(extras, extras_conversion)
+                        # TODO: remove when aiida extras will be moved somewhere else
+                        # from here
+                        deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
+                                key.startswith('_aiida_')}
+                        if models.DbNode.objects.filter(uuid=unique_id)[0].type.endswith('code.Code.'):
+                            deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
+                                    key == 'hidden'}
+                        # till here
+                        merged_extras = merge_extras(old_extras, deserialized_extras, extras_mode_existing)
+
+                        models.DbExtra.reset_values_for_node(
+                            dbnode=existing_entry_id,
+                            attributes=merged_extras,
                             with_transaction=False)
 
             if not silent:
@@ -935,7 +1113,8 @@ def validate_uuid(given_uuid):
     return str(parsed_uuid) == given_uuid
 
 
-def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False, silent=False):
+def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
+        extras_mode_existing='kcl', extras_mode_new='ignore', silent=False):
     """
     Import exported AiiDA environment to the AiiDA database.
     If the 'in_path' is a folder, calls extract_tree; otherwise, tries to
@@ -943,6 +1122,14 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False, silen
     correct function.
 
     :param in_path: the path to a file or folder that can be imported in AiiDA
+    :param extras_mode_existing: 3 letter code that will identify what to do with the extras import. The first letter acts on
+                        extras that are present in the original node and not present in the imported node. Can be
+                        either k (keep it) or n (do not keep it). The second letter acts on the imported extras that
+                        are not present in the original node. Can be either c (create it) or n (do not create it). The
+                        third letter says what to do in case of a name collision. Can be l (leave the old value), u
+                        (update with a new value), d (delete the extra), a (ask what to do if the content is
+                        different).
+    :param extras_mode_new: 'import' to import extras of new nodes, 'none' to ignore them
     """
     import os
     import tarfile
@@ -952,6 +1139,8 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False, silen
     from aiida.common import timezone
 
     from aiida.orm import Node, Group
+    from aiida.backends.sqlalchemy.models.node import DbNode
+    from aiida.backends.sqlalchemy.utils import flag_modified
     from aiida.common.archive import extract_tree, extract_tar, extract_zip, extract_cif
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.common.utils import get_object_from_string
@@ -1346,10 +1535,79 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False, silen
                             attributes, attributes_conversion)
 
                         if deserialized_attributes:
-                            from sqlalchemy.dialects.postgresql import JSONB
                             o.attributes = dict()
                             for k, v in deserialized_attributes.items():
                                 o.attributes[k] = v
+
+                        # For DbNodes, we also have to store extras
+                        # Get extras from import file
+                        if extras_mode_new == 'import':
+                            if not silent:
+                                print("STORING NEW NODE EXTRAS...")
+                            try:
+                                extras = data['node_extras'][
+                                    str(import_entry_id)]
+
+                                extras_conversion = data[
+                                    'node_extras_conversion'][
+                                    str(import_entry_id)]
+                            except KeyError:
+                                raise ValueError(
+                                    "Unable to find extras info "
+                                    "for DbNode with UUID = {}".format(
+                                        unique_id))
+                            # Here I have to deserialize the extras
+                            deserialized_extras = deserialize_attributes(extras, extras_conversion)
+                            # TODO: remove when aiida extras will be moved somewhere else
+                            # from here
+                            deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
+                                    key.startswith('_aiida_')}
+                            if o.type.endswith('code.Code.'):
+                                deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
+                                        key == 'hidden'}
+                            # till here
+                            o.extras = dict()
+                            for k, v in deserialized_extras.items():
+                                o.extras[k] = v
+                        elif extras_mode_new == 'none':
+                            if not silent:
+                                print("SKIPPING NEW NODE EXTRAS...")
+                        else:
+                            raise ValueError("Unknown extras_mode_new value: {}, should be either 'import' or "
+                                    "'none'".format(extras_mode_new))
+
+                    if not silent:
+                        print("UPDATING EXISTING NODE EXTRAS (mode: {})".format(extras_mode_existing))
+
+                    uuid_import_pk_match = {entry_data[unique_identifier]:import_entry_id for import_entry_id, entry_data in
+                            existing_entries[entity_name].items()}
+                    for db_node in session.query(DbNode).filter(DbNode.uuid.in_(uuid_import_pk_match)).distinct().all():
+                        import_entry_id = uuid_import_pk_match[str(db_node.uuid)]
+                        # Get extras from import file
+                        try:
+                            extras = data['node_extras'][
+                                str(import_entry_id)]
+                            extras_conversion = data[
+                                'node_extras_conversion'][
+                                str(import_entry_id)]
+                        except KeyError:
+                            raise ValueError("Unable to find extras info "
+                                             "for DbNode with UUID = {}".format(
+                                unique_id))
+
+                        # Here I have to deserialize the extras
+                        old_extras = db_node.extras
+                        deserialized_extras = deserialize_attributes(extras, extras_conversion)
+                        # TODO: remove when aiida extras will be moved somewhere else
+                        # from here
+                        deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
+                                key.startswith('_aiida_')}
+                        if db_node.type.endswith('code.Code.'):
+                            deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
+                                    key == 'hidden'}
+                        # till here
+                        db_node.extras = merge_extras(old_extras, deserialized_extras, extras_mode_existing)
+                        flag_modified(db_node, "extras")
 
                 # Store them all in once; However, the PK
                 # are not set in this way...
@@ -2155,6 +2413,24 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
              node_attributes_conversion[str(n.pk)]) = serialize_dict(
                 n.get_attrs(), track_conversion=True)
 
+    ## EXTRAS
+    if not silent:
+        print("STORING NODE EXTRAS...")
+    node_extras = {}
+    node_extras_conversion = {}
+
+    # A second QueryBuilder query to get the extras. See if this can be
+    # optimized
+    if len(all_nodes_pk) > 0:
+        all_nodes_query = QueryBuilder()
+        all_nodes_query.append(Node, filters={"id": {"in": all_nodes_pk}},
+                               project=["*"])
+        for res in all_nodes_query.iterall():
+            n = res[0]
+            (node_extras[str(n.pk)],
+             node_extras_conversion[str(n.pk)]) = serialize_dict(
+                n.get_extras(), track_conversion=True)
+
     if not silent:
         print("STORING NODE LINKS...")
 
@@ -2349,6 +2625,8 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
     data = {
         'node_attributes': node_attributes,
         'node_attributes_conversion': node_attributes_conversion,
+        'node_extras': node_extras,
+        'node_extras_conversion': node_extras_conversion,
         'export_data': export_data,
         'links_uuid': links_uuid,
         'groups_uuid': groups_uuid,

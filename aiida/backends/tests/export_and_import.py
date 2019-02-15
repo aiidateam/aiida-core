@@ -2458,3 +2458,154 @@ class TestComments(AiidaTestCase):
 
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)
+
+class TestExtras(AiidaTestCase):
+    """Test extras import"""
+
+    @classmethod
+    def setUpClass(cls, *args, **kwargs):
+        """Only run to prepare an export file"""
+        import os 
+        import tempfile
+        from aiida.orm import Data
+        from aiida.orm.importexport import export
+        super(TestExtras, cls).setUpClass()
+        d = Data()
+        d.label = 'my_test_data_node'
+        d.store()
+        d.set_extras({'b': 2, 'c': 3})
+        tmp_folder = tempfile.mkdtemp()
+        cls.export_file = os.path.join(tmp_folder, 'export.aiida')
+        export([d], outfile=cls.export_file, silent=True)
+
+    def setUp(self):
+        """This function runs before every test execution"""
+        from aiida.orm.importexport import import_data
+        self.clean_db()
+        self.insert_data()
+
+    def import_extras(self, mode_new='import'):
+        """Import an aiida database"""
+        from aiida.orm import Data
+        from aiida.orm.querybuilder import QueryBuilder
+        import_data(self.export_file, silent=True, extras_mode_new=mode_new)
+        q = QueryBuilder().append(Data, filters={'label': 'my_test_data_node'})
+        self.assertEquals(q.count(), 1)
+        self.imported_node = q.all()[0][0]
+
+    def modify_extras(self, mode_existing):
+        """Import the same aiida database again"""
+        from aiida.orm import Data
+        from aiida.orm.querybuilder import QueryBuilder
+        self.imported_node.set_extra('a', 1)
+        self.imported_node.set_extra('b', 1000)
+        self.imported_node.del_extra('c')
+
+        import_data(self.export_file, silent=True, extras_mode_existing=mode_existing)
+
+        # Query again the database
+        q = QueryBuilder().append(Data, filters={'label': 'my_test_data_node'})
+        self.assertEquals(q.count(), 1)
+        return q.all()[0][0]
+
+    def tearDown(self):
+        pass
+
+
+    def test_import_of_extras(self):
+        """Check if extras are properly imported"""
+        self.import_extras()
+        self.assertEquals(self.imported_node.get_extra('b'), 2)
+        self.assertEquals(self.imported_node.get_extra('c'), 3)
+
+    def test_absence_of_extras(self):
+        """Check whether extras are not imported if the mode is set to 'none'"""
+        self.import_extras(mode_new='none')
+        with self.assertRaises(AttributeError):
+            # the extra 'b' should not exist
+            self.imported_node.get_extra('b')
+        with self.assertRaises(AttributeError):
+            # the extra 'c' should not exist
+            self.imported_node.get_extra('c')
+        
+    def test_extras_import_mode_keep_existing(self):
+        """Check if old extras are not modified in case of name collision"""
+        self.import_extras()
+        imported_node = self.modify_extras(mode_existing='kcl')
+
+        # Check that extras are imported correctly
+        self.assertEquals(imported_node.get_extra('a'), 1)
+        self.assertEquals(imported_node.get_extra('b'), 1000)
+        self.assertEquals(imported_node.get_extra('c'), 3)
+
+    def test_extras_import_mode_update_existing(self):
+        """Check if old extras are modified in case of name collision"""
+        self.import_extras()
+        imported_node = self.modify_extras(mode_existing='kcu')
+
+        # Check that extras are imported correctly
+        self.assertEquals(imported_node.get_extra('a'), 1)
+        self.assertEquals(imported_node.get_extra('b'), 2)
+        self.assertEquals(imported_node.get_extra('c'), 3)
+    
+    def test_extras_import_mode_mirror(self):
+        """Check if old extras are fully overwritten by the imported ones"""
+        self.import_extras()
+        imported_node = self.modify_extras(mode_existing='ncu')
+
+        # Check that extras are imported correctly
+        with self.assertRaises(AttributeError): # the extra 
+            # 'a' should not exist, as the extras were fully mirrored with respect to
+            # the imported node
+            imported_node.get_extra('a')
+        self.assertEquals(imported_node.get_extra('b'), 2)
+        self.assertEquals(imported_node.get_extra('c'), 3)
+    
+    def test_extras_import_mode_none(self):
+        """Check if old extras are fully overwritten by the imported ones"""
+        self.import_extras()
+        imported_node = self.modify_extras(mode_existing='knl')
+
+        # Check if extras are imported correctly
+        self.assertEquals(imported_node.get_extra('b'), 1000)
+        self.assertEquals(imported_node.get_extra('a'), 1)
+        with self.assertRaises(AttributeError): # the extra
+            # 'c' should not exist, as the extras were keept untached
+            imported_node.get_extra('c')
+    
+    def test_extras_import_mode_strange(self):
+        """Check a mode that is probably does not make much sense but is still available"""
+        self.import_extras()
+        imported_node = self.modify_extras(mode_existing='kcd')
+
+        # Check if extras are imported correctly
+        self.assertEquals(imported_node.get_extra('a'), 1)
+        self.assertEquals(imported_node.get_extra('c'), 3)
+        with self.assertRaises(AttributeError): # the extra
+            # 'b' should not exist, as the collided extras are deleted
+            imported_node.get_extra('b')
+    
+    def test_extras_import_mode_correct(self):
+        """Test all possible import modes except 'ask' """
+        self.import_extras()
+        for l1 in ['k', 'n']: # keep or not keep old extras
+            for l2 in ['n', 'c']: # create or not create new extras
+                for l3 in ['l', 'u', 'd']: # leave old, update or delete collided extras
+                    mode = l1 + l2 + l3
+                    import_data(self.export_file, silent=True, extras_mode_existing=mode)
+    
+    def test_extras_import_mode_wrong(self):
+        """Check a mode that is wrong"""
+        self.import_extras()
+        with self.assertRaises(ValueError):
+            import_data(self.export_file, silent=True, extras_mode_existing='xnd') # first letter is wrong
+        with self.assertRaises(ValueError):
+            import_data(self.export_file, silent=True, extras_mode_existing='nxd') # second letter is wrong
+        with self.assertRaises(ValueError):
+            import_data(self.export_file, silent=True, extras_mode_existing='nnx') # third letter is wrong
+        with self.assertRaises(ValueError):
+            import_data(self.export_file, silent=True, extras_mode_existing='n') # too short
+        with self.assertRaises(ValueError):
+            import_data(self.export_file, silent=True, extras_mode_existing='nndnn') # too long
+        with self.assertRaises(TypeError):
+            import_data(self.export_file, silent=True, extras_mode_existing=5) # wrong type

@@ -157,6 +157,21 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
             testing_mode=testing_mode,
         )
 
+    def get_daemon_client(self):
+        """
+        Return the daemon client for the current profile.
+
+        :return: the daemon client
+        :rtype: :class:`aiida.daemon.client.DaemonClient`
+        :raises MissingConfigurationError: if the configuration file cannot be found
+        :raises ProfileConfigurationError: if the given profile does not exist
+        """
+        from aiida.daemon.client import DaemonClient
+        if self._daemon_client is None:
+            self._daemon_client = DaemonClient(self.get_profile())
+
+        return self._daemon_client
+
     def get_process_controller(self):
         """
         Get a process controller
@@ -258,16 +273,20 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         if self._runner is not None:
             self._runner.stop()
 
+        self._backend = None
+        self._config = None
         self._profile = None
-        self._persister = None
         self._communicator = None
+        self._daemon_client = None
         self._process_controller = None
+        self._persister = None
         self._runner = None
 
     def __init__(self):
         super(Manager, self).__init__()
         self._backend = None  # type: aiida.orm.Backend
         self._config = None  # type: aiida.manage.configuration.config.Config
+        self._daemon_client = None  # type: aiida.daemon.client.DaemonClient
         self._profile = None  # type: aiida.manage.configuration.profile.Profile
         self._communicator = None  # type: kiwipy.rmq.RmqThreadCommunicator
         self._process_controller = None  # type: plumpy.RemoteProcessThreadController

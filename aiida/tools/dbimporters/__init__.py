@@ -10,6 +10,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from aiida.plugins.factory import BaseFactory
 from aiida.tools.dbimporters.baseclasses import DbImporter
 

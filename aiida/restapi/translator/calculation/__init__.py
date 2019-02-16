@@ -31,7 +31,7 @@ class CalculationTranslator(NodeTranslator):
     from aiida.orm import CalcJobNode
     _aiida_class = CalcJobNode
     # The string name of the AiiDA class
-    _aiida_type = "node.process.calculation.calcjob.CalcJobNode"
+    _aiida_type = "process.calculation.calcjob.CalcJobNode"
     # The string associated to the AiiDA class in the query builder lexicon
     _qb_type = _aiida_type + '.'
 
@@ -119,7 +119,7 @@ class CalculationTranslator(NodeTranslator):
         :param node: aiida node
         :return: the retrieved input files for job calculation
         """
-        if node.type.startswith("node.process.calculation.calcjob"):
+        if node.type.startswith("process.calculation.calcjob"):
 
             input_folder = node._raw_input_folder  # pylint: disable=protected-access
 
@@ -158,7 +158,7 @@ class CalculationTranslator(NodeTranslator):
         :param node: aiida node
         :return: the retrieved output files for job calculation
         """
-        if node.type.startswith("node.process.calculation.calcjob"):
+        if node.type.startswith("process.calculation.calcjob"):
 
             retrieved_folder = node.out.retrieved
             response = {}

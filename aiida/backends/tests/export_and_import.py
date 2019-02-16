@@ -50,7 +50,7 @@ class TestSpecificImport(AiidaTestCase):
         import code used to crash. This test demonstrates this problem.
         """
         from aiida.orm import Node, QueryBuilder
-        from aiida.orm.node.data.parameter import ParameterData
+        from aiida.orm.nodes.data.parameter import ParameterData
 
         parameters = ParameterData(dict={
             'Pr': {
@@ -90,8 +90,8 @@ class TestSpecificImport(AiidaTestCase):
         """
         from aiida.common.links import LinkType
         from aiida.orm import CalculationNode, Node, QueryBuilder
-        from aiida.orm.node.data.structure import StructureData
-        from aiida.orm.node.data.remote import RemoteData
+        from aiida.orm.nodes.data.structure import StructureData
+        from aiida.orm.nodes.data.remote import RemoteData
 
         test_label = 'Test structure'
         test_cell = [
@@ -192,7 +192,7 @@ class TestSimple(AiidaTestCase):
 
     def test_base_data_nodes(self):
         """Test ex-/import of Base Data nodes"""
-        from aiida.orm.node.data.base import Str, Int, Float, Bool
+        from aiida.orm import Str, Int, Float, Bool
 
         # Creating a folder for the import/export files
         temp_folder = tempfile.mkdtemp()
@@ -389,7 +389,7 @@ class TestUsers(AiidaTestCase):
         """
         from aiida.orm import User
         from aiida.orm import CalcJobNode
-        from aiida.orm.node.data.structure import StructureData
+        from aiida.orm.nodes.data.structure import StructureData
         from aiida.common.links import LinkType
         from aiida.manage import get_manager
 
@@ -465,7 +465,7 @@ class TestUsers(AiidaTestCase):
         """
         from aiida.orm import User
         from aiida.orm import CalcJobNode
-        from aiida.orm.node.data.structure import StructureData
+        from aiida.orm.nodes.data.structure import StructureData
         from aiida.common.links import LinkType
         from aiida.manage import get_manager
 
@@ -567,7 +567,7 @@ class TestGroups(AiidaTestCase):
         """
         from aiida.common.links import LinkType
         from aiida.orm import CalcJobNode, User, QueryBuilder
-        from aiida.orm.node.data.structure import StructureData
+        from aiida.orm.nodes.data.structure import StructureData
 
         # Creating a folder for the import/export files
         temp_folder = tempfile.mkdtemp()
@@ -623,7 +623,7 @@ class TestGroups(AiidaTestCase):
     def test_group_export(self):
         """Test that when exporting just a group, its nodes are also exported"""
         from aiida.orm import Group, User, QueryBuilder
-        from aiida.orm.node.data.structure import StructureData
+        from aiida.orm.nodes.data.structure import StructureData
 
         # Creating a folder for the import/export files
         temp_folder = tempfile.mkdtemp()
@@ -672,7 +672,7 @@ class TestGroups(AiidaTestCase):
         database. This should raise an appropriate exception
         """
         from aiida.orm import Group, User, QueryBuilder
-        from aiida.orm.node.data.structure import StructureData
+        from aiida.orm.nodes.data.structure import StructureData
 
         grouplabel = "node_group_existing"
         # Creating a folder for the import/export files
@@ -738,7 +738,7 @@ class TestCalculations(AiidaTestCase):
     def test_calcfunction(self):
         """Test @calcfunction"""
         from aiida.work import calcfunction
-        from aiida.orm.node.data.float import Float
+        from aiida.orm.nodes.data.float import Float
         from aiida.common.exceptions import NotExistent
 
         # Creating a folder for the import/export files
@@ -782,7 +782,7 @@ class TestCalculations(AiidaTestCase):
     def test_workcalculation(self):
         """Test simple master/slave WorkChainNodes"""
         from aiida.orm import WorkChainNode
-        from aiida.orm.node.data.int import Int
+        from aiida.orm.nodes.data.int import Int
         from aiida.common.links import LinkType
 
         # Creating a folder for the import/export files
@@ -835,9 +835,9 @@ class TestComplex(AiidaTestCase):
         at the imported graph.
         """
         from aiida.orm import CalcJobNode
-        from aiida.orm.node.data.folder import FolderData
-        from aiida.orm.node.data.parameter import ParameterData
-        from aiida.orm.node.data.remote import RemoteData
+        from aiida.orm.nodes.data.folder import FolderData
+        from aiida.orm.nodes.data.parameter import ParameterData
+        from aiida.orm.nodes.data.remote import RemoteData
         from aiida.common.links import LinkType
         from aiida.common.exceptions import NotExistent
 
@@ -917,8 +917,8 @@ class TestComplex(AiidaTestCase):
         from datetime import datetime
 
         from aiida.orm import Group, CalculationNode, QueryBuilder
-        from aiida.orm.node.data.array import ArrayData
-        from aiida.orm.node.data.parameter import ParameterData
+        from aiida.orm.nodes.data.array import ArrayData
+        from aiida.orm.nodes.data.parameter import ParameterData
         from aiida.common.hashing import make_hash
         from aiida.common.links import LinkType
 
@@ -1483,7 +1483,7 @@ class TestLinks(AiidaTestCase):
         import tarfile
 
         from aiida.common.folders import SandboxFolder
-        from aiida.orm.node.data.structure import StructureData
+        from aiida.orm.nodes.data.structure import StructureData
         from aiida.common import json
 
         # Creating a folder for the import/export files
@@ -1537,7 +1537,7 @@ class TestLinks(AiidaTestCase):
         correctly recreated upon import.
         """
         from aiida.orm import CalculationNode
-        from aiida.orm.node.data.int import Int
+        from aiida.orm.nodes.data.int import Int
         from aiida.common.links import LinkType
 
         tmp_folder = tempfile.mkdtemp()
@@ -1577,7 +1577,7 @@ class TestLinks(AiidaTestCase):
         """
         from aiida.orm import CalculationNode, WorkflowNode
         from aiida.orm import CalcJobNode, CalcFunctionNode, WorkChainNode, WorkFunctionNode
-        from aiida.orm.node.data.int import Int
+        from aiida.orm.nodes.data.int import Int
         from aiida.common.links import LinkType
 
         if export_combination < 0 or export_combination > 9:
@@ -1684,7 +1684,7 @@ class TestLinks(AiidaTestCase):
     def test_data_create_reversed_false(self):
         """Verify that create_reversed = False is respected when only exporting Data nodes."""
         from aiida.orm import Data, Group, CalcJobNode, QueryBuilder
-        from aiida.orm.node.data.int import Int
+        from aiida.orm.nodes.data.int import Int
         from aiida.common.links import LinkType
 
         tmp_folder = tempfile.mkdtemp()
@@ -1890,7 +1890,7 @@ class TestLinks(AiidaTestCase):
 
         """
         from aiida.orm import WorkflowNode
-        from aiida.orm.node.data.int import Int
+        from aiida.orm.nodes.data.int import Int
         from aiida.common.links import LinkType
 
         tmp_folder = tempfile.mkdtemp()
@@ -1940,7 +1940,7 @@ class TestLinks(AiidaTestCase):
         and imported without problems,
         """
         from aiida.orm import WorkflowNode, Node, QueryBuilder
-        from aiida.orm.node.data.int import Int
+        from aiida.orm.nodes.data.int import Int
         from aiida.common.links import LinkType
 
         tmp_folder = tempfile.mkdtemp()
@@ -2597,13 +2597,13 @@ class TestProvenanceRedesign(AiidaTestCase):
         Example: Bool: “data.base.Bool.” → “data.bool.Bool.”
         Change data nodes: “data.*” → “node.data.*”
         """
-        from aiida.orm.node.data.base import Str, Int, Float, Bool, List
+        from aiida.orm import Str, Int, Float, Bool, List
 
         # Test content
         test_content = ("Hello", 6, -1.2399834e12, False)
         test_types = ()
         for node_type in ["str", "int", "float", "bool"]:
-            add_type = ('node.data.{}.{}.'.format(node_type, node_type.capitalize()),)
+            add_type = ('data.{}.{}.'.format(node_type, node_type.capitalize()),)
             test_types = test_types.__add__(add_type)
 
         # Create temporary folders for the import/export files
@@ -2654,7 +2654,7 @@ class TestProvenanceRedesign(AiidaTestCase):
 
             # Check List type
             msg = "type of node ('{}') is not updated according to db schema v0.4".format(nlist.type)
-            self.assertEqual(nlist.type, 'node.data.list.List.', msg=msg)
+            self.assertEqual(nlist.type, 'data.list.List.', msg=msg)
 
         finally:
             # Deleting the created temporary folders
@@ -2663,7 +2663,7 @@ class TestProvenanceRedesign(AiidaTestCase):
     def test_node_process_type(self):
         """ Column `process_type` added to `Node` entity DB table """
         from aiida.orm import ProcessNode, QueryBuilder
-        from aiida.orm.node.data.int import Int
+        from aiida.orm.nodes.data.int import Int
         from aiida.work.launch import run_get_node
         from aiida.work.test_utils import AddProcess
 
@@ -2671,7 +2671,7 @@ class TestProvenanceRedesign(AiidaTestCase):
         tmp_folder = tempfile.mkdtemp()
 
         # Node types
-        node_type = "node.process.workflow.WorkflowNode."
+        node_type = "process.workflow.WorkflowNode."
         node_process_type = "aiida.work.test_utils.AddProcess"
 
         try:
@@ -2737,7 +2737,7 @@ class TestProvenanceRedesign(AiidaTestCase):
             code_type = code.type
 
             # Assert correct type exists prior to export
-            self.assertEqual(code_type, "node.data.code.Code.")
+            self.assertEqual(code_type, "data.code.Code.")
 
             # Export node
             filename = os.path.join(tmp_folder, "export.tar.gz")
@@ -2789,7 +2789,7 @@ class TestProvenanceRedesign(AiidaTestCase):
         as the type_string content for the relevant Groups.
         """
         from aiida.orm import CalculationNode, Group, QueryBuilder
-        from aiida.orm.node.data.upf import upload_upf_family
+        from aiida.orm.nodes.data.upf import upload_upf_family
         from aiida.orm import load_group
 
         # Create temporary folders for the import/export files

@@ -934,7 +934,7 @@ class QueryBuilder(object):
             # Will project the ORM instance
             qb.add_projection('struc', '*')
             print type(qb.first()[0])
-            # >>> aiida.orm.node.data.structure.StructureData
+            # >>> aiida.orm.nodes.data.structure.StructureData
 
         The double start *\*\** projects all possible projections of this entity:
 

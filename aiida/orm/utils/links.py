@@ -76,7 +76,7 @@ def validate_link(source, target, link_type, link_label):
     """
     from aiida.common.links import LinkType
     from aiida.orm import Node
-    from aiida.orm.node.data import Data
+    from aiida.orm.nodes.data import Data
     from aiida.orm import CalculationNode, WorkflowNode
 
     if not isinstance(link_type, LinkType):

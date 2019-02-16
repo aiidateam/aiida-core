@@ -24,14 +24,14 @@ from six.moves import cStringIO as StringIO
 from click.testing import CliRunner
 
 from aiida import orm
-from aiida.orm.node.data.array import ArrayData
-from aiida.orm.node.data.array.bands import BandsData
-from aiida.orm.node.data.array.kpoints import KpointsData
-from aiida.orm.node.data.cif import CifData, has_pycifrw
-from aiida.orm.node.data.parameter import ParameterData
-from aiida.orm.node.data.remote import RemoteData
-from aiida.orm.node.data.structure import StructureData
-from aiida.orm.node.data.array.trajectory import TrajectoryData
+from aiida.orm.nodes.data.array import ArrayData
+from aiida.orm.nodes.data.array.bands import BandsData
+from aiida.orm.nodes.data.array.kpoints import KpointsData
+from aiida.orm.nodes.data.cif import CifData, has_pycifrw
+from aiida.orm.nodes.data.parameter import ParameterData
+from aiida.orm.nodes.data.remote import RemoteData
+from aiida.orm.nodes.data.structure import StructureData
+from aiida.orm.nodes.data.array.trajectory import TrajectoryData
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands.cmd_data import cmd_array
@@ -372,7 +372,7 @@ class TestVerdiDataBands(AiidaTestCase, TestVerdiDataListable):
         self.assertIn(b'Usage:', output, "Sub-command verdi data bands show --help failed.")
 
     def test_bandslist(self):
-        from aiida.orm.node.data.array.bands import BandsData
+        from aiida.orm.nodes.data.array.bands import BandsData
 
         self.data_listing_test(BandsData, 'FeO', self.ids)
 
@@ -484,7 +484,7 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable, TestVerdiDat
 
     @staticmethod
     def create_trajectory_data():
-        from aiida.orm.node.data.array.trajectory import TrajectoryData
+        from aiida.orm.nodes.data.array.trajectory import TrajectoryData
         import numpy
 
         # Create a node with two arrays
@@ -597,7 +597,7 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable, TestVerdiData
 
     @staticmethod
     def create_structure_data():
-        from aiida.orm.node.data.structure import StructureData, Site, Kind
+        from aiida.orm.nodes.data.structure import StructureData, Site, Kind
 
         alat = 4.  # angstrom
         cell = [
@@ -787,7 +787,7 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExport
         This method tests that the Cif listing works as expected with all
         possible flags and arguments.
         """
-        from aiida.orm.node.data.cif import CifData
+        from aiida.orm.nodes.data.cif import CifData
 
         self.data_listing_test(CifData, 'C O2', self.ids)
 

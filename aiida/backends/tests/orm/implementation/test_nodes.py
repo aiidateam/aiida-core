@@ -30,7 +30,7 @@ class TestBackendNode(AiidaTestCase):
 
     def setUp(self):
         super(TestBackendNode, self).setUp()
-        self.node_type = 'node.Node.'
+        self.node_type = ''
         self.node_label = 'label'
         self.node_description = 'description'
         self.node = self.backend.nodes.create(

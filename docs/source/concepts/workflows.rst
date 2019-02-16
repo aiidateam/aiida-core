@@ -884,12 +884,12 @@ Quite often, inputs which are given as Python data types need to be cast to the 
 
 For inputs which are stored in the database (``non_db=False``), the serialization function should return an AiiDA data type. For ``non_db`` inputs, the function must be idempotent because it might be applied more than once.
 
-The following example workchain takes three inputs ``a``, ``b``, ``c``, and simply returns the given inputs. The :func:`.to_aiida_type` function is used as serialization function.
+The following example workchain takes three inputs ``a``, ``b``, ``c``, and simply returns the given inputs. The :func:`aiida.orm.nodes.data.base.to_aiida_type` function is used as serialization function.
 
 .. include:: serialize_examples/serialize_workchain.py
     :code: python
 
-This workchain can now be called with native Python types, which will automatically converted to AiiDA types by the :func:`.to_aiida_type` function. Note that the module which defines the corresponding AiiDA type must be loaded for it to be recognized by :func:`.to_aiida_type`.
+This workchain can now be called with native Python types, which will automatically converted to AiiDA types by the :func:`aiida.orm.nodes.data.base.to_aiida_type` function. Note that the module which defines the corresponding AiiDA type must be loaded for it to be recognized by :func:`aiida.orm.nodes.data.base.to_aiida_type`.
 
 .. include:: serialize_examples/run_serialize.py
     :code: python
@@ -922,6 +922,6 @@ However, these workchains can be updated with just a few minor updates that we w
 * The method ``RemoteData.is_empty()`` has been changes and is now accessed through the ``RemoteData.is_empty``.
 * The method ``.is_alloy()`` for classes ``StructureData`` and ``Kind`` is now accessed through the ``.is_alloy`` property.
 * The method ``.has_vacancies()`` for classes ``StructureData`` and ``Kind`` is now accessed through the ``.has_vacancies`` property.
-* The arguments ``stepids`` and ``cells`` of the :meth:`TrajectoryData.set_trajectory()<aiida.orm.node.data.array.trajectory.TrajectoryData.set_trajectory>` method are made optional
+* The arguments ``stepids`` and ``cells`` of the :meth:`TrajectoryData.set_trajectory()<aiida.orm.nodes.data.array.trajectory.TrajectoryData.set_trajectory>` method are made optional
   which has implications on the ordering of the arguments passed to this method. 
 * The list of atomic symbols for trajectories is no longer stored as array data but is now accessible through the ``TrajectoryData.symbols`` attribute.

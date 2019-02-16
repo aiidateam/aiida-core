@@ -9,9 +9,9 @@ from aiida import orm
 from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.common.links import LinkType
-from aiida.orm.node.data.folder import FolderData
-from aiida.orm.node.data.remote import RemoteData
-from aiida.orm.node.data.singlefile import SinglefileData
+from aiida.orm.nodes.data.folder import FolderData
+from aiida.orm.nodes.data.remote import RemoteData
+from aiida.orm.nodes.data.singlefile import SinglefileData
 from aiida.orm import CalcJobNode
 
 from .job_processes import Waiting, UPLOAD_COMMAND

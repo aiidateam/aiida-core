@@ -16,7 +16,7 @@ import plumpy
 from tornado import gen
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm.node.data.int import Int
+from aiida.orm.nodes.data.int import Int
 from aiida import work
 from aiida.manage import get_manager
 from aiida.orm import WorkflowNode

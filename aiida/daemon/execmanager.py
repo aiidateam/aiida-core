@@ -27,7 +27,7 @@ from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
 from aiida.common.log import get_dblogger_extra
 from aiida.orm import DataFactory
-from aiida.orm.node.data.folder import FolderData
+from aiida.orm.nodes.data.folder import FolderData
 from aiida.scheduler.datastructures import JobState
 
 REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
@@ -45,7 +45,7 @@ def upload_calculation(calculation, transport, calc_info, script_filename):
     :param script_filename: the job launch script returned by `CalcJobNode._presubmit`
     """
     from aiida.orm import load_node, Code
-    from aiida.orm.node.data.remote import RemoteData
+    from aiida.orm.nodes.data.remote import RemoteData
 
     computer = calculation.computer
 

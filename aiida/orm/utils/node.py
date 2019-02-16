@@ -24,8 +24,11 @@ def load_node_class(type_string):
     :param type_string: the `type` string of the node
     :return: a sub class of `Node`
     """
-    from aiida.orm.node.data import Data
+    from aiida.orm.nodes.data import Data
     from aiida.plugins.entry_point import load_entry_point
+
+    if type_string == 'data.Data.':
+        return Data
 
     if not type_string.endswith('.'):
         raise exceptions.DbContentError('The type string {} is invalid'.format(type_string))
@@ -35,20 +38,17 @@ def load_node_class(type_string):
     except ValueError:
         raise exceptions.MissingPluginError
 
-    if base_path == 'node.data':
-        return Data
-
     # Data nodes are the only ones with sub classes that are still external, so if the plugin is not available
     # we fall back on the base node type
-    if base_path.startswith('node.data.'):
-        entry_point_name = strip_prefix(base_path, 'node.data.')
+    if base_path.startswith('data.'):
+        entry_point_name = strip_prefix(base_path, 'data.')
         try:
             return load_entry_point('aiida.data', entry_point_name)
         except exceptions.MissingEntryPointError:
             return Data
 
-    if base_path.startswith('node.process'):
-        entry_point_name = strip_prefix(base_path, 'node.')
+    if base_path.startswith('process'):
+        entry_point_name = strip_prefix(base_path, 'nodes.')
         return load_entry_point('aiida.node', entry_point_name)
 
     raise exceptions.MissingPluginError('unknown type string {}'.format(type_string))
@@ -76,14 +76,14 @@ def get_type_string_from_class(class_module, class_name):
     else:
         type_string = '{}.{}.'.format(class_module, class_name)
 
-    prefixes = ('aiida.orm.', 'implementation.general.', 'implementation.django.', 'implementation.sqlalchemy.')
+    prefixes = ('aiida.orm.nodes.',)
 
     # Sequentially and **in order** strip the prefixes if present
     for prefix in prefixes:
         type_string = strip_prefix(type_string, prefix)
 
-    # This needs to be here as long as `aiida.orm.node.data` does not live in `aiida.orm.node.data` because all the
-    # `Data` instances will have a type string that starts with `data.` instead of `node.`, so in order to match any
+    # This needs to be here as long as `aiida.orm.nodes.data` does not live in `aiida.orm.nodes.data` because all the
+    # `Data` instances will have a type string that starts with `data.` instead of `nodes.`, so in order to match any
     # `Node` we have to look for any type string essentially.
     if type_string == 'node.Node.':
         type_string = ''
@@ -127,7 +127,7 @@ def clean_value(value):
         values replaced where needed.
     """
     # Must be imported in here to avoid recursive imports
-    from aiida.orm.node.data import BaseType
+    from aiida.orm.nodes.data import BaseType
 
     def clean_builtin(val):
         """

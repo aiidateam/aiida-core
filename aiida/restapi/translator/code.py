@@ -28,7 +28,7 @@ class CodeTranslator(NodeTranslator):
     # The AiiDA class one-to-one associated to the present class
     _aiida_class = Code
     # The string name of the AiiDA class
-    _aiida_type = "node.data.code.Code"
+    _aiida_type = "data.code.Code"
     # The string associated to the AiiDA class in the query builder lexicon
     _qb_type = _aiida_type + '.'
 

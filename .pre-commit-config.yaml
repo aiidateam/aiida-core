@@ -142,18 +142,13 @@
         aiida/common/datastructures.py|
         aiida/daemon/execmanager.py|
         aiida/manage/backup/backup_base.py|
-        aiida/orm/authinfo.py|
         aiida/orm/autogroup.py|
         aiida/orm/backend.py|
         aiida/orm/querybuilder.py|
-        aiida/orm/code.py|
-        aiida/orm/group.py|
-        aiida/orm/implementation/calculation.py|
         aiida/orm/implementation/django/authinfo.py|
         aiida/orm/implementation/django/backend.py|
         aiida/orm/implementation/django/computer.py|
         aiida/orm/implementation/django/__init__.py|
-        aiida/orm/implementation/django/user.py|
         aiida/orm/implementation/django/utils.py|
         aiida/orm/implementation/sqlalchemy/authinfo.py|
         aiida/orm/implementation/sqlalchemy/backend.py|
@@ -163,30 +158,28 @@
         aiida/orm/implementation/sqlalchemy/utils.py|
         aiida/orm/__init__.py|
         aiida/orm/importexport.py|
-        aiida/orm/node/data/array/bands.py|
-        aiida/orm/node/data/array/kpoints.py|
-        aiida/orm/node/data/array/projection.py|
-        aiida/orm/node/data/array/xy.py|
-        aiida/orm/node/data/base.py|
-        aiida/orm/node/data/bool.py|
-        aiida/orm/node/data/error.py|
-        aiida/orm/node/data/float.py|
-        aiida/orm/node/data/folder.py|
-        aiida/orm/node/data/frozendict.py|
-        aiida/orm/node/data/__init__.py|
-        aiida/orm/node/data/int.py|
-        aiida/orm/node/data/list.py|
-        aiida/orm/node/data/code.py|
-        aiida/orm/node/data/numeric.py|
-        aiida/orm/node/data/orbital.py|
-        aiida/orm/node/data/parameter.py|
-        aiida/orm/node/data/remote.py|
-        aiida/orm/node/data/singlefile.py|
-        aiida/orm/node/data/str.py|
-        aiida/orm/node/data/structure.py|
-        aiida/orm/node/data/upf.py|
-        aiida/orm/node/process/calculation/calcjob.py|
-        aiida/orm/node.py|
+        aiida/orm/nodes/data/array/bands.py|
+        aiida/orm/nodes/data/array/kpoints.py|
+        aiida/orm/nodes/data/array/projection.py|
+        aiida/orm/nodes/data/array/xy.py|
+        aiida/orm/nodes/data/base.py|
+        aiida/orm/nodes/data/bool.py|
+        aiida/orm/nodes/data/error.py|
+        aiida/orm/nodes/data/float.py|
+        aiida/orm/nodes/data/folder.py|
+        aiida/orm/nodes/data/frozendict.py|
+        aiida/orm/nodes/data/int.py|
+        aiida/orm/nodes/data/list.py|
+        aiida/orm/nodes/data/code.py|
+        aiida/orm/nodes/data/numeric.py|
+        aiida/orm/nodes/data/orbital.py|
+        aiida/orm/nodes/data/parameter.py|
+        aiida/orm/nodes/data/remote.py|
+        aiida/orm/nodes/data/singlefile.py|
+        aiida/orm/nodes/data/str.py|
+        aiida/orm/nodes/data/structure.py|
+        aiida/orm/nodes/data/upf.py|
+        aiida/orm/nodes/process/calculation/calcjob.py|
         aiida/orm/utils/__init__.py|
         aiida/orm/utils/loaders.py|
         aiida/orm/utils/remote.py|

@@ -38,17 +38,17 @@ User
 Node
 ++++
 
-.. automodule:: aiida.orm.node
+.. automodule:: aiida.orm.nodes
    :members:
    :noindex:
 
-.. autoclass:: aiida.orm.node.Node
+.. autoclass:: aiida.orm.nodes.node.Node
    :noindex:
 
 
 Code
 ++++
-.. automodule:: aiida.orm.node.data.code
+.. automodule:: aiida.orm.nodes.data.code
    :members:
    :noindex:
    :special-members: __init__
@@ -69,7 +69,7 @@ ORM documentation: Data
 .. note:: This list only includes the classes included in AiiDA-core. For all the plugin subclasses,
   check the corresponding plugin repositories.
 
-.. automodule:: aiida.orm.node.data
+.. automodule:: aiida.orm.nodes.data
    :members:
    :noindex:
    :private-members: _exportcontent
@@ -78,56 +78,56 @@ ORM documentation: Data
 
 Structure
 +++++++++
-.. automodule:: aiida.orm.node.data.structure
+.. automodule:: aiida.orm.nodes.data.structure
    :members:
    :noindex:
    :special-members: __init__
 
 Folder
 ++++++
-.. automodule:: aiida.orm.node.data.folder
+.. automodule:: aiida.orm.nodes.data.folder
    :members:
    :noindex:
 
 Singlefile
 ++++++++++
-.. automodule:: aiida.orm.node.data.singlefile
+.. automodule:: aiida.orm.nodes.data.singlefile
    :members:
    :noindex:
 
 Upf
 +++
-.. automodule:: aiida.orm.node.data.upf
+.. automodule:: aiida.orm.nodes.data.upf
    :members:
    :noindex:
 
 Cif
 +++
-.. automodule:: aiida.orm.node.data.cif
+.. automodule:: aiida.orm.nodes.data.cif
    :members:
    :noindex:
 
 Parameter
 +++++++++
-.. automodule:: aiida.orm.node.data.parameter
+.. automodule:: aiida.orm.nodes.data.parameter
    :members:
    :noindex:
 
 Remote
 ++++++
-.. automodule:: aiida.orm.node.data.remote
+.. automodule:: aiida.orm.nodes.data.remote
    :members:
    :noindex:
 
 OrbitalData
 +++++++++++
-.. automodule:: aiida.orm.node.data.orbital
+.. automodule:: aiida.orm.nodes.data.orbital
    :members:
    :noindex:
 
 ArrayData
 +++++++++
-.. automodule:: aiida.orm.node.data.array
+.. automodule:: aiida.orm.nodes.data.array
    :members:
    :noindex:
 
@@ -137,32 +137,32 @@ The following are Data classes inheriting from ArrayData.
 
 KpointsData
 ...........
-.. automodule:: aiida.orm.node.data.array.kpoints
+.. automodule:: aiida.orm.nodes.data.array.kpoints
    :members:
    :noindex:
    :private-members:
 
 BandsData
 .........
-.. automodule:: aiida.orm.node.data.array.bands
+.. automodule:: aiida.orm.nodes.data.array.bands
    :members:
    :noindex:
 
 ProjectionData
 ..............
-.. automodule:: aiida.orm.node.data.array.projection
+.. automodule:: aiida.orm.nodes.data.array.projection
    :members:
    :noindex:
 
 TrajectoryData
 ..............
-.. automodule:: aiida.orm.node.data.array.trajectory
+.. automodule:: aiida.orm.nodes.data.array.trajectory
    :members:
    :noindex:
 
 XyData
 ..............
-.. automodule:: aiida.orm.node.data.array.xy
+.. automodule:: aiida.orm.nodes.data.array.xy
    :members:
    :noindex:
 
@@ -171,41 +171,41 @@ Base data types
 
 BaseType and NumericType
 ------------------------
-.. automodule:: aiida.orm.node.data.base
+.. automodule:: aiida.orm.nodes.data.base
    :members:
    :noindex:
 
 List
 ----
-.. autoclass:: aiida.orm.node.data.list.List
+.. autoclass:: aiida.orm.nodes.data.list.List
    :members:
    :noindex:
 
 
 Bool
 ----
-.. automodule:: aiida.orm.node.data.bool
+.. automodule:: aiida.orm.nodes.data.bool
    :members:
    :noindex:
 
 
 Float
 -----
-.. automodule:: aiida.orm.node.data.float
+.. automodule:: aiida.orm.nodes.data.float
    :members:
    :noindex:
 
 
 Int
 ---
-.. automodule:: aiida.orm.node.data.int
+.. automodule:: aiida.orm.nodes.data.int
    :members:
    :noindex:
 
 
 Str
 ---
-.. automodule:: aiida.orm.node.data.str
+.. automodule:: aiida.orm.nodes.data.str
    :members:
    :noindex:
 
@@ -217,12 +217,12 @@ ORM documentation: Calculations
 .. note:: This list only includes the classes included in AiiDA-core. For all the plugin subclasses,
   check the corresponding plugin repositories.
 
-.. automodule:: aiida.orm.node.process
+.. automodule:: aiida.orm.nodes.process
    :members:
    :noindex:
    :special-members: __init__
 
-.. automodule:: aiida.orm.node.process.calculation.calcjob
+.. automodule:: aiida.orm.nodes.process.calculation.calcjob
    :members:
    :noindex:
    :special-members: __init__

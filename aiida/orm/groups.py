@@ -280,7 +280,7 @@ class Group(entities.Entity):
 
         :param nodes: a single `Node` or a list of `Nodes`
         """
-        from .node import Node
+        from .nodes import Node
 
         if not self.is_stored:
             raise exceptions.ModificationNotAllowed('cannot add nodes to an unstored group')
@@ -301,7 +301,7 @@ class Group(entities.Entity):
 
         :param nodes: a single `Node` or a list of `Nodes`
         """
-        from .node import Node
+        from .nodes import Node
 
         if not self.is_stored:
             raise exceptions.ModificationNotAllowed('cannot add nodes to an unstored group')

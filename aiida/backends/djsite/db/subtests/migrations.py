@@ -96,8 +96,8 @@ class TestDuplicateNodeUuidMigration(TestMigrations):
     migrate_to = '0014_add_node_uuid_unique_constraint'
 
     def setUpBeforeMigration(self):
-        from aiida.orm.node.data.bool import Bool
-        from aiida.orm.node.data.int import Int
+        from aiida.orm.nodes.data.bool import Bool
+        from aiida.orm.nodes.data.int import Int
 
         self.file_name = 'test.temp'
         self.file_content = '#!/bin/bash\n\necho test run\n'
@@ -630,7 +630,7 @@ class TestTrajectoryDataMigration(TestMigrations):
     ]]])
 
     def setUpBeforeMigration(self):
-        from aiida.orm.node.data.array.trajectory import TrajectoryData
+        from aiida.orm.nodes.data.array.trajectory import TrajectoryData
 
         # Create a TrajectoryData node
         node = TrajectoryData()

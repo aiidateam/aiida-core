@@ -22,7 +22,7 @@ def calcfunction(function):
     A decorator to turn a standard python function into a calcfunction.
     Example usage:
 
-    >>> from aiida.orm.node.data.int import Int
+    >>> from aiida.orm.nodes.data.int import Int
     >>>
     >>> # Define the calcfunction
     >>> @calcfunction
@@ -48,7 +48,7 @@ def workfunction(function):
     A decorator to turn a standard python function into a workfunction.
     Example usage:
 
-    >>> from aiida.orm.node.data.int import Int
+    >>> from aiida.orm.nodes.data.int import Int
     >>>
     >>> # Define the workfunction
     >>> @workfunction
@@ -163,7 +163,7 @@ class FunctionProcess(processes.Process):
         :param func: The function to build a process from
         :param node_class: Provide a custom node class to be used, has to be constructable with no arguments. It has to
             be a sub class of `ProcessNode` and the mixin :class:`~aiida.orm.utils.mixins.FunctionCalculationMixin`.
-        :type node_class: :class:`aiida.orm.node.process.ProcessNode`
+        :type node_class: :class:`aiida.orm.nodes.process.process.ProcessNode`
         :return: A Process class that represents the function
         :rtype: :class:`FunctionProcess`
         """
@@ -269,7 +269,7 @@ class FunctionProcess(processes.Process):
     @override
     def run(self):
         """Run the process"""
-        from aiida.orm.node.data import Data
+        from aiida.orm.nodes.data import Data
         from .exit_code import ExitCode
 
         args = []

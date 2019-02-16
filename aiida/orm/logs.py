@@ -80,9 +80,9 @@ class Log(entities.Entity):
             :return: the list of log entries
             :rtype: list
             """
-            from . import node
+            from . import nodes
 
-            if not isinstance(entity, node.Node):
+            if not isinstance(entity, nodes.Node):
                 raise Exception('Only node logs are stored')
 
             return self.find({'dbnode_id': entity.pk}, order_by=order_by)

@@ -127,7 +127,7 @@ class TestNodeHashing(AiidaTestCase):
 
     @staticmethod
     def create_folderdata_with_empty_file():
-        from aiida.orm.node.data.folder import FolderData
+        from aiida.orm.nodes.data.folder import FolderData
         res = FolderData()
         with res.repository.folder.get_subfolder('path').open('name', 'w') as fhandle:
             pass
@@ -135,7 +135,7 @@ class TestNodeHashing(AiidaTestCase):
 
     @staticmethod
     def create_folderdata_with_empty_folder():
-        from aiida.orm.node.data.folder import FolderData
+        from aiida.orm.nodes.data.folder import FolderData
         res = FolderData()
         res.repository.folder.get_subfolder('path/name').create()
         return res
@@ -178,7 +178,7 @@ class TestNodeHashing(AiidaTestCase):
 
     def test_unequal_arrays(self):
         import numpy as np
-        from aiida.orm.node.data.array import ArrayData
+        from aiida.orm.nodes.data.array import ArrayData
         arrays = [(np.zeros(1001), np.zeros(1005)), (np.array([1, 2, 3]), np.array([2, 3, 4]))]
 
         def create_arraydata(arr):
@@ -1094,9 +1094,9 @@ class TestNodeBasic(AiidaTestCase):
         """
         Test that setting a basetype as an attribute works transparently
         """
-        from aiida.orm.node.data.list import List
-        from aiida.orm.node.data.parameter import ParameterData
-        from aiida.orm.node.data.str import Str
+        from aiida.orm.nodes.data.list import List
+        from aiida.orm.nodes.data.parameter import ParameterData
+        from aiida.orm.nodes.data.str import Str
 
         # This one is unstored
         l1 = List()
@@ -1137,8 +1137,8 @@ class TestNodeBasic(AiidaTestCase):
         """
         Test that setting a basetype as an attribute works transparently
         """
-        from aiida.orm.node.data.list import List
-        from aiida.orm.node.data.str import Str
+        from aiida.orm.nodes.data.list import List
+        from aiida.orm.nodes.data.str import Str
 
         # This one is unstored
         l1 = List()
@@ -1393,7 +1393,7 @@ class TestNodeBasic(AiidaTestCase):
         """
         Tests the load node functionality
         """
-        from aiida.orm.node.data.array import ArrayData
+        from aiida.orm.nodes.data.array import ArrayData
         from aiida.common.exceptions import NotExistent
 
         # I only need one node to test
@@ -1452,8 +1452,8 @@ class TestNodeBasic(AiidaTestCase):
         class TestCalculation(CalcJobNode):
             pass
 
-        TestCalculation._plugin_type_string = 'node.process.calculation.calcjob.notexisting.TemplatereplacerCalculation.'
-        TestCalculation._query_type_string = 'node.process.calculation.calcjob.notexisting.TemplatereplacerCalculation'
+        TestCalculation._plugin_type_string = 'nodes.process.calculation.calcjob.notexisting.TemplatereplacerCalculation.'
+        TestCalculation._query_type_string = 'nodes.process.calculation.calcjob.notexisting.TemplatereplacerCalculation'
 
         jobcalc = CalcJobNode(computer=self.computer)
         jobcalc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
@@ -1473,7 +1473,7 @@ class TestNodeBasic(AiidaTestCase):
         For the case where, e.g., the user doesn't have the necessary plugin.
         """
         from aiida.orm import DataFactory
-        from aiida.orm.node.data import Data
+        from aiida.orm.nodes.data import Data
 
         KpointsData = DataFactory('array.kpoints')
         kpoint = KpointsData().store()
@@ -1717,7 +1717,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         """
         Cannot have two CREATE links for the same node.
         """
-        from aiida.orm.node.data import Data
+        from aiida.orm.nodes.data import Data
         from aiida.orm import CalculationNode
 
         n1 = CalculationNode()

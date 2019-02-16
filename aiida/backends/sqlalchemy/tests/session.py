@@ -75,7 +75,7 @@ class TestSessionSqla(AiidaTestCase):
         session.add(computer.dbmodel)
         session.commit()
 
-        node = self.backend.nodes.create(node_type='node.Node.', user=user).store()
+        node = self.backend.nodes.create(node_type='', user=user).store()
         session.add(node.dbmodel)
         session.commit()
 
@@ -102,7 +102,7 @@ class TestSessionSqla(AiidaTestCase):
         computer = self.backend.computers.create(**defaults)
         computer.store()
 
-        self.backend.nodes.create(node_type='node.Node.', user=user).store()
+        self.backend.nodes.create(node_type='', user=user).store()
         self.drop_connection()
 
     def test_session_update_and_expiration_3(self):
@@ -127,7 +127,7 @@ class TestSessionSqla(AiidaTestCase):
         session.add(computer.dbmodel)
         session.commit()
 
-        node = self.backend.nodes.create(node_type='node.Node.', user=user).store()
+        node = self.backend.nodes.create(node_type='', user=user).store()
         session.add(node.dbmodel)
         session.commit()
 
@@ -154,7 +154,7 @@ class TestSessionSqla(AiidaTestCase):
         computer = self.backend.computers.create(**defaults)
         computer.store()
 
-        self.backend.nodes.create(node_type='node.Node.', user=user).store()
+        self.backend.nodes.create(node_type='', user=user).store()
         self.drop_connection()
 
     def test_node_access_with_sessions(self):
@@ -173,7 +173,7 @@ class TestSessionSqla(AiidaTestCase):
         custom_session = Session()
 
         user = self.backend.users.create(email='test@localhost').store()
-        node = self.backend.nodes.create(node_type='node.Node.', user=user).store()
+        node = self.backend.nodes.create(node_type='', user=user).store()
         master_session = node.dbmodel.session
         self.assertIsNot(master_session, custom_session)
 

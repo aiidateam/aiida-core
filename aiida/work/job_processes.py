@@ -152,7 +152,7 @@ def task_update_job(node, job_manager, cancellable):
     If all retries fail, the task will raise a TransportTaskException
 
     :param node: the node that represents the job calculation
-    :type node: :class:`aiida.orm.node.process.calculation.calcjob.CalcJobNode`
+    :type node: :class:`aiida.orm.nodes.process.calculation.calcjob.CalcJobNode`
     :param job_manager: The job manager
     :type job_manager: :class:`aiida.work.job_calcs.JobManager`
     :param cancellable: A cancel flag

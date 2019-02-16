@@ -13,7 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm.node.data import Data
+from aiida.orm.nodes.data import Data
 from aiida.orm.utils.node import load_node_class
 
 
@@ -22,5 +22,5 @@ class TestLoadNodeClass(AiidaTestCase):
 
     def test_load_node_class_fallback(self):
         """Verify that `load_node_class` will fall back to `Data` class if entry point cannot be loaded."""
-        loaded_class = load_node_class('node.data.some.non.existing.plugin.')
+        loaded_class = load_node_class('data.some.non.existing.plugin.')
         self.assertEqual(loaded_class, Data)

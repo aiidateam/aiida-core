@@ -1001,3 +1001,58 @@ class TestTrajectoryDataMigration(TestMigrationsSQLA):
 
             finally:
                 session.close()
+
+
+class TestNodePrefixRemovalMigration(TestMigrationsSQLA):
+    """Test the migration of Data nodes after the data module was moved within the node moduel."""
+
+    migrate_from = 'ce56d84bcc35'  # ce56d84bcc35_delete_trajectory_symbols_array
+    migrate_to = '61fc0913fae9'  # 61fc0913fae9_remove_node_prefix
+
+    def setUpBeforeMigration(self):
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
+        DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
+        DbUser = self.get_auto_base().classes.db_dbuser  # pylint: disable=invalid-name
+
+        with sa.engine.begin() as connection:
+            try:
+                session = Session(connection.engine)
+
+                user = DbUser(is_superuser=False, email='{}@aiida.net'.format(self.id()))
+                session.add(user)
+                session.commit()
+
+                node_calc = DbNode(type='node.process.calculation.calcjob.CalcJobNode.', user_id=user.id)
+                node_data = DbNode(type='node.data.int.Int.', user_id=user.id)
+
+                session.add(node_data)
+                session.add(node_calc)
+                session.commit()
+
+                self.node_calc_id = node_calc.id
+                self.node_data_id = node_data.id
+            except:
+                session.rollback()
+                raise
+            finally:
+                session.close()
+
+    def test_data_node_type_string(self):
+        """Verify that type string of the Data node was successfully adapted."""
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
+        DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
+
+        with sa.engine.begin() as connection:
+            try:
+                session = Session(connection.engine)
+
+                # Verify that the `node.` prefix has been dropped from both the data as well as the process node
+                node_data = session.query(DbNode).filter(DbNode.id == self.node_data_id).one()
+                self.assertEqual(node_data.type, 'data.int.Int.')
+
+                node_calc = session.query(DbNode).filter(DbNode.id == self.node_calc_id).one()
+                self.assertEqual(node_calc.type, 'process.calculation.calcjob.CalcJobNode.')
+            finally:
+                session.close()

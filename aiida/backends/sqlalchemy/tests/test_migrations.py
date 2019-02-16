@@ -24,7 +24,7 @@ from six.moves import zip
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy import utils
 from aiida.backends.sqlalchemy.models.base import Base
-from aiida.backends.sqlalchemy.tests.utils import new_database
+from aiida.backends.sqlalchemy.tests.test_utils import new_database
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm import load_node
 

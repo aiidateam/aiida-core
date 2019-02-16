@@ -30,11 +30,11 @@
         aiida/backends/djsite/db/migrations/0017_drop_dbcalcstate.py|
         aiida/backends/djsite/db/migrations/__init__.py|
         aiida/backends/djsite/db/models.py|
-        aiida/backends/djsite/db/subtests/migrations.py|
-        aiida/backends/djsite/db/subtests/generic.py|
+        aiida/backends/djsite/db/subtests/test_migrations.py|
+        aiida/backends/djsite/db/subtests/test_generic.py|
         aiida/backends/djsite/db/subtests/__init__.py|
-        aiida/backends/djsite/db/subtests/nodes.py|
-        aiida/backends/djsite/db/subtests/query.py|
+        aiida/backends/djsite/db/subtests/test_nodes.py|
+        aiida/backends/djsite/db/subtests/test_query.py|
         aiida/backends/djsite/globalsettings.py|
         aiida/backends/djsite/__init__.py|
         aiida/backends/djsite/manage.py|
@@ -76,21 +76,21 @@
         aiida/backends/sqlalchemy/models/utils.py|
         aiida/backends/sqlalchemy/models/workflow.py|
         aiida/backends/sqlalchemy/queries.py|
-        aiida/backends/sqlalchemy/tests/generic.py|
+        aiida/backends/sqlalchemy/tests/test_generic.py|
         aiida/backends/sqlalchemy/tests/__init__.py|
-        aiida/backends/sqlalchemy/tests/nodes.py|
-        aiida/backends/sqlalchemy/tests/query.py|
-        aiida/backends/sqlalchemy/tests/schema.py|
-        aiida/backends/sqlalchemy/tests/session.py|
+        aiida/backends/sqlalchemy/tests/test_nodes.py|
+        aiida/backends/sqlalchemy/tests/test_query.py|
+        aiida/backends/sqlalchemy/tests/test_schema.py|
+        aiida/backends/sqlalchemy/tests/test_session.py|
         aiida/backends/sqlalchemy/tests/testbase.py|
-        aiida/backends/sqlalchemy/tests/utils.py|
+        aiida/backends/sqlalchemy/tests/test_utils.py|
         aiida/backends/sqlalchemy/transition_06dj_to_07sqla.py|
         aiida/backends/sqlalchemy/utils.py|
         aiida/backends/testbase.py|
         aiida/backends/testimplbase.py|
-        aiida/backends/tests/backup_script.py|
-        aiida/backends/tests/backup_setup_script.py|
-        aiida/backends/tests/base_dataclasses.py|
+        aiida/backends/tests/test_backup_script.py|
+        aiida/backends/tests/test_backup_setup_script.py|
+        aiida/backends/tests/test_base_dataclasses.py|
         aiida/backends/tests/cmdline/commands/test_calculation.py|
         aiida/backends/tests/cmdline/commands/test_code.py|
         aiida/backends/tests/cmdline/commands/test_comment.py|
@@ -102,32 +102,31 @@
         aiida/backends/tests/cmdline/commands/test_user.py|
         aiida/backends/tests/cmdline/commands/test_work.py|
         aiida/backends/tests/common/test_datastructures.py|
-        aiida/backends/tests/computer.py|
+        aiida/backends/tests/test_computer.py|
         aiida/backends/tests/control/test_computer_ctrl.py|
-        aiida/backends/tests/daemon.py|
+        aiida/backends/tests/test_daemon.py|
         aiida/backends/tests/daemon/test_client.py|
-        aiida/backends/tests/dataclasses.py|
-        aiida/backends/tests/dbimporters.py|
-        aiida/backends/tests/example_helpers.py|
-        aiida/backends/tests/export_and_import.py|
-        aiida/backends/tests/generic.py|
+        aiida/backends/tests/test_dataclasses.py|
+        aiida/backends/tests/test_dbimporters.py|
+        aiida/backends/tests/test_example_helpers.py|
+        aiida/backends/tests/test_export_and_import.py|
+        aiida/backends/tests/test_generic.py|
         aiida/backends/tests/__init__.py|
-        aiida/backends/tests/nodes.py|
-        aiida/backends/tests/orm/data/frozendict.py|
-        aiida/backends/tests/orm/data/remote.py|
-        aiida/backends/tests/orm/utils/loaders.py|
-        aiida/backends/tests/parsers.py|
-        aiida/backends/tests/query.py|
-        aiida/backends/tests/tcodexporter.py|
+        aiida/backends/tests/test_nodes.py|
+        aiida/backends/tests/orm/data/test_frozendict.py|
+        aiida/backends/tests/orm/data/test_remote.py|
+        aiida/backends/tests/orm/utils/test_loaders.py|
+        aiida/backends/tests/test_parsers.py|
+        aiida/backends/tests/test_query.py|
+        aiida/backends/tests/test_tcodexporter.py|
         aiida/backends/tests/test_caching_config.py|
         aiida/backends/tests/test_plugin_loader.py|
-        aiida/backends/tests/utils/fixtures.py|
-        aiida/backends/tests/work/class_loader.py|
-        aiida/backends/tests/work/daemon.py|
-        aiida/backends/tests/work/job_processes.py|
-        aiida/backends/tests/work/persistence.py|
-        aiida/backends/tests/work/process.py|
-        aiida/backends/tests/work/run.py|
+        aiida/backends/tests/work/test_class_loader.py|
+        aiida/backends/tests/work/test_daemon.py|
+        aiida/backends/tests/work/test_job_processes.py|
+        aiida/backends/tests/work/test_persistence.py|
+        aiida/backends/tests/work/test_process.py|
+        aiida/backends/tests/work/test_run.py|
         aiida/backends/tests/work/test_futures.py|
         aiida/backends/tests/work/test_launch.py|
         aiida/backends/tests/work/test_process_builder.py|
@@ -136,8 +135,8 @@
         aiida/backends/tests/work/test_runners.py|
         aiida/backends/tests/work/test_transport.py|
         aiida/backends/tests/work/test_utils.py|
-        aiida/backends/tests/work/utils.py|
-        aiida/backends/tests/work/work_chain.py|
+        aiida/backends/tests/work/test_utils.py|
+        aiida/backends/tests/work/test_work_chain.py|
         aiida/backends/utils.py|
         aiida/common/datastructures.py|
         aiida/daemon/execmanager.py|

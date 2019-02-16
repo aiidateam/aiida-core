@@ -257,11 +257,16 @@ class TestCalcAttributeKeysMigration(TestMigrations):
         self.environment_variables = {}
         self.parser_name = 'aiida.parsers:parser'
 
+        # We need to explicitly set the node type here to what they were at the time of this migration, because that
+        # is also what the SQL targets. If we weren't to set it, it would get the current ORM node types which are not
+        # considered by the update SQL statements, as they should not be
         self.node_work = WorkflowNode()
+        self.node_work.backend_entity.dbmodel.type = 'node.process.workflow.WorkflowNode.'
         self.node_work.set_attribute(self.KEY_PROCESS_LABEL_OLD, self.process_label)
         self.node_work.store()
 
         self.node_calc = CalcJobNode(computer=self.computer)
+        self.node_calc.backend_entity.dbmodel.type = 'node.process.calculation.calcjob.CalcJobNode.'
         self.node_calc._validate = lambda: True  # Need to disable the validation because we cannot set `resources`
         self.node_calc.set_attribute(self.KEY_PROCESS_LABEL_OLD, self.process_label)
         self.node_calc.set_attribute(self.KEY_RESOURCES_OLD, self.resources)
@@ -634,6 +639,10 @@ class TestTrajectoryDataMigration(TestMigrations):
 
         # Create a TrajectoryData node
         node = TrajectoryData()
+        # We need to explicitly set the node type here to what they were at the time of this migration, because that
+        # is also what the SQL targets. If we weren't to set it, it would get the current ORM node types which are not
+        # considered by the update SQL statements, as they should not be
+        node.backend_entity.dbmodel.type = 'node.data.array.trajectory.TrajectoryData.'
         symbols = numpy.array(['H', 'O', 'C'])
 
         # I set the node

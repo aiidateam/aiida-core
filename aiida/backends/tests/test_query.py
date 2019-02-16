@@ -1025,8 +1025,9 @@ class TestManager(AiidaTestCase):
 
         I try to implement it in a way that does not depend on the past state.
         """
-        from aiida.orm import Node, DataFactory
+        from aiida.orm import Node
         from aiida.orm import ProcessNode
+        from aiida.plugins import DataFactory
         from collections import defaultdict
 
         def store_and_add(n, statistics):
@@ -1070,8 +1071,8 @@ class TestManager(AiidaTestCase):
 
         I try to implement it in a way that does not depend on the past state.
         """
-        from aiida.orm import Node, DataFactory
-        from aiida.orm import ProcessNode
+        from aiida.orm import Node, ProcessNode
+        from aiida.plugins import DataFactory
         from collections import defaultdict
 
         def store_and_add(n, statistics):

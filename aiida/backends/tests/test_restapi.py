@@ -16,11 +16,11 @@ from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
-from aiida.orm import DataFactory
 from aiida.orm import CalcJobNode
 from aiida.orm.computers import Computer
 from aiida.orm.nodes.data import Data
 from aiida.orm.querybuilder import QueryBuilder
+from aiida.plugins import DataFactory
 from aiida.restapi.api import App, AiidaApi
 import aiida.common.json as json
 

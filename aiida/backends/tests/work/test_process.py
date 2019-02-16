@@ -177,7 +177,8 @@ class TestProcess(AiidaTestCase):
         """
         For a process with a registered entry point, the process_type will be its formatted entry point string
         """
-        from aiida.orm import CalculationFactory, Code
+        from aiida.orm import Code
+        from aiida.plugins import CalculationFactory
 
         code = Code()
         code.set_remote_computer_exec((self.computer, '/bin/true'))

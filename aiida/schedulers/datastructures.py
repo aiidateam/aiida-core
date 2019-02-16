@@ -449,7 +449,7 @@ class JobInfo(DefaultFieldsAttributeDict):
          ``aiida.schedulers.datastructures.JobState``)
        * ``job_substate``: a string with the implementation-specific sub-state
        * ``allocated_machines``: a list of machines used for the current job.
-         This is a list of :py:class:`MachineInfo` objects.
+         This is a list of :py:class:`aiida.schedulers.datastructures.MachineInfo` objects.
        * ``job_owner``: the job owner as reported by the scheduler
        * ``num_mpiprocs``: the *total* number of requested MPI procs
        * ``num_cpus``: the *total* number of requested CPUs (cores) [may be undefined]

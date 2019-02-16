@@ -15,9 +15,9 @@ from __future__ import print_function
 import os
 import sys
 
-from aiida.orm import DataFactory
 from aiida.orm.computers import Computer
 from aiida.orm.implementation.sqlalchemy.code import Code
+from aiida.plugins import DataFactory
 
 ParameterData = DataFactory('parameter')
 

@@ -221,7 +221,7 @@ class TestSimple(AiidaTestCase):
     def test_calc_of_structuredata(self):
         """Simple ex-/import of CalcJobNode with input StructureData"""
         from aiida.common.links import LinkType
-        from aiida.orm import DataFactory
+        from aiida.plugins import DataFactory
         from aiida.orm import CalcJobNode
 
         # Creating a folder for the import/export files
@@ -270,7 +270,7 @@ class TestSimple(AiidaTestCase):
         import tarfile
 
         from aiida.common import exceptions
-        from aiida.orm import DataFactory
+        from aiida.plugins import DataFactory
         from aiida.common import json
 
         # Creating a folder for the import/export files
@@ -315,7 +315,7 @@ class TestSimple(AiidaTestCase):
         from aiida.common.folders import SandboxFolder
         from aiida.orm.importexport import export_tree
 
-        from aiida.orm import DataFactory
+        from aiida.plugins import DataFactory
 
         StructureData = DataFactory('structure')
         struct = StructureData()

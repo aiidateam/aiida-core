@@ -951,7 +951,7 @@ class TestTrajectoryDataMigration(TestMigrationsSQLA):
             try:
                 session = Session(connection.engine)
                 import numpy
-                from aiida.plugins.factory import DataFactory
+                from aiida.plugins import DataFactory
 
                 TrajectoryData = DataFactory('array.trajectory')  # pylint: disable=invalid-name
                 symbols = numpy.array(['H', 'O', 'C'])

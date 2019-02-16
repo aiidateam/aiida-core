@@ -9,6 +9,6 @@
 ###########################################################################
 """Module for classes and methods that represents molecular orbitals."""
 
-from .orbital import Orbital, OrbitalFactory
+from .orbital import Orbital
 
-__all__ = ('Orbital', 'OrbitalFactory')
+__all__ = ('Orbital',)

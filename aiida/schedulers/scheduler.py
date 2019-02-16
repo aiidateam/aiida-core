@@ -30,11 +30,12 @@ class SchedulerParsingError(SchedulerError):
     pass
 
 
-@six.add_metaclass(ABCMeta)
+@six.add_metaclass(ABCMeta)  # pylint: disable=useless-object-inheritance
 class Scheduler(object):
     """
     Base class for all schedulers.
     """
+
     _logger = aiida.common.AIIDA_LOGGER.getChild('scheduler')
 
     # A list of features
@@ -163,7 +164,7 @@ class Scheduler(object):
             script_lines.append(job_tmpl.append_text)
             script_lines.append(empty_line)
 
-        footer = self._get_submit_script_footer(job_tmpl)
+        footer = self._get_submit_script_footer(job_tmpl)  # pylint: disable=assignment-from-none
         if footer:
             script_lines.append(footer)
             script_lines.append(empty_line)
@@ -244,13 +245,15 @@ class Scheduler(object):
             list_of_runlines.append(output_string)
 
         self.logger.debug('_get_run_line output: {}'.format(list_of_runlines))
+
         if codes_run_mode == CodeRunMode.PARALLEL:
             list_of_runlines.append('wait\n')
             return " &\n\n".join(list_of_runlines)
-        elif codes_run_mode == CodeRunMode.SERIAL:
+
+        if codes_run_mode == CodeRunMode.SERIAL:
             return "\n\n".join(list_of_runlines)
-        else:
-            raise NotImplementedError('Unrecognized code run mode')
+
+        raise NotImplementedError('Unrecognized code run mode')
 
     @abstractmethod
     def _get_joblist_command(self, jobs=None, user=None):
@@ -297,7 +300,7 @@ class Scheduler(object):
         :raises: :class:`aiida.common.exceptions.FeatureNotAvailable`
         """
 
-        command = self._get_detailed_jobinfo_command(jobid=jobid)
+        command = self._get_detailed_jobinfo_command(jobid=jobid)  # pylint: disable=assignment-from-no-return
         with self.transport:
             retval, stdout, stderr = self.transport.exec_command_wait(command)
 
@@ -323,7 +326,7 @@ stderr:
         """
         raise NotImplementedError
 
-    def get_jobs(self, jobs=None, user=None, as_dict=False):  # pylint: disable=invalid-name
+    def get_jobs(self, jobs=None, user=None, as_dict=False):
         """
         Get the list of jobs and return it.
 
@@ -347,8 +350,8 @@ stderr:
             if None in jobdict:
                 raise SchedulerError("Found at least one job without jobid")
             return jobdict
-        else:
-            return joblist
+
+        return joblist
 
     @property
     def transport(self):
@@ -357,8 +360,8 @@ stderr:
         """
         if self._transport is None:
             raise SchedulerError("Use the set_transport function to set the transport for the scheduler first.")
-        else:
-            return self._transport
+
+        return self._transport
 
     @abstractmethod
     def _get_submit_command(self, submit_script):

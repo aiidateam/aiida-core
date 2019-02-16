@@ -26,8 +26,8 @@ from aiida.common.datastructures import CalcJobState
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
 from aiida.common.log import get_dblogger_extra
-from aiida.orm import DataFactory
 from aiida.orm.nodes.data.folder import FolderData
+from aiida.plugins import DataFactory
 from aiida.schedulers.datastructures import JobState
 
 REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'

@@ -83,7 +83,8 @@ and simply request this fixture for your test function::
 
   def test_load_dataclass(orm):
       """Test loading a data class defined by the plugin"""
-      MyData = orm.DataFactory('myplugin.maydata')
+      from aiida.plugins import DataFactory
+      MyData = DataFactory('myplugin.maydata')
 
 We set ``'scope='module'`` to declare that this is module scope fixture and
 avoids repetitively doing the import for each test.
@@ -160,7 +161,7 @@ Here, we will explain how to migrate existing tests for the plugins,
 written as sub-classes of ``AiidaTestCase`` to work with ``pytest``.
 First, let's see a typical test class using the ``unittest``::
 
-  from aiida.orm import DataFactory
+  from aiida.plugins import DataFactory
 
   # Assuming our new date type has entry point myplugin.complex
   ComplexData = DataFactory("myplugin.complex")
@@ -205,7 +206,7 @@ run with ``pytest`` directly, as shown below:
 
   @pytest.fixture(scope='module')
   def module_import(aiida_profile, request):
-      from aiida.orm import DataFactory
+      from aiida.plugins import DataFactory
       ComplexData = DataFactory("myplugin.complex")
       for name, value in locals():
           setattr(resquest.module, name, value)

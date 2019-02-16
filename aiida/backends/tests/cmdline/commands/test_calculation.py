@@ -35,9 +35,10 @@ class TestVerdiCalculation(AiidaTestCase):
         super(TestVerdiCalculation, cls).setUpClass(*args, **kwargs)
         from aiida.backends.tests.utils.fixtures import import_archive_fixture
         from aiida.common.links import LinkType
-        from aiida.orm import CalculationFactory, Data
+        from aiida.orm import Data
         from aiida.orm import CalcJobNode
         from aiida.orm.nodes.data.parameter import ParameterData
+        from aiida.plugins import CalculationFactory
         from aiida.work.processes import ProcessState
         from aiida import orm
 

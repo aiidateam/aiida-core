@@ -42,7 +42,7 @@ class DjangoModelEntity(typing.Generic[ModelType]):
         :param backend: the corresponding backend
         :return: the Django entity
         """
-        from .backend import DjangoBackend
+        from .backend import DjangoBackend  # pylint: disable=cyclic-import
         cls._class_check()
         type_check(dbmodel, cls.MODEL_CLASS)
         type_check(backend, DjangoBackend)

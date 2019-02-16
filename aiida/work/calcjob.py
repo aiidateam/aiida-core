@@ -185,11 +185,11 @@ class CalcJob(Process):
         from aiida.common.exceptions import PluginInternalError, ValidationError
         from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.utils import validate_list_of_string_tuples
-        from aiida.orm import DataFactory
         from aiida.common.datastructures import CodeInfo, CodeRunMode
         from aiida.orm import Code
         from aiida.orm.computers import Computer
         from aiida.orm.utils import load_node
+        from aiida.plugins import DataFactory
         import aiida.common.json as json
 
         computer = self.node.computer

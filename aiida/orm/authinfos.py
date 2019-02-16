@@ -12,8 +12,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from aiida.transports import TransportFactory
 from aiida.common.exceptions import (ConfigurationError, MissingPluginError)
+from aiida.plugins import TransportFactory
 from aiida.manage import get_manager
 from . import entities
 from . import users

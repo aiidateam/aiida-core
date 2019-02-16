@@ -460,7 +460,7 @@ class Code(Data):
 
         :return:
         """
-        from aiida.orm.utils import CalculationFactory
+        from aiida.plugins import CalculationFactory
         plugin_name = self.get_input_plugin_name()
         if plugin_name is None:
             raise ValueError("You did not specify a default input plugin for this code")

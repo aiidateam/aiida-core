@@ -3645,7 +3645,7 @@ class TestKpointsData(AiidaTestCase):
         testing tetragonal cells with axis along X
         """
         import numpy
-        from aiida.orm import DataFactory
+        from aiida.plugins import DataFactory
         alat = 1.5
         cell_x = [[alat, 0, 0], [0, 1, 0], [0, 0, 1]]
         K = DataFactory('array.kpoints')
@@ -3661,7 +3661,7 @@ class TestKpointsData(AiidaTestCase):
         testing tetragonal cells with axis along X
         """
         import numpy
-        from aiida.orm import DataFactory
+        from aiida.plugins import DataFactory
         alat = 1.5
         cell_x = [[1, 0, 0], [0, 1, 0], [0, 0, alat]]
         K = DataFactory('array.kpoints')
@@ -3852,7 +3852,7 @@ class TestSeekpathExplicitPath(AiidaTestCase):
     @unittest.skipIf(not has_seekpath(), "No seekpath available")
     def test_simple(self):
         import numpy as np
-        from aiida.orm import DataFactory
+        from aiida.plugins import DataFactory
 
         from aiida.tools import get_explicit_kpoints_path
 
@@ -3926,7 +3926,7 @@ class TestSeekpathPath(AiidaTestCase):
     @unittest.skipIf(not has_seekpath(), "No seekpath available")
     def test_simple(self):
         import numpy as np
-        from aiida.orm import DataFactory
+        from aiida.plugins import DataFactory
 
         from aiida.tools import get_kpoints_path
 

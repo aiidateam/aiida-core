@@ -10,15 +10,16 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from aiida.backends.testbase import AiidaTestCase
-from aiida.plugins.entry_point import get_entry_points
-from aiida.orm import CalculationFactory, DataFactory, WorkflowFactory
-from aiida.parsers import Parser, ParserFactory
 from aiida.orm.nodes.data import Data
-from aiida.schedulers import Scheduler, SchedulerFactory
-from aiida.transports import Transport, TransportFactory
-from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator, TcodExporterFactory
-from aiida.tools.dbimporters import DbImporter, DbImporterFactory
+from aiida.parsers import Parser
+from aiida.plugins import factories
+from aiida.plugins.entry_point import get_entry_points
+from aiida.schedulers import Scheduler
+from aiida.transports import Transport
+from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator
+from aiida.tools.dbimporters import DbImporter
 from aiida.work.calcjob import CalcJob
 from aiida.work import WorkChain
 
@@ -40,7 +41,7 @@ class TestExistingPlugins(AiidaTestCase):
         self.assertIsInstance(entry_points, list)
 
         for entry_point in entry_points:
-            cls = CalculationFactory(entry_point.name)
+            cls = factories.CalculationFactory(entry_point.name)
             self.assertTrue(issubclass(cls, CalcJob),
                 'Calculation plugin class {} is not subclass of {}'.format(cls, CalcJob))
 
@@ -50,7 +51,7 @@ class TestExistingPlugins(AiidaTestCase):
         self.assertIsInstance(entry_points, list)
 
         for entry_point in entry_points:
-            cls = DataFactory(entry_point.name)
+            cls = factories.DataFactory(entry_point.name)
             self.assertTrue(issubclass(cls, Data),
                 'Data plugin class {} is not subclass of {}'.format(cls, Data))
 
@@ -60,7 +61,7 @@ class TestExistingPlugins(AiidaTestCase):
         self.assertIsInstance(entry_points, list)
 
         for entry_point in entry_points:
-            cls = ParserFactory(entry_point.name)
+            cls = factories.ParserFactory(entry_point.name)
             self.assertTrue(issubclass(cls, Parser),
                 'Parser plugin class {} is not subclass of {}'.format(cls, Parser))
 
@@ -70,7 +71,7 @@ class TestExistingPlugins(AiidaTestCase):
         self.assertIsInstance(entry_points, list)
 
         for entry_point in entry_points:
-            cls = SchedulerFactory(entry_point.name)
+            cls = factories.SchedulerFactory(entry_point.name)
             self.assertTrue(issubclass(cls, Scheduler),
                 'Scheduler plugin class {} is not subclass of {}'.format(cls, Scheduler))
 
@@ -80,7 +81,7 @@ class TestExistingPlugins(AiidaTestCase):
         self.assertIsInstance(entry_points, list)
 
         for entry_point in entry_points:
-            cls = TransportFactory(entry_point.name)
+            cls = factories.TransportFactory(entry_point.name)
             self.assertTrue(issubclass(cls, Transport),
                 'Transport plugin class {} is not subclass of {}'.format(cls, Transport))
 
@@ -90,7 +91,7 @@ class TestExistingPlugins(AiidaTestCase):
         self.assertIsInstance(entry_points, list)
 
         for entry_point in entry_points:
-            cls = WorkflowFactory(entry_point.name)
+            cls = factories.WorkflowFactory(entry_point.name)
             self.assertTrue(issubclass(cls, WorkChain),
                 'Workflow plugin class {} is not a subclass of {}'.format(cls, WorkChain))
 
@@ -100,7 +101,7 @@ class TestExistingPlugins(AiidaTestCase):
         self.assertIsInstance(entry_points, list)
 
         for entry_point in entry_points:
-            cls = TcodExporterFactory(entry_point.name)
+            cls = factories.TcodExporterFactory(entry_point.name)
             self.assertTrue(issubclass(cls, BaseTcodtranslator),
                 'TcodExporter plugin class {} is not subclass of {}'.format(cls, BaseTcodtranslator))
 
@@ -110,6 +111,6 @@ class TestExistingPlugins(AiidaTestCase):
         self.assertIsInstance(entry_points, list)
 
         for entry_point in entry_points:
-            cls = DbImporterFactory(entry_point.name)
+            cls = factories.DbImporterFactory(entry_point.name)
             self.assertTrue(issubclass(cls, DbImporter),
                 'DbImporter plugin class {} is not subclass of {}'.format(cls, BaseTcodtranslator))

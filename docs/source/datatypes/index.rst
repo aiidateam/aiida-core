@@ -46,7 +46,7 @@ ParameterData
 +++++++++++++
 
 * **Class**: :py:class:`~aiida.orm.nodes.data.parameter.ParameterData`
-* **String to pass to the** :py:func:`~aiida.orm.utils.DataFactory`: ``parameter``
+* **String to pass to the** :py:func:`~aiida.plugins.factories.DataFactory`: ``parameter``
 * **Aim**: store a dictionary of python base types in the database.
   It can store any dictionary where elements can be a base python type (strings, floats,
   integers, booleans, None type, datetime objects) and lists or dictionaries of them, at
@@ -59,7 +59,7 @@ StructureData
 +++++++++++++
 
 * **Class**: :py:class:`~aiida.orm.nodes.data.upf.UpfData`
-* **String to pass to the** :py:func:`~aiida.orm.utils.DataFactory`: ``structure``
+* **String to pass to the** :py:func:`~aiida.plugins.factories.DataFactory`: ``structure``
 * **Aim**: store a crystal structure to be used by atomistic codes
 * **What is stored in the database**: all atomic positions, species, kinds,
 * **What is stored in the file repository**: ---
@@ -71,7 +71,7 @@ UpfData
 +++++++
 
 * **Class**: :py:class:`~aiida.orm.nodes.data.upf.UpfData`
-* **String to pass to the** :py:func:`~aiida.orm.utils.DataFactory`: ``upf``
+* **String to pass to the** :py:func:`~aiida.plugins.factories.DataFactory`: ``upf``
 * **Aim**: store a pseudopotential in the .UPF format (e.g. used by `Quantum ESPRESSO`_ - see also the `AiiDA Quantum ESPRESSO plugin`_)
 * **What is stored in the database**: the MD5 of the UPF; the element the pseudopotential
   is associated to
@@ -84,7 +84,7 @@ ArrayData
 +++++++++
 
 * **Class**: :py:class:`~aiida.orm.nodes.data.array.ArrayData`
-* **String to pass to the** :py:func:`~aiida.orm.utils.DataFactory`: ``array``
+* **String to pass to the** :py:func:`~aiida.plugins.factories.DataFactory`: ``array``
 * **Aim**: store generic numeric arrays
 * **What is stored in the database**: the shape of the arrays and the name of the arrays
 * **What is stored in the file repository**: the array data in numpy format
@@ -92,7 +92,7 @@ ArrayData
 TrajectoryData
 ++++++++++++++
 * **Class**: :py:class:`~aiida.orm.nodes.data.array.trajectory.TrajectoryData`
-* **String to pass to the** :py:func:`~aiida.orm.utils.DataFactory`: ``array.trajectory``
+* **String to pass to the** :py:func:`~aiida.plugins.factories.DataFactory`: ``array.trajectory``
 * **Aim**: store molecular trajectories (i.e. sequences of StructureData objects, where
   then number of atomic kinds and sites does not change over time).
   beside the coordinates, it can also optionally store velocities.
@@ -107,7 +107,7 @@ KpointsData
 +++++++++++
 
 * **Class**: :py:class:`~aiida.orm.nodes.data.array.kpoints.KpointsData`
-* **String to pass to the** :py:func:`~aiida.orm.utils.DataFactory`: ``array.kpoints``
+* **String to pass to the** :py:func:`~aiida.plugins.factories.DataFactory`: ``array.kpoints``
 * **Aim**: store grids of k-points (in reciprocal space, for crystal structures), or
   explicit list of k-points (optionally with a weight associated to each one). Can also
   associate labels to (some of the) points, which is very useful for later plottings
@@ -122,7 +122,7 @@ BandsData
 +++++++++
 
 * **Class**: :py:class:`~aiida.orm.nodes.data.array.bands.BandsData`
-* **String to pass to the** :py:func:`~aiida.orm.utils.DataFactory`: ``array.bands``
+* **String to pass to the** :py:func:`~aiida.plugins.factories.DataFactory`: ``array.bands``
 * **Aim**: store electronic structure bands (of phonon bands)
 * **What is stored in the database**: like ``ArrayData``
 * **What is stored in the file repository**: the array data in numpy format
@@ -134,7 +134,7 @@ XyData
 ++++++
 
 * **Class**: :py:class:`~aiida.orm.nodes.data.array.xy.XyData`
-* **String to pass to the** :py:func:`~aiida.orm.utils.DataFactory`: ``array.xy``
+* **String to pass to the** :py:func:`~aiida.plugins.factories.DataFactory`: ``array.xy``
 * **Aim**: store data for a 2D (xy) plot
 * **What is stored in the database**: like ``ArrayData``
 * **What is stored in the file repository**: the array data in numpy format
@@ -143,7 +143,7 @@ FolderData
 ++++++++++
 
 * **Class**: :py:class:`~aiida.orm.nodes.data.folder.FolderData`
-* **String to pass to the** :py:func:`~aiida.orm.utils.DataFactory`: ``folder``
+* **String to pass to the** :py:func:`~aiida.plugins.factories.DataFactory`: ``folder``
 * **Aim**: store a set of files/folders (with possibly a folder/subfolder structure)
 * **What is stored in the database**: ---
 * **What is stored in the file repository**: all files and folders
@@ -151,7 +151,7 @@ FolderData
 SinglefileData
 ++++++++++++++
 * **Class**: :py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`
-* **String to pass to the** :py:func:`~aiida.orm.utils.DataFactory`: ``singlefile``
+* **String to pass to the** :py:func:`~aiida.plugins.factories.DataFactory`: ``singlefile``
 * **Aim**: the same as ``FolderData``, but allows to store only one single file.
 * **What is stored in the database**: the filename
 * **What is stored in the file repository**: the file
@@ -160,7 +160,7 @@ RemoteData
 ++++++++++
 
 * **Class**: :py:class:`~aiida.orm.nodes.data.remote.RemoteData`
-* **String to pass to the** :py:func:`~aiida.orm.utils.DataFactory`: ``remote``
+* **String to pass to the** :py:func:`~aiida.plugins.factories.DataFactory`: ``remote``
 * **Aim**: this basically represents a "symbolic link" to a specific folder on
   a remote computer.
   Its main use is to allow users to persist the provenance when e.g. a calculation

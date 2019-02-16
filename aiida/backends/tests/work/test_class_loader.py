@@ -14,7 +14,7 @@ from __future__ import absolute_import
 import aiida
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm import CalculationFactory
+from aiida.plugins import CalculationFactory
 from aiida.work import Process
 
 

@@ -111,7 +111,7 @@ Example entry point specification::
 
 Will lead to usage::
 
-   from aiida.orm import CalculationFactory
+   from aiida.plugins import CalculationFactory
    calc = CalculationFactory('mycode.mycode')
 
 ``aiida.parsers``
@@ -135,7 +135,7 @@ Example spec::
 
 Usage::
    
-   from aiida.parsers import ParserFactory
+   from aiida.plugins import ParserFactory
    parser = ParserFactory('mycode.mycode')
 
 ``aiida.data``
@@ -159,7 +159,7 @@ Spec::
 
 Usage::
 
-   from aiida.orm import DataFactory
+   from aiida.plugins import DataFactory
    params = DataFactory('mycode.mydata')
 
 ``aiida.workflows``
@@ -183,7 +183,7 @@ Spec::
    
 Usage::
 
-   from aiida.orm import WorkflowFactory
+   from aiida.plugins import WorkflowFactory
    wf = WorkflowFactory('mycode.mywf')
 
 .. note:: For old-style workflows the entry point mechanism of the plugin system is not supported. 
@@ -312,7 +312,7 @@ Spec::
 
 Usage::
 
-   from aiida.transports import TransportFactory
+   from aiida.plugins import TransportFactory
    transport = TransportFactory('mytransport')
 
 Jus like one would expect, when a computer is setup, ``mytransport`` can be given as the transport option.

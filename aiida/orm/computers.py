@@ -19,6 +19,8 @@ import six
 from aiida import transports, schedulers
 from aiida.common import exceptions
 from aiida.manage import get_manager
+from aiida.plugins import SchedulerFactory, TransportFactory
+
 from . import entities
 from . import users
 
@@ -657,7 +659,7 @@ class Computer(entities.Entity):
         """
         try:
             # I return the class, not an instance
-            return transports.TransportFactory(self.get_transport_type())
+            return TransportFactory(self.get_transport_type())
         except exceptions.MissingPluginError as exc:
             raise exceptions.ConfigurationError('No transport found for {} [type {}], message: {}'.format(
                 self.name, self.get_transport_type(), exc))
@@ -670,7 +672,7 @@ class Computer(entities.Entity):
         :rtype: :class:`aiida.schedulers.Scheduler`
         """
         try:
-            scheduler_class = schedulers.SchedulerFactory(self.get_scheduler_type())
+            scheduler_class = SchedulerFactory(self.get_scheduler_type())
             # I call the init without any parameter
             return scheduler_class()
         except exceptions.MissingPluginError as exc:

@@ -479,7 +479,7 @@ class CalcJobNode(CalculationNode):
         :return: a Parser class.
         :raise: MissingPluginError from ParserFactory no plugin is found.
         """
-        from aiida.parsers import ParserFactory
+        from aiida.plugins import ParserFactory
 
         parser_name = self.get_option('parser_name')
 

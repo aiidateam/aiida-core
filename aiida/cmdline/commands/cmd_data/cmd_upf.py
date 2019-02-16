@@ -64,9 +64,10 @@ def upf_listfamilies(elements, with_description):
     Print on screen the list of upf families installed
     """
     from aiida import orm
+    from aiida.plugins import DataFactory
     from aiida.orm.nodes.data.upf import UPFGROUP_TYPE
 
-    UpfData = orm.DataFactory('upf')  # pylint: disable=invalid-name
+    UpfData = DataFactory('upf')  # pylint: disable=invalid-name
     query = orm.QueryBuilder()
     query.append(UpfData, tag='upfdata')
     if elements is not None:

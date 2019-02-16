@@ -41,7 +41,7 @@ class OrbitalData(Data):
         :param orbital_dict: orbital dictionary associated with the orbital
         :return: an Orbital produced using the module_name
         """
-        from aiida.tools.data.orbital import OrbitalFactory
+        from aiida.plugins import OrbitalFactory
 
         try:
             module_name = orbital_dict['module_name']

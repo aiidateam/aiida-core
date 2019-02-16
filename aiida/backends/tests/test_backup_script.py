@@ -344,8 +344,8 @@ class TestBackupScriptIntegration(AiidaTestCase):
             shutil.rmtree(temp_folder, ignore_errors=True)
 
     def fill_repo(self):
-        from aiida.orm import CalculationFactory, Data, DataFactory
-        from aiida.orm import CalcJobNode
+        from aiida.orm import CalcJobNode, Data
+        from aiida.plugins import CalculationFactory, DataFactory
 
         extra_name = self.__class__.__name__ + "/test_with_subclasses"
         resources = {'num_machines': 1, 'num_mpiprocs_per_machine': 1}

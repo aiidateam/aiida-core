@@ -251,9 +251,9 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
     """
 
     def test_with_subclasses(self):
-        from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm import CalculationFactory, DataFactory
         from aiida.orm import CalcJobNode
+        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.plugins import CalculationFactory, DataFactory
 
         extra_name = self.__class__.__name__ + "/test_with_subclasses"
 
@@ -1436,8 +1436,8 @@ class TestNodeBasic(AiidaTestCase):
         Test that the loader will choose a common calculation ancestor for an unknown data type.
         For the case where, e.g., the user doesn't have the necessary plugin.
         """
-        from aiida.orm import CalculationFactory
         from aiida.orm import CalcJobNode
+        from aiida.plugins import CalculationFactory
 
         TemplateReplacerCalc = CalculationFactory('templatereplacer')
         testcalc = TemplateReplacerCalc(computer=self.computer)
@@ -1472,8 +1472,8 @@ class TestNodeBasic(AiidaTestCase):
         Test that the loader will choose a common data ancestor for an unknown data type.
         For the case where, e.g., the user doesn't have the necessary plugin.
         """
-        from aiida.orm import DataFactory
         from aiida.orm.nodes.data import Data
+        from aiida.plugins import DataFactory
 
         KpointsData = DataFactory('array.kpoints')
         kpoint = KpointsData().store()
@@ -1732,8 +1732,8 @@ class TestSubNodesAndLinks(AiidaTestCase):
     def test_valid_links(self):
         import tempfile
         from aiida import orm
-        from aiida.orm import DataFactory
         from aiida.orm import CalcJobNode
+        from aiida.plugins import DataFactory
 
         SinglefileData = DataFactory('singlefile')
 

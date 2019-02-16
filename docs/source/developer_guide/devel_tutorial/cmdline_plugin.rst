@@ -163,7 +163,7 @@ Example test in ``test_float_cmd.py``::
         # or set the TEST_BACKEND variable in your CI configuration
 
       def setUp(self):
-         from aiida.orm import DataFactory
+         from aiida.plugins import DataFactory
          self.float_node = DataFactory('yourplugin.float')()
          self.float_node.value = 1.2
          self.runner = CliRunner()

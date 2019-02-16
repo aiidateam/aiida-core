@@ -16,10 +16,10 @@ from __future__ import absolute_import
 import unittest
 import logging
 
-import aiida.transport
-import aiida.transport.transport
+import aiida.transports
+import aiida.transports.transport
 import paramiko
-from aiida.transport.plugins.ssh import SshTransport
+from aiida.transports.plugins.ssh import SshTransport
 
 # This will be used by test_all_plugins
 
@@ -32,12 +32,12 @@ class TestBasicConnection(unittest.TestCase):
     """
 
     def test_closed_connection_ssh(self):
-        with self.assertRaises(aiida.transport.transport.TransportInternalError):
+        with self.assertRaises(aiida.transports.transport.TransportInternalError):
             t = SshTransport(machine='localhost')
             t._exec_command_internal('ls')
 
     def test_closed_connection_sftp(self):
-        with self.assertRaises(aiida.transport.transport.TransportInternalError):
+        with self.assertRaises(aiida.transports.transport.TransportInternalError):
             t = SshTransport(machine='localhost')
             t.listdir()
 

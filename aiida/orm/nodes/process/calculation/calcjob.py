@@ -403,7 +403,7 @@ class CalcJobNode(CalculationNode):
 
     def _set_scheduler_state(self, state):
         from aiida.common import timezone
-        from aiida.scheduler.datastructures import JobState
+        from aiida.schedulers.datastructures import JobState
 
         if not isinstance(state, JobState):
             raise ValueError('scheduler state should be an instance of JobState, got: {}'.format())
@@ -417,7 +417,7 @@ class CalcJobNode(CalculationNode):
 
         :return: a JobState enum instance.
         """
-        from aiida.scheduler.datastructures import JobState
+        from aiida.schedulers.datastructures import JobState
 
         state = self.get_attribute('scheduler_state', None)
 
@@ -445,7 +445,7 @@ class CalcJobNode(CalculationNode):
 
         :return: a JobInfo object (that closely resembles a dictionary) or None.
         """
-        from aiida.scheduler.datastructures import JobInfo
+        from aiida.schedulers.datastructures import JobInfo
 
         last_jobinfo_serialized = self.get_attribute('last_jobinfo', None)
         if last_jobinfo_serialized is not None:

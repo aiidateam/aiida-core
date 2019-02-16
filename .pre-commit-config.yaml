@@ -176,20 +176,19 @@
         aiida/plugins/info.py|
         aiida/plugins/registry.py|
         aiida/plugins/utils.py|
-        aiida/scheduler/datastructures.py|
-        aiida/scheduler/__init__.py|
-        aiida/scheduler/plugins/direct.py|
-        aiida/scheduler/plugins/lsf.py|
-        aiida/scheduler/plugins/pbsbaseclasses.py|
-        aiida/scheduler/plugins/pbsbaseclasses.py|
-        aiida/scheduler/plugins/sge.py|
-        aiida/scheduler/plugins/slurm.py|
-        aiida/scheduler/plugins/test_direct.py|
-        aiida/scheduler/plugins/test_lsf.py|
-        aiida/scheduler/plugins/test_pbspro.py|
-        aiida/scheduler/plugins/test_sge.py|
-        aiida/scheduler/plugins/test_slurm.py|
-        aiida/scheduler/plugins/test_torque.py|
+        aiida/schedulers/datastructures.py|
+        aiida/schedulers/plugins/direct.py|
+        aiida/schedulers/plugins/lsf.py|
+        aiida/schedulers/plugins/pbsbaseclasses.py|
+        aiida/schedulers/plugins/pbsbaseclasses.py|
+        aiida/schedulers/plugins/sge.py|
+        aiida/schedulers/plugins/slurm.py|
+        aiida/schedulers/plugins/test_direct.py|
+        aiida/schedulers/plugins/test_lsf.py|
+        aiida/schedulers/plugins/test_pbspro.py|
+        aiida/schedulers/plugins/test_sge.py|
+        aiida/schedulers/plugins/test_slurm.py|
+        aiida/schedulers/plugins/test_torque.py|
         aiida/settings.py|
         aiida/sphinxext/tests/conftest.py|
         aiida/sphinxext/tests/test_workchain.py|
@@ -218,10 +217,10 @@
         aiida/tools/dbimporters/plugins/pcod.py|
         aiida/tools/dbimporters/plugins/tcod.py|
         aiida/tools/__init__.py|
-        aiida/transport/plugins/ssh.py|
-        aiida/transport/plugins/test_all_plugins.py|
-        aiida/transport/plugins/test_local.py|
-        aiida/transport/plugins/test_ssh.py|
+        aiida/transports/plugins/ssh.py|
+        aiida/transports/plugins/test_all_plugins.py|
+        aiida/transports/plugins/test_local.py|
+        aiida/transports/plugins/test_ssh.py|
         aiida/work/__init__.py|
         aiida/work/job_processes.py|
         utils/create_requirements.py|

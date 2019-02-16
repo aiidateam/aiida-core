@@ -31,8 +31,8 @@ import glob
 import six
 from six.moves import cStringIO as StringIO
 
-from aiida.transport import cli as transport_cli
-from aiida.transport.transport import Transport, TransportInternalError
+from aiida.transports import cli as transport_cli
+from aiida.transports.transport import Transport, TransportInternalError
 
 
 # refactor or raise the limit: issue #1784
@@ -660,10 +660,10 @@ class LocalTransport(Transport):
     def get_attribute(self, path):
         """
         Returns an object FileAttribute,
-        as specified in aiida.transport.
+        as specified in aiida.transports.
         :param path: the path of the given file.
         """
-        from aiida.transport.util import FileAttribute
+        from aiida.transports.util import FileAttribute
 
         os_attr = os.lstat(os.path.join(self.curdir, path))
         aiida_attr = FileAttribute()

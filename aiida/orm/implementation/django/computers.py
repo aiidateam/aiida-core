@@ -33,6 +33,7 @@ class DjangoComputer(entities.DjangoModelEntity[models.DbComputer], BackendCompu
     MODEL_CLASS = models.DbComputer
 
     def __init__(self, backend, **kwargs):
+        """Construct a new `DjangoComputer` instance."""
         super(DjangoComputer, self).__init__(backend)
         self._dbmodel = utils.ModelWrapper(models.DbComputer(**kwargs))
 

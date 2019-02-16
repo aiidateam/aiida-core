@@ -19,9 +19,9 @@ import glob
 import six
 from six.moves import cStringIO as StringIO
 
-import aiida.transport
-import aiida.transport.transport
-from aiida import transport
+import aiida.transports
+import aiida.transports.transport
+from aiida import transports
 from aiida.cmdline.params import options, arguments
 from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.params.types.path import AbsolutePathParamType
@@ -59,7 +59,7 @@ def convert_to_bool(string):
 
 
 
-class SshTransport(aiida.transport.Transport):
+class SshTransport(aiida.transports.Transport):
     """
     Support connection, command execution and data transfer to remote computers via SSH+SFTP.
     """
@@ -322,7 +322,7 @@ class SshTransport(aiida.transport.Transport):
         :raise InvalidOperation: if the channel is already open
         """
         from aiida.common.exceptions import InvalidOperation
-        from aiida.transport.util import _DetachedProxyCommand
+        from aiida.transports.util import _DetachedProxyCommand
 
         if self._is_open:
             raise InvalidOperation("Cannot open the transport twice")
@@ -369,14 +369,14 @@ class SshTransport(aiida.transport.Transport):
     @property
     def sshclient(self):
         if not self._is_open:
-            raise aiida.transport.transport.TransportInternalError("Error, ssh method called for SshTransport "
+            raise aiida.transports.transport.TransportInternalError("Error, ssh method called for SshTransport "
                                                                    "without opening the channel first")
         return self._client
 
     @property
     def sftp(self):
         if not self._is_open:
-            raise aiida.transport.transport.TransportInternalError("Error, sftp method called for SshTransport "
+            raise aiida.transports.transport.TransportInternalError("Error, sftp method called for SshTransport "
                                                                    "without opening the channel first")
         return self._sftp
 
@@ -913,10 +913,10 @@ class SshTransport(aiida.transport.Transport):
 
     def get_attribute(self, path):
         """
-        Returns the object Fileattribute, specified in aiida.transport
+        Returns the object Fileattribute, specified in aiida.transports
         Receives in input the path of a given file.
         """
-        from aiida.transport.util import FileAttribute
+        from aiida.transports.util import FileAttribute
 
         paramiko_attr = self.sftp.lstat(path)
         aiida_attr = FileAttribute()

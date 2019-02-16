@@ -183,7 +183,7 @@ class CalcJob(Process):
         from six.moves import StringIO
 
         from aiida.common.exceptions import PluginInternalError, ValidationError
-        from aiida.scheduler.datastructures import JobTemplate
+        from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.utils import validate_list_of_string_tuples
         from aiida.orm import DataFactory
         from aiida.common.datastructures import CodeInfo, CodeRunMode

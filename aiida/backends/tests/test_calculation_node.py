@@ -131,6 +131,6 @@ class TestProcessNode(AiidaTestCase):
 
     def test_get_transport(self):
         """Test that we can get the Transport object from the calculation instance."""
-        from aiida.transport import Transport
+        from aiida.transports import Transport
         transport = self.calcjob._get_transport()  # pylint: disable=protected-access
         self.assertIsInstance(transport, Transport)

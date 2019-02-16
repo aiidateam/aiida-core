@@ -13,8 +13,8 @@ from __future__ import print_function
 from __future__ import absolute_import
 import unittest
 import uuid
-from aiida.scheduler.plugins.pbspro import *
-from aiida.scheduler.datastructures import JobState
+from aiida.schedulers.datastructures import JobState
+from aiida.schedulers.plugins.torque import *
 
 text_qstat_f_to_test = """Job Id: 68350.mycluster
     Job_Name = cell-Qnormal
@@ -765,13 +765,13 @@ class TestParserQstat(unittest.TestCase):
         """
         Test whether _parse_joblist can parse the qstat -f output
         """
-        scheduler = PbsproScheduler()
+        s = TorqueScheduler()
 
         retval = 0
         stdout = text_qstat_f_to_test
         stderr = ''
 
-        job_list = scheduler._parse_joblist_output(retval, stdout, stderr)
+        job_list = s._parse_joblist_output(retval, stdout, stderr)
 
         # The parameters are hard coded in the text to parse
         job_on_cluster = 6
@@ -820,13 +820,13 @@ class TestParserQstat(unittest.TestCase):
         Test whether _parse_joblist can parse the qstat -f output
         also when there are unexpected newlines
         """
-        scheduler = PbsproScheduler()
+        s = TorqueScheduler()
 
         retval = 0
         stdout = text_qstat_f_to_test_with_unexpected_newlines
         stderr = ''
 
-        job_list = scheduler._parse_joblist_output(retval, stdout, stderr)
+        job_list = s._parse_joblist_output(retval, stdout, stderr)
 
         # The parameters are hard coded in the text to parse
         job_on_cluster = 10
@@ -871,49 +871,20 @@ class TestParserQstat(unittest.TestCase):
                 # TODO : parse the env_vars
 
 
-# TODO: WHEN WE USE THE CORRECT ERROR MANAGEMENT, REIMPLEMENT THIS TEST
-#        def test_parse_with_error_retval(self):
-#            """
-#            The qstat -f command has received a retval != 0
-#            """
-#            s = PbsproScheduler()
-#            retval = 1
-#            stdout = text_qstat_f_to_test
-#            stderr = ''
-#            # Disable logging to avoid excessive output during test
-#            logging.disable(logging.ERROR)
-#            with self.assertRaises(SchedulerError):
-#                job_list = s._parse_joblist_output(retval, stdout, stderr)
-#            # Reset logging level
-#            logging.disable(logging.NOTSET)
-
-#        def test_parse_with_error_stderr(self):
-#            """
-#            The qstat -f command has received a stderr
-#            """
-#            s = PbsproScheduler()
-#            retval = 0
-#            stdout = text_qstat_f_to_test
-#            stderr = 'A non empty error message'
-#            # TODO : catch the logging error
-#            job_list = s._parse_joblist_output(retval, stdout, stderr)
-#            #            print s._logger._log, dir(s._logger._log),'!!!!'
-
-
 class TestSubmitScript(unittest.TestCase):
 
     def test_submit_script(self):
         """
         Test to verify if scripts works fine with default options
         """
-        from aiida.scheduler.datastructures import JobTemplate
+        from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, CodeRunMode
 
-        scheduler = PbsproScheduler()
+        s = TorqueScheduler()
 
         job_tmpl = JobTemplate()
-        job_tmpl.shebang = '#!/bin/bash -l'
-        job_tmpl.job_resource = scheduler.create_job_resource(num_machines=1, num_mpiprocs_per_machine=1)
+        job_tmpl.shebang = '#!/bin/bash'
+        job_tmpl.job_resource = s.create_job_resource(num_machines=1, num_mpiprocs_per_machine=1)
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
         code_info = CodeInfo()
@@ -922,56 +893,28 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl.codes_info = [code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
-        submit_script_text = scheduler.get_submit_script(job_tmpl)
+        submit_script_text = s.get_submit_script(job_tmpl)
 
         self.assertTrue('#PBS -r n' in submit_script_text)
-        self.assertTrue(submit_script_text.startswith('#!/bin/bash -l'))
-        self.assertTrue('#PBS -l walltime=24:00:00' in submit_script_text)
-        self.assertTrue('#PBS -l select=1' in submit_script_text)
+        self.assertTrue(submit_script_text.startswith('#!/bin/bash'))
+        self.assertTrue('#PBS -l nodes=1:ppn=1,walltime=24:00:00' in submit_script_text)
         self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + \
                         " < 'aiida.in'" in submit_script_text)
-
-    def test_submit_script_bad_shebang(self):
-        """
-        Test to verify if scripts works fine with default options
-        """
-        from aiida.scheduler.datastructures import JobTemplate
-        from aiida.common.datastructures import CodeInfo, CodeRunMode
-
-        scheduler = PbsproScheduler()
-        code_info = CodeInfo()
-        code_info.cmdline_params = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
-        code_info.stdin_name = 'aiida.in'
-
-        for (shebang, expected_first_line) in ((None, '#!/bin/bash'), ("", ""), ("NOSET", '#!/bin/bash')):
-            job_tmpl = JobTemplate()
-            if shebang == "NOSET":
-                pass
-            else:
-                job_tmpl.shebang = shebang
-            job_tmpl.job_resource = scheduler.create_job_resource(num_machines=1, num_mpiprocs_per_machine=1)
-            job_tmpl.codes_info = [code_info]
-            job_tmpl.codes_run_mode = CodeRunMode.SERIAL
-
-            submit_script_text = scheduler.get_submit_script(job_tmpl)
-
-            # This tests if the implementation correctly chooses the default:
-            self.assertEquals(submit_script_text.split('\n')[0], expected_first_line)
 
     def test_submit_script_with_num_cores_per_machine(self):
         """
         Test to verify if script works fine if we specify only
         num_cores_per_machine value.
         """
-        from aiida.scheduler.datastructures import JobTemplate
+        from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, CodeRunMode
 
-        scheduler = PbsproScheduler()
+        s = TorqueScheduler()
 
         job_tmpl = JobTemplate()
         job_tmpl.shebang = '#!/bin/bash'
-        job_tmpl.job_resource = scheduler.create_job_resource(
-            num_machines=1, num_mpiprocs_per_machine=2, num_cores_per_machine=24)
+        job_tmpl.job_resource = s.create_job_resource(
+            num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_machine=24)
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
         code_info = CodeInfo()
@@ -980,14 +923,11 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl.codes_info = [code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
-        submit_script_text = scheduler.get_submit_script(job_tmpl)
+        submit_script_text = s.get_submit_script(job_tmpl)
 
         self.assertTrue('#PBS -r n' in submit_script_text)
         self.assertTrue(submit_script_text.startswith('#!/bin/bash'))
-
-        self.assertTrue('#PBS -l select=1:mpiprocs=2' in submit_script_text)
-        # Note: here 'num_cores_per_machine' should NOT override the mpiprocs
-
+        self.assertTrue('#PBS -l nodes=1:ppn=24,walltime=24:00:00' in submit_script_text)
         self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + " < 'aiida.in'" in submit_script_text)
 
     def test_submit_script_with_num_cores_per_mpiproc(self):
@@ -995,10 +935,10 @@ class TestSubmitScript(unittest.TestCase):
         Test to verify if scripts works fine if we pass only
         num_cores_per_mpiproc value
         """
-        from aiida.scheduler.datastructures import JobTemplate
+        from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, CodeRunMode
 
-        scheduler = PbsproScheduler()
+        scheduler = TorqueScheduler()
 
         job_tmpl = JobTemplate()
         job_tmpl.shebang = '#!/bin/bash'
@@ -1016,23 +956,20 @@ class TestSubmitScript(unittest.TestCase):
 
         self.assertTrue('#PBS -r n' in submit_script_text)
         self.assertTrue(submit_script_text.startswith('#!/bin/bash'))
-
-        self.assertTrue('#PBS -l select=1:mpiprocs=1:ppn=24' in submit_script_text)
-        # Note: here 'num_cores_per_machine' should NOT override the mpiprocs
-
+        self.assertTrue('#PBS -l nodes=1:ppn=24,walltime=24:00:00' in submit_script_text)
         self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + " < 'aiida.in'" in submit_script_text)
 
     def test_submit_script_with_num_cores_per_machine_and_mpiproc1(self):
         """
         Test to verify if scripts works fine if we pass both
-        num_cores_per_machine and num_cores_per_mpiproc correct values.
+        num_cores_per_machine and num_cores_per_mpiproc correct values
         It should pass in check:
         res.num_cores_per_mpiproc * res.num_mpiprocs_per_machine = res.num_cores_per_machine
         """
-        from aiida.scheduler.datastructures import JobTemplate
+        from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, CodeRunMode
 
-        scheduler = PbsproScheduler()
+        scheduler = TorqueScheduler()
 
         job_tmpl = JobTemplate()
         job_tmpl.shebang = '#!/bin/bash'
@@ -1050,21 +987,19 @@ class TestSubmitScript(unittest.TestCase):
 
         self.assertTrue('#PBS -r n' in submit_script_text)
         self.assertTrue(submit_script_text.startswith('#!/bin/bash'))
-        self.assertTrue('#PBS -l select=1:mpiprocs=1:ppn=24' in submit_script_text)
-        # Note: here 'num_cores_per_machine' should NOT override the mpiprocs
-
+        self.assertTrue('#PBS -l nodes=1:ppn=24,walltime=24:00:00' in submit_script_text)
         self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + " < 'aiida.in'" in submit_script_text)
 
     def test_submit_script_with_num_cores_per_machine_and_mpiproc2(self):
         """
         Test to verify if scripts works fine if we pass
-        num_cores_per_machine and num_cores_per_mpiproc wrong values.
+        num_cores_per_machine and num_cores_per_mpiproc wrong values
         It should fail in check:
         res.num_cores_per_mpiproc * res.num_mpiprocs_per_machine = res.num_cores_per_machine
         """
-        from aiida.scheduler.datastructures import JobTemplate
+        from aiida.schedulers.datastructures import JobTemplate
 
-        scheduler = PbsproScheduler()
+        scheduler = TorqueScheduler()
 
         job_tmpl = JobTemplate()
         with self.assertRaises(ValueError):

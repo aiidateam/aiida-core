@@ -15,8 +15,8 @@ from aiida.plugins.entry_point import get_entry_points
 from aiida.orm import CalculationFactory, DataFactory, WorkflowFactory
 from aiida.parsers import Parser, ParserFactory
 from aiida.orm.nodes.data import Data
-from aiida.scheduler import Scheduler, SchedulerFactory
-from aiida.transport import Transport, TransportFactory
+from aiida.schedulers import Scheduler, SchedulerFactory
+from aiida.transports import Transport, TransportFactory
 from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator, TcodExporterFactory
 from aiida.tools.dbimporters import DbImporter, DbImporterFactory
 from aiida.work.calcjob import CalcJob

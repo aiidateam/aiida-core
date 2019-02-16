@@ -16,7 +16,7 @@ import logging
 import os
 import six
 
-from aiida import transport, scheduler
+from aiida import transports, schedulers
 from aiida.common import exceptions
 from aiida.manage import get_manager
 from . import entities
@@ -177,7 +177,7 @@ class Computer(entities.Entity):
         """
         Validates the transport string.
         """
-        if transport_type not in transport.Transport.get_valid_transports():
+        if transport_type not in transports.Transport.get_valid_transports():
             raise exceptions.ValidationError("The specified transport is not a valid one")
 
     @classmethod
@@ -185,7 +185,7 @@ class Computer(entities.Entity):
         """
         Validates the transport string.
         """
-        if scheduler_type not in scheduler.Scheduler.get_valid_schedulers():
+        if scheduler_type not in schedulers.Scheduler.get_valid_schedulers():
             raise exceptions.ValidationError("The specified scheduler is not a valid one")
 
     @classmethod
@@ -475,12 +475,12 @@ class Computer(entities.Entity):
         Return a Transport class, configured with all correct parameters.
         The Transport is closed (meaning that if you want to run any operation with
         it, you have to open it first (i.e., e.g. for a SSH transport, you have
-        to open a connection). To do this you can call ``transport.open()``, or simply
+        to open a connection). To do this you can call ``transports.open()``, or simply
         run within a ``with`` statement::
 
            transport = Computer.get_transport()
            with transport:
-               print(transport.whoami())
+               print(transports.whoami())
 
         :param user: if None, try to obtain a transport for the default user.
             Otherwise, pass a valid User.
@@ -657,7 +657,7 @@ class Computer(entities.Entity):
         """
         try:
             # I return the class, not an instance
-            return transport.TransportFactory(self.get_transport_type())
+            return transports.TransportFactory(self.get_transport_type())
         except exceptions.MissingPluginError as exc:
             raise exceptions.ConfigurationError('No transport found for {} [type {}], message: {}'.format(
                 self.name, self.get_transport_type(), exc))
@@ -667,10 +667,10 @@ class Computer(entities.Entity):
         Get a scheduler instance for this computer
 
         :return: the scheduler instance
-        :rtype: :class:`aiida.scheduler.Scheduler`
+        :rtype: :class:`aiida.schedulers.Scheduler`
         """
         try:
-            scheduler_class = scheduler.SchedulerFactory(self.get_scheduler_type())
+            scheduler_class = schedulers.SchedulerFactory(self.get_scheduler_type())
             # I call the init without any parameter
             return scheduler_class()
         except exceptions.MissingPluginError as exc:
@@ -797,7 +797,7 @@ class Computer(entities.Entity):
                         "doc": "Support for the SLURM scheduler (http://slurm.schedmd.com/)."
                     },
                     "torque": {
-                        "doc": "Subclass to support the Torque scheduler.."
+                        "doc": "Subclass to support the Torque scheduler."
                     }
                 }
             },

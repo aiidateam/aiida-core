@@ -12,8 +12,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 import unittest
-from aiida.scheduler.plugins.direct import DirectScheduler
-from aiida.scheduler import SchedulerError
+from aiida.schedulers.plugins.direct import DirectScheduler
+from aiida.schedulers import SchedulerError
 
 # This was executed with ps -o pid,stat,user,time | tail -n +2
 mac_ps_output_str = """21259 S+   broeder   0:00.04

@@ -19,8 +19,8 @@ import logging
 import six
 
 from aiida.common.escaping import escape_for_bash
-from aiida.scheduler import Scheduler, SchedulerError, SchedulerParsingError
-from aiida.scheduler.datastructures import (JobInfo, JobState, MachineInfo, NodeNumberJobResource)
+from aiida.schedulers import Scheduler, SchedulerError, SchedulerParsingError
+from aiida.schedulers.datastructures import (JobInfo, JobState, MachineInfo, NodeNumberJobResource)
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -16,7 +16,7 @@ import logging
 import uuid
 import datetime
 
-from aiida.scheduler.plugins.slurm import *
+from aiida.schedulers.plugins.slurm import *
 
 TEXT_SQUEUE_TO_TEST = """862540^^^PD^^^Dependency^^^n/a^^^user1^^^20^^^640^^^(Dependency)^^^normal^^^1-00:00:00^^^0:00^^^N/A^^^longsqw_L24_q_10_0^^^2013-05-22T01:41:11
 863100^^^PD^^^Resources^^^n/a^^^user2^^^32^^^1024^^^(Resources)^^^normal^^^10:00^^^0:00^^^2013-05-23T14:44:44^^^eq_solve_e4.slm^^^2013-05-22T04:23:59
@@ -151,7 +151,7 @@ class TestSubmitScript(unittest.TestCase):
         """
         Test the creation of a simple submission script.
         """
-        from aiida.scheduler.datastructures import JobTemplate
+        from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, CodeRunMode
 
         scheduler = SlurmScheduler()
@@ -179,7 +179,7 @@ class TestSubmitScript(unittest.TestCase):
                         " < 'aiida.in'" in submit_script_text)
 
     def test_submit_script_bad_shebang(self):
-        from aiida.scheduler.datastructures import JobTemplate
+        from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, CodeRunMode
 
         scheduler = SlurmScheduler()
@@ -207,7 +207,7 @@ class TestSubmitScript(unittest.TestCase):
         Test to verify if script works fine if we specify only
         num_cores_per_machine value.
         """
-        from aiida.scheduler.datastructures import JobTemplate
+        from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, CodeRunMode
 
         scheduler = SlurmScheduler()
@@ -239,7 +239,7 @@ class TestSubmitScript(unittest.TestCase):
         """
         Test to verify if scripts works fine if we pass only num_cores_per_mpiproc value
         """
-        from aiida.scheduler.datastructures import JobTemplate
+        from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, CodeRunMode
 
         scheduler = SlurmScheduler()
@@ -274,7 +274,7 @@ class TestSubmitScript(unittest.TestCase):
         It should pass in check:
         res.num_cores_per_mpiproc * res.num_mpiprocs_per_machine = res.num_cores_per_machine
         """
-        from aiida.scheduler.datastructures import JobTemplate
+        from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, CodeRunMode
 
         scheduler = SlurmScheduler()
@@ -310,7 +310,7 @@ class TestSubmitScript(unittest.TestCase):
         It should fail in check:
         res.num_cores_per_mpiproc * res.num_mpiprocs_per_machine = res.num_cores_per_machine
         """
-        from aiida.scheduler.datastructures import JobTemplate
+        from aiida.schedulers.datastructures import JobTemplate
 
         scheduler = SlurmScheduler()
 

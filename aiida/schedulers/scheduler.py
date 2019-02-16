@@ -7,33 +7,19 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Module for all scheduler related things
-"""
-
+"""Implementation of `Scheduler` base class."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from abc import ABCMeta, abstractmethod
 
+from abc import ABCMeta, abstractmethod
 import six
 
 import aiida.common
 from aiida.common.lang import classproperty
 from aiida.common.escaping import escape_for_bash
 from aiida.common.exceptions import AiidaException, FeatureNotAvailable
-from aiida.plugins.factory import BaseFactory
-from aiida.scheduler.datastructures import JobTemplate, JobInfo, JobState
-
-
-def SchedulerFactory(entry_point):
-    """
-    Return the Scheduler plugin class for a given entry point
-
-    :param entry_point: the entry point name of the Scheduler plugin
-    """
-    # pylint: disable=invalid-name
-    return BaseFactory('aiida.schedulers', entry_point)
+from aiida.schedulers.datastructures import JobTemplate
 
 
 class SchedulerError(AiidaException):
@@ -130,7 +116,7 @@ class Scheduler(object):
     def get_submit_script(self, job_tmpl):
         """
         Return the submit script as a string.
-        :parameter job_tmpl: a aiida.scheduler.datastrutures.JobTemplate object.
+        :parameter job_tmpl: a aiida.schedulers.datastrutures.JobTemplate object.
 
         The plugin returns something like
 
@@ -242,7 +228,7 @@ class Scheduler(object):
             command_to_exec_list = []
             for arg in code_info.cmdline_params:
                 command_to_exec_list.append(escape_for_bash(arg))
-            command_to_exec =' '.join(command_to_exec_list)
+            command_to_exec = ' '.join(command_to_exec_list)
 
             stdin_str = "< {}".format(escape_for_bash(code_info.stdin_name)) if code_info.stdin_name else ""
             stdout_str = "> {}".format(escape_for_bash(code_info.stdout_name)) if code_info.stdout_name else ""
@@ -337,7 +323,7 @@ stderr:
         """
         raise NotImplementedError
 
-    def getJobs(self, jobs=None, user=None, as_dict=False):  # pylint: disable=invalid-name
+    def get_jobs(self, jobs=None, user=None, as_dict=False):  # pylint: disable=invalid-name
         """
         Get the list of jobs and return it.
 

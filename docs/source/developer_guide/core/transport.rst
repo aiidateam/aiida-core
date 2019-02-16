@@ -14,20 +14,20 @@ A generic set of tests is contained in plugin_test.py, while plugin-specific tes
 Generic transport class
 -----------------------
 
-.. automodule:: aiida.transport
+.. automodule:: aiida.transports
    :members:
    :noindex:
    :special-members: __enter__, __exit__,__unicode__
 
 Existing plugins
 ----------------
-.. automodule:: aiida.transport.plugins.ssh
+.. automodule:: aiida.transports.plugins.ssh
    :members:
    :noindex:
    :special-members: __enter__, __exit__,__unicode__
 
 
-.. automodule:: aiida.transport.plugins.local
+.. automodule:: aiida.transports.plugins.local
    :members:
    :noindex:
    :special-members: __enter__, __exit__,__unicode__
@@ -89,7 +89,7 @@ Below, you can find a template to fill for a new transport plugin, with a minima
 
 ::
 
-  class NewTransport(aiida.transport.Transport):
+  class NewTransport(aiida.transports.Transport):
         
     def __init__(self, machine, **kwargs):
         """

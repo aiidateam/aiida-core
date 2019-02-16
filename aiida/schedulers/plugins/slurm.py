@@ -19,10 +19,10 @@ import re
 import six
 from six.moves import zip
 
-import aiida.scheduler
+import aiida.schedulers
 from aiida.common.escaping import escape_for_bash
-from aiida.scheduler import SchedulerError
-from aiida.scheduler.datastructures import (JobInfo, JobState, NodeNumberJobResource)
+from aiida.schedulers import SchedulerError
+from aiida.schedulers.datastructures import (JobInfo, JobState, NodeNumberJobResource)
 
 # This maps SLURM state codes to our own status list
 
@@ -151,11 +151,11 @@ class SlurmJobResource(NodeNumberJobResource):
                 raise ValueError(value_error)
 
 
-class SlurmScheduler(aiida.scheduler.Scheduler):
+class SlurmScheduler(aiida.schedulers.Scheduler):
     """
     Support for the SLURM scheduler (http://slurm.schedmd.com/).
     """
-    _logger = aiida.scheduler.Scheduler._logger.getChild('slurm')
+    _logger = aiida.schedulers.Scheduler._logger.getChild('slurm')
 
     # Query only by list of jobs and not by user
     _features = {

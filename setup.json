@@ -138,8 +138,8 @@
       "templatereplacer = aiida.calculations.plugins.templatereplacer:TemplatereplacerCalculation"
     ],
     "aiida.cmdline.computer.configure": [
-      "local = aiida.transport.plugins.local:CONFIGURE_LOCAL_CMD",
-      "ssh = aiida.transport.plugins.ssh:CONFIGURE_SSH_CMD"
+      "local = aiida.transports.plugins.local:CONFIGURE_LOCAL_CMD",
+      "ssh = aiida.transports.plugins.ssh:CONFIGURE_SSH_CMD"
     ],
     "aiida.data": [
       "array = aiida.orm.nodes.data.array.array:ArrayData",
@@ -183,16 +183,16 @@
       "templatereplacer.doubler = aiida.parsers.plugins.templatereplacer.doubler:TemplatereplacerDoublerParser"
     ],
     "aiida.schedulers": [
-      "direct = aiida.scheduler.plugins.direct:DirectScheduler",
-      "lsf = aiida.scheduler.plugins.lsf:LsfScheduler",
-      "pbspro = aiida.scheduler.plugins.pbspro:PbsproScheduler",
-      "sge = aiida.scheduler.plugins.sge:SgeScheduler",
-      "slurm = aiida.scheduler.plugins.slurm:SlurmScheduler",
-      "torque = aiida.scheduler.plugins.torque:TorqueScheduler"
+      "direct = aiida.schedulers.plugins.direct:DirectScheduler",
+      "lsf = aiida.schedulers.plugins.lsf:LsfScheduler",
+      "pbspro = aiida.schedulers.plugins.pbspro:PbsproScheduler",
+      "sge = aiida.schedulers.plugins.sge:SgeScheduler",
+      "slurm = aiida.schedulers.plugins.slurm:SlurmScheduler",
+      "torque = aiida.schedulers.plugins.torque:TorqueScheduler"
     ],
     "aiida.transports": [
-      "local = aiida.transport.plugins.local:LocalTransport",
-      "ssh = aiida.transport.plugins.ssh:SshTransport"
+      "local = aiida.transports.plugins.local:LocalTransport",
+      "ssh = aiida.transports.plugins.ssh:SshTransport"
     ],
     "aiida.workflows": [],
     "aiida.tools.dbexporters": [

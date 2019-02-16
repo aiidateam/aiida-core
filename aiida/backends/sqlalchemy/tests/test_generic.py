@@ -64,7 +64,7 @@ class TestGroupsSqla(AiidaTestCase):
     def setUp(self):
         from aiida.orm.implementation import sqlalchemy as sqla
         super(TestGroupsSqla, self).setUp()
-        self.assertIsInstance(self.backend, sqla.SqlaBackend)
+        self.assertIsInstance(self.backend, sqla.backend.SqlaBackend)
 
     def test_query(self):
         """

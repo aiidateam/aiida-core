@@ -101,14 +101,10 @@
         aiida/backends/tests/cmdline/commands/test_node.py|
         aiida/backends/tests/cmdline/commands/test_user.py|
         aiida/backends/tests/cmdline/commands/test_work.py|
-        aiida/backends/tests/common/test_datastructures.py|
         aiida/backends/tests/test_computer.py|
-        aiida/backends/tests/control/test_computer_ctrl.py|
-        aiida/backends/tests/test_daemon.py|
         aiida/backends/tests/daemon/test_client.py|
         aiida/backends/tests/test_dataclasses.py|
         aiida/backends/tests/test_dbimporters.py|
-        aiida/backends/tests/test_example_helpers.py|
         aiida/backends/tests/test_export_and_import.py|
         aiida/backends/tests/test_generic.py|
         aiida/backends/tests/__init__.py|
@@ -123,7 +119,6 @@
         aiida/backends/tests/test_plugin_loader.py|
         aiida/backends/tests/work/test_class_loader.py|
         aiida/backends/tests/work/test_daemon.py|
-        aiida/backends/tests/work/test_job_processes.py|
         aiida/backends/tests/work/test_persistence.py|
         aiida/backends/tests/work/test_process.py|
         aiida/backends/tests/work/test_run.py|
@@ -142,18 +137,8 @@
         aiida/daemon/execmanager.py|
         aiida/manage/backup/backup_base.py|
         aiida/orm/autogroup.py|
-        aiida/orm/backend.py|
         aiida/orm/querybuilder.py|
-        aiida/orm/implementation/django/authinfo.py|
-        aiida/orm/implementation/django/backend.py|
-        aiida/orm/implementation/django/computer.py|
-        aiida/orm/implementation/django/__init__.py|
         aiida/orm/implementation/django/utils.py|
-        aiida/orm/implementation/sqlalchemy/authinfo.py|
-        aiida/orm/implementation/sqlalchemy/backend.py|
-        aiida/orm/implementation/sqlalchemy/computer.py|
-        aiida/orm/implementation/sqlalchemy/__init__.py|
-        aiida/orm/implementation/sqlalchemy/querytool.py|
         aiida/orm/implementation/sqlalchemy/utils.py|
         aiida/orm/__init__.py|
         aiida/orm/importexport.py|

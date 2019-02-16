@@ -43,7 +43,7 @@ class Backend(object):
     @abc.abstractproperty
     def comments(self):
         """
-        Return the collection of comment objects
+        Return the collection of comments
 
         :return: the comment collection
         :rtype: :class:`aiida.orm.implementation.BackendCommentCollection`
@@ -52,7 +52,7 @@ class Backend(object):
     @abc.abstractproperty
     def computers(self):
         """
-        Return the collection of computer objects
+        Return the collection of computers
 
         :return: the computers collection
         :rtype: :class:`aiida.orm.implementation.BackendComputerCollection`
@@ -68,21 +68,21 @@ class Backend(object):
         """
 
     @abc.abstractproperty
+    def logs(self):
+        """
+        Return the collection of logs
+
+        :return: the log collection
+        :rtype: :class:`aiida.orm.implementation.BackendLogCollection`
+        """
+
+    @abc.abstractproperty
     def nodes(self):
         """
         Return the collection of nodes
 
         :return: the nodes collection
         :rtype: :class:`aiida.orm.implementation.BackendNodeCollection`
-        """
-
-    @abc.abstractproperty
-    def logs(self):
-        """
-        Return the collection of log entries
-
-        :return: the log collection
-        :rtype: :class:`aiida.orm.implementation.BackendLogCollection`
         """
 
     @abc.abstractproperty
@@ -193,6 +193,15 @@ class BackendCollection(typing.Generic[EntityType]):
         assert issubclass(self.ENTITY_CLASS, BackendEntity), 'Must set the ENTRY_CLASS class variable to an entity type'
         self._backend = backend
 
+    def from_dbmodel(self, dbmodel):
+        """
+        Create an entity from the backend dbmodel
+
+        :param dbmodel: the dbmodel to create the entity from
+        :return: the entity instance
+        """
+        return self.ENTITY_CLASS.from_dbmodel(dbmodel, self.backend)
+
     @property
     def backend(self):
         """
@@ -209,12 +218,3 @@ class BackendCollection(typing.Generic[EntityType]):
         :return: the newly created entry of type ENTITY_CLASS
         """
         return self.ENTITY_CLASS(backend=self._backend, **kwargs)  # pylint: disable=not-callable
-
-    def from_dbmodel(self, dbmodel):
-        """
-        Create an entity from the backend dbmodel
-
-        :param dbmodel: the dbmodel to create the entity from
-        :return: the entity instance
-        """
-        return self.ENTITY_CLASS.from_dbmodel(dbmodel, self.backend)

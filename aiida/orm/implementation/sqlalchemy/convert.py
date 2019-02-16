@@ -69,8 +69,8 @@ def _(dbmodel, backend):
     """
     get_backend_entity for SQLA DbGroup
     """
-    from . import computer
-    return computer.SqlaComputer.from_dbmodel(dbmodel, backend)
+    from . import computers
+    return computers.SqlaComputer.from_dbmodel(dbmodel, backend)
 
 
 @get_backend_entity.register(DbNode)
@@ -88,8 +88,8 @@ def _(dbmodel, backend):
     """
     get_backend_entity for SQLA DbAuthInfo
     """
-    from . import authinfo
-    return authinfo.SqlaAuthInfo.from_dbmodel(dbmodel, backend)
+    from . import authinfos
+    return authinfos.SqlaAuthInfo.from_dbmodel(dbmodel, backend)
 
 
 @get_backend_entity.register(DbComment)

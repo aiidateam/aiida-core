@@ -7,69 +7,19 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Django implementations for the `AuthInfo` entity and collection."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.backends.djsite.db.models import DbAuthInfo
 from aiida.common import exceptions
+from aiida.common import json
 from aiida.common.lang import type_check
-import aiida.common.json as json
 
 from ..authinfos import BackendAuthInfo, BackendAuthInfoCollection
 from . import entities
-from . import computer as computers
-from . import users as users
 from . import utils
-
-
-class DjangoAuthInfoCollection(BackendAuthInfoCollection):
-
-    def create(self, computer, user):
-        """
-        Create a AuthInfo given a computer and a user
-
-        :param computer: a Computer instance
-        :param user: a User instance
-        :return: an AuthInfo object associated with the given computer and user
-        """
-        return DjangoAuthInfo(self.backend, computer, user)
-
-    def get(self, computer, user):
-        """
-        Return a AuthInfo given a computer and a user
-
-        :param computer: a Computer instance
-        :param user: a User instance
-        :return: an AuthInfo object associated with the given computer and user
-        :raise NotExistent: if the user is not configured to use computer
-        :raise sqlalchemy.orm.exc.MultipleResultsFound: if the user is configured
-            more than once to use the computer! Should never happen
-        """
-        from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
-
-        try:
-            authinfo = DbAuthInfo.objects.get(dbcomputer=computer.id, aiidauser=user.id)
-            return self.from_dbmodel(authinfo)
-        except ObjectDoesNotExist:
-            raise exceptions.NotExistent(
-                "The aiida user {} is not configured to use computer {}".format(
-                    user.email, computer.name))
-        except MultipleObjectsReturned:
-            raise exceptions.ConfigurationError(
-                "The aiida user {} is configured more than once to use "
-                "computer {}! Only one configuration is allowed".format(
-                    user.email, computer.name))
-
-    def delete(self, authinfo_id):
-        from django.core.exceptions import ObjectDoesNotExist
-        try:
-            DbAuthInfo.objects.get(pk=authinfo_id).delete()
-        except ObjectDoesNotExist:
-            raise exceptions.NotExistent("AuthInfo with id '{}' not found".format(authinfo_id))
-
-    def from_dbmodel(self, dbmodel):
-        return DjangoAuthInfo.from_dbmodel(dbmodel, self.backend)
 
 
 class DjangoAuthInfo(entities.DjangoModelEntity[DbAuthInfo], BackendAuthInfo):
@@ -79,6 +29,12 @@ class DjangoAuthInfo(entities.DjangoModelEntity[DbAuthInfo], BackendAuthInfo):
 
     @classmethod
     def get_dbmodel_attribute_name(cls, attr_name):
+        """Return the name of the auth info attribute as it is known to the database model.
+
+        This is essentially a mapping because the `type_string` attribute is called `type` on the database model class.
+
+        :return: name of the backend `attribute` as defined on the database model class
+        """
         if attr_name == 'type_string':
             return 'type'
 
@@ -92,10 +48,24 @@ class DjangoAuthInfo(entities.DjangoModelEntity[DbAuthInfo], BackendAuthInfo):
         :param user: a User instance
         :return: an AuthInfo object associated with the given computer and user
         """
+        from . import computers
+        from . import users
         super(DjangoAuthInfo, self).__init__(backend)
         type_check(user, users.DjangoUser)
         type_check(computer, computers.DjangoComputer)
         self._dbmodel = utils.ModelWrapper(DbAuthInfo(dbcomputer=computer.dbmodel, aiidauser=user.dbmodel))
+
+    @property
+    def is_stored(self):
+        """Return whether the `AuthInfo` is stored
+
+        :return: True if stored, False otherwise
+        """
+        return self._dbmodel.is_saved()
+
+    @property
+    def id(self):
+        return self._dbmodel.id
 
     @property
     def enabled(self):
@@ -131,8 +101,6 @@ class DjangoAuthInfo(entities.DjangoModelEntity[DbAuthInfo], BackendAuthInfo):
         """
         Replace the auth_params dictionary in the DB with the provided dictionary
         """
-        import aiida.common.json as json
-
         # Raises ValueError if data is not JSON-serializable
         self._dbmodel.auth_params = json.dumps(auth_params)
 
@@ -142,8 +110,6 @@ class DjangoAuthInfo(entities.DjangoModelEntity[DbAuthInfo], BackendAuthInfo):
 
         :return: a dictionary
         """
-        import aiida.common.json as json
-
         try:
             return json.loads(self._dbmodel.metadata)
         except ValueError:
@@ -166,3 +132,46 @@ class DjangoAuthInfo(entities.DjangoModelEntity[DbAuthInfo], BackendAuthInfo):
         """
         self._dbmodel.save()
         return self
+
+
+class DjangoAuthInfoCollection(BackendAuthInfoCollection):
+    """Collection of AuthInfo instances."""
+
+    ENTITY_CLASS = DjangoAuthInfo
+
+    def get(self, computer, user):
+        """
+        Return a AuthInfo given a computer and a user
+
+        :param computer: a Computer instance
+        :param user: a User instance
+        :return: an AuthInfo object associated with the given computer and user
+        :raise NotExistent: if the user is not configured to use computer
+        :raise sqlalchemy.orm.exc.MultipleResultsFound: if the user is configured
+            more than once to use the computer! Should never happen
+        """
+        # pylint: disable=import-error,no-name-in-module
+        from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
+
+        try:
+            authinfo = DbAuthInfo.objects.get(dbcomputer=computer.id, aiidauser=user.id)
+            return self.from_dbmodel(authinfo)
+        except ObjectDoesNotExist:
+            raise exceptions.NotExistent("The aiida user {} is not configured to use computer {}".format(
+                user.email, computer.name))
+        except MultipleObjectsReturned:
+            raise exceptions.ConfigurationError("The aiida user {} is configured more than once to use "
+                                                "computer {}! Only one configuration is allowed".format(
+                                                    user.email, computer.name))
+
+    def delete(self, authinfo_id):
+        """Delete an `AuthInfo` entry from the collection and database.
+
+        :param authinfo_id: the id of the entity
+        """
+        # pylint: disable=import-error,no-name-in-module
+        from django.core.exceptions import ObjectDoesNotExist
+        try:
+            DbAuthInfo.objects.get(pk=authinfo_id).delete()
+        except ObjectDoesNotExist:
+            raise exceptions.NotExistent("AuthInfo with id '{}' not found".format(authinfo_id))

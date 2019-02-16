@@ -23,7 +23,7 @@ from aiida.common.lang import type_check
 from .. import BackendNode, BackendNodeCollection
 from . import entities
 from . import utils
-from .computer import DjangoComputer
+from .computers import DjangoComputer
 from .users import DjangoUser
 
 

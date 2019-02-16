@@ -7,20 +7,23 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Django implementation of `aiida.orm.implementation.backends.Backend`."""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
 from contextlib import contextmanager
 
+# pylint: disable=import-error,no-name-in-module
 from django.db import models, transaction
 
 from aiida.backends.djsite.queries import DjangoQueryManager
-from aiida.orm.implementation.sql import SqlBackend
+from aiida.backends.djsite.utils import migrate_database
 
-from . import authinfo
+from ..sql import SqlBackend
+from . import authinfos
 from . import comments
-from . import computer
+from . import computers
 from . import convert
 from . import groups
 from . import logs
@@ -32,19 +35,21 @@ __all__ = ('DjangoBackend',)
 
 
 class DjangoBackend(SqlBackend[models.Model]):
+    """Django implementation of `aiida.orm.implementation.backends.Backend`."""
 
     def __init__(self):
-        self._authinfos = authinfo.DjangoAuthInfoCollection(self)
+        """Construct the backend instance by initializing all the collections."""
+        self._authinfos = authinfos.DjangoAuthInfoCollection(self)
         self._comments = comments.DjangoCommentCollection(self)
-        self._computers = computer.DjangoComputerCollection(self)
+        self._computers = computers.DjangoComputerCollection(self)
         self._groups = groups.DjangoGroupCollection(self)
         self._logs = logs.DjangoLogCollection(self)
         self._nodes = nodes.DjangoNodeCollection(self)
         self._query_manager = DjangoQueryManager(self)
         self._users = users.DjangoUserCollection(self)
 
-    def migrate(self):
-        from aiida.backends.djsite.utils import migrate_database
+    @staticmethod
+    def migrate():
         migrate_database()
 
     @property
@@ -82,33 +87,50 @@ class DjangoBackend(SqlBackend[models.Model]):
     def users(self):
         return self._users
 
+    @staticmethod
+    def transaction():
+        """Open a transaction to be used as a context manager."""
+        return transaction.atomic()
+
+    # Below are abstract methods inherited from `aiida.orm.implementation.sql.backends.SqlBackend`
+
     def get_backend_entity(self, model):
+        """Return a `BackendEntity` instance from a `DbModel` instance."""
         return convert.get_backend_entity(model, self)
 
-    def get_connection(self):
-        """
-        Get the Django connection
+    @contextmanager
+    def cursor(self):
+        """Return a psycopg cursor to be used in a context manager.
 
-        :return: the django connection
+        :return: a psycopg cursor
+        :rtype: :class:`psycopg2.extensions.cursor`
         """
-        # For now we just return the global but if we ever support multiple Django backends
-        # being loaded this should be specific to this backend
-        from django.db import connection
-        return connection
+        try:
+            yield self.get_connection().cursor()
+        finally:
+            pass
 
     def execute_raw(self, query):
+        """Execute a raw SQL statement and return the result.
+
+        :param query: a string containing a raw SQL statement
+        :return: the result of the query
+        """
         with self.cursor() as cursor:
             cursor.execute(query)
             results = cursor.fetchall()
 
         return results
 
-    @contextmanager
-    def cursor(self):
-        try:
-            yield self.get_connection().cursor()
-        finally:
-            pass
+    @staticmethod
+    def get_connection():
+        """
+        Get the Django connection
 
-    def transaction(self):
-        return transaction.atomic()
+        :return: the django connection
+        """
+        # pylint: disable=import-error,no-name-in-module
+        from django.db import connection
+        # For now we just return the global but if we ever support multiple Django backends
+        # being loaded this should be specific to this backend
+        return connection

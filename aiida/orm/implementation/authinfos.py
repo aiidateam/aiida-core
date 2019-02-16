@@ -136,16 +136,6 @@ class BackendAuthInfoCollection(backends.BackendCollection[BackendAuthInfo]):
     ENTITY_CLASS = BackendAuthInfo
 
     @abc.abstractmethod
-    def create(self, computer, user):
-        """
-        Create a AuthInfo given a computer and a user
-
-        :param computer: a Computer instance
-        :param user: a User instance
-        :return: a AuthInfo object associated to the given computer and user
-        """
-
-    @abc.abstractmethod
     def delete(self, authinfo_id):
         """
         Remove an AuthInfo from the collection with the given id

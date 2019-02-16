@@ -24,7 +24,7 @@ from aiida.common.lang import type_check
 from .. import BackendNode, BackendNodeCollection
 from . import entities
 from . import utils
-from .computer import SqlaComputer
+from .computers import SqlaComputer
 from .users import SqlaUser
 
 

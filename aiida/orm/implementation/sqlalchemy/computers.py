@@ -7,31 +7,37 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+"""SqlAlchemy implementations for the `Computer` entity and collection."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from copy import copy
 import six
+
+# pylint: disable=import-error,no-name-in-module
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.session import make_transient
 
+from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models.computer import DbComputer
-from aiida.common.exceptions import InvalidOperation
+from aiida.common import exceptions, json
 from aiida.orm.implementation.computers import BackendComputerCollection, BackendComputer
-import aiida.common.json as json
+
 from . import utils
 from . import entities
 
 
 class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
-    """SQLA computer"""
+    """SqlAlchemy implementation for `BackendComputer`."""
+
+    # pylint: disable=too-many-public-methods
 
     MODEL_CLASS = DbComputer
 
-    def __init__(self, backend, attributes):
+    def __init__(self, backend, **kwargs):
         super(SqlaComputer, self).__init__(backend)
-        self._dbmodel = utils.ModelWrapper(DbComputer(**attributes))
+        self._dbmodel = utils.ModelWrapper(DbComputer(**kwargs))
 
     @property
     def uuid(self):
@@ -42,7 +48,7 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
         return self._dbmodel.id
 
     @property
-    def id(self):
+    def id(self):  # pylint: disable=invalid-name
         return self._dbmodel.id
 
     @property
@@ -50,27 +56,26 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
         return self._dbmodel.id is not None
 
     def copy(self):
-        from aiida.backends.sqlalchemy import get_scoped_session
+        """Create an unstored clone of an already stored `Computer`."""
         session = get_scoped_session()
 
         if not self.is_stored:
-            raise InvalidOperation("You can copy a computer only after having stored it")
+            raise exceptions.InvalidOperation("You can copy a computer only after having stored it")
 
-        newdbcomputer = copy(self._dbmodel)
-        make_transient(newdbcomputer)
-        session.add(newdbcomputer)
+        dbcomputer = copy(self._dbmodel)
+        make_transient(dbcomputer)
+        session.add(dbcomputer)
 
-        newobject = self.__class__(dbcomputer=newdbcomputer)
+        newobject = self.__class__.from_dbmodel(dbcomputer)
 
         return newobject
 
     def store(self):
+        """Store the `Computer` instance."""
         try:
             self._dbmodel.save()
         except SQLAlchemyError:
-            raise ValueError(
-                "Integrity error, probably the hostname already exists in the"
-                " DB")
+            raise ValueError("Integrity error, probably the hostname already exists in the" " DB")
 
         return self
 
@@ -87,10 +92,10 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
         return self._dbmodel.hostname
 
     def get_metadata(self):
-        return self._dbmodel._metadata
+        return self._dbmodel._metadata  # pylint: disable=protected-access
 
     def set_metadata(self, metadata_dict):
-        self._dbmodel._metadata = metadata_dict
+        self._dbmodel._metadata = metadata_dict  # pylint: disable=protected-access
 
     def get_transport_params(self):
         """
@@ -133,33 +138,31 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
         return self._dbmodel.scheduler_type
 
     def set_scheduler_type(self, scheduler_type):
-
         self._dbmodel.scheduler_type = scheduler_type
 
     def get_transport_type(self):
         return self._dbmodel.transport_type
 
-    def set_transport_type(self, val):
-        self._dbmodel.transport_type = val
+    def set_transport_type(self, transport_type):
+        self._dbmodel.transport_type = transport_type
 
 
 class SqlaComputerCollection(BackendComputerCollection):
+    """Collection of `Computer` instances."""
+
     ENTITY_CLASS = SqlaComputer
 
-    def create(self, **attributes):
-        return SqlaComputer(self.backend, attributes)
-
-    def list_names(cls):
-        from aiida.backends.sqlalchemy import get_scoped_session
+    @staticmethod
+    def list_names():
         session = get_scoped_session()
         return session.query(DbComputer.name).all()
 
-    def delete(self, id):
-        import aiida.backends.sqlalchemy
+    def delete(self, pk):
         try:
-            session = aiida.backends.sqlalchemy.get_scoped_session()
-            session.query(DbComputer).get(id).delete()
+            session = get_scoped_session()
+            session.query(DbComputer).get(pk).delete()
             session.commit()
         except SQLAlchemyError as exc:
-            raise InvalidOperation("Unable to delete the requested computer: it is possible that there "
-                                   "is at least one node using this computer (original message: {})".format(exc))
+            raise exceptions.InvalidOperation(
+                "Unable to delete the requested computer: it is possible that there "
+                "is at least one node using this computer (original message: {})".format(exc))

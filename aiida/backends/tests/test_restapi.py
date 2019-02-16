@@ -793,7 +793,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         Get the list of give calculation inputs
         """
-        from aiida.backends.tests.dataclasses import simplify
+        from aiida.backends.tests.test_dataclasses import simplify
         node_uuid = self.get_dummy_data()["structuredata"][0]["uuid"]
         url = self.get_url_prefix() + '/structures/' + str(node_uuid) + '/content/visualization?visformat=cif'
         with self.app.test_client() as client:
@@ -818,7 +818,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         Get the list of given calculation inputs
         """
-        from aiida.backends.tests.dataclasses import simplify
+        from aiida.backends.tests.test_dataclasses import simplify
         node_uuid = self.get_dummy_data()["structuredata"][0]["uuid"]
         url = self.get_url_prefix() + '/structures/' + str(node_uuid) + '/content/visualization?visformat=xsf'
         with self.app.test_client() as client:
@@ -843,7 +843,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         Get the list of given calculation inputs
         """
-        from aiida.backends.tests.dataclasses import simplify
+        from aiida.backends.tests.test_dataclasses import simplify
         node_uuid = self.get_dummy_data()["structuredata"][0]["uuid"]
         url = self.get_url_prefix() + '/structures/' + str(node_uuid) + '/content/visualization'
         with self.app.test_client() as client:

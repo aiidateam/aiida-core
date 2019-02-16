@@ -176,7 +176,7 @@ class NodeTranslator(BaseTranslator):
         # Add input/output relation to the query help
         if self._result_type != self.__label__:
             self._query_help["path"].append({
-                "type": ("node.Node.", "node.data.Data."),
+                "type": ("node.Node.", "data.Data."),
                 "tag": self._result_type,
                 self._result_type: self.__label__
             })

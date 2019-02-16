@@ -3,7 +3,7 @@
 from __future__ import absolute_import
 
 from aiida.common.extendeddicts import AttributeDict
-from aiida.orm.node.data import Data
+from aiida.orm.nodes.data import Data
 from aiida.orm import CalculationNode, WorkflowNode
 
 
@@ -17,20 +17,20 @@ def format_type_string_regex(node_class):
     To obtain the regex string that can be used to match sub classes, one has to strip the last period and
     the class name::
 
-        node.process.calculation.
+        nodes.process.calculation.
 
     Any node with a type string that starts with this sub string is a sub class of the `CalculationNode` class.
 
     :param node_class: the node class for which to get the sub class regex string
     :return: a string that can be used as regex to match nodes that are a sub class of the given node class
     """
-    # 'node.process.calculation.CalculationNode.'
+    # 'nodes.process.calculation.CalculationNode.'
     type_string = node_class._plugin_type_string  # pylint: disable=protected-access
 
-    # ['node', 'process', 'calculation']
+    # ['nodes', 'process', 'calculation']
     type_parts = type_string.split('.')[:-2]
 
-    # 'node.process.calculation.'
+    # 'nodes.process.calculation.'
     type_string_regex = '{}.'.format('.'.join(type_parts))
 
     return type_string_regex

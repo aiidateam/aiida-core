@@ -18,7 +18,7 @@ from six.moves import range
 import io
 
 from aiida.orm import DataFactory
-from aiida.orm.node.data.parameter import ParameterData
+from aiida.orm.nodes.data.parameter import ParameterData
 from aiida.work import calcfunction
 
 aiida_executable_name = '_aiidasubmit.sh'
@@ -350,9 +350,9 @@ def _get_calculation(node):
     Gets the parent (immediate) calculation, attached as the input of
     the node.
 
-    :param node: an instance of subclass of :py:class:`aiida.orm.node.Node`
+    :param node: an instance of subclass of :py:class:`aiida.orm.nodes.node.Node`
     :return: an instance of subclass of
-        :py:class:`aiida.orm.node.process.ProcessNode`
+        :py:class:`aiida.orm.nodes.process.process.ProcessNode`
     :raises MultipleObjectsError: if the node has more than one calculation
         attached.
     """
@@ -379,8 +379,8 @@ def _assert_same_parents(a, b):
     Can be used to check whether two data nodes originate from the same
     calculation.
 
-    :param a: an instance of subclass of :py:class:`aiida.orm.node.Node`
-    :param b: an instance of subclass of :py:class:`aiida.orm.node.Node`
+    :param a: an instance of subclass of :py:class:`aiida.orm.nodes.node.Node`
+    :param b: an instance of subclass of :py:class:`aiida.orm.nodes.node.Node`
 
     :raises ValueError: if the condition is not met.
     """
@@ -449,7 +449,7 @@ def _collect_calculation_data(calc):
     calculation.
     """
     from aiida.common.links import LinkType
-    from aiida.orm.node.data import Data
+    from aiida.orm.nodes.data import Data
     from aiida.orm import CalculationNode, CalcJobNode, CalcFunctionNode, WorkflowNode
     import hashlib
     import os
@@ -848,7 +848,7 @@ def _collect_tags(node, calc,parameters=None,
     # Describing Brillouin zone (if used)
 
     if calc is not None:
-        from aiida.orm.node.data.array.kpoints import KpointsData
+        from aiida.orm.nodes.data.array.kpoints import KpointsData
         kpoints_list = calc.get_incoming(node_class=KpointsData, link_type=LinkType.INPUT_CALC).all()
         # TODO: stop if more than one KpointsData is used?
         if len(kpoints_list) == 1:
@@ -891,21 +891,21 @@ def add_metadata_inline(what, node, parameters, args):
     Add metadata of original exported node to the produced TCOD CIF.
 
     :param what: an original exported node.
-    :param node: a :py:class:`aiida.orm.node.data.cif.CifData` instance.
-    :param parameters: a :py:class:`aiida.orm.node.data.parameter.ParameterData`
+    :param node: a :py:class:`aiida.orm.nodes.data.cif.CifData` instance.
+    :param parameters: a :py:class:`aiida.orm.nodes.data.parameter.ParameterData`
         instance, produced by the same calculation as the original exported
         node.
-    :param args: a :py:class:`aiida.orm.node.data.parameter.ParameterData`
+    :param args: a :py:class:`aiida.orm.nodes.data.parameter.ParameterData`
         instance, containing parameters for the control of metadata
         collection and inclusion in the produced
-        :py:class:`aiida.orm.node.data.cif.CifData`.
-    :return: dict with :py:class:`aiida.orm.node.data.cif.CifData`
+        :py:class:`aiida.orm.nodes.data.cif.CifData`.
+    :return: dict with :py:class:`aiida.orm.nodes.data.cif.CifData`
     :raises ValueError: if tags present in
         ``args.get_dict()['additional_tags']`` are not valid CIF tags.
 
     .. note:: can be used as inline calculation.
     """
-    from aiida.orm.node.data.cif import pycifrw_from_cif
+    from aiida.orm.nodes.data.cif import pycifrw_from_cif
     CifData = DataFactory('cif')
 
     if not node:
@@ -980,16 +980,16 @@ def export_cifnode(what, parameters=None, trajectory_index=None,
                    **kwargs):
     """
     The main exporter function. Exports given coordinate-containing \*Data
-    node to :py:class:`aiida.orm.node.data.cif.CifData` node, ready to be
+    node to :py:class:`aiida.orm.nodes.data.cif.CifData` node, ready to be
     exported to TCOD. All \*Data types, having method ``get_cif()``, are
-    supported in addition to :py:class:`aiida.orm.node.data.cif.CifData`.
+    supported in addition to :py:class:`aiida.orm.nodes.data.cif.CifData`.
 
     :param what: data node to be exported.
-    :param parameters: a :py:class:`aiida.orm.node.data.parameter.ParameterData`
+    :param parameters: a :py:class:`aiida.orm.nodes.data.parameter.ParameterData`
         instance, produced by the same calculation as the original exported
         node.
     :param trajectory_index: a step to be converted and exported in case a
-        :py:class:`aiida.orm.node.data.array.trajectory.TrajectoryData` is
+        :py:class:`aiida.orm.nodes.data.array.trajectory.TrajectoryData` is
         exported.
     :param store: boolean indicating whether to store intermediate nodes or
         not. Default False.
@@ -1005,7 +1005,7 @@ def export_cifnode(what, parameters=None, trajectory_index=None,
     :param gzip_threshold: integer indicating the maximum size (in bytes) of
         uncompressed CIF text fields when the **gzip** option is in action.
         Default 1024.
-    :return: a :py:class:`aiida.orm.node.data.cif.CifData` node.
+    :return: a :py:class:`aiida.orm.nodes.data.cif.CifData` node.
     """
     from aiida.common.links import LinkType
     from aiida.common.exceptions import MultipleObjectsError
@@ -1051,7 +1051,7 @@ def export_cifnode(what, parameters=None, trajectory_index=None,
     # Reduction of the symmetry
 
     if reduce_symmetry:
-        from aiida.orm.node.data.cif import refine_inline
+        from aiida.tools.data.cif import refine_inline
         ret_dict = refine_inline(node=node, metadata={'store_provenance': store})
         node = ret_dict['cif']
 
@@ -1076,10 +1076,10 @@ def deposit(what, type, author_name=None, author_email=None, url=None,
             replace=None, message=None, **kwargs):
     """
     Launches a
-    :py:class:`aiida.orm.node.process.calculation.calcjob.CalcJobNode`
+    :py:class:`aiida.orm.nodes.process.calculation.calcjob.CalcJobNode`
     to deposit data node to \*COD-type database.
 
-    :return: launched :py:class:`aiida.orm.node.process.calculation.calcjob.CalcJobNode`
+    :return: launched :py:class:`aiida.orm.nodes.process.calculation.calcjob.CalcJobNode`
         instance.
     :raises ValueError: if any of the required parameters are not given.
     """
@@ -1227,11 +1227,11 @@ def deposition_cmdline_parameters(parser, expclass="Data"):
 def translate_calculation_specific_values(calc, translator, **kwargs):
     """
     Translates calculation-specific values from
-    :py:class:`aiida.orm.node.process.calculation.calcjob.CalcJobNode` subclass to
+    :py:class:`aiida.orm.nodes.process.calculation.calcjob.CalcJobNode` subclass to
     appropriate TCOD CIF tags.
 
     :param calc: an instance of
-        :py:class:`aiida.orm.node.process.calculation.calcjob.CalcJobNode` subclass.
+        :py:class:`aiida.orm.nodes.process.calculation.calcjob.CalcJobNode` subclass.
     :param translator: class, derived from
         :py:class:`aiida.tools.dbexporters.tcod_plugins.BaseTcodtranslator`.
     :raises ValueError: if **translator** is not derived from proper class.

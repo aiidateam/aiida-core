@@ -25,10 +25,10 @@ class BandsDataTranslator(DataTranslator):
     # A label associated to the present class (coincides with the resource name)
     __label__ = "bands"
     # The AiiDA class one-to-one associated to the present class
-    from aiida.orm.node.data.array.bands import BandsData
+    from aiida.orm.nodes.data.array.bands import BandsData
     _aiida_class = BandsData
     # The string name of the AiiDA class
-    _aiida_type = "node.data.array.bands.BandsData"
+    _aiida_type = "data.array.bands.BandsData"
     # The string associated to the AiiDA class in the query builder lexicon
     _qb_type = _aiida_type + '.'
 

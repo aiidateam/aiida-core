@@ -401,7 +401,7 @@ class Process(plumpy.Process):
         Get the parent process node
 
         :return: the parent process node if there is one
-        :rtype: :class:`aiida.orm.node.process.ProcessNode`
+        :rtype: :class:`aiida.orm.nodes.process.process.ProcessNode`
         """
         # Can't get it if we don't know our parent
         if self._parent_pid is None:
@@ -546,7 +546,7 @@ class Process(plumpy.Process):
 
     def _setup_inputs(self):
         """Create the links between the input nodes and the ProcessNode that represents this process."""
-        from aiida.orm.node.data.code import Code
+        from aiida.orm.nodes.data.code import Code
 
         for name, node in self._flat_inputs().items():
 

@@ -44,7 +44,7 @@ def upf_uploadfamily(folder, group_label, group_description, stop_if_existing):
 
     Call without parameters to get some help.
     """
-    from aiida.orm.node.data.upf import upload_upf_family
+    from aiida.orm.nodes.data.upf import upload_upf_family
     files_found, files_uploaded = upload_upf_family(folder, group_label, group_description, stop_if_existing)
     echo.echo_success("UPF files found: {}. New files uploaded: {}".format(files_found, files_uploaded))
 
@@ -64,7 +64,7 @@ def upf_listfamilies(elements, with_description):
     Print on screen the list of upf families installed
     """
     from aiida import orm
-    from aiida.orm.node.data.upf import UPFGROUP_TYPE
+    from aiida.orm.nodes.data.upf import UPFGROUP_TYPE
 
     UpfData = orm.DataFactory('upf')  # pylint: disable=invalid-name
     query = orm.QueryBuilder()
@@ -129,7 +129,7 @@ def upf_import(filename):
     """
     Import upf data object
     """
-    from aiida.orm.node.data.upf import UpfData
+    from aiida.orm.nodes.data.upf import UpfData
 
     node, _ = UpfData.get_or_create(filename)
     echo.echo_success('Imported: {}'.format(node))

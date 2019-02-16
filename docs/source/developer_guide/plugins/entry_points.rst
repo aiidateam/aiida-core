@@ -93,7 +93,7 @@ Below, a list of valid entry points recognized by AiiDA follows.
 ``aiida.calculations``
 ----------------------
 
-Entry points in this group are expected to be subclasses of :py:class:`aiida.orm.JobCalculation <aiida.orm.node.process.calculation.calcjob.CalcJobNode>`. This replaces the previous method of placing a python module with the class in question inside the ``aiida/orm/calculation/job`` subpackage.
+Entry points in this group are expected to be subclasses of :py:class:`aiida.orm.JobCalculation <aiida.orm.nodes.process.calculation.calcjob.CalcJobNode>`. This replaces the previous method of placing a python module with the class in question inside the ``aiida/orm/calculation/job`` subpackage.
 
 Example entry point specification::
    
@@ -141,7 +141,7 @@ Usage::
 ``aiida.data``
 --------------
 
-Group for :py:class:`~aiida.orm.node.data.Data` subclasses. Previously located in a subpackage of ``aiida/orm/data``.
+Group for :py:class:`~aiida.orm.nodes.data.data.Data` subclasses. Previously located in a subpackage of ``aiida/orm/data``.
 
 Spec::
 

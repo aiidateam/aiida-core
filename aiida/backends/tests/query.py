@@ -33,7 +33,7 @@ class TestQueryBuilder(AiidaTestCase):
         This tests the classifications of the QueryBuilder
         """
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm.node.data.structure import StructureData
+        from aiida.orm.nodes.data.structure import StructureData
         from aiida.orm import Group, User, Node, Computer, Data
         from aiida.common.exceptions import DbContentError
 
@@ -41,16 +41,16 @@ class TestQueryBuilder(AiidaTestCase):
 
         # Asserting that improper declarations of the class type raise an error
         with self.assertRaises(DbContentError):
-            qb._get_ormclass(None, 'node.data')
+            qb._get_ormclass(None, 'data')
         with self.assertRaises(DbContentError):
-            qb._get_ormclass(None, 'node.data.Data')
+            qb._get_ormclass(None, 'data.Data')
         with self.assertRaises(DbContentError):
             qb._get_ormclass(None, '.')
 
         # Asserting that the query type string and plugin type string are returned:
         for cls, clstype, query_type_string in (
             qb._get_ormclass(StructureData, None),
-            qb._get_ormclass(None, 'node.data.structure.StructureData.'),
+            qb._get_ormclass(None, 'data.structure.StructureData.'),
         ):
             self.assertEqual(clstype, StructureData._plugin_type_string)
             self.assertEqual(query_type_string, StructureData._query_type_string)
@@ -81,7 +81,7 @@ class TestQueryBuilder(AiidaTestCase):
 
         for cls, clstype, query_type_string in (
                 qb._get_ormclass(Data, None),
-                qb._get_ormclass(None, 'node.data.Data.'),
+                qb._get_ormclass(None, 'data.Data.'),
         ):
             self.assertEqual(clstype, Data._plugin_type_string)
             self.assertEqual(query_type_string, Data._query_type_string)
@@ -137,7 +137,7 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(qb2.count(), 3)
 
         qb2 = QueryBuilder()
-        qb2.append(type='node.data.Data.')
+        qb2.append(type='data.Data.')
         self.assertEqual(qb2.count(), 3)
 
         qb3 = QueryBuilder()
@@ -284,8 +284,8 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(QueryBuilder().append(Node, filters={'attributes.fa': {'>=': 1.02}}).count(), 5)
 
     def test_subclassing(self):
-        from aiida.orm.node.data.structure import StructureData
-        from aiida.orm.node.data.parameter import ParameterData
+        from aiida.orm.nodes.data.structure import StructureData
+        from aiida.orm.nodes.data.parameter import ParameterData
         from aiida.orm import Node, Data
         from aiida.orm.querybuilder import QueryBuilder
         s = StructureData()
@@ -323,7 +323,7 @@ class TestQueryBuilder(AiidaTestCase):
         # Now I am testing the subclassing with tuples:
         qb = QueryBuilder().append(cls=(StructureData, ParameterData), filters={'attributes.cat': 'miau'})
         self.assertEqual(qb.count(), 2)
-        qb = QueryBuilder().append(type=('node.data.structure.StructureData.', 'node.data.parameter.ParameterData.'),
+        qb = QueryBuilder().append(type=('data.structure.StructureData.', 'data.parameter.ParameterData.'),
                                    filters={'attributes.cat': 'miau'})
         self.assertEqual(qb.count(), 2)
         qb = QueryBuilder().append(cls=(StructureData, ParameterData), filters={'attributes.cat': 'miau'},
@@ -331,10 +331,10 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(qb.count(), 2)
         qb = QueryBuilder().append(cls=(StructureData, Data), filters={'attributes.cat': 'miau'}, )
         self.assertEqual(qb.count(), 3)
-        qb = QueryBuilder().append(type=('node.data.structure.StructureData.', 'node.data.parameter.ParameterData.'),
+        qb = QueryBuilder().append(type=('data.structure.StructureData.', 'data.parameter.ParameterData.'),
                                    filters={'attributes.cat': 'miau'}, subclassing=False)
         self.assertEqual(qb.count(), 2)
-        qb = QueryBuilder().append(type=('node.data.structure.StructureData.', 'node.data.Data.'),
+        qb = QueryBuilder().append(type=('data.structure.StructureData.', 'data.Data.'),
                                    filters={'attributes.cat': 'miau'}, subclassing=False)
         self.assertEqual(qb.count(), 2)
 
@@ -364,7 +364,7 @@ class TestQueryBuilder(AiidaTestCase):
 
     def test_append_validation(self):
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm.node.data.structure import StructureData
+        from aiida.orm.nodes.data.structure import StructureData
         from aiida.common.exceptions import InputValidationError
         from aiida.orm import ProcessNode
 
@@ -407,8 +407,8 @@ class TestQueryBuilder(AiidaTestCase):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm import Node
         from aiida.orm import ProcessNode
-        from aiida.orm.node.data.structure import StructureData
-        from aiida.orm.node.data.parameter import ParameterData
+        from aiida.orm.nodes.data.structure import StructureData
+        from aiida.orm.nodes.data.parameter import ParameterData
         from aiida.orm.computers import Computer
         qb = QueryBuilder()
         qb.append(Node, tag='n1')
@@ -445,9 +445,9 @@ class TestQueryHelp(AiidaTestCase):
         I also check passing of tuples.
         """
 
-        from aiida.orm.node.data.structure import StructureData
-        from aiida.orm.node.data.parameter import ParameterData
-        from aiida.orm.node.data import Data
+        from aiida.orm.nodes.data.structure import StructureData
+        from aiida.orm.nodes.data.parameter import ParameterData
+        from aiida.orm.nodes.data import Data
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.groups import Group
         from aiida.orm.computers import Computer

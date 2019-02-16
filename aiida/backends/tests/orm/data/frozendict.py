@@ -12,9 +12,9 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm.node.data.frozendict import FrozenDict
-from aiida.orm.node.data.int import Int
-from aiida.orm.node.data.str import Str
+from aiida.orm.nodes.data.frozendict import FrozenDict
+from aiida.orm.nodes.data.int import Int
+from aiida.orm.nodes.data.str import Str
 
 
 class TestFrozenDict(AiidaTestCase):

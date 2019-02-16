@@ -25,7 +25,7 @@ class TestCodDbImporter(AiidaTestCase):
     """
     Test the CodDbImporter class.
     """
-    from aiida.orm.node.data.cif import has_pycifrw
+    from aiida.orm.nodes.data.cif import has_pycifrw
 
     def test_query_construction_1(self):
         from aiida.tools.dbimporters.plugins.cod import CodDbImporter
@@ -144,7 +144,7 @@ class TestCodDbImporter(AiidaTestCase):
         Tests the creation of CifData node from CodEntry.
         """
         from aiida.tools.dbimporters.plugins.cod import CodEntry
-        from aiida.orm.node.data.cif import CifData
+        from aiida.orm.nodes.data.cif import CifData
 
         entry = CodEntry("http://www.crystallography.net/cod/1000000.cif")
         entry.cif = "data_test _publ_section_title 'Test structure'"

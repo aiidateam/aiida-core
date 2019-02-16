@@ -19,20 +19,10 @@ from .computers import *
 from .entities import *
 from .groups import *
 from .logs import *
+from .nodes import *
 from .querybuilder import *
 from .users import *
 from .utils import *
-
-from .node import Node
-from .node.data import Data
-from .node.data.code import Code
-from .node.process import ProcessNode
-from .node.process.calculation import CalculationNode
-from .node.process.calculation.calcjob import CalcJobNode
-from .node.process.calculation.calcfunction import CalcFunctionNode
-from .node.process.workflow import WorkflowNode
-from .node.process.workflow.workchain import WorkChainNode
-from .node.process.workflow.workfunction import WorkFunctionNode
 
 __all__ = (
     authinfos.__all__ +
@@ -41,7 +31,7 @@ __all__ = (
     entities.__all__ +
     groups.__all__ +
     logs.__all__ +
-    node.__all__ +
+    nodes.__all__ +
     querybuilder.__all__ +
     users.__all__ +
     utils.__all__

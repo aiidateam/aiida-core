@@ -12,7 +12,7 @@ Prerequisites
 -------------
 
 Before getting the calculation results, we need a correctly finished and parsed
-:class:`CalcJobNode<aiida.orm.node.process.calculation.calcjob.CalcJobNode>`.
+:class:`CalcJobNode<aiida.orm.nodes.process.calculation.calcjob.CalcJobNode>`.
 For example this can be a Quantum ESPRESSO ``pw.x`` calculation.
 You can load such a calculation -- we'll call it ``calc`` -- with the command
 
@@ -27,7 +27,7 @@ either in ``verdi shell``, or in a python script (as described :doc:`here <../wo
 Using the CalcJobResultManager instance
 -------------------------------------------
 
-Each :class:`CalcJobNode<aiida.orm.node.process.calculation.calcjob.CalcJobNode>` has a ``res`` attribute that is a 
+Each :class:`CalcJobNode<aiida.orm.nodes.process.calculation.calcjob.CalcJobNode>` has a ``res`` attribute that is a 
 :class:`~aiida.orm.utils.calcjob.CalcJobResultManager` instance and
 gives direct access to parsed data. You can access it as
 ::
@@ -62,7 +62,7 @@ Similarly, you can get any other parsed value, for any code that
 provides a parser.
 
 .. hint:: 
-    The :class:`~aiida.orm.utils.calcjob.CalcJobResultManager` is also integrated with the iPython/verdi shell completion mechanism: if ``calc`` is a valid :class:`CalcJobNode<aiida.orm.node.process.calculation.calcjob.CalcJobNode>`, you can type
+    The :class:`~aiida.orm.utils.calcjob.CalcJobResultManager` is also integrated with the iPython/verdi shell completion mechanism: if ``calc`` is a valid :class:`CalcJobNode<aiida.orm.nodes.process.calculation.calcjob.CalcJobNode>`, you can type
     ::
 
         calc.res.
@@ -81,7 +81,7 @@ Again, we start by loading a node from the database. Unlike before, this can be 
     from aiida.orm import load_node
     node = load_node(17)
 
-Now, we want to find the nodes which have a direct link to this node. The node has several methods to extract this information: :meth:`get_outgoing() <aiida.orm.node.Node.get_outgoing>`, :meth:`get_incoming() <aiida.orm.node.Node.get_incoming>`. The most practical way to access this information, especially when working on the ``verdi shell``, is by means of the ``inp`` and ``out`` attributes.
+Now, we want to find the nodes which have a direct link to this node. The node has several methods to extract this information: :meth:`get_outgoing() <aiida.orm.nodes.Node.get_outgoing>`, :meth:`get_incoming() <aiida.orm.nodes.Node.get_incoming>`. The most practical way to access this information, especially when working on the ``verdi shell``, is by means of the ``inp`` and ``out`` attributes.
 
 The ``inp`` attribute can be used to list and access the nodes with a direct link to 
 ``node`` in input. The names of the input links can be printed by ``list(node.inp)`` or interactively by ``node.inp. + TAB``. As an example, suppose that ``node`` has an input ``KpointsData`` object under the linkname ``kpoints``. The command

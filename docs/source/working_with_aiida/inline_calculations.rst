@@ -5,7 +5,7 @@ Python, without being submitted to a cluster.
 However, this operation takes one (or more) input data nodes, and creates new
 data nodes, the operation itself is not recorded in the database, and provenance
 is lost. In order to put a Calculation object inbetween, we define the
-:py:class:`CalcFunctionNode <aiida.orm.node.process.calculation.calcfunction.CalcFunctionNode>`
+:py:class:`CalcFunctionNode <aiida.orm.nodes.process.calculation.calcfunction.CalcFunctionNode>`
 class, that is used as the class for these calculations that are run "in-line".
 
 We also provide a wrapper (that also works as a decorator of a function),

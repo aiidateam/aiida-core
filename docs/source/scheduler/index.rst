@@ -87,20 +87,20 @@ Job resources
 
 When asking a scheduler to allocate some nodes/machines for a given job, we have to specify some job resources, such as the number of required nodes or the numbers of MPI processes per node.
 
-Unfortunately, the way of specifying this information is different on different clusters. In AiiDA, this is implemented in different subclasses of the :py:class:`aiida.scheduler.datastructures.JobResource` class. The subclass that should be used is given by the scheduler, as described in the previous section. 
+Unfortunately, the way of specifying this information is different on different clusters. In AiiDA, this is implemented in different subclasses of the :py:class:`aiida.schedulers.datastructures.JobResource` class. The subclass that should be used is given by the scheduler, as described in the previous section. 
 
-The interfaces of these subclasses are not all exactly the same. Instead, specifying the resources is similar to writing a scheduler script.  All classes define at least one method, :meth:`get_tot_num_mpiprocs <aiida.scheduler.datastructures.JobResource.get_tot_num_mpiprocs>`, that returns the total number of MPI processes requested. 
+The interfaces of these subclasses are not all exactly the same. Instead, specifying the resources is similar to writing a scheduler script.  All classes define at least one method, :meth:`get_tot_num_mpiprocs <aiida.schedulers.datastructures.JobResource.get_tot_num_mpiprocs>`, that returns the total number of MPI processes requested. 
 
-In the following, the different :class:`JobResource <aiida.scheduler.datastructures.JobResource>` subclasses are described:
+In the following, the different :class:`JobResource <aiida.schedulers.datastructures.JobResource>` subclasses are described:
 
 .. contents ::
     :local:
 
 .. note:: 
-    you can manually load a `specific` :class:`JobResource <aiida.scheduler.datastructures.JobResource>` subclass by directly importing it, e..g.
+    you can manually load a `specific` :class:`JobResource <aiida.schedulers.datastructures.JobResource>` subclass by directly importing it, e..g.
     ::
 
-        from aiida.scheduler.datastructures import NodeNumberJobResource
+        from aiida.schedulers.datastructures import NodeNumberJobResource
     
     However, in general, you will pass the fields to set directly to the :meth:`set_option <aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.set_option>` method of a :class:`CalcJobNode <aiida.orm.nodes.process.calculation.calcjob.CalcJobNode>` object with the ``resources`` key. For instance::
   
@@ -116,7 +116,7 @@ In the following, the different :class:`JobResource <aiida.scheduler.datastructu
 
 NodeNumberJobResource (PBS-like)
 --------------------------------
-This is the way of specifying the job resources in PBS and SLURM. The class is :py:class:`aiida.scheduler.datastructures.NodeNumberJobResource`.
+This is the way of specifying the job resources in PBS and SLURM. The class is :py:class:`aiida.schedulers.datastructures.NodeNumberJobResource`.
 
 Once an instance of the class is obtained, you have the following fields that you can set:
 
@@ -173,7 +173,7 @@ If you want to specifiy single value in num_mpiprocs_per_machine and  num_cores_
 
 ParEnvJobResource (SGE-like)
 ----------------------------
-In SGE and similar schedulers, one has to specify a *parallel environment* and the *total number of CPUs* requested. The class is :py:class:`aiida.scheduler.datastructures.ParEnvJobResource`.
+In SGE and similar schedulers, one has to specify a *parallel environment* and the *total number of CPUs* requested. The class is :py:class:`aiida.schedulers.datastructures.ParEnvJobResource`.
 
 Once an instance of the class is obtained, you have the following fields that you can set:
 

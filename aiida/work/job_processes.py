@@ -22,7 +22,7 @@ import plumpy
 from aiida.common.datastructures import CalcJobState
 from aiida.common.exceptions import TransportTaskException
 from aiida.daemon import execmanager
-from aiida.scheduler.datastructures import JobState
+from aiida.schedulers.datastructures import JobState
 from aiida.work.utils import exponential_backoff_retry, interruptable_task
 
 from . import processes

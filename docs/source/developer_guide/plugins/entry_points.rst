@@ -285,7 +285,7 @@ Spec::
 
 ``aiida_myscheduler/myscheduler.py``::
 
-   from aiida.scheduler import Scheduler
+   from aiida.schedulers import Scheduler
    class MyScheduler(Scheduler):
       ...
 
@@ -306,13 +306,13 @@ Spec::
 
 ``aiida_mytransport/mytransport.py``::
 
-   from aiida.transport import Transport
+   from aiida.transports import Transport
    class MyTransport(Transport):
       ...
 
 Usage::
 
-   from aiida.transport import TransportFactory
+   from aiida.transports import TransportFactory
    transport = TransportFactory('mytransport')
 
 Jus like one would expect, when a computer is setup, ``mytransport`` can be given as the transport option.

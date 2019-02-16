@@ -15,7 +15,7 @@ import unittest
 import logging
 import uuid
 
-from aiida.scheduler.plugins.lsf import *
+from aiida.schedulers.plugins.lsf import *
 
 BJOBS_STDOUT_TO_TEST = "764213236|EXIT|TERM_RUNLIMIT: job killed after reaching LSF run time limit" \
                        "|b681e480bd|inewton|1|-|b681e480bd|test|Feb  2 00:46|Feb  2 00:45|-|Feb  2 00:44|aiida-1033269\n" \
@@ -119,7 +119,7 @@ class TestSubmitScript(unittest.TestCase):
         """
         Test the creation of a simple submission script.
         """
-        from aiida.scheduler.datastructures import JobTemplate
+        from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, CodeRunMode
 
         scheduler = LsfScheduler()
@@ -151,7 +151,7 @@ class TestSubmitScript(unittest.TestCase):
         Test to verify that script fails if we specify only
         num_machines.
         """
-        from aiida.scheduler.datastructures import JobTemplate
+        from aiida.schedulers.datastructures import JobTemplate
 
         scheduler = LsfScheduler()
         job_tmpl = JobTemplate()

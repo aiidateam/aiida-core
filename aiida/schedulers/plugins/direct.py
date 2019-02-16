@@ -16,10 +16,10 @@ from __future__ import absolute_import
 
 import six
 
-import aiida.scheduler
+import aiida.schedulers
 from aiida.common.escaping import escape_for_bash
-from aiida.scheduler import SchedulerError
-from aiida.scheduler.datastructures import (JobInfo, JobState, NodeNumberJobResource)
+from aiida.schedulers import SchedulerError
+from aiida.schedulers.datastructures import (JobInfo, JobState, NodeNumberJobResource)
 
 ## From the ps man page on Mac OS X 10.12
 #     state     The state is given by a sequence of characters, for example,
@@ -72,11 +72,11 @@ class DirectJobResource(NodeNumberJobResource):
     pass
 
 
-class DirectScheduler(aiida.scheduler.Scheduler):
+class DirectScheduler(aiida.schedulers.Scheduler):
     """
     Support for the direct execution bypassing schedulers.
     """
-    _logger = aiida.scheduler.Scheduler._logger.getChild('direct')
+    _logger = aiida.schedulers.Scheduler._logger.getChild('direct')
 
     # Query only by list of jobs and not by user
     _features = {
@@ -279,12 +279,12 @@ class DirectScheduler(aiida.scheduler.Scheduler):
 
         return job_list
 
-    def getJobs(self, jobs=None, user=None, as_dict=False):
+    def get_jobs(self, jobs=None, user=None, as_dict=False):
         """
         Overrides original method from DirectScheduler in order to list
         missing processes as DONE.
         """
-        job_stats = super(DirectScheduler, self).getJobs(jobs=jobs, user=user, as_dict=as_dict)
+        job_stats = super(DirectScheduler, self).get_jobs(jobs=jobs, user=user, as_dict=as_dict)
 
         found_jobs = []
         # Get the list of known jobs

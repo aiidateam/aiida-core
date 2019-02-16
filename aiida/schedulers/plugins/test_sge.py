@@ -13,7 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 import unittest
 import logging
-from aiida.scheduler.plugins.sge import *
+from aiida.schedulers.plugins.sge import *
 
 text_qstat_ext_urg_xml_test = """<?xml version='1.0'?>
 <job_info  xmlns:xsd="http://www.w3.org/2001/XMLSchema">
@@ -297,7 +297,7 @@ class TestCommand(unittest.TestCase):
         logging.disable(logging.NOTSET)
 
     def test_submit_script(self):
-        from aiida.scheduler.datastructures import JobTemplate
+        from aiida.schedulers.datastructures import JobTemplate
 
         sge = SgeScheduler()
 

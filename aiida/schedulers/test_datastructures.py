@@ -23,7 +23,7 @@ class TestNodeNumberJobResource(unittest.TestCase):
         """
         Test the __init__ of the NodeNumberJobResource class
         """
-        from aiida.scheduler.datastructures import NodeNumberJobResource
+        from aiida.schedulers.datastructures import NodeNumberJobResource
 
         # No empty initialization
         with self.assertRaises(TypeError):

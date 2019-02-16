@@ -27,7 +27,7 @@ from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.cmdline.utils.multi_line_input import ensure_scripts
 from aiida.common.exceptions import ValidationError, InputValidationError
 from aiida.plugins.entry_point import get_entry_points
-from aiida.transport import cli as transport_cli
+from aiida.transports import cli as transport_cli
 
 
 @verdi.group('computer')
@@ -62,7 +62,7 @@ def _computer_test_get_jobs(transport, scheduler, authinfo):  # pylint: disable=
     :return: True if the test succeeds, False if it fails.
     """
     echo.echo("> Getting job list...")
-    found_jobs = scheduler.getJobs(as_dict=True)
+    found_jobs = scheduler.get_jobs(as_dict=True)
     echo.echo("  `-> OK, {} jobs found in the queue.".format(len(found_jobs)))
     return True
 

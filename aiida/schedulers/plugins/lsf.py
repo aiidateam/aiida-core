@@ -17,10 +17,10 @@ from __future__ import absolute_import
 
 import six
 
-import aiida.scheduler
+import aiida.schedulers
 from aiida.common.escaping import escape_for_bash
-from aiida.scheduler import SchedulerError, SchedulerParsingError
-from aiida.scheduler.datastructures import (JobInfo, JobState, JobResource)
+from aiida.schedulers import SchedulerError, SchedulerParsingError
+from aiida.schedulers.datastructures import (JobInfo, JobState, JobResource)
 
 # This maps LSF status codes to our own state list
 #
@@ -158,12 +158,12 @@ class LsfJobResource(JobResource):
         return False
 
 
-class LsfScheduler(aiida.scheduler.Scheduler):
+class LsfScheduler(aiida.schedulers.Scheduler):
     """
     Support for the IBM LSF scheduler
     'https://www-01.ibm.com/support/knowledgecenter/SSETD4_9.1.2/lsf_welcome.html'
     """
-    _logger = aiida.scheduler.Scheduler._logger.getChild('lsf')
+    _logger = aiida.schedulers.Scheduler._logger.getChild('lsf')
 
     # Query only by list of jobs and not by user
     _features = {

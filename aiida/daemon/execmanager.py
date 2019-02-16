@@ -28,7 +28,7 @@ from aiida.common.links import LinkType
 from aiida.common.log import get_dblogger_extra
 from aiida.orm import DataFactory
 from aiida.orm.nodes.data.folder import FolderData
-from aiida.scheduler.datastructures import JobState
+from aiida.schedulers.datastructures import JobState
 
 REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
 
@@ -317,7 +317,7 @@ def kill_calculation(calculation, transport):
     if result is not True:
 
         # Failed to kill because the job might have already been completed
-        running_jobs = scheduler.getJobs(jobs=[job_id], as_dict=True)
+        running_jobs = scheduler.get_jobs(jobs=[job_id], as_dict=True)
         job = running_jobs.get(job_id, None)
 
         # If the job is returned it is still running and the kill really failed, so we raise

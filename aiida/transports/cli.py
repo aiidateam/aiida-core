@@ -120,7 +120,7 @@ def create_option(name, spec):
 
 
 def list_transport_options(transport_type):
-    from aiida.transport import TransportFactory
+    from aiida.transports import TransportFactory
     options_list = [create_option(*item) for item in TransportFactory(transport_type).auth_options.items()]
     return options_list
 

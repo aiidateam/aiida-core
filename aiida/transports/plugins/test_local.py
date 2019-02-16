@@ -12,7 +12,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 import unittest
 
-from aiida.transport.plugins.local import *
+from aiida.transports.plugins.local import *
 
 # This will be used by test_all_plugins
 
@@ -37,7 +37,7 @@ class TestBasicConnection(unittest.TestCase):
     """
 
     def test_closed_connection(self):
-        from aiida.transport.transport import TransportInternalError
+        from aiida.transports.transport import TransportInternalError
 
         with self.assertRaises(TransportInternalError):
             t = LocalTransport()

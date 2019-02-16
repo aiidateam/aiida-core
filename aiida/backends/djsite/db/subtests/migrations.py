@@ -667,3 +667,32 @@ class TestTrajectoryDataMigration(TestMigrations):
         self.assertSequenceEqual(trajectory.get_array('positions').tolist(), self.positions.tolist())
         with self.assertRaises(KeyError):
             trajectory.get_array('symbols')
+
+
+class TestNodePrefixRemovalMigration(TestMigrations):
+
+    migrate_from = '0027_delete_trajectory_symbols_array'
+    migrate_to = '0028_remove_node_prefix'
+
+    def setUpBeforeMigration(self):
+        DbNode = self.apps.get_model('db', 'DbNode')
+
+        default_user = self.backend.users.create('{}@aiida.net'.format(self.id())).store()
+
+        node_calc = DbNode(type='node.process.calculation.calcjob.CalcJobNode.', user_id=default_user.id)
+        node_data = DbNode(type='node.data.int.Int.', user_id=default_user.id)
+        node_calc.save()
+        node_data.save()
+
+        self.node_calc_id = node_calc.id
+        self.node_data_id = node_data.id
+
+    def test_data_node_type_string(self):
+        """Verify that type string of the nodes was successfully adapted."""
+        from aiida.orm import load_node
+
+        node_calc = load_node(self.node_calc_id)
+        node_data = load_node(self.node_data_id)
+
+        self.assertEqual(node_data.type, 'data.int.Int.')
+        self.assertEqual(node_calc.type, 'process.calculation.calcjob.CalcJobNode.')

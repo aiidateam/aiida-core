@@ -958,6 +958,10 @@ class TestTrajectoryDataMigration(TestMigrationsSQLA):
 
                 # Create a TrajectoryData node
                 node = TrajectoryData()
+                # We need to explicitly set the node type here to what they were at the time of this migration, because
+                # that is also what the SQL targets. If we weren't to set it, it would get the current ORM node types
+                # which are not considered by the update SQL statements, as they should not be
+                node.backend_entity.dbmodel.type = 'node.data.array.trajectory.TrajectoryData.'
 
                 # I set the node
                 node.set_array('steps', self.stepids)

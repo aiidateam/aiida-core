@@ -24,19 +24,27 @@ def load_node_class(type_string):
     :param type_string: the `type` string of the node
     :return: a sub class of `Node`
     """
-    from aiida.orm.nodes.data import Data
+    from aiida.orm import Data, Node
     from aiida.plugins.entry_point import load_entry_point
+
+    if type_string == '':
+        return Node
 
     if type_string == 'data.Data.':
         return Data
 
     if not type_string.endswith('.'):
-        raise exceptions.DbContentError('The type string {} is invalid'.format(type_string))
+        raise exceptions.DbContentError('The type string `{}` is invalid'.format(type_string))
 
     try:
         base_path = type_string.rsplit('.', 2)[0]
     except ValueError:
         raise exceptions.MissingPluginError
+
+    # This exception needs to be there to make migrations work that rely on the old type string starting with `node.`
+    # Since now the type strings no longer have that prefix, we simply strip it and continue with the normal logic.
+    if base_path.startswith('node.'):
+        base_path = strip_prefix(base_path, 'node.')
 
     # Data nodes are the only ones with sub classes that are still external, so if the plugin is not available
     # we fall back on the base node type

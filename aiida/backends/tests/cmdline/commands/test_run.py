@@ -33,7 +33,7 @@ class TestVerdiRun(AiidaTestCase):
         """
         import tempfile
         from aiida.orm import load_node
-        from aiida.orm.node import WorkFunctionNode
+        from aiida.orm import WorkFunctionNode
 
         script_content = """
 #!/usr/bin/env python

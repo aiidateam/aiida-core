@@ -103,7 +103,7 @@ In ``aiida-myplugin/aiida_myplugin/calculations/mycalc.py``::
 
 In user code::
 
-    from aiida import CalculationFactory
+    from aiida.plugins import CalculationFactory
     Mycalc = CalculationFactory('myplugin.mycalc')
     ...
 

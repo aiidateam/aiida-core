@@ -18,7 +18,7 @@ import six
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.group import DbGroup, table_groups_nodes
 from aiida.backends.sqlalchemy.models.node import DbNode
-from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError)
+from aiida.common.exceptions import UniquenessError
 from aiida.common.lang import type_check
 from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
 
@@ -123,53 +123,6 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
         self._dbmodel.save()
         return self
 
-    def add_nodes(self, nodes):
-        from sqlalchemy.exc import IntegrityError  # pylint: disable=import-error, no-name-in-module
-
-        if not self.is_stored:
-            raise ModificationNotAllowed("Cannot add nodes to a group before storing")
-        from aiida.orm.implementation.sqlalchemy.node import Node
-        from aiida.backends.sqlalchemy import get_scoped_session
-
-        # First convert to a list
-        if isinstance(nodes, (Node, DbNode)):
-            nodes = [nodes]
-
-        if isinstance(nodes, six.string_types) or not isinstance(nodes, collections.Iterable):
-            raise TypeError("Invalid type passed as the 'nodes' parameter to "
-                            "add_nodes, can only be a Node, DbNode, or a list "
-                            "of such objects, it is instead {}".format(str(type(nodes))))
-
-        with utils.disable_expire_on_commit(get_scoped_session()) as session:
-            # Get dbnodes here ONCE, otherwise each call to _dbgroup.dbnodes will
-            # re-read the current value in the database
-            dbnodes = self._dbmodel.dbnodes
-            for node in nodes:
-                if not isinstance(node, (Node, DbNode)):
-                    raise TypeError("Invalid type of one of the elements passed "
-                                    "to add_nodes, it should be either a Node or "
-                                    "a DbNode, it is instead {}".format(str(type(node))))
-
-                if node.id is None:
-                    raise ValueError("At least one of the provided nodes is unstored, stopping...")
-                if isinstance(node, Node):
-                    to_add = node.dbnode
-                else:
-                    to_add = node
-
-                # Use pattern as suggested here:
-                # http://docs.sqlalchemy.org/en/latest/orm/session_transaction.html#using-savepoint
-                try:
-                    with session.begin_nested():
-                        dbnodes.append(to_add)
-                        session.flush()
-                except IntegrityError:
-                    # Duplicate entry, skip
-                    pass
-
-            # Commit everything as up till now we've just flushed
-            session.commit()
-
     @property
     def nodes(self):
         """Get an iterator to all the nodes in the group"""
@@ -208,42 +161,70 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
 
         return Iterator(self._dbmodel.dbnodes, self._backend)
 
+    def add_nodes(self, nodes):
+        """Add a node or a set of nodes to the group.
+
+        :note: all the nodes *and* the group itself have to be stored.
+
+        :param nodes: a list of `BackendNode` instance to be added to this group
+        """
+        from sqlalchemy.exc import IntegrityError  # pylint: disable=import-error, no-name-in-module
+        from aiida.orm.implementation.sqlalchemy.nodes import SqlaNode
+        from aiida.backends.sqlalchemy import get_scoped_session
+
+        super(SqlaGroup, self).add_nodes(nodes)
+
+        with utils.disable_expire_on_commit(get_scoped_session()) as session:
+
+            # Get dbnodes here ONCE, otherwise each call to dbnodes will re-read the current value in the database
+            dbnodes = self._dbmodel.dbnodes
+
+            for node in nodes:
+                if not isinstance(node, SqlaNode):
+                    raise TypeError('invalid type {}, has to be {}'.format(type(node), SqlaNode))
+
+                if not node.is_stored:
+                    raise ValueError('At least one of the provided nodes is unstored, stopping...')
+
+                # Use pattern as suggested here:
+                # http://docs.sqlalchemy.org/en/latest/orm/session_transaction.html#using-savepoint
+                try:
+                    with session.begin_nested():
+                        dbnodes.append(node.dbmodel)
+                        session.flush()
+                except IntegrityError:
+                    # Duplicate entry, skip
+                    pass
+
+            # Commit everything as up till now we've just flushed
+            session.commit()
+
     def remove_nodes(self, nodes):
+        """Remove a node or a set of nodes from the group.
+
+        :note: all the nodes *and* the group itself have to be stored.
+
+        :param nodes: a list of `BackendNode` instance to be added to this group
         """
-        Remove the given nodes from the group.  Can pass a single node or a collection of nodes
+        from aiida.orm.implementation.sqlalchemy.nodes import SqlaNode
 
-        :param nodes: the nodes to remove
-        """
-        if not self.is_stored:
-            raise ModificationNotAllowed("Cannot remove nodes from a group before storing")
+        super(SqlaGroup, self).remove_nodes(nodes)
 
-        from aiida.orm.implementation.sqlalchemy.node import Node
-        # First convert to a list
-        if isinstance(nodes, (Node, DbNode)):
-            nodes = [nodes]
-
-        if isinstance(nodes, six.string_types) or not isinstance(nodes, collections.Iterable):
-            raise TypeError("Invalid type passed as the 'nodes' parameter to "
-                            "remove_nodes, can only be a Node, DbNode, or a "
-                            "list of such objects, it is instead {}".format(str(type(nodes))))
+        # Get dbnodes here ONCE, otherwise each call to dbnodes will re-read the current value in the database
+        dbnodes = self._dbmodel.dbnodes
 
         list_nodes = []
-        # Have to save dbndoes here ONCE, otherwise it will be reloaded from
-        # the database each time we access it through _dbgroup.dbnodes
-        dbnodes = self._dbmodel.dbnodes
+
         for node in nodes:
-            if not isinstance(node, (Node, DbNode)):
-                raise TypeError("Invalid type of one of the elements passed "
-                                "to add_nodes, it should be either a Node or "
-                                "a DbNode, it is instead {}".format(str(type(node))))
+            if not isinstance(node, SqlaNode):
+                raise TypeError('invalid type {}, has to be {}'.format(type(node), SqlaNode))
+
             if node.id is None:
-                raise ValueError("At least one of the provided nodes is unstored, stopping...")
-            if isinstance(node, Node):
-                node = node.dbnode
-            # If we don't check first, SqlA might issue a DELETE statement for
-            # an unexisting key, resulting in an error
-            if node in dbnodes:
-                list_nodes.append(node)
+                raise ValueError('At least one of the provided nodes is unstored, stopping...')
+
+            # If we don't check first, SqlA might issue a DELETE statement for an unexisting key, resulting in an error
+            if node.dbmodel in dbnodes:
+                list_nodes.append(node.dbmodel)
 
         for node in list_nodes:
             dbnodes.remove(node)
@@ -268,7 +249,7 @@ class SqlaGroupCollection(BackendGroupCollection):
               label_filters=None,
               **kwargs):  # pylint: disable=too-many-arguments
         # pylint: disable=too-many-branches
-        from aiida.orm.implementation.sqlalchemy.node import Node
+        from aiida.orm.implementation.sqlalchemy.nodes import SqlaNode
 
         session = sa.get_scoped_session()
 
@@ -288,7 +269,7 @@ class SqlaGroupCollection(BackendGroupCollection):
             if not isinstance(nodes, collections.Iterable):
                 nodes = [nodes]
 
-            if not all(isinstance(n, (Node, DbNode)) for n in nodes):
+            if not all(isinstance(n, (SqlaNode, DbNode)) for n in nodes):
                 raise TypeError("At least one of the elements passed as "
                                 "nodes for the query on Group is neither "
                                 "a Node nor a DbNode")

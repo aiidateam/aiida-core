@@ -10,16 +10,6 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from aiida.plugins.factory import BaseFactory
-
-
-def TcodExporterFactory(entry_point):
-    """
-    Return the TcodExporter plugin class for a given entry point
-
-    :param entry_point: the entry point name of the TcodExporter plugin
-    """
-    return BaseFactory('aiida.tools.dbexporters.tcod_plugins', entry_point)
 
 
 class BaseTcodtranslator(object):
@@ -64,7 +54,7 @@ class BaseTcodtranslator(object):
         try:
             code = calc.inp.code
             if not code.is_local():
-                return code.get_attr('remote_exec_path')
+                return code.get_attribute('remote_exec_path')
         except Exception:
             return None
         return None

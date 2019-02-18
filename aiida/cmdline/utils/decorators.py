@@ -54,9 +54,9 @@ def with_dbenv(*load_dbenv_args, **load_dbenv_kwargs):
         Example::
 
             @with_dbenv()
-            def create_my_calculation():
-                from aiida.orm import CalculationFactory  # note the local import
-                my_calc = CalculationFactory('mycalc.mycalc')
+            def create_node():
+                from aiida.orm import Int  # note the local import
+                node = Int(5)
         """
 
         @wraps(function)

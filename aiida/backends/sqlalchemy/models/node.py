@@ -36,9 +36,8 @@ class DbNode(Base):
     uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True)
     type = Column(String(255), index=True)
     process_type = Column(String(255), index=True)
-    label = Column(String(255), index=True, nullable=True,
-                   default="")  # Does it make sense to be nullable and have a default?
-    description = Column(Text(), nullable=True, default="")
+    label = Column(String(255), index=True, nullable=True, default='')  # Does it make sense to be nullable and have a default?
+    description = Column(Text(), nullable=True, default='')
     ctime = Column(DateTime(timezone=True), default=timezone.now)
     mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now)
     nodeversion = Column(Integer, default=1)
@@ -67,8 +66,6 @@ class DbNode(Base):
     # this is probably a ON DELETE inside the DB. On removing node with id=x,
     # we would remove all link with x as an output.
 
-    ######### RELATIONSSHIPS #########
-
     dbcomputer = relationship(
         'DbComputer',
         backref=backref('dbnodes', passive_deletes='all', cascade='merge')
@@ -92,6 +89,14 @@ class DbNode(Base):
 
     def __init__(self, *args, **kwargs):
         super(DbNode, self).__init__(*args, **kwargs)
+        # The behavior of an unstored Node instance should be that all its attributes should be initialized in
+        # accordance with the defaults specified on the colums, i.e. if a default is specified for the `uuid` column,
+        # then an unstored `DbNode` instance should have a default value for the `uuid` attribute. The exception here
+        # is the `mtime`, that we do not want to be set upon instantiation, but only upon storing. However, in
+        # SqlAlchemy a default *has* to be defined if one wants to get that value upon storing. But since defining a
+        # default on the column in combination with the hack in `aiida.backend.SqlAlchemy.models.__init__` to force all
+        # defaults to be populated upon instantiation, we have to unset the `mtime` attribute here manually.
+        self.mtime = None
 
         if self.attributes is None:
             self.attributes = dict()
@@ -133,8 +138,24 @@ class DbNode(Base):
         flag_modified(self, "attributes")
         self.save()
 
+    def reset_attributes(self, attributes):
+        self.attributes = dict()
+        self.set_attributes(attributes)
+
+    def set_attributes(self, attributes):
+        for key, value in attributes.items():
+            DbNode._set_attr(self.attributes, key, value)
+        flag_modified(self, "attributes")
+        self.save()
+
     def set_extra(self, key, value):
         DbNode._set_attr(self.extras, key, value)
+        flag_modified(self, "extras")
+        self.save()
+
+    def set_extras(self, extras):
+        for key, value in extras.items():
+            DbNode._set_attr(self.extras, key, value)
         flag_modified(self, "extras")
         self.save()
 

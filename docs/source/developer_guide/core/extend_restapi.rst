@@ -50,7 +50,7 @@ Let's assume you've put the code in the file ``example.py``, reading:
 
         def get(self):
             from aiida.orm.querybuilder import QueryBuilder
-            from aiida.orm.node.data.parameter import ParameterData
+            from aiida.orm.nodes.data.parameter import ParameterData
 
             qb = QueryBuilder()
             qb.append(ParameterData,
@@ -66,7 +66,7 @@ Let's assume you've put the code in the file ``example.py``, reading:
                         attributes=result[2])
 
         def post(self):
-            from aiida.orm.node.data.parameter import ParameterData
+            from aiida.orm.nodes.data.parameter import ParameterData
 
             params = dict(property1="spam", property2="egg")
             paramsData = ParameterData(dict=params).store()
@@ -142,7 +142,7 @@ Then we define a class representing the additional resource:
 
         def get(self):
             from aiida.orm.querybuilder import QueryBuilder
-            from aiida.orm.node.data.parameter import ParameterData
+            from aiida.orm.nodes.data.parameter import ParameterData
 
             qb = QueryBuilder()
             qb.append(ParameterData,
@@ -158,7 +158,7 @@ Then we define a class representing the additional resource:
                         attributes=result[2])
 
         def post(self):
-            from aiida.orm.node.data.parameter import ParameterData
+            from aiida.orm.nodes.data.parameter import ParameterData
 
             params = dict(property1="spam", property2="egg")
             paramsData = ParameterData(dict=params).store()

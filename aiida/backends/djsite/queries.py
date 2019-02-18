@@ -119,8 +119,8 @@ class DjangoQueryManager(AbstractQueryManager):
         from django.db.models import Q
         from aiida.common.utils import grouper
         from aiida.backends.djsite.db import models
-        from aiida.orm.node.data.structure import (get_formula, get_symbols_string)
-        from aiida.orm.node.data.array.bands import BandsData
+        from aiida.orm.nodes.data.structure import (get_formula, get_symbols_string)
+        from aiida.orm.nodes.data.array.bands import BandsData
         from aiida import orm
 
         user = orm.User.objects.get_default()
@@ -135,7 +135,7 @@ class DjangoQueryManager(AbstractQueryManager):
         self.query_past_days(q_object, args)
         self.query_group(q_object, args)
 
-        bands_list = models.DbNode.objects.filter(type__startswith=BandsData.plugin_type_string) \
+        bands_list = models.DbNode.objects.filter(type__startswith=BandsData.class_node_type) \
             .filter(q_object).distinct().order_by('ctime')
         bands_list_data = bands_list.values_list('pk', 'label', 'ctime')
 
@@ -150,7 +150,7 @@ class DjangoQueryManager(AbstractQueryManager):
             pks = [_[0] for _ in this_chunk]
 
             # get the closest structures (WITHOUT DbPath)
-            q_object = Q(type='node.data.structure.StructureData.')
+            q_object = Q(type='data.structure.StructureData.')
             structure_dict = get_closest_parents(pks, q_object, chunk_size=1)
 
             struc_pks = [structure_dict[pk] for pk in pks]

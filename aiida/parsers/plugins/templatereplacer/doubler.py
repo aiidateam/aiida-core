@@ -15,9 +15,9 @@ import io
 import os
 
 from aiida.common import exceptions
-from aiida.orm import CalculationFactory
-from aiida.orm.node.data.parameter import ParameterData
+from aiida.orm.nodes.data.parameter import ParameterData
 from aiida.parsers.parser import Parser
+from aiida.plugins import CalculationFactory
 
 TemplatereplacerCalculation = CalculationFactory('templatereplacer')
 

@@ -38,7 +38,6 @@ from aiida.common.exceptions import InputValidationError
 # The way I get column as a an attribute to the orm class
 from aiida.common.links import LinkType
 from aiida.manage import get_manager
-from aiida.orm.node import Node
 from aiida.common.exceptions import ConfigurationError
 
 from . import authinfos
@@ -935,7 +934,7 @@ class QueryBuilder(object):
             # Will project the ORM instance
             qb.add_projection('struc', '*')
             print type(qb.first()[0])
-            # >>> aiida.orm.node.data.structure.StructureData
+            # >>> aiida.orm.nodes.data.structure.StructureData
 
         The double start *\*\** projects all possible projections of this entity:
 
@@ -1978,7 +1977,7 @@ class QueryBuilder(object):
                 raise Exception("I have not received an iterable\n" "but the number of projections is > 1")
             # It still returns a list!
             else:
-                returnval = [self._impl.get_aiida_res(self._attrkeys_as_in_sql_result[0], resultrow)]
+                returnval = [convert.get_orm_entity(self._impl.get_aiida_res(self._attrkeys_as_in_sql_result[0], resultrow))]
         return returnval
 
     def one(self):
@@ -2073,7 +2072,6 @@ class QueryBuilder(object):
 
         :returns: a list of lists of all projected entities.
         """
-
         return list(self.iterall(batch_size=batch_size))
 
     def dict(self, batch_size=None):
@@ -2136,6 +2134,7 @@ class QueryBuilder(object):
 
         :returns: self
         """
+        from aiida.orm import Node
         join_to = self._path[-1]['tag']
         cls = kwargs.pop('cls', Node)
         self.append(cls=cls, with_outgoing=join_to, autotag=True, **kwargs)
@@ -2147,6 +2146,7 @@ class QueryBuilder(object):
 
         :returns: self
         """
+        from aiida.orm import Node
         join_to = self._path[-1]['tag']
         cls = kwargs.pop('cls', Node)
         self.append(cls=cls, with_incoming=join_to, autotag=True, **kwargs)
@@ -2158,6 +2158,7 @@ class QueryBuilder(object):
 
         :returns: self
         """
+        from aiida.orm import Node
         join_to = self._path[-1]['tag']
         cls = kwargs.pop('cls', Node)
         self.append(cls=cls, with_ancestors=join_to, autotag=True, **kwargs)
@@ -2169,6 +2170,7 @@ class QueryBuilder(object):
 
         :returns: self
         """
+        from aiida.orm import Node
         join_to = self._path[-1]['tag']
         cls = kwargs.pop('cls', Node)
         self.append(cls=cls, with_descendants=join_to, autotag=True, **kwargs)

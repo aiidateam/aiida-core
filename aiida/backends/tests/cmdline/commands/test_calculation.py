@@ -35,9 +35,10 @@ class TestVerdiCalculation(AiidaTestCase):
         super(TestVerdiCalculation, cls).setUpClass(*args, **kwargs)
         from aiida.backends.tests.utils.fixtures import import_archive_fixture
         from aiida.common.links import LinkType
-        from aiida.orm import CalculationFactory, Data
-        from aiida.orm.node import CalcJobNode
-        from aiida.orm.node.data.parameter import ParameterData
+        from aiida.orm import Data
+        from aiida.orm import CalcJobNode
+        from aiida.orm.nodes.data.parameter import ParameterData
+        from aiida.plugins import CalculationFactory
         from aiida.work.processes import ProcessState
         from aiida import orm
 
@@ -63,8 +64,7 @@ class TestVerdiCalculation(AiidaTestCase):
         # Create 5 CalcJobNodes (one for each CalculationState)
         for calculation_state in CalcJobState:
 
-            calc = CalcJobNode(computer=cls.computer)
-            calc.dbnode.process_type = process_type
+            calc = CalcJobNode(computer=cls.computer, process_type=process_type)
             calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
             calc.store()
 

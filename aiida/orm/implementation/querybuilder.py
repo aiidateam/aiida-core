@@ -92,11 +92,13 @@ class BackendQueryBuilder(object):
         relationship between group and nodes.
         """
 
-    @abc.abstractmethod
+    @property
     def AiidaNode(self):
         """
         A property, decorated with @property. Returns the implementation for the AiiDA-class for Node
         """
+        from aiida.orm import Node
+        return Node
 
     @abc.abstractmethod
     def get_session(self):

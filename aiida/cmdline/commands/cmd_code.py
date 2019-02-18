@@ -174,13 +174,13 @@ def show(code, verbose):
 def delete(codes):
     """Delete codes that have not yet been used for calculations, i.e. if it has outgoing links."""
     from aiida.common.exceptions import InvalidOperation
-    from aiida.orm.code import delete_code
+    from aiida.orm import Node
 
     for code in codes:
         try:
             pk = code.pk
             full_label = code.full_label
-            delete_code(code)
+            Node.objects.delete(pk)  # pylint: disable=no-member
         except InvalidOperation as exception:
             echo.echo_error(str(exception))
         else:
@@ -252,7 +252,7 @@ def rename(ctx, code, label):
 @with_dbenv()
 def code_list(computer, input_plugin, all_entries, all_users, show_owner):
     """List the codes in the database."""
-    from aiida.orm.code import Code  # pylint: disable=redefined-outer-name
+    from aiida.orm import Code  # pylint: disable=redefined-outer-name
     from aiida import orm
 
     qb_user_filters = dict()

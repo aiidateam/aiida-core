@@ -35,11 +35,11 @@ you can use a modification of the following script::
         with transport:
             if only_current_user:
                 remote_username = transport.whoami()
-                all_jobs = scheduler.getJobs(
+                all_jobs = scheduler.get_jobs(
                     user=remote_username,
                     as_dict=True)
             else:
-                all_jobs = scheduler.getJobs(
+                all_jobs = scheduler.get_jobs(
                     as_dict=True)
 
         return all_jobs

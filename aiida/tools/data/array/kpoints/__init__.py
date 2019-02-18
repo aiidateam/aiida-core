@@ -10,8 +10,8 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from aiida.orm.node.data.array.kpoints import KpointsData
-from aiida.orm.node.data.parameter import ParameterData
+from aiida.orm.nodes.data.array.kpoints import KpointsData
+from aiida.orm.nodes.data.parameter import ParameterData
 from aiida.tools.data.array.kpoints import legacy
 from aiida.tools.data.array.kpoints import seekpath
 

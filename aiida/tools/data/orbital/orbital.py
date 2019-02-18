@@ -18,7 +18,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.common.exceptions import ValidationError, MissingPluginError
-from aiida.plugins.factory import BaseFactory
+from aiida.plugins import OrbitalFactory
 
 
 class Orbital(object):
@@ -162,12 +162,3 @@ class Orbital(object):
         Sets the module name, or label, to the orbital
         """
         return self.__module__.split('.')[-1]
-
-
-def OrbitalFactory(entry_point):
-    """
-    Return the Orbital plugin class for a given entry point
-
-    :param entry_point: the entry point name of the Orbital plugin
-    """
-    return BaseFactory('aiida.tools.data.orbital', entry_point)

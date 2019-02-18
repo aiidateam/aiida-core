@@ -4,11 +4,14 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+import os
+
 from aiida.backends.testbase import AiidaTestCase
+from aiida.common import exceptions
 from aiida.common.links import LinkType
-from aiida.orm.node.data import Data
-from aiida.orm.node import Node
-from aiida.orm.node import CalculationNode, WorkflowNode
+from aiida.orm.nodes.data import Data
+from aiida.orm import Node, User
+from aiida.orm import CalculationNode, WorkflowNode
 from aiida.orm.utils.links import LinkTriple
 
 
@@ -19,6 +22,26 @@ class TestNodeLinks(AiidaTestCase):
         super(TestNodeLinks, self).setUp()
         self.node_source = CalculationNode()
         self.node_target = Data()
+        self.user = User.objects.get_default()
+
+    def test_repository_garbage_collection(self):
+        """Verify that the repository sandbox folder is cleaned after the node instance is garbage collected."""
+        node = Data()
+        dirpath = node.repository.folder.abspath
+
+        self.assertTrue(os.path.isdir(dirpath))
+        del node
+        self.assertFalse(os.path.isdir(dirpath))
+
+    def test_computer_user_immutability(self):
+        """Test that computer and user of a node are immutable after storing."""
+        node = Data().store()
+
+        with self.assertRaises(exceptions.ModificationNotAllowed):
+            node.computer = self.computer
+
+        with self.assertRaises(exceptions.ModificationNotAllowed):
+            node.user = self.user
 
     def test_get_stored_link_triples(self):
         """Validate the `get_stored_link_triples` method."""

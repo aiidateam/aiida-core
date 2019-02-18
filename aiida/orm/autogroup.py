@@ -41,7 +41,7 @@ class Autogroup(object):
         """
         Used internally to verify the sanity of exclude, include lists
         """
-        from aiida.orm import DataFactory, CalculationFactory
+        from aiida.plugins import CalculationFactory, DataFactory
 
         for i in param:
             if not any([i.startswith('calculation'),

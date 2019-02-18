@@ -9,10 +9,10 @@ from aiida import orm
 from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.common.links import LinkType
-from aiida.orm.node.data.folder import FolderData
-from aiida.orm.node.data.remote import RemoteData
-from aiida.orm.node.data.singlefile import SinglefileData
-from aiida.orm.node import CalcJobNode
+from aiida.orm.nodes.data.folder import FolderData
+from aiida.orm.nodes.data.remote import RemoteData
+from aiida.orm.nodes.data.singlefile import SinglefileData
+from aiida.orm import CalcJobNode
 
 from .job_processes import Waiting, UPLOAD_COMMAND
 from .processes import Process, ProcessState
@@ -120,7 +120,7 @@ class CalcJob(Process):
             return self.node.exit_status
 
         with SandboxFolder() as folder:
-            computer = self.node.get_computer()
+            computer = self.node.computer
             if self.node.has_cached_links():
                 raise exceptions.InvalidOperation('calculation node has unstored links in cache')
             calc_info, script_filename = self.presubmit(folder)
@@ -183,16 +183,16 @@ class CalcJob(Process):
         from six.moves import StringIO
 
         from aiida.common.exceptions import PluginInternalError, ValidationError
-        from aiida.scheduler.datastructures import JobTemplate
+        from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.utils import validate_list_of_string_tuples
-        from aiida.orm import DataFactory
         from aiida.common.datastructures import CodeInfo, CodeRunMode
-        from aiida.orm.code import Code
+        from aiida.orm import Code
         from aiida.orm.computers import Computer
         from aiida.orm.utils import load_node
+        from aiida.plugins import DataFactory
         import aiida.common.json as json
 
-        computer = self.node.get_computer()
+        computer = self.node.computer
         inputs = self.node.get_incoming(link_type=LinkType.INPUT_CALC)
 
         codes = [_ for _ in inputs.all_nodes() if isinstance(_, Code)]

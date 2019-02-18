@@ -117,14 +117,17 @@ class BaseTranslator(object):
         return ""
 
     def get_schema(self):
-        # pylint: disable=fixme
+        # pylint: disable=fixme,too-many-branches
         """
         Get node schema
         :return: node schema
         """
 
         # Construct the full class string
-        class_string = 'aiida.orm.' + self._aiida_type
+        if any([self._aiida_type.startswith(prefix) for prefix in ['node.', 'data.', 'process.']]):
+            class_string = 'aiida.orm.nodes.' + self._aiida_type
+        else:
+            class_string = 'aiida.orm.' + self._aiida_type
 
         # Load correspondent orm class
         orm_class = get_object_from_string(class_string)

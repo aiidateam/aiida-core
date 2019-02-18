@@ -77,7 +77,7 @@ LOGGING = {
         },
         'dblogger': {
             'level': lambda: get_config_option('logging.db_loglevel'),
-            'class': 'aiida.orm.utils.DBLogHandler',
+            'class': 'aiida.orm.utils.log.DBLogHandler',
         },
     },
     'loggers': {

@@ -21,7 +21,7 @@ import time
 from six import iteritems, itervalues
 from tornado import concurrent, gen
 
-from aiida import scheduler as schedulers
+from aiida import schedulers
 from aiida.common import exceptions
 from .utils import RefObjectStore
 
@@ -87,7 +87,7 @@ class JobsList(object):  # pylint: disable=useless-object-inheritance
             else:
                 kwargs['jobs'] = self._get_jobs_with_scheduler()
 
-            scheduler_response = scheduler.getJobs(**kwargs)
+            scheduler_response = scheduler.get_jobs(**kwargs)
             jobs_cache = {}
 
             for job_id, job_info in iteritems(scheduler_response):
@@ -174,8 +174,8 @@ class JobsList(object):  # pylint: disable=useless-object-inheritance
     @staticmethod
     def _has_job_state_changed(old, new):
         """
-        :type old: :class:`aiida.scheduler.JobInfo`
-        :type new: :class:`aiida.scheduler.JobInfo`
+        :type old: :class:`aiida.schedulers.JobInfo`
+        :type new: :class:`aiida.schedulers.JobInfo`
         :rtype: bool
         """
         if old is None and new is None:

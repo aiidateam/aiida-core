@@ -7,15 +7,16 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Test utility to import fixtures, such as export archives."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import os
 
 
 def import_archive_fixture(filepath):
-    """
-    Import an archive fixture, which is an AiiDA export archive
+    """Import a test fixture that is an AiiDA export archive
 
     :param filepath: the relative path of the archive file within the fixture directory
     """

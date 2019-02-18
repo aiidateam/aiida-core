@@ -134,9 +134,9 @@ class AbstractQueryManager(object):
         import datetime
         from aiida.common import timezone
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm.node.data.structure import (get_formula, get_symbols_string)
-        from aiida.orm.node.data.array.bands import BandsData
-        from aiida.orm.node.data.structure import StructureData
+        from aiida.orm.nodes.data.structure import (get_formula, get_symbols_string)
+        from aiida.orm.nodes.data.array.bands import BandsData
+        from aiida.orm.nodes.data.structure import StructureData
         from aiida import orm
 
         qb = QueryBuilder()

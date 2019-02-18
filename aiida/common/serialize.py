@@ -40,7 +40,7 @@ def represent_node(dumper, node):
 
     :param dumper: the dumper to use
     :param node: the node to represent
-    :type node: :class:`aiida.orm.node.Node`
+    :type node: :class:`aiida.orm.nodes.node.Node`
     :return: the representation
     """
     if not node.is_stored:
@@ -55,7 +55,7 @@ def node_constructor(loader, node):
     :param loader: the yaml loader
     :param node: the yaml representation
     :return: the aiida node
-    :rtype: :class:`aiida.orm.node.Node`
+    :rtype: :class:`aiida.orm.nodes.node.Node`
     """
     yaml_node = loader.construct_scalar(node)
     return orm.load_node(uuid=yaml_node)

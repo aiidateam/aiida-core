@@ -28,7 +28,7 @@ class TestProcessSpec(AiidaTestCase):
 
     def test_dynamic_input(self):
         from aiida.orm import Node
-        from aiida.orm.node.data import Data
+        from aiida.orm.nodes.data import Data
 
         n = Node()
         d = Data()
@@ -39,7 +39,7 @@ class TestProcessSpec(AiidaTestCase):
 
     def test_dynamic_output(self):
         from aiida.orm import Node
-        from aiida.orm.node.data import Data
+        from aiida.orm.nodes.data import Data
 
         n = Node()
         d = Data()

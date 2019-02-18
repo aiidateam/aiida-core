@@ -83,8 +83,8 @@ class CalculationProjectionMapper(ProjectionMapper):
 
     def __init__(self, projections, projection_labels=None, projection_attributes=None, projection_formatters=None):
         # pylint: disable=too-many-locals
-        from aiida.orm.node import ProcessNode
-        from aiida.orm.mixins import Sealable
+        from aiida.orm import ProcessNode
+        from aiida.orm.utils.mixins import Sealable
 
         self._valid_projections = projections
 

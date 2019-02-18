@@ -11,13 +11,14 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import abc
 import logging
 import six
 
 from . import backends
 
-__all__ = 'BackendComputer', 'BackendComputerCollection'
+__all__ = ('BackendComputer', 'BackendComputerCollection')
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -125,7 +126,7 @@ class BackendComputer(backends.BackendEntity):
         pass
 
     @abc.abstractmethod
-    def set_scheduler_type(self, val):
+    def set_scheduler_type(self, scheduler_type):
         pass
 
     @abc.abstractmethod
@@ -133,7 +134,7 @@ class BackendComputer(backends.BackendEntity):
         pass
 
     @abc.abstractmethod
-    def set_transport_type(self, val):
+    def set_transport_type(self, transport_type):
         pass
 
 
@@ -144,9 +145,9 @@ class BackendComputerCollection(backends.BackendCollection[BackendComputer]):
     ENTITY_CLASS = BackendComputer
 
     @abc.abstractmethod
-    def delete(self, id):  # pylint: disable=redefined-builtin, invalid-name
+    def delete(self, pk):
         """
-        Delete an entry with the given id
+        Delete an entry with the given pk
 
-        :param id: the id of the entry to delete
+        :param pk: the pk of the entry to delete
         """

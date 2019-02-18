@@ -75,18 +75,21 @@ def validate_link(source, target, link_type, link_label):
     :raise ValueError: if the proposed link is invalid
     """
     from aiida.common.links import LinkType
-    from aiida.orm.node.data import Data
-    from aiida.orm.implementation.general.node import AbstractNode
-    from aiida.orm.node import CalculationNode, WorkflowNode
+    from aiida.orm import Node
+    from aiida.orm.nodes.data import Data
+    from aiida.orm import CalculationNode, WorkflowNode
 
     if not isinstance(link_type, LinkType):
         raise TypeError('the link_type should be a value from the LinkType enum')
 
-    if not isinstance(source, AbstractNode):
+    if not isinstance(source, Node):
         raise TypeError('the source should be a Node instance')
 
-    if not isinstance(target, AbstractNode):
+    if not isinstance(target, Node):
         raise TypeError('the target should be a Node instance')
+
+    if source.uuid is None or target.uuid is None:
+        raise ValueError('source or target node does not have a UUID')
 
     if source.uuid == target.uuid:
         raise ValueError('cannot add a link to oneself')

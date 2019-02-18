@@ -86,8 +86,8 @@ def get_node_summary(node):
     :return: a string summary of the node
     """
     from plumpy import ProcessState
-    from aiida.orm.node.data.code import Code
-    from aiida.orm.node import ProcessNode
+    from aiida.orm.nodes.data.code import Code
+    from aiida.orm import ProcessNode
 
     table_headers = ['Property', 'Value']
     table = []
@@ -116,12 +116,12 @@ def get_node_summary(node):
             table.append(['exit status', None])
 
     try:
-        computer = node.get_computer()
+        computer = node.computer
     except AttributeError:
         pass
     else:
         if computer is not None:
-            table.append(['computer', '[{}] {}'.format(node.get_computer().pk, node.get_computer().name)])
+            table.append(['computer', '[{}] {}'.format(node.computer.pk, node.computer.name)])
 
     try:
         code = node.get_incoming(node_class=Code).first()
@@ -143,7 +143,7 @@ def get_node_info(node, include_summary=True):
     """
     from aiida.common.links import LinkType
     from aiida import orm
-    from aiida.orm.node import WorkChainNode
+    from aiida.orm import WorkChainNode
 
     if include_summary:
         result = get_node_summary(node)
@@ -288,7 +288,7 @@ def get_workchain_report(node, levelname, indent_size=4, max_depth=None):
     from aiida.common.log import LOG_LEVELS
     from aiida import orm
     from aiida.orm.querybuilder import QueryBuilder
-    from aiida.orm.node import WorkChainNode
+    from aiida.orm import WorkChainNode
 
     def get_report_messages(uuid, depth, levelname):
         """Return list of log messages with given levelname and their depth for a node with a given uuid."""

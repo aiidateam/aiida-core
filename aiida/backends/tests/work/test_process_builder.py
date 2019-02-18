@@ -12,11 +12,11 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm import CalculationFactory
-from aiida.orm.node.data.parameter import ParameterData
-from aiida.orm.node.data.bool import Bool
-from aiida.orm.node.data.float import Float
-from aiida.orm.node.data.int import Int
+from aiida.orm.nodes.data.parameter import ParameterData
+from aiida.orm.nodes.data.bool import Bool
+from aiida.orm.nodes.data.float import Float
+from aiida.orm.nodes.data.int import Int
+from aiida.plugins import CalculationFactory
 from aiida.work import WorkChain, Process
 
 DEFAULT_INT = 256
@@ -116,19 +116,15 @@ class TestProcessBuilder(AiidaTestCase):
         """
         Test the get_builder_restart method of CalcJobNode class
         """
-        from aiida.orm.node import CalcJobNode
-
-        original = CalcJobNode()
-        original.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
-        original.set_option('max_wallclock_seconds', 1800)
-        original.set_computer(self.computer)
-        original.label = 'original'
-        original.store()
+        from aiida.orm import CalcJobNode
 
         # Have to set the process type manually, because usually this will be done automatically when the node is
         # instantiated by the process itself. Since we hack it here and instantiate the node directly ourselves we
-        # have to set the process type for the restart builder to be able to recreatem the process class.
-        original.dbnode.process_type = 'aiida.calculations:templatereplacer'
+        # have to set the process type for the restart builder to be able to recreate the process class.
+        original = CalcJobNode(computer=self.computer, process_type='aiida.calculations:templatereplacer', label='original')
+        original.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+        original.set_option('max_wallclock_seconds', 1800)
+        original.store()
 
         builder = original.get_builder_restart()
 

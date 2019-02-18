@@ -17,7 +17,7 @@ import aiida.backends.sqlalchemy
 from aiida.backends.sqlalchemy.models.node import DbNode
 from aiida.manage.backup.backup_base import AbstractBackup, BackupError
 from aiida.common.folders import RepositoryFolder
-from aiida.orm.node import Node
+from aiida.orm.utils.repository import Repository
 
 
 class Backup(AbstractBackup):
@@ -74,7 +74,7 @@ class Backup(AbstractBackup):
         """
         # pylint: disable=protected-access
         if isinstance(item, DbNode):
-            source_dir = os.path.normpath(RepositoryFolder(section=Node._section_name, uuid=item.uuid).abspath)
+            source_dir = os.path.normpath(RepositoryFolder(section=Repository._section_name, uuid=item.uuid).abspath)
         else:
             # Raise exception
             self._logger.error("Unexpected item type to backup: %s", type(item))

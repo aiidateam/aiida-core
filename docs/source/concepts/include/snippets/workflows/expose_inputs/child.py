@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-from aiida.orm.node.data.bool import Bool
-from aiida.orm.node.data.float import Float
-from aiida.orm.node.data.int import Int
+from aiida.orm.nodes.data.bool import Bool
+from aiida.orm.nodes.data.float import Float
+from aiida.orm.nodes.data.int import Int
 from aiida.work import WorkChain 
 
 class ChildWorkChain(WorkChain):

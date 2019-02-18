@@ -48,7 +48,7 @@ class PluginTestCase1(PluginTestCase):
         """
         Return some ParameterData
         """
-        from aiida.orm.utils import DataFactory
+        from aiida.plugins import DataFactory
         data = DataFactory('parameter')(dict={'data': 'test'})
         data.store()
         return data

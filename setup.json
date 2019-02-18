@@ -138,42 +138,44 @@
       "templatereplacer = aiida.calculations.plugins.templatereplacer:TemplatereplacerCalculation"
     ],
     "aiida.cmdline.computer.configure": [
-      "ssh = aiida.transport.plugins.ssh:CONFIGURE_SSH_CMD",
-      "local = aiida.transport.plugins.local:CONFIGURE_LOCAL_CMD"
+      "local = aiida.transports.plugins.local:CONFIGURE_LOCAL_CMD",
+      "ssh = aiida.transports.plugins.ssh:CONFIGURE_SSH_CMD"
     ],
     "aiida.data": [
-      "base = aiida.orm.node.data:BaseType",
-      "numeric = aiida.orm.node.data.numeric:NumericType",
-      "bool = aiida.orm.node.data.bool:Bool",
-      "float = aiida.orm.node.data.float:Float",
-      "int = aiida.orm.node.data.int:Int",
-      "code = aiida.orm.node.data.code:Code",
-      "list = aiida.orm.node.data.list:List",
-      "str = aiida.orm.node.data.str:Str",
-      "frozendict = aiida.orm.node.data.frozendict:FrozenDict",
-      "array = aiida.orm.node.data.array:ArrayData",
-      "array.bands = aiida.orm.node.data.array.bands:BandsData",
-      "array.kpoints = aiida.orm.node.data.array.kpoints:KpointsData",
-      "array.projection = aiida.orm.node.data.array.projection:ProjectionData",
-      "array.trajectory = aiida.orm.node.data.array.trajectory:TrajectoryData",
-      "array.xy = aiida.orm.node.data.array.xy:XyData",
-      "cif = aiida.orm.node.data.cif:CifData",
-      "error = aiida.orm.node.data.error:Error",
-      "folder = aiida.orm.node.data.folder:FolderData",
-      "parameter = aiida.orm.node.data.parameter:ParameterData",
-      "remote = aiida.orm.node.data.remote:RemoteData",
-      "singlefile = aiida.orm.node.data.singlefile:SinglefileData",
-      "structure = aiida.orm.node.data.structure:StructureData",
-      "upf = aiida.orm.node.data.upf:UpfData",
-      "orbital = aiida.orm.node.data.orbital:OrbitalData"
+      "array = aiida.orm.nodes.data.array.array:ArrayData",
+      "array.bands = aiida.orm.nodes.data.array.bands:BandsData",
+      "array.kpoints = aiida.orm.nodes.data.array.kpoints:KpointsData",
+      "array.projection = aiida.orm.nodes.data.array.projection:ProjectionData",
+      "array.trajectory = aiida.orm.nodes.data.array.trajectory:TrajectoryData",
+      "array.xy = aiida.orm.nodes.data.array.xy:XyData",
+      "base = aiida.orm.nodes.data:BaseType",
+      "bool = aiida.orm.nodes.data.bool:Bool",
+      "cif = aiida.orm.nodes.data.cif:CifData",
+      "code = aiida.orm.nodes.data.code:Code",
+      "error = aiida.orm.nodes.data.error:Error",
+      "float = aiida.orm.nodes.data.float:Float",
+      "folder = aiida.orm.nodes.data.folder:FolderData",
+      "frozendict = aiida.orm.nodes.data.frozendict:FrozenDict",
+      "int = aiida.orm.nodes.data.int:Int",
+      "list = aiida.orm.nodes.data.list:List",
+      "numeric = aiida.orm.nodes.data.numeric:NumericType",
+      "orbital = aiida.orm.nodes.data.orbital:OrbitalData",
+      "parameter = aiida.orm.nodes.data.parameter:ParameterData",
+      "remote = aiida.orm.nodes.data.remote:RemoteData",
+      "singlefile = aiida.orm.nodes.data.singlefile:SinglefileData",
+      "str = aiida.orm.nodes.data.str:Str",
+      "structure = aiida.orm.nodes.data.structure:StructureData",
+      "upf = aiida.orm.nodes.data.upf:UpfData"
     ],
     "aiida.node": [
-      "process.calculation = aiida.orm.node.process.calculation:CalculationNode",
-      "process.calculation.calcfunction = aiida.orm.node.process.calculation.calcfunction:CalcFunctionNode",
-      "process.calculation.calcjob = aiida.orm.node.process.calculation.calcjob:CalcJobNode",
-      "process.workflow = aiida.orm.node.process.workflow:WorkflowNode",
-      "process.workflow.workchain = aiida.orm.node.process.workflow.workchain:WorkChainNode",
-      "process.workflow.workfunction = aiida.orm.node.process.workflow.workfunction:WorkFunctionNode"
+      "data = aiida.orm.nodes.data.data:Data",
+      "process = aiida.orm.nodes.process.process:ProcessNode",
+      "process.calculation = aiida.orm.nodes.process.calculation.calculation:CalculationNode",
+      "process.calculation.calcfunction = aiida.orm.nodes.process.calculation.calcfunction:CalcFunctionNode",
+      "process.calculation.calcjob = aiida.orm.nodes.process.calculation.calcjob:CalcJobNode",
+      "process.workflow = aiida.orm.nodes.process.workflow.workflow:WorkflowNode",
+      "process.workflow.workchain = aiida.orm.nodes.process.workflow.workchain:WorkChainNode",
+      "process.workflow.workfunction = aiida.orm.nodes.process.workflow.workfunction:WorkFunctionNode"
     ],
     "aiida.cmdline.data": [],
     "aiida.parsers": [
@@ -181,16 +183,16 @@
       "templatereplacer.doubler = aiida.parsers.plugins.templatereplacer.doubler:TemplatereplacerDoublerParser"
     ],
     "aiida.schedulers": [
-      "direct = aiida.scheduler.plugins.direct:DirectScheduler",
-      "lsf = aiida.scheduler.plugins.lsf:LsfScheduler",
-      "sge = aiida.scheduler.plugins.sge:SgeScheduler",
-      "slurm = aiida.scheduler.plugins.slurm:SlurmScheduler",
-      "pbspro = aiida.scheduler.plugins.pbspro:PbsproScheduler",
-      "torque = aiida.scheduler.plugins.torque:TorqueScheduler"
+      "direct = aiida.schedulers.plugins.direct:DirectScheduler",
+      "lsf = aiida.schedulers.plugins.lsf:LsfScheduler",
+      "pbspro = aiida.schedulers.plugins.pbspro:PbsproScheduler",
+      "sge = aiida.schedulers.plugins.sge:SgeScheduler",
+      "slurm = aiida.schedulers.plugins.slurm:SlurmScheduler",
+      "torque = aiida.schedulers.plugins.torque:TorqueScheduler"
     ],
     "aiida.transports": [
-      "ssh = aiida.transport.plugins.ssh:SshTransport",
-      "local = aiida.transport.plugins.local:LocalTransport"
+      "local = aiida.transports.plugins.local:LocalTransport",
+      "ssh = aiida.transports.plugins.ssh:SshTransport"
     ],
     "aiida.workflows": [],
     "aiida.tools.dbexporters": [
@@ -202,9 +204,9 @@
     "aiida.tools.dbimporters": [
       "cod = aiida.tools.dbimporters.plugins.cod:CodDbImporter",
       "icsd = aiida.tools.dbimporters.plugins.icsd:IcsdDbImporter",
-      "mpod = aiida.tools.dbimporters.plugins.mpod:MpodDbImporter",
-      "mpds = aiida.tools.dbimporters.plugins.mpds:MpdsDbImporter",
       "materialsproject = aiida.tools.dbimporters.plugins.materialsproject:MaterialsProjectImporter",
+      "mpds = aiida.tools.dbimporters.plugins.mpds:MpdsDbImporter",
+      "mpod = aiida.tools.dbimporters.plugins.mpod:MpodDbImporter",
       "nninc = aiida.tools.dbimporters.plugins.nninc:NnincDbImporter",
       "oqmd = aiida.tools.dbimporters.plugins.oqmd:OqmdDbImporter",
       "pcod = aiida.tools.dbimporters.plugins.pcod:PcodDbImporter",

@@ -9,13 +9,9 @@
 ###########################################################################
 """Main module to expose all orm classes and methods"""
 # pylint: disable=wildcard-import
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-
-from .node.data import *
-from .node.data.code import Code
 
 from .authinfos import *
 from .comments import *
@@ -23,28 +19,20 @@ from .computers import *
 from .entities import *
 from .groups import *
 from .logs import *
-from .node import *
+from .nodes import *
 from .querybuilder import *
 from .users import *
 from .utils import *
 
-# For legacy reasons support the singulars as well
-authinfo = authinfos
-computer = computers
-group = groups
-log = logs
-user = users
-
-_local = 'Code', 'CalculationFactory', 'DataFactory', 'WorkflowFactory', \
-         'Group', 'user', 'Computer', 'group', 'computers', 'authinfo'
-
-__all__ = (_local +
-           authinfos.__all__ +
-           comments.__all__ +
-           computers.__all__ +
-           entities.__all__ +
-           groups.__all__ +
-           logs.__all__ +
-           querybuilder.__all__ +
-           users.__all__ +
-           utils.__all__)
+__all__ = (
+    authinfos.__all__ +
+    comments.__all__ +
+    computers.__all__ +
+    entities.__all__ +
+    groups.__all__ +
+    logs.__all__ +
+    nodes.__all__ +
+    querybuilder.__all__ +
+    users.__all__ +
+    utils.__all__
+)

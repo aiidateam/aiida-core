@@ -39,7 +39,7 @@ def cif():
 @decorators.with_dbenv()
 def cif_list(raw, formula_mode, past_days, groups, all_users):
     """List store CifData objects."""
-    from aiida.orm.node.data.cif import CifData
+    from aiida.orm.nodes.data.cif import CifData
     from tabulate import tabulate
 
     elements = None
@@ -123,7 +123,7 @@ def cif_export(**kwargs):
 @decorators.with_dbenv()
 def cif_import(filename):
     """Import structure into CifData object."""
-    from aiida.orm.node.data.cif import CifData
+    from aiida.orm.nodes.data.cif import CifData
 
     try:
         node, _ = CifData.get_or_create(filename)

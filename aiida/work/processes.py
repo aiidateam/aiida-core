@@ -34,7 +34,7 @@ from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida import orm
 from aiida.orm import ProcessNode, CalculationNode, WorkflowNode
-from aiida.common import serialize
+from aiida.orm.utils import serialize
 from aiida.work.ports import InputPort, PortNamespace
 from aiida.work.process_spec import ProcessSpec, ExitCode
 from aiida.work.process_builder import ProcessBuilder

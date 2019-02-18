@@ -74,7 +74,7 @@ class ProcessNode(Sealable, Node):
 
         :return: LoggerAdapter object, that works like a logger, but also has the 'extra' embedded
         """
-        from aiida.common.log import create_logger_adapter
+        from aiida.orm.utils.log import create_logger_adapter
         return create_logger_adapter(self._logger, self)
 
     def load_process_class(self):

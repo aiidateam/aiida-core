@@ -139,8 +139,9 @@ class ProcessLauncher(plumpy.ProcessLauncher):
         :raises plumpy.TaskRejected: if the node corresponding to the task cannot be loaded
         """
         from aiida.work.exceptions import PastException
-        from aiida.common import exceptions, serialize
+        from aiida.common import exceptions
         from aiida.orm import load_node, Data
+        from aiida.orm.utils import serialize
 
         try:
             node = load_node(pk=pid)

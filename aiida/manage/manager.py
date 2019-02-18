@@ -149,7 +149,7 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         task_queue = rmq.get_launch_queue_name(prefix)
 
         if with_orm:
-            from aiida.common import serialize
+            from aiida.orm.utils import serialize
             encoder = functools.partial(serialize.serialize, encoding='utf-8')
             decoder = serialize.deserialize
         else:

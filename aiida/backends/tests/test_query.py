@@ -89,7 +89,7 @@ class TestQueryBuilder(AiidaTestCase):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.work import WorkChain
         from aiida.work.workchain import WorkChainNode
-        from aiida.orm import CalculationFactory
+        from aiida.plugins import CalculationFactory
 
         ArithmeticAdd = CalculationFactory('arithmetic.add')
 
@@ -98,17 +98,17 @@ class TestQueryBuilder(AiidaTestCase):
         # When passing a WorkChain class, it should return the type of the corresponding Node
         # including the appropriate filter on the process_type
         cls, classifiers = qb._get_ormclass(WorkChain, None)
-        self.assertEqual(classifiers['ormclass_type_string'], 'node.process.workflow.workchain.WorkChainNode.')
+        self.assertEqual(classifiers['ormclass_type_string'], 'process.workflow.workchain.WorkChainNode.')
         self.assertEqual(classifiers['process_type_string'], 'aiida.work.workchain.WorkChain')
 
         # When passing a WorkChainNode, no process_type filter is applied
         cls, classifiers = qb._get_ormclass(WorkChainNode, None)
-        self.assertEqual(classifiers['ormclass_type_string'], 'node.process.workflow.workchain.WorkChainNode.')
+        self.assertEqual(classifiers['ormclass_type_string'], 'process.workflow.workchain.WorkChainNode.')
         self.assertEqual(classifiers['process_type_string'], None)
 
         # Same tests for a calculation
         cls, classifiers = qb._get_ormclass(ArithmeticAdd, None)
-        self.assertEqual(classifiers['ormclass_type_string'], 'node.process.calculation.calcjob.CalcJobNode.')
+        self.assertEqual(classifiers['ormclass_type_string'], 'process.calculation.calcjob.CalcJobNode.')
         self.assertEqual(classifiers['process_type_string'], 'aiida.calculations:arithmetic.add')
 
     def test_process_query(self):
@@ -116,8 +116,8 @@ class TestQueryBuilder(AiidaTestCase):
         Test querying for a process class.
         """
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.backends.tests.work.work_chain import Wf, PotentialFailureWorkChain
-        from aiida.orm.node.data.base import Str, Int
+        from aiida.backends.tests.work.test_work_chain import Wf, PotentialFailureWorkChain
+        from aiida.orm import Str, Int
         from aiida.work import run, WorkChain
         from aiida.work.workchain import WorkChainNode
         from aiida.common.warnings import AiidaEntryPointWarning

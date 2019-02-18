@@ -18,19 +18,19 @@ from .launch import *
 from .persistence import *
 from .processes import *
 from .process_function import *
-from .rmq import *
 from .runners import *
 from .utils import *
 from .workchain import *
+from aiida.manage.external import rmq
 from . import test_utils
 
 __all__ = (exceptions.__all__ +
-        exit_code.__all__ +
-        futures.__all__ +
-        launch.__all__ +
-        persistence.__all__ +
-        processes.__all__ +
-        rmq.__all__ +
-        runners.__all__ +
-        utils.__all__ +
-        workchain.__all__ + ('test_utils', ))
+           exit_code.__all__ +
+           futures.__all__ +
+           launch.__all__ +
+           persistence.__all__ +
+           processes.__all__ +
+           rmq.__all__ +
+           runners.__all__ +
+           utils.__all__ +
+           workchain.__all__ + ('test_utils', ))

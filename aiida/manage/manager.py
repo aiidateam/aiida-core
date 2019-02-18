@@ -119,16 +119,18 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
 
         return self._communicator
 
-    def create_communicator(self, task_prefetch_count=None):
+    def create_communicator(self, task_prefetch_count=None, with_orm=True):
         """
         Create a Communicator
 
         :param task_prefetch_count: optional specify how many tasks this communicator take simultaneously
+        :param with_orm: if True, use ORM (de)serializers. If false, use json.
+            This is used by verdi status to get a communicator without needing to load the dbenv.
+
         :return: the communicator instance
         :rtype: :class:`~kiwipy.rmq.communicator.RmqThreadCommunicator`
         """
-        from aiida.common import serialize
-        from aiida.work import rmq
+        from aiida.manage.external import rmq
         import kiwipy.rmq
         profile = self.get_profile()
 
@@ -136,7 +138,7 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
             task_prefetch_count = rmq._RMQ_TASK_PREFETCH_COUNT  # pylint: disable=protected-access
 
         url = rmq.get_rmq_url()
-        prefix = rmq.get_rmq_prefix()
+        prefix = profile.rmq_prefix
 
         # This needs to be here, because the verdi commands will call this function and when called in unit tests the
         # testing_mode cannot be set.
@@ -146,11 +148,21 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         task_exchange = rmq.get_task_exchange_name(prefix)
         task_queue = rmq.get_launch_queue_name(prefix)
 
+        if with_orm:
+            from aiida.common import serialize
+            encoder = functools.partial(serialize.serialize, encoding='utf-8')
+            decoder = serialize.deserialize
+        else:
+            # used by verdi status to get a communicator without needing to load the dbenv
+            import json
+            encoder = functools.partial(json.dumps, encoding='utf-8')
+            decoder = json.loads
+
         return kiwipy.rmq.RmqThreadCommunicator.connect(
             connection_params={'url': url},
             message_exchange=message_exchange,
-            encoder=functools.partial(serialize.serialize, encoding='utf-8'),
-            decoder=serialize.deserialize,
+            encoder=encoder,
+            decoder=decoder,
             task_exchange=task_exchange,
             task_queue=task_queue,
             task_prefetch_count=task_prefetch_count,
@@ -246,7 +258,8 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         :rtype: :class:`aiida.work.Runner`
         """
         import plumpy
-        from aiida.work import rmq, persistence
+        from aiida.work import persistence
+        from aiida.manage.external import rmq
         runner = self.create_runner(rmq_submit=True, loop=loop)
         runner_loop = runner.loop
 

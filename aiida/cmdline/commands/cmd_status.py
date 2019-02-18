@@ -18,9 +18,9 @@ import click
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils.daemon import get_daemon_status
 from aiida.manage import get_manager
-from aiida.cmdline.utils import decorators
 from aiida.common.utils import Capturing, get_repository_folder
 from aiida.manage.external.postgres import Postgres
+from aiida.manage.external.rmq import get_rmq_url
 
 
 class ServiceStatus(IntEnum):
@@ -39,7 +39,6 @@ STATUS_COLOR_MAP = {
 
 
 @verdi.command('status')
-@decorators.with_dbenv()  # currently needed only for get_communicator (to fix)
 def verdi_status():
     """Print status of AiiDA services."""
     # pylint: disable=broad-except
@@ -84,8 +83,9 @@ def verdi_status():
     # getting the rmq status
     try:
         with Capturing():
-            manager.get_communicator()
-        print_status(ServiceStatus.UP, 'rabbitmq', "Connected to rabbitmq")
+            manager.create_communicator(with_orm=False)
+
+        print_status(ServiceStatus.UP, 'rabbitmq', "Connected to {}".format(get_rmq_url()))
     except Exception as exc:
         print_status(ServiceStatus.ERROR, 'rabbitmq', "Unable to connect to rabbitmq")
         print(exc)

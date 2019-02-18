@@ -31,10 +31,19 @@ class ServiceStatus(IntEnum):
     DOWN = 2
 
 
-STATUS_COLOR_MAP = {
-    ServiceStatus.UP: 'green',
-    ServiceStatus.ERROR: 'red',
-    ServiceStatus.DOWN: 'red',
+STATUS_SYMBOLS = {
+    ServiceStatus.UP: {
+        'color': 'green',
+        'string': u'\u2713',
+    },
+    ServiceStatus.ERROR: {
+        'color': 'red',
+        'string': u'\u2717',
+    },
+    ServiceStatus.DOWN: {
+        'color': 'red',
+        'string': u'\u2717',
+    },
 }
 
 
@@ -117,6 +126,7 @@ def print_status(status, service, msg=""):
     :param msg:  message string
 
     """
-    click.secho(u'  \u2B24  ', fg=STATUS_COLOR_MAP[status], nl=False)
-    click.secho('{:10s}: '.format(service), nl=False)
+    symbol = STATUS_SYMBOLS[status]
+    click.secho(u'  {} '.format(symbol['string']), fg=symbol['color'], nl=False)
+    click.secho('{:10s} '.format(service + ':'), nl=False)
     click.secho(msg)

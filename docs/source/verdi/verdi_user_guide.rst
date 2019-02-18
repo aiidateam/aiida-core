@@ -310,14 +310,14 @@ Manage the daemon, i.e. the process that runs in background and that manages sub
 --------------
 Manage ``Data`` nodes.
 
-  * **array**: handles :class:`aiida.orm.node.data.array.ArrayData` objects
+  * **array**: handles :class:`aiida.orm.nodes.data.array.ArrayData` objects
 
     * **show**: visualizes the data object
 
-  * **bands**:  handles :class:`aiida.orm.node.data.array.bands.BandsData` objects (band structure object)
+  * **bands**:  handles :class:`aiida.orm.nodes.data.array.bands.BandsData` objects (band structure object)
 
     * **export**: export the node as a string of a specified format
-    * **list**:   list currently saved nodes of :class:`aiida.orm.node.data.array.bands.BandsData` kind
+    * **list**:   list currently saved nodes of :class:`aiida.orm.nodes.data.array.bands.BandsData` kind
     * **show**:   visualizes the data object
 
   * **cif**: handles the CifData objects

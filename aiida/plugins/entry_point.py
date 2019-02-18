@@ -39,8 +39,8 @@ class EntryPointFormat(enum.Enum):
 
     Under these definitions a potentially valid entry point string may have the following formats:
 
-        * FULL:    prefixed group plus entry point name     aiida.transport:ssh
-        * PARTIAL: unprefixed group plus entry point name   transport:ssh
+        * FULL:    prefixed group plus entry point name     aiida.transports:ssh
+        * PARTIAL: unprefixed group plus entry point name   transports:ssh
         * MINIMAL: no group but only entry point name:      ssh
 
     Note that the MINIMAL format can potentially lead to ambiguity if the name appears in multiple
@@ -54,15 +54,15 @@ class EntryPointFormat(enum.Enum):
 
 
 entry_point_group_to_module_path_map = {
-    'aiida.calculations': 'aiida.orm.node.process.calculation.calcjob',
-    'aiida.data': 'aiida.orm.node.data',
-    'aiida.node': 'aiida.orm.node',
+    'aiida.calculations': 'aiida.orm.nodes.process.calculation.calcjob',
+    'aiida.data': 'aiida.orm.nodes.data',
+    'aiida.node': 'aiida.orm.nodes',
     'aiida.parsers': 'aiida.parsers.plugins',
-    'aiida.schedulers': 'aiida.scheduler.plugins',
+    'aiida.schedulers': 'aiida.schedulers.plugins',
     'aiida.tools.dbexporters': 'aiida.tools.dbexporters',
     'aiida.tools.dbexporters.tcod_plugins': 'aiida.tools.dbexporters.tcod_plugins',
     'aiida.tools.dbimporters': 'aiida.tools.dbimporters.plugins',
-    'aiida.transports': 'aiida.transport.plugins',
+    'aiida.transports': 'aiida.transports.plugins',
     'aiida.workflows': 'aiida.workflows',
 }
 

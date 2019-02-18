@@ -13,10 +13,7 @@ from __future__ import absolute_import
 
 import six
 
-from aiida.plugins.factory import CalculationFactory, DataFactory, WorkflowFactory
-
-__all__ = (
-    'CalculationFactory', 'DataFactory', 'WorkflowFactory', 'load_code', 'load_computer', 'load_group', 'load_node')
+__all__ = ('load_code', 'load_computer', 'load_group', 'load_node')
 
 
 def load_entity(entity_loader=None, identifier=None, pk=None, uuid=None, label=None, sub_classes=None,

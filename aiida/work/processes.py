@@ -33,7 +33,7 @@ from aiida.common.lang import classproperty, override, protected
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida import orm
-from aiida.orm.node import ProcessNode, CalculationNode, WorkflowNode
+from aiida.orm import ProcessNode, CalculationNode, WorkflowNode
 from aiida.common import serialize
 from aiida.work.ports import InputPort, PortNamespace
 from aiida.work.process_spec import ProcessSpec, ExitCode
@@ -401,7 +401,7 @@ class Process(plumpy.Process):
         Get the parent process node
 
         :return: the parent process node if there is one
-        :rtype: :class:`aiida.orm.node.process.ProcessNode`
+        :rtype: :class:`aiida.orm.nodes.process.process.ProcessNode`
         """
         # Can't get it if we don't know our parent
         if self._parent_pid is None:
@@ -571,13 +571,13 @@ class Process(plumpy.Process):
 
     def _setup_inputs(self):
         """Create the links between the input nodes and the ProcessNode that represents this process."""
-        from aiida.orm.node.data.code import Code
+        from aiida.orm.nodes.data.code import Code
 
         for name, node in self._flat_inputs().items():
 
             # Special exception: set computer if node is a remote Code and our node does not yet have a computer set
-            if isinstance(node, Code) and not node.is_local() and not self.node.get_computer():
-                self.node.set_computer(node.get_remote_computer())
+            if isinstance(node, Code) and not node.is_local() and not self.node.computer:
+                self.node.computer = node.get_remote_computer()
 
             if isinstance(node, ProcessNode):
                 node = utils.get_or_create_output_group(node)

@@ -21,7 +21,7 @@ from .. import BackendLog, BackendLogCollection
 
 
 class DjangoLog(entities.DjangoModelEntity[models.DbLog], BackendLog):
-    """Django log class"""
+    """Django Log backend class"""
 
     MODEL_CLASS = models.DbLog
 

@@ -20,7 +20,7 @@ import tornado.ioloop
 from tornado import concurrent, gen
 
 from aiida.common.links import LinkType
-from aiida.orm.node.data.frozendict import FrozenDict
+from aiida.orm.nodes.data.frozendict import FrozenDict
 
 __all__ = 'RefObjectStore', 'interruptable_task', 'InterruptableFuture'
 
@@ -179,7 +179,7 @@ def get_or_create_output_group(node):
 
     :param node: ProcessNode
     """
-    from aiida.orm.node import ProcessNode
+    from aiida.orm import ProcessNode
 
     if not isinstance(node, ProcessNode):
         raise TypeError('Can only create output groups for type ProcessNode')
@@ -215,7 +215,7 @@ def set_process_state_change_timestamp(process):
     """
     from aiida.backends.utils import set_global_setting
     from aiida.common.exceptions import UniquenessError
-    from aiida.orm.node import ProcessNode, CalculationNode, WorkflowNode
+    from aiida.orm import ProcessNode, CalculationNode, WorkflowNode
     from aiida.common import timezone
 
     if isinstance(process.node, CalculationNode):

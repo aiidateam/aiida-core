@@ -31,7 +31,7 @@ class DjangoUserCollection(BackendUserCollection):
         Create a user with the provided email address
 
         :return: A new user object
-        :rtype: :class:`aiida.orm.implementation.django.DjangoUser`
+        :rtype: :class:`aiida.orm.implementation.django.users.DjangoUser`
         """
         return DjangoUser(
             self.backend, email=email, first_name=first_name, last_name=last_name, institution=institution)

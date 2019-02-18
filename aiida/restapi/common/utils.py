@@ -124,19 +124,18 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
         self.perpage_default = kwargs['PERPAGE_DEFAULT']
         self.limit_default = kwargs['LIMIT_DEFAULT']
 
-    def strip_prefix(self, path):
+    def strip_api_prefix(self, path):
         """
         Removes the PREFIX from an URL path. PREFIX must be defined in the
         config.py file::
 
             PREFIX = "/api/v2"
             path = "/api/v2/calculations/page/2"
-            strip_prefix(path) ==> "/calculations/page/2"
+            strip_api_prefix(path) ==> "/calculations/page/2"
 
         :param path: the URL path string
         :return: the same URL without the prefix
         """
-
         if path.startswith(self.prefix):
             return path[len(self.prefix):]
 
@@ -169,7 +168,7 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
         page = None
         node_id = None
         query_type = "default"
-        path = self.split_path(self.strip_prefix(path_string))
+        path = self.split_path(self.strip_api_prefix(path_string))
 
         ## Pop out iteratively the "words" of the path until it is an empty
         # list.

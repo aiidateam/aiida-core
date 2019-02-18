@@ -14,7 +14,7 @@ from django.apps import apps
 
 import six
 
-LATEST_MIGRATION = '0027_delete_trajectory_symbols_array'
+LATEST_MIGRATION = '0028_remove_node_prefix'
 
 
 def _update_schema_version(version, apps, schema_editor):

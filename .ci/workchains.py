@@ -10,9 +10,9 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from aiida.orm.node.data.int import Int
-from aiida.orm.node.data.list import List
-from aiida.orm.node.data.str import Str
+from aiida.orm.nodes.data.int import Int
+from aiida.orm.nodes.data.list import List
+from aiida.orm.nodes.data.str import Str
 from aiida.work import calcfunction, workfunction
 from aiida.work.persistence import ObjectLoader
 from aiida.work.workchain import WorkChain, ToContext, append_

@@ -13,8 +13,8 @@ A good example of a process is the :py:class:`~aiida.work.workchain.WorkChain` c
 In the :ref:`workflows and workchains section <workchains_workfunctions>` you can see how the ``WorkChain`` defines how it needs to be run.
 In addition to those run instructions, the ``WorkChain`` needs some sort of record in the database to store what happened during its execution.
 For example it needs to record what its exact inputs were, the log messages that were reported and what the final outputs were.
-For this purpose, every process will utilize an instance of a sub class of the :py:class:`~aiida.orm.node.process.ProcessNode` class.
-This ``Calculation`` class is a sub class of :py:class:`~aiida.orm.node.Node` and serves as the record of the process' execution in the database and by extension the provenance graph.
+For this purpose, every process will utilize an instance of a sub class of the :py:class:`~aiida.orm.nodes.process.ProcessNode` class.
+This ``Calculation`` class is a sub class of :py:class:`~aiida.orm.nodes.Node` and serves as the record of the process' execution in the database and by extension the provenance graph.
 
 It is very important to understand this division of labor.
 A ``Process`` describes how something should be run, and the ``Calculation`` node serves as a mere record in the database of what actually happened during execution.
@@ -72,7 +72,7 @@ Note that this does not automatically mean that the result of the process can al
 To distinghuis between a successful and a failed execution, we have introduced the 'exit status'.
 This is another attribute that is stored in the node of the process and is an integer that can be set by the process.
 A zero means that the result of the process was successful, and a non-zero value indicates a failure.
-All the calculation nodes used by the various processes are a sub class of :py:class:`~aiida.orm.node.process.ProcessNode`, which defines handy properties to query the process state and exit status.
+All the calculation nodes used by the various processes are a sub class of :py:class:`~aiida.orm.nodes.process.ProcessNode`, which defines handy properties to query the process state and exit status.
 
 ===================   ============================================================================================
 Method                Explanation
@@ -120,7 +120,7 @@ In an interactive shell, you can get this information to display as follows::
         "non_db": "False"
         "help": "Parameters used to replace placeholders in the template",
         "name": "parameters",
-        "valid_type": "<class 'aiida.orm.node.data.parameter.ParameterData'>"
+        "valid_type": "<class 'aiida.orm.nodes.data.parameter.ParameterData'>"
 
 In the ``Docstring`` you will see a ``help`` string that contains more detailed information about the input port.
 Additionally, it will display a ``valid_type``, which when defined shows which data types are expected.

@@ -80,7 +80,7 @@ class ModelWrapper(object):
         return inspect(self._model.__class__).has_property(name)
 
     def _flush(self, fields=()):
-        """If the user is stored then save the current value."""
+        """If the model is stored then save the current value."""
         if self.is_saved():
             for field in fields:
                 flag_modified(self._model, field)

@@ -70,11 +70,6 @@ class DjangoQueryBuilder(BackendQueryBuilder):
     def table_groups_nodes(self):
         return dummy_model.table_groups_nodes
 
-    @property
-    def AiidaNode(self):
-        import aiida.orm.implementation.django.node
-        return aiida.orm.implementation.django.node.Node
-
     def get_filter_expr(self, operator, value, attr_key, is_attribute, alias=None, column=None, column_name=None):
         """
         Applies a filter on the alias given.

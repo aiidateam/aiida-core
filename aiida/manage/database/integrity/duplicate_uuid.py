@@ -12,8 +12,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+from aiida.common import exceptions
 from aiida.manage import get_manager
-from aiida.common.exceptions import IntegrityError
 
 __all__ = ('verify_uuid_uniqueness', 'get_duplicate_uuids', 'deduplicate_uuids', 'TABLES_UUID_DEDUPLICATION')
 
@@ -45,7 +45,7 @@ def verify_uuid_uniqueness(table):
     duplicates = get_duplicate_uuids(table=table)
 
     if duplicates:
-        raise IntegrityError(
+        raise exceptions.IntegrityError(
             'Table {} contains rows with duplicate UUIDS: '
             'run `verdi database integrity duplicate-node-uuid` to return to a consistent state'.format(table))
 
@@ -68,7 +68,7 @@ def deduplicate_uuids(table=None, dry_run=True):
 
     from aiida.common.utils import get_new_uuid
     from aiida.orm import load_computer, load_group, load_node
-    from aiida.orm.node import Node
+    from aiida.orm import Node
 
     if table not in TABLES_UUID_DEDUPLICATION:
         raise ValueError('invalid table {}: choose from {}'.format(table, ', '.join(TABLES_UUID_DEDUPLICATION)))
@@ -94,7 +94,7 @@ def deduplicate_uuids(table=None, dry_run=True):
         """
         from aiida.common.folders import RepositoryFolder
         folder = RepositoryFolder('node', uuid)
-        folder.replace_with_folder(node_source.folder.abspath)
+        folder.replace_with_folder(node_source.repository.folder.abspath)
 
     messages = []
 
@@ -122,15 +122,11 @@ def deduplicate_uuids(table=None, dry_run=True):
                 messages.append('would update UUID of {} row<{}> from {} to {}'.format(table, pk, uuid_old, uuid_new))
             else:
 
-                # When Node is migrated to the new backend system, this will have to be adapted as well!
-                # Then the only exception should be that for Node the repository should be copied.
+                entity.backend_entity._dbmodel.uuid = uuid_new  # pylint: disable=protected-access
+                entity.backend_entity._dbmodel.save()  # pylint: disable=protected-access
+
                 if isinstance(entity, Node):
-                    entity._dbnode.uuid = uuid_new  # pylint: disable=protected-access
-                    entity._dbnode.save()  # pylint: disable=protected-access
                     copy_repo_folder(entity_reference, uuid_new)
-                else:
-                    entity._backend_entity._dbmodel.uuid = uuid_new  # pylint: disable=protected-access
-                    entity._backend_entity._dbmodel.save()  # pylint: disable=protected-access
 
                 messages.append('updated UUID of {} row<{}> from {} to {}'.format(table, pk, uuid_old, uuid_new))
 

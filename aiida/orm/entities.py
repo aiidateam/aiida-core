@@ -14,6 +14,8 @@ from __future__ import print_function
 
 import typing
 
+from plumpy.base.utils import super_check, call_with_super_check
+
 from aiida.common import exceptions
 from aiida.common import datastructures
 from aiida.common.lang import classproperty, type_check
@@ -168,6 +170,7 @@ class Entity(object):  # pylint: disable=useless-object-inheritance
         type_check(backend_entity, implementation.BackendEntity)
         entity = cls.__new__(cls)
         entity.init_from_backend(backend_entity)
+        call_with_super_check(entity.initialize)
         return entity
 
     def __init__(self, backend_entity):
@@ -176,6 +179,7 @@ class Entity(object):  # pylint: disable=useless-object-inheritance
         :type backend_entity: :class:`aiida.orm.implementation.BackendEntity`
         """
         self._backend_entity = backend_entity
+        call_with_super_check(self.initialize)
 
     def init_from_backend(self, backend_entity):
         """
@@ -183,6 +187,13 @@ class Entity(object):  # pylint: disable=useless-object-inheritance
         :type backend_entity: :class:`aiida.orm.implementation.BackendEntity`
         """
         self._backend_entity = backend_entity
+
+    @super_check
+    def initialize(self):
+        """Initialize instance attributes.
+
+        This will be called after the constructor is called or an entity is created from an existing backend entity.
+        """
 
     @property
     def id(self):

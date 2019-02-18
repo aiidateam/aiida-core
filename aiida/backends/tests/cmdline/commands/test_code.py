@@ -93,7 +93,7 @@ class TestVerdiCodeSetup(AiidaTestCase):
             '--code-rel-path={}'.format(self.this_file)
         ]
         result = self.cli_runner.invoke(setup_code, options)
-        self.assertIsNone(result.exception, result.output[-1000:])
+        self.assertClickResultNoException(result)
         self.assertIsInstance(Code.get_from_string('{}'.format(label)), Code)
 
     def test_mixed(self):

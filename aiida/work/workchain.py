@@ -21,7 +21,7 @@ from aiida.common.exceptions import MultipleObjectsError, NotExistent
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import override
 from aiida.orm import Node
-from aiida.orm.node import WorkChainNode
+from aiida.orm import WorkChainNode
 from aiida.orm.utils import load_node
 
 from .awaitable import AwaitableTarget, AwaitableAction, construct_awaitable

@@ -27,7 +27,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_process
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
-from aiida.orm.node import WorkflowNode, WorkFunctionNode, WorkChainNode
+from aiida.orm import WorkflowNode, WorkFunctionNode, WorkChainNode
 from aiida.work import test_utils
 from aiida.manage import get_manager
 

@@ -330,5 +330,5 @@ def group_copy(source_group, destination_group):
 
     dest_group = orm.Group.objects.get_or_create(
         label=destination_group, type_string=GroupTypeString(source_group.type_string))[0]
-    dest_group.add_nodes(source_group.nodes)
+    dest_group.add_nodes(list(source_group.nodes))
     echo.echo_success("Nodes copied from group<{}> to group<{}>".format(source_group, destination_group))

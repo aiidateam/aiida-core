@@ -93,7 +93,7 @@ Below, a list of valid entry points recognized by AiiDA follows.
 ``aiida.calculations``
 ----------------------
 
-Entry points in this group are expected to be subclasses of :py:class:`aiida.orm.JobCalculation <aiida.orm.node.process.calculation.calcjob.CalcJobNode>`. This replaces the previous method of placing a python module with the class in question inside the ``aiida/orm/calculation/job`` subpackage.
+Entry points in this group are expected to be subclasses of :py:class:`aiida.orm.JobCalculation <aiida.orm.nodes.process.calculation.calcjob.CalcJobNode>`. This replaces the previous method of placing a python module with the class in question inside the ``aiida/orm/calculation/job`` subpackage.
 
 Example entry point specification::
    
@@ -111,7 +111,7 @@ Example entry point specification::
 
 Will lead to usage::
 
-   from aiida.orm import CalculationFactory
+   from aiida.plugins import CalculationFactory
    calc = CalculationFactory('mycode.mycode')
 
 ``aiida.parsers``
@@ -135,13 +135,13 @@ Example spec::
 
 Usage::
    
-   from aiida.parsers import ParserFactory
+   from aiida.plugins import ParserFactory
    parser = ParserFactory('mycode.mycode')
 
 ``aiida.data``
 --------------
 
-Group for :py:class:`~aiida.orm.node.data.Data` subclasses. Previously located in a subpackage of ``aiida/orm/data``.
+Group for :py:class:`~aiida.orm.nodes.data.data.Data` subclasses. Previously located in a subpackage of ``aiida/orm/data``.
 
 Spec::
 
@@ -159,7 +159,7 @@ Spec::
 
 Usage::
 
-   from aiida.orm import DataFactory
+   from aiida.plugins import DataFactory
    params = DataFactory('mycode.mydata')
 
 ``aiida.workflows``
@@ -183,7 +183,7 @@ Spec::
    
 Usage::
 
-   from aiida.orm import WorkflowFactory
+   from aiida.plugins import WorkflowFactory
    wf = WorkflowFactory('mycode.mywf')
 
 .. note:: For old-style workflows the entry point mechanism of the plugin system is not supported. 
@@ -285,7 +285,7 @@ Spec::
 
 ``aiida_myscheduler/myscheduler.py``::
 
-   from aiida.scheduler import Scheduler
+   from aiida.schedulers import Scheduler
    class MyScheduler(Scheduler):
       ...
 
@@ -306,13 +306,13 @@ Spec::
 
 ``aiida_mytransport/mytransport.py``::
 
-   from aiida.transport import Transport
+   from aiida.transports import Transport
    class MyTransport(Transport):
       ...
 
 Usage::
 
-   from aiida.transport import TransportFactory
+   from aiida.plugins import TransportFactory
    transport = TransportFactory('mytransport')
 
 Jus like one would expect, when a computer is setup, ``mytransport`` can be given as the transport option.

@@ -42,8 +42,8 @@ def get_valid_test_paths():
         'aiida.cmdline.params.types',
         'aiida.cmdline.params.options',
         'aiida.common',
-        'aiida.scheduler',
-        'aiida.transport',
+        'aiida.schedulers',
+        'aiida.transports',
         'aiida.tools.dbimporters.plugins',
     ]
 

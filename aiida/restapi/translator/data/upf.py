@@ -27,10 +27,10 @@ class UpfDataTranslator(DataTranslator):
     # A label associated to the present class (coincides with the resource name)
     __label__ = "upfs"
     # The AiiDA class one-to-one associated to the present class
-    from aiida.orm.node.data.upf import UpfData
+    from aiida.orm.nodes.data.upf import UpfData
     _aiida_class = UpfData
     # The string name of the AiiDA class
-    _aiida_type = "node.data.upf.UpfData"
+    _aiida_type = "data.upf.UpfData"
     # The string associated to the AiiDA class in the query builder lexicon
     _qb_type = _aiida_type + '.'
 
@@ -67,7 +67,7 @@ class UpfDataTranslator(DataTranslator):
         response = {}
 
         if node.folder.exists():
-            folder_node = node._get_folder_pathsubfolder  # pylint: disable=protected-access
+            folder_node = node.repository._get_folder_pathsubfolder  # pylint: disable=protected-access
             filename = node.filename
 
             try:

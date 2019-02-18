@@ -168,7 +168,7 @@ def calcjob_inputls(calcjob, path, color):
     If PATH is not specified, the base path of the input folder will be used.
     """
     from aiida.cmdline.utils.repository import list_repo_files
-    from aiida.orm.node.process.calculation.calcjob import _input_subfolder
+    from aiida.orm.nodes.process.calculation.calcjob import _input_subfolder
 
     if path is not None:
         fullpath = os.path.join(_input_subfolder, path)

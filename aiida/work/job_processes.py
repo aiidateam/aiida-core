@@ -22,7 +22,7 @@ import plumpy
 from aiida.common.datastructures import CalcJobState
 from aiida.common.exceptions import TransportTaskException
 from aiida.daemon import execmanager
-from aiida.scheduler.datastructures import JobState
+from aiida.schedulers.datastructures import JobState
 from aiida.work.utils import exponential_backoff_retry, interruptable_task
 
 from . import processes
@@ -66,7 +66,7 @@ def task_upload_job(node, transport_queue, calc_info, script_filename, cancellab
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
     max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
 
-    authinfo = node.get_computer().get_authinfo(node.get_user())
+    authinfo = node.computer.get_authinfo(node.user)
 
     @coroutine
     def do_upload():
@@ -117,7 +117,7 @@ def task_submit_job(node, transport_queue, calc_info, script_filename, cancellab
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
     max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
 
-    authinfo = node.get_computer().get_authinfo(node.get_user())
+    authinfo = node.computer.get_authinfo(node.user)
 
     @coroutine
     def do_submit():
@@ -152,7 +152,7 @@ def task_update_job(node, job_manager, cancellable):
     If all retries fail, the task will raise a TransportTaskException
 
     :param node: the node that represents the job calculation
-    :type node: :class:`aiida.orm.node.process.calculation.calcjob.CalcJobNode`
+    :type node: :class:`aiida.orm.nodes.process.calculation.calcjob.CalcJobNode`
     :param job_manager: The job manager
     :type job_manager: :class:`aiida.work.job_calcs.JobManager`
     :param cancellable: A cancel flag
@@ -166,7 +166,7 @@ def task_update_job(node, job_manager, cancellable):
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
     max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
 
-    authinfo = node.get_computer().get_authinfo(node.get_user())
+    authinfo = node.computer.get_authinfo(node.user)
     job_id = node.get_job_id()
 
     @coroutine
@@ -226,7 +226,7 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
     max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
 
-    authinfo = node.get_computer().get_authinfo(node.get_user())
+    authinfo = node.computer.get_authinfo(node.user)
 
     @coroutine
     def do_retrieve():
@@ -274,7 +274,7 @@ def task_kill_job(node, transport_queue, cancellable):
         logger.warning('CalcJob<{}> killed, it was in the {} state'.format(node.pk, node.get_state()))
         raise Return(True)
 
-    authinfo = node.get_computer().get_authinfo(node.get_user())
+    authinfo = node.computer.get_authinfo(node.user)
 
     @coroutine
     def do_kill():

@@ -15,7 +15,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from aiida.restapi.translator.node import NodeTranslator
-from aiida.orm.code import Code
+from aiida.orm import Code
 
 
 class CodeTranslator(NodeTranslator):
@@ -28,7 +28,7 @@ class CodeTranslator(NodeTranslator):
     # The AiiDA class one-to-one associated to the present class
     _aiida_class = Code
     # The string name of the AiiDA class
-    _aiida_type = "code.Code"
+    _aiida_type = "data.code.Code"
     # The string associated to the AiiDA class in the query builder lexicon
     _qb_type = _aiida_type + '.'
 

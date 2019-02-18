@@ -43,7 +43,7 @@ def delete_trajectory_symbols_array(apps, _):
         trajectory = load_node(t_pk)
         modifier.del_value_for_node(DbNode.objects.get(pk=trajectory.pk), 'array|symbols')
         # Remove the .npy file (using delete_array raises ModificationNotAllowed error)
-        trajectory._get_folder_pathsubfolder.remove_path('symbols.npy')  # pylint: disable=protected-access
+        trajectory.repository._get_folder_pathsubfolder.remove_path('symbols.npy')  # pylint: disable=protected-access
 
 
 def create_trajectory_symbols_array(apps, _):
@@ -61,12 +61,12 @@ def create_trajectory_symbols_array(apps, _):
         'id', flat=True)
     for t_pk in trajectories_pk:
         trajectory = load_node(t_pk)
-        symbols = numpy.array(trajectory.get_attr('symbols'))
+        symbols = numpy.array(trajectory.get_attribute('symbols'))
         # Save the .npy file (using set_array raises ModificationNotAllowed error)
         with tempfile.NamedTemporaryFile() as _file:
             numpy.save(_file, symbols)
             _file.flush()
-            trajectory._get_folder_pathsubfolder.insert_path(_file.name, 'symbols.npy')  # pylint: disable=protected-access
+            trajectory.repository._get_folder_pathsubfolder.insert_path(_file.name, 'symbols.npy')  # pylint: disable=protected-access
         modifier.set_value_for_node(DbNode.objects.get(pk=trajectory.pk), 'array|symbols', list(symbols.shape))
 
 

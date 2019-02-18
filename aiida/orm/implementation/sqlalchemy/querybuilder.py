@@ -120,11 +120,6 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         import aiida.backends.sqlalchemy.models.group
         return aiida.backends.sqlalchemy.models.group.table_groups_nodes
 
-    @property
-    def AiidaNode(self):
-        import aiida.orm.implementation.sqlalchemy.node
-        return aiida.orm.implementation.sqlalchemy.node.Node
-
     def get_session(self):
         return aiida.backends.sqlalchemy.get_scoped_session()
 

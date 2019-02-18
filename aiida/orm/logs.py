@@ -15,7 +15,6 @@ from __future__ import absolute_import
 from aiida.common import timezone
 from aiida.manage import get_manager
 from . import entities
-from . import node
 
 __all__ = ('Log', 'OrderSpecifier', 'ASCENDING', 'DESCENDING')
 
@@ -81,10 +80,12 @@ class Log(entities.Entity):
             :return: the list of log entries
             :rtype: list
             """
-            if not isinstance(entity, node.Node):
-                raise Exception("Only node logs are stored")
-            filters = {'dbnode_id': entity.pk}
-            return self.find(filters, order_by=order_by)
+            from . import nodes
+
+            if not isinstance(entity, nodes.Node):
+                raise Exception('Only node logs are stored')
+
+            return self.find({'dbnode_id': entity.pk}, order_by=order_by)
 
         def delete(self, log_id):
             """

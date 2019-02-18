@@ -25,10 +25,10 @@ class KpointsDataTranslator(DataTranslator):
     # A label associated to the present class (coincides with the resource name)
     __label__ = "kpoints"
     # The AiiDA class one-to-one associated to the present class
-    from aiida.orm.node.data.array.kpoints import KpointsData
+    from aiida.orm.nodes.data.array.kpoints import KpointsData
     _aiida_class = KpointsData
     # The string name of the AiiDA class
-    _aiida_type = "node.data.array.kpoints.KpointsData"
+    _aiida_type = "data.array.kpoints.KpointsData"
     # The string associated to the AiiDA class in the query builder lexicon
     _qb_type = _aiida_type + '.'
 

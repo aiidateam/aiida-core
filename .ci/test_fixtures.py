@@ -59,7 +59,8 @@ class FixtureManagerTestCase(unittest.TestCase):
         self.assertEqual(AIIDA_CONFIG_FOLDER, self.fixture_manager.config_dir, msg=output)
         self.assertTrue(is_dbenv_loaded())
 
-        from aiida.orm import DataFactory, load_node
+        from aiida.orm import load_node
+        from aiida.plugins import DataFactory
         data = DataFactory('parameter')(dict={'key': 'value'})
         data.store()
         data_pk = data.pk

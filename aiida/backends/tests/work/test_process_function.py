@@ -15,11 +15,11 @@ from __future__ import absolute_import
 import io
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm.node.data.bool import get_true_node
-from aiida.orm.node.data.int import Int
-from aiida.orm.node.data.str import Str
-from aiida.orm.node import WorkFunctionNode
-from aiida.orm.node import CalcFunctionNode
+from aiida.orm.nodes.data.bool import get_true_node
+from aiida.orm.nodes.data.int import Int
+from aiida.orm.nodes.data.str import Str
+from aiida.orm import WorkFunctionNode
+from aiida.orm import CalcFunctionNode
 from aiida.work import run, run_get_node, submit, calcfunction, workfunction, Process, ExitCode
 
 DEFAULT_INT = 256
@@ -137,6 +137,8 @@ class TestProcessFunction(AiidaTestCase):
         # Read the source file of the calculation function that should be stored in the repository
         # into memory, which should be exactly this test file
         function_source_file = node.function_source_file
+
+        self.assertIsNotNone(function_source_file)
 
         with io.open(function_source_file, encoding='utf8') as handle:
             function_source_code = handle.readlines()

@@ -76,9 +76,9 @@ class Node(Entity):
             if node.get_outgoing().all():
                 raise exceptions.InvalidOperation('cannot delete Node<{}> because it has output links'.format(node.pk))
 
-            repository = node.repository._get_folder_pathsubfolder  # pylint: disable=protected-access
+            repository = node._repository  # pylint: disable=protected-access
             self._backend.nodes.delete(node_id)
-            repository.erase()
+            repository.erase(force=True)
 
     # This will be set by the metaclass call
     _logger = None
@@ -92,6 +92,9 @@ class Node(Entity):
 
     # Flag that determines whether the class can be cached.
     _cachable = True
+
+    # Base path within the repository where to put objects by default
+    _repository_base_path = 'path'
 
     # Flag that determines whether the class can be stored.
     _storable = False
@@ -152,7 +155,7 @@ class Node(Entity):
         self._incoming_cache = list()
 
         # Calls the initialisation from the RepositoryMixin
-        self._repository = Repository(uuid=self.uuid, is_stored=self.is_stored)
+        self._repository = Repository(uuid=self.uuid, is_stored=self.is_stored, base_path=self._repository_base_path)
 
     def _validate(self):
         """Check if the attributes and files retrieved from the database are valid.
@@ -171,14 +174,6 @@ class Node(Entity):
         """Returns the node type of this node (sub) class."""
         # pylint: disable=no-self-argument,no-member
         return cls._plugin_type_string
-
-    @property
-    def repository(self):
-        """Return the repository configured for this Node.
-
-        :return: `Repository` instance
-        """
-        return self._repository
 
     @property
     def logger(self):
@@ -649,6 +644,101 @@ class Node(Entity):
         except AttributeError:
             raise AttributeError('can only call `append_to_attr` for attributes that are lists')
 
+    def list_objects(self, key=None):
+        """Return a list of the objects contained in this repository, optionally in the given sub directory.
+
+        :param key: fully qualified identifier for the object within the repository
+        :return: a list of `File` named tuples representing the objects present in directory with the given key
+        """
+        return self._repository.list_objects(key)
+
+    def list_object_names(self, key=None):
+        """Return a list of the object names contained in this repository, optionally in the given sub directory.
+
+        :param key: fully qualified identifier for the object within the repository
+        :return: a list of `File` named tuples representing the objects present in directory with the given key
+        """
+        return self._repository.list_object_names(key)
+
+    def open(self, key, mode='r'):
+        """Open a file handle to an object stored under the given key.
+
+        :param key: fully qualified identifier for the object within the repository
+        :param mode: the mode under which to open the handle
+        """
+        return self._repository.open(key, mode)
+
+    def get_object(self, key):
+        """Return the object identified by key.
+
+        :param key: fully qualified identifier for the object within the repository
+        :return: a `File` named tuple representing the object located at key
+        """
+        return self._repository.get_object(key)
+
+    def get_object_content(self, key):
+        """Return the content of a object identified by key.
+
+        :param key: fully qualified identifier for the object within the repository
+        """
+        return self._repository.get_object_content(key)
+
+    def put_object_from_tree(self, path, key=None, contents_only=True, force=False):
+        """Store a new object under `key` with the contents of the directory located at `path` on this file system.
+
+        .. warning:: If the repository belongs to a stored node, a `ModificationNotAllowed` exception will be raised.
+            This check can be avoided by using the `force` flag, but this should be used with extreme caution!
+
+        :param path: absolute path of directory whose contents to copy to the repository
+        :param key: fully qualified identifier for the object within the repository
+        :param contents_only: boolean, if True, omit the top level directory of the path and only copy its contents.
+        :param force: boolean, if True, will skip the mutability check
+        :raises ModificationNotAllowed: if repository is immutable and `force=False`
+        """
+        self._repository.put_object_from_tree(path, key, contents_only, force)
+
+    def put_object_from_file(self, path, key, mode='w', encoding='utf8', force=False):
+        """Store a new object under `key` with contents of the file located at `path` on this file system.
+
+        .. warning:: If the repository belongs to a stored node, a `ModificationNotAllowed` exception will be raised.
+            This check can be avoided by using the `force` flag, but this should be used with extreme caution!
+
+        :param path: absolute path of file whose contents to copy to the repository
+        :param key: fully qualified identifier for the object within the repository
+        :param mode: the file mode with which the object will be written
+        :param encoding: the file encoding with which the object will be written
+        :param force: boolean, if True, will skip the mutability check
+        :raises ModificationNotAllowed: if repository is immutable and `force=False`
+        """
+        self._repository.put_object_from_file(path, key, mode, encoding, force)
+
+    def put_object_from_filelike(self, handle, key, mode='w', encoding='utf8', force=False):
+        """Store a new object under `key` with contents of filelike object `handle`.
+
+        .. warning:: If the repository belongs to a stored node, a `ModificationNotAllowed` exception will be raised.
+            This check can be avoided by using the `force` flag, but this should be used with extreme caution!
+
+        :param handle: filelike object with the content to be stored
+        :param key: fully qualified identifier for the object within the repository
+        :param mode: the file mode with which the object will be written
+        :param encoding: the file encoding with which the object will be written
+        :param force: boolean, if True, will skip the mutability check
+        :raises ModificationNotAllowed: if repository is immutable and `force=False`
+        """
+        self._repository.put_object_from_filelike(handle, key, mode, encoding, force)
+
+    def delete_object(self, key, force=False):
+        """Delete the object from the repository.
+
+        .. warning:: If the repository belongs to a stored node, a `ModificationNotAllowed` exception will be raised.
+            This check can be avoided by using the `force` flag, but this should be used with extreme caution!
+
+        :param key: fully qualified identifier for the object within the repository
+        :param force: boolean, if True, will skip the mutability check
+        :raises ModificationNotAllowed: if repository is immutable and `force=False`
+        """
+        self._repository.delete_object(key, force)
+
     def add_comment(self, content, user=None):
         """Add a new comment.
 
@@ -985,7 +1075,7 @@ class Node(Entity):
         # First store the repository folder such that if this fails, there won't be an incomplete node in the database.
         # On the flipside, in the case that storing the node does fail, the repository will now have an orphaned node
         # directory which will have to be cleaned manually sometime.
-        self.repository.store()
+        self._repository.store()
 
         try:
             attributes = self._attrs_cache
@@ -993,7 +1083,7 @@ class Node(Entity):
             self._backend_entity.store(attributes, links, with_transaction=with_transaction)
         except Exception:
             # I put back the files in the sandbox folder since the transaction did not succeed
-            self.repository.restore()
+            self._repository.restore()
             raise
 
         self._attrs_cache = {}
@@ -1028,7 +1118,7 @@ class Node(Entity):
             if key != Sealable.SEALED_KEY:
                 self.set_attribute(key, value)
 
-        self.repository.folder.replace_with_folder(cache_node.repository.folder.abspath, move=False, overwrite=True)
+        self.put_object_from_tree(cache_node._repository._get_base_folder().abspath)  # pylint: disable=protected-access
 
         self._store(with_transaction=with_transaction)
         self._add_outputs_from_cache(cache_node)
@@ -1052,12 +1142,15 @@ class Node(Entity):
     def _get_objects_to_hash(self):
         """Return a list of objects which should be included in the hash."""
         objects = [
-            importlib.import_module(self.__module__.split('.', 1)[0]).__version__, {
+            importlib.import_module(self.__module__.split('.', 1)[0]).__version__,
+            {
                 key: val
                 for key, val in self.attributes_items()
                 if (key not in self._hash_ignored_attributes and
                     key not in getattr(self, '_updatable_attributes', tuple()))
-            }, self.repository.folder, self.computer.uuid if self.computer is not None else None
+            },
+            self._repository._get_base_folder(),  # pylint: disable=protected-access
+            self.computer.uuid if self.computer is not None else None
         ]
         return objects
 

@@ -13,8 +13,10 @@
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
+
 import copy
 import io
+import tempfile
 import unittest
 
 import six
@@ -30,7 +32,6 @@ from aiida.orm import ProcessNode
 from aiida.orm import CalculationNode
 from aiida.orm import WorkflowNode
 from aiida.orm.utils import load_node
-from aiida.orm.convert import get_orm_entity
 from aiida.common.utils import Capturing
 
 
@@ -128,25 +129,24 @@ class TestNodeHashing(AiidaTestCase):
     @staticmethod
     def create_folderdata_with_empty_file():
         from aiida.orm.nodes.data.folder import FolderData
-        res = FolderData()
-        with res.repository.folder.get_subfolder('path').open('name', 'w') as fhandle:
-            pass
-        return res
+        node = FolderData()
+        with tempfile.NamedTemporaryFile() as handle:
+            node.put_object_from_filelike(handle, 'path/name')
+        return node
 
     @staticmethod
     def create_folderdata_with_empty_folder():
         from aiida.orm.nodes.data.folder import FolderData
-        res = FolderData()
-        res.repository.folder.get_subfolder('path/name').create()
-        return res
+        dirpath = tempfile.mkdtemp()
+        node = FolderData()
+        node.put_object_from_tree(dirpath, 'path/name')
+        return node
 
     def test_folder_file_different(self):
         f1 = self.create_folderdata_with_empty_file()
         f2 = self.create_folderdata_with_empty_folder()
 
-        assert (
-                f1.repository.folder.get_subfolder('path').get_content_list() == f2.repository.folder.get_subfolder(
-            'path').get_content_list())
+        assert (f1.list_object_names('path') == f2.list_object_names('path'))
         assert f1.get_hash() != f2.get_hash()
 
     def test_folder_same(self):
@@ -604,51 +604,51 @@ class TestNodeBasic(AiidaTestCase):
 
         a = Data()
 
-        file_content = 'some text ABCDE'
-        file_content_different = 'other values 12345'
+        file_content = u'some text ABCDE'
+        file_content_different = u'other values 12345'
 
-        with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
-            tmpf.write(file_content)
-            tmpf.flush()
-            a.repository.add_path(tmpf.name, 'file1.txt')
-            a.repository.add_path(tmpf.name, 'file2.txt')
+        with tempfile.NamedTemporaryFile('w+') as handle:
+            handle.write(file_content)
+            handle.flush()
+            a.put_object_from_file(handle.name, 'file1.txt')
+            a.put_object_from_file(handle.name, 'file2.txt')
 
-        self.assertEquals(set(a.repository.get_folder_list()), set(['file1.txt', 'file2.txt']))
-        with io.open(a.repository.get_abs_path('file1.txt'), encoding='utf8') as fhandle:
+        self.assertEquals(set(a.list_object_names()), set(['file1.txt', 'file2.txt']))
+        with a.open('file1.txt') as fhandle:
             self.assertEquals(fhandle.read(), file_content)
-        with io.open(a.repository.get_abs_path('file2.txt'), encoding='utf8') as fhandle:
+        with a.open('file2.txt') as fhandle:
             self.assertEquals(fhandle.read(), file_content)
 
         b = a.clone()
         self.assertNotEquals(a.uuid, b.uuid)
 
         # Check that the content is there
-        self.assertEquals(set(b.repository.get_folder_list()), set(['file1.txt', 'file2.txt']))
-        with io.open(b.repository.get_abs_path('file1.txt'), encoding='utf8') as fhandle:
-            self.assertEquals(fhandle.read(), file_content)
-        with io.open(b.repository.get_abs_path('file2.txt'), encoding='utf8') as fhandle:
-            self.assertEquals(fhandle.read(), file_content)
+        self.assertEquals(set(b.list_object_names()), set(['file1.txt', 'file2.txt']))
+        with b.open('file1.txt') as handle:
+            self.assertEquals(handle.read(), file_content)
+        with b.open('file2.txt') as handle:
+            self.assertEquals(handle.read(), file_content)
 
         # I overwrite a file and create a new one in the clone only
-        with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
-            tmpf.write(file_content_different)
-            tmpf.flush()
-            b.repository.add_path(tmpf.name, 'file2.txt')
-            b.repository.add_path(tmpf.name, 'file3.txt')
+        with tempfile.NamedTemporaryFile(mode='w+') as handle:
+            handle.write(file_content_different)
+            handle.flush()
+            b.put_object_from_file(handle.name, 'file2.txt')
+            b.put_object_from_file(handle.name, 'file3.txt')
 
         # I check the new content, and that the old one has not changed
-        self.assertEquals(set(a.repository.get_folder_list()), set(['file1.txt', 'file2.txt']))
-        with io.open(a.repository.get_abs_path('file1.txt'), encoding='utf8') as fhandle:
-            self.assertEquals(fhandle.read(), file_content)
-        with io.open(a.repository.get_abs_path('file2.txt'), encoding='utf8') as fhandle:
-            self.assertEquals(fhandle.read(), file_content)
-        self.assertEquals(set(b.repository.get_folder_list()), set(['file1.txt', 'file2.txt', 'file3.txt']))
-        with io.open(b.repository.get_abs_path('file1.txt'), encoding='utf8') as fhandle:
-            self.assertEquals(fhandle.read(), file_content)
-        with io.open(b.repository.get_abs_path('file2.txt'), encoding='utf8') as fhandle:
-            self.assertEquals(fhandle.read(), file_content_different)
-        with io.open(b.repository.get_abs_path('file3.txt'), encoding='utf8') as fhandle:
-            self.assertEquals(fhandle.read(), file_content_different)
+        self.assertEquals(set(a.list_object_names()), set(['file1.txt', 'file2.txt']))
+        with a.open('file1.txt') as handle:
+            self.assertEquals(handle.read(), file_content)
+        with a.open('file2.txt') as handle:
+            self.assertEquals(handle.read(), file_content)
+        self.assertEquals(set(b.list_object_names()), set(['file1.txt', 'file2.txt', 'file3.txt']))
+        with b.open('file1.txt') as handle:
+            self.assertEquals(handle.read(), file_content)
+        with b.open('file2.txt') as handle:
+            self.assertEquals(handle.read(), file_content_different)
+        with b.open('file3.txt') as handle:
+            self.assertEquals(handle.read(), file_content_different)
 
         # This should in principle change the location of the files,
         # so I recheck
@@ -657,25 +657,25 @@ class TestNodeBasic(AiidaTestCase):
         # I now clone after storing
         c = a.clone()
         # I overwrite a file and create a new one in the clone only
-        with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
-            tmpf.write(file_content_different)
-            tmpf.flush()
-            c.repository.add_path(tmpf.name, 'file1.txt')
-            c.repository.add_path(tmpf.name, 'file4.txt')
+        with tempfile.NamedTemporaryFile(mode='w+') as handle:
+            handle.write(file_content_different)
+            handle.flush()
+            c.put_object_from_file(handle.name, 'file1.txt')
+            c.put_object_from_file(handle.name, 'file4.txt')
 
-        self.assertEquals(set(a.repository.get_folder_list()), set(['file1.txt', 'file2.txt']))
-        with io.open(a.repository.get_abs_path('file1.txt'), encoding='utf8') as fhandle:
-            self.assertEquals(fhandle.read(), file_content)
-        with io.open(a.repository.get_abs_path('file2.txt'), encoding='utf8') as fhandle:
-            self.assertEquals(fhandle.read(), file_content)
+        self.assertEquals(set(a.list_object_names()), set(['file1.txt', 'file2.txt']))
+        with a.open('file1.txt') as handle:
+            self.assertEquals(handle.read(), file_content)
+        with a.open('file2.txt') as handle:
+            self.assertEquals(handle.read(), file_content)
 
-        self.assertEquals(set(c.repository.get_folder_list()), set(['file1.txt', 'file2.txt', 'file4.txt']))
-        with io.open(c.repository.get_abs_path('file1.txt'), encoding='utf8') as fhandle:
-            self.assertEquals(fhandle.read(), file_content_different)
-        with io.open(c.repository.get_abs_path('file2.txt'), encoding='utf8') as fhandle:
-            self.assertEquals(fhandle.read(), file_content)
-        with io.open(c.repository.get_abs_path('file4.txt'), encoding='utf8') as fhandle:
-            self.assertEquals(fhandle.read(), file_content_different)
+        self.assertEquals(set(c.list_object_names()), set(['file1.txt', 'file2.txt', 'file4.txt']))
+        with c.open('file1.txt') as handle:
+            self.assertEquals(handle.read(), file_content_different)
+        with c.open('file2.txt') as handle:
+            self.assertEquals(handle.read(), file_content)
+        with c.open('file4.txt') as handle:
+            self.assertEquals(handle.read(), file_content_different)
 
     def test_folders(self):
         """
@@ -686,6 +686,7 @@ class TestNodeBasic(AiidaTestCase):
         import shutil
         import random
         import string
+        from six.moves import StringIO
 
         a = Data()
 
@@ -712,98 +713,91 @@ class TestNodeBasic(AiidaTestCase):
         os.mkdir(os.path.join(tree_1, 'dir1', 'dir2', 'dir3'))
 
         # add the tree to the node
-
-        a.repository.add_path(tree_1, 'tree_1')
+        a.put_object_from_tree(tree_1, 'tree_1')
 
         # verify if the node has the structure I expect
-        self.assertEquals(set(a.repository.get_folder_list()), set(['tree_1']))
-        self.assertEquals(set(a.repository.get_folder_list('tree_1')), set(['file1.txt', 'dir1']))
-        self.assertEquals(set(a.repository.get_folder_list(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
-        with io.open(a.repository.get_abs_path(os.path.join('tree_1', 'file1.txt')), encoding='utf8') as fhandle:
+        self.assertEquals(set(a.list_object_names()), set(['tree_1']))
+        self.assertEquals(set(a.list_object_names('tree_1')), set(['file1.txt', 'dir1']))
+        self.assertEquals(set(a.list_object_names(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
+        with a.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
             self.assertEquals(fhandle.read(), file_content)
-        with io.open(a.repository.get_abs_path(os.path.join('tree_1', 'dir1', 'file2.txt')), encoding='utf8') as fhandle:
+        with a.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
             self.assertEquals(fhandle.read(), file_content)
 
         # try to exit from the folder
         with self.assertRaises(ValueError):
-            a.repository.get_folder_list('..')
+            a.list_object_names('..')
 
         # clone into a new node
         b = a.clone()
         self.assertNotEquals(a.uuid, b.uuid)
 
         # Check that the content is there
-        self.assertEquals(set(b.repository.get_folder_list('.')), set(['tree_1']))
-        self.assertEquals(set(b.repository.get_folder_list('tree_1')), set(['file1.txt', 'dir1']))
-        self.assertEquals(set(b.repository.get_folder_list(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
-        with io.open(b.repository.get_abs_path(os.path.join('tree_1', 'file1.txt')), encoding='utf8') as fhandle:
+        self.assertEquals(set(b.list_object_names('.')), set(['tree_1']))
+        self.assertEquals(set(b.list_object_names('tree_1')), set(['file1.txt', 'dir1']))
+        self.assertEquals(set(b.list_object_names(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
+        with b.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
             self.assertEquals(fhandle.read(), file_content)
-        with io.open(b.repository.get_abs_path(os.path.join('tree_1', 'dir1', 'file2.txt')), encoding='utf8') as fhandle:
+        with b.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
             self.assertEquals(fhandle.read(), file_content)
 
         # I overwrite a file and create a new one in the copy only
         dir3 = os.path.join(directory, 'dir3')
         os.mkdir(dir3)
 
-        b.repository.add_path(dir3, os.path.join('tree_1', 'dir3'))
+        b.put_object_from_tree(dir3, os.path.join('tree_1', 'dir3'))
         # no absolute path here
         with self.assertRaises(ValueError):
-            b.repository.add_path('dir3', os.path.join('tree_1', 'dir3'))
+            b.put_object_from_tree('dir3', os.path.join('tree_1', 'dir3'))
 
-        with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
-            tmpf.write(file_content_different)
-            tmpf.flush()
-            b.repository.add_path(tmpf.name, 'file3.txt')
+        stream = StringIO(file_content_different)
+        b.put_object_from_filelike(stream, 'file3.txt')
 
-        # I check the new content, and that the old one has not changed
-        # old
-        self.assertEquals(set(a.repository.get_folder_list('.')), set(['tree_1']))
-        self.assertEquals(set(a.repository.get_folder_list('tree_1')), set(['file1.txt', 'dir1']))
-        self.assertEquals(set(a.repository.get_folder_list(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
-        with io.open(a.repository.get_abs_path(os.path.join('tree_1', 'file1.txt')), encoding='utf8') as fhandle:
+        # I check the new content, and that the old one has not changed old
+        self.assertEquals(set(a.list_object_names('.')), set(['tree_1']))
+        self.assertEquals(set(a.list_object_names('tree_1')), set(['file1.txt', 'dir1']))
+        self.assertEquals(set(a.list_object_names(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
+        with a.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
             self.assertEquals(fhandle.read(), file_content)
-        with io.open(a.repository.get_abs_path(os.path.join('tree_1', 'dir1', 'file2.txt')), encoding='utf8') as fhandle:
+        with a.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
             self.assertEquals(fhandle.read(), file_content)
         # new
-        self.assertEquals(set(b.repository.get_folder_list('.')), set(['tree_1', 'file3.txt']))
-        self.assertEquals(set(b.repository.get_folder_list('tree_1')), set(['file1.txt', 'dir1', 'dir3']))
-        self.assertEquals(set(b.repository.get_folder_list(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
-        with io.open(b.repository.get_abs_path(os.path.join('tree_1', 'file1.txt')), encoding='utf8') as fhandle:
+        self.assertEquals(set(b.list_object_names('.')), set(['tree_1', 'file3.txt']))
+        self.assertEquals(set(b.list_object_names('tree_1')), set(['file1.txt', 'dir1', 'dir3']))
+        self.assertEquals(set(b.list_object_names(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
+        with b.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
             self.assertEquals(fhandle.read(), file_content)
-        with io.open(b.repository.get_abs_path(os.path.join('tree_1', 'dir1', 'file2.txt')), encoding='utf8') as fhandle:
+        with b.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
             self.assertEquals(fhandle.read(), file_content)
 
-        # This should in principle change the location of the files,
-        # so I recheck
+        # This should in principle change the location of the files, so I recheck
         a.store()
 
         # I now copy after storing
         c = a.clone()
         # I overwrite a file, create a new one and remove a directory
         # in the copy only
-        with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
-            tmpf.write(file_content_different)
-            tmpf.flush()
-            c.repository.add_path(tmpf.name, os.path.join('tree_1', 'file1.txt'))
-            c.repository.add_path(tmpf.name, os.path.join('tree_1', 'dir1', 'file4.txt'))
-        c.repository.remove_path(os.path.join('tree_1', 'dir1', 'dir2'))
+        stream = StringIO(file_content_different)
+        c.put_object_from_filelike(stream, os.path.join('tree_1', 'file1.txt'))
+        c.put_object_from_filelike(stream, os.path.join('tree_1', 'dir1', 'file4.txt'))
+        c.delete_object(os.path.join('tree_1', 'dir1', 'dir2'))
 
         # check old
-        self.assertEquals(set(a.repository.get_folder_list('.')), set(['tree_1']))
-        self.assertEquals(set(a.repository.get_folder_list('tree_1')), set(['file1.txt', 'dir1']))
-        self.assertEquals(set(a.repository.get_folder_list(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
-        with io.open(a.repository.get_abs_path(os.path.join('tree_1', 'file1.txt')), encoding='utf8') as fhandle:
+        self.assertEquals(set(a.list_object_names('.')), set(['tree_1']))
+        self.assertEquals(set(a.list_object_names('tree_1')), set(['file1.txt', 'dir1']))
+        self.assertEquals(set(a.list_object_names(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
+        with a.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
             self.assertEquals(fhandle.read(), file_content)
-        with io.open(a.repository.get_abs_path(os.path.join('tree_1', 'dir1', 'file2.txt')), encoding='utf8') as fhandle:
+        with a.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
             self.assertEquals(fhandle.read(), file_content)
 
         # check new
-        self.assertEquals(set(c.repository.get_folder_list('.')), set(['tree_1']))
-        self.assertEquals(set(c.repository.get_folder_list('tree_1')), set(['file1.txt', 'dir1']))
-        self.assertEquals(set(c.repository.get_folder_list(os.path.join('tree_1', 'dir1'))), set(['file2.txt', 'file4.txt']))
-        with io.open(c.repository.get_abs_path(os.path.join('tree_1', 'file1.txt'))) as fhandle:
+        self.assertEquals(set(c.list_object_names('.')), set(['tree_1']))
+        self.assertEquals(set(c.list_object_names('tree_1')), set(['file1.txt', 'dir1']))
+        self.assertEquals(set(c.list_object_names(os.path.join('tree_1', 'dir1'))), set(['file2.txt', 'file4.txt']))
+        with c.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
             self.assertEquals(fhandle.read(), file_content_different)
-        with io.open(c.repository.get_abs_path(os.path.join('tree_1', 'dir1', 'file2.txt')), encoding='utf8') as fhandle:
+        with c.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
             self.assertEquals(fhandle.read(), file_content)
 
         # garbage cleaning
@@ -1740,7 +1734,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # I create some objects
         d1 = Data().store()
         with tempfile.NamedTemporaryFile('w+') as tmpf:
-            d2 = SinglefileData(file=tmpf.name).store()
+            d2 = SinglefileData(filepath=tmpf.name).store()
 
         unsavedcomputer = orm.Computer(name='localhost2', hostname='localhost', scheduler_type='direct', transport_type='local')
 

@@ -244,8 +244,6 @@ Folder management
 =================
 ``Folder`` objects represent directories on the disk (virtual or not) where extra information for the node are stored. These folders can be temporary or permanent.
 
-- :py:meth:`~aiida.orm.nodes.Node.repository` returns the repository instance associated to the ``node``.
-
 
 Store & deletion
 ================

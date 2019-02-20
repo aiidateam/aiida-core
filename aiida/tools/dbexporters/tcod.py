@@ -419,7 +419,6 @@ def _inline_to_standalone_script(calc):
 
     function_name = calc.function_name
     function_namespace = calc.function_namespace
-    function_source_file = calc.function_source_file
 
     if function_name is None:
         function_name = 'f'
@@ -427,8 +426,7 @@ def _inline_to_standalone_script(calc):
     if function_namespace is None:
         function_namespace = '__main__'
 
-    with open(function_source_file) as handle:
-        code_string = handle.read().encode('utf-8')
+    code_string = calc.get_function_source_code()
 
     if function_namespace.startswith('aiida.'):
         code_string = "from {} import {}".format(function_namespace, function_name)
@@ -467,9 +465,9 @@ def _collect_calculation_data(calc):
     }
 
     if isinstance(calc, CalcJobNode):
-        retrieved_abspath = calc.get_retrieved_node().repository.folder.abspath
+        retrieved_abspath = calc.get_retrieved_node()._repository._get_base_folder().abspath
         files_in  = _collect_files(calc._raw_input_folder.abspath)
-        files_out = _collect_files(os.path.join(retrieved_abspath, 'path'))
+        files_out = _collect_files(retrieved_abspath)
         this_calc['env'] = calc.get_option('environment_variables')
         stdout_name = '{}.out'.format(aiida_executable_name)
         while stdout_name in [files_in,files_out]:

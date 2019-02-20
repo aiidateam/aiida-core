@@ -112,11 +112,11 @@ class TestDuplicateNodeUuidMigration(TestMigrations):
             self.n_int_duplicates = 4
 
             node_bool = Bool(True)
-            node_bool.repository.add_path(handle.name, self.file_name)
+            node_bool.put_object_from_file(handle.name, self.file_name)
             node_bool.store()
 
             node_int = Int(1)
-            node_int.repository.add_path(handle.name, self.file_name)
+            node_int.put_object_from_file(handle.name, self.file_name)
             node_int.store()
 
             self.nodes_boolean.append(node_bool)
@@ -125,14 +125,14 @@ class TestDuplicateNodeUuidMigration(TestMigrations):
             for i in range(self.n_bool_duplicates):
                 node = Bool(True)
                 node.backend_entity.dbmodel.uuid = node_bool.uuid
-                node.repository.add_path(handle.name, self.file_name)
+                node.put_object_from_file(handle.name, self.file_name)
                 node.store()
                 self.nodes_boolean.append(node)
 
             for i in range(self.n_int_duplicates):
                 node = Int(1)
                 node.backend_entity.dbmodel.uuid = node_int.uuid
-                node.repository.add_path(handle.name, self.file_name)
+                node.put_object_from_file(handle.name, self.file_name)
                 node.store()
                 self.nodes_integer.append(node)
 
@@ -161,7 +161,7 @@ class TestDuplicateNodeUuidMigration(TestMigrations):
         self.assertEqual(len(set(uuids_integer)), len(nodes_integer))
 
         for node in nodes_boolean:
-            with node.repository._get_folder_pathsubfolder.open(self.file_name) as handle:
+            with node.open(self.file_name) as handle:
                 content = handle.read()
                 self.assertEqual(content, self.file_content)
 

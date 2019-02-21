@@ -637,9 +637,9 @@ class NodeTranslator(BaseTranslator):
             qb.limit(tree_out_limit)
 
         output_node_pks = {}
-        sent_no_of_outcomings = qb.count()
+        sent_no_of_outgoings = qb.count()
 
-        if sent_no_of_outcomings > 0:
+        if sent_no_of_outgoings > 0:
             for output in qb.iterdict():
                 node = output['out']['*']
                 pk = node.pk
@@ -695,4 +695,4 @@ class NodeTranslator(BaseTranslator):
 
         return {"nodes": nodes, "edges": edges, "total_no_of_incomings": total_no_of_incomings,
                 "total_no_of_outgoings": total_no_of_outgoings, "sent_no_of_incomings": sent_no_of_incomings,
-                "sent_no_of_outcomings": sent_no_of_outcomings}
+                "sent_no_of_outgoings": sent_no_of_outgoings}

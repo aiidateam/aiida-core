@@ -11,11 +11,12 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import click
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.params.types import IdentifierParamType, NodeParamType
-from aiida.orm.node.data.base import Bool, Float, Int
+from aiida.orm import Bool, Float, Int
 
 
 class TestIdentifierParamType(AiidaTestCase):

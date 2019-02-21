@@ -114,27 +114,27 @@ AiiDA object(s) you want to request. The following resources are available:
 +--------------------------------------------------------------------------------------------+-------------------+
 | Class                                                                                      | Resource          |
 +============================================================================================+===================+
-| :py:class:`ProcessNode <aiida.orm.node.process.ProcessNode>`                               | ``/calculations`` |
+| :py:class:`ProcessNode <aiida.orm.nodes.process.ProcessNode>`                              | ``/calculations`` |
 +--------------------------------------------------------------------------------------------+-------------------+
 | :py:class:`Computer <aiida.orm.Computer>`                                                  | ``/computers``    |
 +--------------------------------------------------------------------------------------------+-------------------+
-| :py:class:`Data <aiida.orm.node.data.Data>`                                                | ``/data``         |
+| :py:class:`Data <aiida.orm.nodes.data.data.Data>`                                          | ``/data``         |
 +--------------------------------------------------------------------------------------------+-------------------+
 | :py:class:`Group <aiida.orm.groups.Group>`                                                 | ``/groups``       |
 +--------------------------------------------------------------------------------------------+-------------------+
-| :py:class:`Node <aiida.orm.implementation.general.node.AbstractNode>`                      | ``/nodes``        |
+| :py:class:`Node <aiida.orm.nodes.Node>`                                                    | ``/nodes``        |
 +--------------------------------------------------------------------------------------------+-------------------+
 | :py:class:`User <aiida.orm.User>`                                                          | ``/users``        |
 +--------------------------------------------------------------------------------------------+-------------------+
-| :py:class:`BandsData <aiida.orm.node.data.array.bands.BandsData>`                          | ``/bands``        |
+| :py:class:`BandsData <aiida.orm.nodes.data.array.bands.BandsData>`                         | ``/bands``        |
 +--------------------------------------------------------------------------------------------+-------------------+
-| :py:class:`CifData <aiida.orm.node.data.cif.CifData>`                                      | ``/cifs``         |
+| :py:class:`CifData <aiida.orm.nodes.data.cif.CifData>`                                     | ``/cifs``         |
 +--------------------------------------------------------------------------------------------+-------------------+
-| :py:class:`KpointsData <aiida.orm.node.data.array.kpoints.KpointsData>`                    | ``/kpoints``      |
+| :py:class:`KpointsData <aiida.orm.nodes.data.array.kpoints.KpointsData>`                   | ``/kpoints``      |
 +--------------------------------------------------------------------------------------------+-------------------+
-| :py:class:`StructureData <aiida.orm.node.data.structure.StructureData>`                    | ``/structures``   |
+| :py:class:`StructureData <aiida.orm.nodes.data.structure.StructureData>`                   | ``/structures``   |
 +--------------------------------------------------------------------------------------------+-------------------+
-| :py:class:`UpfData <aiida.orm.node.data.upf.UpfData>`                                      | ``/upfs``         |
+| :py:class:`UpfData <aiida.orm.nodes.data.upf.UpfData>`                                     | ``/upfs``         |
 +--------------------------------------------------------------------------------------------+-------------------+
 
 For a **full list** of available endpoints for each resource, simply query the base URL of the REST API.

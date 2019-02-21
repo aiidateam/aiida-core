@@ -176,7 +176,7 @@ class NodeTranslator(BaseTranslator):
         # Add input/output relation to the query help
         if self._result_type != self.__label__:
             self._query_help["path"].append({
-                "type": ("node.Node.", "node.data.Data."),
+                "type": ("node.Node.", "data.Data."),
                 "tag": self._result_type,
                 self._result_type: self.__label__
             })
@@ -237,7 +237,7 @@ class NodeTranslator(BaseTranslator):
         if self._content_type is not None:
             # Use '*' so that the object itself will be returned.
             # In get_results() we access attributes/extras by
-            # calling the get_attrs()/get_extras().
+            # calling the attributes/extras.
             projections = ['*']
         else:
             pass  # i.e. use the input parameter projection
@@ -274,20 +274,20 @@ class NodeTranslator(BaseTranslator):
         if self._content_type == "attributes":
             # Get all attrs if nalist and alist are both None
             if self._alist is None and self._nalist is None:
-                data = {self._content_type: node.get_attrs()}
+                data = {self._content_type: node.attributes}
             # Get all attrs except those contained in nalist
             elif self._alist is None and self._nalist is not None:
                 attrs = {}
-                for key in node.get_attrs().keys():
+                for key in node.attributes.keys():
                     if key not in self._nalist:
-                        attrs[key] = node.get_attr(key)
+                        attrs[key] = node.get_attribute(key)
                 data = {self._content_type: attrs}
             # Get all attrs contained in alist
             elif self._alist is not None and self._nalist is None:
                 attrs = {}
-                for key in node.get_attrs().keys():
+                for key in node.attributes.keys():
                     if key in self._alist:
-                        attrs[key] = node.get_attr(key)
+                        attrs[key] = node.get_attribute(key)
                 data = {self._content_type: attrs}
             else:
                 raise RestValidationError("you cannot specify both alist and nalist")
@@ -296,12 +296,12 @@ class NodeTranslator(BaseTranslator):
 
             # Get all extras if nelist and elist are both None
             if self._elist is None and self._nelist is None:
-                data = {self._content_type: node.get_extras()}
+                data = {self._content_type: node.extras}
 
             # Get all extras except those contained in nelist
             elif self._elist is None and self._nelist is not None:
                 extras = {}
-                for key in node.get_extras().keys():
+                for key in node.extras.keys():
                     if key not in self._nelist:
                         extras[key] = node.get_extra(key)
                 data = {self._content_type: extras}
@@ -309,7 +309,7 @@ class NodeTranslator(BaseTranslator):
             # Get all extras contained in elist
             elif self._elist is not None and self._nelist is None:
                 extras = {}
-                for key in node.get_extras().keys():
+                for key in node.extras.keys():
                     if key in self._elist:
                         extras[key] = node.get_extra(key)
                 data = {self._content_type: extras}
@@ -550,7 +550,7 @@ class NodeTranslator(BaseTranslator):
         """
 
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm.node import Node
+        from aiida.orm import Node
 
         def get_node_shape(ntype):
             """
@@ -587,7 +587,7 @@ class NodeTranslator(BaseTranslator):
             uuid = main_node.uuid
             nodetype = main_node.type
             display_type = nodetype.split('.')[-2]
-            description = main_node.get_desc()
+            description = main_node.get_description()
             if description == '':
                 description = main_node.type.split('.')[-2]
 
@@ -616,7 +616,7 @@ class NodeTranslator(BaseTranslator):
                 uuid = node.uuid
                 nodetype = node.type
                 display_type = nodetype.split('.')[-2]
-                description = node.get_desc()
+                description = node.get_description()
                 if description == '':
                     description = node.type.split('.')[-2]
 
@@ -654,7 +654,7 @@ class NodeTranslator(BaseTranslator):
                 uuid = node.uuid
                 nodetype = node.type
                 display_type = nodetype.split('.')[-2]
-                description = node.get_desc()
+                description = node.get_description()
                 if description == '':
                     description = node.type.split('.')[-2]
 

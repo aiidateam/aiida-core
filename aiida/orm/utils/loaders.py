@@ -298,7 +298,7 @@ class ProcessEntityLoader(OrmEntityLoader):
 
         :returns: the orm base class
         """
-        from aiida.orm.node import ProcessNode
+        from aiida.orm import ProcessNode
         return ProcessNode
 
     @classmethod
@@ -330,7 +330,7 @@ class CalculationEntityLoader(OrmEntityLoader):
 
         :returns: the orm base class
         """
-        from aiida.orm.node import CalculationNode
+        from aiida.orm import CalculationNode
         return CalculationNode
 
     @classmethod
@@ -362,7 +362,7 @@ class WorkflowEntityLoader(OrmEntityLoader):
 
         :returns: the orm base class
         """
-        from aiida.orm.node import WorkflowNode
+        from aiida.orm import WorkflowNode
         return WorkflowNode
 
     @classmethod
@@ -394,7 +394,7 @@ class CodeEntityLoader(OrmEntityLoader):
 
         :returns: the orm base class
         """
-        from aiida.orm.node.data.code import Code
+        from aiida.orm.nodes.data.code import Code
         return Code
 
     @classmethod
@@ -468,7 +468,7 @@ class DataEntityLoader(OrmEntityLoader):
 
         :returns: the orm base class
         """
-        from aiida.orm.node.data import Data
+        from aiida.orm.nodes.data import Data
         return Data
 
     @classmethod
@@ -532,7 +532,7 @@ class NodeEntityLoader(OrmEntityLoader):
 
         :returns: the orm base class
         """
-        from aiida.orm.node import Node
+        from aiida.orm import Node
         return Node
 
     @classmethod

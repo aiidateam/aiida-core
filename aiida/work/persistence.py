@@ -17,7 +17,7 @@ import traceback
 
 import plumpy
 
-from aiida.common import serialize
+from aiida.orm.utils import serialize
 
 __all__ = 'AiiDAPersister', 'ObjectLoader', 'get_object_loader'
 

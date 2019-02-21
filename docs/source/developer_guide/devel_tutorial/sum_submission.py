@@ -15,9 +15,9 @@ from __future__ import print_function
 import os
 import sys
 
-from aiida.orm import DataFactory
 from aiida.orm.computers import Computer
 from aiida.orm.implementation.sqlalchemy.code import Code
+from aiida.plugins import DataFactory
 
 ParameterData = DataFactory('parameter')
 
@@ -51,7 +51,7 @@ calc = code.new_calc()
 calc.label = "Test sum"
 calc.description = "Test calculation with the sum code"
 calc.set_option('max_wallclock_seconds', 30*60) # 30 min
-calc.set_computer(computer)
+calc.computer = computer
 calc.set_option('withmpi', False)
 calc.set_option('resources', {"num_machines": 1})
 

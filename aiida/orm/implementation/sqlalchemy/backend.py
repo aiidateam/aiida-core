@@ -7,22 +7,26 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""SqlAlchemy implementation of `aiida.orm.implementation.backends.Backend`."""
+from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from __future__ import absolute_import
 
 from contextlib import contextmanager
 
-from aiida.orm.implementation.sql import SqlBackend
 from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models import base
 from aiida.backends.sqlalchemy.queries import SqlaQueryManager
-from . import authinfo
+from aiida.backends.sqlalchemy.utils import migrate_database
+
+from ..sql import SqlBackend
+from . import authinfos
 from . import comments
-from . import computer
+from . import computers
 from . import convert
 from . import groups
 from . import logs
+from . import nodes
 from . import querybuilder
 from . import users
 
@@ -30,18 +34,21 @@ __all__ = ('SqlaBackend',)
 
 
 class SqlaBackend(SqlBackend[base.Base]):
+    """SqlAlchemy implementation of `aiida.orm.implementation.backends.Backend`."""
 
     def __init__(self):
-        self._authinfos = authinfo.SqlaAuthInfoCollection(self)
+        """Construct the backend instance by initializing all the collections."""
+        self._authinfos = authinfos.SqlaAuthInfoCollection(self)
         self._comments = comments.SqlaCommentCollection(self)
-        self._computers = computer.SqlaComputerCollection(self)
+        self._computers = computers.SqlaComputerCollection(self)
         self._groups = groups.SqlaGroupCollection(self)
         self._logs = logs.SqlaLogCollection(self)
+        self._nodes = nodes.SqlaNodeCollection(self)
         self._query_manager = SqlaQueryManager(self)
         self._users = users.SqlaUserCollection(self)
 
-    def migrate(self):
-        from aiida.backends.sqlalchemy.utils import migrate_database
+    @staticmethod
+    def migrate():
         migrate_database()
 
     @property
@@ -65,6 +72,10 @@ class SqlaBackend(SqlBackend[base.Base]):
         return self._logs
 
     @property
+    def nodes(self):
+        return self._nodes
+
+    @property
     def query_manager(self):
         return self._query_manager
 
@@ -75,42 +86,10 @@ class SqlaBackend(SqlBackend[base.Base]):
     def users(self):
         return self._users
 
-    def get_backend_entity(self, model):
-        return convert.get_backend_entity(model, self)
-
-    def get_connection(self):
-        """
-        Get the SQLA database connection
-
-        :return: the SQLA database connection
-        """
-        from aiida.backends import sqlalchemy as sa
-
-        return sa.engine.raw_connection()
-
-    def execute_raw(self, query):
-        """Execute a raw SQL statement and return the result.
-
-        :param query: a string containing a raw SQL statement
-        :return: the result of the query
-        """
-        from aiida.backends.sqlalchemy import get_scoped_session
-
-        session = get_scoped_session()
-        result = session.execute(query)
-        return result.fetchall()
-
+    @staticmethod
     @contextmanager
-    def cursor(self):
-        from aiida.backends import sqlalchemy as sa
-        try:
-            connection = sa.engine.raw_connection()
-            yield connection.cursor()
-        finally:
-            self.get_connection().close()
-
-    @contextmanager
-    def transaction(self):
+    def transaction():
+        """Open a transaction to be used as a context manager."""
         session = get_scoped_session()
         nested = session.transaction.nested
         try:
@@ -124,3 +103,44 @@ class SqlaBackend(SqlBackend[base.Base]):
             if not nested:
                 # Make sure to commit the outermost session
                 session.commit()
+
+    # Below are abstract methods inherited from `aiida.orm.implementation.sql.backends.SqlBackend`
+
+    def get_backend_entity(self, model):
+        """Return a `BackendEntity` instance from a `DbModel` instance."""
+        return convert.get_backend_entity(model, self)
+
+    @contextmanager
+    def cursor(self):
+        """Return a psycopg cursor to be used in a context manager.
+
+        :return: a psycopg cursor
+        :rtype: :class:`psycopg2.extensions.cursor`
+        """
+        from aiida.backends import sqlalchemy as sa
+        try:
+            connection = sa.engine.raw_connection()
+            yield connection.cursor()
+        finally:
+            self.get_connection().close()
+
+    @staticmethod
+    def execute_raw(query):
+        """Execute a raw SQL statement and return the result.
+
+        :param query: a string containing a raw SQL statement
+        :return: the result of the query
+        """
+        session = get_scoped_session()
+        result = session.execute(query)
+        return result.fetchall()
+
+    @staticmethod
+    def get_connection():
+        """
+        Get the SQLA database connection
+
+        :return: the SQLA database connection
+        """
+        from aiida.backends import sqlalchemy as sa
+        return sa.engine.raw_connection()

@@ -16,9 +16,11 @@ import logging
 import os
 import six
 
-from aiida import transport, scheduler
+from aiida import transports, schedulers
 from aiida.common import exceptions
 from aiida.manage import get_manager
+from aiida.plugins import SchedulerFactory, TransportFactory
+
 from . import entities
 from . import users
 
@@ -60,107 +62,6 @@ class Computer(entities.Entity):
         def delete(self, id):  # pylint: disable=redefined-builtin, invalid-name
             """Delete the computer with the given id"""
             return self._backend.computers.delete(id)
-
-    @staticmethod
-    def get_schema():
-        """
-        Every node property contains:
-            - display_name: display name of the property
-            - help text: short help text of the property
-            - is_foreign_key: is the property foreign key to other type of the node
-            - type: type of the property. e.g. str, dict, int
-
-        :return: get schema of the computer
-        """
-        return {
-            "description": {
-                "display_name": "Description",
-                "help_text": "short description of the Computer",
-                "is_foreign_key": False,
-                "type": "str"
-            },
-            "enabled": {
-                "display_name": "Enabled",
-                "help_text": "True(False) if the computer is(not) enabled to run jobs",
-                "is_foreign_key": False,
-                "type": "bool"
-            },
-            "hostname": {
-                "display_name": "Host",
-                "help_text": "Name of the host",
-                "is_foreign_key": False,
-                "type": "str"
-            },
-            "id": {
-                "display_name": "Id",
-                "help_text": "Id of the object",
-                "is_foreign_key": False,
-                "type": "int"
-            },
-            "name": {
-                "display_name": "Name",
-                "help_text": "Name of the object",
-                "is_foreign_key": False,
-                "type": "str"
-            },
-            "scheduler_type": {
-                "display_name": "Scheduler",
-                "help_text": "Scheduler type",
-                "is_foreign_key": False,
-                "type": "str",
-                "valid_choices": {
-                    "direct": {
-                        "doc": "Support for the direct execution bypassing schedulers."
-                    },
-                    "pbsbaseclasses.PbsBaseClass": {
-                        "doc": "Base class with support for the PBSPro scheduler"
-                    },
-                    "pbspro": {
-                        "doc": "Subclass to support the PBSPro scheduler"
-                    },
-                    "sge": {
-                        "doc":
-                        "Support for the Sun Grid Engine scheduler and its variants/forks (Son of Grid Engine, "
-                        "Oracle Grid Engine, ...)"
-                    },
-                    "slurm": {
-                        "doc": "Support for the SLURM scheduler (http://slurm.schedmd.com/)."
-                    },
-                    "torque": {
-                        "doc": "Subclass to support the Torque scheduler.."
-                    }
-                }
-            },
-            "transport_params": {
-                "display_name": "",
-                "help_text": "Transport Parameters",
-                "is_foreign_key": False,
-                "type": "str"
-            },
-            "transport_type": {
-                "display_name": "Transport type",
-                "help_text": "Transport Type",
-                "is_foreign_key": False,
-                "type": "str",
-                "valid_choices": {
-                    "local": {
-                        "doc":
-                        "Support copy and command execution on the same host on which AiiDA is running via direct file "
-                        "copy and execution commands."
-                    },
-                    "ssh": {
-                        "doc":
-                        "Support connection, command execution and data transfer to remote computers via SSH+SFTP."
-                    }
-                }
-            },
-            "uuid": {
-                "display_name": "Unique ID",
-                "help_text": "Universally Unique Identifier",
-                "is_foreign_key": False,
-                "type": "unicode"
-            }
-        }
 
     def __init__(self,
                  name,
@@ -278,7 +179,7 @@ class Computer(entities.Entity):
         """
         Validates the transport string.
         """
-        if transport_type not in transport.Transport.get_valid_transports():
+        if transport_type not in transports.Transport.get_valid_transports():
             raise exceptions.ValidationError("The specified transport is not a valid one")
 
     @classmethod
@@ -286,7 +187,7 @@ class Computer(entities.Entity):
         """
         Validates the transport string.
         """
-        if scheduler_type not in scheduler.Scheduler.get_valid_schedulers():
+        if scheduler_type not in schedulers.Scheduler.get_valid_schedulers():
             raise exceptions.ValidationError("The specified scheduler is not a valid one")
 
     @classmethod
@@ -576,12 +477,12 @@ class Computer(entities.Entity):
         Return a Transport class, configured with all correct parameters.
         The Transport is closed (meaning that if you want to run any operation with
         it, you have to open it first (i.e., e.g. for a SSH transport, you have
-        to open a connection). To do this you can call ``transport.open()``, or simply
+        to open a connection). To do this you can call ``transports.open()``, or simply
         run within a ``with`` statement::
 
            transport = Computer.get_transport()
            with transport:
-               print(transport.whoami())
+               print(transports.whoami())
 
         :param user: if None, try to obtain a transport for the default user.
             Otherwise, pass a valid User.
@@ -758,7 +659,7 @@ class Computer(entities.Entity):
         """
         try:
             # I return the class, not an instance
-            return transport.TransportFactory(self.get_transport_type())
+            return TransportFactory(self.get_transport_type())
         except exceptions.MissingPluginError as exc:
             raise exceptions.ConfigurationError('No transport found for {} [type {}], message: {}'.format(
                 self.name, self.get_transport_type(), exc))
@@ -768,10 +669,10 @@ class Computer(entities.Entity):
         Get a scheduler instance for this computer
 
         :return: the scheduler instance
-        :rtype: :class:`aiida.scheduler.Scheduler`
+        :rtype: :class:`aiida.schedulers.Scheduler`
         """
         try:
-            scheduler_class = scheduler.SchedulerFactory(self.get_scheduler_type())
+            scheduler_class = SchedulerFactory(self.get_scheduler_type())
             # I call the init without any parameter
             return scheduler_class()
         except exceptions.MissingPluginError as exc:
@@ -831,3 +732,104 @@ class Computer(entities.Entity):
             pass
 
         return config
+
+    @staticmethod
+    def get_schema():
+        """
+        Every node property contains:
+            - display_name: display name of the property
+            - help text: short help text of the property
+            - is_foreign_key: is the property foreign key to other type of the node
+            - type: type of the property. e.g. str, dict, int
+
+        :return: get schema of the computer
+        """
+        return {
+            "description": {
+                "display_name": "Description",
+                "help_text": "short description of the Computer",
+                "is_foreign_key": False,
+                "type": "str"
+            },
+            "enabled": {
+                "display_name": "Enabled",
+                "help_text": "True(False) if the computer is(not) enabled to run jobs",
+                "is_foreign_key": False,
+                "type": "bool"
+            },
+            "hostname": {
+                "display_name": "Host",
+                "help_text": "Name of the host",
+                "is_foreign_key": False,
+                "type": "str"
+            },
+            "id": {
+                "display_name": "Id",
+                "help_text": "Id of the object",
+                "is_foreign_key": False,
+                "type": "int"
+            },
+            "name": {
+                "display_name": "Name",
+                "help_text": "Name of the object",
+                "is_foreign_key": False,
+                "type": "str"
+            },
+            "scheduler_type": {
+                "display_name": "Scheduler",
+                "help_text": "Scheduler type",
+                "is_foreign_key": False,
+                "type": "str",
+                "valid_choices": {
+                    "direct": {
+                        "doc": "Support for the direct execution bypassing schedulers."
+                    },
+                    "pbsbaseclasses.PbsBaseClass": {
+                        "doc": "Base class with support for the PBSPro scheduler"
+                    },
+                    "pbspro": {
+                        "doc": "Subclass to support the PBSPro scheduler"
+                    },
+                    "sge": {
+                        "doc":
+                        "Support for the Sun Grid Engine scheduler and its variants/forks (Son of Grid Engine, "
+                        "Oracle Grid Engine, ...)"
+                    },
+                    "slurm": {
+                        "doc": "Support for the SLURM scheduler (http://slurm.schedmd.com/)."
+                    },
+                    "torque": {
+                        "doc": "Subclass to support the Torque scheduler."
+                    }
+                }
+            },
+            "transport_params": {
+                "display_name": "",
+                "help_text": "Transport Parameters",
+                "is_foreign_key": False,
+                "type": "str"
+            },
+            "transport_type": {
+                "display_name": "Transport type",
+                "help_text": "Transport Type",
+                "is_foreign_key": False,
+                "type": "str",
+                "valid_choices": {
+                    "local": {
+                        "doc":
+                        "Support copy and command execution on the same host on which AiiDA is running via direct file "
+                        "copy and execution commands."
+                    },
+                    "ssh": {
+                        "doc":
+                        "Support connection, command execution and data transfer to remote computers via SSH+SFTP."
+                    }
+                }
+            },
+            "uuid": {
+                "display_name": "Unique ID",
+                "help_text": "Universally Unique Identifier",
+                "is_foreign_key": False,
+                "type": "unicode"
+            }
+        }

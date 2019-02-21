@@ -19,9 +19,33 @@ from six.moves import zip
 import numpy as np
 
 from aiida.common.constants import elements
-from aiida.orm.node.data.structure import Kind, Site, StructureData
+from aiida.orm.nodes.data.structure import Kind, Site, StructureData
+from aiida.work import calcfunction
 
 __all__ = ['structure_to_spglib_tuple', 'spglib_tuple_to_structure']
+
+
+@calcfunction
+def _get_cif_ase_inline(struct, parameters):
+    """
+    Creates :py:class:`aiida.orm.nodes.data.cif.CifData` using ASE.
+
+    .. note:: requires ASE module.
+    """
+    from aiida.orm.nodes.data.cif import CifData
+
+    kwargs = {}
+    if parameters is not None:
+        kwargs = parameters.get_dict()
+    cif = CifData(ase=struct.get_ase(**kwargs))
+    formula = struct.get_formula(mode='hill', separator=' ')
+    for i in cif.values.keys():
+        cif.values[i]['_symmetry_space_group_name_H-M'] = 'P 1'
+        cif.values[i]['_symmetry_space_group_name_Hall'] = 'P 1'
+        cif.values[i]['_symmetry_Int_Tables_number'] = 1
+        cif.values[i]['_cell_formula_units_Z'] = 1
+        cif.values[i]['_chemical_formula_sum'] = formula
+    return {'cif': cif}
 
 
 def structure_to_spglib_tuple(structure):

@@ -19,10 +19,8 @@ What functionality should go directly in the ORM class in `aiida.orm` and what i
 .. note:: Modules in this sub package may require the database environment to be loaded
 
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
-from aiida.tools.dbimporters import DbImporter, DbImporterFactory
-from aiida.tools.data.array.kpoints import get_kpoints_path, get_explicit_kpoints_path
-from aiida.tools.data.structure import structure_to_spglib_tuple, spglib_tuple_to_structure
+from .data.array.kpoints import get_explicit_kpoints_path, get_kpoints_path
+from .data.structure import structure_to_spglib_tuple, spglib_tuple_to_structure
+
+__all__ = ('get_explicit_kpoints_path', 'get_kpoints_path', 'structure_to_spglib_tuple', 'spglib_tuple_to_structure')

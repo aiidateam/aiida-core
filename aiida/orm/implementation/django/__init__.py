@@ -7,9 +7,3 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
-from .groups import *
-from .users import *
-
-__all__ = (groups.__all__ +
-           users.__all__)

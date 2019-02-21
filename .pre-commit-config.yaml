@@ -30,11 +30,11 @@
         aiida/backends/djsite/db/migrations/0017_drop_dbcalcstate.py|
         aiida/backends/djsite/db/migrations/__init__.py|
         aiida/backends/djsite/db/models.py|
-        aiida/backends/djsite/db/subtests/migrations.py|
-        aiida/backends/djsite/db/subtests/generic.py|
+        aiida/backends/djsite/db/subtests/test_migrations.py|
+        aiida/backends/djsite/db/subtests/test_generic.py|
         aiida/backends/djsite/db/subtests/__init__.py|
-        aiida/backends/djsite/db/subtests/nodes.py|
-        aiida/backends/djsite/db/subtests/query.py|
+        aiida/backends/djsite/db/subtests/test_nodes.py|
+        aiida/backends/djsite/db/subtests/test_query.py|
         aiida/backends/djsite/globalsettings.py|
         aiida/backends/djsite/__init__.py|
         aiida/backends/djsite/manage.py|
@@ -76,21 +76,21 @@
         aiida/backends/sqlalchemy/models/utils.py|
         aiida/backends/sqlalchemy/models/workflow.py|
         aiida/backends/sqlalchemy/queries.py|
-        aiida/backends/sqlalchemy/tests/generic.py|
+        aiida/backends/sqlalchemy/tests/test_generic.py|
         aiida/backends/sqlalchemy/tests/__init__.py|
-        aiida/backends/sqlalchemy/tests/nodes.py|
-        aiida/backends/sqlalchemy/tests/query.py|
-        aiida/backends/sqlalchemy/tests/schema.py|
-        aiida/backends/sqlalchemy/tests/session.py|
+        aiida/backends/sqlalchemy/tests/test_nodes.py|
+        aiida/backends/sqlalchemy/tests/test_query.py|
+        aiida/backends/sqlalchemy/tests/test_schema.py|
+        aiida/backends/sqlalchemy/tests/test_session.py|
         aiida/backends/sqlalchemy/tests/testbase.py|
-        aiida/backends/sqlalchemy/tests/utils.py|
+        aiida/backends/sqlalchemy/tests/test_utils.py|
         aiida/backends/sqlalchemy/transition_06dj_to_07sqla.py|
         aiida/backends/sqlalchemy/utils.py|
         aiida/backends/testbase.py|
         aiida/backends/testimplbase.py|
-        aiida/backends/tests/backup_script.py|
-        aiida/backends/tests/backup_setup_script.py|
-        aiida/backends/tests/base_dataclasses.py|
+        aiida/backends/tests/test_backup_script.py|
+        aiida/backends/tests/test_backup_setup_script.py|
+        aiida/backends/tests/test_base_dataclasses.py|
         aiida/backends/tests/cmdline/commands/test_calculation.py|
         aiida/backends/tests/cmdline/commands/test_code.py|
         aiida/backends/tests/cmdline/commands/test_comment.py|
@@ -101,33 +101,27 @@
         aiida/backends/tests/cmdline/commands/test_node.py|
         aiida/backends/tests/cmdline/commands/test_user.py|
         aiida/backends/tests/cmdline/commands/test_work.py|
-        aiida/backends/tests/common/test_datastructures.py|
-        aiida/backends/tests/computer.py|
-        aiida/backends/tests/control/test_computer_ctrl.py|
-        aiida/backends/tests/daemon.py|
+        aiida/backends/tests/test_computer.py|
         aiida/backends/tests/daemon/test_client.py|
-        aiida/backends/tests/dataclasses.py|
-        aiida/backends/tests/dbimporters.py|
-        aiida/backends/tests/example_helpers.py|
-        aiida/backends/tests/export_and_import.py|
-        aiida/backends/tests/generic.py|
+        aiida/backends/tests/test_dataclasses.py|
+        aiida/backends/tests/test_dbimporters.py|
+        aiida/backends/tests/test_export_and_import.py|
+        aiida/backends/tests/test_generic.py|
         aiida/backends/tests/__init__.py|
-        aiida/backends/tests/nodes.py|
-        aiida/backends/tests/orm/data/frozendict.py|
-        aiida/backends/tests/orm/data/remote.py|
-        aiida/backends/tests/orm/utils/loaders.py|
-        aiida/backends/tests/parsers.py|
-        aiida/backends/tests/query.py|
-        aiida/backends/tests/tcodexporter.py|
+        aiida/backends/tests/test_nodes.py|
+        aiida/backends/tests/orm/data/test_frozendict.py|
+        aiida/backends/tests/orm/data/test_remote.py|
+        aiida/backends/tests/orm/utils/test_loaders.py|
+        aiida/backends/tests/test_parsers.py|
+        aiida/backends/tests/test_query.py|
+        aiida/backends/tests/test_tcodexporter.py|
         aiida/backends/tests/test_caching_config.py|
         aiida/backends/tests/test_plugin_loader.py|
-        aiida/backends/tests/utils/fixtures.py|
-        aiida/backends/tests/work/class_loader.py|
-        aiida/backends/tests/work/daemon.py|
-        aiida/backends/tests/work/job_processes.py|
-        aiida/backends/tests/work/persistence.py|
-        aiida/backends/tests/work/process.py|
-        aiida/backends/tests/work/run.py|
+        aiida/backends/tests/work/test_class_loader.py|
+        aiida/backends/tests/work/test_daemon.py|
+        aiida/backends/tests/work/test_persistence.py|
+        aiida/backends/tests/work/test_process.py|
+        aiida/backends/tests/work/test_run.py|
         aiida/backends/tests/work/test_futures.py|
         aiida/backends/tests/work/test_launch.py|
         aiida/backends/tests/work/test_process_builder.py|
@@ -136,64 +130,40 @@
         aiida/backends/tests/work/test_runners.py|
         aiida/backends/tests/work/test_transport.py|
         aiida/backends/tests/work/test_utils.py|
-        aiida/backends/tests/work/utils.py|
-        aiida/backends/tests/work/work_chain.py|
+        aiida/backends/tests/work/test_utils.py|
+        aiida/backends/tests/work/test_work_chain.py|
         aiida/backends/utils.py|
         aiida/common/datastructures.py|
         aiida/daemon/execmanager.py|
         aiida/manage/backup/backup_base.py|
-        aiida/orm/authinfo.py|
         aiida/orm/autogroup.py|
-        aiida/orm/backend.py|
         aiida/orm/querybuilder.py|
-        aiida/orm/code.py|
-        aiida/orm/group.py|
-        aiida/orm/implementation/calculation.py|
-        aiida/orm/implementation/django/authinfo.py|
-        aiida/orm/implementation/django/backend.py|
-        aiida/orm/implementation/django/code.py|
-        aiida/orm/implementation/django/computer.py|
-        aiida/orm/implementation/django/__init__.py|
-        aiida/orm/implementation/django/node.py|
-        aiida/orm/implementation/django/user.py|
         aiida/orm/implementation/django/utils.py|
-        aiida/orm/implementation/general/__init__.py|
-        aiida/orm/implementation/general/node.py|
-        aiida/orm/implementation/__init__.py|
-        aiida/orm/implementation/sqlalchemy/authinfo.py|
-        aiida/orm/implementation/sqlalchemy/backend.py|
-        aiida/orm/implementation/sqlalchemy/code.py|
-        aiida/orm/implementation/sqlalchemy/computer.py|
-        aiida/orm/implementation/sqlalchemy/__init__.py|
-        aiida/orm/implementation/sqlalchemy/node.py|
-        aiida/orm/implementation/sqlalchemy/querytool.py|
         aiida/orm/implementation/sqlalchemy/utils.py|
         aiida/orm/__init__.py|
         aiida/orm/importexport.py|
-        aiida/orm/node/data/array/bands.py|
-        aiida/orm/node/data/array/kpoints.py|
-        aiida/orm/node/data/array/projection.py|
-        aiida/orm/node/data/array/xy.py|
-        aiida/orm/node/data/base.py|
-        aiida/orm/node/data/bool.py|
-        aiida/orm/node/data/error.py|
-        aiida/orm/node/data/float.py|
-        aiida/orm/node/data/folder.py|
-        aiida/orm/node/data/frozendict.py|
-        aiida/orm/node/data/__init__.py|
-        aiida/orm/node/data/int.py|
-        aiida/orm/node/data/list.py|
-        aiida/orm/node/data/code.py|
-        aiida/orm/node/data/numeric.py|
-        aiida/orm/node/data/orbital.py|
-        aiida/orm/node/data/parameter.py|
-        aiida/orm/node/data/remote.py|
-        aiida/orm/node/data/singlefile.py|
-        aiida/orm/node/data/str.py|
-        aiida/orm/node/data/structure.py|
-        aiida/orm/node/data/upf.py|
-        aiida/orm/node/process/calculation/calcjob.py|
-        aiida/orm/node.py|
+        aiida/orm/nodes/data/array/bands.py|
+        aiida/orm/nodes/data/array/kpoints.py|
+        aiida/orm/nodes/data/array/projection.py|
+        aiida/orm/nodes/data/array/xy.py|
+        aiida/orm/nodes/data/base.py|
+        aiida/orm/nodes/data/bool.py|
+        aiida/orm/nodes/data/error.py|
+        aiida/orm/nodes/data/float.py|
+        aiida/orm/nodes/data/folder.py|
+        aiida/orm/nodes/data/frozendict.py|
+        aiida/orm/nodes/data/int.py|
+        aiida/orm/nodes/data/list.py|
+        aiida/orm/nodes/data/code.py|
+        aiida/orm/nodes/data/numeric.py|
+        aiida/orm/nodes/data/orbital.py|
+        aiida/orm/nodes/data/parameter.py|
+        aiida/orm/nodes/data/remote.py|
+        aiida/orm/nodes/data/singlefile.py|
+        aiida/orm/nodes/data/str.py|
+        aiida/orm/nodes/data/structure.py|
+        aiida/orm/nodes/data/upf.py|
+        aiida/orm/nodes/process/calculation/calcjob.py|
         aiida/orm/utils/__init__.py|
         aiida/orm/utils/loaders.py|
         aiida/orm/utils/remote.py|
@@ -206,20 +176,19 @@
         aiida/plugins/info.py|
         aiida/plugins/registry.py|
         aiida/plugins/utils.py|
-        aiida/scheduler/datastructures.py|
-        aiida/scheduler/__init__.py|
-        aiida/scheduler/plugins/direct.py|
-        aiida/scheduler/plugins/lsf.py|
-        aiida/scheduler/plugins/pbsbaseclasses.py|
-        aiida/scheduler/plugins/pbsbaseclasses.py|
-        aiida/scheduler/plugins/sge.py|
-        aiida/scheduler/plugins/slurm.py|
-        aiida/scheduler/plugins/test_direct.py|
-        aiida/scheduler/plugins/test_lsf.py|
-        aiida/scheduler/plugins/test_pbspro.py|
-        aiida/scheduler/plugins/test_sge.py|
-        aiida/scheduler/plugins/test_slurm.py|
-        aiida/scheduler/plugins/test_torque.py|
+        aiida/schedulers/datastructures.py|
+        aiida/schedulers/plugins/direct.py|
+        aiida/schedulers/plugins/lsf.py|
+        aiida/schedulers/plugins/pbsbaseclasses.py|
+        aiida/schedulers/plugins/pbsbaseclasses.py|
+        aiida/schedulers/plugins/sge.py|
+        aiida/schedulers/plugins/slurm.py|
+        aiida/schedulers/plugins/test_direct.py|
+        aiida/schedulers/plugins/test_lsf.py|
+        aiida/schedulers/plugins/test_pbspro.py|
+        aiida/schedulers/plugins/test_sge.py|
+        aiida/schedulers/plugins/test_slurm.py|
+        aiida/schedulers/plugins/test_torque.py|
         aiida/settings.py|
         aiida/sphinxext/tests/conftest.py|
         aiida/sphinxext/tests/test_workchain.py|
@@ -248,10 +217,10 @@
         aiida/tools/dbimporters/plugins/pcod.py|
         aiida/tools/dbimporters/plugins/tcod.py|
         aiida/tools/__init__.py|
-        aiida/transport/plugins/ssh.py|
-        aiida/transport/plugins/test_all_plugins.py|
-        aiida/transport/plugins/test_local.py|
-        aiida/transport/plugins/test_ssh.py|
+        aiida/transports/plugins/ssh.py|
+        aiida/transports/plugins/test_all_plugins.py|
+        aiida/transports/plugins/test_local.py|
+        aiida/transports/plugins/test_ssh.py|
         aiida/work/__init__.py|
         aiida/work/job_processes.py|
         utils/create_requirements.py|

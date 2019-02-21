@@ -20,6 +20,7 @@ from six.moves.html_parser import HTMLParser
 from aiida.common import exceptions
 from aiida.common.utils import export_shard_uuid, get_class_string, grouper
 from aiida.orm import Computer, Group, GroupTypeString, Node, QueryBuilder, User, Log, Comment
+from aiida.orm.utils.repository import Repository
 
 IMPORTGROUP_TYPE = GroupTypeString.IMPORTGROUP_TYPE
 DUPL_SUFFIX = ' (Imported #{})'
@@ -252,7 +253,8 @@ def get_all_fields_info():
             "requires": COMPUTER_ENTITY_NAME,
             "related_name": "dbnodes"
         },
-        "description": {}
+        "description": {},
+        "process_type": {}
     }
     all_fields_info[ATTRIBUTE_ENTITY_NAME] = {
         "dbnode": {
@@ -814,7 +816,7 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
                                              "in the exported "
                                              "file".format(o.uuid))
                         destdir = RepositoryFolder(
-                            section=Node._section_name,
+                            section=Repository._section_name,
                             uuid=o.uuid)
                         # Replace the folder, possibly destroying existing
                         # previous folders, and move the files (faster if we
@@ -1080,8 +1082,8 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
 
                 # Add all the nodes to the new group
                 # TODO: decide if we want to return the group label
-                group.add_nodes(models.DbNode.objects.filter(
-                    pk__in=pks_for_group))
+                nodes = [entry[0] for entry in QueryBuilder().append(Node, filters={'id': {'in': pks_for_group}}).all()]
+                group.add_nodes(nodes)
 
                 if not silent:
                     print("IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.label))
@@ -1505,7 +1507,7 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
                                              "in the exported file"
                                              .format(o.uuid))
                         destdir = RepositoryFolder(
-                            section=Node._section_name,
+                            section=Repository._section_name,
                             uuid=o.uuid)
                         # Replace the folder, possibly destroying existing
                         # previous folders, and move the files (faster if we
@@ -1781,12 +1783,8 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
 
                 # Add all the nodes to the new group
                 # TODO: decide if we want to return the group label 
-                from aiida.backends.sqlalchemy.models.node import DbNode
-                group.add_nodes(session.query(DbNode).filter(
-                    DbNode.id.in_(pks_for_group)).distinct().all())
-
-                # group.add_nodes(models.DbNode.objects.filter(
-                #     pk__in=pks_for_group))
+                nodes = [entry[0] for entry in QueryBuilder().append(Node, filters={'id': {'in': pks_for_group}}).all()]
+                group.add_nodes(nodes)
 
                 if not silent:
                     print("IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.label))
@@ -1957,13 +1955,6 @@ def serialize_dict(datadict, remove_fields=[], rename_fields={},
         return ret_dict
 
 
-fields_to_export = {
-    'aiida.backends.djsite.db.models.DbNode':
-        ['description', 'public', 'nodeversion', 'uuid', 'mtime', 'user',
-         'ctime', 'dbcomputer', 'label', 'type'],
-}
-
-
 def fill_in_query(partial_query, originating_entity_str, current_entity_str,
                   tag_suffixes=[], entity_separator="_"):
     """
@@ -2079,7 +2070,7 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
     import os
     import aiida
     from aiida.orm import Node, Data, Group, Log, Comment
-    from aiida.orm.node import ProcessNode
+    from aiida.orm import ProcessNode
     from aiida.common.exceptions import ContentNotExistent
     from aiida.common.links import LinkType
     from aiida.common.folders import RepositoryFolder
@@ -2411,7 +2402,7 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
             n = res[0]
             (node_attributes[str(n.pk)],
              node_attributes_conversion[str(n.pk)]) = serialize_dict(
-                n.get_attrs(), track_conversion=True)
+                n.attributes, track_conversion=True)
 
     ## EXTRAS
     if not silent:
@@ -2428,8 +2419,7 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
         for res in all_nodes_query.iterall():
             n = res[0]
             (node_extras[str(n.pk)],
-             node_extras_conversion[str(n.pk)]) = serialize_dict(
-                n.get_extras(), track_conversion=True)
+             node_extras_conversion[str(n.pk)]) = serialize_dict(n.extras, track_conversion=True)
 
     if not silent:
         print("STORING NODE LINKS...")
@@ -2672,11 +2662,11 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
                 reset_limit=True)
             # In this way, I copy the content of the folder, and not the folder
             # itself
-            src = RepositoryFolder(section=Node._section_name, uuid=uuid).abspath
-            if not os.path.exists(os.path.join(src, Node._path_subfolder_name)):
+            src = RepositoryFolder(section=Repository._section_name, uuid=uuid).abspath
+            if not os.path.exists(os.path.join(src, Repository._path_subfolder_name)):
                 raise ContentNotExistent("The exported repository folder '{}' for node<{}> does not contain the '{}' "
                         "sub folder, probably it was deleted manually before exporting. Try to recreate it and export "
-                        "again.".format(src, uuid, Node._path_subfolder_name))
+                        "again.".format(src, uuid, Repository._path_subfolder_name))
             thisnodefolder.insert_path(src=src, dest_name='.')
 
 

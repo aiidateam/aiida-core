@@ -25,10 +25,10 @@ from aiida.common import exceptions
 from aiida.common.datastructures import CalcJobState
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
-from aiida.common.log import get_dblogger_extra
-from aiida.orm import DataFactory
-from aiida.orm.node.data.folder import FolderData
-from aiida.scheduler.datastructures import JobState
+from aiida.orm.utils.log import get_dblogger_extra
+from aiida.orm.nodes.data.folder import FolderData
+from aiida.plugins import DataFactory
+from aiida.schedulers.datastructures import JobState
 
 REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
 
@@ -45,9 +45,9 @@ def upload_calculation(calculation, transport, calc_info, script_filename):
     :param script_filename: the job launch script returned by `CalcJobNode._presubmit`
     """
     from aiida.orm import load_node, Code
-    from aiida.orm.node.data.remote import RemoteData
+    from aiida.orm.nodes.data.remote import RemoteData
 
-    computer = calculation.get_computer()
+    computer = calculation.computer
 
     if not computer.is_enabled():
         return
@@ -230,7 +230,7 @@ def submit_calculation(calculation, transport, calc_info, script_filename):
     :param calc_info: the calculation info datastructure returned by `CalcJobNode._presubmit`
     :param script_filename: the job launch script returned by `CalcJobNode._presubmit`
     """
-    scheduler = calculation.get_computer().get_scheduler()
+    scheduler = calculation.computer.get_scheduler()
     scheduler.set_transport(transport)
 
     workdir = calculation._get_remote_workdir()
@@ -293,7 +293,7 @@ def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
         # Store everything
         execlogger.debug(
             "[retrieval of calc {}] "
-            "Storing retrieved_files={}".format(calculation.pk, retrieved_files.dbnode.pk),
+            "Storing retrieved_files={}".format(calculation.pk, retrieved_files.pk),
             extra=logger_extra)
         retrieved_files.store()
 
@@ -308,7 +308,7 @@ def kill_calculation(calculation, transport):
     job_id = calculation.get_job_id()
 
     # Get the scheduler plugin class and initialize it with the correct transport
-    scheduler = calculation.get_computer().get_scheduler()
+    scheduler = calculation.computer.get_scheduler()
     scheduler.set_transport(transport)
 
     # Call the proper kill method for the job ID of this calculation
@@ -317,7 +317,7 @@ def kill_calculation(calculation, transport):
     if result is not True:
 
         # Failed to kill because the job might have already been completed
-        running_jobs = scheduler.getJobs(jobs=[job_id], as_dict=True)
+        running_jobs = scheduler.get_jobs(jobs=[job_id], as_dict=True)
         job = running_jobs.get(job_id, None)
 
         # If the job is returned it is still running and the kill really failed, so we raise
@@ -415,7 +415,7 @@ def _retrieve_singlefiles(job, transport, folder, retrieve_file_list, logger_ext
     for fil in singlefiles:
         execlogger.debug(
             "[retrieval of calc {}] "
-            "Storing retrieved_singlefile={}".format(job.pk, fil.dbnode.pk),
+            "Storing retrieved_singlefile={}".format(job.pk, fil.pk),
             extra=logger_extra)
         fil.store()
 

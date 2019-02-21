@@ -38,7 +38,7 @@ def upgrade():
         del t.attributes['array|symbols']
         flag_modified(t, 'attributes')
         # Remove the .npy file (using delete_array raises ModificationNotAllowed error)
-        load_node(pk=t.id)._get_folder_pathsubfolder.remove_path('symbols.npy')  # pylint: disable=protected-access
+        load_node(pk=t.id).repository._get_folder_pathsubfolder.remove_path('symbols.npy')  # pylint: disable=protected-access
         session.add(t)
     session.commit()
     session.close()
@@ -50,12 +50,12 @@ def downgrade():
     session = Session(bind=op.get_bind())
     trajectories = session.query(DbNode).filter_by(type='node.data.array.trajectory.TrajectoryData.').all()
     for t in trajectories:
-        symbols = numpy.array(t.get_attr('symbols'))
+        symbols = numpy.array(t.get_attribute('symbols'))
         # Save the .npy file (using set_array raises ModificationNotAllowed error)
         with tempfile.NamedTemporaryFile() as _file:
             numpy.save(_file, symbols)
             _file.flush()
-            load_node(pk=t.id)._get_folder_pathsubfolder.insert_path(_file.name, 'symbols.npy')  # pylint: disable=protected-access
+            load_node(pk=t.id).repository.insert_path(_file.name, 'symbols.npy')
         t.attributes['array|symbols'] = list(symbols.shape)
         flag_modified(t, 'attributes')
         session.add(t)

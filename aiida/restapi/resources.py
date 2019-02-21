@@ -41,7 +41,7 @@ class ServerInfo(Resource):
         url = unquote(request.url)
         url_root = unquote(request.url_root)
 
-        pathlist = self.utils.split_path(self.utils.strip_prefix(path))
+        pathlist = self.utils.split_path(self.utils.strip_api_prefix(path))
 
         if len(pathlist) > 1:
             resource_type = pathlist.pop(1)
@@ -381,7 +381,7 @@ class Calculation(Node):
 
         from aiida.restapi.translator.calculation import CalculationTranslator
         self.trans = CalculationTranslator(**kwargs)
-        from aiida.orm.node import CalcJobNode as CalculationTclass
+        from aiida.orm import CalcJobNode as CalculationTclass
         self.tclass = CalculationTclass
 
         self.parse_pk_uuid = 'uuid'
@@ -395,7 +395,7 @@ class Code(Node):
 
         from aiida.restapi.translator.code import CodeTranslator
         self.trans = CodeTranslator(**kwargs)
-        from aiida.orm import Code as CodeTclass
+        from aiida.orm.nodes.data.code import Code as CodeTclass
         self.tclass = CodeTclass
 
         self.parse_pk_uuid = 'uuid'
@@ -425,7 +425,7 @@ class StructureData(Data):
         from aiida.restapi.translator.data.structure import \
             StructureDataTranslator
         self.trans = StructureDataTranslator(**kwargs)
-        from aiida.orm.node.data.structure import StructureData as StructureDataTclass
+        from aiida.orm.nodes.data.structure import StructureData as StructureDataTclass
         self.tclass = StructureDataTclass
 
         self.parse_pk_uuid = 'uuid'
@@ -439,7 +439,7 @@ class KpointsData(Data):
 
         from aiida.restapi.translator.data.kpoints import KpointsDataTranslator
         self.trans = KpointsDataTranslator(**kwargs)
-        from aiida.orm.node.data.array.kpoints import KpointsData as KpointsDataTclass
+        from aiida.orm.nodes.data.array.kpoints import KpointsData as KpointsDataTclass
         self.tclass = KpointsDataTclass
 
         self.parse_pk_uuid = 'uuid'
@@ -454,7 +454,7 @@ class BandsData(Data):
         from aiida.restapi.translator.data.bands import \
             BandsDataTranslator
         self.trans = BandsDataTranslator(**kwargs)
-        from aiida.orm.node.data.array.bands import BandsData as BandsDataTclass
+        from aiida.orm.nodes.data.array.bands import BandsData as BandsDataTclass
         self.tclass = BandsDataTclass
 
         self.parse_pk_uuid = 'uuid'
@@ -470,7 +470,7 @@ class CifData(Data):
         from aiida.restapi.translator.data.cif import \
             CifDataTranslator
         self.trans = CifDataTranslator(**kwargs)
-        from aiida.orm.node.data.cif import CifData as CifDataTclass
+        from aiida.orm.nodes.data.cif import CifData as CifDataTclass
         self.tclass = CifDataTclass
 
         self.parse_pk_uuid = 'uuid'
@@ -486,7 +486,7 @@ class UpfData(Data):
         from aiida.restapi.translator.data.upf import \
             UpfDataTranslator
         self.trans = UpfDataTranslator(**kwargs)
-        from aiida.orm.node.data.upf import UpfData as UpfDataTclass
+        from aiida.orm.nodes.data.upf import UpfData as UpfDataTclass
         self.tclass = UpfDataTclass
 
         self.parse_pk_uuid = 'uuid'

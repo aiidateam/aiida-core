@@ -16,8 +16,8 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from aiida.orm.node.data.float import Float
-from aiida.orm.node.data.int import Int
+from aiida.orm.nodes.data.float import Float
+from aiida.orm.nodes.data.int import Int
 from aiida.work import calcfunction
 
 

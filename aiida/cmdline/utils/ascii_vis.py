@@ -28,7 +28,7 @@ def draw_parents(node, node_label=None, show_pk=True, dist=2, follow_links_of_ty
     Print an ASCII tree of the parents of the given node.
 
     :param node: The node to draw for
-    :type node: :class:`aiida.orm.node.data.Data`
+    :type node: :class:`aiida.orm.nodes.data.Data`
     :param node_label: The label to use for the nodes
     :type node_label: str
     :param show_pk: Show the PK of nodes alongside the label
@@ -47,7 +47,7 @@ def draw_children(node, node_label=None, show_pk=True, dist=2, follow_links_of_t
     Print an ASCII tree of the parents of the given node.
 
     :param node: The node to draw for
-    :type node: :class:`aiida.orm.node.data.Data`
+    :type node: :class:`aiida.orm.nodes.data.Data`
     :param node_label: The label to use for the nodes
     :type node_label: str
     :param show_pk: Show the PK of nodes alongside the label
@@ -66,7 +66,7 @@ def get_ascii_tree(node, node_label=None, show_pk=True, max_depth=1, follow_link
     Get a string representing an ASCII tree for the given node.
 
     :param node: The node to get the tree for
-    :type node: :class:`aiida.orm.node.Node`
+    :type node: :class:`aiida.orm.nodes.node.Node`
     :param node_label: What to label the nodes with (can be an attribute name)
     :type node_label: str
     :param show_pk: If True, show the pk with the node label
@@ -91,7 +91,7 @@ def build_tree(node, node_label=None, show_pk=True, max_depth=1, follow_links_of
     Recursively build an ASCII string representation of the node tree
 
     :param node: The node to get the tree for
-    :type node: :class:`aiida.orm.node.Node`
+    :type node: :class:`aiida.orm.nodes.node.Node`
     :param node_label: What to label the nodes with (can be an attribute name)
     :type node_label: str
     :param show_pk: If True, show the pk with the node label
@@ -139,7 +139,7 @@ def _generate_node_label(node, node_attr, show_pk):
     Generate a label for the node.
 
     :param node: The node to generate the label for
-    :type node: :class:`aiida.orm.node.Node`
+    :type node: :class:`aiida.orm.nodes.node.Node`
     :param node_attr: The attribute to use as the label, can be None
     :type node_attr: str
     :param show_pk: if True, show the PK alongside the label
@@ -158,7 +158,7 @@ def _generate_node_label(node, node_attr, show_pk):
             label = str(getattr(node, node_attr))
         except AttributeError:
             try:
-                label = node.get_attr(node_attr)
+                label = node.get_attribute(node_attr)
             except AttributeError:
                 pass
 
@@ -174,7 +174,7 @@ def _generate_node_label(node, node_attr, show_pk):
 
 def calc_info(calc_node):
     """Return a string with the summary of the state of a CalculationNode."""
-    from aiida.orm.node import CalculationNode, CalcJobNode, WorkChainNode, WorkflowNode
+    from aiida.orm import CalculationNode, CalcJobNode, WorkChainNode, WorkflowNode
 
     if isinstance(calc_node, WorkChainNode):
         plabel = calc_node.process_label

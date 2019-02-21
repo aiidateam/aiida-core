@@ -552,6 +552,7 @@ class NodeTranslator(BaseTranslator):
             pk = mainNode.pk
             uuid = mainNode.uuid
             nodetype = mainNode.type
+            nodelabel = mainNode.label
             display_type = nodetype.split('.')[-2]
             description = mainNode.get_desc()
             if description == '':
@@ -562,6 +563,7 @@ class NodeTranslator(BaseTranslator):
                 "nodeid": pk,
                 "nodeuuid": uuid,
                 "nodetype": nodetype,
+                "nodelabel": nodelabel,
                 "displaytype": display_type,
                 "group": "mainNode",
                 "description": description,
@@ -593,6 +595,7 @@ class NodeTranslator(BaseTranslator):
                     input_node_pks[pk] = nodeCount
                     uuid = node.uuid
                     nodetype = node.type
+                    nodelabel = node.label
                     display_type = nodetype.split('.')[-2]
                     description = node.get_desc()
                     if description == '':
@@ -603,6 +606,7 @@ class NodeTranslator(BaseTranslator):
                         "nodeid": pk,
                         "nodeuuid": uuid,
                         "nodetype": nodetype,
+                        "nodelabel": nodelabel,
                         "displaytype": display_type,
                         "group": "inputs",
                         "description": description,
@@ -645,6 +649,7 @@ class NodeTranslator(BaseTranslator):
                     output_node_pks[pk] = nodeCount
                     uuid = node.uuid
                     nodetype = node.type
+                    nodelabel = node.label
                     display_type = nodetype.split('.')[-2]
                     description = node.get_desc()
                     if description == '':
@@ -655,6 +660,7 @@ class NodeTranslator(BaseTranslator):
                         "nodeid": pk,
                         "nodeuuid": uuid,
                         "nodetype": nodetype,
+                        "nodelabel": nodelabel,
                         "displaytype": display_type,
                         "group": "outputs",
                         "description": description,

@@ -165,7 +165,6 @@ class TestQueryBuilder(AiidaTestCase):
 
             def success(self):
                 self.out(self.OUTPUT_LABEL, Int(self.OUTPUT_VALUE))
-                return
 
         class DummyWorkChain(WorkChain):
             pass
@@ -669,7 +668,7 @@ class TestAttributes(AiidaTestCase):
                 }],
             },
             project='uuid')
-        res_query = set([str(_[0]) for _ in qb.all()])
+        res_query = {str(_[0]) for _ in qb.all()}
         self.assertEqual(res_query, res_uuids)
 
     def test_attribute_type(self):
@@ -906,14 +905,14 @@ class QueryBuilderJoinsTests(AiidaTestCase):
         qb = QueryBuilder()
         qb.append(User, tag='user', filters={'id': {'==': user.id}})
         qb.append(Group, with_user='user', filters={'id': {'==': group.id}})
-        self.assertEquals(qb.count(), 1, "The expected group that belongs to " "the selected user was not found.")
+        self.assertEqual(qb.count(), 1, "The expected group that belongs to " "the selected user was not found.")
 
         # Search for the user that owns a group
         qb = QueryBuilder()
         qb.append(Group, tag='group', filters={'id': {'==': group.id}})
         qb.append(User, with_group='group', filters={'id': {'==': user.id}})
 
-        self.assertEquals(qb.count(), 1, "The expected user that owns the " "selected group was not found.")
+        self.assertEqual(qb.count(), 1, "The expected user that owns the " "selected group was not found.")
 
 
 class QueryBuilderPath(AiidaTestCase):
@@ -964,21 +963,21 @@ class QueryBuilderPath(AiidaTestCase):
         # There are no parents to n9, checking that
         self.assertEqual(set([]), set(q.get_all_parents([n9.pk])))
         # There is one parent to n6
-        self.assertEqual(set([(_,) for _ in (n6.pk,)]), set([tuple(_) for _ in q.get_all_parents([n7.pk])]))
+        self.assertEqual({(_,) for _ in (n6.pk,)}, {tuple(_) for _ in q.get_all_parents([n7.pk])})
         # There are several parents to n4
-        self.assertEqual(set([(_.pk,) for _ in (n1, n2)]), set([tuple(_) for _ in q.get_all_parents([n4.pk])]))
+        self.assertEqual({(_.pk,) for _ in (n1, n2)}, {tuple(_) for _ in q.get_all_parents([n4.pk])})
         # There are several parents to n5
-        self.assertEqual(set([(_.pk,) for _ in (n1, n2, n3, n4)]), set([tuple(_) for _ in q.get_all_parents([n5.pk])]))
+        self.assertEqual({(_.pk,) for _ in (n1, n2, n3, n4)}, {tuple(_) for _ in q.get_all_parents([n5.pk])})
 
         # Yet, no links from 1 to 8
-        self.assertEquals(
+        self.assertEqual(
             QueryBuilder().append(Node, filters={
                 'id': n1.pk
             }, tag='anc').append(Node, with_ancestors='anc', filters={
                 'id': n8.pk
             }).count(), 0)
 
-        self.assertEquals(
+        self.assertEqual(
             QueryBuilder().append(Node, filters={
                 'id': n8.pk
             }, tag='desc').append(Node, with_descendants='desc', filters={
@@ -987,21 +986,21 @@ class QueryBuilderPath(AiidaTestCase):
 
         n6.add_incoming(n5, link_type=LinkType.CREATE, link_label='link1')
         # Yet, now 2 links from 1 to 8
-        self.assertEquals(
+        self.assertEqual(
             QueryBuilder().append(Node, filters={
                 'id': n1.pk
             }, tag='anc').append(Node, with_ancestors='anc', filters={
                 'id': n8.pk
             }).count(), 2)
 
-        self.assertEquals(
+        self.assertEqual(
             QueryBuilder().append(Node, filters={
                 'id': n8.pk
             }, tag='desc').append(Node, with_descendants='desc', filters={
                 'id': n1.pk
             }).count(), 2)
 
-        self.assertEquals(
+        self.assertEqual(
             QueryBuilder().append(Node, filters={
                 'id': n8.pk
             }, tag='desc').append(
@@ -1016,7 +1015,7 @@ class QueryBuilderPath(AiidaTestCase):
                     }
                 },
             ).count(), 2)
-        self.assertEquals(
+        self.assertEqual(
             QueryBuilder().append(Node, filters={
                 'id': n8.pk
             }, tag='desc').append(
@@ -1029,7 +1028,7 @@ class QueryBuilderPath(AiidaTestCase):
                     'depth': 5
                 },
             ).count(), 2)
-        self.assertEquals(
+        self.assertEqual(
             QueryBuilder().append(Node, filters={
                 'id': n8.pk
             }, tag='desc').append(
@@ -1056,10 +1055,10 @@ class QueryBuilderPath(AiidaTestCase):
             Node, with_descendants='desc', edge_project='path', filters={'id': n1.pk})
         queried_path_set = set([frozenset(p) for p, in qb.all()])
 
-        paths_there_should_be = set([
+        paths_there_should_be = {
             frozenset([n1.pk, n2.pk, n3.pk, n5.pk, n6.pk, n7.pk, n8.pk]),
             frozenset([n1.pk, n2.pk, n4.pk, n5.pk, n6.pk, n7.pk, n8.pk])
-        ])
+        }
 
         self.assertTrue(queried_path_set == paths_there_should_be)
 
@@ -1069,23 +1068,22 @@ class QueryBuilderPath(AiidaTestCase):
             }, tag='anc').append(
                 Node, with_ancestors='anc', filters={'id': n8.pk}, edge_project='path')
 
-        self.assertTrue(
-            set([frozenset(p) for p, in qb.all()]) == set([
-                frozenset([n1.pk, n2.pk, n3.pk, n5.pk, n6.pk, n7.pk, n8.pk]),
-                frozenset([n1.pk, n2.pk, n4.pk, n5.pk, n6.pk, n7.pk, n8.pk])
-            ]))
+        self.assertEqual({frozenset(p) for p, in qb.all()}, {
+            frozenset([n1.pk, n2.pk, n3.pk, n5.pk, n6.pk, n7.pk, n8.pk]),
+            frozenset([n1.pk, n2.pk, n4.pk, n5.pk, n6.pk, n7.pk, n8.pk])
+        })
 
         n7.add_incoming(n9, link_type=LinkType.INPUT_CALC, link_label='link0')
         # Still two links...
 
-        self.assertEquals(
+        self.assertEqual(
             QueryBuilder().append(Node, filters={
                 'id': n1.pk
             }, tag='anc').append(Node, with_ancestors='anc', filters={
                 'id': n8.pk
             }).count(), 2)
 
-        self.assertEquals(
+        self.assertEqual(
             QueryBuilder().append(Node, filters={
                 'id': n8.pk
             }, tag='desc').append(Node, with_descendants='desc', filters={
@@ -1094,14 +1092,14 @@ class QueryBuilderPath(AiidaTestCase):
         n9.add_incoming(n5, link_type=LinkType.CREATE, link_label='link6')
         # And now there should be 4 nodes
 
-        self.assertEquals(
+        self.assertEqual(
             QueryBuilder().append(Node, filters={
                 'id': n1.pk
             }, tag='anc').append(Node, with_ancestors='anc', filters={
                 'id': n8.pk
             }).count(), 4)
 
-        self.assertEquals(
+        self.assertEqual(
             QueryBuilder().append(Node, filters={
                 'id': n8.pk
             }, tag='desc').append(Node, with_descendants='desc', filters={
@@ -1198,7 +1196,7 @@ class TestManager(AiidaTestCase):
             k: dict(v) if isinstance(v, defaultdict) else v for k, v in expected_db_statistics.items()
         }
 
-        self.assertEquals(new_db_statistics, expected_db_statistics)
+        self.assertEqual(new_db_statistics, expected_db_statistics)
 
     def test_statistics_default_class(self):
         """
@@ -1237,4 +1235,4 @@ class TestManager(AiidaTestCase):
             k: dict(v) if isinstance(v, defaultdict) else v for k, v in expected_db_statistics.items()
         }
 
-        self.assertEquals(new_db_statistics, expected_db_statistics)
+        self.assertEqual(new_db_statistics, expected_db_statistics)

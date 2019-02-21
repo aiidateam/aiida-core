@@ -127,7 +127,7 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         :return: the communicator instance
         :rtype: :class:`~kiwipy.rmq.communicator.RmqThreadCommunicator`
         """
-        from aiida.common import serialize
+        from aiida.orm.utils import serialize
         from aiida.work import rmq
         import kiwipy.rmq
         profile = self.get_profile()

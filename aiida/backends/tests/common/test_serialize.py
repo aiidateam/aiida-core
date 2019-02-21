@@ -13,7 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida import orm
-from aiida.common import serialize
+from aiida.orm.utils import serialize
 from aiida.backends.testbase import AiidaTestCase
 
 # pylint: disable=missing-docstring

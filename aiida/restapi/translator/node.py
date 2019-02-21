@@ -582,8 +582,9 @@ class NodeTranslator(BaseTranslator):
             qb.limit(tree_in_limit)
 
         input_node_pks = {}
+        sent_no_of_incomings = qb.count()
 
-        if qb.count() > 0:
+        if sent_no_of_incomings > 0:
             for input in qb.iterdict():
                 node = input['in']['*']
                 pk = node.pk
@@ -636,8 +637,9 @@ class NodeTranslator(BaseTranslator):
             qb.limit(tree_out_limit)
 
         output_node_pks = {}
+        sent_no_of_outcomings = qb.count()
 
-        if qb.count() > 0:
+        if sent_no_of_outcomings > 0:
             for output in qb.iterdict():
                 node = output['out']['*']
                 pk = node.pk
@@ -683,12 +685,14 @@ class NodeTranslator(BaseTranslator):
         qb = QueryBuilder()
         qb.append(Node, tag="main", project=['id'], filters=self._id_filter)
         qb.append(Node, tag="in", project=['id'], input_of='main')
-        no_of_inputs = qb.count()
+        total_no_of_incomings = qb.count()
 
         qb = QueryBuilder()
         qb.append(Node, tag="main", project=['id'], filters=self._id_filter)
         qb.append(Node, tag="out", project=['id'], output_of='main')
-        no_of_outputs = qb.count()
+        total_no_of_outgoings = qb.count()
 
 
-        return {"nodes": nodes, "edges": edges, "no_of_incomings": no_of_inputs, "no_of_outgoings": no_of_outputs}
+        return {"nodes": nodes, "edges": edges, "total_no_of_incomings": total_no_of_incomings,
+                "total_no_of_outgoings": total_no_of_outgoings, "sent_no_of_incomings": sent_no_of_incomings,
+                "sent_no_of_outcomings": sent_no_of_outcomings}

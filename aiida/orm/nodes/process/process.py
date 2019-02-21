@@ -36,7 +36,6 @@ class ProcessNode(Sealable, Node):
     PROCESS_LABEL_KEY = 'process_label'
     PROCESS_STATE_KEY = 'process_state'
     PROCESS_STATUS_KEY = 'process_status'
-    PROCESS_TYPE_KEY = 'process_type'
 
     # The link_type might not be correct while the object is being created.
     _hash_ignored_inputs = ['CALL_CALC', 'CALL_WORK']
@@ -97,14 +96,6 @@ class ProcessNode(Sealable, Node):
             process_class = getattr(module, class_name)
 
         return process_class
-
-    def _set_process_type(self, process_type_string):
-        """
-        Set the process type.
-
-        :param process_type_string: the process type string to set in the DB
-        """
-        self.set_attribute(self.PROCESS_TYPE_KEY, process_type_string)
 
     @property
     def process_label(self):

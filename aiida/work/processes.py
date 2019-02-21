@@ -536,7 +536,8 @@ class Process(plumpy.Process):
         # Store important process attributes in the node proxy
         self.node._set_process_state(None)  # pylint: disable=protected-access
         self.node._set_process_label(self.__class__.__name__)  # pylint: disable=protected-access
-        self.node._set_process_type(self.__class__.build_process_type())  # pylint: disable=protected-access
+        # Note: For some reason, process_type is exposed on the Node level via a property
+        self.node.process_type = self.__class__.build_process_type()  # pylint: disable=protected-access
 
         parent_calc = self.get_parent_calc()
 

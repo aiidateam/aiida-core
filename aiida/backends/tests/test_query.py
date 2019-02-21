@@ -175,9 +175,9 @@ class TestQueryBuilder(AiidaTestCase):
         # Query for nodes associated with this type of WorkChain
         qb = QueryBuilder()
 
-        with warnings.catch_warnings(record=True) as w:
+        with warnings.catch_warnings(record=True) as w:  # pylint: disable=no-member
             # Cause all warnings to always be triggered.
-            warnings.simplefilter("always")
+            warnings.simplefilter("always")  # pylint: disable=no-member
 
             qb.append(PotentialFailureWorkChain)
 
@@ -192,9 +192,9 @@ class TestQueryBuilder(AiidaTestCase):
         # Query for nodes of a different type of WorkChain
         qb = QueryBuilder()
 
-        with warnings.catch_warnings(record=True) as w:
+        with warnings.catch_warnings(record=True) as w:  # pylint: disable=no-member
             # Cause all warnings to always be triggered.
-            warnings.simplefilter("always")
+            warnings.simplefilter("always")  # pylint: disable=no-member
 
             qb.append(DummyWorkChain)
 
@@ -1053,7 +1053,7 @@ class QueryBuilderPath(AiidaTestCase):
             tag='desc',
         ).append(
             Node, with_descendants='desc', edge_project='path', filters={'id': n1.pk})
-        queried_path_set = set([frozenset(p) for p, in qb.all()])
+        queried_path_set = {frozenset(p) for p, in qb.all()}
 
         paths_there_should_be = {
             frozenset([n1.pk, n2.pk, n3.pk, n5.pk, n6.pk, n7.pk, n8.pk]),

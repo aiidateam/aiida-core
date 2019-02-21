@@ -113,7 +113,6 @@
         aiida/backends/tests/orm/data/test_remote.py|
         aiida/backends/tests/orm/utils/test_loaders.py|
         aiida/backends/tests/test_parsers.py|
-        aiida/backends/tests/test_query.py|
         aiida/backends/tests/test_tcodexporter.py|
         aiida/backends/tests/test_caching_config.py|
         aiida/backends/tests/test_plugin_loader.py|

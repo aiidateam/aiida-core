@@ -26,7 +26,10 @@ table_groups_nodes = Table(
     Base.metadata,
     Column('id', Integer, primary_key=True),
     Column('dbnode_id', Integer, ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")),
-    Column('dbgroup_id', Integer, ForeignKey('db_dbgroup.id', deferrable=True, initially="DEFERRED"))
+    Column('dbgroup_id', Integer, ForeignKey('db_dbgroup.id', deferrable=True, initially="DEFERRED")),
+
+    # explicit/composite unique constraint.  'name' is optional.
+    UniqueConstraint('dbnode_id', 'dbgroup_id', name='uix_dbnode_id_dbgroup_id')
 )
 
 

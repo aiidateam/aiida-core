@@ -739,6 +739,10 @@ class RESTApiTestSuite(RESTApiTestCase):
             response = json.loads(rv.data)
             self.assertEqual(len(response["data"]["nodes"]), 3)
             self.assertEqual(len(response["data"]["edges"]),2)
+            expected_attr = ["nodelabel", "nodetype", "linklabel", "linktype", "nodeuuid", "description"]
+            received_attr = response["data"]["nodes"][1].keys()
+            for attr in expected_attr:
+                self.assertIn(attr, received_attr)
             RESTApiTestCase.compare_extra_response_data(self, "calculations",
                                                         url,
                                                         response, uuid=node_uuid)

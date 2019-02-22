@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 from enum import IntEnum
 import click
+import frozendict
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils.daemon import get_daemon_status
@@ -31,7 +32,7 @@ class ServiceStatus(IntEnum):
     DOWN = 2
 
 
-STATUS_SYMBOLS = {
+STATUS_SYMBOLS = frozendict.frozendict({
     ServiceStatus.UP: {
         'color': 'green',
         'string': u'\u2713',
@@ -44,7 +45,7 @@ STATUS_SYMBOLS = {
         'color': 'red',
         'string': u'\u2717',
     },
-}
+})
 
 
 @verdi.command('status')
@@ -123,12 +124,11 @@ def print_status(status, service, msg=""):
 
     Includes colored indicator.
 
-    :param status: a ServiceStatus
-    :param service: string for service
+    :param status: a ServiceStatus code
+    :param service: string for service name
     :param msg:  message string
 
     """
     symbol = STATUS_SYMBOLS[status]
     click.secho(u'  {} '.format(symbol['string']), fg=symbol['color'], nl=False)
-    click.secho('{:10s} '.format(service + ':'), nl=False)
-    click.secho(msg)
+    click.secho('{:10s} {}'.format(service + ':', msg))

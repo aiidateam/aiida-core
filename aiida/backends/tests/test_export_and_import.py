@@ -2645,16 +2645,16 @@ class TestProvenanceRedesign(AiidaTestCase):
                 # Check value/content
                 self.assertEqual(n.value, refval)
                 # Check type
-                msg = "type of node ('{}') is not updated according to db schema v0.4".format(n.type)
-                self.assertEqual(n.type, reftype, msg=msg)
+                msg = "type of node ('{}') is not updated according to db schema v0.4".format(n.node_type)
+                self.assertEqual(n.node_type, reftype, msg=msg)
 
                 # List
                 # Check value
                 self.assertEqual(list_value, refval)
 
             # Check List type
-            msg = "type of node ('{}') is not updated according to db schema v0.4".format(nlist.type)
-            self.assertEqual(nlist.type, 'data.list.List.', msg=msg)
+            msg = "type of node ('{}') is not updated according to db schema v0.4".format(nlist.node_type)
+            self.assertEqual(nlist.node_type, 'data.list.List.', msg=msg)
 
         finally:
             # Deleting the created temporary folders
@@ -2683,7 +2683,7 @@ class TestProvenanceRedesign(AiidaTestCase):
             node_uuid = str(node.uuid)
 
             # Assert correct type and process_type strings
-            self.assertEqual(node.type, node_type)
+            self.assertEqual(node.node_type, node_type)
             self.assertEqual(node.process_type, node_process_type)
 
             # Export nodes
@@ -2709,7 +2709,7 @@ class TestProvenanceRedesign(AiidaTestCase):
             # Check imported node type and process type
             node = load_node(imported_node_uuid)
 
-            self.assertEqual(node.type, node_type)
+            self.assertEqual(node.node_type, node_type)
             self.assertEqual(node.process_type, node_process_type)
 
         finally:
@@ -2734,7 +2734,7 @@ class TestProvenanceRedesign(AiidaTestCase):
 
             # Save uuid and type
             code_uuid = str(code.uuid)
-            code_type = code.type
+            code_type = code.node_type
 
             # Assert correct type exists prior to export
             self.assertEqual(code_type, "data.code.Code.")
@@ -2760,7 +2760,7 @@ class TestProvenanceRedesign(AiidaTestCase):
             self.assertEqual(imported_code_uuid, code_uuid)
 
             # Check whether types are correctly imported
-            imported_code_type = load_node(imported_code_uuid).type
+            imported_code_type = load_node(imported_code_uuid).node_type
 
             self.assertEqual(imported_code_type, code_type)
 

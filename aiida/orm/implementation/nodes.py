@@ -46,12 +46,12 @@ class BackendNode(backends.BackendEntity):
         return None
 
     @property
-    def type(self):
+    def node_type(self):
         """Return the node type.
 
-        :return: the type
+        :return: the node type
         """
-        return self._dbmodel.type
+        return self._dbmodel.node_type
 
     @property
     def process_type(self):

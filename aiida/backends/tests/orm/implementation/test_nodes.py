@@ -56,7 +56,7 @@ class TestBackendNode(AiidaTestCase):
         self.assertEqual(node.version, 1)
         self.assertEqual(node.attributes, dict())
         self.assertEqual(node.extras, dict())
-        self.assertEqual(node.type, self.node_type)
+        self.assertEqual(node.node_type, self.node_type)
         self.assertEqual(node.label, self.node_label)
         self.assertEqual(node.description, self.node_description)
 
@@ -85,7 +85,7 @@ class TestBackendNode(AiidaTestCase):
         self.assertEqual(node.version, 1)
         self.assertEqual(node.attributes, dict())
         self.assertEqual(node.extras, dict())
-        self.assertEqual(node.type, self.node_type)
+        self.assertEqual(node.node_type, self.node_type)
         self.assertEqual(node.label, self.node_label)
         self.assertEqual(node.description, self.node_description)
 

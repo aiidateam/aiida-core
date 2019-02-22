@@ -157,7 +157,7 @@ class RESTApiTestCase(AiidaTestCase):
                 comp['uuid'] = str(comp['uuid'])
         cls._dummy_data["computers"] = computers
 
-        calculation_projections = ["id", "uuid", "user_id", "type"]
+        calculation_projections = ["id", "uuid", "user_id", "node_type"]
         calculations = QueryBuilder().append(
             CalcJobNode, tag="calc", project=calculation_projections).order_by({
                 'calc': [{
@@ -173,7 +173,7 @@ class RESTApiTestCase(AiidaTestCase):
                 calc['uuid'] = str(calc['uuid'])
         cls._dummy_data["calculations"] = calculations
 
-        data_projections = ["id", "uuid", "user_id", "type"]
+        data_projections = ["id", "uuid", "user_id", "node_type"]
         data_types = {
             'cifdata': CifData,
             'parameterdata': ParameterData,
@@ -238,7 +238,7 @@ class RESTApiTestCase(AiidaTestCase):
 
     ###### node details and list with limit, offset, page, perpage ####
     def process_test(self,
-                     node_type,
+                     entity_type,
                      url,
                      full_list=False,
                      empty_list=False,
@@ -252,7 +252,7 @@ class RESTApiTestCase(AiidaTestCase):
         """
         Check whether response matches expected values.
 
-        :param node_type: url requested fot the type of the node
+        :param entity_type: url requested fot the type of the node
         :param url: web url
         :param full_list: if url is requested to get full list
         :param empty_list: if the response list is empty
@@ -271,8 +271,8 @@ class RESTApiTestCase(AiidaTestCase):
             expected_range = []
 
         if result_node_type is None and result_name is None:
-            result_node_type = node_type
-            result_name = node_type
+            result_node_type = entity_type
+            result_name = entity_type
 
         url = self._url_prefix + url
 
@@ -301,7 +301,7 @@ class RESTApiTestCase(AiidaTestCase):
                 result_node_uuids = [node['uuid'] for node in response["data"][result_name]]
                 self.assertEqual(expected_node_uuids, result_node_uuids)
 
-                self.compare_extra_response_data(node_type, url, response, uuid)
+                self.compare_extra_response_data(entity_type, url, response, uuid)
 
     ######## check exception #########
     # def node_exception(self, url, exception_type):
@@ -726,7 +726,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         node_uuid = self.get_dummy_data()["calculations"][1]["uuid"]
         self.process_test(
             "calculations",
-            '/calculations/' + str(node_uuid) + '/io/inputs?type="data.parameter.ParameterData."',
+            '/calculations/' + str(node_uuid) + '/io/inputs?node_type="data.parameter.ParameterData."',
             expected_list_ids=[2],
             uuid=node_uuid,
             result_node_type="data",

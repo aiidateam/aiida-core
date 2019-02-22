@@ -242,7 +242,7 @@ def get_all_fields_info():
         "mtime": {
             "convert_type": "date"
         },
-        "type": {},
+        "node_type": {},
         "label": {},
         "nodeversion": {},
         "user": {
@@ -899,7 +899,7 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
                             # from here
                             deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
                                     key.startswith('_aiida_')}
-                            if models.DbNode.objects.filter(uuid=unique_id)[0].type.endswith('code.Code.'):
+                            if models.DbNode.objects.filter(uuid=unique_id)[0].node_type.endswith('code.Code.'):
                                 deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
                                         key == 'hidden'}
                             # till here
@@ -940,7 +940,7 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
                         # from here
                         deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
                                 key.startswith('_aiida_')}
-                        if models.DbNode.objects.filter(uuid=unique_id)[0].type.endswith('code.Code.'):
+                        if models.DbNode.objects.filter(uuid=unique_id)[0].node_type.endswith('code.Code.'):
                             deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
                                     key == 'hidden'}
                         # till here
@@ -1564,7 +1564,7 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
                             # from here
                             deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
                                     key.startswith('_aiida_')}
-                            if o.type.endswith('code.Code.'):
+                            if o.node_type.endswith('code.Code.'):
                                 deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
                                         key == 'hidden'}
                             # till here
@@ -1604,7 +1604,7 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
                         # from here
                         deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
                                 key.startswith('_aiida_')}
-                        if db_node.type.endswith('code.Code.'):
+                        if db_node.node_type.endswith('code.Code.'):
                             deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
                                     key == 'hidden'}
                         # till here

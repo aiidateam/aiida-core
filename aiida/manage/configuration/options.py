@@ -105,7 +105,7 @@ CONFIG_OPTIONS = {
         'key': 'projections_for_calculation_list',
         'valid_type': 'list_of_str',
         'valid_values': None,
-        'default': ('pk', 'ctime', 'process_state', 'type', 'job_state'),
+        'default': ('pk', 'ctime', 'process_state', 'node_type', 'job_state'),
         'description': 'List of default projections for `verdi calculation list`',
     },
     'logging.aiida_loglevel': {

@@ -24,7 +24,7 @@ from aiida.cmdline.utils import decorators
 from aiida.manage import get_config_option
 
 LIST_CMDLINE_PROJECT_DEFAULT = get_config_option('verdishell.calculation_list')
-LIST_CMDLINE_PROJECT_CHOICES = ('pk', 'ctime', 'process_state', 'job_state', 'scheduler_state', 'computer', 'type',
+LIST_CMDLINE_PROJECT_CHOICES = ('pk', 'ctime', 'process_state', 'job_state', 'scheduler_state', 'computer', 'node_type',
                                 'description', 'label', 'uuid', 'mtime', 'user', 'sealed')
 
 

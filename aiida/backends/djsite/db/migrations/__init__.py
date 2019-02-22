@@ -14,7 +14,7 @@ from django.apps import apps
 
 import six
 
-LATEST_MIGRATION = '0028_remove_node_prefix'
+LATEST_MIGRATION = '0029_dbnode_type_to_dbnode_node_type'
 
 
 def _update_schema_version(version, apps, schema_editor):

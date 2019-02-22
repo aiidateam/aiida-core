@@ -137,7 +137,7 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(qb2.count(), 3)
 
         qb2 = QueryBuilder()
-        qb2.append(type='data.Data.')
+        qb2.append(entity_type='data.Data.')
         self.assertEqual(qb2.count(), 3)
 
         qb3 = QueryBuilder()
@@ -323,7 +323,7 @@ class TestQueryBuilder(AiidaTestCase):
         # Now I am testing the subclassing with tuples:
         qb = QueryBuilder().append(cls=(StructureData, ParameterData), filters={'attributes.cat': 'miau'})
         self.assertEqual(qb.count(), 2)
-        qb = QueryBuilder().append(type=('data.structure.StructureData.', 'data.parameter.ParameterData.'),
+        qb = QueryBuilder().append(entity_type=('data.structure.StructureData.', 'data.parameter.ParameterData.'),
                                    filters={'attributes.cat': 'miau'})
         self.assertEqual(qb.count(), 2)
         qb = QueryBuilder().append(cls=(StructureData, ParameterData), filters={'attributes.cat': 'miau'},
@@ -331,10 +331,10 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(qb.count(), 2)
         qb = QueryBuilder().append(cls=(StructureData, Data), filters={'attributes.cat': 'miau'}, )
         self.assertEqual(qb.count(), 3)
-        qb = QueryBuilder().append(type=('data.structure.StructureData.', 'data.parameter.ParameterData.'),
+        qb = QueryBuilder().append(entity_type=('data.structure.StructureData.', 'data.parameter.ParameterData.'),
                                    filters={'attributes.cat': 'miau'}, subclassing=False)
         self.assertEqual(qb.count(), 2)
-        qb = QueryBuilder().append(type=('data.structure.StructureData.', 'data.Data.'),
+        qb = QueryBuilder().append(entity_type=('data.structure.StructureData.', 'data.Data.'),
                                    filters={'attributes.cat': 'miau'}, subclassing=False)
         self.assertEqual(qb.count(), 2)
 

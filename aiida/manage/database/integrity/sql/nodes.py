@@ -40,9 +40,9 @@ VALID_NODE_BASE_CLASSES = [Data, CalculationNode, WorkflowNode]
 VALID_NODE_TYPE_STRING = '({})%'.format('|'.join([format_type_string_regex(cls) for cls in VALID_NODE_BASE_CLASSES]))
 
 SELECT_NODES_WITH_INVALID_TYPE = """
-    SELECT node.id, node.uuid, node.type
+    SELECT node.id, node.uuid, node.node_type
     FROM db_dbnode AS node
-    WHERE node.type NOT SIMILAR TO %(valid_node_types)s;
+    WHERE node.node_type NOT SIMILAR TO %(valid_node_types)s;
     """
 
 INVALID_NODE_SELECT_STATEMENTS = (AttributeDict({

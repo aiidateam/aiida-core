@@ -317,10 +317,10 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
         user.save()
 
         # Creating the needed nodes & workflows
-        calc_1 = DbNode(type="node.process.calculation.CalculationNode.", user_id=user.id)
-        param = DbNode(type="data.parameter.ParameterData.", user_id=user.id)
+        calc_1 = DbNode(node_type="node.process.calculation.CalculationNode.", user_id=user.id)
+        param = DbNode(node_type="data.parameter.ParameterData.", user_id=user.id)
         leg_workf = DbWorkflow(label="Legacy WorkflowNode", user_id=user.id)
-        calc_2 = DbNode(type="node.process.calculation.CalculationNode.", user_id=user.id)
+        calc_2 = DbNode(node_type="node.process.calculation.CalculationNode.", user_id=user.id)
 
         # Storing them
         calc_1.save()
@@ -544,8 +544,8 @@ class TestDbLogMigrationBackward(TestMigrations):
         user.save()
 
         # Creating the needed nodes & workflows
-        calc_1 = DbNode(type="node.process.calculation.CalculationNode.1", user_id=user.id)
-        calc_2 = DbNode(type="node.process.calculation.CalculationNode.2", user_id=user.id)
+        calc_1 = DbNode(node_type="node.process.calculation.CalculationNode.1", user_id=user.id)
+        calc_2 = DbNode(node_type="node.process.calculation.CalculationNode.2", user_id=user.id)
 
         # Storing them
         calc_1.save()
@@ -623,8 +623,8 @@ class TestDataMoveWithinNodeMigration(TestMigrations):
 
         default_user = self.backend.users.create("{}@aiida.net".format(self.id())).store()
 
-        node_calc = DbNode(type='node.process.calculation.calcjob.CalcJobNode.', user_id=default_user.id)
-        node_data = DbNode(type='data.int.Int.', user_id=default_user.id)
+        node_calc = DbNode(node_type='node.process.calculation.calcjob.CalcJobNode.', user_id=default_user.id)
+        node_data = DbNode(node_type='data.int.Int.', user_id=default_user.id)
         node_calc.save()
         node_data.save()
 
@@ -725,8 +725,8 @@ class TestNodePrefixRemovalMigration(TestMigrations):
 
         default_user = self.backend.users.create('{}@aiida.net'.format(self.id())).store()
 
-        node_calc = DbNode(type='node.process.calculation.calcjob.CalcJobNode.', user_id=default_user.id)
-        node_data = DbNode(type='node.data.int.Int.', user_id=default_user.id)
+        node_calc = DbNode(node_type='node.process.calculation.calcjob.CalcJobNode.', user_id=default_user.id)
+        node_data = DbNode(node_type='node.data.int.Int.', user_id=default_user.id)
         node_calc.save()
         node_data.save()
 

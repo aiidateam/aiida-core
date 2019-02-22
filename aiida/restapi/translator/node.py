@@ -66,7 +66,7 @@ class NodeTranslator(BaseTranslator):
         super(NodeTranslator, self).__init__(Class=Class, **kwargs)
 
         self._default_projections = [
-            "id", "label", "type", "ctime", "mtime", "uuid", "user_id", "user_email", "attributes", "extras"
+            "id", "label", "node_type", "ctime", "mtime", "uuid", "user_id", "user_email", "attributes", "extras"
         ]
 
         ## node schema
@@ -74,7 +74,7 @@ class NodeTranslator(BaseTranslator):
         # Note: final schema will contain details for only the fields present in column order
         self._schema_projections = {
             "column_order":
-            ["id", "label", "type", "ctime", "mtime", "uuid", "user_id", "user_email", "attributes", "extras"],
+            ["id", "label", "node_type", "ctime", "mtime", "uuid", "user_id", "user_email", "attributes", "extras"],
             "additional_info": {
                 "id": {
                     "is_display": True
@@ -82,7 +82,7 @@ class NodeTranslator(BaseTranslator):
                 "label": {
                     "is_display": False
                 },
-                "type": {
+                "node_type": {
                     "is_display": True
                 },
                 "ctime": {
@@ -176,7 +176,7 @@ class NodeTranslator(BaseTranslator):
         # Add input/output relation to the query help
         if self._result_type != self.__label__:
             self._query_help["path"].append({
-                "type": ("node.Node.", "data.Data."),
+                "entity_type": ("node.Node.", "data.Data."),
                 "tag": self._result_type,
                 self._result_type: self.__label__
             })
@@ -585,11 +585,11 @@ class NodeTranslator(BaseTranslator):
             main_node = qb_obj.first()[0]
             pk = main_node.pk
             uuid = main_node.uuid
-            nodetype = main_node.type
+            nodetype = main_node.node_type
             display_type = nodetype.split('.')[-2]
             description = main_node.get_description()
             if description == '':
-                description = main_node.type.split('.')[-2]
+                description = main_node.node_type.split('.')[-2]
 
             nodes.append({
                 "id": node_count,
@@ -614,11 +614,11 @@ class NodeTranslator(BaseTranslator):
                 linktype = node_input['main--in']['label']
                 pk = node.pk
                 uuid = node.uuid
-                nodetype = node.type
+                nodetype = node.node_type
                 display_type = nodetype.split('.')[-2]
                 description = node.get_description()
                 if description == '':
-                    description = node.type.split('.')[-2]
+                    description = node.node_type.split('.')[-2]
 
                 nodes.append({
                     "id": node_count,
@@ -652,11 +652,11 @@ class NodeTranslator(BaseTranslator):
                 linktype = output['main--out']['label']
                 pk = node.pk
                 uuid = node.uuid
-                nodetype = node.type
+                nodetype = node.node_type
                 display_type = nodetype.split('.')[-2]
                 description = node.get_description()
                 if description == '':
-                    description = node.type.split('.')[-2]
+                    description = node.node_type.split('.')[-2]
 
                 nodes.append({
                     "id": node_count,

@@ -160,7 +160,7 @@ def group_show(group, raw, uuid):
             if uuid:
                 row.append(node.uuid)
             row.append(node.pk)
-            row.append(node.type.rsplit('.', 2)[1])
+            row.append(node.node_type.rsplit('.', 2)[1])
             row.append(str_timedelta(now - node.ctime, short=True, negative_to_zero=True))
             table.append(row)
         echo.echo(tabulate(table, headers=header))

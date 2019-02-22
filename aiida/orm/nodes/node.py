@@ -193,12 +193,12 @@ class Node(Entity):
         return self.backend_entity.uuid
 
     @property
-    def type(self):
+    def node_type(self):
         """Return the node type.
 
-        :return: the type
+        :return: the node type
         """
-        return self.backend_entity.type
+        return self.backend_entity.node_type
 
     @property
     def process_type(self):
@@ -1105,7 +1105,7 @@ class Node(Entity):
     def _store_from_cache(self, cache_node, with_transaction):
         """Store this node from an existing cache node."""
         from aiida.orm.utils.mixins import Sealable
-        assert self.type == cache_node.type
+        assert self.node_type == cache_node.node_type
 
         # Make sure the node doesn't have any RETURN links
         if cache_node.get_outgoing(link_type=LinkType.RETURN).all():
@@ -1280,9 +1280,9 @@ class Node(Entity):
                 "is_foreign_key": False,
                 "type": "datetime.datetime"
             },
-            "type": {
+            "node_type": {
                 "display_name": "Type",
-                "help_text": "Code type",
+                "help_text": "Node type",
                 "is_foreign_key": False,
                 "type": "str"
             },

@@ -12,7 +12,7 @@ SELECT_CALCULATIONS_WITH_OUTGOING_CALL = """
     FROM db_dbnode AS node_in
     JOIN db_dblink AS link ON node_in.id = link.input_id
     JOIN db_dbnode AS node_out ON node_out.id = link.output_id
-    WHERE node_in.type LIKE 'process.calculation%'
+    WHERE node_in.node_type LIKE 'process.calculation%'
     AND link.type = 'call_calc' OR link.type = 'call_work';
     """
 
@@ -21,7 +21,7 @@ SELECT_CALCULATIONS_WITH_OUTGOING_RETURN = """
     FROM db_dbnode AS node_in
     JOIN db_dblink AS link ON node_in.id = link.input_id
     JOIN db_dbnode AS node_out ON node_out.id = link.output_id
-    WHERE node_in.type LIKE 'process.calculation%'
+    WHERE node_in.node_type LIKE 'process.calculation%'
     AND link.type = 'return';
     """
 
@@ -30,7 +30,7 @@ SELECT_WORKFLOWS_WITH_OUTGOING_CREATE = """
     FROM db_dbnode AS node_in
     JOIN db_dblink AS link ON node_in.id = link.input_id
     JOIN db_dbnode AS node_out ON node_out.id = link.output_id
-    WHERE node_in.type LIKE 'process.workflow%'
+    WHERE node_in.node_type LIKE 'process.workflow%'
     AND link.type = 'create';
     """
 
@@ -43,22 +43,22 @@ SELECT_LINKS_WITH_INVALID_TYPE = """
     """
 
 SELECT_MULTIPLE_INCOMING_CREATE = """
-    SELECT node.id, node.uuid, node.type, COUNT(link.id)
+    SELECT node.id, node.uuid, node.node_type, COUNT(link.id)
     FROM db_dbnode AS node
     JOIN db_dblink AS link
     ON node.id = link.output_id
-    WHERE node.type LIKE 'data.%'
+    WHERE node.node_type LIKE 'data.%'
     AND link.type = 'create'
     GROUP BY node.id
     HAVING COUNT(link.id) > 1;
     """
 
 SELECT_MULTIPLE_INCOMING_CALL = """
-    SELECT node.id, node.uuid, node.type, COUNT(link.id)
+    SELECT node.id, node.uuid, node.node_type, COUNT(link.id)
     FROM db_dbnode AS node
     JOIN db_dblink AS link
     ON node.id = link.output_id
-    WHERE node.type LIKE 'process.%'
+    WHERE node.node_type LIKE 'process.%'
     AND (link.type = 'call_calc' OR link.type = 'call_work')
     GROUP BY node.id
     HAVING COUNT(link.id) > 1;

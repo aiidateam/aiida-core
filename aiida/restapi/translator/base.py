@@ -92,7 +92,7 @@ class BaseTranslator(object):
         # basic query_help object
         self._query_help = {
             "path": [{
-                "type": self._qb_type,
+                "entity_type": self._qb_type,
                 "tag": self.__label__
             }],
             "filters": {},

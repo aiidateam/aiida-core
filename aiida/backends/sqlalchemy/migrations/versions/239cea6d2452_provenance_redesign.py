@@ -34,12 +34,15 @@ def migrate_infer_calculation_entry_point():
     """Set the process type for calculation nodes by inferring it from their type string."""
     from sqlalchemy.orm.session import Session
 
-    from aiida.backends.sqlalchemy.models.node import DbNode
+    from aiida.backends.sqlalchemy.utils import get_current_table
     from aiida.manage.database.integrity import write_database_integrity_violation
     from aiida.manage.database.integrity.plugins import infer_calculation_entry_point
     from aiida.plugins.entry_point import ENTRY_POINT_STRING_SEPARATOR
 
-    session = Session(bind=op.get_bind())
+    bind = op.get_bind()
+    session = Session(bind=bind)
+
+    DbNode = get_current_table(bind, 'db_dbnode')
 
     type_strings = [entry[0] for entry in session.query(DbNode.type).filter(DbNode.type.like('calculation.%')).all()]
     mapping_node_type_to_entry_point = infer_calculation_entry_point(type_strings=type_strings)

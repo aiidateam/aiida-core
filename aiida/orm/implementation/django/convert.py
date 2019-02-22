@@ -164,7 +164,7 @@ def _(dbmodel, backend):
     """
     djnode_instance = models.DbNode(
         id=dbmodel.id,
-        type=dbmodel.type,
+        node_type=dbmodel.node_type,
         process_type=dbmodel.process_type,
         uuid=dbmodel.uuid,
         ctime=dbmodel.ctime,

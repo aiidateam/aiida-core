@@ -285,7 +285,7 @@ class QueryBuilder(object):
             elif isinstance(path_spec, six.string_types):
                 # Maybe it is just a string,
                 # I assume user means the type
-                self.append(type=path_spec)
+                self.append(entity_type=path_spec)
             else:
                 # Or a class, let's try
                 self.append(cls=path_spec)
@@ -432,7 +432,7 @@ class QueryBuilder(object):
 
     def append(self,
                cls=None,
-               type=None,
+               entity_type=None,
                tag=None,
                filters=None,
                project=None,
@@ -458,7 +458,7 @@ class QueryBuilder(object):
 
                 cls=(Group, Node)
 
-        :param type: The type of the class, if cls is not given. Also here, a tuple or list is accepted.
+        :param entity_type: The node type of the class, if cls is not given. Also here, a tuple or list is accepted.
         :type type: str
         :param bool autotag: Whether to find automatically a unique tag. If this is set to True (default False),
         :param str tag:
@@ -505,11 +505,11 @@ class QueryBuilder(object):
         # input now.
         # First of all, let's make sure the specified
         # the class or the type (not both)
-        if cls and type:
-            raise InputValidationError("You cannot specify both a class ({}) and a type ({})".format(cls, type))
+        if cls and entity_type:
+            raise InputValidationError("You cannot specify both a class ({}) and a entity_type ({})".format(cls, entity_type))
 
-        if not (cls or type):
-            raise InputValidationError("You need to specify at least a class or a type")
+        if not (cls or entity_type):
+            raise InputValidationError("You need to specify at least a class or a entity_type")
 
         # Let's check if it is a valid class or type
         if cls:
@@ -520,16 +520,16 @@ class QueryBuilder(object):
             else:
                 if not inspect_isclass(cls):
                     raise InputValidationError("{} was passed with kw 'cls', but is not a class".format(cls))
-        elif type:
-            if isinstance(type, (tuple, list, set)):
-                for t in type:
+        elif entity_type:
+            if isinstance(entity_type, (tuple, list, set)):
+                for t in entity_type:
                     if not isinstance(t, six.string_types):
-                        raise InputValidationError("{} was passed as type, but is not a string".format(t))
+                        raise InputValidationError("{} was passed as entity_type, but is not a string".format(t))
             else:
-                if not isinstance(type, six.string_types):
-                    raise InputValidationError("{} was passed as type, but is not a string".format(type))
+                if not isinstance(entity_type, six.string_types):
+                    raise InputValidationError("{} was passed as entity_type, but is not a string".format(entity_type))
 
-        ormclass, ormclasstype, query_type_string = self._get_ormclass(cls, type)
+        ormclass, ormclasstype, query_type_string = self._get_ormclass(cls, entity_type)
 
         # TAG #################################
         # Let's get a tag
@@ -737,7 +737,7 @@ class QueryBuilder(object):
 
         self._path.append(
             dict(
-                type=ormclasstype,
+                entity_type=ormclasstype,
                 tag=tag,
                 joining_keyword=joining_keyword,
                 joining_value=joining_value,
@@ -890,13 +890,13 @@ class QueryBuilder(object):
         if isinstance(query_type_string, list):
             # A list was maybe passed to append, this propagates to a list being passed
             # as a query type string
-            node_type_filter = {'or': []}
+            entity_type_filter = {'or': []}
             for i, (q, p) in enumerate(zip(query_type_string, plugin_type_string)):
-                node_type_filter['or'].append(get_type_filter(q, p))
+                entity_type_filter['or'].append(get_type_filter(q, p))
         else:
-            node_type_filter = get_type_filter(query_type_string, plugin_type_string)
+            entity_type_filter = get_type_filter(query_type_string, plugin_type_string)
 
-        self.add_filter(tagspec, {'type': node_type_filter})
+        self.add_filter(tagspec, {'node_type': entity_type_filter})
 
     def add_projection(self, tag_spec, projection_spec):
         """
@@ -1551,10 +1551,10 @@ class QueryBuilder(object):
         :param joining_value: the tag of the nodes to be joined
         """
         # Set the calling entity - to allow for the correct join relation to be set
-        if self._path[index]['type'] not in ['computer', 'user', 'group', 'comment', 'log']:
+        if self._path[index]['entity_type'] not in ['computer', 'user', 'group', 'comment', 'log']:
             calling_entity = 'node'
         else:
-            calling_entity = self._path[index]['type']
+            calling_entity = self._path[index]['entity_type']
 
         if joining_keyword == 'direction':
             if joining_value > 0:
@@ -1825,7 +1825,7 @@ class QueryBuilder(object):
 
             counterquery = self._imp._get_session().query(orm_calc_class)
             if type_spec:
-                counterquery = counterquery.filter(orm_calc_class.type == type_spec)
+                counterquery = counterquery.filter(orm_calc_class.entity_type == type_spec)
             for alias in input_alias_list:
                 link = aliased(self.Link)
                 counterquery = counterquery.join(link, orm_calc_class.id == link.output_id).join(
@@ -2104,7 +2104,7 @@ class QueryBuilder(object):
             qb.append(
                 Node,
                 with_ancestors='structure',
-                project=['type', 'id'],  # returns type (string) and id (string)
+                project=['entity_type', 'id'],  # returns entity_type (string) and id (string)
                 tag='descendant'
             )
 
@@ -2117,11 +2117,11 @@ class QueryBuilder(object):
 
             qb.iterdict()
             >>> {'descendant': {
-                    'type': u'calculation.job.quantumespresso.pw.PwCalculation.',
+                    'entity_type': u'calculation.job.quantumespresso.pw.PwCalculation.',
                     'id': 7716}
                 }
             >>> {'descendant': {
-                    'type': u'data.remote.RemoteData.',
+                    'entity_type': u'data.remote.RemoteData.',
                     'id': 8510}
                 }
 
@@ -2178,8 +2178,8 @@ class QueryBuilder(object):
 
     def _deprecate(self, function, deprecated_name, preferred_name, version='1.0.0a5'):
         """
-        Wrapper to return a decorated functon which will print a deprecation warning when 
-        it is called.
+        Wrapper to return a decorated functon which will print a deprecation warning when it is called.
+
         Specifically for when an  old relationship type is used.
         Note that it is the way of calling the function which is deprecated, not the function itself
 

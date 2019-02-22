@@ -505,6 +505,31 @@ def alembic_command(selected_command, *args, **kwargs):
             al_command(alembic_cfg, *args, **kwargs)
 
 
+def get_current_table(bind, table_name):
+    """
+    Return a Model instantiated at the correct migration.
+    Note that this is obtained by inspecting the database and not
+    by looking into the models file. So, special methods possibly defined
+    in the models files/classes are not present.
+
+    For instance, you can do::
+
+      DbGroup = self.get_current_table('db_dbgroup')
+
+    :param table_name: the name of the table.
+    """
+    from alembic.migration import MigrationContext  # pylint: disable=import-error
+    from sqlalchemy.ext.automap import automap_base  # pylint: disable=import-error,no-name-in-module
+
+    context = MigrationContext.configure(bind)
+    bind = context.bind
+
+    base = automap_base()
+    # reflect the tables
+    base.prepare(bind.engine, reflect=True)
+    return getattr(base.classes, table_name)
+
+
 def delete_nodes_and_connections_sqla(pks_to_delete):
     """
     Delete all nodes corresponding to pks in the input.

@@ -50,7 +50,7 @@ class CalculationTranslator(NodeTranslator):
         # Note: final schema will contain details for only the fields present in column order
         self._schema_projections = {
             "column_order": [
-                "id", "label", "type", "ctime", "mtime", "uuid", "user_id", "user_email", "attributes.state",
+                "id", "label", "node_type", "ctime", "mtime", "uuid", "user_id", "user_email", "attributes.state",
                 "attributes", "extras"
             ],
             "additional_info": {
@@ -60,7 +60,7 @@ class CalculationTranslator(NodeTranslator):
                 "label": {
                     "is_display": False
                 },
-                "type": {
+                "node_type": {
                     "is_display": True
                 },
                 "ctime": {
@@ -119,7 +119,7 @@ class CalculationTranslator(NodeTranslator):
         :param node: aiida node
         :return: the retrieved input files for job calculation
         """
-        if node.type.startswith("process.calculation.calcjob"):
+        if node.node_type.startswith("process.calculation.calcjob"):
 
             input_folder = node._raw_input_folder  # pylint: disable=protected-access
 
@@ -158,7 +158,7 @@ class CalculationTranslator(NodeTranslator):
         :param node: aiida node
         :return: the retrieved output files for job calculation
         """
-        if node.type.startswith("process.calculation.calcjob"):
+        if node.node_type.startswith("process.calculation.calcjob"):
 
             retrieved_folder = node.out.retrieved
             response = {}

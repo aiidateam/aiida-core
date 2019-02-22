@@ -75,14 +75,10 @@ LOGGING = {
             'formatter': 'halfverbose',
             'filters': ['testing']
         },
-        'dblogger': {
-            'level': lambda: get_config_option('logging.db_loglevel'),
-            'class': 'aiida.orm.utils.log.DBLogHandler',
-        },
     },
     'loggers': {
         'aiida': {
-            'handlers': ['console', 'dblogger'],
+            'handlers': ['console'],
             'level': lambda: get_config_option('logging.aiida_loglevel'),
             'propagate': False,
         },
@@ -144,7 +140,7 @@ def evaluate_logging_configuration(dictionary):
     return result
 
 
-def configure_logging(daemon=False, daemon_log_file=None):
+def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
     """
     Setup the logging by retrieving the LOGGING dictionary from aiida and passing it to
     the python module logging.config.dictConfig. If the logging needs to be setup for the
@@ -164,6 +160,9 @@ def configure_logging(daemon=False, daemon_log_file=None):
     # Add the daemon file handler to all loggers if daemon=True
     if daemon is True:
 
+        # Daemon always needs to run with ORM enabled
+        with_orm = True
+
         if daemon_log_file is None:
             raise ValueError('daemon_log_file has to be defined when configuring for the daemon')
 
@@ -179,5 +178,16 @@ def configure_logging(daemon=False, daemon_log_file=None):
 
         for logger in config.get('loggers', {}).values():
             logger.setdefault('handlers', []).append(daemon_handler_name)
+
+    # Add the `DbLogHandler` if `with_orm` is `True`
+    if with_orm:
+
+        handler_dblogger = 'dblogger'
+
+        config['handlers'][handler_dblogger] = {
+            'level': get_config_option('logging.db_loglevel'),
+            'class': 'aiida.orm.utils.log.DBLogHandler',
+        }
+        config['loggers']['aiida']['handlers'].append(handler_dblogger)
 
     dictConfig(config)

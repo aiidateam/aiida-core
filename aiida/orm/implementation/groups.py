@@ -144,7 +144,7 @@ class BackendGroup(backends.BackendEntity):
         the number of nodes in the group using len().
         """
 
-    def add_nodes(self, nodes):
+    def add_nodes(self, nodes, **kwargs):  # pylint: disable=unused-argument
         """Add a set of nodes to the group.
 
         :note: all the nodes *and* the group itself have to be stored.

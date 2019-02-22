@@ -8,11 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """SQLA groups"""
+from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from __future__ import absolute_import
+
 import collections
 import logging
+
 import six
 
 from aiida.backends import sqlalchemy as sa
@@ -21,7 +23,6 @@ from aiida.backends.sqlalchemy.models.node import DbNode
 from aiida.common.exceptions import UniquenessError
 from aiida.common.lang import type_check
 from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
-
 from . import entities
 from . import users
 from . import utils
@@ -161,40 +162,61 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
 
         return Iterator(self._dbmodel.dbnodes, self._backend)
 
-    def add_nodes(self, nodes):
+    def add_nodes(self, nodes, **kwargs):
         """Add a node or a set of nodes to the group.
 
         :note: all the nodes *and* the group itself have to be stored.
 
         :param nodes: a list of `BackendNode` instance to be added to this group
+
+        :param kwargs:
+            skip_orm: When the flag is on, the SQLA ORM is skipped and SQLA is used
+            to create a direct SQL INSERT statement to the group-node relationship
+            table (to improve speed).
         """
         from sqlalchemy.exc import IntegrityError  # pylint: disable=import-error, no-name-in-module
+        from sqlalchemy.dialects.postgresql import insert  # pylint: disable=import-error, no-name-in-module
         from aiida.orm.implementation.sqlalchemy.nodes import SqlaNode
         from aiida.backends.sqlalchemy import get_scoped_session
+        from aiida.backends.sqlalchemy.models.base import Base
 
         super(SqlaGroup, self).add_nodes(nodes)
+        skip_orm = kwargs.get('skip_orm', False)
+
+        def check_node(given_node):
+            """ Check if given node is of correct type and stored """
+            if not isinstance(given_node, SqlaNode):
+                raise TypeError('invalid type {}, has to be {}'.format(type(given_node), SqlaNode))
+
+            if not given_node.is_stored:
+                raise ValueError('At least one of the provided nodes is unstored, stopping...')
 
         with utils.disable_expire_on_commit(get_scoped_session()) as session:
+            if not skip_orm:
+                # Get dbnodes here ONCE, otherwise each call to dbnodes will re-read the current value in the database
+                dbnodes = self._dbmodel.dbnodes
 
-            # Get dbnodes here ONCE, otherwise each call to dbnodes will re-read the current value in the database
-            dbnodes = self._dbmodel.dbnodes
+                for node in nodes:
+                    check_node(node)
 
-            for node in nodes:
-                if not isinstance(node, SqlaNode):
-                    raise TypeError('invalid type {}, has to be {}'.format(type(node), SqlaNode))
+                    # Use pattern as suggested here:
+                    # http://docs.sqlalchemy.org/en/latest/orm/session_transaction.html#using-savepoint
+                    try:
+                        with session.begin_nested():
+                            dbnodes.append(node.dbmodel)
+                            session.flush()
+                    except IntegrityError:
+                        # Duplicate entry, skip
+                        pass
+            else:
+                ins_dict = list()
+                for node in nodes:
+                    check_node(node)
+                    ins_dict.append({'dbnode_id': node.id, 'dbgroup_id': self.id})
 
-                if not node.is_stored:
-                    raise ValueError('At least one of the provided nodes is unstored, stopping...')
-
-                # Use pattern as suggested here:
-                # http://docs.sqlalchemy.org/en/latest/orm/session_transaction.html#using-savepoint
-                try:
-                    with session.begin_nested():
-                        dbnodes.append(node.dbmodel)
-                        session.flush()
-                except IntegrityError:
-                    # Duplicate entry, skip
-                    pass
+                my_table = Base.metadata.tables['db_dbgroup_dbnodes']
+                ins = insert(my_table).values(ins_dict)
+                session.execute(ins.on_conflict_do_nothing(index_elements=['dbnode_id', 'dbgroup_id']))
 
             # Commit everything as up till now we've just flushed
             session.commit()

@@ -149,7 +149,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
 
         return NodesIterator(self._dbmodel.dbnodes.all(), self._backend)
 
-    def add_nodes(self, nodes):
+    def add_nodes(self, nodes, **kwargs):
         from .nodes import DjangoNode
 
         super(DjangoGroup, self).add_nodes(nodes)

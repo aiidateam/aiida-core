@@ -130,5 +130,5 @@ def print_status(status, service, msg=""):
 
     """
     symbol = STATUS_SYMBOLS[status]
-    click.secho(u'  {} '.format(symbol['string']), fg=symbol['color'], nl=False)
-    click.secho('{:10s} {}'.format(service + ':', msg))
+    click.secho(u' {} '.format(symbol['string']), fg=symbol['color'], nl=False)
+    click.secho('{:12s} {}'.format(service + ':', msg))

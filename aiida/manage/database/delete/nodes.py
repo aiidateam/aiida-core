@@ -105,7 +105,7 @@ def delete_nodes(pks,
             builder = QueryBuilder().append(
                 Node, filters={'id': {
                     'in': pks_set_to_delete
-                }}, project=('uuid', 'id', 'type', 'label'))
+                }}, project=('uuid', 'id', 'node_type', 'label'))
             echo.echo("The nodes I {} delete:".format('would' if dry_run else 'will'))
             for uuid, pk, type_string, label in builder.iterall():
                 try:
@@ -124,7 +124,7 @@ def delete_nodes(pks,
         called_qb.append(ProcessNode, filters={'id': {'!in': pks_set_to_delete}}, project='id')
         called_qb.append(
             ProcessNode,
-            project='type',
+            project='node_type',
             edge_project='label',
             filters={'id': {
                 'in': pks_set_to_delete
@@ -149,7 +149,7 @@ def delete_nodes(pks,
         created_qb.append(ProcessNode, filters={'id': {'!in': pks_set_to_delete}}, project='id')
         created_qb.append(
             Data,
-            project='type',
+            project='node_type',
             edge_project='label',
             filters={'id': {
                 'in': pks_set_to_delete

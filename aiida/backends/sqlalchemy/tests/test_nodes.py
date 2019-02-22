@@ -127,7 +127,7 @@ class TestNodeBasicSQLA(AiidaTestCase):
         dbuser = backend.users.create("{}@aiida.net".format(self.id())).store().dbmodel
         # Create a new node but don't add it to the session
         node_uuid = get_new_uuid()
-        DbNode(user=dbuser, uuid=node_uuid, type=None)
+        DbNode(user=dbuser, uuid=node_uuid, node_type=None)
 
         session = aiida.backends.sqlalchemy.get_scoped_session()
 
@@ -150,7 +150,7 @@ class TestNodeBasicSQLA(AiidaTestCase):
         dbuser = orm.User.objects.get_default().backend_entity.dbmodel
         # Create a new node but now add it to the session
         node_uuid = get_new_uuid()
-        node = DbNode(user=dbuser, uuid=node_uuid, type=None)
+        node = DbNode(user=dbuser, uuid=node_uuid, node_type=None)
         session.add(node)
 
         # Query the session before commit

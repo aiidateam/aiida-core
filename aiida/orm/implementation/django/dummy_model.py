@@ -150,7 +150,7 @@ class DbNode(Base):
     __tablename__ = "db_dbnode"
     id = Column(Integer, primary_key=True)
     uuid = Column(UUID(as_uuid=True), default=get_new_uuid)
-    type = Column(String(255), index=True)
+    node_type = Column(String(255), index=True)
     process_type = Column(String(255), index=True)
     label = Column(String(255), index=True, nullable=True)
     description = Column(Text(), nullable=True)

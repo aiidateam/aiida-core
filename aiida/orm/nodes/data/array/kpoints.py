@@ -60,7 +60,7 @@ class KpointsData(ArrayData):
             try:
                 return '(Path of {} kpts)'.format(len(self.get_kpoints()))
             except OSError:
-                return self.type
+                return self.node_type
 
     @property
     def cell(self):

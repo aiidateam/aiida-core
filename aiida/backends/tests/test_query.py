@@ -251,7 +251,7 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(qb2.count(), 3)
 
         qb2 = orm.QueryBuilder()
-        qb2.append(type='data.Data.')
+        qb2.append(entity_type='data.Data.')
         self.assertEqual(qb2.count(), 3)
 
         qb3 = orm.QueryBuilder()
@@ -427,7 +427,7 @@ class TestQueryBuilder(AiidaTestCase):
         qb = orm.QueryBuilder().append(cls=(orm.StructureData, orm.Dict), filters={'attributes.cat': 'miau'})
         self.assertEqual(qb.count(), 2)
         qb = orm.QueryBuilder().append(
-            type=('data.structure.StructureData.', 'data.dict.Dict.'), filters={'attributes.cat': 'miau'})
+            entity_type=('data.structure.StructureData.', 'data.dict.Dict.'), filters={'attributes.cat': 'miau'})
         self.assertEqual(qb.count(), 2)
         qb = orm.QueryBuilder().append(
             cls=(orm.StructureData, orm.Dict), filters={'attributes.cat': 'miau'}, subclassing=False)
@@ -438,12 +438,13 @@ class TestQueryBuilder(AiidaTestCase):
         )
         self.assertEqual(qb.count(), 3)
         qb = orm.QueryBuilder().append(
-            type=('data.structure.StructureData.', 'data.dict.Dict.'),
+            entity_type=('data.structure.StructureData.', 'data.dict.Dict.'),
             filters={'attributes.cat': 'miau'},
             subclassing=False)
         self.assertEqual(qb.count(), 2)
         qb = orm.QueryBuilder().append(
-            type=('data.structure.StructureData.', 'data.Data.'), filters={'attributes.cat': 'miau'}, subclassing=False)
+            entity_type=('data.structure.StructureData.', 'data.Data.'), filters={'attributes.cat': 'miau'},
+            subclassing=False)
         self.assertEqual(qb.count(), 2)
 
     def test_list_behavior(self):

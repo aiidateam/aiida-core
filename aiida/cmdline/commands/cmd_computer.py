@@ -41,7 +41,7 @@ def get_computer_names():
     """
     from aiida.orm.querybuilder import QueryBuilder
     builder = QueryBuilder()
-    builder.append(type='computer', project=['name'])
+    builder.append(entity_type='computer', project=['name'])
     if builder.count() > 0:
         return next(zip(*builder.all()))  # return the first entry
 

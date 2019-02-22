@@ -23,7 +23,7 @@ class CalculationQueryBuilder(object):  # pylint: disable=useless-object-inherit
     _compound_projections = ('state',)
     _default_projections = ('pk', 'ctime', 'state', 'process_label', 'process_status')
     _valid_projections = ('pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'process_status', 'exit_status',
-                          'sealed', 'process_label', 'label', 'description', 'type', 'paused', 'process_type',
+                          'sealed', 'process_label', 'label', 'description', 'node_type', 'paused', 'process_type',
                           'job_state', 'scheduler_state')
 
     def __init__(self, mapper=None):

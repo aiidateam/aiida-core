@@ -14,7 +14,7 @@ from django.apps import apps
 
 import six
 
-LATEST_MIGRATION = '0029_rename_parameter_data_to_dict'
+LATEST_MIGRATION = '0030_dbnode_type_to_dbnode_node_type'
 
 
 def _update_schema_version(version, apps, schema_editor):

@@ -1,7 +1,8 @@
 ## v0.12.3
 ### Improvements
+- Fast addition of nodes to groups with `skip_orm=True` [[#2471]](https://github.com/aiidateam/aiida_core/pull/2471)
 - Add `environment.yml` for installing dependencies using conda; release of `aiida-core` on conda-forge channel [[#2081]](https://github.com/aiidateam/aiida_core/pull/2081)
-- REST API: io tree response now includes link type [[#2033]](https://github.com/aiidateam/aiida_core/pull/2033)
+- REST API: io tree response now includes link type and node label [[#2033]](https://github.com/aiidateam/aiida_core/pull/2033) [[#2511]](https://github.com/aiidateam/aiida_core/pull/2511)
 - backport postgres improvements for quicksetup [[#2433]](https://github.com/aiidateam/aiida_core/pull/2433)
 - backport `aiida.get_strict_version` (for plugin development) [[#2099]](https://github.com/aiidateam/aiida_core/pull/2099)
 

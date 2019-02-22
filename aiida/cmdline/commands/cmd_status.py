@@ -73,8 +73,9 @@ def verdi_status():
 
     # getting the postgres status
     try:
-        postgres = Postgres.from_profile(profile)
-        pg_connected = postgres.determine_setup()
+        with Capturing(capture_stderr=True):
+            postgres = Postgres.from_profile(profile)
+            pg_connected = postgres.determine_setup()
 
         dbinfo = postgres.dbinfo
         if pg_connected:
@@ -91,8 +92,9 @@ def verdi_status():
 
     # getting the rmq status
     try:
-        with Capturing():
-            manager.create_communicator(with_orm=False)
+        with Capturing(capture_stderr=True):
+            comm = manager.create_communicator(with_orm=False)
+            comm.stop()
 
         print_status(ServiceStatus.UP, 'rabbitmq', "Connected to {}".format(get_rmq_url()))
     except Exception as exc:

@@ -128,10 +128,20 @@ class Group(AbstractGroup):
 
         return self
 
-    def add_nodes(self, nodes):
+    def add_nodes(self, nodes, skip_orm=False, batch_size=5000):
+        """
+        :param nodes: See the description of the abstract method that it extends
+        :param skip_orm: When the flag is on, the SQLA ORM is skipped and a RAW SQL
+            statement is issued (to improove speed).
+        :param batch_size: The maximum number of nodes added per SQL query when
+            skip_orm=True.
+        """
         if not self.is_stored:
             raise ModificationNotAllowed("Cannot add nodes to a group before "
                                          "storing")
+        if skip_orm and batch_size <= 0:
+            raise ValueError("batch_size should be a positive nunber")
+
         from aiida.orm.implementation.sqlalchemy.node import Node
         from aiida.backends.sqlalchemy import get_scoped_session
         session = get_scoped_session()
@@ -147,7 +157,11 @@ class Group(AbstractGroup):
                             "of such objects, it is instead {}".format(
                 str(type(nodes))))
 
-        list_nodes = []
+        # In the following list we store the the group,node pairs that will
+        # be used for the non-ORM insert
+        ins_list = list()
+        insert_txt = ""
+        node_count = 0
         for node in nodes:
             if not isinstance(node, (Node, DbNode)):
                 raise TypeError("Invalid type of one of the elements passed "
@@ -163,11 +177,53 @@ class Group(AbstractGroup):
             else:
                 to_add = node
 
-            if to_add not in self._dbgroup.dbnodes:
-                # ~ list_nodes.append(to_add)
-                self._dbgroup.dbnodes.append(to_add)
+            # If we would like to skip the ORM, we just populate the list containing
+            # the group/node pairs to be inserted
+            if skip_orm:
+                # We keep the nodes in bathes that should be inserted one by one to
+                # the group to avoid creating very big SQL statements
+                insert_txt += "({}, {}), ".format(node.id, self.id)
+                if node_count < batch_size:
+                    node_count += 1
+                else:
+                    node_count = 0
+                    # Clean the end of the text
+                    insert_txt = insert_txt[:-2]
+                    # Keep it and reset the string for the next batch
+                    ins_list.append(insert_txt)
+                    insert_txt = ""
+
+            # Otherwise follow the traditional approach for
+            else:
+                if to_add not in self._dbgroup.dbnodes:
+                    self._dbgroup.dbnodes.append(to_add)
+
+        # Here we do the final insert for the non-ORM case
+        if skip_orm:
+            # Take care of the latest batch if it was not added to the list
+            if len(insert_txt) > 0:
+                insert_txt = insert_txt[:-2]
+                ins_list.append(insert_txt)
+
+            for ins_item in ins_list:
+                statement = """INSERT INTO db_dbgroup_dbnodes(dbnode_id, dbgroup_id) VALUES {} 
+                ON CONFLICT DO NOTHING;""".format(ins_item)
+                session.execute(statement)
+
+            # #### The following code can be used to generate similar to the SQL statement shown above.
+            # #### The difference is that it will create an SQL statement per added node resulting to a
+            # #### performance degradation of ~50% comparing the above SQL statement that will
+            # #### contain all nodes in one statement.
+            # #### We don't use the following SQLA code for the moment because the "on_conflict_do_nothing"
+            # #### is not supported by the SQLA version (1.0.x) that we use at AiiDA 0.12.x.
+
+            # from sqlalchemy.dialects.postgresql import insert
+            # from aiida.backends.sqlalchemy.models.group import table_groups_nodes
+            # # Create the insert statement and update the relationship table
+            # insert_statement = insert(table_groups_nodes).values(ins_dict)
+            # session.execute(insert_statement.on_conflict_do_nothing(index_elements=['dbnode_id', 'dbgroup_id']))
+
         session.commit()
-        # ~ self._dbgroup.dbnodes.extend(list_nodes)
 
     @property
     def nodes(self):

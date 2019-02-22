@@ -19,8 +19,7 @@ import numpy
 from alembic import op
 from sqlalchemy.orm.session import Session
 
-from aiida.backends.sqlalchemy.models.node import DbNode
-from aiida.backends.sqlalchemy.utils import flag_modified
+from aiida.backends.sqlalchemy.utils import flag_modified, get_current_table
 from aiida.orm import load_node
 
 # revision identifiers, used by Alembic.
@@ -32,7 +31,11 @@ depends_on = None
 
 def upgrade():
     """Migrations for the upgrade."""
-    session = Session(bind=op.get_bind())
+    bind = op.get_bind()
+    session = Session(bind=bind)
+
+    DbNode = get_current_table(bind, 'db_dbnode')
+
     trajectories = session.query(DbNode).filter_by(type='node.data.array.trajectory.TrajectoryData.').all()
     for t in trajectories:
         del t.attributes['array|symbols']
@@ -46,7 +49,11 @@ def upgrade():
 def downgrade():
     """Migrations for the downgrade."""
     import tempfile
-    session = Session(bind=op.get_bind())
+    bind = op.get_bind()
+    session = Session(bind=bind)
+
+    DbNode = get_current_table(bind, 'db_dbnode')
+
     trajectories = session.query(DbNode).filter_by(type='node.data.array.trajectory.TrajectoryData.').all()
     for t in trajectories:
         symbols = numpy.array(t.get_attribute('symbols'))

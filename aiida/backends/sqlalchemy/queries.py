@@ -58,7 +58,7 @@ class SqlaQueryManager(AbstractQueryManager):
         retdict = {}
 
         total_query = s.query(m.node.DbNode)
-        types_query = s.query(m.node.DbNode.type.label('typestring'),
+        types_query = s.query(m.node.DbNode.node_type.label('typestring'),
                               sa.func.count(m.node.DbNode.id))
         stat_query = s.query(sa.func.date_trunc('day', m.node.DbNode.ctime).label('cday'),
                              sa.func.count(m.node.DbNode.id))

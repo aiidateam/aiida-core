@@ -51,8 +51,8 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         super(DjangoNode, self).__init__(backend)
 
         arguments = {
-            'type': node_type,
             'user': user.dbmodel,
+            'node_type': node_type,
             'process_type': process_type,
             'label': label,
             'description': description,
@@ -72,16 +72,16 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         :return: an unstored `BackendNode` with the exact same attributes and extras as self
         """
         arguments = {
-            'type': self._dbmodel.type,
+            'node_type': self._dbmodel.node_type,
+            'process_type': self._dbmodel.process_type,
             'user': self._dbmodel.user,
             'dbcomputer': self._dbmodel.dbcomputer,
-            'process_type': self._dbmodel.process_type,
             'label': self._dbmodel.label,
             'description': self._dbmodel.description,
         }
 
         clone = self.__class__.__new__(self.__class__)  # pylint: disable=no-value-for-parameter
-        clone.__init__(self.backend, self.type, self.user)
+        clone.__init__(self.backend, self.node_type, self.user)
         clone._dbmodel = utils.ModelWrapper(models.DbNode(**arguments))  # pylint: disable=protected-access
         return clone
 

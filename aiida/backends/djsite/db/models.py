@@ -143,10 +143,10 @@ class DbNode(m.Model):
     uuid = m.UUIDField(default=get_new_uuid, unique=True)
     # in the form data.upffile., data.structure., calculation., ...
     # Note that there is always a final dot, to allow to do queries of the
-    # type (type__startswith="calculation.") and avoid problems with classes
+    # type (node_type__startswith="calculation.") and avoid problems with classes
     # starting with the same string
     # max_length required for index by MySql
-    type = m.CharField(max_length=255, db_index=True)
+    node_type = m.CharField(max_length=255, db_index=True)
     process_type = m.CharField(max_length=255, db_index=True, null=True)
     label = m.CharField(max_length=255, db_index=True, blank=True)
     description = m.TextField(blank=True)

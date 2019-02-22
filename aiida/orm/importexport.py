@@ -2252,22 +2252,22 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
                 res = {_[0] for _ in qb.all()}
                 given_calculation_entry_ids.update(res - to_be_exported)
 
-        # Universal "entities" attributed to all types of nodes
-        if include_logs:
-            # Get related log(s) - universal for all nodes
-            qb = QueryBuilder()
-            qb.append(Node, tag='node', filters={'id': curr_node_id})
-            qb.append(Log, with_node='node', project=['id'])
-            res = {_[0] for _ in qb.all()}
-            given_log_entry_ids.update(res)
+    ## Universal "entities" attributed to all types of nodes
+    # Logs
+    if include_logs:
+        # Get related log(s) - universal for all nodes
+        builder = QueryBuilder()
+        builder.append(Log, filters={'dbnode_id': {'in': to_be_exported}}, project=['id'])
+        res = {_[0] for _ in builder.all()}
+        given_log_entry_ids.update(res)
 
-        if include_comments:
-            # Get related comment(s) - universal for all nodes
-            qb = QueryBuilder()
-            qb.append(Node, tag='node', filters={'id': curr_node_id})
-            qb.append(Comment, with_node='node', project=['id'])
-            res = {_[0] for _ in qb.all()}
-            given_comment_entry_ids.update(res)
+    # Comments
+    if include_comments:
+        # Get related log(s) - universal for all nodes
+        builder = QueryBuilder()
+        builder.append(Comment, filters={'dbnode_id': {'in': to_be_exported}}, project=['id'])
+        res = {_[0] for _ in builder.all()}
+        given_comment_entry_ids.update(res)
 
     # Here we get all the columns that we plan to project per entity that we
     # would like to extract

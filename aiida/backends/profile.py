@@ -44,8 +44,9 @@ def load_profile(profile=None):
 
         settings.AIIDADB_PROFILE = profile
 
-    # Reconfigure the logging to make sure that profile specific logging configuration options are taken into account
-    configure_logging()
+    # Reconfigure the logging to make sure that profile specific logging configuration options are taken into account.
+    # Also set `with_orm=True` to make sure that the `DBLogHandler` is configured as well.
+    configure_logging(with_orm=True)
 
     profile = config.get_profile(profile)
 

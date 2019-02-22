@@ -552,6 +552,7 @@ class NodeTranslator(BaseTranslator):
             pk = mainNode.pk
             uuid = mainNode.uuid
             nodetype = mainNode.type
+            nodelabel = mainNode.label
             display_type = nodetype.split('.')[-2]
             description = mainNode.get_desc()
             if description == '':
@@ -562,6 +563,7 @@ class NodeTranslator(BaseTranslator):
                 "nodeid": pk,
                 "nodeuuid": uuid,
                 "nodetype": nodetype,
+                "nodelabel": nodelabel,
                 "displaytype": display_type,
                 "group": "mainNode",
                 "description": description,
@@ -580,8 +582,9 @@ class NodeTranslator(BaseTranslator):
             qb.limit(tree_in_limit)
 
         input_node_pks = {}
+        sent_no_of_incomings = qb.count()
 
-        if qb.count() > 0:
+        if sent_no_of_incomings > 0:
             for input in qb.iterdict():
                 node = input['in']['*']
                 pk = node.pk
@@ -593,6 +596,7 @@ class NodeTranslator(BaseTranslator):
                     input_node_pks[pk] = nodeCount
                     uuid = node.uuid
                     nodetype = node.type
+                    nodelabel = node.label
                     display_type = nodetype.split('.')[-2]
                     description = node.get_desc()
                     if description == '':
@@ -603,6 +607,7 @@ class NodeTranslator(BaseTranslator):
                         "nodeid": pk,
                         "nodeuuid": uuid,
                         "nodetype": nodetype,
+                        "nodelabel": nodelabel,
                         "displaytype": display_type,
                         "group": "inputs",
                         "description": description,
@@ -632,8 +637,9 @@ class NodeTranslator(BaseTranslator):
             qb.limit(tree_out_limit)
 
         output_node_pks = {}
+        sent_no_of_outgoings = qb.count()
 
-        if qb.count() > 0:
+        if sent_no_of_outgoings > 0:
             for output in qb.iterdict():
                 node = output['out']['*']
                 pk = node.pk
@@ -645,6 +651,7 @@ class NodeTranslator(BaseTranslator):
                     output_node_pks[pk] = nodeCount
                     uuid = node.uuid
                     nodetype = node.type
+                    nodelabel = node.label
                     display_type = nodetype.split('.')[-2]
                     description = node.get_desc()
                     if description == '':
@@ -655,6 +662,7 @@ class NodeTranslator(BaseTranslator):
                         "nodeid": pk,
                         "nodeuuid": uuid,
                         "nodetype": nodetype,
+                        "nodelabel": nodelabel,
                         "displaytype": display_type,
                         "group": "outputs",
                         "description": description,
@@ -677,12 +685,14 @@ class NodeTranslator(BaseTranslator):
         qb = QueryBuilder()
         qb.append(Node, tag="main", project=['id'], filters=self._id_filter)
         qb.append(Node, tag="in", project=['id'], input_of='main')
-        no_of_inputs = qb.count()
+        total_no_of_incomings = qb.count()
 
         qb = QueryBuilder()
         qb.append(Node, tag="main", project=['id'], filters=self._id_filter)
         qb.append(Node, tag="out", project=['id'], output_of='main')
-        no_of_outputs = qb.count()
+        total_no_of_outgoings = qb.count()
 
 
-        return {"nodes": nodes, "edges": edges, "no_of_incomings": no_of_inputs, "no_of_outgoings": no_of_outputs}
+        return {"nodes": nodes, "edges": edges, "total_no_of_incomings": total_no_of_incomings,
+                "total_no_of_outgoings": total_no_of_outgoings, "sent_no_of_incomings": sent_no_of_incomings,
+                "sent_no_of_outgoings": sent_no_of_outgoings}

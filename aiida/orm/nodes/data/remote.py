@@ -30,9 +30,6 @@ class RemoteData(Data):
         if remote_path is not None:
             self.set_remote_path(remote_path)
 
-    def get_dbcomputer(self):
-        return self.dbnode.dbmodel
-
     def get_computer_name(self):
         return self.computer.name
 
@@ -41,14 +38,6 @@ class RemoteData(Data):
 
     def set_remote_path(self, val):
         self.set_attribute('remote_path', val)
-
-    def add_path(self, src_abs, dst_filename=None):
-        """
-        Disable adding files or directories to a RemoteData
-        """
-        from aiida.common.exceptions import ModificationNotAllowed
-
-        raise ModificationNotAllowed("Cannot add files or directories to a RemoteData object")
 
     @property
     def is_empty(self):

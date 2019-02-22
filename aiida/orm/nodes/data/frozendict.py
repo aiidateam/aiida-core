@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""`Data` sub class to represent an immutable dictionary containing only `Data` nodes as values."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -19,11 +20,9 @@ __all__ = ('FrozenDict',)
 
 
 class FrozenDict(Data, collections.Mapping):
-    """
-    An immutable dictionary containing only Data nodes as values.
+    """`Data` sub class to represent an immutable dictionary containing only `Data` nodes as values.
 
-    .. note::
-        All values must be stored before being passed to constructor.
+    .. note:: all nodes in the dictionary must be stored before being passed to constructor.
     """
 
     def __init__(self, **kwargs):
@@ -34,10 +33,19 @@ class FrozenDict(Data, collections.Mapping):
         self._initialized = True
 
     def initialize(self):
+        """Initialize the `_cache` to an empty dictionary.
+
+        .. note:: this has to be done here and not in the constructor, because otherwise the cache would not be
+            initialized if the node instance would be loaded from an existing node.
+        """
         super(FrozenDict, self).initialize()
-        self._cache = {}
+        self._cache = {}  # pylint: disable=attribute-defined-outside-init
 
     def set_dictionary(self, dictionary):
+        """Set the dictionary for this node.
+
+        :param dictionary: a dictionary of stored nodes
+        """
         assert not self._initialized
 
         for value in dictionary.values():
@@ -58,9 +66,17 @@ class FrozenDict(Data, collections.Mapping):
         return len(list(self.attributes_keys()))
 
     def _get(self, key):
+        """Return the node from the dictionary stored under the name `key`, using an internal cache.
+
+        :param key: key of the node in the dictionary
+        :return: the `Node` instance
+        """
         from ...utils import load_node
-        val = self._cache.get(key, None)
-        if val is None:
-            val = load_node(self.get_attribute(key))
-            self._cache[key] = val
-        return val
+
+        node = self._cache.get(key, None)
+
+        if node is None:
+            node = load_node(self.get_attribute(key))
+            self._cache[key] = node
+
+        return node

@@ -12,8 +12,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-import io
-
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm.nodes.data.bool import get_true_node
 from aiida.orm.nodes.data.int import Int
@@ -135,27 +133,17 @@ class TestProcessFunction(AiidaTestCase):
         _, node = test_process_function.run_get_node(data=Int(5))
 
         # Read the source file of the calculation function that should be stored in the repository
-        # into memory, which should be exactly this test file
-        function_source_file = node.function_source_file
-
-        self.assertIsNotNone(function_source_file)
-
-        with io.open(function_source_file, encoding='utf8') as handle:
-            function_source_code = handle.readlines()
-
-        # Get the attributes that should be stored in the node
-        function_name = node.function_name
-        function_starting_line_number = node.function_starting_line_number
+        function_source_code = node.get_function_source_code().split('\n')
 
         # Verify that the function name is correct and the first source code linenumber is stored
-        self.assertEqual(function_name, function_name)
-        self.assertIsInstance(function_starting_line_number, int)
+        self.assertEqual(node.function_name, function_name)
+        self.assertIsInstance(node.function_starting_line_number, int)
 
         # Check that first line number is correct. Note that the first line should correspond
         # to the `@workfunction` directive, but since the list is zero-indexed we actually get the
         # following line, which should correspond to the function name i.e. `def test_process_function(data)`
-        function_name_from_source = function_source_code[function_starting_line_number]
-        self.assertTrue(function_name in function_name_from_source)
+        function_name_from_source = function_source_code[node.function_starting_line_number]
+        self.assertTrue(node.function_name in function_name_from_source)
 
     def test_function_varargs(self):
         """Variadic arguments are not supported and should raise."""

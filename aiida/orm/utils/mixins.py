@@ -59,7 +59,7 @@ class FunctionCalculationMixin(object):  # pylint: disable=useless-object-inheri
 
         try:
             source_file_path = inspect.getsourcefile(func)
-            with io.open(source_file_path, encoding='utf8') as handle:
+            with io.open(source_file_path, 'r', encoding='utf8') as handle:
                 self._set_source_file(handle)
         except (IOError, OSError):
             pass
@@ -115,17 +115,13 @@ class FunctionCalculationMixin(object):  # pylint: disable=useless-object-inheri
         """
         self.set_attribute(self.FUNCTION_STARTING_LINE_KEY, function_starting_line_number)
 
-    @property
-    def function_source_file(self):
+    def get_function_source_code(self):
         """
         Return the absolute path to the source file in the repository
 
         :returns: the absolute path of the source file in the repository, or None if it does not exist
         """
-        try:
-            return self.repository.get_abs_path(self.FUNCTION_SOURCE_FILE_PATH, check_existence=True)
-        except OSError:
-            return None
+        return self.get_object_content(self.FUNCTION_SOURCE_FILE_PATH)
 
     def _set_source_file(self, source_file_handle):
         """
@@ -133,7 +129,7 @@ class FunctionCalculationMixin(object):  # pylint: disable=useless-object-inheri
 
         :param source_file_handle: a file like object with the source file
         """
-        self.repository.create_file_from_filelike(source_file_handle, self.FUNCTION_SOURCE_FILE_PATH)
+        self.put_object_from_filelike(source_file_handle, self.FUNCTION_SOURCE_FILE_PATH)
 
 
 class Sealable(object):  # pylint: disable=useless-object-inheritance

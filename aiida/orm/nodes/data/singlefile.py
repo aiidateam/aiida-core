@@ -7,126 +7,93 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Implement subclass for a single file in the permanent repository
-files = [one_single_file]
-jsons = {}
-
-methods:
-* get_content
-* get_path
-* get_aiidaurl (?)
-* get_md5
-* ...
-
-To discuss: do we also need a simple directory class for full directories
-in the perm repo?
-"""
+"""Data class that can be used to store a single file in its repository."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import os
 
+from aiida.common import exceptions
 from .data import Data
 
 __all__ = ('SinglefileData',)
 
 
 class SinglefileData(Data):
-    """
-    Pass as input a file parameter with the (absolute) path of a file
-    on the hard drive.
-    It will get copied inside the node.
+    """Data class that can be used to store a single file in its repository."""
 
-    Internally must have a single file, and stores as internal attribute
-    the filename in the 'filename' attribute.
-    """
-
-    def __init__(self, file, **kwargs):
+    def __init__(self, filepath, **kwargs):
         super(SinglefileData, self).__init__(**kwargs)
-        if file is not None:
-            self.set_file(file)
+        if filepath is not None:
+            self.put_object_from_file(filepath)
 
     @property
     def filename(self):
-        """
-        Returns the name of the file stored
+        """Return the name of the file stored.
+
+        :return: the filename under which the file is stored in the repository
         """
         return self.get_attribute('filename')
 
-    def get_file_abs_path(self):
-        """
-        Return the absolute path to the file in the repository
-        """
-        return self.repository.get_abs_path(self.filename)
+    def open(self, mode='r'):  # pylint: disable=arguments-differ
+        """Return an open file handle to the content of this data node.
 
-    def set_file(self, filename):
+        :param mode: the mode with which to open the file handle
+        :return: a file handle in read mode
         """
-        Add a file to the singlefiledata
-        :param filename: absolute path to the file
-        """
-        self.add_path(filename)
+        return self._repository.open(self.filename, mode=mode)
 
-    def del_file(self, filename):
-        """
-        Remove a file from SingleFileData
-        :param filename: name of the file stored in the DB
-        """
-        self.repository.remove_path(filename)
+    def get_content(self):
+        """Return the content of the single file stored for this data node.
 
-    def add_path(self, src_abs, dst_filename=None):
+        :return: the string content of the file
         """
-        Add a single file
-        """
-        old_file_list = self.repository.get_folder_list()
+        with self.open() as handle:
+            return handle.read()
 
-        if not os.path.isabs(src_abs):
-            raise ValueError("Pass an absolute path for src_abs")
+    def set_file(self, filepath):
+        """Add the file located at `path` on file system to repository, deleting any other existing objects."""
+        self.put_object_from_file(filepath)
 
-        if not os.path.isfile(src_abs):
-            raise ValueError("src_abs must exist and must be a single file")
+    def put_object_from_file(self, path, key=None, mode='w', encoding='utf8', force=False):
+        """Add the file located at `path` on file system to repository, deleting any other existing objects."""
+        if not os.path.isabs(path):
+            raise ValueError('path `{}` is not absolute'.format(path))
 
-        if dst_filename is None:
-            final_filename = os.path.split(src_abs)[1]
-        else:
-            final_filename = dst_filename
+        if not os.path.isfile(path):
+            raise ValueError('path `{}` does not correspond to an existing file'.format(path))
+
+        if key is None:
+            key = os.path.split(path)[1]
+
+        existing_object_names = self.list_object_names()
 
         try:
-            # I remove the 'filename' from the list of old files:
-            # if I am overwriting the file, I don't want to delete if afterwards
-            old_file_list.remove(dst_filename)
+            # Remove the 'key' from the list of currently existing objects such that it is not deleted after storing
+            existing_object_names.remove(key)
         except ValueError:
-            # filename is not there: no problem, it simply means I don't have
-            # to delete it
             pass
 
-        super(SinglefileData, self).repository.add_path(src_abs, final_filename)
+        super(SinglefileData, self).put_object_from_file(path, key, mode, encoding, force)
 
-        for delete_me in old_file_list:
-            self.repository.remove_path(delete_me)
+        # Delete any other existing objects (minus the current `key` which was already removed from the list)
+        for existing_key in existing_object_names:
+            self.delete_object(existing_key)
 
-        self.set_attribute('filename', final_filename)
-
-    def remove_path(self, filename):
-        if filename == self.get_attribute('filename', None):
-            try:
-                self.delete_attribute('filename')
-            except AttributeError:
-                # There was not file set
-                pass
+        self.set_attribute('filename', key)
 
     def _validate(self):
-        from aiida.common.exceptions import ValidationError
-
+        """Ensure that there is one object stored in the repository, whose key matches value set for `filename` attr."""
         super(SinglefileData, self)._validate()
 
         try:
             filename = self.filename
         except AttributeError:
-            raise ValidationError("attribute 'filename' not set.")
+            raise exceptions.ValidationError('the `filename` attribute is not set.')
 
-        if [filename] != self.repository.get_folder_list():
-            raise ValidationError("The list of files in the folder does not "
-                                  "match the 'filename' attribute. "
-                                  "_filename='{}', content: {}".format(
-                filename, self.repository.get_folder_list()))
+        objects = self.list_object_names()
+
+        if [filename] != objects:
+            raise exceptions.ValidationError('respository files {} do not match the `filename` attribute {}.'.format(
+                objects, filename))

@@ -27,7 +27,7 @@ class TestNodeLinks(AiidaTestCase):
     def test_repository_garbage_collection(self):
         """Verify that the repository sandbox folder is cleaned after the node instance is garbage collected."""
         node = Data()
-        dirpath = node.repository.folder.abspath
+        dirpath = node._repository._get_temp_folder().abspath  # pylint: disable=protected-access
 
         self.assertTrue(os.path.isdir(dirpath))
         del node

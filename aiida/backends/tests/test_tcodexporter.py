@@ -88,17 +88,17 @@ class TestTcodDbExporter(AiidaTestCase):
         sf.get_subfolder('save/2', create=True)
 
         f = StringIO(u"test")
-        sf.create_file_from_filelike(f, 'aiida.in')
+        sf.create_file_from_filelike(f, 'aiida.in', mode='w')
         f = StringIO(u"test")
-        sf.create_file_from_filelike(f, 'aiida.out')
+        sf.create_file_from_filelike(f, 'aiida.out', mode='w')
         f = StringIO(u"test")
-        sf.create_file_from_filelike(f, '_aiidasubmit.sh')
+        sf.create_file_from_filelike(f, '_aiidasubmit.sh', mode='w')
         f = StringIO(u"test")
-        sf.create_file_from_filelike(f, '_.out')
+        sf.create_file_from_filelike(f, '_.out', mode='w')
         f = StringIO(u"test")
-        sf.create_file_from_filelike(f, 'out/out')
+        sf.create_file_from_filelike(f, 'out/out', mode='w')
         f = StringIO(u"test")
-        sf.create_file_from_filelike(f, 'save/1/log.log')
+        sf.create_file_from_filelike(f, 'save/1/log.log', mode='w')
 
         md5 = '098f6bcd4621d373cade4e832627b4f6'
         sha1 = 'a94a8fe5ccb19ba61c4c0873d391e987982fbbd3'
@@ -154,7 +154,7 @@ class TestTcodDbExporter(AiidaTestCase):
                 O 0.5 0.5 0.5
             ''')
             tmpf.flush()
-            a = CifData(file=tmpf.name)
+            a = CifData(filepath=tmpf.name)
 
         c = a.get_structure()
         c.store()
@@ -164,7 +164,7 @@ class TestTcodDbExporter(AiidaTestCase):
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write("#/bin/bash\n\necho test run\n")
             tmpf.flush()
-            code.repository.add_path(tmpf.name, 'test.sh')
+            code.put_object_from_filelike(tmpf, 'test.sh')
 
         code.store()
 
@@ -177,27 +177,26 @@ class TestTcodDbExporter(AiidaTestCase):
         with tempfile.NamedTemporaryFile(mode='w+', prefix="Fe") as tmpf:
             tmpf.write("<UPF version=\"2.0.1\">\nelement=\"Fe\"\n")
             tmpf.flush()
-            upf = UpfData(file=tmpf.name)
+            upf = UpfData(filepath=tmpf.name)
             upf.store()
             calc.add_incoming(upf, LinkType.INPUT_CALC, "upf")
 
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write("data_test")
             tmpf.flush()
-            cif = CifData(file=tmpf.name)
+            cif = CifData(filepath=tmpf.name)
             cif.store()
             calc.add_incoming(cif, LinkType.INPUT_CALC, "cif")
 
-        calc.store()
         with SandboxFolder() as fhandle:
-            calc._store_raw_input_folder(fhandle.abspath)
+            calc.put_object_from_tree(fhandle.abspath)
+        calc.store()
 
         fd = FolderData()
-        subfolder = fd.repository._get_folder_pathsubfolder
-        with io.open(subfolder.get_abs_path('_scheduler-stdout.txt'), 'w', encoding='utf8') as fhandle:
+        with fd.open('_scheduler-stdout.txt', 'w') as fhandle:
             fhandle.write(u"standard output")
 
-        with io.open(subfolder.get_abs_path('_scheduler-stderr.txt'), 'w', encoding='utf8') as fhandle:
+        with fd.open('_scheduler-stderr.txt', 'w') as fhandle:
             fhandle.write(u"standard error")
 
         fd.store()
@@ -219,7 +218,6 @@ class TestTcodDbExporter(AiidaTestCase):
                           ['PATH=/dev/null\nUSER=unknown'])
         self.assertEquals(values['_tcod_computation_command'],
                           ['cd 1; ./_aiidasubmit.sh'])
-
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_spglib(), "Unable to import spglib")
@@ -247,7 +245,7 @@ class TestTcodDbExporter(AiidaTestCase):
                 O 0.5 0.5 0.5
             ''')
             tmpf.flush()
-            a = CifData(file=tmpf.name)
+            a = CifData(filepath=tmpf.name)
 
         s = a.get_structure(store=True)
         val = export_values(s)

@@ -11,6 +11,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+import io
 import os
 import six
 
@@ -92,8 +93,11 @@ class Code(Data):
 
         if isinstance(files, six.string_types):
             files = [files]
-        for f in files:
-            self.repository.add_path(f, os.path.split(f)[1])
+
+        for filename in files:
+            if os.path.isfile(filename):
+                with io.open(filename, 'rb') as handle:
+                    self.put_object_from_filelike(handle, os.path.split(filename)[1], 'wb', encoding=None)
 
     def __str__(self):
         local_str = "Local" if self.is_local() else "Remote"
@@ -279,11 +283,11 @@ class Code(Data):
                 raise ValidationError("You have to set which file is the local executable "
                                       "using the set_exec_filename() method")
                 # c[1] is True if the element is a file
-            if self.get_local_executable() not in self.repository.get_folder_list():
+            if self.get_local_executable() not in self.list_object_names():
                 raise ValidationError("The local executable '{}' is not in the list of "
                                       "files of this code".format(self.get_local_executable()))
         else:
-            if self.repository.get_folder_list():
+            if self.list_object_names():
                 raise ValidationError("The code is remote but it has files inside")
             if not self.get_remote_computer():
                 raise ValidationError("You did not specify a remote computer")
@@ -504,8 +508,8 @@ class Code(Data):
             result.append(['Type', 'local'])
             result.append(['Exec name', self.get_execname()])
             result.append(['List of files/folders:', ''])
-            for fname in self.repository._get_folder_pathsubfolder.get_content_list():
-                if self.repository._get_folder_pathsubfolder.isdir(fname):
+            for fname in self.list_object_names():
+                if self._repository._get_folder_pathsubfolder.isdir(fname):
                     result.append(['directory', fname])
                 else:
                     result.append(['file', fname])

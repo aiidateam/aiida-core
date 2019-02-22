@@ -156,9 +156,9 @@ class TemplatereplacerCalculation(CalcJob):
             raise exceptions.InputValidationError(
                 "If you ask for input_through_stdin you have to specify a input_file_name")
 
-        input_file = StringIO(input_file_template.format(**parameters))
+        input_content = input_file_template.format(**parameters)
         if input_file_name:
-            folder.create_file_from_filelike(input_file, input_file_name)
+            folder.create_file_from_filelike(StringIO(input_content), input_file_name, 'w', encoding='utf8')
         else:
             if input_file_template:
                 self.logger.warning("No input file name passed, but a input file template is present")

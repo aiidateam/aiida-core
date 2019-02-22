@@ -47,11 +47,11 @@ class ArrayData(Data):
         :param name: The name of the array to delete from the node.
         """
         fname = '{}.npy'.format(name)
-        if fname not in self.repository.get_folder_list():
+        if fname not in self.list_object_names():
             raise KeyError("Array with name '{}' not found in node pk= {}".format(name, self.pk))
 
         # remove both file and attribute
-        self.repository.remove_path(fname)
+        self.delete_object(fname)
         try:
             self.delete_attribute("{}{}".format(self.array_prefix, name))
         except (KeyError, AttributeError):
@@ -73,7 +73,7 @@ class ArrayData(Data):
         Return a list of all arrays stored in the node, listing the files (and
         not relying on the properties).
         """
-        return [i[:-4] for i in self.repository.get_folder_list() if i.endswith('.npy')]
+        return [i[:-4] for i in self.list_object_names() if i.endswith('.npy')]
 
     def _arraynames_from_properties(self):
         """
@@ -121,25 +121,24 @@ class ArrayData(Data):
         """
         import numpy
 
-        # raw function used only internally
         def get_array_from_file(self, name):
-            """
-            Return the array stored in a .npy file
-            """
-            fname = '{}.npy'.format(name)
-            if fname not in self.repository.get_folder_list():
-                raise KeyError("Array with name '{}' not found in node pk= {}".format(name, self.pk))
+            """Return the array stored in a .npy file"""
+            filename = '{}.npy'.format(name)
 
-            array = numpy.load(self.repository.get_abs_path(fname))
-            return array
+            if filename not in self.list_object_names():
+                raise KeyError('Array with name `{}` not found in ArrayData<{}>'.format(name, self.pk))
 
-        # Return with proper caching, but only after storing. Before, instead,
-        # always re-read from disk
+            # Open a handle in binary read mode as the arrays are written as binary files as well
+            with self.open(filename, mode='rb') as handle:
+                return numpy.load(handle)
+
+        # Return with proper caching if the node is stored, otherwise always re-read from disk
         if not self.is_stored:
             return get_array_from_file(self, name)
 
         if name not in self._cached_arrays:
             self._cached_arrays[name] = get_array_from_file(self, name)
+
         return self._cached_arrays[name]
 
     def clear_internal_cache(self):
@@ -164,29 +163,29 @@ class ArrayData(Data):
         """
         import re
         import tempfile
-
         import numpy
 
         if not isinstance(array, numpy.ndarray):
-            raise TypeError("ArrayData can only store numpy arrays. Convert the object to an array first")
+            raise TypeError('ArrayData can only store numpy arrays. Convert the object to an array first')
 
         # Check if the name is valid
-        if not (name) or re.sub('[0-9a-zA-Z_]', '', name):
+        if not name or re.sub('[0-9a-zA-Z_]', '', name):
             raise ValueError("The name assigned to the array ({}) is not valid,"
-                             "it can only contain digits, letters or underscores")
+                             "it can only contain digits, letters and underscores")
 
-        fname = "{}.npy".format(name)
+        # Write the array to a temporary file, and then add it to the repository of the node
+        with tempfile.NamedTemporaryFile() as handle:
+            numpy.save(handle, array)
 
-        with tempfile.NamedTemporaryFile() as _file:
-            # Store in a temporary file, and then add to the node
-            numpy.save(_file, array)
-            _file.flush()  # Important to flush here, otherwise the next copy command
-            # will just copy an empty file
-            self.repository.add_path(_file.name, fname)
+            # Flush and rewind the handle, otherwise the command to store it in the repo will write an empty file
+            handle.flush()
+            handle.seek(0)
 
-        # Mainly for convenience, for querying purposes (both stores the fact
-        # that there is an array with that name, and its shape)
-        self.set_attribute("{}{}".format(self.array_prefix, name), list(array.shape))
+            # Write the numpy array to the repository, keeping the byte representation
+            self.put_object_from_filelike(handle, '{}.npy'.format(name), mode='wb', encoding=None)
+
+        # Store the array name and shape for querying purposes
+        self.set_attribute('{}{}'.format(self.array_prefix, name), list(array.shape))
 
     def _validate(self):
         """

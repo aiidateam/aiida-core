@@ -93,6 +93,7 @@ class Postgres(object):  # pylint: disable=useless-object-inheritance
         if dbinfo is None:
             dbinfo = {
                 'host': 'localhost',
+                'port': 5432,
                 'user': None,
             }
 
@@ -101,12 +102,13 @@ class Postgres(object):  # pylint: disable=useless-object-inheritance
     @classmethod
     def from_profile(cls, profile, **kwargs):
         """Create Postgres instance with dbinfo from profile data."""
+        get = profile.dictionary.get
         dbinfo = dict(
-            host=profile.dictionary['AIIDADB_HOST'],
-            port=profile.dictionary['AIIDADB_PORT'],
-            user=profile.dictionary['AIIDADB_USER'],
-            database=profile.dictionary['AIIDADB_NAME'],
-            password=profile.dictionary['AIIDADB_PASS'],
+            host=get('AIIDADB_HOST', 'localhost'),
+            port=get('AIIDADB_PORT', 5432),
+            user=get('AIIDADB_USER', None),
+            database=get('AIIDADB_NAME', None),
+            password=get('AIIDADB_PASS', None),
         )
         return Postgres(dbinfo=dbinfo, **kwargs)
 

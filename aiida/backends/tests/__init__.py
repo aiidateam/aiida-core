@@ -106,6 +106,7 @@ db_test_list = {
         'orm.utils.calcjob': ['aiida.backends.tests.orm.utils.test_calcjob'],
         'orm.utils.node': ['aiida.backends.tests.orm.utils.test_node'],
         'orm.utils.loaders': ['aiida.backends.tests.orm.utils.test_loaders'],
+        'orm.utils.repository': ['aiida.backends.tests.orm.utils.test_repository'],
         'work.calcfunctions': ['aiida.backends.tests.work.test_calcfunctions'],
         'work.class_loader': ['aiida.backends.tests.work.test_class_loader'],
         'work.daemon': ['aiida.backends.tests.work.test_daemon'],

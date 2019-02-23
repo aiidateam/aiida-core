@@ -67,8 +67,8 @@ def deduplicate_uuids(table=None, dry_run=True):
     from collections import defaultdict
 
     from aiida.common.utils import get_new_uuid
-    from aiida.orm import load_computer, load_group, load_node
-    from aiida.orm import Node
+    from aiida.orm import Node, load_computer, load_group, load_node
+    from aiida.orm.utils.repository import Repository
 
     if table not in TABLES_UUID_DEDUPLICATION:
         raise ValueError('invalid table {}: choose from {}'.format(table, ', '.join(TABLES_UUID_DEDUPLICATION)))
@@ -84,17 +84,6 @@ def deduplicate_uuids(table=None, dry_run=True):
 
     for pk, uuid in get_duplicate_uuids(table=table):
         mapping[uuid].append(int(pk))
-
-    def copy_repo_folder(node_source, uuid):
-        """
-        Copy the repository folder from source node to a new location based on the given UUID.
-
-        :param node_source: the node whose repository folder contents to copy
-        :param uuid: the UUID that will be used to generate the sharded folder location for the copied folder
-        """
-        from aiida.common.folders import RepositoryFolder
-        folder = RepositoryFolder('node', uuid)
-        folder.replace_with_folder(node_source.repository.folder.abspath)
 
     messages = []
 
@@ -126,7 +115,9 @@ def deduplicate_uuids(table=None, dry_run=True):
                 entity.backend_entity._dbmodel.save()  # pylint: disable=protected-access
 
                 if isinstance(entity, Node):
-                    copy_repo_folder(entity_reference, uuid_new)
+                    entity._repository = Repository(entity.uuid, False, entity._repository_base_path)  # pylint: disable=protected-access
+                    entity.put_object_from_tree(entity_reference._repository._get_base_folder().abspath)  # pylint: disable=protected-access
+                    entity._repository.store()  # pylint: disable=protected-access
 
                 messages.append('updated UUID of {} row<{}> from {} to {}'.format(table, pk, uuid_old, uuid_new))
 

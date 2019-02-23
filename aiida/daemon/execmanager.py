@@ -274,7 +274,7 @@ def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
         with SandboxFolder() as folder:
             retrieve_files_from_list(calculation, transport, folder.abspath, retrieve_list)
             # Here I retrieved everything; now I store them inside the calculation
-            retrieved_files.replace_with_folder(folder.abspath, overwrite=True)
+            retrieved_files.put_object_from_tree(folder.abspath)
 
         # Second, retrieve the singlefiles
         with SandboxFolder() as folder:
@@ -408,7 +408,7 @@ def _retrieve_singlefiles(job, transport, folder, retrieve_file_list, logger_ext
     for (linkname, subclassname, filename) in singlefile_list:
         SinglefileSubclass = DataFactory(subclassname)
         singlefile = SinglefileSubclass()
-        singlefile.set_file(filename)
+        singlefile.put_object_from_file(filename)
         singlefile.add_incoming(job, link_type=LinkType.CREATE, link_label=linkname)
         singlefiles.append(singlefile)
 

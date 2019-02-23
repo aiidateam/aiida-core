@@ -133,7 +133,7 @@ class CalcJob(Process):
                             code.pk, self.node.pk, computer.name))
 
             # After this call, no modifications to the folder should be done
-            self.node._store_raw_input_folder(folder.abspath)  # pylint: disable=protected-access
+            self.node.put_object_from_tree(folder.abspath, force=True)
 
         # Launch the upload operation
         return plumpy.Wait(msg='Waiting to upload', data=(UPLOAD_COMMAND, calc_info, script_filename))
@@ -180,8 +180,6 @@ class CalcJob(Process):
         # pylint: disable=too-many-locals,too-many-statements,too-many-branches
         import os
 
-        from six.moves import StringIO
-
         from aiida.common.exceptions import PluginInternalError, ValidationError
         from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.utils import validate_list_of_string_tuples
@@ -190,7 +188,7 @@ class CalcJob(Process):
         from aiida.orm.computers import Computer
         from aiida.orm.utils import load_node
         from aiida.plugins import DataFactory
-        import aiida.common.json as json
+        from aiida.common import json
 
         computer = self.node.computer
         inputs = self.node.get_incoming(link_type=LinkType.INPUT_CALC)
@@ -357,11 +355,11 @@ class CalcJob(Process):
 
         script_filename = '_aiidasubmit.sh'
         script_content = scheduler.get_submit_script(job_tmpl)
-        folder.create_file_from_filelike(StringIO(script_content), script_filename)
+        folder.create_file_from_filelike(six.StringIO(script_content), script_filename, 'w', encoding='utf8')
 
         subfolder = folder.get_subfolder('.aiida', create=True)
-        subfolder.create_file_from_filelike(StringIO(json.dumps(job_tmpl)), 'job_tmpl.json')
-        subfolder.create_file_from_filelike(StringIO(json.dumps(calcinfo)), 'calcinfo.json')
+        subfolder.create_file_from_filelike(six.StringIO(json.dumps(job_tmpl)), 'job_tmpl.json', 'w', encoding='utf8')
+        subfolder.create_file_from_filelike(six.StringIO(json.dumps(calcinfo)), 'calcinfo.json', 'w', encoding='utf8')
 
         if calcinfo.local_copy_list is None:
             calcinfo.local_copy_list = []

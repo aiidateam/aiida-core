@@ -95,8 +95,7 @@ def cif_content(data):
     """Show the content of the file behind CifData objects."""
     for node in data:
         try:
-            with open(node.get_file_abs_path(), 'r') as handle:
-                echo.echo(handle.read())
+            echo.echo(node.get_content())
         except IOError as exception:
             echo.echo_warning('could not read the content for CifData<{}>: {}'.format(node.pk, str(exception)))
 

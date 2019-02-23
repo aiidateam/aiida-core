@@ -255,8 +255,12 @@ def parse_upf(fname, check_filename=True):
 
     parsed_data = {}
 
-    with io.open(fname, encoding='utf8') as f:
-        upf_contents = f.read()
+    try:
+        upf_contents = fname.read()
+        fname = fname.name
+    except AttributeError:
+        with io.open(fname, encoding='utf8') as f:
+            upf_contents = f.read()
 
     match = _upfversion_regexp.search(upf_contents)
     if match:
@@ -312,20 +316,20 @@ class UpfData(SinglefileData):
     Function not yet documented.
     """
 
-    def __init__(self, file=None, source=None, **kwargs):
+    def __init__(self, filepath=None, source=None, **kwargs):
 
-        super(UpfData, self).__init__(file, **kwargs)
+        super(UpfData, self).__init__(filepath, **kwargs)
 
         if source is not None:
             self.set_source(source)
 
     @classmethod
-    def get_or_create(cls, filename, use_first=False, store_upf=True):
+    def get_or_create(cls, filepath, use_first=False, store_upf=True):
         """
         Pass the same parameter of the init; if a file with the same md5
         is found, that UpfData is returned.
 
-        :param filename: an absolute filename on disk
+        :param filepath: an absolute filepath on disk
         :param use_first: if False (default), raise an exception if more than \
                 one potential is found.\
                 If it is True, instead, use the first available pseudopotential.
@@ -338,17 +342,17 @@ class UpfData(SinglefileData):
         import os
         from aiida.common.files import md5_file
 
-        if not os.path.isabs(filename):
-            raise ValueError("filename must be an absolute path")
-        md5 = md5_file(filename)
+        if not os.path.isabs(filepath):
+            raise ValueError("filepath must be an absolute path")
+        md5 = md5_file(filepath)
 
         pseudos = cls.from_md5(md5)
         if len(pseudos) == 0:
             if store_upf:
-                instance = cls(file=filename).store()
+                instance = cls(filepath=filepath).store()
                 return (instance, True)
             else:
-                instance = cls(file=filename)
+                instance = cls(filepath=filepath)
                 return (instance, True)
         else:
             if len(pseudos) > 1:
@@ -371,18 +375,18 @@ class UpfData(SinglefileData):
         Store the node, reparsing the file so that the md5 and the element
         are correctly reset.
         """
-        from aiida.common.exceptions import ParsingError, ValidationError
-        from aiida.common.files import md5_file
+        from aiida.common.exceptions import ParsingError
+        from aiida.common.files import md5_from_filelike
 
         if self.is_stored:
             return self
 
-        upf_abspath = self.get_file_abs_path()
-        if not upf_abspath:
-            raise ValidationError("No valid UPF was passed!")
+        with self.open('r') as handle:
+            parsed_data = parse_upf(handle)
 
-        parsed_data = parse_upf(upf_abspath)
-        md5sum = md5_file(upf_abspath)
+        # Open in binary mode which is required for generating the md5 checksum
+        with self.open('rb') as handle:
+            md5 = md5_from_filelike(handle)
 
         try:
             element = parsed_data['element']
@@ -391,7 +395,7 @@ class UpfData(SinglefileData):
                                " unable to store".format(self.filename))
 
         self.set_attribute('element', str(element))
-        self.set_attribute('md5', md5sum)
+        self.set_attribute('md5', md5)
 
         return super(UpfData, self).store(*args, **kwargs)
 
@@ -408,7 +412,7 @@ class UpfData(SinglefileData):
         qb.append(cls, filters={'attributes.md5': {'==': md5}})
         return [_ for [_] in qb.all()]
 
-    def set_file(self, filename):
+    def put_object_from_file(self, filename):
         """
         I pre-parse the file to store the attributes.
         """
@@ -424,7 +428,7 @@ class UpfData(SinglefileData):
             raise ParsingError("No 'element' parsed in the UPF file {};"
                                " unable to store".format(self.filename))
 
-        super(UpfData, self).set_file(filename)
+        super(UpfData, self).put_object_from_file(filename)
 
         self.set_attribute('element', str(element))
         self.set_attribute('md5', md5sum)
@@ -448,21 +452,17 @@ class UpfData(SinglefileData):
         return self.get_attribute('md5', None)
 
     def _validate(self):
-        from aiida.common.exceptions import ValidationError, ParsingError
-        from aiida.common.files import md5_file
+        from aiida.common.exceptions import ValidationError
+        from aiida.common.files import md5_from_filelike
 
         super(UpfData, self)._validate()
 
-        upf_abspath = self.get_file_abs_path()
-        if not upf_abspath:
-            raise ValidationError("No valid UPF was passed!")
+        with self.open('r') as handle:
+            parsed_data = parse_upf(handle)
 
-        try:
-            parsed_data = parse_upf(upf_abspath)
-        except ParsingError:
-            raise ValidationError("The file '{}' could not be "
-                                  "parsed".format(upf_abspath))
-        md5 = md5_file(upf_abspath)
+        # Open in binary mode which is required for generating the md5 checksum
+        with self.open('rb') as handle:
+            md5 = md5_from_filelike(handle)
 
         try:
             element = parsed_data['element']

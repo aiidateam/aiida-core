@@ -35,7 +35,7 @@ class TestCode(AiidaTestCase):
         with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
             fhandle.write("#/bin/bash\n\necho test run\n")
             fhandle.flush()
-            code.repository.add_path(fhandle.name, 'test.sh')
+            code.put_object_from_filelike(fhandle, 'test.sh')
 
         code.store()
         self.assertTrue(code.can_run_on(self.computer))
@@ -68,14 +68,14 @@ class TestCode(AiidaTestCase):
         with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
             fhandle.write("#/bin/bash\n\necho test run\n")
             fhandle.flush()
-            code.repository.add_path(fhandle.name, 'test.sh')
+            code.put_object_from_filelike(fhandle, 'test.sh')
 
         with self.assertRaises(ValidationError):
             # There are files inside
             code.store()
 
         # If there are no files, I can store
-        code.repository.remove_path('test.sh')
+        code.delete_object('test.sh')
         code.store()
 
         self.assertEquals(code.get_remote_computer().pk, self.computer.pk)

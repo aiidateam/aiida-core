@@ -88,7 +88,6 @@ def calcjob_inputcat(calcjob, path):
 
     If PATH is not specified, the default input file path will be used, if defined by the calcjob plugin class.
     """
-    from aiida.cmdline.utils.repository import cat_repo_files
     from aiida.plugins.entry_point import get_entry_point_from_class
 
     if path is None:
@@ -102,16 +101,11 @@ def calcjob_inputcat(calcjob, path):
                 entry_point.name))
 
     try:
-        cat_repo_files(calcjob, os.path.join('raw_input', path))
-    except ValueError as exc:
-        echo.echo_critical(str(exc))
-    except IOError as e:
-        import errno
-        # Ignore Broken pipe errors, re-raise everything else
-        if e.errno == errno.EPIPE:
-            pass
-        else:
-            raise
+        content = calcjob.get_object_content(path)
+    except Exception as exception:  # pylint: disable=broad-except
+        echo.echo_critical('failed to get the content of file `{}`: {}'.format(path, exception))
+    else:
+        echo.echo(content)
 
 
 @verdi_calcjob.command('outputcat')
@@ -125,7 +119,6 @@ def calcjob_outputcat(calcjob, path):
     If PATH is not specified, the default output file path will be used, if defined by the calcjob plugin class.
     Content can only be shown after the daemon has retrieved the remote files.
     """
-    from aiida.cmdline.utils.repository import cat_repo_files
     from aiida.plugins.entry_point import get_entry_point_from_class
 
     if path is None:
@@ -144,16 +137,11 @@ def calcjob_outputcat(calcjob, path):
         echo.echo_critical("No 'retrieved' node found. Have the calcjob files already been retrieved?")
 
     try:
-        cat_repo_files(retrieved, os.path.join('path', path))
-    except ValueError as exc:
-        echo.echo_critical(str(exc))
-    except IOError as e:
-        import errno
-        # Ignore Broken pipe errors, re-raise everything else
-        if e.errno == errno.EPIPE:
-            pass
-        else:
-            raise
+        content = retrieved.get_object_content(path)
+    except Exception as exception:  # pylint: disable=broad-except
+        echo.echo_critical('failed to get the content of file `{}`: {}'.format(path, exception))
+    else:
+        echo.echo(content)
 
 
 @verdi_calcjob.command('inputls')
@@ -167,16 +155,10 @@ def calcjob_inputls(calcjob, path, color):
 
     If PATH is not specified, the base path of the input folder will be used.
     """
-    from aiida.cmdline.utils.repository import list_repo_files
-    from aiida.orm.nodes.process.calculation.calcjob import _input_subfolder
-
-    if path is not None:
-        fullpath = os.path.join(_input_subfolder, path)
-    else:
-        fullpath = _input_subfolder
+    from aiida.cmdline.utils.repository import list_repository_contents
 
     try:
-        list_repo_files(calcjob, fullpath, color)
+        list_repository_contents(calcjob, path, color)
     except ValueError as exception:
         echo.echo_critical(exception)
 
@@ -193,12 +175,7 @@ def calcjob_outputls(calcjob, path, color):
     If PATH is not specified, the base path of the retrieved folder will be used.
     Content can only be showm after the daemon has retrieved the remote files.
     """
-    from aiida.cmdline.utils.repository import list_repo_files
-
-    if path is not None:
-        fullpath = os.path.join(calcjob._path_subfolder_name, path)
-    else:
-        fullpath = calcjob._path_subfolder_name
+    from aiida.cmdline.utils.repository import list_repository_contents
 
     try:
         retrieved = calcjob.out.retrieved
@@ -206,7 +183,7 @@ def calcjob_outputls(calcjob, path, color):
         echo.echo_critical("No 'retrieved' node found. Have the calcjob files already been retrieved?")
 
     try:
-        list_repo_files(retrieved, fullpath, color)
+        list_repository_contents(retrieved, path, color)
     except ValueError as exception:
         echo.echo_critical(exception)
 

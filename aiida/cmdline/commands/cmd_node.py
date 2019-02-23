@@ -36,19 +36,12 @@ def verdi_node_repo():
 @with_dbenv()
 def repo_cat(node, relative_path):
     """Output the content of a file in the repository folder."""
-    from aiida.cmdline.utils.repository import cat_repo_files
-
     try:
-        cat_repo_files(node, relative_path)
-    except ValueError as exc:
-        echo.echo_critical(str(exc))
-    except IOError as exc:
-        import errno
-        # Ignore Broken pipe errors, re-raise everything else
-        if exc.errno == errno.EPIPE:
-            pass
-        else:
-            echo.echo_critical(str(exc))
+        content = node.get_object_content(relative_path)
+    except Exception as exception:  # pylint: disable=broad-except
+        echo.echo_critical('failed to get the content of file `{}`: {}'.format(relative_path, exception))
+    else:
+        echo.echo(content)
 
 
 @verdi_node_repo.command('ls')
@@ -58,12 +51,12 @@ def repo_cat(node, relative_path):
 @with_dbenv()
 def repo_ls(node, relative_path, color):
     """List files in the repository folder."""
-    from aiida.cmdline.utils.repository import list_repo_files
+    from aiida.cmdline.utils.repository import list_repository_contents
 
     try:
-        list_repo_files(node, relative_path, color)
-    except ValueError as exc:
-        echo.echo_critical(str(exc))
+        list_repository_contents(node, relative_path, color)
+    except ValueError as exception:
+        echo.echo_critical(exception)
 
 
 @verdi_node.command('label')
@@ -144,7 +137,7 @@ def show(nodes, print_groups):
 
     for node in nodes:
         # pylint: disable=fixme
-        #TODO: Add a check here on the node type, otherwise it might try to access
+        # TODO: Add a check here on the node type, otherwise it might try to access
         # attributes such as code which are not necessarily there
         echo.echo(get_node_info(node))
 

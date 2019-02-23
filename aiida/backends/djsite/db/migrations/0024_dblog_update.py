@@ -21,21 +21,27 @@ REVISION = '1.0.24'
 DOWN_REVISION = '1.0.23'
 
 # The values that will be exported for the log records that will be deleted
-values_to_export = ['pk', 'time', 'loggername', 'levelname', 'objpk', 'objname', 'message', 'metadata']
+values_to_export = ['id', 'time', 'loggername', 'levelname', 'objpk', 'objname', 'message', 'metadata']
 
 node_prefix = 'node.'
 leg_workflow_prefix = 'aiida.workflows.user.'
 
 
-def get_legacy_workflow_log_no(dblog_model):
+def get_legacy_workflow_log_number(dblog_model):
     """ Get the number of the log records that correspond to legacy workflows """
     return dblog_model.objects.filter(objname__startswith=leg_workflow_prefix).count()
 
 
-def get_unknown_entity_log_no(dblog_model):
+def get_unknown_entity_log_number(dblog_model):
     """ Get the number of the log records that correspond to unknown entities """
     return dblog_model.objects.exclude(objname__startswith=node_prefix).exclude(
         objname__startswith=leg_workflow_prefix).count()
+
+
+def get_logs_with_no_nodes_number(dblog_model, dbnode_model):
+    """ Get the number of the log records that don't correspond to a node """
+    return dblog_model.objects.exclude(objpk__in=dbnode_model.objects.values('id')).filter(
+        objname__startswith=node_prefix).values(*values_to_export).count()
 
 
 def get_serialized_legacy_workflow_logs(dblog_model):
@@ -50,6 +56,14 @@ def get_serialized_unknown_entity_logs(dblog_model):
     from aiida.backends.sqlalchemy.utils import dumps_json
     queryset = dblog_model.objects.exclude(objname__startswith=node_prefix).exclude(
         objname__startswith=leg_workflow_prefix).values(*values_to_export)
+    return dumps_json(list(queryset))
+
+
+def get_serialized_logs_with_no_nodes(dblog_model, dbnode_model):
+    """ Get the serialized log records that don't correspond to a node """
+    from aiida.backends.sqlalchemy.utils import dumps_json
+    queryset = dblog_model.objects.exclude(objpk__in=dbnode_model.objects.values('id')).filter(
+        objname__startswith=node_prefix).values(*values_to_export)
     return dumps_json(list(queryset))
 
 
@@ -70,16 +84,19 @@ def export_and_clean_workflow_logs(apps, _):
     from tempfile import NamedTemporaryFile
 
     DbLog = apps.get_model('db', 'DbLog')
-    lwf_no = get_legacy_workflow_log_no(DbLog)
-    other_no = get_unknown_entity_log_no(DbLog)
+    DbNode = apps.get_model('db', 'DbNode')
+
+    lwf_number = get_legacy_workflow_log_number(DbLog)
+    other_number = get_unknown_entity_log_number(DbLog)
+    log_no_node_number = get_logs_with_no_nodes_number(DbLog, DbNode)
 
     # If there are no legacy workflow log records or log records of an unknown entity
-    if lwf_no == 0 and other_no == 0:
+    if lwf_number == 0 and other_number == 0 and log_no_node_number == 0:
         return
 
     if not settings.TESTING_MODE:
         click.echo('We found {} log records that correspond to legacy workflows and {} log records to correspond '
-                   'to an unknown entity.'.format(lwf_no, other_no))
+                   'to an unknown entity.'.format(lwf_number, other_number))
         click.echo(
             'These records will be removed from the database and exported to JSON files to the current directory).')
         proceed = click.confirm('Would you like to proceed?', default=True)
@@ -91,7 +108,7 @@ def export_and_clean_workflow_logs(apps, _):
         delete_on_close = True
 
     # Exporting the legacy workflow log records
-    if lwf_no != 0:
+    if lwf_number != 0:
         # Get the records and write them to file
         with NamedTemporaryFile(
                 prefix='legagy_wf_logs-', suffix='.log', dir='.', delete=delete_on_close, mode='w+') as handle:
@@ -106,7 +123,7 @@ def export_and_clean_workflow_logs(apps, _):
         DbLog.objects.filter(objname__startswith=leg_workflow_prefix).delete()
 
     # Exporting unknown log records
-    if other_no != 0:
+    if other_number != 0:
         # Get the records and write them to file
         with NamedTemporaryFile(
                 prefix='unknown_entity_logs-', suffix='.log', dir='.', delete=delete_on_close, mode='w+') as handle:
@@ -119,6 +136,21 @@ def export_and_clean_workflow_logs(apps, _):
 
         # Now delete the records
         DbLog.objects.exclude(objname__startswith=node_prefix).exclude(objname__startswith=leg_workflow_prefix).delete()
+
+    # Exporting log records that don't correspond to nodes
+    if log_no_node_number != 0:
+        # Get the records and write them to file
+        with NamedTemporaryFile(
+                prefix='no_node_entity_logs-', suffix='.log', dir='.', delete=delete_on_close, mode='w+') as handle:
+            filename = handle.name
+            handle.write(get_serialized_logs_with_no_nodes(DbLog, DbNode))
+
+        # If delete_on_close is False, we are running for the user and add additional message of file location
+        if not delete_on_close:
+            click.echo('Exported entity logs that don\'t correspond to nodes to {}'.format(filename))
+
+        # Now delete the records
+        DbLog.objects.exclude(objpk__in=DbNode.objects.values('id')).filter(objname__startswith=node_prefix).delete()
 
 
 def clean_dblog_metadata(apps, _):
@@ -211,7 +243,6 @@ class Migration(migrations.Migration):
 
         # Since the new column is created correctly, drop the old objpk column
         # The reverse migration will add the field
-        # migrations.RemoveField(model_name='dblog', name='objpk', field=models.IntegerField(null=True, db_index=True)),
         migrations.RemoveField(model_name='dblog', name='objpk'),
 
         # This is the correct pattern to generate unique fields, see

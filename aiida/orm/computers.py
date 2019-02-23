@@ -692,6 +692,12 @@ class Computer(entities.Entity):
 
         transport_cls = self.get_transport_class()
         user = user or users.User.objects(self.backend).get_default()
+        valid_keys = set(transport_cls.get_valid_auth_params())
+
+        if not set(kwargs.keys()).issubset(valid_keys):
+            invalid_keys = [key for key in kwargs if key not in valid_keys]
+            raise ValueError('{transport}: recieved invalid authentication parameter(s) "{invalid}"'.format(
+                transport=transport_cls, invalid=invalid_keys))
 
         try:
             authinfo = self.get_authinfo(user)
@@ -699,12 +705,6 @@ class Computer(entities.Entity):
             authinfo = authinfos.AuthInfo(self, user)
 
         auth_params = authinfo.get_auth_params()
-        valid_keys = set(transport_cls.get_valid_auth_params())
-
-        if not set(kwargs.keys()).issubset(valid_keys):
-            invalid_keys = [key for key in kwargs if key not in valid_keys]
-            raise ValueError('{transport}: recieved invalid authentication parameter(s) "{invalid}"'.format(
-                transport=transport_cls, invalid=invalid_keys))
 
         if valid_keys:
             auth_params.update(kwargs)

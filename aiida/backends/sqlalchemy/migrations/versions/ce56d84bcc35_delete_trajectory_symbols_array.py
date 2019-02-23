@@ -1,4 +1,4 @@
-"""delete trajectory symbols array
+"""Delete trajectory symbols array from the repository and the reference in the attributes
 
 Revision ID: ce56d84bcc35
 Revises: 12536798d4d3
@@ -17,10 +17,11 @@ from __future__ import absolute_import
 import numpy
 
 from alembic import op
-from sqlalchemy.orm.session import Session
+from sqlalchemy.sql import table, column, select, func, text
+from sqlalchemy import String, Integer, cast
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 
-from aiida.backends.sqlalchemy.utils import flag_modified, get_current_table
-from aiida.orm import load_node
+from aiida.backends.general.migrations import utils
 
 # revision identifiers, used by Alembic.
 revision = 'ce56d84bcc35'
@@ -31,40 +32,38 @@ depends_on = None
 
 def upgrade():
     """Migrations for the upgrade."""
-    bind = op.get_bind()
-    session = Session(bind=bind)
+    # yapf:disable
+    connection = op.get_bind()
 
-    DbNode = get_current_table(bind, 'db_dbnode')
+    DbNode = table('db_dbnode', column('id', Integer), column('uuid', UUID), column('type', String),
+                   column('attributes', JSONB))
 
-    trajectories = session.query(DbNode).filter_by(type='node.data.array.trajectory.TrajectoryData.').all()
-    for t in trajectories:
-        del t.attributes['array|symbols']
-        flag_modified(t, 'attributes')
-        load_node(pk=t.id).delete_object('symbols.npy', force=True)
-        session.add(t)
-    session.commit()
-    session.close()
+    nodes = connection.execute(
+        select([DbNode.c.id, DbNode.c.uuid]).where(
+            DbNode.c.type == op.inline_literal('node.data.array.trajectory.TrajectoryData.'))).fetchall()
+
+    for pk, uuid in nodes:
+        connection.execute(
+            text("""UPDATE db_dbnode SET attributes = attributes #- '{{array|symbols}}' WHERE id = {}""".format(pk)))
+        utils.delete_numpy_array_from_repository(uuid, 'symbols')
 
 
 def downgrade():
     """Migrations for the downgrade."""
-    import tempfile
-    bind = op.get_bind()
-    session = Session(bind=bind)
+    # yapf:disable
+    connection = op.get_bind()
 
-    DbNode = get_current_table(bind, 'db_dbnode')
+    DbNode = table('db_dbnode', column('id', Integer), column('uuid', UUID), column('type', String),
+                   column('attributes', JSONB))
 
-    trajectories = session.query(DbNode).filter_by(type='node.data.array.trajectory.TrajectoryData.').all()
-    for t in trajectories:
-        symbols = numpy.array(t.get_attribute('symbols'))
-        # Save the .npy file (using set_array raises ModificationNotAllowed error)
-        with tempfile.NamedTemporaryFile() as handle:
-            numpy.save(handle, symbols)
-            handle.flush()
-            handle.seek(0)
-            load_node(pk=t.id).put_object_from_filelike(handle, 'symbols.npy')
-        t.attributes['array|symbols'] = list(symbols.shape)
-        flag_modified(t, 'attributes')
-        session.add(t)
-    session.commit()
-    session.close()
+    nodes = connection.execute(
+        select([DbNode.c.id, DbNode.c.uuid]).where(
+            DbNode.c.type == op.inline_literal('node.data.array.trajectory.TrajectoryData.'))).fetchall()
+
+    for pk, uuid in nodes:
+        attributes = connection.execute(select([DbNode.c.attributes]).where(DbNode.c.id == pk)).fetchone()
+        symbols = numpy.array(attributes['symbols'])
+        utils.store_numpy_array_in_repository(uuid, 'symbols', symbols)
+        key = op.inline_literal('{"array|symbols"}')
+        connection.execute(DbNode.update().where(DbNode.c.id == pk).values(
+            attributes=func.jsonb_set(DbNode.c.attributes, key, cast(list(symbols.shape), JSONB))))

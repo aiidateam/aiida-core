@@ -31,8 +31,12 @@ depends_on = None
 def upgrade():
     """Migrations for the upgrade."""
     op.alter_column('db_dbnode', 'type', new_column_name='node_type')  # pylint: disable=no-member
+    op.create_index(op.f('ix_db_dbnode_node_type'), 'db_dbnode', ['node_type'], unique=False)
+    op.drop_index('ix_db_dbnode_type', table_name='db_dbnode')
 
 
 def downgrade():
     """Migrations for the downgrade."""
     op.alter_column('db_dbnode', 'node_type', new_column_name='type')  # pylint: disable=no-member
+    op.create_index('ix_db_dbnode_type', 'db_dbnode', ['type'], unique=False)
+    op.drop_index(op.f('ix_db_dbnode_node_type'), table_name='db_dbnode')

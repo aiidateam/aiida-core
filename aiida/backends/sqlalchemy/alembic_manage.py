@@ -11,7 +11,12 @@
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
+
 import sys
+
+from alembic import command as alembic_command
+from aiida.backends import sqlalchemy as sa
+from aiida.backends.sqlalchemy.utils import get_alembic_conf
 
 # Available alembic commands
 REVISION_CMD = 'revision'
@@ -25,7 +30,6 @@ AVAIL_AL_COMMANDS = [REVISION_CMD, CURRENT_CMD, HISTORY_CMD,
 
 if __name__ == "__main__":
     import argparse
-    from aiida.backends.sqlalchemy.utils import alembic_command
     from aiida.backends.profile import load_profile
     from aiida.backends.sqlalchemy.utils import _load_dbenv_noschemacheck
     from aiida.backends.profile import BACKEND_SQLA
@@ -34,31 +38,24 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--aiida-profile', help='The AiiDA profile that you would like to use')
+    parser.add_argument('--no-autogenerate', action='store_true', help='Only generate an empty revision template file '
+        'but do not automatically generate the migration operations')
 
     subparsers = parser.add_subparsers(
         help='sub-command help', dest='command')
 
-    parser_upg = subparsers.add_parser(
-        'upgrade', help='Upgrade to a later version')
-    parser_upg.add_argument(
-        'arguments', choices=['head'], help='Upgrade to head')
+    parser_upg = subparsers.add_parser('upgrade', help='Upgrade to a later version')
+    parser_upg.add_argument('revision', help='specify the revision')
 
-    parser_dg = subparsers.add_parser(
-        'downgrade', help='Revert to a previous version')
-    parser_dg.add_argument(
-        'arguments', choices=['base'], help='Revert to base')
+    parser_dg = subparsers.add_parser('downgrade', help='Revert to a previous version')
+    parser_dg.add_argument('revision', help='specify the revision')
 
-    parser_hist = subparsers.add_parser(
-        'history', help='List changeset scripts in chronological order')
-    parser_hist.add_argument(
-        'arguments', choices=['verbose'], nargs='?',
-        help='Output in verbose mode')
+    parser_hist = subparsers.add_parser('history', help='List changeset scripts in chronological order')
+    parser_hist.add_argument('-r', '--rev-range', help='Output in verbose mode')
+    parser_hist.add_argument('-v', '--verbose', action='store_true', help='Output in verbose mode')
 
-    parser_cur = subparsers.add_parser(
-        'current', help='Display the current version for a database')
-    parser_cur.add_argument(
-        'arguments', choices=['verbose'], nargs='?',
-        help='Output in verbose mode')
+    parser_cur = subparsers.add_parser('current', help='Display the current version for a database')
+    parser_cur.add_argument('-v', '--verbose', action='store_true', help='Output in verbose mode')
 
     parser_rev = subparsers.add_parser(
         'revision', help='Create a new migration file')
@@ -84,9 +81,19 @@ if __name__ == "__main__":
                                    "but a different backend is used!")
         _load_dbenv_noschemacheck(profile=profile_name)
 
-        if 'arguments' in args:
-            alembic_command(args.command, args.arguments)
-        else:
-            alembic_command(args.command)
-    else:
-        print("No valid command specified. The available commands are: " + str(AVAIL_AL_COMMANDS))
+        # Get the requested alembic command from the available commands
+        command = getattr(alembic_command, args.command)
+        alembic_cfg = get_alembic_conf()
+
+        with sa.engine.begin() as connection:
+            alembic_cfg.attributes['connection'] = connection
+            if command.__name__ == CURRENT_CMD:
+                command(alembic_cfg, verbose=args.verbose)
+            elif command.__name__ == HISTORY_CMD:
+                command(alembic_cfg, rev_range=args.rev_range, verbose=args.verbose)
+            elif command.__name__ == REVISION_CMD:
+                command(alembic_cfg, message=args.arguments[0], autogenerate=not args.no_autogenerate)
+            elif command.__name__ in [UPGRADE_CMD, DOWNGRADE_CMD]:
+                command(alembic_cfg, revision=args.revision)
+            else:
+                raise ValueError('invalid command')

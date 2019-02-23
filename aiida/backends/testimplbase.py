@@ -14,8 +14,8 @@ from abc import ABCMeta, abstractmethod
 
 import six
 
-from aiida.common.exceptions import InternalError
 from aiida import orm
+from aiida.common import exceptions
 
 
 @six.add_metaclass(ABCMeta)
@@ -85,10 +85,14 @@ class AiidaTestImplementation(object):
             backend=self.backend
         ).store()
 
-        config = get_config()
-        email = config.current_profile.default_user_email
-        self.user = orm.User(email=email).store()
-        self.user_email = email
+        self.user_email = get_config().current_profile.default_user_email
+
+        # Since the default user is needed for many operations in AiiDA, it is not deleted by clean_db.
+        # In principle, it should therefore always exist - if not we create it anyhow.
+        try:
+            self.user = orm.User.objects.get(email=self.user_email)
+        except exceptions.NotExistent:
+            self.user = orm.User(email=self.user_email).store()
 
     def get_computer(self):
         """
@@ -97,7 +101,8 @@ class AiidaTestImplementation(object):
         try:
             return self.computer
         except AttributeError:
-            raise InternalError("The AiiDA Test implementation should define a self.computer in the setUpClass_method")
+            raise exceptions.InternalError(
+                "The AiiDA Test implementation should define a self.computer in the setUpClass_method")
 
     def get_user_email(self):
         """
@@ -106,4 +111,5 @@ class AiidaTestImplementation(object):
         try:
             return self.user_email
         except AttributeError:
-            raise InternalError("The AiiDA Test implementation should define a self.user_email in the setUpClass_method")
+            raise exceptions.InternalError(
+                "The AiiDA Test implementation should define a self.user_email in the setUpClass_method")

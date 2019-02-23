@@ -1,4 +1,4 @@
-"""trajectory symbols to attribute
+"""Move trajectory symbols from repository array to attribute
 
 Revision ID: 12536798d4d3
 Revises: 37f3d4882837
@@ -15,10 +15,11 @@ from __future__ import absolute_import
 # pylint: disable=no-member,no-name-in-module,import-error
 
 from alembic import op
-from sqlalchemy.orm.session import Session
+from sqlalchemy import cast, String, Integer
+from sqlalchemy.sql import table, column, select, func, text
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 
-from aiida.backends.sqlalchemy.utils import flag_modified, get_current_table
-from aiida.orm import load_node
+from aiida.backends.general.migrations.utils import load_numpy_array_from_repository
 
 # revision identifiers, used by Alembic.
 revision = '12536798d4d3'
@@ -32,32 +33,34 @@ depends_on = None
 
 def upgrade():
     """Migrations for the upgrade."""
-    bind = op.get_bind()
-    session = Session(bind=bind)
+    # yapf:disable
+    connection = op.get_bind()
 
-    DbNode = get_current_table(bind, 'db_dbnode')
+    DbNode = table('db_dbnode', column('id', Integer), column('uuid', UUID), column('type', String),
+                   column('attributes', JSONB))
 
-    trajectories = session.query(DbNode).filter_by(type='node.data.array.trajectory.TrajectoryData.').all()
-    for t in trajectories:
-        symbols = load_node(pk=t.id).get_array('symbols').tolist()
-        t.attributes['symbols'] = symbols
-        flag_modified(t, 'attributes')
-        session.add(t)
-    session.commit()
-    session.close()
+    nodes = connection.execute(
+        select([DbNode.c.id, DbNode.c.uuid]).where(
+            DbNode.c.type == op.inline_literal('node.data.array.trajectory.TrajectoryData.'))).fetchall()
+
+    for pk, uuid in nodes:
+        symbols = load_numpy_array_from_repository(uuid, 'symbols').tolist()
+        connection.execute(DbNode.update().where(DbNode.c.id == pk).values(
+            attributes=func.jsonb_set(DbNode.c.attributes, op.inline_literal('{"symbols"}'), cast(symbols, JSONB))))
 
 
 def downgrade():
     """Migrations for the downgrade."""
-    bind = op.get_bind()
-    session = Session(bind=bind)
+    # yapf:disable
+    connection = op.get_bind()
 
-    DbNode = get_current_table(bind, 'db_dbnode')
+    DbNode = table('db_dbnode', column('id', Integer), column('uuid', UUID), column('type', String),
+                   column('attributes', JSONB))
 
-    trajectories = session.query(DbNode).filter_by(type='node.data.array.trajectory.TrajectoryData.').all()
-    for t in trajectories:
-        t.delete_attribute('symbols')
-        flag_modified(t, 'attributes')
-        session.add(t)
-    session.commit()
-    session.close()
+    nodes = connection.execute(
+        select([DbNode.c.id, DbNode.c.uuid]).where(
+            DbNode.c.type == op.inline_literal('node.data.array.trajectory.TrajectoryData.'))).fetchall()
+
+    for pk, _ in nodes:
+        connection.execute(
+            text("""UPDATE db_dbnode SET attributes = attributes #- '{{symbols}}' WHERE id = {}""".format(pk)))

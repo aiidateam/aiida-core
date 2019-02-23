@@ -12,6 +12,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import inspect
+import unittest
 
 import six
 import plumpy
@@ -1142,6 +1143,7 @@ class TestWorkChainExpose(AiidaTestCase):
                 'sub_2.sub_3.c': Bool(False)
             })
 
+    @unittest.skip('Reenable when issue #2515 is solved: references to deleted ORM instances')
     def test_nested_expose(self):
         res = run(
             GrandParentExposeWorkChain,

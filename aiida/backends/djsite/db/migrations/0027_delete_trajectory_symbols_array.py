@@ -22,6 +22,7 @@ from __future__ import absolute_import
 from django.db import migrations
 
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
+from aiida.backends.general.migrations import utils
 from . import ModelModifierV0025
 
 REVISION = '1.0.27'
@@ -30,44 +31,31 @@ DOWN_REVISION = '1.0.26'
 
 def delete_trajectory_symbols_array(apps, _):
     """Delete the symbols array from all `TrajectoryData` nodes."""
-    from aiida.orm import load_node
-
+    DbNode = apps.get_model('db', 'DbNode')
     DbAttribute = apps.get_model('db', 'DbAttribute')
 
-    modifier = ModelModifierV0025(DbAttribute)
+    modifier = ModelModifierV0025(apps, DbAttribute)
 
-    DbNode = apps.get_model('db', 'DbNode')
-    trajectories_pk = DbNode.objects.filter(type='node.data.array.trajectory.TrajectoryData.').values_list(
-        'id', flat=True)
-    for t_pk in trajectories_pk:
-        trajectory = load_node(t_pk)
-        modifier.del_value_for_node(DbNode.objects.get(pk=trajectory.pk), 'array|symbols')
-        trajectory.delete_object('symbols.npy', force=True)
+    nodes = DbNode.objects.filter(type='node.data.array.trajectory.TrajectoryData.').values_list('id', 'uuid')
+    for pk, uuid in nodes:
+        modifier.del_value_for_node(DbNode.objects.get(pk=pk), 'array|symbols')
+        utils.delete_numpy_array_from_repository(uuid, 'symbols')
 
 
 def create_trajectory_symbols_array(apps, _):
     """Create the symbols array for all `TrajectoryData` nodes."""
     import numpy
-    import tempfile
-    from aiida.orm import load_node
-
-    DbAttribute = apps.get_model('db', 'DbAttribute')
-
-    modifier = ModelModifierV0025(DbAttribute)
 
     DbNode = apps.get_model('db', 'DbNode')
-    trajectories_pk = DbNode.objects.filter(type='node.data.array.trajectory.TrajectoryData.').values_list(
-        'id', flat=True)
-    for t_pk in trajectories_pk:
-        trajectory = load_node(t_pk)
-        symbols = numpy.array(trajectory.get_attribute('symbols'))
-        # Save the .npy file (using set_array raises ModificationNotAllowed error)
-        with tempfile.NamedTemporaryFile() as handle:
-            numpy.save(handle, symbols)
-            handle.flush()
-            handle.seek(0)
-            trajectory.put_object_from_filelike(handle, 'symbols.npy')
-        modifier.set_value_for_node(DbNode.objects.get(pk=trajectory.pk), 'array|symbols', list(symbols.shape))
+    DbAttribute = apps.get_model('db', 'DbAttribute')
+
+    modifier = ModelModifierV0025(apps, DbAttribute)
+
+    nodes = DbNode.objects.filter(type='node.data.array.trajectory.TrajectoryData.').values_list('id', 'uuid')
+    for pk, uuid in nodes:
+        symbols = numpy.array(modifier.get_value_for_node(pk, 'symbols'))
+        utils.store_numpy_array_in_repository(uuid, 'symbols', symbols)
+        modifier.set_value_for_node(DbNode.objects.get(pk=pk), 'array|symbols', list(symbols.shape))
 
 
 class Migration(migrations.Migration):

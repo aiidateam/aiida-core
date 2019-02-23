@@ -443,7 +443,8 @@ class TestQueryBuilder(AiidaTestCase):
             subclassing=False)
         self.assertEqual(qb.count(), 2)
         qb = orm.QueryBuilder().append(
-            entity_type=('data.structure.StructureData.', 'data.Data.'), filters={'attributes.cat': 'miau'},
+            entity_type=('data.structure.StructureData.', 'data.Data.'),
+            filters={'attributes.cat': 'miau'},
             subclassing=False)
         self.assertEqual(qb.count(), 2)
 

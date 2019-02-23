@@ -210,18 +210,15 @@ def delete_db(profile, non_interactive=True):
     """
     from aiida.manage import get_config
     from aiida.manage.external.postgres import Postgres
-    from aiida.common import json
 
-    pconfig = profile.dictionary
+    pdict = profile.dictionary
 
-    postgres = Postgres(port=pconfig.get('AIIDADB_PORT'), interactive=not non_interactive, quiet=False)
-    postgres.dbinfo['user'] = pconfig.get('AIIDADB_USER')
-    postgres.dbinfo['host'] = pconfig.get('AIIDADB_HOST')
+    postgres = Postgres.from_profile(profile, interactive=not non_interactive, quiet=False)
     postgres.determine_setup()
 
-    echo.echo(json.dumps(postgres.dbinfo, indent=4))
+    # echo.echo(json.dumps(postgres.get_dbinfo(), indent=4))
 
-    db_name = pconfig.get('AIIDADB_NAME', '')
+    db_name = pdict.get('AIIDADB_NAME', '')
     if not postgres.db_exists(db_name):
         echo.echo_info("Associated database '{}' does not exist.".format(db_name))
     elif non_interactive or click.confirm("Delete associated database '{}'?\n"
@@ -229,7 +226,7 @@ def delete_db(profile, non_interactive=True):
         echo.echo_info("Deleting database '{}'.".format(db_name))
         postgres.drop_db(db_name)
 
-    user = pconfig.get('AIIDADB_USER', '')
+    user = pdict.get('AIIDADB_USER', '')
     config = get_config()
     users = [profile.dictionary.get('AIIDADB_USER', '') for profile in config.profiles]
 

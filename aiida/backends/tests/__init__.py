@@ -89,7 +89,7 @@ db_test_list = {
         'manage.configuration.migrations.': ['aiida.backends.tests.manage.configuration.migrations.test_migrations'],
         'manage.configuration.options.': ['aiida.backends.tests.manage.configuration.test_options'],
         'manage.configuration.profile.': ['aiida.backends.tests.manage.configuration.test_profile'],
-        'manage.external.postgres.': ['aiida.backends.tests.manage.external.test_postgres'],
+        'manage.external.postgres': ['aiida.backends.tests.manage.external.test_postgres'],
         'orm.authinfos': ['aiida.backends.tests.orm.test_authinfos'],
         'orm.comments': ['aiida.backends.tests.orm.test_comments'],
         'orm.computer': ['aiida.backends.tests.test_computer'],

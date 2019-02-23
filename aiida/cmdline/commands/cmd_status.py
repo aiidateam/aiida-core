@@ -20,8 +20,8 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils.daemon import get_daemon_status
 from aiida.manage import get_manager
 from aiida.common.utils import Capturing, get_repository_folder
-from aiida.manage.external.postgres import Postgres
 from aiida.manage.external.rmq import get_rmq_url
+from aiida.manage.external.postgres import Postgres
 
 
 class ServiceStatus(IntEnum):
@@ -58,12 +58,11 @@ def verdi_status():
     # getting the profile
     try:
         profile = manager.get_profile()
+        print_status(ServiceStatus.UP, 'profile', "On profile {}".format(profile.name))
 
     except Exception as exc:
         print_status(ServiceStatus.ERROR, 'profile', "Unable to read AiiDA profile")
         raise exc  # without a profile, we cannot access anything
-
-    print_status(ServiceStatus.UP, 'profile', "On profile {}".format(profile.name))
 
     # getting the repository
     try:
@@ -77,8 +76,17 @@ def verdi_status():
     # getting the postgres status
     try:
         with Capturing(capture_stderr=True):
+
             postgres = Postgres.from_profile(profile)
-            pg_connected = postgres.determine_setup()
+            pg_connected = postgres.try_connect()
+
+        dbinfo = postgres.get_dbinfo()
+        if pg_connected:
+            print_status(ServiceStatus.UP, 'postgres', "Connected to {}@{}:{}".format(
+                dbinfo['user'], dbinfo['host'], dbinfo['port']))
+        else:
+            print_status(ServiceStatus.DOWN, 'postgres', "Unable to connect to {}:{}".format(
+                dbinfo['host'], dbinfo['port']))
 
     except Exception as exc:
         pd_dict = profile.dictionary
@@ -86,40 +94,32 @@ def verdi_status():
             pd_dict['AIIDADB_HOST'], pd_dict['AIIDADB_PORT']))
         print(exc)
 
-    dbinfo = postgres.dbinfo
-    if pg_connected:
-        print_status(ServiceStatus.UP, 'postgres', "Connected to {}@{}:{}".format(dbinfo['user'], dbinfo['host'],
-                                                                                  dbinfo['port']))
-    else:
-        print_status(ServiceStatus.DOWN, 'postgres', "Unable to connect to {}:{}".format(
-            dbinfo['host'], dbinfo['port']))
-
     # getting the rmq status
     try:
         with Capturing(capture_stderr=True):
             comm = manager.create_communicator(with_orm=False)
             comm.stop()
 
+        print_status(ServiceStatus.UP, 'rabbitmq', "Connected to {}".format(get_rmq_url()))
+
     except Exception as exc:
         print_status(ServiceStatus.ERROR, 'rabbitmq', "Unable to connect to rabbitmq")
         print(exc)
-
-    print_status(ServiceStatus.UP, 'rabbitmq', "Connected to {}".format(get_rmq_url()))
 
     # getting the daemon status
     try:
         client = manager.get_daemon_client()
         daemon_status = get_daemon_status(client)
 
+        daemon_status = daemon_status.split("\n")[0]  # take only the first line
+        if client.is_daemon_running:
+            print_status(ServiceStatus.UP, 'daemon', daemon_status)
+        else:
+            print_status(ServiceStatus.DOWN, 'daemon', daemon_status)
+
     except Exception as exc:
         print_status(ServiceStatus.ERROR, 'daemon', "Error getting daemon status")
         print(exc)
-
-    daemon_status = daemon_status.split("\n")[0]  # take only the first line
-    if client.is_daemon_running:
-        print_status(ServiceStatus.UP, 'daemon', daemon_status)
-    else:
-        print_status(ServiceStatus.DOWN, 'daemon', daemon_status)
 
     return 0
 

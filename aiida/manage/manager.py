@@ -154,7 +154,7 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
             decoder = serialize.deserialize
         else:
             # used by verdi status to get a communicator without needing to load the dbenv
-            import json
+            from aiida.common import json
             encoder = functools.partial(json.dumps, encoding='utf-8')
             decoder = json.loads
 

@@ -106,7 +106,7 @@ db_test_list = {
         'nodes': ['aiida.backends.tests.test_nodes'],
         'orm.authinfos': ['aiida.backends.tests.orm.test_authinfos'],
         'orm.comments': ['aiida.backends.tests.orm.test_comments'],
-        'orm.computer': ['aiida.backends.tests.test_computer'],
+        'orm.computers': ['aiida.backends.tests.orm.test_computers'],
         'orm.data.remote': ['aiida.backends.tests.orm.data.test_remote'],
         'orm.data.upf': ['aiida.backends.tests.orm.data.test_upf'],
         'orm.entities': ['aiida.backends.tests.orm.test_entities'],

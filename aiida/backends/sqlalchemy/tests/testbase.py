@@ -82,32 +82,27 @@ class SqlAlchemyTests(AiidaTestImplementation):
         return dec
 
     def clean_db(self):
-        from aiida.backends.sqlalchemy.models.computer import DbComputer
-        from aiida.backends.sqlalchemy.models.group import DbGroup
-        from aiida.backends.sqlalchemy.models.node import DbLink
-        from aiida.backends.sqlalchemy.models.node import DbNode
-        from aiida.backends.sqlalchemy.models.log import DbLog
-        from aiida.backends.sqlalchemy.models.user import DbUser
-        from aiida.backends.sqlalchemy.models.workflow import DbWorkflow
+        from sqlalchemy.sql import table
 
-        # Empty the relationship dbgroup.dbnode
-        dbgroups = self.test_session.query(DbGroup).all()
-        for dbgroup in dbgroups:
-            dbgroup.dbnodes = []
+        DbGroupNodes = table('db_dbgroup_dbnodes')
+        DbGroup = table('db_dbgroup')
+        DbLink = table('db_dblink')
+        DbNode = table('db_dbnode')
+        DbLog = table('db_dblog')
+        DbWorkflow = table('db_dbworkflow')
+        DbAuthInfo = table('db_dbauthinfo')
+        DbUser = table('db_dbuser')
+        DbComputer = table('db_dbcomputer')
 
-        # Delete the groups
-        self.test_session.query(DbGroup).delete()
-
-        # I first need to delete the links, because in principle I could not delete input nodes, only outputs.
-        # For simplicity, since I am deleting everything, I delete the links first
-        self.test_session.query(DbLink).delete()
-
-        # Then I delete the nodes, otherwise I cannot delete computers and users
-        self.test_session.query(DbNode).delete()
-        self.test_session.query(DbWorkflow).delete()
-        self.test_session.query(DbUser).delete()
-        self.test_session.query(DbComputer).delete()
-        self.test_session.query(DbLog).delete()
+        self.test_session.execute(DbGroupNodes.delete())
+        self.test_session.execute(DbGroup.delete())
+        self.test_session.execute(DbLog.delete())
+        self.test_session.execute(DbLink.delete())
+        self.test_session.execute(DbNode.delete())
+        self.test_session.execute(DbWorkflow.delete())
+        self.test_session.execute(DbAuthInfo.delete())
+        self.test_session.execute(DbComputer.delete())
+        self.test_session.execute(DbUser.delete())
 
         self.test_session.commit()
 

@@ -14,12 +14,14 @@ from __future__ import absolute_import
 from six.moves import range
 
 import numpy
-import tempfile
 
 from django.apps import apps
 from django.db.migrations.executor import MigrationExecutor
 from django.db import connection
+
 from aiida.backends.testbase import AiidaTestCase
+from aiida.backends.djsite.db.migrations import ModelModifierV0025
+from aiida.backends.general.migrations import utils
 from aiida.common.exceptions import IntegrityError
 from aiida.manage.database.integrity.duplicate_uuid import deduplicate_uuids, verify_uuid_uniqueness
 
@@ -48,6 +50,9 @@ class TestMigrations(AiidaTestCase):
         # Reverse to the original migration
         executor.migrate(self.migrate_from)
 
+        self.default_user = self.backend.users.create('{}@aiida.net'.format(self.id())).store()
+        self.DbNode = self.apps.get_model('db', 'DbNode')
+
         try:
             self.setUpBeforeMigration()
             # Run the migration to test
@@ -56,8 +61,11 @@ class TestMigrations(AiidaTestCase):
             executor.migrate(self.migrate_to)
 
             self.apps = executor.loader.project_state(self.migrate_to).apps
-        except Exception:
+        except Exception as exception:
             # Bring back the DB to the correct state if this setup part fails
+            import traceback
+            traceback.print_stack()
+            print('EXCEPTION', exception)
             self._revert_database_schema()
             raise
 
@@ -77,6 +85,40 @@ class TestMigrations(AiidaTestCase):
         executor = MigrationExecutor(connection)
         executor.migrate(self.migrate_to)
 
+    def load_node(self, pk):
+        return self.DbNode.objects.get(pk=pk)
+
+
+class TestMigrationsModelModifierV0025(TestMigrations):
+    """Sub class of `TestMigrations` that need to work on node attributes using the `ModelModifierV0025`."""
+
+    def set_attribute(self, node, key, value):
+        DbAttribute = self.apps.get_model('db', 'DbAttribute')
+        modifier = ModelModifierV0025(self.apps, DbAttribute)
+        modifier.set_value_for_node(node.pk, key, value)
+
+    def get_attribute(self, node, key, default=None):
+        DbAttribute = self.apps.get_model('db', 'DbAttribute')
+        modifier = ModelModifierV0025(self.apps, DbAttribute)
+        try:
+            return modifier.get_value_for_node(node.pk, key)
+        except AttributeError:
+            return default
+
+    def get_node_array(self, node, name):
+        return utils.load_numpy_array_from_repository(node.uuid, name)
+
+    def set_node_array(self, node, name, array):
+        """Store a new numpy array inside a node. Possibly overwrite the array if it already existed.
+
+        Internally, it stores a name.npy file in numpy format.
+
+        :param name: The name of the array.
+        :param array: The numpy array to store.
+        """
+        utils.store_numpy_array_in_repository(node.uuid, name, array)
+        self.set_attribute(node, 'array|{}'.format(name), list(array.shape))
+
 
 class TestNoMigrations(AiidaTestCase):
 
@@ -92,48 +134,40 @@ class TestNoMigrations(AiidaTestCase):
 
 
 class TestDuplicateNodeUuidMigration(TestMigrations):
+
     migrate_from = '0013_django_1_8'
     migrate_to = '0014_add_node_uuid_unique_constraint'
 
     def setUpBeforeMigration(self):
-        from aiida.orm import Bool, Int
-
+        from aiida.common.utils import get_new_uuid
         self.file_name = 'test.temp'
-        self.file_content = '#!/bin/bash\n\necho test run\n'
+        self.file_content = u'#!/bin/bash\n\necho test run\n'
 
-        with tempfile.NamedTemporaryFile(mode='w+') as handle:
-            handle.write(self.file_content)
-            handle.flush()
+        self.nodes_boolean = []
+        self.nodes_integer = []
+        self.n_bool_duplicates = 2
+        self.n_int_duplicates = 4
 
-            self.nodes_boolean = []
-            self.nodes_integer = []
-            self.n_bool_duplicates = 2
-            self.n_int_duplicates = 4
+        node_bool = self.DbNode(type='data.bool.Bool.', user_id=self.default_user.id, uuid=get_new_uuid())
+        node_bool.save()
 
-            node_bool = Bool(True)
-            node_bool.put_object_from_file(handle.name, self.file_name)
-            node_bool.store()
+        node_int = self.DbNode(type='data.int.Int.', user_id=self.default_user.id, uuid=get_new_uuid())
+        node_int.save()
 
-            node_int = Int(1)
-            node_int.put_object_from_file(handle.name, self.file_name)
-            node_int.store()
+        self.nodes_boolean.append(node_bool)
+        self.nodes_integer.append(node_int)
 
-            self.nodes_boolean.append(node_bool)
-            self.nodes_integer.append(node_int)
+        for i in range(self.n_bool_duplicates):
+            node = self.DbNode(type='data.bool.Bool.', user_id=self.default_user.id, uuid=node_bool.uuid)
+            node.save()
+            utils.put_object_from_string(node.uuid, self.file_name, self.file_content)
+            self.nodes_boolean.append(node)
 
-            for i in range(self.n_bool_duplicates):
-                node = Bool(True)
-                node.backend_entity.dbmodel.uuid = node_bool.uuid
-                node.put_object_from_file(handle.name, self.file_name)
-                node.store()
-                self.nodes_boolean.append(node)
-
-            for i in range(self.n_int_duplicates):
-                node = Int(1)
-                node.backend_entity.dbmodel.uuid = node_int.uuid
-                node.put_object_from_file(handle.name, self.file_name)
-                node.store()
-                self.nodes_integer.append(node)
+        for i in range(self.n_int_duplicates):
+            node = self.DbNode(type='data.int.Int.', user_id=self.default_user.id, uuid=node_int.uuid)
+            node.save()
+            utils.put_object_from_string(node.uuid, self.file_name, self.file_content)
+            self.nodes_integer.append(node)
 
         # Verify that there are duplicate UUIDs by checking that the following function raises
         with self.assertRaises(IntegrityError):
@@ -145,43 +179,38 @@ class TestDuplicateNodeUuidMigration(TestMigrations):
 
     def test_deduplicated_uuids(self):
         """Verify that after the migration, all expected nodes are still there with unique UUIDs."""
-        from aiida.orm import load_node
-
         # If the duplicate UUIDs were successfully fixed, the following should not raise.
         verify_uuid_uniqueness(table='db_dbnode')
 
         # Reload the nodes by PK and check that all UUIDs are now unique
-        nodes_boolean = [load_node(node.pk) for node in self.nodes_boolean]
+        nodes_boolean = [self.load_node(node.pk) for node in self.nodes_boolean]
         uuids_boolean = [node.uuid for node in nodes_boolean]
         self.assertEqual(len(set(uuids_boolean)), len(nodes_boolean))
 
-        nodes_integer = [load_node(node.pk) for node in self.nodes_integer]
+        nodes_integer = [self.load_node(node.pk) for node in self.nodes_integer]
         uuids_integer = [node.uuid for node in nodes_integer]
         self.assertEqual(len(set(uuids_integer)), len(nodes_integer))
 
         for node in nodes_boolean:
-            with node.open(self.file_name) as handle:
-                content = handle.read()
-                self.assertEqual(content, self.file_content)
+            self.assertEqual(utils.get_object_from_repository(node.uuid, self.file_name), self.file_content)
 
 
 class TestUuidMigration(TestMigrations):
+
     migrate_from = '0017_drop_dbcalcstate'
     migrate_to = '0018_django_1_11'
 
     def setUpBeforeMigration(self):
-        from aiida.orm import Data
+        node = self.DbNode(type='node.process.calculation.calcjob.CalcJobNode.', user_id=self.default_user.id)
+        node.save()
 
-        n = Data().store()
-        self.node_uuid = n.uuid
-        self.node_id = n.id
+        self.node_uuid = str(node.uuid)
+        self.node_id = node.id
 
     def test_uuid_untouched(self):
         """Verify that Node uuids remain unchanged."""
-        from aiida.orm import load_node
-
-        n = load_node(self.node_id)
-        self.assertEqual(self.node_uuid, n.uuid)
+        node = self.load_node(self.node_id)
+        self.assertEqual(self.node_uuid, str(node.uuid))
 
 
 class TestGroupRenamingMigration(TestMigrations):
@@ -192,25 +221,24 @@ class TestGroupRenamingMigration(TestMigrations):
     def setUpBeforeMigration(self):
         # Create group
         DbGroup = self.apps.get_model('db', 'DbGroup')
-        default_user = self.backend.users.create("{}@aiida.net".format(self.id())).store()
 
         # test user group type_string: '' -> 'user'
-        group_user = DbGroup(label='test_user_group', user_id=default_user.id, type_string='')
+        group_user = DbGroup(label='test_user_group', user_id=self.default_user.id, type_string='')
         group_user.save()
         self.group_user_pk = group_user.pk
 
         # test data.upf group type_string: 'data.upf.family' -> 'data.upf'
-        group_data_upf = DbGroup(label='test_data_upf_group', user_id=default_user.id, type_string='data.upf.family')
+        group_data_upf = DbGroup(label='test_data_upf_group', user_id=self.default_user.id, type_string='data.upf.family')
         group_data_upf.save()
         self.group_data_upf_pk = group_data_upf.pk
 
         # test auto.import group type_string: 'aiida.import' -> 'auto.import'
-        group_autoimport = DbGroup(label='test_import_group', user_id=default_user.id, type_string='aiida.import')
+        group_autoimport = DbGroup(label='test_import_group', user_id=self.default_user.id, type_string='aiida.import')
         group_autoimport.save()
         self.group_autoimport_pk = group_autoimport.pk
 
         # test auto.run group type_string: 'autogroup.run' -> 'auto.run'
-        group_autorun = DbGroup(label='test_autorun_group', user_id=default_user.id, type_string='autogroup.run')
+        group_autorun = DbGroup(label='test_autorun_group', user_id=self.default_user.id, type_string='autogroup.run')
         group_autorun.save()
         self.group_autorun_pk = group_autorun.pk
 
@@ -234,7 +262,7 @@ class TestGroupRenamingMigration(TestMigrations):
         self.assertEqual(group_autorun.type_string, 'auto.run')
 
 
-class TestCalcAttributeKeysMigration(TestMigrations):
+class TestCalcAttributeKeysMigration(TestMigrationsModelModifierV0025):
 
     migrate_from = '0022_dbgroup_type_string_change_content'
     migrate_to = '0023_calc_job_option_attribute_keys'
@@ -249,49 +277,37 @@ class TestCalcAttributeKeysMigration(TestMigrations):
     KEY_ENVIRONMENT_VARIABLES_NEW = 'environment_variables'
 
     def setUpBeforeMigration(self):
-        from aiida.orm import WorkflowNode, CalcJobNode
-
         self.process_label = 'TestLabel'
         self.resources = {'number_machines': 1}
         self.environment_variables = {}
         self.parser_name = 'aiida.parsers:parser'
 
-        # We need to explicitly set the node type here to what they were at the time of this migration, because that
-        # is also what the SQL targets. If we weren't to set it, it would get the current ORM node types which are not
-        # considered by the update SQL statements, as they should not be
-        self.node_work = WorkflowNode()
-        self.node_work.backend_entity.dbmodel.type = 'node.process.workflow.WorkflowNode.'
-        self.node_work.set_attribute(self.KEY_PROCESS_LABEL_OLD, self.process_label)
-        self.node_work.store()
+        self.node_work = self.DbNode(type='node.process.workflow.WorkflowNode.', user_id=self.default_user.id)
+        self.node_work.save()
+        self.set_attribute(self.node_work, self.KEY_PROCESS_LABEL_OLD, self.process_label)
 
-        self.node_calc = CalcJobNode(computer=self.computer)
-        self.node_calc.backend_entity.dbmodel.type = 'node.process.calculation.calcjob.CalcJobNode.'
-        self.node_calc._validate = lambda: True  # Need to disable the validation because we cannot set `resources`
-        self.node_calc.set_attribute(self.KEY_PROCESS_LABEL_OLD, self.process_label)
-        self.node_calc.set_attribute(self.KEY_RESOURCES_OLD, self.resources)
-        self.node_calc.set_attribute(self.KEY_ENVIRONMENT_VARIABLES_OLD, self.environment_variables)
-        self.node_calc.set_attribute(self.KEY_PARSER_NAME_OLD, self.parser_name)
-        self.node_calc.store()
+        self.node_calc = self.DbNode(type='node.process.calculation.calcjob.CalcJobNode.', user_id=self.default_user.id)
+        self.node_calc.save()
+        self.set_attribute(self.node_calc, self.KEY_PROCESS_LABEL_OLD, self.process_label)
+        self.set_attribute(self.node_calc, self.KEY_RESOURCES_OLD, self.resources)
+        self.set_attribute(self.node_calc, self.KEY_ENVIRONMENT_VARIABLES_OLD, self.environment_variables)
+        self.set_attribute(self.node_calc, self.KEY_PARSER_NAME_OLD, self.parser_name)
 
     def test_attribute_key_changes(self):
         """Verify that the keys are successfully changed of the affected attributes."""
-        from aiida.orm import load_node
-
         NOT_FOUND = tuple([0])
 
-        node_work = load_node(self.node_work.pk)
-        self.assertEqual(node_work.get_attribute(self.KEY_PROCESS_LABEL_NEW), self.process_label)
-        self.assertEqual(node_work.get_attribute(self.KEY_PROCESS_LABEL_OLD, default=NOT_FOUND), NOT_FOUND)
+        self.assertEqual(self.get_attribute(self.node_work, self.KEY_PROCESS_LABEL_NEW), self.process_label)
+        self.assertEqual(self.get_attribute(self.node_work, self.KEY_PROCESS_LABEL_OLD, default=NOT_FOUND), NOT_FOUND)
 
-        node_calc = load_node(self.node_calc.pk)
-        self.assertEqual(node_calc.get_attribute(self.KEY_PROCESS_LABEL_NEW), self.process_label)
-        self.assertEqual(node_calc.get_attribute(self.KEY_RESOURCES_NEW), self.resources)
-        self.assertEqual(node_calc.get_attribute(self.KEY_ENVIRONMENT_VARIABLES_NEW), self.environment_variables)
-        self.assertEqual(node_calc.get_attribute(self.KEY_PARSER_NAME_NEW), self.parser_name)
-        self.assertEqual(node_calc.get_attribute(self.KEY_PROCESS_LABEL_OLD, default=NOT_FOUND), NOT_FOUND)
-        self.assertEqual(node_calc.get_attribute(self.KEY_RESOURCES_OLD, default=NOT_FOUND), NOT_FOUND)
-        self.assertEqual(node_calc.get_attribute(self.KEY_ENVIRONMENT_VARIABLES_OLD, default=NOT_FOUND), NOT_FOUND)
-        self.assertEqual(node_calc.get_attribute(self.KEY_PARSER_NAME_OLD, default=NOT_FOUND), NOT_FOUND)
+        self.assertEqual(self.get_attribute(self.node_calc, self.KEY_PROCESS_LABEL_NEW), self.process_label)
+        self.assertEqual(self.get_attribute(self.node_calc, self.KEY_RESOURCES_NEW), self.resources)
+        self.assertEqual(self.get_attribute(self.node_calc, self.KEY_ENVIRONMENT_VARIABLES_NEW), self.environment_variables)
+        self.assertEqual(self.get_attribute(self.node_calc, self.KEY_PARSER_NAME_NEW), self.parser_name)
+        self.assertEqual(self.get_attribute(self.node_calc, self.KEY_PROCESS_LABEL_OLD, default=NOT_FOUND), NOT_FOUND)
+        self.assertEqual(self.get_attribute(self.node_calc, self.KEY_RESOURCES_OLD, default=NOT_FOUND), NOT_FOUND)
+        self.assertEqual(self.get_attribute(self.node_calc, self.KEY_ENVIRONMENT_VARIABLES_OLD, default=NOT_FOUND), NOT_FOUND)
+        self.assertEqual(self.get_attribute(self.node_calc, self.KEY_PARSER_NAME_OLD, default=NOT_FOUND), NOT_FOUND)
 
 
 class TestDbLogMigrationRecordCleaning(TestMigrations):
@@ -306,20 +322,15 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
 
         update_024 = importlib.import_module('aiida.backends.djsite.db.migrations.0024_dblog_update')
 
-        DbUser = self.apps.get_model('db', 'DbUser')
         DbNode = self.apps.get_model('db', 'DbNode')
         DbWorkflow = self.apps.get_model('db', 'DbWorkflow')
         DbLog = self.apps.get_model('db', 'DbLog')
 
-        # Creating the user & saving it
-        user = DbUser(is_superuser=False, email="{}@aiida.net".format(self.id()))
-        user.save()
-
         # Creating the needed nodes & workflows
-        calc_1 = DbNode(node_type="node.process.calculation.CalculationNode.", user_id=user.id)
-        param = DbNode(node_type="data.dict.Dict.", user_id=user.id)
-        leg_workf = DbWorkflow(label="Legacy WorkflowNode", user_id=user.id)
-        calc_2 = DbNode(node_type="node.process.calculation.CalculationNode.", user_id=user.id)
+        calc_1 = DbNode(type="node.process.calculation.CalculationNode.", user_id=self.default_user.id)
+        param = DbNode(type="data.dict.Dict.", user_id=self.default_user.id)
+        leg_workf = DbWorkflow(label="Legacy WorkflowNode", user_id=self.default_user.id)
+        calc_2 = DbNode(type="node.process.calculation.CalculationNode.", user_id=self.default_user.id)
 
         # Storing them
         calc_1.save()
@@ -475,12 +486,10 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
         # Get the node id of the log record referencing the node and verify that it is the correct one
         dbnode_id_1 = DbLog.objects.filter(
             pk=self.to_check['CalculationNode'][1]).values('dbnode_id')[:1].get()['dbnode_id']
-        self.assertEqual(dbnode_id_1, self.to_check['CalculationNode'][0], "The referenced node is not "
-                          "the expected one")
+        self.assertEqual(dbnode_id_1, self.to_check['CalculationNode'][0], 'referenced node is not the expected one')
         dbnode_id_2 = DbLog.objects.filter(
             pk=self.to_check['CalculationNode'][3]).values('dbnode_id')[:1].get()['dbnode_id']
-        self.assertEqual(dbnode_id_2, self.to_check['CalculationNode'][2], "The referenced node is not "
-                          "the expected one")
+        self.assertEqual(dbnode_id_2, self.to_check['CalculationNode'][2], 'referenced node is not the expected one')
 
     def test_dblog_correct_export_of_logs(self):
         """
@@ -496,7 +505,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
         self.assertEqual(self.to_check['WorkflowNode'][2], 1)
 
         self.assertEqual(sorted(list(json.loads(self.to_check['NoNode'][0])), key=lambda k: k['id']),
-                          sorted(list(json.loads(self.to_check['NoNode'][1])), key=lambda k: k['id']))
+                         sorted(list(json.loads(self.to_check['NoNode'][1])), key=lambda k: k['id']))
         self.assertEqual(self.to_check['NoNode'][2], 2)
 
     def test_dblog_unique_uuids(self):
@@ -534,17 +543,12 @@ class TestDbLogMigrationBackward(TestMigrations):
     def setUpBeforeMigration(self):
         import json
 
-        DbUser = self.apps.get_model('db', 'DbUser')
         DbNode = self.apps.get_model('db', 'DbNode')
         DbLog = self.apps.get_model('db', 'DbLog')
 
-        # Creating the user & saving it
-        user = DbUser(is_superuser=False, email="{}@aiida.net".format(self.id()))
-        user.save()
-
         # Creating the needed nodes & workflows
-        calc_1 = DbNode(node_type="node.process.calculation.CalculationNode.1", user_id=user.id)
-        calc_2 = DbNode(node_type="node.process.calculation.CalculationNode.2", user_id=user.id)
+        calc_1 = DbNode(type="node.process.calculation.CalculationNode.1", user_id=self.default_user.id)
+        calc_2 = DbNode(type="node.process.calculation.CalculationNode.2", user_id=self.default_user.id)
 
         # Storing them
         calc_1.save()
@@ -595,21 +599,21 @@ class TestDbLogMigrationBackward(TestMigrations):
         # Check that only two log records exist with the correct objpk objname
         for log_pk in self.to_check.keys():
             log_entry = DbLog.objects.filter(pk=log_pk)[:1].get()
-            log_dbnode_id, node_type = self.to_check[log_pk]
+            log_dbnode_id, type = self.to_check[log_pk]
             self.assertEqual(log_dbnode_id, log_entry.objpk,
                              "The dbnode_id ({}) of the 0024 schema version should be identical to the objpk ({}) of "
                              "the 0023 schema version.".format(log_dbnode_id, log_entry.objpk))
-            self.assertEqual(node_type, log_entry.objname,
+            self.assertEqual(type, log_entry.objname,
                              "The type ({}) of the linked node of the 0024 schema version should be identical to the "
-                             "objname ({}) of the 0023 schema version.".format(node_type, log_entry.objname))
+                             "objname ({}) of the 0023 schema version.".format(type, log_entry.objname))
             self.assertEqual(log_dbnode_id, json.loads(log_entry.metadata)['objpk'],
                              "The dbnode_id ({}) of the 0024 schema version should be identical to the objpk ({}) of "
                              "the 0023 schema version stored in the metadata.".format(
                                  log_dbnode_id, json.loads(log_entry.metadata)['objpk']))
-            self.assertEqual(node_type, json.loads(log_entry.metadata)['objname'],
+            self.assertEqual(type, json.loads(log_entry.metadata)['objname'],
                              "The type ({}) of the linked node of the 0024 schema version should be identical to the "
                              "objname ({}) of the 0023 schema version stored in the metadata.".format(
-                                 node_type, json.loads(log_entry.metadata)['objname']))
+                                 type, json.loads(log_entry.metadata)['objname']))
 
 
 class TestDataMoveWithinNodeMigration(TestMigrations):
@@ -618,100 +622,51 @@ class TestDataMoveWithinNodeMigration(TestMigrations):
     migrate_to = '0025_move_data_within_node_module'
 
     def setUpBeforeMigration(self):
-        DbNode = self.apps.get_model('db', 'DbNode')
+        self.node_calc = self.DbNode(type='node.process.calculation.calcjob.CalcJobNode.', user_id=self.default_user.id)
+        self.node_data = self.DbNode(type='data.int.Int.', user_id=self.default_user.id)
+        self.node_calc.save()
+        self.node_data.save()
 
-        default_user = self.backend.users.create("{}@aiida.net".format(self.id())).store()
-
-        node_calc = DbNode(node_type='node.process.calculation.calcjob.CalcJobNode.', user_id=default_user.id)
-        node_data = DbNode(node_type='data.int.Int.', user_id=default_user.id)
-        node_calc.save()
-        node_data.save()
-
-        self.node_calc_id = node_calc.id
-        self.node_data_id = node_data.id
-
-    def test_data_node_type_string(self):
+    def test_data_type_string(self):
         """Verify that type string of the Data node was successfully adapted."""
-        from aiida.orm import load_node
-
-        node_calc = load_node(self.node_calc_id)
-        node_data = load_node(self.node_data_id)
-
+        node_calc = self.load_node(self.node_calc.id)
+        node_data = self.load_node(self.node_data.id)
         self.assertEqual(node_data.type, 'node.data.int.Int.')
         self.assertEqual(node_calc.type, 'node.process.calculation.calcjob.CalcJobNode.')
 
 
-class TestTrajectoryDataMigration(TestMigrations):
+class TestTrajectoryDataMigration(TestMigrationsModelModifierV0025):
 
     migrate_from = '0025_move_data_within_node_module'
     migrate_to = '0027_delete_trajectory_symbols_array'
 
-    # I create sample data
     stepids = numpy.array([60, 70])
     times = stepids * 0.01
-    positions = numpy.array([[[0., 0., 0.], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]], [[0., 0., 0.], [0.5, 0.5, 0.5],
-                                                                                     [1.5, 1.5, 1.5]]])
-    velocities = numpy.array([[[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]], [[0.5, 0.5, 0.5], [0.5, 0.5, 0.5],
-                                                                                [-0.5, -0.5, -0.5]]])
-    cells = numpy.array([[[
-        2.,
-        0.,
-        0.,
-    ], [
-        0.,
-        2.,
-        0.,
-    ], [
-        0.,
-        0.,
-        2.,
-    ]], [[
-        3.,
-        0.,
-        0.,
-    ], [
-        0.,
-        3.,
-        0.,
-    ], [
-        0.,
-        0.,
-        3.,
-    ]]])
+    positions = numpy.array(
+        [[[0., 0., 0.], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]], [[0., 0., 0.], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]]])
+    velocities = numpy.array(
+        [[[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]], [[0.5, 0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, -0.5, -0.5]]])
+    cells = numpy.array([[[2., 0., 0.], [0., 2., 0.], [0., 0., 2.]], [[3., 0., 0.], [0., 3., 0.], [0., 0., 3.]]])
 
     def setUpBeforeMigration(self):
-        from aiida.orm import TrajectoryData
-
-        # Create a TrajectoryData node
-        node = TrajectoryData()
-        # We need to explicitly set the node type here to what they were at the time of this migration, because that
-        # is also what the SQL targets. If we weren't to set it, it would get the current ORM node types which are not
-        # considered by the update SQL statements, as they should not be
-        node.backend_entity.dbmodel.type = 'node.data.array.trajectory.TrajectoryData.'
         symbols = numpy.array(['H', 'O', 'C'])
+        self.node = self.DbNode(type='node.data.array.trajectory.TrajectoryData.', user_id=self.default_user.id)
+        self.node.save()
 
-        # I set the node
-        node.set_array('steps', self.stepids)
-        node.set_array('cells', self.cells)
-        node.set_array('symbols', symbols)
-        node.set_array('positions', self.positions)
-        node.set_array('times', self.times)
-        node.set_array('velocities', self.velocities)
-
-        # Reset validate to avoid raising of validation error according to the new TrajectoryData definition
-        node._validate = lambda: True
-        node.store()
-
-        self.trajectory_pk = node.pk
+        self.set_node_array(self.node, 'steps', self.stepids)
+        self.set_node_array(self.node, 'cells', self.cells)
+        self.set_node_array(self.node, 'symbols', symbols)
+        self.set_node_array(self.node, 'positions', self.positions)
+        self.set_node_array(self.node, 'times', self.times)
+        self.set_node_array(self.node, 'velocities', self.velocities)
 
     def test_trajectory_symbols(self):
-        from aiida.orm import load_node
-        trajectory = load_node(self.trajectory_pk)
-        self.assertSequenceEqual(trajectory.get_attribute('symbols'), ['H', 'O', 'C'])
-        self.assertSequenceEqual(trajectory.get_array('velocities').tolist(), self.velocities.tolist())
-        self.assertSequenceEqual(trajectory.get_array('positions').tolist(), self.positions.tolist())
-        with self.assertRaises(KeyError):
-            trajectory.get_array('symbols')
+        node = self.load_node(self.node.id)
+        self.assertSequenceEqual(self.get_attribute(node, 'symbols'), ['H', 'O', 'C'])
+        self.assertSequenceEqual(self.get_node_array(node, 'velocities').tolist(), self.velocities.tolist())
+        self.assertSequenceEqual(self.get_node_array(node, 'positions').tolist(), self.positions.tolist())
+        with self.assertRaises(IOError):
+            self.get_node_array(node, 'symbols')
 
 
 class TestNodePrefixRemovalMigration(TestMigrations):
@@ -720,24 +675,15 @@ class TestNodePrefixRemovalMigration(TestMigrations):
     migrate_to = '0028_remove_node_prefix'
 
     def setUpBeforeMigration(self):
-        DbNode = self.apps.get_model('db', 'DbNode')
-
-        default_user = self.backend.users.create('{}@aiida.net'.format(self.id())).store()
-
-        node_calc = DbNode(node_type='node.process.calculation.calcjob.CalcJobNode.', user_id=default_user.id)
-        node_data = DbNode(node_type='node.data.int.Int.', user_id=default_user.id)
-        node_calc.save()
-        node_data.save()
-
-        self.node_calc_id = node_calc.id
-        self.node_data_id = node_data.id
+        self.node_calc = self.DbNode(type='node.process.calculation.calcjob.CalcJobNode.', user_id=self.default_user.id)
+        self.node_data = self.DbNode(type='node.data.int.Int.', user_id=self.default_user.id)
+        self.node_calc.save()
+        self.node_data.save()
 
     def test_data_node_type_string(self):
         """Verify that type string of the nodes was successfully adapted."""
-        from aiida.orm import load_node
-
-        node_calc = load_node(self.node_calc_id)
-        node_data = load_node(self.node_data_id)
+        node_calc = self.load_node(self.node_calc.id)
+        node_data = self.load_node(self.node_data.id)
 
         self.assertEqual(node_data.type, 'data.int.Int.')
         self.assertEqual(node_calc.type, 'process.calculation.calcjob.CalcJobNode.')
@@ -749,19 +695,10 @@ class TestParameterDataToDictMigration(TestMigrations):
     migrate_to = '0029_rename_parameter_data_to_dict'
 
     def setUpBeforeMigration(self):
-        DbNode = self.apps.get_model('db', 'DbNode')
-
-        default_user = self.backend.users.create('{}@aiida.net'.format(self.id())).store()
-
-        node = DbNode(type='data.parameter.ParameterData.', user_id=default_user.id)
-        node.save()
-
-        self.node_id = node.id
+        self.node = self.DbNode(type='data.parameter.ParameterData.', user_id=self.default_user.id)
+        self.node.save()
 
     def test_data_node_type_string(self):
         """Verify that type string of the nodes was successfully adapted."""
-        from aiida.orm import load_node
-
-        node = load_node(self.node_id)
-
+        node = self.load_node(self.node.id)
         self.assertEqual(node.type, 'data.dict.Dict.')

@@ -41,6 +41,12 @@ class AbstractQueryManager(object):
             """.format(table)
         return self._backend.execute_raw(query)
 
+    def apply_new_uuid_mapping(self, table, mapping):
+        for pk, uuid in mapping.items():
+            query = """UPDATE {table:} SET uuid = '{uuid:}' WHERE id = {pk:}""".format(table=table, uuid=uuid, pk=pk)
+            with self._backend.cursor() as cursor:
+                cursor.execute(query)
+
     def get_creation_statistics(
             self,
             user_pk=None

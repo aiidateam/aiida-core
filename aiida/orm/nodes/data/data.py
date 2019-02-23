@@ -30,7 +30,7 @@ class Data(Node):
     Specifications of the Data class:
     AiiDA Data objects are subclasses of Node and should have
 
-    Multiple inheritance must be suppoted, i.e. Data should have methods for
+    Multiple inheritance must be supported, i.e. Data should have methods for
     querying and be able to inherit other library objects such as ASE for
     structures.
 

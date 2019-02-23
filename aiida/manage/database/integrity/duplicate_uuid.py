@@ -23,15 +23,11 @@ TABLES_UUID_DEDUPLICATION = ['db_dbcomment', 'db_dbcomputer', 'db_dbgroup', 'db_
 def get_duplicate_uuids(table):
     """Retrieve rows with duplicate UUIDS.
 
-    :param table: Database table with uuid column, e.g. 'db_dbnode'
-    :type str:
-
+    :param table: database table with uuid column, e.g. 'db_dbnode'
     :return: list of tuples of (id, uuid) of rows with duplicate UUIDs
     """
     backend = get_manager().get_backend()
-    duplicates = backend.query_manager.get_duplicate_uuids(table=table)
-
-    return duplicates
+    return backend.query_manager.get_duplicate_uuids(table=table)
 
 
 def verify_uuid_uniqueness(table):
@@ -46,8 +42,18 @@ def verify_uuid_uniqueness(table):
 
     if duplicates:
         raise exceptions.IntegrityError(
-            'Table {} contains rows with duplicate UUIDS: '
-            'run `verdi database integrity duplicate-node-uuid` to return to a consistent state'.format(table))
+            'Table {table:} contains rows with duplicate UUIDS: run '
+            '`verdi database integrity detect-duplicate-uuid -t {table:}` to address the problem'.format(table=table))
+
+
+def apply_new_uuid_mapping(table, mapping):
+    """Take a mapping of pks to UUIDs and apply it to the given table.
+
+    :param table: database table with uuid column, e.g. 'db_dbnode'
+    :param mapping: dictionary of UUIDs mapped onto a pk
+    """
+    backend = get_manager().get_backend()
+    backend.query_manager.apply_new_uuid_mapping(table, mapping)
 
 
 def deduplicate_uuids(table=None, dry_run=True):
@@ -67,18 +73,10 @@ def deduplicate_uuids(table=None, dry_run=True):
     from collections import defaultdict
 
     from aiida.common.utils import get_new_uuid
-    from aiida.orm import Node, load_computer, load_group, load_node
     from aiida.orm.utils.repository import Repository
 
     if table not in TABLES_UUID_DEDUPLICATION:
         raise ValueError('invalid table {}: choose from {}'.format(table, ', '.join(TABLES_UUID_DEDUPLICATION)))
-
-    # A mapping of table to the corresponding entity loader, note that a loader for Comment is not implemented yet.
-    loaders = {
-        'db_dbcomputer': load_computer,
-        'db_dbgroup': load_group,
-        'db_dbnode': load_node,
-    }
 
     mapping = defaultdict(list)
 
@@ -86,40 +84,33 @@ def deduplicate_uuids(table=None, dry_run=True):
         mapping[uuid].append(int(pk))
 
     messages = []
-
-    try:
-        load_entity = loaders[table]
-    except KeyError:
-        raise ValueError('no entity loader has been implemented yet for table {}'.format(table))
+    mapping_new_uuid = {}
 
     for uuid, rows in mapping.items():
 
-        uuid_old = None
+        uuid_ref = None
 
         for pk in rows:
 
             # We don't have to change all rows that have the same UUID, the first one can keep the original
-            if uuid_old is None:
-                entity_reference = load_entity(pk)
-                uuid_old = uuid
+            if uuid_ref is None:
+                uuid_ref = uuid
                 continue
 
-            entity = load_entity(pk)
             uuid_new = str(get_new_uuid())
+            mapping_new_uuid[pk] = uuid_new
 
             if dry_run:
-                messages.append('would update UUID of {} row<{}> from {} to {}'.format(table, pk, uuid_old, uuid_new))
+                messages.append('would update UUID of {} row<{}> from {} to {}'.format(table, pk, uuid_ref, uuid_new))
             else:
+                messages.append('updated UUID of {} row<{}> from {} to {}'.format(table, pk, uuid_ref, uuid_new))
+                repo_ref = Repository(uuid_ref, True, 'path')
+                repo_new = Repository(uuid_new, False, 'path')
+                repo_new.put_object_from_tree(repo_ref._get_base_folder().abspath)  # pylint: disable=protected-access
+                repo_new.store()
 
-                entity.backend_entity._dbmodel.uuid = uuid_new  # pylint: disable=protected-access
-                entity.backend_entity._dbmodel.save()  # pylint: disable=protected-access
-
-                if isinstance(entity, Node):
-                    entity._repository = Repository(entity.uuid, False, entity._repository_base_path)  # pylint: disable=protected-access
-                    entity.put_object_from_tree(entity_reference._repository._get_base_folder().abspath)  # pylint: disable=protected-access
-                    entity._repository.store()  # pylint: disable=protected-access
-
-                messages.append('updated UUID of {} row<{}> from {} to {}'.format(table, pk, uuid_old, uuid_new))
+    if not dry_run:
+        apply_new_uuid_mapping(table, mapping_new_uuid)
 
     if not messages:
         messages = ['no duplicate UUIDs found']

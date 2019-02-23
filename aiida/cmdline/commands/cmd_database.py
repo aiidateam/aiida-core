@@ -36,7 +36,9 @@ def database_migrate(force):
     backend = manager._load_backend(schema_check=False)  # pylint: disable=protected-access
 
     if force:
-        raise NotImplementedError('--force is disabled currently to prevent accidental migrations.')
+        backend.migrate()
+        return
+        # raise NotImplementedError('--force is disabled currently to prevent accidental migrations.')
 
     echo.echo('\n' + '*' * 79 + '\n')
     echo.echo_warning('Before continuing, make sure the daemon is stopped and you have a backup of your database.')

@@ -22,6 +22,7 @@ from __future__ import absolute_import
 from django.db import migrations
 
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
+from aiida.backends.general.migrations.utils import load_numpy_array_from_repository
 from . import ModelModifierV0025
 
 REVISION = '1.0.26'
@@ -30,35 +31,27 @@ DOWN_REVISION = '1.0.25'
 
 def create_trajectory_symbols_attribute(apps, _):
     """Create the symbols attribute from the repository array for all `TrajectoryData` nodes."""
-    from aiida.orm import load_node
-
+    DbNode = apps.get_model('db', 'DbNode')
     DbAttribute = apps.get_model('db', 'DbAttribute')
 
-    modifier = ModelModifierV0025(DbAttribute)
+    modifier = ModelModifierV0025(apps, DbAttribute)
 
-    DbNode = apps.get_model('db', 'DbNode')
-    trajectories_pk = DbNode.objects.filter(type='node.data.array.trajectory.TrajectoryData.').values_list(
-        'id', flat=True)
-    for t_pk in trajectories_pk:
-        trajectory = load_node(t_pk)
-        symbols = trajectory.get_array('symbols').tolist()
-        modifier.set_value_for_node(DbNode.objects.get(pk=trajectory.pk), 'symbols', symbols)
+    nodes = DbNode.objects.filter(type='node.data.array.trajectory.TrajectoryData.').values_list('id', 'uuid')
+    for pk, uuid in nodes:
+        symbols = load_numpy_array_from_repository(uuid, 'symbols').tolist()
+        modifier.set_value_for_node(DbNode.objects.get(pk=pk), 'symbols', symbols)
 
 
 def delete_trajectory_symbols_attribute(apps, _):
     """Delete the symbols attribute for all `TrajectoryData` nodes."""
-    from aiida.orm import load_node
-
+    DbNode = apps.get_model('db', 'DbNode')
     DbAttribute = apps.get_model('db', 'DbAttribute')
 
-    modifier = ModelModifierV0025(DbAttribute)
+    modifier = ModelModifierV0025(apps, DbAttribute)
 
-    DbNode = apps.get_model('db', 'DbNode')
-    trajectories_pk = DbNode.objects.filter(type='node.data.array.trajectory.TrajectoryData.').values_list(
-        'id', flat=True)
-    for t_pk in trajectories_pk:
-        trajectory = load_node(t_pk)
-        modifier.del_value_for_node(DbNode.objects.get(pk=trajectory.pk), 'symbols')
+    nodes = DbNode.objects.filter(type='node.data.array.trajectory.TrajectoryData.').values_list('id', flat=True)
+    for pk in nodes:
+        modifier.del_value_for_node(DbNode.objects.get(pk=pk), 'symbols')
 
 
 class Migration(migrations.Migration):

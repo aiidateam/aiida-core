@@ -21,7 +21,9 @@ from __future__ import print_function
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-name-in-module,import-error
 from alembic import op
-from sqlalchemy.sql import text
+from sqlalchemy import String, Integer
+from sqlalchemy.sql import table, column, select, text
+from sqlalchemy.dialects.postgresql import UUID
 
 # revision identifiers, used by Alembic.
 revision = '239cea6d2452'
@@ -30,21 +32,17 @@ branch_labels = None
 depends_on = None
 
 
-def migrate_infer_calculation_entry_point():
+def migrate_infer_calculation_entry_point(connection):
     """Set the process type for calculation nodes by inferring it from their type string."""
-    from sqlalchemy.orm.session import Session
-
-    from aiida.backends.sqlalchemy.utils import get_current_table
     from aiida.manage.database.integrity import write_database_integrity_violation
     from aiida.manage.database.integrity.plugins import infer_calculation_entry_point
     from aiida.plugins.entry_point import ENTRY_POINT_STRING_SEPARATOR
 
-    bind = op.get_bind()
-    session = Session(bind=bind)
+    DbNode = table('db_dbnode', column('id', Integer), column('uuid', UUID), column('type', String),
+                   column('process_type', String))
 
-    DbNode = get_current_table(bind, 'db_dbnode')
-
-    type_strings = [entry[0] for entry in session.query(DbNode.type).filter(DbNode.type.like('calculation.%')).all()]
+    query_set = connection.execute(select([DbNode.c.type]).where(DbNode.c.type.like('calculation.%'))).fetchall()
+    type_strings = set(entry[0] for entry in query_set)
     mapping_node_type_to_entry_point = infer_calculation_entry_point(type_strings=type_strings)
 
     fallback_cases = []
@@ -55,14 +53,15 @@ def migrate_infer_calculation_entry_point():
         # to map the type string onto a known entry point string. As a fallback it uses the modified type string itself.
         # All affected entries should be logged to file that the user can consult.
         if ENTRY_POINT_STRING_SEPARATOR not in entry_point_string:
-            query_set = session.query(DbNode).filter_by(type=type_string).all()
+            query_set = connection.execute(
+                select([DbNode.c.uuid]).where(DbNode.c.type == op.inline_literal(type_string))).fetchall()
+
             uuids = [str(entry.uuid) for entry in query_set]
             for uuid in uuids:
                 fallback_cases.append([uuid, type_string, entry_point_string])
 
-        session.query(DbNode).filter_by(type=type_string).update({'process_type': entry_point_string})
-
-    session.commit()
+        connection.execute(DbNode.update().where(DbNode.c.type == op.inline_literal(type_string)).values(
+            process_type=op.inline_literal(entry_point_string)))
 
     if fallback_cases:
         headers = ['UUID', 'type (old)', 'process_type (fallback)']
@@ -71,7 +70,7 @@ def migrate_infer_calculation_entry_point():
         write_database_integrity_violation(fallback_cases, headers, warning_message, action_message)
 
 
-def detect_unexpected_links():
+def detect_unexpected_links(connection):
     """Scan the database for any links that are unexpected.
 
     The checks will verify that there are no outgoing `call` or `return` links from calculation nodes and that if a
@@ -80,8 +79,6 @@ def detect_unexpected_links():
     """
     from aiida.backends.general.migrations.provenance_redesign import INVALID_LINK_SELECT_STATEMENTS
     from aiida.manage.database.integrity import write_database_integrity_violation
-
-    connection = op.get_bind()
 
     for sql, warning_message in INVALID_LINK_SELECT_STATEMENTS:
         results = list(connection.execute(text(sql)))
@@ -92,13 +89,13 @@ def detect_unexpected_links():
 
 def upgrade():
     """The upgrade migration actions."""
-    conn = op.get_bind()
+    connection = op.get_bind()
 
     # Migrate calculation nodes by inferring the process type from the type string
-    migrate_infer_calculation_entry_point()
+    migrate_infer_calculation_entry_point(connection)
 
     # Detect if the database contain any unexpected links
-    detect_unexpected_links()
+    detect_unexpected_links(connection)
 
     statement = text("""
         DELETE FROM db_dblink WHERE db_dblink.id IN (
@@ -170,12 +167,12 @@ def upgrade():
         AND db_dblink.type = 'calllink';
          -- Rename `calllink` to `call_work` if the target node is a workflow type node
         """)
-    conn.execute(statement)
+    connection.execute(statement)
 
 
 def downgrade():
     """The downgrade migration actions."""
-    conn = op.get_bind()
+    connection = op.get_bind()
 
     statement = text("""
         UPDATE db_dbnode SET type = 'calculation.job.JobCalculation.'
@@ -203,4 +200,4 @@ def downgrade():
         UPDATE db_dblink SET type = 'returnlink'
         WHERE type = 'return';
         """)
-    conn.execute(statement)
+    connection.execute(statement)

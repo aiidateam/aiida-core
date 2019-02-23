@@ -100,7 +100,6 @@
         aiida/backends/tests/cmdline/commands/test_node.py|
         aiida/backends/tests/cmdline/commands/test_user.py|
         aiida/backends/tests/cmdline/commands/test_work.py|
-        aiida/backends/tests/test_computer.py|
         aiida/backends/tests/test_dataclasses.py|
         aiida/backends/tests/test_dbimporters.py|
         aiida/backends/tests/test_export_and_import.py|

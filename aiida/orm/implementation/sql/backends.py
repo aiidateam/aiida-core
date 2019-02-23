@@ -46,11 +46,10 @@ class SqlBackend(typing.Generic[ModelType], backends.Backend):
     @abc.abstractmethod
     def cursor(self):
         """
-        Return a psycopg cursor.  This method should be used as a context manager i.e.:
+        Return a psycopg cursor.  This method should be used as a context manager i.e.::
 
-        with backend.cursor():
-            # Do stuff
-
+            with backend.cursor():
+                # Do stuff
 
         :return: a psycopg cursor
         :rtype: :class:`psycopg2.extensions.cursor`

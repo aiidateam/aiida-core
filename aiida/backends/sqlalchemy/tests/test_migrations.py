@@ -997,21 +997,23 @@ class TestTrajectoryDataMigration(TestMigrationsSQLA):
     def setUpBeforeMigration(self):
         from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
 
+        DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
+        DbUser = self.get_auto_base().classes.db_dbuser  # pylint: disable=invalid-name
+
         with sa.engine.begin() as connection:
             try:
                 session = Session(connection.engine)
                 import numpy
-                from aiida.plugins import DataFactory
 
-                TrajectoryData = DataFactory('array.trajectory')  # pylint: disable=invalid-name
+                user = DbUser(is_superuser=False, email='{}@aiida.net'.format(self.id()))
+                session.add(user)
+                session.commit()
+
+                node = DbNode(type='node.data.array.trajectory.TrajectoryData.', user_id=user.id)
+                session.add(node)
+                session.commit()
+
                 symbols = numpy.array(['H', 'O', 'C'])
-
-                # Create a TrajectoryData node
-                node = TrajectoryData()
-                # We need to explicitly set the node type here to what they were at the time of this migration, because
-                # that is also what the SQL targets. If we weren't to set it, it would get the current ORM node types
-                # which are not considered by the update SQL statements, as they should not be
-                node.backend_entity.dbmodel.type = 'node.data.array.trajectory.TrajectoryData.'
 
                 # I set the node
                 node.set_array('steps', self.stepids)

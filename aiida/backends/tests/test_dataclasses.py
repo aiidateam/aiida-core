@@ -2300,6 +2300,7 @@ class TestStructureDataFromAse(AiidaTestCase):
         atoms[2].tag = 1
         atoms[3].tag = 1
         atoms[4].tag = 4
+        atoms.set_cell([1,1,1])
         s = StructureData(ase=atoms)
         kindnames = set([k.name for k in s.kinds])
         self.assertEquals(kindnames, set(['Fe', 'Fe1', 'Fe4']))
@@ -2322,6 +2323,7 @@ class TestStructureDataFromAse(AiidaTestCase):
         atoms[0].tag = 1
         atoms[2].tag = 1
         atoms[3].tag = 4
+        atoms.set_cell([1, 1, 1])
         s = StructureData(ase=atoms)
         kindnames = set([k.name for k in s.kinds])
         self.assertEquals(kindnames, set(['Fe', 'Fe1', 'Fe4']))

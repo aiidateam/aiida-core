@@ -1052,7 +1052,8 @@ class Node(Entity):
     def _get_objects_to_hash(self):
         """Return a list of objects which should be included in the hash."""
         objects = [
-            importlib.import_module(self.__module__.split('.', 1)[0]).__version__, {
+            importlib.import_module(self.__module__.split('.', 1)[0]).__version__,
+            {
                 key: val
                 for key, val in self.attributes_items()
                 if (key not in self._hash_ignored_attributes and

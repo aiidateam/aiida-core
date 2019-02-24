@@ -349,14 +349,12 @@ class DjangoQueryBuilder(BackendQueryBuilder):
                 select([1], correlate=True).select_from(aliased_attributes).where(
                     and_(aliased_attributes.key == attrkey, aliased_attributes.dbnode_id == alias.id)))
 
-            select_stmt = select(
-                [aliased_attributes.id], correlate=True).select_from(aliased_attributes).where(
-                    and_(aliased_attributes.key == attrkey, aliased_attributes.dbnode_id == alias.id)).label('miao')
+            select_stmt = select([aliased_attributes.id], correlate=True).select_from(aliased_attributes).where(
+                and_(aliased_attributes.key == attrkey, aliased_attributes.dbnode_id == alias.id)).label('miao')
 
-            entity = case(
-                [
-                    (exists_stmt, select_stmt),
-                ], else_=None)
+            entity = case([
+                (exists_stmt, select_stmt),
+            ], else_=None)
 
         return entity
 

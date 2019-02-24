@@ -117,7 +117,8 @@ def _get_aiida_structure_pymatgen_inline(cif, **kwargs):
         if argument in parameters:
             constructor_kwargs[argument] = parameters.pop(argument)
 
-    parser = CifParser(cif.get_file_abs_path(), **constructor_kwargs)
+    with cif.open() as handle:
+        parser = CifParser(handle, **constructor_kwargs)
 
     try:
         structures = parser.get_structures(**parameters)
@@ -126,7 +127,8 @@ def _get_aiida_structure_pymatgen_inline(cif, **kwargs):
         # Verify whether the failure was due to wrong occupancy numbers
         try:
             constructor_kwargs['occupancy_tolerance'] = 1E10
-            parser = CifParser(cif.get_file_abs_path(), **constructor_kwargs)
+            with cif.open() as handle:
+                parser = CifParser(handle, **constructor_kwargs)
             structures = parser.get_structures(**parameters)
         except ValueError:
             # If it still fails, the occupancies were not the reason for failure

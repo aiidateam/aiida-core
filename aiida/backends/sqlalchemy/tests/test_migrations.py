@@ -565,11 +565,40 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
                         "message": "calculation node 1",
                         "objname": "node.calculation.job.quantumespresso.pw.",
                     })
+                # Creating two more log records that don't correspond to a node
+                log_5 = DbLog(
+                    loggername='CalculationNode logger',
+                    objpk=(calc_2.id + 1000),
+                    objname='node.calculation.job.quantumespresso.pw.',
+                    message='calculation node 1000',
+                    metadata={
+                        "msecs": 718,
+                        "objpk": (calc_2.id + 1000),
+                        "lineno": 361,
+                        "levelno": 25,
+                        "message": "calculation node 1000",
+                        "objname": "node.calculation.job.quantumespresso.pw.",
+                    })
+                log_6 = DbLog(
+                    loggername='CalculationNode logger',
+                    objpk=(calc_2.id + 1001),
+                    objname='node.calculation.job.quantumespresso.pw.',
+                    message='calculation node 10001',
+                    metadata={
+                        "msecs": 722,
+                        "objpk": (calc_2.id + 1001),
+                        "lineno": 362,
+                        "levelno": 24,
+                        "message": "calculation node 1001",
+                        "objname": "node.calculation.job.quantumespresso.pw.",
+                    })
 
                 session.add(log_1)
                 session.add(log_2)
                 session.add(log_3)
                 session.add(log_4)
+                session.add(log_5)
+                session.add(log_6)
 
                 session.commit()
 
@@ -597,9 +626,9 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
                 # provides them) - this should coincide to the above
                 serialized_unknown_exp_logs = log_migration.get_serialized_unknown_entity_logs(connection)
                 # Getting their number
-                unknown_exp_logs_no = log_migration.get_unknown_entity_log_no(connection)
+                unknown_exp_logs_number = log_migration.get_unknown_entity_log_number(connection)
                 self.to_check['ParameterData'] = (serialized_param_data, serialized_unknown_exp_logs,
-                                                  unknown_exp_logs_no)
+                                                  unknown_exp_logs_number)
 
                 # Getting the serialized legacy workflow logs
                 # yapf: disable
@@ -610,8 +639,23 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
                 # Getting the serialized logs for the legacy workflow logs (as the export migration function
                 # provides them) - this should coincide to the above
                 serialized_leg_wf_exp_logs = log_migration.get_serialized_legacy_workflow_logs(connection)
-                eg_wf_exp_logs_no = log_migration.get_legacy_workflow_log_no(connection)
-                self.to_check['WorkflowNode'] = (serialized_leg_wf_logs, serialized_leg_wf_exp_logs, eg_wf_exp_logs_no)
+                eg_wf_exp_logs_number = log_migration.get_legacy_workflow_log_number(connection)
+                self.to_check['WorkflowNode'] = (serialized_leg_wf_logs, serialized_leg_wf_exp_logs,
+                                                 eg_wf_exp_logs_number)
+
+                # Getting the serialized logs that don't correspond to a DbNode record
+                logs_no_node = session.query(DbLog).filter(
+                    DbLog.id.in_([log_5.id, log_6.id])).with_entities(*cols_to_project)
+                logs_no_node_list = list()
+                for log_no_node in logs_no_node:
+                    logs_no_node_list.append((dict(list(zip(log_no_node.keys(), log_no_node)))))
+                serialized_logs_no_node = dumps_json(logs_no_node_list)
+
+                # Getting the serialized logs that don't correspond to a node (as the export migration function
+                # provides them) - this should coincide to the above
+                serialized_logs_exp_no_node = log_migration.get_serialized_logs_with_no_nodes(connection)
+                logs_no_node_number = log_migration.get_logs_with_no_nodes_number(connection)
+                self.to_check['NoNode'] = (serialized_logs_no_node, serialized_logs_exp_no_node, logs_no_node_number)
             except:
                 session.rollback()
                 raise
@@ -648,13 +692,20 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
 
     def test_dblog_correct_export_of_logs(self):
         """
-        Verify that export log methods for legacy workflows and unknown entities work as expected
+        Verify that export log methods for legacy workflows, unknown entities and log records that
+        don't correspond to nodes, work as expected
         """
+        import json
+
         self.assertEqual(self.to_check['ParameterData'][0], self.to_check['ParameterData'][1])
         self.assertEqual(self.to_check['ParameterData'][2], 1)
 
         self.assertEqual(self.to_check['WorkflowNode'][0], self.to_check['WorkflowNode'][1])
         self.assertEqual(self.to_check['WorkflowNode'][2], 1)
+
+        self.assertEqual(sorted(list(json.loads(self.to_check['NoNode'][0])), key=lambda k: k['id']),
+                          sorted(list(json.loads(self.to_check['NoNode'][1])), key=lambda k: k['id']))
+        self.assertEqual(self.to_check['NoNode'][2], 2)
 
     def test_metadata_correctness(self):
         """

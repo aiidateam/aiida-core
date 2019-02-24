@@ -161,14 +161,22 @@ def validate_cached(cached_calcs):
             valid = False
 
         if isinstance(calc, CalcJobNode):
-            if 'raw_input' not in calc.repository._get_folder_pathsubfolder.get_content_list():
-                print("Cached calculation <{}> does not have a 'raw_input' folder".format(calc.pk))
+            original_calc = load_node(calc.get_extra('_aiida_cached_from'))
+            files_original = original_calc.list_object_names()
+            files_cached = calc.list_object_names()
+
+            if not files_cached:
+                print("Cached calculation <{}> does not have any raw inputs files".format(calc.pk))
                 print_report(calc.pk)
                 valid = False
-            original_calc = load_node(calc.get_extra('_aiida_cached_from'))
-            if 'raw_input' not in original_calc.repository._get_folder_pathsubfolder.get_content_list():
-                print("Original calculation <{}> does not have a 'raw_input' folder after being cached from."
+            if not files_original:
+                print("Original calculation <{}> does not have any raw inputs files after being cached from."
                       .format(original_calc.pk))
+                valid = False
+
+            if set(files_original) != set(files_cached):
+                print("different raw input files [{}] vs [{}] for original<{}> and cached<{}> calculation".format(
+                    set(files_original), set(files_cached), original_calc.pk, calc.pk))
                 valid = False
 
     return valid

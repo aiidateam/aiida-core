@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""`Data` sub class to represent a boolean value."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -19,9 +20,8 @@ __all__ = ('Bool',)
 
 
 class Bool(BaseType):
-    """
-    Class to store booleans as AiiDA nodes
-    """
+    """`Data` sub class to represent a boolean value."""
+
     _type = bool
 
     def __int__(self):
@@ -43,26 +43,22 @@ def _(value):
 
 
 def get_true_node():
-    """
-    Return a Bool Data node, with value True
+    """Return a `Bool` node with value `True`
 
-    Cannot be done as a singleton in the module, because it would be generated
-    at import time, with the risk that (e.g. in the tests, or at the very first use
-    of AiiDA) a user is not yet defined in the DB (but a user is mandatory in the
-    DB before you can create new Nodes in AiiDA).
+    .. note:: this function serves as a substitute for defining the node as a module singleton, because that would be
+        instantiated at import time, at which time not all required database resources may be defined.
+
+    :return: a `Bool` instance with the value `True`
     """
-    TRUE = Bool(True)
-    return TRUE
+    return Bool(True)
 
 
 def get_false_node():
-    """
-    Return a Bool Data node, with value False
+    """Return a `Bool` node with value `False`
 
-    Cannot be done as a singleton in the module, because it would be generated
-    at import time, with the risk that (e.g. in the tests, or at the very first use
-    of AiiDA) a user is not yet defined in the DB (but a user is mandatory in the
-    DB before you can create new Nodes in AiiDA).
+    .. note:: this function serves as a substitute for defining the node as a module singleton, because that would be
+        instantiated at import time, at which time not all required database resources may be defined.
+
+    :return: a `Bool` instance with the value `False`
     """
-    FALSE = Bool(False)
-    return FALSE
+    return Bool(False)

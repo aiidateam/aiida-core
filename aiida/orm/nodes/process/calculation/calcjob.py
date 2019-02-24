@@ -28,8 +28,6 @@ PROCESS_STATE_KEY = 'attributes.{}'.format(ProcessNode.PROCESS_STATE_KEY)
 EXIT_STATUS_KEY = 'attributes.{}'.format(ProcessNode.EXIT_STATUS_KEY)
 DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/process/index.html#the-process-builder'
 
-_input_subfolder = 'raw_input'
-
 
 class CalcJobNode(CalculationNode):
     """ORM class for all nodes representing the execution of a CalcJob."""
@@ -38,7 +36,11 @@ class CalcJobNode(CalculationNode):
     CALC_JOB_STATE_KEY = 'state'
     CALC_JOB_STATE_ATTRIBUTE_KEY = 'attributes.{}'.format(CALC_JOB_STATE_KEY)
 
+    # Flag that determines whether the class can be cached.
     _cachable = True
+
+    # Base path within the repository where to put objects by default
+    _repository_base_path = 'raw_input'
 
     # An optional entry point for a CalculationTools instance
     _tools = None
@@ -173,7 +175,7 @@ class CalcJobNode(CalculationNode):
             raise ValidationError("Calculation state '{}' is not valid".format(self.get_state()))
 
         try:
-            _ = self.get_parserclass()
+            self.get_parserclass()
         except MissingPluginError:
             raise ValidationError("No valid class/implementation found for the parser '{}'. "
                                   "Set the parser to None if you do not need an automatic "
@@ -186,20 +188,9 @@ class CalcJobNode(CalculationNode):
         if def_cpus_machine is not None:
             resources['default_mpiprocs_per_machine'] = def_cpus_machine
         try:
-            _ = s.create_job_resource(**resources)
+            s.create_job_resource(**resources)
         except (TypeError, ValueError) as exc:
             raise ValidationError("Invalid resources for the scheduler of the specified computer: {}".format(exc))
-
-    def _store_raw_input_folder(self, folder_path):
-        """
-        Copy the content of the folder internally, in a subfolder called
-        'raw_input'
-
-        :param folder_path: the path to the folder from which the content
-               should be taken
-        """
-        _raw_input_folder = self.repository._get_folder_pathsubfolder.get_subfolder(_input_subfolder, create=True)
-        _raw_input_folder.replace_with_folder(folder_path, move=False, overwrite=True)
 
     @property
     def _raw_input_folder(self):
@@ -211,7 +202,7 @@ class CalcJobNode(CalculationNode):
         """
         from aiida.common.exceptions import NotExistent
 
-        return_folder = self.repository._get_folder_pathsubfolder.get_subfolder(_input_subfolder)
+        return_folder = self._repository._get_base_folder()
         if return_folder.exists():
             return return_folder
         else:
@@ -537,7 +528,7 @@ class CalcJobNode(CalculationNode):
             return None
 
         try:
-            outfile_content = retrieved_node.get_file_content(filename)
+            outfile_content = retrieved_node.get_object_content(filename)
         except NotExistent:
             # Return None if no file is found
             return None
@@ -565,7 +556,7 @@ class CalcJobNode(CalculationNode):
             return None
 
         try:
-            errfile_content = retrieved_node.get_file_content(filename)
+            errfile_content = retrieved_node.get_object_content(filename)
         except (NotExistent):
             # Return None if no file is found
             return None

@@ -11,95 +11,22 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import io
 
-from aiida.cmdline.utils import echo
+import click
 
 
-def cat_repo_files(node, path):
+def list_repository_contents(node, path, color):
+    """Print the contents of the directory `path` in the repository of the given node to stdout.
+
+    :param node: the node
+    :param path: directory path
     """
-    Given a Node and a relative path to a file in the Node repository directory,
-    prints in output the content of the file.
+    from aiida.orm.utils.repository import FileType
 
-    :param node: a Node instance
-    :param path: a string with the relative path to list. Must be a file.
-    :raise ValueError: if the file is not found, or is a directory.
-    """
-    import os
-    import sys
+    for entry in node.list_objects(path):
+        bold = bool(entry.type == FileType.DIRECTORY)
 
-    fldr = node.folder
-
-    is_dir = False
-    parts = path.split(os.path.sep)
-    # except the last item
-    for item in parts[:-1]:
-        fldr = fldr.get_subfolder(item)
-    if parts:
-        if fldr.isdir(parts[-1]):
-            fldr = fldr.get_subfolder(parts[-1])
-            is_dir = True
+        if color:
+            click.secho(entry.name, bold=bold, fg='blue')
         else:
-            fname = parts[-1]
-    else:
-        is_dir = True
-
-    if is_dir:
-        if not fldr.isdir('.'):
-            raise ValueError("No directory '{}' in the repo".format(path))
-        else:
-            raise ValueError("'{}' is a directory".format(path))
-    else:
-        if not fldr.isfile(fname):
-            raise ValueError("No file '{}' in the repo".format(path))
-
-        absfname = fldr.get_abs_path(fname)
-        with io.open(absfname, encoding='utf8') as repofile:
-            for line in repofile:
-                sys.stdout.write(line)
-
-
-def list_repo_files(node, path, color):
-    """
-    Given a Node and a relative path prints in output the list of files
-    in the given path in the Node repository directory.
-
-    :param node: a Node instance
-    :param path: a string with the relative path to list. Can be a file.
-    :param color: boolean, if True prints with the codes to show colors.
-    :raise ValueError: if the file or directory is not found.
-    """
-    import os
-
-    fldr = node.folder
-
-    is_dir = False
-    parts = path.split(os.path.sep)
-    # except the last item
-    for item in parts[:-1]:
-        fldr = fldr.get_subfolder(item)
-    if parts:
-        if fldr.isdir(parts[-1]):
-            fldr = fldr.get_subfolder(parts[-1])
-            is_dir = True
-        else:
-            fname = parts[-1]
-    else:
-        is_dir = True
-
-    if is_dir:
-        if not fldr.isdir('.'):
-            raise ValueError("{}: No such file or directory in the repo".format(path))
-
-        for elem, elem_is_file in sorted(fldr.get_content_list(only_paths=False)):
-            if elem_is_file or not color:
-                echo.echo(elem)
-            else:
-                # BOLD("1;") and color 34=blue
-                outstr = "\x1b[1;{color_id}m{elem}\x1b[0m".format(color_id=34, elem=elem)
-                echo.echo(outstr)
-    else:
-        if not fldr.isfile(fname):
-            raise ValueError("{}: No such file or directory in the repo".format(path))
-
-        echo.echo(fname)
+            click.secho(entry.name, bold=bold)

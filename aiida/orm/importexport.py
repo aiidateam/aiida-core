@@ -2622,7 +2622,6 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
         'groups_uuid': groups_uuid,
     }
 
-
     # N.B. We're really calling zipfolder.open
     with folder.open('data.json', mode='w') as fhandle:
         # fhandle.write(json.dumps(data, cls=UUIDEncoder))
@@ -2660,13 +2659,8 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
             thisnodefolder = nodesubfolder.get_subfolder(
                 sharded_uuid, create=False,
                 reset_limit=True)
-            # In this way, I copy the content of the folder, and not the folder
-            # itself
+            # In this way, I copy the content of the folder, and not the folder itself
             src = RepositoryFolder(section=Repository._section_name, uuid=uuid).abspath
-            if not os.path.exists(os.path.join(src, Repository._path_subfolder_name)):
-                raise ContentNotExistent("The exported repository folder '{}' for node<{}> does not contain the '{}' "
-                        "sub folder, probably it was deleted manually before exporting. Try to recreate it and export "
-                        "again.".format(src, uuid, Repository._path_subfolder_name))
             thisnodefolder.insert_path(src=src, dest_name='.')
 
 

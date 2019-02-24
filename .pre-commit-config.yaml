@@ -146,21 +146,9 @@
         aiida/orm/nodes/data/array/kpoints.py|
         aiida/orm/nodes/data/array/projection.py|
         aiida/orm/nodes/data/array/xy.py|
-        aiida/orm/nodes/data/base.py|
-        aiida/orm/nodes/data/bool.py|
-        aiida/orm/nodes/data/error.py|
-        aiida/orm/nodes/data/float.py|
-        aiida/orm/nodes/data/folder.py|
-        aiida/orm/nodes/data/frozendict.py|
-        aiida/orm/nodes/data/int.py|
-        aiida/orm/nodes/data/list.py|
         aiida/orm/nodes/data/code.py|
-        aiida/orm/nodes/data/numeric.py|
         aiida/orm/nodes/data/orbital.py|
-        aiida/orm/nodes/data/parameter.py|
         aiida/orm/nodes/data/remote.py|
-        aiida/orm/nodes/data/singlefile.py|
-        aiida/orm/nodes/data/str.py|
         aiida/orm/nodes/data/structure.py|
         aiida/orm/nodes/data/upf.py|
         aiida/orm/nodes/process/calculation/calcjob.py|

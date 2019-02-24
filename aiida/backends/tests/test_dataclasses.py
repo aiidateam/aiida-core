@@ -75,27 +75,27 @@ class TestSinglefileData(AiidaTestCase):
             basename = os.path.split(filename)[1]
             tmpf.write(file_content)
             tmpf.flush()
-            a = SinglefileData(file=filename)
+            a = SinglefileData(filepath=filename)
 
         the_uuid = a.uuid
 
-        self.assertEquals(a.repository.get_folder_list(), [basename])
+        self.assertEquals(a.list_object_names(), [basename])
 
-        with io.open(a.repository.get_abs_path(basename), encoding='utf8') as fhandle:
+        with a.open() as fhandle:
             self.assertEquals(fhandle.read(), file_content)
 
         a.store()
 
-        with io.open(a.repository.get_abs_path(basename), encoding='utf8') as fhandle:
+        with a.open() as fhandle:
             self.assertEquals(fhandle.read(), file_content)
-        self.assertEquals(a.repository.get_folder_list(), [basename])
+        self.assertEquals(a.list_object_names(), [basename])
 
         b = load_node(the_uuid)
 
         # I check the retrieved object
         self.assertTrue(isinstance(b, SinglefileData))
-        self.assertEquals(b.repository.get_folder_list(), [basename])
-        with io.open(b.repository.get_abs_path(basename), encoding='utf8') as fhandle:
+        self.assertEquals(b.list_object_names(), [basename])
+        with b.open() as fhandle:
             self.assertEquals(fhandle.read(), file_content)
 
 
@@ -161,7 +161,7 @@ class TestCifData(AiidaTestCase):
             basename = os.path.split(filename)[1]
             tmpf.write(file_content)
             tmpf.flush()
-            a = CifData(file=filename, source={'version': '1234', 'db_name': 'COD', 'id': '0000001'})
+            a = CifData(filepath=filename, source={'version': '1234', 'db_name': 'COD', 'id': '0000001'})
 
         # Key 'db_kind' is not allowed in source description:
         with self.assertRaises(KeyError):
@@ -169,9 +169,9 @@ class TestCifData(AiidaTestCase):
 
         the_uuid = a.uuid
 
-        self.assertEquals(a.repository.get_folder_list(), [basename])
+        self.assertEquals(a.list_object_names(), [basename])
 
-        with io.open(a.repository.get_abs_path(basename), encoding='utf8') as fhandle:
+        with a.open() as fhandle:
             self.assertEquals(fhandle.read(), file_content)
 
         a.store()
@@ -182,16 +182,16 @@ class TestCifData(AiidaTestCase):
             'version': '1234',
         })
 
-        with io.open(a.repository.get_abs_path(basename), encoding='utf8') as fhandle:
+        with a.open() as fhandle:
             self.assertEquals(fhandle.read(), file_content)
-        self.assertEquals(a.repository.get_folder_list(), [basename])
+        self.assertEquals(a.list_object_names(), [basename])
 
         b = load_node(the_uuid)
 
         # I check the retrieved object
         self.assertTrue(isinstance(b, CifData))
-        self.assertEquals(b.repository.get_folder_list(), [basename])
-        with io.open(b.repository.get_abs_path(basename), encoding='utf8') as fhandle:
+        self.assertEquals(b.list_object_names(), [basename])
+        with b.open() as fhandle:
             self.assertEquals(fhandle.read(), file_content)
 
         # Checking the get_or_create() method:
@@ -202,9 +202,7 @@ class TestCifData(AiidaTestCase):
 
         self.assertTrue(isinstance(c, CifData))
         self.assertTrue(not created)
-
-        with io.open(c.get_file_abs_path(), 'r', encoding='utf8') as fhandle:
-            self.assertEquals(fhandle.read(), file_content)
+        self.assertEquals(c.get_content(), file_content)
 
         other_content = "data_test _cell_length_b 10(1)"
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
@@ -214,9 +212,7 @@ class TestCifData(AiidaTestCase):
 
         self.assertTrue(isinstance(c, CifData))
         self.assertTrue(created)
-
-        with io.open(c.get_file_abs_path(), 'r', encoding='utf8') as fhandle:
-            self.assertEquals(fhandle.read(), other_content)
+        self.assertEquals(c.get_content(), other_content)
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_parse_cifdata(self):
@@ -228,7 +224,7 @@ class TestCifData(AiidaTestCase):
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write(file_content)
             tmpf.flush()
-            a = CifData(file=tmpf.name)
+            a = CifData(filepath=tmpf.name)
 
         self.assertEquals(list(a.values.keys()), ['test'])
 
@@ -243,14 +239,14 @@ class TestCifData(AiidaTestCase):
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write(file_content_1)
             tmpf.flush()
-            a = CifData(file=tmpf.name)
+            a = CifData(filepath=tmpf.name)
 
         self.assertEquals(a.values['test']['_cell_length_a'], '10(1)')
 
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write(file_content_2)
             tmpf.flush()
-            a.set_file(tmpf.name)
+            a.put_object_from_file(tmpf.name)
 
         self.assertEquals(a.values['test']['_cell_length_a'], '11(1)')
 
@@ -283,7 +279,7 @@ C 0 0 0
 O 0.5 0.5 0.5
             ''')
             tmpf.flush()
-            a = CifData(file=tmpf.name)
+            a = CifData(filepath=tmpf.name)
 
         with self.assertRaises(ValueError):
             a.get_structure(converter='none')
@@ -328,7 +324,7 @@ O 0.5 0.5 0.5
                 Te2 0.00000 0.00000 0.79030 0.01912
             ''')
             tmpf.flush()
-            c = CifData(file=tmpf.name)
+            c = CifData(filepath=tmpf.name)
 
         ase = c.get_structure(converter='ase', primitive_cell=False).get_ase()
         self.assertEquals(ase.get_number_of_atoms(), 15)
@@ -387,7 +383,7 @@ Te1 0.00000 0.00000 0.00000 0.01748
 Te2 0.00000 0.00000 0.79030 0.01912
             ''')
             tmpf.flush()
-            c = CifData(file=tmpf.name)
+            c = CifData(filepath=tmpf.name)
 
         ase = c.get_structure(converter='pymatgen', primitive_cell=False).get_ase()
         self.assertEquals(ase.get_number_of_atoms(), 15)
@@ -496,7 +492,7 @@ data_0
 _tag   {}
  '''.format('a' * 5000))
             tmpf.flush()
-            _ = CifData(file=tmpf.name)
+            _ = CifData(filepath=tmpf.name)
 
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
@@ -524,7 +520,7 @@ _tag   {}
                 _[local]_flags     ''
             ''')
             tmpf.flush()
-            a = CifData(file=tmpf.name)
+            a = CifData(filepath=tmpf.name)
 
         b = CifData(values=a.values)
         c = CifData(values=b.values)
@@ -570,7 +566,7 @@ _tag   {}
                 H 0.75 0.75 0.75 0
             ''')
             tmpf.flush()
-            a = CifData(file=tmpf.name)
+            a = CifData(filepath=tmpf.name)
 
         self.assertEqual(a.has_attached_hydrogens, False)
 
@@ -594,7 +590,7 @@ _tag   {}
                 H 0.75 0.75 0.75 0
             ''')
             tmpf.flush()
-            a = CifData(file=tmpf.name)
+            a = CifData(filepath=tmpf.name)
 
         self.assertEqual(a.has_attached_hydrogens, True)
 
@@ -629,7 +625,7 @@ _tag   {}
                 O 0.75 0.5 0.5
             ''')
             tmpf.flush()
-            a = CifData(file=tmpf.name)
+            a = CifData(filepath=tmpf.name)
 
         ret_dict = refine_inline(a)
         b = ret_dict['cif']
@@ -646,7 +642,7 @@ _tag   {}
                 data_b
             ''')
             tmpf.flush()
-            c = CifData(file=tmpf.name)
+            c = CifData(filepath=tmpf.name)
 
         with self.assertRaises(ValueError):
             ret_dict = refine_inline(c)
@@ -681,11 +677,11 @@ _tag   {}
             tmpf.write(self.valid_sample_cif_str)
             tmpf.flush()
 
-            default = CifData(file=tmpf.name)
-            default2 = CifData(file=tmpf.name, scan_type='standard')
+            default = CifData(filepath=tmpf.name)
+            default2 = CifData(filepath=tmpf.name, scan_type='standard')
             self.assertEquals(default._prepare_cif(), default2._prepare_cif())
 
-            flex = CifData(file=tmpf.name, scan_type='flex')
+            flex = CifData(filepath=tmpf.name, scan_type='flex')
             self.assertEquals(default._prepare_cif(), flex._prepare_cif())
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
@@ -710,7 +706,7 @@ _tag   {}
                 a.filename
 
             #now it has
-            a.set_file(tmpf.name)
+            a.put_object_from_file(tmpf.name)
             a.filename
 
             a.store()
@@ -728,11 +724,11 @@ _tag   {}
             tmpf.flush()
 
             # this will parse the cif
-            eager = CifData(file=tmpf.name, parse_policy='eager')
+            eager = CifData(filepath=tmpf.name, parse_policy='eager')
             self.assertIsNot(eager._values, None)
 
             # this should not parse the cif
-            lazy = CifData(file=tmpf.name, parse_policy='lazy')
+            lazy = CifData(filepath=tmpf.name, parse_policy='lazy')
             self.assertIs(lazy._values, None)
 
             # also lazy-loaded nodes should be storable
@@ -743,7 +739,7 @@ _tag   {}
             self.assertIsNot(lazy._values, None)
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
-    def test_set_file(self):
+    def test_put_object_from_file(self):
         """
         Test that setting a new file clears formulae and spacegroups.
         """
@@ -754,7 +750,7 @@ _tag   {}
             tmpf.write(self.valid_sample_cif_str)
             tmpf.flush()
 
-            a = CifData(file=tmpf.name)
+            a = CifData(filepath=tmpf.name)
             f1 = a.get_formulae()
             self.assertIsNot(f1, None)
 
@@ -763,7 +759,7 @@ _tag   {}
             tmpf.flush()
 
             # this should reset formulae and spacegroup_numbers
-            a.set_file(tmpf.name)
+            a.put_object_from_file(tmpf.name)
             self.assertIs(a.get_attribute('formulae'), None)
             self.assertIs(a.get_attribute('spacegroup_numbers'), None)
 
@@ -778,7 +774,7 @@ _tag   {}
             with self.assertRaises(AttributeError):
                 a.filename
             # now it has
-            a.set_file(tmpf.name)
+            a.put_object_from_file(tmpf.name)
             a.parse()
             a.filename
 
@@ -813,7 +809,7 @@ _tag   {}
                     {}
                 """.format(test_string))
                 handle.flush()
-                cif = CifData(file=handle.name)
+                cif = CifData(filepath=handle.name)
                 self.assertEqual(cif.has_partial_occupancies, result)
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
@@ -833,7 +829,7 @@ _tag   {}
                 formula_string = "_chemical_formula_sum '{}'".format(formula) if formula else '\n'
                 handle.write("""data_test\n{}\n""".format(formula_string))
                 handle.flush()
-                cif = CifData(file=handle.name)
+                cif = CifData(filepath=handle.name)
                 self.assertEqual(cif.has_unknown_species, result, formula_string)
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
@@ -853,7 +849,7 @@ _tag   {}
                 atomic_site_string = '{}\n{}'.format(base, test_string) if test_string else ''
                 handle.write("""data_test\n{}\n""".format(atomic_site_string))
                 handle.flush()
-                cif = CifData(file=handle.name)
+                cif = CifData(filepath=handle.name)
                 self.assertEqual(cif.has_undefined_atomic_sites, result)
 
 

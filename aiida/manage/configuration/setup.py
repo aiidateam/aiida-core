@@ -199,7 +199,7 @@ def delete_repository(profile, non_interactive=True):
         shutil.rmtree(repo_path)
 
 
-def delete_db(profile, non_interactive=True):
+def delete_db(profile, non_interactive=True, verbose=False):
     """
     Delete an AiiDA database associated with an AiiDA profile.
 
@@ -207,16 +207,21 @@ def delete_db(profile, non_interactive=True):
     :type profile: :class:`aiida.manage.configuration.profile.Profile`
     :param non_interactive: do not prompt for configuration values, fail if not all values are given as kwargs.
     :type non_interactive: bool
+    :param verbose: if True, print parameters of DB connection
+    :type verbose: bool
     """
     from aiida.manage import get_config
     from aiida.manage.external.postgres import Postgres
+    import aiida.common.json as json
 
     pdict = profile.dictionary
 
     postgres = Postgres.from_profile(profile, interactive=not non_interactive, quiet=False)
     postgres.determine_setup()
 
-    # echo.echo(json.dumps(postgres.get_dbinfo(), indent=4))
+    if verbose:
+        echo.echo_info("Parameters used to connect to postgres:")
+        echo.echo(json.dumps(postgres.get_dbinfo(), indent=4))
 
     db_name = pdict.get('AIIDADB_NAME', '')
     if not postgres.db_exists(db_name):

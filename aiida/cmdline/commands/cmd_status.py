@@ -67,8 +67,7 @@ def verdi_status():
     try:
         repo_folder = get_repository_folder()
     except Exception as exc:
-        print_status(ServiceStatus.ERROR, 'repository', "Error with repo folder")
-        print(exc)
+        print_status(ServiceStatus.ERROR, 'repository', "Error with repo folder", exception=exc)
 
     print_status(ServiceStatus.UP, 'repository', repo_folder)
 
@@ -89,9 +88,11 @@ def verdi_status():
 
     except Exception as exc:
         pd_dict = profile.dictionary
-        print_status(ServiceStatus.ERROR, 'postgres', "Error connecting to {}:{}".format(
-            pd_dict['AIIDADB_HOST'], pd_dict['AIIDADB_PORT']))
-        print(exc)
+        print_status(
+            ServiceStatus.ERROR,
+            'postgres',
+            "Error connecting to {}:{}".format(pd_dict['AIIDADB_HOST'], pd_dict['AIIDADB_PORT']),
+            exception=exc)
 
     # getting the rmq status
     try:
@@ -102,8 +103,7 @@ def verdi_status():
         print_status(ServiceStatus.UP, 'rabbitmq', "Connected to {}".format(get_rmq_url()))
 
     except Exception as exc:
-        print_status(ServiceStatus.ERROR, 'rabbitmq', "Unable to connect to rabbitmq")
-        print(exc)
+        print_status(ServiceStatus.ERROR, 'rabbitmq', "Unable to connect to rabbitmq", exception=exc)
 
     # getting the daemon status
     try:
@@ -117,13 +117,12 @@ def verdi_status():
             print_status(ServiceStatus.DOWN, 'daemon', daemon_status)
 
     except Exception as exc:
-        print_status(ServiceStatus.ERROR, 'daemon', "Error getting daemon status")
-        print(exc)
+        print_status(ServiceStatus.ERROR, 'daemon', "Error getting daemon status", exception=exc)
 
     return 0
 
 
-def print_status(status, service, msg=""):
+def print_status(status, service, msg="", exception=None):
     """Print status message.
 
     Includes colored indicator.
@@ -136,3 +135,5 @@ def print_status(status, service, msg=""):
     symbol = STATUS_SYMBOLS[status]
     click.secho(u' {} '.format(symbol['string']), fg=symbol['color'], nl=False)
     click.secho('{:12s} {}'.format(service + ':', msg))
+    if exception is not None:
+        click.echo(exception, err=True)

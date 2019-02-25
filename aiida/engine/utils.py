@@ -12,15 +12,13 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import contextlib
 import logging
 
 from six.moves import range
 import tornado.ioloop
 from tornado import concurrent, gen
-
-from aiida.common.links import LinkType
-from aiida.orm.nodes.data.frozendict import FrozenDict
 
 __all__ = ('RefObjectStore', 'interruptable_task', 'InterruptableFuture')
 
@@ -170,22 +168,6 @@ def is_process_function(function):
         return function.is_process_function
     except AttributeError:
         return False
-
-
-def get_or_create_output_group(node):
-    """
-    For a given ProcessNode, get or create a new frozendict Data node that
-    has as its values all output Data nodes of the ProcessNode.
-
-    :param node: ProcessNode
-    """
-    from aiida.orm import ProcessNode
-
-    if not isinstance(node, ProcessNode):
-        raise TypeError('Can only create output groups for type ProcessNode')
-
-    outputs = node.get_outgoing(link_type=(LinkType.CREATE, LinkType.RETURN))
-    return FrozenDict(dict={entry.link_label: entry.node for entry in outputs})
 
 
 @contextlib.contextmanager

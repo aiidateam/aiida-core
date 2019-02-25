@@ -18,11 +18,10 @@ from plumpy.utils import AttributesFrozendict
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.tests.utils import processes as test_processes
 from aiida.common.lang import override
-from aiida.engine import Process, run, run_get_pid, calcfunction
+from aiida.engine import Process, run, run_get_pid
 from aiida.orm import load_node
 from aiida.orm.nodes.data.int import Int
 from aiida.orm.nodes.data.str import Str
-from aiida.orm.nodes.data.frozendict import FrozenDict
 from aiida.orm.nodes.data.parameter import ParameterData
 from aiida.orm import WorkflowNode
 
@@ -150,22 +149,6 @@ class TestProcess(AiidaTestCase):
         self.assertFalse(p.node.is_finished_ok)
         run(p)
         self.assertTrue(p.node.is_finished_ok)
-
-    def test_calculation_input(self):
-
-        @calcfunction
-        def simple_wf():
-            return {'a': Int(6), 'b': Int(7)}
-
-        outputs, pid = run_get_pid(simple_wf)
-        calc = load_node(pid)
-
-        dp = test_processes.DummyProcess(inputs={'calc': calc})
-        run(dp)
-
-        input_calc = dp.node.get_incoming().get_node_by_label('calc')
-        self.assertTrue(isinstance(input_calc, FrozenDict))
-        self.assertEqual(input_calc['a'], outputs['a'])
 
     def test_save_instance_state(self):
         proc = test_processes.DummyProcess()

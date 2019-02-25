@@ -107,7 +107,6 @@
         aiida/backends/tests/test_generic.py|
         aiida/backends/tests/__init__.py|
         aiida/backends/tests/test_nodes.py|
-        aiida/backends/tests/orm/data/test_frozendict.py|
         aiida/backends/tests/orm/data/test_remote.py|
         aiida/backends/tests/orm/utils/test_loaders.py|
         aiida/backends/tests/test_parsers.py|

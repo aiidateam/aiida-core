@@ -15,7 +15,6 @@ import click
 from tabulate import tabulate
 
 from aiida.cmdline.utils.common import format_local_time
-from aiida.daemon.client import DaemonClient
 
 
 def print_client_response_status(response):
@@ -24,6 +23,8 @@ def print_client_response_status(response):
 
     :param response: the response object
     """
+    from aiida.engine.daemon.client import DaemonClient
+
     if 'status' not in response:
         return
 

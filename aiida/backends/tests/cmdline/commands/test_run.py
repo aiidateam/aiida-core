@@ -37,7 +37,7 @@ class TestVerdiRun(AiidaTestCase):
 
         script_content = """
 #!/usr/bin/env python
-from aiida.work import workfunction
+from aiida.engine import workfunction
 
 @workfunction
 def wf():

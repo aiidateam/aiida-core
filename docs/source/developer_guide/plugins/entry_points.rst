@@ -177,7 +177,7 @@ Spec::
 
 ``aiida_mycode/workflows/mywf.py``::
    
-   from aiida.work.workchain import WorkChain
+   from aiida.engine.workchain import WorkChain
    class MyWorkflow(WorkChain):
       ...
    

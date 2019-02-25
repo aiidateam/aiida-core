@@ -33,7 +33,7 @@ def CalculationFactory(entry_point):
     """Return the `CalcJob` sub class registered under the given entry point.
 
     :param entry_point: the entry point name
-    :return: sub class of :py:class:`~aiida.work.calcjob.CalcJob`
+    :return: sub class of :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob`
     """
     return BaseFactory('aiida.calculations', entry_point)
 
@@ -105,6 +105,6 @@ def WorkflowFactory(entry_point):
     """Return the `WorkChain` sub class registered under the given entry point.
 
     :param entry_point: the entry point name
-    :return: sub class of :py:class:`~aiida.work.workchain.WorkChain`
+    :return: sub class of :py:class:`~aiida.engine.processes.workchains.workchain.WorkChain`
     """
     return BaseFactory('aiida.workflows', entry_point)

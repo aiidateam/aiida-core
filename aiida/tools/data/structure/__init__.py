@@ -20,7 +20,7 @@ import numpy as np
 
 from aiida.common.constants import elements
 from aiida.orm.nodes.data.structure import Kind, Site, StructureData
-from aiida.work import calcfunction
+from aiida.engine import calcfunction
 
 __all__ = ['structure_to_spglib_tuple', 'spglib_tuple_to_structure']
 

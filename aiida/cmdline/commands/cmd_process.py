@@ -270,8 +270,9 @@ def process_actions(futures_map, infinitive, present, past, wait=False, timeout=
     """
     # pylint: disable=too-many-branches
     import kiwipy
-    from aiida.manage.external.rmq import CommunicationTimeout
     from concurrent import futures
+
+    from aiida.manage.external.rmq import CommunicationTimeout
 
     scheduled = {}
     try:

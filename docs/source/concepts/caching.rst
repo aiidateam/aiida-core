@@ -134,8 +134,8 @@ Finally, workchains can create links not only to nodes which they create themsel
 
 .. code:: python
 
+    from aiida.engine import workfunction
     from aiida.orm.nodes.data.int import Int
-    from aiida.work import workfunction
 
     @workfunction
     def select(a, b):

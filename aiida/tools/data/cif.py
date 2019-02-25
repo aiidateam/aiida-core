@@ -5,7 +5,7 @@ from __future__ import absolute_import
 from six.moves import range
 
 from aiida.orm import CifData
-from aiida.work import calcfunction
+from aiida.engine import calcfunction
 
 
 class InvalidOccupationsError(Exception):

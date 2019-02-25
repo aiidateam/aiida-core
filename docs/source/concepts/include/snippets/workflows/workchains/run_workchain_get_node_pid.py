@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from aiida.orm.nodes.data.int import Int
-from aiida.work.launch import run_get_node, run_get_pid
-from aiida.work.workchain import WorkChain
+from aiida.engine import run_get_node, run_get_pid
+from aiida.engine.workchain import WorkChain
 
 class AddAndMultiplyWorkChain(WorkChain):
     ...

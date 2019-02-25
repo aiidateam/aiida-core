@@ -102,7 +102,6 @@
         aiida/backends/tests/cmdline/commands/test_user.py|
         aiida/backends/tests/cmdline/commands/test_work.py|
         aiida/backends/tests/test_computer.py|
-        aiida/backends/tests/daemon/test_client.py|
         aiida/backends/tests/test_dataclasses.py|
         aiida/backends/tests/test_dbimporters.py|
         aiida/backends/tests/test_export_and_import.py|
@@ -117,24 +116,25 @@
         aiida/backends/tests/test_tcodexporter.py|
         aiida/backends/tests/test_caching_config.py|
         aiida/backends/tests/test_plugin_loader.py|
-        aiida/backends/tests/work/test_class_loader.py|
-        aiida/backends/tests/work/test_daemon.py|
-        aiida/backends/tests/work/test_persistence.py|
-        aiida/backends/tests/work/test_process.py|
-        aiida/backends/tests/work/test_run.py|
-        aiida/backends/tests/work/test_futures.py|
-        aiida/backends/tests/work/test_launch.py|
-        aiida/backends/tests/work/test_process_builder.py|
-        aiida/backends/tests/work/test_process_spec.py|
-        aiida/backends/tests/work/test_rmq.py|
-        aiida/backends/tests/work/test_runners.py|
-        aiida/backends/tests/work/test_transport.py|
-        aiida/backends/tests/work/test_utils.py|
-        aiida/backends/tests/work/test_utils.py|
-        aiida/backends/tests/work/test_work_chain.py|
+        aiida/backends/tests/engine/test_class_loader.py|
+        aiida/backends/tests/engine/test_daemon.py|
+        aiida/backends/tests/engine/test_persistence.py|
+        aiida/backends/tests/engine/test_process.py|
+        aiida/backends/tests/engine/test_run.py|
+        aiida/backends/tests/engine/test_futures.py|
+        aiida/backends/tests/engine/test_launch.py|
+        aiida/backends/tests/engine/test_process_builder.py|
+        aiida/backends/tests/engine/test_process_spec.py|
+        aiida/backends/tests/engine/test_rmq.py|
+        aiida/backends/tests/engine/test_runners.py|
+        aiida/backends/tests/engine/test_transport.py|
+        aiida/backends/tests/engine/test_utils.py|
+        aiida/backends/tests/engine/test_utils.py|
+        aiida/backends/tests/engine/test_work_chain.py|
         aiida/backends/utils.py|
         aiida/common/datastructures.py|
-        aiida/daemon/execmanager.py|
+        aiida/engine/daemon/execmanager.py|
+        aiida/engine/processes/calcjobs/tasks.py|
         aiida/manage/backup/backup_base.py|
         aiida/orm/autogroup.py|
         aiida/orm/querybuilder.py|
@@ -209,8 +209,6 @@
         aiida/transports/plugins/test_all_plugins.py|
         aiida/transports/plugins/test_local.py|
         aiida/transports/plugins/test_ssh.py|
-        aiida/work/__init__.py|
-        aiida/work/job_processes.py|
         utils/create_requirements.py|
         utils/validate_pyproject.py|
         .ci/test_daemon.py|
@@ -277,7 +275,7 @@
     exclude: >
       (?x)^(
         docs/.*|
-        aiida/work/utils.py  # exclude because tornado WaitIterator.next() does not work with next(...)
+        aiida/engine/utils.py  # exclude because tornado WaitIterator.next() does not work with next(...)
       )$
     args:
       - --write

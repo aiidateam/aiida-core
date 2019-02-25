@@ -9,7 +9,7 @@ is lost. In order to put a Calculation object inbetween, we define the
 class, that is used as the class for these calculations that are run "in-line".
 
 We also provide a wrapper (that also works as a decorator of a function),
-:py:func:`~aiida.work.process_function.calcfunction`. This can be used
+:py:func:`~aiida.engine.processes.functions.calcfunction`. This can be used
 to wrap suitably defined function, so that after their execution,
 a node representing their execution is stored in the DB, and suitable input
 and output nodes are also stored.

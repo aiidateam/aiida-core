@@ -1,6 +1,7 @@
 """Tools to operate on `TrajectoryData` nodes."""
 from __future__ import absolute_import
-from aiida.work import calcfunction
+
+from aiida.engine import calcfunction
 
 
 @calcfunction

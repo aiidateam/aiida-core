@@ -3,7 +3,7 @@
 
 from __future__ import print_function
 
-from aiida.work.launch import run
+from aiida.engine import run
 
 from serialize_workchain import SerializeWorkChain
 

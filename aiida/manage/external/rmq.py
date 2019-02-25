@@ -138,8 +138,8 @@ class ProcessLauncher(plumpy.ProcessLauncher):
         :param tag: the tag of the checkpoint to continue from
         :raises plumpy.TaskRejected: if the node corresponding to the task cannot be loaded
         """
-        from aiida.work.exceptions import PastException
         from aiida.common import exceptions
+        from aiida.engine.exceptions import PastException
         from aiida.orm import load_node, Data
         from aiida.orm.utils import serialize
 

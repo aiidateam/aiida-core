@@ -17,7 +17,7 @@ from __future__ import absolute_import
 
 from aiida.common import exceptions
 from aiida.common import extendeddicts
-from aiida.work import calcfunction
+from aiida.engine import calcfunction
 
 
 class Parser(object):  # pylint: disable=useless-object-inheritance

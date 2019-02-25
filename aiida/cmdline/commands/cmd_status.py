@@ -17,10 +17,8 @@ import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils.daemon import get_daemon_status
-from aiida.manage import get_manager
 from aiida.common.utils import Capturing, get_repository_folder
-from aiida.manage.external.rmq import get_rmq_url
-from aiida.manage.external.postgres import Postgres
+from aiida.manage import get_manager
 
 
 class ServiceStatus(IntEnum):
@@ -51,6 +49,8 @@ STATUS_SYMBOLS = {
 def verdi_status():
     """Print status of AiiDA services."""
     # pylint: disable=broad-except
+    from aiida.manage.external.rmq import get_rmq_url
+    from aiida.manage.external.postgres import Postgres
 
     manager = get_manager()
 

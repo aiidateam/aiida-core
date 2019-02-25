@@ -160,10 +160,9 @@ class FixtureManager(object):  # pylint: disable=too-many-public-methods,useless
             raise FixtureError('AiiDA dbenv can not be loaded while creating a test db environment')
         if not self.db_params:
             self.create_db_cluster()
-        self.postgres = Postgres(interactive=False, quiet=True)
-        self.postgres.dbinfo = self.db_params
+        self.postgres = Postgres(interactive=False, quiet=True, dbinfo=self.db_params)
         self.postgres.determine_setup()
-        self.db_params = self.postgres.dbinfo
+        self.db_params = self.postgres.get_dbinfo()
         if not self.postgres.pg_execute:
             raise FixtureError('Could not connect to the test postgres instance')
         self.postgres.create_dbuser(self.db_user, self.db_pass)

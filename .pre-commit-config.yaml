@@ -42,7 +42,6 @@
         aiida/backends/djsite/settings/__init__.py|
         aiida/backends/djsite/settings/settings_profile.py|
         aiida/backends/general/abstractqueries.py|
-        aiida/backends/__init__.py|
         aiida/backends/profile.py|
         aiida/backends/settings.py|
         aiida/backends/sqlalchemy/alembic_manage.py|
@@ -140,7 +139,6 @@
         aiida/orm/querybuilder.py|
         aiida/orm/implementation/django/utils.py|
         aiida/orm/implementation/sqlalchemy/utils.py|
-        aiida/orm/__init__.py|
         aiida/orm/importexport.py|
         aiida/orm/nodes/data/array/bands.py|
         aiida/orm/nodes/data/array/kpoints.py|
@@ -204,7 +202,6 @@
         aiida/tools/dbimporters/plugins/oqmd.py|
         aiida/tools/dbimporters/plugins/pcod.py|
         aiida/tools/dbimporters/plugins/tcod.py|
-        aiida/tools/__init__.py|
         aiida/transports/plugins/ssh.py|
         aiida/transports/plugins/test_all_plugins.py|
         aiida/transports/plugins/test_local.py|

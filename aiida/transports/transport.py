@@ -11,6 +11,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from abc import ABCMeta
 import os
 import re
@@ -23,6 +24,8 @@ from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
 
 DEFAULT_TRANSPORT_INTERVAL = 30.
+
+__all__ = ('Transport',)
 
 
 @six.add_metaclass(ABCMeta)

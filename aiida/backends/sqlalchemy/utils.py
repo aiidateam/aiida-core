@@ -109,7 +109,7 @@ def _load_dbenv_noschemacheck(profile=None, connection=None):
     """
     Load the SQLAlchemy database.
     """
-    from aiida.manage import get_config
+    from aiida.manage.configuration import get_config
 
     config = get_config()
     profile = config.current_profile
@@ -388,7 +388,7 @@ def check_schema_version(profile_name=None):
     """
     Check if the version stored in the database is the same of the version of the code.
 
-    :raise ConfigurationError: if the two schema versions do not match
+    :raise aiida.common.ConfigurationError: if the two schema versions do not match
     """
     from aiida.backends import sqlalchemy as sa
     from aiida.backends.settings import IN_DOC_MODE

@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=wildcard-import,undefined-variable
 """
 Common data structures, utility classes and functions
 
@@ -17,4 +18,10 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from aiida.common.log import AIIDA_LOGGER  # noqa: F401
+from .datastructures import *
+from .exceptions import *
+from .extendeddicts import *
+from .links import *
+from .log import *
+
+__all__ = (datastructures.__all__ + exceptions.__all__ + extendeddicts.__all__ + links.__all__ + log.__all__)

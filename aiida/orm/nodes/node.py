@@ -23,7 +23,7 @@ from aiida.common.escaping import sql_string_match
 from aiida.common.hashing import make_hash, _HASH_EXTRA_KEY
 from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
-from aiida.manage import get_manager
+from aiida.manage.manager import get_manager
 from aiida.orm.utils.links import LinkManager, LinkTriple
 from aiida.orm.utils.repository import Repository
 from aiida.orm.utils.node import AbstractNodeMeta, clean_value
@@ -382,7 +382,7 @@ class Node(Entity):
         :param value: value of the attribute
         :param clean: boolean, when True will clean the value before passing it to the backend
         :param stored_check: boolean, if True skips the check whether the node is stored
-        :raise ModificationNotAllowed: if the node is stored and `stored_check=False`
+        :raise aiida.common.ModificationNotAllowed: if the node is stored and `stored_check=False`
         """
         if stored_check and self.is_stored:
             raise exceptions.ModificationNotAllowed('cannot set an attribute on a stored node')
@@ -431,7 +431,7 @@ class Node(Entity):
         :param key: name of the attribute
         :param stored_check: boolean, if True skips the check whether the node is stored
         :raises AttributeError: if the attribute does not exist
-        :raise ModificationNotAllowed: if the node is stored and `stored_check=False`
+        :raise aiida.common.ModificationNotAllowed: if the node is stored and `stored_check=False`
         """
         if stored_check and self.is_stored:
             raise exceptions.ModificationNotAllowed('cannot delete an attribute on a stored node')
@@ -536,7 +536,7 @@ class Node(Entity):
 
         :param key: name of the extra
         :param value: value of the extra
-        :raise ModificationNotAllowed: if the node is not stored
+        :raise aiida.common.ModificationNotAllowed: if the node is not stored
         """
         if not self.is_stored:
             raise exceptions.ModificationNotAllowed('cannot set extras on unstored nodes')
@@ -627,7 +627,7 @@ class Node(Entity):
         :param clean: whether to clean the value
             WARNING: when set to False, storing will throw errors
             for any data types not recognized by the db backend
-        :raise ValidationError: if the key is not valid, e.g. it contains the separator symbol
+        :raise aiida.common.ValidationError: if the key is not valid, e.g. it contains the separator symbol
         """
         if self.is_stored:
             raise exceptions.ModificationNotAllowed('can only call `append_to_attr` on unstored nodes')
@@ -693,7 +693,7 @@ class Node(Entity):
         :param key: fully qualified identifier for the object within the repository
         :param contents_only: boolean, if True, omit the top level directory of the path and only copy its contents.
         :param force: boolean, if True, will skip the mutability check
-        :raises ModificationNotAllowed: if repository is immutable and `force=False`
+        :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
         """
         self._repository.put_object_from_tree(path, key, contents_only, force)
 
@@ -708,7 +708,7 @@ class Node(Entity):
         :param mode: the file mode with which the object will be written
         :param encoding: the file encoding with which the object will be written
         :param force: boolean, if True, will skip the mutability check
-        :raises ModificationNotAllowed: if repository is immutable and `force=False`
+        :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
         """
         self._repository.put_object_from_file(path, key, mode, encoding, force)
 
@@ -723,7 +723,7 @@ class Node(Entity):
         :param mode: the file mode with which the object will be written
         :param encoding: the file encoding with which the object will be written
         :param force: boolean, if True, will skip the mutability check
-        :raises ModificationNotAllowed: if repository is immutable and `force=False`
+        :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
         """
         self._repository.put_object_from_filelike(handle, key, mode, encoding, force)
 
@@ -735,7 +735,7 @@ class Node(Entity):
 
         :param key: fully qualified identifier for the object within the repository
         :param force: boolean, if True, will skip the mutability check
-        :raises ModificationNotAllowed: if repository is immutable and `force=False`
+        :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
         """
         self._repository.delete_object(key, force)
 
@@ -753,8 +753,8 @@ class Node(Entity):
         """Return a comment corresponding to the given identifier.
 
         :param identifier: the comment pk
-        :raise NotExistent: if the comment with the given id does not exist
-        :raise MultipleObjectsError: if the id cannot be uniquely resolved to a comment
+        :raise aiida.common.NotExistent: if the comment with the given id does not exist
+        :raise aiida.common.MultipleObjectsError: if the id cannot be uniquely resolved to a comment
         :return: the comment
         """
         return Comment.objects.get(dbnode_id=self.pk, pk=identifier)
@@ -771,8 +771,8 @@ class Node(Entity):
 
         :param identifier: the comment pk
         :param content: the new comment content
-        :raise NotExistent: if the comment with the given id does not exist
-        :raise MultipleObjectsError: if the id cannot be uniquely resolved to a comment
+        :raise aiida.common.NotExistent: if the comment with the given id does not exist
+        :raise aiida.common.MultipleObjectsError: if the id cannot be uniquely resolved to a comment
         """
         comment = Comment.objects.get(dbnode_id=self.pk, pk=identifier)
         comment.set_content(content)
@@ -863,7 +863,7 @@ class Node(Entity):
         :param source: the node from which the link is coming
         :param link_type: the link type
         :param link_label: the link label
-        :raise UniquenessError: if the given link triple already exists in the cache
+        :raise aiida.common.UniquenessError: if the given link triple already exists in the cache
         """
         link_triple = LinkTriple(source, link_type, link_label)
 
@@ -1095,7 +1095,7 @@ class Node(Entity):
     def verify_are_parents_stored(self):
         """Verify that all `parent` nodes are already stored.
 
-        :raise ModificationNotAllowed: if one of the source nodes of incoming links is not stored.
+        :raise aiida.common.ModificationNotAllowed: if one of the source nodes of incoming links is not stored.
         """
         for link_triple in self._incoming_cache:
             if not link_triple.node.is_stored:

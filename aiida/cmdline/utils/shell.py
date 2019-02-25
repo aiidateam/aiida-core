@@ -83,7 +83,7 @@ def run_shell(interface=None):
 
 def get_start_namespace():
     """Load all default and custom modules"""
-    from aiida.manage import get_config
+    from aiida.manage.configuration import get_config
 
     config = get_config()
 

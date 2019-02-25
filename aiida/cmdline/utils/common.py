@@ -21,7 +21,7 @@ from tabulate import tabulate
 
 def get_env_with_venv_bin():
     """Create a clone of the current running environment with the AIIDA_PATH variable set directory of the config."""
-    from aiida.manage import get_config
+    from aiida.manage.configuration import get_config
 
     config = get_config()
 

@@ -26,7 +26,7 @@ from . import entities
 from . import users
 from . import utils
 
-__all__ = 'SqlaGroup', 'SqlaGroupCollection'
+__all__ = ('SqlaGroup', 'SqlaGroupCollection')
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
         UniquenessError will be raised
 
         :param label: the new group label
-        :raises UniquenessError: if another group of same type and label already exists
+        :raises aiida.common.UniquenessError: if another group of same type and label already exists
         """
         self._dbmodel.label = label
 

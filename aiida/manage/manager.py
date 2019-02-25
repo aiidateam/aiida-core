@@ -16,7 +16,7 @@ import functools
 
 from .configuration import get_config
 
-__all__ = 'get_manager', 'reset_manager'
+__all__ = ('get_manager', 'reset_manager')
 
 MANAGER = None
 
@@ -175,8 +175,8 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
 
         :return: the daemon client
         :rtype: :class:`aiida.daemon.client.DaemonClient`
-        :raises MissingConfigurationError: if the configuration file cannot be found
-        :raises ProfileConfigurationError: if the given profile does not exist
+        :raises aiida.common.MissingConfigurationError: if the configuration file cannot be found
+        :raises aiida.common.ProfileConfigurationError: if the given profile does not exist
         """
         from aiida.engine.daemon.client import DaemonClient
 

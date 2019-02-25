@@ -56,9 +56,9 @@ def get_pseudos_from_structure(structure, family_name):
     structure, return a dictionary associating each kind name with its
     UpfData object.
 
-    :raise MultipleObjectsError: if more than one UPF for the same element is
+    :raise aiida.common.MultipleObjectsError: if more than one UPF for the same element is
        found in the group.
-    :raise NotExistent: if no UPF for an element in the group is
+    :raise aiida.common.NotExistent: if no UPF for an element in the group is
        found in the group.
     """
     from aiida.common.exceptions import NotExistent, MultipleObjectsError

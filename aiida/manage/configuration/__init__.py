@@ -23,7 +23,7 @@ def get_config():
 
     :return: the config
     :rtype: :class:`~aiida.manage.configuration.config.Config`
-    :raises ConfigurationError: if the configuration file could not be found, read or deserialized
+    :raises aiida.common.ConfigurationError: if the configuration file could not be found, read or deserialized
     """
     global CONFIG
 

@@ -16,7 +16,9 @@ import collections
 import logging
 import types
 
-from aiida.manage import get_config_option
+from aiida.manage.configuration import get_config_option
+
+__all__ = ('AIIDA_LOGGER',)
 
 # Custom logging level, intended specifically for informative log messages reported during WorkChains.
 # We want the level between INFO(20) and WARNING(30) such that it will be logged for the default loglevel, however

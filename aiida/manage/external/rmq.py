@@ -19,7 +19,7 @@ from tornado import gen
 from kiwipy import communications
 import plumpy
 
-__all__ = 'RemoteException', 'CommunicationTimeout', 'DeliveryFailed', 'ProcessLauncher'
+__all__ = ('RemoteException', 'CommunicationTimeout', 'DeliveryFailed', 'ProcessLauncher')
 
 LOGGER = logging.getLogger(__name__)
 

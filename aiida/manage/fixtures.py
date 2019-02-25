@@ -45,7 +45,7 @@ from aiida import is_dbenv_loaded
 from aiida.backends import settings as backend_settings
 from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 from aiida.common import exceptions
-from aiida.manage import get_manager, reset_manager
+from aiida.manage.manager import get_manager, reset_manager
 from aiida.manage.configuration.setup import create_instance_directories
 from aiida.manage.configuration.utils import load_config
 from aiida.manage.external.postgres import Postgres

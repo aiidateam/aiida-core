@@ -37,7 +37,7 @@ from sqlalchemy.dialects.postgresql import array
 from aiida.common.exceptions import InputValidationError
 # The way I get column as a an attribute to the orm class
 from aiida.common.links import LinkType
-from aiida.manage import get_manager
+from aiida.manage.manager import get_manager
 from aiida.common.exceptions import ConfigurationError
 
 from . import authinfos
@@ -331,7 +331,7 @@ class QueryBuilder(object):
         When somebody hits: print(QueryBuilder) or print(str(QueryBuilder))
         I want to print the SQL-query. Because it looks cool...
         """
-        from aiida.manage import get_config
+        from aiida.manage.configuration import get_config
 
         config = get_config()
         engine = config.current_profile.dictionary['AIIDADB_ENGINE']

@@ -33,7 +33,7 @@ def registry_cache_folder_path():
     return the fully resolved path to the cache folder
     """
     from os import path as osp
-    from aiida.manage import get_config
+    from aiida.manage.configuration import get_config
     config = get_config()
     cache_dir = registry_cache_folder_name()
     return osp.join(config.dirpath, cache_dir)

@@ -391,7 +391,7 @@ class TestUsers(AiidaTestCase):
         from aiida.orm import CalcJobNode
         from aiida.orm.nodes.data.structure import StructureData
         from aiida.common.links import LinkType
-        from aiida.manage import get_manager
+        from aiida.manage.manager import get_manager
 
         manager = get_manager()
 
@@ -467,7 +467,7 @@ class TestUsers(AiidaTestCase):
         from aiida.orm import CalcJobNode
         from aiida.orm.nodes.data.structure import StructureData
         from aiida.common.links import LinkType
-        from aiida.manage import get_manager
+        from aiida.manage.manager import get_manager
 
         manager = get_manager()
 

@@ -58,7 +58,8 @@ def setup_profile(profile_name, only_config, set_default=False, non_interactive=
     from aiida.cmdline.commands import cmd_user
     from aiida.common.exceptions import InvalidOperation
     from aiida.common.setup import create_profile, create_profile_noninteractive
-    from aiida.manage import get_config, get_manager
+    from aiida.manage.configuration import get_config
+    from aiida.manage.manager import get_manager
     from .settings import DEFAULT_AIIDA_USER
 
     config = get_config()
@@ -210,7 +211,7 @@ def delete_db(profile, non_interactive=True, verbose=False):
     :param verbose: if True, print parameters of DB connection
     :type verbose: bool
     """
-    from aiida.manage import get_config
+    from aiida.manage.configuration import get_config
     from aiida.manage.external.postgres import Postgres
     import aiida.common.json as json
 
@@ -254,7 +255,7 @@ def delete_from_config(profile, non_interactive=True):
     :param non_interactive: do not prompt for configuration values, fail if not all values are given as kwargs.
     :type non_interactive: bool
     """
-    from aiida.manage import get_config
+    from aiida.manage.configuration import get_config
 
     if non_interactive or click.confirm("Delete configuration for profile '{}'?\n"
                                         "WARNING: Permanently removes profile from the list of AiiDA profiles.".format(

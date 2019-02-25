@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=wildcard-import,undefined-variable,redefined-builtin
 """
 Tools to operate on AiiDA ORM class instances
 
@@ -20,7 +21,9 @@ What functionality should go directly in the ORM class in `aiida.orm` and what i
 
 """
 
-from .data.array.kpoints import get_explicit_kpoints_path, get_kpoints_path
-from .data.structure import structure_to_spglib_tuple, spglib_tuple_to_structure
+from .calculations import *
+from .data.array.kpoints import *
+from .data.structure import *
+from .dbimporters import *
 
-__all__ = ('get_explicit_kpoints_path', 'get_kpoints_path', 'structure_to_spglib_tuple', 'spglib_tuple_to_structure')
+__all__ = (calculations.__all__ + data.array.kpoints.__all__ + data.structure.__all__ + dbimporters.__all__)

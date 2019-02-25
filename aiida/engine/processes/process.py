@@ -42,7 +42,7 @@ from .builder import ProcessBuilder
 from .ports import InputPort, PortNamespace
 from .process_spec import ProcessSpec
 
-__all__ = ('Process', 'ProcessState', 'instantiate_process')
+__all__ = ('Process', 'ProcessState')
 
 
 def instantiate_process(runner, process, *args, **inputs):

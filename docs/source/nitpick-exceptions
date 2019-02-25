@@ -75,6 +75,7 @@ py:class  bool
 py:class  basestring
 py:class  None
 py:class  type
+py:class  typing.Final
 # this is required for metaclasses(?)
 py:class  __builtin__.bool
 py:class  __builtin__.float

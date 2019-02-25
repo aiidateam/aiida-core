@@ -19,7 +19,7 @@ import plumpy
 
 from aiida.orm.utils import serialize
 
-__all__ = 'AiiDAPersister', 'ObjectLoader', 'get_object_loader'
+__all__ = ('AiiDAPersister', 'ObjectLoader', 'get_object_loader')
 
 LOGGER = logging.getLogger(__name__)
 OBJECT_LOADER = None

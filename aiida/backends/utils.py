@@ -27,7 +27,7 @@ def validate_attribute_key(key):
     contain the separator symbol.).
 
     :return: None if the key is valid
-    :raise ValidationError: if the key is not valid
+    :raise aiida.common.ValidationError: if the key is not valid
     """
     from aiida.common.exceptions import ValidationError
 

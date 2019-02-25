@@ -45,7 +45,7 @@ def bands():
 @options.FORMULA_MODE()
 def bands_list(elements, elements_exclusive, raw, formula_mode, past_days, groups, all_users):
     """List BandsData objects."""
-    from aiida.manage import get_manager
+    from aiida.manage.manager import get_manager
     from tabulate import tabulate
     from argparse import Namespace
 

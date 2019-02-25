@@ -66,7 +66,7 @@ class ModelModifierV0025(object):
         contain the separator symbol.).
 
         :return: None if the key is valid
-        :raise ValidationError: if the key is not valid
+        :raise aiida.common.ValidationError: if the key is not valid
         """
         from aiida.backends.utils import validate_attribute_key
         return validate_attribute_key(key)

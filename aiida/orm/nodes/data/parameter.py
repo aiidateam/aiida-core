@@ -50,7 +50,7 @@ class ParameterData(Data):
             # Clear existing attributes and set the new dictionary
             self.clear_attributes()
             self.update_dict(dictionary)
-        except exceptions.ModificationNotAllowed:
+        except exceptions.ModificationNotAllowed:  # pylint: disable=try-except-raise
             # I reraise here to avoid to go in the generic 'except' below that would raise the same exception again
             raise
         except Exception:

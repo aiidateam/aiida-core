@@ -18,7 +18,7 @@ from sqlalchemy.orm import sessionmaker
 
 import aiida.backends
 from aiida.backends.testbase import AiidaTestCase
-from aiida.manage import get_manager
+from aiida.manage.manager import get_manager
 
 
 class TestSessionSqla(AiidaTestCase):

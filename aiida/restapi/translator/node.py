@@ -16,7 +16,7 @@ from aiida.common.exceptions import InputValidationError, ValidationError, \
     InvalidOperation
 from aiida.restapi.common.exceptions import RestValidationError
 from aiida.restapi.translator.base import BaseTranslator
-from aiida.manage import get_manager
+from aiida.manage.manager import get_manager
 from aiida import orm
 
 

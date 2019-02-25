@@ -22,7 +22,7 @@ from tornado import concurrent, gen
 from aiida.common.links import LinkType
 from aiida.orm.nodes.data.frozendict import FrozenDict
 
-__all__ = 'RefObjectStore', 'interruptable_task', 'InterruptableFuture'
+__all__ = ('RefObjectStore', 'interruptable_task', 'InterruptableFuture')
 
 LOGGER = logging.getLogger(__name__)
 PROCESS_STATE_CHANGE_KEY = 'process|state_change|{}'

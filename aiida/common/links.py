@@ -14,6 +14,8 @@ from __future__ import absolute_import
 
 from enum import Enum
 
+__all__ = ('LinkType',)
+
 
 class LinkType(Enum):
     """A simple enum of allowed link types."""

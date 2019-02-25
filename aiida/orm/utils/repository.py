@@ -40,7 +40,8 @@ class Repository(object):  # pylint: disable=useless-object-inheritance
     def validate_mutability(self):
         """Raise if the repository is immutable.
 
-        :raises ModificationNotAllowed: if repository is marked as immutable because the corresponding node is stored
+        :raises aiida.common.ModificationNotAllowed: if repository is marked as immutable because the corresponding node
+            is stored
         """
         if self._is_stored:
             raise exceptions.ModificationNotAllowed('cannot modify the repository after the node has been stored')
@@ -133,7 +134,7 @@ class Repository(object):  # pylint: disable=useless-object-inheritance
         :param key: fully qualified identifier for the object within the repository
         :param contents_only: boolean, if True, omit the top level directory of the path and only copy its contents.
         :param force: boolean, if True, will skip the mutability check
-        :raises ModificationNotAllowed: if repository is immutable and `force=False`
+        :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
         """
         if not force:
             self.validate_mutability()
@@ -165,7 +166,7 @@ class Repository(object):  # pylint: disable=useless-object-inheritance
         :param mode: the file mode with which the object will be written
         :param encoding: the file encoding with which the object will be written
         :param force: boolean, if True, will skip the mutability check
-        :raises ModificationNotAllowed: if repository is immutable and `force=False`
+        :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
         """
         if not force:
             self.validate_mutability()
@@ -186,7 +187,7 @@ class Repository(object):  # pylint: disable=useless-object-inheritance
         :param mode: the file mode with which the object will be written
         :param encoding: the file encoding with which the object will be written
         :param force: boolean, if True, will skip the mutability check
-        :raises ModificationNotAllowed: if repository is immutable and `force=False`
+        :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
         """
         if not force:
             self.validate_mutability()
@@ -209,7 +210,7 @@ class Repository(object):  # pylint: disable=useless-object-inheritance
 
         :param key: fully qualified identifier for the object within the repository
         :param force: boolean, if True, will skip the mutability check
-        :raises ModificationNotAllowed: if repository is immutable and `force=False`
+        :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
         """
         if not force:
             self.validate_mutability()
@@ -225,7 +226,7 @@ class Repository(object):  # pylint: disable=useless-object-inheritance
             This check can be avoided by using the `force` flag, but this should be used with extreme caution!
 
         :param force: boolean, if True, will skip the mutability check
-        :raises ModificationNotAllowed: if repository is immutable and `force=False`
+        :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
         """
         if not force:
             self.validate_mutability()

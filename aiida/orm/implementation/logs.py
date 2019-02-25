@@ -17,7 +17,7 @@ import six
 
 from . import backends
 
-__all__ = 'BackendLog', 'BackendLogCollection'
+__all__ = ('BackendLog', 'BackendLogCollection')
 
 
 @six.add_metaclass(abc.ABCMeta)

@@ -488,7 +488,7 @@ class CalcJobNode(CalculationNode):
         """Return the retrieved data folde.
 
         :return: the retrieved FolderData node
-        :raise MultipleObjectsError: if no or more than one retrieved node is found.
+        :raise aiida.common.MultipleObjectsError: if no or more than one retrieved node is found.
         """
         from aiida.orm.nodes.data.folder import FolderData
         return self.get_outgoing(node_class=FolderData, link_label_filter=self.link_label_retrieved).one().node

@@ -245,7 +245,7 @@ class LinkManager(object):  # pylint: disable=useless-object-inheritance
         """Return the node from list for given label.
 
         :return: node that corresponds to the given label
-        :raises NotExistent: if the label is not present among the link_triples
+        :raises aiida.common.NotExistent: if the label is not present among the link_triples
         """
         for entry in self.link_triples:
             if entry.link_label == label:

@@ -1600,7 +1600,7 @@ class StructureData(Data):
         :param conserve_particle: if True, allows the possibility of removing a site.
             currently not implemented.
 
-        :raises ModificationNotAllowed: if object is stored already
+        :raises aiida.common.ModificationNotAllowed: if object is stored already
         :raises ValueError: if positions are invalid
 
         .. note:: it is assumed that the order of the new_positions is

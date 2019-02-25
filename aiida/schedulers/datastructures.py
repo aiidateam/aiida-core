@@ -26,6 +26,8 @@ from aiida.common.extendeddicts import DefaultFieldsAttributeDict
 
 SCHEDULER_LOGGER = AIIDA_LOGGER.getChild('scheduler')
 
+__all__ = ('JobState', 'JobResource', 'JobTemplate', 'JobInfo', 'NodeNumberJobResource', 'ParEnvJobResource', 'MachineInfo')
+
 
 class JobState(Enum):
     """Enumeration of possible scheduler states of a CalcJob.
@@ -245,7 +247,7 @@ class ParEnvJobResource(JobResource):
 
         :raise ValueError: on invalid parameters.
         :raise TypeError: on invalid parameters.
-        :raise ConfigurationError: if default_mpiprocs_per_machine was set for this
+        :raise aiida.common.ConfigurationError: if default_mpiprocs_per_machine was set for this
             computer, since ParEnvJobResource cannot accept this parameter.
         """
         from aiida.common.exceptions import ConfigurationError

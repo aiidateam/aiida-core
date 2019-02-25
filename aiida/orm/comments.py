@@ -12,7 +12,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from aiida.manage import get_manager
+from aiida.manage.manager import get_manager
 from . import entities
 from . import users
 

@@ -18,7 +18,7 @@ from enum import Enum
 from plumpy.utils import AttributesDict
 from aiida.orm import ProcessNode
 
-__all__ = ['Awaitable', 'AwaitableTarget', 'AwaitableAction', 'construct_awaitable']
+__all__ = ('Awaitable', 'AwaitableTarget', 'AwaitableAction', 'construct_awaitable')
 
 
 class Awaitable(AttributesDict):

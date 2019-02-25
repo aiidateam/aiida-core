@@ -353,7 +353,7 @@ def _get_calculation(node):
     :param node: an instance of subclass of :py:class:`aiida.orm.nodes.node.Node`
     :return: an instance of subclass of
         :py:class:`aiida.orm.nodes.process.process.ProcessNode`
-    :raises MultipleObjectsError: if the node has more than one calculation
+    :raises aiida.common.MultipleObjectsError: if the node has more than one calculation
         attached.
     """
     from aiida.common.exceptions import MultipleObjectsError
@@ -1081,7 +1081,7 @@ def deposit(what, type, author_name=None, author_email=None, url=None,
         instance.
     :raises ValueError: if any of the required parameters are not given.
     """
-    from aiida.manage import get_config
+    from aiida.manage.configuration import get_config
 
     config = get_config()
     parameters = {}

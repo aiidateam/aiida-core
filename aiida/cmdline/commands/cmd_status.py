@@ -18,7 +18,7 @@ import click
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils.daemon import get_daemon_status
 from aiida.common.utils import Capturing, get_repository_folder
-from aiida.manage import get_manager
+from aiida.manage.manager import get_manager
 
 
 class ServiceStatus(IntEnum):

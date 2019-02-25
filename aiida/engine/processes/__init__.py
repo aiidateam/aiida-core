@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=wildcard-import,undefined-variable,redefined-builtin
 """Module for processes and related utilities."""
 
-from .calcjobs import CalcJob
-from .exit_code import ExitCode
-from .functions import calcfunction, workfunction
-from .process import Process, ProcessState, instantiate_process
-from .workchains import assign_, append_, ToContext, WorkChain, if_, while_, return_
+from .calcjobs import *
+from .exit_code import *
+from .functions import *
+from .process import *
+from .workchains import *
 
-__all__ = ('CalcJob', 'ExitCode', 'calcfunction', 'workfunction', 'Process', 'ProcessState', 'instantiate_process',
-           'assign_', 'append_', 'ToContext', 'WorkChain', 'if_', 'while_', 'return_')
+__all__ = (calcjobs.__all__ + exit_code.__all__ + functions.__all__ + process.__all__ + workchains.__all__)

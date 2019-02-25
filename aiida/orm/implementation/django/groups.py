@@ -32,7 +32,7 @@ from . import entities
 from . import users
 from . import utils
 
-__all__ = 'DjangoGroup', 'DjangoGroupCollection'
+__all__ = ('DjangoGroup', 'DjangoGroupCollection')
 
 
 class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # pylint: disable=abstract-method
@@ -59,7 +59,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
         UniquenessError will be raised
 
         :param label : the new group label
-        :raises UniquenessError: if another group of same type and label already exists
+        :raises aiida.common.UniquenessError: if another group of same type and label already exists
         """
         self._dbmodel.label = label
 

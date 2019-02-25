@@ -23,7 +23,7 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils import decorators, echo
 from aiida.cmdline.utils.common import get_env_with_venv_bin
 from aiida.cmdline.utils.daemon import get_daemon_status, print_client_response_status
-from aiida.manage import get_config
+from aiida.manage.configuration import get_config
 
 
 @verdi.group('daemon')

@@ -104,8 +104,8 @@ def delete_nodes(pks,
         pks_set_to_delete = pks_set_to_delete.union(new_pks_set)
 
     if verbosity > 0:
-        echo.echo("I {} delete {} node{}".format('would' if dry_run else 'will', len(pks_set_to_delete), 's'
-                                                 if len(pks_set_to_delete) > 1 else ''))
+        echo.echo("I {} delete {} node{}".format('would' if dry_run else 'will', len(pks_set_to_delete),
+                                                 's' if len(pks_set_to_delete) > 1 else ''))
         if verbosity > 1:
             builder = QueryBuilder().append(
                 Node, filters={'id': {
@@ -142,8 +142,8 @@ def delete_nodes(pks,
         if verbosity > 0 and caller_to_called2delete:
             calculation_pks_losing_called = set(next(zip(*caller_to_called2delete)))
             echo.echo("\n{} calculation{} {} lose at least one called instance".format(
-                len(calculation_pks_losing_called), 's' if len(calculation_pks_losing_called) > 1 else '', 'would'
-                if dry_run else 'will'))
+                len(calculation_pks_losing_called), 's' if len(calculation_pks_losing_called) > 1 else '',
+                'would' if dry_run else 'will'))
             if verbosity > 1:
                 echo.echo(
                     "These are the calculations that {} lose a called instance:".format('would' if dry_run else 'will'))
@@ -167,11 +167,11 @@ def delete_nodes(pks,
         if verbosity > 0 and creator_to_created2delete:
             calculation_pks_losing_created = set(next(zip(*creator_to_created2delete)))
             echo.echo("\n{} calculation{} {} lose at least one created data-instance".format(
-                len(calculation_pks_losing_created), 's' if len(calculation_pks_losing_created) > 1 else '', 'would'
-                if dry_run else 'will'))
+                len(calculation_pks_losing_created), 's' if len(calculation_pks_losing_created) > 1 else '',
+                'would' if dry_run else 'will'))
             if verbosity > 1:
-                echo.echo("These are the calculations that {} lose a created data-instance:".format('would' if dry_run
-                                                                                                    else 'will'))
+                echo.echo("These are the calculations that {} lose a created data-instance:".format(
+                    'would' if dry_run else 'will'))
                 for calc_losing_created_pk in calculation_pks_losing_created:
                     echo.echo('  ', load_node(calc_losing_created_pk))
 

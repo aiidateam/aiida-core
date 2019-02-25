@@ -141,11 +141,12 @@ class MakeHashTest(unittest.TestCase):
             ('c', set([2, '5', 'a', 'b', 5])),
         ])
 
-        obj_b = collections.OrderedDict([('c', set([2, 'b', 5, 'a', '5'])), ('b', 4), ('a', {
-            2: 'goodbye',
-            1: 'here',
-            '1': 'hello',
-        }), ('3', 4), (3, 4)])
+        obj_b = collections.OrderedDict([('c', set([2, 'b', 5, 'a', '5'])), ('b', 4),
+                                         ('a', {
+                                             2: 'goodbye',
+                                             1: 'here',
+                                             '1': 'hello',
+                                         }), ('3', 4), (3, 4)])
 
         self.assertEqual(
             make_hash(obj_a, odict_as_unordered=True),

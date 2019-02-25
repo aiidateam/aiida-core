@@ -58,7 +58,7 @@ class TestVerdiSetup(AiidaTestCase):
         result = self.cli_runner.invoke(cmd_setup.setup, options)
         self.assertIsNotNone(result.exception)
         self.assertIn('Missing argument', result.output)
-        self.assertIn('profile_name', result.output)
+        self.assertIn('PROFILE_NAME', result.output)
 
         # With existing profile name should raise exception
         options.append(profile.name)

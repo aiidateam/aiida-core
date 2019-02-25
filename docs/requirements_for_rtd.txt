@@ -1,32 +1,32 @@
 Flask-Cache==0.13.1
-Flask-Cors==3.0.4
-Flask-HTTPAuth==3.2.3
-Flask-RESTful==0.3.6
+Flask-Cors==3.0.7
+Flask-HTTPAuth==3.2.4
+Flask-RESTful==0.3.7
 Flask-SQLAlchemy==2.3.2
 Flask==1.0.2
 Jinja2==2.10
-MarkupSafe==1.0
+MarkupSafe==1.1.1
 PyCifRW==4.2.1; python_version < '3'
 PyCifRW==4.4; python_version >= '3'
-PyMySQL==0.8.0
-PyYAML==3.12
-Pygments==2.2.0
-SQLAlchemy-Utils==0.33.0
-SQLAlchemy==1.2.12
-Sphinx==1.8.2
-aldjemy==0.8.0
+PyMySQL==0.9.3
+PyYAML==3.13
+Pygments==2.3.1
+SQLAlchemy-Utils==0.33.11
+SQLAlchemy==1.2.18
+Sphinx==1.8.4
+aldjemy==0.9.1
 alembic==1.0.7
 anyjson==0.3.3
-ase==3.12.0
+ase==3.17.0
 chainmap; python_version<'3.5'
-circus==0.14.0
-click-completion==0.3.1
-click-plugins==1.0.3
-click-spinner==0.1.7
-click==6.7
+circus==0.15.0
+click-completion==0.5.0
+click-plugins==1.0.4
+click-spinner==0.1.8
+click==7.0
 codecov==2.0.15
-coverage==4.5.1
-django==1.11.16
+coverage==4.5.2
+django==1.11.20
 docutils==0.14
 ecdsa==0.13
 enum34==1.1.6; python_version<'3.5'
@@ -34,12 +34,12 @@ ete3==3.1.1
 flask-marshmallow==0.9.0
 futures; python_version=='2.7'
 ipython>=4.0,<6.0
-itsdangerous==0.24
+itsdangerous==1.1.0
 kiwipy[rmq]==0.4.2
-marshmallow-sqlalchemy==0.13.2
+marshmallow-sqlalchemy==0.16.0
 meld3==1.0.2
 mock==2.0.0
-numpy==1.14.3
+numpy==1.16.1
 paramiko==2.4.2
 passlib==1.7.1
 pathlib2; python_version<'3.5'
@@ -47,31 +47,31 @@ pg8000<1.13.0
 pgtest==1.1.0
 pika==1.0.0b1
 plumpy==0.12.1
-psutil==5.4.5
+psutil==5.5.1
 pyblake2==1.1.2; python_version<'3.6'
-pymatgen==2018.4.20
-pyparsing==2.2.0
-pytest-cov==2.5.1
-pytest==3.6.3
-python-dateutil==2.7.2
+pymatgen<=2018.12.12
+pyparsing==2.3.1
+pytest-cov==2.6.1
+pytest==4.3.0
+python-dateutil==2.8.0
 python-memcached==1.59
 python-mimeparse==1.6.0
-pytz==2018.4
-qe-tools==1.1.0
-reentry==1.2.1
-seekpath==1.8.1
+pytz==2018.9
+qe-tools==1.1.2
+reentry==1.2.2
+seekpath==1.8.4
 simplejson==3.16.0
 singledispatch>=3.4.0.3; python_version<'3.5'
-six==1.11.0
-spglib==1.10.3.65
-sphinx-rtd-theme==0.4.2
+six==1.12.0
+spglib==1.12.2.post0
+sphinx-rtd-theme==0.4.3
 sphinxcontrib-contentui==0.2.2
 sqlalchemy-diff==0.1.3
-sqlalchemy-migrate==0.11.0
-tabulate==0.8.2
-tornado==4.5.3
+sqlalchemy-migrate==0.12.0
+tabulate==0.8.3
+tornado<5.0
 typing==3.6.6; python_version<'3.5'
 tzlocal==1.5.1
 ujson==1.35
 unittest2==1.1.0; python_version<'3.5'
-uritools==2.1.0
+uritools==2.2.0

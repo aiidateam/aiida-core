@@ -223,8 +223,8 @@ def get_calcjob_report(calcjob):
     report = []
 
     if calcjob_state == CalcJobState.WITHSCHEDULER:
-        state_string = '{}, scheduler state: {}'.format(calcjob_state, scheduler_state
-                                                        if scheduler_state else '(unknown)')
+        state_string = '{}, scheduler state: {}'.format(calcjob_state,
+                                                        scheduler_state if scheduler_state else '(unknown)')
     else:
         state_string = '{}'.format(calcjob_state)
 

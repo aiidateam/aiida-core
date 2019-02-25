@@ -14,7 +14,9 @@ from __future__ import absolute_import
 
 from enum import Enum, IntEnum
 
-from aiida.common.extendeddicts import DefaultFieldsAttributeDict
+from .extendeddicts import DefaultFieldsAttributeDict
+
+__all__ = ('CalcJobState', 'CalcInfo', 'CodeInfo', 'CodeRunMode')
 
 
 class CalcJobState(Enum):

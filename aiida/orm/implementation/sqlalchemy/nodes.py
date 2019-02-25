@@ -357,7 +357,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         :param link_type: the link type
         :param link_label: the link label
         :return: True if the proposed link is allowed, False otherwise
-        :raise ModificationNotAllowed: if either source or target node is not stored
+        :raise aiida.common.ModificationNotAllowed: if either source or target node is not stored
         """
         session = get_scoped_session()
 

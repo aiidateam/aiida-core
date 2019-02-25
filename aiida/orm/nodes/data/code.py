@@ -158,8 +158,8 @@ class Code(Data):
         :param label: the code label identifying the code to load
         :param machinename: the machine name where code is setup
 
-        :raise NotExistent: if no code identified by the given string is found
-        :raise MultipleObjectsError: if the string cannot identify uniquely
+        :raise aiida.common.NotExistent: if no code identified by the given string is found
+        :raise aiida.common.MultipleObjectsError: if the string cannot identify uniquely
             a code
         """
         from aiida.common.exceptions import (NotExistent, MultipleObjectsError, InputValidationError)
@@ -192,10 +192,10 @@ class Code(Data):
         :param label: the code label identifying the code to load
         :param machinename: the machine name where code is setup
 
-        :raise NotExistent: if no code identified by the given string is found
-        :raise MultipleObjectsError: if the string cannot identify uniquely
+        :raise aiida.common.NotExistent: if no code identified by the given string is found
+        :raise aiida.common.MultipleObjectsError: if the string cannot identify uniquely
             a code
-        :raise InputValidationError: if neither a pk nor a label was passed in
+        :raise aiida.common.InputValidationError: if neither a pk nor a label was passed in
         """
         from aiida.common.exceptions import (NotExistent, MultipleObjectsError, InputValidationError)
         from aiida.orm.utils import load_code
@@ -231,10 +231,10 @@ class Code(Data):
 
         :param code_string: the code string identifying the code to load
 
-        :raise NotExistent: if no code identified by the given string is found
-        :raise MultipleObjectsError: if the string cannot identify uniquely
+        :raise aiida.common.NotExistent: if no code identified by the given string is found
+        :raise aiida.common.MultipleObjectsError: if the string cannot identify uniquely
             a code
-        :raise InputValidationError: if code_string is not of string type
+        :raise aiida.common.InputValidationError: if code_string is not of string type
 
         """
         from aiida.common.exceptions import NotExistent, MultipleObjectsError, InputValidationError
@@ -459,7 +459,7 @@ class Code(Data):
 
         :note: it also sets the ``builder.code`` value.
 
-        :raise MissingPluginError: if the specified plugin does not exist.
+        :raise aiida.common.MissingPluginError: if the specified plugin does not exist.
         :raise ValueError: if no default plugin was specified.
 
         :return:

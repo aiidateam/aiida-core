@@ -17,7 +17,7 @@ from enum import Enum
 from aiida.cmdline.utils import echo
 from aiida.common import exceptions
 from aiida.common.lang import type_check
-from aiida.manage import get_manager
+from aiida.manage.manager import get_manager
 
 from . import convert
 from . import entities
@@ -180,7 +180,7 @@ class Group(entities.Entity):
         UniquenessError will be raised
 
         :param label: the new group label
-        :raises UniquenessError: if another group of same type and label already exists
+        :raises aiida.common.UniquenessError: if another group of same type and label already exists
         """
         self._backend_entity.label = label
 
@@ -192,7 +192,7 @@ class Group(entities.Entity):
         UniquenessError will be raised
 
         :param label: the new group label
-        :raises UniquenessError: if another group of same type and label already exists
+        :raises aiida.common.UniquenessError: if another group of same type and label already exists
         """
         import warnings
         # pylint: disable=redefined-builtin
@@ -386,7 +386,7 @@ class Group(entities.Entity):
         (e.g. 'data.upf', 'import', etc.)
 
         :raise ValueError: if the group type does not exist.
-        :raise NotExistent: if the group is not found.
+        :raise aiida.common.NotExistent: if the group is not found.
         """
         import warnings
         # pylint: disable=redefined-builtin

@@ -11,12 +11,13 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import unittest
 
 import click
 from click.testing import CliRunner
 
-from aiida.cmdline.params.options.conditional import ConditionalOption
+from .conditional import ConditionalOption
 
 
 class ConditionalOptionTest(unittest.TestCase):

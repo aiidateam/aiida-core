@@ -280,7 +280,7 @@ class AbstractBackup(object):
     def _get_repository_path(self):
         from aiida.common.setup import parse_repository_uri
         from aiida.common.exceptions import MissingConfigurationError
-        from aiida.manage import get_config
+        from aiida.manage.configuration import get_config
 
         try:
             config = get_config()

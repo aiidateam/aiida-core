@@ -14,7 +14,7 @@ from __future__ import absolute_import
 from aiida.orm.nodes.data.array.kpoints import KpointsData
 from aiida.orm.nodes.data.parameter import ParameterData
 
-__all__ = ['check_seekpath_is_installed', 'get_explicit_kpoints_path', 'get_kpoints_path']
+__all__ = ('check_seekpath_is_installed', 'get_explicit_kpoints_path', 'get_kpoints_path')
 
 
 def check_seekpath_is_installed():

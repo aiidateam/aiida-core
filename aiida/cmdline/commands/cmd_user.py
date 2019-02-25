@@ -112,7 +112,7 @@ def user_list(color):
     List all the users.
     :param color: Show the list using colors
     """
-    from aiida.manage import get_manager
+    from aiida.manage.manager import get_manager
     from aiida import orm
 
     manager = get_manager()

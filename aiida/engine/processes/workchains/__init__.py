@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=wildcard-import,undefined-variable
 """Module for the `WorkChain` process and related utilities."""
 
-from .context import append_, assign_, ToContext
-from .workchain import WorkChain, if_, while_, return_
+from .context import *
+from .workchain import *
 
-__all__ = ('assign_', 'append_', 'ToContext', 'WorkChain', 'if_', 'while_', 'return_')
+__all__ = (context.__all__ + workchain.__all__)

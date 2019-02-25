@@ -19,7 +19,7 @@ from plumpy.base.utils import super_check, call_with_super_check
 from aiida.common import exceptions
 from aiida.common import datastructures
 from aiida.common.lang import classproperty, type_check
-from aiida.manage import get_manager
+from aiida.manage.manager import get_manager
 
 __all__ = ('Entity', 'Collection')
 

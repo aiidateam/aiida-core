@@ -10,12 +10,13 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from aiida.orm.nodes.data.array.kpoints import KpointsData
 from aiida.orm.nodes.data.parameter import ParameterData
 from aiida.tools.data.array.kpoints import legacy
 from aiida.tools.data.array.kpoints import seekpath
 
-__all__ = ['get_kpoints_path', 'get_explicit_kpoints_path']
+__all__ = ('get_kpoints_path', 'get_explicit_kpoints_path')
 
 
 def get_kpoints_path(structure, method='seekpath', **kwargs):

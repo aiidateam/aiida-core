@@ -19,7 +19,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.tests.utils import processes as test_processes
 from aiida.engine import ProcessState, submit
 from aiida.orm.nodes.data.int import Int
-from aiida.manage import get_manager
+from aiida.manage.manager import get_manager
 
 
 class TestProcessControl(AiidaTestCase):

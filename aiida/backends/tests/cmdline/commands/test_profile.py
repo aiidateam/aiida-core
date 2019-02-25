@@ -17,7 +17,7 @@ from click.testing import CliRunner
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_profile
 from aiida.backends.tests.utils.configuration import create_mock_profile, with_temporary_config_instance
-from aiida.manage import get_config
+from aiida.manage.configuration import get_config
 
 
 class TestVerdiProfileSetup(AiidaTestCase):

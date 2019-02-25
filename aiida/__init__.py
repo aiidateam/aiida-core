@@ -29,7 +29,7 @@ import six
 
 import aiida.common.warnings
 from aiida.common.log import configure_logging
-from aiida.manage import get_config_option
+from aiida.manage.configuration import get_config_option
 
 __copyright__ = (u'Copyright (c), This file is part of the AiiDA platform. '
                  u'For further information please visit http://www.aiida.net/. All rights reserved.')

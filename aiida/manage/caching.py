@@ -26,7 +26,7 @@ from aiida.backends.utils import get_current_profile
 from aiida.common import exceptions
 from aiida.common.utils import get_object_from_string
 
-__all__ = ['get_use_cache', 'enable_caching', 'disable_caching']
+__all__ = ('get_use_cache', 'enable_caching', 'disable_caching')
 
 
 class ConfigKeys(Enum):
@@ -85,7 +85,7 @@ def configure(config_file=None):
     """
     # pylint: disable=global-statement
     if config_file is None:
-        from aiida.manage import get_config
+        from aiida.manage.configuration import get_config
 
         config = get_config()
         config_file = os.path.join(config.dirpath, 'cache_config.yml')

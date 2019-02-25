@@ -11,7 +11,7 @@ import inspect
 from six.moves import zip  # pylint: disable=unused-import
 
 from aiida.common.lang import override
-from aiida.manage import get_manager
+from aiida.manage.manager import get_manager
 
 from .process import Process
 

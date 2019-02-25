@@ -74,7 +74,7 @@ class LocalTransport(Transport):
         """
         Opens a local transport channel
 
-        :raise InvalidOperation: if the channel is already open
+        :raise aiida.common.InvalidOperation: if the channel is already open
         """
         from aiida.common.exceptions import InvalidOperation
 
@@ -89,7 +89,7 @@ class LocalTransport(Transport):
         """
         Closes the local transport channel
 
-        :raise InvalidOperation: if the channel is already open
+        :raise aiida.common.InvalidOperation: if the channel is already open
         """
         from aiida.common.exceptions import InvalidOperation
 

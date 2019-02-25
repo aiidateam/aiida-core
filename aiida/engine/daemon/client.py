@@ -24,7 +24,7 @@ import tempfile
 import six
 
 from aiida.common.files import which
-from aiida.manage import get_config
+from aiida.manage.configuration import get_config
 
 VERDI_BIN = which('verdi')
 # Recent versions of virtualenv create the environment variable VIRTUAL_ENV
@@ -47,8 +47,8 @@ def get_daemon_client(profile_name=None):
     :param profile_name: the profile name, will use the current profile if None
     :return: the daemon client
     :rtype: :class:`aiida.engine.daemon.client.DaemonClient`
-    :raises MissingConfigurationError: if the configuration file cannot be found
-    :raises ProfileConfigurationError: if the given profile does not exist
+    :raises aiida.common.MissingConfigurationError: if the configuration file cannot be found
+    :raises aiida.common.ProfileConfigurationError: if the given profile does not exist
     """
     config = get_config()
 

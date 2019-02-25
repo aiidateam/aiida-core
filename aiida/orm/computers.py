@@ -18,7 +18,7 @@ import six
 
 from aiida import transports, schedulers
 from aiida.common import exceptions
-from aiida.manage import get_manager
+from aiida.manage.manager import get_manager
 from aiida.plugins import SchedulerFactory, TransportFactory
 
 from . import entities
@@ -572,7 +572,7 @@ class Computer(entities.Entity):
 
         :param user: a User instance.
         :return: a AuthInfo instance
-        :raise NotExistent: if the computer is not configured for the given
+        :raise aiida.common.NotExistent: if the computer is not configured for the given
             user.
         """
         from . import authinfos

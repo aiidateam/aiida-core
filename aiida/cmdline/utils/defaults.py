@@ -14,7 +14,7 @@ from __future__ import absolute_import
 
 from aiida.cmdline.utils import echo
 from aiida.common import exceptions
-from aiida.manage import get_config
+from aiida.manage.configuration import get_config
 
 
 def get_default_profile(ctx, param, value):  # pylint: disable=unused-argument

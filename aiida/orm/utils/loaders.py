@@ -19,10 +19,10 @@ from aiida.common.exceptions import MultipleObjectsError, NotExistent
 from aiida.common.lang import abstractclassmethod, classproperty
 from aiida.orm.querybuilder import QueryBuilder
 
-__all__ = [
+__all__ = (
     'get_loader', 'OrmEntityLoader', 'CalculationEntityLoader', 'CodeEntityLoader', 'ComputerEntityLoader',
     'GroupEntityLoader', 'NodeEntityLoader'
-]
+)
 
 
 def get_loader(orm_class):
@@ -85,7 +85,7 @@ class OrmEntityLoader(object):
         :param classes: a tuple of orm classes to which the identifier should be mapped
         :returns: the query builder instance
         :raises ValueError: if the identifier is invalid
-        :raises NotExistent: if the orm base class does not support a LABEL like identifier
+        :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
         """
         raise NotImplementedError
 
@@ -179,8 +179,8 @@ class OrmEntityLoader(object):
         :param sub_classes: an optional tuple of orm classes, that should each be strict sub classes of the
             base orm class of the loader, that will narrow the queryset
         :returns: the loaded entity
-        :raises MultipleObjectsError: if the identifier maps onto multiple entities
-        :raises NotExistent: if the identifier maps onto not a single entity
+        :raises aiida.common.MultipleObjectsError: if the identifier maps onto multiple entities
+        :raises aiida.common.NotExistent: if the identifier maps onto not a single entity
         """
         qb, query_parameters = cls.get_query_builder(identifier, identifier_type, sub_classes, query_with_dashes)
         qb.limit(2)
@@ -311,7 +311,7 @@ class ProcessEntityLoader(OrmEntityLoader):
         :param classes: a tuple of orm classes to which the identifier should be mapped
         :returns: the query builder instance that should retrieve the entity corresponding to the identifier
         :raises ValueError: if the identifier is invalid
-        :raises NotExistent: if the orm base class does not support a LABEL like identifier
+        :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
         """
         qb = QueryBuilder()
         qb.append(cls=classes, tag='process', project=['*'], filters={'label': {'==': identifier}})
@@ -343,7 +343,7 @@ class CalculationEntityLoader(OrmEntityLoader):
         :param classes: a tuple of orm classes to which the identifier should be mapped
         :returns: the query builder instance that should retrieve the entity corresponding to the identifier
         :raises ValueError: if the identifier is invalid
-        :raises NotExistent: if the orm base class does not support a LABEL like identifier
+        :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
         """
         qb = QueryBuilder()
         qb.append(cls=classes, tag='calculation', project=['*'], filters={'label': {'==': identifier}})
@@ -375,7 +375,7 @@ class WorkflowEntityLoader(OrmEntityLoader):
         :param classes: a tuple of orm classes to which the identifier should be mapped
         :returns: the query builder instance that should retrieve the entity corresponding to the identifier
         :raises ValueError: if the identifier is invalid
-        :raises NotExistent: if the orm base class does not support a LABEL like identifier
+        :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
         """
         qb = QueryBuilder()
         qb.append(cls=classes, tag='workflow', project=['*'], filters={'label': {'==': identifier}})
@@ -407,7 +407,7 @@ class CodeEntityLoader(OrmEntityLoader):
         :param classes: a tuple of orm classes to which the identifier should be mapped
         :returns: the query builder instance that should retrieve the entity corresponding to the identifier
         :raises ValueError: if the identifier is invalid
-        :raises NotExistent: if the orm base class does not support a LABEL like identifier
+        :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
         """
         from aiida.orm.computers import Computer
 
@@ -449,7 +449,7 @@ class ComputerEntityLoader(OrmEntityLoader):
         :param classes: a tuple of orm classes to which the identifier should be mapped
         :returns: the query builder instance that should retrieve the entity corresponding to the identifier
         :raises ValueError: if the identifier is invalid
-        :raises NotExistent: if the orm base class does not support a LABEL like identifier
+        :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
         """
         qb = QueryBuilder()
         qb.append(cls=classes, tag='computer', project=['*'], filters={'name': {'==': identifier}})
@@ -481,7 +481,7 @@ class DataEntityLoader(OrmEntityLoader):
         :param classes: a tuple of orm classes to which the identifier should be mapped
         :returns: the query builder instance that should retrieve the entity corresponding to the identifier
         :raises ValueError: if the identifier is invalid
-        :raises NotExistent: if the orm base class does not support a LABEL like identifier
+        :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
         """
         qb = QueryBuilder()
         qb.append(cls=classes, tag='calculation', project=['*'], filters={'label': {'==': identifier}})
@@ -513,7 +513,7 @@ class GroupEntityLoader(OrmEntityLoader):
         :param classes: a tuple of orm classes to which the identifier should be mapped
         :returns: the query builder instance that should retrieve the entity corresponding to the identifier
         :raises ValueError: if the identifier is invalid
-        :raises NotExistent: if the orm base class does not support a LABEL like identifier
+        :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
         """
         qb = QueryBuilder()
         qb.append(cls=classes, tag='group', project=['*'], filters={'label': {'==': identifier}})
@@ -545,7 +545,7 @@ class NodeEntityLoader(OrmEntityLoader):
         :param classes: a tuple of orm classes to which the identifier should be mapped
         :returns: the query builder instance that should retrieve the entity corresponding to the identifier
         :raises ValueError: if the identifier is invalid
-        :raises NotExistent: if the orm base class does not support a LABEL like identifier
+        :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
         """
         qb = QueryBuilder()
         qb.append(cls=classes, tag='node', project=['*'], filters={'label': {'==': identifier}})

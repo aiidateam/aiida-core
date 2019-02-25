@@ -15,6 +15,9 @@ from __future__ import absolute_import
 
 from .entry_point import load_entry_point
 
+__all__ = ('BaseFactory', 'CalculationFactory', 'DataFactory', 'DbImporterFactory', 'OrbitalFactory', 'ParserFactory',
+           'SchedulerFactory', 'TransportFactory', 'TcodExporterFactory', 'WorkflowFactory')
+
 
 def BaseFactory(group, name):
     """Return the plugin class registered under a given entry point group and name.
@@ -22,9 +25,9 @@ def BaseFactory(group, name):
     :param group: entry point group
     :param name: entry point name
     :return: the plugin class
-    :raises MissingEntryPointError: entry point was not registered
-    :raises MultipleEntryPointError: entry point could not be uniquely resolved
-    :raises LoadingEntryPointError: entry point could not be loaded
+    :raises aiida.common.MissingEntryPointError: entry point was not registered
+    :raises aiida.common.MultipleEntryPointError: entry point could not be uniquely resolved
+    :raises aiida.common.LoadingEntryPointError: entry point could not be loaded
     """
     return load_entry_point(group, name)
 

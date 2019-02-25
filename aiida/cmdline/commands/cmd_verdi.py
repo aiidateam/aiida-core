@@ -29,7 +29,7 @@ def verdi(ctx, profile, version):
     from aiida import get_version
     from aiida.backends import settings
     from aiida.cmdline.utils import echo
-    from aiida.manage import get_config
+    from aiida.manage.configuration import get_config
 
     if version:
         echo.echo('AiiDA version {}'.format(get_version()))

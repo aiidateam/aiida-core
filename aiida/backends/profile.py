@@ -26,7 +26,7 @@ def load_profile(profile=None):
     be called by the user by hand.
     """
     from aiida.common.log import configure_logging
-    from aiida.manage import get_config
+    from aiida.manage.configuration import get_config
 
     if settings.LOAD_PROFILE_CALLED:
         raise InvalidOperation('You cannot call load_profile multiple times!')

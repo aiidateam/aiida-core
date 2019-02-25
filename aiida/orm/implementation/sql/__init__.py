@@ -17,4 +17,4 @@ All SQL backends with an ORM should subclass from the classes in this module
 
 from .backends import *
 
-__all__ = backends.__all__
+__all__ = (backends.__all__)

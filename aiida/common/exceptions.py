@@ -12,6 +12,15 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+__all__ = ('AiidaException', 'NotExistent', 'MultipleObjectsError', 'RemoteOperationError', 'ContentNotExistent',
+           'FailedError', 'StoringNotAllowed', 'ModificationNotAllowed', 'IntegrityError', 'UniquenessError',
+           'MissingEntryPointError', 'MultipleEntryPointError', 'LoadingEntryPointError', 'MissingPluginError',
+           'LoadingPluginFailed', 'InvalidOperation', 'ParsingError', 'InternalError', 'PluginInternalError',
+           'ValidationError', 'ConfigurationError', 'ProfileConfigurationError', 'MissingConfigurationError',
+           'ConfigurationVersionError', 'DbContentError', 'InputValidationError', 'FeatureNotAvailable',
+           'FeatureDisabled', 'LicensingException', 'TestsNotAllowedError', 'UnsupportedSpeciesError',
+           'DanglingLinkError', 'TransportTaskException', 'IncompatibleArchiveVersionError', 'OutputParsingError')
+
 
 class AiidaException(Exception):
     """

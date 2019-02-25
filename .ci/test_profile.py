@@ -152,7 +152,7 @@ class DeleteTestCase(unittest.TestCase):
         is not generated until the test function is entered, which calls the `with_temporary_config_instance`
         decorator.
         """
-        from aiida.manage import get_config
+        from aiida.manage.configuration import get_config
 
         config = get_config()
 

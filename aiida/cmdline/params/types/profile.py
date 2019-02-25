@@ -22,7 +22,7 @@ class ProfileParamType(click.ParamType):
     def convert(self, value, param, ctx):
         """Attempt to match the given value to a valid profile."""
         from aiida.common.exceptions import MissingConfigurationError, ProfileConfigurationError
-        from aiida.manage import get_config
+        from aiida.manage.configuration import get_config
 
         try:
             config = get_config()
@@ -39,7 +39,7 @@ class ProfileParamType(click.ParamType):
         :returns: list of tuples of valid entry points (matching incomplete) and a description
         """
         from aiida.common.exceptions import MissingConfigurationError
-        from aiida.manage import get_config
+        from aiida.manage.configuration import get_config
 
         try:
             config = get_config()

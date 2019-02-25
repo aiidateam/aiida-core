@@ -8,17 +8,21 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # yapf: disable
-"""
-Module to make available commonly used click arguments.
-"""
+"""Module with pre-defined reusable commandline arguments that can be used as `click` decorators."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
 import click
 
-from aiida.cmdline.params import types
-from aiida.cmdline.params.arguments.overridable import OverridableArgument
+from .. import types
+from .overridable import OverridableArgument
+
+__all__ = (
+    'PROFILE', 'PROFILES', 'CALCULATION', 'CALCULATIONS', 'CODE', 'CODES', 'COMPUTER', 'COMPUTERS', 'DATUM', 'DATA',
+    'GROUP', 'GROUPS', 'NODE', 'NODES', 'PROCESS', 'PROCESSES', 'WORKFLOW', 'WORKFLOWS', 'INPUT_FILE', 'OUTPUT_FILE',
+    'LABEL', 'USER', 'PROFILE_NAME', 'CONFIG_OPTION'
+)
 
 
 PROFILE = OverridableArgument('profile', type=types.ProfileParamType())

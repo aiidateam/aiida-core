@@ -24,7 +24,7 @@ from aiida.common.links import LinkType
 from aiida.common.utils import Capturing
 from aiida.engine import ExitCode, Process, ToContext, WorkChain, if_, while_, return_, run, run_get_node
 from aiida.engine.persistence import ObjectLoader
-from aiida.manage import get_manager
+from aiida.manage.manager import get_manager
 from aiida.orm import load_node
 from aiida.orm.nodes.data.bool import Bool
 from aiida.orm.nodes.data.float import Float

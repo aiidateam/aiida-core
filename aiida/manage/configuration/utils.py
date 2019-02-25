@@ -18,7 +18,7 @@ def load_config(create=False):
     :param create: when set to True, will create the configuration file if it does not already exist
     :return: the config
     :rtype: :class:`~aiida.manage.configuration.config.Config`
-    :raises MissingConfigurationError: if the configuration file could not be found and create=False
+    :raises aiida.common.MissingConfigurationError: if the configuration file could not be found and create=False
     """
     from .settings import AIIDA_CONFIG_FOLDER
     from aiida.backends.settings import IN_RT_DOC_MODE, DUMMY_CONF_FILE

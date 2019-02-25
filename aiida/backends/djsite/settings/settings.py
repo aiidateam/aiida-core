@@ -20,7 +20,7 @@ from aiida.common.exceptions import ConfigurationError, MissingConfigurationErro
 
 from aiida.backends import settings
 from aiida.common.setup import parse_repository_uri
-from aiida.manage import get_config
+from aiida.manage.configuration import get_config
 from aiida.common.timezone import get_current_timezone
 
 # Assumes that parent directory of aiida is root for

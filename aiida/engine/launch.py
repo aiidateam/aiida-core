@@ -13,10 +13,10 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.manage import manager
-from . import processes
-from . import utils
+from .processes.process import Process, instantiate_process
+from .utils import is_process_function
 
-__all__ = 'run', 'run_get_pid', 'run_get_node', 'submit'
+__all__ = ('run', 'run_get_pid', 'run_get_node', 'submit')
 
 
 def run(process, *args, **inputs):
@@ -28,7 +28,7 @@ def run(process, *args, **inputs):
     :param inputs: the inputs to be passed to the process
     :return: the outputs of the process
     """
-    if isinstance(process, processes.Process):
+    if isinstance(process, Process):
         runner = process.runner
     else:
         runner = manager.get_manager().get_runner()
@@ -45,7 +45,7 @@ def run_get_node(process, *args, **inputs):
     :param inputs: the inputs to be passed to the process
     :return: tuple of the outputs of the process and the calculation node
     """
-    if isinstance(process, processes.Process):
+    if isinstance(process, Process):
         runner = process.runner
     else:
         runner = manager.get_manager().get_runner()
@@ -62,7 +62,7 @@ def run_get_pid(process, *args, **inputs):
     :param inputs: the inputs to be passed to the process
     :return: tuple of the outputs of the process and process pid
     """
-    if isinstance(process, processes.Process):
+    if isinstance(process, Process):
         runner = process.runner
     else:
         runner = manager.get_manager().get_runner()
@@ -79,12 +79,12 @@ def submit(process, **inputs):
     :param inputs: the inputs to be passed to the process
     :return: the calculation node of the process
     """
-    assert not utils.is_process_function(process), 'Cannot submit a process function'
+    assert not is_process_function(process), 'Cannot submit a process function'
 
     runner = manager.get_manager().get_runner()
     controller = manager.get_manager().get_process_controller()
 
-    process = processes.instantiate_process(runner, process, **inputs)
+    process = instantiate_process(runner, process, **inputs)
     runner.persister.save_checkpoint(process)
     process.close()
 

@@ -76,7 +76,7 @@ class AiidaTestImplementation(object):
         """
         This method inserts default data into the database.
         """
-        from aiida.manage import get_config
+        from aiida.manage.configuration import get_config
 
         self.computer = orm.Computer(
             name='localhost',

@@ -18,6 +18,8 @@ from ..process import Process, ProcessState
 from ..process_spec import CalcJobProcessSpec
 from .tasks import Waiting, UPLOAD_COMMAND
 
+__all__ = ('CalcJob',)
+
 
 class CalcJob(Process):
     """Implementation of the CalcJob process."""

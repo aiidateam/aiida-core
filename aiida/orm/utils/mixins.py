@@ -151,7 +151,7 @@ class Sealable(object):  # pylint: disable=useless-object-inheritance
         :param source: the node from which the link is coming
         :param link_type: the link type
         :param link_label: the link label
-        :raise ModificationNotAllowed: if the target node (self) is sealed
+        :raise aiida.common.ModificationNotAllowed: if the target node (self) is sealed
         """
         if self.is_sealed:
             raise ModificationNotAllowed('Cannot add a link to a sealed node')
@@ -167,7 +167,7 @@ class Sealable(object):  # pylint: disable=useless-object-inheritance
         :param target: the node to which the link is going
         :param link_type: the link type
         :param link_label: the link label
-        :raise ModificationNotAllowed: if the source node (self) is sealed
+        :raise aiida.common.ModificationNotAllowed: if the source node (self) is sealed
         """
         if self.is_sealed:
             raise ModificationNotAllowed('Cannot add a link from a sealed node')
@@ -195,7 +195,7 @@ class Sealable(object):  # pylint: disable=useless-object-inheritance
 
         :param key: attribute name
         :param value: attribute value
-        :raise ModificationNotAllowed: if the node is already sealed or if the node is already stored
+        :raise aiida.common.ModificationNotAllowed: if the node is already sealed or if the node is already stored
             and the attribute is not updatable
         """
         if self.is_sealed:
@@ -213,7 +213,7 @@ class Sealable(object):  # pylint: disable=useless-object-inheritance
 
         :param key: attribute name
         :raise AttributeError: if key does not exist
-        :raise ModificationNotAllowed: if the node is already sealed or if the node is already stored
+        :raise aiida.common.ModificationNotAllowed: if the node is already sealed or if the node is already stored
             and the attribute is not updatable
         """
         if self.is_sealed:

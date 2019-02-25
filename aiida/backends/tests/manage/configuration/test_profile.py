@@ -16,7 +16,7 @@ import uuid
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.tests.utils.configuration import create_mock_profile
-from aiida.manage import Profile
+from aiida.manage.configuration import Profile
 
 
 class TestProfile(AiidaTestCase):

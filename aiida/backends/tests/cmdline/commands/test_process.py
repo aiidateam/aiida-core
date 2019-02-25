@@ -28,7 +28,7 @@ from aiida.backends.tests.utils import processes as test_processes
 from aiida.cmdline.commands import cmd_process
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
-from aiida.manage import get_manager
+from aiida.manage.manager import get_manager
 from aiida.orm import WorkflowNode, WorkFunctionNode, WorkChainNode
 
 
@@ -43,7 +43,7 @@ class TestVerdiProcessDaemon(AiidaTestCase):
 
     def setUp(self):
         super(TestVerdiProcessDaemon, self).setUp()
-        from aiida.manage import get_config
+        from aiida.manage.configuration import get_config
         from aiida.engine.daemon.client import DaemonClient
 
         profile = get_config().current_profile

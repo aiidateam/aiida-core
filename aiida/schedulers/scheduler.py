@@ -21,6 +21,8 @@ from aiida.common.escaping import escape_for_bash
 from aiida.common.exceptions import AiidaException, FeatureNotAvailable
 from aiida.schedulers.datastructures import JobTemplate
 
+__all__ = ('Scheduler', 'SchedulerError', 'SchedulerParsingError')
+
 
 class SchedulerError(AiidaException):
     pass

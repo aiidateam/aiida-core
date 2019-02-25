@@ -21,7 +21,7 @@ from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.cmdline.utils import echo
 from aiida.common.exceptions import NotExistent
-from aiida.manage import get_manager
+from aiida.manage.manager import get_manager
 
 TRANSPORT_PARAMS = []
 

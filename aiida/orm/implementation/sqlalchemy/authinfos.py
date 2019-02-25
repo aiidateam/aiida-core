@@ -121,7 +121,7 @@ class SqlaAuthInfoCollection(BackendAuthInfoCollection):
         :param computer: a Computer instance
         :param user: a User instance
         :return: an AuthInfo object associated with the given computer and user
-        :raise NotExistent: if the user is not configured to use computer
+        :raise aiida.common.NotExistent: if the user is not configured to use computer
         :raise sqlalchemy.orm.exc.MultipleResultsFound: if the user is configured
              more than once to use the computer! Should never happen
         """

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from aiida.work import calcfunction
+from aiida.engine import calcfunction
 
 a = 1
 b = 2

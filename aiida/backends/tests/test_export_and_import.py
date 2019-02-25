@@ -737,7 +737,7 @@ class TestCalculations(AiidaTestCase):
 
     def test_calcfunction(self):
         """Test @calcfunction"""
-        from aiida.work import calcfunction
+        from aiida.engine import calcfunction
         from aiida.orm.nodes.data.float import Float
         from aiida.common.exceptions import NotExistent
 
@@ -2664,15 +2664,15 @@ class TestProvenanceRedesign(AiidaTestCase):
         """ Column `process_type` added to `Node` entity DB table """
         from aiida.orm import ProcessNode, QueryBuilder
         from aiida.orm.nodes.data.int import Int
-        from aiida.work.launch import run_get_node
-        from aiida.work.test_utils import AddProcess
+        from aiida.engine import run_get_node
+        from aiida.backends.tests.utils.processes import AddProcess
 
         # Create temporary folder for the import/export files
         tmp_folder = tempfile.mkdtemp()
 
         # Node types
         node_type = "process.workflow.WorkflowNode."
-        node_process_type = "aiida.work.test_utils.AddProcess"
+        node_process_type = "aiida.backends.tests.utils.processes.AddProcess"
 
         try:
             # Run workflow

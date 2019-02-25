@@ -17,9 +17,9 @@ from six.moves import range
 
 import io
 
+from aiida.engine import calcfunction
 from aiida.orm.nodes.data.parameter import ParameterData
 from aiida.plugins import DataFactory
-from aiida.work import calcfunction
 
 aiida_executable_name = '_aiidasubmit.sh'
 inline_executable_name = 'aiidainline.py'

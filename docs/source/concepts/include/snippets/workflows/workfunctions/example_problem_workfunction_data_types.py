@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from aiida.orm.nodes.data.int import Int
-from aiida.work import calcfunction
+from aiida.engine import calcfunction
 
 a = Int(1)
 b = Int(2)

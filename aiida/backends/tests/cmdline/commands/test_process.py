@@ -24,12 +24,12 @@ import kiwipy
 import plumpy
 
 from aiida.backends.testbase import AiidaTestCase
+from aiida.backends.tests.utils import processes as test_processes
 from aiida.cmdline.commands import cmd_process
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
-from aiida.orm import WorkflowNode, WorkFunctionNode, WorkChainNode
-from aiida.work import test_utils
 from aiida.manage import get_manager
+from aiida.orm import WorkflowNode, WorkFunctionNode, WorkChainNode
 
 
 def get_result_lines(result):
@@ -44,7 +44,7 @@ class TestVerdiProcessDaemon(AiidaTestCase):
     def setUp(self):
         super(TestVerdiProcessDaemon, self).setUp()
         from aiida.manage import get_config
-        from aiida.daemon.client import DaemonClient
+        from aiida.engine.daemon.client import DaemonClient
 
         profile = get_config().current_profile
         self.daemon_client = DaemonClient(profile)
@@ -67,7 +67,7 @@ class TestVerdiProcessDaemon(AiidaTestCase):
         # pylint: disable=no-member
         from aiida.orm import load_node
 
-        calc = self.runner.submit(test_utils.WaitProcess)
+        calc = self.runner.submit(test_processes.WaitProcess)
         start_time = time.time()
         while calc.process_state is not plumpy.ProcessState.WAITING:
             if time.time() - start_time >= self.TEST_TIMEOUT:
@@ -129,8 +129,8 @@ class TestVerdiProcess(AiidaTestCase):
     def setUpClass(cls, *args, **kwargs):
         # pylint: disable=protected-access
         super(TestVerdiProcess, cls).setUpClass(*args, **kwargs)
+        from aiida.engine import ProcessState
         from aiida.orm.groups import Group
-        from aiida.work.processes import ProcessState
 
         cls.calcs = []
 

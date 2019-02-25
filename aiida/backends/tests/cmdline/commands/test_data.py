@@ -44,7 +44,7 @@ from aiida.cmdline.commands.cmd_data import cmd_remote
 from aiida.cmdline.commands.cmd_data import cmd_structure
 from aiida.cmdline.commands.cmd_data import cmd_trajectory
 from aiida.cmdline.commands.cmd_data import cmd_upf
-from aiida.work import calcfunction
+from aiida.engine import calcfunction
 
 
 @contextmanager

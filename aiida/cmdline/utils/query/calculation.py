@@ -55,7 +55,7 @@ class CalculationQueryBuilder(object):  # pylint: disable=useless-object-inherit
         :param failed: boolean to filter only failed processes
         :return: dictionary of filters suitable for a QueryBuilder.append() call
         """
-        from aiida.work import ProcessState
+        from aiida.engine import ProcessState
 
         exit_status_attribute = self.mapper.get_attribute('exit_status')
         process_state_attribute = self.mapper.get_attribute('process_state')

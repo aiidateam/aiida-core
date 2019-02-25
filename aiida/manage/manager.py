@@ -100,7 +100,7 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         :return: the current persister instance
         :rtype: :class:`plumpy.Persister`
         """
-        from aiida.work import persistence
+        from aiida.engine import persistence
 
         if self._persister is None:
             self._persister = persistence.AiiDAPersister()
@@ -178,7 +178,8 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         :raises MissingConfigurationError: if the configuration file cannot be found
         :raises ProfileConfigurationError: if the given profile does not exist
         """
-        from aiida.daemon.client import DaemonClient
+        from aiida.engine.daemon.client import DaemonClient
+
         if self._daemon_client is None:
             self._daemon_client = DaemonClient(self.get_profile())
 
@@ -202,7 +203,7 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         Get a runner that is based on the current profile settings and can be used globally by the code.
 
         :return: the global runner
-        :rtype: :class:`aiida.work.Runner`
+        :rtype: :class:`aiida.engine.runners.Runner`
         """
         if self._runner is None:
             self._runner = self.create_runner()
@@ -214,7 +215,7 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         Set the currently used runner
 
         :param new_runner: the new runner to use
-        :type new_runner: :class:`aiida.work.Runner`
+        :type new_runner: :class:`aiida.engine.runners.Runner`
         """
         if self._runner is not None:
             self._runner.close()
@@ -228,9 +229,9 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         :param with_persistence: create a runner with persistence enabled
         :type with_persistence: bool
         :return: a new runner instance
-        :rtype: :class:`aiida.work.Runner`
+        :rtype: :class:`aiida.engine.runners.Runner`
         """
-        from aiida.work import runners
+        from aiida.engine import runners
 
         config = get_config()
         profile = self.get_profile()
@@ -255,10 +256,10 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         :param loop: the (optional) tornado event loop to use
         :type loop: :class:`tornado.ioloop.IOLoop`
         :return: a runner configured to work in the daemon configuration
-        :rtype: :class:`aiida.work.Runner`
+        :rtype: :class:`aiida.engine.runners.Runner`
         """
         import plumpy
-        from aiida.work import persistence
+        from aiida.engine import persistence
         from aiida.manage.external import rmq
         runner = self.create_runner(rmq_submit=True, loop=loop)
         runner_loop = runner.loop
@@ -303,8 +304,8 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         self._profile = None  # type: aiida.manage.configuration.profile.Profile
         self._communicator = None  # type: kiwipy.rmq.RmqThreadCommunicator
         self._process_controller = None  # type: plumpy.RemoteProcessThreadController
-        self._persister = None  # type: aiida.work.AiiDAPersister
-        self._runner = None  # type: aiida.work.Runner
+        self._persister = None  # type: aiida.engine.persistence.AiiDAPersister
+        self._runner = None  # type: aiida.engine.runners.Runner
 
 
 def get_manager():

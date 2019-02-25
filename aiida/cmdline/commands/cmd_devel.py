@@ -66,7 +66,7 @@ def get_valid_test_paths():
 @decorators.with_dbenv()
 def devel_run_daemon():
     """Run a daemon instance in the current interpreter."""
-    from aiida.daemon.runner import start_daemon
+    from aiida.engine.daemon.runner import start_daemon
     start_daemon()
 
 

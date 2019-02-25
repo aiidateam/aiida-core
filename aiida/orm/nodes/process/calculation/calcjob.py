@@ -137,7 +137,7 @@ class CalcJobNode(CalculationNode):
 
         :return: CalcJobBuilder instance
         """
-        from aiida.work.ports import PortNamespace
+        from aiida.engine.processes.ports import PortNamespace
 
         process_class = self.process_class
         inputs = self.get_incoming()

@@ -41,7 +41,7 @@ class TestVerdiWork(AiidaTestCase):
 
     def test_list(self):
         """Test the list command."""
-        from aiida.work.processes import ProcessState
+        from aiida.engine import ProcessState
 
         # Number of output lines in -r/--raw format should be zero when there are no calculations yet
         result = self.cli_runner.invoke(cmd_work.work_list, ['-r'])

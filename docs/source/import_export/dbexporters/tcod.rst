@@ -67,7 +67,7 @@ Where:
 * ``--reduce-symmetry``, ``--no-reduce-symmetry`` -- turn on/off symmetry
   reduction of the exported structure (on by default);
 * ``--parameter-data`` -- specify the PK of
-  :py:class:`ParameterData <aiida.orm.nodes.data.parameter.ParameterData>`
+  :py:class:`Dict <aiida.orm.nodes.data.dict.Dict>`
   object, describing the result of the final (or single) calculation step
   of the workflow;
 * ``--dump-aiida-database``, ``--no-dump-aiida-database`` -- turn on/off
@@ -117,7 +117,7 @@ Return values
 The deposition process, which is of
 :py:class:`CalcJobNode <aiida.orm.nodes.process.calculation.calcjob.CalcJobNode>`
 type, returns the output of ``cif_cod_deposit``, wrapped in
-:py:class:`ParameterData <aiida.orm.nodes.data.parameter.ParameterData>`.
+:py:class:`Dict <aiida.orm.nodes.data.dict.Dict>`.
 
 Citing
 ++++++

@@ -120,7 +120,7 @@ In an interactive shell, you can get this information to display as follows::
         "non_db": "False"
         "help": "Parameters used to replace placeholders in the template",
         "name": "parameters",
-        "valid_type": "<class 'aiida.orm.nodes.data.parameter.ParameterData'>"
+        "valid_type": "<class 'aiida.orm.nodes.data.dict.Dict'>"
 
 In the ``Docstring`` you will see a ``help`` string that contains more detailed information about the input port.
 Additionally, it will display a ``valid_type``, which when defined shows which data types are expected.

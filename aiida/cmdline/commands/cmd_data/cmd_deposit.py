@@ -35,11 +35,11 @@ DEPOSIT_OPTIONS = [
     click.option('--url', type=click.STRING, default=None, help="URL of the deposition API."),
     click.option(
         '--parameters',
-        type=types.DataParamType(sub_classes=('aiida.data:parameter',)),
-        help="ParameterData to be exported alongside the to be deposited Data node. By default, if "
-        "the node originates from a calculation with single ParameterData in the output, aforementioned "
-        "ParameterData is picked automatically. Instead, the option is used in the case the calculation produces "
-        "more than a single instance of ParameterData."),
+        type=types.DataParamType(sub_classes=('aiida.data:dict',)),
+        help="Dict to be exported alongside the to be deposited Data node. By default, if "
+        "the node originates from a calculation with single Dict in the output, aforementioned "
+        "Dict is picked automatically. Instead, the option is used in the case the calculation produces "
+        "more than a single instance of Dict."),
     click.option(
         '--replace', type=click.INT, default=None, help="ID of the structure to be redeposited (replaced), if any."),
     click.option(

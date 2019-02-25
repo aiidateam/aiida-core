@@ -13,7 +13,7 @@ from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.engine import WorkChain, Process
-from aiida.orm.nodes.data.parameter import ParameterData
+from aiida.orm.nodes.data.dict import Dict
 from aiida.orm.nodes.data.bool import Bool
 from aiida.orm.nodes.data.float import Float
 from aiida.orm.nodes.data.int import Int
@@ -150,7 +150,7 @@ class TestProcessBuilder(AiidaTestCase):
         self.assertEquals(builder.code.pk, code1.pk)
 
         # Check that I can set the parameters
-        builder.parameters = ParameterData(dict={})
+        builder.parameters = Dict(dict={})
 
         # Check that it complains for an unknown input
         with self.assertRaises(AttributeError):
@@ -158,6 +158,6 @@ class TestProcessBuilder(AiidaTestCase):
 
         # Check that it complains if the type is not the correct one
         # (for the templatereplacer, it should be a
-        # ParameterData)
+        # Dict)
         with self.assertRaises(ValueError):
             builder.parameters = Int(3)

@@ -329,7 +329,7 @@ Manage ``Data`` nodes.
     * **list**: list currently saved nodes of CifData kind
     * **show**: use third-party visualizer (like jmol) to graphically show the CifData
 
-  * **parameter**: handles the ParameterData objects
+  * **parameter**: handles the Dict objects
 
     * **show**: output the content of the python dictionary in different formats.
 

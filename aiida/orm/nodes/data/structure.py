@@ -1764,10 +1764,10 @@ class StructureData(Data):
             AiiDA database for record. Default False.
         :return: :py:class:`aiida.orm.nodes.data.cif.CifData` node.
         """
-        from .parameter import ParameterData
+        from .dict import Dict
         from aiida.tools.data import structure as structure_tools
 
-        param = ParameterData(dict=kwargs)
+        param = Dict(dict=kwargs)
         try:
             conv_f = getattr(structure_tools, '_get_cif_{}_inline'.format(converter))
         except AttributeError:

@@ -90,13 +90,13 @@ class CalcJobProcessSpec(ProcessSpec):
 
     @default_output_node.setter
     def default_output_node(self, port_name):
-        from aiida.orm.nodes.data.parameter import ParameterData
+        from aiida.orm.nodes.data.dict import Dict
 
         if port_name not in self.outputs:
             raise ValueError('{} is not a registered output port'.format(port_name))
 
         valid_type_port = self.outputs[port_name].valid_type
-        valid_type_required = ParameterData
+        valid_type_required = Dict
 
         if valid_type_port is not valid_type_required:
             raise ValueError('the valid type of a default output has to be a {} but it is {}'.format(

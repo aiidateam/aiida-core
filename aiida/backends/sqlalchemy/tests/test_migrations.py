@@ -516,7 +516,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
                 session.commit()
 
                 calc_1 = DbNode(type="node.process.calculation.CalculationNode.", user_id=user.id)
-                param = DbNode(type="data.parameter.ParameterData.", user_id=user.id)
+                param = DbNode(type="data.dict.Dict.", user_id=user.id)
                 leg_workf = DbWorkflow(label="Legacy WorkflowNode", user_id=user.id)
                 calc_2 = DbNode(type="node.process.calculation.CalculationNode.", user_id=user.id)
 
@@ -618,7 +618,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
                 for val in log_migration.values_to_export:
                     cols_to_project.append(getattr(DbLog, val))
 
-                # Getting the serialized ParameterData logs
+                # Getting the serialized Dict logs
                 param_data = session.query(DbLog).filter(DbLog.objpk == param.id).filter(
                     DbLog.objname == 'something.else.').with_entities(*cols_to_project).one()
                 serialized_param_data = dumps_json([(dict(list(zip(param_data.keys(), param_data))))])
@@ -627,8 +627,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
                 serialized_unknown_exp_logs = log_migration.get_serialized_unknown_entity_logs(connection)
                 # Getting their number
                 unknown_exp_logs_number = log_migration.get_unknown_entity_log_number(connection)
-                self.to_check['ParameterData'] = (serialized_param_data, serialized_unknown_exp_logs,
-                                                  unknown_exp_logs_number)
+                self.to_check['Dict'] = (serialized_param_data, serialized_unknown_exp_logs, unknown_exp_logs_number)
 
                 # Getting the serialized legacy workflow logs
                 # yapf: disable
@@ -697,8 +696,8 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
         """
         import json
 
-        self.assertEqual(self.to_check['ParameterData'][0], self.to_check['ParameterData'][1])
-        self.assertEqual(self.to_check['ParameterData'][2], 1)
+        self.assertEqual(self.to_check['Dict'][0], self.to_check['Dict'][1])
+        self.assertEqual(self.to_check['Dict'][2], 1)
 
         self.assertEqual(self.to_check['WorkflowNode'][0], self.to_check['WorkflowNode'][1])
         self.assertEqual(self.to_check['WorkflowNode'][2], 1)
@@ -1105,5 +1104,53 @@ class TestNodePrefixRemovalMigration(TestMigrationsSQLA):
 
                 node_calc = session.query(DbNode).filter(DbNode.id == self.node_calc_id).one()
                 self.assertEqual(node_calc.type, 'process.calculation.calcjob.CalcJobNode.')
+            finally:
+                session.close()
+
+
+class TestParameterDataToDictMigration(TestMigrationsSQLA):
+    """Test the data migration after `ParameterData` was renamed to `Dict`."""
+
+    migrate_from = '61fc0913fae9'  # 61fc0913fae9_remove_node_prefix
+    migrate_to = 'd254fdfed416'  # d254fdfed416_rename_parameter_data_to_dict
+
+    def setUpBeforeMigration(self):
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
+        DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
+        DbUser = self.get_auto_base().classes.db_dbuser  # pylint: disable=invalid-name
+
+        with sa.engine.begin() as connection:
+            try:
+                session = Session(connection.engine)
+
+                user = DbUser(is_superuser=False, email='{}@aiida.net'.format(self.id()))
+                session.add(user)
+                session.commit()
+
+                node = DbNode(type='data.parameter.ParameterData.', user_id=user.id)
+
+                session.add(node)
+                session.commit()
+
+                self.node_id = node.id
+            except:
+                session.rollback()
+                raise
+            finally:
+                session.close()
+
+    def test_type_string(self):
+        """Verify that type string of the Data node was successfully adapted."""
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
+        DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
+
+        with sa.engine.begin() as connection:
+            try:
+                session = Session(connection.engine)
+
+                node = session.query(DbNode).filter(DbNode.id == self.node_id).one()
+                self.assertEqual(node.type, 'data.dict.Dict.')
             finally:
                 session.close()

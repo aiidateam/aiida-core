@@ -3585,7 +3585,7 @@ class TestKpointsData(AiidaTestCase):
         the same behavior of the old implementation
         """
         import numpy
-        from aiida.orm.nodes.data.parameter import ParameterData
+        from aiida.orm.nodes.data.dict import Dict
         from aiida.orm.nodes.data.structure import StructureData
         from aiida.orm.nodes.data.array.kpoints import KpointsData
         from aiida.tools.data.array.kpoints import get_explicit_kpoints_path
@@ -3677,7 +3677,7 @@ class TestKpointsData(AiidaTestCase):
         the same behavior of the old implementation
         """
         import numpy
-        from aiida.orm.nodes.data.parameter import ParameterData
+        from aiida.orm.nodes.data.dict import Dict
         from aiida.orm.nodes.data.structure import StructureData
         from aiida.tools.data.array.kpoints import get_kpoints_path
 
@@ -3686,7 +3686,7 @@ class TestKpointsData(AiidaTestCase):
         s = StructureData(cell=cell_x)
         result = get_kpoints_path(s, method='legacy', cartesian=True)
 
-        self.assertIsInstance(result['parameters'], ParameterData)
+        self.assertIsInstance(result['parameters'], Dict)
 
         point_coords = result['parameters'].dict.point_coords
         path = result['parameters'].dict.path

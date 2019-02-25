@@ -50,9 +50,9 @@ class TestSpecificImport(AiidaTestCase):
         import code used to crash. This test demonstrates this problem.
         """
         from aiida.orm import Node, QueryBuilder
-        from aiida.orm.nodes.data.parameter import ParameterData
+        from aiida.orm.nodes.data.dict import Dict
 
-        parameters = ParameterData(dict={
+        parameters = Dict(dict={
             'Pr': {
                 'cutoff': 50.0,
                 'pseudo_type': 'Wentzcovitch',
@@ -836,7 +836,7 @@ class TestComplex(AiidaTestCase):
         """
         from aiida.orm import CalcJobNode
         from aiida.orm.nodes.data.folder import FolderData
-        from aiida.orm.nodes.data.parameter import ParameterData
+        from aiida.orm.nodes.data.dict import Dict
         from aiida.orm.nodes.data.remote import RemoteData
         from aiida.common.links import LinkType
         from aiida.common.exceptions import NotExistent
@@ -849,11 +849,11 @@ class TestComplex(AiidaTestCase):
             calc1.label = "calc1"
             calc1.store()
 
-            pd1 = ParameterData()
+            pd1 = Dict()
             pd1.label = "pd1"
             pd1.store()
 
-            pd2 = ParameterData()
+            pd2 = Dict()
             pd2.label = "pd2"
             pd2.store()
 
@@ -918,13 +918,13 @@ class TestComplex(AiidaTestCase):
 
         from aiida.orm import Group, CalculationNode, QueryBuilder
         from aiida.orm.nodes.data.array import ArrayData
-        from aiida.orm.nodes.data.parameter import ParameterData
+        from aiida.orm.nodes.data.dict import Dict
         from aiida.common.hashing import make_hash
         from aiida.common.links import LinkType
 
         def get_hash_from_db_content(grouplabel):
             builder = QueryBuilder()
-            builder.append(ParameterData, tag='p', project='*')
+            builder.append(Dict, tag='p', project='*')
             builder.append(CalculationNode, tag='c', project='*', edge_tag='p2c', edge_project=('label', 'type'))
             builder.append(ArrayData, tag='a', project='*', edge_tag='c2a', edge_project=('label', 'type'))
             builder.append(Group, filters={'label': grouplabel}, project='*', tag='g', with_node='a')
@@ -974,7 +974,7 @@ class TestComplex(AiidaTestCase):
             # give some text:
             trial_dict.update({str(k): ''.join(random.choice(chars) for _ in range(size)) for k in range(20, 30)})
 
-            p = ParameterData(dict=trial_dict)
+            p = Dict(dict=trial_dict)
             p.label = str(datetime.now())
             p.description = 'd_' + str(datetime.now())
             p.store()

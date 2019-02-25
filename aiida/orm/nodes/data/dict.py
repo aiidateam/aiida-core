@@ -18,10 +18,10 @@ from aiida.common import exceptions
 from .data import Data
 from .base import to_aiida_type
 
-__all__ = ('ParameterData',)
+__all__ = ('Dict',)
 
 
-class ParameterData(Data):
+class Dict(Data):
     """`Data` sub class to represent a dictionary."""
 
     def __init__(self, **kwargs):
@@ -35,7 +35,7 @@ class ParameterData(Data):
         :param dict: the dictionary to set
         """
         dictionary = kwargs.pop('dict', None)
-        super(ParameterData, self).__init__(**kwargs)
+        super(Dict, self).__init__(**kwargs)
         if dictionary:
             self.set_dict(dictionary)
 
@@ -77,7 +77,7 @@ class ParameterData(Data):
         return dict(self.attributes)
 
     def keys(self):
-        """Iterator of valid keys stored in the ParameterData object.
+        """Iterator of valid keys stored in the Dict object.
 
         :return: iterator over the keys of the current dictionary
         """
@@ -98,4 +98,4 @@ class ParameterData(Data):
 
 @to_aiida_type.register(dict)
 def _(value):
-    return ParameterData(dictionary=value)
+    return Dict(dictionary=value)

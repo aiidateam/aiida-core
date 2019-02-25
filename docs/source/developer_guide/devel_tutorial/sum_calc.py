@@ -12,7 +12,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from aiida.orm.calculation.job import JobCalculation
-from aiida.orm.nodes.data.parameter import ParameterData 
+from aiida.orm.nodes.data.dict import Dict 
 from aiida.common.lang import classproperty
 from aiida.common.exceptions import InputValidationError
 from aiida.common.exceptions import ValidationError
@@ -39,7 +39,7 @@ class SumCalculation(JobCalculation):
         retdict = JobCalculation._use_methods
         retdict.update({
             "parameters": {
-               'valid_types': ParameterData,
+               'valid_types': Dict,
                'additional_parameter': None,
                'linkname': 'parameters',
                'docstring': ("Use a node that specifies the input parameters "
@@ -63,9 +63,9 @@ class SumCalculation(JobCalculation):
         except KeyError:
             raise InputValidationError("No parameters specified for this "
                                        "calculation")
-        if not isinstance(parameters, ParameterData):
+        if not isinstance(parameters, Dict):
             raise InputValidationError("parameters is not of type "
-                                       "ParameterData")
+                                       "Dict")
         try:
             code = inputdict.pop(self.get_linkname('code'))
         except KeyError:

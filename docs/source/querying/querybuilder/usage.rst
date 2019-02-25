@@ -335,11 +335,11 @@ Some more examples::
     qb.append(CalcJobNode, tag='calc')
     qb.append(StructureData, with_outgoing='calc')
 
-    # StructureData and ParameterData as inputs to a calculation
+    # StructureData and Dict as inputs to a calculation
     qb = QueryBuilder()
     qb.append(CalcJobNode, tag='calc')
     qb.append(StructureData, with_outgoing='calc')
-    qb.append(ParameterDataData, with_outgoing='calc')
+    qb.append(DictData, with_outgoing='calc')
 
     # Filtering the remote data instance by the computer it ran on (name)
     qb = QueryBuilder()
@@ -421,7 +421,7 @@ results in the following output::
     >>> {'descendant': {'type': u'data.folder.FolderData.', 'id': 9090}}
     >>> {'descendant': {'type': u'data.array.ArrayData.', 'id': 9091}}
     >>> {'descendant': {'type': u'data.array.trajectory.TrajectoryData.', 'id': 9092}}
-    >>> {'descendant': {'type': u'data.parameter.ParameterData.', 'id': 9093}}
+    >>> {'descendant': {'type': u'data.dict.Dict.', 'id': 9093}}
 
 
     qb.iterall()
@@ -430,7 +430,7 @@ results in the following output::
     >>> [u'data.folder.FolderData.', 9090]
     >>> [u'data.array.ArrayData.', 9091]
     >>> [u'data.array.trajectory.TrajectoryData.', 9092]
-    >>> [u'data.parameter.ParameterData.', 9093]
+    >>> [u'data.dict.Dict.', 9093]
 
 
     qb.first()
@@ -475,7 +475,7 @@ Output::
     >>> {'desc': {'*': <FolderData: uuid: 91d5a5e8-6b88-4e43-9652-9efda4adb4ce (pk: 9090)>}}
     >>> {'desc': {'*': <ArrayData: uuid: 7c34c219-f400-42aa-8bf2-ee36c7c1dd40 (pk: 9091)>}}
     >>> {'desc': {'*': <TrajectoryData: uuid: 09288a5f-dba5-4558-b115-1209013b6b32 (pk: 9092)>}}
-    >>> {'desc': {'*': <ParameterData: uuid: 371677e1-d7d4-4f2e-8a41-594aace02759 (pk: 9093)>}}
+    >>> {'desc': {'*': <Dict: uuid: 371677e1-d7d4-4f2e-8a41-594aace02759 (pk: 9093)>}}
 
 
     qb.iterall()
@@ -484,7 +484,7 @@ Output::
     >>> [<FolderData: uuid: 91d5a5e8-6b88-4e43-9652-9efda4adb4ce (pk: 9090)>]
     >>> [<ArrayData: uuid: 7c34c219-f400-42aa-8bf2-ee36c7c1dd40 (pk: 9091)>]
     >>> [<TrajectoryData: uuid: 09288a5f-dba5-4558-b115-1209013b6b32 (pk: 9092)>]
-    >>> [<ParameterData: uuid: 371677e1-d7d4-4f2e-8a41-594aace02759 (pk: 9093)>]
+    >>> [<Dict: uuid: 371677e1-d7d4-4f2e-8a41-594aace02759 (pk: 9093)>]
 
 
     qb.first()
@@ -537,7 +537,7 @@ for the wavefunctions has a value above 30.0 Ry::
     qb = QueryBuilder()
     qb.append(PwCalculation, project=['*'], tag='calc')
     qb.append(
-        ParameterData,
+        Dict,
         with_outgoing='calc',
         filters={'attributes.SYSTEM.ecutwfc':{'>':30.0}},
         project=[
@@ -570,7 +570,7 @@ Great, because this will be our use case here. (If not, you can find it on the
 We will query for calculations that were done on a certain structure (*mystructure*),
 that fulfill certain requirements, such as a cutoff above 30.0.
 In our case, we have a structure (an instance of StructureData) and an instance
-of ParameterData that are both inputs to a PwCalculation.
+of Dict that are both inputs to a PwCalculation.
 You need to tell the QueryBuilder that::
 
     qb = QueryBuilder()
@@ -586,7 +586,7 @@ You need to tell the QueryBuilder that::
         tag='calc'
     )
     qb.append(
-        ParameterData,
+        Dict,
         filters={'attributes.SYSTEM.ecutwfc':{'>':30.0}},
         with_outgoing='calc',
         tag='params'
@@ -618,7 +618,7 @@ A shorter version of the previous example::
         project='*',
     )
     qb.append(
-        ParameterData,
+        Dict,
         filters={'attributes.SYSTEM.ecutwfc':{'>':30.0}},
         with_outgoing=PwCalculation
     )
@@ -655,7 +655,7 @@ you're in good shape to query the database, so you can skip the rest if you want
 .. ~             filters={'ctime':{'>': now - timedelta(days=3)}}
 .. ~         )
 .. ~     qb.append(
-.. ~             ParameterData,
+.. ~             Dict,
 .. ~             project=[{'attributes.energy':{'cast':'f'}}],
 .. ~         )
 .. ~     print list(qb.all())
@@ -681,7 +681,7 @@ you're in good shape to query the database, so you can skip the rest if you want
 .. ~             filters={'ctime':{'>': now - timedelta(days=3)}}
 .. ~         )
 .. ~     qb.append(
-.. ~             ParameterData,
+.. ~             Dict,
 .. ~             project={
 .. ~                 'attributes.energy':{'cast':'f'},
 .. ~                 'attributes.energy_units':{'cast':'t'},
@@ -700,7 +700,7 @@ you're in good shape to query the database, so you can skip the rest if you want
 .. ~             filters={'ctime':{'>': now - timedelta(days=3)}}
 .. ~         )
 .. ~     qb.append(
-.. ~             ParameterData,
+.. ~             Dict,
 .. ~             project={
 .. ~                 'attributes.energy':{'cast':'f', 'func':'max'},
 .. ~             }
@@ -722,7 +722,7 @@ you're in good shape to query the database, so you can skip the rest if you want
 .. ~             project={'id':{'func':'count'}}
 .. ~         )
 .. ~     qb.append(
-.. ~             ParameterData,
+.. ~             Dict,
 .. ~             filters={
 .. ~                 'attributes.energy':{'>':-5.0},
 .. ~             }
@@ -745,7 +745,7 @@ Let's take the above example, but put a filter on the label of the link and proj
             project={'id':{'func':'count'}}
         )
     qb.append(
-            ParameterData,
+            Dict,
             filters={'attributes.energy':{'>':-5.0}},
             edge_filters={'label':{'like':'output_%'}},
             edge_project='label'
@@ -768,7 +768,7 @@ Assuming you want to order the above example by the time of the calculations::
             project=['*']
         )
     qb.append(
-            ParameterData,
+            Dict,
             filters={'attributes.energy':{'>':-5.0}},
          )
 
@@ -787,7 +787,7 @@ You can also limit the number of rows returned with the method *limit*::
         project=['*']
     )
     qb.append(
-        ParameterData,
+        Dict,
         filters={'attributes.energy':{'>':-5.0}},
      )
 
@@ -910,7 +910,7 @@ What do you have to specify:
                         'cls':Trajectory
                     },
                     {
-                        'cls':ParameterData,
+                        'cls':Dict,
                         'direction':-2
                     }
                 ]
@@ -927,7 +927,7 @@ What do you have to specify:
                         'cls':Trajectory
                     },
                     {
-                        'cls':ParameterData,
+                        'cls':Dict,
                         'with_outgoing':PwCalculation
                     }
                 ]
@@ -937,7 +937,7 @@ What do you have to specify:
 
             qh3 = {
                 'path':[
-                    ParameterData,
+                    Dict,
                     PwCalculation,
                     Trajectory,
                 ]
@@ -1045,7 +1045,7 @@ What do you have to specify:
 .. ~
 .. ~     queryhelp =  {
 .. ~         'path':[
-.. ~             ParameterData,
+.. ~             Dict,
 .. ~             {'cls':PwCalculation, 'tag':'md'},
 .. ~             {'cls':Trajectory},
 .. ~             {'cls':StructureData, 'with_outgoing':'md'},
@@ -1053,14 +1053,14 @@ What do you have to specify:
 .. ~             {'cls':StructureData,'tag':'struc2','with_outgoing':Relax}
 .. ~         ],
 .. ~         'project':{
-.. ~             ParameterData:{'attributes.IONS.tempw':{'cast':'f'}},
+.. ~             Dict:{'attributes.IONS.tempw':{'cast':'f'}},
 .. ~             'md':['id', 'time'],
 .. ~             Trajectory:['id', 'attributes.length'],
 .. ~             StructureData:'*',
 .. ~             'struc2':['*']    # equivalent, the two!
 .. ~         },
 .. ~         'filters':{
-.. ~             ParameterData:{
+.. ~             Dict:{
 .. ~                 'attributes.SYSTEM.econv':{'<':1e-5},
 .. ~                 'attributes.SYSTEM.ecut':{'>':60},
 .. ~             },

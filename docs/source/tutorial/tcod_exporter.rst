@@ -18,11 +18,11 @@ No. Description                     Input                                       
 2   Niggli reduction of the unit    :py:class:`CifData <aiida.orm.nodes.data.cif.CifData>`                    :py:class:`CifData <aiida.orm.nodes.data.cif.CifData>`                           Inline ---
     cell
 3   Addition of structure           :py:class:`CifData <aiida.orm.nodes.data.cif.CifData>`,                   :py:class:`CifData <aiida.orm.nodes.data.cif.CifData>`                           Inline PW and CP
-    properties (total energy,       :py:class:`ParameterData <aiida.orm.nodes.data.parameter.ParameterData>`
+    properties (total energy,       :py:class:`Dict <aiida.orm.nodes.data.dict.Dict>`
     residual forces)
 4   Addition of the metadata for    :py:class:`CifData <aiida.orm.nodes.data.cif.CifData>`                    :py:class:`CifData <aiida.orm.nodes.data.cif.CifData>`                           Inline ~
     reproduction of the results
-5   Depostition to the TCOD         :py:class:`CifData <aiida.orm.nodes.data.cif.CifData>`                    :py:class:`ParameterData <aiida.orm.nodes.data.parameter.ParameterData>`         Job    \+
+5   Depostition to the TCOD         :py:class:`CifData <aiida.orm.nodes.data.cif.CifData>`                    :py:class:`Dict <aiida.orm.nodes.data.dict.Dict>`         Job    \+
 === =============================== ========================================================================= ========================================================================= ====== =================
 
 Type of each step's calculation
@@ -45,7 +45,7 @@ defined in column *Type*. Each step is described in more detail below:
 * Addition of structure properties (energy, remaining forces)
     The structure properties from the calculations, such as total energy
     and residual forces can be extracted from
-    :py:class:`ParameterData <aiida.orm.nodes.data.parameter.ParameterData>`
+    :py:class:`Dict <aiida.orm.nodes.data.dict.Dict>`
     nodes and put into related `TCOD CIF dictionaries`_ tags using
     calculation-specific parameter translator, derived from
     :py:class:`BaseTcodtranslator <aiida.tools.dbexporters.tcod_plugins.BaseTcodtranslator>`.

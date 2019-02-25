@@ -42,10 +42,10 @@ value and not the whole AiiDA class, use the `.value` property.
 In the same module, there is also a :py:class:`~aiida.orm.nodes.data.list.List` class to
 store a list of base data types.
 
-ParameterData
+Dict
 +++++++++++++
 
-* **Class**: :py:class:`~aiida.orm.nodes.data.parameter.ParameterData`
+* **Class**: :py:class:`~aiida.orm.nodes.data.dict.Dict`
 * **String to pass to the** :py:func:`~aiida.plugins.factories.DataFactory`: ``parameter``
 * **Aim**: store a dictionary of python base types in the database.
   It can store any dictionary where elements can be a base python type (strings, floats,

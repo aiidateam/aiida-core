@@ -114,7 +114,7 @@ class NodeOutputManager(object):  # pylint: disable=too-few-public-methods,usele
 class AttributeManager(object):  # pylint: disable=too-few-public-methods,useless-object-inheritance
     """
     An object used internally to return the attributes as a dictionary.
-    This is currently used in :py:class:`~aiida.orm.nodes.data.parameter.ParameterData`,
+    This is currently used in :py:class:`~aiida.orm.nodes.data.dict.Dict`,
     for instance.
 
     :note: Important! It cannot be used to change variables, just to read

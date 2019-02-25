@@ -130,7 +130,7 @@ class TestTcodDbExporter(AiidaTestCase):
         from aiida.orm import Code
         from aiida.orm import CalcJobNode
         from aiida.orm.nodes.data.cif import CifData
-        from aiida.orm.nodes.data.parameter import ParameterData
+        from aiida.orm.nodes.data.dict import Dict
         from aiida.orm.nodes.data.upf import UpfData
         from aiida.orm.nodes.data.folder import FolderData
         from aiida.common.folders import SandboxFolder
@@ -158,7 +158,7 @@ class TestTcodDbExporter(AiidaTestCase):
 
         c = a.get_structure()
         c.store()
-        pd = ParameterData()
+        pd = Dict()
 
         code = Code(local_executable='test.sh')
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:

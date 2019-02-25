@@ -12,7 +12,7 @@ class CalcJobResultManager(object):  # pylint: disable=useless-object-inheritanc
     Utility class to easily access the contents of the 'default output' node of a `CalcJobNode`.
 
     A `CalcJob` process can mark one of its outputs as the 'default output'. The default output node will always be
-    returned by the `CalcJob` and will always be a `ParameterData` node.
+    returned by the `CalcJob` and will always be a `Dict` node.
 
     If a `CalcJob` defines such a default output node, this utility class will simplify retrieving the result of said
     node through the `CalcJobNode` instance produced by the execution of the `CalcJob`.

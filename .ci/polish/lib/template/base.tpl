@@ -5,7 +5,7 @@ from aiida.engine import submit, WorkChain, if_, while_, append_, ToContext, cal
 from aiida.orm import Code
 from aiida.orm.nodes.data.int import Int
 from aiida.orm.nodes.data.str import Str
-from aiida.orm.nodes.data.parameter import ParameterData
+from aiida.orm.nodes.data.dict import Dict
 from aiida.plugins import CalculationFactory
 
 

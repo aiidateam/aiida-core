@@ -34,7 +34,7 @@ from workchains import (
 )
 
 
-ParameterData = DataFactory('parameter')
+Dict = DataFactory('dict')
 
 codename = 'doubler@torquessh'
 timeout_secs = 4 * 60  # 4 minutes
@@ -207,8 +207,8 @@ def create_calculation_process(code, inputval):
     Create the process and inputs for a submitting / running a calculation.
     """
     TemplatereplacerCalculation = CalculationFactory('templatereplacer')
-    parameters = ParameterData(dict={'value': inputval})
-    template = ParameterData(dict={
+    parameters = Dict(dict={'value': inputval})
+    template = Dict(dict={
         # The following line adds a significant sleep time.
         # I set it to 1 second to speed up tests
         # I keep it to a non-zero value because I want

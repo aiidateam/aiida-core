@@ -249,7 +249,7 @@ A sample of the *data.json* file follows::
                     "user": 2,
                     "mtime": "2016-08-21T11:55:53.132925",
                     "nodeversion": 1,
-                    "type": "data.parameter.ParameterData.",
+                    "type": "data.dict.Dict.",
                     "public": false,
                     "ctime": "2016-08-21T11:55:53.118306"
                 },

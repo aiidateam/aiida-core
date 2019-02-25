@@ -26,7 +26,7 @@ import aiida.common.json as json
 
 StructureData = DataFactory('structure')  # pylint: disable=invalid-name
 CifData = DataFactory('cif')  # pylint: disable=invalid-name
-ParameterData = DataFactory('parameter')  # pylint: disable=invalid-name
+Dict = DataFactory('dict')  # pylint: disable=invalid-name
 KpointsData = DataFactory('array.kpoints')  # pylint: disable=invalid-name
 
 
@@ -68,10 +68,10 @@ class RESTApiTestCase(AiidaTestCase):
         cif = CifData(ase=structure.get_ase())
         cif.store()
 
-        parameter1 = ParameterData(dict={"a": 1, "b": 2})
+        parameter1 = Dict(dict={"a": 1, "b": 2})
         parameter1.store()
 
-        parameter2 = ParameterData(dict={"c": 3, "d": 4})
+        parameter2 = Dict(dict={"c": 3, "d": 4})
         parameter2.store()
 
         kpoint = KpointsData()
@@ -176,7 +176,7 @@ class RESTApiTestCase(AiidaTestCase):
         data_projections = ["id", "uuid", "user_id", "type"]
         data_types = {
             'cifdata': CifData,
-            'parameterdata': ParameterData,
+            'parameterdata': Dict,
             'structuredata': StructureData,
             'data': Data,
         }
@@ -726,7 +726,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         node_uuid = self.get_dummy_data()["calculations"][1]["uuid"]
         self.process_test(
             "calculations",
-            '/calculations/' + str(node_uuid) + '/io/inputs?type="data.parameter.ParameterData."',
+            '/calculations/' + str(node_uuid) + '/io/inputs?type="data.dict.Dict."',
             expected_list_ids=[2],
             uuid=node_uuid,
             result_node_type="data",

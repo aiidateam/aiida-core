@@ -498,10 +498,10 @@ class TrajectoryData(ArrayData):
             AiiDA database for record. Default False.
         :return: :py:class:`aiida.orm.nodes.data.structure.StructureData` node.
         """
-        from aiida.orm.nodes.data.parameter import ParameterData
+        from aiida.orm.nodes.data.dict import Dict
         from aiida.tools.data.array.trajectory import _get_aiida_structure_inline
 
-        param = ParameterData(dict=kwargs)
+        param = Dict(dict=kwargs)
 
         ret_dict = _get_aiida_structure_inline(trajectory=self, parameters=param, metadata={'store_provenance': store})  # pylint: disable=unexpected-keyword-arg
         return ret_dict['structure']

@@ -152,7 +152,6 @@
       "bool = aiida.orm.nodes.data.bool:Bool",
       "cif = aiida.orm.nodes.data.cif:CifData",
       "code = aiida.orm.nodes.data.code:Code",
-      "error = aiida.orm.nodes.data.error:Error",
       "float = aiida.orm.nodes.data.float:Float",
       "folder = aiida.orm.nodes.data.folder:FolderData",
       "frozendict = aiida.orm.nodes.data.frozendict:FrozenDict",

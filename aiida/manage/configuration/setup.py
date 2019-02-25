@@ -199,7 +199,7 @@ def delete_repository(profile, non_interactive=True):
         shutil.rmtree(repo_path)
 
 
-def delete_db(profile, non_interactive=True):
+def delete_db(profile, non_interactive=True, verbose=False):
     """
     Delete an AiiDA database associated with an AiiDA profile.
 
@@ -207,21 +207,23 @@ def delete_db(profile, non_interactive=True):
     :type profile: :class:`aiida.manage.configuration.profile.Profile`
     :param non_interactive: do not prompt for configuration values, fail if not all values are given as kwargs.
     :type non_interactive: bool
+    :param verbose: if True, print parameters of DB connection
+    :type verbose: bool
     """
     from aiida.manage import get_config
     from aiida.manage.external.postgres import Postgres
-    from aiida.common import json
+    import aiida.common.json as json
 
-    pconfig = profile.dictionary
+    pdict = profile.dictionary
 
-    postgres = Postgres(port=pconfig.get('AIIDADB_PORT'), interactive=not non_interactive, quiet=False)
-    postgres.dbinfo['user'] = pconfig.get('AIIDADB_USER')
-    postgres.dbinfo['host'] = pconfig.get('AIIDADB_HOST')
+    postgres = Postgres.from_profile(profile, interactive=not non_interactive, quiet=False)
     postgres.determine_setup()
 
-    echo.echo(json.dumps(postgres.dbinfo, indent=4))
+    if verbose:
+        echo.echo_info("Parameters used to connect to postgres:")
+        echo.echo(json.dumps(postgres.get_dbinfo(), indent=4))
 
-    db_name = pconfig.get('AIIDADB_NAME', '')
+    db_name = pdict.get('AIIDADB_NAME', '')
     if not postgres.db_exists(db_name):
         echo.echo_info("Associated database '{}' does not exist.".format(db_name))
     elif non_interactive or click.confirm("Delete associated database '{}'?\n"
@@ -229,7 +231,7 @@ def delete_db(profile, non_interactive=True):
         echo.echo_info("Deleting database '{}'.".format(db_name))
         postgres.drop_db(db_name)
 
-    user = pconfig.get('AIIDADB_USER', '')
+    user = pdict.get('AIIDADB_USER', '')
     config = get_config()
     users = [profile.dictionary.get('AIIDADB_USER', '') for profile in config.profiles]
 

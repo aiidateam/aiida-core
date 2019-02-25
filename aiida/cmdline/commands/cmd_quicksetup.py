@@ -79,7 +79,8 @@ def quicksetup(profile_name, only_config, set_default, non_interactive, backend,
             write_profile = True
 
     # access postgres
-    postgres = Postgres(host=db_host, port=db_port, interactive=bool(not non_interactive), quiet=False)
+    dbinfo = {'host': db_host, 'port': db_port}
+    postgres = Postgres(interactive=bool(not non_interactive), quiet=False, dbinfo=dbinfo)
     postgres.set_setup_fail_callback(prompt_db_info)
     success = postgres.determine_setup()
     if not success:
@@ -123,8 +124,8 @@ def quicksetup(profile_name, only_config, set_default, non_interactive, backend,
         ]))
         raise exception
 
-    dbhost = postgres.dbinfo.get('host', 'localhost')
-    dbport = postgres.dbinfo.get('port', '5432')
+    dbhost = postgres.get_dbinfo().get('host', 'localhost')
+    dbport = postgres.get_dbinfo().get('port', '5432')
 
     repo = repository or 'repository/{}/'.format(profile_name)
     if not os.path.isabs(repo):

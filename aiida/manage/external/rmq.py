@@ -17,11 +17,7 @@ import logging
 
 from tornado import gen
 from kiwipy import communications
-
 import plumpy
-
-from aiida.orm.utils import serialize
-from aiida.work.exceptions import PastException
 
 __all__ = 'RemoteException', 'CommunicationTimeout', 'DeliveryFailed', 'ProcessLauncher'
 
@@ -63,21 +59,7 @@ def get_rmq_url(heartbeat_timeout=None):
     return url
 
 
-def get_rmq_prefix():
-    """
-    Get the prefix for the RabbitMQ message queues and exchanges for the current profile
-
-    :returns: string prefix for the RMQ communicators
-    """
-    from aiida.manage import get_config
-
-    profile = get_config().current_profile
-    prefix = profile.rmq_prefix
-
-    return prefix
-
-
-def get_rmq_config(prefix=None):
+def get_rmq_config(prefix):
     """
     Get the RabbitMQ configuration dictionary for a given prefix. If the prefix is not
     specified, the prefix will be retrieved from the currently loaded profile configuration
@@ -85,11 +67,7 @@ def get_rmq_config(prefix=None):
     :param prefix: a string prefix for the RabbitMQ communication queues and exchanges
     :returns: the configuration dictionary for the RabbitMQ communicators
     """
-    if prefix is None:
-        prefix = get_rmq_prefix()
-
     rmq_config = {'url': get_rmq_url(), 'prefix': prefix, 'task_prefetch_count': _RMQ_TASK_PREFETCH_COUNT}
-
     return rmq_config
 
 
@@ -160,8 +138,10 @@ class ProcessLauncher(plumpy.ProcessLauncher):
         :param tag: the tag of the checkpoint to continue from
         :raises plumpy.TaskRejected: if the node corresponding to the task cannot be loaded
         """
+        from aiida.work.exceptions import PastException
         from aiida.common import exceptions
         from aiida.orm import load_node, Data
+        from aiida.orm.utils import serialize
 
         try:
             node = load_node(pk=pid)

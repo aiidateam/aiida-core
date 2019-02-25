@@ -7,28 +7,25 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Tests for `verdi status`."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+from click.testing import CliRunner
 
-from .exceptions import *
-from .exit_code import *
-from .futures import *
-from .launch import *
-from .persistence import *
-from .processes import *
-from .process_function import *
-from .runners import *
-from .utils import *
-from .workchain import *
-from . import test_utils
+from aiida.backends.testbase import AiidaTestCase
+from aiida.cmdline.commands import cmd_status
 
-__all__ = (exceptions.__all__ +
-           exit_code.__all__ +
-           futures.__all__ +
-           launch.__all__ +
-           persistence.__all__ +
-           processes.__all__ +
-           runners.__all__ +
-           utils.__all__ +
-           workchain.__all__ + ('test_utils', ))
+
+class TestVerdiStatus(AiidaTestCase):
+    """Tests for `verdi rehash`."""
+
+    def setUp(self):
+        self.cli_runner = CliRunner()
+
+    def test_status_1(self):
+        """Check running the command."""
+        options = []
+        result = self.cli_runner.invoke(cmd_status.verdi_status, options)
+        self.assertClickResultNoException(result)
+        self.assertTrue(result.exit_code == 0)

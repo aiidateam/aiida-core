@@ -11,6 +11,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -33,9 +34,7 @@ def rehash(nodes, entry_point):
 
     The set of nodes that will be rehashed can be filtered by their identifier and/or based on their class.
     """
-    from aiida.orm.nodes.data import Data
-    from aiida.orm import ProcessNode
-    from aiida.orm.querybuilder import QueryBuilder
+    from aiida.orm import Data, ProcessNode, QueryBuilder
 
     # If no explicit entry point is defined, rehash all nodes, which are either Data nodes or ProcessNodes
     if entry_point is None:

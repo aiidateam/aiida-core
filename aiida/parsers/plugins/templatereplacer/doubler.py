@@ -15,7 +15,7 @@ import io
 import os
 
 from aiida.common import exceptions
-from aiida.orm.nodes.data.dict import Dict
+from aiida.orm import Dict
 from aiida.parsers.parser import Parser
 from aiida.plugins import CalculationFactory
 

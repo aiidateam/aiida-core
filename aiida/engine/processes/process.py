@@ -548,7 +548,7 @@ class Process(plumpy.Process):
 
     def _setup_inputs(self):
         """Create the links between the input nodes and the ProcessNode that represents this process."""
-        from aiida.orm.nodes.data.code import Code
+        from aiida.orm import Code
 
         for name, node in self._flat_inputs().items():
 

@@ -409,7 +409,7 @@ class Folder(object):  # pylint: disable=useless-object-inheritance
         if overwrite:
             self.erase()
         elif self.exists():
-            raise IOError("Location {} already exists, and overwrite is set to " "False".format(self.abspath))
+            raise IOError("Location {} already exists, and overwrite is set to False".format(self.abspath))
 
         # Create parent dir, if needed, with the right mode
         pardir = os.path.dirname(self.abspath)

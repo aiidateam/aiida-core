@@ -16,8 +16,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.manage.caching import enable_caching
 from aiida.common.links import LinkType
 from aiida.engine import workfunction, Process
-from aiida.orm.nodes.data.int import Int
-from aiida.orm import WorkFunctionNode
+from aiida.orm import Int, WorkFunctionNode
 
 
 class TestWorkFunction(AiidaTestCase):

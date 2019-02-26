@@ -7,11 +7,8 @@ from __future__ import absolute_import
 import os
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common import exceptions
-from aiida.common.links import LinkType
-from aiida.orm.nodes.data import Data
-from aiida.orm import Node, User
-from aiida.orm import CalculationNode, WorkflowNode
+from aiida.common import exceptions, LinkType
+from aiida.orm import Data, Node, User, CalculationNode, WorkflowNode
 from aiida.orm.utils.links import LinkTriple
 
 

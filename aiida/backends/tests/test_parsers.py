@@ -77,7 +77,7 @@ def output_test(pk, testname, skip_uuids_from_inputs=[]):
         skipped
     """
     import os
-    import aiida.common.json as json
+    from aiida.common import json
 
     from aiida.common.folders import Folder
     from aiida.orm import CalcJobNode
@@ -173,7 +173,7 @@ class TestParsers(AiidaTestCase):
     def read_test(self, outfolder):
         import os
         import importlib
-        import aiida.common.json as json
+        from aiida.common import json
 
         from aiida.orm import CalcJobNode
         from aiida.orm.utils import load_node

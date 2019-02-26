@@ -32,7 +32,7 @@ def _get_cif_ase_inline(struct, parameters):
 
     .. note:: requires ASE module.
     """
-    from aiida.orm.nodes.data.cif import CifData
+    from aiida.orm import CifData
 
     kwargs = {}
     if parameters is not None:

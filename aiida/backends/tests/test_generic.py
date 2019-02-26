@@ -50,19 +50,19 @@ class TestCode(AiidaTestCase):
 
         with self.assertRaises(ValueError):
             # remote_computer_exec has length 2 but is not a list or tuple
-            _ = Code(remote_computer_exec='ab')
+            Code(remote_computer_exec='ab')
 
         # invalid code path
         with self.assertRaises(ValueError):
-            _ = Code(remote_computer_exec=(self.computer, ''))
+            Code(remote_computer_exec=(self.computer, ''))
 
         # Relative path is invalid for remote code
         with self.assertRaises(ValueError):
-            _ = Code(remote_computer_exec=(self.computer, 'subdir/run.exe'))
+            Code(remote_computer_exec=(self.computer, 'subdir/run.exe'))
 
         # first argument should be a computer, not a string
         with self.assertRaises(TypeError):
-            _ = Code(remote_computer_exec=('localhost', '/bin/ls'))
+            Code(remote_computer_exec=('localhost', '/bin/ls'))
 
         code = Code(remote_computer_exec=(self.computer, '/bin/ls'))
         with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
@@ -95,11 +95,9 @@ class TestCode(AiidaTestCase):
 class TestBool(AiidaTestCase):
 
     def test_bool_conversion(self):
-        from aiida.orm.nodes.data.bool import Bool
         for val in [True, False]:
-            self.assertEqual(val, bool(Bool(val)))
+            self.assertEqual(val, bool(orm.Bool(val)))
 
     def test_int_conversion(self):
-        from aiida.orm.nodes.data.bool import Bool
         for val in [True, False]:
-            self.assertEqual(int(val), int(Bool(val)))
+            self.assertEqual(int(val), int(orm.Bool(val)))

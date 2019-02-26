@@ -38,7 +38,7 @@ imagine that we want to introduce a new type of data node that simply
 stores a float number. We will call it ``FloatData``, and the class 
 implementation can look like this::
 
-   from aiida.orm.nodes.data import Data
+   from aiida.orm import Data
 
    class FloatData(Data):
 

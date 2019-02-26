@@ -9,10 +9,6 @@ from aiida import orm
 from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.common.links import LinkType
-from aiida.orm.nodes.data.folder import FolderData
-from aiida.orm.nodes.data.remote import RemoteData
-from aiida.orm.nodes.data.singlefile import SinglefileData
-from aiida.orm import CalcJobNode
 
 from ..process import Process, ProcessState
 from ..process_spec import CalcJobProcessSpec
@@ -24,7 +20,7 @@ __all__ = ('CalcJob',)
 class CalcJob(Process):
     """Implementation of the CalcJob process."""
 
-    _node_class = CalcJobNode
+    _node_class = orm.CalcJobNode
     _spec_type = CalcJobProcessSpec
     link_label_retrieved = 'retrieved'
 
@@ -82,9 +78,9 @@ class CalcJob(Process):
         spec.input('metadata.options.parser_name', valid_type=six.string_types[0], non_db=True, required=False,
             help='Set a string for the output parser. Can be None if no output plugin is available or needed')
 
-        spec.output('remote_folder', valid_type=RemoteData,
+        spec.output('remote_folder', valid_type=orm.RemoteData,
             help='Input files necessary to run the process will be stored in this folder node.')
-        spec.output(cls.link_label_retrieved, valid_type=FolderData, pass_to_parser=True,
+        spec.output(cls.link_label_retrieved, valid_type=orm.FolderData, pass_to_parser=True,
             help='Files that are retrieved by the daemon will be stored in this node. By default the stdout and stderr '
                  'of the scheduler will be added, but one can add more by specifying them in `CalcInfo.retrieve_list`.')
 
@@ -183,14 +179,12 @@ class CalcJob(Process):
         import os
 
         from aiida.common.exceptions import PluginInternalError, ValidationError
-        from aiida.schedulers.datastructures import JobTemplate
+        from aiida.common import json
         from aiida.common.utils import validate_list_of_string_tuples
         from aiida.common.datastructures import CodeInfo, CodeRunMode
-        from aiida.orm import Code
-        from aiida.orm.computers import Computer
-        from aiida.orm.utils import load_node
+        from aiida.orm import load_node, Code, Computer
         from aiida.plugins import DataFactory
-        from aiida.common import json
+        from aiida.schedulers.datastructures import JobTemplate
 
         computer = self.node.computer
         inputs = self.node.get_incoming(link_type=LinkType.INPUT_CALC)
@@ -235,7 +229,7 @@ class CalcJob(Process):
         # a validation on the subclasses of retrieve_singlefile_list
         for _, subclassname, _ in retrieve_singlefile_list:
             file_sub_class = DataFactory(subclassname)
-            if not issubclass(file_sub_class, SinglefileData):
+            if not issubclass(file_sub_class, orm.SinglefileData):
                 raise PluginInternalError(
                     "[presubmission of calc {}] retrieve_singlefile_list subclass problem: {} is "
                     "not subclass of SinglefileData".format(self.node.pk, file_sub_class.__name__))

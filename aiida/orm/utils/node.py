@@ -135,7 +135,7 @@ def clean_value(value):
         values replaced where needed.
     """
     # Must be imported in here to avoid recursive imports
-    from aiida.orm.nodes.data import BaseType
+    from aiida.orm import BaseType
 
     def clean_builtin(val):
         """

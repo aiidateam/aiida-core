@@ -25,7 +25,7 @@ from aiida.common import utils
 from aiida.manage.backup import backup_setup
 from aiida.manage.backup import backup_utils
 from aiida.orm import Data
-import aiida.common.json as json
+from aiida.common import json
 
 
 if not is_dbenv_loaded():

@@ -11,8 +11,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from aiida.orm.nodes.data.array.kpoints import KpointsData
-from aiida.orm.nodes.data.dict import Dict
+from aiida.orm import KpointsData, Dict
 
 __all__ = ('check_seekpath_is_installed', 'get_explicit_kpoints_path', 'get_kpoints_path')
 

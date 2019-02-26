@@ -19,11 +19,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.tests.utils import processes as test_processes
 from aiida.common.lang import override
 from aiida.engine import Process, run, run_get_pid
-from aiida.orm import load_node
-from aiida.orm.nodes.data.dict import Dict
-from aiida.orm.nodes.data.int import Int
-from aiida.orm.nodes.data.str import Str
-from aiida.orm import WorkflowNode
+from aiida.orm import load_node, Dict, Int, Str, WorkflowNode
 
 
 class NameSpacedProcess(Process):

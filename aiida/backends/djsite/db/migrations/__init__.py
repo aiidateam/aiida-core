@@ -277,7 +277,7 @@ class ModelModifierV0025(object):
         cls = self._model_class
         import datetime
 
-        import aiida.common.json as json
+        from aiida.common import json
         from aiida.common.timezone import is_naive, make_aware, get_current_timezone
 
         if self._subspecifier_field_name is None:

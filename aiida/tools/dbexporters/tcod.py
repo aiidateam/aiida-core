@@ -18,7 +18,7 @@ from six.moves import range
 import io
 
 from aiida.engine import calcfunction
-from aiida.orm.nodes.data.dict import Dict
+from aiida.orm import Dict
 from aiida.plugins import DataFactory
 
 aiida_executable_name = '_aiidasubmit.sh'
@@ -447,8 +447,7 @@ def _collect_calculation_data(calc):
     calculation.
     """
     from aiida.common.links import LinkType
-    from aiida.orm.nodes.data import Data
-    from aiida.orm import CalculationNode, CalcJobNode, CalcFunctionNode, WorkflowNode
+    from aiida.orm import Data, CalculationNode, CalcJobNode, CalcFunctionNode, WorkflowNode
     import hashlib
     import os
     calcs_now = []
@@ -585,7 +584,7 @@ def _collect_files(base, path=''):
         files = []
         files.append(get_dict(name=path, full_path=os.path.join(base, path)))
 
-        import aiida.common.json as json
+        from aiida.common import json
         with open(os.path.join(base,path)) as f:
             calcinfo = json.load(f)
         if 'local_copy_list' in calcinfo:
@@ -685,7 +684,7 @@ def _collect_tags(node, calc,parameters=None,
     from aiida.common.links import LinkType
     import os 
     import aiida
-    import aiida.common.json as json
+    from aiida.common import json
 
     tags = { '_audit_creation_method': "AiiDA version {}".format(aiida.__version__) }
 
@@ -748,7 +747,7 @@ def _collect_tags(node, calc,parameters=None,
         from aiida.common.exceptions import LicensingException
         from aiida.common.folders import SandboxFolder
         from aiida.orm.importexport import export_tree
-        import aiida.common.json as json
+        from aiida.common import json
 
         with SandboxFolder() as folder:
             try:
@@ -846,7 +845,7 @@ def _collect_tags(node, calc,parameters=None,
     # Describing Brillouin zone (if used)
 
     if calc is not None:
-        from aiida.orm.nodes.data.array.kpoints import KpointsData
+        from aiida.orm import KpointsData
         kpoints_list = calc.get_incoming(node_class=KpointsData, link_type=LinkType.INPUT_CALC).all()
         # TODO: stop if more than one KpointsData is used?
         if len(kpoints_list) == 1:

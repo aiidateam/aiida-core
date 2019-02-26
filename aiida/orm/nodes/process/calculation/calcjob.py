@@ -490,7 +490,7 @@ class CalcJobNode(CalculationNode):
         :return: the retrieved FolderData node
         :raise aiida.common.MultipleObjectsError: if no or more than one retrieved node is found.
         """
-        from aiida.orm.nodes.data.folder import FolderData
+        from aiida.orm import FolderData
         return self.get_outgoing(node_class=FolderData, link_label_filter=self.link_label_retrieved).one().node
 
     @property

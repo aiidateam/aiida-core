@@ -13,9 +13,7 @@ from __future__ import absolute_import
 
 from aiida.engine import calcfunction, workfunction, WorkChain, ToContext, append_
 from aiida.engine.persistence import ObjectLoader
-from aiida.orm.nodes.data.int import Int
-from aiida.orm.nodes.data.list import List
-from aiida.orm.nodes.data.str import Str
+from aiida.orm import Int, List, Str
 
 
 class NestedWorkChain(WorkChain):

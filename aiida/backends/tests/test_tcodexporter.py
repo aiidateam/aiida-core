@@ -13,12 +13,12 @@ Tests for TestTcodDbExporter
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import io
+
 import unittest
 
-import six
 from six.moves import range
 
+from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 
@@ -66,11 +66,9 @@ class TestTcodDbExporter(AiidaTestCase):
         self.assertEquals(cif_encode_contents(u'angstrom ÅÅÅ'.encode('utf-8')),
                           (b'YW5nc3Ryb20gw4XDhcOF', 'base64'))
         self.assertEquals(cif_encode_contents(
-            "".join("a" for i in range(0, 2048)).encode('utf-8'))[1],
-                          None)
+            "".join("a" for i in range(0, 2048)).encode('utf-8'))[1], None)
         self.assertEquals(cif_encode_contents(
-            "".join("a" for i in range(0, 2049)).encode('utf-8'))[1],
-                          'quoted-printable')
+            "".join("a" for i in range(0, 2049)).encode('utf-8'))[1], 'quoted-printable')
         self.assertEquals(cif_encode_contents(b'datatest')[1], None)
         self.assertEquals(cif_encode_contents(b'data_test')[1], 'base64')
 
@@ -127,12 +125,6 @@ class TestTcodDbExporter(AiidaTestCase):
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_cif_structure_roundtrip(self):
         from aiida.tools.dbexporters.tcod import export_cif, export_values
-        from aiida.orm import Code
-        from aiida.orm import CalcJobNode
-        from aiida.orm.nodes.data.cif import CifData
-        from aiida.orm.nodes.data.dict import Dict
-        from aiida.orm.nodes.data.upf import UpfData
-        from aiida.orm.nodes.data.folder import FolderData
         from aiida.common.folders import SandboxFolder
         import tempfile
 
@@ -154,13 +146,13 @@ class TestTcodDbExporter(AiidaTestCase):
                 O 0.5 0.5 0.5
             ''')
             tmpf.flush()
-            a = CifData(filepath=tmpf.name)
+            a = orm.CifData(filepath=tmpf.name)
 
         c = a.get_structure()
         c.store()
-        pd = Dict()
+        pd = orm.Dict()
 
-        code = Code(local_executable='test.sh')
+        code = orm.Code(local_executable='test.sh')
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write("#/bin/bash\n\necho test run\n")
             tmpf.flush()
@@ -168,7 +160,7 @@ class TestTcodDbExporter(AiidaTestCase):
 
         code.store()
 
-        calc = CalcJobNode(computer=self.computer)
+        calc = orm.CalcJobNode(computer=self.computer)
         calc.set_option('resources', {'num_machines': 1,
                             'num_mpiprocs_per_machine': 1})
         calc.add_incoming(code, LinkType.INPUT_CALC, "code")
@@ -177,14 +169,14 @@ class TestTcodDbExporter(AiidaTestCase):
         with tempfile.NamedTemporaryFile(mode='w+', prefix="Fe") as tmpf:
             tmpf.write("<UPF version=\"2.0.1\">\nelement=\"Fe\"\n")
             tmpf.flush()
-            upf = UpfData(filepath=tmpf.name)
+            upf = orm.UpfData(filepath=tmpf.name)
             upf.store()
             calc.add_incoming(upf, LinkType.INPUT_CALC, "upf")
 
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write("data_test")
             tmpf.flush()
-            cif = CifData(filepath=tmpf.name)
+            cif = orm.CifData(filepath=tmpf.name)
             cif.store()
             calc.add_incoming(cif, LinkType.INPUT_CALC, "cif")
 
@@ -192,7 +184,7 @@ class TestTcodDbExporter(AiidaTestCase):
             calc.put_object_from_tree(fhandle.abspath)
         calc.store()
 
-        fd = FolderData()
+        fd = orm.FolderData()
         with fd.open('_scheduler-stdout.txt', 'w') as fhandle:
             fhandle.write(u"standard output")
 
@@ -223,7 +215,6 @@ class TestTcodDbExporter(AiidaTestCase):
     @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_inline_export(self):
-        from aiida.orm.nodes.data.cif import CifData
         from aiida.tools.dbexporters.tcod import export_values
         import tempfile
 
@@ -245,7 +236,7 @@ class TestTcodDbExporter(AiidaTestCase):
                 O 0.5 0.5 0.5
             ''')
             tmpf.flush()
-            a = CifData(filepath=tmpf.name)
+            a = orm.CifData(filepath=tmpf.name)
 
         s = a.get_structure(store=True)
         val = export_values(s)
@@ -257,7 +248,6 @@ class TestTcodDbExporter(AiidaTestCase):
     @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_symmetry_reduction(self):
-        from aiida.orm.nodes.data.structure import StructureData
         from aiida.tools.dbexporters.tcod import export_values
         from ase import Atoms
 
@@ -272,11 +262,10 @@ class TestTcodDbExporter(AiidaTestCase):
         )
 
         a.set_chemical_symbols(['Ba', 'Ti', 'O', 'O', 'O'])
-        val = export_values(StructureData(ase=a), reduce_symmetry=True, store=True)['0']
+        val = export_values(orm.StructureData(ase=a), reduce_symmetry=True, store=True)['0']
         self.assertEqual(val['_atom_site_label'], ['Ba1', 'Ti1', 'O1'])
         self.assertEqual(val['_symmetry_space_group_name_H-M'], 'Pm-3m')
         self.assertEqual(val['_symmetry_space_group_name_Hall'], '-P 4 2 3')
-
 
     def test_cmdline_parameters(self):
         """
@@ -308,8 +297,6 @@ class TestTcodDbExporter(AiidaTestCase):
     @unittest.skipIf(not has_spglib(), "Unable to import spglib")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_export_trajectory(self):
-        from aiida.orm.nodes.data.structure import StructureData
-        from aiida.orm.nodes.data.array.trajectory import TrajectoryData
         from aiida.tools.dbexporters.tcod import export_values
 
         cells = [
@@ -331,12 +318,12 @@ class TestTcodDbExporter(AiidaTestCase):
         ]
         structurelist = []
         for i in range(0, 2):
-            struct = StructureData(cell=cells[i])
+            struct = orm.StructureData(cell=cells[i])
             for j, symbol in enumerate(symbols[i]):
                 struct.append_atom(symbols=symbol, position=positions[i][j])
             structurelist.append(struct)
 
-        td = TrajectoryData(structurelist=structurelist)
+        td = orm.TrajectoryData(structurelist=structurelist)
 
         with self.assertRaises(ValueError):
             # Trajectory index is not specified
@@ -384,27 +371,27 @@ class TestTcodDbExporter(AiidaTestCase):
         self.assertEqual(sorted(v['0'].keys()), expected_tags)
 
         # Stored, but not expected to be stored:
-        td = TrajectoryData(structurelist=structurelist)
+        td = orm.TrajectoryData(structurelist=structurelist)
         td.store()
         v = export_values(td, trajectory_index=1)
         self.assertEqual(sorted(v['0'].keys()),
                          expected_tags + tcod_file_tags)
 
         # Not stored, but expected to be stored:
-        td = TrajectoryData(structurelist=structurelist)
+        td = orm.TrajectoryData(structurelist=structurelist)
         v = export_values(td, trajectory_index=1, store=True)
         self.assertEqual(sorted(v['0'].keys()),
                          expected_tags + tcod_file_tags)
-        
+
         # Both stored and expected to be stored:
-        td = TrajectoryData(structurelist=structurelist)
+        td = orm.TrajectoryData(structurelist=structurelist)
         td.store()
         v = export_values(td, trajectory_index=1, store=True)
         self.assertEqual(sorted(v['0'].keys()),
                          expected_tags + tcod_file_tags)
 
         # Stored, but asked not to include DB dump:
-        td = TrajectoryData(structurelist=structurelist)
+        td = orm.TrajectoryData(structurelist=structurelist)
         td.store()
         v = export_values(td, trajectory_index=1,
                           dump_aiida_database=False)

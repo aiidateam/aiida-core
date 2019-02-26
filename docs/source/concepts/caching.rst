@@ -15,7 +15,7 @@ Caching is also implemented for Data nodes. This is not very useful in practice 
 
     In [1]: from __future__ import print_function
 
-    In [2]: from aiida.orm.nodes.data.str import Str
+    In [2]: from aiida.orm import Str
 
     In [3]: n1 = Str('test string')
 
@@ -135,7 +135,7 @@ Finally, workchains can create links not only to nodes which they create themsel
 .. code:: python
 
     from aiida.engine import workfunction
-    from aiida.orm.nodes.data.int import Int
+    from aiida.orm import Int
 
     @workfunction
     def select(a, b):

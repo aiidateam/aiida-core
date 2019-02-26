@@ -14,8 +14,7 @@ from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
-from aiida.orm.nodes.data.dict import Dict
-from aiida.orm import CalcJobNode
+from aiida.orm import Dict, CalcJobNode
 from aiida.orm.utils.calcjob import CalcJobResultManager
 from aiida.plugins import CalculationFactory
 from aiida.plugins.entry_point import get_entry_point_string_from_class

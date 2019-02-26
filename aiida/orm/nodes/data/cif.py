@@ -729,7 +729,7 @@ class CifData(SinglefileData):
             in which case they will be combined to a single disordered site. Defaults to 1e-4. (pymatgen only)
         :return: :py:class:`aiida.orm.nodes.data.structure.StructureData` node.
         """
-        from aiida.orm.nodes.data.dict import Dict
+        from aiida.orm import Dict
         from aiida.tools.data import cif as cif_tools
 
         parameters = Dict(dict=kwargs)

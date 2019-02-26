@@ -86,8 +86,7 @@ def get_node_summary(node):
     :return: a string summary of the node
     """
     from plumpy import ProcessState
-    from aiida.orm.nodes.data.code import Code
-    from aiida.orm import ProcessNode
+    from aiida.orm import Code, ProcessNode
 
     table_headers = ['Property', 'Value']
     table = []
@@ -285,10 +284,8 @@ def get_workchain_report(node, levelname, indent_size=4, max_depth=None):
     """
     # pylint: disable=too-many-locals
     import itertools
-    from aiida.common.log import LOG_LEVELS
     from aiida import orm
-    from aiida.orm.querybuilder import QueryBuilder
-    from aiida.orm import WorkChainNode
+    from aiida.common.log import LOG_LEVELS
 
     def get_report_messages(uuid, depth, levelname):
         """Return list of log messages with given levelname and their depth for a node with a given uuid."""
@@ -304,10 +301,10 @@ def get_workchain_report(node, levelname, indent_size=4, max_depth=None):
         Get a nested tree of work calculation nodes and their nesting level starting from this uuid.
         The result is a list of uuid of these nodes.
         """
-        builder = QueryBuilder()
-        builder.append(cls=WorkChainNode, filters={'uuid': uuid}, tag='workcalculation')
+        builder = orm.QueryBuilder()
+        builder.append(cls=orm.WorkChainNode, filters={'uuid': uuid}, tag='workcalculation')
         builder.append(
-            cls=WorkChainNode,
+            cls=orm.WorkChainNode,
             project=['uuid'],
             # In the future, we should specify here the type of link
             # for now, CALL links are the only ones allowing calc-calc

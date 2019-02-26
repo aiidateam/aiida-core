@@ -58,7 +58,7 @@ be performed with Groups:
 
     From python interface::
 
-      In [3]: from aiida.orm.nodes.data.dict import Dict
+      In [3]: from aiida.orm import Dict
 
       In [4]: p = Dict().store()
 

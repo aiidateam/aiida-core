@@ -11,9 +11,10 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.params.types import DataParamType
-from aiida.orm.nodes.data import Data
+from aiida.orm import Data
 from aiida.orm.utils.loaders import OrmEntityLoader
 
 

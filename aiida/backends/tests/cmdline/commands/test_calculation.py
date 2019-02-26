@@ -36,9 +36,7 @@ class TestVerdiCalculation(AiidaTestCase):
         from aiida.backends.tests.utils.fixtures import import_archive_fixture
         from aiida.common.links import LinkType
         from aiida.engine import ProcessState
-        from aiida.orm import Data
-        from aiida.orm import CalcJobNode
-        from aiida.orm.nodes.data.dict import Dict
+        from aiida.orm import Data, CalcJobNode, Dict
         from aiida.plugins import CalculationFactory
         from aiida import orm
 

@@ -74,8 +74,7 @@ def _get_aiida_structure_ase_inline(cif, **kwargs):
     .. note:: unable to correctly import structures of alloys.
     .. note:: requires ASE module.
     """
-    from aiida.orm.nodes.data.dict import Dict
-    from aiida.orm.nodes.data.structure import StructureData
+    from aiida.orm import Dict, StructureData
 
     parameters = kwargs.get('parameters', {})
 
@@ -101,8 +100,7 @@ def _get_aiida_structure_pymatgen_inline(cif, **kwargs):
     .. note:: requires pymatgen module.
     """
     from pymatgen.io.cif import CifParser
-    from aiida.orm.nodes.data.dict import Dict
-    from aiida.orm.nodes.data.structure import StructureData
+    from aiida.orm import Dict, StructureData
 
     parameters = kwargs.get('parameters', {})
 

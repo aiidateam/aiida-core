@@ -14,11 +14,8 @@ from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.engine import run, run_get_node, submit, calcfunction, workfunction, Process, ExitCode
+from aiida.orm import Int, Str, WorkFunctionNode, CalcFunctionNode
 from aiida.orm.nodes.data.bool import get_true_node
-from aiida.orm.nodes.data.int import Int
-from aiida.orm.nodes.data.str import Str
-from aiida.orm import WorkFunctionNode
-from aiida.orm import CalcFunctionNode
 
 DEFAULT_INT = 256
 DEFAULT_LABEL = 'Default label'

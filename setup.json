@@ -154,7 +154,6 @@
       "code = aiida.orm.nodes.data.code:Code",
       "float = aiida.orm.nodes.data.float:Float",
       "folder = aiida.orm.nodes.data.folder:FolderData",
-      "frozendict = aiida.orm.nodes.data.frozendict:FrozenDict",
       "int = aiida.orm.nodes.data.int:Int",
       "list = aiida.orm.nodes.data.list:List",
       "numeric = aiida.orm.nodes.data.numeric:NumericType",

@@ -109,7 +109,7 @@ class Process(plumpy.Process):
         spec.input(
             '{}.description'.format(spec.metadata_key), valid_type=six.string_types[0], required=False, non_db=True)
         spec.input('{}.label'.format(spec.metadata_key), valid_type=six.string_types[0], required=False, non_db=True)
-        spec.inputs.valid_type = (orm.Data, ProcessNode)
+        spec.inputs.valid_type = (orm.Data,)
         spec.outputs.valid_type = (orm.Data,)
 
     @classmethod
@@ -555,9 +555,6 @@ class Process(plumpy.Process):
             # Special exception: set computer if node is a remote Code and our node does not yet have a computer set
             if isinstance(node, Code) and not node.is_local() and not self.node.computer:
                 self.node.computer = node.get_remote_computer()
-
-            if isinstance(node, ProcessNode):
-                node = utils.get_or_create_output_group(node)
 
             # Need this special case for tests that use ProcessNodes as classes
             if isinstance(self.node, ProcessNode) and not isinstance(self.node, (CalculationNode, WorkflowNode)):

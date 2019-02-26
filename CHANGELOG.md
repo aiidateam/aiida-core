@@ -231,7 +231,7 @@
 #### Core entities
 - `Computer`: the shebang line is now customizable [[#940]](https://github.com/aiidateam/aiida_core/pull/940)
 - `KpointsData`: deprecate buggy legacy implementation of k-point generation in favor of Seekpath [[#1015]](https://github.com/aiidateam/aiida_core/pull/1015)
-- `ParameterData`: `to_aiida_type` used on dictionaries now automatically converted to `ParameterData` [[#947]](https://github.com/aiidateam/aiida_core/pull/947)
+- `Dict`: `to_aiida_type` used on dictionaries now automatically converted to `Dict` [[#947]](https://github.com/aiidateam/aiida_core/pull/947)
 - `JobCalculation`: parsers can now specify files that are retrieved locally for parsing, but only temporarily, as they are deleted after parsing is completed [[#886]](https://github.com/aiidateam/aiida_core/pull/886) [[#894]](https://github.com/aiidateam/aiida_core/pull/894)
 
 #### Plugins
@@ -399,7 +399,7 @@
 
 ### Miscellaneous
 - Replacing dependency from old unmantained `pyspglib` to new `spglib`
-- Accept BaseTypes as attributes/extras, and convert them automatically to their value. In this way, for instance, it is now possible to pass a `Int`, `Float`, `Str`, ... as value of a dictionary, and store all into a `ParameterData`.
+- Accept BaseTypes as attributes/extras, and convert them automatically to their value. In this way, for instance, it is now possible to pass a `Int`, `Float`, `Str`, ... as value of a dictionary, and store all into a `Dict`.
 - Switch from `pkg_resources` to reentry to allow for much faster loading of modules when possible, and therefore allowing for good speed for bash completion
 - Removed obsolete code for Sqlite
 - Removed `mayavi2` package from dependencies

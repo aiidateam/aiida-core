@@ -87,7 +87,7 @@ For what concerns data nodes, the base class (``Data``) is subclassed to provide
 Often, the name of the subclass contains the word “Data” appended to it, but this is not a requirement. A few examples:
 
 * **Float, Int, Bool, Str, List**, ...
-* **ParameterData**: represents a dictionary of key-value pairs - these are parameters of a general nature that do not need to belong to more specific data sub-classes
+* **Dict**: represents a dictionary of key-value pairs - these are parameters of a general nature that do not need to belong to more specific data sub-classes
 * **StructureData**: represents crystal structure data (containing chemical symbols, atomic positions of the atoms, periodic cell for periodic structures, …)
 * **ArrayData**: represents generic numerical arrays of data (python numpy arrays)
 

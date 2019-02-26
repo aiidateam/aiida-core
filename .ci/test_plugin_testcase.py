@@ -46,10 +46,10 @@ class PluginTestCase1(PluginTestCase):
     @staticmethod
     def get_data():
         """
-        Return some ParameterData
+        Return some Dict
         """
         from aiida.plugins import DataFactory
-        data = DataFactory('parameter')(dict={'data': 'test'})
+        data = DataFactory('dict')(dict={'data': 'test'})
         data.store()
         return data
 

@@ -17,7 +17,7 @@ import six
 from aiida.common import exceptions
 from aiida.common.datastructures import CalcInfo, CodeInfo
 from aiida.engine import CalcJob
-from aiida.orm.nodes.data.parameter import ParameterData
+from aiida.orm.nodes.data.dict import Dict
 from aiida.orm.nodes.data.remote import RemoteData
 from aiida.orm.nodes.data.singlefile import SinglefileData
 
@@ -27,7 +27,7 @@ class TemplatereplacerCalculation(CalcJob):
     Simple stub of a plugin that can be used to replace some text in a given template.
     Can be used for many different codes, or as a starting point to develop a new plugin.
 
-    This simple plugin takes two node inputs, both of type ParameterData, with the labels
+    This simple plugin takes two node inputs, both of type Dict, with the labels
     'parameters' and 'template'
 
     You can also add other SinglefileData nodes as input, that will be copied according to
@@ -71,13 +71,13 @@ class TemplatereplacerCalculation(CalcJob):
         super(TemplatereplacerCalculation, cls).define(spec)
         spec.input('metadata.options.parser_name', valid_type=six.string_types, default='templatereplacer.doubler',
             non_db=True)
-        spec.input('template', valid_type=ParameterData,
+        spec.input('template', valid_type=Dict,
             help='A template for the input file.')
-        spec.input('parameters', valid_type=ParameterData, required=False,
+        spec.input('parameters', valid_type=Dict, required=False,
             help='Parameters used to replace placeholders in the template.')
         spec.input_namespace('files', valid_type=(RemoteData, SinglefileData), required=False)
 
-        spec.output('output_parameters', valid_type=ParameterData, required=True)
+        spec.output('output_parameters', valid_type=Dict, required=True)
         spec.default_output_node = 'output_parameters'
 
         spec.exit_code(100, 'ERROR_NO_RETRIEVED_FOLDER',

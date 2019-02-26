@@ -100,7 +100,7 @@ Assume that the user wants to see the available links of a node in order to unde
 	[Neighbor(link_type='inputlink', label='code',
 	node=<Code: Remote code 'cp-5.1' on daint, pk: 75709, uuid: 3c9cdb7f-0cda-402e-b898-4dd0d06aa5a4>),
 	Neighbor(link_type='inputlink', label='parameters',
-	node=<ParameterData: uuid: 94efe64f-7f7e-46ea-922a-fe64a7fba8a5 (pk: 139166)>)
+	node=<Dict: uuid: 94efe64f-7f7e-46ea-922a-fe64a7fba8a5 (pk: 139166)>)
 	Neighbor(link_type='inputlink', label='parent_calc_folder',
 	node=<RemoteData: uuid: becb4894-c50c-4779-b84f-713772eaceff (pk: 139118)>)
 	Neighbor(link_type='inputlink', label='pseudo_Ba',
@@ -110,16 +110,16 @@ Assume that the user wants to see the available links of a node in order to unde
 	Neighbor(link_type='inputlink', label='pseudo_Ti',
 	node=<UpfData: uuid: e5744077-8615-4927-9f97-c5f7b36ba421 (pk: 1660)>)
 	Neighbor(link_type='inputlink', label='settings',
-	node=<ParameterData: uuid: a5a828b8-fdd8-4d75-b674-2e2d62792de0 (pk: 139167)>)
+	node=<Dict: uuid: a5a828b8-fdd8-4d75-b674-2e2d62792de0 (pk: 139167)>)
 	Neighbor(link_type='inputlink', label='structure',
 	node=<StructureData: uuid: 3096f83c-6385-48c4-8cb2-24a427ce11b1 (pk: 139001)>)]
 
 	In [4]: c.get_outgoing()
 	Out[4]:
 	[Neighbor(link_type='createlink', label='output_parameters',
-	node=<ParameterData: uuid: f7a3ca96-4594-497f-a128-9843a1f12f7f (pk: 139257)>),
+	node=<Dict: uuid: f7a3ca96-4594-497f-a128-9843a1f12f7f (pk: 139257)>),
 	Neighbor(link_type='createlink', label='output_parameters_139257',
-	node=<ParameterData: uuid: f7a3ca96-4594-497f-a128-9843a1f12f7f (pk: 139257)>),
+	node=<Dict: uuid: f7a3ca96-4594-497f-a128-9843a1f12f7f (pk: 139257)>),
 	Neighbor(link_type='createlink', label='output_trajectory',
 	node=<TrajectoryData: uuid: 7c5b65bc-22bb-4b87-ac92-e8a78cf145c3 (pk: 139256)>),
 	Neighbor(link_type='createlink', label='output_trajectory_139256',

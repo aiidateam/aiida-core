@@ -14,7 +14,7 @@ from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
-from aiida.orm.nodes.data.parameter import ParameterData
+from aiida.orm.nodes.data.dict import Dict
 from aiida.orm import CalcJobNode
 from aiida.orm.utils.calcjob import CalcJobResultManager
 from aiida.plugins import CalculationFactory
@@ -44,7 +44,7 @@ class TestCalcJobResultManager(AiidaTestCase):
         cls.val_two = 'val_two'
         cls.keys = [cls.key_one, cls.key_two]
 
-        cls.result_node = ParameterData(dict={
+        cls.result_node = Dict(dict={
             cls.key_one: cls.val_one,
             cls.key_two: cls.val_two,
         }).store()

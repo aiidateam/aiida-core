@@ -28,7 +28,7 @@ from aiida.orm.nodes.data.array import ArrayData
 from aiida.orm.nodes.data.array.bands import BandsData
 from aiida.orm.nodes.data.array.kpoints import KpointsData
 from aiida.orm.nodes.data.cif import CifData, has_pycifrw
-from aiida.orm.nodes.data.parameter import ParameterData
+from aiida.orm.nodes.data.dict import Dict
 from aiida.orm.nodes.data.remote import RemoteData
 from aiida.orm.nodes.data.structure import StructureData
 from aiida.orm.nodes.data.array.trajectory import TrajectoryData
@@ -397,7 +397,7 @@ class TestVerdiDataParameter(AiidaTestCase):
         super(TestVerdiDataParameter, cls).setUpClass()
 
     def setUp(self):
-        self.p = ParameterData()
+        self.p = Dict()
         self.p.set_dict({'a': 1, 'b': 2})
         self.p.store()
 

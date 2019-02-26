@@ -109,7 +109,7 @@ Cif
 
 Parameter
 +++++++++
-.. automodule:: aiida.orm.nodes.data.parameter
+.. automodule:: aiida.orm.nodes.data.dict
    :members:
    :noindex:
 

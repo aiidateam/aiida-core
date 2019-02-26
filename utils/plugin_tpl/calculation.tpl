@@ -110,7 +110,7 @@ class {{classname}}(JobCalculation):
 
         example using json input format::
 
-            # ParameterData input nodes
+            # Dict input nodes
             input_params = inputdict['param_name'].get_dict()
             secondary_params = inputdict['secondary_name'].get_dict()
 

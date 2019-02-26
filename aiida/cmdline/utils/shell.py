@@ -28,7 +28,7 @@ DEFAULT_MODULES_LIST = [
     ('aiida.orm', 'Int', 'Int'),
     ('aiida.orm', 'Str', 'Str'),
     ('aiida.orm', 'List', 'List'),
-    ('aiida.orm', 'ParameterData', 'ParameterData'),
+    ('aiida.orm', 'Dict', 'Dict'),
     ('aiida.orm', 'Code', 'Code'),
     ('aiida.orm', 'Computer', 'Computer'),
     ('aiida.orm', 'Group', 'Group'),

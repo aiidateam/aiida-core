@@ -74,12 +74,12 @@ def _get_aiida_structure_ase_inline(cif, **kwargs):
     .. note:: unable to correctly import structures of alloys.
     .. note:: requires ASE module.
     """
-    from aiida.orm.nodes.data.parameter import ParameterData
+    from aiida.orm.nodes.data.dict import Dict
     from aiida.orm.nodes.data.structure import StructureData
 
     parameters = kwargs.get('parameters', {})
 
-    if isinstance(parameters, ParameterData):
+    if isinstance(parameters, Dict):
         parameters = parameters.get_dict()
 
     parameters.pop('occupancy_tolerance', None)
@@ -101,12 +101,12 @@ def _get_aiida_structure_pymatgen_inline(cif, **kwargs):
     .. note:: requires pymatgen module.
     """
     from pymatgen.io.cif import CifParser
-    from aiida.orm.nodes.data.parameter import ParameterData
+    from aiida.orm.nodes.data.dict import Dict
     from aiida.orm.nodes.data.structure import StructureData
 
     parameters = kwargs.get('parameters', {})
 
-    if isinstance(parameters, ParameterData):
+    if isinstance(parameters, Dict):
         parameters = parameters.get_dict()
 
     constructor_kwargs = {}

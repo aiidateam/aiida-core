@@ -318,7 +318,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
 
         # Creating the needed nodes & workflows
         calc_1 = DbNode(type="node.process.calculation.CalculationNode.", user_id=user.id)
-        param = DbNode(type="data.parameter.ParameterData.", user_id=user.id)
+        param = DbNode(type="data.dict.Dict.", user_id=user.id)
         leg_workf = DbWorkflow(label="Legacy WorkflowNode", user_id=user.id)
         calc_2 = DbNode(type="node.process.calculation.CalculationNode.", user_id=user.id)
 
@@ -415,7 +415,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
             log_4.pk,
         )
 
-        # Getting the serialized ParameterData logs
+        # Getting the serialized Dict logs
         param_data = DbLog.objects.filter(objpk=param.pk).filter(objname='something.else.').values(
             *update_024.values_to_export)[:1]
         serialized_param_data = dumps_json(list(param_data))
@@ -424,7 +424,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
         serialized_unknown_exp_logs = update_024.get_serialized_unknown_entity_logs(DbLog)
         # Getting their number
         unknown_exp_logs_number = update_024.get_unknown_entity_log_number(DbLog)
-        self.to_check['ParameterData'] = (serialized_param_data, serialized_unknown_exp_logs,
+        self.to_check['Dict'] = (serialized_param_data, serialized_unknown_exp_logs,
                                           unknown_exp_logs_number)
 
         # Getting the serialized legacy workflow logs
@@ -490,8 +490,8 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
         """
         import json
 
-        self.assertEqual(self.to_check['ParameterData'][0], self.to_check['ParameterData'][1])
-        self.assertEqual(self.to_check['ParameterData'][2], 1)
+        self.assertEqual(self.to_check['Dict'][0], self.to_check['Dict'][1])
+        self.assertEqual(self.to_check['Dict'][2], 1)
 
         self.assertEqual(self.to_check['WorkflowNode'][0], self.to_check['WorkflowNode'][1])
         self.assertEqual(self.to_check['WorkflowNode'][2], 1)
@@ -742,3 +742,27 @@ class TestNodePrefixRemovalMigration(TestMigrations):
 
         self.assertEqual(node_data.type, 'data.int.Int.')
         self.assertEqual(node_calc.type, 'process.calculation.calcjob.CalcJobNode.')
+
+
+class TestParameterDataToDictMigration(TestMigrations):
+
+    migrate_from = '0028_remove_node_prefix'
+    migrate_to = '0029_rename_parameter_data_to_dict'
+
+    def setUpBeforeMigration(self):
+        DbNode = self.apps.get_model('db', 'DbNode')
+
+        default_user = self.backend.users.create('{}@aiida.net'.format(self.id())).store()
+
+        node = DbNode(type='data.parameter.ParameterData.', user_id=default_user.id)
+        node.save()
+
+        self.node_id = node.id
+
+    def test_data_node_type_string(self):
+        """Verify that type string of the nodes was successfully adapted."""
+        from aiida.orm import load_node
+
+        node = load_node(self.node_id)
+
+        self.assertEqual(node.type, 'data.dict.Dict.')

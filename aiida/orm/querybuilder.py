@@ -452,7 +452,7 @@ class QueryBuilder(object):
             this class being accepted in a query. However the classes have to have the same orm-class
             for the joining to work. I.e. both have to subclasses of Node. Valid is::
 
-                cls=(StructureData, ParameterData)
+                cls=(StructureData, Dict)
 
             This is invalid:
 

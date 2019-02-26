@@ -20,9 +20,9 @@ from aiida.backends.tests.utils import processes as test_processes
 from aiida.common.lang import override
 from aiida.engine import Process, run, run_get_pid
 from aiida.orm import load_node
+from aiida.orm.nodes.data.dict import Dict
 from aiida.orm.nodes.data.int import Int
 from aiida.orm.nodes.data.str import Str
-from aiida.orm.nodes.data.parameter import ParameterData
 from aiida.orm import WorkflowNode
 
 
@@ -168,8 +168,8 @@ class TestProcess(AiidaTestCase):
         code.set_remote_computer_exec((self.computer, '/bin/true'))
         code.store()
 
-        parameters = ParameterData(dict={})
-        template = ParameterData(dict={})
+        parameters = Dict(dict={})
+        template = Dict(dict={})
         options = {
             'resources': {
                 'num_machines': 1,

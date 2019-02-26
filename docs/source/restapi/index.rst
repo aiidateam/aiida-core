@@ -600,7 +600,7 @@ Nodes
                 "label": "",
                 "mtime": "Fri, 29 Apr 2016 19:24:00 GMT",
                 "state": null,
-                "type": "data.parameter.ParameterData.",
+                "type": "data.dict.Dict.",
                 "uuid": "a39dc158-fedd-4ea1-888d-d90ec6f86f35"
               }
             ]
@@ -635,7 +635,7 @@ Nodes
                 "label": "",
                 "mtime": "Mon, 25 Jan 2016 14:34:59 GMT",
                 "state": "IMPORTED",
-                "type": "data.parameter.ParameterData.",
+                "type": "data.dict.Dict.",
                 "uuid": "e30da7cc-af50-40ca-a940-2ac8d89b2e0d"
               }
             ]

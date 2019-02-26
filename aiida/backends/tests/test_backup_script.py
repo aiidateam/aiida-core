@@ -350,7 +350,7 @@ class TestBackupScriptIntegration(AiidaTestCase):
         extra_name = self.__class__.__name__ + "/test_with_subclasses"
         resources = {'num_machines': 1, 'num_mpiprocs_per_machine': 1}
 
-        ParameterData = DataFactory('parameter')
+        Dict = DataFactory('dict')
 
         a1 = CalcJobNode(computer=self.computer)
         a1.set_option('resources', resources)
@@ -359,7 +359,7 @@ class TestBackupScriptIntegration(AiidaTestCase):
         a1.set_extra(extra_name, True)
         a3 = Data().store()
         a3.set_extra(extra_name, True)
-        a4 = ParameterData(dict={'a': 'b'}).store()
+        a4 = Dict(dict={'a': 'b'}).store()
         a4.set_extra(extra_name, True)
         a5 = Data().store()
         a5.set_extra(extra_name, True)

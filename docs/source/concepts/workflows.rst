@@ -369,19 +369,19 @@ An example output for a ``PwBaseWorkChain`` would look like the following:
 
     Inputs            PK  Type
     --------------  ----  -------------
-    parameters       158  ParameterData
+    parameters       158  Dict
     structure        140  StructureData
     kpoints          159  KpointsData
     pseudo_family    161  Str
     max_iterations   163  Int
     clean_workdir    160  Bool
-    options          162  ParameterData
+    options          162  Dict
 
     Outputs              PK  Type
     -----------------  ----  -------------
     output_band         170  BandsData
     remote_folder       168  RemoteData
-    output_parameters   171  ParameterData
+    output_parameters   171  Dict
     output_array        172  ArrayData
 
     Called      PK  Type

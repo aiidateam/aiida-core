@@ -38,7 +38,7 @@ class TestVerdiCalculation(AiidaTestCase):
         from aiida.engine import ProcessState
         from aiida.orm import Data
         from aiida.orm import CalcJobNode
-        from aiida.orm.nodes.data.parameter import ParameterData
+        from aiida.orm.nodes.data.dict import Dict
         from aiida.plugins import CalculationFactory
         from aiida import orm
 
@@ -77,7 +77,7 @@ class TestVerdiCalculation(AiidaTestCase):
                 cls.VAL_ONE = 'val_one'
                 cls.VAL_TWO = 'val_two'
 
-                output_parameters = ParameterData(dict={
+                output_parameters = Dict(dict={
                     cls.KEY_ONE: cls.VAL_ONE,
                     cls.KEY_TWO: cls.VAL_TWO,
                 }).store()

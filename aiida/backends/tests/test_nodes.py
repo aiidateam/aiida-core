@@ -257,7 +257,7 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
 
         extra_name = self.__class__.__name__ + "/test_with_subclasses"
 
-        ParameterData = DataFactory('parameter')
+        Dict = DataFactory('dict')
 
         a1 = CalcJobNode(computer=self.computer)
         a1.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
@@ -266,7 +266,7 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         a1.set_extra(extra_name, True)
         a3 = Data().store()
         a3.set_extra(extra_name, True)
-        a4 = ParameterData(dict={'a': 'b'}).store()
+        a4 = Dict(dict={'a': 'b'}).store()
         a4.set_extra(extra_name, True)
         # I don't set the extras, just to be sure that the filtering works
         # The filtering is needed because other tests will put stuff int he DB
@@ -296,9 +296,9 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         results = [_ for [_] in qb.all()]
         self.assertEquals(set([i.pk for i in results]), set([a3.pk, a4.pk]))
 
-        # Same query, but by the ParameterData subclass
+        # Same query, but by the Dict subclass
         qb = QueryBuilder()
-        qb.append(ParameterData, filters={'extras': {'has_key': extra_name}})
+        qb.append(Dict, filters={'extras': {'has_key': extra_name}})
         results = [_ for [_] in qb.all()]
         self.assertEquals(set([i.pk for i in results]), set([a4.pk]))
 
@@ -1089,7 +1089,7 @@ class TestNodeBasic(AiidaTestCase):
         Test that setting a basetype as an attribute works transparently
         """
         from aiida.orm.nodes.data.list import List
-        from aiida.orm.nodes.data.parameter import ParameterData
+        from aiida.orm.nodes.data.dict import Dict
         from aiida.orm.nodes.data.str import Str
 
         # This one is unstored
@@ -1102,7 +1102,7 @@ class TestNodeBasic(AiidaTestCase):
         l2.store()
 
         # Manages to store, and value is converted to its base type
-        p = ParameterData(dict={'b': Str("sometext"), 'c': l1})
+        p = Dict(dict={'b': Str("sometext"), 'c': l1})
         p.store()
         self.assertEqual(p.get_attribute('b'), "sometext")
         self.assertIsInstance(p.get_attribute('b'), six.string_types)

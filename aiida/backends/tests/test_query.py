@@ -285,7 +285,7 @@ class TestQueryBuilder(AiidaTestCase):
 
     def test_subclassing(self):
         from aiida.orm.nodes.data.structure import StructureData
-        from aiida.orm.nodes.data.parameter import ParameterData
+        from aiida.orm.nodes.data.dict import Dict
         from aiida.orm import Node, Data
         from aiida.orm.querybuilder import QueryBuilder
         s = StructureData()
@@ -296,7 +296,7 @@ class TestQueryBuilder(AiidaTestCase):
         d.set_attribute('cat', 'miau')
         d.store()
 
-        p = ParameterData(dict=dict(cat='miau'))
+        p = Dict(dict=dict(cat='miau'))
         p.store()
 
         # Now when asking for a node with attr.cat==miau, I want 3 esults:
@@ -307,31 +307,31 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(qb.count(), 3)
 
         # If I'm asking for the specific lowest subclass, I want one result
-        for cls in (StructureData, ParameterData):
+        for cls in (StructureData, Dict):
             qb = QueryBuilder().append(cls, filters={'attributes.cat': 'miau'})
             self.assertEqual(qb.count(), 1)
 
         # Now I am not allow the subclassing, which should give 1 result for each
         for cls, count in (
             (StructureData, 1),
-            (ParameterData, 1),
+            (Dict, 1),
             (Data, 1),
             (Node, 0)):
             qb = QueryBuilder().append(cls, filters={'attributes.cat': 'miau'}, subclassing=False)
             self.assertEqual(qb.count(), count)
 
         # Now I am testing the subclassing with tuples:
-        qb = QueryBuilder().append(cls=(StructureData, ParameterData), filters={'attributes.cat': 'miau'})
+        qb = QueryBuilder().append(cls=(StructureData, Dict), filters={'attributes.cat': 'miau'})
         self.assertEqual(qb.count(), 2)
-        qb = QueryBuilder().append(type=('data.structure.StructureData.', 'data.parameter.ParameterData.'),
+        qb = QueryBuilder().append(type=('data.structure.StructureData.', 'data.dict.Dict.'),
                                    filters={'attributes.cat': 'miau'})
         self.assertEqual(qb.count(), 2)
-        qb = QueryBuilder().append(cls=(StructureData, ParameterData), filters={'attributes.cat': 'miau'},
+        qb = QueryBuilder().append(cls=(StructureData, Dict), filters={'attributes.cat': 'miau'},
                                    subclassing=False)
         self.assertEqual(qb.count(), 2)
         qb = QueryBuilder().append(cls=(StructureData, Data), filters={'attributes.cat': 'miau'}, )
         self.assertEqual(qb.count(), 3)
-        qb = QueryBuilder().append(type=('data.structure.StructureData.', 'data.parameter.ParameterData.'),
+        qb = QueryBuilder().append(type=('data.structure.StructureData.', 'data.dict.Dict.'),
                                    filters={'attributes.cat': 'miau'}, subclassing=False)
         self.assertEqual(qb.count(), 2)
         qb = QueryBuilder().append(type=('data.structure.StructureData.', 'data.Data.'),
@@ -408,7 +408,7 @@ class TestQueryBuilder(AiidaTestCase):
         from aiida.orm import Node
         from aiida.orm import ProcessNode
         from aiida.orm.nodes.data.structure import StructureData
-        from aiida.orm.nodes.data.parameter import ParameterData
+        from aiida.orm.nodes.data.dict import Dict
         from aiida.orm.computers import Computer
         qb = QueryBuilder()
         qb.append(Node, tag='n1')
@@ -420,21 +420,21 @@ class TestQueryBuilder(AiidaTestCase):
         # Now I am testing the default tags,
         qb = QueryBuilder().append(StructureData).append(ProcessNode).append(
             StructureData).append(
-            ParameterData, with_outgoing=ProcessNode)
+            Dict, with_outgoing=ProcessNode)
         self.assertEqual(qb.get_used_tags(), [
             'StructureData_1', 'ProcessNode_1',
             'StructureData_1--ProcessNode_1', 'StructureData_2',
-            'ProcessNode_1--StructureData_2', 'ParameterData_1',
-            'ProcessNode_1--ParameterData_1'
+            'ProcessNode_1--StructureData_2', 'Dict_1',
+            'ProcessNode_1--Dict_1'
         ])
         self.assertEqual(qb.get_used_tags(edges=False), [
             'StructureData_1', 'ProcessNode_1',
-            'StructureData_2', 'ParameterData_1',
+            'StructureData_2', 'Dict_1',
         ])
         self.assertEqual(qb.get_used_tags(vertices=False), [
             'StructureData_1--ProcessNode_1',
             'ProcessNode_1--StructureData_2',
-            'ProcessNode_1--ParameterData_1'
+            'ProcessNode_1--Dict_1'
         ])
 
 
@@ -446,13 +446,13 @@ class TestQueryHelp(AiidaTestCase):
         """
 
         from aiida.orm.nodes.data.structure import StructureData
-        from aiida.orm.nodes.data.parameter import ParameterData
+        from aiida.orm.nodes.data.dict import Dict
         from aiida.orm.nodes.data import Data
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.groups import Group
         from aiida.orm.computers import Computer
         g = Group(label='helloworld').store()
-        for cls in (StructureData, ParameterData, Data):
+        for cls in (StructureData, Dict, Data):
             obj = cls()
             obj.set_attribute('foo-qh2', 'bar')
             obj.store()
@@ -460,14 +460,14 @@ class TestQueryHelp(AiidaTestCase):
 
         for cls, expected_count, subclassing in (
                 (StructureData, 1, True),
-                (ParameterData, 1, True),
+                (Dict, 1, True),
                 (Data, 3, True),
                 (Data, 1, False),
-                ((ParameterData, StructureData), 2, True),
-                ((ParameterData, StructureData), 2, False),
-                ((ParameterData, Data), 2, False),
-                ((ParameterData, Data), 3, True),
-                ((ParameterData, Data, StructureData), 3, False),
+                ((Dict, StructureData), 2, True),
+                ((Dict, StructureData), 2, False),
+                ((Dict, Data), 2, False),
+                ((Dict, Data), 3, True),
+                ((Dict, Data, StructureData), 3, False),
         ):
             qb = QueryBuilder()
             qb.append(cls, filters={'attributes.foo-qh2': 'bar'}, subclassing=subclassing, project='uuid')
@@ -1049,11 +1049,11 @@ class TestManager(AiidaTestCase):
             'ctime_by_day': ctime_by_day
         }
 
-        ParameterData = DataFactory('parameter')
+        Dict = DataFactory('dict')
 
         store_and_add(Data(), expected_db_statistics)
-        store_and_add(ParameterData(), expected_db_statistics)
-        store_and_add(ParameterData(), expected_db_statistics)
+        store_and_add(Dict(), expected_db_statistics)
+        store_and_add(Dict(), expected_db_statistics)
         store_and_add(CalculationNode(), expected_db_statistics)
 
         new_db_statistics = qmanager.get_creation_statistics()
@@ -1093,11 +1093,11 @@ class TestManager(AiidaTestCase):
             'ctime_by_day': ctime_by_day
         }
 
-        ParameterData = DataFactory('parameter')
+        Dict = DataFactory('dict')
 
         store_and_add(Data(), expected_db_statistics)
-        store_and_add(ParameterData(), expected_db_statistics)
-        store_and_add(ParameterData(), expected_db_statistics)
+        store_and_add(Dict(), expected_db_statistics)
+        store_and_add(Dict(), expected_db_statistics)
         store_and_add(CalculationNode(), expected_db_statistics)
 
         new_db_statistics = self.backend.query_manager.get_creation_statistics()

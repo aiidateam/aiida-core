@@ -75,9 +75,7 @@ def validate_link(source, target, link_type, link_label):
     :raise ValueError: if the proposed link is invalid
     """
     from aiida.common.links import LinkType
-    from aiida.orm import Node
-    from aiida.orm.nodes.data import Data
-    from aiida.orm import CalculationNode, WorkflowNode
+    from aiida.orm import Node, Data, CalculationNode, WorkflowNode
 
     if not isinstance(link_type, LinkType):
         raise TypeError('the link_type should be a value from the LinkType enum')

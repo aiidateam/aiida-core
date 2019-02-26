@@ -213,7 +213,7 @@ def delete_db(profile, non_interactive=True, verbose=False):
     """
     from aiida.manage.configuration import get_config
     from aiida.manage.external.postgres import Postgres
-    import aiida.common.json as json
+    from aiida.common import json
 
     pdict = profile.dictionary
 

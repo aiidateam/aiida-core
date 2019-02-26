@@ -19,7 +19,7 @@ from six.moves import range
 import requests
 
 from aiida.tools.dbimporters.baseclasses import CifEntry, DbEntry, DbImporter, DbSearchResults
-import aiida.common.json as json
+from aiida.common import json
 
 
 class ApiFormat(enum.Enum):

@@ -590,7 +590,7 @@ class JobInfo(DefaultFieldsAttributeDict):
         Serialise the current data
         :return: A serialised representation of the current data
         """
-        import aiida.common.json as json
+        from aiida.common import json
 
         ser_data = {k: self.serialize_field(v, self._special_serializers.get(k, None)) for k, v in self.items()}
 
@@ -602,7 +602,7 @@ class JobInfo(DefaultFieldsAttributeDict):
         :param data: The data to load from
         :return: The value after loading
         """
-        import aiida.common.json as json
+        from aiida.common import json
 
         deser_data = json.loads(data)
 

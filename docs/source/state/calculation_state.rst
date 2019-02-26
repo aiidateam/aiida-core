@@ -62,7 +62,7 @@ If you prefer, you can check the state of a calculation from within python. For 
     from aiida import load_dbenv
     load_dbenv()
 
-    from aiida.orm.nodes import CalcJobNode
+    from aiida.orm import CalcJobNode
 
     ## pk must be a valid integer pk
     calc = load_node(pk)

@@ -17,8 +17,7 @@ from aiida.common import exceptions
 from aiida.common.links import LinkType
 from aiida.engine import calcfunction, Process
 from aiida.manage.caching import enable_caching
-from aiida.orm.nodes.data.int import Int
-from aiida.orm import CalcFunctionNode
+from aiida.orm import Int, CalcFunctionNode
 
 
 class TestCalcFunction(AiidaTestCase):

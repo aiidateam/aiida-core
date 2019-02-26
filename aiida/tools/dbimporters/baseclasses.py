@@ -283,7 +283,7 @@ class CifEntry(DbEntry):
             :py:class:`aiida.orm.nodes.data.cif.CifData`.
         """
         from six.moves import cStringIO as StringIO
-        from aiida.orm.nodes.data.cif import CifData
+        from aiida.orm import CifData
         return CifData.read_cif(StringIO(self.cif))
 
     def get_cif_node(self, store=False, parse_policy='lazy'):
@@ -293,7 +293,6 @@ class CifEntry(DbEntry):
 
         :return: :py:class:`aiida.orm.nodes.data.cif.CifData` object
         """
-        from aiida.common.files import md5_file
         from aiida.orm.nodes.data.cif import CifData
         import tempfile
 
@@ -316,7 +315,6 @@ class CifEntry(DbEntry):
         :return: AiiDA structure corresponding to the CIF file.
         """
         cif = self.get_cif_node(store=store, parse_policy='lazy')
-        
         return cif.get_structure(converter=converter, store=store, **kwargs)
 
     def get_parsed_cif(self):
@@ -340,8 +338,7 @@ class UpfEntry(DbEntry):
 
         :return: :py:class:`aiida.orm.nodes.data.upf.UpfData` object
         """
-        from aiida.common.files import md5_file
-        from aiida.orm.nodes.data.upf import UpfData
+        from aiida.orm import UpfData
         import tempfile
 
         upfnode = None

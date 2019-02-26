@@ -118,11 +118,9 @@
         aiida/backends/tests/engine/test_daemon.py|
         aiida/backends/tests/engine/test_persistence.py|
         aiida/backends/tests/engine/test_process.py|
-        aiida/backends/tests/engine/test_run.py|
         aiida/backends/tests/engine/test_futures.py|
         aiida/backends/tests/engine/test_launch.py|
         aiida/backends/tests/engine/test_process_builder.py|
-        aiida/backends/tests/engine/test_process_spec.py|
         aiida/backends/tests/engine/test_rmq.py|
         aiida/backends/tests/engine/test_runners.py|
         aiida/backends/tests/engine/test_transport.py|

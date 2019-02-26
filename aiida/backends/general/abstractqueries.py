@@ -64,10 +64,9 @@ class AbstractQueryManager(object):
             where in `ctime_by_day` the key is a string in the format 'YYYY-MM-DD' and the value is
             an integer with the number of nodes created that day.
         """
-        from aiida.orm.querybuilder import QueryBuilder as QB
-        from aiida.orm import User, Node
-        from collections import Counter
         import datetime
+        from collections import Counter
+        from aiida.orm import User, Node, QueryBuilder
 
         def count_statistics(dataset):
 
@@ -108,7 +107,7 @@ class AbstractQueryManager(object):
 
         statistics = {}
 
-        q = QB()
+        q = QueryBuilder()
         q.append(Node, project=['id', 'ctime', 'type'], tag='node')
 
         if user_pk is not None:
@@ -133,13 +132,10 @@ class AbstractQueryManager(object):
 
         import datetime
         from aiida.common import timezone
-        from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.nodes.data.structure import (get_formula, get_symbols_string)
-        from aiida.orm.nodes.data.array.bands import BandsData
-        from aiida.orm.nodes.data.structure import StructureData
         from aiida import orm
 
-        qb = QueryBuilder()
+        qb = orm.QueryBuilder()
         if args.all_users is False:
             user = orm.User.objects.get_default()
             qb.append(orm.User, tag="creator", filters={"email": user.email})
@@ -152,7 +148,7 @@ class AbstractQueryManager(object):
             n_days_ago = now - datetime.timedelta(days=args.past_days)
             bdata_filters.update({"ctime": {'>=': n_days_ago}})
 
-        qb.append(BandsData, tag="bdata", with_user="creator",
+        qb.append(orm.BandsData, tag="bdata", with_user="creator",
                   filters=bdata_filters,
                   project=["id", "label", "ctime"]
                   )
@@ -167,11 +163,11 @@ class AbstractQueryManager(object):
             qb.append(orm.Group, tag="group", filters=group_filters,
                       group_of="bdata")
 
-        qb.append(StructureData, tag="sdata", with_descendants="bdata",
+        qb.append(orm.StructureData, tag="sdata", with_descendants="bdata",
                   # We don't care about the creator of StructureData
                   project=["id", "attributes.kinds", "attributes.sites"])
 
-        qb.order_by({StructureData: {'ctime': 'desc'}})
+        qb.order_by({orm.StructureData: {'ctime': 'desc'}})
 
         list_data = qb.distinct()
 
@@ -236,8 +232,8 @@ class AbstractQueryManager(object):
         :param node_pks: one node pk or an iterable of node pks
         :return: a list of aiida objects with all the parents of the nodes
         """
-        from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm import Node
+        from aiida.orm import Node, QueryBuilder
+
         qb = QueryBuilder()
         qb.append(Node, tag='low_node',
                   filters={'id': {'in': node_pks}})

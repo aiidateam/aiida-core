@@ -13,15 +13,20 @@ Tests for specific subclasses of Data
 from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
+
 import io
+import os
+import tempfile
 import unittest
 
 from six.moves import range
 
-from aiida.orm import load_node
-from aiida.common.exceptions import ModificationNotAllowed
 from aiida.backends.testbase import AiidaTestCase
+from aiida.common.exceptions import ModificationNotAllowed
 from aiida.common.utils import Capturing
+from aiida.orm import load_node
+from aiida.orm import CifData, SinglefileData, StructureData, KpointsData, BandsData, ArrayData, TrajectoryData, Dict
+from aiida.orm.nodes.data.structure import Kind, Site
 
 
 def has_seekpath():
@@ -64,11 +69,6 @@ class TestSinglefileData(AiidaTestCase):
     """
 
     def test_reload_singlefiledata(self):
-        import os
-        import tempfile
-
-        from aiida.orm.nodes.data.singlefile import SinglefileData
-
         file_content = 'some text ABCDE'
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             filename = tmpf.name
@@ -103,11 +103,9 @@ class TestCifData(AiidaTestCase):
     """
     Tests for CifData class.
     """
-    from aiida.orm.nodes.data.cif import has_pycifrw
-    from aiida.orm.nodes.data.structure import has_ase, has_pymatgen, has_spglib, \
-        get_pymatgen_version
-    
     from distutils.version import StrictVersion
+    from aiida.orm.nodes.data.cif import has_pycifrw
+    from aiida.orm.nodes.data.structure import has_ase, has_pymatgen, has_spglib, get_pymatgen_version
 
     valid_sample_cif_str = '''
         data_test
@@ -150,11 +148,6 @@ class TestCifData(AiidaTestCase):
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_reload_cifdata(self):
-        import os
-        import tempfile
-
-        from aiida.orm.nodes.data.cif import CifData
-
         file_content = "data_test _cell_length_a 10(1)"
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             filename = tmpf.name
@@ -216,10 +209,6 @@ class TestCifData(AiidaTestCase):
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_parse_cifdata(self):
-        import tempfile
-
-        from aiida.orm.nodes.data.cif import CifData
-
         file_content = "data_test _cell_length_a 10(1)"
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write(file_content)
@@ -230,10 +219,6 @@ class TestCifData(AiidaTestCase):
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_change_cifdata_file(self):
-        import tempfile
-
-        from aiida.orm.nodes.data.cif import CifData
-
         file_content_1 = "data_test _cell_length_a 10(1)"
         file_content_2 = "data_test _cell_length_a 11(1)"
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
@@ -253,10 +238,6 @@ class TestCifData(AiidaTestCase):
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_get_structure(self):
-        import tempfile
-
-        from aiida.orm.nodes.data.cif import CifData
-
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write('''
 data_test
@@ -296,10 +277,7 @@ O 0.5 0.5 0.5
         returned by ASE ase.io.read() method. Test input is
         adapted from http://www.crystallography.net/cod/9012064.cif@120115
         """
-        import tempfile
         import ase
-
-        from aiida.orm.nodes.data.cif import CifData
 
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write('''
@@ -344,10 +322,6 @@ O 0.5 0.5 0.5
         returned by ASE ase.io.read() method. Test input is
         adapted from http://www.crystallography.net/cod/9012064.cif@120115
         """
-        import tempfile
-
-        from aiida.orm.nodes.data.cif import CifData
-
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write('''
 data_9012064
@@ -483,9 +457,6 @@ _tag                                    '[value]'
         are supported.
         Should not raise any error.
         """
-        import tempfile
-        from aiida.orm.nodes.data.cif import CifData
-
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write('''
 data_0
@@ -497,9 +468,6 @@ _tag   {}
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_cif_roundtrip(self):
-        import tempfile
-        from aiida.orm.nodes.data.cif import CifData
-
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write('''
                 data_test
@@ -543,9 +511,6 @@ _tag   {}
     @unittest.skipIf(not has_ase(), "Unable to import ase")
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_attached_hydrogens(self):
-        import tempfile
-        from aiida.orm.nodes.data.cif import CifData
-
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write('''
                 data_test
@@ -602,9 +567,7 @@ _tag   {}
         Test case for refinement (space group determination) for a
         CifData object.
         """
-        from aiida.orm.nodes.data.cif import CifData
         from aiida.tools.data.cif import refine_inline
-        import tempfile
 
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write('''
@@ -670,9 +633,6 @@ _tag   {}
         """
         Check that different scan_types of PyCifRW produce the same result.
         """
-        import tempfile
-        from aiida.orm.nodes.data.cif import CifData
-
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write(self.valid_sample_cif_str)
             tmpf.flush()
@@ -691,9 +651,6 @@ _tag   {}
 
         Note: This test does not need PyCifRW.
         """
-        import tempfile
-        from aiida.orm.nodes.data.cif import CifData
-
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write(self.valid_sample_cif_str)
             tmpf.flush()
@@ -716,9 +673,6 @@ _tag   {}
         """
         Test that loading of CIF file occurs as defined by parse_policy.
         """
-        import tempfile
-        from aiida.orm.nodes.data.cif import CifData
-
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write(self.valid_sample_cif_str)
             tmpf.flush()
@@ -743,9 +697,6 @@ _tag   {}
         """
         Test that setting a new file clears formulae and spacegroups.
         """
-        import tempfile
-        from aiida.orm.nodes.data.cif import CifData
-
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write(self.valid_sample_cif_str)
             tmpf.flush()
@@ -782,9 +733,6 @@ _tag   {}
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_has_partial_occupancies(self):
-        import tempfile
-        from aiida.orm.nodes.data.cif import CifData
-
         tests = [
             # Unreadable occupations should not count as a partial occupancy
             ('O 0.5 0.5(1) 0.5 ?', False),
@@ -814,9 +762,6 @@ _tag   {}
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_has_unknown_species(self):
-        import tempfile
-        from aiida.orm.nodes.data.cif import CifData
-
         tests = [
             ('H2 O', False),  # No unknown species
             ('OsAx', True),   # Ax is an unknown specie
@@ -834,9 +779,6 @@ _tag   {}
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_has_undefined_atomic_sites(self):
-        import tempfile
-        from aiida.orm.nodes.data.cif import CifData
-
         tests = [
             ('C 0.0 0.0 0.0', False),  # Should return False because all sites have valid coordinates
             ('C 0.0 0.0 ?', True),     # Should return True because one site has an undefined coordinate
@@ -863,36 +805,28 @@ class TestKindValidSymbols(AiidaTestCase):
         """
         Should not accept a non-existing symbol.
         """
-        from aiida.orm.nodes.data.structure import Kind
-
         with self.assertRaises(ValueError):
-            _ = Kind(symbols='Hxx')
+            Kind(symbols='Hxx')
 
     def test_empty_list_symbols(self):
         """
         Should not accept an empty list
         """
-        from aiida.orm.nodes.data.structure import Kind
-
         with self.assertRaises(ValueError):
-            _ = Kind(symbols=[])
+            Kind(symbols=[])
 
     def test_valid_list(self):
         """
         Should not raise any error.
         """
-        from aiida.orm.nodes.data.structure import Kind
-
-        _ = Kind(symbols=['H', 'He'], weights=[0.5, 0.5])
+        Kind(symbols=['H', 'He'], weights=[0.5, 0.5])
 
     def test_unknown_symbol(self):
         """
         Should test if symbol X is valid and defined
         in the elements dictionary.
         """
-        from aiida.orm.nodes.data.structure import Kind
-
-        _ = Kind(symbols=['X'])
+        Kind(symbols=['X'])
 
 
 class TestSiteValidWeights(AiidaTestCase):
@@ -904,74 +838,58 @@ class TestSiteValidWeights(AiidaTestCase):
         """
         Should not accept a non-list, non-number weight
         """
-        from aiida.orm.nodes.data.structure import Kind
-
         with self.assertRaises(ValueError):
-            _ = Kind(symbols='Ba', weights='aaa')
+            Kind(symbols='Ba', weights='aaa')
 
     def test_empty_list_weights(self):
         """
         Should not accept an empty list
         """
-        from aiida.orm.nodes.data.structure import Kind
-
         with self.assertRaises(ValueError):
-            _ = Kind(symbols='Ba', weights=[])
+            Kind(symbols='Ba', weights=[])
 
     def test_symbol_weight_mismatch(self):
         """
         Should not accept a size mismatch of the symbols and weights
         list.
         """
-        from aiida.orm.nodes.data.structure import Kind
+        with self.assertRaises(ValueError):
+            Kind(symbols=['Ba', 'C'], weights=[1.])
 
         with self.assertRaises(ValueError):
-            _ = Kind(symbols=['Ba', 'C'], weights=[1.])
-
-        with self.assertRaises(ValueError):
-            _ = Kind(symbols=['Ba'], weights=[0.1, 0.2])
+            Kind(symbols=['Ba'], weights=[0.1, 0.2])
 
     def test_negative_value(self):
         """
         Should not accept a negative weight
         """
-        from aiida.orm.nodes.data.structure import Kind
-
         with self.assertRaises(ValueError):
-            _ = Kind(symbols=['Ba', 'C'], weights=[-0.1, 0.3])
+            Kind(symbols=['Ba', 'C'], weights=[-0.1, 0.3])
 
     def test_sum_greater_one(self):
         """
         Should not accept a sum of weights larger than one
         """
-        from aiida.orm.nodes.data.structure import Kind
-
         with self.assertRaises(ValueError):
-            _ = Kind(symbols=['Ba', 'C'], weights=[0.5, 0.6])
+            Kind(symbols=['Ba', 'C'], weights=[0.5, 0.6])
 
     def test_sum_one_weights(self):
         """
         Should accept a sum equal to one
         """
-        from aiida.orm.nodes.data.structure import Kind
-
-        _ = Kind(symbols=['Ba', 'C'], weights=[1. / 3., 2. / 3.])
+        Kind(symbols=['Ba', 'C'], weights=[1. / 3., 2. / 3.])
 
     def test_sum_less_one_weights(self):
         """
         Should accept a sum equal less than one
         """
-        from aiida.orm.nodes.data.structure import Kind
-
-        _ = Kind(symbols=['Ba', 'C'], weights=[1. / 3., 1. / 3.])
+        Kind(symbols=['Ba', 'C'], weights=[1. / 3., 1. / 3.])
 
     def test_none(self):
         """
         Should accept None.
         """
-        from aiida.orm.nodes.data.structure import Kind
-
-        _ = Kind(symbols='Ba', weights=None)
+        Kind(symbols='Ba', weights=None)
 
 
 class TestKindTestGeneral(AiidaTestCase):
@@ -983,8 +901,6 @@ class TestKindTestGeneral(AiidaTestCase):
         """
         Should accept a sum equal to one
         """
-        from aiida.orm.nodes.data.structure import Kind
-
         a = Kind(symbols=['Ba', 'C'], weights=[1. / 3., 2. / 3.])
         self.assertTrue(a.is_alloy)
         self.assertFalse(a.has_vacancies)
@@ -993,8 +909,6 @@ class TestKindTestGeneral(AiidaTestCase):
         """
         Should accept a sum equal less than one
         """
-        from aiida.orm.nodes.data.structure import Kind
-
         a = Kind(symbols=['Ba', 'C'], weights=[1. / 3., 1. / 3.])
         self.assertTrue(a.is_alloy)
         self.assertTrue(a.has_vacancies)
@@ -1003,17 +917,13 @@ class TestKindTestGeneral(AiidaTestCase):
         """
         Should not accept a 'positions' parameter
         """
-        from aiida.orm.nodes.data.structure import Kind
-
         with self.assertRaises(ValueError):
-            _ = Kind(position=[0., 0., 0.], symbols=['Ba'], weights=[1.])
+            Kind(position=[0., 0., 0.], symbols=['Ba'], weights=[1.])
 
     def test_simple(self):
         """
         Should recognize a simple element.
         """
-        from aiida.orm.nodes.data.structure import Kind
-
         a = Kind(symbols='Ba')
         self.assertFalse(a.is_alloy)
         self.assertFalse(a.has_vacancies)
@@ -1030,8 +940,6 @@ class TestKindTestGeneral(AiidaTestCase):
         """
         Check the automatic name generator.
         """
-        from aiida.orm.nodes.data.structure import Kind
-
         a = Kind(symbols='Ba')
         self.assertEqual(a.name, 'Ba')
 
@@ -1064,7 +972,7 @@ class TestKindTestMasses(AiidaTestCase):
         """
         mass for elements with sum one
         """
-        from aiida.orm.nodes.data.structure import Kind, _atomic_masses
+        from aiida.orm.nodes.data.structure import _atomic_masses
 
         a = Kind(symbols=['Ba', 'C'], weights=[1. / 3., 2. / 3.])
         self.assertAlmostEqual(a.mass, (_atomic_masses['Ba'] + 2. * _atomic_masses['C']) / 3.)
@@ -1073,7 +981,7 @@ class TestKindTestMasses(AiidaTestCase):
         """
         mass for elements with sum less than one
         """
-        from aiida.orm.nodes.data.structure import Kind, _atomic_masses
+        from aiida.orm.nodes.data.structure import _atomic_masses
 
         a = Kind(symbols=['Ba', 'C'], weights=[1. / 3., 1. / 3.])
         self.assertAlmostEqual(a.mass, (_atomic_masses['Ba'] + _atomic_masses['C']) / 2.)
@@ -1082,7 +990,7 @@ class TestKindTestMasses(AiidaTestCase):
         """
         mass for a single element
         """
-        from aiida.orm.nodes.data.structure import Kind, _atomic_masses
+        from aiida.orm.nodes.data.structure import _atomic_masses
 
         a = Kind(symbols=['Ba'])
         self.assertAlmostEqual(a.mass, _atomic_masses['Ba'])
@@ -1091,8 +999,6 @@ class TestKindTestMasses(AiidaTestCase):
         """
         mass set manually
         """
-        from aiida.orm.nodes.data.structure import Kind
-
         a = Kind(symbols=['Ba', 'C'], weights=[1. / 3., 1. / 3.], mass=1000.)
         self.assertAlmostEqual(a.mass, 1000.)
 
@@ -1106,44 +1012,34 @@ class TestStructureDataInit(AiidaTestCase):
         """
         Wrong cell size (not 3x3)
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         with self.assertRaises(ValueError):
-            _ = StructureData(cell=((1., 2., 3.),))
+            StructureData(cell=((1., 2., 3.),))
 
     def test_cell_wrong_size_2(self):
         """
         Wrong cell size (not 3x3)
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         with self.assertRaises(ValueError):
-            _ = StructureData(cell=((1., 0., 0.), (0., 0., 3.), (0., 3.)))
+            StructureData(cell=((1., 0., 0.), (0., 0., 3.), (0., 3.)))
 
     def test_cell_zero_vector(self):
         """
         Wrong cell (one vector has zero length)
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         with self.assertRaises(ValueError):
-            _ = StructureData(cell=((0., 0., 0.), (0., 1., 0.), (0., 0., 1.)))
+            StructureData(cell=((0., 0., 0.), (0., 1., 0.), (0., 0., 1.)))
 
     def test_cell_zero_volume(self):
         """
         Wrong cell (volume is zero)
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         with self.assertRaises(ValueError):
-            _ = StructureData(cell=((1., 0., 0.), (0., 1., 0.), (1., 1., 0.)))
+            StructureData(cell=((1., 0., 0.), (0., 1., 0.), (1., 1., 0.)))
 
     def test_cell_ok_init(self):
         """
         Correct cell
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         cell = ((1., 0., 0.), (0., 2., 0.), (0., 0., 3.))
         a = StructureData(cell=cell)
         out_cell = a.cell
@@ -1156,8 +1052,6 @@ class TestStructureDataInit(AiidaTestCase):
         """
         Check the volume calculation
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         a = StructureData(cell=((1., 0., 0.), (0., 2., 0.), (0., 0., 3.)))
         self.assertAlmostEqual(a.get_cell_volume(), 6.)
 
@@ -1165,38 +1059,30 @@ class TestStructureDataInit(AiidaTestCase):
         """
         Wrong pbc parameter (not bool or iterable)
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         with self.assertRaises(ValueError):
             cell = ((1., 0., 0.), (0., 2., 0.), (0., 0., 3.))
-            _ = StructureData(cell=cell, pbc=1)
+            StructureData(cell=cell, pbc=1)
 
     def test_wrong_pbc_2(self):
         """
         Wrong pbc parameter (iterable but with wrong len)
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         with self.assertRaises(ValueError):
             cell = ((1., 0., 0.), (0., 2., 0.), (0., 0., 3.))
-            _ = StructureData(cell=cell, pbc=[True, True])
+            StructureData(cell=cell, pbc=[True, True])
 
     def test_wrong_pbc_3(self):
         """
         Wrong pbc parameter (iterable but with wrong len)
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         with self.assertRaises(ValueError):
             cell = ((1., 0., 0.), (0., 2., 0.), (0., 0., 3.))
-            _ = StructureData(cell=cell, pbc=[])
+            StructureData(cell=cell, pbc=[])
 
     def test_ok_pbc_1(self):
         """
         Single pbc value
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         cell = ((1., 0., 0.), (0., 2., 0.), (0., 0., 3.))
         a = StructureData(cell=cell, pbc=True)
         self.assertEquals(a.pbc, tuple([True, True, True]))
@@ -1208,8 +1094,6 @@ class TestStructureDataInit(AiidaTestCase):
         """
         One-element list
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         cell = ((1., 0., 0.), (0., 2., 0.), (0., 0., 3.))
         a = StructureData(cell=cell, pbc=[True])
         self.assertEqual(a.pbc, tuple([True, True, True]))
@@ -1221,8 +1105,6 @@ class TestStructureDataInit(AiidaTestCase):
         """
         Three-element list
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         cell = ((1., 0., 0.), (0., 2., 0.), (0., 0., 3.))
         a = StructureData(cell=cell, pbc=[True, False, True])
         self.assertEqual(a.pbc, tuple([True, False, True]))
@@ -1239,8 +1121,6 @@ class TestStructureData(AiidaTestCase):
         """
         Test the creation of a cell and the appending of atoms
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         cell = [[2., 0., 0.], [0., 2., 0.], [0., 0., 2.]]
 
         a = StructureData(cell=cell)
@@ -1274,8 +1154,6 @@ class TestStructureData(AiidaTestCase):
         Test the creation of a cell and the appending of atoms, including
         the unknown entry.
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         cell = [[2., 0., 0.], [0., 2., 0.], [0., 0., 2.]]
 
         a = StructureData(cell=cell)
@@ -1309,8 +1187,6 @@ class TestStructureData(AiidaTestCase):
         Test the management of kinds (automatic detection of kind of
         simple atoms).
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
 
         a.append_atom(position=(0., 0., 0.), symbols=['Ba'])
@@ -1326,8 +1202,6 @@ class TestStructureData(AiidaTestCase):
         Test the management of kinds (automatic detection of kind of
         simple atoms), inluding the unknown entry.
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
 
         a.append_atom(position=(0., 0., 0.), symbols=['X'])
@@ -1342,8 +1216,6 @@ class TestStructureData(AiidaTestCase):
         """
         Test the management of kinds (manual specification of kind name).
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
 
         a.append_atom(position=(0., 0., 0.), symbols=['Ba'], name='Ba1')
@@ -1359,8 +1231,6 @@ class TestStructureData(AiidaTestCase):
         Test the management of kinds (manual specification of kind name),
         including the unknown entry.
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
 
         a.append_atom(position=(0., 0., 0.), symbols=['X'], name='X1')
@@ -1375,8 +1245,6 @@ class TestStructureData(AiidaTestCase):
         """
         Test the management of kinds (adding an atom with different mass).
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
 
         a.append_atom(position=(0., 0., 0.), symbols=['Ba'], mass=100.)
@@ -1398,8 +1266,6 @@ class TestStructureData(AiidaTestCase):
         Test the management of kinds (adding an atom with different mass),
         including the unknown entry.
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
 
         a.append_atom(position=(0., 0., 0.), symbols=['X'], mass=100.)
@@ -1421,8 +1287,6 @@ class TestStructureData(AiidaTestCase):
         Test the management of kind (adding an atom with different symbols
         or weights).
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
 
         a.append_atom(position=(0., 0., 0.), symbols=['Ba', 'Ti'], weights=(1., 0.), name='mytype')
@@ -1453,8 +1317,6 @@ class TestStructureData(AiidaTestCase):
         Test the management of kind (adding an atom with different symbols
         or weights), including the unknown entry.
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
 
         a.append_atom(position=(0., 0., 0.), symbols=['X', 'Ti'], weights=(1., 0.), name='mytype')
@@ -1485,8 +1347,6 @@ class TestStructureData(AiidaTestCase):
         Test the management of kinds (automatic creation of new kind
         if name is not specified and properties are different).
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
 
         a.append_atom(position=(0., 0., 0.), symbols='Ba', mass=100.)
@@ -1512,8 +1372,6 @@ class TestStructureData(AiidaTestCase):
         if name is not specified and properties are different), including
         the unknown entry.
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
 
         a.append_atom(position=(0., 0., 0.), symbols='X', mass=100.)
@@ -1539,7 +1397,6 @@ class TestStructureData(AiidaTestCase):
         if name is not specified and properties are different).
         This test was failing in, e.g., commit f6a8f4b.
         """
-        from aiida.orm.nodes.data.structure import StructureData
         from aiida.common.constants import elements
 
         s = StructureData(cell=((6., 0., 0.), (0., 6., 0.), (0., 0., 6.)))
@@ -1565,7 +1422,6 @@ class TestStructureData(AiidaTestCase):
         This test was failing in, e.g., commit f6a8f4b. This also includes
         the unknown entry.
         """
-        from aiida.orm.nodes.data.structure import StructureData
         from aiida.common.constants import elements
 
         s = StructureData(cell=((6., 0., 0.), (0., 6., 0.), (0., 0., 6.)))
@@ -1589,7 +1445,6 @@ class TestStructureData(AiidaTestCase):
         """
         Same test as test_kind_5_bis, but using ase
         """
-        from aiida.orm.nodes.data.structure import StructureData
         import ase
 
         asecell = ase.Atoms('Fe5', cell=((6., 0., 0.), (0., 6., 0.), (0., 0., 6.)))
@@ -1620,7 +1475,6 @@ class TestStructureData(AiidaTestCase):
         """
         Same test as test_kind_5_bis_unknown, but using ase
         """
-        from aiida.orm.nodes.data.structure import StructureData
         import ase
 
         asecell = ase.Atoms('X5', cell=((6., 0., 0.), (0., 6., 0.), (0., 0., 6.)))
@@ -1651,8 +1505,6 @@ class TestStructureData(AiidaTestCase):
         Test the returning of kinds from the string name (most of the code
         copied from :py:meth:`.test_kind_5`).
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
 
         a.append_atom(position=(0., 0., 0.), symbols='Ba', mass=100.)
@@ -1680,8 +1532,6 @@ class TestStructureData(AiidaTestCase):
         Test the returning of kinds from the string name (most of the code
         copied from :py:meth:`.test_kind_5`), including the unknown entry.
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
 
         a.append_atom(position=(0., 0., 0.), symbols='X', mass=100.)
@@ -1708,8 +1558,6 @@ class TestStructureData(AiidaTestCase):
         """
         Test the functions returning the list of kinds, symbols, ...
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
 
         a.append_atom(position=(0., 0., 0.), symbols='Ba', mass=100.)
@@ -1726,8 +1574,6 @@ class TestStructureData(AiidaTestCase):
         Test the functions returning the list of kinds, symbols, ...
         including the unknown entry.
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
 
         a.append_atom(position=(0., 0., 0.), symbols='Ba', mass=100.)
@@ -1887,7 +1733,6 @@ class TestStructureData(AiidaTestCase):
         """
         Tests the conversion to CifData
         """
-        from aiida.orm.nodes.data.structure import StructureData
         import re
 
         a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
@@ -2008,8 +1853,6 @@ class TestStructureDataLock(AiidaTestCase):
         """
         Start from a StructureData object, convert to raw and then back
         """
-        from aiida.orm.nodes.data.structure import StructureData, Kind, Site
-
         cell = ((1., 0., 0.), (0., 2., 0.), (0., 0., 3.))
         a = StructureData(cell=cell)
 
@@ -2063,8 +1906,6 @@ class TestStructureDataReload(AiidaTestCase):
         """
         Start from a StructureData object, convert to raw and then back
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         cell = ((1., 0., 0.), (0., 2., 0.), (0., 0., 3.))
         a = StructureData(cell=cell)
 
@@ -2110,8 +1951,6 @@ class TestStructureDataReload(AiidaTestCase):
         """
         Start from a StructureData object, clone it and see if it is preserved
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         cell = ((1., 0., 0.), (0., 2., 0.), (0., 0., 3.))
         a = StructureData(cell=cell)
 
@@ -2194,7 +2033,6 @@ class TestStructureDataFromAse(AiidaTestCase):
         """
         Tests roundtrip ASE -> StructureData -> ASE, with tags
         """
-        from aiida.orm.nodes.data.structure import StructureData
         import ase
 
         a = ase.Atoms('Si4Ge4', cell=(1., 2., 3.), pbc=(True, False, False))
@@ -2225,7 +2063,6 @@ class TestStructureDataFromAse(AiidaTestCase):
         Tests roundtrip ASE -> StructureData -> ASE, with tags, and 
         changing the atomic masses
         """
-        from aiida.orm.nodes.data.structure import StructureData
         import ase
 
         a = ase.Atoms('Si4', cell=(1., 2., 3.), pbc=(True, False, False))
@@ -2259,8 +2096,6 @@ class TestStructureDataFromAse(AiidaTestCase):
         """
         Tests StructureData -> ASE, with all sorts of kind names
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         a = StructureData()
         a.append_atom(position=(0., 0., 0.), symbols='Ba', name='Ba')
         a.append_atom(position=(0., 0., 0.), symbols='Ba', name='Ba1')
@@ -2289,7 +2124,6 @@ class TestStructureDataFromAse(AiidaTestCase):
         """
         Tests ASE -> StructureData -> ASE, in particular conversion tags / kind names
         """
-        from aiida.orm.nodes.data.structure import StructureData
         import ase
 
         atoms = ase.Atoms('Fe5')
@@ -2312,7 +2146,6 @@ class TestStructureDataFromAse(AiidaTestCase):
         Tests ASE -> StructureData -> ASE, in particular conversion tags / kind names
         (subtle variation of test_conversion_of_types_4)
         """
-        from aiida.orm.nodes.data.structure import StructureData
         import ase
 
         atoms = ase.Atoms('Fe5')
@@ -2334,8 +2167,6 @@ class TestStructureDataFromAse(AiidaTestCase):
         """
         Tests roundtrip StructureData -> ASE -> StructureData, with tags/kind names
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         a = StructureData(cell=[[4, 0, 0], [0, 4, 0], [0, 0, 4]])
         a.append_atom(position=(0, 0, 0), symbols='Ni', name='Ni1')
         a.append_atom(position=(2, 2, 2), symbols='Ni', name='Ni2')
@@ -2366,10 +2197,7 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         Test's input is derived from COD entry 9011963, processed with
         cif_mark_disorder (from cod-tools) and abbreviated.
         """
-        from aiida.orm.nodes.data.structure import StructureData
         from pymatgen.io.cif import CifParser
-
-        import tempfile
 
         with tempfile.NamedTemporaryFile(mode='w+', suffix=".cif") as tmpf:
             tmpf.write("""data_9011963
@@ -2438,10 +2266,7 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         Tests xyz -> pymatgen -> StructureData
         Input source: http://pymatgen.org/_static/Molecule.html
         """
-        from aiida.orm.nodes.data.structure import StructureData
         from pymatgen.io.xyz import XYZ
-
-        import tempfile
 
         with tempfile.NamedTemporaryFile(mode='w+', suffix=".xyz") as tmpf:
             tmpf.write("""5
@@ -2470,7 +2295,6 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         Tests pymatgen -> StructureData, with partial occupancies and spins.
         This should raise a ValueError.
         """
-        from aiida.orm.nodes.data.structure import StructureData
         import pymatgen
 
         Fe_spin_up = pymatgen.structure.Specie('Fe', 0, properties={'spin': 1})
@@ -2500,7 +2324,6 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         Tests that a structure with multiple sites with the same element but different
         partial occupancies, get their own unique kind name
         """
-        from aiida.orm.nodes.data.structure import StructureData
         import pymatgen
 
         Mg1 = pymatgen.structure.Composition({'Mg': 0.50})
@@ -2517,7 +2340,6 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         Tests that a structure with multiple sites with the same alloy symbols but different
         weights, get their own unique kind name
         """
-        from aiida.orm.nodes.data.structure import StructureData
         import pymatgen
 
         alloy_one = pymatgen.structure.Composition({'Mg': 0.25, 'Al': 0.75})
@@ -2536,8 +2358,7 @@ class TestPymatgenFromStructureData(AiidaTestCase):
     Tests the creation of pymatgen Structure and Molecule objects from
     StructureData.
     """
-    from aiida.orm.nodes.data.structure import has_ase, has_pymatgen, \
-        get_pymatgen_version
+    from aiida.orm.nodes.data.structure import has_ase, has_pymatgen, get_pymatgen_version
 
     @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
     def test_1(self):
@@ -2561,7 +2382,6 @@ class TestPymatgenFromStructureData(AiidaTestCase):
         """
         Tests ASE -> StructureData -> pymatgen
         """
-        from aiida.orm.nodes.data.structure import StructureData
         import ase
 
         aseatoms = ase.Atoms('Si4', cell=(1., 2., 3.), pbc=(True, True, True))
@@ -2589,7 +2409,6 @@ class TestPymatgenFromStructureData(AiidaTestCase):
         Tests the conversion of StructureData to pymatgen's Molecule
         (ASE -> StructureData -> pymatgen)
         """
-        from aiida.orm.nodes.data.structure import StructureData
         import ase
 
         aseatoms = ase.Atoms('Si4', cell=(10, 10, 10), pbc=(True, True, True))
@@ -2613,8 +2432,6 @@ class TestPymatgenFromStructureData(AiidaTestCase):
         Tests roundtrip StructureData -> pymatgen -> StructureData
         (no spins)
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         a = StructureData(cell=[[5.6, 0, 0], [0, 5.6, 0], [0, 0, 5.6]])
         a.append_atom(position=(0, 0, 0), symbols='Cl')
         a.append_atom(position=(2.8, 0, 2.8), symbols='Cl')
@@ -2638,8 +2455,6 @@ class TestPymatgenFromStructureData(AiidaTestCase):
         Tests roundtrip StructureData -> pymatgen -> StructureData
         (no spins, but with all kind of kind names)
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         a = StructureData(cell=[[5.6, 0, 0], [0, 5.6, 0], [0, 0, 5.6]])
         a.append_atom(position=(0, 0, 0), symbols='Cl', name='Cl')
         a.append_atom(position=(2.8, 0, 2.8), symbols='Cl', name='Cl10')
@@ -2666,8 +2481,6 @@ class TestPymatgenFromStructureData(AiidaTestCase):
         Tests roundtrip StructureData -> pymatgen -> StructureData
         (with spins)
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         a = StructureData(cell=[[5.6, 0, 0], [0, 5.6, 0], [0, 0, 5.6]])
         a.append_atom(position=(0, 0, 0), symbols='Mn', name='Mn1')
         a.append_atom(position=(2.8, 0, 2.8), symbols='Mn', name='Mn1')
@@ -2694,8 +2507,6 @@ class TestPymatgenFromStructureData(AiidaTestCase):
         Tests roundtrip StructureData -> pymatgen -> StructureData
         (with partial occupancies).
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         a = StructureData(cell=[[4.0, 0.0, 0.0], [-2., 3.5, 0.0], [0.0, 0.0, 16.]])
         a.append_atom(position=(0.0, 0.0, 13.5), symbols='Mn')
         a.append_atom(position=(0.0, 0.0, 2.6), symbols='Mn')
@@ -2762,8 +2573,6 @@ class TestPymatgenFromStructureData(AiidaTestCase):
         Tests StructureData -> pymatgen, with partial occupancies and spins.
         This should raise a ValueError.
         """
-        from aiida.orm.nodes.data.structure import StructureData
-
         a = StructureData(cell=[[4, 0, 0], [0, 4, 0], [0, 0, 4]])
         a.append_atom(position=(0, 0, 0), symbols=('Fe', 'Al'), weights=(0.8, 0.2), name='FeAl1')
         a.append_atom(position=(2, 2, 2), symbols=('Fe', 'Al'), weights=(0.8, 0.2), name='FeAl2')
@@ -2800,7 +2609,6 @@ class TestArrayData(AiidaTestCase):
         Check the methods to add, remove, modify, and get arrays and
         array shapes.
         """
-        from aiida.orm.nodes.data.array import ArrayData
         import numpy
 
         # Create a node with two arrays
@@ -2892,7 +2700,6 @@ class TestArrayData(AiidaTestCase):
         """
         Check the functionality of the get_iterarrays() iterator
         """
-        from aiida.orm.nodes.data.array import ArrayData
         import numpy
 
         # Create a node with two arrays
@@ -2924,7 +2731,6 @@ class TestTrajectoryData(AiidaTestCase):
         """
         Check the methods to set and retrieve a trajectory.
         """
-        from aiida.orm.nodes.data.array.trajectory import TrajectoryData
         import numpy
 
         # Create a node with two arrays
@@ -3105,8 +2911,6 @@ class TestTrajectoryData(AiidaTestCase):
         """
         Check the methods to export a given time step to a StructureData node.
         """
-        from aiida.orm.nodes.data.array.trajectory import TrajectoryData
-        from aiida.orm.nodes.data.structure import Kind
         import numpy
 
         # Create a node with two arrays
@@ -3206,9 +3010,6 @@ class TestTrajectoryData(AiidaTestCase):
         Check the method to create a TrajectoryData from list of AiiDA
         structures.
         """
-        from aiida.orm.nodes.data.structure import StructureData
-        from aiida.orm.nodes.data.array.trajectory import TrajectoryData
-
         cells = [[[
             2.,
             0.,
@@ -3266,8 +3067,6 @@ class TestTrajectoryData(AiidaTestCase):
         """
         import numpy
         import os
-        import tempfile
-        from aiida.orm.nodes.data.array.trajectory import TrajectoryData
         from aiida.orm.nodes.data.cif import has_pycifrw
 
         n = TrajectoryData()
@@ -3398,8 +3197,6 @@ class TestKpointsData(AiidaTestCase):
         """
         Check the methods to set and retrieve a mesh.
         """
-        from aiida.orm.nodes.data.array.kpoints import KpointsData
-
         # Create a node with two arrays
         k = KpointsData()
 
@@ -3434,7 +3231,6 @@ class TestKpointsData(AiidaTestCase):
         """
         Test the method to set and retrieve a kpoint list.
         """
-        from aiida.orm.nodes.data.array.kpoints import KpointsData
         import numpy
 
         k = KpointsData()
@@ -3484,7 +3280,6 @@ class TestKpointsData(AiidaTestCase):
         """
         Test how the list of kpoints is converted to cartesian coordinates
         """
-        from aiida.orm.nodes.data.array.kpoints import KpointsData
         import numpy
 
         k = KpointsData()
@@ -3524,7 +3319,6 @@ class TestKpointsData(AiidaTestCase):
         """
         Test the methods to generate automatically a list of kpoints
         """
-        from aiida.orm.nodes.data.array.kpoints import KpointsData
         import numpy
 
         k = KpointsData()
@@ -3585,9 +3379,6 @@ class TestKpointsData(AiidaTestCase):
         the same behavior of the old implementation
         """
         import numpy
-        from aiida.orm.nodes.data.dict import Dict
-        from aiida.orm.nodes.data.structure import StructureData
-        from aiida.orm.nodes.data.array.kpoints import KpointsData
         from aiida.tools.data.array.kpoints import get_explicit_kpoints_path
 
         # Shouldn't get anything without having set the cell
@@ -3677,8 +3468,6 @@ class TestKpointsData(AiidaTestCase):
         the same behavior of the old implementation
         """
         import numpy
-        from aiida.orm.nodes.data.dict import Dict
-        from aiida.orm.nodes.data.structure import StructureData
         from aiida.tools.data.array.kpoints import get_kpoints_path
 
         alat = 1.5
@@ -3726,7 +3515,6 @@ class TestSpglibTupleConversion(AiidaTestCase):
         """
         import numpy as np
         from aiida.tools import spglib_tuple_to_structure
-        from aiida.orm.nodes.data.structure import Kind
 
         cell = np.array([[4., 1., 0.], [0., 4., 0.], [0., 0., 4.]])
 
@@ -3788,7 +3576,6 @@ class TestSpglibTupleConversion(AiidaTestCase):
         Test conversion of an AiiDA structure to a spglib tuple
         """
         import numpy as np
-        from aiida.orm.nodes.data.structure import StructureData, Site, Kind
         from aiida.tools import structure_to_spglib_tuple
 
         cell = np.array([[4., 1., 0.], [0., 4., 0.], [0., 0., 4.]])
@@ -3818,7 +3605,6 @@ class TestSpglibTupleConversion(AiidaTestCase):
         Convert an AiiDA structure to a tuple and go back to see if we get the same results
         """
         import numpy as np
-        from aiida.orm.nodes.data.structure import StructureData, Site, Kind
         from aiida.tools import structure_to_spglib_tuple, spglib_tuple_to_structure
 
         cell = np.array([[4., 1., 0.], [0., 4., 0.], [0., 0., 4.]])
@@ -3925,7 +3711,6 @@ class TestSeekpathPath(AiidaTestCase):
     def test_simple(self):
         import numpy as np
         from aiida.plugins import DataFactory
-
         from aiida.tools import get_kpoints_path
 
         structure = DataFactory('structure')(cell=[[4, 0, 0], [0, 4, 0], [0, 0, 6]])
@@ -3996,8 +3781,6 @@ class TestBandsData(AiidaTestCase):
         """
         Check the methods to set and retrieve a mesh.
         """
-        from aiida.orm.nodes.data.array.bands import BandsData
-        from aiida.orm.nodes.data.array.kpoints import KpointsData
         import numpy
 
         # define a cell
@@ -4041,10 +3824,7 @@ class TestBandsData(AiidaTestCase):
         Export the band structure on a file, check if it is working
         """
         import numpy
-        import os
-        import tempfile
-        from aiida.orm.nodes.data.array.bands import BandsData
-        from aiida.orm.nodes.data.array.kpoints import KpointsData
+        from aiida.orm import BandsData, KpointsData
 
         # define a cell
         alat = 4.
@@ -4070,8 +3850,8 @@ class TestBandsData(AiidaTestCase):
         # It is not obvious how to check that the bands are correct.
         # I just check, for a few formats, that the file is correctly
         # created, at this stage
-        ## I use this to get a file. I then close it and ask the .export() function
-        ## to create it again. I have to remember to delete everything at the end.
+        # I use this to get a file. I then close it and ask the .export() function
+        # to create it again. I have to remember to delete everything at the end.
         handle, filename = tempfile.mkstemp()
         os.close(handle)
         os.remove(filename)

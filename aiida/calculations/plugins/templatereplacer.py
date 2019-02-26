@@ -14,12 +14,10 @@ from __future__ import absolute_import
 
 import six
 
+from aiida import orm
 from aiida.common import exceptions
 from aiida.common.datastructures import CalcInfo, CodeInfo
 from aiida.engine import CalcJob
-from aiida.orm.nodes.data.dict import Dict
-from aiida.orm.nodes.data.remote import RemoteData
-from aiida.orm.nodes.data.singlefile import SinglefileData
 
 
 class TemplatereplacerCalculation(CalcJob):
@@ -71,13 +69,13 @@ class TemplatereplacerCalculation(CalcJob):
         super(TemplatereplacerCalculation, cls).define(spec)
         spec.input('metadata.options.parser_name', valid_type=six.string_types, default='templatereplacer.doubler',
             non_db=True)
-        spec.input('template', valid_type=Dict,
+        spec.input('template', valid_type=orm.Dict,
             help='A template for the input file.')
-        spec.input('parameters', valid_type=Dict, required=False,
+        spec.input('parameters', valid_type=orm.Dict, required=False,
             help='Parameters used to replace placeholders in the template.')
-        spec.input_namespace('files', valid_type=(RemoteData, SinglefileData), required=False)
+        spec.input_namespace('files', valid_type=(orm.RemoteData, orm.SinglefileData), required=False)
 
-        spec.output('output_parameters', valid_type=Dict, required=True)
+        spec.output('output_parameters', valid_type=orm.Dict, required=True)
         spec.default_output_node = 'output_parameters'
 
         spec.exit_code(100, 'ERROR_NO_RETRIEVED_FOLDER',
@@ -138,9 +136,9 @@ class TemplatereplacerCalculation(CalcJob):
             except AttributeError:
                 raise exceptions.InputValidationError("You are asking to copy a file link {}, "
                                                       "but there is no input link with such a name".format(link_name))
-            if isinstance(fileobj, SinglefileData):
+            if isinstance(fileobj, orm.SinglefileData):
                 local_copy_list.append((fileobj.get_file_abs_path(), dest_rel_path))
-            elif isinstance(fileobj, RemoteData):  # can be a folder
+            elif isinstance(fileobj, orm.RemoteData):  # can be a folder
                 remote_copy_list.append((fileobj.computer.uuid, fileobj.get_remote_path(), dest_rel_path))
             else:
                 raise exceptions.InputValidationError(

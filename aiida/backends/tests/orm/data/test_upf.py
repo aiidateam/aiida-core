@@ -20,8 +20,8 @@ import shutil
 import os
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm.nodes.data.upf import parse_upf
 from aiida.common.exceptions import ParsingError
+from aiida.orm.nodes.data.upf import parse_upf
 
 
 class TestUpfParser(AiidaTestCase):

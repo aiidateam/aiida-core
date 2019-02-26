@@ -11,6 +11,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
@@ -23,10 +24,7 @@ class TestVerdiRehash(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         super(TestVerdiRehash, cls).setUpClass(*args, **kwargs)
-        from aiida.orm import Data
-        from aiida.orm.nodes.data.bool import Bool
-        from aiida.orm.nodes.data.float import Float
-        from aiida.orm.nodes.data.int import Int
+        from aiida.orm import Data, Bool, Float, Int
 
         cls.node_base = Data().store()
         cls.node_bool_true = Bool(True).store()

@@ -39,7 +39,7 @@ def trajectory():
 @decorators.with_dbenv()
 def trajectory_list(raw, past_days, groups, all_users):
     """List trajectories stored in database."""
-    from aiida.orm.nodes.data.array.trajectory import TrajectoryData
+    from aiida.orm import TrajectoryData
     from tabulate import tabulate
 
     elements = None

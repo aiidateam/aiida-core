@@ -528,7 +528,7 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.backends.djsite.db import models
     from aiida.common.utils import get_object_from_string
-    import aiida.common.json as json
+    from aiida.common import json
 
     # This is the export version expected by this function
     expected_export_version = '0.4'
@@ -1147,7 +1147,7 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.common.utils import get_object_from_string
     from aiida.common.links import LinkType
-    import aiida.common.json as json
+    from aiida.common import json
 
     # This is the export version expected by this function
     expected_export_version = '0.4'
@@ -2075,7 +2075,7 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
     from aiida.common.links import LinkType
     from aiida.common.folders import RepositoryFolder
     from aiida.orm.querybuilder import QueryBuilder
-    import aiida.common.json as json
+    from aiida.common import json
     from django.core.exceptions import ImproperlyConfigured
 
     if not silent:

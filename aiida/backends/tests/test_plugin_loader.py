@@ -13,7 +13,7 @@ from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.engine import CalcJob, WorkChain
-from aiida.orm.nodes.data import Data
+from aiida.orm import Data
 from aiida.parsers import Parser
 from aiida.plugins import factories
 from aiida.plugins.entry_point import get_entry_points

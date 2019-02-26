@@ -10,6 +10,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import errno
 import io
 import os
@@ -17,9 +18,7 @@ import shutil
 import tempfile
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm.nodes.data.remote import RemoteData
-
-from aiida.orm import User, AuthInfo
+from aiida.orm import RemoteData, User, AuthInfo
 
 
 class TestRemoteData(AiidaTestCase):

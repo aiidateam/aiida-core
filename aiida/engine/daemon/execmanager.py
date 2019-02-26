@@ -20,13 +20,12 @@ import os
 
 from six.moves import zip
 
-from aiida.common import AIIDA_LOGGER
-from aiida.common import exceptions
+from aiida.common import AIIDA_LOGGER, exceptions
 from aiida.common.datastructures import CalcJobState
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
+from aiida.orm import FolderData
 from aiida.orm.utils.log import get_dblogger_extra
-from aiida.orm.nodes.data.folder import FolderData
 from aiida.plugins import DataFactory
 from aiida.schedulers.datastructures import JobState
 
@@ -44,8 +43,7 @@ def upload_calculation(calculation, transport, calc_info, script_filename):
     :param calc_info: the calculation info datastructure returned by `CalcJobNode._presubmit`
     :param script_filename: the job launch script returned by `CalcJobNode._presubmit`
     """
-    from aiida.orm import load_node, Code
-    from aiida.orm.nodes.data.remote import RemoteData
+    from aiida.orm import load_node, Code, RemoteData
 
     computer = calculation.computer
 

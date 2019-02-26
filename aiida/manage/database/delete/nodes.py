@@ -17,7 +17,6 @@ from six.moves import zip
 import click
 
 from aiida.cmdline.utils import echo
-from aiida.orm import User
 
 
 def delete_nodes(pks,
@@ -47,14 +46,10 @@ def delete_nodes(pks,
         The verbosity levels, 0 prints nothing, 1 prints just sums and total, 2 prints individual nodes.
     """
     # pylint: disable=too-many-arguments,too-many-branches,too-many-locals,too-many-statements
+    from aiida.backends.utils import delete_nodes_and_connections
     from aiida.common import exceptions
     from aiida.common.links import LinkType
-    from aiida.orm import Node
-    from aiida.orm import ProcessNode
-    from aiida.orm.nodes.data import Data
-    from aiida.orm.querybuilder import QueryBuilder
-    from aiida.orm import load_node
-    from aiida.backends.utils import delete_nodes_and_connections
+    from aiida.orm import User, Node, ProcessNode, Data, QueryBuilder, load_node
 
     user_email = User.objects.get_default().email
 

@@ -22,7 +22,7 @@ from dateutil.parser import parse
 from pytz import timezone as ptimezone
 
 from aiida.common import timezone as dtimezone
-import aiida.common.json as json
+from aiida.common import json
 
 
 @six.add_metaclass(ABCMeta)

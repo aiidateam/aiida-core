@@ -23,10 +23,8 @@ class TestQueryBuilderDjango(AiidaTestCase):
             DbNode, DbUser, DbComputer,
             DbGroup,
         )
-        from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm.nodes.data.structure import StructureData
-        from aiida.orm import Group, Node, Computer, Data
         from aiida.common.exceptions import DbContentError
+        from aiida.orm import QueryBuilder, Group, Node, Computer, Data, StructureData
         qb = QueryBuilder()
 
         with self.assertRaises(DbContentError):

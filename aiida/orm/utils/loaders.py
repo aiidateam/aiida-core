@@ -394,7 +394,7 @@ class CodeEntityLoader(OrmEntityLoader):
 
         :returns: the orm base class
         """
-        from aiida.orm.nodes.data.code import Code
+        from aiida.orm import Code
         return Code
 
     @classmethod
@@ -409,11 +409,11 @@ class CodeEntityLoader(OrmEntityLoader):
         :raises ValueError: if the identifier is invalid
         :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
         """
-        from aiida.orm.computers import Computer
+        from aiida.orm import Computer
 
         try:
             label, sep, machinename = identifier.partition('@')
-        except AttributeError as exception:
+        except AttributeError:
             raise ValueError('the identifier needs to be a string')
 
         qb = QueryBuilder()
@@ -436,7 +436,7 @@ class ComputerEntityLoader(OrmEntityLoader):
 
         :returns: the orm base class
         """
-        from aiida.orm.computers import Computer
+        from aiida.orm import Computer
         return Computer
 
     @classmethod
@@ -468,7 +468,7 @@ class DataEntityLoader(OrmEntityLoader):
 
         :returns: the orm base class
         """
-        from aiida.orm.nodes.data import Data
+        from aiida.orm import Data
         return Data
 
     @classmethod

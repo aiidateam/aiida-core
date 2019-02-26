@@ -17,7 +17,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 from aiida.engine import WorkChain, run, while_, if_
-from aiida.orm.nodes.data.int import Int
+from aiida.orm import Int
 
 
 class OutlineWorkChain(WorkChain):

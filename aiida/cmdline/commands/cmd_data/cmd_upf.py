@@ -129,7 +129,7 @@ def upf_import(filename):
     """
     Import upf data object
     """
-    from aiida.orm.nodes.data.upf import UpfData
+    from aiida.orm import UpfData
 
     node, _ = UpfData.get_or_create(filename)
     echo.echo_success('Imported: {}'.format(node))

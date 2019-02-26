@@ -10,32 +10,27 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import io
-import unittest
-import tempfile
 
+import tempfile
+import unittest
 import yaml
 
 from aiida.backends.utils import get_current_profile
-from aiida.manage.caching import configure, get_use_cache, enable_caching, disable_caching
-from aiida.orm.nodes.data.bool import Bool
-from aiida.orm.nodes.data.float import Float
-from aiida.orm.nodes.data.int import Int
 from aiida.calculations.plugins.templatereplacer import TemplatereplacerCalculation
+from aiida.manage.caching import configure, get_use_cache, enable_caching, disable_caching
+from aiida.orm import Bool, Float, Int
+
 
 class CacheConfigTest(unittest.TestCase):
-    """
-    Tests the caching configuration.
-    """
+    """Tests the caching configuration."""
+
     def setUp(self):
-        """
-        Write a temporary config file, and load the configuration.
-        """
+        """Write a temporary config file, and load the configuration."""
         self.config_reference = {
             get_current_profile(): {
                 'default': True,
-                'enabled': ['aiida.orm.nodes.data.bool.Bool', 'aiida.orm.nodes.data.float.Float'],
-                'disabled': ['aiida.calculations.plugins.templatereplacer.TemplatereplacerCalculation', 'aiida.orm.nodes.data.bool.Bool']
+                'enabled': ['aiida.orm.Bool', 'aiida.orm.Float'],
+                'disabled': ['aiida.calculations.plugins.templatereplacer.TemplatereplacerCalculation', 'aiida.orm.Bool']
             }
         }
         with tempfile.NamedTemporaryFile() as tmpf:
@@ -60,11 +55,10 @@ class CacheConfigTest(unittest.TestCase):
 
     def test_contextmanager_disable_global(self):
         with disable_caching():
-            self.assertTrue(get_use_cache(Float)) # explicitly set, hence not overwritten
+            self.assertTrue(get_use_cache(Float))  # explicitly set, hence not overwritten
             self.assertFalse(get_use_cache(Int))
 
     def test_disable_caching(self):
-        from aiida.orm.nodes.data.float import Float
         with disable_caching(Float):
             self.assertFalse(get_use_cache(Float))
         self.assertTrue(get_use_cache(Float))

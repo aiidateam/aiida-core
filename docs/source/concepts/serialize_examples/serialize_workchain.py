@@ -5,7 +5,9 @@ from aiida.orm.nodes.data import to_aiida_type
 # the 'to_aiida_type' function.
 from aiida.orm.nodes.data.base import *
 
+
 class SerializeWorkChain(WorkChain):
+
     @classmethod
     def define(cls, spec):
         super(SerializeWorkChain, cls).define(spec)

@@ -351,8 +351,12 @@ class _Delete(VerdiCommand):
         for key, req_vals in (('id', parsed_args.pks), ('uuid', parsed_args.uuids)):
             if req_vals:
                 filters['or'].append({key:{'in':req_vals}})
-
-
+        
+        # If neither of the arguments is passed, exit the program
+        if not filters['or']:
+            print "Nothing to delete"
+            return None
+        
         node_pks_to_delete = set([_ for _, in QueryBuilder().append(Node, filters=filters, project='id').all()])
         if not(node_pks_to_delete):
             print "Nothing to delete"

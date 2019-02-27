@@ -113,6 +113,7 @@ Data types
 
     ../datatypes/index
     ../datatypes/kpoints
+    ../datatypes/bands
     ../datatypes/functionality
 
 ==========

@@ -70,7 +70,7 @@ class TestGroupParamType(AiidaTestCase):
         result = self.param.convert(identifier, None, None)
         self.assertEqual(result.uuid, self.entity_01.uuid)
 
-        identifier = '{}{}'.format(self.entity_02.label, OrmEntityLoader.LABEL_AMBIGUITY_BREAKER_CHARACTER)
+        identifier = '{}{}'.format(self.entity_02.label, OrmEntityLoader.label_ambiguity_breaker)
         result = self.param.convert(identifier, None, None)
         self.assertEqual(result.uuid, self.entity_02.uuid)
 
@@ -85,6 +85,6 @@ class TestGroupParamType(AiidaTestCase):
         result = self.param.convert(identifier, None, None)
         self.assertEqual(result.uuid, self.entity_01.uuid)
 
-        identifier = '{}{}'.format(self.entity_03.label, OrmEntityLoader.LABEL_AMBIGUITY_BREAKER_CHARACTER)
+        identifier = '{}{}'.format(self.entity_03.label, OrmEntityLoader.label_ambiguity_breaker)
         result = self.param.convert(identifier, None, None)
         self.assertEqual(result.uuid, self.entity_03.uuid)

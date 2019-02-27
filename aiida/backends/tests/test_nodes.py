@@ -191,7 +191,7 @@ class TestNodeHashing(AiidaTestCase):
         """
         node = orm.ProcessNode()
         hash1 = node.get_hash()
-        node._set_process_state('finished')
+        node.set_process_state('finished')
         hash2 = node.get_hash()
         self.assertNotEquals(hash1, None)
         self.assertEquals(hash1, hash2)

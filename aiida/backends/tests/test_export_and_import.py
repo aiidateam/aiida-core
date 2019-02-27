@@ -114,7 +114,6 @@ class TestSpecificImport(AiidaTestCase):
         structure.label = test_label
         structure.store()
 
-        # pylint: disable=protected-access
         parent_process = orm.CalculationNode()
         parent_process.set_attribute('key', 'value')
         parent_process.store()
@@ -1343,7 +1342,7 @@ class TestComputer(AiidaTestCase):
                 u'key2': 2
             }
             self.computer.set_name(comp1_name)
-            self.computer._set_metadata(comp1_metadata)
+            self.computer.set_metadata(comp1_metadata)
             self.computer.set_transport_params(comp1_transport_params)
 
             # Store a calculation

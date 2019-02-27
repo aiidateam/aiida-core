@@ -329,7 +329,7 @@ class Process(plumpy.Process):
         :param exc_info: the sys.exc_info() object
         """
         super(Process, self).on_except(exc_info)
-        self.node._set_exception(''.join(traceback.format_exception(exc_info[0], exc_info[1], None)))  # pylint: disable=protected-access
+        self.node.set_exception(''.join(traceback.format_exception(exc_info[0], exc_info[1], None)))
         self.report(''.join(traceback.format_exception(*exc_info)))
 
     @override
@@ -340,10 +340,10 @@ class Process(plumpy.Process):
         super(Process, self).on_finish(result, successful)
 
         if result is None or isinstance(result, int):
-            self.node._set_exit_status(result)  # pylint: disable=protected-access
+            self.node.set_exit_status(result)
         elif isinstance(result, ExitCode):
-            self.node._set_exit_status(result.status)  # pylint: disable=protected-access
-            self.node._set_exit_message(result.message)  # pylint: disable=protected-access
+            self.node.set_exit_status(result.status)
+            self.node.set_exit_message(result.message)
         else:
             raise ValueError('the result should be an integer, ExitCode or None, got {} {} {}'.format(
                 type(result), result, self.pid))
@@ -388,7 +388,7 @@ class Process(plumpy.Process):
         :param status: the status message
         """
         super(Process, self).set_status(status)
-        self.node._set_process_status(status)  # pylint: disable=protected-access
+        self.node.set_process_status(status)
 
     def submit(self, process, *args, **kwargs):
         return self.runner.submit(process, *args, **kwargs)
@@ -473,7 +473,7 @@ class Process(plumpy.Process):
 
     def update_node_state(self, state):
         self.update_outputs()
-        self.node._set_process_state(state.LABEL)  # pylint: disable=protected-access
+        self.node.set_process_state(state.LABEL)
 
     def update_outputs(self):
         """Attach any new outputs to the node since the last time this was called, if store provenance is True."""
@@ -511,9 +511,9 @@ class Process(plumpy.Process):
         assert not self.node.is_sealed, 'process node cannot be sealed when setting up the database record'
 
         # Store important process attributes in the node proxy
-        self.node._set_process_state(None)  # pylint: disable=protected-access
-        self.node._set_process_label(self.__class__.__name__)  # pylint: disable=protected-access
-        self.node._set_process_type(self.__class__)  # pylint: disable=protected-access
+        self.node.set_process_state(None)
+        self.node.set_process_label(self.__class__.__name__)
+        self.node.set_process_type(self.__class__)
 
         parent_calc = self.get_parent_calc()
 

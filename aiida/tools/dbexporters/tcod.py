@@ -475,8 +475,8 @@ def _collect_calculation_data(calc):
         while stderr_name in [files_in,files_out]:
             stderr_name = '_{}'.format(stderr_name)
         # Output/error of schedulers are converted to bytes as file contents have to be bytes.
-        if calc.get_scheduler_output() is not None:
-            scheduler_output = calc.get_scheduler_output().encode('utf-8')
+        if calc.get_scheduler_stdout() is not None:
+            scheduler_output = calc.get_scheduler_stdout().encode('utf-8')
             files_out.append({
                 'name'    : stdout_name,
                 'contents': scheduler_output,
@@ -486,8 +486,8 @@ def _collect_calculation_data(calc):
                 'type'    : 'file',
                 })
             this_calc['stdout'] = stdout_name
-        if calc.get_scheduler_error() is not None:
-            scheduler_error = calc.get_scheduler_error().encode('utf-8')
+        if calc.get_scheduler_stderr() is not None:
+            scheduler_error = calc.get_scheduler_stderr().encode('utf-8')
             files_out.append({
                 'name'    : stderr_name,
                 'contents': scheduler_error,

@@ -173,8 +173,8 @@ class TestVerdiGroupSetup(AiidaTestCase):
         from aiida.orm import CalculationNode
 
         node = CalculationNode()
-        node.set_attribute('attr1', 'OK')  # pylint: disable=protected-access
-        node.set_attribute('attr2', 'OK')  # pylint: disable=protected-access
+        node.set_attribute('attr1', 'OK')
+        node.set_attribute('attr2', 'OK')
         node.store()
 
         result = self.cli_runner.invoke(group_addnodes, ['--force', '--group=dummygroup1', node.uuid])

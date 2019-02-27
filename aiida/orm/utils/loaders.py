@@ -7,9 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Module with `OrmEntityLoader` and its sub classes that simplify loading entities through their identifiers."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from abc import ABCMeta
 from enum import Enum
 
@@ -19,15 +21,12 @@ from aiida.common.exceptions import MultipleObjectsError, NotExistent
 from aiida.common.lang import abstractclassmethod, classproperty
 from aiida.orm.querybuilder import QueryBuilder
 
-__all__ = (
-    'get_loader', 'OrmEntityLoader', 'CalculationEntityLoader', 'CodeEntityLoader', 'ComputerEntityLoader',
-    'GroupEntityLoader', 'NodeEntityLoader'
-)
+__all__ = ('get_loader', 'OrmEntityLoader', 'CalculationEntityLoader', 'CodeEntityLoader', 'ComputerEntityLoader',
+           'GroupEntityLoader', 'NodeEntityLoader')
 
 
 def get_loader(orm_class):
-    """
-    Get the correct OrmEntityLoader for the given orm class
+    """Return the correct OrmEntityLoader for the given orm class.
 
     :param orm_class: the orm class
     :returns: a subclass of OrmEntityLoader
@@ -37,14 +36,17 @@ def get_loader(orm_class):
 
     if issubclass(orm_class, Code):
         return CodeEntityLoader
-    elif issubclass(orm_class, Computer):
+
+    if issubclass(orm_class, Computer):
         return ComputerEntityLoader
-    elif issubclass(orm_class, Group):
+
+    if issubclass(orm_class, Group):
         return GroupEntityLoader
-    elif issubclass(orm_class, Node):
+
+    if issubclass(orm_class, Node):
         return NodeEntityLoader
-    else:
-        raise ValueError('no OrmEntityLoader available for {}'.format(orm_class))
+
+    raise ValueError('no OrmEntityLoader available for {}'.format(orm_class))
 
 
 class IdentifierType(Enum):
@@ -53,6 +55,7 @@ class IdentifierType(Enum):
     The ID is always an integer, the UUID a base 16 encoded integer with optional dashes and the LABEL can
     be any string based label or name, the format of which will vary per orm class
     """
+    # pylint: disable=invalid-name
 
     ID = 'ID'
     UUID = 'UUID'
@@ -61,11 +64,14 @@ class IdentifierType(Enum):
 
 @six.add_metaclass(ABCMeta)
 class OrmEntityLoader(object):
+    """Base class for entity loaders."""
 
-    LABEL_AMBIGUITY_BREAKER_CHARACTER = '!'
+    # pylint: disable=useless-object-inheritance
+
+    label_ambiguity_breaker = '!'
 
     @classproperty
-    def orm_base_class(cls):
+    def orm_base_class(self):
         """
         Return the orm base class to which loaded entities should be mapped. Actual queries to load an entity
         may further narrow the query set by defining a more specific set of orm classes, as long as each of
@@ -76,7 +82,7 @@ class OrmEntityLoader(object):
         raise NotImplementedError
 
     @abstractclassmethod
-    def _get_query_builder_label_identifier(self, identifier, classes):
+    def _get_query_builder_label_identifier(cls, identifier, classes):
         """
         Return the query builder instance that attempts to map the identifier onto an entity of the orm class,
         defined for this loader class, interpreting the identifier as a LABEL like identifier
@@ -90,7 +96,7 @@ class OrmEntityLoader(object):
         raise NotImplementedError
 
     @classmethod
-    def _get_query_builder_id_identifier(self, identifier, classes):
+    def _get_query_builder_id_identifier(cls, identifier, classes):
         """
         Return the query builder instance that attempts to map the identifier onto an entity of the orm class,
         defined for this loader class, interpreting the identifier as an ID like identifier
@@ -99,14 +105,14 @@ class OrmEntityLoader(object):
         :param classes: a tuple of orm classes to which the identifier should be mapped
         :returns: the query builder instance
         """
-        qb = QueryBuilder()
-        qb.append(cls=classes, tag='entity', project=['*'])
-        qb.add_filter('entity', {'id': identifier})
+        builder = QueryBuilder()
+        builder.append(cls=classes, tag='entity', project=['*'])
+        builder.add_filter('entity', {'id': identifier})
 
-        return qb
+        return builder
 
     @classmethod
-    def _get_query_builder_uuid_identifier(self, identifier, classes, query_with_dashes):
+    def _get_query_builder_uuid_identifier(cls, identifier, classes, query_with_dashes):
         """
         Return the query builder instance that attempts to map the identifier onto an entity of the orm class,
         defined for this loader class, interpreting the identifier as a UUID like identifier
@@ -124,18 +130,18 @@ class OrmEntityLoader(object):
                 if len(uuid) > dash_pos:
                     uuid = '{}-{}'.format(uuid[:dash_pos], uuid[dash_pos:])
 
-        qb = QueryBuilder()
-        qb.append(cls=classes, tag='entity', project=['*'])
+        builder = QueryBuilder()
+        builder.append(cls=classes, tag='entity', project=['*'])
 
         # If a UUID can be constructed from the identifier, it is a full UUID and the query can use an equality operator
         try:
             UUID(uuid)
         except ValueError:
-            qb.add_filter('entity', {'uuid': {'like': '{}%'.format(uuid)}})
+            builder.add_filter('entity', {'uuid': {'like': '{}%'.format(uuid)}})
         else:
-            qb.add_filter('entity', {'uuid': uuid})
+            builder.add_filter('entity', {'uuid': uuid})
 
-        return qb
+        return builder
 
     @classmethod
     def get_query_builder(cls, identifier, identifier_type=None, sub_classes=None, query_with_dashes=True):
@@ -155,11 +161,11 @@ class OrmEntityLoader(object):
             identifier, identifier_type = cls.infer_identifier_type(identifier)
 
         if identifier_type == IdentifierType.ID:
-            qb = cls._get_query_builder_id_identifier(identifier, classes)
+            builder = cls._get_query_builder_id_identifier(identifier, classes)
         elif identifier_type == IdentifierType.UUID:
-            qb = cls._get_query_builder_uuid_identifier(identifier, classes, query_with_dashes)
+            builder = cls._get_query_builder_uuid_identifier(identifier, classes, query_with_dashes)
         elif identifier_type == IdentifierType.LABEL:
-            qb = cls._get_query_builder_label_identifier(identifier, classes)
+            builder = cls._get_query_builder_label_identifier(identifier, classes)
 
         query_parameters = {
             'classes': classes,
@@ -167,7 +173,7 @@ class OrmEntityLoader(object):
             'identifier_type': identifier_type,
         }
 
-        return qb, query_parameters
+        return builder, query_parameters
 
     @classmethod
     def load_entity(cls, identifier, identifier_type=None, sub_classes=None, query_with_dashes=True):
@@ -182,15 +188,15 @@ class OrmEntityLoader(object):
         :raises aiida.common.MultipleObjectsError: if the identifier maps onto multiple entities
         :raises aiida.common.NotExistent: if the identifier maps onto not a single entity
         """
-        qb, query_parameters = cls.get_query_builder(identifier, identifier_type, sub_classes, query_with_dashes)
-        qb.limit(2)
+        builder, query_parameters = cls.get_query_builder(identifier, identifier_type, sub_classes, query_with_dashes)
+        builder.limit(2)
 
         classes = ' or '.join([sub_class.__name__ for sub_class in query_parameters['classes']])
         identifier = query_parameters['identifier']
         identifier_type = query_parameters['identifier_type'].value
 
         try:
-            entity = qb.one()[0]
+            entity = builder.one()[0]
         except MultipleObjectsError:
             error = 'multiple {} entries found with {}<{}>'.format(classes, identifier_type, identifier)
             raise MultipleObjectsError(error)
@@ -260,9 +266,9 @@ class OrmEntityLoader(object):
             value = str(value)
 
         # If the final character of the value is the special marker, we enforce LABEL interpretation
-        if value[-1] == cls.LABEL_AMBIGUITY_BREAKER_CHARACTER:
+        if value[-1] == cls.label_ambiguity_breaker:
 
-            identifier = value.rstrip(cls.LABEL_AMBIGUITY_BREAKER_CHARACTER)
+            identifier = value.rstrip(cls.label_ambiguity_breaker)
             identifier_type = IdentifierType.LABEL
 
         else:
@@ -275,7 +281,7 @@ class OrmEntityLoader(object):
 
                 # If the value is a valid base sixteen encoded integer, after dashes are removed, interpret it as a UUID
                 try:
-                    hexadecimal = int(value.replace('-', ''), 16)
+                    int(value.replace('-', ''), 16)
                     identifier = value
                     identifier_type = IdentifierType.UUID
 
@@ -288,9 +294,10 @@ class OrmEntityLoader(object):
 
 
 class ProcessEntityLoader(OrmEntityLoader):
+    """Loader for the `Process` entity and sub classes."""
 
     @classproperty
-    def orm_base_class(cls):
+    def orm_base_class(self):
         """
         Return the orm base class to which loaded entities should be mapped. Actual queries to load an entity
         may further narrow the query set by defining a more specific set of orm classes, as long as each of
@@ -313,16 +320,17 @@ class ProcessEntityLoader(OrmEntityLoader):
         :raises ValueError: if the identifier is invalid
         :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
         """
-        qb = QueryBuilder()
-        qb.append(cls=classes, tag='process', project=['*'], filters={'label': {'==': identifier}})
+        builder = QueryBuilder()
+        builder.append(cls=classes, tag='process', project=['*'], filters={'label': {'==': identifier}})
 
-        return qb
+        return builder
 
 
 class CalculationEntityLoader(OrmEntityLoader):
+    """Loader for the `Calculation` entity and sub classes."""
 
     @classproperty
-    def orm_base_class(cls):
+    def orm_base_class(self):
         """
         Return the orm base class to which loaded entities should be mapped. Actual queries to load an entity
         may further narrow the query set by defining a more specific set of orm classes, as long as each of
@@ -345,16 +353,17 @@ class CalculationEntityLoader(OrmEntityLoader):
         :raises ValueError: if the identifier is invalid
         :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
         """
-        qb = QueryBuilder()
-        qb.append(cls=classes, tag='calculation', project=['*'], filters={'label': {'==': identifier}})
+        builder = QueryBuilder()
+        builder.append(cls=classes, tag='calculation', project=['*'], filters={'label': {'==': identifier}})
 
-        return qb
+        return builder
 
 
 class WorkflowEntityLoader(OrmEntityLoader):
+    """Loader for the `Workflow` entity and sub classes."""
 
     @classproperty
-    def orm_base_class(cls):
+    def orm_base_class(self):
         """
         Return the orm base class to which loaded entities should be mapped. Actual queries to load an entity
         may further narrow the query set by defining a more specific set of orm classes, as long as each of
@@ -377,16 +386,17 @@ class WorkflowEntityLoader(OrmEntityLoader):
         :raises ValueError: if the identifier is invalid
         :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
         """
-        qb = QueryBuilder()
-        qb.append(cls=classes, tag='workflow', project=['*'], filters={'label': {'==': identifier}})
+        builder = QueryBuilder()
+        builder.append(cls=classes, tag='workflow', project=['*'], filters={'label': {'==': identifier}})
 
-        return qb
+        return builder
 
 
 class CodeEntityLoader(OrmEntityLoader):
+    """Loader for the `Code` entity and sub classes."""
 
     @classproperty
-    def orm_base_class(cls):
+    def orm_base_class(self):
         """
         Return the orm base class to which loaded entities should be mapped. Actual queries to load an entity
         may further narrow the query set by defining a more specific set of orm classes, as long as each of
@@ -412,23 +422,24 @@ class CodeEntityLoader(OrmEntityLoader):
         from aiida.orm import Computer
 
         try:
-            label, sep, machinename = identifier.partition('@')
+            label, _, machinename = identifier.partition('@')
         except AttributeError:
             raise ValueError('the identifier needs to be a string')
 
-        qb = QueryBuilder()
-        qb.append(cls=classes, tag='code', project=['*'], filters={'label': {'==': label}})
+        builder = QueryBuilder()
+        builder.append(cls=classes, tag='code', project=['*'], filters={'label': {'==': label}})
 
         if machinename:
-            qb.append(Computer, filters={'name': {'==': machinename}}, with_node='code')
+            builder.append(Computer, filters={'name': {'==': machinename}}, with_node='code')
 
-        return qb
+        return builder
 
 
 class ComputerEntityLoader(OrmEntityLoader):
+    """Loader for the `Computer` entity and sub classes."""
 
     @classproperty
-    def orm_base_class(cls):
+    def orm_base_class(self):
         """
         Return the orm base class to which loaded entities should be mapped. Actual queries to load an entity
         may further narrow the query set by defining a more specific set of orm classes, as long as each of
@@ -451,16 +462,17 @@ class ComputerEntityLoader(OrmEntityLoader):
         :raises ValueError: if the identifier is invalid
         :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
         """
-        qb = QueryBuilder()
-        qb.append(cls=classes, tag='computer', project=['*'], filters={'name': {'==': identifier}})
+        builder = QueryBuilder()
+        builder.append(cls=classes, tag='computer', project=['*'], filters={'name': {'==': identifier}})
 
-        return qb
+        return builder
 
 
 class DataEntityLoader(OrmEntityLoader):
+    """Loader for the `Data` entity and sub classes."""
 
     @classproperty
-    def orm_base_class(cls):
+    def orm_base_class(self):
         """
         Return the orm base class to which loaded entities should be mapped. Actual queries to load an entity
         may further narrow the query set by defining a more specific set of orm classes, as long as each of
@@ -483,16 +495,17 @@ class DataEntityLoader(OrmEntityLoader):
         :raises ValueError: if the identifier is invalid
         :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
         """
-        qb = QueryBuilder()
-        qb.append(cls=classes, tag='calculation', project=['*'], filters={'label': {'==': identifier}})
+        builder = QueryBuilder()
+        builder.append(cls=classes, tag='calculation', project=['*'], filters={'label': {'==': identifier}})
 
-        return qb
+        return builder
 
 
 class GroupEntityLoader(OrmEntityLoader):
+    """Loader for the `Group` entity and sub classes."""
 
     @classproperty
-    def orm_base_class(cls):
+    def orm_base_class(self):
         """
         Return the orm base class to which loaded entities should be mapped. Actual queries to load an entity
         may further narrow the query set by defining a more specific set of orm classes, as long as each of
@@ -515,16 +528,17 @@ class GroupEntityLoader(OrmEntityLoader):
         :raises ValueError: if the identifier is invalid
         :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
         """
-        qb = QueryBuilder()
-        qb.append(cls=classes, tag='group', project=['*'], filters={'label': {'==': identifier}})
+        builder = QueryBuilder()
+        builder.append(cls=classes, tag='group', project=['*'], filters={'label': {'==': identifier}})
 
-        return qb
+        return builder
 
 
 class NodeEntityLoader(OrmEntityLoader):
+    """Loader for the `Node` entity and sub classes."""
 
     @classproperty
-    def orm_base_class(cls):
+    def orm_base_class(self):
         """
         Return the orm base class to which loaded entities should be mapped. Actual queries to load an entity
         may further narrow the query set by defining a more specific set of orm classes, as long as each of
@@ -547,7 +561,7 @@ class NodeEntityLoader(OrmEntityLoader):
         :raises ValueError: if the identifier is invalid
         :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
         """
-        qb = QueryBuilder()
-        qb.append(cls=classes, tag='node', project=['*'], filters={'label': {'==': identifier}})
+        builder = QueryBuilder()
+        builder.append(cls=classes, tag='node', project=['*'], filters={'label': {'==': identifier}})
 
-        return qb
+        return builder

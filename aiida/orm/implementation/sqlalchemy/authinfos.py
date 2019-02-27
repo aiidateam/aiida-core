@@ -93,7 +93,7 @@ class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
         # Raises ValueError if data is not JSON-serializable
         self._dbmodel.auth_params = auth_params
 
-    def _get_metadata(self):
+    def get_metadata(self):
         """
         Get the metadata dictionary from the DB
 
@@ -101,7 +101,7 @@ class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
         """
         return self._dbmodel._metadata  # pylint: disable=protected-access
 
-    def _set_metadata(self, metadata):
+    def set_metadata(self, metadata):
         """
         Replace the metadata dictionary in the DB with the provided dictionary
         """

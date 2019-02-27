@@ -102,7 +102,7 @@ class BackendAuthInfo(backends.BackendEntity):
         """
 
     @abc.abstractmethod
-    def _get_metadata(self):
+    def get_metadata(self):
         """
         Get the metadata dictionary
 
@@ -110,21 +110,21 @@ class BackendAuthInfo(backends.BackendEntity):
         """
 
     @abc.abstractmethod
-    def _set_metadata(self, metadata):
+    def set_metadata(self, metadata):
         """
         Replace the metadata dictionary in the DB with the provided dictionary
         """
 
     def get_property(self, name):
         try:
-            return self._get_metadata()[name]
+            return self.get_metadata()[name]
         except KeyError:
             raise ValueError('Unknown property: {}'.format(name))
 
     def set_property(self, name, value):
-        metadata = self._get_metadata()
+        metadata = self.get_metadata()
         metadata[name] = value
-        self._set_metadata(metadata)
+        self.set_metadata(metadata)
 
 
 @six.add_metaclass(abc.ABCMeta)

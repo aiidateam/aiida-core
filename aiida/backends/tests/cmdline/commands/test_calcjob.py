@@ -66,7 +66,7 @@ class TestVerdiCalculation(AiidaTestCase):
             calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
             calc.store()
 
-            calc._set_process_state(ProcessState.RUNNING)
+            calc.set_process_state(ProcessState.RUNNING)
             cls.calcs.append(calc)
 
             if calculation_state == CalcJobState.PARSING:
@@ -93,8 +93,8 @@ class TestVerdiCalculation(AiidaTestCase):
         calc = CalcJobNode(computer=cls.computer)
         calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         calc.store()
-        calc._set_exit_status(cls.EXIT_STATUS)
-        calc._set_process_state(ProcessState.FINISHED)
+        calc.set_exit_status(cls.EXIT_STATUS)
+        calc.set_process_state(ProcessState.FINISHED)
         cls.calcs.append(calc)
 
         # Uncomment when issue 2342 is addressed

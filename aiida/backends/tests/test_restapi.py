@@ -71,8 +71,8 @@ class RESTApiTestCase(AiidaTestCase):
 
         calc = orm.CalcJobNode(computer=cls.computer)
         calc.set_option('resources', resources)
-        calc.set_attribute("attr1", "OK")  # pylint: disable=protected-access
-        calc.set_attribute("attr2", "OK")  # pylint: disable=protected-access
+        calc.set_attribute("attr1", "OK")
+        calc.set_attribute("attr2", "OK")
         calc.store()
 
         calc.add_incoming(structure, link_type=LinkType.INPUT_CALC, link_label='link_structure')

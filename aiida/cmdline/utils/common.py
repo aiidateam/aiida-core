@@ -142,7 +142,6 @@ def get_node_info(node, include_summary=True):
     """
     from aiida.common.links import LinkType
     from aiida import orm
-    from aiida.orm import WorkChainNode
 
     if include_summary:
         result = get_node_summary(node)
@@ -194,10 +193,7 @@ def get_node_info(node, include_summary=True):
         table = []
         table_headers = ['Log messages']
         table.append(['There are {} log messages for this calculation'.format(len(log_messages))])
-        if isinstance(node, WorkChainNode):
-            table.append(["Run 'verdi work report {}' to see them".format(node.pk)])
-        else:
-            table.append(["Run 'verdi calculation logshow {}' to see them".format(node.pk)])
+        table.append(["Run 'verdi process report {}' to see them".format(node.pk)])
         result += '\n{}'.format(tabulate(table, headers=table_headers))
 
     return result
@@ -214,8 +210,8 @@ def get_calcjob_report(calcjob):
     from aiida.common.datastructures import CalcJobState
 
     log_messages = orm.Log.objects.get_logs_for(calcjob)
-    scheduler_out = calcjob.get_scheduler_output()
-    scheduler_err = calcjob.get_scheduler_error()
+    scheduler_out = calcjob.get_scheduler_stdout()
+    scheduler_err = calcjob.get_scheduler_stderr()
     calcjob_state = calcjob.get_state()
     scheduler_state = calcjob.get_scheduler_state()
 

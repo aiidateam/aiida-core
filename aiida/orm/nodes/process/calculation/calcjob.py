@@ -3,38 +3,31 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-from six.moves import range
-from six.moves import zip
-
-import copy
-import datetime
 import six
 
+from aiida.common import exceptions
 from aiida.common.datastructures import CalcJobState
 from aiida.common.lang import classproperty
-from aiida.common.utils import str_timedelta
-from aiida.orm.utils.mixins import Sealable
-from aiida.common import timezone
 
-from ..process import ProcessNode
 from .calculation import CalculationNode
 
 __all__ = ('CalcJobNode',)
 
-SEALED_KEY = 'attributes.{}'.format(Sealable.SEALED_KEY)
-CALC_JOB_STATE_KEY = 'attributes.state'
-SCHEDULER_STATE_KEY = 'attributes.scheduler_state'
-PROCESS_STATE_KEY = 'attributes.{}'.format(ProcessNode.PROCESS_STATE_KEY)
-EXIT_STATUS_KEY = 'attributes.{}'.format(ProcessNode.EXIT_STATUS_KEY)
-DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/process/index.html#the-process-builder'
-
 
 class CalcJobNode(CalculationNode):
     """ORM class for all nodes representing the execution of a CalcJob."""
-    # pylint: disable=abstract-method
+
+    # pylint: disable=too-many-public-methods
 
     CALC_JOB_STATE_KEY = 'state'
-    CALC_JOB_STATE_ATTRIBUTE_KEY = 'attributes.{}'.format(CALC_JOB_STATE_KEY)
+    REMOTE_WORKDIR_KEY = 'remote_workdir'
+    RETRIEVE_LIST_KEY = 'retrieve_list'
+    RETRIEVE_TEMPORARY_LIST_KEY = 'retrieve_temporary_list'
+    RETRIEVE_SINGLE_FILE_LIST_KEY = 'retrieve_singlefile_list'
+    SCHEDULER_JOB_ID_KEY = 'job_id'
+    SCHEDULER_STATE_KEY = 'scheduler_state'
+    SCHEDULER_LAST_CHECK_TIME_KEY = 'scheduler_lastchecktime'
+    SCHEUDLER_LAST_JOB_INFO_KEY = 'last_jobinfo'
 
     # Flag that determines whether the class can be cached.
     _cachable = True
@@ -77,13 +70,21 @@ class CalcJobNode(CalculationNode):
         return self._tools
 
     @classproperty
-    def _updatable_attributes(cls):
+    def _updatable_attributes(cls):  # pylint: disable=no-self-argument
         return super(CalcJobNode, cls)._updatable_attributes + (
-            'job_id', 'scheduler_state', 'scheduler_lastchecktime', 'last_jobinfo', 'remote_workdir', 'retrieve_list',
-            'retrieve_temporary_list', 'retrieve_singlefile_list', cls.CALC_JOB_STATE_KEY)
+            cls.CALC_JOB_STATE_KEY,
+            cls.REMOTE_WORKDIR_KEY,
+            cls.RETRIEVE_LIST_KEY,
+            cls.RETRIEVE_TEMPORARY_LIST_KEY,
+            cls.RETRIEVE_SINGLE_FILE_LIST_KEY,
+            cls.SCHEDULER_JOB_ID_KEY,
+            cls.SCHEDULER_STATE_KEY,
+            cls.SCHEDULER_LAST_CHECK_TIME_KEY,
+            cls.SCHEUDLER_LAST_JOB_INFO_KEY,
+        )
 
     @classproperty
-    def _hash_ignored_attributes(cls):
+    def _hash_ignored_attributes(cls):  # pylint: disable=no-self-argument
         return super(CalcJobNode, cls)._hash_ignored_attributes + (
             'queue_name',
             'account',
@@ -93,7 +94,7 @@ class CalcJobNode(CalculationNode):
             'max_memory_kb',
         )
 
-    def get_hash(self, ignore_errors=True, ignored_folder_content=('raw_input',), **kwargs):
+    def get_hash(self, ignore_errors=True, ignored_folder_content=('raw_input',), **kwargs):  # pylint: disable=arguments-differ
         return super(CalcJobNode, self).get_hash(
             ignore_errors=ignore_errors, ignored_folder_content=ignored_folder_content, **kwargs)
 
@@ -149,7 +150,11 @@ class CalcJobNode(CalculationNode):
                 builder.metadata.options = options
             elif isinstance(port, PortNamespace):
                 namespace = port_name + '_'
-                sub = {entry.link_label[len(namespace):]: entry.node for entry in inputs if entry.link_label.startswith(namespace)}
+                sub = {
+                    entry.link_label[len(namespace):]: entry.node
+                    for entry in inputs
+                    if entry.link_label.startswith(namespace)
+                }
                 if sub:
                     setattr(builder, port_name, sub)
             else:
@@ -164,33 +169,34 @@ class CalcJobNode(CalculationNode):
 
         :raise: ValidationError: if invalid parameters are found.
         """
-        from aiida.common.exceptions import MissingPluginError, ValidationError
-
         super(CalcJobNode, self)._validate()
 
         if self.computer is None:
-            raise ValidationError("You did not specify a computer")
+            raise exceptions.ValidationError('no computer was specified')
 
         if self.get_state() and self.get_state() not in CalcJobState:
-            raise ValidationError("Calculation state '{}' is not valid".format(self.get_state()))
+            raise exceptions.ValidationError('invalid calculation state `{}`'.format(self.get_state()))
 
         try:
-            self.get_parserclass()
-        except MissingPluginError:
-            raise ValidationError("No valid class/implementation found for the parser '{}'. "
-                                  "Set the parser to None if you do not need an automatic "
-                                  "parser.".format(self.get_option('parser_name')))
+            self.get_parser_class()
+        except exceptions.MissingPluginError:
+            raise exceptions.ValidationError("No valid class/implementation found for the parser '{}'. "
+                                             "Set the parser to None if you do not need an automatic "
+                                             "parser.".format(self.get_option('parser_name')))
 
         computer = self.computer
-        s = computer.get_scheduler()
+        scheduler = computer.get_scheduler()
         resources = self.get_option('resources')
         def_cpus_machine = computer.get_default_mpiprocs_per_machine()
+
         if def_cpus_machine is not None:
             resources['default_mpiprocs_per_machine'] = def_cpus_machine
+
         try:
-            s.create_job_resource(**resources)
+            scheduler.create_job_resource(**resources)
         except (TypeError, ValueError) as exc:
-            raise ValidationError("Invalid resources for the scheduler of the specified computer: {}".format(exc))
+            raise exceptions.ValidationError(
+                "Invalid resources for the scheduler of the specified computer: {}".format(exc))
 
     @property
     def _raw_input_folder(self):
@@ -202,16 +208,17 @@ class CalcJobNode(CalculationNode):
         """
         from aiida.common.exceptions import NotExistent
 
-        return_folder = self._repository._get_base_folder()
+        return_folder = self._repository._get_base_folder()  # pylint: disable=protected-access
         if return_folder.exists():
             return return_folder
-        else:
-            raise NotExistent("_raw_input_folder not created yet")
+
+        raise NotExistent('the `_raw_input_folder` has not yet been created')
 
     @property
     def options(self):
+        """Return the available process options for the process class that created this node."""
         try:
-            return self.process_class.spec().inputs._ports['metadata']['options']
+            return self.process_class.spec().inputs._ports['metadata']['options']  # pylint: disable=protected-access
         except ValueError:
             return {}
 
@@ -271,7 +278,7 @@ class CalcJobNode(CalculationNode):
 
         return None
 
-    def _set_state(self, state):
+    def set_state(self, state):
         """
         Set the state of the calculation job.
 
@@ -283,191 +290,220 @@ class CalcJobNode(CalculationNode):
 
         self.set_attribute(self.CALC_JOB_STATE_KEY, state.value)
 
-    def _del_state(self):
+    def delete_state(self):
         """Delete the calculation job state attribute if it exists."""
         try:
             self.delete_attribute(self.CALC_JOB_STATE_KEY)
         except AttributeError:
             pass
 
-    def _set_remote_workdir(self, remote_workdir):
-        self.set_attribute('remote_workdir', remote_workdir)
+    def set_remote_workdir(self, remote_workdir):
+        """Set the absolute path to the working directory on the remote computer where the calculation is run.
 
-    def _get_remote_workdir(self):
+        :param remote_workdir: absolute filepath to the remote working directory
         """
-        Get the path to the remote (on cluster) scratch
-        folder of the calculation.
+        self.set_attribute(self.REMOTE_WORKDIR_KEY, remote_workdir)
+
+    def get_remote_workdir(self):
+        """Return the path to the remote (on cluster) scratch folder of the calculation.
 
         :return: a string with the remote path
         """
-        return self.get_attribute('remote_workdir', None)
+        return self.get_attribute(self.REMOTE_WORKDIR_KEY, None)
 
-    def _set_retrieve_list(self, retrieve_list):
-        if not (isinstance(retrieve_list, (tuple, list))):
-            raise ValueError("You should pass a list/tuple")
-        for item in retrieve_list:
-            if not isinstance(item, six.string_types):
-                if (not (isinstance(item, (tuple, list))) or len(item) != 3):
-                    raise ValueError("You should pass a list containing either strings or lists/tuples")
-                if (not (isinstance(item[0], six.string_types)) or not (isinstance(item[1], six.string_types)) or
-                        not (isinstance(item[2], int))):
-                    raise ValueError("You have to pass a list (or tuple) of "
-                                     "lists, with remotepath(string), "
-                                     "localpath(string) and depth (integer)")
+    @staticmethod
+    def _validate_retrieval_directive(directives):
+        """Validate a list or tuple of file retrieval directives.
 
-        self.set_attribute('retrieve_list', retrieve_list)
-
-    def _get_retrieve_list(self):
+        :param directives: a list or tuple of file retrieveal directives
+        :raise ValueError: if the format of the directives is invalid
         """
-        Get the list of files/directories to be retrieved on the cluster.
-        Their path is relative to the remote workdirectory path.
+        if not isinstance(directives, (tuple, list)):
+            raise TypeError('file retrieval directives has to be a list or tuple')
 
-        :return: a list of strings for file/directory names
+        for directive in directives:
+
+            # A string as a directive is valid, so we continue
+            if isinstance(directive, six.string_types):
+                continue
+
+            # Otherwise, it has to be a tuple of length three with specific requirements
+            if not isinstance(directive, (tuple, list)) or len(directive) != 3:
+                raise ValueError('invalid directive, not a list or tuple of length three: {}'.format(directive))
+
+            if not isinstance(directive[0], six.string_types):
+                raise ValueError('invalid directive, first element has to be a string representing remote path')
+
+            if not isinstance(directive[1], six.string_types):
+                raise ValueError('invalid directive, second element has to be a string representing local path')
+
+            if not isinstance(directive[2], int):
+                raise ValueError('invalid directive, three element has to be an integer representing the depth')
+
+    def set_retrieve_list(self, retrieve_list):
+        """Set the retrieve list.
+
+        This list of directives will instruct the daemon what files to retrieve after the calculation has completed.
+        list or tuple of files or paths that should be retrieved by the daemon.
+
+        :param retrieve_list: list or tuple of with filepath directives
         """
-        return self.get_attribute('retrieve_list', None)
+        self._validate_retrieval_directive(retrieve_list)
+        self.set_attribute(self.RETRIEVE_LIST_KEY, retrieve_list)
 
-    def _set_retrieve_temporary_list(self, retrieve_temporary_list):
+    def get_retrieve_list(self):
+        """Return the list of files/directories to be retrieved on the cluster after the calculation has completed.
+
+        :return: a list of file directives
         """
-        Set the list of paths that are to retrieved for parsing and be deleted as soon
-        as the parsing has been completed.
+        return self.get_attribute(self.RETRIEVE_LIST_KEY, None)
+
+    def set_retrieve_temporary_list(self, retrieve_temporary_list):
+        """Set the retrieve temporary list.
+
+        The retrieve temporary list stores files that are retrieved after completion and made available during parsing
+        and are deleted as soon as the parsing has been completed.
+
+        :param retrieve_temporary_list: list or tuple of with filepath directives
         """
-        if not (isinstance(retrieve_temporary_list, (tuple, list))):
-            raise ValueError('You should pass a list/tuple')
+        self._validate_retrieval_directive(retrieve_temporary_list)
+        self.set_attribute(self.RETRIEVE_TEMPORARY_LIST_KEY, retrieve_temporary_list)
 
-        for item in retrieve_temporary_list:
-            if not isinstance(item, six.string_types):
-                if (not (isinstance(item, (tuple, list))) or len(item) != 3):
-                    raise ValueError('You should pass a list containing either ' 'strings or lists/tuples')
+    def get_retrieve_temporary_list(self):
+        """Return list of files to be retrieved from the cluster which will be available during parsing.
 
-                if (not (isinstance(item[0], six.string_types)) or not (isinstance(item[1], six.string_types)) or
-                        not (isinstance(item[2], int))):
-                    raise ValueError('You have to pass a list (or tuple) of lists, with remotepath(string), '
-                                     'localpath(string) and depth (integer)')
-
-        self.set_attribute('retrieve_temporary_list', retrieve_temporary_list)
-
-    def _get_retrieve_temporary_list(self):
+        :return: a list of file directives
         """
-        Get the list of files/directories to be retrieved on the cluster and will be kept temporarily during parsing.
-        Their path is relative to the remote workdirectory path.
+        return self.get_attribute(self.RETRIEVE_TEMPORARY_LIST_KEY, None)
 
-        :return: a list of strings for file/directory names
-        """
-        return self.get_attribute('retrieve_temporary_list', None)
+    def set_retrieve_singlefile_list(self, retrieve_singlefile_list):
+        """Set the retrieve singlefile list.
 
-    def _set_retrieve_singlefile_list(self, retrieve_singlefile_list):
-        """
-        Set the list of information for the retrieval of singlefiles
+        The files will be stored as `SinglefileData` instances and added as output nodes to this calculation node.
+        The format of a single file directive is a tuple or list of length 3 with the following entries:
+
+            1. the link label under which the file should be added
+            2. the `SinglefileData` class or sub class to use to store
+            3. the filepath relative to the remote working directory of the calculation
+
+        :param retrieve_singlefile_list: list or tuple of single file directives
         """
         if not isinstance(retrieve_singlefile_list, (tuple, list)):
-            raise ValueError("You have to pass a list (or tuple) of lists of strings as retrieve_singlefile_list")
+            raise TypeError('retrieve_singlefile_list has to be a list or tuple')
+
         for j in retrieve_singlefile_list:
-            if (not (isinstance(j, (tuple, list))) or not (all(isinstance(i, six.string_types) for i in j))):
-                raise ValueError("You have to pass a list (or tuple) of lists "
-                                 "of strings as retrieve_singlefile_list")
-        self.set_attribute('retrieve_singlefile_list', retrieve_singlefile_list)
+            if not isinstance(j, (tuple, list)) or not all(isinstance(i, six.string_types) for i in j):
+                raise ValueError('You have to pass a list (or tuple) of lists of strings as retrieve_singlefile_list')
 
-    def _get_retrieve_singlefile_list(self):
-        """
-        Get the list of files to be retrieved from the cluster and stored as
-        SinglefileData's (or subclasses of it).
-        Their path is relative to the remote workdirectory path.
+        self.set_attribute(self.RETRIEVE_SINGLE_FILE_LIST_KEY, retrieve_singlefile_list)
 
-        :return: a list of lists of strings for 1) linknames,
-                 2) Singlefile subclass name 3) file names
-        """
-        return self.get_attribute('retrieve_singlefile_list', None)
+    def get_retrieve_singlefile_list(self):
+        """Return the list of files to be retrieved on the cluster after the calculation has completed.
 
-    def _set_job_id(self, job_id):
+        :return: list of single file retrieval directives
         """
-        Always set as a string
+        return self.get_attribute(self.RETRIEVE_SINGLE_FILE_LIST_KEY, None)
+
+    def set_job_id(self, job_id):
+        """Set the job id that was assigned to the calculation by the scheduler.
+
+        .. note:: the id will always be stored as a string
+
+        :param job_id: the id assigned by the scheduler after submission
         """
-        return self.set_attribute('job_id', six.text_type(job_id))
+        return self.set_attribute(self.SCHEDULER_JOB_ID_KEY, six.text_type(job_id))
 
     def get_job_id(self):
-        """
-        Get the scheduler job id of the calculation.
+        """Return job id that was assigned to the calculation by the scheduler.
 
-        :return: a string
+        :return: the string representation of the scheduler job id
         """
-        return self.get_attribute('job_id', None)
+        return self.get_attribute(self.SCHEDULER_JOB_ID_KEY, None)
 
-    def _set_scheduler_state(self, state):
+    def set_scheduler_state(self, state):
+        """Set the scheduler state.
+
+        :param state: an instance of `JobState`
+        """
         from aiida.common import timezone
         from aiida.schedulers.datastructures import JobState
 
         if not isinstance(state, JobState):
-            raise ValueError('scheduler state should be an instance of JobState, got: {}'.format())
+            raise ValueError('scheduler state should be an instance of JobState, got: {}'.format(state))
 
-        self.set_attribute('scheduler_state', state.value)
-        self.set_attribute('scheduler_lastchecktime', timezone.now())
+        self.set_attribute(self.SCHEDULER_STATE_KEY, state.value)
+        self.set_attribute(self.SCHEDULER_LAST_CHECK_TIME_KEY, timezone.now())
 
     def get_scheduler_state(self):
-        """
-        Return the status of the calculation according to the cluster scheduler.
+        """Return the status of the calculation according to the cluster scheduler.
 
         :return: a JobState enum instance.
         """
         from aiida.schedulers.datastructures import JobState
 
-        state = self.get_attribute('scheduler_state', None)
+        state = self.get_attribute(self.SCHEDULER_STATE_KEY, None)
 
         if state is None:
             return state
 
         return JobState(state)
 
-    def _get_scheduler_lastchecktime(self):
+    def get_scheduler_lastchecktime(self):
+        """Return the time of the last update of the scheduler state by the daemon or None if it was never set.
+
+        :return: a datetime object or None
         """
-        Return the time of the last update of the scheduler state by the daemon,
-        or None if it was never set.
+        return self.get_attribute(self.SCHEDULER_LAST_CHECK_TIME_KEY, None)
 
-        :return: a datetime object.
+    def set_last_job_info(self, last_job_info):
+        """Set the last job info.
+
+        :param last_job_info: a `JobInfo` object
         """
-        return self.get_attribute('scheduler_lastchecktime', None)
+        self.set_attribute(self.SCHEUDLER_LAST_JOB_INFO_KEY, last_job_info.serialize())
 
-    def _set_last_jobinfo(self, last_jobinfo):
-        self.set_attribute('last_jobinfo', last_jobinfo.serialize())
+    def get_last_job_info(self):
+        """Return the last information asked to the scheduler about the status of the job.
 
-    def _get_last_jobinfo(self):
-        """
-        Get the last information asked to the scheduler
-        about the status of the job.
-
-        :return: a JobInfo object (that closely resembles a dictionary) or None.
+        :return: a `JobInfo` object (that closely resembles a dictionary) or None.
         """
         from aiida.schedulers.datastructures import JobInfo
 
-        last_jobinfo_serialized = self.get_attribute('last_jobinfo', None)
-        if last_jobinfo_serialized is not None:
-            jobinfo = JobInfo()
-            jobinfo.load_from_serialized(last_jobinfo_serialized)
-            return jobinfo
-        else:
-            return None
+        last_job_info_serialized = self.get_attribute(self.SCHEUDLER_LAST_JOB_INFO_KEY, None)
 
-    def _get_authinfo(self):
-        from aiida.common.exceptions import NotExistent
+        if last_job_info_serialized is not None:
+            job_info = JobInfo()
+            job_info.load_from_serialized(last_job_info_serialized)
+        else:
+            job_info = None
+
+        return job_info
+
+    def get_authinfo(self):
+        """Return the `AuthInfo` that is configured for the `Computer` set for this node.
+
+        :return: `AuthInfo`
+        """
         from aiida.orm.authinfos import AuthInfo
 
         computer = self.computer
+
         if computer is None:
-            raise NotExistent("No computer has been set for this calculation")
+            raise exceptions.NotExistent("No computer has been set for this calculation")
 
         return AuthInfo.from_backend_entity(self.backend.authinfos.get(computer=computer, user=self.user))
 
-    def _get_transport(self):
-        """
-        Return the transport for this calculation.
-        """
-        return self._get_authinfo().get_transport()
+    def get_transport(self):
+        """Return the transport for this calculation.
 
-    def get_parserclass(self):
+        :return: `Transport` configured with the `AuthInfo` associated to the computer of this node
         """
-        Return the output parser object for this calculation, or None
-        if no parser is set.
+        return self.get_authinfo().get_transport()
 
-        :return: a Parser class.
+    def get_parser_class(self):
+        """Return the output parser object for this calculation or None if no parser is set.
+
+        :return: a `Parser` class.
         :raise: MissingPluginError from ParserFactory no plugin is found.
         """
         from aiida.plugins import ParserFactory
@@ -476,8 +512,8 @@ class CalcJobNode(CalculationNode):
 
         if parser_name is not None:
             return ParserFactory(parser_name)
-        else:
-            return None
+
+        return None
 
     @property
     def link_label_retrieved(self):
@@ -485,13 +521,15 @@ class CalcJobNode(CalculationNode):
         return 'retrieved'
 
     def get_retrieved_node(self):
-        """Return the retrieved data folde.
+        """Return the retrieved data folder.
 
-        :return: the retrieved FolderData node
-        :raise aiida.common.MultipleObjectsError: if no or more than one retrieved node is found.
+        :return: the retrieved FolderData node or None if not found
         """
         from aiida.orm import FolderData
-        return self.get_outgoing(node_class=FolderData, link_label_filter=self.link_label_retrieved).one().node
+        try:
+            return self.get_outgoing(node_class=FolderData, link_label_filter=self.link_label_retrieved).one().node
+        except ValueError:
+            return None
 
     @property
     def res(self):
@@ -507,427 +545,42 @@ class CalcJobNode(CalculationNode):
         from aiida.orm.utils.calcjob import CalcJobResultManager
         return CalcJobResultManager(self)
 
-    def get_scheduler_output(self):
-        """
-        Return the output of the scheduler output (a string) if the calculation
-        has finished, and output node is present, and the output of the
-        scheduler was retrieved.
+    def get_scheduler_stdout(self):
+        """Return the scheduler stderr output if the calculation has finished and been retrieved, None otherwise.
 
-        Return None otherwise.
+        :return: scheduler stderr output or None
         """
-        from aiida.common.exceptions import NotExistent
-
         filename = self.get_option('scheduler_stdout')
-
-        # Shortcut if no error file is set
-        if filename is None:
-            return None
-
         retrieved_node = self.get_retrieved_node()
-        if retrieved_node is None:
+
+        if filename is None or retrieved_node is None:
             return None
 
         try:
-            outfile_content = retrieved_node.get_object_content(filename)
-        except NotExistent:
-            # Return None if no file is found
-            return None
+            stdout = retrieved_node.get_object_content(filename)
+        except exceptions.NotExistent:
+            stdout = None
 
-        return outfile_content
+        return stdout
 
-    def get_scheduler_error(self):
+    def get_scheduler_stderr(self):
+        """Return the scheduler stdout output if the calculation has finished and been retrieved, None otherwise.
+
+        :return: scheduler stdout output or None
         """
-        Return the output of the scheduler error (a string) if the calculation
-        has finished, and output node is present, and the output of the
-        scheduler was retrieved.
-
-        Return None otherwise.
-        """
-        from aiida.common.exceptions import NotExistent
-
         filename = self.get_option('scheduler_stderr')
-
-        # Shortcut if no error file is set
-        if filename is None:
-            return None
-
         retrieved_node = self.get_retrieved_node()
-        if retrieved_node is None:
+
+        if filename is None or retrieved_node is None:
             return None
 
         try:
-            errfile_content = retrieved_node.get_object_content(filename)
-        except (NotExistent):
-            # Return None if no file is found
-            return None
+            stderr = retrieved_node.get_object_content(filename)
+        except exceptions.NotExistent:
+            stderr = None
 
-        return errfile_content
+        return stderr
 
     def get_description(self):
-        """
-        Returns a string with infos retrieved from a CalcJobNode node's
-        properties.
-        """
+        """Return a string with a description of the node based on its properties."""
         return self.get_state()
-
-    projection_map = {
-        'pk': ('calculation', 'id'),
-        'ctime': ('calculation', 'ctime'),
-        'mtime': ('calculation', 'mtime'),
-        'scheduler_state': ('calculation', SCHEDULER_STATE_KEY),
-        'calc_job_state': ('calculation', CALC_JOB_STATE_KEY),
-        'process_state': ('calculation', PROCESS_STATE_KEY),
-        'exit_status': ('calculation', EXIT_STATUS_KEY),
-        'sealed': ('calculation', SEALED_KEY),
-        'type': ('calculation', 'type'),
-        'description': ('calculation', 'description'),
-        'label': ('calculation', 'label'),
-        'uuid': ('calculation', 'uuid'),
-        'user': ('user', 'email'),
-        'computer': ('computer', 'name')
-    }
-
-    compound_projection_map = {
-        'state': ('calculation', (PROCESS_STATE_KEY, EXIT_STATUS_KEY)),
-        'job_state': ('calculation', (CALC_JOB_STATE_KEY, SCHEDULER_STATE_KEY))
-    }
-
-    @classmethod
-    def _list_calculations(cls,
-                           states=None,
-                           past_days=None,
-                           groups=None,
-                           all_users=False,
-                           pks=tuple(),
-                           relative_ctime=True,
-                           with_scheduler_state=False,
-                           order_by=None,
-                           limit=None,
-                           filters=None,
-                           projections=('pk', 'state', 'ctime', 'sched', 'computer', 'type'),
-                           raw=False):
-        """
-        Print a description of the AiiDA calculations.
-
-        :param states: a list of string with states. If set, print only the
-            calculations in the states "states", otherwise shows all.
-            Default = None.
-        :param past_days: If specified, show only calculations that were
-            created in the given number of past days.
-        :param groups: If specified, show only calculations belonging to these groups
-        :param pks: if specified, must be a list of integers, and only
-            calculations within that list are shown. Otherwise, all
-            calculations are shown.
-            If specified, sets state to None and ignores the
-            value of the ``past_days`` option.")
-        :param relative_ctime: if true, prints the creation time relative from now.
-                               (like 2days ago). Default = True
-        :param filters: a dictionary of filters to be passed to the QueryBuilder query
-        :param all_users: if True, list calculation belonging to all users.
-                           Default = False
-        :param raw: Only print the query result, without any headers, footers
-            or other additional information
-
-        :return: a string with description of calculations.
-        """
-
-        from aiida.orm.querybuilder import QueryBuilder
-        from tabulate import tabulate
-        from aiida import orm
-
-        projection_label_dict = {
-            'pk': 'PK',
-            'state': 'State',
-            'process_state': 'Process state',
-            'exit_status': 'Exit status',
-            'sealed': 'Sealed',
-            'ctime': 'Creation',
-            'mtime': 'Modification',
-            'job_state': 'Job state',
-            'calc_job_state': 'Calculation job state',
-            'scheduler_state': 'Scheduler state',
-            'computer': 'Computer',
-            'type': 'Type',
-            'description': 'Description',
-            'label': 'Label',
-            'uuid': 'UUID',
-            'user': 'User',
-        }
-
-        now = timezone.now()
-
-        # Let's check the states:
-        if states:
-            for state in states:
-                if state not in CalcJobState:
-                    return "Invalid state provided: {}.".format(state)
-
-        # Let's check if there is something to order_by:
-        valid_order_parameters = (None, 'id', 'ctime')
-        assert order_by in valid_order_parameters, \
-            "invalid order by parameter {}\n" \
-            "valid parameters are:\n".format(order_by, valid_order_parameters)
-
-        # Limit:
-        if limit is not None:
-            assert isinstance(limit, int), \
-                "Limit (set to {}) has to be an integer or None".format(limit)
-
-        if filters is None:
-            calculation_filters = {}
-        else:
-            calculation_filters = filters
-
-        # filter for calculation pks:
-        if pks:
-            calculation_filters['id'] = {'in': pks}
-            group_filters = None
-        else:
-            # The wanted behavior:
-            # You know what you're looking for and specify pks,
-            # Otherwise the other filters apply.
-            # Open question: Is that the best way?
-
-            # filter for states:
-            if states:
-                calculation_filters['attributes.{}'.format(cls.CALC_JOB_STATE_KEY)] = {'in': states}
-
-            # Filter on the users, if not all users
-            if not all_users:
-                user_id = orm.User.objects.get_default().id
-                calculation_filters['user_id'] = {'==': user_id}
-
-            if past_days is not None:
-                n_days_ago = now - datetime.timedelta(days=past_days)
-                calculation_filters['ctime'] = {'>': n_days_ago}
-
-            # Filter on the groups
-            if groups:
-                group_filters = {'uuid': {'in': [group.uuid for group in groups]}}
-            else:
-                group_filters = None
-
-        calc_list_header = [projection_label_dict[p] for p in projections]
-
-        qb = orm.QueryBuilder()
-        qb.append(cls, filters=calculation_filters, tag='calculation')
-
-        if group_filters is not None:
-            qb.append(type='group', filters=group_filters, with_node='calculation')
-
-        qb.append(type='computer', with_node='calculation', tag='computer')
-        qb.append(type='user', with_node="calculation", tag="user")
-
-        projections_dict = {'calculation': [], 'user': [], 'computer': []}
-
-        # Expand compound projections
-        for compound_projection in ['state', 'job_state']:
-            if compound_projection in projections:
-                field, values = cls.compound_projection_map[compound_projection]
-                for value in values:
-                    projections_dict[field].append(value)
-
-        for p in projections:
-            if p in cls.projection_map:
-                for k, v in [cls.projection_map[p]]:
-                    projections_dict[k].append(v)
-
-        for k, v in projections_dict.items():
-            qb.add_projection(k, v)
-
-        # ORDER
-        if order_by is not None:
-            qb.order_by({'calculation': [order_by]})
-
-        # LIMIT
-        if limit is not None:
-            qb.limit(limit)
-
-        results_generator = qb.iterdict()
-
-        counter = 0
-        while True:
-            calc_list_data = []
-            try:
-                for i in range(100):
-                    res = next(results_generator)
-
-                    row = cls._get_calculation_info_row(res, projections, now if relative_ctime else None)
-
-                    # Build the row of information
-                    calc_list_data.append(row)
-
-                    counter += 1
-
-                if raw:
-                    print(tabulate(calc_list_data, tablefmt='plain'))
-                else:
-                    print(tabulate(calc_list_data, headers=calc_list_header))
-
-            except StopIteration:
-                if raw:
-                    print(tabulate(calc_list_data, tablefmt='plain'))
-                else:
-                    print(tabulate(calc_list_data, headers=calc_list_header))
-                break
-
-        if not raw:
-            print("\nTotal results: {}\n".format(counter))
-
-    @classmethod
-    def _get_calculation_info_row(cls, res, projections, times_since=None):
-        """
-        Get a row of information about a calculation.
-
-        :param res: Results from the calculations query.
-        :param times_since: Times are relative to this timepoint, if None then
-            absolute times will be used.
-        :param projections: The projections used in the calculation query
-        :type projections: list
-        :type times_since: :class:`!datetime.datetime`
-        :return: A list of string with information about the calculation.
-        """
-        d = copy.deepcopy(res)
-
-        try:
-            prefix = 'nodes.process.calculation.calcjob.'
-            calculation_type = d['calculation']['type']
-            module, class_name = calculation_type.rsplit('.', 2)[:2]
-
-            # For the base class 'mode.process.calculation.calcjob.CalcJobNode' the module at this point equals
-            # 'nodes.process.calculation.calcjob'. For this case we should simply set the type to the base module
-            # 'nodes.process.calculation.calcjob. Otherwise we need to strip the prefix to get the proper sub module
-            if module == prefix.rstrip('.'):
-                d['calculation']['type'] = module[len(prefix):]
-            else:
-                assert module.startswith(prefix), "module '{}' does not start with '{}'".format(module, prefix)
-                d['calculation']['type'] = module[len(prefix):]
-        except KeyError:
-            pass
-        for proj in ('ctime', 'mtime'):
-            try:
-                time = d['calculation'][proj]
-                if times_since:
-                    dt = timezone.delta(time, times_since)
-                    d['calculation'][proj] = str_timedelta(dt, negative_to_zero=True, max_num_fields=1)
-                else:
-                    d['calculation'][proj] =' '.join([
-                        timezone.localtime(time).isoformat().split('T')[0],
-                        timezone.localtime(time).isoformat().split('T')[1].split('.')[0].rsplit(":", 1)[0]
-                    ])
-            except (KeyError, ValueError):
-                pass
-
-        if PROCESS_STATE_KEY in d['calculation']:
-
-            process_state = d['calculation'][PROCESS_STATE_KEY]
-
-            if process_state is None:
-                process_state = 'unknown'
-
-            d['calculation'][PROCESS_STATE_KEY] = process_state.capitalize()
-
-        if SEALED_KEY in d['calculation']:
-            sealed = 'True' if d['calculation'][SEALED_KEY] == 1 else 'False'
-            d['calculation'][SEALED_KEY] = sealed
-
-        result = []
-
-        for projection in projections:
-
-            if projection in cls.compound_projection_map:
-                field, attributes = cls.compound_projection_map[projection]
-                projected_attributes = [str(d[field][attribute]) for attribute in attributes]
-                result.append(' | '.join(projected_attributes))
-            else:
-                field = cls.projection_map[projection][0]
-                attribute = cls.projection_map[projection][1]
-                result.append(d[field][attribute])
-
-        return result
-
-    @classmethod
-    def _get_all_with_state(cls,
-                            state,
-                            computer=None,
-                            user=None,
-                            only_computer_user_pairs=False,
-                            only_enabled=True,
-                            limit=None):
-        """
-        Filter all calculations with a given state.
-
-        Issue a warning if the state is not in the list of valid states.
-
-        :param str state: The state to be used to filter (should be a string among
-                those defined in aiida.common.datastructures.CalcJobState)
-        :param computer: a Django DbComputer entry, or a Computer object, of a
-                computer in the DbComputer table.
-                A string for the hostname is also valid.
-        :param user: a Django entry (or its pk) of a user in the DbUser table;
-                if present, the results are restricted to calculations of that
-                specific user
-        :param bool only_computer_user_pairs: if False (default) return a queryset
-                where each element is a suitable instance of Node (it should
-                be an instance of Calculation, if everything goes right!)
-                If True, return only a list of tuples, where each tuple is
-                in the format
-                ('dbcomputer__id', 'user__id')
-                [where the IDs are the IDs of the respective tables]
-        :param int limit: Limit the number of rows returned
-
-        :return: a list of calculation objects matching the filters.
-        """
-        # I assume that CalcJobState are strings. If this changes in the future,
-        # update the filter below from dbattributes__tval to the correct field.
-        from aiida.orm.computers import Computer
-        from aiida.orm.querybuilder import QueryBuilder
-
-        if state not in CalcJobState:
-            cls._logger.warning("querying for calculation state='{}', but it "
-                                "is not a valid calculation state".format(state))
-
-        calcfilter = {'state': {'==': state}}
-        computerfilter = {"enabled": {'==': True}}
-        userfilter = {}
-
-        if computer is None:
-            pass
-        elif isinstance(computer, int):
-            # An ID was provided
-            computerfilter.update({'id': {'==': computer}})
-        elif isinstance(computer, Computer):
-            computerfilter.update({'id': {'==': computer.pk}})
-        else:
-            try:
-                computerfilter.update({'id': {'==': computer.id}})
-            except AttributeError as e:
-                raise Exception("{} is not a valid computer\n{}".format(computer, e))
-
-        if user is None:
-            pass
-        elif isinstance(user, int):
-            userfilter.update({'id': {'==': user}})
-        else:
-            try:
-                userfilter.update({'id': {'==': int(user.id)}})
-                # Is that safe?
-            except:
-                raise Exception("{} is not a valid user".format(user))
-
-        qb = QueryBuilder()
-        qb.append(type="computer", tag='computer', filters=computerfilter)
-        qb.append(cls, filters=calcfilter, tag='calc', with_computer='computer')
-        qb.append(type="user", tag='user', filters=userfilter, with_node="calc")
-
-        if only_computer_user_pairs:
-            qb.add_projection("computer", "*")
-            qb.add_projection("user", "*")
-            returnresult = qb.distinct().all()
-        else:
-            qb.add_projection("calc", "*")
-            if limit is not None:
-                qb.limit(limit)
-            returnresult = qb.all()
-            returnresult = next(zip(*returnresult))
-        return returnresult

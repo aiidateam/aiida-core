@@ -54,7 +54,7 @@ def upload_calculation(calculation, transport, calc_info, script_filename):
     input_codes = [load_node(_.code_uuid, sub_classes=(Code,)) for _ in codes_info]
 
     logger_extra = get_dblogger_extra(calculation)
-    transport._set_logger_extra(logger_extra)
+    transport.set_logger_extra(logger_extra)
 
     if calculation.has_cached_links():
         raise ValueError("Cannot submit calculation {} because it has "
@@ -131,7 +131,7 @@ def upload_calculation(calculation, transport, calc_info, script_filename):
 
     # I store the workdir of the calculation for later file retrieval
     workdir = transport.getcwd()
-    calculation._set_remote_workdir(workdir)
+    calculation.set_remote_workdir(workdir)
 
     # I first create the code files, so that the code can put
     # default files to be overwritten by the plugin itself.
@@ -231,9 +231,9 @@ def submit_calculation(calculation, transport, calc_info, script_filename):
     scheduler = calculation.computer.get_scheduler()
     scheduler.set_transport(transport)
 
-    workdir = calculation._get_remote_workdir()
+    workdir = calculation.get_remote_workdir()
     job_id = scheduler.submit_from_script(workdir, script_filename)
-    calculation._set_job_id(job_id)
+    calculation.set_job_id(job_id)
 
 
 def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
@@ -251,7 +251,7 @@ def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
     logger_extra = get_dblogger_extra(calculation)
 
     execlogger.debug("Retrieving calc {}".format(calculation.pk), extra=logger_extra)
-    workdir = calculation._get_remote_workdir()
+    workdir = calculation.get_remote_workdir()
 
     execlogger.debug(
         "[retrieval of calc {}] chdir {}".format(calculation.pk, workdir),
@@ -265,9 +265,9 @@ def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
         transport.chdir(workdir)
 
         # First, retrieve the files of folderdata
-        retrieve_list = calculation._get_retrieve_list()
-        retrieve_temporary_list = calculation._get_retrieve_temporary_list()
-        retrieve_singlefile_list = calculation._get_retrieve_singlefile_list()
+        retrieve_list = calculation.get_retrieve_list()
+        retrieve_temporary_list = calculation.get_retrieve_temporary_list()
+        retrieve_singlefile_list = calculation.get_retrieve_singlefile_list()
 
         with SandboxFolder() as folder:
             retrieve_files_from_list(calculation, transport, folder.abspath, retrieve_list)
@@ -338,7 +338,7 @@ def parse_results(process, retrieved_temporary_folder=None):
     assert process.node.get_state() == CalcJobState.PARSING, \
         'the job should be in the PARSING state when calling this function yet it is {}'.format(process.node.get_state())
 
-    parser_class = process.node.get_parserclass()
+    parser_class = process.node.get_parser_class()
     exit_code = ExitCode()
     logger_extra = get_dblogger_extra(process.node)
 

@@ -524,7 +524,7 @@ class TrajectoryData(ArrayData):
            Renamed from _get_cif
         """
         struct = self.get_structure(index=index, **kwargs)
-        cif = struct.get_cif(**kwargs)  # pylint: disable=protected-access
+        cif = struct.get_cif(**kwargs)
         return cif
 
     def _parse_xyz_pos(self, inputstring):

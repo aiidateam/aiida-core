@@ -127,7 +127,6 @@ class TestVerdiProcess(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        # pylint: disable=protected-access
         super(TestVerdiProcess, cls).setUpClass(*args, **kwargs)
         from aiida.engine import ProcessState
         from aiida.orm.groups import Group
@@ -138,21 +137,21 @@ class TestVerdiProcess(AiidaTestCase):
         for state in ProcessState:
 
             calc = WorkFunctionNode()
-            calc._set_process_state(state)
+            calc.set_process_state(state)
 
             # Set the WorkFunctionNode as successful
             if state == ProcessState.FINISHED:
-                calc._set_exit_status(0)
+                calc.set_exit_status(0)
 
             calc.store()
             cls.calcs.append(calc)
 
             calc = WorkChainNode()
-            calc._set_process_state(state)
+            calc.set_process_state(state)
 
             # Set the WorkChainNode as failed
             if state == ProcessState.FINISHED:
-                calc._set_exit_status(1)
+                calc.set_exit_status(1)
 
             calc.store()
             cls.calcs.append(calc)

@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=protected-access,invalid-name,too-many-locals
+# pylint: disable=invalid-name,too-many-locals
 """`verdi calcjob` commands."""
 from __future__ import division
 from __future__ import print_function
@@ -39,11 +39,11 @@ def calcjob_gotocomputer(calcjob):
     from aiida.common.exceptions import NotExistent
 
     try:
-        transport = calcjob._get_transport()
+        transport = calcjob.get_transport()
     except NotExistent as exception:
         echo.echo_critical(exception)
 
-    remote_workdir = calcjob._get_remote_workdir()
+    remote_workdir = calcjob.get_remote_workdir()
 
     if not remote_workdir:
         echo.echo_critical('no remote work directory for this calcjob, maybe the daemon did not submit it yet')

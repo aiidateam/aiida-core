@@ -67,7 +67,7 @@ class PostgresTest(unittest.TestCase):
     @mock.patch('aiida.manage.external.postgres._try_subcmd')
     def test_fallback_on_subcmd(self, try_subcmd):
         """Ensure that accessing postgres via subcommand is tried if psycopg does not work."""
-        _postgres = self._setup_postgres()
+        self._setup_postgres()
         self.assertTrue(try_subcmd.call_count >= 1)
 
     def test_create_drop_db_user(self):

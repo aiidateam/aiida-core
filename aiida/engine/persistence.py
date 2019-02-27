@@ -137,7 +137,7 @@ class AiiDAPersister(plumpy.Persister):
         from aiida.orm import load_node
 
         calc = load_node(pid)
-        calc.del_checkpoint()
+        calc.delete_checkpoint()
 
     def delete_process_checkpoints(self, pid):
         """

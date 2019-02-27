@@ -100,7 +100,7 @@ class CalcJob(Process):
 
         .. note:: This has to be done before calling the super because that will seal the node after we cannot change it
         """
-        self.node._del_state()  # pylint: disable=protected-access
+        self.node.delete_state()
         super(CalcJob, self).on_terminated()
 
     @override
@@ -222,7 +222,7 @@ class CalcJob(Process):
         if not job_tmpl.sched_join_files:
             if (job_tmpl.sched_error_path is not None and job_tmpl.sched_error_path not in retrieve_list):
                 retrieve_list.append(job_tmpl.sched_error_path)
-        self.node._set_retrieve_list(retrieve_list)  # pylint: disable=protected-access
+        self.node.set_retrieve_list(retrieve_list)
 
         retrieve_singlefile_list = (calcinfo.retrieve_singlefile_list
                                     if calcinfo.retrieve_singlefile_list is not None else [])
@@ -233,12 +233,12 @@ class CalcJob(Process):
                 raise PluginInternalError(
                     "[presubmission of calc {}] retrieve_singlefile_list subclass problem: {} is "
                     "not subclass of SinglefileData".format(self.node.pk, file_sub_class.__name__))
-        self.node._set_retrieve_singlefile_list(retrieve_singlefile_list)  # pylint: disable=protected-access
+        self.node.set_retrieve_singlefile_list(retrieve_singlefile_list)
 
         # Handle the retrieve_temporary_list
         retrieve_temporary_list = (calcinfo.retrieve_temporary_list
                                    if calcinfo.retrieve_temporary_list is not None else [])
-        self.node._set_retrieve_temporary_list(retrieve_temporary_list)  # pylint: disable=protected-access
+        self.node.set_retrieve_temporary_list(retrieve_temporary_list)
 
         # the if is done so that if the method returns None, this is
         # not added. This has two advantages:

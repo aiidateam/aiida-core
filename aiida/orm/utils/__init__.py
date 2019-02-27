@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Utilities related to the ORM."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -16,10 +17,16 @@ import six
 __all__ = ('load_code', 'load_computer', 'load_group', 'load_node')
 
 
-def load_entity(entity_loader=None, identifier=None, pk=None, uuid=None, label=None, sub_classes=None,
+def load_entity(entity_loader=None,
+                identifier=None,
+                pk=None,
+                uuid=None,
+                label=None,
+                sub_classes=None,
                 query_with_dashes=True):
+    # pylint: disable=too-many-arguments
     """
-    Load a Code instance by one of its identifiers: pk, uuid or label
+    Load an entity instance by one of its identifiers: pk, uuid or label
 
     If the type of the identifier is unknown simply pass it without a keyword and the loader will attempt to
     automatically infer the type.
@@ -76,8 +83,8 @@ def load_entity(entity_loader=None, identifier=None, pk=None, uuid=None, label=N
         identifier = str(identifier)
         identifier_type = None
 
-    return entity_loader.load_entity(identifier, identifier_type, sub_classes=sub_classes,
-                                     query_with_dashes=query_with_dashes)
+    return entity_loader.load_entity(
+        identifier, identifier_type, sub_classes=sub_classes, query_with_dashes=query_with_dashes)
 
 
 def load_code(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True):
@@ -101,8 +108,14 @@ def load_code(identifier=None, pk=None, uuid=None, label=None, sub_classes=None,
     :raise aiida.common.MultipleObjectsError: if more than one Code was found
     """
     from aiida.orm.utils.loaders import CodeEntityLoader
-    return load_entity(CodeEntityLoader, identifier=identifier, pk=pk, uuid=uuid, label=label, sub_classes=sub_classes,
-                       query_with_dashes=query_with_dashes)
+    return load_entity(
+        CodeEntityLoader,
+        identifier=identifier,
+        pk=pk,
+        uuid=uuid,
+        label=label,
+        sub_classes=sub_classes,
+        query_with_dashes=query_with_dashes)
 
 
 def load_computer(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True):
@@ -126,8 +139,14 @@ def load_computer(identifier=None, pk=None, uuid=None, label=None, sub_classes=N
     :raise aiida.common.MultipleObjectsError: if more than one Computer was found
     """
     from aiida.orm.utils.loaders import ComputerEntityLoader
-    return load_entity(ComputerEntityLoader, identifier=identifier, pk=pk, uuid=uuid, label=label,
-                       sub_classes=sub_classes, query_with_dashes=query_with_dashes)
+    return load_entity(
+        ComputerEntityLoader,
+        identifier=identifier,
+        pk=pk,
+        uuid=uuid,
+        label=label,
+        sub_classes=sub_classes,
+        query_with_dashes=query_with_dashes)
 
 
 def load_group(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True):
@@ -151,8 +170,14 @@ def load_group(identifier=None, pk=None, uuid=None, label=None, sub_classes=None
     :raise aiida.common.MultipleObjectsError: if more than one Group was found
     """
     from aiida.orm.utils.loaders import GroupEntityLoader
-    return load_entity(GroupEntityLoader, identifier=identifier, pk=pk, uuid=uuid, label=label, sub_classes=sub_classes,
-                       query_with_dashes=query_with_dashes)
+    return load_entity(
+        GroupEntityLoader,
+        identifier=identifier,
+        pk=pk,
+        uuid=uuid,
+        label=label,
+        sub_classes=sub_classes,
+        query_with_dashes=query_with_dashes)
 
 
 def load_node(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True):
@@ -174,5 +199,11 @@ def load_node(identifier=None, pk=None, uuid=None, label=None, sub_classes=None,
     :raise aiida.common.MultipleObjectsError: if more than one Node was found
     """
     from aiida.orm.utils.loaders import NodeEntityLoader
-    return load_entity(NodeEntityLoader, identifier=identifier, pk=pk, uuid=uuid, label=label, sub_classes=sub_classes,
-                       query_with_dashes=query_with_dashes)
+    return load_entity(
+        NodeEntityLoader,
+        identifier=identifier,
+        pk=pk,
+        uuid=uuid,
+        label=label,
+        sub_classes=sub_classes,
+        query_with_dashes=query_with_dashes)

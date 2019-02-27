@@ -87,7 +87,7 @@ def task_upload_job(node, transport_queue, calc_info, script_filename, cancellab
         raise TransportTaskException('upload_calculation failed {} times consecutively'.format(max_attempts))
     else:
         logger.info('uploading calculation<{}> successful'.format(node.pk))
-        node._set_state(CalcJobState.SUBMITTING)
+        node.set_state(CalcJobState.SUBMITTING)
         raise Return(result)
 
 
@@ -138,7 +138,7 @@ def task_submit_job(node, transport_queue, calc_info, script_filename, cancellab
         raise TransportTaskException('submit_calculation failed {} times consecutively'.format(max_attempts))
     else:
         logger.info('submitting CalcJob<{}> successful'.format(node.pk))
-        node._set_state(CalcJobState.WITHSCHEDULER)
+        node.set_state(CalcJobState.WITHSCHEDULER)
         raise Return(result)
 
 
@@ -178,11 +178,11 @@ def task_update_job(node, job_manager, cancellable):
 
         if job_info is None:
             # If the job is computed or not found assume it's done
-            node._set_scheduler_state(JobState.DONE)
+            node.set_scheduler_state(JobState.DONE)
             job_done = True
         else:
-            node._set_last_jobinfo(job_info)
-            node._set_scheduler_state(job_info.job_state)
+            node.set_last_job_info(job_info)
+            node.set_scheduler_state(job_info.job_state)
             job_done = job_info.job_state == JobState.DONE
 
         raise Return(job_done)
@@ -198,7 +198,7 @@ def task_update_job(node, job_manager, cancellable):
     else:
         logger.info('updating CalcJob<{}> successful'.format(node.pk))
         if job_done:
-            node._set_state(CalcJobState.RETRIEVING)
+            node.set_state(CalcJobState.RETRIEVING)
 
         raise Return(job_done)
 
@@ -246,7 +246,7 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
         logger.warning('retrieving CalcJob<{}> failed'.format(node.pk))
         raise TransportTaskException('retrieve_calculation failed {} times consecutively'.format(max_attempts))
     else:
-        node._set_state(CalcJobState.PARSING)
+        node.set_state(CalcJobState.PARSING)
         logger.info('retrieving CalcJob<{}> successful'.format(node.pk))
         raise Return(result)
 
@@ -293,7 +293,7 @@ def task_kill_job(node, transport_queue, cancellable):
         raise TransportTaskException('kill_calculation failed {} times consecutively'.format(max_attempts))
     else:
         logger.info('killing CalcJob<{}> successful'.format(node.pk))
-        node._set_scheduler_state(JobState.DONE)
+        node.set_scheduler_state(JobState.DONE)
         raise Return(result)
 
 
@@ -322,7 +322,7 @@ class Waiting(plumpy.Waiting):
         else:
             command = self.data
 
-        node._set_process_status('Waiting for transport task: {}'.format(command))
+        node.set_process_status('Waiting for transport task: {}'.format(command))
 
         try:
 
@@ -359,10 +359,10 @@ class Waiting(plumpy.Waiting):
             self._killing.set_result(True)
             six.reraise(*exc_info)
         except Return:
-            node._set_process_status(None)
+            node.set_process_status(None)
             raise
         except (plumpy.Interruption, plumpy.CancelledError):
-            node._set_process_status('Transport task {} was interrupted'.format(command))
+            node.set_process_status('Transport task {} was interrupted'.format(command))
             raise
         finally:
             # If we were trying to kill but we didn't deal with it, make sure it's set here

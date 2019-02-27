@@ -69,8 +69,8 @@ def get_logs_with_no_nodes_number(connection):
         text("""
         SELECT COUNT(*) FROM db_dblog
         WHERE
-            (db_dblog.objname LIKE 'node.%') AND
-            (db_dblog.objpk NOT IN (SELECT id FROM db_dbnode))
+            (db_dblog.objname LIKE 'node.%') AND NOT EXISTS
+            (SELECT 1 FROM db_dbnode WHERE db_dbnode.id = db_dblog.objpk LIMIT 1)
         """)).fetchall()[0][0]
 
 
@@ -112,8 +112,8 @@ def get_serialized_logs_with_no_nodes(connection):
         SELECT db_dblog.id, db_dblog.time, db_dblog.loggername, db_dblog.levelname, db_dblog.objpk, db_dblog.objname,
         db_dblog.message, db_dblog.metadata FROM db_dblog
         WHERE
-            (db_dblog.objname LIKE 'node.%') AND
-            (db_dblog.objpk NOT IN (SELECT id FROM db_dbnode))
+            (db_dblog.objname LIKE 'node.%') AND NOT EXISTS
+            (SELECT 1 FROM db_dbnode WHERE db_dbnode.id = db_dblog.objpk LIMIT 1)
         """))
     res = list()
     for row in query:
@@ -209,8 +209,8 @@ def export_and_clean_workflow_logs(connection):
         connection.execute(
             text("""
             DELETE FROM db_dblog WHERE
-            (db_dblog.objname LIKE 'node.%') AND
-            (db_dblog.objpk NOT IN (SELECT id FROM db_dbnode))
+            (db_dblog.objname LIKE 'node.%') AND NOT EXISTS
+            (SELECT 1 FROM db_dbnode WHERE db_dbnode.id = db_dblog.objpk LIMIT 1)
             """))
 
 

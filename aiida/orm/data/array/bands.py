@@ -505,6 +505,12 @@ class BandsData(KpointsData):
             plot_info['paths'] = []
 
             if len(labels) > 1:
+                # I add an empty label that points to the first band if the first label does not do it
+                if labels[0][0] != 0:
+                    labels.insert(0, (0, ''))
+                # I add an empty label that points to the last band if the last label does not do it
+                if labels[-1][0] != len(bands)-1 :
+                    labels.append((len(bands)-1, ''))
                 for (position_from, label_from), (position_to, label_to) in zip(labels[:-1], labels[1:]):
                     if position_to - position_from > 1:
                         # Create a new path line only if there are at least two points,
@@ -801,7 +807,6 @@ class BandsData(KpointsData):
 
         bands = plot_info['y']
         x = plot_info['x']
-        the_bands = numpy.transpose(bands)
         labels = plot_info['labels']
         # prepare xticks labels
         if labels:

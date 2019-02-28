@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-from aiida.orm.nodes.data.int import Int
-from aiida.work.workchain import WorkChain, ToContext
+from aiida.engine.workchain import WorkChain
+
 
 class SomeWorkChain(WorkChain):
 
@@ -16,7 +16,7 @@ class SomeWorkChain(WorkChain):
         for i in range(3):
             future = self.submit(SomeWorkChain)
             key = 'workchain_{}'.format(i)
-            self.to_context(**{key:future})
+            self.to_context(**{key: future})
 
     def inspect_workchains(self):
         for i in range(3):

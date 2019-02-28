@@ -19,7 +19,7 @@ from aiida.orm.computers import Computer
 from aiida.orm.implementation.sqlalchemy.code import Code
 from aiida.plugins import DataFactory
 
-ParameterData = DataFactory('parameter')
+Dict = DataFactory('dict')
 
 # The name of the code setup in AiiDA
 codename = 'sum'
@@ -45,7 +45,7 @@ code = Code.get_from_string(codename)
 computer = Computer.get(computer_name) 
 
 # These are the two numbers to sum
-parameters = ParameterData(dict={'x1':2,'x2':3})
+parameters = Dict(dict={'x1':2,'x2':3})
 
 calc = code.new_calc()
 calc.label = "Test sum"

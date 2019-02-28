@@ -7,20 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=wildcard-import,undefined-variable
 """Module with `Node` sub classes for data and processes."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from .data import Data, BaseType, ArrayData, BandsData, KpointsData, ProjectionData, TrajectoryData, XyData, Bool
-from .data import CifData, Code, Error, Float, FolderData, FrozenDict, Int, List, OrbitalData, ParameterData, RemoteData
-from .data import SinglefileData, Str, StructureData, UpfData
-from .process import ProcessNode
-from .process import CalculationNode, CalcFunctionNode, CalcJobNode, WorkflowNode, WorkChainNode, WorkFunctionNode
-from .node import Node
+from .data import *
+from .process import *
+from .node import *
 
-__all__ = ('Node', 'BaseType', 'Data', 'ArrayData', 'BandsData', 'KpointsData', 'ProjectionData', 'TrajectoryData',
-           'XyData', 'Bool', 'CifData', 'Code', 'Error', 'Float', 'FolderData', 'FrozenDict', 'Int', 'List',
-           'OrbitalData', 'ParameterData', 'RemoteData', 'SinglefileData', 'Str', 'StructureData', 'UpfData',
-           'ProcessNode', 'CalculationNode', 'CalcFunctionNode', 'CalcJobNode', 'WorkflowNode', 'WorkChainNode',
-           'WorkFunctionNode')
+__all__ = (data.__all__ + process.__all__ + node.__all__)

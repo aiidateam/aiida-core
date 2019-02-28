@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-from aiida.orm.nodes.data.bool import Bool
-from aiida.orm.nodes.data.float import Float
-from aiida.orm.nodes.data.int import Int
-from aiida.work import WorkChain 
+from aiida.orm import Bool, Float, Int
+from aiida.engine import WorkChain
+
 
 class ChildWorkChain(WorkChain):
+
     @classmethod
     def define(cls, spec):
         super(ChildWorkChain, cls).define(spec)

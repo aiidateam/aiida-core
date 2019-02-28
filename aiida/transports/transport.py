@@ -11,6 +11,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from abc import ABCMeta
 import os
 import re
@@ -23,6 +24,8 @@ from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
 
 DEFAULT_TRANSPORT_INTERVAL = 30.
+
+__all__ = ('Transport',)
 
 
 @six.add_metaclass(ABCMeta)
@@ -118,7 +121,7 @@ class Transport(object):
     def __str__(self):
         return "[Transport class or subclass]"
 
-    def _set_logger_extra(self, logger_extra):
+    def set_logger_extra(self, logger_extra):
         """
         Pass the data that should be passed automatically to self.logger
         as 'extra' keyword. This is typically useful if you pass data
@@ -188,7 +191,7 @@ class Transport(object):
     def logger(self):
         """
         Return the internal logger.
-        If you have set extra parameters using _set_logger_extra(), a
+        If you have set extra parameters using set_logger_extra(), a
         suitable LoggerAdapter instance is created, bringing with itself
         also the extras.
         """

@@ -2,34 +2,33 @@
 """Class that represents the repository of a `Node` instance."""
 from __future__ import absolute_import
 
+import collections
+import enum
+import io
 import os
 
 from aiida.common import exceptions
 from aiida.common.folders import RepositoryFolder, SandboxFolder
 
 
+class FileType(enum.Enum):
+
+    DIRECTORY = 0
+    FILE = 1
+
+
+File = collections.namedtuple('File', ['name', 'type'])
+
+
 class Repository(object):  # pylint: disable=useless-object-inheritance
-    """
-    A mixin class that knows about file repositories, to mix in
-    with the BackendNode class
-    """
+    """Class that represents the repository of a `Node` instance."""
 
     # Name to be used for the Repository section
     _section_name = 'node'
 
-    # The name of the subfolder in which to put the files/directories
-    # added with add_path
-    _path_subfolder_name = 'path'
-
-    # Flag that says if the node is storable or not.
-    # By default, bare nodes (and also ProcessNodes) are not storable,
-    # all subclasses (WorkflowNode, CalculationNode, Data and their subclasses)
-    # are storable. This flag is checked in store()
-    _storable = False
-    _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
-
-    def __init__(self, uuid, is_stored):
+    def __init__(self, uuid, is_stored, base_path=None):
         self._is_stored = is_stored
+        self._base_path = base_path
         self._temp_folder = None
         self._repo_folder = RepositoryFolder(section=self._section_name, uuid=uuid)
 
@@ -38,111 +37,240 @@ class Repository(object):  # pylint: disable=useless-object-inheritance
         if getattr(self, '_temp_folder', None) is not None:
             self._temp_folder.erase()
 
-    @property
-    def folder(self):
-        """
-        Get the folder associated with the node,
-        whether it is in the temporary or the permanent repository.
+    def validate_mutability(self):
+        """Raise if the repository is immutable.
 
-        :return: the RepositoryFolder object.
+        :raises aiida.common.ModificationNotAllowed: if repository is marked as immutable because the corresponding node
+            is stored
         """
         if self._is_stored:
-            return self._repo_folder
+            raise exceptions.ModificationNotAllowed('cannot modify the repository after the node has been stored')
 
-        return self._get_temp_folder()
+    @staticmethod
+    def validate_object_key(key):
+        """Validate the key of an object.
+
+        :param key: an object key in the repository
+        :raises ValueError: if the key is not a valid object key
+        """
+        if key and os.path.isabs(key):
+            raise ValueError('the key must be a relative path')
+
+    def list_objects(self, key=None):
+        """Return a list of the objects contained in this repository, optionally in the given sub directory.
+
+        :param key: fully qualified identifier for the object within the repository
+        :return: a list of `File` named tuples representing the objects present in directory with the given key
+        """
+        folder = self._get_base_folder()
+
+        if key:
+            folder = folder.get_subfolder(key)
+
+        objects = []
+
+        for filename in folder.get_content_list():
+            if os.path.isdir(os.path.join(folder.abspath, filename)):
+                objects.append(File(filename, FileType.DIRECTORY))
+            else:
+                objects.append(File(filename, FileType.FILE))
+
+        return sorted(objects, key=lambda x: x.name)
+
+    def list_object_names(self, key=None):
+        """Return a list of the object names contained in this repository, optionally in the given sub directory.
+
+        :param key: fully qualified identifier for the object within the repository
+        :return: a list of `File` named tuples representing the objects present in directory with the given key
+        """
+        return [entry.name for entry in self.list_objects(key)]
+
+    def open(self, key, mode='r'):
+        """Open a file handle to an object stored under the given key.
+
+        :param key: fully qualified identifier for the object within the repository
+        :param mode: the mode under which to open the handle
+        """
+        return io.open(self._get_base_folder().get_abs_path(key), mode=mode)
+
+    def get_object(self, key):
+        """Return the object identified by key.
+
+        :param key: fully qualified identifier for the object within the repository
+        :return: a `File` named tuple representing the object located at key
+        """
+        self.validate_object_key(key)
+
+        try:
+            directory, filename = key.rsplit(os.sep, 1)
+        except ValueError:
+            directory, filename = None, key
+
+        folder = self._get_base_folder()
+
+        if directory:
+            folder = folder.get_subfolder(directory)
+
+        if os.path.isdir(os.path.join(folder.abspath, filename)):
+            return File(filename, FileType.DIRECTORY)
+
+        return File(filename, FileType.FILE)
+
+    def get_object_content(self, key):
+        """Return the content of a object identified by key.
+
+        :param key: fully qualified identifier for the object within the repository
+        """
+        with self.open(key) as handle:
+            return handle.read()
+
+    def put_object_from_tree(self, path, key=None, contents_only=True, force=False):
+        """Store a new object under `key` with the contents of the directory located at `path` on this file system.
+
+        .. warning:: If the repository belongs to a stored node, a `ModificationNotAllowed` exception will be raised.
+            This check can be avoided by using the `force` flag, but this should be used with extreme caution!
+
+        :param path: absolute path of directory whose contents to copy to the repository
+        :param key: fully qualified identifier for the object within the repository
+        :param contents_only: boolean, if True, omit the top level directory of the path and only copy its contents.
+        :param force: boolean, if True, will skip the mutability check
+        :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
+        """
+        if not force:
+            self.validate_mutability()
+
+        self.validate_object_key(key)
+
+        if not os.path.isabs(path):
+            raise ValueError('the `path` must be an absolute path')
+
+        folder = self._get_base_folder()
+
+        if key:
+            folder = folder.get_subfolder(key, create=True)
+
+        if contents_only:
+            for entry in os.listdir(path):
+                folder.insert_path(os.path.join(path, entry))
+        else:
+            folder.insert_path(path)
+
+    def put_object_from_file(self, path, key, mode='w', encoding='utf8', force=False):
+        """Store a new object under `key` with contents of the file located at `path` on this file system.
+
+        .. warning:: If the repository belongs to a stored node, a `ModificationNotAllowed` exception will be raised.
+            This check can be avoided by using the `force` flag, but this should be used with extreme caution!
+
+        :param path: absolute path of file whose contents to copy to the repository
+        :param key: fully qualified identifier for the object within the repository
+        :param mode: the file mode with which the object will be written
+        :param encoding: the file encoding with which the object will be written
+        :param force: boolean, if True, will skip the mutability check
+        :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
+        """
+        if not force:
+            self.validate_mutability()
+
+        self.validate_object_key(key)
+
+        with io.open(path) as handle:
+            self.put_object_from_filelike(handle, key, mode=mode, encoding=encoding)
+
+    def put_object_from_filelike(self, handle, key, mode='w', encoding='utf8', force=False):
+        """Store a new object under `key` with contents of filelike object `handle`.
+
+        .. warning:: If the repository belongs to a stored node, a `ModificationNotAllowed` exception will be raised.
+            This check can be avoided by using the `force` flag, but this should be used with extreme caution!
+
+        :param handle: filelike object with the content to be stored
+        :param key: fully qualified identifier for the object within the repository
+        :param mode: the file mode with which the object will be written
+        :param encoding: the file encoding with which the object will be written
+        :param force: boolean, if True, will skip the mutability check
+        :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
+        """
+        if not force:
+            self.validate_mutability()
+
+        self.validate_object_key(key)
+
+        folder = self._get_base_folder()
+
+        if os.sep in key:
+            basepath, key = key.split(os.sep, 1)
+            folder = folder.get_subfolder(basepath, create=True)
+
+        folder.create_file_from_filelike(handle, key, mode=mode, encoding=encoding)
+
+    def delete_object(self, key, force=False):
+        """Delete the object from the repository.
+
+        .. warning:: If the repository belongs to a stored node, a `ModificationNotAllowed` exception will be raised.
+            This check can be avoided by using the `force` flag, but this should be used with extreme caution!
+
+        :param key: fully qualified identifier for the object within the repository
+        :param force: boolean, if True, will skip the mutability check
+        :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
+        """
+        if not force:
+            self.validate_mutability()
+
+        self.validate_object_key(key)
+
+        self._get_base_folder().remove_path(key)
+
+    def erase(self, force=False):
+        """Delete the repository folder.
+
+        .. warning:: If the repository belongs to a stored node, a `ModificationNotAllowed` exception will be raised.
+            This check can be avoided by using the `force` flag, but this should be used with extreme caution!
+
+        :param force: boolean, if True, will skip the mutability check
+        :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
+        """
+        if not force:
+            self.validate_mutability()
+
+        self._repo_folder.erase()
 
     def store(self):
         """Store the contents of the sandbox folder into the repository folder."""
+        if self._is_stored:
+            raise exceptions.ModificationNotAllowed('repository is already stored')
+
         self._repo_folder.replace_with_folder(self._get_temp_folder().abspath, move=True, overwrite=True)
         self._is_stored = True
 
     def restore(self):
         """Move the contents from the repository folder back into the sandbox folder."""
+        if not self._is_stored:
+            raise exceptions.ModificationNotAllowed('repository is not yet stored')
+
         self._temp_folder.replace_with_folder(self._repo_folder.abspath, move=True, overwrite=True)
         self._is_stored = False
 
-    @property
-    def _get_folder_pathsubfolder(self):
-        """
-        Get the subfolder in the repository.
+    def _get_base_folder(self):
+        """Return the base sub folder in the repository.
 
         :return: a Folder object.
         """
-        return self.folder.get_subfolder(self._path_subfolder_name, reset_limit=True)
+        if self._is_stored:
+            folder = self._repo_folder
+        else:
+            folder = self._get_temp_folder()
 
-    def get_abs_path(self, relpath, check_existence=False):
-        """
-        Return an absolute path for a file or folder in this folder.
+        if self._base_path is not None:
+            folder = folder.get_subfolder(self._base_path, reset_limit=True)
+            folder.create()
 
-        The advantage of using this method is that it checks that filename
-        is a valid filename within this folder,
-        and not something e.g. containing slashes.
-
-        :param filename: The file or directory.
-        :param check_existence: if False, just return the file path.
-            Otherwise, also check if the file or directory actually exists.
-            Raise OSError if it does not.
-        """
-        return self._get_folder_pathsubfolder.get_abs_path(relpath, check_existence)
-
-    def get_folder_list(self, subfolder='.'):
-        """
-        Get the the list of files/directory in the repository of the object.
-
-        :param subfolder: get the list of a subfolder
-        :return: a list of strings.
-        """
-        return self._get_folder_pathsubfolder.get_subfolder(subfolder).get_content_list()
+        return folder
 
     def _get_temp_folder(self):
-        """
-        Get the folder of the Node in the temporary repository.
+        """Return the temporary sandbox folder.
 
         :return: a SandboxFolder object mapping the node in the repository.
         """
-        # I create the temp folder only at is first usage
         if self._temp_folder is None:
-            self._temp_folder = SandboxFolder()  # This is also created
-            # Create the 'path' subfolder in the Sandbox
-            self._get_folder_pathsubfolder.create()
+            self._temp_folder = SandboxFolder()
+
         return self._temp_folder
-
-    def remove_path(self, path):
-        """
-        Remove a file or directory from the repository directory.
-        Can be called only before storing.
-
-        :param str path: relative path to file/directory.
-        """
-        if self._is_stored:
-            raise exceptions.ModificationNotAllowed("Cannot delete a path after storing the node")
-
-        if os.path.isabs(path):
-            raise ValueError("The destination path in remove_path " "must be a relative path")
-        self._get_folder_pathsubfolder.remove_path(path)
-
-    def add_path(self, src_abs, dst_path=None):
-        """
-        Copy a file or folder from a local file inside the repository directory.
-        If there is a subpath, folders will be created.
-
-        Copy to a cache directory if the entry has not been saved yet.
-
-        :param str src_abs: the absolute path of the file to copy.
-        :param str dst_filename: the (relative) path on which to copy.
-
-        :todo: in the future, add an add_attachment() that has the same
-            meaning of a extras file. Decide also how to store. If in two
-            separate subfolders, remember to reset the limit.
-        """
-        if self._is_stored:
-            raise exceptions.ModificationNotAllowed("Cannot insert a path after storing the node")
-
-        if not os.path.isabs(src_abs):
-            raise ValueError("The source path in add_path must be absolute")
-        if os.path.isabs(dst_path):
-            raise ValueError("The destination path in add_path must be a filename without any subfolder")
-        self._get_folder_pathsubfolder.insert_path(src_abs, dst_path)
-
-    def create_file_from_filelike(self, src_filelike, dest_name):
-        self._get_folder_pathsubfolder.create_file_from_filelike(src_filelike, dest_name)

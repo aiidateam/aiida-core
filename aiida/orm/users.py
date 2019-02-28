@@ -14,7 +14,7 @@ from __future__ import absolute_import
 
 from aiida.common.hashing import is_password_usable
 from aiida.common import exceptions
-from aiida.manage import get_manager
+from aiida.manage.manager import get_manager
 
 from . import entities
 

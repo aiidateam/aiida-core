@@ -96,10 +96,8 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
     import sys
     import time
     import uuid
-    from aiida.orm import Code
-    from aiida.orm.nodes.data.int import Int
-    from aiida.orm.nodes.data.str import Str
-    from aiida.work.launch import run_get_node, submit
+    from aiida.orm import Code, Int, Str
+    from aiida.engine import run_get_node, submit
     from lib.expression import generate, validate, evaluate
     from lib.workchain import generate_outlines, format_outlines, write_workchain
 

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-from aiida.orm.nodes.data.int import Int
-from aiida.work.workchain import WorkChain
+from aiida.engine.workchain import WorkChain
+from aiida.orm import Int
+
 
 class AddAndMultiplyWorkChain(WorkChain):
 

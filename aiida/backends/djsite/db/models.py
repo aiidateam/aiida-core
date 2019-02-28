@@ -323,7 +323,7 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
     :return: the deserialized value
     :raise aiida.backends.djsite.db.models.DeserializationException: if an error occurs
     """
-    import aiida.common.json as json
+    from aiida.common import json
     from aiida.common.timezone import (
         is_naive, make_aware, get_current_timezone)
 
@@ -605,7 +605,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
         contain the separator symbol.).
 
         :return: None if the key is valid
-        :raise ValidationError: if the key is not valid
+        :raise aiida.common.ValidationError: if the key is not valid
         """
         from aiida.backends.utils import validate_attribute_key
         return validate_attribute_key(key)
@@ -719,7 +719,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
         """
         import datetime
 
-        import aiida.common.json as json
+        from aiida.common import json
         from aiida.common.timezone import is_naive, make_aware, get_current_timezone
 
         if cls._subspecifier_field_name is None:
@@ -1362,7 +1362,7 @@ class DbComputer(m.Model):
         return dbcomputer
 
     def _get_val_from_metadata(self, key):
-        import aiida.common.json as json
+        from aiida.common import json
 
         try:
             metadata = json.loads(self.metadata)

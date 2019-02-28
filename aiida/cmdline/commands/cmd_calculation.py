@@ -21,9 +21,8 @@ from aiida.cmdline.commands.cmd_plugin import verdi_plugin
 from aiida.cmdline.commands.cmd_process import verdi_process
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.utils import decorators
-from aiida.manage import get_config_option
 
-LIST_CMDLINE_PROJECT_DEFAULT = get_config_option('verdishell.calculation_list')
+LIST_CMDLINE_PROJECT_DEFAULT = ('pk', 'ctime', 'process_state', 'type', 'job_state')
 LIST_CMDLINE_PROJECT_CHOICES = ('pk', 'ctime', 'process_state', 'job_state', 'scheduler_state', 'computer', 'type',
                                 'description', 'label', 'uuid', 'mtime', 'user', 'sealed')
 

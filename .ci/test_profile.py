@@ -81,8 +81,7 @@ class SetupTestCase(unittest.TestCase):
         backend = os.environ.get('TEST_AIIDA_BACKEND', 'django')
         self.backend = 'django' if backend == 'django' else 'sqlalchemy'
         self.pg_test = PGTest()
-        self.postgres = Postgres(port=self.pg_test.port, interactive=False, quiet=True)
-        self.postgres.dbinfo = self.pg_test.dsn
+        self.postgres = Postgres(interactive=False, quiet=True, dbinfo=self.pg_test.dsn)
         self.postgres.determine_setup()
         self.dbuser = 'aiida_SetupTestCase'
         self.dbpass = 'setuptestcase'
@@ -153,7 +152,7 @@ class DeleteTestCase(unittest.TestCase):
         is not generated until the test function is entered, which calls the `with_temporary_config_instance`
         decorator.
         """
-        from aiida.manage import get_config
+        from aiida.manage.configuration import get_config
 
         config = get_config()
 

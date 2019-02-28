@@ -12,7 +12,8 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm.nodes.data import Data
+from aiida.engine import CalcJob, WorkChain
+from aiida.orm import Data
 from aiida.parsers import Parser
 from aiida.plugins import factories
 from aiida.plugins.entry_point import get_entry_points
@@ -20,8 +21,6 @@ from aiida.schedulers import Scheduler
 from aiida.transports import Transport
 from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator
 from aiida.tools.dbimporters import DbImporter
-from aiida.work.calcjob import CalcJob
-from aiida.work import WorkChain
 
 
 class TestExistingPlugins(AiidaTestCase):

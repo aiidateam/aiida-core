@@ -16,7 +16,7 @@ import functools
 
 from .configuration import get_config
 
-__all__ = 'get_manager', 'reset_manager'
+__all__ = ('get_manager', 'reset_manager')
 
 MANAGER = None
 
@@ -100,7 +100,7 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         :return: the current persister instance
         :rtype: :class:`plumpy.Persister`
         """
-        from aiida.work import persistence
+        from aiida.engine import persistence
 
         if self._persister is None:
             self._persister = persistence.AiiDAPersister()
@@ -119,16 +119,18 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
 
         return self._communicator
 
-    def create_communicator(self, task_prefetch_count=None):
+    def create_communicator(self, task_prefetch_count=None, with_orm=True):
         """
         Create a Communicator
 
         :param task_prefetch_count: optional specify how many tasks this communicator take simultaneously
+        :param with_orm: if True, use ORM (de)serializers. If false, use json.
+            This is used by verdi status to get a communicator without needing to load the dbenv.
+
         :return: the communicator instance
         :rtype: :class:`~kiwipy.rmq.communicator.RmqThreadCommunicator`
         """
-        from aiida.orm.utils import serialize
-        from aiida.work import rmq
+        from aiida.manage.external import rmq
         import kiwipy.rmq
         profile = self.get_profile()
 
@@ -136,7 +138,7 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
             task_prefetch_count = rmq._RMQ_TASK_PREFETCH_COUNT  # pylint: disable=protected-access
 
         url = rmq.get_rmq_url()
-        prefix = rmq.get_rmq_prefix()
+        prefix = profile.rmq_prefix
 
         # This needs to be here, because the verdi commands will call this function and when called in unit tests the
         # testing_mode cannot be set.
@@ -146,16 +148,42 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         task_exchange = rmq.get_task_exchange_name(prefix)
         task_queue = rmq.get_launch_queue_name(prefix)
 
+        if with_orm:
+            from aiida.orm.utils import serialize
+            encoder = functools.partial(serialize.serialize, encoding='utf-8')
+            decoder = serialize.deserialize
+        else:
+            # used by verdi status to get a communicator without needing to load the dbenv
+            from aiida.common import json
+            encoder = functools.partial(json.dumps, encoding='utf-8')
+            decoder = json.loads
+
         return kiwipy.rmq.RmqThreadCommunicator.connect(
             connection_params={'url': url},
             message_exchange=message_exchange,
-            encoder=functools.partial(serialize.serialize, encoding='utf-8'),
-            decoder=serialize.deserialize,
+            encoder=encoder,
+            decoder=decoder,
             task_exchange=task_exchange,
             task_queue=task_queue,
             task_prefetch_count=task_prefetch_count,
             testing_mode=testing_mode,
         )
+
+    def get_daemon_client(self):
+        """
+        Return the daemon client for the current profile.
+
+        :return: the daemon client
+        :rtype: :class:`aiida.daemon.client.DaemonClient`
+        :raises aiida.common.MissingConfigurationError: if the configuration file cannot be found
+        :raises aiida.common.ProfileConfigurationError: if the given profile does not exist
+        """
+        from aiida.engine.daemon.client import DaemonClient
+
+        if self._daemon_client is None:
+            self._daemon_client = DaemonClient(self.get_profile())
+
+        return self._daemon_client
 
     def get_process_controller(self):
         """
@@ -175,7 +203,7 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         Get a runner that is based on the current profile settings and can be used globally by the code.
 
         :return: the global runner
-        :rtype: :class:`aiida.work.Runner`
+        :rtype: :class:`aiida.engine.runners.Runner`
         """
         if self._runner is None:
             self._runner = self.create_runner()
@@ -187,7 +215,7 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         Set the currently used runner
 
         :param new_runner: the new runner to use
-        :type new_runner: :class:`aiida.work.Runner`
+        :type new_runner: :class:`aiida.engine.runners.Runner`
         """
         if self._runner is not None:
             self._runner.close()
@@ -201,12 +229,12 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         :param with_persistence: create a runner with persistence enabled
         :type with_persistence: bool
         :return: a new runner instance
-        :rtype: :class:`aiida.work.Runner`
+        :rtype: :class:`aiida.engine.runners.Runner`
         """
-        from aiida.work import runners
+        from aiida.engine import runners
 
         config = get_config()
-        profile = config.current_profile
+        profile = self.get_profile()
         poll_interval = 0.0 if profile.is_test_profile else config.option_get('runner.poll.interval')
 
         settings = {'rmq_submit': False, 'poll_interval': poll_interval}
@@ -228,10 +256,11 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         :param loop: the (optional) tornado event loop to use
         :type loop: :class:`tornado.ioloop.IOLoop`
         :return: a runner configured to work in the daemon configuration
-        :rtype: :class:`aiida.work.Runner`
+        :rtype: :class:`aiida.engine.runners.Runner`
         """
         import plumpy
-        from aiida.work import rmq, persistence
+        from aiida.engine import persistence
+        from aiida.manage.external import rmq
         runner = self.create_runner(rmq_submit=True, loop=loop)
         runner_loop = runner.loop
 
@@ -258,21 +287,25 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         if self._runner is not None:
             self._runner.stop()
 
+        self._backend = None
+        self._config = None
         self._profile = None
-        self._persister = None
         self._communicator = None
+        self._daemon_client = None
         self._process_controller = None
+        self._persister = None
         self._runner = None
 
     def __init__(self):
         super(Manager, self).__init__()
         self._backend = None  # type: aiida.orm.Backend
         self._config = None  # type: aiida.manage.configuration.config.Config
+        self._daemon_client = None  # type: aiida.daemon.client.DaemonClient
         self._profile = None  # type: aiida.manage.configuration.profile.Profile
         self._communicator = None  # type: kiwipy.rmq.RmqThreadCommunicator
         self._process_controller = None  # type: plumpy.RemoteProcessThreadController
-        self._persister = None  # type: aiida.work.AiiDAPersister
-        self._runner = None  # type: aiida.work.Runner
+        self._persister = None  # type: aiida.engine.persistence.AiiDAPersister
+        self._runner = None  # type: aiida.engine.runners.Runner
 
 
 def get_manager():

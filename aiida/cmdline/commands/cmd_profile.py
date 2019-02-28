@@ -19,7 +19,7 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.utils import defaults, echo
 from aiida.common import exceptions
-from aiida.manage import get_config
+from aiida.manage.configuration import get_config
 
 
 @verdi.group('profile')

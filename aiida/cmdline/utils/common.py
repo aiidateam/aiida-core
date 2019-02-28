@@ -21,7 +21,7 @@ from tabulate import tabulate
 
 def get_env_with_venv_bin():
     """Create a clone of the current running environment with the AIIDA_PATH variable set directory of the config."""
-    from aiida.manage import get_config
+    from aiida.manage.configuration import get_config
 
     config = get_config()
 
@@ -57,10 +57,10 @@ def print_last_process_state_change(process_type=None):
         Valid process types are either 'calculation' or 'work'.
     """
     from aiida.cmdline.utils.echo import echo_info, echo_warning
-    from aiida.daemon.client import get_daemon_client
     from aiida.common import timezone
     from aiida.common.utils import str_timedelta
-    from aiida.work.utils import get_process_state_change_timestamp
+    from aiida.engine.daemon.client import get_daemon_client
+    from aiida.engine.utils import get_process_state_change_timestamp
 
     client = get_daemon_client()
 
@@ -86,8 +86,7 @@ def get_node_summary(node):
     :return: a string summary of the node
     """
     from plumpy import ProcessState
-    from aiida.orm.nodes.data.code import Code
-    from aiida.orm import ProcessNode
+    from aiida.orm import Code, ProcessNode
 
     table_headers = ['Property', 'Value']
     table = []
@@ -143,7 +142,6 @@ def get_node_info(node, include_summary=True):
     """
     from aiida.common.links import LinkType
     from aiida import orm
-    from aiida.orm import WorkChainNode
 
     if include_summary:
         result = get_node_summary(node)
@@ -195,10 +193,7 @@ def get_node_info(node, include_summary=True):
         table = []
         table_headers = ['Log messages']
         table.append(['There are {} log messages for this calculation'.format(len(log_messages))])
-        if isinstance(node, WorkChainNode):
-            table.append(["Run 'verdi work report {}' to see them".format(node.pk)])
-        else:
-            table.append(["Run 'verdi calculation logshow {}' to see them".format(node.pk)])
+        table.append(["Run 'verdi process report {}' to see them".format(node.pk)])
         result += '\n{}'.format(tabulate(table, headers=table_headers))
 
     return result
@@ -215,16 +210,16 @@ def get_calcjob_report(calcjob):
     from aiida.common.datastructures import CalcJobState
 
     log_messages = orm.Log.objects.get_logs_for(calcjob)
-    scheduler_out = calcjob.get_scheduler_output()
-    scheduler_err = calcjob.get_scheduler_error()
+    scheduler_out = calcjob.get_scheduler_stdout()
+    scheduler_err = calcjob.get_scheduler_stderr()
     calcjob_state = calcjob.get_state()
     scheduler_state = calcjob.get_scheduler_state()
 
     report = []
 
     if calcjob_state == CalcJobState.WITHSCHEDULER:
-        state_string = '{}, scheduler state: {}'.format(calcjob_state, scheduler_state
-                                                        if scheduler_state else '(unknown)')
+        state_string = '{}, scheduler state: {}'.format(calcjob_state,
+                                                        scheduler_state if scheduler_state else '(unknown)')
     else:
         state_string = '{}'.format(calcjob_state)
 
@@ -285,10 +280,8 @@ def get_workchain_report(node, levelname, indent_size=4, max_depth=None):
     """
     # pylint: disable=too-many-locals
     import itertools
-    from aiida.common.log import LOG_LEVELS
     from aiida import orm
-    from aiida.orm.querybuilder import QueryBuilder
-    from aiida.orm import WorkChainNode
+    from aiida.common.log import LOG_LEVELS
 
     def get_report_messages(uuid, depth, levelname):
         """Return list of log messages with given levelname and their depth for a node with a given uuid."""
@@ -304,10 +297,10 @@ def get_workchain_report(node, levelname, indent_size=4, max_depth=None):
         Get a nested tree of work calculation nodes and their nesting level starting from this uuid.
         The result is a list of uuid of these nodes.
         """
-        builder = QueryBuilder()
-        builder.append(cls=WorkChainNode, filters={'uuid': uuid}, tag='workcalculation')
+        builder = orm.QueryBuilder()
+        builder.append(cls=orm.WorkChainNode, filters={'uuid': uuid}, tag='workcalculation')
         builder.append(
-            cls=WorkChainNode,
+            cls=orm.WorkChainNode,
             project=['uuid'],
             # In the future, we should specify here the type of link
             # for now, CALL links are the only ones allowing calc-calc

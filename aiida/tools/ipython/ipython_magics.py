@@ -41,7 +41,7 @@ import six
 from IPython import version_info
 from IPython.core import magic
 
-import aiida.common.json as json
+from aiida.common import json
 
 
 def add_to_ns(local_ns, name, obj):

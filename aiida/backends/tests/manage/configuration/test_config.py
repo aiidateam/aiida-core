@@ -19,7 +19,7 @@ import tempfile
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.tests.utils.configuration import create_mock_profile
 from aiida.common import exceptions
-from aiida.manage import Config, Profile
+from aiida.manage.configuration import Config, Profile
 from aiida.manage.configuration.migrations import CURRENT_CONFIG_VERSION, OLDEST_COMPATIBLE_CONFIG_VERSION
 from aiida.manage.configuration.options import get_option
 from aiida.common import json

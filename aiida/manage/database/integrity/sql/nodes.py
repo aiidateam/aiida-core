@@ -3,8 +3,7 @@
 from __future__ import absolute_import
 
 from aiida.common.extendeddicts import AttributeDict
-from aiida.orm.nodes.data import Data
-from aiida.orm import CalculationNode, WorkflowNode
+from aiida.orm import Data, CalculationNode, WorkflowNode
 
 
 def format_type_string_regex(node_class):

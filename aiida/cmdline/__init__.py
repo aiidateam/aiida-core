@@ -7,10 +7,17 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=wildcard-import,undefined-variable
 """The command line interface of AiiDA."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-# Default execname; can be substituted later in the call from exec_from_cmdline
-EXECNAME = 'verdi'
+from .params.arguments import *
+from .params.options import *
+from .params.types import *
+from .utils.decorators import *
+from .utils.echo import *
+
+__all__ = (params.arguments.__all__ + params.options.__all__ + params.types.__all__ + utils.decorators.__all__ +
+           utils.echo.__all__)

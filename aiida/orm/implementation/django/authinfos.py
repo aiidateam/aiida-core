@@ -104,7 +104,7 @@ class DjangoAuthInfo(entities.DjangoModelEntity[DbAuthInfo], BackendAuthInfo):
         # Raises ValueError if data is not JSON-serializable
         self._dbmodel.auth_params = json.dumps(auth_params)
 
-    def _get_metadata(self):
+    def get_metadata(self):
         """
         Get the metadata dictionary from the DB
 
@@ -117,7 +117,7 @@ class DjangoAuthInfo(entities.DjangoModelEntity[DbAuthInfo], BackendAuthInfo):
                 "Error while reading metadata for dbauthinfo, aiidauser={}, computer={}".format(
                     self.aiidauser.email, self.dbcomputer.hostname))
 
-    def _set_metadata(self, metadata):
+    def set_metadata(self, metadata):
         """
         Replace the metadata dictionary in the DB with the provided dictionary
         """
@@ -146,7 +146,7 @@ class DjangoAuthInfoCollection(BackendAuthInfoCollection):
         :param computer: a Computer instance
         :param user: a User instance
         :return: an AuthInfo object associated with the given computer and user
-        :raise NotExistent: if the user is not configured to use computer
+        :raise aiida.common.NotExistent: if the user is not configured to use computer
         :raise sqlalchemy.orm.exc.MultipleResultsFound: if the user is configured
             more than once to use the computer! Should never happen
         """

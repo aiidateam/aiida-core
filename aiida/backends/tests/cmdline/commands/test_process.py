@@ -24,12 +24,12 @@ import kiwipy
 import plumpy
 
 from aiida.backends.testbase import AiidaTestCase
+from aiida.backends.tests.utils import processes as test_processes
 from aiida.cmdline.commands import cmd_process
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
+from aiida.manage.manager import get_manager
 from aiida.orm import WorkflowNode, WorkFunctionNode, WorkChainNode
-from aiida.work import test_utils
-from aiida.manage import get_manager
 
 
 def get_result_lines(result):
@@ -43,8 +43,8 @@ class TestVerdiProcessDaemon(AiidaTestCase):
 
     def setUp(self):
         super(TestVerdiProcessDaemon, self).setUp()
-        from aiida.manage import get_config
-        from aiida.daemon.client import DaemonClient
+        from aiida.manage.configuration import get_config
+        from aiida.engine.daemon.client import DaemonClient
 
         profile = get_config().current_profile
         self.daemon_client = DaemonClient(profile)
@@ -67,7 +67,7 @@ class TestVerdiProcessDaemon(AiidaTestCase):
         # pylint: disable=no-member
         from aiida.orm import load_node
 
-        calc = self.runner.submit(test_utils.WaitProcess)
+        calc = self.runner.submit(test_processes.WaitProcess)
         start_time = time.time()
         while calc.process_state is not plumpy.ProcessState.WAITING:
             if time.time() - start_time >= self.TEST_TIMEOUT:
@@ -127,10 +127,9 @@ class TestVerdiProcess(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        # pylint: disable=protected-access
         super(TestVerdiProcess, cls).setUpClass(*args, **kwargs)
+        from aiida.engine import ProcessState
         from aiida.orm.groups import Group
-        from aiida.work.processes import ProcessState
 
         cls.calcs = []
 
@@ -138,21 +137,21 @@ class TestVerdiProcess(AiidaTestCase):
         for state in ProcessState:
 
             calc = WorkFunctionNode()
-            calc._set_process_state(state)
+            calc.set_process_state(state)
 
             # Set the WorkFunctionNode as successful
             if state == ProcessState.FINISHED:
-                calc._set_exit_status(0)
+                calc.set_exit_status(0)
 
             calc.store()
             cls.calcs.append(calc)
 
             calc = WorkChainNode()
-            calc._set_process_state(state)
+            calc.set_process_state(state)
 
             # Set the WorkChainNode as failed
             if state == ProcessState.FINISHED:
-                calc._set_exit_status(1)
+                calc.set_exit_status(1)
 
             calc.store()
             cls.calcs.append(calc)

@@ -113,14 +113,14 @@ class DjangoQueryManager(AbstractQueryManager):
 
     def get_bands_and_parents_structure(self, args):
         """
-        Returns bands and closest parent structure     
+        Returns bands and closest parent structure
         """
         from collections import defaultdict
         from django.db.models import Q
-        from aiida.common.utils import grouper
         from aiida.backends.djsite.db import models
+        from aiida.common.utils import grouper
         from aiida.orm.nodes.data.structure import (get_formula, get_symbols_string)
-        from aiida.orm.nodes.data.array.bands import BandsData
+        from aiida.orm import BandsData
         from aiida import orm
 
         user = orm.User.objects.get_default()
@@ -238,9 +238,8 @@ def get_closest_parents(pks, *args, **kwargs):
         For now a work around is to use chunk_size=1.
 
     """
-    from aiida.orm import Node
-    from aiida.backends.djsite.db import models
     from copy import deepcopy
+    from aiida.backends.djsite.db import models
     from aiida.common.utils import grouper
     try:
         the_pks = list(pks)

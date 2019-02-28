@@ -22,7 +22,7 @@ import sqlalchemy.exc
 from aiida.common import exceptions
 from aiida.backends.sqlalchemy import get_scoped_session
 
-__all__ = ['django_filter', 'get_attr']
+__all__ = ('django_filter', 'get_attr')
 
 
 class ModelWrapper(object):

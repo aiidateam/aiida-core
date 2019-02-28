@@ -7,11 +7,8 @@ from __future__ import absolute_import
 import os
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common import exceptions
-from aiida.common.links import LinkType
-from aiida.orm.nodes.data import Data
-from aiida.orm import Node, User
-from aiida.orm import CalculationNode, WorkflowNode
+from aiida.common import exceptions, LinkType
+from aiida.orm import Data, Node, User, CalculationNode, WorkflowNode
 from aiida.orm.utils.links import LinkTriple
 
 
@@ -27,7 +24,7 @@ class TestNodeLinks(AiidaTestCase):
     def test_repository_garbage_collection(self):
         """Verify that the repository sandbox folder is cleaned after the node instance is garbage collected."""
         node = Data()
-        dirpath = node.repository.folder.abspath
+        dirpath = node._repository._get_temp_folder().abspath  # pylint: disable=protected-access
 
         self.assertTrue(os.path.isdir(dirpath))
         del node

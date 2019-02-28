@@ -143,7 +143,7 @@ class Config(object):  # pylint: disable=useless-object-inheritance
         """Validate that a profile exists.
 
         :param name: name of the profile:
-        :raises ProfileConfigurationError: if the name is not found in the configuration file
+        :raises aiida.common.ProfileConfigurationError: if the name is not found in the configuration file
         """
         from aiida.common import exceptions
 
@@ -154,7 +154,7 @@ class Config(object):  # pylint: disable=useless-object-inheritance
         """Return the profile for the given name or the default one if not specified.
 
         :return: the profile instance or None if it does not exist
-        :raises ProfileConfigurationError: if the name is not found in the configuration file
+        :raises aiida.common.ProfileConfigurationError: if the name is not found in the configuration file
         """
         from aiida.common import exceptions
 
@@ -172,7 +172,7 @@ class Config(object):  # pylint: disable=useless-object-inheritance
         """Return the internal profile dictionary for the given name or the default one if not specified.
 
         :return: the profile instance or None if it does not exist
-        :raises ProfileConfigurationError: if the name is not found in the configuration file
+        :raises aiida.common.ProfileConfigurationError: if the name is not found in the configuration file
         """
         self.validate_profile(name)
         return self.dictionary[self.KEY_PROFILES][name]
@@ -200,7 +200,7 @@ class Config(object):  # pylint: disable=useless-object-inheritance
         """Remove a profile from the configuration.
 
         :param name: the name of the profile to remove
-        :raises ProfileConfigurationError: if the given profile does not exist
+        :raises aiida.common.ProfileConfigurationError: if the given profile does not exist
         :return: self
         """
         self.validate_profile(name)
@@ -212,7 +212,7 @@ class Config(object):  # pylint: disable=useless-object-inheritance
 
         :param name: name of the profile to set as new default
         :param overwrite: when True, set the profile as the new default even if a default profile is already defined
-        :raises ProfileConfigurationError: if the given profile does not exist
+        :raises aiida.common.ProfileConfigurationError: if the given profile does not exist
         :return: self
         """
         if self.default_profile_name and not overwrite:

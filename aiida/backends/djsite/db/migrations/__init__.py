@@ -14,7 +14,7 @@ from django.apps import apps
 
 import six
 
-LATEST_MIGRATION = '0028_remove_node_prefix'
+LATEST_MIGRATION = '0029_rename_parameter_data_to_dict'
 
 
 def _update_schema_version(version, apps, schema_editor):
@@ -66,7 +66,7 @@ class ModelModifierV0025(object):
         contain the separator symbol.).
 
         :return: None if the key is valid
-        :raise ValidationError: if the key is not valid
+        :raise aiida.common.ValidationError: if the key is not valid
         """
         from aiida.backends.utils import validate_attribute_key
         return validate_attribute_key(key)
@@ -277,7 +277,7 @@ class ModelModifierV0025(object):
         cls = self._model_class
         import datetime
 
-        import aiida.common.json as json
+        from aiida.common import json
         from aiida.common.timezone import is_naive, make_aware, get_current_timezone
 
         if self._subspecifier_field_name is None:

@@ -5,7 +5,7 @@ from __future__ import absolute_import
 from six.moves import range
 
 from aiida.orm import CifData
-from aiida.work import calcfunction
+from aiida.engine import calcfunction
 
 
 class InvalidOccupationsError(Exception):
@@ -74,12 +74,11 @@ def _get_aiida_structure_ase_inline(cif, **kwargs):
     .. note:: unable to correctly import structures of alloys.
     .. note:: requires ASE module.
     """
-    from aiida.orm.nodes.data.parameter import ParameterData
-    from aiida.orm.nodes.data.structure import StructureData
+    from aiida.orm import Dict, StructureData
 
     parameters = kwargs.get('parameters', {})
 
-    if isinstance(parameters, ParameterData):
+    if isinstance(parameters, Dict):
         parameters = parameters.get_dict()
 
     parameters.pop('occupancy_tolerance', None)
@@ -101,12 +100,11 @@ def _get_aiida_structure_pymatgen_inline(cif, **kwargs):
     .. note:: requires pymatgen module.
     """
     from pymatgen.io.cif import CifParser
-    from aiida.orm.nodes.data.parameter import ParameterData
-    from aiida.orm.nodes.data.structure import StructureData
+    from aiida.orm import Dict, StructureData
 
     parameters = kwargs.get('parameters', {})
 
-    if isinstance(parameters, ParameterData):
+    if isinstance(parameters, Dict):
         parameters = parameters.get_dict()
 
     constructor_kwargs = {}
@@ -117,7 +115,8 @@ def _get_aiida_structure_pymatgen_inline(cif, **kwargs):
         if argument in parameters:
             constructor_kwargs[argument] = parameters.pop(argument)
 
-    parser = CifParser(cif.get_file_abs_path(), **constructor_kwargs)
+    with cif.open() as handle:
+        parser = CifParser(handle, **constructor_kwargs)
 
     try:
         structures = parser.get_structures(**parameters)
@@ -126,7 +125,8 @@ def _get_aiida_structure_pymatgen_inline(cif, **kwargs):
         # Verify whether the failure was due to wrong occupancy numbers
         try:
             constructor_kwargs['occupancy_tolerance'] = 1E10
-            parser = CifParser(cif.get_file_abs_path(), **constructor_kwargs)
+            with cif.open() as handle:
+                parser = CifParser(handle, **constructor_kwargs)
             structures = parser.get_structures(**parameters)
         except ValueError:
             # If it still fails, the occupancies were not the reason for failure

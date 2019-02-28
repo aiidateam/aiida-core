@@ -110,7 +110,7 @@ What do you have to specify:
                         'cls':Trajectory
                     },
                     {
-                        'cls':ParameterData,
+                        'cls':Dict,
                         'direction':-2
                     }
                 ]
@@ -127,7 +127,7 @@ What do you have to specify:
                         'cls':Trajectory
                     },
                     {
-                        'cls':ParameterData,
+                        'cls':Dict,
                         'with_outgoing':PwCalculation
                     }
                 ]
@@ -137,7 +137,7 @@ What do you have to specify:
 
             qh3 = {
                 'path':[
-                    ParameterData,
+                    Dict,
                     PwCalculation,
                     Trajectory,
                 ]
@@ -245,7 +245,7 @@ What do you have to specify:
 .. ~
 .. ~     queryhelp =  {
 .. ~         'path':[
-.. ~             ParameterData,
+.. ~             Dict,
 .. ~             {'cls':PwCalculation, 'tag':'md'},
 .. ~             {'cls':Trajectory},
 .. ~             {'cls':StructureData, 'with_outgoing':'md'},
@@ -253,14 +253,14 @@ What do you have to specify:
 .. ~             {'cls':StructureData,'tag':'struc2','with_outgoing':Relax}
 .. ~         ],
 .. ~         'project':{
-.. ~             ParameterData:{'attributes.IONS.tempw':{'cast':'f'}},
+.. ~             Dict:{'attributes.IONS.tempw':{'cast':'f'}},
 .. ~             'md':['id', 'time'],
 .. ~             Trajectory:['id', 'attributes.length'],
 .. ~             StructureData:'*',
 .. ~             'struc2':['*']    # equivalent, the two!
 .. ~         },
 .. ~         'filters':{
-.. ~             ParameterData:{
+.. ~             Dict:{
 .. ~                 'attributes.SYSTEM.econv':{'<':1e-5},
 .. ~                 'attributes.SYSTEM.ecut':{'>':60},
 .. ~             },

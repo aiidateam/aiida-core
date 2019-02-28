@@ -26,6 +26,8 @@ except ImportError:
 
 from aiida.common.exceptions import MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError
 
+__all__ = ('load_entry_point', 'load_entry_point_from_string')
+
 
 ENTRY_POINT_GROUP_PREFIX = 'aiida.'
 ENTRY_POINT_STRING_SEPARATOR = ':'
@@ -138,8 +140,8 @@ def get_entry_point_from_string(entry_point_string):
     :return: the entry point if it exists else None
     :raises TypeError: if the entry_point_string is not a string type
     :raises ValueError: if the entry_point_string cannot be split into two parts on the entry point string separator
-    :raises MissingEntryPointError: entry point was not registered
-    :raises MultipleEntryPointError: entry point could not be uniquely resolved
+    :raises aiida.common.MissingEntryPointError: entry point was not registered
+    :raises aiida.common.MultipleEntryPointError: entry point could not be uniquely resolved
     """
     group, name = parse_entry_point_string(entry_point_string)
     return get_entry_point(group, name)
@@ -153,9 +155,9 @@ def load_entry_point_from_string(entry_point_string):
     :return: class registered at the given entry point
     :raises TypeError: if the entry_point_string is not a string type
     :raises ValueError: if the entry_point_string cannot be split into two parts on the entry point string separator
-    :raises MissingEntryPointError: entry point was not registered
-    :raises MultipleEntryPointError: entry point could not be uniquely resolved
-    :raises LoadingEntryPointError: entry point could not be loaded
+    :raises aiida.common.MissingEntryPointError: entry point was not registered
+    :raises aiida.common.MultipleEntryPointError: entry point could not be uniquely resolved
+    :raises aiida.common.LoadingEntryPointError: entry point could not be loaded
     """
     group, name = parse_entry_point_string(entry_point_string)
     return load_entry_point(group, name)
@@ -170,9 +172,9 @@ def load_entry_point(group, name):
     :return: class registered at the given entry point
     :raises TypeError: if the entry_point_string is not a string type
     :raises ValueError: if the entry_point_string cannot be split into two parts on the entry point string separator
-    :raises MissingEntryPointError: entry point was not registered
-    :raises MultipleEntryPointError: entry point could not be uniquely resolved
-    :raises LoadingEntryPointError: entry point could not be loaded
+    :raises aiida.common.MissingEntryPointError: entry point was not registered
+    :raises aiida.common.MultipleEntryPointError: entry point could not be uniquely resolved
+    :raises aiida.common.LoadingEntryPointError: entry point could not be loaded
     """
     entry_point = get_entry_point(group, name)
 
@@ -226,8 +228,8 @@ def get_entry_point(group, name):
     :param group: the entry point group
     :param name: the name of the entry point
     :return: the entry point if it exists else None
-    :raises MissingEntryPointError: entry point was not registered
-    :raises MultipleEntryPointError: entry point could not be uniquely resolved
+    :raises aiida.common.MissingEntryPointError: entry point was not registered
+    :raises aiida.common.MultipleEntryPointError: entry point could not be uniquely resolved
     """
     entry_points = [ep for ep in get_entry_points(group) if ep.name == name]
 

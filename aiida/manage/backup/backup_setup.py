@@ -23,7 +23,7 @@ import sys
 from aiida.backends.profile import BACKEND_DJANGO
 from aiida.backends.profile import BACKEND_SQLA
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-import aiida.common.json as json
+from aiida.common import json
 from aiida.manage.backup.backup_base import AbstractBackup, BackupError
 from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
 

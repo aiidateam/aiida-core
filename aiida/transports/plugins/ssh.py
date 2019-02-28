@@ -10,28 +10,23 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from stat import S_ISDIR, S_ISREG
+
 import io
 import os
 import click
 import glob
+from stat import S_ISDIR, S_ISREG
 
 import six
 from six.moves import cStringIO as StringIO
 
-import aiida.transports
-import aiida.transports.transport
-from aiida import transports
-from aiida.cmdline.params import options, arguments
-from aiida.cmdline.params.options.interactive import InteractiveOption
+from aiida.cmdline.params import options
 from aiida.cmdline.params.types.path import AbsolutePathParamType
-from aiida.cmdline.utils import echo
-from aiida.common import AIIDA_LOGGER
 from aiida.common.escaping import escape_for_bash
-from aiida.common.exceptions import NotExistent
+from ..transport import Transport, TransportInternalError
 
 
-__all__ = ["parse_sshconfig", "convert_to_bool", "SshTransport"]
+__all__ = ('parse_sshconfig', 'convert_to_bool', 'SshTransport')
 
 
 # TODO : callback functions in paramiko are currently not used much and probably broken
@@ -58,8 +53,7 @@ def convert_to_bool(string):
         raise ValueError("Invalid boolean value provided")
 
 
-
-class SshTransport(aiida.transports.Transport):
+class SshTransport(Transport):
     """
     Support connection, command execution and data transfer to remote computers via SSH+SFTP.
     """
@@ -319,7 +313,7 @@ class SshTransport(aiida.transports.Transport):
         Also opens a sftp channel, ready to be used.
         The current working directory is set explicitly, so it is not None.
 
-        :raise InvalidOperation: if the channel is already open
+        :raise aiida.common.InvalidOperation: if the channel is already open
         """
         from aiida.common.exceptions import InvalidOperation
         from aiida.transports.util import _DetachedProxyCommand
@@ -355,7 +349,7 @@ class SshTransport(aiida.transports.Transport):
 
         :todo: correctly manage exceptions
 
-        :raise InvalidOperation: if the channel is already open
+        :raise aiida.common.InvalidOperation: if the channel is already open
         """
         from aiida.common.exceptions import InvalidOperation
 
@@ -369,15 +363,13 @@ class SshTransport(aiida.transports.Transport):
     @property
     def sshclient(self):
         if not self._is_open:
-            raise aiida.transports.transport.TransportInternalError("Error, ssh method called for SshTransport "
-                                                                   "without opening the channel first")
+            raise TransportInternalError("Error, ssh method called for SshTransport without opening the channel first")
         return self._client
 
     @property
     def sftp(self):
         if not self._is_open:
-            raise aiida.transports.transport.TransportInternalError("Error, sftp method called for SshTransport "
-                                                                   "without opening the channel first")
+            raise TransportInternalError("Error, sftp method called for SshTransport without opening the channel first")
         return self._sftp
 
     def __str__(self):
@@ -851,7 +843,7 @@ class SshTransport(aiida.transports.Transport):
         # Workaround for bug #724 in paramiko -- remove localpath on IOError
         try:
             return self.sftp.get(remotepath, localpath, callback)
-        except IOError as e:
+        except IOError:
             try:
                 os.remove(localpath)
             except OSError:
@@ -1203,7 +1195,7 @@ class SshTransport(aiida.transports.Transport):
         if 'key_filename' in self._connect_args:
             further_params.append("-i {}".format(escape_for_bash(self._connect_args['key_filename'])))
 
-        further_params_str =' '.join(further_params)
+        further_params_str = ' '.join(further_params)
         connect_string = """ssh -t {machine} {further_params} "if [ -d {escaped_remotedir} ] ; then cd {escaped_remotedir} ; bash -l ; else echo '  ** The directory' ; echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
             further_params=further_params_str,
             machine=self._machine,
@@ -1212,10 +1204,6 @@ class SshTransport(aiida.transports.Transport):
 
         # print connect_string
         return connect_string
-
-        # return """ssh -Y -t {machine} "if [ -d {escaped_remotedir} ] ; then cd {escaped_remotedir} ; bash -c "{bash_call_escaped}" ; else echo '  ** The directory' ; echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
-        #    machine=self._machine, escaped_remotedir="'{}'".format(remotedir), remotedir=remotedir,
-        #    bash_call_escaped=escape_for_bash("""bash --rcfile <(echo 'if [ -e ~/.bashrc ] ; then source ~/.bashrc ; fi ; export PS1="\[\033[01;31m\][AiiDA]\033[00m\]$PS1"')"""))
 
     def symlink(self, remotesource, remotedestination):
         """

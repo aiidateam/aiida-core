@@ -12,7 +12,6 @@ This module defines the classes related to Xy data. That is data that contains
 collections of y-arrays bound to a single x-array, and the methods to operate
 on them.
 """
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -21,8 +20,8 @@ import six
 from six.moves import range, zip
 
 import numpy as np
-from aiida.orm.nodes.data.array import ArrayData
 from aiida.common.exceptions import InputValidationError, NotExistent
+from .array import ArrayData
 
 
 def check_convert_single_to_tuple(item):
@@ -39,6 +38,7 @@ def check_convert_single_to_tuple(item):
     else:
         return [item]
 
+
 class XyData(ArrayData):
     """
     A subclass designed to handle arrays that have an "XY" relationship to
@@ -51,22 +51,17 @@ class XyData(ArrayData):
         of type basestring. Raises InputValidationError if this not the case.
         """
         if not isinstance(name, six.string_types):
-            raise InputValidationError("The name must always be an instance "
-                                       "of basestring.")
+            raise InputValidationError("The name must always be an instance of basestring.")
 
         if not isinstance(array, np.ndarray):
-            raise InputValidationError("The input array must always be a "
-                                       "numpy array")
+            raise InputValidationError("The input array must always be a numpy array")
         try:
             array.astype(float)
         except ValueError:
-            raise InputValidationError("The input array must only contain "
-                                       "floats")
+            raise InputValidationError("The input array must only contain floats")
         if not isinstance(units, six.string_types):
-            raise InputValidationError("The units must always be an instance"
-                                           " of basestring.")
+            raise InputValidationError("The units must always be an instance of basestring.")
 
-        
     def set_x(self, x_array, x_name, x_units):
         """
         Sets the array and the name for the x values.
@@ -80,7 +75,6 @@ class XyData(ArrayData):
         self.set_attribute("x_units", x_units)
         self.set_array("x_array", x_array)
 
-        
     def set_y(self, y_arrays, y_names, y_units):
         """
         Set array(s) for the y part of the dataset. Also checks if the
@@ -108,9 +102,8 @@ class XyData(ArrayData):
         except NotExistent:
             raise InputValidationError("X array has not been set yet")
         # validate each of the y_arrays
-        for num, (y_array, y_name, y_unit) in enumerate(
-                                            zip(y_arrays, y_names, y_units)):
-            self._arrayandname_validator(y_array,y_name,y_unit)
+        for num, (y_array, y_name, y_unit) in enumerate(zip(y_arrays, y_names, y_units)):
+            self._arrayandname_validator(y_array, y_name, y_unit)
             if np.shape(y_array) != np.shape(x_array):
                 raise InputValidationError("y_array {} did not have the "
                                            "same shape has the x_array!"
@@ -136,7 +129,7 @@ class XyData(ArrayData):
         except (KeyError, AttributeError):
             raise NotExistent("No x array has been set yet!")
         return x_name, x_array, x_units
-    
+
     def get_y(self):
         """
         Tries to retrieve the y arrays and the y names, raises a
@@ -161,26 +154,4 @@ class XyData(ArrayData):
         except (KeyError, AttributeError):
             raise NotExistent("Could not retrieve array associated with y array"
                               " {}".format(y_names[i]))
-        return list(zip(y_names,y_arrays,y_units))
-
-    # def plot_dosdata(self, dosdata_type, spin='',path='', fmt='pdf'):
-    #     """
-    #     Creates a plot of any of the dosdata_type that is dos of a given spin,
-    #     or the integrated dos array.
-    #
-    #     :param dosdata_type: str, descriptor of dosdata array
-    #     :param spin: optional parameter, to be passed to get_dos
-    #     :param path: str, if specified will save figure to path
-    #     :param fmt: str, specifies format to save figure, default pdf
-    #     """
-    #     plt.close()
-    #     dosdata_array = getattr(self, 'get_'+dosdata_type)(spin)
-    #     dosenergy_array = self.get_dos_energy()
-    #     dosdata_units = getattr(self, dosdata_type+'_units')
-    #     dosenergy_units = self.energy_units
-    #     plt.plot(dosenergy_array, dosdata_array)
-    #     plt.title(dosdata_type+' vs energy')
-    #     plt.xlabel('Energy in ('+dosenergy_units+')')
-    #     plt.ylabel(dosdata_type+' in ('+dosdata_units+')')
-    #     if path != '':
-    #         plt.savefig(path, format=fmt)
+        return list(zip(y_names, y_arrays, y_units))

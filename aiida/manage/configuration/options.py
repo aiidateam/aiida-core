@@ -94,19 +94,12 @@ CONFIG_OPTIONS = {
         'default': DEFAULT_DAEMON_TIMEOUT,
         'description': 'The timeout in seconds for calls to the circus client',
     },
-    'verdishell.modules': {
-        'key': 'modules_for_verdi_shell',
+    'verdi.shell.auto_import': {
+        'key': 'verdi_shell_auto_import',
         'valid_type': 'string',
         'valid_values': None,
         'default': '',
         'description': 'Additional modules/functions/classes to be automatically loaded in `verdi shell`',
-    },
-    'verdishell.calculation_list': {
-        'key': 'projections_for_calculation_list',
-        'valid_type': 'list_of_str',
-        'valid_values': None,
-        'default': ('pk', 'ctime', 'process_state', 'type', 'job_state'),
-        'description': 'List of default projections for `verdi calculation list`',
     },
     'logging.aiida_loglevel': {
         'key': 'logging_aiida_log_level',

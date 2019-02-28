@@ -528,7 +528,7 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.backends.djsite.db import models
     from aiida.common.utils import get_object_from_string
-    import aiida.common.json as json
+    from aiida.common import json
 
     # This is the export version expected by this function
     expected_export_version = '0.4'
@@ -1147,7 +1147,7 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.common.utils import get_object_from_string
     from aiida.common.links import LinkType
-    import aiida.common.json as json
+    from aiida.common import json
 
     # This is the export version expected by this function
     expected_export_version = '0.4'
@@ -2075,7 +2075,7 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
     from aiida.common.links import LinkType
     from aiida.common.folders import RepositoryFolder
     from aiida.orm.querybuilder import QueryBuilder
-    import aiida.common.json as json
+    from aiida.common import json
     from django.core.exceptions import ImproperlyConfigured
 
     if not silent:
@@ -2252,22 +2252,22 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
                 res = {_[0] for _ in qb.all()}
                 given_calculation_entry_ids.update(res - to_be_exported)
 
-        # Universal "entities" attributed to all types of nodes
-        if include_logs:
-            # Get related log(s) - universal for all nodes
-            qb = QueryBuilder()
-            qb.append(Node, tag='node', filters={'id': curr_node_id})
-            qb.append(Log, with_node='node', project=['id'])
-            res = {_[0] for _ in qb.all()}
-            given_log_entry_ids.update(res)
+    ## Universal "entities" attributed to all types of nodes
+    # Logs
+    if include_logs:
+        # Get related log(s) - universal for all nodes
+        builder = QueryBuilder()
+        builder.append(Log, filters={'dbnode_id': {'in': to_be_exported}}, project=['id'])
+        res = {_[0] for _ in builder.all()}
+        given_log_entry_ids.update(res)
 
-        if include_comments:
-            # Get related comment(s) - universal for all nodes
-            qb = QueryBuilder()
-            qb.append(Node, tag='node', filters={'id': curr_node_id})
-            qb.append(Comment, with_node='node', project=['id'])
-            res = {_[0] for _ in qb.all()}
-            given_comment_entry_ids.update(res)
+    # Comments
+    if include_comments:
+        # Get related log(s) - universal for all nodes
+        builder = QueryBuilder()
+        builder.append(Comment, filters={'dbnode_id': {'in': to_be_exported}}, project=['id'])
+        res = {_[0] for _ in builder.all()}
+        given_comment_entry_ids.update(res)
 
     # Here we get all the columns that we plan to project per entity that we
     # would like to extract
@@ -2622,7 +2622,6 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
         'groups_uuid': groups_uuid,
     }
 
-
     # N.B. We're really calling zipfolder.open
     with folder.open('data.json', mode='w') as fhandle:
         # fhandle.write(json.dumps(data, cls=UUIDEncoder))
@@ -2660,13 +2659,8 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
             thisnodefolder = nodesubfolder.get_subfolder(
                 sharded_uuid, create=False,
                 reset_limit=True)
-            # In this way, I copy the content of the folder, and not the folder
-            # itself
+            # In this way, I copy the content of the folder, and not the folder itself
             src = RepositoryFolder(section=Repository._section_name, uuid=uuid).abspath
-            if not os.path.exists(os.path.join(src, Repository._path_subfolder_name)):
-                raise ContentNotExistent("The exported repository folder '{}' for node<{}> does not contain the '{}' "
-                        "sub folder, probably it was deleted manually before exporting. Try to recreate it and export "
-                        "again.".format(src, uuid, Repository._path_subfolder_name))
             thisnodefolder.insert_path(src=src, dest_name='.')
 
 

@@ -22,9 +22,9 @@ try:
 except ImportError:
     import mock
 
-import aiida.common.json as json
+from aiida.common import json
 
-from aiida.manage import Config
+from aiida.manage.configuration import Config
 from aiida.manage.configuration.migrations.utils import check_and_migrate_config
 from aiida.manage.configuration.migrations.migrations import _MIGRATION_LOOKUP
 

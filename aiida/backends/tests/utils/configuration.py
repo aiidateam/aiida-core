@@ -24,7 +24,7 @@ def create_mock_profile(name, repository_dirpath=None):
     :param name: name of the profile
     :param repository_dirpath: optional absolute path to use as the base for the repository path
     """
-    from aiida.manage import get_config, Profile
+    from aiida.manage.configuration import get_config, Profile
 
     if repository_dirpath is None:
         config = get_config()

@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""`Data` sub class to represent a float value."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -20,9 +21,8 @@ __all__ = ('Float',)
 
 
 class Float(NumericType):
-    """
-    Class to store float numbers as AiiDA nodes
-    """
+    """`Data` sub class to represent a float value."""
+
     _type = float
 
 

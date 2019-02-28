@@ -42,7 +42,7 @@ depends_on = None
 values_to_export = ['id', 'time', 'loggername', 'levelname', 'objpk', 'objname', 'message', 'metadata']
 
 
-def get_legacy_workflow_log_no(connection):
+def get_legacy_workflow_log_number(connection):
     """ Get the number of the log records that correspond to legacy workflows """
     return connection.execute(
         text("""
@@ -52,7 +52,7 @@ def get_legacy_workflow_log_no(connection):
         """)).fetchall()[0][0]
 
 
-def get_unknown_entity_log_no(connection):
+def get_unknown_entity_log_number(connection):
     """ Get the number of the log records that correspond to unknown entities """
     return connection.execute(
         text("""
@@ -60,6 +60,17 @@ def get_unknown_entity_log_no(connection):
         WHERE
             (db_dblog.objname NOT LIKE 'node.%') AND
             (db_dblog.objname NOT LIKE 'aiida.workflows.user.%')
+        """)).fetchall()[0][0]
+
+
+def get_logs_with_no_nodes_number(connection):
+    """ Get the number of the log records that correspond to nodes that were deleted """
+    return connection.execute(
+        text("""
+        SELECT COUNT(*) FROM db_dblog
+        WHERE
+            (db_dblog.objname LIKE 'node.%') AND NOT EXISTS
+            (SELECT 1 FROM db_dbnode WHERE db_dbnode.id = db_dblog.objpk LIMIT 1)
         """)).fetchall()[0][0]
 
 
@@ -94,6 +105,22 @@ def get_serialized_unknown_entity_logs(connection):
     return dumps_json(res)
 
 
+def get_serialized_logs_with_no_nodes(connection):
+    """ Get the serialized log records that correspond to nodes that were deleted """
+    query = connection.execute(
+        text("""
+        SELECT db_dblog.id, db_dblog.time, db_dblog.loggername, db_dblog.levelname, db_dblog.objpk, db_dblog.objname,
+        db_dblog.message, db_dblog.metadata FROM db_dblog
+        WHERE
+            (db_dblog.objname LIKE 'node.%') AND NOT EXISTS
+            (SELECT 1 FROM db_dbnode WHERE db_dbnode.id = db_dblog.objpk LIMIT 1)
+        """))
+    res = list()
+    for row in query:
+        res.append(dict(list(zip(row.keys(), row))))
+    return dumps_json(res)
+
+
 def export_and_clean_workflow_logs(connection):
     """
     Export the logs records that correspond to legacy workflows and to unknown entities (place them to files
@@ -101,16 +128,17 @@ def export_and_clean_workflow_logs(connection):
     """
     from tempfile import NamedTemporaryFile
 
-    lwf_no = get_legacy_workflow_log_no(connection)
-    other_no = get_unknown_entity_log_no(connection)
+    lwf_no_number = get_legacy_workflow_log_number(connection)
+    other_number = get_unknown_entity_log_number(connection)
+    log_no_node_number = get_logs_with_no_nodes_number(connection)
 
     # If there are no legacy workflow log records or log records of an unknown entity
-    if lwf_no == 0 and other_no == 0:
+    if lwf_no_number == 0 and other_number == 0 and log_no_node_number == 0:
         return
 
     if not settings.TESTING_MODE:
         click.echo('We found {} log records that correspond to legacy workflows and {} log records to correspond '
-                   'to an unknown entity.'.format(lwf_no, other_no))
+                   'to an unknown entity.'.format(lwf_no_number, other_number))
         click.echo(
             'These records will be removed from the database and exported to JSON files to the current directory).')
         proceed = click.confirm('Would you like to proceed?', default=True)
@@ -122,7 +150,7 @@ def export_and_clean_workflow_logs(connection):
         delete_on_close = True
 
     # Exporting the legacy workflow log records
-    if lwf_no != 0:
+    if lwf_no_number != 0:
 
         # Get the records and write them to file
         with NamedTemporaryFile(
@@ -144,7 +172,7 @@ def export_and_clean_workflow_logs(connection):
             """))
 
     # Exporting unknown log records
-    if other_no != 0:
+    if other_number != 0:
         # Get the records and write them to file
         with NamedTemporaryFile(
                 prefix='unknown_entity_logs-', suffix='.log', dir='.', delete=delete_on_close, mode='w+') as handle:
@@ -162,6 +190,27 @@ def export_and_clean_workflow_logs(connection):
             DELETE FROM db_dblog WHERE
                 (db_dblog.objname NOT LIKE 'node.%') AND
                 (db_dblog.objname NOT LIKE 'aiida.workflows.user.%')
+            """))
+
+    # Exporting log records that don't correspond to nodes
+    if log_no_node_number != 0:
+        # Get the records and write them to file
+        with NamedTemporaryFile(
+                prefix='no_node_entity_logs-', suffix='.log', dir='.', delete=delete_on_close, mode='w+') as handle:
+            # Export the log records
+            filename = handle.name
+            handle.write(get_serialized_logs_with_no_nodes(connection))
+
+            # If delete_on_close is False, we are running for the user and add additional message of file location
+            if not delete_on_close:
+                click.echo('Exported entity logs that don\'t correspond to nodes to {}'.format(filename))
+
+        # Now delete the records
+        connection.execute(
+            text("""
+            DELETE FROM db_dblog WHERE
+            (db_dblog.objname LIKE 'node.%') AND NOT EXISTS
+            (SELECT 1 FROM db_dbnode WHERE db_dbnode.id = db_dblog.objpk LIMIT 1)
             """))
 
 

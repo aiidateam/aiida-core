@@ -15,14 +15,14 @@ import six
 from six.moves import range, zip
 import numpy
 
-from aiida.common.lang import classproperty
-from aiida.orm.nodes.data.array import ArrayData
+from .array import ArrayData
 
 
 DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/datatypes/kpoints.html#deprecated-methods'
 
 _default_epsilon_length = 1e-5
 _default_epsilon_angle = 1e-5
+
 
 class KpointsData(ArrayData):
     """
@@ -169,7 +169,7 @@ class KpointsData(ArrayData):
             raise ValueError("Index of label exceeding the list of kpoints")
 
         self.set_attribute('label_numbers', label_numbers)
-        self.set_attribute('labels', labels)    
+        self.set_attribute('labels', labels)
 
     def _change_reference(self, kpoints, to_cartesian=True):
         """
@@ -205,7 +205,7 @@ class KpointsData(ArrayData):
 
         :param structuredata: an instance of StructureData
         """
-        from aiida.orm.nodes.data.structure import StructureData
+        from aiida.orm import StructureData
 
         if not isinstance(structuredata, StructureData):
             raise ValueError("An instance of StructureData should be passed to "

@@ -23,7 +23,7 @@ from six.moves import range
 
 from aiida.common.exceptions import ContentNotExistent, InvalidOperation
 from aiida.common.folders import SandboxFolder
-import aiida.common.json as json
+from aiida.common import json
 
 
 class Archive(object):  # pylint: disable=useless-object-inheritance

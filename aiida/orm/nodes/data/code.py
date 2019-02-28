@@ -11,6 +11,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+import io
 import os
 import six
 
@@ -92,8 +93,11 @@ class Code(Data):
 
         if isinstance(files, six.string_types):
             files = [files]
-        for f in files:
-            self.repository.add_path(f, os.path.split(f)[1])
+
+        for filename in files:
+            if os.path.isfile(filename):
+                with io.open(filename, 'rb') as handle:
+                    self.put_object_from_filelike(handle, os.path.split(filename)[1], 'wb', encoding=None)
 
     def __str__(self):
         local_str = "Local" if self.is_local() else "Remote"
@@ -154,8 +158,8 @@ class Code(Data):
         :param label: the code label identifying the code to load
         :param machinename: the machine name where code is setup
 
-        :raise NotExistent: if no code identified by the given string is found
-        :raise MultipleObjectsError: if the string cannot identify uniquely
+        :raise aiida.common.NotExistent: if no code identified by the given string is found
+        :raise aiida.common.MultipleObjectsError: if the string cannot identify uniquely
             a code
         """
         from aiida.common.exceptions import (NotExistent, MultipleObjectsError, InputValidationError)
@@ -188,10 +192,10 @@ class Code(Data):
         :param label: the code label identifying the code to load
         :param machinename: the machine name where code is setup
 
-        :raise NotExistent: if no code identified by the given string is found
-        :raise MultipleObjectsError: if the string cannot identify uniquely
+        :raise aiida.common.NotExistent: if no code identified by the given string is found
+        :raise aiida.common.MultipleObjectsError: if the string cannot identify uniquely
             a code
-        :raise InputValidationError: if neither a pk nor a label was passed in
+        :raise aiida.common.InputValidationError: if neither a pk nor a label was passed in
         """
         from aiida.common.exceptions import (NotExistent, MultipleObjectsError, InputValidationError)
         from aiida.orm.utils import load_code
@@ -227,10 +231,10 @@ class Code(Data):
 
         :param code_string: the code string identifying the code to load
 
-        :raise NotExistent: if no code identified by the given string is found
-        :raise MultipleObjectsError: if the string cannot identify uniquely
+        :raise aiida.common.NotExistent: if no code identified by the given string is found
+        :raise aiida.common.MultipleObjectsError: if the string cannot identify uniquely
             a code
-        :raise InputValidationError: if code_string is not of string type
+        :raise aiida.common.InputValidationError: if code_string is not of string type
 
         """
         from aiida.common.exceptions import NotExistent, MultipleObjectsError, InputValidationError
@@ -279,11 +283,11 @@ class Code(Data):
                 raise ValidationError("You have to set which file is the local executable "
                                       "using the set_exec_filename() method")
                 # c[1] is True if the element is a file
-            if self.get_local_executable() not in self.repository.get_folder_list():
+            if self.get_local_executable() not in self.list_object_names():
                 raise ValidationError("The local executable '{}' is not in the list of "
                                       "files of this code".format(self.get_local_executable()))
         else:
-            if self.repository.get_folder_list():
+            if self.list_object_names():
                 raise ValidationError("The code is remote but it has files inside")
             if not self.get_remote_computer():
                 raise ValidationError("You did not specify a remote computer")
@@ -455,7 +459,7 @@ class Code(Data):
 
         :note: it also sets the ``builder.code`` value.
 
-        :raise MissingPluginError: if the specified plugin does not exist.
+        :raise aiida.common.MissingPluginError: if the specified plugin does not exist.
         :raise ValueError: if no default plugin was specified.
 
         :return:
@@ -504,8 +508,8 @@ class Code(Data):
             result.append(['Type', 'local'])
             result.append(['Exec name', self.get_execname()])
             result.append(['List of files/folders:', ''])
-            for fname in self.repository._get_folder_pathsubfolder.get_content_list():
-                if self.repository._get_folder_pathsubfolder.isdir(fname):
+            for fname in self.list_object_names():
+                if self._repository._get_folder_pathsubfolder.isdir(fname):
                     result.append(['directory', fname])
                 else:
                     result.append(['file', fname])

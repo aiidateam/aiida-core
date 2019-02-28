@@ -30,9 +30,6 @@ class RemoteData(Data):
         if remote_path is not None:
             self.set_remote_path(remote_path)
 
-    def get_dbcomputer(self):
-        return self.dbnode.dbmodel
-
     def get_computer_name(self):
         return self.computer.name
 
@@ -42,20 +39,12 @@ class RemoteData(Data):
     def set_remote_path(self, val):
         self.set_attribute('remote_path', val)
 
-    def add_path(self, src_abs, dst_filename=None):
-        """
-        Disable adding files or directories to a RemoteData
-        """
-        from aiida.common.exceptions import ModificationNotAllowed
-
-        raise ModificationNotAllowed("Cannot add files or directories to a RemoteData object")
-
     @property
     def is_empty(self):
         """
         Check if remote folder is empty
         """
-        authinfo = self._get_authinfo()
+        authinfo = self.get_authinfo()
         transport = authinfo.get_transport()
 
         with transport:
@@ -75,7 +64,7 @@ class RemoteData(Data):
         :param destpath: A path on the local computer to get the file
         :return: a string with the file content
         """
-        authinfo = self._get_authinfo()
+        authinfo = self.get_authinfo()
         t = authinfo.get_transport()
 
         with t:
@@ -99,7 +88,7 @@ class RemoteData(Data):
         :param relpath: If 'relpath' is specified, lists the content of the given subfolder.
         :return: a flat list of file/directory names (as strings).
         """
-        authinfo = self._get_authinfo()
+        authinfo = self.get_authinfo()
         t = authinfo.get_transport()
 
         with t:
@@ -137,7 +126,7 @@ class RemoteData(Data):
         :param relpath: If 'relpath' is specified, lists the content of the given subfolder.
         :return: a list of dictionaries, where the documentation is in :py:class:Transport.listdir_withattributes.
         """
-        authinfo = self._get_authinfo()
+        authinfo = self.get_authinfo()
         t = authinfo.get_transport()
 
         with t:
@@ -174,7 +163,7 @@ class RemoteData(Data):
         """
         from aiida.orm.utils.remote import clean_remote
 
-        authinfo = self._get_authinfo()
+        authinfo = self.get_authinfo()
         transport = authinfo.get_transport()
         remote_dir = self.get_remote_path()
 
@@ -195,5 +184,5 @@ class RemoteData(Data):
         if computer is None:
             raise ValidationError("Remote computer not set.")
 
-    def _get_authinfo(self):
+    def get_authinfo(self):
         return AuthInfo.objects.get(dbcomputer=self.computer, aiidauser=self.user)

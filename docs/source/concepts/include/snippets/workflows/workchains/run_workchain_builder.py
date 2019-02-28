@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
-from aiida.orm.nodes.data.int import Int
-from aiida.work.launch import submit
-from aiida.work.workchain import WorkChain
+from aiida.engine import submit
+from aiida.engine.workchain import WorkChain
+from aiida.orm import Int
+
 
 class AddAndMultiplyWorkChain(WorkChain):
-    ...
+    pass
+
 
 builder = AddAndMultiplyWorkChain.get_builder()
 builder.a = Int(1)

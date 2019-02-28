@@ -225,13 +225,13 @@ class CifData(SinglefileData):
     """
     Wrapper for Crystallographic Interchange File (CIF)
 
-    .. note:: the file (physical) is held as the authoritative source of
+    .. note:: the filepath (physical) is held as the authoritative source of
         information, so all conversions are done through the physical file:
         when setting ``ase`` or ``values``, a physical CIF file is generated
         first, the values are updated from the physical CIF file.
     """
     # pylint: disable=abstract-method, too-many-public-methods
-    _set_incompatibilities = [('ase', 'file'), ('ase', 'values'), ('file', 'values')]
+    _set_incompatibilities = [('ase', 'filepath'), ('ase', 'values'), ('filepath', 'values')]
     _scan_types = ('standard', 'flex')
     _parse_policies = ('eager', 'lazy')
     _values = None
@@ -239,7 +239,7 @@ class CifData(SinglefileData):
 
     def __init__(self,
                  ase=None,
-                 file=None,
+                 filepath=None,
                  values=None,
                  source=None,
                  scan_type='standard',
@@ -249,7 +249,7 @@ class CifData(SinglefileData):
 
         args = {
             'ase': ase,
-            'file': file,
+            'filepath': filepath,
             'values': values,
         }
 
@@ -257,7 +257,7 @@ class CifData(SinglefileData):
             if args[left] is not None and args[right] is not None:
                 raise ValueError('cannot pass {} and {} at the same time'.format(left, right))
 
-        super(CifData, self).__init__(file, **kwargs)
+        super(CifData, self).__init__(filepath, **kwargs)
         self.set_scan_type(scan_type)
         self.set_parse_policy(parse_policy)
 
@@ -270,7 +270,7 @@ class CifData(SinglefileData):
         if values is not None:
             self.set_values(values)
 
-        if not self.is_stored and file is not None and self.get_attribute('parse_policy') == 'eager':
+        if not self.is_stored and filepath is not None and self.get_attribute('parse_policy') == 'eager':
             self.parse()
 
     @staticmethod
@@ -332,9 +332,9 @@ class CifData(SinglefileData):
         cifs = cls.from_md5(md5)
         if not cifs:
             if store_cif:
-                instance = cls(file=filename).store()
+                instance = cls(filepath=filename).store()
                 return (instance, True)
-            instance = cls(file=filename)
+            instance = cls(filepath=filename)
             return (instance, True)
 
         if len(cifs) > 1:
@@ -369,7 +369,7 @@ class CifData(SinglefileData):
         """
         if not kwargs and self._ase:
             return self.ase
-        return CifData.read_cif(self.repository._get_folder_pathsubfolder.open(self.filename), **kwargs)  # pylint: disable=protected-access
+        return CifData.read_cif(self.open(), **kwargs)
 
     def set_ase(self, aseatoms):
         """
@@ -383,7 +383,7 @@ class CifData(SinglefileData):
             with Capturing():
                 tmpf.write(pycifrw_from_cif(cif, loops=ase_loops).WriteOut())
             tmpf.flush()
-            self.set_file(tmpf.name)
+            self.put_object_from_file(tmpf.name)
 
     @ase.setter
     def ase(self, aseatoms):
@@ -400,7 +400,8 @@ class CifData(SinglefileData):
             import CifFile
             from CifFile import CifBlock  # pylint: disable=no-name-in-module
 
-            c = CifFile.ReadCif(self.get_file_abs_path(), scantype=self.get_attribute('scan_type'))  # pylint: disable=no-member
+            with self.open() as handle:
+                c = CifFile.ReadCif(handle, scantype=self.get_attribute('scan_type'))  # pylint: disable=no-member
             for k, v in c.items():
                 c.dictionary[k] = CifBlock(v)
             self._values = c
@@ -421,7 +422,7 @@ class CifData(SinglefileData):
             with Capturing():
                 tmpf.write(values.WriteOut())
             tmpf.flush()
-            self.set_file(tmpf.name)
+            self.put_object_from_file(tmpf.name)
 
         self._values = values
 
@@ -453,14 +454,14 @@ class CifData(SinglefileData):
         return super(CifData, self).store(*args, **kwargs)
 
     # pylint: disable=attribute-defined-outside-init
-    def set_file(self, filename):
+    def put_object_from_file(self, path, key=None, mode='w', encoding='utf8', force=False):
         """
         Set the file.
 
         If the source is set and the MD5 checksum of new file
         is different from the source, the source has to be deleted.
         """
-        super(CifData, self).set_file(filename)
+        super(CifData, self).put_object_from_file(path, key, mode, encoding, force)
         md5sum = self.generate_md5()
         if isinstance(self.source, dict) and \
                 self.source.get('source_md5', None) is not None and \
@@ -683,14 +684,11 @@ class CifData(SinglefileData):
         """
         Computes and returns MD5 hash of the CIF file.
         """
-        from aiida.common.exceptions import ValidationError
-        from aiida.common.files import md5_file
+        from aiida.common.files import md5_from_filelike
 
-        abspath = self.get_file_abs_path()
-        if not abspath:
-            raise ValidationError("No valid CIF was passed!")
-
-        return md5_file(abspath)
+        # Open in binary mode which is required for generating the md5 checksum
+        with self.open(mode='rb') as handle:
+            return md5_from_filelike(handle)
 
     def _get_aiida_structure(self, converter='pymatgen', store=False, **kwargs):
         """
@@ -731,10 +729,10 @@ class CifData(SinglefileData):
             in which case they will be combined to a single disordered site. Defaults to 1e-4. (pymatgen only)
         :return: :py:class:`aiida.orm.nodes.data.structure.StructureData` node.
         """
-        from aiida.orm.nodes.data.parameter import ParameterData
+        from aiida.orm import Dict
         from aiida.tools.data import cif as cif_tools
 
-        parameters = ParameterData(dict=kwargs)
+        parameters = Dict(dict=kwargs)
 
         try:
             convert_function = getattr(cif_tools, '_get_aiida_structure_{}_inline'.format(converter))
@@ -759,8 +757,8 @@ class CifData(SinglefileData):
             # Note: this overwrites the CIF file!
             self.set_values(self._values)
 
-        with self.repository._get_folder_pathsubfolder.open(self.filename) as f:  # pylint: disable=protected-access
-            return f.read().encode('utf-8'), {}
+        with self.open() as handle:
+            return handle.read().encode('utf-8'), {}
 
     # pylint: disable=unused-argument
     def _prepare_tcod(self, main_file_name="", **kwargs):

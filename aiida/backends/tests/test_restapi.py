@@ -14,20 +14,11 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
+from aiida.common import json
 from aiida.common.links import LinkType
-from aiida.orm import CalcJobNode
-from aiida.orm.computers import Computer
-from aiida.orm.nodes.data import Data
-from aiida.orm.querybuilder import QueryBuilder
-from aiida.plugins import DataFactory
 from aiida.restapi.api import App, AiidaApi
-import aiida.common.json as json
-
-StructureData = DataFactory('structure')  # pylint: disable=invalid-name
-CifData = DataFactory('cif')  # pylint: disable=invalid-name
-ParameterData = DataFactory('parameter')  # pylint: disable=invalid-name
-KpointsData = DataFactory('array.kpoints')  # pylint: disable=invalid-name
 
 
 class RESTApiTestCase(AiidaTestCase):
@@ -45,8 +36,6 @@ class RESTApiTestCase(AiidaTestCase):
         Basides the standard setup we need to add few more objects in the
         database to be able to explore different requests/filters/orderings etc.
         """
-        from aiida import orm
-
         # call parent setUpClass method
         super(RESTApiTestCase, cls).setUpClass()
 
@@ -61,36 +50,36 @@ class RESTApiTestCase(AiidaTestCase):
 
         # create test inputs
         cell = ((2., 0., 0.), (0., 2., 0.), (0., 0., 2.))
-        structure = StructureData(cell=cell)
+        structure = orm.StructureData(cell=cell)
         structure.append_atom(position=(0., 0., 0.), symbols=['Ba'])
         structure.store()
 
-        cif = CifData(ase=structure.get_ase())
+        cif = orm.CifData(ase=structure.get_ase())
         cif.store()
 
-        parameter1 = ParameterData(dict={"a": 1, "b": 2})
+        parameter1 = orm.Dict(dict={"a": 1, "b": 2})
         parameter1.store()
 
-        parameter2 = ParameterData(dict={"c": 3, "d": 4})
+        parameter2 = orm.Dict(dict={"c": 3, "d": 4})
         parameter2.store()
 
-        kpoint = KpointsData()
+        kpoint = orm.KpointsData()
         kpoint.set_kpoints_mesh([4, 4, 4])
         kpoint.store()
 
         resources = {'num_machines': 1, 'num_mpiprocs_per_machine': 1}
 
-        calc = CalcJobNode(computer=cls.computer)
+        calc = orm.CalcJobNode(computer=cls.computer)
         calc.set_option('resources', resources)
-        calc.set_attribute("attr1", "OK")  # pylint: disable=protected-access
-        calc.set_attribute("attr2", "OK")  # pylint: disable=protected-access
+        calc.set_attribute("attr1", "OK")
+        calc.set_attribute("attr2", "OK")
         calc.store()
 
         calc.add_incoming(structure, link_type=LinkType.INPUT_CALC, link_label='link_structure')
         calc.add_incoming(parameter1, link_type=LinkType.INPUT_CALC, link_label='link_parameter')
         kpoint.add_incoming(calc, link_type=LinkType.CREATE, link_label='create')
 
-        calc1 = CalcJobNode(computer=cls.computer)
+        calc1 = orm.CalcJobNode(computer=cls.computer)
         calc1.set_option('resources', resources)
         calc1.store()
 
@@ -141,8 +130,8 @@ class RESTApiTestCase(AiidaTestCase):
         # by their list index is very fragile and a pain to debug.
         # Please change this!
         computer_projections = ["id", "uuid", "name", "hostname", "transport_type", "scheduler_type"]
-        computers = QueryBuilder().append(
-            Computer, tag="comp", project=computer_projections).order_by({
+        computers = orm.QueryBuilder().append(
+            orm.Computer, tag="comp", project=computer_projections).order_by({
                 'comp': [{
                     'name': {
                         'order': 'asc'
@@ -158,8 +147,8 @@ class RESTApiTestCase(AiidaTestCase):
         cls._dummy_data["computers"] = computers
 
         calculation_projections = ["id", "uuid", "user_id", "type"]
-        calculations = QueryBuilder().append(
-            CalcJobNode, tag="calc", project=calculation_projections).order_by({
+        calculations = orm.QueryBuilder().append(
+            orm.CalcJobNode, tag="calc", project=calculation_projections).order_by({
                 'calc': [{
                     'id': {
                         'order': 'desc'
@@ -175,13 +164,13 @@ class RESTApiTestCase(AiidaTestCase):
 
         data_projections = ["id", "uuid", "user_id", "type"]
         data_types = {
-            'cifdata': CifData,
-            'parameterdata': ParameterData,
-            'structuredata': StructureData,
-            'data': Data,
+            'cifdata': orm.CifData,
+            'parameterdata': orm.Dict,
+            'structuredata': orm.StructureData,
+            'data': orm.Data,
         }
         for label, dataclass in data_types.items():
-            data = QueryBuilder().append(
+            data = orm.QueryBuilder().append(
                 dataclass, tag="data", project=data_projections).order_by({
                     'data': [{
                         'id': {
@@ -236,7 +225,7 @@ class RESTApiTestCase(AiidaTestCase):
         self.assertEqual(response["url"], "http://localhost" + url)
         self.assertEqual(response["url_root"], "http://localhost/")
 
-    ###### node details and list with limit, offset, page, perpage ####
+    # node details and list with limit, offset, page, perpage
     def process_test(self,
                      node_type,
                      url,
@@ -303,16 +292,6 @@ class RESTApiTestCase(AiidaTestCase):
 
                 self.compare_extra_response_data(node_type, url, response, uuid)
 
-    ######## check exception #########
-    # def node_exception(self, url, exception_type):
-    #     """
-    #     Assert exception if any unknown parameter is passed in url
-    #     :param url: web url
-    #     :param exception_type: exception to be thrown
-    #     :return:
-    #     """
-    #     self.assertRaises(exception_type, self.app.get(url))
-
 
 class RESTApiTestSuite(RESTApiTestCase):
     # pylint: disable=too-many-public-methods
@@ -320,7 +299,6 @@ class RESTApiTestSuite(RESTApiTestCase):
     Define unittests for rest api
     """
 
-    ############### single computer ########################
     def test_computers_details(self):
         """
         Requests the details of single computer
@@ -330,7 +308,6 @@ class RESTApiTestSuite(RESTApiTestCase):
         RESTApiTestCase.process_test(
             self, "computers", "/computers/" + str(node_uuid), expected_list_ids=[1], uuid=node_uuid)
 
-    ############### full list with limit, offset, page, perpage #############
     def test_computers_list(self):
         """
         Get the full list of computers from database
@@ -726,7 +703,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         node_uuid = self.get_dummy_data()["calculations"][1]["uuid"]
         self.process_test(
             "calculations",
-            '/calculations/' + str(node_uuid) + '/io/inputs?type="data.parameter.ParameterData."',
+            '/calculations/' + str(node_uuid) + '/io/inputs?type="data.dict.Dict."',
             expected_list_ids=[2],
             uuid=node_uuid,
             result_node_type="data",

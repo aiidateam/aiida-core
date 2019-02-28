@@ -80,9 +80,7 @@ class Data(Node):
         clone = self.__class__.from_backend_entity(backend_clone)
 
         clone.set_attributes(copy.deepcopy(self.attributes))
-
-        for path in self.repository.get_folder_list():
-            clone.repository.add_path(self.repository.get_abs_path(path), path)
+        clone.put_object_from_tree(self._repository._get_base_folder().abspath)  # pylint: disable=protected-access
 
         return clone
 

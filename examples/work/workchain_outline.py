@@ -16,12 +16,12 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from aiida import work
-from aiida.orm.nodes.data.int import Int
-from aiida.work.workchain import while_, if_
+from aiida.engine import WorkChain, run, while_, if_
+from aiida.orm import Int
 
 
-class OutlineWorkChain(work.WorkChain):
+class OutlineWorkChain(WorkChain):
+
     @classmethod
     def define(cls, spec):
         super(OutlineWorkChain, cls).define(spec)
@@ -74,7 +74,7 @@ class OutlineWorkChain(work.WorkChain):
 
 
 def main():
-    work.run(OutlineWorkChain, a=Int(16))
+    run(OutlineWorkChain, a=Int(16))
 
 
 if __name__ == '__main__':

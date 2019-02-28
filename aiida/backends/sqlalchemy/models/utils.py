@@ -28,7 +28,7 @@ def validate_key(key):
     contain the separator symbol.).
 
     :return: None if the key is valid
-    :raise ValidationError: if the key is not valid
+    :raise aiida.common.ValidationError: if the key is not valid
     """
     if not isinstance(key, six.string_types):
         raise ValidationError("The key must be a string.")
@@ -50,7 +50,7 @@ def get_value_of_sub_field(key, original_get_value):
     :param original_get_value: The function that should be called to get the
     original value (which can be a dictionary too).
     :return: The value that correspond to the complex (or not) key.
-    :raise NotExistent: If the key doesn't correspond to a value
+    :raise aiida.common.NotExistent: If the key doesn't correspond to a value
     """
     keys = list()
     if _sep in key:

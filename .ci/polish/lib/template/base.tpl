@@ -1,14 +1,9 @@
 # -*- coding: utf-8 -*-
 from numpy import prod
 from copy import deepcopy
-from aiida.orm import Code
-from aiida.orm.nodes.data.int import Int
-from aiida.orm.nodes.data.str import Str
-from aiida.orm.nodes.data.parameter import ParameterData
+from aiida.engine import submit, WorkChain, if_, while_, append_, ToContext, calcfunction
+from aiida.orm import Code, Int, Str, Dict
 from aiida.plugins import CalculationFactory
-from aiida.work.run import submit
-from aiida.work.workchain import WorkChain, if_, while_, append_, ToContext
-from aiida.work import calcfunction
 
 
 ArithmeticAddCalculation = CalculationFactory('arithmetic.add')

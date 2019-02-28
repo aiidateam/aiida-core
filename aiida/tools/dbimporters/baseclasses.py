@@ -283,7 +283,7 @@ class CifEntry(DbEntry):
             :py:class:`aiida.orm.nodes.data.cif.CifData`.
         """
         from six.moves import cStringIO as StringIO
-        from aiida.orm.nodes.data.cif import CifData
+        from aiida.orm import CifData
         return CifData.read_cif(StringIO(self.cif))
 
     def get_cif_node(self, store=False, parse_policy='lazy'):
@@ -293,7 +293,6 @@ class CifEntry(DbEntry):
 
         :return: :py:class:`aiida.orm.nodes.data.cif.CifData` object
         """
-        from aiida.common.files import md5_file
         from aiida.orm.nodes.data.cif import CifData
         import tempfile
 
@@ -302,7 +301,7 @@ class CifEntry(DbEntry):
         with tempfile.NamedTemporaryFile(mode='w+') as f:
             f.write(self.cif)
             f.flush()
-            cifnode = CifData(file=f.name, source=self.source, parse_policy=parse_policy)
+            cifnode = CifData(filepath=f.name, source=self.source, parse_policy=parse_policy)
 
         # Maintaining backwards-compatibility. Parameter 'store' should
         # be removed in the future, as the new node can be stored later.
@@ -316,7 +315,6 @@ class CifEntry(DbEntry):
         :return: AiiDA structure corresponding to the CIF file.
         """
         cif = self.get_cif_node(store=store, parse_policy='lazy')
-        
         return cif.get_structure(converter=converter, store=store, **kwargs)
 
     def get_parsed_cif(self):
@@ -340,8 +338,7 @@ class UpfEntry(DbEntry):
 
         :return: :py:class:`aiida.orm.nodes.data.upf.UpfData` object
         """
-        from aiida.common.files import md5_file
-        from aiida.orm.nodes.data.upf import UpfData
+        from aiida.orm import UpfData
         import tempfile
 
         upfnode = None
@@ -351,7 +348,7 @@ class UpfEntry(DbEntry):
         with tempfile.NamedTemporaryFile(mode='w+', prefix=self.source['id']) as f:
             f.write(self.contents)
             f.flush()
-            upfnode = UpfData(file=f.name, source=self.source)
+            upfnode = UpfData(filepath=f.name, source=self.source)
 
         # Maintaining backwards-compatibility. Parameter 'store' should
         # be removed in the future, as the new node can be stored later.

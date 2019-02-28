@@ -17,9 +17,9 @@ from six.moves import range
 
 import io
 
-from aiida.orm.nodes.data.parameter import ParameterData
+from aiida.engine import calcfunction
+from aiida.orm import Dict
 from aiida.plugins import DataFactory
-from aiida.work import calcfunction
 
 aiida_executable_name = '_aiidasubmit.sh'
 inline_executable_name = 'aiidainline.py'
@@ -353,7 +353,7 @@ def _get_calculation(node):
     :param node: an instance of subclass of :py:class:`aiida.orm.nodes.node.Node`
     :return: an instance of subclass of
         :py:class:`aiida.orm.nodes.process.process.ProcessNode`
-    :raises MultipleObjectsError: if the node has more than one calculation
+    :raises aiida.common.MultipleObjectsError: if the node has more than one calculation
         attached.
     """
     from aiida.common.exceptions import MultipleObjectsError
@@ -419,7 +419,6 @@ def _inline_to_standalone_script(calc):
 
     function_name = calc.function_name
     function_namespace = calc.function_namespace
-    function_source_file = calc.function_source_file
 
     if function_name is None:
         function_name = 'f'
@@ -427,8 +426,7 @@ def _inline_to_standalone_script(calc):
     if function_namespace is None:
         function_namespace = '__main__'
 
-    with open(function_source_file) as handle:
-        code_string = handle.read().encode('utf-8')
+    code_string = calc.get_function_source_code()
 
     if function_namespace.startswith('aiida.'):
         code_string = "from {} import {}".format(function_namespace, function_name)
@@ -449,8 +447,7 @@ def _collect_calculation_data(calc):
     calculation.
     """
     from aiida.common.links import LinkType
-    from aiida.orm.nodes.data import Data
-    from aiida.orm import CalculationNode, CalcJobNode, CalcFunctionNode, WorkflowNode
+    from aiida.orm import Data, CalculationNode, CalcJobNode, CalcFunctionNode, WorkflowNode
     import hashlib
     import os
     calcs_now = []
@@ -467,9 +464,9 @@ def _collect_calculation_data(calc):
     }
 
     if isinstance(calc, CalcJobNode):
-        retrieved_abspath = calc.get_retrieved_node().repository.folder.abspath
+        retrieved_abspath = calc.get_retrieved_node()._repository._get_base_folder().abspath
         files_in  = _collect_files(calc._raw_input_folder.abspath)
-        files_out = _collect_files(os.path.join(retrieved_abspath, 'path'))
+        files_out = _collect_files(retrieved_abspath)
         this_calc['env'] = calc.get_option('environment_variables')
         stdout_name = '{}.out'.format(aiida_executable_name)
         while stdout_name in [files_in,files_out]:
@@ -478,8 +475,8 @@ def _collect_calculation_data(calc):
         while stderr_name in [files_in,files_out]:
             stderr_name = '_{}'.format(stderr_name)
         # Output/error of schedulers are converted to bytes as file contents have to be bytes.
-        if calc.get_scheduler_output() is not None:
-            scheduler_output = calc.get_scheduler_output().encode('utf-8')
+        if calc.get_scheduler_stdout() is not None:
+            scheduler_output = calc.get_scheduler_stdout().encode('utf-8')
             files_out.append({
                 'name'    : stdout_name,
                 'contents': scheduler_output,
@@ -489,8 +486,8 @@ def _collect_calculation_data(calc):
                 'type'    : 'file',
                 })
             this_calc['stdout'] = stdout_name
-        if calc.get_scheduler_error() is not None:
-            scheduler_error = calc.get_scheduler_error().encode('utf-8')
+        if calc.get_scheduler_stderr() is not None:
+            scheduler_error = calc.get_scheduler_stderr().encode('utf-8')
             files_out.append({
                 'name'    : stderr_name,
                 'contents': scheduler_error,
@@ -587,7 +584,7 @@ def _collect_files(base, path=''):
         files = []
         files.append(get_dict(name=path, full_path=os.path.join(base, path)))
 
-        import aiida.common.json as json
+        from aiida.common import json
         with open(os.path.join(base,path)) as f:
             calcinfo = json.load(f)
         if 'local_copy_list' in calcinfo:
@@ -626,16 +623,16 @@ def extend_with_cmdline_parameters(parser, expclass="Data"):
                         dest='reduce_symmetry',
                         help="Do not perform symmetry reduction.")
     parser.add_argument('--parameter-data', type=int, default=None,
-                        help="ID of the ParameterData to be exported "
+                        help="ID of the Dict to be exported "
                              "alongside the {} instance. "
                              "By default, if {} originates from "
-                             "a calculation with single ParameterData "
+                             "a calculation with single Dict "
                              "in the output, aforementioned "
-                             "ParameterData is picked automatically. "
+                             "Dict is picked automatically. "
                              "Instead, the option is used in the case "
                              "the calculation produces more than a "
                              "single instance of "
-                             "ParameterData.".format(expclass,expclass))
+                             "Dict.".format(expclass,expclass))
     parser.add_argument('--dump-aiida-database', action='store_true',
                         default=None,
                         dest='dump_aiida_database',
@@ -687,7 +684,7 @@ def _collect_tags(node, calc,parameters=None,
     from aiida.common.links import LinkType
     import os 
     import aiida
-    import aiida.common.json as json
+    from aiida.common import json
 
     tags = { '_audit_creation_method': "AiiDA version {}".format(aiida.__version__) }
 
@@ -750,7 +747,7 @@ def _collect_tags(node, calc,parameters=None,
         from aiida.common.exceptions import LicensingException
         from aiida.common.folders import SandboxFolder
         from aiida.orm.importexport import export_tree
-        import aiida.common.json as json
+        from aiida.common import json
 
         with SandboxFolder() as folder:
             try:
@@ -848,7 +845,7 @@ def _collect_tags(node, calc,parameters=None,
     # Describing Brillouin zone (if used)
 
     if calc is not None:
-        from aiida.orm.nodes.data.array.kpoints import KpointsData
+        from aiida.orm import KpointsData
         kpoints_list = calc.get_incoming(node_class=KpointsData, link_type=LinkType.INPUT_CALC).all()
         # TODO: stop if more than one KpointsData is used?
         if len(kpoints_list) == 1:
@@ -892,10 +889,10 @@ def add_metadata_inline(what, node, parameters, args):
 
     :param what: an original exported node.
     :param node: a :py:class:`aiida.orm.nodes.data.cif.CifData` instance.
-    :param parameters: a :py:class:`aiida.orm.nodes.data.parameter.ParameterData`
+    :param parameters: a :py:class:`aiida.orm.nodes.data.dict.Dict`
         instance, produced by the same calculation as the original exported
         node.
-    :param args: a :py:class:`aiida.orm.nodes.data.parameter.ParameterData`
+    :param args: a :py:class:`aiida.orm.nodes.data.dict.Dict`
         instance, containing parameters for the control of metadata
         collection and inclusion in the produced
         :py:class:`aiida.orm.nodes.data.cif.CifData`.
@@ -923,7 +920,7 @@ def add_metadata_inline(what, node, parameters, args):
     for loop in node.values[dataname].loops.values():
         loops[loop[0]] = loop
 
-    # Unpacking the kwargs from ParameterData
+    # Unpacking the kwargs from Dict
     kwargs = {}
     additional_tags = {}
     datablock_names = None
@@ -985,7 +982,7 @@ def export_cifnode(what, parameters=None, trajectory_index=None,
     supported in addition to :py:class:`aiida.orm.nodes.data.cif.CifData`.
 
     :param what: data node to be exported.
-    :param parameters: a :py:class:`aiida.orm.nodes.data.parameter.ParameterData`
+    :param parameters: a :py:class:`aiida.orm.nodes.data.dict.Dict`
         instance, produced by the same calculation as the original exported
         node.
     :param trajectory_index: a step to be converted and exported in case a
@@ -1012,21 +1009,21 @@ def export_cifnode(what, parameters=None, trajectory_index=None,
     CifData        = DataFactory('cif')
     StructureData  = DataFactory('structure')
     TrajectoryData = DataFactory('array.trajectory')
-    ParameterData  = DataFactory('parameter')
+    Dict  = DataFactory('dict')
 
     calc = _get_calculation(what)
 
     if parameters is not None:
-        if not isinstance(parameters, ParameterData):
+        if not isinstance(parameters, Dict):
             raise ValueError("Supplied parameters are not an "
-                             "instance of ParameterData")
+                             "instance of Dict")
     elif calc is not None:
-        params = calc.get_outgoing(node_class=ParameterData, link_type=LinkType.CREATE).all()
+        params = calc.get_outgoing(node_class=Dict, link_type=LinkType.CREATE).all()
         if len(params) == 1:
             parameters = params[0].node
         elif len(params) > 0:
             raise MultipleObjectsError("Calculation {} has more than "
-                                       "one ParameterData output, please "
+                                       "one Dict output, please "
                                        "specify which one to use with "
                                        "an option parameters='' when "
                                        "calling export_cif()".format(calc))
@@ -1057,14 +1054,14 @@ def export_cifnode(what, parameters=None, trajectory_index=None,
 
     # Addition of the metadata
 
-    args = ParameterData(dict=kwargs)
+    args = Dict(dict=kwargs)
     function_args = {'what': what, 'args': args, 'metadata': {'store_provenance': store}}
     if node != what:
         function_args['node'] = node
     if parameters is not None:
         function_args['parameters'] = parameters
     else:
-        function_args['parameters'] = ParameterData(dict={})
+        function_args['parameters'] = Dict(dict={})
     ret_dict = add_metadata_inline(**function_args)
 
     return ret_dict['cif']
@@ -1083,7 +1080,7 @@ def deposit(what, type, author_name=None, author_email=None, url=None,
         instance.
     :raises ValueError: if any of the required parameters are not given.
     """
-    from aiida.manage import get_config
+    from aiida.manage.configuration import get_config
 
     config = get_config()
     parameters = {}
@@ -1166,7 +1163,7 @@ def deposit(what, type, author_name=None, author_email=None, url=None,
         parameters['replace'] = True
     if message:
         parameters['log-message'] = str(message)
-    pd = ParameterData(dict=parameters)
+    pd = Dict(dict=parameters)
 
     calc.use_cif(cif)
     calc.use_parameters(pd)

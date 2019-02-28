@@ -11,9 +11,10 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.params.types import DataParamType
-from aiida.orm.nodes.data import Data
+from aiida.orm import Data
 from aiida.orm.utils.loaders import OrmEntityLoader
 
 
@@ -74,7 +75,7 @@ class TestDataParamType(AiidaTestCase):
         result = self.param.convert(identifier, None, None)
         self.assertEqual(result.uuid, self.entity_01.uuid)
 
-        identifier = '{}{}'.format(self.entity_02.label, OrmEntityLoader.LABEL_AMBIGUITY_BREAKER_CHARACTER)
+        identifier = '{}{}'.format(self.entity_02.label, OrmEntityLoader.label_ambiguity_breaker)
         result = self.param.convert(identifier, None, None)
         self.assertEqual(result.uuid, self.entity_02.uuid)
 
@@ -89,6 +90,6 @@ class TestDataParamType(AiidaTestCase):
         result = self.param.convert(identifier, None, None)
         self.assertEqual(result.uuid, self.entity_01.uuid)
 
-        identifier = '{}{}'.format(self.entity_03.label, OrmEntityLoader.LABEL_AMBIGUITY_BREAKER_CHARACTER)
+        identifier = '{}{}'.format(self.entity_03.label, OrmEntityLoader.label_ambiguity_breaker)
         result = self.param.convert(identifier, None, None)
         self.assertEqual(result.uuid, self.entity_03.uuid)

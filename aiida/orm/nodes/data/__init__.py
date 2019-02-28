@@ -18,14 +18,13 @@ from .bool import Bool
 from .cif import CifData
 from .code import Code
 from .data import Data
-from .error import Error
+from .dict import Dict
 from .float import Float
 from .folder import FolderData
-from .frozendict import FrozenDict
 from .int import Int
 from .list import List
+from .numeric import NumericType
 from .orbital import OrbitalData
-from .parameter import ParameterData
 from .remote import RemoteData
 from .singlefile import SinglefileData
 from .str import Str
@@ -33,5 +32,5 @@ from .structure import StructureData
 from .upf import UpfData
 
 __all__ = ('Data', 'BaseType', 'ArrayData', 'BandsData', 'KpointsData', 'ProjectionData', 'TrajectoryData', 'XyData',
-           'Bool', 'CifData', 'Code', 'Error', 'Float', 'FolderData', 'FrozenDict', 'Int', 'List', 'OrbitalData',
-           'ParameterData', 'RemoteData', 'SinglefileData', 'Str', 'StructureData', 'UpfData')
+           'Bool', 'CifData', 'Code', 'Float', 'FolderData', 'Int', 'List', 'OrbitalData', 'Dict', 'RemoteData',
+           'SinglefileData', 'Str', 'StructureData', 'UpfData', 'NumericType')

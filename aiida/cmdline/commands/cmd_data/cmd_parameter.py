@@ -18,13 +18,13 @@ from aiida.cmdline.params import arguments, types
 
 @verdi_data.group('parameter')
 def parameter():
-    """View and manipulate ParameterData objects."""
+    """View and manipulate Dict objects."""
 
 
 @parameter.command('show')
-@arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:parameter',)))
+@arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:dict',)))
 def parameter_show(data):
-    """Show contents of ParameterData nodes."""
+    """Show contents of Dict nodes."""
     from aiida.cmdline.utils.echo import echo_dictionary
 
     for node in data:

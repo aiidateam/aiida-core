@@ -12,7 +12,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.common import exceptions
-from aiida.orm.nodes.data.int import Int
+from aiida.orm import Int
 from aiida.parsers.parser import Parser
 
 

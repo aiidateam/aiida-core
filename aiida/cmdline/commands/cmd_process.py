@@ -22,7 +22,7 @@ from aiida.cmdline.params import arguments, options
 from aiida.cmdline.utils import decorators, echo
 from aiida.cmdline.utils.query.calculation import CalculationQueryBuilder
 from aiida.common.log import LOG_LEVELS
-from aiida.manage import get_manager
+from aiida.manage.manager import get_manager
 
 
 @verdi.group('process')
@@ -270,8 +270,9 @@ def process_actions(futures_map, infinitive, present, past, wait=False, timeout=
     """
     # pylint: disable=too-many-branches
     import kiwipy
-    from aiida.work import CommunicationTimeout
     from concurrent import futures
+
+    from aiida.manage.external.rmq import CommunicationTimeout
 
     scheduled = {}
     try:

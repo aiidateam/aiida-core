@@ -23,7 +23,7 @@ def data_import_xyz(filename, **kwargs):
     Imports an XYZ-file.
     """
     from os.path import abspath
-    from aiida.orm.nodes.data.structure import StructureData
+    from aiida.orm import StructureData
 
     vacuum_addition = kwargs.pop('vacuum_addition')
     vacuum_factor = kwargs.pop('vacuum_factor')
@@ -91,7 +91,7 @@ def data_import_ase(filename, **kwargs):
     Imports a structure in a number of formats using the ASE routines.
     """
     from os.path import abspath
-    from aiida.orm.nodes.data.structure import StructureData
+    from aiida.orm import StructureData
 
     try:
         import ase.io

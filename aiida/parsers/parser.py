@@ -17,7 +17,9 @@ from __future__ import absolute_import
 
 from aiida.common import exceptions
 from aiida.common import extendeddicts
-from aiida.work import calcfunction
+from aiida.engine import calcfunction
+
+__all__ = ('Parser',)
 
 
 class Parser(object):  # pylint: disable=useless-object-inheritance
@@ -76,7 +78,7 @@ class Parser(object):  # pylint: disable=useless-object-inheritance
 
         :param link_label: the name of the link label
         :param node: the node to register as an output
-        :raises ModificationNotAllowed: if an output node was already registered with the same link label
+        :raises aiida.common.ModificationNotAllowed: if an output node was already registered with the same link label
         """
         if link_label in self._outputs:
             raise exceptions.ModificationNotAllowed('the output {} already exists'.format(link_label))

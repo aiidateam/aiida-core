@@ -15,6 +15,9 @@ from __future__ import absolute_import
 
 from .entry_point import load_entry_point
 
+__all__ = ('BaseFactory', 'CalculationFactory', 'DataFactory', 'DbImporterFactory', 'OrbitalFactory', 'ParserFactory',
+           'SchedulerFactory', 'TransportFactory', 'TcodExporterFactory', 'WorkflowFactory')
+
 
 def BaseFactory(group, name):
     """Return the plugin class registered under a given entry point group and name.
@@ -22,9 +25,9 @@ def BaseFactory(group, name):
     :param group: entry point group
     :param name: entry point name
     :return: the plugin class
-    :raises MissingEntryPointError: entry point was not registered
-    :raises MultipleEntryPointError: entry point could not be uniquely resolved
-    :raises LoadingEntryPointError: entry point could not be loaded
+    :raises aiida.common.MissingEntryPointError: entry point was not registered
+    :raises aiida.common.MultipleEntryPointError: entry point could not be uniquely resolved
+    :raises aiida.common.LoadingEntryPointError: entry point could not be loaded
     """
     return load_entry_point(group, name)
 
@@ -33,7 +36,7 @@ def CalculationFactory(entry_point):
     """Return the `CalcJob` sub class registered under the given entry point.
 
     :param entry_point: the entry point name
-    :return: sub class of :py:class:`~aiida.work.calcjob.CalcJob`
+    :return: sub class of :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob`
     """
     return BaseFactory('aiida.calculations', entry_point)
 
@@ -105,6 +108,6 @@ def WorkflowFactory(entry_point):
     """Return the `WorkChain` sub class registered under the given entry point.
 
     :param entry_point: the entry point name
-    :return: sub class of :py:class:`~aiida.work.workchain.WorkChain`
+    :return: sub class of :py:class:`~aiida.engine.processes.workchains.workchain.WorkChain`
     """
     return BaseFactory('aiida.workflows', entry_point)

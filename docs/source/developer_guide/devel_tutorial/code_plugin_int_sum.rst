@@ -147,7 +147,7 @@ summation code (a detailed description of the different sections follows)::
     # -*- coding: utf-8 -*-
 
     from aiida.orm.calculation.job import JobCalculation
-    from aiida.orm.nodes.data.parameter import ParameterData
+    from aiida.orm.nodes.data.dict import Dict
     from aiida.common.lang import classproperty
     from aiida.common.exceptions import InputValidationError
     from aiida.common.exceptions import ValidationError
@@ -174,7 +174,7 @@ summation code (a detailed description of the different sections follows)::
             retdict = JobCalculation._use_methods
             retdict.update({
                 "parameters": {
-                   'valid_types': ParameterData,
+                   'valid_types': Dict,
                    'additional_parameter': None,
                    'linkname': 'parameters',
                    'docstring': ("Use a node that specifies the input parameters "
@@ -198,9 +198,9 @@ summation code (a detailed description of the different sections follows)::
             except KeyError:
                 raise InputValidationError("No parameters specified for this "
                                            "calculation")
-            if not isinstance(parameters, ParameterData):
+            if not isinstance(parameters, Dict):
                 raise InputValidationError("parameters is not of type "
-                                           "ParameterData")
+                                           "Dict")
             try:
                 code = inputdict.pop(self.get_linkname('code'))
             except KeyError:
@@ -307,7 +307,7 @@ code snippet::
 
     retdict.update({
         "parameters": {
-           'valid_types': ParameterData,
+           'valid_types': Dict,
            'additional_parameter': None,
            'linkname': 'parameters',
            'docstring': ("Use a node that specifies the input parameters "
@@ -316,7 +316,7 @@ code snippet::
         })
 
 This means that this specific summation plugin expects only one input data 
-node, which is of the type ``ParameterData`` and with link name ``parameters``.
+node, which is of the type ``Dict`` and with link name ``parameters``.
 
 
 The main plugin logic
@@ -568,7 +568,7 @@ detail later::
     from aiida.orm.calculation.job.sum import SumCalculation
     from aiida.parsers.parser import Parser
     from aiida.parsers.exceptions import OutputParsingError
-    from aiida.orm.nodes.data.parameter import ParameterData
+    from aiida.orm.nodes.data.dict import Dict
 
     import json
 
@@ -609,7 +609,7 @@ detail later::
                 return successful,()
 
             # save the arrays
-            output_data = ParameterData(dict=out_dict)
+            output_data = Dict(dict=out_dict)
             link_name = self.get_linkname_outparams()
             new_nodes_list = [(link_name, output_data)]
 
@@ -635,11 +635,11 @@ We then read and parse the output file that will contain the result::
   class.
 
 After loading the code result data to the dictionary ``out_dict``,
-we construct a ``ParameterData`` object (``ParameterData(dict=out_dict)``)
+we construct a ``Dict`` object (``Dict(dict=out_dict)``)
 that will be linked to the calculation in the AiiDA graph to be later
 in the database::
 
-    output_data = ParameterData(dict=out_dict)
+    output_data = Dict(dict=out_dict)
     link_name = self.get_linkname_outparams()
     new_nodes_list = [(link_name, output_data)]
 
@@ -654,7 +654,7 @@ in the database::
   defined in all ``Parser`` classes and subclasses. In general, you can have
   multiple output nodes with any name, but it is good practice so have also
   one of the output nodes with link name ``self.get_linkname_outparams()``
-  and of type ``ParameterData``. The reason is that this node is the one exposed
+  and of type ``Dict``. The reason is that this node is the one exposed
   with the ``calc.res`` interface (for instance, later we will be able to get
   the results using ``print calc.res.sum``.
 
@@ -683,7 +683,7 @@ sample script follows (other examples can be found in the
     import os
 
     from aiida.common.exceptions import NotExistent
-    ParameterData = DataFactory('parameter')
+    Dict = DataFactory('dict')
 
     # The name of the code setup in AiiDA
     codename = 'sum'
@@ -709,7 +709,7 @@ sample script follows (other examples can be found in the
     computer = Computer.get(computer_name) 
 
     # These are the two numbers to sum
-    parameters = ParameterData(dict={'x1':2,'x2':3})
+    parameters = Dict(dict={'x1':2,'x2':3})
 
     calc = code.new_calc()
     calc.label = "Test sum"
@@ -741,7 +741,7 @@ to be used::
 
 and the definition of the parameters::
 
-    parameters = ParameterData(dict={'x1':2,'x2':3})
+    parameters = Dict(dict={'x1':2,'x2':3})
     calc.use_parameters(parameters)
 
 If everything is done correctly, by running the script a new calculation  will

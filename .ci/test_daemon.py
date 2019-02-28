@@ -18,23 +18,19 @@ import time
 from six.moves import range
 
 from aiida.common import exceptions
+from aiida.engine import run_get_node, submit
+from aiida.engine.daemon.client import get_daemon_client
+from aiida.engine.persistence import ObjectLoader
 from aiida.manage.caching import enable_caching
-from aiida.daemon.client import get_daemon_client
-from aiida.orm import Code, load_node
-from aiida.orm.nodes.data.int import Int
-from aiida.orm.nodes.data.str import Str
-from aiida.orm.nodes.data.list import List
-from aiida.orm import CalcJobNode
+from aiida.orm import CalcJobNode, Code, load_node, Int, Str, List
 from aiida.plugins import CalculationFactory, DataFactory
-from aiida.work.launch import run_get_node, submit
-from aiida.work.persistence import ObjectLoader
 from workchains import (
     NestedWorkChain, DynamicNonDbInput, DynamicDbInput, DynamicMixedInput, ListEcho, CalcFunctionRunnerWorkChain,
     WorkFunctionRunnerWorkChain, NestedInputNamespace, SerializeWorkChain
 )
 
 
-ParameterData = DataFactory('parameter')
+Dict = DataFactory('dict')
 
 codename = 'doubler@torquessh'
 timeout_secs = 4 * 60  # 4 minutes
@@ -161,14 +157,22 @@ def validate_cached(cached_calcs):
             valid = False
 
         if isinstance(calc, CalcJobNode):
-            if 'raw_input' not in calc.repository._get_folder_pathsubfolder.get_content_list():
-                print("Cached calculation <{}> does not have a 'raw_input' folder".format(calc.pk))
+            original_calc = load_node(calc.get_extra('_aiida_cached_from'))
+            files_original = original_calc.list_object_names()
+            files_cached = calc.list_object_names()
+
+            if not files_cached:
+                print("Cached calculation <{}> does not have any raw inputs files".format(calc.pk))
                 print_report(calc.pk)
                 valid = False
-            original_calc = load_node(calc.get_extra('_aiida_cached_from'))
-            if 'raw_input' not in original_calc.repository._get_folder_pathsubfolder.get_content_list():
-                print("Original calculation <{}> does not have a 'raw_input' folder after being cached from."
+            if not files_original:
+                print("Original calculation <{}> does not have any raw inputs files after being cached from."
                       .format(original_calc.pk))
+                valid = False
+
+            if set(files_original) != set(files_cached):
+                print("different raw input files [{}] vs [{}] for original<{}> and cached<{}> calculation".format(
+                    set(files_original), set(files_cached), original_calc.pk, calc.pk))
                 valid = False
 
     return valid
@@ -199,8 +203,8 @@ def create_calculation_process(code, inputval):
     Create the process and inputs for a submitting / running a calculation.
     """
     TemplatereplacerCalculation = CalculationFactory('templatereplacer')
-    parameters = ParameterData(dict={'value': inputval})
-    template = ParameterData(dict={
+    parameters = Dict(dict={'value': inputval})
+    template = Dict(dict={
         # The following line adds a significant sleep time.
         # I set it to 1 second to speed up tests
         # I keep it to a non-zero value because I want

@@ -23,8 +23,8 @@ If you need to include additional endpoints besides those built in the AiiDA RES
 
 Let's provide a minimal example through which we add the endpoint ``/new-endpoint`` supporting two HTTP methods:
 
-    - *GET*: retrieves the latest created ParameterData object and returns its ``id``, ``ctime`` in ISO 8601 format, and ``attributes``.
-    - *POST*: creates a ParameterData object with placeholder attributes, stores it, and returns its ``id``.
+    - *GET*: retrieves the latest created Dict object and returns its ``id``, ``ctime`` in ISO 8601 format, and ``attributes``.
+    - *POST*: creates a Dict object with placeholder attributes, stores it, and returns its ``id``.
 
 Let's assume you've put the code in the file ``example.py``, reading:
 
@@ -41,19 +41,18 @@ Let's assume you've put the code in the file ``example.py``, reading:
         resource containing GET and POST methods. Description of each method
         follows:
 
-        GET: returns id, ctime, and attributes of the latest created ParameterData.
+        GET: returns id, ctime, and attributes of the latest created Dict.
 
-        POST: creates a ParameterData object, stores it in the database,
+        POST: creates a Dict object, stores it in the database,
         and returns its newly assigned id.
 
         """
 
         def get(self):
-            from aiida.orm.querybuilder import QueryBuilder
-            from aiida.orm.nodes.data.parameter import ParameterData
+            from aiida.orm import QueryBuilder, Dict
 
             qb = QueryBuilder()
-            qb.append(ParameterData,
+            qb.append(Dict,
                       project=['id', 'ctime', 'attributes'],
                       tag='pdata')
             qb.order_by({'pdata': {'ctime': "desc"}})
@@ -66,10 +65,10 @@ Let's assume you've put the code in the file ``example.py``, reading:
                         attributes=result[2])
 
         def post(self):
-            from aiida.orm.nodes.data.parameter import ParameterData
+            from aiida.orm import Dict
 
             params = dict(property1="spam", property2="egg")
-            paramsData = ParameterData(dict=params).store()
+            paramsData = Dict(dict=params).store()
 
             return {'id': paramsData.pk}
 
@@ -133,19 +132,18 @@ Then we define a class representing the additional resource:
         resource containing GET and POST methods. Description of each method
         follows:
 
-        GET: returns id, ctime, and attributes of the latest created ParameterData.
+        GET: returns id, ctime, and attributes of the latest created Dict.
 
-        POST: creates a ParameterData object, stores it in the database,
+        POST: creates a Dict object, stores it in the database,
         and returns its newly assigned id.
 
         """
 
         def get(self):
-            from aiida.orm.querybuilder import QueryBuilder
-            from aiida.orm.nodes.data.parameter import ParameterData
+            from aiida.orm import QueryBuilder, Dict
 
             qb = QueryBuilder()
-            qb.append(ParameterData,
+            qb.append(Dict,
                       project=['id', 'ctime', 'attributes'],
                       tag='pdata')
             qb.order_by({'pdata': {'ctime': "desc"}})
@@ -158,10 +156,10 @@ Then we define a class representing the additional resource:
                         attributes=result[2])
 
         def post(self):
-            from aiida.orm.nodes.data.parameter import ParameterData
+            from aiida.orm import Dict
 
             params = dict(property1="spam", property2="egg")
-            paramsData = ParameterData(dict=params).store()
+            paramsData = Dict(dict=params).store()
 
             return {'id': paramsData.pk}
 
@@ -288,7 +286,7 @@ Now, let us create a node through the POST method, and check it again through GE
     curl http://127.0.0.2:6000/api/v2/new-endpoint/ -X GET
     {"attributes": {"property1": "spam", "property2": "egg"}, "ctime": "2017-06-20T15:36:56.320180+00:00", "id": 410618}
 
-The POST request triggers the creation of a new ParameterData node, as confirmed by the response to the GET request.
+The POST request triggers the creation of a new Dict node, as confirmed by the response to the GET request.
 
 As a final remark, there might be circumstances in which you do not want to hook up the API from command line. For example, you might want to expose the API through Apache for production, rather than the built-in Flask server. In this case, you can invoke ``run_api`` to return two custom objects ``app`` and ``api``.
 

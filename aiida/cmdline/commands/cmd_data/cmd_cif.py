@@ -39,7 +39,7 @@ def cif():
 @decorators.with_dbenv()
 def cif_list(raw, formula_mode, past_days, groups, all_users):
     """List store CifData objects."""
-    from aiida.orm.nodes.data.cif import CifData
+    from aiida.orm import CifData
     from tabulate import tabulate
 
     elements = None
@@ -95,8 +95,7 @@ def cif_content(data):
     """Show the content of the file behind CifData objects."""
     for node in data:
         try:
-            with open(node.get_file_abs_path(), 'r') as handle:
-                echo.echo(handle.read())
+            echo.echo(node.get_content())
         except IOError as exception:
             echo.echo_warning('could not read the content for CifData<{}>: {}'.format(node.pk, str(exception)))
 
@@ -123,7 +122,7 @@ def cif_export(**kwargs):
 @decorators.with_dbenv()
 def cif_import(filename):
     """Import structure into CifData object."""
-    from aiida.orm.nodes.data.cif import CifData
+    from aiida.orm import CifData
 
     try:
         node, _ = CifData.get_or_create(filename)

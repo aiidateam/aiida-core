@@ -75,9 +75,7 @@ def validate_link(source, target, link_type, link_label):
     :raise ValueError: if the proposed link is invalid
     """
     from aiida.common.links import LinkType
-    from aiida.orm import Node
-    from aiida.orm.nodes.data import Data
-    from aiida.orm import CalculationNode, WorkflowNode
+    from aiida.orm import Node, Data, CalculationNode, WorkflowNode
 
     if not isinstance(link_type, LinkType):
         raise TypeError('the link_type should be a value from the LinkType enum')
@@ -245,7 +243,7 @@ class LinkManager(object):  # pylint: disable=useless-object-inheritance
         """Return the node from list for given label.
 
         :return: node that corresponds to the given label
-        :raises NotExistent: if the label is not present among the link_triples
+        :raises aiida.common.NotExistent: if the label is not present among the link_triples
         """
         for entry in self.link_triples:
             if entry.link_label == label:

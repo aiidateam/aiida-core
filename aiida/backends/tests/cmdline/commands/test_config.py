@@ -17,7 +17,7 @@ from click.testing import CliRunner
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.tests.utils.configuration import with_temporary_config_instance
 from aiida.cmdline.commands import cmd_verdi
-from aiida.manage import get_config
+from aiida.manage.configuration import get_config
 
 
 class TestVerdiConfig(AiidaTestCase):

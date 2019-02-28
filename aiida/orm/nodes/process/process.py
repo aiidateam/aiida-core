@@ -97,6 +97,14 @@ class ProcessNode(Sealable, Node):
 
         return process_class
 
+    def set_process_type(self, process_class):
+        """
+        Set the process type
+
+        :param process_class: the process class using this process node as storage
+        """
+        self.process_type = process_class.build_process_type()
+
     @property
     def process_label(self):
         """
@@ -106,7 +114,7 @@ class ProcessNode(Sealable, Node):
         """
         return self.get_attribute(self.PROCESS_LABEL_KEY, None)
 
-    def _set_process_label(self, label):
+    def set_process_label(self, label):
         """
         Set the process label
 
@@ -128,7 +136,7 @@ class ProcessNode(Sealable, Node):
 
         return ProcessState(state)
 
-    def _set_process_state(self, state):
+    def set_process_state(self, state):
         """
         Set the process state
 
@@ -149,7 +157,7 @@ class ProcessNode(Sealable, Node):
         """
         return self.get_attribute(self.PROCESS_STATUS_KEY, None)
 
-    def _set_process_status(self, status):
+    def set_process_status(self, status):
         """
         Set the process status
 
@@ -252,7 +260,7 @@ class ProcessNode(Sealable, Node):
         """
         return self.get_attribute(self.EXIT_STATUS_KEY, None)
 
-    def _set_exit_status(self, status):
+    def set_exit_status(self, status):
         """
         Set the exit status of the process
 
@@ -278,7 +286,7 @@ class ProcessNode(Sealable, Node):
         """
         return self.get_attribute(self.EXIT_MESSAGE_KEY, None)
 
-    def _set_exit_message(self, message):
+    def set_exit_message(self, message):
         """
         Set the exit message of the process, if None nothing will be done
 
@@ -306,7 +314,7 @@ class ProcessNode(Sealable, Node):
 
         return None
 
-    def _set_exception(self, exception):
+    def set_exception(self, exception):
         """
         Set the exception of the process
 
@@ -334,7 +342,7 @@ class ProcessNode(Sealable, Node):
         """
         return self.set_attribute(self.CHECKPOINT_KEY, checkpoint)
 
-    def del_checkpoint(self):
+    def delete_checkpoint(self):
         """
         Delete the checkpoint bundle set for the process
         """

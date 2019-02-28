@@ -16,13 +16,11 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from aiida import work
-from aiida.orm.nodes.data.base import NumericType
-from aiida.orm.nodes.data.float import Float
-from aiida.orm.nodes.data.int import Int
+from aiida.engine import WorkChain, run
+from aiida.orm import NumericType, Float, Int
 
 
-class SumWorkChain(work.WorkChain):
+class SumWorkChain(WorkChain):
 
     @classmethod
     def define(cls, spec):
@@ -38,7 +36,7 @@ class SumWorkChain(work.WorkChain):
         self.out('sum', self.inputs.a + self.inputs.b)
 
 
-class ProductWorkChain(work.WorkChain):
+class ProductWorkChain(WorkChain):
 
     @classmethod
     def define(cls, spec):
@@ -54,7 +52,7 @@ class ProductWorkChain(work.WorkChain):
         self.out('product', self.inputs.a * self.inputs.b)
 
 
-class SumProductWorkChain(work.WorkChain):
+class SumProductWorkChain(WorkChain):
 
     @classmethod
     def define(cls, spec):
@@ -82,13 +80,13 @@ def main():
         'c': Int(6)
     }
 
-    results = work.run(SumWorkChain, **inputs)
+    results = run(SumWorkChain, **inputs)
     print('Result of SumWorkChain: {}'.format(results))
 
-    results = work.run(ProductWorkChain, **inputs)
+    results = run(ProductWorkChain, **inputs)
     print('Result of ProductWorkChain: {}'.format(results))
 
-    results = work.run(SumProductWorkChain, **inputs)
+    results = run(SumProductWorkChain, **inputs)
     print('Result of SumProductWorkChain: {}'.format(results))
 
 

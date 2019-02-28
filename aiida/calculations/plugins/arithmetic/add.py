@@ -14,10 +14,9 @@ from __future__ import absolute_import
 
 import six
 
+from aiida import orm
 from aiida.common.datastructures import CalcInfo, CodeInfo
-from aiida.orm.nodes.data.float import Float
-from aiida.orm.nodes.data.int import Int
-from aiida.work.calcjob import CalcJob
+from aiida.engine import CalcJob
 
 
 class ArithmeticAddCalculation(CalcJob):
@@ -29,9 +28,9 @@ class ArithmeticAddCalculation(CalcJob):
         spec.input('metadata.options.input_filename', valid_type=six.string_types, default='aiida.in', non_db=True)
         spec.input('metadata.options.output_filename', valid_type=six.string_types, default='aiida.out', non_db=True)
         spec.input('metadata.options.parser_name', valid_type=six.string_types, default='arithmetic.add', non_db=True)
-        spec.input('x', valid_type=(Int, Float), help='The left operand.')
-        spec.input('y', valid_type=(Int, Float), help='The right operand.')
-        spec.output('sum', valid_type=(Int, Float), help='The sum of the left and right operand.')
+        spec.input('x', valid_type=(orm.Int, orm.Float), help='The left operand.')
+        spec.input('y', valid_type=(orm.Int, orm.Float), help='The right operand.')
+        spec.output('sum', valid_type=(orm.Int, orm.Float), help='The sum of the left and right operand.')
         spec.exit_code(
             100, 'ERROR_NO_RETRIEVED_FOLDER', message='The retrieved folder data node could not be accessed.')
         spec.exit_code(

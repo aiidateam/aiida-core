@@ -16,7 +16,7 @@ from ete3 import Tree
 
 from aiida.common.links import LinkType
 
-__all__ = ['draw_children', 'draw_parents', 'format_call_graph']
+__all__ = ('draw_children', 'draw_parents', 'format_call_graph')
 
 TREE_LAST_ENTRY = u'\u2514\u2500\u2500 '
 TREE_MIDDLE_ENTRY = u'\u251C\u2500\u2500 '

@@ -29,13 +29,13 @@ EXPORT_OPTIONS = [
         '--parameter-data',
         type=click.INT,
         default=None,
-        help="ID of the ParameterData to be exported alongside the"
+        help="ID of the Dict to be exported alongside the"
         " StructureData instance. By default, if StructureData"
         " originates from a calculation with single"
-        " ParameterData in the output, aforementioned"
-        " ParameterData is picked automatically. Instead, the"
+        " Dict in the output, aforementioned"
+        " Dict is picked automatically. Instead, the"
         " option is used in the case the calculation produces"
-        " more than a single instance of ParameterData."),
+        " more than a single instance of Dict."),
     click.option(
         '--dump-aiida-database/--no-dump-aiida-database',
         'dump_aiida_database',

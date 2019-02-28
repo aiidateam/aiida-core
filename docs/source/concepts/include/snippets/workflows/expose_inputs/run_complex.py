@@ -2,10 +2,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 
-from aiida.orm.nodes.data.bool import Bool
-from aiida.orm.nodes.data.float import Float
-from aiida.orm.nodes.data.int import Int
-from aiida.work import run
+from aiida.orm import Bool, Float, Int
+from aiida.engine import run
 from complex_parent import ComplexParentWorkChain
 
 if __name__ == '__main__':

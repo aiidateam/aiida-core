@@ -23,10 +23,10 @@ import tempfile
 import six
 from six.moves import range, zip
 
+from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm.importexport import import_data, export
 from aiida.common.utils import get_new_uuid
-from aiida.orm import load_node
+from aiida.orm.importexport import import_data, export
 
 
 class TestSpecificImport(AiidaTestCase):
@@ -49,10 +49,7 @@ class TestSpecificImport(AiidaTestCase):
         found at the export file (when imported to an SQLA profile), the SQLA
         import code used to crash. This test demonstrates this problem.
         """
-        from aiida.orm import Node, QueryBuilder
-        from aiida.orm.nodes.data.parameter import ParameterData
-
-        parameters = ParameterData(dict={
+        parameters = orm.Dict(dict={
             'Pr': {
                 'cutoff': 50.0,
                 'pseudo_type': 'Wentzcovitch',
@@ -72,26 +69,23 @@ class TestSpecificImport(AiidaTestCase):
             export(nodes, outfile=handle.name, overwrite=True, silent=True)
 
             # Check that we have the expected number of nodes in the database
-            self.assertEqual(QueryBuilder().append(Node).count(), len(nodes))
+            self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), len(nodes))
 
             # Clean the database and verify there are no nodes left
             self.clean_db()
-            self.assertEqual(QueryBuilder().append(Node).count(), 0)
+            self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), 0)
 
             # After importing we should have the original number of nodes again
             import_data(handle.name, silent=True)
-            self.assertEqual(QueryBuilder().append(Node).count(), len(nodes))
+            self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), len(nodes))
 
     def test_cycle_structure_data(self):
         """
-        Create an export with some CalculationNode and Data nodes and import it after having
+        Create an export with some orm.CalculationNode and Data nodes and import it after having
         cleaned the database. Verify that the nodes and their attributes are restored
         properly after importing the created export archive
         """
         from aiida.common.links import LinkType
-        from aiida.orm import CalculationNode, Node, QueryBuilder
-        from aiida.orm.nodes.data.structure import StructureData
-        from aiida.orm.nodes.data.remote import RemoteData
 
         test_label = 'Test structure'
         test_cell = [
@@ -114,20 +108,19 @@ class TestSpecificImport(AiidaTestCase):
             }
         ]
 
-        structure = StructureData(cell=test_cell)
+        structure = orm.StructureData(cell=test_cell)
         structure.append_atom(symbols=['Fe'], position=[0, 0, 0])
         structure.append_atom(symbols=['S'], position=[2, 2, 2])
         structure.label = test_label
         structure.store()
 
-        # pylint: disable=protected-access
-        parent_process = CalculationNode()
+        parent_process = orm.CalculationNode()
         parent_process.set_attribute('key', 'value')
         parent_process.store()
-        child_calculation = CalculationNode()
+        child_calculation = orm.CalculationNode()
         child_calculation.set_attribute('key', 'value')
         child_calculation.store()
-        remote_folder = RemoteData(computer=self.computer, remote_path='/').store()
+        remote_folder = orm.RemoteData(computer=self.computer, remote_path='/').store()
 
         remote_folder.add_incoming(parent_process, link_type=LinkType.CREATE, link_label='link')
         child_calculation.add_incoming(remote_folder, link_type=LinkType.INPUT_CALC, link_label='link')
@@ -139,45 +132,45 @@ class TestSpecificImport(AiidaTestCase):
             export(nodes, outfile=handle.name, overwrite=True, silent=True)
 
             # Check that we have the expected number of nodes in the database
-            self.assertEqual(QueryBuilder().append(Node).count(), len(nodes))
+            self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), len(nodes))
 
             # Clean the database and verify there are no nodes left
             self.clean_db()
-            self.assertEqual(QueryBuilder().append(Node).count(), 0)
+            self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), 0)
 
             # After importing we should have the original number of nodes again
             import_data(handle.name, silent=True)
-            self.assertEqual(QueryBuilder().append(Node).count(), len(nodes))
+            self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), len(nodes))
 
-            # Verify that CalculationNodes have non-empty attribute dictionaries
-            builder = QueryBuilder().append(CalculationNode)
+            # Verify that orm.CalculationNodes have non-empty attribute dictionaries
+            builder = orm.QueryBuilder().append(orm.CalculationNode)
             for [calculation] in builder.iterall():
                 self.assertIsInstance(calculation.attributes, dict)
                 self.assertNotEqual(len(calculation.attributes), 0)
 
             # Verify that the structure data maintained its label, cell and kinds
-            builder = QueryBuilder().append(StructureData)
+            builder = orm.QueryBuilder().append(orm.StructureData)
             for [structure] in builder.iterall():
                 self.assertEqual(structure.label, test_label)
                 self.assertEqual(structure.cell, test_cell)
 
-            builder = QueryBuilder().append(StructureData, project=['attributes.kinds'])
+            builder = orm.QueryBuilder().append(orm.StructureData, project=['attributes.kinds'])
             for [kinds] in builder.iterall():
                 self.assertEqual(len(kinds), 2)
                 for kind in kinds:
                     self.assertIn(kind, test_kinds)
 
-            # Check that there is a StructureData that is an output of a CalculationNode
-            builder = QueryBuilder()
-            builder.append(CalculationNode, project=['uuid'], tag='calculation')
-            builder.append(StructureData, with_incoming='calculation')
+            # Check that there is a StructureData that is an output of a orm.CalculationNode
+            builder = orm.QueryBuilder()
+            builder.append(orm.CalculationNode, project=['uuid'], tag='calculation')
+            builder.append(orm.StructureData, with_incoming='calculation')
             self.assertGreater(len(builder.all()), 0)
 
-            # Check that there is a RemoteData that is a child and parent of a CalculationNode
-            builder = QueryBuilder()
-            builder.append(CalculationNode, tag='parent')
-            builder.append(RemoteData, project=['uuid'], with_incoming='parent', tag='remote')
-            builder.append(CalculationNode, with_incoming='remote')
+            # Check that there is a RemoteData that is a child and parent of a orm.CalculationNode
+            builder = orm.QueryBuilder()
+            builder.append(orm.CalculationNode, tag='parent')
+            builder.append(orm.RemoteData, project=['uuid'], with_incoming='parent', tag='remote')
+            builder.append(orm.CalculationNode, with_incoming='remote')
             self.assertGreater(len(builder.all()), 0)
 
 
@@ -192,8 +185,6 @@ class TestSimple(AiidaTestCase):
 
     def test_base_data_nodes(self):
         """Test ex-/import of Base Data nodes"""
-        from aiida.orm import Str, Int, Float, Bool
-
         # Creating a folder for the import/export files
         temp_folder = tempfile.mkdtemp()
         try:
@@ -202,7 +193,7 @@ class TestSimple(AiidaTestCase):
             filename = os.path.join(temp_folder, "export.tar.gz")
 
             # producing nodes:
-            nodes = [cls(val).store() for val, cls in zip(values, (Str, Int, Float, Bool))]
+            nodes = [cls(val).store() for val, cls in zip(values, (orm.Str, orm.Int, orm.Float, orm.Bool))]
             # my uuid - list to reload the node:
             uuids = [n.uuid for n in nodes]
             # exporting the nodes:
@@ -213,7 +204,7 @@ class TestSimple(AiidaTestCase):
             import_data(filename, silent=True)
             # Checking whether values are preserved:
             for uuid, refval in zip(uuids, values):
-                self.assertEqual(load_node(uuid).value, refval)
+                self.assertEqual(orm.load_node(uuid).value, refval)
         finally:
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
@@ -222,7 +213,6 @@ class TestSimple(AiidaTestCase):
         """Simple ex-/import of CalcJobNode with input StructureData"""
         from aiida.common.links import LinkType
         from aiida.plugins import DataFactory
-        from aiida.orm import CalcJobNode
 
         # Creating a folder for the import/export files
         temp_folder = tempfile.mkdtemp()
@@ -231,7 +221,7 @@ class TestSimple(AiidaTestCase):
             struct = StructureData()
             struct.store()
 
-            calc = CalcJobNode()
+            calc = orm.CalcJobNode()
             calc.computer = self.computer
             calc.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             calc.store()
@@ -242,7 +232,7 @@ class TestSimple(AiidaTestCase):
 
             attrs = {}
             for pk in pks:
-                node = load_node(pk)
+                node = orm.load_node(pk)
                 attrs[node.uuid] = dict()
                 for k in node.attributes.keys():
                     attrs[node.uuid][k] = node.get_attribute(k)
@@ -258,7 +248,7 @@ class TestSimple(AiidaTestCase):
             # databases is that pk always increment, even if you've deleted elements
             import_data(filename, silent=True)
             for uuid in attrs:
-                node = load_node(uuid)
+                node = orm.load_node(uuid)
                 for k in attrs[uuid].keys():
                     self.assertEqual(attrs[uuid][k], node.get_attribute(k))
         finally:
@@ -373,6 +363,7 @@ class TestSimple(AiidaTestCase):
             export_tree([struct], folder=folder, silent=True,
                         forbidden_licenses=crashing_filter)
 
+
 class TestUsers(AiidaTestCase):
     """Test ex-/import cases related to Users"""
 
@@ -391,7 +382,7 @@ class TestUsers(AiidaTestCase):
         from aiida.orm import CalcJobNode
         from aiida.orm.nodes.data.structure import StructureData
         from aiida.common.links import LinkType
-        from aiida.manage import get_manager
+        from aiida.manage.manager import get_manager
 
         manager = get_manager()
 
@@ -447,10 +438,10 @@ class TestUsers(AiidaTestCase):
             # Check that the imported nodes are correctly imported and that
             # the user assigned to the nodes is the right one
             for uuid in uuids_u1:
-                node = load_node(uuid=uuid)
+                node = orm.load_node(uuid=uuid)
                 self.assertEqual(node.user.email, new_email)
             for uuid in uuids_u2:
-                self.assertEqual(load_node(uuid).user.email, manager.get_profile().default_user_email)
+                self.assertEqual(orm.load_node(uuid).user.email, manager.get_profile().default_user_email)
         finally:
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
@@ -463,11 +454,8 @@ class TestUsers(AiidaTestCase):
         all the nodes that have been finally imported belonging to the right
         users.
         """
-        from aiida.orm import User
-        from aiida.orm import CalcJobNode
-        from aiida.orm.nodes.data.structure import StructureData
         from aiida.common.links import LinkType
-        from aiida.manage import get_manager
+        from aiida.manage.manager import get_manager
 
         manager = get_manager()
 
@@ -476,15 +464,15 @@ class TestUsers(AiidaTestCase):
         try:
             # Create another user
             new_email = "newuser@new.n"
-            user = User(email=new_email).store()
+            user = orm.User(email=new_email).store()
 
             # Create a structure data node that has a calculation as output
-            sd1 = StructureData()
+            sd1 = orm.StructureData()
             sd1.user = user
             sd1.label = 'sd1'
             sd1.store()
 
-            jc1 = CalcJobNode()
+            jc1 = orm.CalcJobNode()
             jc1.computer = self.computer
             jc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             jc1.user = user
@@ -493,7 +481,7 @@ class TestUsers(AiidaTestCase):
             jc1.add_incoming(sd1, link_type=LinkType.INPUT_CALC, link_label='link')
 
             # Create some nodes from a different user
-            sd2 = StructureData()
+            sd2 = orm.StructureData()
             sd2.user = user
             sd2.label = 'sd2'
             sd2.store()
@@ -511,20 +499,20 @@ class TestUsers(AiidaTestCase):
             # Check that the imported nodes are correctly imported and that
             # the user assigned to the nodes is the right one
             for uuid in uuids1:
-                self.assertEqual(load_node(uuid).user.email, new_email)
+                self.assertEqual(orm.load_node(uuid).user.email, new_email)
 
             # Now we continue to generate more data based on the imported
             # data
-            sd2_imp = load_node(sd2_uuid)
+            sd2_imp = orm.load_node(sd2_uuid)
 
-            jc2 = CalcJobNode()
+            jc2 = orm.CalcJobNode()
             jc2.computer = self.computer
             jc2.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             jc2.label = 'jc2'
             jc2.store()
             jc2.add_incoming(sd2_imp, link_type=LinkType.INPUT_CALC, link_label='l2')
 
-            sd3 = StructureData()
+            sd3 = orm.StructureData()
             sd3.label = 'sd3'
             sd3.store()
             sd3.add_incoming(jc2, link_type=LinkType.CREATE, link_label='l3')
@@ -542,9 +530,9 @@ class TestUsers(AiidaTestCase):
             # Check that the imported nodes are correctly imported and that
             # the user assigned to the nodes is the right one
             for uuid in uuids1:
-                self.assertEqual(load_node(uuid).user.email, new_email)
+                self.assertEqual(orm.load_node(uuid).user.email, new_email)
             for uuid in uuids2:
-                self.assertEqual(load_node(uuid).user.email, manager.get_profile().default_user_email)
+                self.assertEqual(orm.load_node(uuid).user.email, manager.get_profile().default_user_email)
 
         finally:
             # Deleting the created temporary folder
@@ -610,10 +598,10 @@ class TestGroups(AiidaTestCase):
             # Check that the imported nodes are correctly imported and that
             # the user assigned to the nodes is the right one
             for uuid in n_uuids:
-                self.assertEqual(load_node(uuid).user.email, new_email)
+                self.assertEqual(orm.load_node(uuid).user.email, new_email)
 
             # Check that the exported group is imported correctly
-            builder = QueryBuilder()
+            builder = orm.QueryBuilder()
             builder.append(Group, filters={'uuid': {'==': gr1_uuid}})
             self.assertEqual(builder.count(), 1, "The group was not found.")
         finally:
@@ -656,10 +644,10 @@ class TestGroups(AiidaTestCase):
             # Check that the imported nodes are correctly imported and that
             # the user assigned to the nodes is the right one
             for uuid in n_uuids:
-                self.assertEqual(load_node(uuid).user.email, new_email)
+                self.assertEqual(orm.load_node(uuid).user.email, new_email)
 
             # Check that the exported group is imported correctly
-            builder = QueryBuilder()
+            builder = orm.QueryBuilder()
             builder.append(Group, filters={'uuid': {'==': g1_uuid}})
             self.assertEqual(builder.count(), 1, "The group was not found.")
         finally:
@@ -706,20 +694,20 @@ class TestGroups(AiidaTestCase):
             import_data(filename1, silent=True)
             # The import should have created a new group with a suffix
             # I check for this:
-            builder = QueryBuilder().append(Group, filters={'label':{'like':grouplabel+'%'}})
-            self.assertEqual(builder.count(),2)
+            builder = orm.QueryBuilder().append(Group, filters={'label': {'like': grouplabel + '%'}})
+            self.assertEqual(builder.count(), 2)
             # Now I check for the group having one member, and whether the name is different:
-            builder = QueryBuilder()
-            builder.append(Group, filters={'label':{'like':grouplabel+'%'}}, tag='g', project='label')
+            builder = orm.QueryBuilder()
+            builder.append(Group, filters={'label': {'like': grouplabel + '%'}}, tag='g', project='label')
             builder.append(StructureData, with_group='g')
-            self.assertEqual(builder.count(),1)
+            self.assertEqual(builder.count(), 1)
             # I check that the group name was changed:
             self.assertTrue(builder.all()[0][0] != grouplabel)
             # I import another name, the group should not be imported again
             import_data(filename1, silent=True)
-            builder = QueryBuilder()
-            builder.append(Group, filters={'label':{'like':grouplabel+'%'}})
-            self.assertEqual(builder.count(),2)
+            builder = orm.QueryBuilder()
+            builder.append(Group, filters={'label': {'like': grouplabel + '%'}})
+            self.assertEqual(builder.count(), 2)
 
         finally:
             # Deleting the created temporary folder
@@ -737,7 +725,7 @@ class TestCalculations(AiidaTestCase):
 
     def test_calcfunction(self):
         """Test @calcfunction"""
-        from aiida.work import calcfunction
+        from aiida.engine import calcfunction
         from aiida.orm.nodes.data.float import Float
         from aiida.common.exceptions import NotExistent
 
@@ -771,10 +759,10 @@ class TestCalculations(AiidaTestCase):
             import_data(filename1, silent=True)
             # Check that the imported nodes are correctly imported and that the value is preserved
             for uuid, value in uuids_values:
-                self.assertEqual(load_node(uuid).value, value)
+                self.assertEqual(orm.load_node(uuid).value, value)
             for uuid in not_wanted_uuids:
                 with self.assertRaises(NotExistent):
-                    load_node(uuid)
+                    orm.load_node(uuid)
         finally:
             # Deleting the created temporary folder
             shutil.rmtree(temp_folder, ignore_errors=True)
@@ -809,7 +797,7 @@ class TestCalculations(AiidaTestCase):
             import_data(filename1, silent=True)
 
             for uuid, value in uuids_values:
-                self.assertEqual(load_node(uuid).value, value)
+                self.assertEqual(orm.load_node(uuid).value, value)
 
         finally:
             # Deleting the created temporary folder
@@ -834,37 +822,33 @@ class TestComplex(AiidaTestCase):
         and import it. In the end it will check if the initial nodes are present
         at the imported graph.
         """
-        from aiida.orm import CalcJobNode
-        from aiida.orm.nodes.data.folder import FolderData
-        from aiida.orm.nodes.data.parameter import ParameterData
-        from aiida.orm.nodes.data.remote import RemoteData
         from aiida.common.links import LinkType
         from aiida.common.exceptions import NotExistent
 
         temp_folder = tempfile.mkdtemp()
         try:
-            calc1 = CalcJobNode()
+            calc1 = orm.CalcJobNode()
             calc1.computer = self.computer
             calc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             calc1.label = "calc1"
             calc1.store()
 
-            pd1 = ParameterData()
+            pd1 = orm.Dict()
             pd1.label = "pd1"
             pd1.store()
 
-            pd2 = ParameterData()
+            pd2 = orm.Dict()
             pd2.label = "pd2"
             pd2.store()
 
-            rd1 = RemoteData()
+            rd1 = orm.RemoteData()
             rd1.label = "rd1"
             rd1.set_remote_path("/x/y.py")
             rd1.computer = self.computer
             rd1.store()
             rd1.add_incoming(calc1, link_type=LinkType.CREATE, link_label='link')
 
-            calc2 = CalcJobNode()
+            calc2 = orm.CalcJobNode()
             calc2.computer = self.computer
             calc2.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             calc2.label = "calc2"
@@ -873,7 +857,7 @@ class TestComplex(AiidaTestCase):
             calc2.add_incoming(pd2, link_type=LinkType.INPUT_CALC, link_label='link2')
             calc2.add_incoming(rd1, link_type=LinkType.INPUT_CALC, link_label='link3')
 
-            fd1 = FolderData()
+            fd1 = orm.FolderData()
             fd1.label = "fd1"
             fd1.store()
             fd1.add_incoming(calc2, link_type=LinkType.CREATE, link_label='link')
@@ -891,7 +875,7 @@ class TestComplex(AiidaTestCase):
 
             for uuid, label in node_uuids_labels.items():
                 try:
-                    load_node(uuid)
+                    orm.load_node(uuid)
                 except NotExistent:
                     self.fail("Node with UUID {} and label {} was not "
                               "found.".format(uuid, label))
@@ -916,18 +900,15 @@ class TestComplex(AiidaTestCase):
         import random
         from datetime import datetime
 
-        from aiida.orm import Group, CalculationNode, QueryBuilder
-        from aiida.orm.nodes.data.array import ArrayData
-        from aiida.orm.nodes.data.parameter import ParameterData
         from aiida.common.hashing import make_hash
         from aiida.common.links import LinkType
 
         def get_hash_from_db_content(grouplabel):
-            builder = QueryBuilder()
-            builder.append(ParameterData, tag='p', project='*')
-            builder.append(CalculationNode, tag='c', project='*', edge_tag='p2c', edge_project=('label', 'type'))
-            builder.append(ArrayData, tag='a', project='*', edge_tag='c2a', edge_project=('label', 'type'))
-            builder.append(Group, filters={'label': grouplabel}, project='*', tag='g', with_node='a')
+            builder = orm.QueryBuilder()
+            builder.append(orm.Dict, tag='p', project='*')
+            builder.append(orm.CalculationNode, tag='c', project='*', edge_tag='p2c', edge_project=('label', 'type'))
+            builder.append(orm.ArrayData, tag='a', project='*', edge_tag='c2a', edge_project=('label', 'type'))
+            builder.append(orm.Group, filters={'label': grouplabel}, project='*', tag='g', with_node='a')
             # I want the query to contain something!
             self.assertTrue(builder.count() > 0)
             # The hash is given from the preservable entries in an export-import cycle,
@@ -974,15 +955,15 @@ class TestComplex(AiidaTestCase):
             # give some text:
             trial_dict.update({str(k): ''.join(random.choice(chars) for _ in range(size)) for k in range(20, 30)})
 
-            p = ParameterData(dict=trial_dict)
+            p = orm.Dict(dict=trial_dict)
             p.label = str(datetime.now())
             p.description = 'd_' + str(datetime.now())
             p.store()
-            c = CalculationNode()
+            c = orm.CalculationNode()
             # setting also trial dict as attributes, but randomizing the keys)
             (c.set_attribute(str(int(k) + np.random.randint(10)), v) for k, v in trial_dict.items())
             c.store()
-            a = ArrayData()
+            a = orm.ArrayData()
             a.set_array('array', nparr)
             a.store()
             # LINKS
@@ -990,7 +971,7 @@ class TestComplex(AiidaTestCase):
             c.add_incoming(p, link_type=LinkType.INPUT_CALC, link_label='input_parameters')
             # I want the array to be an output of the calculation
             a.add_incoming(c, link_type=LinkType.CREATE, link_label='output_array')
-            g = Group(label='test-group')
+            g = orm.Group(label='test-group')
             g.store()
             g.add_nodes(a)
 
@@ -1001,7 +982,7 @@ class TestComplex(AiidaTestCase):
                 # Always new filename:
                 filename = os.path.join(temp_folder, "export-{}.zip".format(i))
                 # Loading the group from the string
-                g = Group.get(label=grouplabel)
+                g = orm.Group.get(label=grouplabel)
                 # exporting based on all members of the group
                 # this also checks if group memberships are preserved!
                 export([g] + [n for n in g.nodes], outfile=filename, silent=True)
@@ -1039,8 +1020,6 @@ class TestComputer(AiidaTestCase):
         Each calculation is related to the same computer. In the end we should
         have only one computer
         """
-        from aiida.orm import CalcJobNode, Computer, QueryBuilder
-
         # Creating a folder for the import/export files
         export_file_tmp_folder = tempfile.mkdtemp()
         unpack_tmp_folder = tempfile.mkdtemp()
@@ -1051,7 +1030,7 @@ class TestComputer(AiidaTestCase):
 
             # Store two job calculation related to the same computer
             calc1_label = "calc1"
-            calc1 = CalcJobNode()
+            calc1 = orm.CalcJobNode()
             calc1.computer = comp
             calc1.set_option('resources', {"num_machines": 1,
                                            "num_mpiprocs_per_machine": 1})
@@ -1059,7 +1038,7 @@ class TestComputer(AiidaTestCase):
             calc1.store()
 
             calc2_label = "calc2"
-            calc2 = CalcJobNode()
+            calc2 = orm.CalcJobNode()
             calc2.computer = comp
             calc2.set_option('resources', {"num_machines": 2,
                                            "num_mpiprocs_per_machine": 2})
@@ -1082,38 +1061,30 @@ class TestComputer(AiidaTestCase):
             self.clean_db()
 
             # Check that there are no computers
-            builder = QueryBuilder()
-            builder.append(Computer, project=['*'])
-            self.assertEqual(builder.count(), 0, "There should not be any computers"
-                                            "in the database at this point.")
+            builder = orm.QueryBuilder()
+            builder.append(orm.Computer, project=['*'])
+            self.assertEqual(builder.count(), 0, "There should not be any computers in the database at this point.")
 
             # Check that there are no calculations
-            builder = QueryBuilder()
-            builder.append(CalcJobNode, project=['*'])
-            self.assertEqual(builder.count(), 0, "There should not be any "
-                                            "calculations in the database at "
-                                            "this point.")
+            builder = orm.QueryBuilder()
+            builder.append(orm.CalcJobNode, project=['*'])
+            self.assertEqual(builder.count(), 0, "There should not be any calculations in the database at this point.")
 
             # Import the first calculation
             import_data(filename1, silent=True)
 
             # Check that the calculation computer is imported correctly.
-            builder = QueryBuilder()
-            builder.append(CalcJobNode, project=['label'])
-            self.assertEqual(builder.count(), 1, "Only one calculation should be "
-                                            "found.")
-            self.assertEqual(six.text_type(builder.first()[0]), calc1_label,
-                             "The calculation label is not correct.")
+            builder = orm.QueryBuilder()
+            builder.append(orm.CalcJobNode, project=['label'])
+            self.assertEqual(builder.count(), 1, "Only one calculation should be found.")
+            self.assertEqual(six.text_type(builder.first()[0]), calc1_label, "The calculation label is not correct.")
 
             # Check that the referenced computer is imported correctly.
-            builder = QueryBuilder()
-            builder.append(Computer, project=['name', 'uuid', 'id'])
-            self.assertEqual(builder.count(), 1, "Only one computer should be "
-                                            "found.")
-            self.assertEqual(six.text_type(builder.first()[0]), comp_name,
-                             "The computer name is not correct.")
-            self.assertEqual(six.text_type(builder.first()[1]), comp_uuid,
-                             "The computer uuid is not correct.")
+            builder = orm.QueryBuilder()
+            builder.append(orm.Computer, project=['name', 'uuid', 'id'])
+            self.assertEqual(builder.count(), 1, "Only one computer should be found.")
+            self.assertEqual(six.text_type(builder.first()[0]), comp_name, "The computer name is not correct.")
+            self.assertEqual(six.text_type(builder.first()[1]), comp_uuid, "The computer uuid is not correct.")
 
             # Store the id of the computer
             comp_id = builder.first()[2]
@@ -1123,10 +1094,10 @@ class TestComputer(AiidaTestCase):
 
             # Check that the number of computers remains the same and its data
             # did not change.
-            builder = QueryBuilder()
-            builder.append(Computer, project=['name', 'uuid', 'id'])
+            builder = orm.QueryBuilder()
+            builder.append(orm.Computer, project=['name', 'uuid', 'id'])
             self.assertEqual(builder.count(), 1, "Found {} computers"
-                                            "but only one computer should be found.".format(builder.count()))
+                             "but only one computer should be found.".format(builder.count()))
             self.assertEqual(six.text_type(builder.first()[0]), comp_name,
                              "The computer name is not correct.")
             self.assertEqual(six.text_type(builder.first()[1]), comp_uuid,
@@ -1136,11 +1107,10 @@ class TestComputer(AiidaTestCase):
 
             # Check that now you have two calculations attached to the same
             # computer.
-            builder = QueryBuilder()
-            builder.append(Computer, tag='comp')
-            builder.append(CalcJobNode, with_computer='comp', project=['label'])
-            self.assertEqual(builder.count(), 2, "Two calculations should be "
-                                            "found.")
+            builder = orm.QueryBuilder()
+            builder.append(orm.Computer, tag='comp')
+            builder.append(orm.CalcJobNode, with_computer='comp', project=['label'])
+            self.assertEqual(builder.count(), 2, "Two calculations should be found.")
             ret_labels = set(_ for [_] in builder.all())
             self.assertEqual(ret_labels, set([calc1_label, calc2_label]),
                              "The labels of the calculations are not correct.")
@@ -1157,8 +1127,6 @@ class TestComputer(AiidaTestCase):
         renamed. It also checks that the names were correctly imported (without
         any change since there is no computer name collision)
         """
-        from aiida.orm import CalcJobNode, Computer, QueryBuilder
-
         # Creating a folder for the import/export files
         export_file_tmp_folder = tempfile.mkdtemp()
         unpack_tmp_folder = tempfile.mkdtemp()
@@ -1169,7 +1137,7 @@ class TestComputer(AiidaTestCase):
 
             # Store a calculation
             calc1_label = "calc1"
-            calc1 = CalcJobNode()
+            calc1 = orm.CalcJobNode()
             calc1.computer = self.computer
             calc1.set_option('resources', {"num_machines": 1,
                                            "num_mpiprocs_per_machine": 1})
@@ -1188,7 +1156,7 @@ class TestComputer(AiidaTestCase):
 
             # Store a second calculation
             calc2_label = "calc2"
-            calc2 = CalcJobNode()
+            calc2 = orm.CalcJobNode()
             calc2.computer = self.computer
             calc2.set_option('resources', {"num_machines": 2,
                                            "num_mpiprocs_per_machine": 2})
@@ -1203,46 +1171,39 @@ class TestComputer(AiidaTestCase):
             self.clean_db()
 
             # Check that there are no computers
-            builder = QueryBuilder()
-            builder.append(Computer, project=['*'])
-            self.assertEqual(builder.count(), 0, "There should not be any computers"
-                                            "in the database at this point.")
+            builder = orm.QueryBuilder()
+            builder.append(orm.Computer, project=['*'])
+            self.assertEqual(builder.count(), 0, "There should not be any computers in the database at this point.")
 
             # Check that there are no calculations
-            builder = QueryBuilder()
-            builder.append(CalcJobNode, project=['*'])
-            self.assertEqual(builder.count(), 0, "There should not be any "
-                                            "calculations in the database at "
-                                            "this point.")
+            builder = orm.QueryBuilder()
+            builder.append(orm.CalcJobNode, project=['*'])
+            self.assertEqual(builder.count(), 0, "There should not be any calculations in the database at this point.")
 
             # Import the first calculation
             import_data(filename1, silent=True)
 
             # Check that the calculation computer is imported correctly.
-            builder = QueryBuilder()
-            builder.append(CalcJobNode, project=['label'])
-            self.assertEqual(builder.count(), 1, "Only one calculation should be "
-                                            "found.")
-            self.assertEqual(six.text_type(builder.first()[0]), calc1_label,
-                             "The calculation label is not correct.")
+            builder = orm.QueryBuilder()
+            builder.append(orm.CalcJobNode, project=['label'])
+            self.assertEqual(builder.count(), 1, "Only one calculation should be found.")
+            self.assertEqual(six.text_type(builder.first()[0]), calc1_label, "The calculation label is not correct.")
 
             # Check that the referenced computer is imported correctly.
-            builder = QueryBuilder()
-            builder.append(Computer, project=['name', 'uuid', 'id'])
-            self.assertEqual(builder.count(), 1, "Only one computer should be "
-                                            "found.")
-            self.assertEqual(six.text_type(builder.first()[0]), comp1_name,
-                             "The computer name is not correct.")
+            builder = orm.QueryBuilder()
+            builder.append(orm.Computer, project=['name', 'uuid', 'id'])
+            self.assertEqual(builder.count(), 1, "Only one computer should be found.")
+            self.assertEqual(six.text_type(builder.first()[0]), comp1_name, "The computer name is not correct.")
 
             # Import the second calculation
             import_data(filename2, silent=True)
 
             # Check that the number of computers remains the same and its data
             # did not change.
-            builder = QueryBuilder()
-            builder.append(Computer, project=['name'])
+            builder = orm.QueryBuilder()
+            builder.append(orm.Computer, project=['name'])
             self.assertEqual(builder.count(), 1, "Found {} computers"
-                                            "but only one computer should be found.".format(builder.count()))
+                             "but only one computer should be found.".format(builder.count()))
             self.assertEqual(six.text_type(builder.first()[0]), comp1_name,
                              "The computer name is not correct.")
 
@@ -1257,7 +1218,6 @@ class TestComputer(AiidaTestCase):
         computers are renamed accordingly.
         """
         from aiida.orm.importexport import DUPL_SUFFIX
-        from aiida.orm import CalcJobNode, Computer, QueryBuilder
 
         # Creating a folder for the import/export files
         export_file_tmp_folder = tempfile.mkdtemp()
@@ -1270,7 +1230,7 @@ class TestComputer(AiidaTestCase):
 
             # Store a calculation
             calc1_label = "calc1"
-            calc1 = CalcJobNode()
+            calc1 = orm.CalcJobNode()
             calc1.computer = self.computer
             calc1.set_option('resources', {"num_machines": 1,
                                            "num_mpiprocs_per_machine": 1})
@@ -1290,7 +1250,7 @@ class TestComputer(AiidaTestCase):
 
             # Store a second calculation
             calc2_label = "calc2"
-            calc2 = CalcJobNode()
+            calc2 = orm.CalcJobNode()
             calc2.computer = self.computer
             calc2.set_option('resources', {"num_machines": 2,
                                            "num_mpiprocs_per_machine": 2})
@@ -1310,7 +1270,7 @@ class TestComputer(AiidaTestCase):
 
             # Store a third calculation
             calc3_label = "calc3"
-            calc3 = CalcJobNode()
+            calc3 = orm.CalcJobNode()
             calc3.computer = self.computer
             calc3.set_option('resources', {"num_machines": 2,
                                            "num_mpiprocs_per_machine": 2})
@@ -1325,14 +1285,14 @@ class TestComputer(AiidaTestCase):
             self.clean_db()
 
             # Check that there are no computers
-            builder = QueryBuilder()
-            builder.append(Computer, project=['*'])
+            builder = orm.QueryBuilder()
+            builder.append(orm.Computer, project=['*'])
             self.assertEqual(builder.count(), 0, "There should not be any computers"
                                                  "in the database at this point.")
 
             # Check that there are no calculations
-            builder = QueryBuilder()
-            builder.append(CalcJobNode, project=['*'])
+            builder = orm.QueryBuilder()
+            builder.append(orm.CalcJobNode, project=['*'])
             self.assertEqual(builder.count(), 0, "There should not be any "
                                                  "calculations in the database at "
                                                  "this point.")
@@ -1343,9 +1303,9 @@ class TestComputer(AiidaTestCase):
             import_data(filename3, silent=True)
 
             # Retrieve the calculation-computer pairs
-            builder = QueryBuilder()
-            builder.append(CalcJobNode, project=['label'], tag='jcalc')
-            builder.append(Computer, project=['name'],
+            builder = orm.QueryBuilder()
+            builder.append(orm.CalcJobNode, project=['label'], tag='jcalc')
+            builder.append(orm.Computer, project=['name'],
                       with_node='jcalc')
             self.assertEqual(builder.count(), 3, "Three combinations expected.")
             res = builder.all()
@@ -1367,8 +1327,6 @@ class TestComputer(AiidaTestCase):
         This test checks that the metadata and transport params are
         exported and imported correctly in both backends.
         """
-        from aiida.orm import CalcJobNode, Computer, QueryBuilder
-
         # Creating a folder for the import/export files
         export_file_tmp_folder = tempfile.mkdtemp()
         unpack_tmp_folder = tempfile.mkdtemp()
@@ -1384,12 +1342,12 @@ class TestComputer(AiidaTestCase):
                 u'key2': 2
             }
             self.computer.set_name(comp1_name)
-            self.computer._set_metadata(comp1_metadata)
+            self.computer.set_metadata(comp1_metadata)
             self.computer.set_transport_params(comp1_transport_params)
 
             # Store a calculation
             calc1_label = "calc1"
-            calc1 = CalcJobNode()
+            calc1 = orm.CalcJobNode()
             calc1.computer = self.computer
             calc1.set_option('resources', {"num_machines": 1,
                                            "num_mpiprocs_per_machine": 1})
@@ -1405,8 +1363,8 @@ class TestComputer(AiidaTestCase):
             # Import the data
             import_data(filename1, silent=True)
 
-            builder = QueryBuilder()
-            builder.append(Computer, project=['transport_params', '_metadata'],
+            builder = orm.QueryBuilder()
+            builder.append(orm.Computer, project=['transport_params', '_metadata'],
                       tag="comp")
             self.assertEqual(builder.count(), 1, "Expected only one computer")
 
@@ -1427,7 +1385,6 @@ class TestComputer(AiidaTestCase):
     def test_import_of_django_sqla_export_file(self):
         """Check why sqla import manages to import the django export file correctly"""
         from aiida.backends.tests.utils.fixtures import import_archive_fixture
-        from aiida.orm import Computer, QueryBuilder
 
         for archive in ['export/compare/django.aiida', 'export/compare/sqlalchemy.aiida']:
             # Clean the database
@@ -1447,8 +1404,8 @@ class TestComputer(AiidaTestCase):
 
             # Check that we got the correct metadata & transport parameters
             # Make sure to exclude the default computer
-            builder = QueryBuilder()
-            builder.append(Computer, project=['transport_params', '_metadata'], tag="comp",
+            builder = orm.QueryBuilder()
+            builder.append(orm.Computer, project=['transport_params', '_metadata'], tag="comp",
                       filters={'name': {'!==': self.computer.name}})
             self.assertEqual(builder.count(), 1, "Expected only one computer")
 
@@ -1469,11 +1426,9 @@ class TestLinks(AiidaTestCase):
 
     def get_all_node_links(self):
         """ Get all Node links currently in the DB """
-        from aiida.orm import Node, QueryBuilder
-        builder = QueryBuilder()
-        builder.append(Node, project='uuid', tag='input')
-        builder.append(Node, project='uuid', tag='output',
-                  edge_project=['label', 'type'], with_incoming='input')
+        builder = orm.QueryBuilder()
+        builder.append(orm.Node, project='uuid', tag='input')
+        builder.append(orm.Node, project='uuid', tag='output', edge_project=['label', 'type'], with_incoming='input')
         return builder.all()
 
     def test_links_to_unknown_nodes(self):
@@ -1483,14 +1438,13 @@ class TestLinks(AiidaTestCase):
         import tarfile
 
         from aiida.common.folders import SandboxFolder
-        from aiida.orm.nodes.data.structure import StructureData
         from aiida.common import json
 
         # Creating a folder for the import/export files
         temp_folder = tempfile.mkdtemp()
         try:
             node_label = "Test structure data"
-            sd = StructureData()
+            sd = orm.StructureData()
             sd.label = str(node_label)
             sd.store()
             sd_uuid = sd.uuid
@@ -1525,7 +1479,7 @@ class TestLinks(AiidaTestCase):
                 import_data(filename, silent=True)
 
             import_data(filename, ignore_unknown_nodes=True, silent=True)
-            self.assertEqual(load_node(sd_uuid).label, node_label)
+            self.assertEqual(orm.load_node(sd_uuid).label, node_label)
 
         finally:
             # Deleting the created temporary folder
@@ -1536,16 +1490,14 @@ class TestLinks(AiidaTestCase):
         Simple test that will verify that INPUT and CREATE links are properly exported and
         correctly recreated upon import.
         """
-        from aiida.orm import CalculationNode
-        from aiida.orm.nodes.data.int import Int
         from aiida.common.links import LinkType
 
         tmp_folder = tempfile.mkdtemp()
 
         try:
-            node_work = CalculationNode().store()
-            node_input = Int(1).store()
-            node_output = Int(2).store()
+            node_work = orm.CalculationNode().store()
+            node_input = orm.Int(1).store()
+            node_output = orm.Int(2).store()
 
             node_work.add_incoming(node_input, LinkType.INPUT_CALC, 'input')
             node_output.add_incoming(node_work, LinkType.CREATE, 'output')
@@ -1575,9 +1527,6 @@ class TestLinks(AiidaTestCase):
         of nodes that need to be extracted but also the final expected set of nodes
         (after adding the expected predecessors, desuccessors).
         """
-        from aiida.orm import CalculationNode, WorkflowNode
-        from aiida.orm import CalcJobNode, CalcFunctionNode, WorkChainNode, WorkFunctionNode
-        from aiida.orm.nodes.data.int import Int
         from aiida.common.links import LinkType
 
         if export_combination < 0 or export_combination > 9:
@@ -1587,26 +1536,26 @@ class TestLinks(AiidaTestCase):
             work_nodes = ["WorkflowNode", "WorkflowNode"]
 
         if calc_nodes is None:
-            calc_nodes = ["CalculationNode", "CalculationNode"]
+            calc_nodes = ["orm.CalculationNode", "orm.CalculationNode"]
 
         # Class mapping
         # "CalcJobNode" is left out, since it is special.
         string_to_class = {
-            "WorkflowNode": WorkflowNode,
-            "WorkChainNode": WorkChainNode,
-            "WorkFunctionNode": WorkFunctionNode,
-            "CalculationNode": CalculationNode,
-            "CalcFunctionNode": CalcFunctionNode
+            "WorkflowNode": orm.WorkflowNode,
+            "WorkChainNode": orm.WorkChainNode,
+            "WorkFunctionNode": orm.WorkFunctionNode,
+            "orm.CalculationNode": orm.CalculationNode,
+            "CalcFunctionNode": orm.CalcFunctionNode
         }
 
         # Node creation
-        data1 = Int(1).store()
-        data2 = Int(1).store()
+        data1 = orm.Int(1).store()
+        data2 = orm.Int(1).store()
         work1 = string_to_class[work_nodes[0]]().store()
         work2 = string_to_class[work_nodes[1]]().store()
 
         if calc_nodes[0] == "CalcJobNode":
-            calc1 = CalcJobNode()
+            calc1 = orm.CalcJobNode()
             calc1.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         else:
             calc1 = string_to_class[calc_nodes[0]]()
@@ -1615,11 +1564,11 @@ class TestLinks(AiidaTestCase):
 
         # Waiting to store Data nodes until they have been "created" with the links below,
         # because @calcfunctions cannot return data, i.e. return stored Data nodes
-        data3 = Int(1)
-        data4 = Int(1)
+        data3 = orm.Int(1)
+        data4 = orm.Int(1)
 
         if calc_nodes[1] == "CalcJobNode":
-            calc2 = CalcJobNode()
+            calc2 = orm.CalcJobNode()
             calc2.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         else:
             calc2 = string_to_class[calc_nodes[1]]()
@@ -1628,8 +1577,8 @@ class TestLinks(AiidaTestCase):
 
         # Waiting to store Data nodes until they have been "created" with the links below,
         # because @calcfunctions cannot return data, i.e. return stored Data nodes
-        data5 = Int(1)
-        data6 = Int(1)
+        data5 = orm.Int(1)
+        data6 = orm.Int(1)
 
         # Link creation
         work1.add_incoming(data1, LinkType.INPUT_WORK, 'input1')
@@ -1683,17 +1632,15 @@ class TestLinks(AiidaTestCase):
 
     def test_data_create_reversed_false(self):
         """Verify that create_reversed = False is respected when only exporting Data nodes."""
-        from aiida.orm import Data, Group, CalcJobNode, QueryBuilder
-        from aiida.orm.nodes.data.int import Int
         from aiida.common.links import LinkType
 
         tmp_folder = tempfile.mkdtemp()
 
         try:
-            data_input = Int(1).store()
-            data_output = Int(2).store()
+            data_input = orm.Int(1).store()
+            data_output = orm.Int(2).store()
 
-            calc = CalcJobNode()
+            calc = orm.CalcJobNode()
             calc.computer = self.computer
             calc.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
             calc.store()
@@ -1702,7 +1649,7 @@ class TestLinks(AiidaTestCase):
             data_output.add_incoming(calc, LinkType.CREATE, 'create')
             data_output_uuid = data_output.uuid
 
-            group = Group(label='test_group').store()
+            group = orm.Group(label='test_group').store()
             group.add_nodes(data_output)
 
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
@@ -1712,13 +1659,13 @@ class TestLinks(AiidaTestCase):
 
             import_data(export_file, silent=True)
 
-            builder = QueryBuilder()
-            builder.append(Data)
+            builder = orm.QueryBuilder()
+            builder.append(orm.Data)
             self.assertEqual(builder.count(), 1, 'Expected a single Data node but got {}'.format(builder.count()))
             self.assertEqual(builder.all()[0][0].uuid, data_output_uuid)
 
-            builder = QueryBuilder()
-            builder.append(CalcJobNode)
+            builder = orm.QueryBuilder()
+            builder.append(orm.CalcJobNode)
             self.assertEqual(builder.count(), 0, 'Expected no Calculation nodes')
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)
@@ -1730,7 +1677,6 @@ class TestLinks(AiidaTestCase):
         links connecting Data nodes, CalcJobNodes and WorkCalculations are
         exported and imported correctly.
         """
-        from aiida.orm import Node, QueryBuilder
         from aiida.common.links import LinkType
 
         tmp_folder = tempfile.mkdtemp()
@@ -1739,9 +1685,9 @@ class TestLinks(AiidaTestCase):
             graph_nodes, _ = self.construct_complex_graph()
 
             # Getting the input, create, return and call links
-            builder = QueryBuilder()
-            builder.append(Node, project='uuid')
-            builder.append(Node, project='uuid',
+            builder = orm.QueryBuilder()
+            builder.append(orm.Node, project='uuid')
+            builder.append(orm.Node, project='uuid',
                       edge_project=['label', 'type'],
                       edge_filters={'type': {'in': (LinkType.INPUT_CALC.value,
                                                     LinkType.INPUT_WORK.value,
@@ -1768,8 +1714,6 @@ class TestLinks(AiidaTestCase):
 
     def test_complex_workflow_graph_export_sets(self):
         """Test ex-/import of individual nodes in complex graph"""
-        from aiida.orm import Node, QueryBuilder
-
         for export_conf in range(0, 9):
 
             _, (export_node, export_target) = self.construct_complex_graph(export_conf)
@@ -1786,8 +1730,8 @@ class TestLinks(AiidaTestCase):
                 import_data(export_file, silent=True)
 
                 # Get all the nodes of the database
-                builder = QueryBuilder()
-                builder.append(Node, project='uuid')
+                builder = orm.QueryBuilder()
+                builder.append(orm.Node, project='uuid')
                 imported_node_uuids = set(str(_[0]) for _ in builder.all())
 
                 self.assertSetEqual(
@@ -1812,7 +1756,6 @@ class TestLinks(AiidaTestCase):
         links connecting Data nodes and high-level Calculation and Workflow nodes:
         CalcJobNode, CalcFunctionNode, WorkChainNode, WorkFunctionNode
         """
-        from aiida.orm import Node, QueryBuilder
         from aiida.common.links import LinkType
 
         tmp_folder = tempfile.mkdtemp()
@@ -1839,9 +1782,9 @@ class TestLinks(AiidaTestCase):
                     graph_nodes, _ = self.construct_complex_graph(calc_nodes=calcs, work_nodes=works)
 
                     # Getting the input, create, return and call links
-                    builder = QueryBuilder()
-                    builder.append(Node, project='uuid')
-                    builder.append(Node, project='uuid',
+                    builder = orm.QueryBuilder()
+                    builder.append(orm.Node, project='uuid')
+                    builder.append(orm.Node, project='uuid',
                             edge_project=['label', 'type'],
                             edge_filters={'type': {'in': (LinkType.INPUT_CALC.value,
                                                           LinkType.INPUT_WORK.value,
@@ -1889,17 +1832,15 @@ class TestLinks(AiidaTestCase):
                       |____|
 
         """
-        from aiida.orm import WorkflowNode
-        from aiida.orm.nodes.data.int import Int
         from aiida.common.links import LinkType
 
         tmp_folder = tempfile.mkdtemp()
 
         try:
-            w1 = WorkflowNode().store()
-            w2 = WorkflowNode().store()
-            i1 = Int(1).store()
-            o1 = Int(2).store()
+            w1 = orm.WorkflowNode().store()
+            w2 = orm.WorkflowNode().store()
+            i1 = orm.Int(1).store()
+            o1 = orm.Int(2).store()
 
             w1.add_incoming(i1, LinkType.INPUT_WORK, 'input-i1')
             w1.add_incoming(w2, LinkType.CALL_WORK, 'call')
@@ -1939,17 +1880,15 @@ class TestLinks(AiidaTestCase):
         This test checks that double return links to a node can be exported
         and imported without problems,
         """
-        from aiida.orm import WorkflowNode, Node, QueryBuilder
-        from aiida.orm.nodes.data.int import Int
         from aiida.common.links import LinkType
 
         tmp_folder = tempfile.mkdtemp()
 
         try:
-            w1 = WorkflowNode().store()
-            w2 = WorkflowNode().store()
-            i1 = Int(1).store()
-            o1 = Int(2).store()
+            w1 = orm.WorkflowNode().store()
+            w2 = orm.WorkflowNode().store()
+            i1 = orm.Int(1).store()
+            o1 = orm.Int(2).store()
 
             w1.add_incoming(i1, LinkType.INPUT_WORK, 'input-i1')
             w1.add_incoming(w2, LinkType.CALL_WORK, 'call')
@@ -1968,7 +1907,7 @@ class TestLinks(AiidaTestCase):
             import_data(export_file, silent=True)
 
             uuids_in_db = [str(uuid) for [uuid] in
-                QueryBuilder().append(Node, project='uuid').all()]
+                orm.QueryBuilder().append(orm.Node, project='uuid').all()]
             self.assertListEqual(sorted(uuids_wanted), sorted(uuids_in_db))
 
             links_in_db = self.get_all_node_links()
@@ -1981,6 +1920,7 @@ class TestLinks(AiidaTestCase):
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)
 
+
 class TestCode(AiidaTestCase):
     """Test ex-/import cases related to Codes"""
 
@@ -1992,11 +1932,9 @@ class TestCode(AiidaTestCase):
 
     def get_all_node_links(self):
         """ Get all Node links currently in the DB """
-        from aiida.orm import Node, QueryBuilder
-        builder = QueryBuilder()
-        builder.append(Node, project='uuid', tag='input')
-        builder.append(Node, project='uuid', tag='output',
-                  edge_project=['label', 'type'], with_incoming='input')
+        builder = orm.QueryBuilder()
+        builder.append(orm.Node, project='uuid', tag='input')
+        builder.append(orm.Node, project='uuid', tag='output', edge_project=['label', 'type'], with_incoming='input')
         return builder.all()
 
     def test_that_solo_code_is_exported_correctly(self):
@@ -2004,14 +1942,12 @@ class TestCode(AiidaTestCase):
         This test checks that when a calculation is exported then the
         corresponding code is also exported.
         """
-        from aiida.orm import Code
-
         tmp_folder = tempfile.mkdtemp()
 
         try:
             code_label = 'test_code1'
 
-            code = Code()
+            code = orm.Code()
             code.set_remote_computer_exec((self.computer, '/bin/true'))
             code.label = code_label
             code.store()
@@ -2025,7 +1961,7 @@ class TestCode(AiidaTestCase):
 
             import_data(export_file, silent=True)
 
-            self.assertEqual(load_node(code_uuid).label, code_label)
+            self.assertEqual(orm.load_node(code_uuid).label, code_label)
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)
 
@@ -2036,21 +1972,20 @@ class TestCode(AiidaTestCase):
         are also in place after the import.
         """
         from aiida.common.links import LinkType
-        from aiida.orm import CalcJobNode, Code
 
         tmp_folder = tempfile.mkdtemp()
 
         try:
             code_label = 'test_code1'
 
-            code = Code()
+            code = orm.Code()
             code.set_remote_computer_exec((self.computer, '/bin/true'))
             code.label = code_label
             code.store()
 
             code_uuid = code.uuid
 
-            jc = CalcJobNode()
+            jc = orm.CalcJobNode()
             jc.computer = self.computer
             jc.set_option('resources',
                           {"num_machines": 1, "num_mpiprocs_per_machine": 1})
@@ -2069,7 +2004,7 @@ class TestCode(AiidaTestCase):
             import_data(export_file, silent=True)
 
             # Check that the code node is there
-            self.assertEqual(load_node(code_uuid).label, code_label)
+            self.assertEqual(orm.load_node(code_uuid).label, code_label)
 
             # Check that the link is in place
             import_links = self.get_all_node_links()
@@ -2090,14 +2025,12 @@ class TestCode(AiidaTestCase):
         This test checks that when a calculation is exported then the
         corresponding code is also exported.
         """
-        from aiida.orm import Code
-
         tmp_folder = tempfile.mkdtemp()
 
         try:
             code_label = 'test_code1'
 
-            code = Code()
+            code = orm.Code()
             code.set_remote_computer_exec((self.computer, '/bin/true'))
             code.label = code_label
             code.store()
@@ -2112,7 +2045,7 @@ class TestCode(AiidaTestCase):
 
             import_data(export_file, silent=True)
 
-            self.assertEqual(load_node(code_uuid).label, code_label)
+            self.assertEqual(orm.load_node(code_uuid).label, code_label)
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)
 
@@ -2127,24 +2060,21 @@ class TestLogs(AiidaTestCase):
         """
         Delete all the created log entries
         """
-        from aiida.orm import Log
         super(TestLogs, self).tearDown()
-        Log.objects.delete_many({})
+        orm.Log.objects.delete_many({})
 
     def test_export_import_of_critical_log_msg(self):
         """ Testing logging of critical message """
-        from aiida.orm import CalculationNode, Log
-
         tmp_folder = tempfile.mkdtemp()
 
         try:
             message = 'Testing logging of critical failure'
-            calc = CalculationNode()
+            calc = orm.CalculationNode()
 
             # Firing a log for an unstored node should not end up in the database
             calc.logger.critical(message)
             # There should be no log messages for the unstored object
-            self.assertEqual(len(Log.objects.all()), 0)
+            self.assertEqual(len(orm.Log.objects.all()), 0)
 
             # After storing the node, logs above log level should be stored
             calc.store()
@@ -2158,7 +2088,7 @@ class TestLogs(AiidaTestCase):
             import_data(export_file, silent=True)
 
             # Finding all the log messages
-            logs = Log.objects.all()
+            logs = orm.Log.objects.all()
 
             self.assertEqual(len(logs), 1)
             self.assertEqual(logs[0].message, message)
@@ -2168,15 +2098,13 @@ class TestLogs(AiidaTestCase):
 
     def test_exclude_logs_flag(self):
         """Test that the `include_logs` argument for `export` works."""
-        from aiida.orm import Log, CalculationNode, QueryBuilder
-
         tmp_folder = tempfile.mkdtemp()
 
         log_msg = 'Testing logging of critical failure'
 
         try:
             # Create node
-            calc = CalculationNode()
+            calc = orm.CalculationNode()
             calc.store()
 
             # Create log message
@@ -2194,10 +2122,10 @@ class TestLogs(AiidaTestCase):
             import_data(export_file, silent=True)
 
             # Finding all the log messages
-            import_calcs = QueryBuilder().append(CalculationNode, project=['uuid']).all()
-            import_logs = QueryBuilder().append(Log, project=['uuid']).all()
+            import_calcs = orm.QueryBuilder().append(orm.CalculationNode, project=['uuid']).all()
+            import_logs = orm.QueryBuilder().append(orm.Log, project=['uuid']).all()
 
-            # There should be exactly: 1 CalculationNode, 0 Logs
+            # There should be exactly: 1 orm.CalculationNode, 0 Logs
             self.assertEqual(len(import_calcs), 1)
             self.assertEqual(len(import_logs), 0)
 
@@ -2222,29 +2150,26 @@ class TestComments(AiidaTestCase):
 
     def tearDown(self):
         super(TestComments, self).tearDown()
-        from aiida.orm import Comment
-        comments = Comment.objects.all()
+        comments = orm.Comment.objects.all()
         for comment in comments:
-            Comment.objects.delete(comment.id)
+            orm.Comment.objects.delete(comment.id)
 
     def test_exclude_comments_flag(self):
         """Test comments and associated commenting users are not exported when using `include_comments=False`."""
-        from aiida.orm import Comment, User, Data, QueryBuilder, Node
-
         tmp_folder = tempfile.mkdtemp()
 
         try:
             # Create users, node, and comments
-            user_one = User.objects.get_default()
-            user_two = User(email="commenting@user.s").store()
+            user_one = orm.User.objects.get_default()
+            user_two = orm.User(email="commenting@user.s").store()
 
-            node = Data().store()
+            node = orm.Data().store()
 
-            comment_one = Comment(node, user_one, self.comments[0]).store()
-            comment_two = Comment(node, user_one, self.comments[1]).store()
+            comment_one = orm.Comment(node, user_one, self.comments[0]).store()
+            comment_two = orm.Comment(node, user_one, self.comments[1]).store()
 
-            comment_three = Comment(node, user_two, self.comments[2]).store()
-            comment_four = Comment(node, user_two, self.comments[3]).store()
+            comment_three = orm.Comment(node, user_two, self.comments[2]).store()
+            comment_four = orm.Comment(node, user_two, self.comments[3]).store()
 
             # Get values prior to export
             users_email = [u.email for u in [user_one, user_two]]
@@ -2264,9 +2189,9 @@ class TestComments(AiidaTestCase):
             import_data(export_file, silent=True)
 
             # Get node, users, and comments
-            import_nodes = QueryBuilder().append(Node, project=['uuid']).all()
-            import_comments = QueryBuilder().append(Comment, project=['uuid']).all()
-            import_users = QueryBuilder().append(User, project=['email']).all()
+            import_nodes = orm.QueryBuilder().append(orm.Node, project=['uuid']).all()
+            import_comments = orm.QueryBuilder().append(orm.Comment, project=['uuid']).all()
+            import_users = orm.QueryBuilder().append(orm.User, project=['email']).all()
 
             # There should be exactly: 1 Node, 0 Comments, 1 User
             self.assertEqual(len(import_nodes), 1)
@@ -2282,22 +2207,20 @@ class TestComments(AiidaTestCase):
 
     def test_calc_and_data_nodes_with_comments(self):
         """ Test comments for CalculatioNode and Data node are correctly ex-/imported """
-        from aiida.orm import CalculationNode, Comment, User, Data, QueryBuilder, Node
-
         tmp_folder = tempfile.mkdtemp()
 
         try:
             # Create user, nodes, and comments
-            user = User.objects.get_default()
+            user = orm.User.objects.get_default()
 
-            calc_node = CalculationNode().store()
-            data_node = Data().store()
+            calc_node = orm.CalculationNode().store()
+            data_node = orm.Data().store()
 
-            comment_one = Comment(calc_node, user, self.comments[0]).store()
-            comment_two = Comment(calc_node, user, self.comments[1]).store()
+            comment_one = orm.Comment(calc_node, user, self.comments[0]).store()
+            comment_two = orm.Comment(calc_node, user, self.comments[1]).store()
 
-            comment_three = Comment(data_node, user, self.comments[2]).store()
-            comment_four = Comment(data_node, user, self.comments[3]).store()
+            comment_three = orm.Comment(data_node, user, self.comments[2]).store()
+            comment_four = orm.Comment(data_node, user, self.comments[3]).store()
 
             # Get values prior to export
             calc_uuid = calc_node.uuid
@@ -2314,9 +2237,9 @@ class TestComments(AiidaTestCase):
             import_data(export_file, silent=True)
 
             # Get nodes and comments
-            builder = QueryBuilder()
-            builder.append(Node, tag='node', project=['uuid'])
-            builder.append(Comment, with_node='node', project=['uuid'])
+            builder = orm.QueryBuilder()
+            builder.append(orm.Node, tag='node', project=['uuid'])
+            builder.append(orm.Comment, with_node='node', project=['uuid'])
             nodes_and_comments = builder.all()
 
             self.assertEqual(len(nodes_and_comments), len(self.comments))
@@ -2338,23 +2261,21 @@ class TestComments(AiidaTestCase):
             shutil.rmtree(tmp_folder, ignore_errors=True)
 
     def test_multiple_user_comments_for_single_node(self):
-        """ Test multiple users commenting on a single CalculationNode """
-        from aiida.orm import CalculationNode, Comment, User, Node, QueryBuilder
-
+        """ Test multiple users commenting on a single orm.CalculationNode """
         tmp_folder = tempfile.mkdtemp()
 
         try:
             # Create users, node, and comments
-            user_one = User.objects.get_default()
-            user_two = User(email="commenting@user.s").store()
+            user_one = orm.User.objects.get_default()
+            user_two = orm.User(email="commenting@user.s").store()
 
-            node = CalculationNode().store()
+            node = orm.CalculationNode().store()
 
-            comment_one = Comment(node, user_one, self.comments[0]).store()
-            comment_two = Comment(node, user_one, self.comments[1]).store()
+            comment_one = orm.Comment(node, user_one, self.comments[0]).store()
+            comment_two = orm.Comment(node, user_one, self.comments[1]).store()
 
-            comment_three = Comment(node, user_two, self.comments[2]).store()
-            comment_four = Comment(node, user_two, self.comments[3]).store()
+            comment_three = orm.Comment(node, user_two, self.comments[2]).store()
+            comment_four = orm.Comment(node, user_two, self.comments[3]).store()
 
             # Get values prior to export
             users_email = [u.email for u in [user_one, user_two]]
@@ -2371,10 +2292,10 @@ class TestComments(AiidaTestCase):
             import_data(export_file, silent=True)
 
             # Get node, users, and comments
-            builder = QueryBuilder()
-            builder.append(Node, tag='node', project=['uuid'])
-            builder.append(Comment, tag='comment', with_node='node', project=['uuid'])
-            builder.append(User, with_comment='comment', project=['email'])
+            builder = orm.QueryBuilder()
+            builder.append(orm.Node, tag='node', project=['uuid'])
+            builder.append(orm.Comment, tag='comment', with_node='node', project=['uuid'])
+            builder.append(orm.User, with_comment='comment', project=['email'])
             entries = builder.all()
 
             # Check that all 4 comments are retrieved, along with their respective node and user
@@ -2431,11 +2352,9 @@ class TestExtras(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         """Only run to prepare an export file"""
-        from aiida.orm import Data
-
         super(TestExtras, cls).setUpClass()
 
-        d = Data()
+        d = orm.Data()
         d.label = 'my_test_data_node'
         d.store()
         d.set_extras({'b': 2, 'c': 3})
@@ -2450,20 +2369,15 @@ class TestExtras(AiidaTestCase):
 
     def import_extras(self, mode_new='import'):
         """Import an aiida database"""
-        from aiida.orm import Data
-        from aiida.orm.querybuilder import QueryBuilder
-
         import_data(self.export_file, silent=True, extras_mode_new=mode_new)
 
-        q = QueryBuilder().append(Data, filters={'label': 'my_test_data_node'})
+        q = orm.QueryBuilder().append(orm.Data, filters={'label': 'my_test_data_node'})
 
         self.assertEqual(q.count(), 1)
         self.imported_node = q.all()[0][0]
 
     def modify_extras(self, mode_existing):
         """Import the same aiida database again"""
-        from aiida.orm import Data
-        from aiida.orm.querybuilder import QueryBuilder
         self.imported_node.set_extra('a', 1)
         self.imported_node.set_extra('b', 1000)
         self.imported_node.delete_extra('c')
@@ -2471,7 +2385,7 @@ class TestExtras(AiidaTestCase):
         import_data(self.export_file, silent=True, extras_mode_existing=mode_existing)
 
         # Query again the database
-        q = QueryBuilder().append(Data, filters={'label': 'my_test_data_node'})
+        q = orm.QueryBuilder().append(orm.Data, filters={'label': 'my_test_data_node'})
         self.assertEqual(q.count(), 1)
         return q.all()[0][0]
 
@@ -2520,7 +2434,7 @@ class TestExtras(AiidaTestCase):
         imported_node = self.modify_extras(mode_existing='ncu')
 
         # Check that extras are imported correctly
-        with self.assertRaises(AttributeError): # the extra 
+        with self.assertRaises(AttributeError):  # the extra
             # 'a' should not exist, as the extras were fully mirrored with respect to
             # the imported node
             imported_node.get_extra('a')
@@ -2535,7 +2449,7 @@ class TestExtras(AiidaTestCase):
         # Check if extras are imported correctly
         self.assertEqual(imported_node.get_extra('b'), 1000)
         self.assertEqual(imported_node.get_extra('a'), 1)
-        with self.assertRaises(AttributeError): # the extra
+        with self.assertRaises(AttributeError):  # the extra
             # 'c' should not exist, as the extras were keept untached
             imported_node.get_extra('c')
 
@@ -2547,16 +2461,16 @@ class TestExtras(AiidaTestCase):
         # Check if extras are imported correctly
         self.assertEqual(imported_node.get_extra('a'), 1)
         self.assertEqual(imported_node.get_extra('c'), 3)
-        with self.assertRaises(AttributeError): # the extra
+        with self.assertRaises(AttributeError):  # the extra
             # 'b' should not exist, as the collided extras are deleted
             imported_node.get_extra('b')
 
     def test_extras_import_mode_correct(self):
         """Test all possible import modes except 'ask' """
         self.import_extras()
-        for l1 in ['k', 'n']: # keep or not keep old extras
-            for l2 in ['n', 'c']: # create or not create new extras
-                for l3 in ['l', 'u', 'd']: # leave old, update or delete collided extras
+        for l1 in ['k', 'n']:  # keep or not keep old extras
+            for l2 in ['n', 'c']:  # create or not create new extras
+                for l3 in ['l', 'u', 'd']:  # leave old, update or delete collided extras
                     mode = l1 + l2 + l3
                     import_data(self.export_file, silent=True, extras_mode_existing=mode)
 
@@ -2564,17 +2478,17 @@ class TestExtras(AiidaTestCase):
         """Check a mode that is wrong"""
         self.import_extras()
         with self.assertRaises(ValueError):
-            import_data(self.export_file, silent=True, extras_mode_existing='xnd') # first letter is wrong
+            import_data(self.export_file, silent=True, extras_mode_existing='xnd')  # first letter is wrong
         with self.assertRaises(ValueError):
-            import_data(self.export_file, silent=True, extras_mode_existing='nxd') # second letter is wrong
+            import_data(self.export_file, silent=True, extras_mode_existing='nxd')  # second letter is wrong
         with self.assertRaises(ValueError):
-            import_data(self.export_file, silent=True, extras_mode_existing='nnx') # third letter is wrong
+            import_data(self.export_file, silent=True, extras_mode_existing='nnx')  # third letter is wrong
         with self.assertRaises(ValueError):
-            import_data(self.export_file, silent=True, extras_mode_existing='n') # too short
+            import_data(self.export_file, silent=True, extras_mode_existing='n')  # too short
         with self.assertRaises(ValueError):
-            import_data(self.export_file, silent=True, extras_mode_existing='nndnn') # too long
+            import_data(self.export_file, silent=True, extras_mode_existing='nndnn')  # too long
         with self.assertRaises(TypeError):
-            import_data(self.export_file, silent=True, extras_mode_existing=5) # wrong type
+            import_data(self.export_file, silent=True, extras_mode_existing=5)  # wrong type
 
 
 class TestProvenanceRedesign(AiidaTestCase):
@@ -2597,8 +2511,6 @@ class TestProvenanceRedesign(AiidaTestCase):
         Example: Bool: “data.base.Bool.” → “data.bool.Bool.”
         Change data nodes: “data.*” → “node.data.*”
         """
-        from aiida.orm import Str, Int, Float, Bool, List
-
         # Test content
         test_content = ("Hello", 6, -1.2399834e12, False)
         test_types = ()
@@ -2614,14 +2526,14 @@ class TestProvenanceRedesign(AiidaTestCase):
             export_nodes = []
 
             # Create list of base type nodes
-            nodes = [cls(val).store() for val, cls in zip(test_content, (Str, Int, Float, Bool))]
+            nodes = [cls(val).store() for val, cls in zip(test_content, (orm.Str, orm.Int, orm.Float, orm.Bool))]
             export_nodes.extend(nodes)
 
             # Collect uuids for created nodes
             uuids = [n.uuid for n in nodes]
 
             # Create List() and insert already created nodes into it
-            list_node = List()
+            list_node = orm.List()
             list_node.set_list(nodes)
             list_node.store()
             list_node_uuid = list_node.uuid
@@ -2638,10 +2550,10 @@ class TestProvenanceRedesign(AiidaTestCase):
             import_data(filename, silent=True)
 
             # Check whether types are correctly imported
-            nlist = load_node(list_node_uuid)  # List
+            nlist = orm.load_node(list_node_uuid)  # List
             for uuid, list_value, refval, reftype in zip(uuids, nlist.get_list(), test_content, test_types):
                 # Str, Int, Float, Bool
-                n = load_node(uuid)
+                n = orm.load_node(uuid)
                 # Check value/content
                 self.assertEqual(n.value, refval)
                 # Check type
@@ -2662,21 +2574,19 @@ class TestProvenanceRedesign(AiidaTestCase):
 
     def test_node_process_type(self):
         """ Column `process_type` added to `Node` entity DB table """
-        from aiida.orm import ProcessNode, QueryBuilder
-        from aiida.orm.nodes.data.int import Int
-        from aiida.work.launch import run_get_node
-        from aiida.work.test_utils import AddProcess
+        from aiida.backends.tests.utils.processes import AddProcess
+        from aiida.engine import run_get_node
 
         # Create temporary folder for the import/export files
         tmp_folder = tempfile.mkdtemp()
 
         # Node types
         node_type = "process.workflow.WorkflowNode."
-        node_process_type = "aiida.work.test_utils.AddProcess"
+        node_process_type = "aiida.backends.tests.utils.processes.AddProcess"
 
         try:
             # Run workflow
-            inputs = {'a': Int(2), 'b': Int(3)}
+            inputs = {'a': orm.Int(2), 'b': orm.Int(3)}
             result, node = run_get_node(AddProcess, **inputs)
 
             # Save node uuid
@@ -2695,8 +2605,8 @@ class TestProvenanceRedesign(AiidaTestCase):
             import_data(filename, silent=True)
 
             # Retrieve node and check exactly one node is imported
-            builder = QueryBuilder()
-            builder.append(ProcessNode, project=['uuid'])
+            builder = orm.QueryBuilder()
+            builder.append(orm.ProcessNode, project=['uuid'])
 
             self.assertEqual(builder.count(), 1)
 
@@ -2707,7 +2617,7 @@ class TestProvenanceRedesign(AiidaTestCase):
             self.assertEqual(imported_node_uuid, node_uuid)
 
             # Check imported node type and process type
-            node = load_node(imported_node_uuid)
+            node = orm.load_node(imported_node_uuid)
 
             self.assertEqual(node.type, node_type)
             self.assertEqual(node.process_type, node_process_type)
@@ -2721,14 +2631,12 @@ class TestProvenanceRedesign(AiidaTestCase):
         Change: “code.Bool.” → “data.code.Code.”
         Change for all data nodes: "data.*" → “node.data.*
         """
-        from aiida.orm import Code, QueryBuilder
-
         # Create temporary folders for the import/export files
         tmp_folder = tempfile.mkdtemp()
 
         try:
             # Create Code instance
-            code = Code()
+            code = orm.Code()
             code.set_remote_computer_exec((self.computer, '/bin/true'))
             code.store()
 
@@ -2748,8 +2656,8 @@ class TestProvenanceRedesign(AiidaTestCase):
             import_data(filename, silent=True)
 
             # Retrieve Code node and make sure exactly 1 is retrieved
-            builder = QueryBuilder()
-            builder.append(Code, project=['uuid'])
+            builder = orm.QueryBuilder()
+            builder.append(orm.Code, project=['uuid'])
             imported_code = builder.all()
 
             self.assertEqual(builder.count(), 1)
@@ -2760,7 +2668,7 @@ class TestProvenanceRedesign(AiidaTestCase):
             self.assertEqual(imported_code_uuid, code_uuid)
 
             # Check whether types are correctly imported
-            imported_code_type = load_node(imported_code_uuid).type
+            imported_code_type = orm.load_node(imported_code_uuid).type
 
             self.assertEqual(imported_code_type, code_type)
 
@@ -2788,9 +2696,7 @@ class TestProvenanceRedesign(AiidaTestCase):
         above succeed, it is understood that "auto.run" is also correctly ex-/imported
         as the type_string content for the relevant Groups.
         """
-        from aiida.orm import CalculationNode, Group, QueryBuilder
         from aiida.orm.nodes.data.upf import upload_upf_family
-        from aiida.orm import load_group
 
         # Create temporary folders for the import/export files
         export_tmp_folder = tempfile.mkdtemp()
@@ -2815,13 +2721,13 @@ class TestProvenanceRedesign(AiidaTestCase):
 
         try:
             # Create Groups
-            node1 = CalculationNode().store()
-            node2 = CalculationNode().store()
-            group_user = Group(label=groups_label[0]).store()
+            node1 = orm.CalculationNode().store()
+            node2 = orm.CalculationNode().store()
+            group_user = orm.Group(label=groups_label[0]).store()
             group_user.add_nodes([node1, node2])
 
             nfiles, nuploads = upload_upf_family(upf_tmp_folder, groups_label[1], "")
-            group_upf = load_group(groups_label[1])
+            group_upf = orm.load_group(groups_label[1])
 
             # Save uuids and type
             users_uuid         = [str(u.uuid)   for u in group_user.nodes]
@@ -2841,8 +2747,8 @@ class TestProvenanceRedesign(AiidaTestCase):
             import_data(filename, silent=True)
 
             # Retrieve Groups and make sure exactly 3 are retrieved (including the "import group")
-            builder = QueryBuilder()
-            builder.append(Group, project=['uuid'])
+            builder = orm.QueryBuilder()
+            builder.append(orm.Group, project=['uuid'])
             imported_groups = builder.all()
 
             self.assertEqual(builder.count(), 3)
@@ -2859,7 +2765,7 @@ class TestProvenanceRedesign(AiidaTestCase):
                 imported_groups_uuid.remove(group_uuid)
 
                 # Load group
-                imported_group = load_group(group_uuid)
+                imported_group = orm.load_group(group_uuid)
 
                 # Check whether types are correctly imported
                 self.assertIn(imported_group.type_string, groups_type_string)
@@ -2868,7 +2774,7 @@ class TestProvenanceRedesign(AiidaTestCase):
                 self.assertIn(imported_group.label, groups_label)
 
             # Check type_string content of "import group"
-            import_group = load_group(imported_groups_uuid[0])
+            import_group = orm.load_group(imported_groups_uuid[0])
             self.assertEqual(import_group.type_string, "auto.import")
 
         finally:

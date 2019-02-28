@@ -10,19 +10,19 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from aiida.orm.nodes.data.array.kpoints import KpointsData
-from aiida.orm.nodes.data.parameter import ParameterData
+
+from aiida.orm import KpointsData, Dict
 from aiida.tools.data.array.kpoints import legacy
 from aiida.tools.data.array.kpoints import seekpath
 
-__all__ = ['get_kpoints_path', 'get_explicit_kpoints_path']
+__all__ = ('get_kpoints_path', 'get_explicit_kpoints_path')
 
 
 def get_kpoints_path(structure, method='seekpath', **kwargs):
     """
     Returns a dictionary whose contents depend on the method but includes at least the following keys
 
-        * parameters: ParameterData node
+        * parameters: Dict node
 
     The contents of the parameters depends on the method but contains at least the keys
 
@@ -64,7 +64,7 @@ def get_explicit_kpoints_path(structure, method='seekpath', **kwargs):
     """
     Returns a dictionary whose contents depend on the method but includes at least the following keys
 
-        * parameters: ParameterData node
+        * parameters: Dict node
         * explicit_kpoints: KpointsData node with explicit kpoints path
 
     The contents of the parameters depends on the method but contains at least the keys
@@ -200,7 +200,7 @@ def _legacy_get_kpoints_path(structure, **kwargs):
         'path': path,
     }
 
-    return {'parameters': ParameterData(dict=parameters)}
+    return {'parameters': Dict(dict=parameters)}
 
 
 def _legacy_get_explicit_kpoints_path(structure, **kwargs):
@@ -238,7 +238,7 @@ def _legacy_get_explicit_kpoints_path(structure, **kwargs):
     }
 
     return {
-        'parameters': ParameterData(dict=parameters),
+        'parameters': Dict(dict=parameters),
         'explicit_kpoints': kpoints
     }
 

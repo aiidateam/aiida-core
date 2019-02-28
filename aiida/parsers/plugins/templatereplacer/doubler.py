@@ -15,7 +15,7 @@ import io
 import os
 
 from aiida.common import exceptions
-from aiida.orm.nodes.data.parameter import ParameterData
+from aiida.orm import Dict
 from aiida.parsers.parser import Parser
 from aiida.plugins import CalculationFactory
 
@@ -71,7 +71,7 @@ class TemplatereplacerDoublerParser(Parser):
                 # We always strip the content of the file from whitespace to simplify testing for expected output
                 output_dict['retrieved_temporary_files'].append((retrieved_file, parsed_value))
 
-        self.out(self.node.process_class.spec().default_output_node, ParameterData(dict=output_dict))
+        self.out(self.node.process_class.spec().default_output_node, Dict(dict=output_dict))
 
         return
 

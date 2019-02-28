@@ -45,7 +45,7 @@ from aiida import is_dbenv_loaded
 from aiida.backends import settings as backend_settings
 from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 from aiida.common import exceptions
-from aiida.manage import get_manager, reset_manager
+from aiida.manage.manager import get_manager, reset_manager
 from aiida.manage.configuration.setup import create_instance_directories
 from aiida.manage.configuration.utils import load_config
 from aiida.manage.external.postgres import Postgres
@@ -160,10 +160,9 @@ class FixtureManager(object):  # pylint: disable=too-many-public-methods,useless
             raise FixtureError('AiiDA dbenv can not be loaded while creating a test db environment')
         if not self.db_params:
             self.create_db_cluster()
-        self.postgres = Postgres(interactive=False, quiet=True)
-        self.postgres.dbinfo = self.db_params
+        self.postgres = Postgres(interactive=False, quiet=True, dbinfo=self.db_params)
         self.postgres.determine_setup()
-        self.db_params = self.postgres.dbinfo
+        self.db_params = self.postgres.get_dbinfo()
         if not self.postgres.pg_execute:
             raise FixtureError('Could not connect to the test postgres instance')
         self.postgres.create_dbuser(self.db_user, self.db_pass)

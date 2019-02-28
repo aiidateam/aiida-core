@@ -66,7 +66,7 @@ class TrajectoryData(ArrayData):
             numsteps = positions.shape[0]
         if cells is not None:
             if cells.shape != (numsteps, 3, 3):
-                raise ValueError("TrajectoryData.cells must have shape (s,3,3), " "with s=number of steps")
+                raise ValueError("TrajectoryData.cells must have shape (s,3,3), with s=number of steps")
         numatoms = len(symbols)
         if positions.shape != (numsteps, numatoms, 3):
             raise ValueError("TrajectoryData.positions must have shape (s,n,3), "
@@ -424,7 +424,7 @@ class TrajectoryData(ArrayData):
             raise NotImplementedError("XSF for alloys or systems with vacancies not implemented.")
         cells = self.get_cells()
         if cells is None:
-            raise ValueError("No cell parameters have been supplied for " "TrajectoryData")
+            raise ValueError("No cell parameters have been supplied for TrajectoryData")
         positions = self.get_positions()
         symbols = self.symbols
         atomic_numbers_list = [_atomic_numbers[s] for s in symbols]
@@ -498,10 +498,10 @@ class TrajectoryData(ArrayData):
             AiiDA database for record. Default False.
         :return: :py:class:`aiida.orm.nodes.data.structure.StructureData` node.
         """
-        from aiida.orm.nodes.data.parameter import ParameterData
+        from aiida.orm.nodes.data.dict import Dict
         from aiida.tools.data.array.trajectory import _get_aiida_structure_inline
 
-        param = ParameterData(dict=kwargs)
+        param = Dict(dict=kwargs)
 
         ret_dict = _get_aiida_structure_inline(trajectory=self, parameters=param, metadata={'store_provenance': store})  # pylint: disable=unexpected-keyword-arg
         return ret_dict['structure']
@@ -524,7 +524,7 @@ class TrajectoryData(ArrayData):
            Renamed from _get_cif
         """
         struct = self.get_structure(index=index, **kwargs)
-        cif = struct.get_cif(**kwargs)  # pylint: disable=protected-access
+        cif = struct.get_cif(**kwargs)
         return cif
 
     def _parse_xyz_pos(self, inputstring):
@@ -760,7 +760,7 @@ class TrajectoryData(ArrayData):
 
         cells = self.get_cells()
         if cells is None:
-            raise ValueError("No cell parameters have been supplied for " "TrajectoryData")
+            raise ValueError("No cell parameters have been supplied for TrajectoryData")
         else:
             cell = np.array(cells[0])
         storage_dict = {s: {} for s in elements}

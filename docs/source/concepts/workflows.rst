@@ -161,7 +161,7 @@ This is done by passing it to the ``run`` function:
 .. include:: include/snippets/workflows/workchains/run_workchain_keyword.py
     :code: python
 
-As you can see, the ``run`` function can be imported from ``aiida.work.launch``.
+As you can see, the ``run`` function can be imported from ``aiida.engine.launch``.
 To launch the workchain (in this example we use the ``AddAndMultiplyWorkChain`` from the previous section), we simply call the ``run`` function with the workchain as the first argument, followed by the inputs as keyword arguments.
 Note that the keys used for each input have to correspond to the name of the inputs defined in the spec of the workchain.
 One can also define the inputs in a dictionary and then use the standard python expansion method to automatically unwrap the dictionary into keyword arguments, as is shown here:
@@ -313,7 +313,7 @@ For the purpose of example, we will show the output of the commands for a comple
 
 verdi work report
 -----------------
-The developer of a ``WorkChain`` can attach log messages to the workchain at any place within the function body of one of the outline steps through the :py:meth:`~aiida.work.processes.Process.report` method.
+The developer of a ``WorkChain`` can attach log messages to the workchain at any place within the function body of one of the outline steps through the :py:meth:`~aiida.engine.processes.process.Process.report` method.
 The ``verdi work report`` command will display all the log messages in chronological order:
 
 .. code-block:: bash
@@ -369,19 +369,19 @@ An example output for a ``PwBaseWorkChain`` would look like the following:
 
     Inputs            PK  Type
     --------------  ----  -------------
-    parameters       158  ParameterData
+    parameters       158  Dict
     structure        140  StructureData
     kpoints          159  KpointsData
     pseudo_family    161  Str
     max_iterations   163  Int
     clean_workdir    160  Bool
-    options          162  ParameterData
+    options          162  Dict
 
     Outputs              PK  Type
     -----------------  ----  -------------
     output_band         170  BandsData
     remote_folder       168  RemoteData
-    output_parameters   171  ParameterData
+    output_parameters   171  Dict
     output_array        172  ArrayData
 
     Called      PK  Type
@@ -409,9 +409,9 @@ Just like the definition of a ``WorkChain``, we will start with the process spec
 
 Process specification
 ---------------------
-The process specification of a workchain, implemented by the :py:class:`~aiida.work.process_spec.ProcessSpec`, is the construct that is used to define the inputs, outputs and the logical outline of the workchain.
+The process specification of a workchain, implemented by the :py:class:`~aiida.engine.processes.process_spec.ProcessSpec`, is the construct that is used to define the inputs, outputs and the logical outline of the workchain.
 Defining this specification is therefore one of the more important steps of designing a workflow.
-A very simple example of the definition of a workchain specification, in the :meth:`~aiida.work.workchain.WorkChain.define` method, was demonstrated in the :ref:`introductory section on workchains <workchains_workfunctions>`.
+A very simple example of the definition of a workchain specification, in the :meth:`~aiida.engine.processes.workchains.workchain.WorkChain.define` method, was demonstrated in the :ref:`introductory section on workchains <workchains_workfunctions>`.
 In this section we will describe all the features of the process spec in more detail.
 
 .. _ports_portnamespaces:
@@ -425,7 +425,7 @@ In the workchain introduction, we already saw how an input could be defined for 
 
     spec.input('a')
 
-What this directive really accomplishes, is that an :py:class:`~aiida.work.ports.InputPort` is added to the ``inputs`` attribute of the :py:class:`~aiida.work.process_spec.ProcessSpec`, which is a :py:class:`~aiida.work.ports.PortNamespace`.
+What this directive really accomplishes, is that an :py:class:`~aiida.engine.processes.ports.InputPort` is added to the ``inputs`` attribute of the :py:class:`~aiida.engine.processes.process_spec.ProcessSpec`, which is a :py:class:`~aiida.engine.processes.ports.PortNamespace`.
 This ``PortNamespace`` is a simple namespace that contains all the ``InputPorts`` and can even have nested ``PortNamespaces``.
 This allows the designer of a workchain to create any nested structure for the input ports.
 Creating a new namespace in the inputs namespace is as simple as:
@@ -541,7 +541,7 @@ To use these in your workchain design, you will have to import them:
 
 .. code:: python
 
-    from aiida.work.workchain import if_, while_, return_
+    from aiida.engine import if_, while_, return_
 
 The following example shows how to use these logical constructs to define the outline of a workchain:
 
@@ -631,7 +631,7 @@ This is an infinitely more robust way of communcating specific errors to a non-h
 Reporting
 ---------
 During the execution of a ``WorkChain``, we may want to keep the user abreast of its progress and what is happening.
-For this purpose, the ``WorkChain`` implements the :meth:`~aiida.work.processes.Process.report` method, which functions as a logger of sorts.
+For this purpose, the ``WorkChain`` implements the :meth:`~aiida.engine.processes.process.Process.report` method, which functions as a logger of sorts.
 It takes a single argument, a string, that is the message that needs to be reported:
 
 .. code:: python
@@ -676,7 +676,7 @@ How this is accomplished, we will show in the next section.
 Submitting calculations and workchains
 --------------------------------------
 One of the main tasks of a ``WorkChain`` will be to launch a ``CalcJob`` or even another ``WorkChain``.
-An example in the section on :ref:`running workflows<running_workflows>` already showed that the ``WorkChain`` class provides the :meth:`~aiida.work.processes.Process.submit` method, to submit another ``WorkChain`` or ``CalcJob`` to the daemon.
+An example in the section on :ref:`running workflows<running_workflows>` already showed that the ``WorkChain`` class provides the :meth:`~aiida.engine.processes.process.Process.submit` method, to submit another ``WorkChain`` or ``CalcJob`` to the daemon.
 However, that is not enough to complete the process.
 When the ``submit`` method is called, the process is created and submitted to the daemon, but at that point it is not yet done.
 So the value that is returned by the ``submit`` call is not the result of the submitted process, but rather it is a *future*.
@@ -692,8 +692,8 @@ To illustrate how this works, consider the following minimal example:
     :code: python
 
 As explained in the previous section, calling ``self.submit`` for a given process that you want to submit, will return a future.
-To add this future to the context, we can not access the context directly as explained in the :ref:`context section<workchain_context>`, but rather we need to use the class :py:class:`~aiida.work.workchain.ToContext`.
-This class has to be imported from the ``aiida.work.workchain`` module.
+To add this future to the context, we can not access the context directly as explained in the :ref:`context section<workchain_context>`, but rather we need to use the class :py:class:`~aiida.engine.processes.workchains.context.ToContext`.
+This class has to be imported from the ``aiida.engine`` module.
 To add the future to the context, simply construct an instance of ``ToContext``, passing the future as a keyword argument, and returning it from the outline step.
 The keyword used, ``workchain`` in this example, will be the key used under which to store the node in the context once its execution has terminated.
 Returning an instance of ``ToContext`` signals to the workflow engine that it has to wait for the futures contained within it to finish execution, store their nodes in the context under the specified keys and then continue to the next step in the outline.
@@ -707,7 +707,7 @@ To solve this problem, there is another way to add futures to the context:
 .. include:: include/snippets/workflows/workchains/run_workchain_submit_parallel.py
     :code: python
 
-Here we submit three workchains in a for loop in a single outline step, but instead of returning an instance of ``ToContext``, we call the :meth:`~aiida.work.workchain.WorkChain.to_context` method.
+Here we submit three workchains in a for loop in a single outline step, but instead of returning an instance of ``ToContext``, we call the :meth:`~aiida.engine.processes.workchains.workchain.WorkChain.to_context` method.
 This method has exactly the same syntax as the ``ToContext`` class, except it is not necessary to return its value, so we can call it multiple times in one outline step.
 Under the hood the functionality is also the same as the ``ToContext`` class.
 At the end of the ``submit_workchains`` outline step, the workflow engine will find the futures that were added by calling ``to_context`` and will wait for all of them to be finished.
@@ -723,7 +723,7 @@ How this can be achieved is explained in the next section.
 
 Appending
 ^^^^^^^^^
-When you want to add a future of a submitted sub process to the context, but append it to a list rather than assign it to a key, you can use the :func:`~aiida.work.context.append_` function.
+When you want to add a future of a submitted sub process to the context, but append it to a list rather than assign it to a key, you can use the :func:`~aiida.engine.processes.workchains.context.append_` function.
 Consider the example from the previous section, but now we will use the ``append_`` function instead:
 
 .. include:: include/snippets/workflows/workchains/run_workchain_submit_append.py
@@ -774,7 +774,7 @@ In the ``inspect_calculation`` outline, we retrieve the calculation that was sub
 If this returns ``False``, in this example we simply fire a report message and return the exit code corresponding to the label ``ERROR_CALCULATION_FAILED``.
 Note that the specific exit code can be retrieved through the ``WorkChain`` property ``exit_codes``.
 This will return a collection of exit codes that have been defined for that ``WorkChain`` and any specific exit code can then be retrieved by accessing it as an attribute.
-Returning this exit code, which will be an instance of the :py:class:`~aiida.work.exit_code.ExitCode` named tuple, will cause the workchain to be aborted and the ``exit_status`` and ``exit_message`` to be set on the node, which were defined in the spec.
+Returning this exit code, which will be an instance of the :py:class:`~aiida.engine.processes.exit_code.ExitCode` named tuple, will cause the workchain to be aborted and the ``exit_status`` and ``exit_message`` to be set on the node, which were defined in the spec.
 
 .. note:: The notation ``self.exit_codes.ERROR_CALCULATION_FAILED`` is just syntactic sugar to retrieve the ``ExitCode`` tuple that was defined in the spec with that error label.
     Constructing your own ``ExitCode`` directly and returning that from the outline step will have exactly the same effect in terms of aborting the workchain execution and setting the exit status and message.
@@ -798,7 +798,7 @@ Consider the following example:
 
     @workfunction
     def exiting_workfunction():
-        from aiida.work import ExitCode
+        from aiida.engine import ExitCode
         return ExitCode(418, 'I am a teapot')
 
 The execution of the workfunction will be immediately terminated as soon as the tuple is returned, and the exit status and message will be set to ``418`` and ``I am a teapot``, respectively.
@@ -831,9 +831,9 @@ In the ``define`` method of this simple parent workchain, we use the :meth:`~plu
 This creates the corresponding input and output ports in the parent workchain.
 Additionally, AiiDA remembers which inputs and outputs were exposed from that particular workchain class.
 This is used when calling the child in the ``run_child`` method.
-The :meth:`~aiida.work.Process.exposed_inputs` method returns a dictionary of inputs that the parent received which were exposed from the child, and so it can be used to pass these on to the child.
-Finally, in the ``finalize`` method, we use :meth:`~aiida.work.Process.exposed_outputs` to retrieve the outputs of the child which were exposed to the parent.
-Using :meth:`~aiida.work.Process.out_many`, these outputs are added to the outputs of the parent workchain.
+The :meth:`~aiida.engine.processes.process.Process.exposed_inputs` method returns a dictionary of inputs that the parent received which were exposed from the child, and so it can be used to pass these on to the child.
+Finally, in the ``finalize`` method, we use :meth:`~aiida.engine.processes.process.Process.exposed_outputs` to retrieve the outputs of the child which were exposed to the parent.
+Using :meth:`~aiida.engine.processes.process.Process.out_many`, these outputs are added to the outputs of the parent workchain.
 This workchain can now be run in exactly the same way as the child itself:
 
 .. include:: include/snippets/workflows/expose_inputs/run_simple.py
@@ -864,16 +864,16 @@ Additionally, we want to expose the inputs ``b`` and ``c`` (outputs ``d`` and ``
 For this purpose, we pass the ``namespace`` parameter to the expose functions.
 However, since we now shouldn't expose ``a`` (``e``) again, we use the ``exclude`` keyword, which specifies a list of keys that will not be exposed.
 
-When calling the children, we again use the :meth:`~aiida.work.Process.exposed_inputs` method to forward the exposed inputs.
+When calling the children, we again use the :meth:`~aiida.engine.processes.process.Process.exposed_inputs` method to forward the exposed inputs.
 Since the inputs ``b`` and ``c`` are now in a specific namespace, we need to pass this namespace as an additional parameter.
-By default, :meth:`~aiida.work.Process.exposed_inputs` will search through all the parent namespaces of the given namespace to search for input, as shown in the call for ``child_1``.
+By default, :meth:`~aiida.engine.processes.process.Process.exposed_inputs` will search through all the parent namespaces of the given namespace to search for input, as shown in the call for ``child_1``.
 If the same input key exists in multiple namespaces, the input in the lowest namespace takes precedence.
 It's also possible to disable this behavior, and instead search only in the explicit namespace that was passed.
 This is done by setting ``agglomerate=False``, as shown in the call to ``child_2``.
 Of course, we then need to explicitly pass the input ``a``.
 
-Finally, we use :meth:`~aiida.work.Process.exposed_outputs` and :meth:`~aiida.work.Process.out_many` to forward the outputs of the children to the outputs of the parent.
-Again, the ``namespace`` and ``agglomerate`` options can be used to select which outputs are returned by the :meth:`~aiida.work.Process.exposed_outputs` method.
+Finally, we use :meth:`~aiida.engine.processes.process.Process.exposed_outputs` and :meth:`~aiida.engine.processes.process.Process.out_many` to forward the outputs of the children to the outputs of the parent.
+Again, the ``namespace`` and ``agglomerate`` options can be used to select which outputs are returned by the :meth:`~aiida.engine.processes.process.Process.exposed_outputs` method.
 
 .. _serialize_inputs:
 
@@ -907,10 +907,10 @@ However, these workchains can be updated with just a few minor updates that we w
 * The free function ``submit`` in any ``WorkChain`` should be replaced with ``self.submit``.
 * The ``_options`` input for ``CalcJob`` is now ``options``, simply removed the leading underscore.
 * The ``label`` and ``description`` inputs for ``CalcJob`` or a ``WorkChain`` have also lost the underscore.
-* The free functions from ``aiida.work.run`` have been moved to ``aiida.work.launch``, even though for the time being the old import will still work.
+* The free functions from ``aiida.work.launch`` and ``aiida.work.run`` have been moved to ``aiida.engine.launch``.
 * The future returned by ``submit`` no longer has the ``pid`` attribute but rather ``pk``.
 * The ``get_inputs_template class`` method has been replaced by ``get_builder``. See the section on the :ref:`process builder<process_builder>` on how to use it.
-* The import ``aiida.work.workfunction.workfunction`` has been moved to ``aiida.work.process_function.workfunction``.
+* The import ``aiida.work.workfunction`` has been moved to ``aiida.engine.processes.functions.workfunction``.
 * The ``input_group`` has been deprecated and been replaced by namespaces. See the section on :ref:`port namespaces<ports_portnamespaces>` on how to use them.
 * The use of a ``.`` (period) in output keys is not supported in ``Process.out`` because that is now reserved to indicate namespaces.
 * The method ``ArrayData.iterarrayas()`` has been renamed to ``ArrayData.get_iterarrays()``.

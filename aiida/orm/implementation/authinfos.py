@@ -7,19 +7,17 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Module for authinfo backend classes
-"""
-
+"""Module for authinfo backend classes."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import abc
 import six
 
 from . import backends
 
-__all__ = 'BackendAuthInfo', 'BackendAuthInfoCollection'
+__all__ = ('BackendAuthInfo', 'BackendAuthInfoCollection')
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -104,7 +102,7 @@ class BackendAuthInfo(backends.BackendEntity):
         """
 
     @abc.abstractmethod
-    def _get_metadata(self):
+    def get_metadata(self):
         """
         Get the metadata dictionary
 
@@ -112,21 +110,21 @@ class BackendAuthInfo(backends.BackendEntity):
         """
 
     @abc.abstractmethod
-    def _set_metadata(self, metadata):
+    def set_metadata(self, metadata):
         """
         Replace the metadata dictionary in the DB with the provided dictionary
         """
 
     def get_property(self, name):
         try:
-            return self._get_metadata()[name]
+            return self.get_metadata()[name]
         except KeyError:
             raise ValueError('Unknown property: {}'.format(name))
 
     def set_property(self, name, value):
-        metadata = self._get_metadata()
+        metadata = self.get_metadata()
         metadata[name] = value
-        self._set_metadata(metadata)
+        self.set_metadata(metadata)
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -150,7 +148,7 @@ class BackendAuthInfoCollection(backends.BackendCollection[BackendAuthInfo]):
         :param computer: a Computer instance
         :param user: a User instance
         :return: a AuthInfo object associated to the given computer and user
-        :raise NotExistent: if the user is not configured to use computer
+        :raise aiida.common.NotExistent: if the user is not configured to use computer
         :raise sqlalchemy.orm.exc.MultipleResultsFound: if the user is configured
             more than once to use the computer! Should never happen
         """

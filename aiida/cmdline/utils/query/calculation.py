@@ -55,7 +55,7 @@ class CalculationQueryBuilder(object):  # pylint: disable=useless-object-inherit
         :param failed: boolean to filter only failed processes
         :return: dictionary of filters suitable for a QueryBuilder.append() call
         """
-        from aiida.work import ProcessState
+        from aiida.engine import ProcessState
 
         exit_status_attribute = self.mapper.get_attribute('exit_status')
         process_state_attribute = self.mapper.get_attribute('process_state')
@@ -95,8 +95,7 @@ class CalculationQueryBuilder(object):  # pylint: disable=useless-object-inherit
         """
         import datetime
 
-        from aiida.orm import ProcessNode
-        from aiida.orm.querybuilder import QueryBuilder
+        from aiida import orm
         from aiida.common import timezone
 
         # Define the list of projections for the QueryBuilder, which are all valid minus the compound projections
@@ -112,8 +111,8 @@ class CalculationQueryBuilder(object):  # pylint: disable=useless-object-inherit
         if past_days is not None:
             filters['ctime'] = {'>': timezone.now() - datetime.timedelta(days=past_days)}
 
-        builder = QueryBuilder()
-        builder.append(cls=ProcessNode, filters=filters, project=projected_attributes, tag='process')
+        builder = orm.QueryBuilder()
+        builder.append(cls=orm.ProcessNode, filters=filters, project=projected_attributes, tag='process')
 
         if relationships is not None:
             for tag, entity in relationships.items():

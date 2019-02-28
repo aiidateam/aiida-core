@@ -13,7 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm.nodes.data import Data
+from aiida.orm import Data
 from aiida.orm.utils.node import load_node_class
 
 

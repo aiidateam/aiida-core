@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=protected-access
 """Tests for `verdi work`."""
 from __future__ import division
 from __future__ import print_function
@@ -41,7 +40,7 @@ class TestVerdiWork(AiidaTestCase):
 
     def test_list(self):
         """Test the list command."""
-        from aiida.work.processes import ProcessState
+        from aiida.engine import ProcessState
 
         # Number of output lines in -r/--raw format should be zero when there are no calculations yet
         result = self.cli_runner.invoke(cmd_work.work_list, ['-r'])
@@ -54,21 +53,21 @@ class TestVerdiWork(AiidaTestCase):
         for state in ProcessState:
 
             calc = WorkFunctionNode()
-            calc._set_process_state(state)
+            calc.set_process_state(state)
 
             # Set the WorkFunctionNode as successful
             if state == ProcessState.FINISHED:
-                calc._set_exit_status(0)
+                calc.set_exit_status(0)
 
             calc.store()
             calcs.append(calc)
 
             calc = WorkChainNode()
-            calc._set_process_state(state)
+            calc.set_process_state(state)
 
             # Set the WorkChainNode as failed
             if state == ProcessState.FINISHED:
-                calc._set_exit_status(1)
+                calc.set_exit_status(1)
 
             calc.store()
             calcs.append(calc)

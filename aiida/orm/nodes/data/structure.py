@@ -54,7 +54,7 @@ def _get_valid_cell(inputcell):
         if any(len(i) != 3 for i in the_cell):
             raise ValueError
     except (IndexError, ValueError, TypeError):
-        raise ValueError("Cell must be a list of three vectors, each " "defined as a list of three coordinates.")
+        raise ValueError("Cell must be a list of three vectors, each defined as a list of three coordinates.")
 
     if abs(calc_cell_volume(the_cell)) < _volume_threshold:
         raise ValueError("The cell volume is zero. Invalid cell.")
@@ -88,7 +88,7 @@ def get_valid_pbc(inputpbc):
         else:
             raise ValueError("pbc elements are not booleans.")
     else:
-        raise ValueError("pbc must be a boolean or a list of three " "booleans.", inputpbc)
+        raise ValueError("pbc must be a boolean or a list of three booleans.", inputpbc)
 
     return the_pbc
 
@@ -217,7 +217,7 @@ def validate_weights_tuple(weights_tuple, threshold):
     """
     w_sum = sum(weights_tuple)
     if (any(i < 0. for i in weights_tuple) or (w_sum - 1. > threshold)):
-        raise ValueError("The weight list is not valid (each element " "must be positive, and the sum must be <= 1).")
+        raise ValueError("The weight list is not valid (each element must be positive, and the sum must be <= 1).")
 
 
 def is_valid_symbol(symbol):
@@ -821,7 +821,7 @@ class StructureData(Data):
         try:
             func = getattr(self, "set_pymatgen_{}".format(typestr.lower()))
         except AttributeError:
-            raise AttributeError("Converter for '{}' to AiiDA structure " "does not exist".format(typestr))
+            raise AttributeError("Converter for '{}' to AiiDA structure does not exist".format(typestr))
         func(obj, **kwargs)
 
     def set_pymatgen_molecule(self, mol, margin=5):
@@ -989,7 +989,7 @@ class StructureData(Data):
         """
         Write the given structure to a string of format CIF.
         """
-        from aiida.orm.nodes.data.cif import CifData
+        from aiida.orm import CifData
 
         cif = CifData(ase=self.get_ase())
         return cif._prepare_cif()
@@ -1008,7 +1008,7 @@ class StructureData(Data):
         import numpy as np
         from itertools import product
 
-        import aiida.common.json as json
+        from aiida.common import json
 
         supercell_factors = [1, 1, 1]
 
@@ -1329,12 +1329,12 @@ class StructureData(Data):
         from aiida.common.exceptions import ModificationNotAllowed
 
         if self.is_stored:
-            raise ModificationNotAllowed("The StructureData object cannot be modified, " "it has already been stored")
+            raise ModificationNotAllowed("The StructureData object cannot be modified, it has already been stored")
 
         new_kind = Kind(kind=kind)  # So we make a copy
 
         if kind.name in [k.name for k in self.kinds]:
-            raise ValueError("A kind with the same name ({}) already exists." "".format(kind.name))
+            raise ValueError("A kind with the same name ({}) already exists.".format(kind.name))
 
         # If here, no exceptions have been raised, so I add the site.
         self.append_to_attr('kinds', new_kind.get_raw())
@@ -1355,7 +1355,7 @@ class StructureData(Data):
         from aiida.common.exceptions import ModificationNotAllowed
 
         if self.is_stored:
-            raise ModificationNotAllowed("The StructureData object cannot be modified, " "it has already been stored")
+            raise ModificationNotAllowed("The StructureData object cannot be modified, it has already been stored")
 
         new_site = Site(site=site)  # So we make a copy
 
@@ -1409,7 +1409,7 @@ class StructureData(Data):
         else:
             position = kwargs.pop('position', None)
             if position is None:
-                raise ValueError("You have to specify the position of the " "new atom")
+                raise ValueError("You have to specify the position of the new atom")
             # all remaining parameters
             kind = Kind(**kwargs)
 
@@ -1475,7 +1475,7 @@ class StructureData(Data):
         from aiida.common.exceptions import ModificationNotAllowed
 
         if self.is_stored:
-            raise ModificationNotAllowed("The StructureData object cannot be modified, " "it has already been stored")
+            raise ModificationNotAllowed("The StructureData object cannot be modified, it has already been stored")
 
         self.set_attribute('kinds', [])
         self._internal_kind_tags = {}
@@ -1488,7 +1488,7 @@ class StructureData(Data):
         from aiida.common.exceptions import ModificationNotAllowed
 
         if self.is_stored:
-            raise ModificationNotAllowed("The StructureData object cannot be modified, " "it has already been stored")
+            raise ModificationNotAllowed("The StructureData object cannot be modified, it has already been stored")
 
         self.set_attribute('sites', [])
 
@@ -1570,7 +1570,7 @@ class StructureData(Data):
         from aiida.common.exceptions import ModificationNotAllowed
 
         if self.is_stored:
-            raise ModificationNotAllowed("The StructureData object cannot be modified, " "it has already been stored")
+            raise ModificationNotAllowed("The StructureData object cannot be modified, it has already been stored")
 
         the_cell = _get_valid_cell(value)
         self.set_attribute('cell', the_cell)
@@ -1600,7 +1600,7 @@ class StructureData(Data):
         :param conserve_particle: if True, allows the possibility of removing a site.
             currently not implemented.
 
-        :raises ModificationNotAllowed: if object is stored already
+        :raises aiida.common.ModificationNotAllowed: if object is stored already
         :raises ValueError: if positions are invalid
 
         .. note:: it is assumed that the order of the new_positions is
@@ -1630,7 +1630,7 @@ class StructureData(Data):
                     raise ValueError("Expecting a list of floats. Found instead {}".format(new_positions[i]))
 
                 if len(this_pos) != 3:
-                    raise ValueError("Expecting a list of lists of length 3. " "found instead {}".format(len(this_pos)))
+                    raise ValueError("Expecting a list of lists of length 3. found instead {}".format(len(this_pos)))
 
                 # now append this Site to the new_site list.
                 new_site = Site(site=self.sites[i])  # So we make a copy
@@ -1661,7 +1661,7 @@ class StructureData(Data):
         from aiida.common.exceptions import ModificationNotAllowed
 
         if self.is_stored:
-            raise ModificationNotAllowed("The StructureData object cannot be modified, " "it has already been stored")
+            raise ModificationNotAllowed("The StructureData object cannot be modified, it has already been stored")
         the_pbc = get_valid_pbc(value)
 
         # self._pbc = the_pbc
@@ -1764,10 +1764,10 @@ class StructureData(Data):
             AiiDA database for record. Default False.
         :return: :py:class:`aiida.orm.nodes.data.cif.CifData` node.
         """
-        from .parameter import ParameterData
+        from .dict import Dict
         from aiida.tools.data import structure as structure_tools
 
-        param = ParameterData(dict=kwargs)
+        param = Dict(dict=kwargs)
         try:
             conv_f = getattr(structure_tools, '_get_cif_{}_inline'.format(converter))
         except AttributeError:
@@ -1851,7 +1851,7 @@ class StructureData(Data):
         from pymatgen.core.structure import Structure
 
         if self.pbc != (True, True, True):
-            raise ValueError("Periodic boundary conditions must apply in " "all three dimensions of real space")
+            raise ValueError("Periodic boundary conditions must apply in all three dimensions of real space")
 
         species = []
         additional_kwargs = {}
@@ -1863,7 +1863,7 @@ class StructureData(Data):
             for s in self.sites:
                 k = self.get_kind(s.kind_name)
                 if len(k.symbols) != 1 or (len(k.weights) != 1 or sum(k.weights) < 1.):
-                    raise ValueError("Cannot set partial occupancies and spins " "at the same time")
+                    raise ValueError("Cannot set partial occupancies and spins at the same time")
                 species.append(
                     Specie(
                         k.symbols[0],
@@ -1884,7 +1884,7 @@ class StructureData(Data):
                 additional_kwargs['site_properties'] = {'kind_name': self.get_site_kindnames()}
 
         if kwargs:
-            raise ValueError("Unrecognized parameters passed to pymatgen " "converter: {}".format(kwargs.keys()))
+            raise ValueError("Unrecognized parameters passed to pymatgen converter: {}".format(kwargs.keys()))
 
         positions = [list(x.position) for x in self.sites]
         return Structure(self.cell, species, positions, coords_are_cartesian=True, **additional_kwargs)
@@ -1905,7 +1905,7 @@ class StructureData(Data):
         from pymatgen.core.structure import Molecule
 
         if kwargs:
-            raise ValueError("Unrecognized parameters passed to pymatgen " "converter: {}".format(kwargs.keys()))
+            raise ValueError("Unrecognized parameters passed to pymatgen converter: {}".format(kwargs.keys()))
 
         species = []
         for s in self.sites:
@@ -1963,27 +1963,27 @@ class Kind(object):
         # Logic to create the site from the raw format
         if 'raw' in kwargs:
             if len(kwargs) != 1:
-                raise ValueError("If you pass 'raw', then you cannot pass " "any other parameter.")
+                raise ValueError("If you pass 'raw', then you cannot pass any other parameter.")
 
             raw = kwargs['raw']
 
             try:
                 self.set_symbols_and_weights(raw['symbols'], raw['weights'])
             except KeyError:
-                raise ValueError("You didn't specify either 'symbols' or " "'weights' in the raw site data.")
+                raise ValueError("You didn't specify either 'symbols' or 'weights' in the raw site data.")
             try:
                 self.mass = raw['mass']
             except KeyError:
-                raise ValueError("You didn't specify the site mass in the " "raw site data.")
+                raise ValueError("You didn't specify the site mass in the raw site data.")
 
             try:
                 self.name = raw['name']
             except KeyError:
-                raise ValueError("You didn't specify the name in the " "raw site data.")
+                raise ValueError("You didn't specify the name in the raw site data.")
 
         elif 'kind' in kwargs:
             if len(kwargs) != 1:
-                raise ValueError("If you pass 'kind', then you cannot pass " "any other parameter.")
+                raise ValueError("If you pass 'kind', then you cannot pass any other parameter.")
             oldkind = kwargs['kind']
 
             try:
@@ -1999,7 +1999,7 @@ class Kind(object):
         elif 'ase' in kwargs:
             aseatom = kwargs['ase']
             if len(kwargs) != 1:
-                raise ValueError("If you pass 'ase', then you cannot pass " "any other parameter.")
+                raise ValueError("If you pass 'ase', then you cannot pass any other parameter.")
 
             try:
                 import numpy
@@ -2034,7 +2034,7 @@ class Kind(object):
             except KeyError:
                 self.set_automatic_kind_name()
             if kwargs:
-                raise ValueError("Unrecognized parameters passed to Kind " "constructor: {}".format(kwargs.keys()))
+                raise ValueError("Unrecognized parameters passed to Kind constructor: {}".format(kwargs.keys()))
 
     def get_raw(self):
         """
@@ -2141,7 +2141,7 @@ class Kind(object):
                         "({} vs. {})".format(i + 1, self.weights[i], other_kind.weights[i]))
         # Check masses
         if abs(self.mass - other_kind.mass) > _mass_threshold:
-            return (False, "Masses are different ({} vs. {})" "".format(self.mass, other_kind.mass))
+            return (False, "Masses are different ({} vs. {})".format(self.mass, other_kind.mass))
 
         if self._internal_tag != other_kind._internal_tag:
             return (False, "Internal tags are different ({} vs. {})"
@@ -2217,7 +2217,7 @@ class Kind(object):
         if len(self._symbols) == 1:
             return self._symbols[0]
         else:
-            raise ValueError("This kind has more than one symbol (it is an " "alloy): {}".format(self._symbols))
+            raise ValueError("This kind has more than one symbol (it is an alloy): {}".format(self._symbols))
 
     @property
     def symbols(self):
@@ -2313,7 +2313,7 @@ class Site(object):
         if 'site' in kwargs:
             site = kwargs.pop('site')
             if kwargs:
-                raise ValueError("If you pass 'site', you cannot pass any " "further parameter to the Site constructor")
+                raise ValueError("If you pass 'site', you cannot pass any further parameter to the Site constructor")
             if not isinstance(site, Site):
                 raise ValueError("'site' must be of type Site")
             self.kind_name = site.kind_name
@@ -2321,12 +2321,12 @@ class Site(object):
         elif 'raw' in kwargs:
             raw = kwargs.pop('raw')
             if kwargs:
-                raise ValueError("If you pass 'raw', you cannot pass any " "further parameter to the Site constructor")
+                raise ValueError("If you pass 'raw', you cannot pass any further parameter to the Site constructor")
             try:
                 self.kind_name = raw['kind_name']
                 self.position = raw['position']
             except KeyError as exc:
-                raise ValueError("Invalid raw object, it does not contain any " "key {}".format(exc.args[0]))
+                raise ValueError("Invalid raw object, it does not contain any key {}".format(exc.args[0]))
             except TypeError:
                 raise ValueError("Invalid raw object, it is not a dictionary")
 
@@ -2411,10 +2411,10 @@ class Site(object):
                 found = True
                 break
         if not found:
-            raise ValueError("No kind '{}' has been found in the list of kinds" "".format(self.kind_name))
+            raise ValueError("No kind '{}' has been found in the list of kinds".format(self.kind_name))
 
         if kind.is_alloy or kind.has_vacancies:
-            raise ValueError("Cannot convert to ASE if the kind represents " "an alloy or it has vacancies.")
+            raise ValueError("Cannot convert to ASE if the kind represents an alloy or it has vacancies.")
         aseatom = ase.Atom(position=self.position, symbol=str(kind.symbols[0]), mass=kind.mass)
         if tag is not None:
             aseatom.tag = tag
@@ -2457,7 +2457,7 @@ class Site(object):
                 raise ValueError
         # value is not iterable or elements are not floats or len != 3
         except (ValueError, TypeError):
-            raise ValueError("Wrong format for position, must be a list of " "three float numbers.")
+            raise ValueError("Wrong format for position, must be a list of three float numbers.")
         self._position = internal_pos
 
     def __repr__(self):

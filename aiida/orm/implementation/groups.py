@@ -20,7 +20,7 @@ from aiida.common import exceptions
 from . import backends
 from .nodes import BackendNode
 
-__all__ = 'BackendGroup', 'BackendGroupCollection'
+__all__ = ('BackendGroup', 'BackendGroupCollection')
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -44,7 +44,7 @@ class BackendGroup(backends.BackendEntity):
         UniquenessError will be raised
 
         :param name: the new group name
-        :raises UniquenessError: if another group of same type and name already exists
+        :raises aiida.common.UniquenessError: if another group of same type and name already exists
         """
 
     @abc.abstractproperty

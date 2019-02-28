@@ -123,7 +123,8 @@ class CalculationProjectionMapper(ProjectionMapper):
             'mtime':
             lambda value: formatting.format_relative_time(value['mtime']),
             'state':
-            lambda value: formatting.format_state(value[process_state_key], value[process_paused_key], value[exit_status_key]),
+            lambda value: formatting.format_state(value[process_state_key], value[process_paused_key], value[
+                exit_status_key]),
             'process_state':
             lambda value: formatting.format_process_state(value[process_state_key]),
             'sealed':

@@ -72,7 +72,7 @@ def check_schema_version(profile_name=None):
       code. This is useful to have the code automatically set the DB version
       at the first code execution.
 
-    :raise ConfigurationError: if the two schema versions do not match.
+    :raise aiida.common.ConfigurationError: if the two schema versions do not match.
       Otherwise, just return.
     """
     # pylint: disable=duplicate-string-formatting-argument

@@ -11,10 +11,10 @@
 This module defines the classes related to band structures or dispersions
 in a Brillouin zone, and how to operate on them.
 """
-
 from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
+
 import io
 from string import Template
 
@@ -22,9 +22,9 @@ import six
 from six.moves import range, zip
 import numpy
 
-from aiida.orm.nodes.data.array.kpoints import KpointsData
 from aiida.common.exceptions import ValidationError
 from aiida.common.utils import prettify_labels, join_labels
+from .kpoints import KpointsData
 
 
 def prepare_header_comment(uuid, plot_info, comment_char='#'):
@@ -87,7 +87,7 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
             return int(num - .5)
 
     if fermi_energy and number_electrons:
-        raise ValueError("Specify either the number of electrons or the " "Fermi energy, but not both")
+        raise ValueError("Specify either the number of electrons or the Fermi energy, but not both")
 
     try:
         stored_bands = bandsdata.get_bands()
@@ -112,7 +112,7 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
             try:
                 _, stored_occupations = bandsdata.get_bands(also_occupations=True)
             except KeyError:
-                raise KeyError("Cannot determine metallicity if I don't have " "either fermi energy, or occupations")
+                raise KeyError("Cannot determine metallicity if I don't have either fermi energy, or occupations")
 
             # put the occupations in the same order of bands, also in case of multiple bands
             if len(stored_occupations.shape) == 3:
@@ -189,9 +189,9 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
         max_mins = [(max(i), min(i)) for i in levels]
 
         if fermi_energy > bands.max():
-            raise ValueError("The Fermi energy is above all band energies, " "don't know what to do")
+            raise ValueError("The Fermi energy is above all band energies, don't know what to do")
         if fermi_energy < bands.min():
-            raise ValueError("The Fermi energy is below all band energies, " "don't know what to do.")
+            raise ValueError("The Fermi energy is below all band energies, don't know what to do.")
 
         # one band is crossed by the fermi energy
         if any(i[1] < fermi_energy and fermi_energy < i[0] for i in max_mins):
@@ -209,7 +209,7 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
             lumo = min([i[1] for i in max_mins if i[1] > fermi_energy])
             gap = lumo - homo
             if gap <= 0.:
-                raise Exception("Something wrong has been implemented. " "Revise the code!")
+                raise Exception("Something wrong has been implemented. Revise the code!")
             return True, gap
 
 
@@ -307,7 +307,7 @@ class BandsData(KpointsData):
             try:
                 [float(_) for _ in x.flatten() if _ is not None]
             except (TypeError, ValueError):
-                raise ValueError("The {} array can only contain " "float or None values".format(msg))
+                raise ValueError("The {} array can only contain float or None values".format(msg))
 
         # check the labels
         if labels is not None:
@@ -383,7 +383,7 @@ class BandsData(KpointsData):
         from aiida.orm.nodes.data.structure import get_valid_pbc
 
         if self.is_stored:
-            raise ModificationNotAllowed("The KpointsData object cannot be modified, " "it has already been stored")
+            raise ModificationNotAllowed("The KpointsData object cannot be modified, it has already been stored")
         the_pbc = get_valid_pbc(value)
         self.set_attribute('pbc1', the_pbc[0])
         self.set_attribute('pbc2', the_pbc[1])
@@ -845,7 +845,7 @@ class BandsData(KpointsData):
         For the possible parameters, see documentation of
         :py:meth:`~aiida.orm.nodes.data.array.bands.BandsData._matplotlib_get_dict`
         """
-        import aiida.common.json as json
+        from aiida.common import json
 
         all_data = self._matplotlib_get_dict(*args, **kwargs)
 
@@ -868,7 +868,7 @@ class BandsData(KpointsData):
         """
         import os
 
-        import aiida.common.json as json
+        from aiida.common import json
 
         all_data = self._matplotlib_get_dict(*args, main_file_name=main_file_name, **kwargs)
 
@@ -1001,7 +1001,7 @@ class BandsData(KpointsData):
         import subprocess
         import sys
 
-        import aiida.common.json as json
+        from aiida.common import json
 
         all_data = self._matplotlib_get_dict(*args, **kwargs)
 
@@ -1253,7 +1253,7 @@ class BandsData(KpointsData):
             format)
         """
         from aiida import get_file_header
-        import aiida.common.json as json
+        from aiida.common import json
 
         json_dict = self._get_band_segments(cartesian=True)
         json_dict['original_uuid'] = self.uuid

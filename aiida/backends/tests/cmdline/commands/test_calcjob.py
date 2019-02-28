@@ -38,11 +38,9 @@ class TestVerdiCalculation(AiidaTestCase):
         super(TestVerdiCalculation, cls).setUpClass(*args, **kwargs)
         from aiida.backends.tests.utils.fixtures import import_archive_fixture
         from aiida.common.links import LinkType
-        from aiida.orm import Data
-        from aiida.orm import CalcJobNode
-        from aiida.orm.nodes.data.parameter import ParameterData
+        from aiida.engine import ProcessState
+        from aiida.orm import Data, CalcJobNode, Dict
         from aiida.plugins import CalculationFactory
-        from aiida.work.processes import ProcessState
         from aiida import orm
 
         cls.computer = orm.Computer(
@@ -68,7 +66,7 @@ class TestVerdiCalculation(AiidaTestCase):
             calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
             calc.store()
 
-            calc._set_process_state(ProcessState.RUNNING)
+            calc.set_process_state(ProcessState.RUNNING)
             cls.calcs.append(calc)
 
             if calculation_state == CalcJobState.PARSING:
@@ -77,7 +75,7 @@ class TestVerdiCalculation(AiidaTestCase):
                 cls.VAL_ONE = 'val_one'
                 cls.VAL_TWO = 'val_two'
 
-                output_parameters = ParameterData(dict={
+                output_parameters = Dict(dict={
                     cls.KEY_ONE: cls.VAL_ONE,
                     cls.KEY_TWO: cls.VAL_TWO,
                 }).store()
@@ -95,8 +93,8 @@ class TestVerdiCalculation(AiidaTestCase):
         calc = CalcJobNode(computer=cls.computer)
         calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         calc.store()
-        calc._set_exit_status(cls.EXIT_STATUS)
-        calc._set_process_state(ProcessState.FINISHED)
+        calc.set_exit_status(cls.EXIT_STATUS)
+        calc.set_process_state(ProcessState.FINISHED)
         cls.calcs.append(calc)
 
         # Uncomment when issue 2342 is addressed

@@ -73,7 +73,6 @@ class TestProcessNode(AiidaTestCase):
 
     def test_process_node_updatable_attribute(self):
         """Check that updatable attributes and only those can be mutated for a stored but unsealed CalculationNode."""
-        # pylint: disable=protected-access
         node = CalculationNode()
         attrs_to_set = {
             'bool': self.boolval,
@@ -126,11 +125,11 @@ class TestProcessNode(AiidaTestCase):
     def test_get_authinfo(self):
         """Test that we can get the AuthInfo object from the calculation instance."""
         from aiida.orm import AuthInfo
-        authinfo = self.calcjob._get_authinfo()  # pylint: disable=protected-access
+        authinfo = self.calcjob.get_authinfo()
         self.assertIsInstance(authinfo, AuthInfo)
 
     def test_get_transport(self):
         """Test that we can get the Transport object from the calculation instance."""
         from aiida.transports import Transport
-        transport = self.calcjob._get_transport()  # pylint: disable=protected-access
+        transport = self.calcjob.get_transport()
         self.assertIsInstance(transport, Transport)

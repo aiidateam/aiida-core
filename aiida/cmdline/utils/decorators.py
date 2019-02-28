@@ -22,6 +22,7 @@ Provides:
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from contextlib import contextmanager
 from functools import wraps
 
@@ -30,6 +31,8 @@ from click_spinner import spinner
 from . import echo
 
 DAEMON_NOT_RUNNING_DEFAULT_MESSAGE = 'daemon is not running'
+
+__all__ = ('with_dbenv', 'dbenv', 'only_if_daemon_running')
 
 
 def load_dbenv_if_not_loaded(**kwargs):
@@ -143,7 +146,7 @@ def only_if_daemon_running(echo_function=echo.echo_critical, message=None):
         @wraps(function)
         def decorated_function(*args, **kwargs):
             """If daemon pid file is not found / empty, echo message and call decorated function."""
-            from aiida.daemon.client import get_daemon_client
+            from aiida.engine.daemon.client import get_daemon_client
 
             daemon_client = get_daemon_client()
 
@@ -209,7 +212,7 @@ def deprecated_command(message):
         def decorated_function(*args, **kwargs):
             """Echo a deprecation warning before doing anything else."""
             from aiida.cmdline.utils import templates
-            from aiida.manage import get_config
+            from aiida.manage.configuration import get_config
             from textwrap import wrap
 
             profile = get_config().current_profile

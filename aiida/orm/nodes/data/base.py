@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""`Data` sub class to be used as a base for data containers that represent base python data types."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -34,24 +35,20 @@ def to_aiida_type(value):
 
 @six.add_metaclass(abc.ABCMeta)
 class BaseType(Data):
-    """
-    Store a base python type as a AiiDA node in the DB.
-
-    Provide the .value property to get the actual value.
-    """
+    """`Data` sub class to be used as a base for data containers that represent base python data types."""
 
     def __init__(self, *args, **kwargs):
         try:
             getattr(self, '_type')
         except AttributeError:
-            raise RuntimeError('Derived class must define the _type class member')
+            raise RuntimeError('Derived class must define the `_type` class member')
 
         super(BaseType, self).__init__(**kwargs)
 
         try:
             value = args[0]
         except IndexError:
-            value = self._type()
+            value = self._type()  # pylint: disable=no-member
 
         self.value = value
 
@@ -61,7 +58,7 @@ class BaseType(Data):
 
     @value.setter
     def value(self, value):
-        self.set_attribute('value', self._type(value))
+        self.set_attribute('value', self._type(value))  # pylint: disable=no-member
 
     def __str__(self):
         return super(BaseType, self).__str__() + ' value: {}'.format(self.value)
@@ -69,14 +66,12 @@ class BaseType(Data):
     def __eq__(self, other):
         if isinstance(other, BaseType):
             return self.value == other.value
-        else:
-            return self.value == other
+        return self.value == other
 
     def __ne__(self, other):
         if isinstance(other, BaseType):
             return self.value != other.value
-        else:
-            return self.value != other
+        return self.value != other
 
     def new(self, value=None):
         return self.__class__(value)

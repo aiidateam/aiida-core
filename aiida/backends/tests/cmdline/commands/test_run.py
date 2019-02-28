@@ -37,7 +37,7 @@ class TestVerdiRun(AiidaTestCase):
 
         script_content = """
 #!/usr/bin/env python
-from aiida.work import workfunction
+from aiida.engine import workfunction
 
 @workfunction
 def wf():
@@ -66,4 +66,4 @@ if __name__ == '__main__':
             # Verify that the node has the correct function name and content
             self.assertTrue(isinstance(node, WorkFunctionNode))
             self.assertEqual(node.function_name, 'wf')
-            self.assertEqual(open(node.function_source_file, 'r').read(), script_content)
+            self.assertEqual(node.get_function_source_code(), script_content)

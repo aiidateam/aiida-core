@@ -75,6 +75,7 @@ py:class  bool
 py:class  basestring
 py:class  None
 py:class  type
+py:class  typing.Final
 # this is required for metaclasses(?)
 py:class  __builtin__.bool
 py:class  __builtin__.float
@@ -152,6 +153,7 @@ py:class  plumpy.Communicator
 py:class  plumpy.RemoteProcessThreadController
 py:class  plumpy.Bundle
 py:class  plumpy.workchains.WorkChainSpec
+py:class  plumpy.WorkChainSpec
 py:class  plumpy.Persister
 py:class  plumpy.persistence.Persister
 py:class  plumpy.PersistenceError
@@ -221,6 +223,7 @@ py:class  collections.abc.Iterator
 py:class  collections.abc.Sized
 
 # backend-dependent implementation
+py:class  WorkChainSpec
 py:class  aiida.orm.nodes.Node
 # This comes from ABCMeta
 py:meth   aiida.orm.group.Group.get_from_string

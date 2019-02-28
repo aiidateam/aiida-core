@@ -7,10 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=wildcard-import,undefined-variable
 """Classes and functions to load and interact with plugin classes accessible through defined entry points."""
 
-from .factories import CalculationFactory, DataFactory, DbImporterFactory, OrbitalFactory, ParserFactory
-from .factories import SchedulerFactory, TransportFactory, TcodExporterFactory, WorkflowFactory
+from .entry_point import *
+from .factories import *
 
-__all__ = ('CalculationFactory', 'DataFactory', 'DbImporterFactory', 'OrbitalFactory', 'ParserFactory',
-           'SchedulerFactory', 'TransportFactory', 'TcodExporterFactory', 'WorkflowFactory')
+__all__ = (entry_point.__all__ + factories.__all__)

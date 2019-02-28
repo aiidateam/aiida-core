@@ -26,6 +26,7 @@ But ``verdi`` is very versatile and provides a wealth of other functionalities; 
 * :ref:`run<run>`:                   Execute an AiiDA script.
 * :ref:`setup<setup>`:               Setup and configure a new profile.
 * :ref:`shell<shell>`:               Start a python shell with preloaded AiiDA environment.
+* :ref:`status<status>`:             Show service status overview.
 * :ref:`user<user>`:                 Inspect and manage users.
 * :ref:`work<work>`:                 Inspect and manage work calculations.
 
@@ -328,7 +329,7 @@ Manage ``Data`` nodes.
     * **list**: list currently saved nodes of CifData kind
     * **show**: use third-party visualizer (like jmol) to graphically show the CifData
 
-  * **parameter**: handles the ParameterData objects
+  * **parameter**: handles the Dict objects
 
     * **show**: output the content of the python dictionary in different formats.
 
@@ -513,6 +514,13 @@ Create and setup a new profile.
 ---------------
 Start a python shell with preloaded AiiDA environment.
 Which modules will be preloaded can be configured through :doc:`properties<properties>` set in the configuration file.
+
+.. _status:
+
+``verdi status``
+----------------
+Show overview of status for services needed by AiiDA.
+This can be helpful for pinning down potential problems during debugging.
 
 
 .. _user:

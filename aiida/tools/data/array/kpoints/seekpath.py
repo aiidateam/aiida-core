@@ -11,10 +11,9 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from aiida.orm.nodes.data.array.kpoints import KpointsData
-from aiida.orm.nodes.data.parameter import ParameterData
+from aiida.orm import KpointsData, Dict
 
-__all__ = ['check_seekpath_is_installed', 'get_explicit_kpoints_path', 'get_kpoints_path']
+__all__ = ('check_seekpath_is_installed', 'get_explicit_kpoints_path', 'get_kpoints_path')
 
 
 def check_seekpath_is_installed():
@@ -50,7 +49,7 @@ def get_explicit_kpoints_path(structure, parameters):
         - ``explicit_kpoints``: a KpointsData with the (explicit) kpoints
           (with labels set).
 
-        - ``parameters``: a ParameterData, whose content is
+        - ``parameters``: a Dict, whose content is
           the same dictionary as returned by the ``seekpath.get_explicit_k_path`` function
           (see `seekpath documentation <https://seekpath.readthedocs.io/>`_),
           except that:
@@ -105,7 +104,7 @@ def get_explicit_kpoints_path(structure, parameters):
     kpoints.set_cell_from_structure(primitive_structure)
     kpoints.set_kpoints(kpoints_abs, cartesian=True, labels=labels)
 
-    result['parameters'] = ParameterData(dict=rawdict)
+    result['parameters'] = Dict(dict=rawdict)
     result['explicit_kpoints'] = kpoints
     result['primitive_structure'] = primitive_structure
     result['conv_structure'] = conv_structure
@@ -133,7 +132,7 @@ def get_kpoints_path(structure, parameters):
 
     :return: A dictionary with three nodes:
 
-        - ``parameters``: a ParameterData, whose content is
+        - ``parameters``: a Dict, whose content is
           the same dictionary as returned by the ``seekpath.get_path`` function
           (see `seekpath documentation <https://seekpath.readthedocs.io/>`_),
           except that:
@@ -172,7 +171,7 @@ def get_kpoints_path(structure, parameters):
     primitive_tuple = (primitive_lattice, primitive_positions, primitive_types)
     primitive_structure = spglib_tuple_to_structure(primitive_tuple, kind_info, kinds)
 
-    result['parameters'] = ParameterData(dict=rawdict)
+    result['parameters'] = Dict(dict=rawdict)
     result['primitive_structure'] = primitive_structure
     result['conv_structure'] = conv_structure
 

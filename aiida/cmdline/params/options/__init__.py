@@ -8,18 +8,28 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # yapf: disable
-"""Provide reusable options, helping to keep interfaces consistent."""
-
-
+"""Module with pre-defined reusable commandline options that can be used as `click` decorators."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import click
 
 from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
-from aiida.cmdline.params import types
-from aiida.cmdline.params.options.multivalue import MultipleValueOption
-from aiida.cmdline.params.options.overridable import OverridableOption
+from .. import types
+from .multivalue import MultipleValueOption
+from .overridable import OverridableOption
+
+__all__ = (
+    'PROFILE', 'CALCULATION', 'CALCULATIONS', 'CODE', 'CODES', 'COMPUTER', 'COMPUTERS', 'DATUM', 'DATA', 'GROUP',
+    'GROUPS', 'NODE', 'NODES', 'FORCE', 'SILENT', 'VISUALIZATION_FORMAT', 'INPUT_FORMAT', 'EXPORT_FORMAT',
+    'ARCHIVE_FORMAT', 'NON_INTERACTIVE', 'USER_EMAIL', 'USER_FIRST_NAME', 'USER_LAST_NAME', 'USER_INSTITUTION',
+    'BACKEND', 'DB_HOST', 'DB_PORT', 'DB_USERNAME', 'DB_PASSWORD', 'DB_NAME', 'REPOSITORY_PATH', 'PROFILE_ONLY_CONFIG',
+    'PROFILE_SET_DEFAULT', 'PREPEND_TEXT', 'APPEND_TEXT', 'LABEL', 'DESCRIPTION', 'INPUT_PLUGIN', 'CALC_JOB_STATE',
+    'PROCESS_STATE', 'EXIT_STATUS', 'FAILED', 'LIMIT', 'PROJECT', 'ORDER_BY', 'PAST_DAYS', 'OLDER_THAN', 'ALL',
+    'ALL_STATES', 'ALL_USERS', 'RAW', 'HOSTNAME', 'TRANSPORT', 'SCHEDULER', 'USER', 'PORT', 'FREQUENCY', 'VERBOSE',
+    'TIMEOUT', 'FORMULA_MODE', 'TRAJECTORY_INDEX', 'WITH_ELEMENTS', 'WITH_ELEMENTS_EXCLUSIVE'
+)
 
 
 def valid_process_states():

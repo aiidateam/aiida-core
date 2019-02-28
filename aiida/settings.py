@@ -14,7 +14,7 @@ import os
 from aiida.backends import settings
 from aiida.common.exceptions import ConfigurationError, MissingConfigurationError
 from aiida.common.setup import parse_repository_uri
-from aiida.manage import get_config
+from aiida.manage.configuration import get_config
 
 
 TESTING_MODE = False

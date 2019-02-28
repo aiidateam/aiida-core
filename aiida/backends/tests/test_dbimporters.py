@@ -16,10 +16,10 @@ from __future__ import division
 import io
 import unittest
 
-import six
 from six.moves import range
 
 from aiida.backends.testbase import AiidaTestCase
+
 
 class TestCodDbImporter(AiidaTestCase):
     """
@@ -143,8 +143,8 @@ class TestCodDbImporter(AiidaTestCase):
         """
         Tests the creation of CifData node from CodEntry.
         """
+        from aiida.orm import CifData
         from aiida.tools.dbimporters.plugins.cod import CodEntry
-        from aiida.orm.nodes.data.cif import CifData
 
         entry = CodEntry("http://www.crystallography.net/cod/1000000.cif")
         entry.cif = "data_test _publ_section_title 'Test structure'"

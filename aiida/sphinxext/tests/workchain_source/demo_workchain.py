@@ -14,12 +14,9 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import re
 
-from aiida.work.workchain import WorkChain
-from aiida.orm.nodes.data.bool import Bool
-from aiida.orm.nodes.data.float import Float
-from aiida.orm.nodes.data.int import Int
+from aiida.engine import WorkChain
+from aiida.orm import Bool, Float, Int
 
 
 class DemoWorkChain(WorkChain):  # pylint: disable=abstract-method
@@ -36,6 +33,7 @@ class DemoWorkChain(WorkChain):  # pylint: disable=abstract-method
         spec.input_namespace('nsp', help='A separate namespace, ``nsp``.')
         spec.input_namespace('nsp2',)
         spec.output('z', valid_type=Bool, help='Output of the demoworkchain.')
+
 
 class NormalClass(object):
     """This is here to check that we didn't break the regular autoclass."""

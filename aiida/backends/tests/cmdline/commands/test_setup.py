@@ -18,7 +18,7 @@ from aiida.backends import settings
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.tests.utils.configuration import with_temporary_config_instance
 from aiida.cmdline.commands import cmd_setup
-from aiida.manage import get_config
+from aiida.manage.configuration import get_config
 
 
 class TestVerdiSetup(AiidaTestCase):
@@ -58,7 +58,7 @@ class TestVerdiSetup(AiidaTestCase):
         result = self.cli_runner.invoke(cmd_setup.setup, options)
         self.assertIsNotNone(result.exception)
         self.assertIn('Missing argument', result.output)
-        self.assertIn('profile_name', result.output)
+        self.assertIn('PROFILE_NAME', result.output)
 
         # With existing profile name should raise exception
         options.append(profile.name)

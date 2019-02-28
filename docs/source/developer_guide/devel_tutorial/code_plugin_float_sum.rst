@@ -38,7 +38,7 @@ imagine that we want to introduce a new type of data node that simply
 stores a float number. We will call it ``FloatData``, and the class 
 implementation can look like this::
 
-   from aiida.orm.nodes.data import Data
+   from aiida.orm import Data
 
    class FloatData(Data):
 
@@ -103,7 +103,7 @@ node and return also a ``FloatData`` node containing the sum.
 
 Below, you will find some hints on the parts you need to modify with respect
 to the :doc:`previous tutorial<code_plugin_int_sum>` using instead 
-``ParameterData`` both as inputs and outputs.
+``Dict`` both as inputs and outputs.
 
 .. note:: Remember to add an entry point for the ``SumFloatCalculation`` in the ``setup.json`` file and re-install the package and refresh entry points.
    It is up to you to either put the new class in the same ``sum.py`` or create a new ``floatsum.py``.
@@ -112,7 +112,7 @@ to the :doc:`previous tutorial<code_plugin_int_sum>` using instead
 Changes to the parser
 /////////////////////
 
-The plugin should now return a ``FloatData`` instead of a ``ParameterData``,
+The plugin should now return a ``FloatData`` instead of a ``Dict``,
 therefore the parser code should contain something like the following::
 
     output_data = FloatData()
@@ -129,7 +129,7 @@ to the correct parser class::
     self._default_parser = 'sum.floatsum'  # Name of the entry point
 
 For consistency, we also want that the input plugin accepts two
-``FloatData`` instead of a single ``ParameterData``.
+``FloatData`` instead of a single ``Dict``.
 Therefore, you have to update the ``retdict`` object accordingly::
 
     retdict.update({

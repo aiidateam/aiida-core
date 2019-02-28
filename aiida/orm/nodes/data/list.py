@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""`Data` sub class to represent a list."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -19,9 +20,7 @@ __all__ = ('List',)
 
 
 class List(Data, MutableSequence):
-    """
-    Class to store python lists as AiiDA nodes
-    """
+    """`Data` sub class to represent a list."""
 
     _LIST_KEY = 'list'
 
@@ -34,16 +33,16 @@ class List(Data, MutableSequence):
         return self.get_list()[item]
 
     def __setitem__(self, key, value):
-        l = self.get_list()
-        l[key] = value
+        data = self.get_list()
+        data[key] = value
         if not self._using_list_reference():
-            self.set_list(l)
+            self.set_list(data)
 
     def __delitem__(self, key):
-        l = self.get_list()
-        del l[key]
+        data = self.get_list()
+        del data[key]
         if not self._using_list_reference():
-            self.set_list(l)
+            self.set_list(data)
 
     def __len__(self):
         return len(self.get_list())
@@ -61,61 +60,69 @@ class List(Data, MutableSequence):
         return not self == other
 
     def append(self, value):
-        l = self.get_list()
-        l.append(value)
+        data = self.get_list()
+        data.append(value)
         if not self._using_list_reference():
-            self.set_list(l)
+            self.set_list(data)
 
-    def extend(self, L):
-        l = self.get_list()
-        l.extend(L)
+    def extend(self, value):  # pylint: disable=arguments-differ
+        data = self.get_list()
+        data.extend(value)
         if not self._using_list_reference():
-            self.set_list(l)
+            self.set_list(data)
 
-    def insert(self, i, value):
-        l = self.get_list()
-        l.insert(i, value)
+    def insert(self, i, value):  # pylint: disable=arguments-differ
+        data = self.get_list()
+        data.insert(i, value)
         if not self._using_list_reference():
-            self.set_list(l)
+            self.set_list(data)
 
     def remove(self, value):
         del self[value]
 
-    def pop(self, **kwargs):
-        l = self.get_list()
-        l.pop(**kwargs)
+    def pop(self, **kwargs):  # pylint: disable=arguments-differ
+        data = self.get_list()
+        data.pop(**kwargs)
         if not self._using_list_reference():
-            self.set_list(l)
+            self.set_list(data)
 
-    def index(self, value):
+    def index(self, value):  # pylint: disable=arguments-differ
         return self.get_list().index(value)
 
     def count(self, value):
         return self.get_list().count(value)
 
     def sort(self, key=None, reverse=False):
-        l = self.get_list()
-        l.sort(key=key, reverse=reverse)
+        data = self.get_list()
+        data.sort(key=key, reverse=reverse)
         if not self._using_list_reference():
-            self.set_list(l)
+            self.set_list(data)
 
     def reverse(self):
-        l = self.get_list()
-        l.reverse()
+        data = self.get_list()
+        data.reverse()
         if not self._using_list_reference():
-            self.set_list(l)
+            self.set_list(data)
 
     def get_list(self):
+        """Return the contents of this node.
+
+        :return: a list
+        """
         try:
             return self.get_attribute(self._LIST_KEY)
         except AttributeError:
             self.set_list(list())
             return self.get_attribute(self._LIST_KEY)
 
-    def set_list(self, list_):
-        if not isinstance(list_, list):
+    def set_list(self, data):
+        """Set the contents of this node.
+
+        :param data: the list to set
+        """
+        if not isinstance(data, list):
             raise TypeError('Must supply list type')
-        self.set_attribute(self._LIST_KEY, list_)
+        self.set_attribute(self._LIST_KEY, data)
 
     def _using_list_reference(self):
         """

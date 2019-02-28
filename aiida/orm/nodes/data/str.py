@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""`Data` sub class to represent a string value."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -19,9 +20,8 @@ __all__ = ('Str',)
 
 
 class Str(BaseType):
-    """
-    Class to store strings as AiiDA nodes
-    """
+    """`Data` sub class to represent a string value."""
+
     _type = str
 
 

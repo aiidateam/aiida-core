@@ -14,25 +14,33 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 DEFAULT_MODULES_LIST = [
-    # ('aiida.orm', 'Node', 'Node'),
-    # ('aiida.orm.node', 'ProcessNode', 'ProcessNode'),
-    # ('aiida.orm.node', 'CalculationNode', 'CalculationNode'),
-    # ('aiida.orm.node', 'CalcJobNode', 'CalcJobNode'),
-    # ('aiida.orm.node', 'CalcFunctionNode', 'CalcFunctionNode'),
-    # ('aiida.orm.node', 'WorkflowNode', 'WorkflowNode'),
-    # ('aiida.orm.node', 'WorkChainNode', 'WorkChainNode'),
-    # ('aiida.orm.node', 'WorkFunctionNode', 'WorkFunctionNode'),
-    # ('aiida.orm', 'Data', 'Data'),
-    # ('aiida.orm', 'CalculationFactory', 'CalculationFactory'),
-    # ('aiida.orm', 'DataFactory', 'DataFactory'),
-    # ('aiida.orm', 'WorkflowFactory', 'WorkflowFactory'),
-    # ('aiida.orm', 'Code', 'Code'),
-    # ('aiida.orm', 'Computer', 'Computer'),
-    # ('aiida.orm', 'Group', 'Group'),
-    # ('aiida.orm', 'QueryBuilder', 'QueryBuilder'),
-    # ('aiida.orm.utils', 'load_code', 'load_code'),
-    # ('aiida.orm.utils', 'load_group', 'load_group'),
-    # ('aiida.orm.utils', 'load_node', 'load_node'),
+    ('aiida.orm', 'Node', 'Node'),
+    ('aiida.orm', 'ProcessNode', 'ProcessNode'),
+    ('aiida.orm', 'CalculationNode', 'CalculationNode'),
+    ('aiida.orm', 'CalcJobNode', 'CalcJobNode'),
+    ('aiida.orm', 'CalcFunctionNode', 'CalcFunctionNode'),
+    ('aiida.orm', 'WorkflowNode', 'WorkflowNode'),
+    ('aiida.orm', 'WorkChainNode', 'WorkChainNode'),
+    ('aiida.orm', 'WorkFunctionNode', 'WorkFunctionNode'),
+    ('aiida.orm', 'Data', 'Data'),
+    ('aiida.orm', 'Bool', 'Bool'),
+    ('aiida.orm', 'Float', 'Float'),
+    ('aiida.orm', 'Int', 'Int'),
+    ('aiida.orm', 'Str', 'Str'),
+    ('aiida.orm', 'List', 'List'),
+    ('aiida.orm', 'Dict', 'Dict'),
+    ('aiida.orm', 'Code', 'Code'),
+    ('aiida.orm', 'Computer', 'Computer'),
+    ('aiida.orm', 'Group', 'Group'),
+    ('aiida.orm', 'QueryBuilder', 'QueryBuilder'),
+    ('aiida.orm', 'User', 'User'),
+    ('aiida.orm', 'load_code', 'load_code'),
+    ('aiida.orm', 'load_computer', 'load_computer'),
+    ('aiida.orm', 'load_group', 'load_group'),
+    ('aiida.orm', 'load_node', 'load_node'),
+    ('aiida.plugins', 'CalculationFactory', 'CalculationFactory'),
+    ('aiida.plugins', 'DataFactory', 'DataFactory'),
+    ('aiida.plugins', 'WorkflowFactory', 'WorkflowFactory'),
 ]
 
 
@@ -83,25 +91,26 @@ def run_shell(interface=None):
 
 def get_start_namespace():
     """Load all default and custom modules"""
-    from aiida.manage import get_config
+    from aiida.manage.configuration import get_config
+
+    user_ns = {}
 
     config = get_config()
 
-    user_ns = {}
-    # load default modules
+    # Load default modules
     for app_mod, model_name, alias in DEFAULT_MODULES_LIST:
         user_ns[alias] = getattr(__import__(app_mod, {}, {}, model_name), model_name)
 
-    # load custom modules
-    custom_modules_list = [(str(e[0]), str(e[2]))
-                           for e in [p.rpartition('.') for p in config.option_get('verdishell.modules').split(':')]
-                           if e[1] == '.']
+    verdi_shell_auto_import = config.option_get('verdi.shell.auto_import', config.current_profile.name).split(':')
 
-    for app_mod, model_name in custom_modules_list:
+    # Load custom modules
+    modules_list = [(str(e[0]), str(e[2])) for e in [p.rpartition('.') for p in verdi_shell_auto_import] if e[1] == '.']
+
+    for app_mod, model_name in modules_list:
         try:
             user_ns[model_name] = getattr(__import__(app_mod, {}, {}, model_name), model_name)
         except AttributeError:
-            # if the module does not exist, we ignore it
+            # If the module does not exist, we ignore it
             pass
 
     return user_ns

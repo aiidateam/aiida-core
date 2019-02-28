@@ -96,8 +96,7 @@ class TestDuplicateNodeUuidMigration(TestMigrations):
     migrate_to = '0014_add_node_uuid_unique_constraint'
 
     def setUpBeforeMigration(self):
-        from aiida.orm.nodes.data.bool import Bool
-        from aiida.orm.nodes.data.int import Int
+        from aiida.orm import Bool, Int
 
         self.file_name = 'test.temp'
         self.file_content = '#!/bin/bash\n\necho test run\n'
@@ -112,11 +111,11 @@ class TestDuplicateNodeUuidMigration(TestMigrations):
             self.n_int_duplicates = 4
 
             node_bool = Bool(True)
-            node_bool.repository.add_path(handle.name, self.file_name)
+            node_bool.put_object_from_file(handle.name, self.file_name)
             node_bool.store()
 
             node_int = Int(1)
-            node_int.repository.add_path(handle.name, self.file_name)
+            node_int.put_object_from_file(handle.name, self.file_name)
             node_int.store()
 
             self.nodes_boolean.append(node_bool)
@@ -125,14 +124,14 @@ class TestDuplicateNodeUuidMigration(TestMigrations):
             for i in range(self.n_bool_duplicates):
                 node = Bool(True)
                 node.backend_entity.dbmodel.uuid = node_bool.uuid
-                node.repository.add_path(handle.name, self.file_name)
+                node.put_object_from_file(handle.name, self.file_name)
                 node.store()
                 self.nodes_boolean.append(node)
 
             for i in range(self.n_int_duplicates):
                 node = Int(1)
                 node.backend_entity.dbmodel.uuid = node_int.uuid
-                node.repository.add_path(handle.name, self.file_name)
+                node.put_object_from_file(handle.name, self.file_name)
                 node.store()
                 self.nodes_integer.append(node)
 
@@ -161,7 +160,7 @@ class TestDuplicateNodeUuidMigration(TestMigrations):
         self.assertEqual(len(set(uuids_integer)), len(nodes_integer))
 
         for node in nodes_boolean:
-            with node.repository._get_folder_pathsubfolder.open(self.file_name) as handle:
+            with node.open(self.file_name) as handle:
                 content = handle.read()
                 self.assertEqual(content, self.file_content)
 
@@ -318,7 +317,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
 
         # Creating the needed nodes & workflows
         calc_1 = DbNode(type="node.process.calculation.CalculationNode.", user_id=user.id)
-        param = DbNode(type="data.parameter.ParameterData.", user_id=user.id)
+        param = DbNode(type="data.dict.Dict.", user_id=user.id)
         leg_workf = DbWorkflow(label="Legacy WorkflowNode", user_id=user.id)
         calc_2 = DbNode(type="node.process.calculation.CalculationNode.", user_id=user.id)
 
@@ -368,12 +367,41 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
                 "message": "calculation node 1",
                 "objname": "node.calculation.job.quantumespresso.pw.",
             }))
+        # Creating two more log records that don't correspond to a node
+        log_5 = DbLog(
+            loggername='CalculationNode logger',
+            objpk=(calc_2.pk + 1000),
+            objname='node.calculation.job.quantumespresso.pw.',
+            message='calculation node 1000',
+            metadata=json.dumps({
+                "msecs": 718,
+                "objpk": (calc_2.pk + 1000),
+                "lineno": 361,
+                "levelno": 25,
+                "message": "calculation node 1000",
+                "objname": "node.calculation.job.quantumespresso.pw.",
+            }))
+        log_6 = DbLog(
+            loggername='CalculationNode logger',
+            objpk=(calc_2.pk + 1001),
+            objname='node.calculation.job.quantumespresso.pw.',
+            message='calculation node 10001',
+            metadata=json.dumps({
+                "msecs": 722,
+                "objpk": (calc_2.pk + 1001),
+                "lineno": 362,
+                "levelno": 24,
+                "message": "calculation node 1001",
+                "objname": "node.calculation.job.quantumespresso.pw.",
+            }))
 
         # Storing the log records
         log_1.save()
         log_2.save()
         log_3.save()
         log_4.save()
+        log_5.save()
+        log_6.save()
 
         # Storing temporarily information needed for the check at the test
         self.to_check = dict()
@@ -386,7 +414,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
             log_4.pk,
         )
 
-        # Getting the serialized ParameterData logs
+        # Getting the serialized Dict logs
         param_data = DbLog.objects.filter(objpk=param.pk).filter(objname='something.else.').values(
             *update_024.values_to_export)[:1]
         serialized_param_data = dumps_json(list(param_data))
@@ -394,9 +422,9 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
         # provides them) - this should coincide to the above
         serialized_unknown_exp_logs = update_024.get_serialized_unknown_entity_logs(DbLog)
         # Getting their number
-        unknown_exp_logs_no = update_024.get_unknown_entity_log_no(DbLog)
-        self.to_check['ParameterData'] = (serialized_param_data, serialized_unknown_exp_logs,
-                                          unknown_exp_logs_no)
+        unknown_exp_logs_number = update_024.get_unknown_entity_log_number(DbLog)
+        self.to_check['Dict'] = (serialized_param_data, serialized_unknown_exp_logs,
+                                          unknown_exp_logs_number)
 
         # Getting the serialized legacy workflow logs
         leg_wf = DbLog.objects.filter(
@@ -407,8 +435,19 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
         # Getting the serialized logs for the legacy workflow logs (as the export migration function
         # provides them) - this should coincide to the above
         serialized_leg_wf_exp_logs = update_024.get_serialized_legacy_workflow_logs(DbLog)
-        eg_wf_exp_logs_no = update_024.get_legacy_workflow_log_no(DbLog)
-        self.to_check['WorkflowNode'] = (serialized_leg_wf_logs, serialized_leg_wf_exp_logs, eg_wf_exp_logs_no)
+        eg_wf_exp_logs_number = update_024.get_legacy_workflow_log_number(DbLog)
+        self.to_check['WorkflowNode'] = (serialized_leg_wf_logs, serialized_leg_wf_exp_logs, eg_wf_exp_logs_number)
+
+        # Getting the serialized logs that don't correspond to a DbNode record
+        logs_no_node = DbLog.objects.filter(
+            id__in=[log_5.id, log_6.id]).values(
+            *update_024.values_to_export)
+        serialized_logs_no_node = dumps_json(list(logs_no_node))
+        # Getting the serialized logs that don't correspond to a node (as the export migration function
+        # provides them) - this should coincide to the above
+        serialized_logs_exp_no_node = update_024.get_serialized_logs_with_no_nodes(DbLog, DbNode)
+        logs_no_node_number = update_024.get_logs_with_no_nodes_number(DbLog, DbNode)
+        self.to_check['NoNode'] = (serialized_logs_no_node, serialized_logs_exp_no_node, logs_no_node_number)
 
     def tearDown(self):
         """Cleaning the DbLog, DbUser, DbWorkflow and DbNode records"""
@@ -428,7 +467,6 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
         Verify that after the migration there is only two log records left and verify that they corresponds to
         the CalculationNodes.
         """
-        import importlib
         DbLog = self.apps.get_model('db', 'DbLog')
 
         # Check that only two log records exist
@@ -437,22 +475,29 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
         # Get the node id of the log record referencing the node and verify that it is the correct one
         dbnode_id_1 = DbLog.objects.filter(
             pk=self.to_check['CalculationNode'][1]).values('dbnode_id')[:1].get()['dbnode_id']
-        self.assertEquals(dbnode_id_1, self.to_check['CalculationNode'][0], "The referenced node is not "
+        self.assertEqual(dbnode_id_1, self.to_check['CalculationNode'][0], "The referenced node is not "
                           "the expected one")
         dbnode_id_2 = DbLog.objects.filter(
             pk=self.to_check['CalculationNode'][3]).values('dbnode_id')[:1].get()['dbnode_id']
-        self.assertEquals(dbnode_id_2, self.to_check['CalculationNode'][2], "The referenced node is not "
+        self.assertEqual(dbnode_id_2, self.to_check['CalculationNode'][2], "The referenced node is not "
                           "the expected one")
 
     def test_dblog_correct_export_of_logs(self):
         """
-        Verify that export log methods for legacy workflows and unknown entities work as expected
+        Verify that export log methods for legacy workflows, unknown entities and log records that
+        don't correspond to nodes, work as expected
         """
-        self.assertEquals(self.to_check['ParameterData'][0], self.to_check['ParameterData'][1])
-        self.assertEquals(self.to_check['ParameterData'][2], 1)
+        import json
 
-        self.assertEquals(self.to_check['WorkflowNode'][0], self.to_check['WorkflowNode'][1])
-        self.assertEquals(self.to_check['WorkflowNode'][2], 1)
+        self.assertEqual(self.to_check['Dict'][0], self.to_check['Dict'][1])
+        self.assertEqual(self.to_check['Dict'][2], 1)
+
+        self.assertEqual(self.to_check['WorkflowNode'][0], self.to_check['WorkflowNode'][1])
+        self.assertEqual(self.to_check['WorkflowNode'][2], 1)
+
+        self.assertEqual(sorted(list(json.loads(self.to_check['NoNode'][0])), key=lambda k: k['id']),
+                          sorted(list(json.loads(self.to_check['NoNode'][1])), key=lambda k: k['id']))
+        self.assertEqual(self.to_check['NoNode'][2], 2)
 
     def test_dblog_unique_uuids(self):
         """
@@ -635,7 +680,7 @@ class TestTrajectoryDataMigration(TestMigrations):
     ]]])
 
     def setUpBeforeMigration(self):
-        from aiida.orm.nodes.data.array.trajectory import TrajectoryData
+        from aiida.orm import TrajectoryData
 
         # Create a TrajectoryData node
         node = TrajectoryData()
@@ -696,3 +741,27 @@ class TestNodePrefixRemovalMigration(TestMigrations):
 
         self.assertEqual(node_data.type, 'data.int.Int.')
         self.assertEqual(node_calc.type, 'process.calculation.calcjob.CalcJobNode.')
+
+
+class TestParameterDataToDictMigration(TestMigrations):
+
+    migrate_from = '0028_remove_node_prefix'
+    migrate_to = '0029_rename_parameter_data_to_dict'
+
+    def setUpBeforeMigration(self):
+        DbNode = self.apps.get_model('db', 'DbNode')
+
+        default_user = self.backend.users.create('{}@aiida.net'.format(self.id())).store()
+
+        node = DbNode(type='data.parameter.ParameterData.', user_id=default_user.id)
+        node.save()
+
+        self.node_id = node.id
+
+    def test_data_node_type_string(self):
+        """Verify that type string of the nodes was successfully adapted."""
+        from aiida.orm import load_node
+
+        node = load_node(self.node_id)
+
+        self.assertEqual(node.type, 'data.dict.Dict.')

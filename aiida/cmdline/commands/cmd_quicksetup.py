@@ -65,8 +65,22 @@ def quicksetup(profile_name, only_config, set_default, non_interactive, backend,
     create_instance_directories()
     config = load_config(create=True)
 
+    # create a profile, by default 'quicksetup' and prompt the user if already exists
+    profile_name = profile_name or 'quicksetup'
+    write_profile = False
+    while not write_profile:
+        if profile_name in config.profile_names:
+            echo.echo_warning("Profile '{}' already exists.".format(profile_name))
+            if click.confirm("Overwrite existing profile '{}'?".format(profile_name)):
+                write_profile = True
+            else:
+                profile_name = click.prompt('New profile name', type=str)
+        else:
+            write_profile = True
+
     # access postgres
-    postgres = Postgres(host=db_host, port=db_port, interactive=bool(not non_interactive), quiet=False)
+    dbinfo = {'host': db_host, 'port': db_port}
+    postgres = Postgres(interactive=bool(not non_interactive), quiet=False, dbinfo=dbinfo)
     postgres.set_setup_fail_callback(prompt_db_info)
     success = postgres.determine_setup()
     if not success:
@@ -110,20 +124,8 @@ def quicksetup(profile_name, only_config, set_default, non_interactive, backend,
         ]))
         raise exception
 
-    # create a profile, by default 'quicksetup' and prompt the user if already exists
-    profile_name = profile_name or 'quicksetup'
-    write_profile = False
-    while not write_profile:
-        if profile_name in config.profile_names:
-            if click.confirm('overwrite existing profile {}?'.format(profile_name)):
-                write_profile = True
-            else:
-                profile_name = click.prompt('new profile name', type=str)
-        else:
-            write_profile = True
-
-    dbhost = postgres.dbinfo.get('host', 'localhost')
-    dbport = postgres.dbinfo.get('port', '5432')
+    dbhost = postgres.get_dbinfo().get('host', 'localhost')
+    dbport = postgres.get_dbinfo().get('port', '5432')
 
     repo = repository or 'repository/{}/'.format(profile_name)
     if not os.path.isabs(repo):

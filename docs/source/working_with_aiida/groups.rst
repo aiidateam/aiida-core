@@ -58,12 +58,12 @@ be performed with Groups:
 
     From python interface::
 
-      In [3]: from aiida.orm.nodes.data.parameter import ParameterData
+      In [3]: from aiida.orm import Dict
 
-      In [4]: p = ParameterData().store()
+      In [4]: p = Dict().store()
 
       In [5]: p
-      Out[5]: <ParameterData: uuid: 09b3d52a-d0c4-4e3c-823c-6157f84af920 (pk: 2)>
+      Out[5]: <Dict: uuid: 09b3d52a-d0c4-4e3c-823c-6157f84af920 (pk: 2)>
 
       In [6]: group.add_nodes(p)
 

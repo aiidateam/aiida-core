@@ -11,10 +11,13 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import enum
 import sys
 
 import click
+
+__all__ = ('echo', 'echo_info', 'echo_success', 'echo_warning', 'echo_error', 'echo_critical', 'echo_dictionary')
 
 
 # pylint: disable=too-few-public-methods
@@ -151,7 +154,7 @@ def echo_dictionary(dictionary, fmt='json+date'):
 
 def _format_dictionary_json_date(dictionary):
     """Return a dictionary formatted as a string using the json format and converting dates to strings."""
-    import aiida.common.json as json
+    from aiida.common import json
 
     def default_jsondump(data):
         """Function needed to decode datetimes, that would otherwise not be JSON-decodable."""

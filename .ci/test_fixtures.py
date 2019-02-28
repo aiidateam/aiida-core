@@ -61,7 +61,7 @@ class FixtureManagerTestCase(unittest.TestCase):
 
         from aiida.orm import load_node
         from aiida.plugins import DataFactory
-        data = DataFactory('parameter')(dict={'key': 'value'})
+        data = DataFactory('dict')(dict={'key': 'value'})
         data.store()
         data_pk = data.pk
         self.assertTrue(load_node(data_pk))

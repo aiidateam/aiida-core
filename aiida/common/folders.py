@@ -235,51 +235,38 @@ class Folder(object):  # pylint: disable=useless-object-inheritance
 
         return dest_abs_path
 
-    def create_file_from_filelike(self, src_filelike, dest_name):
+    def create_file_from_filelike(self, filelike, filename, mode='wb', encoding=None):
+        """Create a file with the given filename from a filelike object.
+
+        :param filelike: a filelike object whose contents to copy
+        :param filename: the filename for the file that is to be created
+        :param mode: the mode with which the target file will be written
+        :param encoding: the encoding with which the target file will be written
+        :return: the absolute filepath of the created file
         """
-        Create a file from a file-like object.
+        filename = six.text_type(filename)
+        filepath = self.get_abs_path(filename)
 
-        :note: if the current file position in src_filelike is not 0,
-          only the contents from the current file position to the end of the
-          file will be copied in the new file.
+        with io.open(filepath, mode=mode, encoding=encoding) as handle:
 
-        :param src_filelike: the file-like object (e.g., if you have
-            a string called s, you can pass ``io.StringIO(s)``)
-        :param dest_name: the destination filename will have this file name.
-        """
-        filename = six.text_type(dest_name)
+            # In python 2 a string literal can either be of unicode or string (bytes) type. Since we do not know what
+            # will be coming in, if the requested mode is not binary, in the case of incoming bytes, the content will
+            # have to be encoded. Therefore in the case of a non-binary mode for python2, we attempt to encode the
+            # incoming filelike object and in case of failure do nothing.
+            if six.PY2 and 'b' not in mode:
+                import codecs
+                utf8reader = codecs.getreader('utf8')
 
-        # I get the full path of the filename, checking also that I don't
-        # go beyond the folder limits
-        dest_abs_path = self.get_abs_path(filename)
-
-        # If Py2, the incoming filelike may contain a unicode or string type.
-        # We want to write explicity with UTF8 encoding, so io.open requires
-        # a unicode type.
-        # First we try and use a UTF8 stream reader wrapper to decode the characters
-        # from the incoming filelike object as if they are UFT8 encoded.
-        # If a unicode type is encountered, Python will attempt to convert to a str
-        # type using the ASCII codec which will fail if any non ASCII chars are
-        # present, raising a UnicodeEncodeError exception. In this case, as we already
-        # have unicode type text, we can catch this and call shutil.copyfileobj without
-        # the wrapper.
-        # In Py3, all str types are unicode, so we can avoid using the wrapper.
-        import codecs
-        utf8wrapper = codecs.getreader('utf8')
-
-        with io.open(dest_abs_path, 'w', encoding='utf8') as dest_fhandle:
-            if six.PY2:
                 try:
-                    shutil.copyfileobj(utf8wrapper(src_filelike), dest_fhandle)
-                except UnicodeEncodeError:
-                    shutil.copyfileobj(src_filelike, dest_fhandle)
+                    shutil.copyfileobj(utf8reader(filelike), handle)
+                except (UnicodeDecodeError, UnicodeEncodeError):
+                    shutil.copyfileobj(filelike, handle)
             else:
-                shutil.copyfileobj(src_filelike, dest_fhandle)
+                shutil.copyfileobj(filelike, handle)
 
-        # Set the mode
-        os.chmod(dest_abs_path, self.mode_file)
+        os.chmod(filepath, self.mode_file)
 
-        return dest_abs_path
+        return filepath
 
     def remove_path(self, filename):
         """
@@ -422,7 +409,7 @@ class Folder(object):  # pylint: disable=useless-object-inheritance
         if overwrite:
             self.erase()
         elif self.exists():
-            raise IOError("Location {} already exists, and overwrite is set to " "False".format(self.abspath))
+            raise IOError("Location {} already exists, and overwrite is set to False".format(self.abspath))
 
         # Create parent dir, if needed, with the right mode
         pardir = os.path.dirname(self.abspath)

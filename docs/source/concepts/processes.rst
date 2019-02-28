@@ -4,12 +4,12 @@
 Processes
 *********
 
-Anything that runs in AiiDA is an instance of the :py:class:`~aiida.work.processes.Process` class.
+Anything that runs in AiiDA is an instance of the :py:class:`~aiida.engine.processes.process.Process` class.
 The ``Process`` class contains all the information and logic to tell, whoever is handling it, how to run it to completion.
-Typically the one responsible for running the processes is an instance of a :py:class:`~aiida.work.runners.Runner`.
+Typically the one responsible for running the processes is an instance of a :py:class:`~aiida.engine.runners.Runner`.
 This can be a local runner or one of the daemon runners in case of the daemon running the process.
 
-A good example of a process is the :py:class:`~aiida.work.workchain.WorkChain` class, which is in fact a sub class of the :py:class:`~aiida.work.processes.Process` class.
+A good example of a process is the :py:class:`~aiida.engine.processes.workchains.workchain.WorkChain` class, which is in fact a sub class of the :py:class:`~aiida.engine.processes.process.Process` class.
 In the :ref:`workflows and workchains section <workchains_workfunctions>` you can see how the ``WorkChain`` defines how it needs to be run.
 In addition to those run instructions, the ``WorkChain`` needs some sort of record in the database to store what happened during its execution.
 For example it needs to record what its exact inputs were, the log messages that were reported and what the final outputs were.
@@ -120,7 +120,7 @@ In an interactive shell, you can get this information to display as follows::
         "non_db": "False"
         "help": "Parameters used to replace placeholders in the template",
         "name": "parameters",
-        "valid_type": "<class 'aiida.orm.nodes.data.parameter.ParameterData'>"
+        "valid_type": "<class 'aiida.orm.nodes.data.dict.Dict'>"
 
 In the ``Docstring`` you will see a ``help`` string that contains more detailed information about the input port.
 Additionally, it will display a ``valid_type``, which when defined shows which data types are expected.
@@ -155,13 +155,13 @@ All that remains is to fill in all the required inputs and we are ready to launc
 Launching the process
 ---------------------
 When all the inputs have been defined for the builder, it can be used to actually launch the ``Process``.
-The ``ProcessBuilder`` can be launched by passing it to the free functions ``run`` and ``submit`` from the ``aiida.work.launch`` module, just as you would do a normal process.
+The ``ProcessBuilder`` can be launched by passing it to the free functions ``run`` and ``submit`` from the ``aiida.engine.launch`` module, just as you would do a normal process.
 For more details please refer to the :ref:`process builder section <running_workflows_process_builder>` in the section of the documentation on :ref:`running workflows <running_workflows>`.
 
 Submit test
 -----------
 The ``ProcessBuilder`` of a ``CalcJobNode`` has one additional feature.
-It has the method :py:meth:`~aiida.work.process_builder.CalcJobBuilder.submit_test()`.
+It has the method :py:meth:`~aiida.engine.processes.builder.CalcJobBuilder.submit_test()`.
 When this method is called, provided that the inputs are valid, a directory will be created locally with all the inputs files and scripts that would be created if the builder were to be submitted for real.
 This gives you a chance to inspect the generated files before actually sending them to the remote computer.
 This action also will not create an actual calculation node in the database, nor do the input nodes have to be stored, allowing you to check that everything is correct without polluting the database.

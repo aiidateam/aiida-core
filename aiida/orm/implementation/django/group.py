@@ -65,7 +65,7 @@ class Group(AbstractGroup):
             description = kwargs.pop('description', "")
             self._dbgroup = utils.ModelWrapper(
                 DbGroup(name=name, description=description,
-                        user=user.backend_entity.dbuser, type=group_type))
+                        user=user.dbuser, type=group_type))
             if kwargs:
                 raise ValueError(
                     "Too many parameters passed to Group, the "

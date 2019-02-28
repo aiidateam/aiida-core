@@ -66,7 +66,7 @@ def get_querybuilder_classifiers_from_cls(cls, qb):
         aiida.orm.utils.node.get_type_string_from_class(cls.__module__, cls.__name__)
     """
     # Note: Unable to move this import to the top of the module for some reason
-    from aiida.work import Process
+    from aiida.engine import Process
     from aiida.orm.utils.node import is_valid_node_type_string
 
     classifiers = {}
@@ -224,7 +224,7 @@ def get_process_type_filter(classifiers, subclassing):
     """
     from aiida.common.escaping import escape_for_sql_like
     from aiida.common.warnings import AiidaEntryPointWarning
-    from aiida.work.processes import get_query_string_from_process_type_string
+    from aiida.engine.processes.process import get_query_string_from_process_type_string
     import warnings
 
     value = classifiers['process_type_string']
@@ -238,7 +238,7 @@ def get_process_type_filter(classifiers, subclassing):
                 {'==': value},
                 {'like': escape_for_sql_like(get_query_string_from_process_type_string(value))},
             ]}
-        elif value.startswith('aiida.work'):
+        elif value.startswith('aiida.engine'):
             # For core process types, a filter is not is needed since each process type has a corresponding
             # ormclass type that already specifies everything.
             # Note: This solution is fragile and will break as soon as there is not an exact one-to-one correspondence

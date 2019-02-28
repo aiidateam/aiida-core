@@ -101,7 +101,7 @@ class TestQueryBuilder(AiidaTestCase):
         # including the appropriate filter on the process_type
         _cls, classifiers = qb._get_ormclass(WorkChain, None)
         self.assertEqual(classifiers['ormclass_type_string'], 'process.workflow.workchain.WorkChainNode.')
-        self.assertEqual(classifiers['process_type_string'], 'aiida.work.workchain.WorkChain')
+        self.assertEqual(classifiers['process_type_string'], 'aiida.engine.workchain.WorkChain')
 
         # When passing a WorkChainNode, no process_type filter is applied
         _cls, classifiers = qb._get_ormclass(orm.WorkChainNode, None)
@@ -651,7 +651,7 @@ class TestAttributes(AiidaTestCase):
                 }],
             },
             project='uuid')
-        res_query = set([str(_[0]) for _ in qb.all()])
+        res_query = {str(_[0]) for _ in qb.all()}
         self.assertEqual(res_query, res_uuids)
 
     def test_attribute_type(self):
@@ -1049,7 +1049,7 @@ class QueryBuilderPath(AiidaTestCase):
             tag='desc',
         ).append(
             orm.Node, with_descendants='desc', edge_project='path', filters={'id': n1.pk})
-        queried_path_set = set([frozenset(p) for p, in qb.all()])
+        queried_path_set = {frozenset(p) for p, in qb.all()}
 
         paths_there_should_be = {
             frozenset([n1.pk, n2.pk, n3.pk, n5.pk, n6.pk, n7.pk, n8.pk]),

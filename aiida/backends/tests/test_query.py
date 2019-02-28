@@ -101,7 +101,7 @@ class TestQueryBuilder(AiidaTestCase):
         # including the appropriate filter on the process_type
         _cls, classifiers = qb._get_ormclass(WorkChain, None)
         self.assertEqual(classifiers['ormclass_type_string'], 'process.workflow.workchain.WorkChainNode.')
-        self.assertEqual(classifiers['process_type_string'], 'aiida.engine.workchain.WorkChain')
+        self.assertEqual(classifiers['process_type_string'], 'aiida.engine.processes.workchains.workchain.WorkChain')
 
         # When passing a WorkChainNode, no process_type filter is applied
         _cls, classifiers = qb._get_ormclass(orm.WorkChainNode, None)
@@ -536,11 +536,11 @@ class TestQueryBuilder(AiidaTestCase):
                 'StructureData_1',
                 'ProcessNode_1',
                 'StructureData_2',
-                'ParameterData_1',
+                'Dict_1',
             ])
         self.assertEqual(
             qb.get_used_tags(vertices=False),
-            ['StructureData_1--ProcessNode_1', 'ProcessNode_1--StructureData_2', 'ProcessNode_1--ParameterData_1'])
+            ['StructureData_1--ProcessNode_1', 'ProcessNode_1--StructureData_2', 'ProcessNode_1--Dict_1'])
 
 
 class TestQueryHelp(AiidaTestCase):

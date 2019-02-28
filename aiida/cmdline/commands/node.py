@@ -354,7 +354,7 @@ class _Delete(VerdiCommand):
         
         # If neither of the arguments is passed, exit the program
         if not filters['or']:
-            print "Nothing to delete"
+            print "No nodes specified."
             return None
         
         node_pks_to_delete = set([_ for _, in QueryBuilder().append(Node, filters=filters, project='id').all()])

@@ -46,9 +46,9 @@ def start(foreground):
     echo.echo('Starting the daemon... ', nl=False)
 
     if foreground:
-        command = ['verdi', '-p', client.profile.name, 'daemon', 'start-circus', '--foreground']
+        command = ['verdi', '-p', client.profile.name, 'daemon', 'start--pcircus', '--foreground']
     else:
-        command = ['verdi', '-p', client.profile.name, 'daemon', 'start-circus']
+        command = ['verdi', '-p', client.profile.name, 'daemon', 'start--pcircus']
 
     try:
         currenv = get_env_with_venv_bin()

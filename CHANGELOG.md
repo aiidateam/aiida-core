@@ -3,24 +3,24 @@
 - Fast addition of nodes to groups with `skip_orm=True` [[#2471]](https://github.com/aiidateam/aiida_core/pull/2471)
 - Add `environment.yml` for installing dependencies using conda; release of `aiida-core` on conda-forge channel [[#2081]](https://github.com/aiidateam/aiida_core/pull/2081)
 - REST API: io tree response now includes link type and node label [[#2033]](https://github.com/aiidateam/aiida_core/pull/2033) [[#2511]](https://github.com/aiidateam/aiida_core/pull/2511)
-- backport postgres improvements for quicksetup [[#2433]](https://github.com/aiidateam/aiida_core/pull/2433)
-- backport `aiida.get_strict_version` (for plugin development) [[#2099]](https://github.com/aiidateam/aiida_core/pull/2099)
+- Backport postgres improvements for quicksetup [[#2433]](https://github.com/aiidateam/aiida_core/pull/2433)
+- Backport `aiida.get_strict_version` (for plugin development) [[#2099]](https://github.com/aiidateam/aiida_core/pull/2099)
 
 ### Minor bug fixes
 - Fix security vulnerability by upgrading `paramiko` to `2.4.2` [[#2043]](https://github.com/aiidateam/aiida_core/pull/2043)
 - Disable caching for inline calculations (broken since move to ``workfunction``-based implementation) [[#1872]](https://github.com/aiidateam/aiida_core/pull/1872)
-- let verdi help return exit status 0 [[#2434]](https://github.com/aiidateam/aiida_core/pull/2434)
-- decode dict keys only if strings (backport) [[#2436]](https://github.com/aiidateam/aiida_core/pull/2436)
-- remove broken verdi-plug entry point [[#2356]](https://github.com/aiidateam/aiida_core/pull/2356)
+- Let `verdi help` return exit status 0 [[#2434]](https://github.com/aiidateam/aiida_core/pull/2434)
+- Decode dict keys only if strings (backport) [[#2436]](https://github.com/aiidateam/aiida_core/pull/2436)
+- Remove broken verdi-plug entry point [[#2356]](https://github.com/aiidateam/aiida_core/pull/2356)
 - `verdi node delete` (without arguments) no longer tries to delete all nodes [[#2545]](https://github.com/aiidateam/aiida_core/pull/2545)
-- Fix plotting of BandsData objects [[#2492]](https://github.com/aiidateam/aiida_core/pull/2492)
+- Fix plotting of `BandsData` objects [[#2492]](https://github.com/aiidateam/aiida_core/pull/2492)
 
 ### Miscellaneous
 - REST API: add tests for random sorting list entries of same type [[#2106]](https://github.com/aiidateam/aiida_core/pull/2106)
 - Add various badges to README [[#1969]](https://github.com/aiidateam/aiida_core/pull/1969)
 - Minor documentation improvements [[#1955]](https://github.com/aiidateam/aiida_core/pull/1955)
-- add license file to MANIFEST [[#2339]](https://github.com/aiidateam/aiida_core/pull/2339)
-- add instructions when verdi import fails [[#2420]](https://github.com/aiidateam/aiida_core/pull/2420)
+- Add license file to MANIFEST [[#2339]](https://github.com/aiidateam/aiida_core/pull/2339)
+- Add instructions when `verdi import` fails [[#2420]](https://github.com/aiidateam/aiida_core/pull/2420)
 
 ## v0.12.2
 ### Improvements

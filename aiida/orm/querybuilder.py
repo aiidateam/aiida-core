@@ -204,6 +204,8 @@ def get_type_filter(classifiers, subclassing):
     if not subclassing:
         filter = {'==': value}
     else:
+        # Note: the query_type_string always ends with a dot. This ensures that "like {str}%" matches *only*
+        # the query type string
         filter = {'like': '{}%'.format(escape_for_sql_like(get_query_type_from_type_string(value)))}
 
     return filter
@@ -234,6 +236,10 @@ def get_process_type_filter(classifiers, subclassing):
     else:
         if ":" in value:
             # if value is an entry point, do usual subclassing
+
+            # Note: the process_type_string stored in the database does *not* end in a dot.
+            # In order to avoid that querying for class 'Begin' will also find class 'BeginEnd',
+            # we need to search separately for equality and 'like'.
             filter = {'or': [
                 {'==': value},
                 {'like': escape_for_sql_like(get_query_string_from_process_type_string(value))},

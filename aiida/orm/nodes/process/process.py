@@ -97,13 +97,13 @@ class ProcessNode(Sealable, Node):
 
         return process_class
 
-    def set_process_type(self, process_class):
+    def set_process_type(self, process_type_string):
         """
-        Set the process type
+        Set the process type string.
 
-        :param process_class: the process class using this process node as storage
+        :param process_type: the process type string identifying the class using this process node as storage.
         """
-        self.process_type = process_class.build_process_type()
+        self.process_type = process_type_string
 
     @property
     def process_label(self):

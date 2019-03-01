@@ -538,7 +538,7 @@ class Process(plumpy.Process):
         # Store important process attributes in the node proxy
         self.node.set_process_state(None)
         self.node.set_process_label(self.__class__.__name__)
-        self.node.set_process_type(self.__class__)
+        self.node.set_process_type(self.__class__.build_process_type())
 
         parent_calc = self.get_parent_calc()
 
@@ -733,7 +733,7 @@ class Process(plumpy.Process):
 
 def get_query_string_from_process_type_string(process_type_string):  # pylint: disable=invalid-name
     """
-    Take the type string of a Node and create the queryable type string
+    Take the process type string of a Node and create the queryable type string.
 
     :param process_type_string: the process type string
     :return: string that can be used to query for subclasses of the process type using 'LIKE <string>'

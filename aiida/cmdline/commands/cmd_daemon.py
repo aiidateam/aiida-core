@@ -46,9 +46,9 @@ def start(foreground):
     echo.echo('Starting the daemon... ', nl=False)
 
     if foreground:
-        command = ['verdi', '-p', client.profile.name, 'daemon', 'start--pcircus', '--foreground']
+        command = ['verdi', '-p', client.profile.name, 'daemon', 'start-circus', '--foreground']
     else:
-        command = ['verdi', '-p', client.profile.name, 'daemon', 'start--pcircus']
+        command = ['verdi', '-p', client.profile.name, 'daemon', 'start-circus']
 
     try:
         currenv = get_env_with_venv_bin()
@@ -211,7 +211,7 @@ def restart(ctx, reset, no_wait):
 @click.option('--foreground', is_flag=True, help='Run in foreground.')
 @decorators.with_dbenv()
 @decorators.check_circus_zmq_version
-def start__pcircus(foreground):
+def start_circus(foreground):
     """
     This will actually launch the circus daemon, either daemonized in the background
     or in the foreground, printing all logs to stdout.

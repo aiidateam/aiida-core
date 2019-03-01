@@ -1381,9 +1381,9 @@ class TestComputer(AiidaTestCase):
             shutil.rmtree(export_file_tmp_folder, ignore_errors=True)
             shutil.rmtree(unpack_tmp_folder, ignore_errors=True)
 
-    @unittest.skip('reenable when issue #2342 is addressed')
+    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_import_of_django_sqla_export_file(self):
-        """Check why sqla import manages to import the django export file correctly"""
+        """Check that sqla import manages to import the django export file correctly"""
         from aiida.backends.tests.utils.fixtures import import_archive_fixture
 
         for archive in ['export/compare/django.aiida', 'export/compare/sqlalchemy.aiida']:

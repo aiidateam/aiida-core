@@ -89,7 +89,6 @@ class TestVerdiExport(AiidaTestCase):
     def setUp(self):
         self.cli_runner = CliRunner()
 
-    @unittest.skip('reenable when issue #2342 is addressed')
     def test_create_file_already_exists(self):
         """Test that using a file that already exists, which is the case when using NamedTemporaryFile, will raise."""
         with tempfile.NamedTemporaryFile() as handle:
@@ -97,7 +96,6 @@ class TestVerdiExport(AiidaTestCase):
             result = self.cli_runner.invoke(cmd_export.create, options)
             self.assertIsNotNone(result.exception)
 
-    @unittest.skip('reenable when issue #2342 is addressed')
     def test_create_force(self):
         """
         Test that using a file that already exists, which is the case when using NamedTemporaryFile, will work
@@ -112,7 +110,6 @@ class TestVerdiExport(AiidaTestCase):
             result = self.cli_runner.invoke(cmd_export.create, options)
             self.assertIsNone(result.exception, result.output)
 
-    @unittest.skip('reenable when issue #2342 is addressed')
     def test_create_zip(self):
         """Test that creating an archive for a set of various ORM entities works with the zip format."""
         filename = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
@@ -128,7 +125,6 @@ class TestVerdiExport(AiidaTestCase):
         finally:
             delete_temporary_file(filename)
 
-    @unittest.skip('reenable when issue #2342 is addressed')
     def test_create_zip_uncompressed(self):
         """Test that creating an archive for a set of various ORM entities works with the zip-uncompressed format."""
         filename = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
@@ -144,7 +140,6 @@ class TestVerdiExport(AiidaTestCase):
         finally:
             delete_temporary_file(filename)
 
-    @unittest.skip('reenable when issue #2342 is addressed')
     def test_create_tar_gz(self):
         """Test that creating an archive for a set of various ORM entities works with the tar.gz format."""
         filename = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
@@ -160,11 +155,13 @@ class TestVerdiExport(AiidaTestCase):
         finally:
             delete_temporary_file(filename)
 
+    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_migrate_versions_old(self):
         """Migrating archives with a version older than the current should work."""
         archives = [
             'export_v0.1.aiida',
             'export_v0.2.aiida',
+            'export_v0.3.aiida'
         ]
 
         for archive in archives:
@@ -181,10 +178,11 @@ class TestVerdiExport(AiidaTestCase):
             finally:
                 delete_temporary_file(filename_output)
 
+    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_migrate_versions_recent(self):
         """Migrating an archive with the current version should exit with non-zero status."""
         archives = [
-            'export_v0.3.aiida',
+            'export_v0.4.aiida',
         ]
 
         for archive in archives:
@@ -268,12 +266,14 @@ class TestVerdiExport(AiidaTestCase):
                 finally:
                     delete_temporary_file(filename_output)
 
+    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_inspect(self):
         """Test the functionality of `verdi export inspect`."""
         archives = [
             ('export_v0.1.aiida', '0.1'),
             ('export_v0.2.aiida', '0.2'),
             ('export_v0.3.aiida', '0.3'),
+            ('export_v0.4.aiida', '0.4')
         ]
 
         for archive, version_number in archives:

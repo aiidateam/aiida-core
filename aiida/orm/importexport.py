@@ -717,6 +717,11 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
                     else:
                         new_entries[model_name] = data['export_data'][model_name].copy()
 
+            # Show Comment mode if not silent and Comments exist in existing_entries
+            if not silent:
+                if COMMENT_ENTITY_NAME in existing_entries:
+                    print("Comment mode: {}".format(comment_mode))
+
             # I import data from the given model
             for model_name in model_order:
                 cls_signature = entity_names_to_signatures[model_name]
@@ -1426,6 +1431,10 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
                         # Why the copy:
                         new_entries[entity_name] = data['export_data'][entity_name].copy()
 
+            # Show Comment mode if not silent and Comments exist in existing_entries
+            if not silent:
+                if COMMENT_ENTITY_NAME in existing_entries:
+                    print("Comment mode: {}".format(comment_mode))
 
             # I import data from the given model
             for entity_sig in entity_sig_order:
@@ -2255,7 +2264,7 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
 
     ## Universal "entities" attributed to all types of nodes
     # Logs
-    if include_logs:
+    if include_logs and to_be_exported:
         # Get related log(s) - universal for all nodes
         builder = QueryBuilder()
         builder.append(Log, filters={'dbnode_id': {'in': to_be_exported}}, project=['id'])
@@ -2263,7 +2272,7 @@ def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
         given_log_entry_ids.update(res)
 
     # Comments
-    if include_comments:
+    if include_comments and to_be_exported:
         # Get related log(s) - universal for all nodes
         builder = QueryBuilder()
         builder.append(Comment, filters={'dbnode_id': {'in': to_be_exported}}, project=['id'])

@@ -12,6 +12,8 @@
 - let verdi help return exit status 0 [[#2434]](https://github.com/aiidateam/aiida_core/pull/2434)
 - decode dict keys only if strings (backport) [[#2436]](https://github.com/aiidateam/aiida_core/pull/2436)
 - remove broken verdi-plug entry point [[#2356]](https://github.com/aiidateam/aiida_core/pull/2356)
+- `verdi node delete` (without arguments) no longer tries to delete all nodes [[#2545]](https://github.com/aiidateam/aiida_core/pull/2545)
+- Fix plotting of BandsData objects [[#2492]](https://github.com/aiidateam/aiida_core/pull/2492)
 
 ### Miscellaneous
 - REST API: add tests for random sorting list entries of same type [[#2106]](https://github.com/aiidateam/aiida_core/pull/2106)

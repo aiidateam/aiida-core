@@ -51,7 +51,6 @@ class AiidaTestImplementation(object):
         You have also to set a self.computer and a self.user_email as explained in the docstring of the
         AiidaTestImplemention docstring.
         """
-        pass
 
     def setUp_method(self):
         pass
@@ -59,18 +58,17 @@ class AiidaTestImplementation(object):
     def tearDown_method(self):
         pass
 
+    @abstractmethod
     def tearDownClass_method(self):
         """
-        This class implements the tear down methods (e.g. cleans up the DB).
+        Backend-specific tasks for tearing down the test environment.
         """
-        pass
 
     @abstractmethod
     def clean_db(self):
         """
         This method implements the logic to fully clean the DB.
         """
-        pass
 
     def insert_data(self):
         """

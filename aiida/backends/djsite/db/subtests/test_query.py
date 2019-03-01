@@ -34,57 +34,49 @@ class TestQueryBuilderDjango(AiidaTestCase):
         with self.assertRaises(DbContentError):
             qb._get_ormclass(None, '.')
 
-        for cls, clstype, query_type_string in (
+        for cls, classifiers in (
                 qb._get_ormclass(StructureData, None),
                 qb._get_ormclass(None, 'data.structure.StructureData.'),
         ):
-            self.assertEqual(clstype, 'data.structure.StructureData.')
+            self.assertEqual(classifiers['ormclass_type_string'], 'data.structure.StructureData.')
             self.assertTrue(issubclass(cls, DbNode))
-            self.assertEqual(clstype, 'data.structure.StructureData.')
-            self.assertEqual(query_type_string,
-                             StructureData._query_type_string)
 
-        for cls, clstype, query_type_string in (
+        for cls, classifiers in (
                 qb._get_ormclass(DbNode, None),
         ):
-            self.assertEqual(clstype, Node._plugin_type_string)
-            self.assertEqual(query_type_string, Node._query_type_string)
+            self.assertEqual(classifiers['ormclass_type_string'], Node._plugin_type_string)
             self.assertTrue(issubclass(cls, DbNode))
 
-        for cls, clstype, query_type_string in (
+        for cls, classifiers in (
                 qb._get_ormclass(DbGroup, None),
                 qb._get_ormclass(Group, None),
                 qb._get_ormclass(None, 'group'),
                 qb._get_ormclass(None, 'Group'),
         ):
-            self.assertEqual(clstype, 'group')
-            self.assertEqual(query_type_string, None)
+            self.assertEqual(classifiers['ormclass_type_string'], 'group')
             self.assertTrue(issubclass(cls, DbGroup))
 
-        for cls, clstype, query_type_string in (
+        for cls, classifiers in (
                 qb._get_ormclass(DbUser, None),
                 qb._get_ormclass(DbUser, None),
                 qb._get_ormclass(None, "user"),
                 qb._get_ormclass(None, "User"),
         ):
-            self.assertEqual(clstype, 'user')
-            self.assertEqual(query_type_string, None)
+            self.assertEqual(classifiers['ormclass_type_string'], 'user')
             self.assertTrue(issubclass(cls, DbUser))
 
-        for cls, clstype, query_type_string in (
+        for cls, classifiers in (
                 qb._get_ormclass(DbComputer, None),
                 qb._get_ormclass(Computer, None),
                 qb._get_ormclass(None, 'computer'),
                 qb._get_ormclass(None, 'Computer'),
         ):
-            self.assertEqual(clstype, 'computer')
-            self.assertEqual(query_type_string, None)
+            self.assertEqual(classifiers['ormclass_type_string'], 'computer')
             self.assertTrue(issubclass(cls, DbComputer))
 
-        for cls, clstype, query_type_string in (
+        for cls, classifiers in (
                 qb._get_ormclass(Data, None),
                 qb._get_ormclass(None, 'data.Data.'),
         ):
-            self.assertEqual(clstype, Data._plugin_type_string)
-            self.assertEqual(query_type_string, Data._query_type_string)
+            self.assertEqual(classifiers['ormclass_type_string'], Data._plugin_type_string)
             self.assertTrue(issubclass(cls, DbNode))

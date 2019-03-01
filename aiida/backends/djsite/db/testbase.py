@@ -13,8 +13,6 @@ Base class for AiiDA tests
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import shutil
-import os
 
 from aiida.backends.testimplbase import AiidaTestImplementation
 from aiida.orm.implementation.django.backend import DjangoBackend
@@ -56,20 +54,7 @@ class DjangoTests(AiidaTestImplementation):
         models.DbComputer.objects.all().delete()
         models.DbGroup.objects.all().delete()
 
-    # Note this is has to be a normal method, not a class method
     def tearDownClass_method(self):
-        from aiida.settings import REPOSITORY_PATH
-        from aiida.common.setup import TEST_KEYWORD
-        from aiida.common.exceptions import InvalidOperation
-
-        base_repo_path = os.path.basename(os.path.normpath(REPOSITORY_PATH))
-        if TEST_KEYWORD not in base_repo_path:
-            raise InvalidOperation("Be careful. The repository for the tests "
-                                   "is not a test repository. I will not "
-                                   "empty the database and I will not delete "
-                                   "the repository. Repository path: "
-                                   "{}".format(REPOSITORY_PATH))
-
-        # I clean the test repository
-        shutil.rmtree(REPOSITORY_PATH, ignore_errors=True)
-        os.makedirs(REPOSITORY_PATH)
+        """
+        Backend-specific tasks for tearing down the test environment.
+        """

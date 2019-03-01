@@ -411,6 +411,31 @@ class Process(plumpy.Process):
 
         return orm.load_node(pk=self._parent_pid)
 
+    @classmethod
+    def build_process_type(cls):
+        """
+        The process type.
+
+        :return: string of the process type
+        :rtype: str
+
+        Note: This could be made into a property 'process_type' but in order to have it be a property of the class
+        it would need to be defined in the metaclass, see https://bugs.python.org/issue20659
+        """
+        from aiida.plugins.entry_point import get_entry_point_string_from_class
+
+        class_module = cls.__module__
+        class_name = cls.__name__
+
+        # If the process is a registered plugin the corresponding entry point will be used as process type
+        process_type = get_entry_point_string_from_class(class_module, class_name)
+
+        # If no entry point was found, default to fully qualified path name
+        if process_type is None:
+            return '{}.{}'.format(class_module, class_name)
+
+        return process_type
+
     @protected
     def report(self, msg, *args, **kwargs):
         """
@@ -513,7 +538,7 @@ class Process(plumpy.Process):
         # Store important process attributes in the node proxy
         self.node.set_process_state(None)
         self.node.set_process_label(self.__class__.__name__)
-        self.node.set_process_type(self.__class__)
+        self.node.set_process_type(self.__class__.build_process_type())
 
         parent_calc = self.get_parent_calc()
 
@@ -704,3 +729,17 @@ class Process(plumpy.Process):
             split_ns = namespace.split('.')
             namespace_list.extend(['.'.join(split_ns[:i]) for i in range(1, len(split_ns) + 1)])
         return namespace_list
+
+
+def get_query_string_from_process_type_string(process_type_string):  # pylint: disable=invalid-name
+    """
+    Take the process type string of a Node and create the queryable type string.
+
+    :param process_type_string: the process type string
+    :return: string that can be used to query for subclasses of the process type using 'LIKE <string>'
+    """
+    if ":" in process_type_string:
+        return process_type_string + "."
+
+    path = process_type_string.rsplit('.', 2)[0]
+    return path + "."

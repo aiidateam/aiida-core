@@ -23,3 +23,12 @@ class AiidaDeprecationWarning(Warning):
 
       verdi config warnings.showdeprecations False
     """
+
+
+class AiidaEntryPointWarning(Warning):
+    """
+    Class for warnings concerning AiiDA entry points.
+
+    It does *not* inherit, on purpose, from `DeprecationWarning` as
+    this would be filtered out by default.
+    """

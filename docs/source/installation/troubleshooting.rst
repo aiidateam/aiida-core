@@ -1,10 +1,12 @@
 .. _troubleshooting:
 
-===============
 Troubleshooting
 ===============
 
-* On a clean Ubuntu 16.04 install the pip install command ``pip install -e aiida_core``
+Installation phase
+------------------
+
+* [**numpy dependency**] On a clean Ubuntu 16.04 install the pip install command ``pip install -e aiida_core``
   may fail due to a problem with dependencies on the ``numpy`` package. In this case
   you may be presented with a message like the following::
 
@@ -21,57 +23,7 @@ Troubleshooting
 
   This should fix the dependency error.
 
-* If the ``pip install`` command gives you an error that resembles the one
-  shown below, you might need to downgrade to an older version of pip::
-
-    Cannot fetch index base URL https://pypi.python.org/simple/
-
-  To downgrade pip, use the following command::
-
-    sudo easy_install pip==1.2.1
-
-* In order to use the AiiDA objects and functions in Jupyter, this latter has to be instructed to use the iPython kernel installed in the AiiDA virtual environment. This happens by default if you install AiiDA with ``pip`` including the ``notebook`` option and run Jupyter from the AiiDA virtual environment.
-
-  If, for any reason, you do not want to install Jupyter in the virtual environment, you might consider to install it out of the virtual environment, if not already done::
-
-      $ pip install jupyter
-
-  Then, activate the AiiDA virtual environment::
-
-      $ source ~/<aiida.virtualenv>/bin/activate
-
-  and setup the AiiDA iPython kernel::
-
-      $ pip install ipykernel
-      $ python -m ipykernel install --user --name=<aiida.kernel.name>
-
-  where you have chosen a meaningful name for the new kernel.
-
-  Finally, start a Jupyter server::
-
-      $ jupyter notebook
-
-  and from the newly opened browser tab select ``New -> <aiida.kernel.name>``
-
-
-* When installing the ``ssh_kerberos`` optional requirement through Anaconda you may encounter the following error on Ubuntu machines::
-
-    version 'GFORTRAN_1.4' not found (required by /usr/lib/libblas.so.3)
-
-  This is related to an open issue in anaconda `ContinuumIO/anaconda-issues#686`_.
-  A potential solution is to run the following command::
-
-    export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libgfortran.so.3
-
-.. _ContinuumIO/anaconda-issues#686: https://github.com/ContinuumIO/anaconda-issues/issues/686
-
-* Several users reported the need to install also ``libpq-dev`` (header files for libpq5 - PostgreSQL library)::
-
-    apt-get install libpq-dev
-
-  But under Ubuntu 12.04 this is not needed.
-
-* If the installation fails while installing the packages related
+* [**Database installation and location**] If the installation fails while installing the packages related
   to the database, you may have not installed or set up the database
   libraries.
 
@@ -104,8 +56,8 @@ Troubleshooting
 
 .. _Stackoverflow link: http://stackoverflow.com/questions/21079820/how-to-find-pg-config-pathlink
 
-
-* For some reasons, on some machines (notably often on Mac OS X) there is no
+* [**ensuring a UTF-8 locale**]For some reasons, on some machines 
+  (notably often on Mac OS X) there is no
   default locale defined, and when you run ``verdi setup`` for the first
   time it fails (see also `this issue`_ of django).
   Run in your terminal (or maybe even better, add to your ``.bashrc``, but
@@ -118,9 +70,71 @@ Troubleshooting
 
 .. _this issue: https://code.djangoproject.com/ticket/16017
 
+* [**possible Ubuntu dependencies**] Several users reported the need to install 
+  also ``libpq-dev`` (header files for libpq5 - PostgreSQL library)::
 
-* Within a virtual environment, attempt to visualize a structure with ``ase`` (either from the shell, or using the 
-  command ``verdi data structure show --format=ase <PK>``), might end up with the following error message::
+    apt-get install libpq-dev
+
+  But under Ubuntu 12.04 this is not needed.
+
+Configuring remote SSH computers
+--------------------------------
+
+* [**ssh_kerberos installation**] When installing the ``ssh_kerberos`` *optional*
+  requirement through Anaconda you may encounter the following error on Ubuntu machines::
+
+    version 'GFORTRAN_1.4' not found (required by /usr/lib/libblas.so.3)
+
+  This is related to an open issue in anaconda `ContinuumIO/anaconda-issues#686`_.
+  A potential solution is to run the following command::
+
+    export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libgfortran.so.3
+
+.. _ContinuumIO/anaconda-issues#686: https://github.com/ContinuumIO/anaconda-issues/issues/686
+
+* [**Output from .bashrc and/or .bash_profile on remote computers**] 
+  (**NOTE** This applies also computers configured via ``local`` transport!)
+  
+  When connecting to remote computers, AiiDA (like other codes as ``sftp``)
+  can get confused if you have code in your ``.bashrc`` or
+  ``.bash_profile`` that produces output or e.g. runs commands like ``clean``
+  that require a terminal.
+
+  For instance, if you add a ``echo "a"`` in your ``.bashrc`` and then try to SFTP
+  a file from it, you will get an error like ``Received message too long 1091174400``.
+
+  If you still want to have code that needs an interactive shell (``echo``, 
+  ``clean``, ...), but you want to disable it for non-interactive shells, put 
+  at the top of your file a guard like this::
+
+    if [[ $- != *i* ]] ; then
+      # Shell is non-interactive.  Be done now!
+      return
+    fi
+
+  Everything below this will not be executed in a non-interactive shell.
+  **Note**: Still, you might want to have some code on top, like e.g. setting the PATH or 
+  similar, if this needs to be run also in the case of non-interactive shells.
+
+  To test if a the computer does not produce spurious output, run (after 
+  configuring)::
+
+     verdi computer test <COMPUTERNAME>
+
+  which checks and, in case of problems, suggests how to solve the problem.
+  You can track the discussion on this issue in `aiidateam/aiida_core#1890`_.
+
+.. _aiidateam/aiida_core#1890: https://github.com/aiidateam/aiida_core/issues/1890
+.. _StackExchange thread: https://apple.stackexchange.com/questions/51036/what-is-the-difference-between-bash-profile-and-bashrc
+
+
+Improvements for dependencies
+-----------------------------
+* [**Activating the ASE visualizer**] Within a virtual environment, 
+  attempt to visualize a structure 
+  with ``ase`` (either from the shell, or using the 
+  command ``verdi data structure show --format=ase <PK>``), 
+  might end up with the following error message::
   
      ImportError: No module named pygtk
 
@@ -154,25 +168,70 @@ Troubleshooting
 
   After that, ``verdi data structure show --format=ase <PK>`` should work.
 
-* [*Only for developers*] The developer tests of the *SSH* transport plugin are
-  performed connecting to ``localhost``. The tests will fail if
-  a passwordless ssh connection is not set up. Therefore, if you want to run
-  the tests:
+Use in ipython/jupyter
+----------------------
 
-  + make sure to have a ssh server. On Ubuntu, for instance, you can install
-    it using::
+* In order to use the AiiDA objects and functions in Jupyter, this latter has to be instructed to use the iPython kernel installed in the AiiDA virtual environment. This happens by default if you install AiiDA with ``pip`` including the ``notebook`` option and run Jupyter from the AiiDA virtual environment.
 
-       sudo apt-get install openssh-server
+  If, for any reason, you do not want to install Jupyter in the virtual environment, you might consider to install it out of the virtual environment, if not already done::
 
-  + Configure a ssh key for your user on your machine, and then add
-    your public key to the authorized keys of localhsot.
-    The easiest way to achieve this is to run::
+      pip install jupyter
 
-       ssh-copy-id localhost
+  Then, activate the AiiDA virtual environment::
 
-    (it will ask your password, because it is connecting via ssh to ``localhost``
-    to install your public key inside ~/.ssh/authorized_keys).
+      source ~/<aiida.virtualenv>/bin/activate
 
-.. _updating_aiida:
+  and setup the AiiDA iPython kernel::
 
+      pip install ipykernel
+      python -m ipykernel install --user --name=<aiida.kernel.name>
 
+  where you have chosen a meaningful name for the new kernel.
+
+  Finally, start a Jupyter server::
+
+      jupyter notebook
+
+  and from the newly opened browser tab select ``New -> <aiida.kernel.name>``
+
+Postgres restart problem
+------------------------
+
+Due to a `bug <https://wiki.postgresql.org/wiki/May_2015_Fsync_Permissions_Bug>` affecting older postgres versions (<9.4), 
+PostgreSQL could refuse to restart after a crash or after a restore from binary backup. 
+
+The error message would be something like::
+
+    * Starting PostgreSQL 9.1 database server
+    * The PostgreSQL server failed to start. Please check the log output:
+    2015-05-26 03:27:20 UTC [331-1] LOG:  database system was interrupted; last known up at 2015-05-21 19:56:58 UTC
+    2015-05-26 03:27:20 UTC [331-2] FATAL:  could not open file "/etc/ssl/certs/ssl-cert-snakeoil.pem": Permission denied
+    2015-05-26 03:27:20 UTC [330-1] LOG:  startup process (PID 331) exited with exit code 1
+    2015-05-26 03:27:20 UTC [330-2] LOG:  aborting startup due to startup process failure
+
+If this happens you should change the permissions on any symlinked files
+to being writable by the Postgres user. For example, on Ubuntu, with PostgreSQL 9.1,
+the following should work (**WARNING**: Make sure these configuration files are
+symbolic links before executing these commands! If someone has customized the server.crt
+or server.key file, you can erase them by following these steps.
+It's a good idea to make a backup of the server.crt and server.key files before removing them)::
+
+    (as root)
+    # go to PGDATA directory
+    cd /var/lib/postgresql/9.1/main
+    ls -l server.crt server.key
+    # confirm both of those files are symbolic links
+    # to files in /etc/ssl before going further
+    # remove symlinks to SSL certs
+    rm server.crt
+    rm server.key
+    # copy the SSL certs to the local directory
+    cp /etc/ssl/certs/ssl-cert-snakeoil.pem server.crt
+    cp /etc/ssl/private/ssl-cert-snakeoil.key server.key
+    # set permissions on ssl certs
+    # and postgres ownership on everything else
+    # just in case
+    chown postgres *
+    chmod 640 server.crt server.key
+
+    service postgresql start

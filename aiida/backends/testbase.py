@@ -127,19 +127,45 @@ class AiidaTestCase(unittest.TestCase):
 
     @classmethod
     def clean_db(cls):
+        """Clean up database and reset caches.
+
+        Resets AiiDA manager cache, which could otherwise be left in an inconsistent state when cleaning the database.
+        """
+        from aiida.common.exceptions import InvalidOperation
+
         # Note: this will raise an exception, that will be seen as a test
         # failure. To be safe, you should do the same check also in the tearDownClass
         # to avoid that it is run
         check_if_tests_can_run()
 
-        from aiida.common.exceptions import InvalidOperation
-
         if not cls._class_was_setup:
             raise InvalidOperation("You cannot call clean_db before running the setUpClass")
 
         cls.__backend_instance.clean_db()
-        # Make sure to reset the backend when cleaning the database
+
+        # Reset AiiDA manager cache
         reset_manager()
+
+    @classmethod
+    def clean_repository(cls):
+        """
+        Cleans up file repository.
+        """
+        from aiida.settings import REPOSITORY_PATH
+        from aiida.common.setup import TEST_KEYWORD
+        from aiida.common.exceptions import InvalidOperation
+        import shutil
+
+        base_repo_path = os.path.basename(os.path.normpath(REPOSITORY_PATH))
+        if TEST_KEYWORD not in base_repo_path:
+            raise InvalidOperation("Warning: The repository folder {} does not "
+                                   "seem to belong to a test profile and will therefore not be deleted.\n"
+                                   "Full repository path: "
+                                   "{}".format(base_repo_path, REPOSITORY_PATH))
+
+        # Clean the test repository
+        shutil.rmtree(REPOSITORY_PATH, ignore_errors=True)
+        os.makedirs(REPOSITORY_PATH)
 
     @classproperty
     def computer(cls):
@@ -161,6 +187,7 @@ class AiidaTestCase(unittest.TestCase):
         # if this is not a test profile
         check_if_tests_can_run()
         cls.clean_db()
+        cls.clean_repository()
         cls.__backend_instance.tearDownClass_method(*args, **kwargs)
 
     def assertClickSuccess(self, cli_result):

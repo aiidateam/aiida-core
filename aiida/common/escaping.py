@@ -52,7 +52,14 @@ SQL_TO_REGEX_TOKENS = [  # Remember in the strings below we have to escape backs
 
 
 def escape_for_sql_like(string):
-    """Function that escapes % or _ symbols provided by user"""
+    """Function that escapes % or _ symbols provided by user
+
+    SQL LIKE syntax summary:
+
+    - ``%`` -> match any number of characters
+    - ``_`` -> match exactly one character
+
+    """
     return string.replace('%', '\\%').replace('_', '\\_')
 
 
@@ -61,7 +68,7 @@ def get_regex_pattern_from_sql(sql_pattern):
     Convert a string providing a pattern to match in SQL
     syntax into a string performing the same match as a regex.
 
-    SQL syntax summary:
+    SQL LIKE syntax summary:
 
     - ``%`` -> match any number of characters
     - ``_`` -> match exactly one character

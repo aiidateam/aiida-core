@@ -7,11 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Tests for the QueryBuilder."""
+
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
 import unittest
+import warnings
 
 from six.moves import range, zip
 
@@ -19,6 +22,8 @@ from aiida import orm
 from aiida.backends import settings
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
+
+# pylint: disable=invalid-name,missing-docstring,too-many-lines
 
 
 class TestQueryBuilder(AiidaTestCase):
@@ -28,10 +33,11 @@ class TestQueryBuilder(AiidaTestCase):
         self.clean_db()
         self.insert_data()
 
-    def test_classification(self):
+    def test_ormclass_type_classification(self):
         """
         This tests the classifications of the QueryBuilder
         """
+        # pylint: disable=protected-access
         from aiida.common.exceptions import DbContentError
 
         qb = orm.QueryBuilder()
@@ -45,50 +51,164 @@ class TestQueryBuilder(AiidaTestCase):
             qb._get_ormclass(None, '.')
 
         # Asserting that the query type string and plugin type string are returned:
-        for cls, clstype, query_type_string in (
-            qb._get_ormclass(orm.StructureData, None),
-            qb._get_ormclass(None, 'data.structure.StructureData.'),
+        for _cls, classifiers in (
+                qb._get_ormclass(orm.StructureData, None),
+                qb._get_ormclass(None, 'data.structure.StructureData.'),
         ):
-            self.assertEqual(clstype, orm.StructureData._plugin_type_string)
-            self.assertEqual(query_type_string, orm.StructureData._query_type_string)
+            self.assertEqual(classifiers['ormclass_type_string'], orm.StructureData._plugin_type_string)  # pylint: disable=no-member
 
-        for cls, clstype, query_type_string in (
+        for _cls, classifiers in (
                 qb._get_ormclass(orm.Group, None),
                 qb._get_ormclass(None, 'group'),
                 qb._get_ormclass(None, 'Group'),
         ):
-            self.assertEqual(clstype, 'group')
-            self.assertEqual(query_type_string, None)
+            self.assertEqual(classifiers['ormclass_type_string'], 'group')
 
-        for cls, clstype, query_type_string in (
+        for _cls, classifiers in (
                 qb._get_ormclass(orm.User, None),
                 qb._get_ormclass(None, "user"),
                 qb._get_ormclass(None, "User"),
         ):
-            self.assertEqual(clstype, 'user')
-            self.assertEqual(query_type_string, None)
+            self.assertEqual(classifiers['ormclass_type_string'], 'user')
 
-        for cls, clstype, query_type_string in (
+        for _cls, classifiers in (
                 qb._get_ormclass(orm.Computer, None),
                 qb._get_ormclass(None, 'computer'),
                 qb._get_ormclass(None, 'Computer'),
         ):
-            self.assertEqual(clstype, 'computer')
-            self.assertEqual(query_type_string, None)
+            self.assertEqual(classifiers['ormclass_type_string'], 'computer')
 
-        for cls, clstype, query_type_string in (
+        for _cls, classifiers in (
                 qb._get_ormclass(orm.Data, None),
                 qb._get_ormclass(None, 'data.Data.'),
         ):
-            self.assertEqual(clstype, orm.Data._plugin_type_string)
-            self.assertEqual(query_type_string, orm.Data._query_type_string)
+            self.assertEqual(classifiers['ormclass_type_string'], orm.Data._plugin_type_string)  # pylint: disable=no-member
+
+    def test_process_type_classification(self):
+        """
+        This tests the classifications of the QueryBuilder
+        """
+        from aiida.engine import WorkChain
+        from aiida.plugins import CalculationFactory
+
+        ArithmeticAdd = CalculationFactory('arithmetic.add')
+
+        qb = orm.QueryBuilder()
+
+        # pylint: disable=protected-access
+
+        # When passing a WorkChain class, it should return the type of the corresponding Node
+        # including the appropriate filter on the process_type
+        _cls, classifiers = qb._get_ormclass(WorkChain, None)
+        self.assertEqual(classifiers['ormclass_type_string'], 'process.workflow.workchain.WorkChainNode.')
+        self.assertEqual(classifiers['process_type_string'], 'aiida.engine.processes.workchains.workchain.WorkChain')
+
+        # When passing a WorkChainNode, no process_type filter is applied
+        _cls, classifiers = qb._get_ormclass(orm.WorkChainNode, None)
+        self.assertEqual(classifiers['ormclass_type_string'], 'process.workflow.workchain.WorkChainNode.')
+        self.assertEqual(classifiers['process_type_string'], None)
+
+        # Same tests for a calculation
+        _cls, classifiers = qb._get_ormclass(ArithmeticAdd, None)
+        self.assertEqual(classifiers['ormclass_type_string'], 'process.calculation.calcjob.CalcJobNode.')
+        self.assertEqual(classifiers['process_type_string'], 'aiida.calculations:arithmetic.add')
+
+    def test_process_query(self):
+        """
+        Test querying for a process class.
+        """
+        from aiida.engine import run, WorkChain, if_, return_, ExitCode
+        from aiida.common.warnings import AiidaEntryPointWarning
+
+        class PotentialFailureWorkChain(WorkChain):
+            EXIT_STATUS = 1
+            EXIT_MESSAGE = 'Well you did ask for it'
+            OUTPUT_LABEL = 'optional_output'
+            OUTPUT_VALUE = 144
+
+            @classmethod
+            def define(cls, spec):
+                super(PotentialFailureWorkChain, cls).define(spec)
+                spec.input('success', valid_type=orm.Bool)
+                spec.input('through_return', valid_type=orm.Bool, default=orm.Bool(False))
+                spec.input('through_exit_code', valid_type=orm.Bool, default=orm.Bool(False))
+                spec.exit_code(cls.EXIT_STATUS, 'EXIT_STATUS', cls.EXIT_MESSAGE)
+                spec.outline(if_(cls.should_return_out_of_outline)(return_(cls.EXIT_STATUS)), cls.failure, cls.success)
+                spec.output('optional', required=False)
+
+            def should_return_out_of_outline(self):
+                return self.inputs.through_return.value
+
+            def failure(self):
+                # pylint: disable=no-else-return
+
+                if self.inputs.success.value is False:
+                    # Returning either 0 or ExitCode with non-zero status should terminate the workchain
+                    if self.inputs.through_exit_code.value is False:
+                        return self.EXIT_STATUS
+                    else:
+                        return self.exit_codes.EXIT_STATUS  # pylint: disable=no-member
+                else:
+                    # Returning 0 or ExitCode with zero status should *not* terminate the workchain
+                    if self.inputs.through_exit_code.value is False:
+                        return 0
+                    else:
+                        return ExitCode()
+
+            def success(self):
+                self.out(self.OUTPUT_LABEL, orm.Int(self.OUTPUT_VALUE))
+
+        class DummyWorkChain(WorkChain):
+            pass
+
+        # Run a simple test WorkChain
+        _result = run(PotentialFailureWorkChain, success=orm.Bool(True))
+
+        # Query for nodes associated with this type of WorkChain
+        qb = orm.QueryBuilder()
+
+        with warnings.catch_warnings(record=True) as w:  # pylint: disable=no-member
+            # Cause all warnings to always be triggered.
+            warnings.simplefilter("always")  # pylint: disable=no-member
+
+            qb.append(PotentialFailureWorkChain)
+
+            # Verify some things
+            assert len(w) == 1
+            assert issubclass(w[-1].category, AiidaEntryPointWarning)
+
+        # There should be one result of type WorkChainNode
+        self.assertEqual(qb.count(), 1)
+        self.assertTrue(isinstance(qb.all()[0][0], orm.WorkChainNode))
+
+        # Query for nodes of a different type of WorkChain
+        qb = orm.QueryBuilder()
+
+        with warnings.catch_warnings(record=True) as w:  # pylint: disable=no-member
+            # Cause all warnings to always be triggered.
+            warnings.simplefilter("always")  # pylint: disable=no-member
+
+            qb.append(DummyWorkChain)
+
+            # Verify some things
+            assert len(w) == 1
+            assert issubclass(w[-1].category, AiidaEntryPointWarning)
+
+        # There should be no result
+        self.assertEqual(qb.count(), 0)
+
+        # Query for all WorkChain nodes
+        qb = orm.QueryBuilder()
+        qb.append(WorkChain)
+
+        # There should be one result
+        self.assertEqual(qb.count(), 1)
 
     def test_simple_query_1(self):
         """
         Testing a simple query
         """
-        from datetime import datetime
-        from aiida.common.links import LinkType
+        # pylint: disable=too-many-statements
 
         n1 = orm.Data()
         n1.label = 'node1'
@@ -181,23 +301,24 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(len(list(qb1.all())), 1)
 
         qh = {
-            'path': [
-                {
-                    'cls': orm.Node,
-                    'tag': 'n1'
-                },
-                {
-                    'cls': orm.Node,
-                    'tag': 'n2',
-                    'with_incoming': 'n1'
-                }
-            ],
+            'path': [{
+                'cls': orm.Node,
+                'tag': 'n1'
+            }, {
+                'cls': orm.Node,
+                'tag': 'n2',
+                'with_incoming': 'n1'
+            }],
             'filters': {
                 'n1': {
-                    'label': {'ilike': '%foO%'},
+                    'label': {
+                        'ilike': '%foO%'
+                    },
                 },
                 'n2': {
-                    'label': {'ilike': 'bar%'},
+                    'label': {
+                        'ilike': 'bar%'
+                    },
                 }
             },
             'project': {
@@ -216,19 +337,20 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertTrue('bar' in res_one)
 
         qh = {
-            'path': [
-                {
-                    'cls': orm.Node,
-                    'tag': 'n1'
-                },
-                {
-                    'cls': orm.Node,
-                    'tag': 'n2',
-                    'with_incoming': 'n1'
-                }
-            ],
+            'path': [{
+                'cls': orm.Node,
+                'tag': 'n1'
+            }, {
+                'cls': orm.Node,
+                'tag': 'n2',
+                'with_incoming': 'n1'
+            }],
             'filters': {
-                'n1--n2': {'label': {'like': '%_2'}}
+                'n1--n2': {
+                    'label': {
+                        'like': '%_2'
+                    }
+                }
             }
         }
         qb = orm.QueryBuilder(**qh)
@@ -262,7 +384,8 @@ class TestQueryBuilder(AiidaTestCase):
         nodes[6].set_attribute('fa', 1.05)
         nodes[7].set_attribute('fa', 1.06)
 
-        [n.store() for n in nodes]
+        for n in nodes:
+            n.store()
 
         self.assertEqual(orm.QueryBuilder().append(orm.Node, filters={'attributes.fa': {'<': 1}}).count(), 0)
         self.assertEqual(orm.QueryBuilder().append(orm.Node, filters={'attributes.fa': {'==': 1}}).count(), 2)
@@ -296,34 +419,35 @@ class TestQueryBuilder(AiidaTestCase):
             self.assertEqual(qb.count(), 1)
 
         # Now I am not allow the subclassing, which should give 1 result for each
-        for cls, count in (
-            (orm.StructureData, 1),
-            (orm.Dict, 1),
-            (orm.Data, 1),
-            (orm.Node, 0)):
+        for cls, count in ((orm.StructureData, 1), (orm.Dict, 1), (orm.Data, 1), (orm.Node, 0)):
             qb = orm.QueryBuilder().append(cls, filters={'attributes.cat': 'miau'}, subclassing=False)
             self.assertEqual(qb.count(), count)
 
         # Now I am testing the subclassing with tuples:
         qb = orm.QueryBuilder().append(cls=(orm.StructureData, orm.Dict), filters={'attributes.cat': 'miau'})
         self.assertEqual(qb.count(), 2)
-        qb = orm.QueryBuilder().append(type=('data.structure.StructureData.', 'data.dict.Dict.'),
-                                   filters={'attributes.cat': 'miau'})
+        qb = orm.QueryBuilder().append(
+            type=('data.structure.StructureData.', 'data.dict.Dict.'), filters={'attributes.cat': 'miau'})
         self.assertEqual(qb.count(), 2)
-        qb = orm.QueryBuilder().append(cls=(orm.StructureData, orm.Dict), filters={'attributes.cat': 'miau'},
-                                   subclassing=False)
+        qb = orm.QueryBuilder().append(
+            cls=(orm.StructureData, orm.Dict), filters={'attributes.cat': 'miau'}, subclassing=False)
         self.assertEqual(qb.count(), 2)
-        qb = orm.QueryBuilder().append(cls=(orm.StructureData, orm.Data), filters={'attributes.cat': 'miau'}, )
+        qb = orm.QueryBuilder().append(
+            cls=(orm.StructureData, orm.Data),
+            filters={'attributes.cat': 'miau'},
+        )
         self.assertEqual(qb.count(), 3)
-        qb = orm.QueryBuilder().append(type=('data.structure.StructureData.', 'data.dict.Dict.'),
-                                   filters={'attributes.cat': 'miau'}, subclassing=False)
+        qb = orm.QueryBuilder().append(
+            type=('data.structure.StructureData.', 'data.dict.Dict.'),
+            filters={'attributes.cat': 'miau'},
+            subclassing=False)
         self.assertEqual(qb.count(), 2)
-        qb = orm.QueryBuilder().append(type=('data.structure.StructureData.', 'data.Data.'),
-                                   filters={'attributes.cat': 'miau'}, subclassing=False)
+        qb = orm.QueryBuilder().append(
+            type=('data.structure.StructureData.', 'data.Data.'), filters={'attributes.cat': 'miau'}, subclassing=False)
         self.assertEqual(qb.count(), 2)
 
     def test_list_behavior(self):
-        for i in range(4):
+        for _i in range(4):
             orm.Data().store()
 
         self.assertEqual(len(orm.QueryBuilder().append(orm.Node).all()), 4)
@@ -373,6 +497,7 @@ class TestQueryBuilder(AiidaTestCase):
             qb.append(orm.StructureData, tag='s', randomkeyword={})
 
         # Now I'm checking whether this keyword appears anywhere in the internal dictionaries:
+        # pylint: disable=protected-access
         self.assertTrue('s' not in qb._projections)
         self.assertTrue('s' not in qb._filters)
         self.assertTrue('s' not in qb._tag_to_alias_map)
@@ -390,27 +515,36 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(qb.get_used_tags(), ['n1', 'n2', 'e1', 'n3', 'e2', 'c1', 'nonsense'])
 
         # Now I am testing the default tags,
-        qb = orm.QueryBuilder().append(orm.StructureData).append(orm.ProcessNode).append(
-            orm.StructureData).append(
+        qb = orm.QueryBuilder().append(orm.StructureData).append(orm.ProcessNode).append(orm.StructureData).append(
             orm.Dict, with_outgoing=orm.ProcessNode)
         self.assertEqual(qb.get_used_tags(), [
-            'StructureData_1', 'ProcessNode_1',
-            'StructureData_1--ProcessNode_1', 'StructureData_2',
-            'ProcessNode_1--StructureData_2', 'Dict_1',
-            'ProcessNode_1--Dict_1'
+            'StructureData_1', 'ProcessNode_1', 'StructureData_1--ProcessNode_1', 'StructureData_2',
+            'ProcessNode_1--StructureData_2', 'Dict_1', 'ProcessNode_1--Dict_1'
         ])
-        self.assertEqual(qb.get_used_tags(edges=False), [
-            'StructureData_1', 'ProcessNode_1',
-            'StructureData_2', 'Dict_1',
-        ])
-        self.assertEqual(qb.get_used_tags(vertices=False), [
-            'StructureData_1--ProcessNode_1',
-            'ProcessNode_1--StructureData_2',
-            'ProcessNode_1--Dict_1'
-        ])
+        self.assertEqual(
+            qb.get_used_tags(edges=False), [
+                'StructureData_1',
+                'ProcessNode_1',
+                'StructureData_2',
+                'Dict_1',
+            ])
+        self.assertEqual(
+            qb.get_used_tags(vertices=False),
+            ['StructureData_1--ProcessNode_1', 'ProcessNode_1--StructureData_2', 'ProcessNode_1--Dict_1'])
+        self.assertEqual(
+            qb.get_used_tags(edges=False), [
+                'StructureData_1',
+                'ProcessNode_1',
+                'StructureData_2',
+                'Dict_1',
+            ])
+        self.assertEqual(
+            qb.get_used_tags(vertices=False),
+            ['StructureData_1--ProcessNode_1', 'ProcessNode_1--StructureData_2', 'ProcessNode_1--Dict_1'])
 
 
 class TestQueryHelp(AiidaTestCase):
+
     def test_queryhelp(self):
         """
         Here I test the queryhelp by seeing whether results are the same as using the append method.
@@ -424,15 +558,15 @@ class TestQueryHelp(AiidaTestCase):
             g.add_nodes(obj)
 
         for cls, expected_count, subclassing in (
-                (orm.StructureData, 1, True),
-                (orm.Dict, 1, True),
-                (orm.Data, 3, True),
-                (orm.Data, 1, False),
-                ((orm.Dict, orm.StructureData), 2, True),
-                ((orm.Dict, orm.StructureData), 2, False),
-                ((orm.Dict, orm.Data), 2, False),
-                ((orm.Dict, orm.Data), 3, True),
-                ((orm.Dict, orm.Data, orm.StructureData), 3, False),
+            (orm.StructureData, 1, True),
+            (orm.Dict, 1, True),
+            (orm.Data, 3, True),
+            (orm.Data, 1, False),
+            ((orm.Dict, orm.StructureData), 2, True),
+            ((orm.Dict, orm.StructureData), 2, False),
+            ((orm.Dict, orm.Data), 2, False),
+            ((orm.Dict, orm.Data), 3, True),
+            ((orm.Dict, orm.Data, orm.StructureData), 3, False),
         ):
             qb = orm.QueryBuilder()
             qb.append(cls, filters={'attributes.foo-qh2': 'bar'}, subclassing=subclassing, project='uuid')
@@ -441,9 +575,7 @@ class TestQueryHelp(AiidaTestCase):
             qh = qb.get_json_compatible_queryhelp()
             qb_new = orm.QueryBuilder(**qh)
             self.assertEqual(qb_new.count(), expected_count)
-            self.assertEqual(
-                sorted([uuid for uuid, in qb.all()]),
-                sorted([uuid for uuid, in qb_new.all()]))
+            self.assertEqual(sorted([uuid for uuid, in qb.all()]), sorted([uuid for uuid, in qb_new.all()]))
 
         qb = orm.QueryBuilder().append(orm.Group, filters={'label': 'helloworld'})
         self.assertEqual(qb.count(), 1)
@@ -451,7 +583,7 @@ class TestQueryHelp(AiidaTestCase):
         qb = orm.QueryBuilder().append((orm.Group,), filters={'label': 'helloworld'})
         self.assertEqual(qb.count(), 1)
 
-        qb = orm.QueryBuilder().append(orm.Computer, )
+        qb = orm.QueryBuilder().append(orm.Computer,)
         self.assertEqual(qb.count(), 1)
 
         qb = orm.QueryBuilder().append(cls=(orm.Computer,))
@@ -463,7 +595,7 @@ class TestQueryBuilderCornerCases(AiidaTestCase):
     In this class corner cases of QueryBuilder are added.
     """
 
-    def test_computer_json(self):
+    def test_computer_json(self):  # pylint: disable=no-self-use
         """
         In this test we check the correct behavior of QueryBuilder when
         retrieving the _metadata and the transport_params with no content.
@@ -480,20 +612,19 @@ class TestQueryBuilderCornerCases(AiidaTestCase):
         # a JSON field (in both backends).
         qb = orm.QueryBuilder()
         qb.append(orm.CalculationNode, project=['id'], tag='calc')
-        qb.append(orm.Computer, project=['id', 'transport_params'],
-                  outerjoin=True, with_node='calc')
+        qb.append(orm.Computer, project=['id', 'transport_params'], outerjoin=True, with_node='calc')
         qb.all()
 
         # Checking the correct retrieval of _metadata which is
         # a JSON field (in both backends).
         qb = orm.QueryBuilder()
         qb.append(orm.CalculationNode, project=['id'], tag='calc')
-        qb.append(orm.Computer, project=['id', '_metadata'],
-                  outerjoin=True, with_node='calc')
+        qb.append(orm.Computer, project=['id', '_metadata'], outerjoin=True, with_node='calc')
         qb.all()
 
 
 class TestAttributes(AiidaTestCase):
+
     def test_attribute_existence(self):
         # I'm storing a value under key whatever:
         val = 1.
@@ -506,13 +637,21 @@ class TestAttributes(AiidaTestCase):
         # I want all the nodes where whatever is smaller than 1. or there is no such value:
 
         qb = orm.QueryBuilder()
-        qb.append(orm.Data, filters={
-            'or': [
-                {'attributes': {'!has_key': 'whatever'}},
-                {'attributes.whatever': {'<': val}}
-            ],
-        }, project='uuid')
-        res_query = set([str(_[0]) for _ in qb.all()])
+        qb.append(
+            orm.Data,
+            filters={
+                'or': [{
+                    'attributes': {
+                        '!has_key': 'whatever'
+                    }
+                }, {
+                    'attributes.whatever': {
+                        '<': val
+                    }
+                }],
+            },
+            project='uuid')
+        res_query = {str(_[0]) for _ in qb.all()}
         self.assertEqual(res_query, res_uuids)
 
     def test_attribute_type(self):
@@ -524,42 +663,40 @@ class TestAttributes(AiidaTestCase):
         n_str.set_attribute(key, '1')
         n_str2.set_attribute(key, 'one')
         n_arr.set_attribute(key, [4, 3, 5])
-        [n.store() for n in (n_str2, n_str, n_int, n_float, n_bool, n_arr)]
+
+        for n in (n_str2, n_str, n_int, n_float, n_bool, n_arr):
+            n.store()
+
         # Here I am testing which values contain a number 1.
         # Both 1 and 1.0 are legitimate values if ask for either 1 or 1.0
         for val in (1.0, 1):
-            qb = orm.QueryBuilder().append(orm.Node,
-                    filters={'attributes.{}'.format(key): val}, project='uuid')
+            qb = orm.QueryBuilder().append(orm.Node, filters={'attributes.{}'.format(key): val}, project='uuid')
             res = [str(_) for _, in qb.all()]
             self.assertEqual(set(res), set((n_float.uuid, n_int.uuid)))
-            qb = orm.QueryBuilder().append(orm.Node,
-                    filters={'attributes.{}'.format(key): {'>': 0.5}}, project='uuid')
+            qb = orm.QueryBuilder().append(orm.Node, filters={'attributes.{}'.format(key): {'>': 0.5}}, project='uuid')
             res = [str(_) for _, in qb.all()]
             self.assertEqual(set(res), set((n_float.uuid, n_int.uuid)))
-            qb = orm.QueryBuilder().append(orm.Node,
-                    filters={'attributes.{}'.format(key): {'<': 1.5}}, project='uuid')
+            qb = orm.QueryBuilder().append(orm.Node, filters={'attributes.{}'.format(key): {'<': 1.5}}, project='uuid')
             res = [str(_) for _, in qb.all()]
             self.assertEqual(set(res), set((n_float.uuid, n_int.uuid)))
         # Now I am testing the boolean value:
-        qb = orm.QueryBuilder().append(orm.Node,
-                filters={'attributes.{}'.format(key): True}, project='uuid')
+        qb = orm.QueryBuilder().append(orm.Node, filters={'attributes.{}'.format(key): True}, project='uuid')
         res = [str(_) for _, in qb.all()]
         self.assertEqual(set(res), set((n_bool.uuid,)))
 
-        qb = orm.QueryBuilder().append(orm.Node,
-                filters={'attributes.{}'.format(key): {'like': '%n%'}}, project='uuid')
+        qb = orm.QueryBuilder().append(orm.Node, filters={'attributes.{}'.format(key): {'like': '%n%'}}, project='uuid')
         res = [str(_) for _, in qb.all()]
         self.assertEqual(set(res), set((n_str2.uuid,)))
-        qb = orm.QueryBuilder().append(orm.Node,
-                filters={'attributes.{}'.format(key): {'ilike': 'On%'}}, project='uuid')
+        qb = orm.QueryBuilder().append(
+            orm.Node, filters={'attributes.{}'.format(key): {
+                                   'ilike': 'On%'
+                               }}, project='uuid')
         res = [str(_) for _, in qb.all()]
         self.assertEqual(set(res), set((n_str2.uuid,)))
-        qb = orm.QueryBuilder().append(orm.Node,
-                filters={'attributes.{}'.format(key): {'like': '1'}}, project='uuid')
+        qb = orm.QueryBuilder().append(orm.Node, filters={'attributes.{}'.format(key): {'like': '1'}}, project='uuid')
         res = [str(_) for _, in qb.all()]
         self.assertEqual(set(res), set((n_str.uuid,)))
-        qb = orm.QueryBuilder().append(orm.Node,
-                filters={'attributes.{}'.format(key): {'==': '1'}}, project='uuid')
+        qb = orm.QueryBuilder().append(orm.Node, filters={'attributes.{}'.format(key): {'==': '1'}}, project='uuid')
         res = [str(_) for _, in qb.all()]
         self.assertEqual(set(res), set((n_str.uuid,)))
         if settings.BACKEND == u'sqlalchemy':
@@ -567,15 +704,17 @@ class TestAttributes(AiidaTestCase):
             # so I exclude. Not the nicest way, But I would like to keep this piece
             # of code because of the initialization part, that would need to be
             # duplicated or wrapped otherwise.
-            qb = orm.QueryBuilder().append(orm.Node,
-                    filters={'attributes.{}'.format(key): {'of_length': 3}}, project='uuid')
+            qb = orm.QueryBuilder().append(
+                orm.Node, filters={'attributes.{}'.format(key): {
+                                       'of_length': 3
+                                   }}, project='uuid')
             res = [str(_) for _, in qb.all()]
             self.assertEqual(set(res), set((n_arr.uuid,)))
 
 
 class QueryBuilderDateTimeAttribute(AiidaTestCase):
-    @unittest.skipIf(settings.BACKEND == u'sqlalchemy',
-                     "SQLA doesn't have full datetime support in attributes")
+
+    @unittest.skipIf(settings.BACKEND == u'sqlalchemy', "SQLA doesn't have full datetime support in attributes")
     def test_date(self):
         from aiida.common import timezone
         from datetime import timedelta
@@ -584,11 +723,20 @@ class QueryBuilderDateTimeAttribute(AiidaTestCase):
         n.set_attribute('now', now)
         n.store()
 
-        qb = orm.QueryBuilder().append(orm.Node,
-                                   filters={'attributes.now': {"and": [
-                                       {">": now - timedelta(seconds=1)},
-                                       {"<": now + timedelta(seconds=1)},
-                                   ]}})
+        qb = orm.QueryBuilder().append(
+            orm.Node,
+            filters={
+                'attributes.now': {
+                    "and": [
+                        {
+                            ">": now - timedelta(seconds=1)
+                        },
+                        {
+                            "<": now + timedelta(seconds=1)
+                        },
+                    ]
+                }
+            })
         self.assertEqual(qb.count(), 1)
 
 
@@ -601,9 +749,7 @@ class QueryBuilderLimitOffsetsTest(AiidaTestCase):
             n.set_attribute('foo', i)
             n.store()
 
-        qb = orm.QueryBuilder().append(
-            orm.Node, project='attributes.foo'
-        ).order_by({orm.Node: 'ctime'})
+        qb = orm.QueryBuilder().append(orm.Node, project='attributes.foo').order_by({orm.Node: 'ctime'})
 
         res = next(zip(*qb.all()))
         self.assertEqual(res, tuple(range(10)))
@@ -620,8 +766,11 @@ class QueryBuilderLimitOffsetsTest(AiidaTestCase):
 
         # Specifying the order  explicitly the order:
         qb = orm.QueryBuilder().append(
-            orm.Node, project='attributes.foo'
-        ).order_by({orm.Node: {'ctime': {'order': 'asc'}}})
+            orm.Node, project='attributes.foo').order_by({orm.Node: {
+                'ctime': {
+                    'order': 'asc'
+                }
+            }})
 
         res = next(zip(*qb.all()))
         self.assertEqual(res, tuple(range(10)))
@@ -638,8 +787,11 @@ class QueryBuilderLimitOffsetsTest(AiidaTestCase):
 
         # Reversing the order:
         qb = orm.QueryBuilder().append(
-            orm.Node, project='attributes.foo'
-        ).order_by({orm.Node: {'ctime': {'order': 'desc'}}})
+            orm.Node, project='attributes.foo').order_by({orm.Node: {
+                'ctime': {
+                    'order': 'desc'
+                }
+            }})
 
         res = next(zip(*qb.all()))
         self.assertEqual(res, tuple(range(9, -1, -1)))
@@ -656,6 +808,7 @@ class QueryBuilderLimitOffsetsTest(AiidaTestCase):
 
 
 class QueryBuilderJoinsTests(AiidaTestCase):
+
     def test_joins1(self):
         # Creating n1, who will be a parent:
         parent = orm.Data()
@@ -717,18 +870,22 @@ class QueryBuilderJoinsTests(AiidaTestCase):
         students[9].add_incoming(advisors[2], link_type=LinkType.CREATE, link_label='lover')
 
         self.assertEqual(
-            orm.QueryBuilder().append(
-                orm.Node
-            ).append(
-                orm.Node, edge_filters={'label': {'like': 'is\\_advisor\\_%'}}, tag='student'
-            ).count(), 7)
+            orm.QueryBuilder().append(orm.Node).append(
+                orm.Node, edge_filters={
+                    'label': {
+                        'like': 'is\\_advisor\\_%'
+                    }
+                }, tag='student').count(), 7)
 
         for adv_id, number_students in zip(list(range(3)), (2, 2, 3)):
-            self.assertEqual(orm.QueryBuilder().append(
-                orm.Node, filters={'attributes.advisor_id': adv_id}
-            ).append(
-                orm.Node, edge_filters={'label': {'like': 'is\\_advisor\\_%'}}, tag='student'
-            ).count(), number_students)
+            self.assertEqual(
+                orm.QueryBuilder().append(orm.Node, filters={
+                    'attributes.advisor_id': adv_id
+                }).append(orm.Node, edge_filters={
+                    'label': {
+                        'like': 'is\\_advisor\\_%'
+                    }
+                }, tag='student').count(), number_students)
 
     def test_joins3_user_group(self):
         # Create another user
@@ -743,23 +900,21 @@ class QueryBuilderJoinsTests(AiidaTestCase):
         # Search for the group of the user
         qb = orm.QueryBuilder()
         qb.append(orm.User, tag='user', filters={'id': {'==': user.id}})
-        qb.append(orm.Group, with_user='user',
-                  filters={'id': {'==': group.id}})
-        self.assertEquals(qb.count(), 1, "The expected group that belongs to "
-                                         "the selected user was not found.")
+        qb.append(orm.Group, with_user='user', filters={'id': {'==': group.id}})
+        self.assertEqual(qb.count(), 1, "The expected group that belongs to " "the selected user was not found.")
 
         # Search for the user that owns a group
         qb = orm.QueryBuilder()
         qb.append(orm.Group, tag='group', filters={'id': {'==': group.id}})
         qb.append(orm.User, with_group='group', filters={'id': {'==': user.id}})
 
-        self.assertEquals(qb.count(), 1, "The expected user that owns the "
-                                         "selected group was not found.")
+        self.assertEqual(qb.count(), 1, "The expected user that owns the " "selected group was not found.")
 
 
 class QueryBuilderPath(AiidaTestCase):
+
     def test_query_path(self):
-        from aiida.common.links import LinkType
+        # pylint: disable=too-many-statements
 
         q = self.backend.query_manager
         n1 = orm.Data()
@@ -804,117 +959,154 @@ class QueryBuilderPath(AiidaTestCase):
         # There are no parents to n9, checking that
         self.assertEqual(set([]), set(q.get_all_parents([n9.pk])))
         # There is one parent to n6
-        self.assertEqual(set([(_,) for _ in (n6.pk,)]), set([tuple(_) for _ in q.get_all_parents([n7.pk])]))
+        self.assertEqual({(_,) for _ in (n6.pk,)}, {tuple(_) for _ in q.get_all_parents([n7.pk])})
         # There are several parents to n4
-        self.assertEqual(set([(_.pk,) for _ in (n1, n2)]), set([tuple(_) for _ in q.get_all_parents([n4.pk])]))
+        self.assertEqual({(_.pk,) for _ in (n1, n2)}, {tuple(_) for _ in q.get_all_parents([n4.pk])})
         # There are several parents to n5
-        self.assertEqual(set([(_.pk,) for _ in (n1, n2, n3, n4)]), set([tuple(_) for _ in q.get_all_parents([n5.pk])]))
+        self.assertEqual({(_.pk,) for _ in (n1, n2, n3, n4)}, {tuple(_) for _ in q.get_all_parents([n5.pk])})
 
         # Yet, no links from 1 to 8
-        self.assertEquals(
-            orm.QueryBuilder().append(
-                orm.Node, filters={'id': n1.pk}, tag='anc'
-            ).append(orm.Node, with_ancestors='anc', filters={'id': n8.pk}
-                     ).count(), 0)
+        self.assertEqual(
+            orm.QueryBuilder().append(orm.Node, filters={
+                'id': n1.pk
+            }, tag='anc').append(orm.Node, with_ancestors='anc', filters={
+                'id': n8.pk
+            }).count(), 0)
 
-        self.assertEquals(
-            orm.QueryBuilder().append(
-                orm.Node, filters={'id': n8.pk}, tag='desc'
-            ).append(orm.Node, with_descendants='desc', filters={'id': n1.pk}
-                     ).count(), 0)
+        self.assertEqual(
+            orm.QueryBuilder().append(orm.Node, filters={
+                'id': n8.pk
+            }, tag='desc').append(orm.Node, with_descendants='desc', filters={
+                'id': n1.pk
+            }).count(), 0)
 
         n6.add_incoming(n5, link_type=LinkType.CREATE, link_label='link1')
         # Yet, now 2 links from 1 to 8
-        self.assertEquals(
-            orm.QueryBuilder().append(
-                orm.Node, filters={'id': n1.pk}, tag='anc'
-            ).append(orm.Node, with_ancestors='anc', filters={'id': n8.pk}
-                     ).count(), 2
-        )
+        self.assertEqual(
+            orm.QueryBuilder().append(orm.Node, filters={
+                'id': n1.pk
+            }, tag='anc').append(orm.Node, with_ancestors='anc', filters={
+                'id': n8.pk
+            }).count(), 2)
 
-        self.assertEquals(
-            orm.QueryBuilder().append(
-                orm.Node, filters={'id': n8.pk}, tag='desc'
-            ).append(orm.Node, with_descendants='desc', filters={'id': n1.pk}
-                     ).count(), 2)
+        self.assertEqual(
+            orm.QueryBuilder().append(orm.Node, filters={
+                'id': n8.pk
+            }, tag='desc').append(orm.Node, with_descendants='desc', filters={
+                'id': n1.pk
+            }).count(), 2)
 
-        self.assertEquals(
-            orm.QueryBuilder().append(
-                orm.Node, filters={'id': n8.pk}, tag='desc'
-            ).append(orm.Node, with_descendants='desc', filters={'id': n1.pk}, edge_filters={'depth': {'<': 6}},
-                     ).count(), 2)
-        self.assertEquals(
-            orm.QueryBuilder().append(
-                orm.Node, filters={'id': n8.pk}, tag='desc'
-            ).append(orm.Node, with_descendants='desc', filters={'id': n1.pk}, edge_filters={'depth': 5},
-                     ).count(), 2)
-        self.assertEquals(
-            orm.QueryBuilder().append(
-                orm.Node, filters={'id': n8.pk}, tag='desc'
-            ).append(orm.Node, with_descendants='desc', filters={'id': n1.pk}, edge_filters={'depth': {'<': 5}},
-                     ).count(), 0)
+        self.assertEqual(
+            orm.QueryBuilder().append(orm.Node, filters={
+                'id': n8.pk
+            }, tag='desc').append(
+                orm.Node,
+                with_descendants='desc',
+                filters={
+                    'id': n1.pk
+                },
+                edge_filters={
+                    'depth': {
+                        '<': 6
+                    }
+                },
+            ).count(), 2)
+        self.assertEqual(
+            orm.QueryBuilder().append(orm.Node, filters={
+                'id': n8.pk
+            }, tag='desc').append(
+                orm.Node,
+                with_descendants='desc',
+                filters={
+                    'id': n1.pk
+                },
+                edge_filters={
+                    'depth': 5
+                },
+            ).count(), 2)
+        self.assertEqual(
+            orm.QueryBuilder().append(orm.Node, filters={
+                'id': n8.pk
+            }, tag='desc').append(
+                orm.Node,
+                with_descendants='desc',
+                filters={
+                    'id': n1.pk
+                },
+                edge_filters={
+                    'depth': {
+                        '<': 5
+                    }
+                },
+            ).count(), 0)
 
-        # TODO write a query that can filter certain paths by traversed ID
+        # TODO write a query that can filter certain paths by traversed ID # pylint: disable=fixme
         qb = orm.QueryBuilder().append(
-            orm.Node, filters={'id': n8.pk}, tag='desc',
-        ).append(orm.Node, with_descendants='desc', edge_project='path', filters={'id': n1.pk})
-        queried_path_set = set([frozenset(p) for p, in qb.all()])
+            orm.Node,
+            filters={
+                'id': n8.pk
+            },
+            tag='desc',
+        ).append(
+            orm.Node, with_descendants='desc', edge_project='path', filters={'id': n1.pk})
+        queried_path_set = {frozenset(p) for p, in qb.all()}
 
-        paths_there_should_be = set([
+        paths_there_should_be = {
             frozenset([n1.pk, n2.pk, n3.pk, n5.pk, n6.pk, n7.pk, n8.pk]),
             frozenset([n1.pk, n2.pk, n4.pk, n5.pk, n6.pk, n7.pk, n8.pk])
-        ])
+        }
 
         self.assertTrue(queried_path_set == paths_there_should_be)
 
         qb = orm.QueryBuilder().append(
-            orm.Node, filters={'id': n1.pk}, tag='anc'
-        ).append(
-            orm.Node, with_ancestors='anc', filters={'id': n8.pk}, edge_project='path'
-        )
+            orm.Node, filters={
+                'id': n1.pk
+            }, tag='anc').append(
+                orm.Node, with_ancestors='anc', filters={'id': n8.pk}, edge_project='path')
 
-        self.assertTrue(set(
-            [frozenset(p) for p, in qb.all()]
-        ) == set(
-            [frozenset([n1.pk, n2.pk, n3.pk, n5.pk, n6.pk, n7.pk, n8.pk]),
-             frozenset([n1.pk, n2.pk, n4.pk, n5.pk, n6.pk, n7.pk, n8.pk])]
-        ))
+        self.assertEqual({frozenset(p) for p, in qb.all()}, {
+            frozenset([n1.pk, n2.pk, n3.pk, n5.pk, n6.pk, n7.pk, n8.pk]),
+            frozenset([n1.pk, n2.pk, n4.pk, n5.pk, n6.pk, n7.pk, n8.pk])
+        })
 
         n7.add_incoming(n9, link_type=LinkType.INPUT_CALC, link_label='link0')
         # Still two links...
 
-        self.assertEquals(
-            orm.QueryBuilder().append(
-                orm.Node, filters={'id': n1.pk}, tag='anc'
-            ).append(orm.Node, with_ancestors='anc', filters={'id': n8.pk}
-                     ).count(), 2
-        )
+        self.assertEqual(
+            orm.QueryBuilder().append(orm.Node, filters={
+                'id': n1.pk
+            }, tag='anc').append(orm.Node, with_ancestors='anc', filters={
+                'id': n8.pk
+            }).count(), 2)
 
-        self.assertEquals(
-            orm.QueryBuilder().append(
-                orm.Node, filters={'id': n8.pk}, tag='desc'
-            ).append(orm.Node, with_descendants='desc', filters={'id': n1.pk}
-                     ).count(), 2)
+        self.assertEqual(
+            orm.QueryBuilder().append(orm.Node, filters={
+                'id': n8.pk
+            }, tag='desc').append(orm.Node, with_descendants='desc', filters={
+                'id': n1.pk
+            }).count(), 2)
         n9.add_incoming(n5, link_type=LinkType.CREATE, link_label='link6')
         # And now there should be 4 nodes
 
-        self.assertEquals(
-            orm.QueryBuilder().append(
-                orm.Node, filters={'id': n1.pk}, tag='anc'
-            ).append(orm.Node, with_ancestors='anc', filters={'id': n8.pk}
-                     ).count(), 4)
+        self.assertEqual(
+            orm.QueryBuilder().append(orm.Node, filters={
+                'id': n1.pk
+            }, tag='anc').append(orm.Node, with_ancestors='anc', filters={
+                'id': n8.pk
+            }).count(), 4)
 
-        self.assertEquals(
-            orm.QueryBuilder().append(
-                orm.Node, filters={'id': n8.pk}, tag='desc'
-            ).append(orm.Node, with_descendants='desc', filters={'id': n1.pk}
-                     ).count(), 4)
+        self.assertEqual(
+            orm.QueryBuilder().append(orm.Node, filters={
+                'id': n8.pk
+            }, tag='desc').append(orm.Node, with_descendants='desc', filters={
+                'id': n1.pk
+            }).count(), 4)
 
         qb = orm.QueryBuilder().append(
-            orm.Node, filters={'id': n1.pk}, tag='anc'
-        ).append(
-            orm.Node, with_ancestors='anc', filters={'id': n8.pk}, edge_tag='edge'
-        )
+            orm.Node, filters={
+                'id': n1.pk
+            }, tag='anc').append(
+                orm.Node, with_ancestors='anc', filters={'id': n8.pk}, edge_tag='edge')
         qb.add_projection('edge', 'depth')
         self.assertTrue(set(next(zip(*qb.all()))), set([5, 6]))
         qb.add_filter('edge', {'depth': 5})
@@ -922,19 +1114,21 @@ class QueryBuilderPath(AiidaTestCase):
 
 
 class TestConsistency(AiidaTestCase):
+
     def test_create_node_and_query(self):
         """
         Testing whether creating nodes within a iterall iteration changes the results.
         """
-        for i in range(100):
+        for _i in range(100):
             n = orm.Data()
             n.store()
 
-        for idx, item in enumerate(orm.QueryBuilder().append(orm.Node, project=['id', 'label']).iterall(batch_size=10)):
+        for idx, _item in enumerate(orm.QueryBuilder().append(orm.Node, project=['id',
+                                                                                 'label']).iterall(batch_size=10)):
             if idx % 10 == 10:
                 n = orm.Data()
                 n.store()
-        self.assertEqual(idx, 99)
+        self.assertEqual(idx, 99)  # pylint: disable=undefined-loop-variable
         self.assertTrue(len(orm.QueryBuilder().append(orm.Node, project=['id', 'label']).all(batch_size=10)) > 99)
 
     def test_len_results(self):
@@ -956,6 +1150,7 @@ class TestConsistency(AiidaTestCase):
 
 
 class TestManager(AiidaTestCase):
+
     def test_statistics(self):
         """
         Test if the statistics query works properly.
@@ -964,10 +1159,12 @@ class TestManager(AiidaTestCase):
         """
         from collections import defaultdict
 
+        # pylint: disable=protected-access
+
         def store_and_add(n, statistics):
             n.store()
             statistics['total'] += 1
-            statistics['types'][n._plugin_type_string] += 1
+            statistics['types'][n._plugin_type_string] += 1  # pylint: disable=no-member
             statistics['ctime_by_day'][n.ctime.strftime('%Y-%m-%d')] += 1
 
         qmanager = self.backend.query_manager
@@ -977,11 +1174,7 @@ class TestManager(AiidaTestCase):
         ctime_by_day = defaultdict(int)
         ctime_by_day.update(current_db_statistics['ctime_by_day'])
 
-        expected_db_statistics = {
-            'total': current_db_statistics['total'],
-            'types': types,
-            'ctime_by_day': ctime_by_day
-        }
+        expected_db_statistics = {'total': current_db_statistics['total'], 'types': types, 'ctime_by_day': ctime_by_day}
 
         store_and_add(orm.Data(), expected_db_statistics)
         store_and_add(orm.Dict(), expected_db_statistics)
@@ -992,10 +1185,11 @@ class TestManager(AiidaTestCase):
         # I only check a few fields
         new_db_statistics = {k: v for k, v in new_db_statistics.items() if k in expected_db_statistics}
 
-        expected_db_statistics = {k: dict(v) if isinstance(v, defaultdict) else v
-                                  for k, v in expected_db_statistics.items()}
+        expected_db_statistics = {
+            k: dict(v) if isinstance(v, defaultdict) else v for k, v in expected_db_statistics.items()
+        }
 
-        self.assertEquals(new_db_statistics, expected_db_statistics)
+        self.assertEqual(new_db_statistics, expected_db_statistics)
 
     def test_statistics_default_class(self):
         """
@@ -1008,7 +1202,7 @@ class TestManager(AiidaTestCase):
         def store_and_add(n, statistics):
             n.store()
             statistics['total'] += 1
-            statistics['types'][n._plugin_type_string] += 1
+            statistics['types'][n._plugin_type_string] += 1  # pylint: disable=no-member,protected-access
             statistics['ctime_by_day'][n.ctime.strftime('%Y-%m-%d')] += 1
 
         current_db_statistics = self.backend.query_manager.get_creation_statistics()
@@ -1017,11 +1211,7 @@ class TestManager(AiidaTestCase):
         ctime_by_day = defaultdict(int)
         ctime_by_day.update(current_db_statistics['ctime_by_day'])
 
-        expected_db_statistics = {
-            'total': current_db_statistics['total'],
-            'types': types,
-            'ctime_by_day': ctime_by_day
-        }
+        expected_db_statistics = {'total': current_db_statistics['total'], 'types': types, 'ctime_by_day': ctime_by_day}
 
         store_and_add(orm.Data(), expected_db_statistics)
         store_and_add(orm.Dict(), expected_db_statistics)
@@ -1032,7 +1222,8 @@ class TestManager(AiidaTestCase):
         # I only check a few fields
         new_db_statistics = {k: v for k, v in new_db_statistics.items() if k in expected_db_statistics}
 
-        expected_db_statistics = {k: dict(v) if isinstance(v, defaultdict) else v
-                                  for k, v in expected_db_statistics.items()}
+        expected_db_statistics = {
+            k: dict(v) if isinstance(v, defaultdict) else v for k, v in expected_db_statistics.items()
+        }
 
-        self.assertEquals(new_db_statistics, expected_db_statistics)
+        self.assertEqual(new_db_statistics, expected_db_statistics)

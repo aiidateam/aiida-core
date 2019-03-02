@@ -59,8 +59,6 @@ Prerequisites
     See :ref:`WSL instructions<details_wsl>` for details.
 
 
-.. _quick_install:
-
 Installation
 ============
 

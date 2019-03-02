@@ -1739,8 +1739,9 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
                                     for node_uuid in groupnodes]
                 qb_nodes = QueryBuilder().append(
                     Node, filters={'id': {'in': nodes_ids_to_add}})
-                nodes_to_add = [n[0] for n in qb_nodes.all()]
-                group.add_nodes(nodes_to_add)
+                # Adding nodes to group avoiding the SQLA ORM to increase speed
+                nodes_to_add = [n[0].backend_entity for n in qb_nodes.all()]
+                group.backend_entity.add_nodes(nodes_to_add, skip_orm=True)
 
             ######################################################
             # Put everything in a specific group
@@ -1782,9 +1783,9 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
                             counter += 1
 
                 # Add all the nodes to the new group
-                # TODO: decide if we want to return the group label 
-                nodes = [entry[0] for entry in QueryBuilder().append(Node, filters={'id': {'in': pks_for_group}}).all()]
-                group.add_nodes(nodes)
+                # Adding nodes to group avoiding the SQLA ORM to increase speed
+                nodes = [entry[0].backend_entity for entry in QueryBuilder().append(Node, filters={'id': {'in': pks_for_group}}).all()]
+                group.backend_entity.add_nodes(nodes, skip_orm=True)
 
                 if not silent:
                     print("IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.label))

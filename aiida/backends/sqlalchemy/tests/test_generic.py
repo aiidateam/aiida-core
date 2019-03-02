@@ -15,8 +15,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm import Node, Data
-from aiida.common import exceptions
+from aiida.orm import Data, Node
 
 
 class TestComputer(AiidaTestCase):
@@ -128,6 +127,42 @@ class TestGroupsSqla(AiidaTestCase):
         res = backend.groups.query(user=simple_user, type_string='')
 
         self.assertSetEqual(set(_.pk for _ in res), set(_.pk for _ in [g1, g2]))
+
+
+class TestGroupNoOrmSQLA(AiidaTestCase):
+    """
+    These tests check that the group node addition works ok when the skip_orm=True flag is used
+    """
+
+    def test_group_general(self):
+        """
+        General tests to verify that the group addition with the skip_orm=True flag
+        work properly
+        """
+        backend = self.backend
+
+        node_01 = Data().store().backend_entity
+        node_02 = Data().store().backend_entity
+        node_03 = Data().store().backend_entity
+        node_04 = Data().store().backend_entity
+        node_05 = Data().store().backend_entity
+        nodes = [node_01, node_02, node_03, node_04, node_05]
+
+        simple_user = backend.users.create('simple1@ton.com')
+        group = backend.groups.create(label='test_adding_nodes', user=simple_user).store()
+        # Single node in a list
+        group.add_nodes([node_01], skip_orm=True)
+        # List of nodes
+        group.add_nodes([node_02, node_03], skip_orm=True)
+        # Tuple of nodes
+        group.add_nodes((node_04, node_05), skip_orm=True)
+
+        # Check
+        self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))
+
+        # Try to add a node that is already present: there should be no problem
+        group.add_nodes([node_01], skip_orm=True)
+        self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))
 
 
 class TestDbExtrasSqla(AiidaTestCase):

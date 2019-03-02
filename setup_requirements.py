@@ -88,12 +88,13 @@ extras_require = {
     ],
     # Requirements to building documentation
     'docs': [
-        'Sphinx==1.7.4',
-        'Pygments==2.2.0',
+        'Sphinx==1.8.4',
+        'Pygments==2.3.1',
         'docutils==0.14',
         'Jinja2==2.10',
-        'MarkupSafe==1.0',
-        'sphinx-rtd-theme==0.3.1',  # Required by readthedocs
+        'MarkupSafe==1.1.1',
+        'sphinx-rtd-theme==0.4.3',  # Required by readthedocs
+        'sphinxcontrib-contentui==0.2.2',
     ],
     # Requirements for non-core functionalities that rely on external atomic manipulation/processing software
     'atomic_tools': [

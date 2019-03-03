@@ -99,15 +99,13 @@ def inspect(archive, version, data, meta_data):
     show_default=True,
     help='Include or exclude comments for node(s) in export. (Will also export extra users who commented).')
 @decorators.with_dbenv()
-def create(output_file, codes, computers, groups, nodes, input_forward, create_reversed, return_reversed, call_reversed,
-           include_comments, include_logs, force, archive_format):
+def create(output_file, codes, computers, groups, nodes, archive_format, force, input_forward, create_reversed,
+           return_reversed, call_reversed, include_comments, include_logs):
     """
     Export various entities, such as Codes, Computers, Groups and Nodes, to an archive file for backup or
     sharing purposes.
     """
     from aiida.orm.importexport import export, export_zip
-
-    echo.echo_critical('the export functionality is currently disabled until issue #2342 is addressed')
 
     entities = []
 
@@ -191,21 +189,7 @@ def migrate(input_file, output_file, force, silent, archive_format):
             echo.echo_critical('export archive does not contain the required file {}'.format(fhandle.filename))
 
         old_version = verify_metadata_version(metadata)
-
-        try:
-            if old_version == '0.1':
-                migrate_v1_to_v2(metadata, data)
-            elif old_version == '0.2':
-                try:
-                    migrate_v2_to_v3(metadata, data)
-                except DanglingLinkError:
-                    echo.echo_critical('export file is invalid because it contains dangling links')
-            else:
-                echo.echo_critical('cannot migrate from version {}'.format(old_version))
-        except ValueError as exception:
-            echo.echo_critical(exception)
-
-        new_version = verify_metadata_version(metadata)
+        new_version = migrate_recursive(metadata, data)
 
         with io.open(folder.get_abs_path('data.json'), 'wb') as fhandle:
             json.dump(data, fhandle)
@@ -449,3 +433,36 @@ def migrate_v2_to_v3(metadata, data):  # pylint: disable=too-many-locals,too-man
             if old_key in data[field]:
                 data[field][new_key] = data[field][old_key]
                 del data[field][old_key]
+
+
+def migrate_recursive(metadata, data):
+    """
+    Recursive migration of export files from v0.1 to newest version,
+    See specific migration functions for detailed descriptions.
+    NOTE: Remember to update newest_version to the newest export version,
+    when/if a migration is available.
+
+    :param metadata: the content of an export archive metadata.json file
+    :param data: the content of an export archive data.json file
+    """
+    newest_version = '0.3'
+    old_version = verify_metadata_version(metadata)
+
+    try:
+        if old_version == '0.1':
+            migrate_v1_to_v2(metadata, data)
+        elif old_version == '0.2':
+            migrate_v2_to_v3(metadata, data)
+        else:
+            echo.echo_critical('cannot migrate from version {}'.format(old_version))
+    except ValueError as exception:
+        echo.echo_critical(exception)
+    except DanglingLinkError:
+        echo.echo_critical('export file is invalid because it contains dangling links')
+
+    new_version = verify_metadata_version(metadata)
+
+    if new_version < newest_version:
+        migrate_recursive(metadata, data)
+
+    return new_version

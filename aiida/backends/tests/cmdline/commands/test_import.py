@@ -13,6 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 import os
 
+import unittest
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
@@ -55,19 +56,37 @@ class TestVerdiImport(AiidaTestCase):
 
         self.assertIsNotNone(result.exception)
 
+    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_import_archive(self):
         """
         Test import for archive files from disk
 
-        Note that when the export format version is upped, the test export_v0.3.aiida archive will have to be
+        NOTE: When the export format version is upped, the test export_v0.4.aiida archive will have to be
         replaced with the version of the new format
         """
         archives = [
             get_archive_file('calcjob/arithmetic.add.aiida'),
-            get_archive_file('export/migrate/export_v0.3.aiida')
+            get_archive_file('export/migrate/export_v0.4.aiida')
         ]
 
         options = [] + archives
         result = self.cli_runner.invoke(cmd_import.cmd_import, options)
 
         self.assertIsNone(result.exception, result.output)
+
+    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
+    def test_comment_mode(self):
+        """
+        Test comment mode flag works as intended
+        """
+        archives = [get_archive_file('export/migrate/export_v0.4.aiida')]
+
+        options = ['--comment-mode', 'newest'] + archives
+        result = self.cli_runner.invoke(cmd_import.cmd_import, options)
+        self.assertIsNone(result.exception, result.output)
+        self.assertIn('Comment mode: newest', result.output)
+
+        options = ['--comment-mode', 'overwrite'] + archives
+        result = self.cli_runner.invoke(cmd_import.cmd_import, options)
+        self.assertIsNone(result.exception, result.output)
+        self.assertIn('Comment mode: overwrite', result.output)

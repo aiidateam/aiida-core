@@ -14,6 +14,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 DEFAULT_MODULES_LIST = [
+    ('aiida.common.links', 'LinkType', 'LinkType'),
     ('aiida.orm', 'Node', 'Node'),
     ('aiida.orm', 'ProcessNode', 'ProcessNode'),
     ('aiida.orm', 'CalculationNode', 'CalculationNode'),

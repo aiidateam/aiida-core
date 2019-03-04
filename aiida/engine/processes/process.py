@@ -168,6 +168,14 @@ class Process(plumpy.Process):
         return self._node
 
     @property
+    def uuid(self):
+        """Return the UUID of the process which corresponds to the UUID of its associated `ProcessNode`.
+
+        :return: the UUID associated to this process instance
+        """
+        return self.node.uuid
+
+    @property
     def metadata(self):
         """Return the metadata passed when launching this process.
 
@@ -438,10 +446,13 @@ class Process(plumpy.Process):
 
     @protected
     def report(self, msg, *args, **kwargs):
-        """
-        Log a message to the logger, which should get saved to the
-        database through the attached DbLogHandler. The class name and function
-        name of the caller are prepended to the given message
+        """Log a message to the logger, which should get saved to the database through the attached DbLogHandler.
+
+        The pk, class name and function name of the caller are prepended to the given message
+
+        :param msg: message to log
+        :param args: args to pass to the log call
+        :param kwargs: kwargs to pass to the log call
         """
         message = '[{}|{}|{}]: {}'.format(self.node.pk, self.__class__.__name__, inspect.stack()[1][3], msg)
         self.logger.log(LOG_LEVEL_REPORT, message, *args, **kwargs)

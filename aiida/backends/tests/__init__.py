@@ -79,6 +79,7 @@ db_test_list = {
         'dataclasses': ['aiida.backends.tests.test_dataclasses'],
         'dbimporters': ['aiida.backends.tests.test_dbimporters'],
         'engine.daemon.client': ['aiida.backends.tests.engine.daemon.test_client'],
+        'engine.calc_job': ['aiida.backends.tests.engine.test_calc_job'],
         'engine.calcfunctions': ['aiida.backends.tests.engine.test_calcfunctions'],
         'engine.class_loader': ['aiida.backends.tests.engine.test_class_loader'],
         'engine.daemon': ['aiida.backends.tests.engine.test_daemon'],

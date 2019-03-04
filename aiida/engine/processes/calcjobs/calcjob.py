@@ -24,6 +24,13 @@ class CalcJob(Process):
     _spec_type = CalcJobProcessSpec
     link_label_retrieved = 'retrieved'
 
+    def __init__(self, *args, **kwargs):
+        """Construct the instance only if it is a sub class of `CalcJob` otherwise raise `InvalidOperation`."""
+        if self.__class__ == CalcJob:
+            raise exceptions.InvalidOperation('cannot construct or launch a base `CalcJob` class.')
+
+        super(CalcJob, self).__init__(*args, **kwargs)
+
     @classmethod
     def define(cls, spec):
         # yapf: disable

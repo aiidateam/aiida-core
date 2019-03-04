@@ -17,14 +17,13 @@ import functools
 import six
 
 import plumpy
-
 from plumpy import auto_persist, Wait, Continue
 from plumpy.workchains import if_, while_, return_, _PropagateReturn
-from aiida.common.exceptions import MultipleObjectsError, NotExistent
+
+from aiida.common import exceptions
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import override
-from aiida.orm import Node
-from aiida.orm import WorkChainNode
+from aiida.orm import Node, WorkChainNode
 from aiida.orm.utils import load_node
 
 from ..exit_code import ExitCode
@@ -58,8 +57,12 @@ class WorkChain(Process):
         spec.outputs.dynamic = True
 
     def __init__(self, inputs=None, logger=None, runner=None, enable_persistence=True):
-        super(WorkChain, self).__init__(
-            inputs=inputs, logger=logger, runner=runner, enable_persistence=enable_persistence)
+        """Construct the instance only if it is a sub class of `WorkChain` otherwise raise `InvalidOperation`."""
+        if self.__class__ == WorkChain:
+            raise exceptions.InvalidOperation('cannot construct or launch a base `WorkChain` class.')
+
+        super(WorkChain, self).__init__(inputs, logger, runner, enable_persistence=enable_persistence)
+
         self._stepper = None
         self._awaitables = []
         self._context = AttributeDict()
@@ -241,7 +244,7 @@ class WorkChain(Process):
         """
         try:
             node = load_node(pk)
-        except (MultipleObjectsError, NotExistent):
+        except (exceptions.MultipleObjectsError, exceptions.NotExistent):
             raise ValueError('provided pk<{}> could not be resolved to a valid Node instance'.format(pk))
 
         if awaitable.outputs:

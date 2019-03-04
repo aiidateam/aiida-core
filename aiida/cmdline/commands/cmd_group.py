@@ -278,7 +278,7 @@ def group_list(all_users, user_email, all_types, group_type, with_description, c
         'pk': lambda group: str(group.pk),
         'label': lambda group: group.label,
         'type_string': lambda group: group.type_string,
-        'count': lambda group: len(group.nodes),
+        'count': lambda group: group.count(),
         'user': lambda group: group.user.email.strip(),
         'description': lambda group: group.description
     }

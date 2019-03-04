@@ -336,7 +336,7 @@ def parse_results(process, retrieved_temporary_folder=None):
     from aiida.engine import ExitCode
 
     assert process.node.get_state() == CalcJobState.PARSING, \
-        'the job should be in the PARSING state when calling this function yet it is {}'.format(process.node.get_state())
+        'job should be in the PARSING state when calling this function yet it is {}'.format(process.node.get_state())
 
     parser_class = process.node.get_parser_class()
     exit_code = ExitCode()
@@ -371,19 +371,14 @@ def parse_results(process, retrieved_temporary_folder=None):
             exit_code = ExitCode(0)
 
         if not isinstance(exit_code, ExitCode):
-            raise ValueError("parse_from_calc returned an 'exit_code' of invalid_type: {}. It should be an ExitCode "
-                "instance or None".format(type(exit_code)))
+            raise ValueError('parse should return an `ExitCode` or None, and not {}'.format(type(exit_code)))
+
+        if exit_code.status:
+            parser.logger.error('parser returned exit code<{}>: {}'.format(exit_code.status, exit_code.message))
 
         for link_label, node in parser.outputs.items():
             node.add_incoming(process.node, link_type=LinkType.CREATE, link_label=link_label)
             node.store()
-
-    if exit_code.status != 0:
-        execlogger.error("[parsing of calc {}] "
-                         "The parser returned an error, but it should have "
-                         "created an output node with some partial results "
-                         "and warnings. Check there for more information on "
-                         "the problem".format(process.node.pk), extra=logger_extra)
 
     return exit_code
 

@@ -27,6 +27,7 @@ from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.utils import get_new_uuid
 from aiida.orm.importexport import import_data, export
+from aiida.backends.tests.utils.configuration import with_temp_dir
 
 
 class TestSpecificImport(AiidaTestCase):
@@ -183,31 +184,26 @@ class TestSimple(AiidaTestCase):
     def tearDown(self):
         self.reset_database()
 
-    def test_base_data_nodes(self):
+    @with_temp_dir
+    def test_base_data_nodes(self, temp_dir):
         """Test ex-/import of Base Data nodes"""
-        # Creating a folder for the import/export files
-        temp_folder = tempfile.mkdtemp()
-        try:
-            # producing values for each base type
-            values = ("Hello", 6, -1.2399834e12, False)  # , ["Bla", 1, 1e-10])
-            filename = os.path.join(temp_folder, "export.tar.gz")
+        # producing values for each base type
+        values = ("Hello", 6, -1.2399834e12, False)  # , ["Bla", 1, 1e-10])
+        filename = os.path.join(temp_dir, "export.tar.gz")
 
-            # producing nodes:
-            nodes = [cls(val).store() for val, cls in zip(values, (orm.Str, orm.Int, orm.Float, orm.Bool))]
-            # my uuid - list to reload the node:
-            uuids = [n.uuid for n in nodes]
-            # exporting the nodes:
-            export(nodes, outfile=filename, silent=True)
-            # cleaning:
-            self.clean_db()
-            # Importing back the data:
-            import_data(filename, silent=True)
-            # Checking whether values are preserved:
-            for uuid, refval in zip(uuids, values):
-                self.assertEqual(orm.load_node(uuid).value, refval)
-        finally:
-            # Deleting the created temporary folder
-            shutil.rmtree(temp_folder, ignore_errors=True)
+        # producing nodes:
+        nodes = [cls(val).store() for val, cls in zip(values, (orm.Str, orm.Int, orm.Float, orm.Bool))]
+        # my uuid - list to reload the node:
+        uuids = [n.uuid for n in nodes]
+        # exporting the nodes:
+        export(nodes, outfile=filename, silent=True)
+        # cleaning:
+        self.clean_db()
+        # Importing back the data:
+        import_data(filename, silent=True)
+        # Checking whether values are preserved:
+        for uuid, refval in zip(uuids, values):
+            self.assertEqual(orm.load_node(uuid).value, refval)
 
     def test_calc_of_structuredata(self):
         """Simple ex-/import of CalcJobNode with input StructureData"""

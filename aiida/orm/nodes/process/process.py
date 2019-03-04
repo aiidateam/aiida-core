@@ -434,7 +434,7 @@ class ProcessNode(Sealable, Node):
         res = super(ProcessNode, self)._get_objects_to_hash()
         res.append({
             entry.link_label: entry.node.get_hash()
-            for entry in self.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK))
+            for entry in self.get_incoming()
             if entry.link_label not in self._hash_ignored_inputs
         })
         return res

@@ -404,9 +404,14 @@ def import_data_dj(in_path,ignore_unknown_nodes=False,
         # PRELIMINARY CHECKS #
         ######################
         if metadata['export_version'] != expected_export_version:
-            raise ValueError("File export version is {}, but I can import only "
-                             "version {}".format(metadata['export_version'],
-                                                 expected_export_version))
+            msg = "Export file version is {}, can import only version {}"\
+                    .format(metadata['export_version'], expected_export_version)
+            if metadata['export_version'] < expected_export_version:
+                msg += "\nUse 'verdi export migrate' to update this export file."
+            else:
+                msg += "\nUpdate your AiiDA version in order to import this file."
+
+            raise ValueError(msg)
 
         ##########################################################################
         # CREATE UUID REVERSE TABLES AND CHECK IF I HAVE ALL NODES FOR THE LINKS #
@@ -927,10 +932,14 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
         # PRELIMINARY CHECKS #
         ######################
         if metadata['export_version'] != expected_export_version:
-            raise ValueError("File export version is {}, but I can "
-                             "import only version {}"
-                             .format(metadata['export_version'],
-                                     expected_export_version))
+            msg = "Export file version is {}, can import only version {}"\
+                    .format(metadata['export_version'], expected_export_version)
+            if metadata['export_version'] < expected_export_version:
+                msg += "\nUse 'verdi export migrate' to update this export file."
+            else:
+                msg += "\nUpdate your AiiDA version in order to import this file."
+
+            raise ValueError(msg)
 
         ###################################################################
         #           CREATE UUID REVERSE TABLES AND CHECK IF               #
@@ -1393,7 +1402,8 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 qb_nodes = QueryBuilder().append(
                     Node, filters={'id': {'in': nodes_ids_to_add}})
                 nodes_to_add = [n[0] for n in qb_nodes.all()]
-                group.add_nodes(nodes_to_add)
+                # Adding nodes to group avoiding the SQLA ORM to increase speed
+                group.add_nodes(nodes_to_add, skip_orm=True)
 
             ######################################################
             # Put everything in a specific group
@@ -1433,12 +1443,9 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 # Add all the nodes to the new group
                 # TODO: decide if we want to return the group name
                 from aiida.backends.sqlalchemy.models.node import DbNode
+                # Adding nodes to group avoiding the SQLA ORM to increase speed
                 group.add_nodes(session.query(DbNode).filter(
-                    DbNode.id.in_(pks_for_group)).distinct().all())
-
-                # group.add_nodes(models.DbNode.objects.filter(
-                #     pk__in=pks_for_group))
-
+                    DbNode.id.in_(pks_for_group)).distinct().all(), skip_orm=True)
                 if not silent:
                     print "IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.name)
             else:

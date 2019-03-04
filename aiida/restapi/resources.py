@@ -24,9 +24,7 @@ class ServerInfo(Resource):
         # Configure utils
         utils_conf_keys = ('PREFIX', 'PERPAGE_DEFAULT', 'LIMIT_DEFAULT')
         self.utils_confs = {
-            k: kwargs[k]
-            for k in utils_conf_keys
-            if k in kwargs
+            k: kwargs[k] for k in utils_conf_keys if k in kwargs
         }
         self.utils = Utils(**self.utils_confs)
 
@@ -103,9 +101,7 @@ class BaseResource(Resource):
         # Configure utils
         utils_conf_keys = ('PREFIX', 'PERPAGE_DEFAULT', 'LIMIT_DEFAULT')
         self.utils_confs = {
-            k: kwargs[k]
-            for k in utils_conf_keys
-            if k in kwargs
+            k: kwargs[k] for k in utils_conf_keys if k in kwargs
         }
         self.utils = Utils(**self.utils_confs)
         self.method_decorators = {'get': kwargs.get('get_decorators', [])}
@@ -126,9 +122,11 @@ class BaseResource(Resource):
         ## Parse request
         (resource_type, page, id, query_type) = self.utils.parse_path(
             path, parse_pk_uuid=self.parse_pk_uuid)
+
+        # pylint: disable=unused-variable
         (limit, offset, perpage, orderby, filters, _alist, _nalist, _elist,
-         _nelist, _downloadformat, _visformat, _filename,
-         _rtype) = self.utils.parse_query_string(query_string)
+         _nelist, _downloadformat, _visformat, _filename, _rtype, tree_in_limit,
+         tree_out_limit) = self.utils.parse_query_string(query_string)
 
         ## Validate request
         self.utils.validate_request(
@@ -205,9 +203,7 @@ class Node(Resource):
         # Configure utils
         utils_conf_keys = ('PREFIX', 'PERPAGE_DEFAULT', 'LIMIT_DEFAULT')
         self.utils_confs = {
-            k: kwargs[k]
-            for k in utils_conf_keys
-            if k in kwargs
+            k: kwargs[k] for k in utils_conf_keys if k in kwargs
         }
         self.utils = Utils(**self.utils_confs)
         self.method_decorators = {'get': kwargs.get('get_decorators', [])}
@@ -231,8 +227,8 @@ class Node(Resource):
             path, parse_pk_uuid=self.parse_pk_uuid)
 
         (limit, offset, perpage, orderby, filters, alist, nalist, elist, nelist,
-         downloadformat, visformat, filename,
-         rtype) = self.utils.parse_query_string(query_string)
+         downloadformat, visformat, filename, rtype, tree_in_limit,
+         tree_out_limit) = self.utils.parse_query_string(query_string)
 
         ## Validate request
         self.utils.validate_request(
@@ -255,8 +251,8 @@ class Node(Resource):
         ## Treat the statistics
         elif query_type == "statistics":
             (limit, offset, perpage, orderby, filters, alist, nalist, elist,
-             nelist, downloadformat, visformat, filename,
-             rtype) = self.utils.parse_query_string(query_string)
+             nelist, downloadformat, visformat, filename, rtype, tree_in_limit,
+             tree_out_limit) = self.utils.parse_query_string(query_string)
             headers = self.utils.build_headers(url=request.url, total_count=0)
             if filters:
                 usr = filters["user"]["=="]
@@ -264,10 +260,11 @@ class Node(Resource):
                 usr = None
             results = self.trans.get_statistics(usr)
 
-        # TODO Might need to be improved
+        # TODO improve the performance of tree endpoint by getting the data from database faster
+        # TODO add pagination for this endpoint (add default max limit)
         elif query_type == "tree":
             headers = self.utils.build_headers(url=request.url, total_count=0)
-            results = self.trans.get_io_tree(id)
+            results = self.trans.get_io_tree(id, tree_in_limit, tree_out_limit)
         else:
             ## Initialize the translator
             self.trans.set_query(

@@ -125,6 +125,69 @@ class TestGroupsSqla(AiidaTestCase):
         newuser.delete()
 
 
+class TestGroupNoOrmSQLA(AiidaTestCase):
+    """
+    These tests check that the group node addition works ok when the skip_orm=True flag is used
+    """
+
+    def test_group_general(self):
+        """
+        General tests to verify that the group addition with the skip_orm=True flag
+        work properly
+        """
+        from aiida.orm.group import Group
+        from aiida.orm.data import Data
+
+        node_01 = Data().store()
+        node_02 = Data().store()
+        node_03 = Data().store()
+        node_04 = Data().store()
+        node_05 = Data().store()
+        node_06 = Data().store()
+        node_07 = Data().store()
+        node_08 = Data().store()
+        nodes = [node_01, node_02, node_03, node_04, node_05, node_06, node_07, node_08]
+
+        group = Group(name='test_adding_nodes').store()
+        # Single node
+        group.add_nodes(node_01, skip_orm=True)
+        # List of nodes
+        group.add_nodes([node_02, node_03], skip_orm=True)
+        # Single DbNode
+        group.add_nodes(node_04.dbnode, skip_orm=True)
+        # List of DbNodes
+        group.add_nodes([node_05.dbnode, node_06.dbnode], skip_orm=True)
+        # List of orm.Nodes and DbNodes
+        group.add_nodes([node_07, node_08.dbnode], skip_orm=True)
+
+        # Check
+        self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))
+
+        # Try to add a node that is already present: there should be no problem
+        group.add_nodes(node_01, skip_orm=True)
+        self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))
+
+    def test_group_batch_size(self):
+        """
+        Test that the group addition in batches works as expected.
+        """
+        from aiida.orm.group import Group
+        from aiida.orm.data import Data
+
+        # Create 100 nodes
+        nodes = []
+        for _ in range(100):
+            nodes.append(Data().store())
+
+        # Add nodes to groups using different batch size. Check in the end the
+        # correct addition.
+        batch_sizes = (1, 3, 10, 1000)
+        for batch_size in batch_sizes:
+            group = Group(name='test_batches_'+ str(batch_size)).store()
+            group.add_nodes(nodes, skip_orm=True, batch_size=batch_size)
+            self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))
+
+
 class TestDbExtrasSqla(AiidaTestCase):
     """
      Characterized functions

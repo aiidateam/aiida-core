@@ -14,11 +14,11 @@ services:
 
 addons:
     # make sure the path in .travis-data/test_script.sh matches the version requested here
-    postgresql: "9.5"
+    postgresql: "9.6"
 
     apt:
        packages:
-           - postgresql-server-dev-9.5
+           - postgresql-server-dev-9.6
            - texlive-base
            - texlive-generic-recommended
            - texlive-fonts-recommended
@@ -35,19 +35,23 @@ before_install:
 
 install:
     # Upgrade pip setuptools and wheel to be able to run the next command
-    - pip install -U pip wheel setuptools
+    - pip install -U pip==18.1 wheel setuptools coveralls
+    # Need numpy version that is compatible with pymatgen, see #2420
+    # Specifying it in pyproject.toml is not sufficient for travis (unknown reason)
+    - pip install numpy==1.15.4
     # Install AiiDA with some optional dependencies
     - if [ "$TEST_TYPE" == "docs" ]; then pip install . && pip install -r docs/requirements_for_rtd.txt; else pip install .[all]; fi
 
 env:
-## Build matrix to test both backends, and the docs
-## I still let it create the test backend for django
-## also when building the docs
-## because otherwise the code would complain. Also, I need latex.
-- TEST_TYPE="pre-commit"
-- TEST_AIIDA_BACKEND=django TEST_TYPE="docs"
-- TEST_AIIDA_BACKEND=django TEST_TYPE="tests"
-- TEST_AIIDA_BACKEND=sqlalchemy TEST_TYPE="tests"
+    ## Build matrix to test both backends, and the docs
+    ## I still let it create the test backend for django
+    ## also when building the docs
+    ## because otherwise the code would complain. Also, I need latex.
+    - TEST_TYPE="pre-commit"
+    - TEST_AIIDA_BACKEND=django TEST_TYPE="docs"
+    - TEST_AIIDA_BACKEND=django TEST_TYPE="tests"
+    - TEST_AIIDA_BACKEND=sqlalchemy TEST_TYPE="tests"
+    - TEST_TYPE="conda"
 
 
 before_script:
@@ -61,8 +65,8 @@ before_script:
 script: .travis-data/test_script.sh
 
 after_success:
-  # upload coverage report to codecov.io
-  - if [ "$TEST_TYPE" == "tests" ]; then codecov; fi
+  # upload coverage report to coveralls.io
+  - if [ "$TEST_TYPE" == "tests" ]; then coveralls; fi
 
 git:
   depth: 3

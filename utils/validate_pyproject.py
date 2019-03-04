@@ -13,7 +13,16 @@ import os
 import sys
 import toml
 
-@click.command()
+dir_path = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(os.path.join(dir_path, os.pardir))
+import setup_requirements
+
+
+@click.group()
+def cli():
+    pass
+
+@click.command('version')
 def validate_pyproject():
     """
     Ensure that the version of reentry in setup_requirements.py and pyproject.toml are identical
@@ -21,11 +30,7 @@ def validate_pyproject():
     filename_pyproject = 'pyproject.toml'
     filename_requirements = 'setup_requirements.py'
 
-    dir_path = os.path.dirname(os.path.realpath(__file__))
     toml_file = os.path.join(dir_path, os.pardir, filename_pyproject)
-    sys.path.append(os.path.join(dir_path, os.pardir))
-
-    import setup_requirements
 
     reentry_requirement = None
 
@@ -63,5 +68,39 @@ def validate_pyproject():
         sys.exit(1)
 
 
+@click.command('conda')
+def update_environment_yml():
+    """
+    Updates environment.yml file for conda.
+    """
+    from setup_requirements import install_requires
+    import yaml
+
+    # fix incompatibilities between conda and pypi
+    replacements = {
+        'psycopg2-binary' : 'psycopg2',
+        'validate-email' : 'validate_email',
+    }
+    sep = '%'  # use something forbidden in conda package names
+    pkg_string = sep.join(install_requires)
+    for (pypi_pkg_name, conda_pkg_name) in iter(replacements.items()):
+        pkg_string = pkg_string.replace(pypi_pkg_name, conda_pkg_name)
+    install_requires = pkg_string.split(sep)
+    environment = dict(
+        name = 'aiida',
+        channels = ['defaults', 'conda-forge', 'etetoolkit'],
+        dependencies = install_requires,
+    )
+
+    environment_filename = 'environment.yml'
+    file_path = os.path.join(dir_path, os.pardir, environment_filename)
+    with open(file_path, 'w') as env_file:
+        env_file.write('# Usage: conda env create -f environment.yml\n')
+        yaml.dump(environment, env_file, explicit_start=True, 
+                  default_flow_style=False)
+
+cli.add_command(validate_pyproject)
+cli.add_command(update_environment_yml)
+
 if __name__ == '__main__':
-    validate_pyproject()  # pylint: disable=no-value-for-parameter
+    cli()  # pylint: disable=no-value-for-parameter

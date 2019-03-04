@@ -9,7 +9,7 @@
 ###########################################################################
 
 install_requires = [
-    'reentry==1.2.0',
+    'reentry==1.2.2',
     'python-dateutil==2.7.2',
     'python-mimeparse==1.6.0',
     'django==1.7.11',  # Upgrade to Django 1.9 does prevent AiiDA functioning
@@ -39,7 +39,7 @@ install_requires = [
     'portalocker==1.1.0',
     'psutil==5.4.5',
     'meld3==1.0.2',
-    'numpy==1.14.3',
+    'numpy==1.15.4',
     'SQLAlchemy==1.0.19',  # Upgrade to SQLalchemy 1.1.5 does break tests, see #465
     'SQLAlchemy-Utils==0.33.0',
     'alembic==0.9.9',
@@ -56,7 +56,7 @@ install_requires = [
     'ete3==3.1.1',
     'uritools==2.1.0',
     'psycopg2-binary==2.7.4',
-    'paramiko==2.4.1',
+    'paramiko==2.4.2',
     'ecdsa==0.13',
     'ipython<6.0',  # Version of ipython non enforced, because some still prefer version 4 rather than the latest
 ]
@@ -88,17 +88,18 @@ extras_require = {
     ],
     # Requirements to building documentation
     'docs': [
-        'Sphinx==1.7.4',
-        'Pygments==2.2.0',
+        'Sphinx==1.8.4',
+        'Pygments==2.3.1',
         'docutils==0.14',
         'Jinja2==2.10',
-        'MarkupSafe==1.0',
-        'sphinx-rtd-theme==0.3.1',  # Required by readthedocs
+        'MarkupSafe==1.1.1',
+        'sphinx-rtd-theme==0.4.3',  # Required by readthedocs
+        'sphinxcontrib-contentui==0.2.2',
     ],
     # Requirements for non-core functionalities that rely on external atomic manipulation/processing software
     'atomic_tools': [
         'spglib==1.10.3.65',
-        'pymatgen==2018.4.20',
+        'pymatgen==2018.12.12',  # last version with py2 support
         'ase==3.12.0',  # Updating breaks tests
         'PyMySQL==0.8.0',  # Required by ICSD tools
         'PyCifRW==4.2.1',  # Updating breaks tests
@@ -113,13 +114,14 @@ extras_require = {
     'testing': [
         'mock==2.0.0',
         'pgtest==1.1.0',
+        'pg8000<1.13.0',
         'sqlalchemy-diff==0.1.3',
         'coverage==4.5.1',
         'codecov==2.0.15'
     ],
     'dev_precommit': [
-        'pre-commit==1.8.2',
-        'yapf==0.21.0',
+        'pre-commit==1.13.0',
+        'yapf==0.24.0',
         'prospector==0.12.7',
         'pylint==1.8.4',
         'toml==0.9.4'

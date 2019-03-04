@@ -125,7 +125,7 @@ class Group(AbstractGroup):
         # To allow to do directly g = Group(...).store()
         return self
 
-    def add_nodes(self, nodes):
+    def add_nodes(self, nodes, **kargs):
         from aiida.backends.djsite.db.models import DbNode
         if not self.is_stored:
             raise ModificationNotAllowed("Cannot add nodes to a group before "

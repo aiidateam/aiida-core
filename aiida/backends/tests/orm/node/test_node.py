@@ -276,3 +276,30 @@ class TestNodeLinks(AiidaTestCase):
         uuids_outgoing = set(node.uuid for node in creator.get_outgoing().all_nodes())
         uuids_expected = set([data_one.uuid, data_two.uuid])
         self.assertEqual(uuids_outgoing, uuids_expected)
+
+    def test_get_node_by_label(self):
+        """Test the get_node_by_label() method of the `LinkManager`
+
+        In particular, check both the it returns the correct values, but also that it raises the expected
+        exceptions where appropriate (missing link with a given label, or more than one link)
+        """
+        data = Data().store()
+        calc_one_a = CalculationNode().store()
+        calc_one_b = CalculationNode().store()
+        calc_two = CalculationNode().store()
+
+        # Two calcs using the data with the same label
+        calc_one_a.add_incoming(data, link_type=LinkType.INPUT_CALC, link_label='input')
+        calc_one_b.add_incoming(data, link_type=LinkType.INPUT_CALC, link_label='input')
+        # A different label
+        calc_two.add_incoming(data, link_type=LinkType.INPUT_CALC, link_label='the_input')
+
+        # Retrieve a link when the label is unique
+        output_the_input = data.get_outgoing(link_type=LinkType.INPUT_CALC).get_node_by_label('the_input')
+        self.assertEqual(output_the_input.pk, calc_two.pk)
+
+        with self.assertRaises(exceptions.MultipleObjectsError):
+            data.get_outgoing(link_type=LinkType.INPUT_CALC).get_node_by_label('input')
+
+        with self.assertRaises(exceptions.NotExistent):
+            data.get_outgoing(link_type=LinkType.INPUT_CALC).get_node_by_label('some_weird_label')

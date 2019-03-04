@@ -245,8 +245,16 @@ class LinkManager(object):  # pylint: disable=useless-object-inheritance
         :return: node that corresponds to the given label
         :raises aiida.common.NotExistent: if the label is not present among the link_triples
         """
+        matching_entry = None
         for entry in self.link_triples:
             if entry.link_label == label:
-                return entry.node
+                if matching_entry is None:
+                    matching_entry = entry.node
+                else:
+                    raise exceptions.MultipleObjectsError(
+                        'more than one neighbor with the label {} found'.format(label))
 
-        raise exceptions.NotExistent('no neighbor with the label {} found'.format(label))
+        if matching_entry is None:
+            raise exceptions.NotExistent('no neighbor with the label {} found'.format(label))
+
+        return matching_entry

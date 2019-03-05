@@ -5,7 +5,6 @@ The main way of interacting with AiiDA is through a command line interface tool 
 You have already used ``verdi`` when installing AiiDA, either through ``verdi quicksetup`` or ``verdi setup``.
 But ``verdi`` is very versatile and provides a wealth of other functionalities; here is a list:
 
-* :ref:`calculation<calculation>`:   Inspect and manage calculations.
 * :ref:`code<code>`:                 Setup and manage codes.
 * :ref:`comment<comment>`:           Inspect, create and manage comments.
 * :ref:`computer<computer>`:         Setup and manage computers.
@@ -28,7 +27,6 @@ But ``verdi`` is very versatile and provides a wealth of other functionalities; 
 * :ref:`shell<shell>`:               Start a python shell with preloaded AiiDA environment.
 * :ref:`status<status>`:             Show service status overview.
 * :ref:`user<user>`:                 Inspect and manage users.
-* :ref:`work<work>`:                 Inspect and manage work calculations.
 
 
 Concepts
@@ -205,28 +203,6 @@ Commands
 ========
 
 Below is a list with all the available subcommands.
-
-.. _calculation:
-
-``verdi calculation``
----------------------
-
-  * **cleanworkdir**: cleans the work directory (remote folder) of AiiDA calculations
-  * **gotocomputer**: open a shell to the calc folder on the cluster
-  * **inputcat**: shows an input file of a calculation node
-  * **inputls**: shows the list of the input files of a calculation node
-  * **kill**: [deprecated: use ``verdi process kill`` instead] stop the execution on the cluster of a calculation
-  * **list**: list the AiiDA calculations. By default, lists only the running calculations
-  * **logshow**: shows the logs/errors produced by a calculation
-  * **outputcat**: shows an ouput file of a calculation node
-  * **outputls**: shows the list of the output files of a calculation node
-  * **plugins**: lists the supported calculation plugins
-  * **res**: shows the calculation results (from calc.res)
-  * **show**: shows the database information related to the calculation: used code, all the input nodes and all the output nodes
-
-.. warning:: When using gotocomputer, be careful not to change any file that AiiDA created,
-  nor to modify the output files or resubmit the calculation, 
-  unless you **really** know what you are doing, otherwise AiiDA may get very confused!   
 
 
 .. _code:
@@ -531,19 +507,3 @@ Configure and manage users
 
   *  **configure**: configure a new AiiDA user
   *  **list**: list existing users configured for your AiiDA installation
-
-
-.. _work:
-
-``verdi work``
---------------
-Manage work calculations.
-
-  * **list**: list the work calculations present in the database
-  * **plugins**: show the registered work calculation plugins
-  * **report**: show the log messages for a work calculation
-  * **status**: shows an ASCII tree for a work calculation showing the status of itself and the calculations it called
-  * **kill**: [deprecated: use ``verdi process kill`` instead] kill a work calculation
-  * **pause**: [deprecated: use ``verdi process pause`` instead] pause a work calculation
-  * **play**: [deprecated: use ``verdi process play`` instead] play a paused work calculation
-  * **watch**: [deprecated: use ``verdi process watch`` instead] dynamically print the state transitions for the given work calculation

@@ -406,15 +406,15 @@ class ProcessNode(Sealable, Node):
         return descendants
 
     @property
-    def called_by(self):
+    def caller(self):
         """
         Return the process node that called this process node, or None if it does not have a caller
 
         :returns: process node that called this process node instance or None
         """
-        called_by = self.get_incoming(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK))
-        if called_by:
-            return called_by.first()
+        caller = self.get_incoming(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK))
+        if caller:
+            return caller.first().node
 
         return None
 

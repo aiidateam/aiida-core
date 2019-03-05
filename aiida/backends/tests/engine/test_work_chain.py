@@ -409,15 +409,15 @@ class TestWorkchain(AiidaTestCase):
                 return ToContext(r1=self.submit(ReturnA), r2=self.submit(ReturnB))
 
             def s2(self):
-                test_case.assertEquals(self.ctx.r1.out.res, A)
-                test_case.assertEquals(self.ctx.r2.out.res, B)
+                test_case.assertEquals(self.ctx.r1.outputs.res, A)
+                test_case.assertEquals(self.ctx.r2.outputs.res, B)
 
                 # Try overwriting r1
                 return ToContext(r1=self.submit(ReturnB))
 
             def s3(self):
-                test_case.assertEquals(self.ctx.r1.out.res, B)
-                test_case.assertEquals(self.ctx.r2.out.res, B)
+                test_case.assertEquals(self.ctx.r1.outputs.res, B)
+                test_case.assertEquals(self.ctx.r2.outputs.res, B)
 
         run_and_check_success(Wf)
 
@@ -519,7 +519,7 @@ class TestWorkchain(AiidaTestCase):
 
             def check(self):
                 pass
-                assert self.ctx.subwc.out.value == Int(5)
+                assert self.ctx.subwc.outputs.value == Int(5)
 
         class SubWorkChain(WorkChain):
 
@@ -547,7 +547,7 @@ class TestWorkchain(AiidaTestCase):
                 return ToContext(subwc=self.submit(SubWorkChain))
 
             def check(self):
-                assert self.ctx.subwc.out.value == Int(5)
+                assert self.ctx.subwc.outputs.value == Int(5)
 
         class SubWorkChain(WorkChain):
 
@@ -649,8 +649,8 @@ class TestWorkchain(AiidaTestCase):
                 return ToContext(result_b=self.submit(SimpleWc))
 
             def result(self):
-                test_case.assertEquals(self.ctx.result_a.out._return, val)
-                test_case.assertEquals(self.ctx.result_b.out._return, val)
+                test_case.assertEquals(self.ctx.result_a.outputs._return, val)
+                test_case.assertEquals(self.ctx.result_b.outputs._return, val)
 
         run_and_check_success(Workchain)
 

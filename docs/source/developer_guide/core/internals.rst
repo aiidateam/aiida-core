@@ -91,47 +91,47 @@ Link management methods
 
 Assume that the user wants to see the available links of a node in order to understand the structure of the graph and maybe traverse it. In the following example, we load a specific node and we list its input and output links. The returned dictionaries have as keys the link name and as value the linked ``node``. Here is the code::
 
-	In [1]: # Let's load a node with a specific pk
+  In [1]: # Let's load a node with a specific pk
 
-	In [2]: c = load_node(139168)
+  In [2]: c = load_node(139168)
 
-	In [3]: c.get_incoming()
-	Out[3]:
-	[Neighbor(link_type='inputlink', label='code',
-	node=<Code: Remote code 'cp-5.1' on daint, pk: 75709, uuid: 3c9cdb7f-0cda-402e-b898-4dd0d06aa5a4>),
-	Neighbor(link_type='inputlink', label='parameters',
-	node=<Dict: uuid: 94efe64f-7f7e-46ea-922a-fe64a7fba8a5 (pk: 139166)>)
-	Neighbor(link_type='inputlink', label='parent_calc_folder',
-	node=<RemoteData: uuid: becb4894-c50c-4779-b84f-713772eaceff (pk: 139118)>)
-	Neighbor(link_type='inputlink', label='pseudo_Ba',
-	node=<UpfData: uuid: 5e53b22d-5757-4d50-bbe0-51f3b9ac8b7c (pk: 1905)>)
-	Neighbor(link_type='inputlink', label='pseudo_O',
-	node=<UpfData: uuid: 5cccd0d9-7944-4c67-b3c7-a39a1f467906 (pk: 1658)>)
-	Neighbor(link_type='inputlink', label='pseudo_Ti',
-	node=<UpfData: uuid: e5744077-8615-4927-9f97-c5f7b36ba421 (pk: 1660)>)
-	Neighbor(link_type='inputlink', label='settings',
-	node=<Dict: uuid: a5a828b8-fdd8-4d75-b674-2e2d62792de0 (pk: 139167)>)
-	Neighbor(link_type='inputlink', label='structure',
-	node=<StructureData: uuid: 3096f83c-6385-48c4-8cb2-24a427ce11b1 (pk: 139001)>)]
+  In [3]: c.get_incoming()
+  Out[3]:
+  [Neighbor(link_type='inputlink', label='code',
+  node=<Code: Remote code 'cp-5.1' on daint, pk: 75709, uuid: 3c9cdb7f-0cda-402e-b898-4dd0d06aa5a4>),
+  Neighbor(link_type='inputlink', label='parameters',
+  node=<Dict: uuid: 94efe64f-7f7e-46ea-922a-fe64a7fba8a5 (pk: 139166)>)
+  Neighbor(link_type='inputlink', label='parent_calc_folder',
+  node=<RemoteData: uuid: becb4894-c50c-4779-b84f-713772eaceff (pk: 139118)>)
+  Neighbor(link_type='inputlink', label='pseudo_Ba',
+  node=<UpfData: uuid: 5e53b22d-5757-4d50-bbe0-51f3b9ac8b7c (pk: 1905)>)
+  Neighbor(link_type='inputlink', label='pseudo_O',
+  node=<UpfData: uuid: 5cccd0d9-7944-4c67-b3c7-a39a1f467906 (pk: 1658)>)
+  Neighbor(link_type='inputlink', label='pseudo_Ti',
+  node=<UpfData: uuid: e5744077-8615-4927-9f97-c5f7b36ba421 (pk: 1660)>)
+  Neighbor(link_type='inputlink', label='settings',
+  node=<Dict: uuid: a5a828b8-fdd8-4d75-b674-2e2d62792de0 (pk: 139167)>)
+  Neighbor(link_type='inputlink', label='structure',
+  node=<StructureData: uuid: 3096f83c-6385-48c4-8cb2-24a427ce11b1 (pk: 139001)>)]
 
-	In [4]: c.get_outgoing()
-	Out[4]:
-	[Neighbor(link_type='createlink', label='output_parameters',
-	node=<Dict: uuid: f7a3ca96-4594-497f-a128-9843a1f12f7f (pk: 139257)>),
-	Neighbor(link_type='createlink', label='output_parameters_139257',
-	node=<Dict: uuid: f7a3ca96-4594-497f-a128-9843a1f12f7f (pk: 139257)>),
-	Neighbor(link_type='createlink', label='output_trajectory',
-	node=<TrajectoryData: uuid: 7c5b65bc-22bb-4b87-ac92-e8a78cf145c3 (pk: 139256)>),
-	Neighbor(link_type='createlink', label='output_trajectory_139256',
-	node=<TrajectoryData: uuid: 7c5b65bc-22bb-4b87-ac92-e8a78cf145c3 (pk: 139256)>),
-	Neighbor(link_type='createlink', label='remote_folder',
-	node=<RemoteData: uuid: 17642a1c-8cac-4e7f-8bd0-1dcebe974aa4 (pk: 139169)>),
-	Neighbor(link_type='createlink', label='remote_folder_139169',
-	node=<RemoteData: uuid: 17642a1c-8cac-4e7f-8bd0-1dcebe974aa4 (pk: 139169)>),
-	Neighbor(link_type='createlink', label='retrieved',
-	node=<FolderData: uuid: a9037dc0-3d84-494d-9616-42b8df77083f (pk: 139255)>),
-	Neighbor(link_type='createlink', label='retrieved_139255',
-	node=<FolderData: uuid: a9037dc0-3d84-494d-9616-42b8df77083f (pk: 139255)>)]
+  In [4]: c.get_outgoing()
+  Out[4]:
+  [Neighbor(link_type='createlink', label='output_parameters',
+  node=<Dict: uuid: f7a3ca96-4594-497f-a128-9843a1f12f7f (pk: 139257)>),
+  Neighbor(link_type='createlink', label='output_parameters_139257',
+  node=<Dict: uuid: f7a3ca96-4594-497f-a128-9843a1f12f7f (pk: 139257)>),
+  Neighbor(link_type='createlink', label='output_trajectory',
+  node=<TrajectoryData: uuid: 7c5b65bc-22bb-4b87-ac92-e8a78cf145c3 (pk: 139256)>),
+  Neighbor(link_type='createlink', label='output_trajectory_139256',
+  node=<TrajectoryData: uuid: 7c5b65bc-22bb-4b87-ac92-e8a78cf145c3 (pk: 139256)>),
+  Neighbor(link_type='createlink', label='remote_folder',
+  node=<RemoteData: uuid: 17642a1c-8cac-4e7f-8bd0-1dcebe974aa4 (pk: 139169)>),
+  Neighbor(link_type='createlink', label='remote_folder_139169',
+  node=<RemoteData: uuid: 17642a1c-8cac-4e7f-8bd0-1dcebe974aa4 (pk: 139169)>),
+  Neighbor(link_type='createlink', label='retrieved',
+  node=<FolderData: uuid: a9037dc0-3d84-494d-9616-42b8df77083f (pk: 139255)>),
+  Neighbor(link_type='createlink', label='retrieved_139255',
+  node=<FolderData: uuid: a9037dc0-3d84-494d-9616-42b8df77083f (pk: 139255)>)]
 
 
 *Understanding link names*
@@ -147,75 +147,9 @@ The input/output links of the node can be accessed by the following methods.
 
 - :py:meth:`~aiida.orm.nodes.Node.get_incoming` returns the iterator of input nodes
 
-- :py:meth:`~aiida.orm.nodes.Node.inp` returns a :py:meth:`~aiida.orm.utils.managers.NodeInputManager` object that can be used to access the node's parents.
-
 *Methods to get the output data*
 
 - :py:meth:`~aiida.orm.nodes.Node.get_outgoing` returns the iterator of output nodes.
-
-- :py:meth:`~aiida.orm.nodes.Node.out` returns a :py:meth:`~aiida.orm.utils.managers.NodeOutputManager` object that can be used to access the node's children.
-
-*Navigating in the ``node`` graph*
-
-The user can easily use the :py:meth:`~aiida.orm.utils.managers.NodeInputManager` and the :py:meth:`~aiida.orm.utils.managers.NodeOutputManager` objects of a ``node`` (provided by the :py:meth:`~aiida.orm.nodes.Node.inp` and :py:meth:`~aiida.orm.nodes.Node.out` respectively) to traverse the ``node`` graph and access other connected ``nodes``. :py:meth:`~aiida.orm.nodes.Node.inp` will give us access to the input ``nodes`` and :py:meth:`~aiida.orm.nodes.Node.out` to the output ``nodes``. For example::
-
-	In [1]: # Let's load a node with a specific pk
-
-	In [2]: c = load_node(139168)
-
-	In [3]: c
-	Out[3]: <CpCalculation: uuid: 49084dcf-c708-4422-8bcf-808e4c3382c2 (pk: 139168)>
-
-	In [4]: # Let's traverse the inputs of this node.
-
-	In [5]: # By typing c.inp. we get all the input links
-
-	In [6]: c.inp.
-	c.inp.code                c.inp.parent_calc_folder  c.inp.pseudo_O            c.inp.settings
-	c.inp.parameters          c.inp.pseudo_Ba           c.inp.pseudo_Ti           c.inp.structure
-
-	In [7]: # We may follow any of these links to access other nodes. For example, let's follow the parent_calc_folder
-
-	In [8]: c.inp.parent_calc_folder
-	Out[8]: <RemoteData: uuid: becb4894-c50c-4779-b84f-713772eaceff (pk: 139118)>
-
-	In [9]: # Let's assign to r the node reached by the parent_calc_folder link
-
-	In [10]: r = c.inp.parent_calc_folder
-
-	In [11]: r.inp.__dir__()
-	Out[11]:
-	['__class__',
-	 '__delattr__',
-	 '__dict__',
-	 '__dir__',
-	 '__doc__',
-	 '__format__',
-	 '__getattr__',
-	 '__getattribute__',
-	 '__getitem__',
-	 '__hash__',
-	 '__init__',
-	 '__iter__',
-	 '__module__',
-	 '__new__',
-	 '__reduce__',
-	 '__reduce_ex__',
-	 '__repr__',
-	 '__setattr__',
-	 '__sizeof__',
-	 '__str__',
-	 '__subclasshook__',
-	 '__weakref__',
-	 u'remote_folder']
-
-	In [12]: r.out.
-	r.out.parent_calc_folder         r.out.parent_calc_folder_139168
-
-	In [13]: # By following the same link from node r, you will get node c
-
-	In [14]: r.out.parent_calc_folder
-	Out[14]: <CpCalculation: uuid: 49084dcf-c708-4422-8bcf-808e4c3382c2 (pk: 139168)>
 
 
 Attributes related methods
@@ -321,10 +255,93 @@ Objects of this class correspond to the repository folders. The :py:class:`~aiid
 
 - :py:meth:`~aiida.common.folders.SandboxFolder.__exit__` destroys the folder on exit.
 
+Data
+++++
+
+Navigating inputs and outputs
+*****************************
+- :py:meth:`~aiida.orm.nodes.data.Data.creator` returns 
+  either the CalculationNode that created it or ``None`` if this Data node
+  created by a calculation.
 
 
-Calculation
+ProcessNode
 +++++++++++
+Navigating inputs and outputs
+*****************************
+- :py:meth:`~aiida.orm.nodes.process.ProcessNode.caller` returns 
+  either the caller WorkflowNode or ``None`` if this ProcessNode was not called
+  by a process
+
+CalculationNode
++++++++++++++++
+
+Navigating inputs and outputs
+*****************************
+- :py:meth:`~aiida.orm.nodes.process.calculation.CalculationNode.inputs` returns 
+  a :py:meth:`~aiida.orm.utils.managers.NodeLinksManager` object that can be used 
+  to access the node's incoming INPUT_CALC links.
+
+  The ``NodeLinksManager`` can be used to quickly go from a node to a neighboring node.
+  For example::
+
+    In [1]: # Let's load a node with a specific pk
+
+    In [2]: c = load_node(139168)
+
+    In [3]: c
+    Out[3]: <CpCalculation: uuid: 49084dcf-c708-4422-8bcf-808e4c3382c2 (pk: 139168)>
+
+    In [4]: # Let's traverse the inputs of this node.
+
+    In [5]: # By typing c.inputs.<TAB> we get all the input links
+
+    In [6]: c.inputs.
+    c.inputs.code                c.inputs.parent_calc_folder  c.inputs.pseudo_O            c.inputs.settings
+    c.inputs.parameters          c.inputs.pseudo_Ba           c.inputs.pseudo_Ti           c.inputs.structure
+
+    In [7]: # We may follow any of these links to access other nodes. For example, let's follow the parent_calc_folder
+
+    In [8]: c.inputs.parent_calc_folder
+    Out[8]: <RemoteData: uuid: becb4894-c50c-4779-b84f-713772eaceff (pk: 139118)>
+
+    In [9]: # Let's assign to r the node reached by the parent_calc_folder link
+
+    In [10]: r = c.inputs.parent_calc_folder
+
+    In [11]: r.inputs.__dir__()
+    Out[11]:
+    ['__class__',
+    '__delattr__',
+    '__dict__',
+    '__dir__',
+    '__doc__',
+    '__format__',
+    '__getattr__',
+    '__getattribute__',
+    '__getitem__',
+    '__hash__',
+    '__init__',
+    '__iter__',
+    '__module__',
+    '__new__',
+    '__reduce__',
+    '__reduce_ex__',
+    '__repr__',
+    '__setattr__',
+    '__sizeof__',
+    '__str__',
+    '__subclasshook__',
+    '__weakref__',
+    u'remote_folder']
+
+  The ``.inputs`` manager for ``WorkflowNode`` and the ``.outputs`` manager
+  both for ``CalculationNode`` and ``WorkflowNode`` work in the same way 
+  (see below).
+
+- :py:meth:`~aiida.orm.nodes.process.calculation.CalculationNode.outputs` 
+  returns a :py:meth:`~aiida.orm.utils.managers.NodeLinksManager` object 
+  that can be used to access the node's outgoing CREATE links.
 
 .. _calculation updatable attributes:
 
@@ -335,6 +352,21 @@ However, for a ``Calculation`` to be runnable it needs to be stored, but that wo
 To solve this issue the :py:class:`~aiida.orm.utils.mixins.Sealable` mixin is introduced. This mixin can be used for subclasses of ``Node`` that need to have updatable attributes even after the node has been stored in the database.
 The mixin defines the ``_updatable_attributes`` tuple, which defines the attributes that are considered to be mutable even when the node is stored.
 It also allows the node to be *sealed*, after which even the updatable attributes become immutable.
+
+WorkflowNode
+++++++++++++
+
+Navigating inputs and outputs
+*****************************
+- :py:meth:`~aiida.orm.nodes.process.workflow.WorkflowNode.inputs` returns a 
+  :py:meth:`~aiida.orm.utils.managers.NodeLinksManager` object that can be used to 
+  access the node's incoming INPUT_WORK links.
+
+- :py:meth:`~aiida.orm.nodes.process.workflow.WorkflowNode.outputs` returns a 
+  :py:meth:`~aiida.orm.utils.managers.NodeLinksManager` object that can be used 
+  to access the node's outgoing RETURN links.
+
+
 
 ORM overview
 ++++++++++++

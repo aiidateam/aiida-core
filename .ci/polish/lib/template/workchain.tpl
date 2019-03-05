@@ -81,7 +81,7 @@ ${outline}
             return self.ERROR_NO_JOB_CALCULATION
 
         try:
-            self.ctx.result = calculation.out.sum % self.inputs.modulo
+            self.ctx.result = calculation.outputs.sum % self.inputs.modulo
         except AttributeError as exception:
             self.report('no output node found')
             return self.ERROR_NO_OUTPUT_NODE
@@ -118,7 +118,7 @@ ${outline}
     def post_raise_power(self):
         sub_result = prod(self.ctx.iterators_sign)
         for workchain in self.ctx.workchains:
-            sub_result *= workchain.out.result.value
+            sub_result *= workchain.outputs.result.value
             sub_result %= self.inputs.modulo.value
 
         self.ctx.result += sub_result

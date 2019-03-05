@@ -67,9 +67,9 @@ class TestCalcFunction(AiidaTestCase):
         """Verify that a calcfunction that returns a single Data node gets a default link label."""
         _, node = self.test_calcfunction.run_get_node(self.default_int)
 
-        self.assertEqual(node.out.result, self.default_int.value + 1)
-        self.assertEqual(getattr(node.out, Process.SINGLE_OUTPUT_LINKNAME), self.default_int.value + 1)
-        self.assertEqual(node.out[Process.SINGLE_OUTPUT_LINKNAME], self.default_int.value + 1)
+        self.assertEqual(node.outputs.result, self.default_int.value + 1)
+        self.assertEqual(getattr(node.outputs, Process.SINGLE_OUTPUT_LINKNAME), self.default_int.value + 1)
+        self.assertEqual(node.outputs[Process.SINGLE_OUTPUT_LINKNAME], self.default_int.value + 1)
 
     def test_calcfunction_caching(self):
         """Verify that a calcfunction can be cached."""

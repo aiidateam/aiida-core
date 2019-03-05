@@ -160,7 +160,7 @@ class CalculationTranslator(NodeTranslator):
         """
         if node.node_type.startswith("process.calculation.calcjob"):
 
-            retrieved_folder = node.out.retrieved
+            retrieved_folder = node.outputs.retrieved
             response = {}
 
             if retrieved_folder is None:

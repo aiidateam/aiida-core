@@ -154,7 +154,7 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
                 sys.exit(1)
 
             try:
-                result = workchain.out.result
+                result = workchain.outputs.result
             except AttributeError:
                 click.secho('Failed: ', fg='red', bold=True, nl=False)
                 click.secho('the workchain<{}> did not return a result output node'.format(workchain.pk), bold=True)

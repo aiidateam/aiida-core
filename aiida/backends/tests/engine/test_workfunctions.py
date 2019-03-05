@@ -66,9 +66,9 @@ class TestWorkFunction(AiidaTestCase):
         """Verify that a workfunction that returns a single Data node gets a default link label."""
         _, node = self.test_workfunction.run_get_node(self.default_int)
 
-        self.assertEqual(node.out.result, self.default_int)
-        self.assertEqual(getattr(node.out, Process.SINGLE_OUTPUT_LINKNAME), self.default_int)
-        self.assertEqual(node.out[Process.SINGLE_OUTPUT_LINKNAME], self.default_int)
+        self.assertEqual(node.outputs.result, self.default_int)
+        self.assertEqual(getattr(node.outputs, Process.SINGLE_OUTPUT_LINKNAME), self.default_int)
+        self.assertEqual(node.outputs[Process.SINGLE_OUTPUT_LINKNAME], self.default_int)
 
     def test_workfunction_caching(self):
         """Verify that a workfunction cannot be cached."""

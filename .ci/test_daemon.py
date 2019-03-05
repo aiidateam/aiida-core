@@ -86,7 +86,7 @@ def validate_calculations(expected_results):
             valid = False
 
         try:
-            actual_dict = calc.out.output_parameters.get_dict()
+            actual_dict = calc.outputs.output_parameters.get_dict()
         except exceptions.NotExistent:
             print('Could not retrieve `output_parameters` node for Calculation<{}>'.format(pk))
             print_report(pk)
@@ -112,7 +112,7 @@ def validate_workchains(expected_results):
         this_valid = True
         try:
             calc = load_node(pk)
-            actual_value = calc.out.output
+            actual_value = calc.outputs.output
         except (exceptions.NotExistent, AttributeError) as exception:
             print("* UNABLE TO RETRIEVE VALUE for workchain pk={}: I expected {}, I got {}: {}"
                   .format(pk, expected_value, type(exception), exception))

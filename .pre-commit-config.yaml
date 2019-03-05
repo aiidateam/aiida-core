@@ -90,7 +90,6 @@
         aiida/backends/tests/test_backup_script.py|
         aiida/backends/tests/test_backup_setup_script.py|
         aiida/backends/tests/test_base_dataclasses.py|
-        aiida/backends/tests/cmdline/commands/test_calculation.py|
         aiida/backends/tests/cmdline/commands/test_code.py|
         aiida/backends/tests/cmdline/commands/test_comment.py|
         aiida/backends/tests/cmdline/commands/test_computer.py|
@@ -99,7 +98,6 @@
         aiida/backends/tests/cmdline/commands/test_group.py|
         aiida/backends/tests/cmdline/commands/test_node.py|
         aiida/backends/tests/cmdline/commands/test_user.py|
-        aiida/backends/tests/cmdline/commands/test_work.py|
         aiida/backends/tests/test_dataclasses.py|
         aiida/backends/tests/test_dbimporters.py|
         aiida/backends/tests/test_export_and_import.py|

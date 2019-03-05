@@ -588,6 +588,10 @@ class Process(plumpy.Process):
 
         for name, node in self._flat_inputs().items():
 
+            # Certain processes allow to specify ports with `None` as acceptable values
+            if node is None:
+                continue
+
             # Special exception: set computer if node is a remote Code and our node does not yet have a computer set
             if isinstance(node, Code) and not node.is_local() and not self.node.computer:
                 self.node.computer = node.get_remote_computer()

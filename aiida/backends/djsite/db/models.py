@@ -225,40 +225,17 @@ class DbNode(m.Model):
 
 @python_2_unicode_compatible
 class DbLink(m.Model):
-    """
-    Direct connection between two dbnodes. The label is identifying the
-    link type.
-    """
+    """Direct connection between two dbnodes. The label is identifying thelink type."""
+
     # If I delete an output, delete also the link; if I delete an input, stop
     # NOTE: this will in most cases render a DbNode.objects.filter(...).delete()
     # call unusable because some nodes will be inputs; Nodes will have to
     #    be deleted in the proper order (or links will need to be deleted first)
-    input = m.ForeignKey('DbNode', related_name='output_links',
-                         on_delete=m.PROTECT)
-    output = m.ForeignKey('DbNode', related_name='input_links',
-                          on_delete=m.CASCADE)
-    # label for data input for calculation
+    # The `input` and `output` columns do not need an explicit `db_index` as it is `True` by default for foreign keys
+    input = m.ForeignKey('DbNode', related_name='output_links', on_delete=m.PROTECT)
+    output = m.ForeignKey('DbNode', related_name='input_links', on_delete=m.CASCADE)
     label = m.CharField(max_length=255, db_index=True, blank=False)
     type = m.CharField(max_length=255, db_index=True, blank=True)
-
-    class Meta:
-        # I cannot add twice the same link
-        # I want unique labels among all inputs of a node
-        # NOTE!
-        # I cannot add ('input', 'label') because in general
-        # if the input is a 'data' and I want to add it more than
-        # once to different calculations, the different links must be
-        # allowed to have the same name. For calculations, it is the
-        # responsibility of the output plugin to avoid to have many
-        # times the same name.
-        #
-        # A calculation can have both a 'return' and a 'create' link to
-        # a single data output node, which would violate the unique constraint
-        # defined below, since the difference in link type is not considered.
-        # The distinction between the type of a 'create' and a 'return' link is not
-        # implemented at the moment, so the unique constraint is disabled.
-        # unique_together = ("output", "label")
-        pass
 
     def __str__(self):
         return "{} ({}) --> {} ({})".format(

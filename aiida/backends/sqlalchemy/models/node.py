@@ -249,7 +249,8 @@ class DbLink(Base):
     id = Column(Integer, primary_key=True)
     input_id = Column(
         Integer,
-        ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED")
+        ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED"),
+        index=True
     )
     output_id = Column(
         Integer,
@@ -258,14 +259,15 @@ class DbLink(Base):
             ondelete="CASCADE",
             deferrable=True,
             initially="DEFERRED"
-        )
+        ),
+        index=True
     )
 
     input = relationship("DbNode", primaryjoin="DbLink.input_id == DbNode.id")
     output = relationship("DbNode", primaryjoin="DbLink.output_id == DbNode.id")
 
     label = Column(String(255), index=True, nullable=False)
-    type = Column(String(255))
+    type = Column(String(255), index=True)
 
     # A calculation can have both a 'return' and a 'create' link to
     # a single data output node, which would violate the unique constraint

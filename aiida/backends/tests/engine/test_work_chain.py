@@ -21,9 +21,11 @@ from tornado import gen
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
+from aiida.common import exceptions
 from aiida.common.links import LinkType
 from aiida.common.utils import Capturing
-from aiida.engine import ExitCode, Process, ToContext, WorkChain, if_, while_, return_, run, run_get_node
+from aiida.engine import ExitCode, Process, ToContext, WorkChain, if_, while_, return_, run, run_get_node, submit
+from aiida.engine import launch
 from aiida.engine.persistence import ObjectLoader
 from aiida.manage.manager import get_manager
 from aiida.orm import load_node, Bool, Float, Int, Str
@@ -266,7 +268,7 @@ class IfTest(WorkChain):
 class TestContext(AiidaTestCase):
 
     def test_attributes(self):
-        wc = WorkChain()
+        wc = IfTest()
         wc.ctx.new_attr = 5
         self.assertEqual(wc.ctx.new_attr, 5)
 
@@ -275,7 +277,7 @@ class TestContext(AiidaTestCase):
             wc.ctx.new_attr
 
     def test_dict(self):
-        wc = WorkChain()
+        wc = IfTest()
         wc.ctx['new_attr'] = 5
         self.assertEqual(wc.ctx['new_attr'], 5)
 
@@ -293,6 +295,23 @@ class TestWorkchain(AiidaTestCase):
     def tearDown(self):
         super(TestWorkchain, self).tearDown()
         self.assertIsNone(Process.current())
+
+    def test_run_base_class(self):
+        """Verify that it is impossible to run, submit or instantiate a base `WorkChain` class."""
+        with self.assertRaises(exceptions.InvalidOperation):
+            WorkChain()
+
+        with self.assertRaises(exceptions.InvalidOperation):
+            launch.run(WorkChain)
+
+        with self.assertRaises(exceptions.InvalidOperation):
+            launch.run_get_node(WorkChain)
+
+        with self.assertRaises(exceptions.InvalidOperation):
+            launch.run_get_pid(WorkChain)
+
+        with self.assertRaises(exceptions.InvalidOperation):
+            launch.submit(WorkChain)
 
     def test_run(self):
         A = Str('A')

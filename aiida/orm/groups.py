@@ -251,6 +251,13 @@ class Group(entities.Entity):
         """
         return self._backend_entity.uuid
 
+    def count(self):
+        """Return the number of entities in this group.
+
+        :return: integer number of entities contained within the group
+        """
+        return self._backend_entity.count()
+
     @property
     def nodes(self):
         """

@@ -109,6 +109,13 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
         # To allow to do directly g = Group(...).store()
         return self
 
+    def count(self):
+        """Return the number of entities in this group.
+
+        :return: integer number of entities contained within the group
+        """
+        return self._dbmodel.dbnodes.count()
+
     @property
     def nodes(self):
         """Get an iterator to the nodes in the group"""

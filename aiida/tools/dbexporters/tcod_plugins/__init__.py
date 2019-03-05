@@ -52,7 +52,7 @@ class BaseTcodtranslator(object):
         this computation.
         """
         try:
-            code = calc.inp.code
+            code = calc.inputs.code
             if not code.is_local():
                 return code.get_attribute('remote_exec_path')
         except Exception:

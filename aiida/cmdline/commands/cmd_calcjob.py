@@ -132,7 +132,7 @@ def calcjob_outputcat(calcjob, path):
                 entry_point.name))
 
     try:
-        retrieved = calcjob.out.retrieved
+        retrieved = calcjob.outputs.retrieved
     except AttributeError:
         echo.echo_critical("No 'retrieved' node found. Have the calcjob files already been retrieved?")
 
@@ -178,7 +178,7 @@ def calcjob_outputls(calcjob, path, color):
     from aiida.cmdline.utils.repository import list_repository_contents
 
     try:
-        retrieved = calcjob.out.retrieved
+        retrieved = calcjob.outputs.retrieved
     except AttributeError:
         echo.echo_critical("No 'retrieved' node found. Have the calcjob files already been retrieved?")
 

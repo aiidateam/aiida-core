@@ -47,7 +47,7 @@ class NestedWorkChain(WorkChain):
         if self.should_submit():
             self.report('Getting sub-workchain output.')
             sub_workchain = self.ctx.workchain[0]
-            self.out('output', sub_workchain.out.output + 1)
+            self.out('output', sub_workchain.outputs.output + 1)
         else:
             self.report('Bottom-level workchain reached.')
             self.out('output', Int(0))

@@ -10,37 +10,70 @@
 """
 Contain utility classes for "managers", i.e., classes that act allow
 to access members of other classes via TAB-completable attributes
-(e.g. the class underlying `node.inp` to allow to do `node.inp.label`).
+(e.g. the class underlying `calculation.inputs` to allow to do `calculation.inputs.<label>`).
 """
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-__all__ = ('NodeInputManager', 'NodeOutputManager', 'AttributeManager')
+from aiida.common.links import LinkType
+
+__all__ = ('NodeLinksManager', 'AttributeManager')
 
 
-class NodeInputManager(object):  # pylint: disable=too-few-public-methods,useless-object-inheritance
+class NodeLinksManager(object):  # pylint: disable=too-few-public-methods,useless-object-inheritance
     """
-    A manager that allows to do node.inp.xxx to get the input named 'xxx'
-    of a given node.
+    A manager that allows to inspect, with tab-completion, nodes linked to a given one.
+    See an example of its use in `CalculationNode.inputs`.
     """
 
-    def __init__(self, node):
+    def __init__(self, node, link_type, incoming):
         """
-        :param node: the node object.
+        Initialise the link manager.
+
+        :param node: the reference node object
+        :param link_type: the link_type to inspect
+        :param incoming: if True, inspect incoming links, otherwise inspect
+            outgoing links
         """
-        # Possibly add checks here
+        # This import is here to avoid circular imports
+        from aiida.orm import Node
+
+        if not isinstance(node, Node):
+            raise TypeError("node must be a valid AiiDA Node")
         self._node = node
+        if not isinstance(link_type, LinkType):
+            raise TypeError("link_type must be a valid LinkType")
+        self._link_type = link_type
+        self._incoming = incoming
+
+    def _get_keys(self):
+        """Return the valid link labels, used e.g. to make getattr() work"""
+        if self._incoming:
+            node_attributes = self._node.get_incoming(link_type=self._link_type).all_link_labels()
+        else:
+            node_attributes = self._node.get_outgoing(link_type=self._link_type).all_link_labels()
+        return node_attributes
+
+    def _get_node_by_link_label(self, label):
+        """
+        Return the linked node with a given link label
+
+        :param label: the link label connecting the current node to the node to get
+        """
+        if self._incoming:
+            return self._node.get_incoming(link_type=self._link_type).get_node_by_label(label)
+        return self._node.get_outgoing(link_type=self._link_type).get_node_by_label(label)
 
     def __dir__(self):
         """
         Allow to list all valid input links
         """
-        node_attributes = self._node.get_incoming().all_link_labels()
+        node_attributes = self._get_keys()
         return sorted(set(list(dir(type(self))) + list(node_attributes)))
 
     def __iter__(self):
-        node_attributes = self._node.get_incoming().all_link_labels()
+        node_attributes = self._get_keys()
         for k in node_attributes:
             yield k
 
@@ -49,7 +82,7 @@ class NodeInputManager(object):  # pylint: disable=too-few-public-methods,useles
         :param name: name of the attribute to be asked to the parser results.
         """
         try:
-            return self._node.get_incoming().get_node_by_label(name)
+            return self._get_node_by_link_label(label=name)
         except KeyError:
             raise AttributeError("Node '{}' does not have an input with link '{}'".format(self._node.pk, name))
 
@@ -60,55 +93,17 @@ class NodeInputManager(object):  # pylint: disable=too-few-public-methods,useles
         :param name: name of the attribute to be asked to the parser results.
         """
         try:
-            return self._node.get_incoming().get_node_by_label(name)
+            return self._get_node_by_link_label(label=name)
         except KeyError:
             raise KeyError("Node '{}' does not have an input with link '{}'".format(self._node.pk, name))
 
+    def __str__(self):
+        """Return a string representation of the manager"""
+        return "Manager for {} {} links for node pk={}".format("incoming" if self._incoming else "outgoing",
+                                                               self._link_type.value.upper(), self._node.pk)
 
-class NodeOutputManager(object):  # pylint: disable=too-few-public-methods,useless-object-inheritance
-    """
-    A manager that allows to do node.out.xxx to get the output named 'xxx'
-    of a given node.
-    """
-
-    def __init__(self, node):
-        """
-        :param node: the node object.
-        """
-        # Possibly add checks here
-        self._node = node
-
-    def __dir__(self):
-        """
-        Allow to list all valid output links
-        """
-        node_attributes = self._node.get_outgoing().all_link_labels()
-        return sorted(set(list(dir(type(self))) + list(node_attributes)))
-
-    def __iter__(self):
-        node_attributes = self._node.get_outgoing().all_link_labels()
-        for k in node_attributes:
-            yield k
-
-    def __getattr__(self, name):
-        """
-        :param name: name of the attribute to be asked to the parser results.
-        """
-        try:
-            return self._node.get_outgoing().get_node_by_label(name)
-        except KeyError:
-            raise AttributeError("Node {} does not have an output with link {}".format(self._node.pk, name))
-
-    def __getitem__(self, name):
-        """
-        interface to get to the parser results as a dictionary.
-
-        :param name: name of the attribute to be asked to the parser results.
-        """
-        try:
-            return self._node.get_outgoing().get_node_by_label(name)
-        except KeyError:
-            raise KeyError("Node {} does not have an output with link {}".format(self._node.pk, name))
+    def __repr__(self):
+        return '<{}: {}>'.format(self.__class__.__name__, str(self))
 
 
 class AttributeManager(object):  # pylint: disable=too-few-public-methods,useless-object-inheritance

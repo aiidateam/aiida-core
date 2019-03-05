@@ -26,7 +26,7 @@ class TemplatereplacerDoublerParser(Parser):
 
     def parse(self, **kwargs):
         """Parse the contents of the output files retrieved in the `FolderData`."""
-        template = self.node.inp.template.get_dict()
+        template = self.node.inputs.template.get_dict()
 
         try:
             output_folder = self.retrieved

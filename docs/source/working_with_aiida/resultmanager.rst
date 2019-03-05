@@ -71,43 +71,38 @@ provides a parser.
 
 .. _db_input_output:
 
-Node input and output
-=====================
+Calculations and workflows inputs and outputs
+=============================================
 
-In the following, we will show the methods to access the input and output nodes of a given node.
+In the following, we will show the methods to access the input and output nodes of a given calculation or workflow.
 
 Again, we start by loading a node from the database. Unlike before, this can be any type of node. For example, we can load the node with PK 17::
 
     from aiida.orm import load_node
-    node = load_node(17)
+    calc = load_node(17)
 
-Now, we want to find the nodes which have a direct link to this node. The node has several methods to extract this information: :meth:`get_outgoing() <aiida.orm.nodes.Node.get_outgoing>`, :meth:`get_incoming() <aiida.orm.nodes.Node.get_incoming>`. The most practical way to access this information, especially when working on the ``verdi shell``, is by means of the ``inp`` and ``out`` attributes.
+Now, we want to find the nodes which have a direct input or output link to this node. 
+The node has several methods to extract this information: :meth:`get_outgoing() <aiida.orm.nodes.Node.get_outgoing>`, 
+:meth:`get_incoming() <aiida.orm.nodes.Node.get_incoming>`. 
+The most practical way to access this information for a calculation (or workflow), when limiting solely to 
+``INPUT_CALC`` and ``CREATE`` (or ``INPUT_WORK`` and ``RETURN``, respectively), especially when working on the ``verdi shell``, 
+is by means of the ``.inputs`` and ``.outputs`` attributes.
 
-The ``inp`` attribute can be used to list and access the nodes with a direct link to 
-``node`` in input. The names of the input links can be printed by ``list(node.inp)`` or interactively by ``node.inp. + TAB``. As an example, suppose that ``node`` has an input ``KpointsData`` object under the linkname ``kpoints``. The command
+The ``.inputs`` attribute can be used to list and access the input nodes. 
+The names of the input links can be printed by ``list(calc.inputs)`` 
+or interactively by ``calc.inputs. + TAB``. 
+As an example, suppose that ``calc`` has an input ``KpointsData`` object under the linkname ``kpoints``. The command
 ::
 
-    node.inp.kpoints
+    calc.inputs.kpoints
   
 returns the ``KpointsData`` object.
 
-Similarly the ``out`` attribute can be used to display the names of links in output from ``node`` and access these nodes. Suppose that ``node`` has an output ``FolderData`` with linkname ``retrieved``, then the command
+Similarly the ``.outputs`` attribute can be used to display the outputs of ``calc``. 
+Suppose that ``calc`` has an output ``FolderData`` with linkname ``retrieved``, then the command
 ::
 
-  node.out.retrieved
+  calc.outputs.retrieved
   
 returns the ``FolderData`` object. 
-
-.. note:: 
-    For the input, there can be only one object for a given linkname. In contrast, there can be more than one output object with the same linkname. For example, a code object can be used by several calculations with the same linkname ``code``. For this reason, we append the string ``_pk`` indicating the pk of the output code to the linkname. A linkname without ``_pk`` still exists, and refers to the oldest link. 
-    
-    As an example, imagine that ``node`` is a code, which is used by calculation #18 and #19. The linknames shown by ``node.out`` are
-    ::
-  
-        node.out.  >>
-          * code
-          * code_18
-          * code_19
-    
-    The attributes ``node.out.code_18`` and ``node.out.code_19`` will return two different calculation objects, and ``node.out.code`` will return the older one of the two. 
 

@@ -27,7 +27,6 @@ from aiida.manage.manager import get_manager
 from aiida.orm.utils.links import LinkManager, LinkTriple
 from aiida.orm.utils.repository import Repository
 from aiida.orm.utils.node import AbstractNodeMeta, clean_value
-from aiida.orm.utils.managers import NodeInputManager, NodeOutputManager
 
 from ..comments import Comment
 from ..computers import Computer
@@ -972,28 +971,6 @@ class Node(Entity):
         :return: boolean, True when there are links in the incoming cache, False otherwise
         """
         return bool(self._incoming_cache)
-
-    @property
-    def out(self):
-        """Return an instance of `NodeOutputManager`
-
-        The `NodeOutputManager` allows you to easily explore the nodes that have outgoing links from this node.
-        The outgoing nodes are reachable by their link labels which are attributes of the manager.
-
-        :return: `NodeOutputManager`
-        """
-        return NodeOutputManager(self)
-
-    @property
-    def inp(self):
-        """Return an instance of `NodeInputManager`
-
-        The `NodeInputManager` allows you to easily explore the nodes that have incoming links to this node.
-        The incoming nodes are reachable by their link labels which are attributes of the manager.
-
-        :return: `NodeInputManager`
-        """
-        return NodeInputManager(self)
 
     def store_all(self, with_transaction=True, use_cache=None):
         """Store the node, together with all input links.

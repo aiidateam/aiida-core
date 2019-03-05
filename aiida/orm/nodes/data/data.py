@@ -128,14 +128,14 @@ class Data(Node):
         self.source = source
 
     @property
-    def created_by(self):
+    def creator(self):
         """Return the creator of this node or None if it does not exist.
 
         :return: the creating node or None
         """
         inputs = self.get_incoming(link_type=LinkType.CREATE)
         if inputs:
-            return inputs.first()
+            return inputs.first().node
 
         return None
 

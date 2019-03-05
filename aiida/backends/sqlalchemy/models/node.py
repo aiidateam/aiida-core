@@ -96,7 +96,12 @@ class DbNode(Base):
         # SqlAlchemy a default *has* to be defined if one wants to get that value upon storing. But since defining a
         # default on the column in combination with the hack in `aiida.backend.SqlAlchemy.models.__init__` to force all
         # defaults to be populated upon instantiation, we have to unset the `mtime` attribute here manually.
-        self.mtime = None
+        #
+        # The only time that we allow mtime not to be null is when we explicitly pass mtime as a kwarg. This covers
+        # the case that a node is constructed based on some very predefined data like when we create nodes at the
+        # AiiDA import functions.
+        if 'mtime' not in kwargs:
+            self.mtime = None
 
         if self.attributes is None:
             self.attributes = dict()

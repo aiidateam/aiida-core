@@ -20,7 +20,6 @@ from sqlalchemy.types import Integer, DateTime, String, Text
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
-from aiida.common.exceptions import ValidationError
 
 
 class DbLog(Base):

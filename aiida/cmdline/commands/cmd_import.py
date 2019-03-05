@@ -22,6 +22,7 @@ from aiida.common import exceptions
 
 EXTRAS_MODE_EXISTING = ['keep_existing', 'update_existing', 'mirror', 'none', 'ask']
 EXTRAS_MODE_NEW = ['import', 'none']
+COMMENT_MODE = ['newest', 'overwrite']
 
 
 # pylint: disable=too-few-public-methods
@@ -69,8 +70,15 @@ class ExtrasImportCode(Enum):
     help="Specify whether to import extras of new nodes: "
     "import: import extras. "
     "none: do not import extras.")
+@click.option(
+    '--comment-mode',
+    type=click.Choice(COMMENT_MODE),
+    default='newest',
+    help="Specify the way to import Comments with identical UUIDs: "
+    "newest: Only the newest Comments (based on mtime) (default)."
+    "overwrite: Replace existing Comments with those from the import file.")
 @decorators.with_dbenv()
-def cmd_import(archives, webpages, group, extras_mode_existing, extras_mode_new):
+def cmd_import(archives, webpages, group, extras_mode_existing, extras_mode_new, comment_mode):
     """Import one or multiple exported AiiDA archives
 
     The ARCHIVES can be specified by their relative or absolute file path, or their HTTP URL.
@@ -116,7 +124,8 @@ def cmd_import(archives, webpages, group, extras_mode_existing, extras_mode_new)
                 archive,
                 group,
                 extras_mode_existing=ExtrasImportCode[extras_mode_existing].value,
-                extras_mode_new=extras_mode_new)
+                extras_mode_new=extras_mode_new,
+                comment_mode=comment_mode)
         except exceptions.IncompatibleArchiveVersionError as exception:
             echo.echo_warning('{} cannot be imported: {}'.format(archive, exception))
             echo.echo_warning('run `verdi export migrate {}` to update it'.format(archive))
@@ -147,7 +156,8 @@ def cmd_import(archives, webpages, group, extras_mode_existing, extras_mode_new)
                     temp_folder.get_abs_path(temp_file),
                     group,
                     extras_mode_existing=ExtrasImportCode[extras_mode_existing].value,
-                    extras_mode_new=extras_mode_new)
+                    extras_mode_new=extras_mode_new,
+                    comment_mode=comment_mode)
             except exceptions.IncompatibleArchiveVersionError as exception:
                 echo.echo_warning('{} cannot be imported: {}'.format(archive, exception))
                 echo.echo_warning('download the archive file and run `verdi export migrate` to update it')

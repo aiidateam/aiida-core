@@ -24,9 +24,9 @@ __all__ = ('BackendComment', 'BackendCommentCollection')
 class BackendComment(backends.BackendEntity):
     """Base class for a node comment."""
 
-    @abc.abstractproperty
+    @property
     def uuid(self):
-        pass
+        return str(self._dbmodel.uuid)
 
     @abc.abstractproperty
     def ctime(self):
@@ -68,7 +68,7 @@ class BackendCommentCollection(backends.BackendCollection[BackendComment]):
     ENTITY_CLASS = BackendComment
 
     @abc.abstractmethod
-    def create(self, node, user, content=None):
+    def create(self, node, user, content=None, **kwargs):
         """
         Create a Comment for a given node and user
 

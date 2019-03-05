@@ -12,6 +12,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+# pylint: disable=import-error,no-name-in-module,fixme
 from aiida.backends.djsite.db import models
 from aiida.common import exceptions
 from aiida.common import json
@@ -34,7 +35,7 @@ class DjangoLog(entities.DjangoModelEntity[models.DbLog], BackendLog):
             levelname=levelname,
             dbnode_id=dbnode_id,
             message=message,
-            metadata=json.dumps(metadata))
+            metadata=json.dumps(metadata) if metadata else "{}")  # Make sure a json-serializable dict is created
 
     @property
     def uuid(self):
@@ -101,15 +102,18 @@ class DjangoLogCollection(BackendLogCollection):
         from django.core.exceptions import ObjectDoesNotExist
         assert log_id is not None
         try:
-            models.DbLog.objects.get(pk=log_id).delete()
+            models.DbLog.objects.get(id=log_id).delete()
         except ObjectDoesNotExist:
             raise exceptions.NotExistent("Log with id '{}' not found".format(log_id))
 
     def delete_many(self, filters):
         """
-        Delete all log entries in the table
+        Delete all log entries.
+        Delete all log entries in the table if 'filters' is not defined.
+        :param filters: Dictionary, where the keys can be: 'id' or 'node_id'.
+        and the values may be a list. 'time' is not yet implemented.
         """
         if not filters:
             models.DbLog.objects.all().delete()
         else:
-            raise NotImplementedError('Only deleting all by passing an empty filer dictionary is currently supported')
+            raise NotImplementedError('Only deleting all by passing an empty filter dictionary is currently supported')

@@ -2063,7 +2063,7 @@ class TestLogs(AiidaTestCase):
         super(TestLogs, self).tearDown()
         orm.Log.objects.delete_many({})
 
-    def test_export_import_of_critical_log_msg(self):
+    def test_export_import_of_critical_log_msg_and_metadata(self):
         """ Testing logging of critical message """
         tmp_folder = tempfile.mkdtemp()
 
@@ -2080,6 +2080,9 @@ class TestLogs(AiidaTestCase):
             calc.store()
             calc.logger.critical(message)
 
+            # Store Log metadata
+            log_metadata = orm.Log.objects.get(dbnode_id=calc.id).metadata
+
             export_file = os.path.join(tmp_folder, 'export.tar.gz')
             export([calc], outfile=export_file, silent=True)
 
@@ -2092,6 +2095,7 @@ class TestLogs(AiidaTestCase):
 
             self.assertEqual(len(logs), 1)
             self.assertEqual(logs[0].message, message)
+            self.assertEqual(logs[0].metadata, log_metadata)
 
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)
@@ -2135,12 +2139,336 @@ class TestLogs(AiidaTestCase):
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)
 
+    def test_export_of_imported_logs(self):
+        """Test export of imported Log"""
+        from aiida.orm import Log, CalculationNode, QueryBuilder
+
+        tmp_folder = tempfile.mkdtemp()
+
+        log_msg = 'Testing export of imported log'
+
+        try:
+            # Create node
+            calc = CalculationNode()
+            calc.store()
+
+            # Create log message
+            calc.logger.critical(log_msg)
+
+            # Save uuids prior to export
+            calc_uuid = calc.uuid
+            log_uuid = QueryBuilder().append(Log, project=['uuid']).all()
+            log_uuid = str(log_uuid[0][0])
+
+            # Export
+            export_file = os.path.join(tmp_folder, 'export.tar.gz')
+            export([calc], outfile=export_file, silent=True)
+
+            # Clean database and reimport exported data
+            self.reset_database()
+            import_data(export_file, silent=True)
+
+            # Finding all the log messages
+            import_calcs = QueryBuilder().append(CalculationNode, project=['uuid']).all()
+            import_logs = QueryBuilder().append(Log, project=['uuid']).all()
+
+            # There should be exactly: 1 CalculationNode, 1 Log
+            self.assertEqual(len(import_calcs), 1)
+            self.assertEqual(len(import_logs), 1)
+
+            # Check the UUIDs are the same
+            self.assertEqual(str(import_calcs[0][0]), calc_uuid)
+            self.assertEqual(str(import_logs[0][0]), log_uuid)
+
+            # Re-export
+            calc = orm.load_node(import_calcs[0][0])
+            re_export_file = os.path.join(tmp_folder, 're_export.tar.gz')
+            export([calc], outfile=re_export_file, silent=True)
+
+            # Clean database and reimport exported data
+            self.reset_database()
+            import_data(re_export_file, silent=True)
+
+            # Finding all the log messages
+            import_calcs = QueryBuilder().append(CalculationNode, project=['uuid']).all()
+            import_logs = QueryBuilder().append(Log, project=['uuid']).all()
+
+            # There should be exactly: 1 CalculationNode, 1 Log
+            self.assertEqual(len(import_calcs), 1)
+            self.assertEqual(len(import_logs), 1)
+
+            # Check the UUIDs are the same
+            self.assertEqual(str(import_calcs[0][0]), calc_uuid)
+            self.assertEqual(str(import_logs[0][0]), log_uuid)
+
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)
+
+    def test_multiple_imports_for_single_node(self):
+        """Test multiple imports for single node with different logs are imported correctly"""
+        tmp_folder = tempfile.mkdtemp()
+
+        log_msgs = [
+            "Life is like riding a bicycle.",
+            "To keep your balance,",
+            "you must keep moving."
+        ]
+
+        try:
+            # Create Node and initial log message and save UUID of node prior to export
+            node = orm.CalculationNode().store()
+            node.logger.critical(log_msgs[0])
+            node_uuid = node.uuid
+
+            # Export as "EXISTING" DB
+            export_file_existing = os.path.join(tmp_folder, 'export_EXISTING.tar.gz')
+            export([node], outfile=export_file_existing, silent=True)
+
+            # Add 2 more Logs and save UUIDs for all three Logs prior to export
+            node.logger.critical(log_msgs[1])
+            node.logger.critical(log_msgs[2])
+            log_uuids = orm.QueryBuilder().append(orm.Log, project=['uuid']).all()
+            log_uuids = [str(log[0]) for log in log_uuids]
+
+            # Export as "FULL" DB
+            export_file_full = os.path.join(tmp_folder, 'export_FULL.tar.gz')
+            export([node], outfile=export_file_full, silent=True)
+
+            # Clean database and reimport "EXISTING" DB
+            self.reset_database()
+            import_data(export_file_existing, silent=True)
+
+            # Check correct import
+            builder = orm.QueryBuilder().append(orm.Node, tag='node', project=['uuid'])
+            builder.append(orm.Log, with_node='node', project=['uuid', 'message'])
+            builder = builder.all()
+
+            self.assertEqual(len(builder), 1) # There is 1 Log in "EXISTING" DB
+
+            imported_node_uuid = builder[0][0]
+            self.assertEqual(imported_node_uuid, node_uuid)
+
+            imported_log_uuid = builder[0][1]
+            imported_log_message = builder[0][2]
+            self.assertEqual(imported_log_uuid, log_uuids[0])
+            self.assertEqual(imported_log_message, log_msgs[0])
+
+            # Import "FULL" DB
+            import_data(export_file_full, silent=True)
+
+            # Since the UUID of the node is identical with the node already in the DB,
+            # the Logs should be added to the existing node, avoiding the addition of
+            # the single Log already present.
+            # Check this by retrieving all Logs for the node.
+            builder = orm.QueryBuilder().append(orm.Node, tag='node', project=['uuid'])
+            builder.append(orm.Log, with_node='node', project=['uuid', 'message'])
+            builder = builder.all()
+
+            self.assertEqual(len(builder), len(log_msgs)) # There should now be 3 Logs
+
+            imported_node_uuid = builder[0][0]
+            self.assertEqual(imported_node_uuid, node_uuid)
+            for log in builder:
+                imported_log_uuid = log[1]
+                imported_log_content = log[2]
+
+                self.assertIn(imported_log_uuid, log_uuids)
+                self.assertIn(imported_log_content, log_msgs)
+
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)
+
+    def test_reimport_of_logs_for_single_node(self):
+        """
+        When a node with logs already exist in the DB, and more logs are imported
+        for the same node (same UUID), test that only new log-entries are added.
+
+        Part I:
+        Create CalculationNode and 1 Log for it.
+        Export CalculationNode with its 1 Log to export file #1 "EXISTING database".
+        Add 2 Logs to CalculationNode.
+        Export CalculationNode with its 3 Logs to export file #2 "FULL database".
+        Reset database.
+
+        Part II:
+        Reimport export file #1 "EXISTING database".
+        Add 2 Logs to CalculationNode (different UUID than for "FULL database").
+        Export CalculationNode with its 3 Logs to export file #3 "NEW database".
+        Reset database.
+
+        Part III:
+        Reimport export file #1 "EXISTING database" (1 CalculationNode, 1 Log).
+        Import export file #2 "FULL database" (1 CalculationNode, 3 Logs).
+        Check the database EXACTLY contains 1 CalculationNode and 3 Logs,
+        with matching UUIDS all the way through all previous Parts.
+
+        Part IV:
+        Import export file #3 "NEW database" (1 CalculationNode, 3 Logs).
+        Check the database EXACTLY contains 1 CalculationNode and 5 Logs,
+        with matching UUIDS all the way through all previous Parts.
+        NB! There should now be 5 Logs in the database. 4 of which are identical
+        in pairs, except for their UUID.
+        """
+
+        from aiida.orm import Log, CalculationNode, QueryBuilder
+
+        tmp_folder = tempfile.mkdtemp()
+        export_filenames = {
+            "EXISTING": "export_EXISTING_db.tar.gz",
+            "FULL": "export_FULL_db.tar.gz",
+            "NEW": "export_NEW_db.tar.gz"
+        }
+
+        log_msgs = [
+            "Life is like riding a bicycle.",
+            "To keep your balance,",
+            "you must keep moving."
+        ]
+
+        try:
+            ## Part I
+            # Create node and save UUID
+            calc = CalculationNode()
+            calc.store()
+            calc_uuid = calc.uuid
+
+            # Create first log message
+            calc.logger.critical(log_msgs[0])
+
+            # There should be exactly: 1 CalculationNode, 1 Log
+            export_calcs = QueryBuilder().append(CalculationNode, project=['uuid'])
+            export_logs = QueryBuilder().append(Log, project=['uuid'])
+            self.assertEqual(export_calcs.count(), 1)
+            self.assertEqual(export_logs.count(), 1)
+
+            # Save Log UUID before export
+            existing_log_uuids = [str(export_logs.all()[0][0])]
+
+            # Export "EXISTING" DB
+            export_file_existing = os.path.join(tmp_folder, export_filenames["EXISTING"])
+            export([calc], outfile=export_file_existing, silent=True)
+
+            # Add remaining Log messages
+            for log_msg in log_msgs[1:]:
+                calc.logger.critical(log_msg)
+
+            # There should be exactly: 1 CalculationNode, 3 Logs (len(log_msgs))
+            export_calcs = QueryBuilder().append(CalculationNode, project=['uuid'])
+            export_logs = QueryBuilder().append(Log, project=['uuid'])
+            self.assertEqual(export_calcs.count(), 1)
+            self.assertEqual(export_logs.count(), len(log_msgs))
+
+            # Save Log UUIDs before export, there should be 3 UUIDs in total (len(log_msgs))
+            full_log_uuids = set(existing_log_uuids)
+            for log_uuid in export_logs.all():
+                full_log_uuids.add(str(log_uuid[0]))
+            self.assertEqual(len(full_log_uuids), len(log_msgs))
+
+            # Export "FULL" DB
+            export_file_full = os.path.join(tmp_folder, export_filenames["FULL"])
+            export([calc], outfile=export_file_full, silent=True)
+
+            # Clean database
+            self.reset_database()
+
+            ## Part II
+            # Reimport "EXISTING" DB
+            import_data(export_file_existing, silent=True)
+
+            # Check the database is correctly imported.
+            # There should be exactly: 1 CalculationNode, 1 Log
+            import_calcs = QueryBuilder().append(CalculationNode, project=['uuid'])
+            import_logs = QueryBuilder().append(Log, project=['uuid'])
+            self.assertEqual(import_calcs.count(), 1)
+            self.assertEqual(import_logs.count(), 1)
+            # Furthermore, the UUIDs should be the same
+            self.assertEqual(str(import_calcs.all()[0][0]), calc_uuid)
+            self.assertIn(str(import_logs.all()[0][0]), existing_log_uuids)
+
+            # Add remaining Log messages (again)
+            calc = orm.load_node(import_calcs.all()[0][0])
+            for log_msg in log_msgs[1:]:
+                calc.logger.critical(log_msg)
+
+            # There should be exactly: 1 CalculationNode, 3 Logs (len(log_msgs))
+            export_calcs = QueryBuilder().append(CalculationNode, project=['uuid'])
+            export_logs = QueryBuilder().append(Log, project=['uuid'])
+            self.assertEqual(export_calcs.count(), 1)
+            self.assertEqual(export_logs.count(), len(log_msgs))
+
+            # Save Log UUIDs before export, there should be 3 UUIDs in total (len(log_msgs))
+            new_log_uuids = set(existing_log_uuids)
+            for log_uuid in export_logs.all():
+                new_log_uuids.add(str(log_uuid[0]))
+            self.assertEqual(len(new_log_uuids), len(log_msgs))
+
+            # Export "NEW" DB
+            export_file_new = os.path.join(tmp_folder, export_filenames["NEW"])
+            export([calc], outfile=export_file_new, silent=True)
+
+            # Clean database
+            self.reset_database()
+
+            ## Part III
+            # Reimport "EXISTING" DB
+            import_data(export_file_existing, silent=True)
+
+            # Check the database is correctly imported.
+            # There should be exactly: 1 CalculationNode, 1 Log
+            import_calcs = QueryBuilder().append(CalculationNode, project=['uuid'])
+            import_logs = QueryBuilder().append(Log, project=['uuid'])
+            self.assertEqual(import_calcs.count(), 1)
+            self.assertEqual(import_logs.count(), 1)
+            # Furthermore, the UUIDs should be the same
+            self.assertEqual(str(import_calcs.all()[0][0]), calc_uuid)
+            self.assertIn(str(import_logs.all()[0][0]), existing_log_uuids)
+
+            # Import "FULL" DB
+            import_data(export_file_full, silent=True)
+
+            # Check the database is correctly imported.
+            # There should be exactly: 1 CalculationNode, 3 Logs (len(log_msgs))
+            import_calcs = QueryBuilder().append(CalculationNode, project=['uuid'])
+            import_logs = QueryBuilder().append(Log, project=['uuid'])
+            self.assertEqual(import_calcs.count(), 1)
+            self.assertEqual(import_logs.count(), len(log_msgs))
+            # Furthermore, the UUIDs should be the same
+            self.assertEqual(str(import_calcs.all()[0][0]), calc_uuid)
+            for log in import_logs.all():
+                log_uuid = str(log[0])
+                self.assertIn(log_uuid, full_log_uuids)
+
+            ## Part IV
+            # Import "NEW" DB
+            import_data(export_file_new, silent=True)
+
+            # Check the database is correctly imported.
+            # There should be exactly: 1 CalculationNode, 5 Logs (len(log_msgs))
+            # 4 of the logs are identical in pairs, except for the UUID.
+            import_calcs = QueryBuilder().append(CalculationNode, project=['uuid'])
+            import_logs = QueryBuilder().append(Log, project=['uuid', 'message'])
+            self.assertEqual(import_calcs.count(), 1)
+            self.assertEqual(import_logs.count(), 5)
+            # Furthermore, the UUIDs should be the same
+            self.assertEqual(str(import_calcs.all()[0][0]), calc_uuid)
+            total_log_uuids = full_log_uuids.copy()
+            total_log_uuids.update(new_log_uuids)
+            for log in import_logs.all():
+                log_uuid = str(log[0])
+                log_message = str(log[1])
+                self.assertIn(log_uuid, total_log_uuids)
+                self.assertIn(log_message, log_msgs)
+
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)
+
 
 class TestComments(AiidaTestCase):
     """Test ex-/import cases related to Comments"""
 
     def setUp(self):
         super(TestComments, self).setUp()
+        self.reset_database()
         self.comments = [
             "We're no strangers to love",
             "You know the rules and so do I",
@@ -2150,9 +2478,78 @@ class TestComments(AiidaTestCase):
 
     def tearDown(self):
         super(TestComments, self).tearDown()
-        comments = orm.Comment.objects.all()
-        for comment in comments:
-            orm.Comment.objects.delete(comment.id)
+        self.reset_database()
+
+    def test_multiple_imports_for_single_node(self):
+        """Test multiple imports for single node with different comments are imported correctly"""
+        tmp_folder = tempfile.mkdtemp()
+        user = orm.User.objects.get_default()
+
+        try:
+            # Create Node and initial comments and save UUIDs prior to export
+            node = orm.CalculationNode().store()
+            comment_one = orm.Comment(node, user, self.comments[0]).store()
+            comment_two = orm.Comment(node, user, self.comments[1]).store()
+            node_uuid = node.uuid
+            comment_uuids = [c.uuid for c in [comment_one, comment_two]]
+
+            # Export as "EXISTING" DB
+            export_file_existing = os.path.join(tmp_folder, 'export_EXISTING.tar.gz')
+            export([node], outfile=export_file_existing, silent=True)
+
+            # Add 2 more Comments and save UUIDs prior to export
+            comment_three = orm.Comment(node, user, self.comments[2]).store()
+            comment_four = orm.Comment(node, user, self.comments[3]).store()
+            comment_uuids += [c.uuid for c in [comment_three, comment_four]]
+
+            # Export as "FULL" DB
+            export_file_full = os.path.join(tmp_folder, 'export_FULL.tar.gz')
+            export([node], outfile=export_file_full, silent=True)
+
+            # Clean database and reimport "EXISTING" DB
+            self.reset_database()
+            import_data(export_file_existing, silent=True)
+
+            # Check correct import
+            builder = orm.QueryBuilder().append(orm.Node, tag='node', project=['uuid'])
+            builder.append(orm.Comment, with_node='node', project=['uuid', 'content'])
+            builder = builder.all()
+
+            self.assertEqual(len(builder), 2) # There are 2 Comments in "EXISTING" DB
+
+            imported_node_uuid = builder[0][0]
+            self.assertEqual(imported_node_uuid, node_uuid)
+            for comment in builder:
+                imported_comment_uuid = comment[1]
+                imported_comment_content = comment[2]
+
+                self.assertIn(imported_comment_uuid, comment_uuids[0:2])
+                self.assertIn(imported_comment_content, self.comments[0:2])
+
+            # Import "FULL" DB
+            import_data(export_file_full, silent=True)
+
+            # Since the UUID of the node is identical with the node already in the DB,
+            # the Comments should be added to the existing node, avoiding the addition
+            # of the two Comments already present.
+            # Check this by retrieving all Comments for the node.
+            builder = orm.QueryBuilder().append(orm.Node, tag='node', project=['uuid'])
+            builder.append(orm.Comment, with_node='node', project=['uuid', 'content'])
+            builder = builder.all()
+
+            self.assertEqual(len(builder), len(self.comments)) # There should now be 4 Comments
+
+            imported_node_uuid = builder[0][0]
+            self.assertEqual(imported_node_uuid, node_uuid)
+            for comment in builder:
+                imported_comment_uuid = comment[1]
+                imported_comment_content = comment[2]
+
+                self.assertIn(imported_comment_uuid, comment_uuids)
+                self.assertIn(imported_comment_content, self.comments)
+
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)
 
     def test_exclude_comments_flag(self):
         """Test comments and associated commenting users are not exported when using `include_comments=False`."""
@@ -2345,6 +2742,333 @@ class TestComments(AiidaTestCase):
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=True)
 
+    def test_mtime_of_imported_comments(self):
+        """
+        Test mtime does not change for imported comments
+        This is related to correct usage of `comment_mode` when importing.
+        """
+        from aiida.orm import Comment, CalculationNode, QueryBuilder, User
+
+        tmp_folder = tempfile.mkdtemp()
+
+        # Get user
+        user = User.objects.get_default()
+
+        comment_content = "You get what you give"
+
+        try:
+            # Create node
+            calc = CalculationNode().store()
+
+            # Create comment
+            comment = Comment(calc, user, comment_content).store()
+            calc.store()
+
+            # Save UUIDs and mtime
+            calc_uuid = calc.uuid
+            builder = QueryBuilder().append(Comment, project=['uuid', 'mtime']).all()
+            comment_uuid = str(builder[0][0])
+            comment_mtime = builder[0][1]
+
+            builder = QueryBuilder().append(CalculationNode, project=['uuid', 'mtime']).all()
+            calc_uuid = str(builder[0][0])
+            calc_mtime = builder[0][1]
+
+            # Export, reset database and reimport
+            export_file = os.path.join(tmp_folder, 'export.tar.gz')
+            export([calc], outfile=export_file, silent=True)
+            self.reset_database()
+            import_data(export_file, silent=True)
+
+            # Retrieve node and comment
+            builder = QueryBuilder().append(CalculationNode, tag='calc', project=['uuid'])
+            builder.append(Comment, with_node='calc', project=['uuid', 'mtime'])
+
+            import_entities = builder.all()[0]
+
+            self.assertEqual(len(import_entities), 3) # Check we have the correct amount of returned values
+
+            import_calc_uuid = str(import_entities[0])
+            import_comment_uuid = str(import_entities[1])
+            import_comment_mtime = import_entities[2]
+
+            # Check we have the correct UUIDs
+            self.assertEqual(import_calc_uuid, calc_uuid)
+            self.assertEqual(import_comment_uuid, comment_uuid)
+
+            # Make sure the mtime is the same after import as it was before export
+            self.assertEqual(import_comment_mtime, comment_mtime)
+
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)
+
+    def test_import_arg_comment_mode(self):
+        """
+        Test the import keyword `comment_mode`.
+        It may be `'newest'` or `'overwrite'`.
+        Test import of 'old' comment that has since been changed in DB.
+        """
+
+        from aiida.orm import Comment, CalculationNode, QueryBuilder, User
+
+        tmp_folder = tempfile.mkdtemp()
+
+        # Get user
+        # Will have to do this again after resetting the DB
+        user = User.objects.get_default()
+
+        try:
+            ## Test comment_mode='newest'
+            # Create node
+            calc = CalculationNode().store()
+            calc_uuid = calc.uuid
+
+            # Creates comment
+            cmt = Comment(calc, user, self.comments[0]).store()
+            cmt_uuid = cmt.uuid
+
+            # Export calc and comment
+            export_file = os.path.join(tmp_folder, "export_file.tar.gz")
+            export([calc], outfile=export_file, silent=True)
+
+            # Update comment
+            cmt.set_content(self.comments[1])
+
+            # Check that Comment has been updated, and that there is only 1
+            export_comments = QueryBuilder().append(Comment, project=['uuid', 'content'])
+            self.assertEqual(export_comments.count(), 1)
+            self.assertEqual(export_comments.all()[0][0], cmt_uuid)
+            self.assertEqual(export_comments.all()[0][1], self.comments[1])
+
+            # Export calc and UPDATED comment
+            export_file_updated = os.path.join(tmp_folder, "export_file_updated.tar.gz")
+            export([calc], outfile=export_file_updated, silent=True)
+
+            # Reimport exported 'old' calc and comment
+            import_data(export_file, silent=True, comment_mode='newest')
+
+            # Check there are exactly 1 CalculationNode and 1 Comment
+            import_calcs = QueryBuilder().append(CalculationNode, tag='calc', project=['uuid'])
+            self.assertEqual(import_calcs.count(), 1)
+            import_comments = import_calcs.append(Comment, with_node='calc', project=['uuid', 'content'])
+            self.assertEqual(import_comments.count(), 1)
+
+            # Check the uuids have not changed
+            self.assertEqual(import_calcs.all()[0][0], calc_uuid)
+            self.assertEqual(import_comments.all()[0][1], cmt_uuid)
+
+            # Check the content of the comment has NOT been rewritten ('newest' mode)
+            self.assertEqual(import_comments.all()[0][2], self.comments[1])
+
+            ## Test comment_mode='overwrite'
+            # Reimport exported 'old' calc and comment
+            import_data(export_file, silent=True, comment_mode='overwrite')
+
+            # Check there are exactly 1 CalculationNode and 1 Comment
+            import_calcs = QueryBuilder().append(CalculationNode, tag='calc', project=['uuid'])
+            import_comments = import_calcs.append(Comment, with_node='calc', project=['uuid', 'content'])
+            self.assertEqual(import_calcs.count(), 1)
+            self.assertEqual(import_comments.count(), 1)
+
+            # Check the uuids have not changed
+            self.assertEqual(import_calcs.all()[0][0], calc_uuid)
+            self.assertEqual(import_comments.all()[0][1], cmt_uuid)
+
+            # Check the content of the comment HAS been rewritten ('overwrite' mode)
+            self.assertEqual(import_comments.all()[0][2], self.comments[0])
+
+            ## Test ValueError is raised when using a wrong comment_mode:
+            with self.assertRaises(ValueError):
+                import_data(export_file, silent=True, comment_mode='invalid')
+
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)
+
+    def test_reimport_of_comments_for_single_node(self):
+        """
+        When a node with comments already exist in the DB, and more comments are
+        imported for the same node (same UUID), test that only new comment-entries
+        are added.
+
+        Part I:
+        Create CalculationNode and 1 Comment for it.
+        Export CalculationNode with its 1 Comment to export file #1 "EXISTING database".
+        Add 3 Comments to CalculationNode.
+        Export CalculationNode with its 4 Comments to export file #2 "FULL database".
+        Reset database.
+
+        Part II:
+        Reimport export file #1 "EXISTING database".
+        Add 3 Comments to CalculationNode.
+        Export CalculationNode with its 4 Comments to export file #3 "NEW database".
+        Reset database.
+
+        Part III:
+        Reimport export file #1 "EXISTING database" (1 CalculationNode, 1 Comment).
+        Import export file #2 "FULL database" (1 CalculationNode, 4 Comments).
+        Check the database EXACTLY contains 1 CalculationNode and 4 Comments,
+        with matching UUIDS all the way through all previous Parts.
+
+        Part IV:
+        Import export file #3 "NEW database" (1 CalculationNode, 4 Comments).
+        Check the database EXACTLY contains 1 CalculationNode and 7 Comments,
+        with matching UUIDS all the way through all previous Parts.
+        NB! There should now be 7 Comments in the database. 6 of which are identical
+        in pairs, except for their UUID.
+        """
+
+        from aiida.orm import Comment, CalculationNode, QueryBuilder, User
+
+        tmp_folder = tempfile.mkdtemp()
+        export_filenames = {
+            "EXISTING": "export_EXISTING_db.tar.gz",
+            "FULL": "export_FULL_db.tar.gz",
+            "NEW": "export_NEW_db.tar.gz"
+        }
+        self.reset_database()
+
+        # Get user
+        # Will have to do this again after resetting the DB
+        user = User.objects.get_default()
+
+        try:
+            ## Part I
+            # Create node and save UUID
+            calc = CalculationNode()
+            calc.store()
+            calc_uuid = calc.uuid
+
+            # Create first comment
+            Comment(calc, user, self.comments[0]).store()
+
+            # There should be exactly: 1 CalculationNode, 1 Comment
+            export_calcs = QueryBuilder().append(CalculationNode, project=['uuid'])
+            export_comments = QueryBuilder().append(Comment, project=['uuid'])
+            self.assertEqual(export_calcs.count(), 1)
+            self.assertEqual(export_comments.count(), 1)
+
+            # Save Comment UUID before export
+            existing_comment_uuids = [str(export_comments.all()[0][0])]
+
+            # Export "EXISTING" DB
+            export_file_existing = os.path.join(tmp_folder, export_filenames["EXISTING"])
+            export([calc], outfile=export_file_existing, silent=True)
+
+            # Add remaining Comments
+            for comment in self.comments[1:]:
+                Comment(calc, user, comment).store()
+
+            # There should be exactly: 1 CalculationNode, 3 Comments (len(self.comments))
+            export_calcs = QueryBuilder().append(CalculationNode, project=['uuid'])
+            export_comments = QueryBuilder().append(Comment, project=['uuid'])
+            self.assertEqual(export_calcs.count(), 1)
+            self.assertEqual(export_comments.count(), len(self.comments))
+
+            # Save Comment UUIDs before export, there should be 4 UUIDs in total (len(self.comments))
+            full_comment_uuids = set(existing_comment_uuids)
+            for comment_uuid in export_comments.all():
+                full_comment_uuids.add(str(comment_uuid[0]))
+            self.assertEqual(len(full_comment_uuids), len(self.comments))
+
+            # Export "FULL" DB
+            export_file_full = os.path.join(tmp_folder, export_filenames["FULL"])
+            export([calc], outfile=export_file_full, silent=True)
+
+            # Clean database
+            self.reset_database()
+
+            ## Part II
+            # Reimport "EXISTING" DB
+            import_data(export_file_existing, silent=True)
+
+            # Check the database is correctly imported.
+            # There should be exactly: 1 CalculationNode, 1 Comment
+            import_calcs = QueryBuilder().append(CalculationNode, project=['uuid'])
+            import_comments = QueryBuilder().append(Comment, project=['uuid'])
+            self.assertEqual(import_calcs.count(), 1)
+            self.assertEqual(import_comments.count(), 1)
+            # Furthermore, the UUIDs should be the same
+            self.assertEqual(str(import_calcs.all()[0][0]), calc_uuid)
+            self.assertIn(str(import_comments.all()[0][0]), existing_comment_uuids)
+
+            # Add remaining Comments (again)
+            calc = orm.load_node(import_calcs.all()[0][0])  # Reload CalculationNode
+            user = User.objects.get_default()               # Get user - again
+            for comment in self.comments[1:]:
+                Comment(calc, user, comment).store()
+
+            # There should be exactly: 1 CalculationNode, 4 Comments (len(self.comments))
+            export_calcs = QueryBuilder().append(CalculationNode, project=['uuid'])
+            export_comments = QueryBuilder().append(Comment, project=['uuid'])
+            self.assertEqual(export_calcs.count(), 1)
+            self.assertEqual(export_comments.count(), len(self.comments))
+
+            # Save Comment UUIDs before export, there should be 4 UUIDs in total (len(self.comments))
+            new_comment_uuids = set(existing_comment_uuids)
+            for comment_uuid in export_comments.all():
+                new_comment_uuids.add(str(comment_uuid[0]))
+            self.assertEqual(len(new_comment_uuids), len(self.comments))
+
+            # Export "NEW" DB
+            export_file_new = os.path.join(tmp_folder, export_filenames["NEW"])
+            export([calc], outfile=export_file_new, silent=True)
+
+            # Clean database
+            self.reset_database()
+
+            ## Part III
+            # Reimport "EXISTING" DB
+            import_data(export_file_existing, silent=True)
+
+            # Check the database is correctly imported.
+            # There should be exactly: 1 CalculationNode, 1 Comment
+            import_calcs = QueryBuilder().append(CalculationNode, project=['uuid'])
+            import_comments = QueryBuilder().append(Comment, project=['uuid'])
+            self.assertEqual(import_calcs.count(), 1)
+            self.assertEqual(import_comments.count(), 1)
+            # Furthermore, the UUIDs should be the same
+            self.assertEqual(str(import_calcs.all()[0][0]), calc_uuid)
+            self.assertIn(str(import_comments.all()[0][0]), existing_comment_uuids)
+
+            # Import "FULL" DB
+            import_data(export_file_full, silent=True)
+
+            # Check the database is correctly imported.
+            # There should be exactly: 1 CalculationNode, 4 Comments (len(self.comments))
+            import_calcs = QueryBuilder().append(CalculationNode, project=['uuid'])
+            import_comments = QueryBuilder().append(Comment, project=['uuid'])
+            self.assertEqual(import_calcs.count(), 1)
+            self.assertEqual(import_comments.count(), len(self.comments))
+            # Furthermore, the UUIDs should be the same
+            self.assertEqual(str(import_calcs.all()[0][0]), calc_uuid)
+            for comment in import_comments.all():
+                comment_uuid = str(comment[0])
+                self.assertIn(comment_uuid, full_comment_uuids)
+
+            ## Part IV
+            # Import "NEW" DB
+            import_data(export_file_new, silent=True)
+
+            # Check the database is correctly imported.
+            # There should be exactly: 1 CalculationNode, 7 Comments (org. (1) + 2 x added (3) Comments)
+            # 4 of the comments are identical in pairs, except for the UUID.
+            import_calcs = QueryBuilder().append(CalculationNode, project=['uuid'])
+            import_comments = QueryBuilder().append(Comment, project=['uuid', 'content'])
+            self.assertEqual(import_calcs.count(), 1)
+            self.assertEqual(import_comments.count(), 7)
+            # Furthermore, the UUIDs should be the same
+            self.assertEqual(str(import_calcs.all()[0][0]), calc_uuid)
+            total_comment_uuids = full_comment_uuids.copy()
+            total_comment_uuids.update(new_comment_uuids)
+            for comment in import_comments.all():
+                comment_uuid = str(comment[0])
+                comment_content = str(comment[1])
+                self.assertIn(comment_uuid, total_comment_uuids)
+                self.assertIn(comment_content, self.comments)
+
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=True)
+
 
 class TestExtras(AiidaTestCase):
     """Test ex-/import cases related to Extras"""
@@ -2509,7 +3233,6 @@ class TestProvenanceRedesign(AiidaTestCase):
     def test_base_data_type_change(self):
         """ Base Data types type string changed
         Example: Bool: “data.base.Bool.” → “data.bool.Bool.”
-        Change data nodes: “data.*” → “node.data.*”
         """
         # Test content
         test_content = ("Hello", 6, -1.2399834e12, False)
@@ -2629,7 +3352,6 @@ class TestProvenanceRedesign(AiidaTestCase):
     def test_code_type_change(self):
         """ Code type string changed
         Change: “code.Bool.” → “data.code.Code.”
-        Change for all data nodes: "data.*" → “node.data.*
         """
         # Create temporary folders for the import/export files
         tmp_folder = tempfile.mkdtemp()

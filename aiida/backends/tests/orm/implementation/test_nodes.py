@@ -92,11 +92,39 @@ class TestBackendNode(AiidaTestCase):
         # Try to construct a UUID from the UUID value to prove that it has a valid UUID
         UUID(node.uuid)
 
-        # Cange a column, which should trigger the save, update the mtime and version, but leave the ctime untouched
+        # Change a column, which should trigger the save, update the mtime and version, but leave the ctime untouched
         node.label = 'test'
         self.assertEqual(node.ctime, node_ctime)
         self.assertTrue(node.mtime > node_mtime)
         self.assertEqual(node.version, 2)
+
+    def test_creation_with_time(self):
+        """
+        Test creation of a BackendNode when passing the mtime and the ctime. The passed ctime and mtime
+        should be respected since it is important for the correct import of nodes at the AiiDA import/export.
+        """
+        from aiida.orm.importexport import deserialize_attributes
+
+        ctime = deserialize_attributes('2019-02-27T16:20:12.245738', 'date')
+        mtime = deserialize_attributes('2019-02-27T16:27:14.798838', 'date')
+
+        node = self.backend.nodes.create(
+            node_type=self.node_type,
+            user=self.user,
+            label=self.node_label,
+            description=self.node_description,
+            mtime=mtime,
+            ctime=ctime)
+
+        # Check that the ctime and mtime are the given ones
+        self.assertEqual(node.ctime, ctime)
+        self.assertEqual(node.mtime, mtime)
+
+        node.store()
+
+        # Check that the given values remain even after storing
+        self.assertEqual(node.ctime, ctime)
+        self.assertEqual(node.mtime, mtime)
 
     def test_clone(self):
         """Test the `clone` method."""

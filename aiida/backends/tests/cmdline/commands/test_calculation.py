@@ -30,6 +30,9 @@ def get_result_lines(result):
 class TestVerdiCalculation(AiidaTestCase):
     """Tests for `verdi calculation`."""
 
+    # Note remove this when reenabling the tests after solving issue #2426
+    # pylint: disable=no-member,unused-variable,unused-import
+
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         super(TestVerdiCalculation, cls).setUpClass(*args, **kwargs)
@@ -97,7 +100,7 @@ class TestVerdiCalculation(AiidaTestCase):
         calc.set_process_state(ProcessState.FINISHED)
         cls.calcs.append(calc)
 
-        # Uncomment when issue 2342 is addressed
+        # Uncomment when issue 2426 is addressed
         # # Load the fixture containing a single ArithmeticAddCalculation node
         # import_archive_fixture('calcjob/arithmetic.add.aiida')
 
@@ -257,7 +260,7 @@ class TestVerdiCalculation(AiidaTestCase):
         self.assertClickResultNoException(result)
         self.assertTrue(len(get_result_lines(result)) > 0)
 
-    @unittest.skip('reenable when issue #2342 is addressed')
+    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_calculation_plugins(self):
         """Test verdi calculation plugins"""
         from aiida.plugins.entry_point import get_entry_points
@@ -275,7 +278,7 @@ class TestVerdiCalculation(AiidaTestCase):
         self.assertClickResultNoException(result)
         self.assertTrue(len(get_result_lines(result)) > len(calculation_plugins))
 
-    @unittest.skip('reenable when issue #2342 is addressed')
+    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_calculation_inputls(self):
         """Test verdi calculation inputls"""
         options = []
@@ -297,7 +300,7 @@ class TestVerdiCalculation(AiidaTestCase):
         self.assertIn('calcinfo.json', get_result_lines(result))
         self.assertIn('job_tmpl.json', get_result_lines(result))
 
-    @unittest.skip('reenable when issue #2342 is addressed')
+    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_calculation_outputls(self):
         """Test verdi calculation outputls"""
         options = []
@@ -318,7 +321,7 @@ class TestVerdiCalculation(AiidaTestCase):
         self.assertEqual(len(get_result_lines(result)), 1)
         self.assertIn('aiida.out', get_result_lines(result))
 
-    @unittest.skip('reenable when issue #2342 is addressed')
+    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_calculation_inputcat(self):
         """Test verdi calculation inputcat"""
         options = []
@@ -337,7 +340,7 @@ class TestVerdiCalculation(AiidaTestCase):
         self.assertEqual(len(get_result_lines(result)), 1)
         self.assertEqual(get_result_lines(result)[0], '2 3')
 
-    @unittest.skip('reenable when issue #2342 is addressed')
+    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_calculation_outputcat(self):
         """Test verdi calculation outputcat"""
         options = []

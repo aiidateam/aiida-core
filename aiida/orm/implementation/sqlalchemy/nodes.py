@@ -13,6 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 # pylint: disable=no-name-in-module,import-error
+from datetime import datetime
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -35,7 +36,16 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
 
     MODEL_CLASS = models.DbNode
 
-    def __init__(self, backend, node_type, user, computer=None, process_type=None, label='', description=''):
+    def __init__(self,
+                 backend,
+                 node_type,
+                 user,
+                 computer=None,
+                 process_type=None,
+                 label='',
+                 description='',
+                 ctime=None,
+                 mtime=None):
         """Construct a new `BackendNode` instance wrapping a new `DbNode` instance.
 
         :param backend: the backend
@@ -44,6 +54,8 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         :param computer: associated `BackendComputer`
         :param label: string label
         :param description: string description
+        :param ctime: The creation time as datetime object
+        :param mtime: The modification time as datetime object
         """
         # pylint: disable=too-many-arguments
         super(SqlaNode, self).__init__(backend)
@@ -61,6 +73,14 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         if computer:
             type_check(computer, SqlaComputer, 'computer is of type {}'.format(type(computer)))
             arguments['dbcomputer'] = computer.dbmodel
+
+        if ctime:
+            type_check(ctime, datetime, 'the given ctime is of type {}'.format(type(ctime)))
+            arguments['ctime'] = ctime
+
+        if mtime:
+            type_check(mtime, datetime, 'the given mtime is of type {}'.format(type(mtime)))
+            arguments['mtime'] = mtime
 
         self._dbmodel = utils.ModelWrapper(models.DbNode(**arguments))
 

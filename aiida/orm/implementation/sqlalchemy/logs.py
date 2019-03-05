@@ -118,4 +118,4 @@ class SqlaLogCollection(BackendLogCollection):
                 entry.delete()
             get_scoped_session().commit()
         else:
-            raise NotImplementedError('Only deleting all by passing an empty filer dictionary is currently supported')
+            raise NotImplementedError('Only deleting all by passing an empty filter dictionary is currently supported')

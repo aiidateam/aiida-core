@@ -25,6 +25,17 @@ class TestGroups(AiidaTestCase):
         for group in orm.Group.objects.all():
             orm.Group.objects.delete(group.id)
 
+    def test_count(self):
+        """Test the `count` method."""
+        node_00 = orm.Data().store()
+        node_01 = orm.Data().store()
+        nodes = [node_00, node_01]
+
+        group = orm.Group(label='label', description='description').store()
+        group.add_nodes(nodes)
+
+        self.assertEqual(group.count(), len(nodes))
+
     def test_creation(self):
         """Test the creation of Groups."""
         node = orm.Data()

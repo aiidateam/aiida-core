@@ -124,6 +124,15 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
         self._dbmodel.save()
         return self
 
+    def count(self):
+        """Return the number of entities in this group.
+
+        :return: integer number of entities contained within the group
+        """
+        from aiida.backends.sqlalchemy import get_scoped_session
+        session = get_scoped_session()
+        return session.query(self.MODEL_CLASS).join(self.MODEL_CLASS.dbnodes).filter(DbGroup.id == self.pk).count()
+
     @property
     def nodes(self):
         """Get an iterator to all the nodes in the group"""

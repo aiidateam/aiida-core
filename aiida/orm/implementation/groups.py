@@ -144,6 +144,13 @@ class BackendGroup(backends.BackendEntity):
         the number of nodes in the group using len().
         """
 
+    @abc.abstractproperty
+    def count(self):
+        """Return the number of entities in this group.
+
+        :return: integer number of entities contained within the group
+        """
+
     def add_nodes(self, nodes, **kwargs):  # pylint: disable=unused-argument
         """Add a set of nodes to the group.
 

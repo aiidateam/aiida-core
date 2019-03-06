@@ -36,13 +36,17 @@ class SinglefileData(Data):
         """
         return self.get_attribute('filename')
 
-    def open(self, mode='r'):  # pylint: disable=arguments-differ
+    def open(self, key=None, mode='r'):
         """Return an open file handle to the content of this data node.
 
+        :param key: optional key within the repository, by default is the `filename` set in the attributes
         :param mode: the mode with which to open the file handle
         :return: a file handle in read mode
         """
-        return self._repository.open(self.filename, mode=mode)
+        if key is None:
+            key = self.filename
+
+        return self._repository.open(key, mode=mode)
 
     def get_content(self):
         """Return the content of the single file stored for this data node.

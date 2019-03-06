@@ -137,7 +137,7 @@ class TemplatereplacerCalculation(CalcJob):
                 raise exceptions.InputValidationError("You are asking to copy a file link {}, "
                                                       "but there is no input link with such a name".format(link_name))
             if isinstance(fileobj, orm.SinglefileData):
-                local_copy_list.append((fileobj.get_file_abs_path(), dest_rel_path))
+                local_copy_list.append((fileobj.uuid, fileobj.filename, dest_rel_path))
             elif isinstance(fileobj, orm.RemoteData):  # can be a folder
                 remote_copy_list.append((fileobj.computer.uuid, fileobj.get_remote_path(), dest_rel_path))
             else:

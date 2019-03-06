@@ -381,11 +381,11 @@ class UpfData(SinglefileData):
         if self.is_stored:
             return self
 
-        with self.open('r') as handle:
+        with self.open(mode='r') as handle:
             parsed_data = parse_upf(handle)
 
         # Open in binary mode which is required for generating the md5 checksum
-        with self.open('rb') as handle:
+        with self.open(mode='rb') as handle:
             md5 = md5_from_filelike(handle)
 
         try:
@@ -457,11 +457,11 @@ class UpfData(SinglefileData):
 
         super(UpfData, self)._validate()
 
-        with self.open('r') as handle:
+        with self.open(mode='r') as handle:
             parsed_data = parse_upf(handle)
 
         # Open in binary mode which is required for generating the md5 checksum
-        with self.open('rb') as handle:
+        with self.open(mode='rb') as handle:
             md5 = md5_from_filelike(handle)
 
         try:

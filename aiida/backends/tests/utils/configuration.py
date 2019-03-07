@@ -104,3 +104,27 @@ def with_temporary_config_instance(function):
             function(*args, **kwargs)
 
     return decorated_function
+
+
+@contextlib.contextmanager
+def temporary_directory():
+    """Create a temporary directory."""
+    try:
+        temp_dir = tempfile.mkdtemp()
+        yield temp_dir
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+def with_temp_dir(function):
+    """Create a temporary directory for the duration of the wrapped function.
+
+    The path of the temporary directory is passed to the wrapped function via
+    the 'temp_dir' parameter (which it must accept).
+    """
+
+    def decorated_function(*args, **kwargs):
+        with temporary_directory() as tmpdir:
+            function(*args, temp_dir=tmpdir, **kwargs)
+
+    return decorated_function

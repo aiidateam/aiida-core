@@ -192,10 +192,19 @@ class FunctionProcess(Process):
                 if i >= first_default_pos:
                     default = defaults[i - first_default_pos]
 
+                # If the keyword was already specified, simply override the default
                 if spec.has_input(arg):
                     spec.inputs[arg].default = default
                 else:
-                    spec.input(arg, valid_type=orm.Data, default=default)
+                    # If the default is `None` make sure that the port also accepts a `NoneType`
+                    # Note that we cannot use `None` because the validation will call `isinstance` which does not work
+                    # when passing `None`, but it does work with `NoneType` which is returned by calling `type(None)`
+                    if default is None:
+                        valid_type = (orm.Data, type(None))
+                    else:
+                        valid_type = (orm.Data,)
+
+                    spec.input(arg, valid_type=valid_type, default=default)
 
             # If the function support kwargs then allow dynamic inputs, otherwise disallow
             spec.inputs.dynamic = keywords is not None

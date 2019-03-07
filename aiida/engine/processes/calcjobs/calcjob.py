@@ -374,7 +374,7 @@ class CalcJob(Process):
         this_pk = self.node.pk if self.node.pk is not None else "[UNSTORED]"
         local_copy_list = calcinfo.local_copy_list
         try:
-            validate_list_of_string_tuples(local_copy_list, tuple_length=2)
+            validate_list_of_string_tuples(local_copy_list, tuple_length=3)
         except ValidationError as exc:
             raise PluginInternalError("[presubmission of calc {}] "
                                       "local_copy_list format problem: {}".format(this_pk, exc))

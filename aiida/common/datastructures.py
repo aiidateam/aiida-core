@@ -64,7 +64,7 @@ class CalcInfo(DefaultFieldsAttributeDict):
         ('linkname_from calc to singlefile', 'subclass of singlefile', 'filename')
         Each tuple represents a file that will be retrieved from cluster and saved in SinglefileData nodes
 
-    * local_copy_list: a list of tuples with format ('localabspath', 'relativedestpath')
+    * local_copy_list: a list of tuples with format ('node_uuid', 'filename', relativedestpath')
     * remote_copy_list: a list of tuples with format ('remotemachinename', 'remoteabspath', 'relativedestpath')
     * remote_symlink_list: a list of tuples with format ('remotemachinename', 'remoteabspath', 'relativedestpath')
     * codes_info: a list of dictionaries used to pass the info of the execution of a code

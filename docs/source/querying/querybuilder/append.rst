@@ -167,7 +167,7 @@ This is a list of all implemented operators:
 |            |            |                                     | and _ as part of the string      |
 |            |            |                                     | prepend it with \\)              |
 +------------+------------+-------------------------------------+----------------------------------+
-| ilike      | Strings    | 'name':{'like':'loVely_Calc%'}      | case insensitive 'like'          |
+| ilike      | Strings    | 'name':{'ilike':'loVely_Calc%'}      | case insensitive 'like'          |
 +------------+------------+-------------------------------------+----------------------------------+
 | or         | list of    | 'id':{'or':[{'<':12}, {'==':199}]}  |                                  |
 |            | expressions|                                     |                                  |

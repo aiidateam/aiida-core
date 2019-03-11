@@ -174,7 +174,7 @@ class TemplatereplacerCalculation(CalcJob):
         codeinfo = CodeInfo()
         codeinfo.cmdline_params = cmdline_params
 
-        if input_through_stdin is not None:
+        if input_through_stdin:
             codeinfo.stdin_name = input_file_name
 
         if output_file_name:

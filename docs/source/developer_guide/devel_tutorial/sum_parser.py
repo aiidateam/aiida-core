@@ -14,7 +14,7 @@ from __future__ import absolute_import
 from aiida.orm.calculation.job.sum import SumCalculation
 from aiida.parsers.parser import Parser
 from aiida.parsers.exceptions import OutputParsingError
-from aiida.orm.data.parameter import ParameterData
+from aiida.orm.nodes.data.dict import Dict
 
 import json
 
@@ -33,7 +33,7 @@ class SumParser(Parser):
         # select the folder object
         # Check that the retrieved folder is there 
         try:
-            out_folder = retrieved[self._calc._get_linkname_retrieved()]
+            out_folder = retrieved[self._calc.link_label_retrieved]
         except KeyError:
             self.logger.error("No retrieved folder found")
             return False, ()
@@ -54,7 +54,7 @@ class SumParser(Parser):
             self.logger.error("Error parsing the output json")
             return successful,()
         
-        output_data = ParameterData(dict=out_dict)
+        output_data = Dict(dict=out_dict)
         link_name = self.get_linkname_outparams()
         new_nodes_list = [(link_name, output_data)]
                     

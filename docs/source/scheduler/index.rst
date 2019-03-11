@@ -87,24 +87,24 @@ Job resources
 
 When asking a scheduler to allocate some nodes/machines for a given job, we have to specify some job resources, such as the number of required nodes or the numbers of MPI processes per node.
 
-Unfortunately, the way of specifying this information is different on different clusters. In AiiDA, this is implemented in different subclasses of the :py:class:`aiida.scheduler.datastructures.JobResource` class. The subclass that should be used is given by the scheduler, as described in the previous section. 
+Unfortunately, the way of specifying this information is different on different clusters. In AiiDA, this is implemented in different subclasses of the :py:class:`aiida.schedulers.datastructures.JobResource` class. The subclass that should be used is given by the scheduler, as described in the previous section. 
 
-The interfaces of these subclasses are not all exactly the same. Instead, specifying the resources is similar to writing a scheduler script.  All classes define at least one method, :meth:`get_tot_num_mpiprocs <aiida.scheduler.datastructures.JobResource.get_tot_num_mpiprocs>`, that returns the total number of MPI processes requested. 
+The interfaces of these subclasses are not all exactly the same. Instead, specifying the resources is similar to writing a scheduler script.  All classes define at least one method, :meth:`get_tot_num_mpiprocs <aiida.schedulers.datastructures.JobResource.get_tot_num_mpiprocs>`, that returns the total number of MPI processes requested. 
 
-In the following, the different :class:`JobResource <aiida.scheduler.datastructures.JobResource>` subclasses are described:
+In the following, the different :class:`JobResource <aiida.schedulers.datastructures.JobResource>` subclasses are described:
 
 .. contents ::
     :local:
 
 .. note:: 
-    you can manually load a `specific` :class:`JobResource <aiida.scheduler.datastructures.JobResource>` subclass by directly importing it, e..g.
+    you can manually load a `specific` :class:`JobResource <aiida.schedulers.datastructures.JobResource>` subclass by directly importing it, e..g.
     ::
 
-        from aiida.scheduler.datastructures import NodeNumberJobResource
+        from aiida.schedulers.datastructures import NodeNumberJobResource
     
-    However, in general, you will pass the fields to set directly to the :meth:`set_option <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation.set_option>` method of a :class:`JobCalculation <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation>` object with the ``resources`` key. For instance::
+    However, in general, you will pass the fields to set directly to the :meth:`set_option <aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.set_option>` method of a :class:`CalcJobNode <aiida.orm.nodes.process.calculation.calcjob.CalcJobNode>` object with the ``resources`` key. For instance::
   
-        calc = JobCalculation(computer=...) # select here a given computer configured
+        calc = CalcJobNode(computer=...) # select here a given computer configured
                                             # in AiiDA
      
         # This assumes that the computer is configured to use a scheduler with
@@ -116,7 +116,7 @@ In the following, the different :class:`JobResource <aiida.scheduler.datastructu
 
 NodeNumberJobResource (PBS-like)
 --------------------------------
-This is the way of specifying the job resources in PBS and SLURM. The class is :py:class:`aiida.scheduler.datastructures.NodeNumberJobResource`.
+This is the way of specifying the job resources in PBS and SLURM. The class is :py:class:`aiida.schedulers.datastructures.NodeNumberJobResource`.
 
 Once an instance of the class is obtained, you have the following fields that you can set:
 
@@ -138,7 +138,7 @@ The same can be achieved passing the fields directly to the constructor::
 
     res = NodeNumberJobResource(num_machines=4, num_mpiprocs_per_machine=16)
 
-or, even better, directly calling the :meth:`set_option <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation.set_option>` method of the :class:`JobCalculation <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation>` class (assuming here that ``calc`` is your calculation object) for the ``resources`` key::
+or, even better, directly calling the :meth:`set_option <aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.set_option>` method of the :class:`CalcJobNode <aiida.orm.nodes.process.calculation.calcjob.CalcJobNode>` class (assuming here that ``calc`` is your calculation object) for the ``resources`` key::
 
     calc.set_option('resources', {"num_machines": 4, "num_mpiprocs_per_machine": 16})
 
@@ -173,7 +173,7 @@ If you want to specifiy single value in num_mpiprocs_per_machine and  num_cores_
 
 ParEnvJobResource (SGE-like)
 ----------------------------
-In SGE and similar schedulers, one has to specify a *parallel environment* and the *total number of CPUs* requested. The class is :py:class:`aiida.scheduler.datastructures.ParEnvJobResource`.
+In SGE and similar schedulers, one has to specify a *parallel environment* and the *total number of CPUs* requested. The class is :py:class:`aiida.schedulers.datastructures.ParEnvJobResource`.
 
 Once an instance of the class is obtained, you have the following fields that you can set:
 
@@ -194,6 +194,6 @@ Some examples:
 
     res = ParEnvJobResource(parallel_env='mpi', tot_num_mpiprocs=64)
 
-* even better, directly calling the :meth:`set_option <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation.set_option>` method of the :meth:`JobCalculation <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation>` class (assuming here that ``calc`` is your calculation object) for the ``resources`` key::
+* even better, directly calling the :meth:`set_option <aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.set_option>` method of the :meth:`CalcJobNode <aiida.orm.nodes.process.calculation.calcjob.CalcJobNode>` class (assuming here that ``calc`` is your calculation object) for the ``resources`` key::
 
     calc.set_option('resources', {"parallel_env": 'mpi', "tot_num_mpiprocs": 64})

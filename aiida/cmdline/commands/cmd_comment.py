@@ -7,45 +7,58 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=superfluous-parens
-"""
-This allows to manage comments from command line.
-"""
+"""`verdi comment` command."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.utils import decorators, echo, multi_line_input
+from aiida.common import exceptions
 
 
 @verdi.group('comment')
 def verdi_comment():
-    """Inspect, create and manage comments."""
-    pass
+    """Inspect, create and manage node comments."""
 
 
 @verdi_comment.command()
-@click.option('--comment', '-c', type=str, required=False)
-@arguments.NODES(required=True)
+@options.NODES()
+@click.argument('content', type=click.STRING, required=False)
 @decorators.with_dbenv()
-def add(comment, nodes):
-    """
-    Add comment to one or more nodes in the database
-    """
-    from aiida import orm
-
-    user = orm.User.objects.get_default()
-
-    if not comment:
-        comment = multi_line_input.edit_comment()
+def add(nodes, content):
+    """Add a comment to one or multiple nodes."""
+    if not content:
+        content = multi_line_input.edit_comment()
 
     for node in nodes:
-        node.add_comment(comment, user)
+        node.add_comment(content)
 
-    echo.echo_info("Comment added to node(s) '{}'".format(", ".join([str(node.pk) for node in nodes])))
+    echo.echo_success('comment added to {} nodes'.format(len(nodes)))
+
+
+@verdi_comment.command()
+@click.argument('comment_id', type=int, metavar='COMMENT_ID')
+@click.argument('content', type=click.STRING, required=False)
+@decorators.with_dbenv()
+def update(comment_id, content):
+    """Update a comment."""
+    from aiida.orm.comments import Comment
+
+    try:
+        comment = Comment.objects.get(comment_id)
+    except (exceptions.NotExistent, exceptions.MultipleObjectsError):
+        echo.echo_critical('comment<{}> not found'.format(comment_id))
+
+    if content is None:
+        content = multi_line_input.edit_comment(comment.content)
+
+    comment.set_content(content)
+
+    echo.echo_success('comment<{}> updated'.format(comment_id))
 
 
 @verdi_comment.command()
@@ -53,112 +66,50 @@ def add(comment, nodes):
 @arguments.NODES()
 @decorators.with_dbenv()
 def show(user, nodes):
-    """
-    Show the comments of (a) node(s) in the database
-    """
+    """Show the comments for one or multiple nodes."""
     for node in nodes:
+
         all_comments = node.get_comments()
 
         if user is not None:
-            to_print = [i for i in all_comments if i['user__email'] == user.email]
-            if not to_print:
-                valid_users = ", ".join(set(["'" + i['user__email'] + "'" for i in all_comments]))
-                echo.echo_info("Nothing found for user '{}'.\n"
-                               "Valid users found for Node {} are: {}.".format(user, node.pk, valid_users))
+            comments = [comment for comment in all_comments if comment.user.email == user.email]
+
+            if not comments:
+                valid_users = ', '.join(set(comment.user.email for comment in all_comments))
+                echo.echo_warning('no comments found for user {}'.format(user))
+                echo.echo_info('valid users found for Node<{}>: {}'.format(node.pk, valid_users))
 
         else:
-            to_print = all_comments
+            comments = all_comments
 
-        for i in to_print:
+        for comment in comments:
             comment_msg = [
-                "***********************************************************", "Comment of '{}' on {}".format(
-                    i['user__email'], i['ctime'].strftime("%Y-%m-%d %H:%M")), "PK {} ID {}. Last modified on {}".format(
-                        node.pk, i['pk'], i['mtime'].strftime("%Y-%m-%d %H:%M")), "", "{}".format(i['content']), ""
+                '***********************************************************',
+                'Comment<{}> for Node<{}> by {}'.format(comment.id, node.pk, comment.user.email),
+                'Created on {}'.format(comment.ctime.strftime('%Y-%m-%d %H:%M')),
+                'Last modified on {}'.format(comment.mtime.strftime('%Y-%m-%d %H:%M')),
+                '\n{}\n'.format(comment.content),
             ]
-            echo.echo_info("\n".join(comment_msg))
+            echo.echo('\n'.join(comment_msg))
 
-        # If there is nothing to print, print a message
-        if not to_print:
-            echo.echo_info("No comments found.")
+        if not comments:
+            echo.echo_info('no comments found')
 
 
 @verdi_comment.command()
-@click.option(
-    '--all',
-    '-a',
-    'remove_all',
-    default=False,
-    is_flag=True,
-    help='If used, deletes all the comments of the active user attached to the node')
 @options.FORCE()
-@arguments.NODE()
-@click.argument('comment_id', type=int, required=False, metavar='COMMENT_ID')
+@click.argument('comment', type=int, required=False, metavar='COMMENT_ID')
 @decorators.with_dbenv()
-def remove(remove_all, force, node, comment_id):
-    """
-    Remove comment(s) of a node. The user can only remove their own comments.
-
-    pk = The pk (an integer) of the node
-
-    id = #ID of the comment to be removed from node #PK
-    """
-    # Note: in fact, the user can still manually delete any comment
-    from aiida import orm
-
-    user = orm.User.objects.get_default()
-
-    if comment_id is None and not remove_all:
-        echo.echo_error("One argument between -a and ID must be provided")
-        return 101
-
-    if comment_id is not None and remove_all:
-        echo.echo_error("Cannot use -a together with a comment id")
-        return 102
-
-    if remove_all:
-        comment_id = None
+def remove(force, comment):
+    """Remove a comment."""
+    from aiida.orm.comments import Comment
 
     if not force:
-        if remove_all:
-            click.confirm("Delete all comments of user {} on node <{}>? ".format(user, node.pk), abort=True)
-        else:
-            click.confirm("Delete comment? ", abort=True)
+        click.confirm('Are you sure you want to remove comment<{}>'.format(comment), abort=True)
 
-    comments = node.get_comment_obj(comment_id=comment_id, user=user)
-    for comment in comments:
-        comment.delete()
-    echo.echo_info("Deleted {} comments.".format(len(comments)))
-
-    return 0
-
-
-@verdi_comment.command()
-@click.option('--comment', '-c', type=str, required=False)
-@arguments.NODE()
-@click.argument('comment_id', type=int, metavar='COMMENT_ID')
-@decorators.with_dbenv()
-def update(comment, node, comment_id):
-    """
-    Update a comment.
-
-    id      = The id of the comment
-    comment = The comment (a string) to be added to the node(s)
-    """
-    from aiida import orm
-
-    user = orm.User.objects.get_default()
-
-    # read the comment from terminal if it is not on command line
-    if comment is None:
-        try:
-            current_comment = node.get_comments(comment_id)[0]
-        except IndexError:
-            echo.echo_error("Comment with id '{}' not found".format(comment_id))
-            return 1
-
-        comment = multi_line_input.edit_comment(current_comment['content'])
-
-    # pylint: disable=protected-access
-    node._update_comment(comment, comment_id, user)
-
-    return 0
+    try:
+        Comment.objects.delete(comment)
+    except exceptions.NotExistent as exception:
+        echo.echo_critical('failed to remove comment<{}>: {}'.format(comment, exception))
+    else:
+        echo.echo_success('removed comment<{}>'.format(comment))

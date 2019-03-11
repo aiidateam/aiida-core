@@ -95,7 +95,7 @@ You can also iterate through all query results::
 
 Instances of :py:class:`IcsdEntry <aiida.tools.dbimporters.plugins.icsd.IcsdEntry>` have following methods:
 
-* **get_cif_node()**: Return an instance of :py:class:`CifData <aiida.orm.data.cif.CifData>`, which can be used in an AiiDA workflow.
+* **get_cif_node()**: Return an instance of :py:class:`CifData <aiida.orm.nodes.data.cif.CifData>`, which can be used in an AiiDA workflow.
 
 * **get_aiida_structure()**: Return an AiiDA structure
 

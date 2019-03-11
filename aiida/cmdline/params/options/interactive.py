@@ -12,14 +12,14 @@
     :synopsis: Tools and an option class for interactive parameter entry with
     additional features such as help lookup.
 """
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import click
 
-from aiida.cmdline.params.options.conditional import ConditionalOption
 from aiida.cmdline.utils import echo
+from .conditional import ConditionalOption
 
 
 def noninteractive(ctx):

@@ -13,31 +13,33 @@ from __future__ import absolute_import
 import os
 from aiida.backends import settings
 from aiida.common.exceptions import ConfigurationError, MissingConfigurationError
-from aiida.common.setup import get_config, get_profile_config, parse_repository_uri
+from aiida.common.setup import parse_repository_uri
+from aiida.manage.configuration import get_config
 
 
 TESTING_MODE = False
 
 try:
-    confs = get_config()
+    config = get_config()
 except MissingConfigurationError:
-    raise MissingConfigurationError("Please run the AiiDA Installation, no config found")
+    raise MissingConfigurationError("Please run the AiiDA installation, no config found")
 
 if settings.AIIDADB_PROFILE is None:
     raise ConfigurationError("AIIDADB_PROFILE not defined, did you load django "
                              "through the AiiDA load_dbenv()?")
 
-profile_conf = get_profile_config(settings.AIIDADB_PROFILE, conf_dict=confs)
+PROFILE = config.current_profile
+PROFILE_CONF = PROFILE.dictionary
 
 # put all database specific portions of settings here
-BACKEND = profile_conf.get('AIIDADB_BACKEND', 'django')
-DBENGINE = profile_conf.get('AIIDADB_ENGINE', '')
-DBNAME = profile_conf.get('AIIDADB_NAME', '')
-DBUSER = profile_conf.get('AIIDADB_USER', '')
-DBPASS = profile_conf.get('AIIDADB_PASS', '')
-DBHOST = profile_conf.get('AIIDADB_HOST', '')
-DBPORT = profile_conf.get('AIIDADB_PORT', '')
-REPOSITORY_URI = profile_conf.get('AIIDADB_REPOSITORY_URI', '')
+BACKEND = PROFILE_CONF.get('AIIDADB_BACKEND', 'django')
+DBENGINE = PROFILE_CONF.get('AIIDADB_ENGINE', '')
+DBNAME = PROFILE_CONF.get('AIIDADB_NAME', '')
+DBUSER = PROFILE_CONF.get('AIIDADB_USER', '')
+DBPASS = PROFILE_CONF.get('AIIDADB_PASS', '')
+DBHOST = PROFILE_CONF.get('AIIDADB_HOST', '')
+DBPORT = PROFILE_CONF.get('AIIDADB_PORT', '')
+REPOSITORY_URI = PROFILE_CONF.get('AIIDADB_REPOSITORY_URI', '')
 
 
 # Checks on the REPOSITORY_* variables

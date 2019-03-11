@@ -7,12 +7,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Unit tests for plugin parameter type."""
+"""Tests for the `PluginParamType`."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import click
-import mock
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.params.types.plugin import PluginParamType
@@ -20,7 +20,7 @@ from aiida.plugins.entry_point import get_entry_point_from_string
 
 
 class TestPluginParamType(AiidaTestCase):
-    """Unit tests for plugin parameter type."""
+    """Tests for the `PluginParamType`."""
 
     def test_group_definition(self):
         """
@@ -58,18 +58,18 @@ class TestPluginParamType(AiidaTestCase):
         Test the functionality of the get_entry_point_from_string which will take an entry point string
         and try to map it onto a valid entry point that is part of the groups defined for the parameter.
         """
-        param = PluginParamType(group='calculations')
-        entry_point = get_entry_point_from_string('aiida.calculations:job')
+        param = PluginParamType(group='transports')
+        entry_point = get_entry_point_from_string('aiida.transports:ssh')
 
         # Invalid entry point strings
         with self.assertRaises(ValueError):
-            param.get_entry_point_from_string('aiida.calculation:job')
+            param.get_entry_point_from_string('aiida.transport:ssh')
 
         with self.assertRaises(ValueError):
-            param.get_entry_point_from_string('aiid.calculations:job')
+            param.get_entry_point_from_string('aiid.transports:ssh')
 
         with self.assertRaises(ValueError):
-            param.get_entry_point_from_string('aiida..calculations:job')
+            param.get_entry_point_from_string('aiida..transports:ssh')
 
         # Unsupported entry points for all formats
         with self.assertRaises(ValueError):
@@ -83,20 +83,20 @@ class TestPluginParamType(AiidaTestCase):
 
         # Non-existent entry points for all formats
         with self.assertRaises(ValueError):
-            param.get_entry_point_from_string('aiida.calculations:not_existent')
+            param.get_entry_point_from_string('aiida.transports:not_existent')
 
         with self.assertRaises(ValueError):
-            param.get_entry_point_from_string('calculations:not_existent')
+            param.get_entry_point_from_string('transports:not_existent')
 
         with self.assertRaises(ValueError):
             param.get_entry_point_from_string('not_existent')
 
         # Valid entry point strings
-        self.assertEquals(param.get_entry_point_from_string('aiida.calculations:job').name, entry_point.name)
-        self.assertEquals(param.get_entry_point_from_string('calculations:job').name, entry_point.name)
-        self.assertEquals(param.get_entry_point_from_string('job').name, entry_point.name)
+        self.assertEqual(param.get_entry_point_from_string('aiida.transports:ssh').name, entry_point.name)
+        self.assertEqual(param.get_entry_point_from_string('transports:ssh').name, entry_point.name)
+        self.assertEqual(param.get_entry_point_from_string('ssh').name, entry_point.name)
 
-    def test_get_entry_point_from_string_ambiguous(self):
+    def test_get_entry_point_from_ambiguous(self):
         """
         Test the functionality of the get_entry_point_from_string which will take an entry point string
         and try to map it onto a valid entry point that is part of the groups defined for the parameter.
@@ -109,37 +109,37 @@ class TestPluginParamType(AiidaTestCase):
             param.get_entry_point_from_string('tcod')
 
         # Passing PARTIAL or FULL should allow entry point to be returned
-        self.assertEquals(param.get_entry_point_from_string('aiida.tools.dbexporters:tcod').name, entry_point.name)
-        self.assertEquals(param.get_entry_point_from_string('tools.dbexporters:tcod').name, entry_point.name)
+        self.assertEqual(param.get_entry_point_from_string('aiida.tools.dbexporters:tcod').name, entry_point.name)
+        self.assertEqual(param.get_entry_point_from_string('tools.dbexporters:tcod').name, entry_point.name)
 
     def test_convert(self):
         """
         Test that the convert method returns the correct entry point
         """
-        param = PluginParamType(group=('calculations', 'data'))
+        param = PluginParamType(group=('transports', 'data'))
 
-        entry_point = param.convert('aiida.calculations:job', None, None)
-        self.assertEquals(entry_point.name, 'job')
+        entry_point = param.convert('aiida.transports:ssh', None, None)
+        self.assertEqual(entry_point.name, 'ssh')
         # self.assertTrue(isinstance(entry_point, EntryPoint))
 
-        entry_point = param.convert('calculations:job', None, None)
-        self.assertEquals(entry_point.name, 'job')
+        entry_point = param.convert('transports:ssh', None, None)
+        self.assertEqual(entry_point.name, 'ssh')
         # self.assertTrue(isinstance(entry_point, EntryPoint))
 
-        entry_point = param.convert('job', None, None)
-        self.assertEquals(entry_point.name, 'job')
+        entry_point = param.convert('ssh', None, None)
+        self.assertEqual(entry_point.name, 'ssh')
         # self.assertTrue(isinstance(entry_point, EntryPoint))
 
         entry_point = param.convert('aiida.data:structure', None, None)
-        self.assertEquals(entry_point.name, 'structure')
+        self.assertEqual(entry_point.name, 'structure')
         # self.assertTrue(isinstance(entry_point, EntryPoint))
 
         entry_point = param.convert('data:structure', None, None)
-        self.assertEquals(entry_point.name, 'structure')
+        self.assertEqual(entry_point.name, 'structure')
         # self.assertTrue(isinstance(entry_point, EntryPoint))
 
         entry_point = param.convert('structure', None, None)
-        self.assertEquals(entry_point.name, 'structure')
+        self.assertEqual(entry_point.name, 'structure')
         # self.assertTrue(isinstance(entry_point, EntryPoint))
 
         with self.assertRaises(click.BadParameter):
@@ -149,18 +149,18 @@ class TestPluginParamType(AiidaTestCase):
         """
         Test that the convert method returns the loaded entry point if load=True at construction time of parameter
         """
-        param = PluginParamType(group=('calculations', 'data'), load=True)
-        entry_point_job = get_entry_point_from_string('aiida.calculations:job')
+        param = PluginParamType(group=('transports', 'data'), load=True)
+        entry_point_ssh = get_entry_point_from_string('aiida.transports:ssh')
         entry_point_structure = get_entry_point_from_string('aiida.data:structure')
 
-        entry_point = param.convert('aiida.calculations:job', None, None)
-        self.assertTrue(entry_point, entry_point_job)
+        entry_point = param.convert('aiida.transports:ssh', None, None)
+        self.assertTrue(entry_point, entry_point_ssh)
 
-        entry_point = param.convert('calculations:job', None, None)
-        self.assertTrue(entry_point, entry_point_job)
+        entry_point = param.convert('transports:ssh', None, None)
+        self.assertTrue(entry_point, entry_point_ssh)
 
-        entry_point = param.convert('job', None, None)
-        self.assertTrue(entry_point, entry_point_job)
+        entry_point = param.convert('ssh', None, None)
+        self.assertTrue(entry_point, entry_point_ssh)
 
         entry_point = param.convert('aiida.data:structure', None, None)
         self.assertTrue(entry_point, entry_point_structure)
@@ -180,27 +180,27 @@ class TestPluginParamType(AiidaTestCase):
         means there should never be ambiguity and specifying a full entry point string is not necessary, however,
         when the user decides to user either a FULL or PARTIAL string anyway, the completion should match that syntax
         """
-        param = PluginParamType(group=('calculations'))
-        entry_point_minimal = 'job'
-        entry_point_partial = 'calculations:job'
-        entry_point_full = 'aiida.calculations:job'
+        param = PluginParamType(group=('transports'))
+        entry_point_minimal = 'ssh'
+        entry_point_partial = 'transports:ssh'
+        entry_point_full = 'aiida.transports:ssh'
 
-        options = [item[0] for item in param.complete(None, 'jo')]
+        options = [item[0] for item in param.complete(None, 'ss')]
         self.assertIn(entry_point_minimal, options)
 
-        options = [item[0] for item in param.complete(None, 'job')]
+        options = [item[0] for item in param.complete(None, 'ssh')]
         self.assertIn(entry_point_minimal, options)
 
-        options = [item[0] for item in param.complete(None, 'calculations:jo')]
+        options = [item[0] for item in param.complete(None, 'transports:ss')]
         self.assertIn(entry_point_partial, options)
 
-        options = [item[0] for item in param.complete(None, 'calculations:job')]
+        options = [item[0] for item in param.complete(None, 'transports:ssh')]
         self.assertIn(entry_point_partial, options)
 
-        options = [item[0] for item in param.complete(None, 'aiida.calculations:jo')]
+        options = [item[0] for item in param.complete(None, 'aiida.transports:ss')]
         self.assertIn(entry_point_full, options)
 
-        options = [item[0] for item in param.complete(None, 'aiida.calculations:job')]
+        options = [item[0] for item in param.complete(None, 'aiida.transports:ssh')]
         self.assertIn(entry_point_full, options)
 
     def test_complete_amibguity(self):

@@ -1,8 +1,3 @@
-##################
-Working with AiiDA
-##################
-
-
 ======================
 Command line interface
 ======================
@@ -11,6 +6,7 @@ Command line interface
     :maxdepth: 4
 
     ../verdi/verdi_user_guide
+    ../verdi/properties
 
 
 =========
@@ -39,6 +35,7 @@ Calculations
 
     ../state/calculation_state
     resultmanager
+    inline_calculations
 
 ==========
 Data types
@@ -51,11 +48,20 @@ Data types
     ../datatypes/kpoints
     ../datatypes/functionality
 
+======
+Groups
+======
+
+.. toctree::
+    :maxdepth: 4
+
+    groups
+
 ==========
 Schedulers
 ==========
 
-As described in the section about calculations, ``JobCalculation`` instances are submitted by the daemon to an external scheduler.
+As described in the section about calculations, ``CalcJobNode`` instances are submitted by the daemon to an external scheduler.
 For this functionality to work, AiiDA needs to be able to interact with these schedulers.
 Interfaces have been written for some of the most used schedulers.
 
@@ -80,17 +86,11 @@ Querying data
 .. toctree::
     :maxdepth: 4
 
-    ../querying/index.rst
+    ../querying/querybuilder/intro
+    ../querying/querybuilder/append
+    ../querying/querybuilder/queryhelp
+    ../querying/backend
 
-
-================
-Legacy workflows
-================
-
-.. toctree::
-    :maxdepth: 4
-
-    ../old_workflows/index.rst
 
 
 =======
@@ -101,3 +101,34 @@ Backups
     :maxdepth: 4
 
     ../backup/index.rst
+
+===============
+Troubleshooting
+===============
+
+.. toctree::
+    :maxdepth: 4
+
+    troubleshooting.rst
+
+========
+REST API
+========
+
+.. toctree::
+    :maxdepth: 4
+
+    ../restapi/index.rst
+
+========
+Cookbook
+========
+
+.. toctree::
+    :maxdepth: 4
+
+    cookbook.rst
+
+
+
+

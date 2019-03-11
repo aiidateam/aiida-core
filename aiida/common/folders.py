@@ -7,14 +7,22 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Utility functions to operate on filesystem folders."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
+import fnmatch
+import io
+import itertools
 import os
 import shutil
-import fnmatch
 import tempfile
-import io
+
+try:
+    from pathlib import Path
+except ImportError:
+    from pathlib2 import Path
 
 import six
 
@@ -22,15 +30,28 @@ from aiida.common.utils import get_repository_folder
 
 # If True, tries to make everything (dirs, files) group-writable.
 # Otherwise, tries to make everything only readable and writable by the user.
-# TODO: put it in a global variable, and check if it really works!
+GROUP_WRITABLE = True
+
+VALID_SECTIONS = ['node']
 
 
-group_writable = True
+def find_path(root, dir_name):
+    """Iteratively recurse uopwards from a root folder to try and find a given directory.
 
-_valid_sections = ['node', 'workflow']
+    :param root: path to start from
+    :param dir_name: name of the directory to try and find
+    :return: path of the directory if found
+    :raises OSError: if directory could not be found
+    """
+    path = Path(os.path.abspath(root))
+    for parent in itertools.chain([path], path.parents):
+        directory = parent / dir_name
+        if directory.is_dir():
+            return directory
+    raise OSError('No directory found')
 
 
-class Folder(object):
+class Folder(object):  # pylint: disable=useless-object-inheritance
     """
     A class to manage generic folders, avoiding to get out of
     specific given folder borders.
@@ -55,12 +76,9 @@ class Folder(object):
             folder_limit = os.path.abspath(folder_limit)
 
             # check that it is a subfolder
-            if not os.path.commonprefix([abspath,
-                                         folder_limit]) == folder_limit:
-                raise ValueError(
-                    "The absolute path for this folder is not within the "
-                    "folder_limit. abspath={}, folder_limit={}.".format(
-                        abspath, folder_limit))
+            if not os.path.commonprefix([abspath, folder_limit]) == folder_limit:
+                raise ValueError("The absolute path for this folder is not within the "
+                                 "folder_limit. abspath={}, folder_limit={}.".format(abspath, folder_limit))
 
         self._abspath = abspath
         self._folder_limit = folder_limit
@@ -70,20 +88,20 @@ class Folder(object):
         """
         Return the mode with which the folders should be created
         """
-        if group_writable:
+        if GROUP_WRITABLE:
             return 0o770
-        else:
-            return 0o700
+
+        return 0o700
 
     @property
     def mode_file(self):
         """
         Return the mode with which the files should be created
         """
-        if group_writable:
+        if GROUP_WRITABLE:
             return 0o660
-        else:
-            return 0o600
+
+        return 0o600
 
     def get_subfolder(self, subfolder, create=False, reset_limit=False):
         """
@@ -100,8 +118,7 @@ class Folder(object):
 
         :Returns: a Folder object pointing to the subfolder.
         """
-        dest_abs_dir = os.path.abspath(os.path.join(
-            self.abspath, six.text_type(subfolder)))
+        dest_abs_dir = os.path.abspath(os.path.join(self.abspath, six.text_type(subfolder)))
 
         if reset_limit:
             # Create a new Folder object, with a limit to itself (cannot go
@@ -111,8 +128,7 @@ class Folder(object):
             # Create a new Folder object, with the same limit of the parent
             folder_limit = self.folder_limit
 
-        new_folder = Folder(abspath=dest_abs_dir,
-                            folder_limit=folder_limit)
+        new_folder = Folder(abspath=dest_abs_dir, folder_limit=folder_limit)
 
         if create:
             new_folder.create()
@@ -138,14 +154,12 @@ class Folder(object):
             the second is True if the element is a file, False if it is a
             directory.
         """
-        file_list = [fname for fname in os.listdir(self.abspath)
-                     if fnmatch.fnmatch(fname, pattern)]
+        file_list = [fname for fname in os.listdir(self.abspath) if fnmatch.fnmatch(fname, pattern)]
 
         if only_paths:
             return file_list
-        else:
-            return [(fname, not os.path.isdir(os.path.join(self.abspath, fname)))
-                    for fname in file_list]
+
+        return [(fname, not os.path.isdir(os.path.join(self.abspath, fname))) for fname in file_list]
 
     def create_symlink(self, src, name):
         """
@@ -172,6 +186,7 @@ class Folder(object):
         :param overwrite: if ``False``, raises an error on existing destination;
                 otherwise, delete it first.
         """
+        # pylint: disable=too-many-branches
         if dest_name is None:
             filename = six.text_type(os.path.basename(src))
         else:
@@ -199,8 +214,7 @@ class Folder(object):
                     # This automatically overwrites files
                     shutil.copyfile(src, dest_abs_path)
                 else:
-                    raise IOError("destination already exists: {}".format(
-                        os.path.join(dest_abs_path)))
+                    raise IOError("destination already exists: {}".format(os.path.join(dest_abs_path)))
             else:
                 shutil.copyfile(src, dest_abs_path)
         elif os.path.isdir(src):
@@ -213,8 +227,7 @@ class Folder(object):
                     # This automatically overwrites files
                     shutil.copytree(src, dest_abs_path)
                 else:
-                    raise IOError("destination already exists: {}".format(
-                        os.path.join(dest_abs_path)))
+                    raise IOError("destination already exists: {}".format(os.path.join(dest_abs_path)))
             else:
                 shutil.copytree(src, dest_abs_path)
         else:
@@ -222,51 +235,38 @@ class Folder(object):
 
         return dest_abs_path
 
-    def create_file_from_filelike(self, src_filelike, dest_name):
+    def create_file_from_filelike(self, filelike, filename, mode='wb', encoding=None):
+        """Create a file with the given filename from a filelike object.
+
+        :param filelike: a filelike object whose contents to copy
+        :param filename: the filename for the file that is to be created
+        :param mode: the mode with which the target file will be written
+        :param encoding: the encoding with which the target file will be written
+        :return: the absolute filepath of the created file
         """
-        Create a file from a file-like object.
+        filename = six.text_type(filename)
+        filepath = self.get_abs_path(filename)
 
-        :note: if the current file position in src_filelike is not 0,
-          only the contents from the current file position to the end of the
-          file will be copied in the new file.
+        with io.open(filepath, mode=mode, encoding=encoding) as handle:
 
-        :param src_filelike: the file-like object (e.g., if you have
-            a string called s, you can pass ``io.StringIO(s)``)
-        :param dest_name: the destination filename will have this file name.
-        """
-        filename = six.text_type(dest_name)
+            # In python 2 a string literal can either be of unicode or string (bytes) type. Since we do not know what
+            # will be coming in, if the requested mode is not binary, in the case of incoming bytes, the content will
+            # have to be encoded. Therefore in the case of a non-binary mode for python2, we attempt to encode the
+            # incoming filelike object and in case of failure do nothing.
+            if six.PY2 and 'b' not in mode:
+                import codecs
+                utf8reader = codecs.getreader('utf8')
 
-        # I get the full path of the filename, checking also that I don't
-        # go beyond the folder limits
-        dest_abs_path = self.get_abs_path(filename)
+                try:
+                    shutil.copyfileobj(utf8reader(filelike), handle)
+                except (UnicodeDecodeError, UnicodeEncodeError):
+                    shutil.copyfileobj(filelike, handle)
+            else:
+                shutil.copyfileobj(filelike, handle)
 
-        # If Py2, the incoming filelike may contain a unicode or string type.
-        # We want to write explicity with UTF8 encoding, so io.open requires
-        # a unicode type. 
-        # First we try and use a UTF8 stream reader wrapper to decode the characters 
-        # from the incoming filelike object as if they are UFT8 encoded. 
-        # If a unicode type is encountered, Python will attempt to convert to a str 
-        # type using the ASCII codec which will fail if any non ASCII chars are 
-        # present, raising a UnicodeEncodeError exception. In this case, as we already 
-        # have unicode type text, we can catch this and call shutil.copyfileobj without 
-        # the wrapper.
-        # In Py3, all str types are unicode, so we can avoid using the wrapper.
-        import codecs
-        utf8wrapper = codecs.getreader('utf8')
+        os.chmod(filepath, self.mode_file)
 
-        with io.open(dest_abs_path, 'w', encoding='utf8') as dest_fhandle:
-            if six.PY2:  
-                try: 
-                    shutil.copyfileobj(utf8wrapper(src_filelike), dest_fhandle)
-                except UnicodeEncodeError as e:
-                    shutil.copyfileobj(src_filelike, dest_fhandle)
-            else:  
-                shutil.copyfileobj(src_filelike, dest_fhandle)
-
-        # Set the mode
-        os.chmod(dest_abs_path, self.mode_file)
-
-        return dest_abs_path
+        return filepath
 
     def remove_path(self, filename):
         """
@@ -282,7 +282,6 @@ class Folder(object):
             shutil.rmtree(dest_abs_path)
         else:
             os.remove(dest_abs_path)
-
 
     def get_abs_path(self, relpath, check_existence=False):
         """
@@ -307,20 +306,22 @@ class Folder(object):
 
         if check_existence:
             if not os.path.exists(dest_abs_path):
-                raise OSError("{} does not exist within the folder {}".format(
-                    relpath, self.abspath))
+                raise OSError("{} does not exist within the folder {}".format(relpath, self.abspath))
 
         return dest_abs_path
 
-    def open(self, name, mode='r', encoding='utf8'):
+    def open(self, name, mode='r', encoding='utf8', check_existence=False):
         """
-        Open a file in the current folder and return the corresponding
-        file object.
+        Open a file in the current folder and return the corresponding file object.
+
+        :param check_existence: if False, just return the file path.
+            Otherwise, also check if the file or directory actually exists.
+            Raise OSError if it does not.
         """
         if 'b' in mode:
-            encoding=None
-        
-        return io.open(self.get_abs_path(name), mode, encoding=encoding)
+            encoding = None
+
+        return io.open(self.get_abs_path(name, check_existence=check_existence), mode, encoding=encoding)
 
     @property
     def abspath(self):
@@ -329,7 +330,6 @@ class Folder(object):
         """
         return self._abspath
 
-
     @property
     def folder_limit(self):
         """
@@ -337,13 +337,11 @@ class Folder(object):
         """
         return self._folder_limit
 
-
     def exists(self):
         """
         Return True if the folder exists, False otherwise.
         """
         return os.path.exists(self.abspath)
-
 
     def isfile(self, relpath):
         """
@@ -374,7 +372,6 @@ class Folder(object):
         if create_empty_folder:
             self.create()
 
-
     def create(self):
         """
         Creates the folder, if it does not exist on the disk yet.
@@ -386,7 +383,6 @@ class Folder(object):
         """
         if not self.exists():
             os.makedirs(self.abspath, mode=self.mode_dir)
-
 
     def replace_with_folder(self, srcdir, move=False, overwrite=False):
         """
@@ -413,8 +409,7 @@ class Folder(object):
         if overwrite:
             self.erase()
         elif self.exists():
-            raise IOError("Location {} already exists, and overwrite is set to "
-                          "False".format(self.abspath))
+            raise IOError("Location {} already exists, and overwrite is set to False".format(self.abspath))
 
         # Create parent dir, if needed, with the right mode
         pardir = os.path.dirname(self.abspath)
@@ -427,16 +422,15 @@ class Folder(object):
             shutil.copytree(srcdir, self.abspath)
 
         # Set the mode also for the current dir, recursively
-        for dirpath, dirnames, filenames in os.walk(self.abspath,
-                                                    followlinks=False):
+        for dirpath, _, filenames in os.walk(self.abspath, followlinks=False):
             # dirpath should already be absolute, because I am passing
             # an absolute path to os.walk
             os.chmod(dirpath, self.mode_dir)
-            for f in filenames:
+            for filename in filenames:
                 # do not change permissions of symlinks (this would
                 # actually change permissions of the linked file/dir)
                 # Toc check whether this is a big speed loss
-                full_file_path = os.path.join(dirpath, f)
+                full_file_path = os.path.join(dirpath, filename)
                 if not os.path.islink(full_file_path):
                     os.chmod(full_file_path, self.mode_file)
 
@@ -499,10 +493,9 @@ class RepositoryFolder(Folder):
 
         Pass the uuid as a string.
         """
-        if section not in _valid_sections:
+        if section not in VALID_SECTIONS:
             retstr = ("Repository section '{}' not allowed. "
-                "Valid sections are: {}".format(
-                    section, ",".join(_valid_sections)))
+                      "Valid sections are: {}".format(section, ",".join(VALID_SECTIONS)))
             raise ValueError(retstr)
         self._section = section
         self._uuid = uuid
@@ -519,15 +512,16 @@ class RepositoryFolder(Folder):
         # class.
         entity_dir = os.path.join(
             get_repository_folder('repository'), six.text_type(section),
-            six.text_type(uuid)[:2], six.text_type(uuid)[2:4], six.text_type(uuid)[4:])
+            six.text_type(uuid)[:2],
+            six.text_type(uuid)[2:4],
+            six.text_type(uuid)[4:])
         dest = os.path.join(entity_dir, six.text_type(subfolder))
 
         # Internal variable of this class
         self._subfolder = subfolder
 
         # This will also do checks on the folder limits
-        super(RepositoryFolder, self).__init__(
-            abspath=dest, folder_limit=entity_dir)
+        super(RepositoryFolder, self).__init__(abspath=dest, folder_limit=entity_dir)
 
     @property
     def section(self):
@@ -556,7 +550,4 @@ class RepositoryFolder(Folder):
         """
         return RepositoryFolder(self.section, self.uuid)
 
-
         # NOTE! The get_subfolder method will return a Folder object, and not a RepositoryFolder object
-
-

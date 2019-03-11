@@ -7,15 +7,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Utility functions and classes to interact with AiiDA export archives."""
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import contextlib
 import io
 import os
-import tarfile
 import sys
+import tarfile
 import zipfile
 from functools import wraps
 
@@ -23,10 +23,10 @@ from six.moves import range
 
 from aiida.common.exceptions import ContentNotExistent, InvalidOperation
 from aiida.common.folders import SandboxFolder
-import aiida.utils.json as json
+from aiida.common import json
 
 
-class Archive(object):
+class Archive(object):  # pylint: disable=useless-object-inheritance
     """
     Utility class to operate on exported archive files or directories.
 
@@ -59,27 +59,29 @@ class Archive(object):
         if self.folder:
             self.folder.erase()
 
-    def ensure_within_context(function):
+    def ensure_within_context(function):  # pylint: disable=no-self-argument
         """Decorator to ensure that the instance is called within a context manager."""
 
         @wraps(function)
         def decorated(self, *args, **kwargs):
-            if not self._folder:
+            """The decorated function is guaranteed to be within the context."""
+            if not self.folder:
                 raise InvalidOperation('the Archive class should be used within a context')
 
-            return function(self, *args, **kwargs)
+            return function(self, *args, **kwargs)  # pylint: disable=not-callable
 
         return decorated
 
-    def ensure_unpacked(function):
+    def ensure_unpacked(function):  # pylint: disable=no-self-argument
         """Decorator to ensure that the archive is unpacked before entering the decorated function."""
 
         @wraps(function)
         def decorated_function(self, *args, **kwargs):
+            """The decorated function is guaranteed to have access to the unpacked archive."""
             if not self.unpacked:
                 self.unpack()
 
-            return function(self, *args, **kwargs)
+            return function(self, *args, **kwargs)  # pylint: disable=not-callable
 
         return decorated_function
 
@@ -87,7 +89,7 @@ class Archive(object):
     def unpack(self):
         """Unpack the archive and store the contents in a sandbox."""
         if os.path.isdir(self.filepath):
-            extract_tree(self.filepath, self.folder, silent=True)
+            extract_tree(self.filepath, self.folder)
         else:
             if tarfile.is_tarfile(self.filepath):
                 extract_tar(self.filepath, self.folder, silent=True, nodes_export_subfolder='nodes')
@@ -248,32 +250,30 @@ def extract_zip(infile, folder, nodes_export_subfolder="nodes", silent=False):
     :param nodes_export_subfolder: name of the subfolder for AiiDA nodes
     :param silent: suppress debug print
     """
-    import os
-    import zipfile
-
+    # pylint: disable=fixme
     if not silent:
         print("READING DATA AND METADATA...")
 
     try:
-        with zipfile.ZipFile(infile, "r", allowZip64=True) as zip:
+        with zipfile.ZipFile(infile, "r", allowZip64=True) as handle:
 
-            if not zip.namelist():
+            if not handle.namelist():
                 raise ValueError("The zip file is empty.")
 
-            zip.extract(path=folder.abspath, member='metadata.json')
-            zip.extract(path=folder.abspath, member='data.json')
+            handle.extract(path=folder.abspath, member='metadata.json')
+            handle.extract(path=folder.abspath, member='data.json')
 
             if not silent:
                 print("EXTRACTING NODE DATA...")
 
-            for membername in zip.namelist():
+            for membername in handle.namelist():
                 # Check that we are only exporting nodes within
                 # the subfolder!
                 # TODO: better check such that there are no .. in the
                 # path; use probably the folder limit checks
                 if not membername.startswith(nodes_export_subfolder + os.sep):
                     continue
-                zip.extract(path=folder.abspath, member=membername)
+                handle.extract(path=folder.abspath, member=membername)
     except zipfile.BadZipfile:
         raise ValueError("The input file format for import is not valid (not" " a zip file)")
 
@@ -287,22 +287,20 @@ def extract_tar(infile, folder, nodes_export_subfolder="nodes", silent=False):
     :param nodes_export_subfolder: name of the subfolder for AiiDA nodes
     :param silent: suppress debug print
     """
-    import os
-    import tarfile
-
+    # pylint: disable=fixme
     if not silent:
         print("READING DATA AND METADATA...")
 
     try:
-        with tarfile.open(infile, "r:*", format=tarfile.PAX_FORMAT) as tar:
+        with tarfile.open(infile, "r:*", format=tarfile.PAX_FORMAT) as handle:
 
-            tar.extract(path=folder.abspath, member=tar.getmember('metadata.json'))
-            tar.extract(path=folder.abspath, member=tar.getmember('data.json'))
+            handle.extract(path=folder.abspath, member=handle.getmember('metadata.json'))
+            handle.extract(path=folder.abspath, member=handle.getmember('data.json'))
 
             if not silent:
                 print("EXTRACTING NODE DATA...")
 
-            for member in tar.getmembers():
+            for member in handle.getmembers():
                 if member.isdev():
                     # safety: skip if character device, block device or FIFO
                     print("WARNING, device found inside the import file: {}".format(member.name), file=sys.stderr)
@@ -318,26 +316,25 @@ def extract_tar(infile, folder, nodes_export_subfolder="nodes", silent=False):
                 # path; use probably the folder limit checks
                 if not member.name.startswith(nodes_export_subfolder + os.sep):
                     continue
-                tar.extract(path=folder.abspath, member=member)
+                handle.extract(path=folder.abspath, member=member)
     except tarfile.ReadError:
         raise ValueError("The input file format for import is not valid (1)")
 
 
-def extract_tree(infile, folder, silent=False):
+def extract_tree(infile, folder):
     """
     Prepare to import nodes from plain file system tree.
 
     :param infile: path
     :param folder: a SandboxFolder, used to extract the file tree
-    :param silent: suppress debug print
     """
-    import os
 
     def add_files(args, path, files):
+        """Add files to a folder."""
         folder = args['folder']
         root = args['root']
-        for f in files:
-            fullpath = os.path.join(path, f)
+        for filename in files:
+            fullpath = os.path.join(path, filename)
             relpath = os.path.relpath(fullpath, root)
             if os.path.isdir(fullpath):
                 if os.path.dirname(relpath) != '':
@@ -348,7 +345,7 @@ def extract_tree(infile, folder, silent=False):
                 folder.get_subfolder(os.path.dirname(relpath) + os.sep, create=True)
             folder.insert_path(os.path.abspath(fullpath), relpath)
 
-    os.path.walk(infile, add_files, {'folder': folder, 'root': infile})
+    os.walk(infile, add_files, {'folder': folder, 'root': infile})
 
 
 def extract_cif(infile, folder, nodes_export_subfolder="nodes", aiida_export_subfolder="aiida", silent=False):
@@ -365,11 +362,11 @@ def extract_cif(infile, folder, nodes_export_subfolder="nodes", aiida_export_sub
         inside the TCOD CIF internal file tree
     :param silent: suppress debug print
     """
-    import os
+    # pylint: disable=unused-argument,too-many-locals,invalid-name
     from six.moves import urllib
     import CifFile
     from aiida.common.exceptions import ValidationError
-    from aiida.common.utils import md5_file, sha1_file
+    from aiida.common.files import md5_file, sha1_file
     from aiida.tools.dbexporters.tcod import decode_textfield
 
     values = CifFile.ReadCif(infile)
@@ -385,7 +382,7 @@ def extract_cif(infile, folder, nodes_export_subfolder="nodes", aiida_export_sub
                 folder.get_subfolder(folder.get_abs_path(dest_path), create=True)
             continue
         contents = values['_tcod_file_contents'][i]
-        if contents == '?' or contents == '.':
+        if contents in ['?', '.']:
             uri = values['_tcod_file_uri'][i]
             if uri is not None and uri != '?' and uri != '.':
                 contents = urllib.request.urlopen(uri).read()

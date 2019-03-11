@@ -11,7 +11,7 @@
 In this module, AiiDA provides REST API to access different
 AiiDA nodes stored in database. The REST API is implemented
 using Flask RESTFul framework. The REST urls provided for
-node types Computer, Node (Calculation , Data, Code), Workflows.
+node types Computer, Node (Calculation , Data, Code).
 
 Examples:
 

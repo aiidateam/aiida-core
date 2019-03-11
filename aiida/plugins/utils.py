@@ -20,6 +20,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 import io
 
+
 def registry_cache_folder_name():
     """
     return the name of the subfolder of aiida_dir where registry caches are stored.
@@ -32,10 +33,10 @@ def registry_cache_folder_path():
     return the fully resolved path to the cache folder
     """
     from os import path as osp
-    from aiida.common.setup import get_aiida_dir
-    aiida_dir = get_aiida_dir()
+    from aiida.manage.configuration import get_config
+    config = get_config()
     cache_dir = registry_cache_folder_name()
-    return osp.join(aiida_dir, cache_dir)
+    return osp.join(config.dirpath, cache_dir)
 
 
 def registry_cache_folder_exists():

@@ -31,7 +31,6 @@ VISUALIZATION_FORMATS = ['jmol', 'vesta']
 @verdi_data.group('cif')
 def cif():
     """Manipulation of CIF data objects."""
-    pass
 
 
 @cif.command('list')
@@ -40,7 +39,7 @@ def cif():
 @decorators.with_dbenv()
 def cif_list(raw, formula_mode, past_days, groups, all_users):
     """List store CifData objects."""
-    from aiida.orm.data.cif import CifData
+    from aiida.orm import CifData
     from tabulate import tabulate
 
     elements = None
@@ -89,6 +88,18 @@ def cif_show(data, fmt):
     show_function(fmt, data)
 
 
+@cif.command('content')
+@arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:cif',)))
+@decorators.with_dbenv()
+def cif_content(data):
+    """Show the content of the file behind CifData objects."""
+    for node in data:
+        try:
+            echo.echo(node.get_content())
+        except IOError as exception:
+            echo.echo_warning('could not read the content for CifData<{}>: {}'.format(node.pk, str(exception)))
+
+
 @cif.command('export')
 @arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:cif',)))
 @options.EXPORT_FORMAT(type=click.Choice(EXPORT_FORMATS), default='cif')
@@ -111,7 +122,7 @@ def cif_export(**kwargs):
 @decorators.with_dbenv()
 def cif_import(filename):
     """Import structure into CifData object."""
-    from aiida.orm.data.cif import CifData
+    from aiida.orm import CifData
 
     try:
         node, _ = CifData.get_or_create(filename)

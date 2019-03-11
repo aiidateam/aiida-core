@@ -11,9 +11,10 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import errno
-import tempfile
 import os
+import tempfile
 
 from click.testing import CliRunner
 
@@ -43,9 +44,9 @@ class TestVerdiGraph(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         super(TestVerdiGraph, cls).setUpClass()
-        from aiida.orm import Node
+        from aiida.orm import Data
 
-        cls.node = Node().store()
+        cls.node = Data().store()
 
         # some of the export tests write in the current directory,
         # make sure it is writeable and we don't pollute the current one
@@ -72,7 +73,7 @@ class TestVerdiGraph(AiidaTestCase):
         options = [root_node]
         try:
             result = self.cli_runner.invoke(cmd_graph.generate, options)
-            self.assertIsNone(result.exception)
+            self.assertIsNone(result.exception, result.output)
             self.assertTrue(os.path.isfile(filename))
         finally:
             delete_temporary_file(filename)
@@ -98,14 +99,14 @@ class TestVerdiGraph(AiidaTestCase):
 
         # Non-existant pk
 
-        ### Check that an arbitrary pk definately can't be loaded
+        # Check that an arbitrary pk definately can't be loaded
         root_node = 123456789
         try:
             node = load_node(pk=root_node)
             self.assertIsNone(node)
         except NotExistent:
             pass
-        ###  Make sure verdi graph rejects this non-existant pk
+        #  Make sure verdi graph rejects this non-existant pk
         try:
             filename = str(root_node) + '.dot'
             options = [str(root_node)]
@@ -129,7 +130,7 @@ class TestVerdiGraph(AiidaTestCase):
             options = [opt, None, root_node]
             try:
                 result = self.cli_runner.invoke(cmd_graph.generate, options)
-                self.assertIsNone(result.exception)
+                self.assertIsNone(result.exception, result.output)
                 self.assertTrue(os.path.isfile(filename))
             finally:
                 delete_temporary_file(filename)
@@ -140,7 +141,7 @@ class TestVerdiGraph(AiidaTestCase):
                 options = [opt, value, root_node]
                 try:
                     result = self.cli_runner.invoke(cmd_graph.generate, options)
-                    self.assertIsNone(result.exception)
+                    self.assertIsNone(result.exception, result.output)
                     self.assertTrue(os.path.isfile(filename))
                 finally:
                     delete_temporary_file(filename)
@@ -167,7 +168,7 @@ class TestVerdiGraph(AiidaTestCase):
             options = [flag, root_node]
             try:
                 result = self.cli_runner.invoke(cmd_graph.generate, options)
-                self.assertIsNone(result.exception)
+                self.assertIsNone(result.exception, result.output)
                 self.assertTrue(os.path.isfile(filename))
             finally:
                 delete_temporary_file(filename)
@@ -189,7 +190,7 @@ class TestVerdiGraph(AiidaTestCase):
                 options = [option, fileformat, root_node]
                 try:
                     result = self.cli_runner.invoke(cmd_graph.generate, options)
-                    self.assertIsNone(result.exception)
+                    self.assertIsNone(result.exception, result.output)
                     self.assertTrue(os.path.isfile(filename))
                 finally:
                     delete_temporary_file(filename)

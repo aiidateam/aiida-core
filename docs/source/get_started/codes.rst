@@ -122,7 +122,7 @@ For any type of code, you will also be asked for:
 At the end, you will get a confirmation command, and also the ID of the code in the
 database (the ``pk``, i.e. the principal key, and the ``uuid``).
 
-.. note:: Codes are a subclass of the :py:class:`Node <aiida.orm.node.Node>` class,
+.. note:: Codes are a subclass of the :py:class:`Node <aiida.orm.nodes.Node>` class,
    and as such you can attach any set of attributes to the code. These can
    be extremely useful for querying: for instance, you can attach the version
    of the code as an attribute, or the code family (for instance: "pw.x code of 

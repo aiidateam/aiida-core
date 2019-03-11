@@ -25,7 +25,6 @@ from aiida.cmdline.params import options
 @verdi.group('user')
 def verdi_user():
     """Inspect and manage users."""
-    pass
 
 
 def get_default(value, ctx):
@@ -81,7 +80,7 @@ def configure(user, first_name, last_name, institution, password, non_interactiv
     """
     Create or update a user.  Email address us taken as the user identiier.
     """
-    # pylint: disable=W0612,W0613
+    # pylint: disable=unused-argument,unused-variable
 
     if first_name is not None:
         user.first_name = first_name
@@ -113,14 +112,12 @@ def user_list(color):
     List all the users.
     :param color: Show the list using colors
     """
-    from aiida.common.utils import get_configured_user_email
-    from aiida.common.exceptions import ConfigurationError
+    from aiida.manage.manager import get_manager
     from aiida import orm
 
-    try:
-        current_user = get_configured_user_email()
-    except ConfigurationError:
-        current_user = None
+    manager = get_manager()
+
+    current_user = manager.get_profile().default_user_email
 
     if current_user is not None:
         pass
@@ -133,7 +130,7 @@ def user_list(color):
             name_pieces.append(user.first_name)
         if user.last_name:
             name_pieces.append(user.last_name)
-        full_name = " ".join(name_pieces)
+        full_name = ' '.join(name_pieces)
         if full_name:
             full_name = " {}".format(full_name)
 

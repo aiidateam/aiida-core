@@ -17,8 +17,8 @@ import click
 from click.testing import CliRunner
 from click.types import IntParamType
 
-from aiida.cmdline.params.options.interactive import InteractiveOption
-from aiida.cmdline.params.options import NON_INTERACTIVE
+from . import NON_INTERACTIVE
+from .interactive import InteractiveOption
 
 
 class Only42IntParamType(IntParamType):
@@ -252,10 +252,11 @@ class InteractiveOptionTest(unittest.TestCase):
         """
         if not value:
             return -1
-        elif value != 42:
+
+        if value != 42:
             raise click.BadParameter('invalid', param=param)
-        else:
-            return value
+
+        return value
 
     def test_after_callback_valid(self):
         """

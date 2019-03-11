@@ -10,7 +10,7 @@
 """
 Utilities for low-level querying of plugins.
 
-Interface for operations that have to connect the 
+Interface for operations that have to connect the
 registry online and that operate on the cache folder.
 """
 

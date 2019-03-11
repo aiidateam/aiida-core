@@ -7,22 +7,20 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Module that contains the class definitions necessary to offer support for
-queries to Materials Project.
-"""
-
+"""Module that contains the class definitions necessary to offer support for queries to Materials Project."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import pytest
-from aiida.tools.dbimporters import DbImporterFactory
+
 from aiida.backends.testbase import AiidaTestCase
+from aiida.plugins import DbImporterFactory
 
 
 def run_materialsproject_api_tests():
-    from aiida.settings import profile_conf
-    return profile_conf.get('run_materialsproject_api_tests', False)
+    from aiida.settings import PROFILE_CONF
+    return PROFILE_CONF.get('run_materialsproject_api_tests', False)
 
 
 class TestMaterialsProject(AiidaTestCase):

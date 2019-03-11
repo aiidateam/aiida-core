@@ -40,9 +40,9 @@ class WorkChainDocumenter(ClassDocumenter):
         try:
             import aiida
             aiida.try_load_dbenv()
-            from aiida.work.workchain import WorkChain
+            from aiida.engine import WorkChain
             return issubclass(member, WorkChain)
-        except:
+        except Exception:
             return False
 
 
@@ -126,7 +126,7 @@ class AiidaWorkchainDirective(Directive):
         """
         Builds the doctree for a port namespace.
         """
-        from aiida.work.ports import InputPort, PortNamespace
+        from aiida.engine.processes.ports import InputPort, PortNamespace
 
         result = nodes.bullet_list(bullet='*')
         for name, port in sorted(port_namespace.items()):

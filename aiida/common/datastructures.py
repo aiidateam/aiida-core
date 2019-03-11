@@ -7,102 +7,26 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-This module defines the main data structures used by Calculations.
-"""
+"""Module to define commonly used data structures."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from aiida.common.extendeddicts import DefaultFieldsAttributeDict, Enumerate
 
-class CalcState(Enumerate):
-    pass
+from enum import Enum, IntEnum
 
-_sorted_datastates = (
-    'NEW',  # just created
-    'TOSUBMIT',  # used by the executionmanager to submit new calculations scheduled to be submitted
-    'SUBMITTING',  # being submitted to cluster
-    'WITHSCHEDULER',  # on the scheduler (on any unfinished status: QUEUED, QUEUED_HELD, SUSPENDED, RUNNING)
-    'COMPUTED',  # calculation finished on scheduler, not yet retrieved (both DONE and FAILED)
-    'RETRIEVING',  # while retrieving data
-    'PARSING',  # while parsing data
-    'FINISHED',  # final state of the calculation: data retrieved and eventually parsed
-    'SUBMISSIONFAILED',  # error occurred during submission phase
-    'RETRIEVALFAILED',  # error occurred during retrieval phase
-    'PARSINGFAILED',  # error occurred during parsing phase due to a problem in the parse
-    'FAILED',  # the parser recognized the calculation as failed
-    'IMPORTED',  # the calculation was imported from another DB
-)
+from .extendeddicts import DefaultFieldsAttributeDict
 
-# The order of states is not random: is the order of precedence.
-# This is used to verify that calculations always procede in the correct order.
-# calc_states, instead, has a random order
-calc_states = CalcState(_sorted_datastates)
+__all__ = ('CalcJobState', 'CalcInfo', 'CodeInfo', 'CodeRunMode')
 
 
-def sort_states(list_states, use_key=False):
-    """
-    Given a list of state names, return a sorted list of states (the first
-    is the most recent) sorted according to their logical appearance in
-    the DB (i.e., NEW before of SUBMITTING before of FINISHED).
+class CalcJobState(Enum):
+    """The sub state of a CalcJobNode while its Process is in an active state (i.e. Running or Waiting)."""
 
-    .. note:: The order of the internal variable _sorted_datastates is
-      used.
-
-    :param list_states: a list (or tuple) of state strings.
-
-    :param use_key: if True, expects that each element is not
-        just a string, but a pair (someobject, string).
-        Only string is used to sort (should be the state string),
-        and only someobject is returned in the final list.
-
-    :return: a sorted list of the given data states.
-
-    :raise ValueError: if any of the given states is not a valid state.
-    """
-    datastates_order_dict = {state: idx for idx, state in enumerate(
-        _sorted_datastates)}
-
-    try:
-        if use_key:
-            list_to_sort = [(datastates_order_dict[st[1]], st[0])
-                            for st in list_states]
-        else:
-            list_to_sort = [(datastates_order_dict[st], st)
-                            for st in list_states]
-
-    except KeyError as e:
-        raise ValueError("At least one of the provided states is not "
-                         "valid ({})".format(e.args[0]))
-
-    # In-place sort
-    list_to_sort.sort()
-
-    return [_[1] for _ in list_to_sort[::-1]]
-
-
-def is_progressive_state_change(state_old, state_new):
-    """
-    Return whether a state change from `state_old` to `state_new` would be progressive, i.e. moving forward in time
-
-    :param state_old: the old calculation state
-    :param state_new: the new calculation state
-    :return: True if the change from `state_old` to `state_new` is progressive, False otherwise
-    :raise: ValueError if either `state_old` or `state_new` is not a valid calculation state
-    """
-    states = list(_sorted_datastates)
-
-    try:
-        index_old = states.index(state_old)
-    except ValueError:
-        raise ValueError('state_old {} is not a valid calculation state'.format(state_old))
-
-    try:
-        index_new = states.index(state_new)
-    except ValueError:
-        raise ValueError('state_new {} is not a valid calculation state'.format(state_new))
-
-    return index_new > index_old
+    UPLOADING = 'uploading'
+    SUBMITTING = 'submitting'
+    WITHSCHEDULER = 'withscheduler'
+    RETRIEVING = 'retrieving'
+    PARSING = 'parsing'
 
 
 class CalcInfo(DefaultFieldsAttributeDict):
@@ -140,7 +64,7 @@ class CalcInfo(DefaultFieldsAttributeDict):
         ('linkname_from calc to singlefile', 'subclass of singlefile', 'filename')
         Each tuple represents a file that will be retrieved from cluster and saved in SinglefileData nodes
 
-    * local_copy_list: a list of tuples with format ('localabspath', 'relativedestpath')
+    * local_copy_list: a list of tuples with format ('node_uuid', 'filename', relativedestpath')
     * remote_copy_list: a list of tuples with format ('remotemachinename', 'remoteabspath', 'relativedestpath')
     * remote_symlink_list: a list of tuples with format ('remotemachinename', 'remoteabspath', 'relativedestpath')
     * codes_info: a list of dictionaries used to pass the info of the execution of a code
@@ -170,20 +94,6 @@ class CalcInfo(DefaultFieldsAttributeDict):
         'codes_info',
         'codes_run_mode'
     )
-
-
-class CodeRunmode(Enumerate):
-    pass
-
-# these are the possible ways to execute more than one code in the same scheduling job
-# if parallel, the codes will be executed as something like:
-#   code1.x &
-#   code2.x &
-#   wait
-# if serial, it will be:
-#   code1.x
-#   code2.x
-code_run_modes = CodeRunmode(('PARALLEL', 'SERIAL'))
 
 
 class CodeInfo(DefaultFieldsAttributeDict):
@@ -230,64 +140,66 @@ class CodeInfo(DefaultFieldsAttributeDict):
       on the remote computer)
     * ``code_uuid``: the uuid of the code associated to the CodeInfo
     """
-    _default_fields = ('cmdline_params',  # as a list of strings
-                       'stdin_name',
-                       'stdout_name',
-                       'stderr_name',
-                       'join_files',
-                       'withmpi',
-                       'code_uuid'
-                       )
+    _default_fields = (
+        'cmdline_params',  # as a list of strings
+        'stdin_name',
+        'stdout_name',
+        'stderr_name',
+        'join_files',
+        'withmpi',
+        'code_uuid'
+    )
 
 
-class WorkflowState(Enumerate):
-    pass
+class CodeRunMode(IntEnum):
+    """Enum to indicate the way the codes of a calculation should be run.
+
+    For PARALLEL, the codes for a given calculation will be run in parallel by running them in the background::
+
+        code1.x &
+        code2.x &
+
+    For the SERIAL option, codes will be executed sequentially by running for example the following::
+
+        code1.x
+        code2.x
+    """
+
+    SERIAL = 0
+    PARALLEL = 1
 
 
-wf_states = WorkflowState((
-    'CREATED',
-    'INITIALIZED',
-    'RUNNING',
-    'FINISHED',
-    'SLEEP',
-    'ERROR'
-))
+class LazyStore(object):
+    """
+    A container that provides a mapping to objects based on a key, if the object is not
+    found in the container when it is retrieved it will created using a provided factory
+    method
+    """
 
+    def __init__(self):
+        self._store = {}
 
-class WorkflowDataType(Enumerate):
-    pass
+    def get(self, key, factory):
+        """
+        Get a value in the store based on the key, if it doesn't exist it will be created
+        using the factory method and returned
 
+        :param key: the key of the object to get
+        :param factory: the factory used to create the object if necessary
+        :return: the object
+        """
+        try:
+            return self._store[key]
+        except KeyError:
+            obj = factory()
+            self._store[key] = obj
+            return obj
 
-wf_data_types = WorkflowDataType((
-    'PARAMETER',
-    'RESULT',
-    'ATTRIBUTE',
-))
+    def pop(self, key):
+        """
+        Pop an object from the store based on the given key
 
-
-class WorkflowDataValueType(Enumerate):
-    pass
-
-
-wf_data_value_types = WorkflowDataValueType((
-    'NONE',
-    'JSON',
-    'AIIDA',
-))
-
-wf_start_call = "start"
-wf_exit_call = "exit"
-wf_default_call = "none"
-
-# TODO Improve/implement this!
-# class DynResourcesInfo(AttributeDict):
-#    """
-#    This object will contain a list of 'dynamical' resources to be
-#    passed from the code plugin to the ExecManager, containing
-#    things like
-#    * resources in the permanent repository, that will be simply
-#      linked locally (but copied remotely on the remote computer)
-#      to avoid a waste of permanent repository space
-#    * remote resources to be directly copied over only remotely
-#    """
-#    pass
+        :param key: the object key
+        :return: the object that was popped
+        """
+        return self._store.pop(key)

@@ -11,13 +11,14 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import abc
 import logging
 import six
 
 from . import backends
 
-__all__ = 'BackendComputer', 'BackendComputerCollection'
+__all__ = ('BackendComputer', 'BackendComputerCollection')
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -48,10 +49,6 @@ class BackendComputer(backends.BackendEntity):
         :rtype: bool
         """
 
-    @abc.abstractmethod
-    def set(self, **kwargs):
-        pass
-
     @abc.abstractproperty
     def name(self):
         pass
@@ -77,7 +74,6 @@ class BackendComputer(backends.BackendEntity):
            data to the database! (The store method can be called multiple
            times, differently from AiiDA Node objects).
         """
-        pass
 
     @abc.abstractmethod
     def get_transport_params(self):
@@ -100,7 +96,6 @@ class BackendComputer(backends.BackendEntity):
         Get this computer hostname
         :rtype: str
         """
-        pass
 
     @abc.abstractmethod
     def set_hostname(self, val):
@@ -109,7 +104,6 @@ class BackendComputer(backends.BackendEntity):
         :param val: The new hostname
         :type val: str
         """
-        pass
 
     @abc.abstractmethod
     def get_description(self):
@@ -132,7 +126,7 @@ class BackendComputer(backends.BackendEntity):
         pass
 
     @abc.abstractmethod
-    def set_scheduler_type(self, val):
+    def set_scheduler_type(self, scheduler_type):
         pass
 
     @abc.abstractmethod
@@ -140,27 +134,20 @@ class BackendComputer(backends.BackendEntity):
         pass
 
     @abc.abstractmethod
-    def set_transport_type(self, val):
+    def set_transport_type(self, transport_type):
         pass
 
 
 @six.add_metaclass(abc.ABCMeta)
-class BackendComputerCollection(backends.BackendCollection):
+class BackendComputerCollection(backends.BackendCollection[BackendComputer]):
     """The collection of Computer entries."""
 
-    ENTRY_TYPE = BackendComputer
+    ENTITY_CLASS = BackendComputer
 
     @abc.abstractmethod
-    def list_names(self):
+    def delete(self, pk):
         """
-        Return a list with all the names of the computers in the DB.
-        """
-        pass
+        Delete an entry with the given pk
 
-    @abc.abstractmethod
-    def delete(self, id):  # pylint: disable=redefined-builtin, invalid-name
-        """
-        Delete an entry with the given id
-
-        :param id: the id of the entry to delete
+        :param pk: the pk of the entry to delete
         """

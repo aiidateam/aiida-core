@@ -25,7 +25,7 @@ class BandsDataTranslator(DataTranslator):
     # A label associated to the present class (coincides with the resource name)
     __label__ = "bands"
     # The AiiDA class one-to-one associated to the present class
-    from aiida.orm.data.array.bands import BandsData
+    from aiida.orm import BandsData
     _aiida_class = BandsData
     # The string name of the AiiDA class
     _aiida_type = "data.array.bands.BandsData"
@@ -60,7 +60,7 @@ class BandsDataTranslator(DataTranslator):
         json_content = uj.decode(json_string[0])
 
         # Add Ylabel which by default is not exported
-        y_label = node.label + ' ({})'.format(node.get_attr('units'))
+        y_label = node.label + ' ({})'.format(node.get_attribute('units'))
         json_content['Y_label'] = y_label
 
         return json_content

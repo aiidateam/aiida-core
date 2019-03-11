@@ -87,10 +87,10 @@ If you use this implementation, please cite the correct reference from the follo
 Deprecated methods
 ------------------
 Originally, the ``legacy`` implementation was implemented directly into the
-:py:class:`~aiida.orm.data.array.kpoints.KpointsData` class.
+:py:class:`~aiida.orm.nodes.data.array.kpoints.KpointsData` class.
 
 In order to implement more than one method, and
-to simplify the :py:class:`~aiida.orm.data.array.kpoints.KpointsData` class,
+to simplify the :py:class:`~aiida.orm.nodes.data.array.kpoints.KpointsData` class,
 and to decouple the underlying logic from AiiDA, we have deprecated those methods, factored out the logic into
 the :py:class:`~aiida.tools.data.array.kpoints.legacy` module. The methods are currently still available
 but will be removed in future versions of AiiDA; plese use directly the wrappers
@@ -99,15 +99,15 @@ and :py:func:`aiida.tools.data.array.kpoints.get_explicit_kpoints_path` instead,
 
 The list of deprecated methods include:
 
--  :py:meth:`~aiida.orm.data.array.kpoints.KpointsData.bravais_lattice`
+-  :py:meth:`~aiida.orm.nodes.data.array.kpoints.KpointsData.bravais_lattice`
 
--  :py:meth:`~aiida.orm.data.array.kpoints.KpointsData._get_or_create_bravais_lattice`
+-  :py:meth:`~aiida.orm.nodes.data.array.kpoints.KpointsData._get_or_create_bravais_lattice`
 
--  :py:meth:`~aiida.orm.data.array.kpoints.KpointsData.set_kpoints_path`
+-  :py:meth:`~aiida.orm.nodes.data.array.kpoints.KpointsData.set_kpoints_path`
 
--  :py:meth:`~aiida.orm.data.array.kpoints.KpointsData._find_bravais_info`
+-  :py:meth:`~aiida.orm.nodes.data.array.kpoints.KpointsData._find_bravais_info`
 
--  :py:meth:`~aiida.orm.data.array.kpoints.KpointsData.find_bravais_lattice`
+-  :py:meth:`~aiida.orm.nodes.data.array.kpoints.KpointsData.find_bravais_lattice`
 
--  :py:meth:`~aiida.orm.data.array.kpoints.KpointsData.get_special_points`
+-  :py:meth:`~aiida.orm.nodes.data.array.kpoints.KpointsData.get_special_points`
 

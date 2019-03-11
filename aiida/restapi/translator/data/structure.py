@@ -28,7 +28,7 @@ class StructureDataTranslator(DataTranslator):
     # A label associated to the present class (coincides with the resource name)
     __label__ = "structures"
     # The AiiDA class one-to-one associated to the present class
-    from aiida.orm.data.structure import StructureData
+    from aiida.orm import StructureData
     _aiida_class = StructureData
     # The string name of the AiiDA class
     _aiida_type = "data.structure.StructureData"
@@ -52,6 +52,11 @@ class StructureDataTranslator(DataTranslator):
         """
         response = {}
         response["str_viz_info"] = {}
+
+        # This check is explicitly added here because sometimes
+        # None is passed here as an value for visformat.
+        if visformat is None:
+            visformat = 'xsf'
 
         if visformat in node.get_export_formats():
             try:
@@ -81,6 +86,11 @@ class StructureDataTranslator(DataTranslator):
         """
 
         response = {}
+
+        # This check is explicitly added here because sometimes
+        # None is passed here as an value for download_format.
+        if download_format is None:
+            download_format = 'cif'
 
         if download_format in node.get_export_formats():
             try:

@@ -14,8 +14,8 @@ from abc import ABCMeta, abstractmethod
 
 import six
 
-from aiida.common.exceptions import InternalError
-from aiida.orm import Computer
+from aiida import orm
+from aiida.common import exceptions
 
 
 @six.add_metaclass(ABCMeta)
@@ -41,6 +41,8 @@ class AiidaTestImplementation(object):
     # This should be set by the implementing class in setUpClass_method()
     backend = None  # type: aiida.orm.Backend
     computer = None  # type: aiida.orm.Computer
+    user = None  # type: aiida.orm.User
+    user_email = None  # type: str
 
     @abstractmethod
     def setUpClass_method(self):
@@ -49,35 +51,32 @@ class AiidaTestImplementation(object):
         You have also to set a self.computer and a self.user_email as explained in the docstring of the
         AiidaTestImplemention docstring.
         """
-        pass
 
-    @abstractmethod
     def setUp_method(self):
         pass
 
-    @abstractmethod
     def tearDown_method(self):
         pass
 
     @abstractmethod
     def tearDownClass_method(self):
         """
-        This class implements the tear down methods (e.g. cleans up the DB).
+        Backend-specific tasks for tearing down the test environment.
         """
-        pass
 
     @abstractmethod
     def clean_db(self):
         """
         This method implements the logic to fully clean the DB.
         """
-        pass
 
     def insert_data(self):
         """
         This method inserts default data into the database.
         """
-        self.computer = Computer(
+        from aiida.manage.configuration import get_config
+
+        self.computer = orm.Computer(
             name='localhost',
             hostname='localhost',
             transport_type='local',
@@ -86,6 +85,15 @@ class AiidaTestImplementation(object):
             backend=self.backend
         ).store()
 
+        self.user_email = get_config().current_profile.default_user_email
+
+        # Since the default user is needed for many operations in AiiDA, it is not deleted by clean_db.
+        # In principle, it should therefore always exist - if not we create it anyhow.
+        try:
+            self.user = orm.User.objects.get(email=self.user_email)
+        except exceptions.NotExistent:
+            self.user = orm.User(email=self.user_email).store()
+
     def get_computer(self):
         """
         A ORM Computer object present in the DB
@@ -93,7 +101,8 @@ class AiidaTestImplementation(object):
         try:
             return self.computer
         except AttributeError:
-            raise InternalError("The AiiDA Test implementation should define a self.computer in the setUpClass_method")
+            raise exceptions.InternalError(
+                "The AiiDA Test implementation should define a self.computer in the setUpClass_method")
 
     def get_user_email(self):
         """
@@ -102,4 +111,5 @@ class AiidaTestImplementation(object):
         try:
             return self.user_email
         except AttributeError:
-            raise InternalError("The AiiDA Test implementation should define a self.computer in the setUpClass_method")
+            raise exceptions.InternalError(
+                "The AiiDA Test implementation should define a self.user_email in the setUpClass_method")

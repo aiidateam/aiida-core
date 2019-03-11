@@ -14,7 +14,7 @@ from __future__ import absolute_import
 from aiida.cmdline.utils.query import formatting
 
 
-class ProjectionMapper(object):
+class ProjectionMapper(object):  # pylint: disable=useless-object-inheritance
     """
     Class to map projection names from the CLI to entity labels, attributes and formatters.
 
@@ -83,17 +83,19 @@ class CalculationProjectionMapper(ProjectionMapper):
 
     def __init__(self, projections, projection_labels=None, projection_attributes=None, projection_formatters=None):
         # pylint: disable=too-many-locals
-        from aiida.orm.calculation import Calculation
-        from aiida.orm.mixins import Sealable
+        from aiida.orm import ProcessNode
+        from aiida.orm.utils.mixins import Sealable
 
         self._valid_projections = projections
 
         sealed_key = 'attributes.{}'.format(Sealable.SEALED_KEY)
-        process_paused_key = 'attributes.{}'.format(Calculation.PROCESS_PAUSED_KEY)
-        process_label_key = 'attributes.{}'.format(Calculation.PROCESS_LABEL_KEY)
-        process_state_key = 'attributes.{}'.format(Calculation.PROCESS_STATE_KEY)
-        process_status_key = 'attributes.{}'.format(Calculation.PROCESS_STATUS_KEY)
-        exit_status_key = 'attributes.{}'.format(Calculation.EXIT_STATUS_KEY)
+        job_state_key = 'attributes.{}'.format('state')
+        scheduler_state_key = 'attributes.{}'.format('scheduler_state')
+        process_paused_key = 'attributes.{}'.format(ProcessNode.PROCESS_PAUSED_KEY)
+        process_label_key = 'attributes.{}'.format(ProcessNode.PROCESS_LABEL_KEY)
+        process_state_key = 'attributes.{}'.format(ProcessNode.PROCESS_STATE_KEY)
+        process_status_key = 'attributes.{}'.format(ProcessNode.PROCESS_STATUS_KEY)
+        exit_status_key = 'attributes.{}'.format(ProcessNode.EXIT_STATUS_KEY)
 
         default_labels = {
             'pk': 'PK',
@@ -104,6 +106,8 @@ class CalculationProjectionMapper(ProjectionMapper):
 
         default_attributes = {
             'pk': 'id',
+            'job_state': job_state_key,
+            'scheduler_state': scheduler_state_key,
             'sealed': sealed_key,
             'paused': process_paused_key,
             'process_label': process_label_key,
@@ -119,7 +123,8 @@ class CalculationProjectionMapper(ProjectionMapper):
             'mtime':
             lambda value: formatting.format_relative_time(value['mtime']),
             'state':
-            lambda value: formatting.format_state(value[process_state_key], value[process_paused_key], value[exit_status_key]),
+            lambda value: formatting.format_state(value[process_state_key], value[process_paused_key], value[
+                exit_status_key]),
             'process_state':
             lambda value: formatting.format_process_state(value[process_state_key]),
             'sealed':

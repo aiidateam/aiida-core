@@ -33,11 +33,11 @@ class TestVerdiRun(AiidaTestCase):
         """
         import tempfile
         from aiida.orm import load_node
-        from aiida.orm.calculation.function import FunctionCalculation
+        from aiida.orm import WorkFunctionNode
 
         script_content = """
 #!/usr/bin/env python
-from aiida.work import workfunction
+from aiida.engine import workfunction
 
 @workfunction
 def wf():
@@ -57,13 +57,13 @@ if __name__ == '__main__':
 
             options = [fhandle.name]
             result = self.cli_runner.invoke(cmd_run.run, options)
-            self.assertIsNone(result.exception, result.output)
+            self.assertClickResultNoException(result)
 
             # Try to load the function calculation node from the printed pk in the output
             pk = int(result.output)
             node = load_node(pk)
 
             # Verify that the node has the correct function name and content
-            self.assertTrue(isinstance(node, FunctionCalculation))
+            self.assertTrue(isinstance(node, WorkFunctionNode))
             self.assertEqual(node.function_name, 'wf')
-            self.assertEqual(open(node.function_source_file, 'r').read(), script_content)
+            self.assertEqual(node.get_function_source_code(), script_content)

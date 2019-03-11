@@ -22,13 +22,11 @@ from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv, deprecated_command
 from aiida.cmdline.utils.multi_line_input import ensure_scripts
 from aiida.common.exceptions import InputValidationError
-from aiida.control.code import CodeBuilder
 
 
 @verdi.group('code')
 def verdi_code():
     """Setup and manage codes."""
-    pass
 
 
 def get_default(key, ctx):
@@ -59,6 +57,7 @@ def get_on_computer(ctx):
 # pylint: disable=unused-argument
 def set_code_builder(ctx, param, value):
     """Set the code spec for defaults of following options."""
+    from aiida.orm.utils.builders.code import CodeBuilder
     ctx.code_builder = CodeBuilder.from_code(value)
     return value
 
@@ -79,6 +78,7 @@ def set_code_builder(ctx, param, value):
 def setup_code(non_interactive, **kwargs):
     """Setup a new Code."""
     from aiida.common.exceptions import ValidationError
+    from aiida.orm.utils.builders.code import CodeBuilder
 
     if not non_interactive:
         try:
@@ -125,6 +125,7 @@ def setup_code(non_interactive, **kwargs):
 def code_duplicate(ctx, code, non_interactive, **kwargs):
     """Create duplicate of existing Code."""
     from aiida.common.exceptions import ValidationError
+    from aiida.orm.utils.builders.code import CodeBuilder
 
     if not non_interactive:
         try:
@@ -164,7 +165,7 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
 @with_dbenv()
 def show(code, verbose):
     """Display detailed information for the given CODE."""
-    click.echo(tabulate.tabulate(code.full_text_info(verbose)))
+    click.echo(tabulate.tabulate(code.get_full_text_info(verbose)))
 
 
 @verdi_code.command()
@@ -173,13 +174,13 @@ def show(code, verbose):
 def delete(codes):
     """Delete codes that have not yet been used for calculations, i.e. if it has outgoing links."""
     from aiida.common.exceptions import InvalidOperation
-    from aiida.orm.code import delete_code
+    from aiida.orm import Node
 
     for code in codes:
         try:
             pk = code.pk
             full_label = code.full_label
-            delete_code(code)
+            Node.objects.delete(pk)  # pylint: disable=no-member
         except InvalidOperation as exception:
             echo.echo_error(str(exception))
         else:
@@ -213,7 +214,6 @@ def reveal(codes):
 # pylint: disable=unused-argument
 def update(code):
     """Update an existing code."""
-    pass
 
 
 @verdi_code.command()
@@ -252,7 +252,7 @@ def rename(ctx, code, label):
 @with_dbenv()
 def code_list(computer, input_plugin, all_entries, all_users, show_owner):
     """List the codes in the database."""
-    from aiida.orm.code import Code  # pylint: disable=redefined-outer-name
+    from aiida.orm import Code  # pylint: disable=redefined-outer-name
     from aiida import orm
 
     qb_user_filters = dict()
@@ -289,12 +289,12 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
         qb.append(Code, tag="code", filters=qb_code_filters, project=["id", "label"])
         # We have a user assigned to the code so we can ask for the
         # presence of a user even if there is no user filter
-        qb.append(orm.User, creator_of="code", project=["email"], filters=qb_user_filters)
+        qb.append(orm.User, with_node="code", project=["email"], filters=qb_user_filters)
         # We also add the filter on computer. This will automatically
         # return codes that have a computer (and of course satisfy the
         # other filters). The codes that have a computer attached are the
         # remote codes.
-        qb.append(orm.Computer, computer_of="code", project=["name"], filters=qb_computer_filters)
+        qb.append(orm.Computer, with_node="code", project=["name"], filters=qb_computer_filters)
         qb.order_by({Code: {'id': 'asc'}})
         print_list_res(qb, show_owner)
 
@@ -306,8 +306,8 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
         qb.append(Code, tag="code", filters=qb_code_filters, project=["id", "label"])
         # We have a user assigned to the code so we can ask for the
         # presence of a user even if there is no user filter
-        qb.append(orm.User, creator_of="code", project=["email"], filters=qb_user_filters)
-        qb.append(orm.Computer, computer_of="code", project=["name"])
+        qb.append(orm.User, with_node="code", project=["email"], filters=qb_user_filters)
+        qb.append(orm.Computer, with_node="code", project=["name"])
         qb.order_by({Code: {'id': 'asc'}})
         print_list_res(qb, show_owner)
 
@@ -323,7 +323,7 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
         qb.append(Code, tag="code", filters=qb_code_filters, project=["id", "label"])
         # We have a user assigned to the code so we can ask for the
         # presence of a user even if there is no user filter
-        qb.append(orm.User, creator_of="code", project=["email"], filters=qb_user_filters)
+        qb.append(orm.User, with_node="code", project=["email"], filters=qb_user_filters)
         qb.order_by({Code: {'id': 'asc'}})
         print_list_res(qb, show_owner)
 

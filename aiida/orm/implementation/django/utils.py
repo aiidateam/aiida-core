@@ -25,10 +25,17 @@ class ModelWrapper(object):
     * after ever write the updated value is flushed to the database.
     """
 
-    def __init__(self, model):
+    def __init__(self, model, auto_flush=()):
+        """Construct the ModelWrapper.
+
+        :param model: the database model instance to wrap
+        :param auto_flush: an optional tuple of database model fields that are always to be flushed, in addition to
+            the field that corresponds to the attribute being set through `__setattr__`.
+        """
         super(ModelWrapper, self).__init__()
         # Have to do it this way because we overwrite __setattr__
         object.__setattr__(self, '_model', model)
+        object.__setattr__(self, '_auto_flush', auto_flush)
 
     def __getattr__(self, item):
         if self.is_saved() and self._is_model_field(item):
@@ -39,7 +46,8 @@ class ModelWrapper(object):
     def __setattr__(self, key, value):
         setattr(self._model, key, value)
         if self.is_saved() and self._is_model_field(key):
-            self._flush(fields=(key,))
+            fields = set((key,) + self._auto_flush)
+            self._flush(fields=fields)
 
     def is_saved(self):
         return self._model.pk is not None
@@ -82,4 +90,3 @@ class ModelWrapper(object):
             new_model = self._model.__class__.objects.get(pk=self._model.pk)
             # Have to save this way so we don't hit the __setattr__ above
             object.__setattr__(self, '_model', new_model)
-

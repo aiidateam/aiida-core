@@ -2,9 +2,9 @@ TCOD database exporter
 ----------------------
 
 TCOD database exporter is used to export computation results of
-:py:class:`StructureData <aiida.orm.data.structure.StructureData>`,
-:py:class:`CifData <aiida.orm.data.cif.CifData>` and
-:py:class:`TrajectoryData <aiida.orm.data.array.trajectory.TrajectoryData>`
+:py:class:`StructureData <aiida.orm.nodes.data.structure.StructureData>`,
+:py:class:`CifData <aiida.orm.nodes.data.cif.CifData>` and
+:py:class:`TrajectoryData <aiida.orm.nodes.data.array.trajectory.TrajectoryData>`
 (or any other data type, which can be converted to them) to the
 `Theoretical Crystallography Open Database`_ (TCOD).
 
@@ -19,7 +19,7 @@ Setup
 To be able to export data to TCOD, one has to
 :ref:`install the atomic_tools dependencies to enable CIF manipulation <install_optional_dependencies>`
 as well as the `aiida-codtools <https://github.com/aiidateam/aiida-codtools>`_ plugin, and set up an
-AiiDA :py:class:`Code <aiida.orm.implementation.general.code.AbstractCode>` for ``cif_cod_deposit`` script
+AiiDA :py:class:`Code <aiida.orm.nodes.data.code.Code>` for ``cif_cod_deposit`` script
 from **cod-tools**.
 
 How to deposit a structure
@@ -50,13 +50,13 @@ Where:
 
 * ``DATATYPE`` -- one of AiiDA structural data types (at the moment of
   writing, these are
-  ``structure`` for :py:class:`StructureData <aiida.orm.data.structure.StructureData>`,
-  ``cif`` for :py:class:`CifData <aiida.orm.data.cif.CifData>` and
-  ``trajectory`` for :py:class:`TrajectoryData <aiida.orm.data.array.trajectory.TrajectoryData>`);
+  ``structure`` for :py:class:`StructureData <aiida.orm.nodes.data.structure.StructureData>`,
+  ``cif`` for :py:class:`CifData <aiida.orm.nodes.data.cif.CifData>` and
+  ``trajectory`` for :py:class:`TrajectoryData <aiida.orm.nodes.data.array.trajectory.TrajectoryData>`);
 * ``TITLE`` -- the title of the publication, where the exported data
   is/will be published; in case of personal communication, the title
   should be chosen so as to reflect the exported dataset the best;
-* ``CODE_LABEL`` -- label of AiiDA :py:class:`Code <aiida.orm.implementation.general.code.AbstractCode>`,
+* ``CODE_LABEL`` -- label of AiiDA :py:class:`Code <aiida.orm.nodes.data.code.Code>`,
   associated with *cif_cod_deposit*;
 * ``COMPUTER_NAME`` -- name of AiiDA
   :py:class:`Computer <aiida.orm.Computer>`, where
@@ -67,7 +67,7 @@ Where:
 * ``--reduce-symmetry``, ``--no-reduce-symmetry`` -- turn on/off symmetry
   reduction of the exported structure (on by default);
 * ``--parameter-data`` -- specify the PK of
-  :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>`
+  :py:class:`Dict <aiida.orm.nodes.data.dict.Dict>`
   object, describing the result of the final (or single) calculation step
   of the workflow;
 * ``--dump-aiida-database``, ``--no-dump-aiida-database`` -- turn on/off
@@ -83,7 +83,7 @@ Where:
 
 * ``--exclude-external-contents``, ``--no-exclude-external-contents`` --
   exclude contents of initial input files, that contain
-  :py:class:`source <aiida.orm.data.Data.source>` property with
+  :py:class:`source <aiida.orm.nodes.data.data.Data.source>` property with
   definitions on how to obtain the contents from external resources (on
   by default);
 * ``--gzip``, `--no-gzip`` -- turn on/off gzip compression for large
@@ -115,9 +115,9 @@ Return values
 +++++++++++++
 
 The deposition process, which is of
-:py:class:`JobCalculation <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation>`
+:py:class:`CalcJobNode <aiida.orm.nodes.process.calculation.calcjob.CalcJobNode>`
 type, returns the output of ``cif_cod_deposit``, wrapped in
-:py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>`.
+:py:class:`Dict <aiida.orm.nodes.data.dict.Dict>`.
 
 Citing
 ++++++

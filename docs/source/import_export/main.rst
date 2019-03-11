@@ -60,18 +60,17 @@ how the data is organised in the database (database schema).
 Let's have a look at the contents of the metadata.json::
 
     {
-        "conversion_info": [
-            "Converted from version 0.2 to 0.3 with external script"
-        ],
-        "export_version": "0.3",
-        "aiida_version": "0.10.0",
+        "export_version": "0.4",
+        "aiida_version": "1.0.0a4",
         "unique_identifiers": {
             "Computer": "uuid",
             "Group": "uuid",
             "User": "email",
             "Node": "uuid",
             "Attribute": null,
-            "Link": null
+            "Link": null,
+            "Log": "uuid",
+            "Comment": "uuid"
         },
         "all_fields_info": {
             "Computer": {
@@ -142,7 +141,7 @@ Let's have a look at the contents of the metadata.json::
             },
             "Group": {
                 "description": {},
-                "name": {},
+                "label": {},
                 "user": {
                     "related_name": "dbgroups",
                     "requires": "User"
@@ -150,8 +149,40 @@ Let's have a look at the contents of the metadata.json::
                 "time": {
                     "convert_type": "date"
                 },
-                "type": {},
+                "type_string": {},
                 "uuid": {}
+            },
+            "Log": {
+                "time": {
+                    "convert_type": "date"
+                },
+                "loggername": {},
+                "levelname": {},
+                "message": {},
+                "metadata": {},
+                "dbnode": {
+                    "requires": "Node",
+                    "related_name": "dblogs"
+                },
+                "uuid": {}
+            },
+            "Comment": {
+                "uuid": {},
+                "ctime": {
+                    "convert_type": "date"
+                },
+                "mtime": {
+                    "convert_type": "date"
+                },
+                "content": {},
+                "dbnode": {
+                    "related_name": "dbcomments",
+                    "requires": "Node"
+                },
+                "user": {
+                    "related_name": "dbcomments",
+                    "requires": "User"
+                }
             }
         }
     }
@@ -218,7 +249,7 @@ A sample of the *data.json* file follows::
                     "user": 2,
                     "mtime": "2016-08-21T11:55:53.132925",
                     "nodeversion": 1,
-                    "type": "data.parameter.ParameterData.",
+                    "type": "data.dict.Dict.",
                     "public": false,
                     "ctime": "2016-08-21T11:55:53.118306"
                 },
@@ -234,6 +265,17 @@ A sample of the *data.json* file follows::
                     "public": false,
                     "ctime": "2015-10-02T20:08:06.628472"
                 },
+                ...
+            },
+            "Comment": {
+                "1": {
+                    "uuid": "8c165836-6ae1-4ae8-8cf1-fb111abc483e",
+                    "ctime": "2016-08-21T11:56:05.501162",
+                    "mtime": "2016-08-21T11:56:05.501697",
+                    "content": "vc-relax calculation with cold smearing",
+                    "dbnode": 5921143,
+                    "user": 2
+                }
                 ...
             }
         },

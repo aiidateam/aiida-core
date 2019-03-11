@@ -14,10 +14,9 @@
 /.idea/
 *.egg-info
 .eggs
+.vscode
 
 # files created by coverage
-*\,cover
-coverage/
 .cache
 .pytest_cache
 .coverage

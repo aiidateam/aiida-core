@@ -19,10 +19,8 @@ from sqlalchemy.orm import sessionmaker
 
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.backends.sqlalchemy.models.computer import DbComputer
-from aiida.backends.sqlalchemy.models.user import DbUser
 from aiida.backends.sqlalchemy.utils import install_tc
 from aiida.backends.testimplbase import AiidaTestImplementation
-from aiida.common.utils import get_configured_user_email
 from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
 
 # Querying for expired objects automatically doesn't seem to work.
@@ -40,7 +38,7 @@ Session = sessionmaker(expire_on_commit=expire_on_commit)
 # in place, and these are implemented in the AiidaTestCase
 class SqlAlchemyTests(AiidaTestImplementation):
     # Specify the need to drop the table at the beginning of a test case
-    # If True, completely drops the tables and recreates the schema, 
+    # If True, completely drops the tables and recreates the schema,
     # but this is usually unnecessary and pretty slow
     # Also, if the tests are interrupted, there is the risk that the
     # DB remains dropped, so you have to do 'verdi -p test_xxx setup' again to
@@ -65,33 +63,12 @@ class SqlAlchemyTests(AiidaTestImplementation):
         else:
             self.clean_db()
         self.backend = SqlaBackend()
-        self.insert_data()
 
     def setUp_method(self):
         pass
 
     def tearDown_method(self):
         pass
-
-    def insert_data(self):
-        """
-        Insert default data into the DB.
-        """
-        email = get_configured_user_email()
-
-        has_user = DbUser.query.filter(DbUser.email == email).first()
-        if not has_user:
-            self.user = DbUser(get_configured_user_email(), "foo", "bar",
-                               "tests")
-            self.test_session.add(self.user)
-            self.test_session.commit()
-        else:
-            self.user = has_user
-
-        # Required by the calling class
-        self.user_email = self.user.email
-
-        super(SqlAlchemyTests, self).insert_data()
 
     @staticmethod
     def inject_computer(f):
@@ -105,68 +82,33 @@ class SqlAlchemyTests(AiidaTestImplementation):
         return dec
 
     def clean_db(self):
-        from aiida.backends.sqlalchemy.models.computer import DbComputer
-        from aiida.backends.sqlalchemy.models.workflow import DbWorkflow, table_workflowstep_calc, \
-            table_workflowstep_subworkflow, DbWorkflowStep, DbWorkflowData
-        from aiida.backends.sqlalchemy.models.group import DbGroup
-        from aiida.backends.sqlalchemy.models.node import DbLink
-        from aiida.backends.sqlalchemy.models.node import DbNode
-        from aiida.backends.sqlalchemy.models.log import DbLog
-        from aiida.backends.sqlalchemy.models.user import DbUser
+        from sqlalchemy.sql import table
 
-        # Delete the workflows
-        # Complicated way to make sure we 'unwind' all the relationships
-        # between workflows and their children.
-        self.test_session.connection().execute(table_workflowstep_calc.delete())
-        self.test_session.connection().execute(table_workflowstep_subworkflow.delete())
-        self.test_session.query(DbWorkflowData).delete()
-        self.test_session.query(DbWorkflowStep).delete()
-        self.test_session.query(DbWorkflow).delete()
+        DbGroupNodes = table('db_dbgroup_dbnodes')
+        DbGroup = table('db_dbgroup')
+        DbLink = table('db_dblink')
+        DbNode = table('db_dbnode')
+        DbLog = table('db_dblog')
+        DbWorkflow = table('db_dbworkflow')
+        DbAuthInfo = table('db_dbauthinfo')
+        DbUser = table('db_dbuser')
+        DbComputer = table('db_dbcomputer')
 
-        # Empty the relationship dbgroup.dbnode
-        dbgroups = self.test_session.query(DbGroup).all()
-        for dbgroup in dbgroups:
-            dbgroup.dbnodes = []
-
-        # Delete the groups
-        self.test_session.query(DbGroup).delete()
-
-        # I first need to delete the links, because in principle I could
-        # not delete input nodes, only outputs. For simplicity, since
-        # I am deleting everything, I delete the links first
-        self.test_session.query(DbLink).delete()
-
-        # Then I delete the nodes, otherwise I cannot
-        # delete computers and users
-        self.test_session.query(DbNode).delete()
-
-        # # Delete the users
-        self.test_session.query(DbUser).delete()
-
-        # Delete the computers
-        self.test_session.query(DbComputer).delete()
-
-        # Delete the logs
-        self.test_session.query(DbLog).delete()
+        self.test_session.execute(DbGroupNodes.delete())
+        self.test_session.execute(DbGroup.delete())
+        self.test_session.execute(DbLog.delete())
+        self.test_session.execute(DbLink.delete())
+        self.test_session.execute(DbNode.delete())
+        self.test_session.execute(DbWorkflow.delete())
+        self.test_session.execute(DbAuthInfo.delete())
+        self.test_session.execute(DbComputer.delete())
+        self.test_session.execute(DbUser.delete())
 
         self.test_session.commit()
 
     def tearDownClass_method(self):
-        from aiida.settings import REPOSITORY_PATH
-        from aiida.common.setup import TEST_KEYWORD
-        from aiida.common.exceptions import InvalidOperation
-        if TEST_KEYWORD not in REPOSITORY_PATH:
-            raise InvalidOperation("Be careful. The repository for the tests "
-                                   "is not a test repository. I will not "
-                                   "empty the database and I will not delete "
-                                   "the repository. Repository path: "
-                                   "{}".format(REPOSITORY_PATH))
-
-        self.clean_db()
-
+        """
+        Backend-specific tasks for tearing down the test environment.
+        """
         self.test_session.close()
         self.test_session = None
-
-        # I clean the test repository
-        shutil.rmtree(REPOSITORY_PATH, ignore_errors=True)
-        os.makedirs(REPOSITORY_PATH)

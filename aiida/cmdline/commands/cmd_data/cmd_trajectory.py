@@ -32,7 +32,6 @@ VISUALIZATION_FORMATS = ['jmol', 'xcrysden', 'mpl_heatmap', 'mpl_pos']
 @verdi_data.group('trajectory')
 def trajectory():
     """View and manipulate TrajectoryData instances."""
-    pass
 
 
 @trajectory.command('list')
@@ -40,7 +39,7 @@ def trajectory():
 @decorators.with_dbenv()
 def trajectory_list(raw, past_days, groups, all_users):
     """List trajectories stored in database."""
-    from aiida.orm.data.array.trajectory import TrajectoryData
+    from aiida.orm import TrajectoryData
     from tabulate import tabulate
 
     elements = None

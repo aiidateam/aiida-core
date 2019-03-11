@@ -84,7 +84,7 @@ def _show_xcrysden(exec_name, object_list, **kwargs):
     import subprocess
 
     if len(object_list) > 1:
-        raise MultipleObjectsError("Visualization of multiple trajectories " "is not implemented")
+        raise MultipleObjectsError("Visualization of multiple trajectories is not implemented")
     obj = object_list[0]
 
     # pylint: disable=protected-access
@@ -132,7 +132,7 @@ def _show_ase(exec_name, structure_list):
         from ase.visualize import view
         for structure in structure_list:
             view(structure.get_ase())
-    except ImportError:
+    except ImportError:  # pylint: disable=try-except-raise
         raise
 
 
@@ -173,7 +173,7 @@ def _show_vmd(exec_name, structure_list):
     import subprocess
 
     if len(structure_list) > 1:
-        raise MultipleObjectsError("Visualization of multiple objects " "is not implemented")
+        raise MultipleObjectsError("Visualization of multiple objects is not implemented")
     structure = structure_list[0]
 
     # pylint: disable=protected-access
@@ -201,7 +201,7 @@ def _show_xmgrace(exec_name, list_bands):
     import sys
     import subprocess
     import tempfile
-    from aiida.orm.data.array.bands import max_num_agr_colors
+    from aiida.orm.nodes.data.array.bands import max_num_agr_colors
 
     list_files = []
     current_band_number = 0

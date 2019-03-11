@@ -19,152 +19,258 @@ An instance of one of the implementation classes becomes a member of the :func:`
 when instantiated by the user.
 """
 
-# Warnings are issued for deprecations:
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
-import warnings
 # Checking for correct input with the inspect module
 from inspect import isclass as inspect_isclass
-
+import copy
+import logging
 import six
 from six.moves import range, zip
-
-from aiida.orm.node import Node
-
-# The SQLAlchemy functionalities:
 from sqlalchemy import and_, or_, not_, func as sa_func, select, join
 from sqlalchemy.types import Integer
 from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import cast
 from sqlalchemy.dialects.postgresql import array
-## AIIDA modules:
-# For exception handling
-from aiida.common.exceptions import InputValidationError, ConfigurationError
-# The way I get column as a an attribute to the orm class
-from aiida.backends.utils import get_column
-from aiida.common.links import LinkType
 
-from . import backends
-from aiida.orm.utils import convert
+from aiida.common.exceptions import InputValidationError
+# The way I get column as a an attribute to the orm class
+from aiida.common.links import LinkType
+from aiida.manage.manager import get_manager
+from aiida.common.exceptions import ConfigurationError
 
 from . import authinfos
+from . import comments
 from . import computers
+from . import groups
+from . import logs
 from . import users
+from . import entities
+from . import convert
 
-__all__ = 'QueryBuilder',
+__all__ = ('QueryBuilder',)
+
+_LOGGER = logging.getLogger(__name__)
 
 
-def get_querybuilder_classifiers_from_cls(cls, obj):
+def get_querybuilder_classifiers_from_cls(cls, qb):
     """
-    This utility function return the correct classifiers for the QueryBuilder, given a class
+    Return the correct classifiers for the QueryBuilder from an ORM class.
 
-    :param cls: a class or tuple/set/list of classes that are either AiiDA-orm classes or ORM-classes.
-    :param obj: The implementation of the QueryBuilder, with all the attributes correctly set.
+    :param cls: an AiiDA ORM class or backend ORM class.
+    :param qb: an instance of the appropriate QueryBuilder backend.
+    :returns: the ORM class as well as a dictionary with additional classifier strings
+    :rtype: cls, dict
+
+    Note: the ormclass_type_string is currently hardcoded for group, computer etc. One could instead use something like
+        aiida.orm.utils.node.get_type_string_from_class(cls.__module__, cls.__name__)
     """
-    if issubclass(cls, obj.Node):
-        # If something pass an ormclass node
-        # Users wouldn't do that, by why not...
-        ormclasstype = obj.AiidaNode._plugin_type_string
-        query_type_string = obj.AiidaNode._query_type_string
+    # Note: Unable to move this import to the top of the module for some reason
+    from aiida.engine import Process
+    from aiida.orm.utils.node import is_valid_node_type_string
+
+    classifiers = {}
+
+    classifiers['process_type_string'] = None
+
+    # Nodes
+    if issubclass(cls, qb.Node):
+        # If a backend ORM node (i.e. DbNode) is passed.
+        # Users shouldn't do that, by why not...
+        classifiers['ormclass_type_string'] = qb.AiidaNode._plugin_type_string
         ormclass = cls
-    elif issubclass(cls, obj.AiidaNode):
-        ormclasstype = cls._plugin_type_string
-        query_type_string = cls._query_type_string
-        ormclass = obj.Node
+
+    elif issubclass(cls, qb.AiidaNode):
+        classifiers['ormclass_type_string'] = cls._plugin_type_string
+        ormclass = qb.Node
+
     # Groups:
-    elif issubclass(cls, obj.Group):
-        ormclasstype = 'group'
-        query_type_string = None
+    elif issubclass(cls, qb.Group):
+        classifiers['ormclass_type_string'] = 'group'
         ormclass = cls
-    elif issubclass(cls, obj.AiidaGroup):
-        ormclasstype = 'group'
-        query_type_string = None
-        ormclass = obj.Group
+    elif issubclass(cls, groups.Group):
+        classifiers['ormclass_type_string'] = 'group'
+        ormclass = qb.Group
+
     # Computers:
-    elif issubclass(cls, obj.Computer):
-        ormclasstype = 'computer'
-        query_type_string = None
+    elif issubclass(cls, qb.Computer):
+        classifiers['ormclass_type_string'] = 'computer'
         ormclass = cls
     elif issubclass(cls, computers.Computer):
-        ormclasstype = 'computer'
-        query_type_string = None
-        ormclass = obj.Computer
+        classifiers['ormclass_type_string'] = 'computer'
+        ormclass = qb.Computer
 
     # Users
-    elif issubclass(cls, obj.User):
-        ormclasstype = 'user'
-        query_type_string = None
+    elif issubclass(cls, qb.User):
+        classifiers['ormclass_type_string'] = 'user'
         ormclass = cls
     elif issubclass(cls, users.User):
-        ormclasstype = 'user'
-        query_type_string = None
-        ormclass = obj.User
+        classifiers['ormclass_type_string'] = 'user'
+        ormclass = qb.User
 
     # AuthInfo
-    elif issubclass(cls, obj.AuthInfo):
-        ormclasstype = 'authinfo'
-        query_type_string = None
+    elif issubclass(cls, qb.AuthInfo):
+        classifiers['ormclass_type_string'] = 'authinfo'
         ormclass = cls
     elif issubclass(cls, authinfos.AuthInfo):
-        ormclasstype = 'authinfo'
-        query_type_string = None
-        ormclass = obj.AuthInfo
+        classifiers['ormclass_type_string'] = 'authinfo'
+        ormclass = qb.AuthInfo
+
+    # Comment
+    elif issubclass(cls, qb.Comment):
+        classifiers['ormclass_type_string'] = 'comment'
+        ormclass = cls
+    elif issubclass(cls, comments.Comment):
+        classifiers['ormclass_type_string'] = 'comment'
+        ormclass = qb.Comment
+
+    # Log
+    elif issubclass(cls, qb.Log):
+        classifiers['ormclass_type_string'] = 'log'
+        ormclass = cls
+    elif issubclass(cls, logs.Log):
+        classifiers['ormclass_type_string'] = 'log'
+        ormclass = qb.Log
+
+    # Process
+    # This is a special case, since Process is not an ORM class.
+    # We need to deduce the ORM class used by the Process.
+    elif issubclass(cls, Process):
+        classifiers['ormclass_type_string'] = cls._node_class._plugin_type_string
+        classifiers['process_type_string'] = cls.build_process_type()
+        ormclass = qb.Node
+
     else:
         raise InputValidationError("I do not know what to do with {}".format(cls))
-    return ormclasstype, query_type_string, ormclass
+
+    if ormclass == qb.Node:
+        is_valid_node_type_string(classifiers['ormclass_type_string'], raise_on_false=True)
+
+    return ormclass, classifiers
 
 
-def get_querybuilder_classifiers_from_type(ormclasstype, obj):
+def get_querybuilder_classifiers_from_type(ormclass_type_string, qb):
     """
-    Same as above get_querybuilder_classifiers_from_cls, but accepts a string instead of a class.
-    """
-    from aiida.common.exceptions import (DbContentError, MissingPluginError, InputValidationError)
+    Return the correct classifiers for the QueryBuilder from an ORM type string.
 
-    if ormclasstype.lower() == 'group':
-        ormclasstype = ormclasstype.lower()
-        query_type_string = None
-        ormclass = obj.Group
-    elif ormclasstype.lower() == 'computer':
-        ormclasstype = ormclasstype.lower()
-        query_type_string = None
-        ormclass = obj.Computer
-    elif ormclasstype.lower() == 'user':
-        ormclasstype = ormclasstype.lower()
-        query_type_string = None
-        ormclass = obj.User
+    :param ormclass_type_string: type string for ORM class
+    :param qb: an instance of the appropriate QueryBuilder backend.
+    :returns: the ORM class as well as a dictionary with additional classifier strings
+    :rtype: cls, dict
+
+
+    Same as get_querybuilder_classifiers_from_cls, but accepts a string instead of a class.
+    """
+    from aiida.orm.utils.node import is_valid_node_type_string
+    classifiers = {}
+
+    classifiers['process_type_string'] = None
+    classifiers['ormclass_type_string'] = ormclass_type_string.lower()
+
+    if classifiers['ormclass_type_string'] == 'group':
+        ormclass = qb.Group
+    elif classifiers['ormclass_type_string'] == 'computer':
+        ormclass = qb.Computer
+    elif classifiers['ormclass_type_string'] == 'user':
+        ormclass = qb.User
     else:
-        # At this point, it has to be a node.
-        # The only valid string at this point is a string
-        # that matches exactly the _plugin_type_string
-        # of a node class
-        from aiida.plugins.loader import get_plugin_type_from_type_string, load_plugin
-        ormclass = obj.Node
-        try:
-            plugin_type = get_plugin_type_from_type_string(ormclasstype)
+        # At this point, we assume it is a node. The only valid type string then is a string
+        # that matches exactly the _plugin_type_string of a node class
+        classifiers['ormclass_type_string'] = ormclass_type_string  # no lowercase
+        ormclass = qb.Node
 
-            # I want to check at this point if that is a valid class,
-            # so I use the load_plugin to load the plugin class
-            # and use the classes _plugin_type_string attribute
-            # In the future, assuming the user knows what he or she is doing
-            # we could remove that check
-            PluginClass = load_plugin(plugin_type)
-        except (DbContentError, MissingPluginError) as e:
-            raise InputValidationError("\nYou provide a vertice of the path with\n"
-                                       "type={}\n"
-                                       "But that string is not a valid type string\n"
-                                       "Exception raise during check\n"
-                                       "{}".format(ormclasstype, e))
+    if ormclass == qb.Node:
+        is_valid_node_type_string(classifiers['ormclass_type_string'], raise_on_false=True)
 
-        ormclasstype = PluginClass._plugin_type_string
-        query_type_string = PluginClass._query_type_string
-    return ormclasstype, query_type_string, ormclass
+
+    return ormclass, classifiers
+
+
+def get_type_filter(classifiers, subclassing):
+    """
+    Return filter dictionaries given a set of classifiers.
+
+    :param classifiers: a dictionary with classifiers (note: does *not* support lists)
+    :param subclassing: if True, allow for subclasses of the ormclass
+
+    :returns: dictionary in QueryBuilder filter language to pass into {"type": ... }
+    :rtype: dict
+
+    """
+    from aiida.orm.utils.node import get_query_type_from_type_string
+    from aiida.common.escaping import escape_for_sql_like
+    value = classifiers['ormclass_type_string']
+
+    if not subclassing:
+        filter = {'==': value}
+    else:
+        # Note: the query_type_string always ends with a dot. This ensures that "like {str}%" matches *only*
+        # the query type string
+        filter = {'like': '{}%'.format(escape_for_sql_like(get_query_type_from_type_string(value)))}
+
+    return filter
+
+def get_process_type_filter(classifiers, subclassing):
+    """
+    Return filter dictionaries given a set of classifiers.
+
+    :param classifiers: a dictionary with classifiers (note: does *not* support lists)
+    :param subclassing: if True, allow for subclasses of the process type
+            This is activated only, if an entry point can be found for the process type
+            (as well as for a selection of built-in process types)
+
+
+    :returns: dictionary in QueryBuilder filter language to pass into {"process_type": ... }
+    :rtype: dict
+
+    """
+    from aiida.common.escaping import escape_for_sql_like
+    from aiida.common.warnings import AiidaEntryPointWarning
+    from aiida.engine.processes.process import get_query_string_from_process_type_string
+    import warnings
+
+    value = classifiers['process_type_string']
+
+    if not subclassing:
+        filter = {'==': value}
+    else:
+        if ":" in value:
+            # if value is an entry point, do usual subclassing
+
+            # Note: the process_type_string stored in the database does *not* end in a dot.
+            # In order to avoid that querying for class 'Begin' will also find class 'BeginEnd',
+            # we need to search separately for equality and 'like'.
+            filter = {'or': [
+                {'==': value},
+                {'like': escape_for_sql_like(get_query_string_from_process_type_string(value))},
+            ]}
+        elif value.startswith('aiida.engine'):
+            # For core process types, a filter is not is needed since each process type has a corresponding
+            # ormclass type that already specifies everything.
+            # Note: This solution is fragile and will break as soon as there is not an exact one-to-one correspondence
+            # between process classes and node classes
+
+            # Note: Improve this when issue #2475 is addressed
+            filter = {'like': '%'}
+        else:
+            warnings.warn("Process type '{}' does not correspond to a registered entry. "
+                          "This risks queries to fail once the location of the process class changes. "
+                          "Add an entry point for '{}' to remove this warning.".format(value, value),
+                          AiidaEntryPointWarning)
+            filter = {'or': [
+                {'==': value},
+                {'like': escape_for_sql_like(get_query_string_from_process_type_string(value))},
+            ]}
+
+
+    return filter
 
 
 class QueryBuilder(object):
     """
-    The class to query the AiiDA database. 
-    
+    The class to query the AiiDA database.
+
     Usage::
 
         from aiida.orm.querybuilder import QueryBuilder
@@ -212,7 +318,7 @@ class QueryBuilder(object):
             check :func:`QueryBuilder.order_by` for more information.
 
         """
-        backend = backend or backends.construct_backend()
+        backend = backend or get_manager().get_backend()
         self._impl = backend.query()
 
         # A list storing the path being traversed by the query
@@ -239,7 +345,7 @@ class QueryBuilder(object):
 
         # qb = QueryBuilder()
         # qb.append(PwCalculation)
-        # qb.append(StructureData, input_of=PwCalculation)
+        # qb.append(StructureData, with_outgoing=PwCalculation)
 
         # The cls_to_tag_map in this case would be:
         # {PwCalculation:'PwCalculation', StructureData:'StructureData'}
@@ -280,7 +386,7 @@ class QueryBuilder(object):
             elif isinstance(path_spec, six.string_types):
                 # Maybe it is just a string,
                 # I assume user means the type
-                self.append(type=path_spec)
+                self.append(entity_type=path_spec)
             else:
                 # Or a class, let's try
                 self.append(cls=path_spec)
@@ -326,11 +432,10 @@ class QueryBuilder(object):
         When somebody hits: print(QueryBuilder) or print(str(QueryBuilder))
         I want to print the SQL-query. Because it looks cool...
         """
+        from aiida.manage.configuration import get_config
 
-        from aiida.common.setup import get_profile_config
-        from aiida.backends import settings
-
-        engine = get_profile_config(settings.AIIDADB_PROFILE)["AIIDADB_ENGINE"]
+        config = get_config()
+        engine = config.current_profile.dictionary['AIIDADB_ENGINE']
 
         if engine.startswith("mysql"):
             from sqlalchemy.dialects import mysql as mydialect
@@ -342,62 +447,67 @@ class QueryBuilder(object):
         que = self.get_query()
         return str(que.statement.compile(compile_kwargs={"literal_binds": True}, dialect=mydialect.dialect()))
 
-    def _get_ormclass(self, cls, ormclasstype):
+    def _get_ormclass(self, cls, ormclass_type_string):
         """
-        For testing purposes, I want to check whether the implementation gives the correct
-        ormclass back. Just relaying to the implementation, details for this function
-        in the interface.
+        Get ORM classifiers from either class(es) or ormclass_type_string(s).
+
+        :param cls: a class or tuple/set/list of classes that are either AiiDA ORM classes or backend ORM classes.
+        :param ormclass_type_string: type string for ORM class
+
+        :returns: the ORM class as well as a dictionary with additional classifier strings
+
+        Handles the case of lists as well.
         """
-        # If it is a class:
         if cls is not None:
             func = get_querybuilder_classifiers_from_cls
-            classifier = cls
-        elif ormclasstype is not None:
+            input_info = cls
+        elif ormclass_type_string is not None:
             func = get_querybuilder_classifiers_from_type
-            classifier = ormclasstype
+            input_info = ormclass_type_string
         else:
-            raise RuntimeError("Neither cls nor ormclasstype specified")
+            raise RuntimeError("Neither cls nor ormclass_type_string specified")
 
-        if isinstance(classifier, (tuple, list, set)):
-            # I have been passed a list of classes (hopefully) instead of a class.
+        if isinstance(input_info, (tuple, list, set)):
             # Going through each element of the list/tuple/set:
-            query_type_string = []
             ormclass = None
-            ormclasstype = []
-            for i, c in enumerate(classifier):
-                ormclassifiers = func(c, self._impl)
+            classifiers = []
+
+            for i, c in enumerate(input_info):
+                new_ormclass, new_classifiers = func(c, self._impl)
                 if i:
                     # This is not my first iteration!
-                    # I check consistensy with what was specified before
-                    if ormclassifiers[2] != ormclass:
+                    # I check consistency with what was specified before
+                    if new_ormclass != ormclass:
                         raise InputValidationError("Non-matching types have been passed as list/tuple/set.")
                 else:
-                    ormclass = ormclassifiers[2]
-                query_type_string.append(ormclassifiers[1])
-                ormclasstype.append(ormclassifiers[0])
+                    # first iteration
+                    ormclass = new_ormclass
+
+                classifiers.append(new_classifiers)
         else:
-            ormclasstype, query_type_string, ormclass = func(classifier, self._impl)
+            ormclass, classifiers = func(input_info, self._impl)
 
-        return ormclass, ormclasstype, query_type_string
+        return ormclass, classifiers
 
-    def _get_unique_tag(self, ormclasstype):
+    def _get_unique_tag(self, classifiers):
         """
         Using the function get_tag_from_type, I get a tag.
         I increment an index that is appended to that tag until I have an unused tag.
         This function is called in :func:`QueryBuilder.append` when autotag is set to True.
 
-        :param str ormclasstype:
-            The string that defines the type of the AiiDA ORM class.
+        :param dict classifiers:
+            Classifiers, containing the string that defines the type of the AiiDA ORM class.
             For subclasses of Node, this is the Node._plugin_type_string, for other they are
             as defined as returned by :func:`QueryBuilder._get_ormclass`.
 
-        :returns: A tag, as a string.
+            Can also be a list of dictionaries, when multiple classes are passed to QueryBuilder.append
+
+        :returns: A tag as a string (it is a single string also when passing multiple classes).
         """
 
-        def get_tag_from_type(ormclasstype):
+        def get_tag_from_type(classifiers):
             """
-            Assign a tag to the given
-            vertice of a path, based mainly on the type
+            Assign a tag to the given vertex of a path, based mainly on the type
             *   data.structure.StructureData -> StructureData
             *   data.structure.StructureData. -> StructureData
             *   calculation.job.quantumespresso.pw.PwCalculation. -. PwCalculation
@@ -406,28 +516,29 @@ class QueryBuilder(object):
             *   computer -> computer
             *   etc.
 
-            :param str ormclasstype:
+            :param str ormclass_type_string:
                 The string that defines the type of the AiiDA ORM class.
                 For subclasses of Node, this is the Node._plugin_type_string, for other they are
                 as defined as returned by :func:`QueryBuilder._get_ormclass`.
             :returns: A tag, as a string.
             """
-            if isinstance(ormclasstype, list):
-                return '-'.join([t.rstrip('.').split('.')[-1] or "node" for t in ormclasstype])
+            if isinstance(classifiers, list):
+                return '-'.join([t['ormclass_type_string'].rstrip('.').split('.')[-1] or "node" for t in classifiers])
             else:
-                return ormclasstype.rstrip('.').split('.')[-1] or "node"
+                return classifiers['ormclass_type_string'].rstrip('.').split('.')[-1] or "node"
 
-        basetag = get_tag_from_type(ormclasstype)
+        basetag = get_tag_from_type(classifiers)
         tags_used = self._tag_to_alias_map.keys()
         for i in range(1, 100):
             tag = '{}_{}'.format(basetag, i)
             if tag not in tags_used:
                 return tag
-        raise Exception("Cannot find a tag after 100 tries")
+
+        raise RuntimeError("Cannot find a tag after 100 tries")
 
     def append(self,
                cls=None,
-               type=None,
+               entity_type=None,
                tag=None,
                filters=None,
                project=None,
@@ -447,21 +558,19 @@ class QueryBuilder(object):
             this class being accepted in a query. However the classes have to have the same orm-class
             for the joining to work. I.e. both have to subclasses of Node. Valid is::
 
-                cls=(StructureData, ParameterData)
+                cls=(StructureData, Dict)
 
             This is invalid:
 
                 cls=(Group, Node)
 
-        :param str type:
-            The type of the class, if cls is not given. Also here, a tuple or list is accepted.
-        :param bool autotag:
-            Whether to find automatically a unique tag. If this is set to True (default False),
-
+        :param entity_type: The node type of the class, if cls is not given. Also here, a tuple or list is accepted.
+        :type type: str
+        :param bool autotag: Whether to find automatically a unique tag. If this is set to True (default False),
         :param str tag:
             A unique tag. If none is given, I will create a unique tag myself.
         :param filters:
-            Filters to apply for this vertice.
+            Filters to apply for this vertex.
             See :meth:`.add_filter`, the method invoked in the background, or usage examples for details.
         :param project:
             Projections to apply. See usage examples for details.
@@ -469,7 +578,7 @@ class QueryBuilder(object):
         :param bool subclassing:
             Whether to include subclasses of the given class
             (default **True**).
-            E.g. Specifying a  Calculation as cls will include JobCalculations, InlineCalculations, etc..
+            E.g. Specifying a  ProcessNode as cls will include CalcJobNode, WorkChainNode, CalcFunctionNode, etc..
         :param bool outerjoin:
             If True, (default is False), will do a left outerjoin
             instead of an inner join
@@ -491,21 +600,22 @@ class QueryBuilder(object):
             # the structure joined as an input
             qb.append(
                 cls=PwCalculation,
-                output_of=StructureData
+                with_incoming=StructureData
             )
 
-        :returns: self
+        :return: self
+        :rtype: :class:`aiida.orm.QueryBuilder`
         """
-        ######################## INPUT CHECKS ##########################
+        # INPUT CHECKS ##########################
         # This function can be called by users, so I am checking the
         # input now.
         # First of all, let's make sure the specified
         # the class or the type (not both)
-        if cls and type:
-            raise InputValidationError("You cannot specify both a " "class ({}) " "and a type ({})".format(cls, type))
+        if cls and entity_type:
+            raise InputValidationError("You cannot specify both a class ({}) and a entity_type ({})".format(cls, entity_type))
 
-        if not (cls or type):
-            raise InputValidationError("You need to specify at least a class or a type")
+        if not (cls or entity_type):
+            raise InputValidationError("You need to specify at least a class or a entity_type")
 
         # Let's check if it is a valid class or type
         if cls:
@@ -515,43 +625,20 @@ class QueryBuilder(object):
                         raise InputValidationError("{} was passed with kw 'cls', but is not a class".format(c))
             else:
                 if not inspect_isclass(cls):
-                    raise InputValidationError("\n\n"
-                                               "{} was passed with kw 'cls', but is not a class"
-                                               "\n\n".format(cls))
-        elif type:
-
-            if isinstance(type, (tuple, list, set)):
-                for t in type:
+                    raise InputValidationError("{} was passed with kw 'cls', but is not a class".format(cls))
+        elif entity_type:
+            if isinstance(entity_type, (tuple, list, set)):
+                for t in entity_type:
                     if not isinstance(t, six.string_types):
-                        raise InputValidationError("\n\n\n"
-                                                   "{} was passed as type, but is not a string"
-                                                   "\n\n\n".format(t))
+                        raise InputValidationError("{} was passed as entity_type, but is not a string".format(t))
             else:
-                if not isinstance(type, six.string_types):
-                    raise InputValidationError("\n\n\n"
-                                               "{} was passed as type, but is not a string"
-                                               "\n\n\n".format(type))
+                if not isinstance(entity_type, six.string_types):
+                    raise InputValidationError("{} was passed as entity_type, but is not a string".format(entity_type))
 
-        if kwargs.pop('link_tag', None) is not None:
-            raise DeprecationWarning("link_tag is deprecated, use edge_tag instead")
-        if kwargs.pop('autotag', None) is not None:
-            raise DeprecationWarning("autotag=True is now the default behavior, this keyword is deprecated")
+        ormclass, classifiers = self._get_ormclass(cls, entity_type)
 
-        ormclass, ormclasstype, query_type_string = self._get_ormclass(cls, type)
-        ############################### TAG #################################
+        # TAG #################################
         # Let's get a tag
-        label = kwargs.pop('label', None)
-        if label is not None:
-            if tag is None:
-                warnings.warn(
-                    "\nUse of the keyword 'label' will be deprecated soon\n"
-                    "Please use 'tag' instead\n",
-                    DeprecationWarning,
-                )
-                tag = label
-            else:
-                raise InputValidationError("Both label and tag specified")
-
         if tag:
             if self._EDGE_TAG_DELIM in tag:
                 raise InputValidationError("tag cannot contain {}\n"
@@ -559,15 +646,15 @@ class QueryBuilder(object):
                                            "".format(self._EDGE_TAG_DELIM))
             tag = tag
             if tag in self._tag_to_alias_map.keys():
-                raise InputValidationError("\n" "This tag ({}) is already in use\n" "\n".format(tag))
+                raise InputValidationError("This tag ({}) is already in use".format(tag))
         else:
-            tag = self._get_unique_tag(ormclasstype)
+            tag = self._get_unique_tag(classifiers)
 
         # Checks complete
         # This is where I start doing changes to self!
         # Now, several things can go wrong along the way, so I need to split into
         # atomic blocks that I can reverse if something goes wrong.
-        ################ TAG MAPPING #################################
+        # TAG MAPPING #################################
         # TODO check with duplicate classes
 
         # Let's fill the cls_to_tag_map so that one can specify
@@ -576,7 +663,13 @@ class QueryBuilder(object):
 
         l_class_added_to_map = False
         if cls:
-            if cls in self._cls_to_tag_map.keys():
+            # Note: tuples can be used as array keys, lists & sets can't
+            if isinstance(cls, (list, set)):
+                tag_key = tuple(cls)
+            else:
+                tag_key = cls
+
+            if tag_key in self._cls_to_tag_map.keys():
                 # In this case, this class already stands for another
                 # tag that was used before.
                 # This means that the first tag will be the correct
@@ -585,13 +678,11 @@ class QueryBuilder(object):
                 pass
 
             else:
-                self._cls_to_tag_map[cls] = tag
+                self._cls_to_tag_map[tag_key] = tag
                 l_class_added_to_map = True
 
-        ######################## ALIASING ##############################
+        # ALIASING ##############################
         try:
-            # ~ alias =
-            # ~ self._aliased_path.append(alias)
             self._tag_to_alias_map[tag] = aliased(ormclass)
         except Exception as e:
             if self._debug:
@@ -600,13 +691,13 @@ class QueryBuilder(object):
             if l_class_added_to_map:
                 self._cls_to_tag_map.pop(cls)
             self._tag_to_alias_map.pop(tag, None)
-            raise e
+            raise
 
-        ################# FILTERS ######################################
-
+        # FILTERS ######################################
         try:
             self._filters[tag] = {}
-            # I have to add a filter on column type.
+            # So far, only Node and its subclasses need additional filters on column type
+            # (for other classes, the "classifi.
             # This so far only is necessary for AiidaNodes not for groups.
             # Now here there is the issue that for everything else,
             # the query_type_string is either None (e.g. if Group was passed)
@@ -615,8 +706,9 @@ class QueryBuilder(object):
             # For now that is only nodes, and it is hardcoded. In the future (e.g. we subclass group)
             # this has to be added
             if ormclass == self._impl.Node:
-                plugin_type_string = ormclasstype
-                self._add_type_filter(tag, query_type_string, plugin_type_string, subclassing)
+                self._add_type_filter(tag, classifiers, subclassing)
+                self._add_process_type_filter(tag, classifiers, subclassing)
+
             # The order has to be first _add_type_filter and then add_filter.
             # If the user adds a query on the type column, it overwrites what I did
             # if the user specified a filter, add it:
@@ -630,10 +722,9 @@ class QueryBuilder(object):
                 self._cls_to_tag_map.pop(cls)
             self._tag_to_alias_map.pop(tag)
             self._filters.pop(tag)
-            raise e
+            raise
 
-        #################### PROJECTIONS ##############################
-
+        # PROJECTIONS ##############################
         try:
             self._projections[tag] = []
             if project is not None:
@@ -649,34 +740,35 @@ class QueryBuilder(object):
             self._projections.pop(tag)
             raise e
 
-        ################## JOINING #####################################
-
+        # JOINING #####################################
         try:
             # Get the functions that are implemented:
-            spec_to_function_map = list(self._get_function_map().keys())
+            spec_to_function_map = []
+            for secondary_dict in self._get_function_map().values():
+                for key in secondary_dict.keys():
+                    if key not in spec_to_function_map:
+                        spec_to_function_map.append(key)
             joining_keyword = kwargs.pop('joining_keyword', None)
             joining_value = kwargs.pop('joining_value', None)
 
             for key, val in kwargs.items():
                 if key not in spec_to_function_map:
                     raise InputValidationError(
-                        "\n\n\n"
                         "{} is not a valid keyword "
                         "for joining specification\n"
-                        "Valid keywords are:\n"
-                        "{}\n\n\n".format(
-                            key, spec_to_function_map + ['cls', 'type', 'tag', 'autotag', 'filters', 'project']))
+                        "Valid keywords are: "
+                        "{}".format(key,
+                                    spec_to_function_map + ['cls', 'type', 'tag', 'autotag', 'filters', 'project']))
                 elif joining_keyword:
-                    raise InputValidationError("\n\n\n"
-                                               "You already specified joining specification {}\n"
+                    raise InputValidationError("You already specified joining specification {}\n"
                                                "But you now also want to specify {}"
-                                               "\n\n\n".format(joining_keyword, key))
+                                               "".format(joining_keyword, key))
                 else:
                     joining_keyword = key
                     joining_value = self._get_tag_from_specification(val)
-            # the default is that this vertice is 'output_of' the previous one
+            # the default is that this vertice is 'with_incoming' as the previous one
             if joining_keyword is None and len(self._path) > 0:
-                joining_keyword = 'output_of'
+                joining_keyword = 'with_incoming'
                 joining_value = self._path[-1]['tag']
 
             if joining_keyword == 'direction':
@@ -684,9 +776,9 @@ class QueryBuilder(object):
                     raise InputValidationError("direction=n expects n to be an integer")
                 try:
                     if joining_value < 0:
-                        joining_keyword = 'input_of'
+                        joining_keyword = 'with_outgoing'
                     elif joining_value > 0:
-                        joining_keyword = 'output_of'
+                        joining_keyword = 'with_incoming'
                     else:
                         raise InputValidationError("direction=0 is not valid")
                     joining_value = self._path[-abs(joining_value)]['tag']
@@ -707,7 +799,7 @@ class QueryBuilder(object):
             # There's not more to clean up here!
             raise e
 
-        ############################# EDGES #################################
+        # EDGES #################################
         if len(self._path) > 0:
             try:
                 if self._debug:
@@ -719,7 +811,7 @@ class QueryBuilder(object):
                     if edge_tag in self._tag_to_alias_map.keys():
                         raise InputValidationError("The tag {} is already in use".format(edge_tag))
                 if self._debug:
-                    print("   I have chosen", edge_tag)
+                    print("I have chosen", edge_tag)
 
                 # My edge is None for now, since this is created on the FLY,
                 # the _tag_to_alias_map will be updated later (in _build)
@@ -754,11 +846,17 @@ class QueryBuilder(object):
                 # There's not more to clean up here!
                 raise e
 
-            ################### EXTENDING THE PATH #################################
+        # EXTENDING THE PATH #################################
+        # Note: 'type' being a list is a relict of an earlier implementation
+        # Could simply pass all classifiers here.
+        if isinstance(classifiers, list):
+            path_type = [c['ormclass_type_string'] for c in classifiers]
+        else:
+            path_type = classifiers['ormclass_type_string']
 
         self._path.append(
             dict(
-                type=ormclasstype,
+                entity_type=path_type,
                 tag=tag,
                 joining_keyword=joining_keyword,
                 joining_value=joining_value,
@@ -800,8 +898,6 @@ class QueryBuilder(object):
             qb = QueryBuilder()
             qb.append(Node, tag='node')
             qb.order_by({'node':[{'id':'desc'}]})
-
-
         """
 
         self._order_by = []
@@ -867,11 +963,8 @@ class QueryBuilder(object):
         """
         Adding a filter to my filters.
 
-        :param tagspec:
-            The tag, which has to exist already as a key
-            in self._filters
-        :param filter_spec:
-            The specifications for the filter, has to be a dictionary
+        :param tagspec: The tag, which has to exist already as a key in self._filters
+        :param filter_spec: The specifications for the filter, has to be a dictionary
 
         Usage::
 
@@ -884,35 +977,70 @@ class QueryBuilder(object):
             # Now I am overriding the first filter I set:
             qb.add_filter('node',{'id':13})
         """
+        filters = self._process_filters(filter_spec)
+        tag = self._get_tag_from_specification(tagspec)
+        self._filters[tag].update(filters)
 
-        if not isinstance(filter_spec, dict):
+    def _process_filters(self, filters):
+        if not isinstance(filters, dict):
             raise InputValidationError("Filters have to be passed as dictionaries")
 
-        tag = self._get_tag_from_specification(tagspec)
-        self._filters[tag].update(filter_spec)
+        for key, value in filters.items():
+            if isinstance(value, entities.Entity):
+                # Convert to be the id of the joined entity because we can't query
+                # for the object instance directly
+                filters.pop(key)
+                filters['{}_id'.format(key)] = value.id
 
-    def _add_type_filter(self, tagspec, query_type_string, plugin_type_string, subclassing):
+        return filters
+
+    def _add_type_filter(self, tagspec, classifiers, subclassing):
         """
-        Add a filter on the type based on the query_type_string
+        Add a filter based on type.
+
+        :param tagspec: The tag, which has to exist already as a key in self._filters
+        :param classifiers: a dictionary with classifiers
+        :param subclassing: if True, allow for subclasses of the ormclass
         """
-
-        def get_type_filter(q, p):
-            if subclassing:
-                return {'like': '{}%'.format(q)}
-            else:
-                return {'==': p}
-
         tag = self._get_tag_from_specification(tagspec)
-        if isinstance(query_type_string, list):
-            # A list was maybe passed to append, this propagates to a list being passed
-            # as a query type string
-            node_type_filter = {'or': []}
-            for i, (q, p) in enumerate(zip(query_type_string, plugin_type_string)):
-                node_type_filter['or'].append(get_type_filter(q, p))
+
+        if isinstance(classifiers, list):
+            # If a list was passed to QueryBuilder.append, this propagates to a list in the classifiers
+            entity_type_filter = {'or': []}
+            for c in classifiers:
+                entity_type_filter['or'].append(get_type_filter(c, subclassing))
         else:
-            node_type_filter = get_type_filter(query_type_string, plugin_type_string)
+            entity_type_filter = get_type_filter(classifiers, subclassing)
 
-        self.add_filter(tagspec, {'type': node_type_filter})
+        self.add_filter(tagspec, {'node_type': entity_type_filter})
+
+    def _add_process_type_filter(self, tagspec, classifiers, subclassing):
+        """
+        Add a filter based on process type.
+
+        :param tagspec: The tag, which has to exist already as a key in self._filters
+        :param classifiers: a dictionary with classifiers
+        :param subclassing: if True, allow for subclasses of the process type
+
+        Note: This function handles the case when process_type_string is None.
+        """
+        tag = self._get_tag_from_specification(tagspec)
+
+        if isinstance(classifiers, list):
+            # If a list was passed to QueryBuilder.append, this propagates to a list in the classifiers
+            process_type_filter = {'or': []}
+            for c in classifiers:
+                if c['process_type_string'] is not None:
+                    process_type_filter['or'].append(get_process_type_filter(c, subclassing))
+
+            if len(process_type_filter['or']) > 0:
+                self.add_filter(tagspec, {'process_type': process_type_filter})
+
+        else:
+            if classifiers['process_type_string'] is not None:
+                process_type_filter = get_process_type_filter(classifiers, subclassing)
+                self.add_filter(tagspec, {'process_type': process_type_filter})
+
 
     def add_projection(self, tag_spec, projection_spec):
         """
@@ -950,7 +1078,7 @@ class QueryBuilder(object):
             # Will project the ORM instance
             qb.add_projection('struc', '*')
             print type(qb.first()[0])
-            # >>> aiida.orm.data.structure.StructureData
+            # >>> aiida.orm.nodes.data.structure.StructureData
 
         The double start *\*\** projects all possible projections of this entity:
 
@@ -985,26 +1113,24 @@ class QueryBuilder(object):
                 for key, val in spec.items():
                     if key not in self._VALID_PROJECTION_KEYS:
                         raise InputValidationError("{} is not a valid key {}".format(key, self._VALID_PROJECTION_KEYS))
-                        if not isinstance(val, six.string_types):
-                            raise InputValidationError("{} has to be a string".format(val))
+                    if not isinstance(val, six.string_types):
+                        raise InputValidationError("{} has to be a string".format(val))
             _projections.append(_thisprojection)
         if self._debug:
             print("   projections have become:", _projections)
         self._projections[tag] = _projections
 
     def _get_projectable_entity(self, alias, column_name, attrpath, **entityspec):
-
-        if len(attrpath) or column_name in ('attributes', 'extras'):
-
+        if attrpath or column_name in ('attributes', 'extras'):
             entity = self._impl.get_projectable_attribute(alias, column_name, attrpath, **entityspec)
         else:
-            entity = get_column(column_name, alias)
+            entity = self._impl.get_column(column_name, alias)
         return entity
 
     def _add_to_projections(self, alias, projectable_entity_name, cast=None, func=None):
         """
-        :param alias:
-            A instance of *sqlalchemy.orm.util.AliasedClass*, alias for an ormclass
+        :param alias: A instance of *sqlalchemy.orm.util.AliasedClass*, alias for an ormclass
+        :type alias: :class:`sqlalchemy.orm.util.AliasedClass`
         :param projectable_entity_name:
             User specification of what to project.
             Appends to query's entities what the user wants to project
@@ -1083,17 +1209,15 @@ class QueryBuilder(object):
                 tag = specification
             else:
                 raise InputValidationError("tag {} is not among my known tags\n"
-                                           "   My tags are: {}"
-                                           "\n\n".format(specification, self._tag_to_alias_map.keys()))
+                                           "My tags are: {}".format(specification, self._tag_to_alias_map.keys()))
         else:
             if specification in self._cls_to_tag_map.keys():
                 tag = self._cls_to_tag_map[specification]
             else:
-                raise InputValidationError("\nYou specified as a class for which I have to find a tag\n"
+                raise InputValidationError("You specified as a class for which I have to find a tag\n"
                                            "The classes that I can do this for are:{}\n"
-                                           "The tags I have are: {}\n"
-                                           "\n".format(specification, self._cls_to_tag_map.keys(),
-                                                       self._tag_to_alias_map.keys()))
+                                           "The tags I have are: {}".format(specification, self._cls_to_tag_map.keys(),
+                                                                            self._tag_to_alias_map.keys()))
         return tag
 
     def set_debug(self, debug):
@@ -1165,13 +1289,12 @@ class QueryBuilder(object):
                 attr_key = path_spec.split('.')[1:]
                 is_attribute = (attr_key or column_name in ('attributes', 'extras'))
                 try:
-                    column = get_column(column_name, alias)
-                except InputValidationError as e:
+                    column = self._impl.get_column(column_name, alias)
+                except InputValidationError:
                     if is_attribute:
                         column = None
                     else:
-                        raise e
-                # ~ is_attribute = bool(attr_key)
+                        raise
                 if not isinstance(filter_operation_dict, dict):
                     filter_operation_dict = {'==': filter_operation_dict}
                 [
@@ -1190,12 +1313,14 @@ class QueryBuilder(object):
     @staticmethod
     def _check_dbentities(entities_cls_joined, entities_cls_to_join, relationship):
         """
-        :param list entities_cls_joined:
-            A list (tuple) of the aliased class passed as joined_entity and
+        :param entities_cls_joined:
+            A tuple of the aliased class passed as joined_entity and
             the ormclass that was expected
-        :param list entities_cls_joined:
-            A list (tuple) of the aliased class passed as entity_to_join and
+        :type entities_cls_to_join: tuple
+        :param entities_cls_joined:
+            A tuple of the aliased class passed as entity_to_join and
             the ormclass that was expected
+        :type entities_cls_to_join: tuple
         :param str relationship:
             The relationship between the two entities to make the Exception
             comprehensible
@@ -1203,37 +1328,19 @@ class QueryBuilder(object):
         for entity, cls in (entities_cls_joined, entities_cls_to_join):
 
             if not issubclass(entity._sa_class_manager.class_, cls):
-                raise InputValidationError("\nYou are attempting to join {} as '{}' of {}\n"
+                raise InputValidationError("You are attempting to join {} as '{}' of {}\n"
                                            "This failed because you passed:\n"
                                            " - {} as entity joined (expected {})\n"
                                            " - {} as entity to join (expected {})\n"
                                            "\n".format(
-                    entities_cls_joined[0],
-                    relationship,
-                    entities_cls_to_join[0],
-                    entities_cls_joined[0]._sa_class_manager.class_,
-                    entities_cls_joined[1],
-                    entities_cls_to_join[0]._sa_class_manager.class_,
-                    entities_cls_to_join[1],
-                ))
-
-    def _join_slaves(self, joined_entity, entity_to_join):
-        raise NotImplementedError("Master - slave relationships are not implemented")
-        # ~ call = aliased(Call)
-        # ~ self._query = self._query.join(call,  call.caller_id == joined_entity.id)
-        # ~ self._query = self._query.join(
-        # ~ entity_to_join,
-        # ~ call.called_id == entity_to_join.id
-        # ~ )
-
-    def _join_masters(self, joined_entity, entity_to_join):
-        raise NotImplementedError("Master - slave relationships are not implemented")
-        # ~ call = aliased(Call)
-        # ~ self._query = self._query.join(call,  call.called_id == joined_entity.id)
-        # ~ self._query = self._query.join(
-        # ~ entity_to_join,
-        # ~ call.caller_id == entity_to_join.id
-        # ~ )
+                                               entities_cls_joined[0].__name__,
+                                               relationship,
+                                               entities_cls_to_join[0].__name__,
+                                               entities_cls_joined[0]._sa_class_manager.class_.__name__,
+                                               entities_cls_joined[1].__name__,
+                                               entities_cls_to_join[0]._sa_class_manager.class_.__name__,
+                                               entities_cls_to_join[1].__name__,
+                                           ))
 
     def _join_outputs(self, joined_entity, entity_to_join, isouterjoin):
         """
@@ -1242,14 +1349,14 @@ class QueryBuilder(object):
 
         **joined_entity** and **entity_to_join** are joined with a link
         from **joined_entity** as input to **enitity_to_join** as output
-        (**enitity_to_join** is an *output_of* **joined_entity**)
+        (**enitity_to_join** is *with_incoming* **joined_entity**)
         """
-        self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.Node), 'output_of')
+        self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.Node), 'with_incoming')
 
         aliased_edge = aliased(self._impl.Link)
         self._query = self._query.join(
             aliased_edge, aliased_edge.input_id == joined_entity.id, isouter=isouterjoin).join(
-            entity_to_join, aliased_edge.output_id == entity_to_join.id, isouter=isouterjoin)
+                entity_to_join, aliased_edge.output_id == entity_to_join.id, isouter=isouterjoin)
         return aliased_edge
 
     def _join_inputs(self, joined_entity, entity_to_join, isouterjoin):
@@ -1259,10 +1366,11 @@ class QueryBuilder(object):
 
         **joined_entity** and **entity_to_join** are joined with a link
         from **joined_entity** as output to **enitity_to_join** as input
-        (**enitity_to_join** is an *input_of* **joined_entity**)
+        (**enitity_to_join** is *with_outgoing* **joined_entity**)
+
         """
 
-        self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.Node), 'input_of')
+        self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.Node), 'with_outgoing')
         aliased_edge = aliased(self._impl.Link)
         self._query = self._query.join(
             aliased_edge,
@@ -1279,7 +1387,7 @@ class QueryBuilder(object):
         """
 
         self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.Node),
-                               'descendant_of_beta')
+                               'with_ancestors')
 
         link1 = aliased(self._impl.Link)
         link2 = aliased(self._impl.Link)
@@ -1292,12 +1400,12 @@ class QueryBuilder(object):
             cast(0, Integer).label('depth'),
         ]
         if expand_path:
-            selection_walk_list.append(array([link1.input_id, link1.output_id]).label('path'))
+            selection_walk_list.append(array((link1.input_id, link1.output_id)).label('path'))
 
         walk = select(selection_walk_list).select_from(join(node1, link1, link1.input_id == node1.id)).where(
             and_(
                 in_recursive_filters,  # I apply filters for speed here
-                link1.type.in_((LinkType.CREATE.value, LinkType.INPUT.value))  # I follow input and create links
+                link1.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value))  # I follow input and create links
             )).cte(recursive=True)
 
         aliased_walk = aliased(walk)
@@ -1307,7 +1415,7 @@ class QueryBuilder(object):
             link2.output_id.label('descendant_id'), (aliased_walk.c.depth + cast(1, Integer)).label('current_depth')
         ]
         if expand_path:
-            selection_union_list.append((aliased_walk.c.path + array([link2.output_id])).label('path'))
+            selection_union_list.append((aliased_walk.c.path + array((link2.output_id,))).label('path'))
 
         descendants_recursive = aliased(
             aliased_walk.union_all(
@@ -1316,13 +1424,13 @@ class QueryBuilder(object):
                         aliased_walk,
                         link2,
                         link2.input_id == aliased_walk.c.descendant_id,
-                    )).where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT.value)))))  # .alias()
+                    )).where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value)))))  # .alias()
 
         self._query = self._query.join(descendants_recursive,
                                        descendants_recursive.c.ancestor_id == joined_entity.id).join(
-            entity_to_join,
-            descendants_recursive.c.descendant_id == entity_to_join.id,
-            isouter=isouterjoin)
+                                           entity_to_join,
+                                           descendants_recursive.c.descendant_id == entity_to_join.id,
+                                           isouter=isouterjoin)
         return descendants_recursive.c
 
     def _join_ancestors_recursive(self, joined_entity, entity_to_join, isouterjoin, filter_dict, expand_path=False):
@@ -1333,7 +1441,7 @@ class QueryBuilder(object):
 
         """
         self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.Node),
-                               'descendant_of_beta')
+                               'with_ancestors')
 
         link1 = aliased(self._impl.Link)
         link2 = aliased(self._impl.Link)
@@ -1346,11 +1454,11 @@ class QueryBuilder(object):
             cast(0, Integer).label('depth'),
         ]
         if expand_path:
-            selection_walk_list.append(array([link1.output_id, link1.input_id]).label('path'))
+            selection_walk_list.append(array((link1.output_id, link1.input_id)).label('path'))
 
         walk = select(selection_walk_list).select_from(join(node1, link1, link1.output_id == node1.id)).where(
             and_(in_recursive_filters, link1.type.in_((LinkType.CREATE.value,
-                                                       LinkType.INPUT.value)))).cte(recursive=True)
+                                                       LinkType.INPUT_CALC.value)))).cte(recursive=True)
 
         aliased_walk = aliased(walk)
 
@@ -1360,7 +1468,7 @@ class QueryBuilder(object):
             (aliased_walk.c.depth + cast(1, Integer)).label('current_depth'),
         ]
         if expand_path:
-            selection_union_list.append((aliased_walk.c.path + array([link2.input_id])).label('path'))
+            selection_union_list.append((aliased_walk.c.path + array((link2.input_id,))).label('path'))
 
         ancestors_recursive = aliased(
             aliased_walk.union_all(
@@ -1369,15 +1477,15 @@ class QueryBuilder(object):
                         aliased_walk,
                         link2,
                         link2.output_id == aliased_walk.c.ancestor_id,
-                    )).where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT.value)))
+                    )).where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value)))
                 # I can't follow RETURN or CALL links
             ))
 
         self._query = self._query.join(ancestors_recursive,
                                        ancestors_recursive.c.descendant_id == joined_entity.id).join(
-            entity_to_join,
-            ancestors_recursive.c.ancestor_id == entity_to_join.id,
-            isouter=isouterjoin)
+                                           entity_to_join,
+                                           ancestors_recursive.c.ancestor_id == entity_to_join.id,
+                                           isouter=isouterjoin)
         return ancestors_recursive.c
 
     def _join_group_members(self, joined_entity, entity_to_join, isouterjoin):
@@ -1391,9 +1499,9 @@ class QueryBuilder(object):
         **joined_entity** and **entity_to_join**
         are joined via the table_groups_nodes table.
         from **joined_entity** as group to **enitity_to_join** as node.
-        (**enitity_to_join** is an *member_of* **joined_entity**)
+        (**enitity_to_join** is *with_group* **joined_entity**)
         """
-        self._check_dbentities((joined_entity, self._impl.Group), (entity_to_join, self._impl.Node), 'member_of')
+        self._check_dbentities((joined_entity, self._impl.Group), (entity_to_join, self._impl.Node), 'with_group')
         aliased_group_nodes = aliased(self._impl.table_groups_nodes)
         self._query = self._query.join(aliased_group_nodes, aliased_group_nodes.c.dbgroup_id == joined_entity.id).join(
             entity_to_join, entity_to_join.id == aliased_group_nodes.c.dbnode_id, isouter=isouterjoin)
@@ -1407,9 +1515,9 @@ class QueryBuilder(object):
         **joined_entity** and **entity_to_join** are
         joined via the table_groups_nodes table.
         from **joined_entity** as node to **enitity_to_join** as group.
-        (**enitity_to_join** is an *group_of* **joined_entity**)
+        (**enitity_to_join** is a group *with_node* **joined_entity**)
         """
-        self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.Group), 'group_of')
+        self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.Group), 'with_node')
         aliased_group_nodes = aliased(self._impl.table_groups_nodes)
         self._query = self._query.join(aliased_group_nodes, aliased_group_nodes.c.dbnode_id == joined_entity.id).join(
             entity_to_join, entity_to_join.id == aliased_group_nodes.c.dbgroup_id, isouter=isouterjoin)
@@ -1420,7 +1528,7 @@ class QueryBuilder(object):
         :param joined_entity: the aliased node
         :param entity_to_join: the aliased user to join to that node
         """
-        self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.User), 'creator_of')
+        self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.User), 'with_node')
         self._query = self._query.join(entity_to_join, entity_to_join.id == joined_entity.user_id, isouter=isouterjoin)
 
     def _join_created_by(self, joined_entity, entity_to_join, isouterjoin):
@@ -1428,7 +1536,7 @@ class QueryBuilder(object):
         :param joined_entity: the aliased user you want to join to
         :param entity_to_join: the (aliased) node or group in the DB to join with
         """
-        self._check_dbentities((joined_entity, self._impl.User), (entity_to_join, self._impl.Node), 'created_by')
+        self._check_dbentities((joined_entity, self._impl.User), (entity_to_join, self._impl.Node), 'with_user')
         self._query = self._query.join(entity_to_join, entity_to_join.user_id == joined_entity.id, isouter=isouterjoin)
 
     def _join_to_computer_used(self, joined_entity, entity_to_join, isouterjoin):
@@ -1437,7 +1545,7 @@ class QueryBuilder(object):
         :param entity_to_join: the (aliased) node entity
 
         """
-        self._check_dbentities((joined_entity, self._impl.Computer), (entity_to_join, self._impl.Node), 'has_computer')
+        self._check_dbentities((joined_entity, self._impl.Computer), (entity_to_join, self._impl.Node), 'with_computer')
         self._query = self._query.join(
             entity_to_join, entity_to_join.dbcomputer_id == joined_entity.id, isouter=isouterjoin)
 
@@ -1446,7 +1554,7 @@ class QueryBuilder(object):
         :param joined_entity: An entity that can use a computer (eg a node)
         :param entity_to_join: aliased dbcomputer entity
         """
-        self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.Computer), 'computer_of')
+        self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.Computer), 'with_node')
         self._query = self._query.join(
             entity_to_join, joined_entity.dbcomputer_id == entity_to_join.id, isouter=isouterjoin)
 
@@ -1455,7 +1563,7 @@ class QueryBuilder(object):
         :param joined_entity: An aliased dbgroup
         :param entity_to_join: aliased dbuser
         """
-        self._check_dbentities((joined_entity, self._impl.Group), (entity_to_join, self._impl.User), 'computer_of')
+        self._check_dbentities((joined_entity, self._impl.Group), (entity_to_join, self._impl.User), 'with_group')
         self._query = self._query.join(entity_to_join, joined_entity.user_id == entity_to_join.id, isouter=isouterjoin)
 
     def _join_user_group(self, joined_entity, entity_to_join, isouterjoin):
@@ -1463,28 +1571,119 @@ class QueryBuilder(object):
         :param joined_entity: An aliased user
         :param entity_to_join: aliased group
         """
-        self._check_dbentities((joined_entity, self._impl.User), (entity_to_join, self._impl.Group), 'computer_of')
+        self._check_dbentities((joined_entity, self._impl.User), (entity_to_join, self._impl.Group), 'with_user')
         self._query = self._query.join(entity_to_join, joined_entity.id == entity_to_join.user_id, isouter=isouterjoin)
 
+    def _join_node_comment(self, joined_entity, entity_to_join, isouterjoin):
+        """
+        :param joined_entity: An aliased node
+        :param entity_to_join: aliased comment
+        """
+        self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.Comment), 'with_node')
+        self._query = self._query.join(
+            entity_to_join, joined_entity.id == entity_to_join.dbnode_id, isouter=isouterjoin)
+
+    def _join_comment_node(self, joined_entity, entity_to_join, isouterjoin):
+        """
+        :param joined_entity: An aliased comment
+        :param entity_to_join: aliased node
+        """
+        self._check_dbentities((joined_entity, self._impl.Comment), (entity_to_join, self._impl.Node), 'with_comment')
+        self._query = self._query.join(
+            entity_to_join, joined_entity.dbnode_id == entity_to_join.id, isouter=isouterjoin)
+
+    def _join_node_log(self, joined_entity, entity_to_join, isouterjoin):
+        """
+        :param joined_entity: An aliased node
+        :param entity_to_join: aliased log
+        """
+        self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.Log), 'with_node')
+        self._query = self._query.join(
+            entity_to_join, joined_entity.id == entity_to_join.dbnode_id, isouter=isouterjoin)
+
+    def _join_log_node(self, joined_entity, entity_to_join, isouterjoin):
+        """
+        :param joined_entity: An aliased log
+        :param entity_to_join: aliased node
+        """
+        self._check_dbentities((joined_entity, self._impl.Log), (entity_to_join, self._impl.Node), 'with_log')
+        self._query = self._query.join(
+            entity_to_join, joined_entity.dbnode_id == entity_to_join.id, isouter=isouterjoin)
+
+    def _join_user_comment(self, joined_entity, entity_to_join, isouterjoin):
+        """
+        :param joined_entity: An aliased user
+        :param entity_to_join: aliased comment
+        """
+        self._check_dbentities((joined_entity, self._impl.User), (entity_to_join, self._impl.Comment), 'with_user')
+        self._query = self._query.join(entity_to_join, joined_entity.id == entity_to_join.user_id, isouter=isouterjoin)
+
+    def _join_comment_user(self, joined_entity, entity_to_join, isouterjoin):
+        """
+        :param joined_entity: An aliased comment
+        :param entity_to_join: aliased user
+        """
+        self._check_dbentities((joined_entity, self._impl.Comment), (entity_to_join, self._impl.User), 'with_comment')
+        self._query = self._query.join(entity_to_join, joined_entity.user_id == entity_to_join.id, isouter=isouterjoin)
+
     def _get_function_map(self):
-        d = {
-            'input_of': self._join_inputs,
-            'output_of': self._join_outputs,
-            'slave_of': self._join_slaves,  # not implemented
-            'master_of': self._join_masters,  # not implemented
-            'direction': None,
-            'group_of': self._join_groups,
-            'member_of': self._join_group_members,
-            'has_computer': self._join_to_computer_used,
-            'computer_of': self._join_computer,
-            'created_by': self._join_created_by,
-            'creator_of': self._join_creator_of,
-            'owner_of': self._join_group_user,
-            'belongs_to': self._join_user_group,
-            'ancestor_of': self._join_ancestors_recursive,
-            'descendant_of': self._join_descendants_recursive
+        """
+        Map relationship type keywords to functions
+        The new mapping (since 1.0.0a5) is a two level dictionary. The first level defines the entity which has been passed to
+        the qb.append functon, and the second defines the relationship with respect to a given tag.
+        """
+        mapping = {
+            'node': {
+                'with_log': self._join_log_node,
+                'with_comment': self._join_comment_node,
+                'with_incoming': self._join_outputs,
+                'with_outgoing': self._join_inputs,
+                'with_descendants': self._join_ancestors_recursive,
+                'with_ancestors': self._join_descendants_recursive,
+                'with_computer': self._join_to_computer_used,
+                'with_user': self._join_created_by,
+                'with_group': self._join_group_members,
+                'direction': None,
+                'ancestor_of': self._deprecate(self._join_ancestors_recursive, 'ancestor_of', 'with_descendants'),
+                'descendant_of': self._deprecate(self._join_descendants_recursive, 'descendant_of', 'with_ancestors'),
+                'input_of': self._deprecate(self._join_inputs, 'input_of', 'with_outgoing'),
+                'output_of': self._deprecate(self._join_outputs, 'output_of', 'with_incoming'),
+                'has_computer': self._deprecate(self._join_to_computer_used, 'has_computer', 'with_computer'),
+                'created_by': self._deprecate(self._join_created_by, 'created_by', 'with_user'),
+                'member_of': self._deprecate(self._join_group_members, 'member_of', 'with_group')
+            },
+            'computer': {
+                'with_node': self._join_computer,
+                'direction': None,
+                'computer_of': self._deprecate(self._join_computer, 'computer_of', 'with_node')
+            },
+            'user': {
+                'with_comment': self._join_comment_user,
+                'with_node': self._join_creator_of,
+                'with_group': self._join_group_user,
+                'direction': None,
+                'creator_of': self._deprecate(self._join_creator_of, 'creator_of', 'with_node'),
+                'owner_of': self._deprecate(self._join_group_user, 'owner_of', 'with_group')
+            },
+            'group': {
+                'with_node': self._join_groups,
+                'with_user': self._join_user_group,
+                'direction': None,
+                'group_of': self._deprecate(self._join_groups, 'group_of', 'with_node'),
+                'belongs_to': self._deprecate(self._join_user_group, 'belongs_to', 'with_user')
+            },
+            'comment': {
+                'with_user': self._join_user_comment,
+                'with_node': self._join_node_comment,
+                'direction': None
+            },
+            'log': {
+                'with_node': self._join_node_log,
+                'direction': None
+            }
         }
-        return d
+
+        return mapping
 
     def _get_connecting_node(self, index, joining_keyword=None, joining_value=None, **kwargs):
         """
@@ -1492,28 +1691,14 @@ class QueryBuilder(object):
             A dictionary specifying how the current node
             is linked to other nodes.
         :param index: Index of this node within the path specification
-
-        Valid (currently implemented) keys are:
-
-        *   *input_of*
-        *   *output_of*
-        *   *descendant_of*
-        *   *ancestor_of*
-        *   *direction*
-        *   *group_of*
-        *   *member_of*
-        *   *has_computer*
-        *   *computer_of*
-        *   *created_by*
-        *   *creator_of*
-        *   *owner_of*
-        *   *belongs_to*
-
-        Future:
-
-        *   *master_of*
-        *   *slave_of*
+        :param joining_keyword: the relation on which to join
+        :param joining_value: the tag of the nodes to be joined
         """
+        # Set the calling entity - to allow for the correct join relation to be set
+        if self._path[index]['entity_type'] not in ['computer', 'user', 'group', 'comment', 'log']:
+            calling_entity = 'node'
+        else:
+            calling_entity = self._path[index]['entity_type']
 
         if joining_keyword == 'direction':
             if joining_value > 0:
@@ -1523,7 +1708,11 @@ class QueryBuilder(object):
             else:
                 raise Exception("Direction 0 is not valid")
         else:
-            func = self._get_function_map()[joining_keyword]
+            try:
+                func = self._get_function_map()[calling_entity][joining_keyword]
+            except KeyError:
+                raise InputValidationError("'{}' is not a valid joining keyword for a '{}' type entity".format(
+                    joining_keyword, calling_entity))
 
             if isinstance(joining_value, int):
                 returnval = (self._aliased_path[joining_value], func)
@@ -1533,8 +1722,8 @@ class QueryBuilder(object):
                 except KeyError:
                     raise InputValidationError('Key {} is unknown to the types I know about:\n'
                                                '{}'.format(
-                        self._get_tag_from_specification(joining_value),
-                        self._tag_to_alias_map.keys()))
+                                                   self._get_tag_from_specification(joining_value),
+                                                   self._tag_to_alias_map.keys()))
         return returnval
 
     def _get_json_compatible(self, inp):
@@ -1544,7 +1733,8 @@ class QueryBuilder(object):
             The input value that will be converted.
             Recurses into each value if **inp** is an iterable.
         """
-        print(inp)
+        from aiida import orm
+
         if isinstance(inp, dict):
             for key, val in inp.items():
                 inp[self._get_json_compatible(key)] = self._get_json_compatible(inp.pop(key))
@@ -1553,7 +1743,7 @@ class QueryBuilder(object):
         elif inspect_isclass(inp):
             if issubclass(inp, self.AiidaNode):
                 return '.'.join(inp._plugin_type_string.strip('.').split('.')[:-1])
-            elif issubclass(inp, self.AiidaGroup):
+            elif issubclass(inp, orm.Group):
                 return 'group'
             else:
                 raise InputValidationError
@@ -1564,7 +1754,8 @@ class QueryBuilder(object):
 
     def get_json_compatible_queryhelp(self):
         """
-        Makes the queryhelp a json - compatible  dictionary.
+        Makes the queryhelp a json-compatible dictionary.
+
         In this way,the queryhelp can be stored
         in the database or a json-object, retrieved or shared and used later.
         See this usage::
@@ -1582,9 +1773,7 @@ class QueryBuilder(object):
 
         :returns: the json-compatible queryhelp
         """
-        from copy import deepcopy
-
-        return deepcopy({
+        return copy.deepcopy({
             'path': self._path,
             'filters': self._filters,
             'project': self._projections,
@@ -1593,20 +1782,16 @@ class QueryBuilder(object):
             'offset': self._offset,
         })
 
-        # ~ self._get_json_compatible()
-
-        # ~ return
-
     def _build_order(self, alias, entitytag, entityspec):
-
+        """
+        Build the order parameter of the query
+        """
         column_name = entitytag.split('.')[0]
         attrpath = entitytag.split('.')[1:]
         if attrpath and 'cast' not in entityspec.keys():
-            raise InputValidationError("\n\n"
-                                       "In order to project ({}), I have to cast the the values,\n"
+            raise InputValidationError("In order to project ({}), I have to cast the the values,\n"
                                        "but you have not specified the datatype to cast to\n"
-                                       "You can do this with keyword 'cast'\n"
-                                       "".format(entitytag))
+                                       "You can do this with keyword 'cast'".format(entitytag))
 
         entity = self._get_projectable_entity(alias, column_name, attrpath, **entityspec)
         order = entityspec.get('order', 'asc')
@@ -1632,11 +1817,7 @@ class QueryBuilder(object):
         firstalias = self._tag_to_alias_map[self._path[0]['tag']]
         self._query = self._impl.get_session().query(firstalias)
 
-        ######################### JOINS ################################
-        # ~ print self._query
-        # ~ print '\n\n\n'
-        # ~ raw_input()
-
+        # JOINS ################################
         for index, verticespec in enumerate(self._path[1:], start=1):
             alias = self._tag_to_alias_map[verticespec['tag']]
             # looping through the queryhelp
@@ -1646,7 +1827,7 @@ class QueryBuilder(object):
             isouterjoin = verticespec.get('outerjoin')
             edge_tag = verticespec['edge_tag']
 
-            if (verticespec['joining_keyword'] in ('descendant_of', 'ancestor_of')):
+            if verticespec['joining_keyword'] in ('with_ancestors', 'with_descendants', 'ancestor_of', 'descendant_of'):
                 # I treat those two cases in a special way.
                 # I give them a filter_dict, to help the recursive function find a good
                 # starting point. TODO: document this!
@@ -1670,9 +1851,8 @@ class QueryBuilder(object):
                 alias = self._tag_to_alias_map[tag]
             except KeyError:
                 # TODO Check KeyError before?
-                raise InputValidationError(' You looked for tag {} among the alias list\n'
-                                           'The tags I know are:\n{}'
-                                           ''.format(tag, self._tag_to_alias_map.keys()))
+                raise InputValidationError('You looked for tag {} among the alias list\n'
+                                           'The tags I know are:\n{}'.format(tag, self._tag_to_alias_map.keys()))
             self._query = self._query.filter(self._build_filters(alias, filter_specs))
 
         ######################### PROJECTIONS ##########################
@@ -1699,22 +1879,22 @@ class QueryBuilder(object):
             # relies on this behavior!
             self._build_projections(self._path[-1]['tag'], items_to_project=[{'*': {}}])
         else:
-            for vertice in self._path:
-                self._build_projections(vertice['tag'])
+            for vertex in self._path:
+                self._build_projections(vertex['tag'])
 
-            ##################### LINK-PROJECTIONS #########################
+            # LINK-PROJECTIONS #########################
 
-            for vertice in self._path[1:]:
-                edge_tag = vertice.get('edge_tag', None)
+            for vertex in self._path[1:]:
+                edge_tag = vertex.get('edge_tag', None)
                 if self._debug:
                     print("DEBUG: Checking projections for edges:")
-                    print("   This is edge {} from {}, {} of {}".format(edge_tag, vertice.get('tag'),
-                                                                        vertice.get('joining_keyword'),
-                                                                        vertice.get('joining_value')))
+                    print("   This is edge {} from {}, {} of {}".format(edge_tag, vertex.get('tag'),
+                                                                        vertex.get('joining_keyword'),
+                                                                        vertex.get('joining_value')))
                 if edge_tag is not None:
                     self._build_projections(edge_tag)
 
-        ######################### ORDER ################################
+        # ORDER ################################
         for order_spec in self._order_by:
             for tag, entities in order_spec.items():
                 alias = self._tag_to_alias_map[tag]
@@ -1722,7 +1902,7 @@ class QueryBuilder(object):
                     for entitytag, entityspec in entitydict.items():
                         self._build_order(alias, entitytag, entityspec)
 
-        ######################### LIMIT ################################
+        # LIMIT ################################
         if self._limit is not None:
             self._query = self._query.limit(self._limit)
 
@@ -1734,6 +1914,17 @@ class QueryBuilder(object):
         # pop the entity that I added to start the query
         self._query._entities.pop(0)
 
+        # Dirty solution coming up:
+        # Sqlalchemy is by default de-duplicating results if possible.
+        # This can lead to strange results, as shown in:
+        # https://github.com/aiidateam/aiida_core/issues/1600
+        # essentially qb.count() != len(qb.all()) in some cases.
+        # We also addressed this with sqlachemy:
+        # https://github.com/sqlalchemy/sqlalchemy/issues/4395#event-2002418814
+        # where the following solution was sanctioned:
+        self._query._has_mapper_entities = False
+        # We should monitor SQLAlchemy, for when a solution is officially supported by the API!
+
         # Make a list that helps the projection postprocessing
         self._attrkeys_as_in_sql_result = {
             index_in_sql_result: attrkey for tag, projected_entities_dict in self.tag_to_projected_entity_dict.items()
@@ -1741,7 +1932,7 @@ class QueryBuilder(object):
         }
 
         if self.nr_of_projections > len(self._attrkeys_as_in_sql_result):
-            raise InputValidationError("\nYou are projecting the same key\n" "multiple times within the same node")
+            raise InputValidationError("You are projecting the same key multiple times within the same node")
         ######################### DONE #################################
 
         return self._query
@@ -1778,7 +1969,7 @@ class QueryBuilder(object):
 
             counterquery = self._imp._get_session().query(orm_calc_class)
             if type_spec:
-                counterquery = counterquery.filter(orm_calc_class.type == type_spec)
+                counterquery = counterquery.filter(orm_calc_class.entity_type == type_spec)
             for alias in input_alias_list:
                 link = aliased(self.Link)
                 counterquery = counterquery.join(link, orm_calc_class.id == link.output_id).join(
@@ -1833,7 +2024,6 @@ class QueryBuilder(object):
         In this way, if a user asks for the same query twice, I am not recreating an instance.
 
         :returns: an instance of sqlalchemy.orm.Query that is specific to the backend used.
-
         """
         from aiida.common.hashing import make_hash
 
@@ -1864,10 +2054,14 @@ class QueryBuilder(object):
             try:
                 query = self._query
             except AttributeError:
-                warnings.warn("AttributeError thrown even though I should\n" "have _query as an attribute")
+                _LOGGER.warning("AttributeError thrown even though I should have _query as an attribute")
                 query = self._build()
                 self._hash = queryhelp_hash
         return query
+
+    @staticmethod
+    def get_aiida_entity_res(backend_entity):
+        return convert.get_orm_entity(backend_entity)
 
     def inject_query(self, query):
         """
@@ -1927,7 +2121,7 @@ class QueryBuilder(object):
                 raise Exception("I have not received an iterable\n" "but the number of projections is > 1")
             # It still returns a list!
             else:
-                returnval = [self._impl.get_aiida_res(self._attrkeys_as_in_sql_result[0], resultrow)]
+                returnval = [convert.get_orm_entity(self._impl.get_aiida_res(self._attrkeys_as_in_sql_result[0], resultrow))]
         return returnval
 
     def one(self):
@@ -1968,15 +2162,14 @@ class QueryBuilder(object):
 
         :returns: a generator of lists
         """
-
         query = self.get_query()
 
         for item in self._impl.iterall(query, batch_size, self._attrkeys_as_in_sql_result):
             # Convert to AiiDA frontend entities (if they are such)
             for i, item_entry in enumerate(item):
                 try:
-                    item[i] = convert.aiida_from_backend_entity(item_entry)
-                except ValueError:
+                    item[i] = convert.get_orm_entity(item_entry)
+                except TypeError:
                     # Keep the current value
                     pass
 
@@ -2002,8 +2195,8 @@ class QueryBuilder(object):
         for item in self._impl.iterdict(query, batch_size, self.tag_to_projected_entity_dict):
             for key, value in item.items():
                 try:
-                    item[key] = convert.aiida_from_backend_entity(value)
-                except ValueError:
+                    item[key] = convert.get_orm_entity(value)
+                except TypeError:
                     # Keep the current value
                     pass
 
@@ -2023,7 +2216,6 @@ class QueryBuilder(object):
 
         :returns: a list of lists of all projected entities.
         """
-
         return list(self.iterall(batch_size=batch_size))
 
     def dict(self, batch_size=None):
@@ -2055,8 +2247,8 @@ class QueryBuilder(object):
             )
             qb.append(
                 Node,
-                descendant_of='structure',
-                project=['type', 'id'],  # returns type (string) and id (string)
+                with_ancestors='structure',
+                project=['entity_type', 'id'],  # returns entity_type (string) and id (string)
                 tag='descendant'
             )
 
@@ -2069,26 +2261,16 @@ class QueryBuilder(object):
 
             qb.iterdict()
             >>> {'descendant': {
-                    'type': u'calculation.job.quantumespresso.pw.PwCalculation.',
+                    'entity_type': u'calculation.job.quantumespresso.pw.PwCalculation.',
                     'id': 7716}
                 }
             >>> {'descendant': {
-                    'type': u'data.remote.RemoteData.',
+                    'entity_type': u'data.remote.RemoteData.',
                     'id': 8510}
                 }
 
         """
         return list(self.iterdict(batch_size=batch_size))
-
-    def get_results_dict(self):
-        """
-        Deprecated, use :meth:`.dict` instead
-        """
-        warnings.warn(
-            "get_results_dict will be deprecated in the future"
-            "User iterdict for generator or dict for list", DeprecationWarning)
-
-        return self.dict()
 
     def inputs(self, **kwargs):
         """
@@ -2096,9 +2278,10 @@ class QueryBuilder(object):
 
         :returns: self
         """
+        from aiida.orm import Node
         join_to = self._path[-1]['tag']
         cls = kwargs.pop('cls', Node)
-        self.append(cls=cls, input_of=join_to, autotag=True, **kwargs)
+        self.append(cls=cls, with_outgoing=join_to, autotag=True, **kwargs)
         return self
 
     def outputs(self, **kwargs):
@@ -2107,9 +2290,10 @@ class QueryBuilder(object):
 
         :returns: self
         """
+        from aiida.orm import Node
         join_to = self._path[-1]['tag']
         cls = kwargs.pop('cls', Node)
-        self.append(cls=cls, output_of=join_to, autotag=True, **kwargs)
+        self.append(cls=cls, with_incoming=join_to, autotag=True, **kwargs)
         return self
 
     def children(self, **kwargs):
@@ -2118,9 +2302,10 @@ class QueryBuilder(object):
 
         :returns: self
         """
+        from aiida.orm import Node
         join_to = self._path[-1]['tag']
         cls = kwargs.pop('cls', Node)
-        self.append(cls=cls, descendant_of=join_to, autotag=True, **kwargs)
+        self.append(cls=cls, with_ancestors=join_to, autotag=True, **kwargs)
         return self
 
     def parents(self, **kwargs):
@@ -2129,7 +2314,36 @@ class QueryBuilder(object):
 
         :returns: self
         """
+        from aiida.orm import Node
         join_to = self._path[-1]['tag']
         cls = kwargs.pop('cls', Node)
-        self.append(cls=cls, ancestor_of=join_to, autotag=True, **kwargs)
+        self.append(cls=cls, with_descendants=join_to, autotag=True, **kwargs)
         return self
+
+    def _deprecate(self, function, deprecated_name, preferred_name, version='1.0.0a5'):
+        """
+        Wrapper to return a decorated functon which will print a deprecation warning when it is called.
+
+        Specifically for when an  old relationship type is used.
+        Note that it is the way of calling the function which is deprecated, not the function itself
+
+        :param function: a deprecated function to call
+        :param deprecated_name: the name which is deprecated
+        :param preferred_name: the new name which is preferred
+        :param version: aiida version for which this takes effect.
+        """
+
+        def wrapper(*args, **kwargs):
+            """
+            Decorator to print a deprecation warning
+            """
+            import warnings
+            from aiida.common.warnings import AiidaDeprecationWarning
+            warnings.warn(
+                "The relationship name '{}' is deprecated from version {} onwards. Use '{}' instead.".format(
+                    deprecated_name, version, preferred_name),
+                AiidaDeprecationWarning,
+                stacklevel=2)
+            return function(*args, **kwargs)
+
+        return wrapper

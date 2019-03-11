@@ -20,9 +20,9 @@ from sqlalchemy.types import Integer, Boolean
 import sqlalchemy.exc
 
 from aiida.common import exceptions
+from aiida.backends.sqlalchemy import get_scoped_session
 
-
-__all__ = ['django_filter', 'get_attr']
+__all__ = ('django_filter', 'get_attr')
 
 
 class ModelWrapper(object):
@@ -34,10 +34,17 @@ class ModelWrapper(object):
     * after ever write the updated value is flushed to the database.
     """
 
-    def __init__(self, model):
+    def __init__(self, model, auto_flush=()):
+        """Construct the ModelWrapper.
+
+        :param model: the database model instance to wrap
+        :param auto_flush: an optional tuple of database model fields that are always to be flushed, in addition to
+            the field that corresponds to the attribute being set through `__setattr__`.
+        """
         super(ModelWrapper, self).__init__()
         # Have to do it this way because we overwrite __setattr__
         object.__setattr__(self, '_model', model)
+        object.__setattr__(self, '_auto_flush', auto_flush)
 
     def __getattr__(self, item):
         # Python 3's implementation of copy.copy does not call __init__ on the new object
@@ -46,7 +53,7 @@ class ModelWrapper(object):
         if item == '_model':
             raise AttributeError()
 
-        if self.is_saved() and self._is_model_field(item):
+        if self.is_saved() and not self._in_transaction() and self._is_model_field(item):
             self._ensure_model_uptodate(fields=(item,))
 
         return getattr(self._model, item)
@@ -54,7 +61,8 @@ class ModelWrapper(object):
     def __setattr__(self, key, value):
         setattr(self._model, key, value)
         if self.is_saved() and self._is_model_field(key):
-            self._flush(fields=(key,))
+            fields = set((key,) + self._auto_flush)
+            self._flush(fields=fields)
 
     def is_saved(self):
         return self._model.id is not None
@@ -62,7 +70,8 @@ class ModelWrapper(object):
     def save(self):
         """Store the model (possibly updating values if changed)."""
         try:
-            self._model.save(commit=True)
+            commit = not self._in_transaction()
+            self._model.save(commit=commit)
         except sqlalchemy.exc.IntegrityError as e:
             self._model.session.rollback()
             raise exceptions.IntegrityError(str(e))
@@ -71,7 +80,7 @@ class ModelWrapper(object):
         return inspect(self._model.__class__).has_property(name)
 
     def _flush(self, fields=()):
-        """If the user is stored then save the current value."""
+        """If the model is stored then save the current value."""
         if self.is_saved():
             for field in fields:
                 flag_modified(self._model, field)
@@ -81,6 +90,10 @@ class ModelWrapper(object):
     def _ensure_model_uptodate(self, fields=None):
         if self.is_saved():
             self._model.session.expire(self._model, attribute_names=fields)
+
+    @staticmethod
+    def _in_transaction():
+        return get_scoped_session().transaction.nested
 
 
 @contextlib.contextmanager

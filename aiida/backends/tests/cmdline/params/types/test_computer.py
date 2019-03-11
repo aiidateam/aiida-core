@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Tests for the `ComputerParamType`."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -18,16 +19,17 @@ from aiida import orm
 
 
 class TestComputerParamType(AiidaTestCase):
+    """Tests for the `ComputerParamType`."""
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls, *args, **kwargs):
         """
         Create some computers to test the ComputerParamType parameter type for the command line infrastructure
         We create an initial computer with a random name and then on purpose create two computers with a name
         that matches exactly the ID and UUID, respectively, of the first one. This allows us to test
         the rules implemented to solve ambiguities that arise when determing the identifier type
         """
-        super(TestComputerParamType, cls).setUpClass()
+        super(TestComputerParamType, cls).setUpClass(*args, **kwargs)
 
         kwargs = {
             'hostname': 'localhost',
@@ -47,7 +49,7 @@ class TestComputerParamType(AiidaTestCase):
         """
         identifier = '{}'.format(self.entity_01.pk)
         result = self.param.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_01.uuid)
+        self.assertEqual(result.uuid, self.entity_01.uuid)
 
     def test_get_by_uuid(self):
         """
@@ -55,7 +57,7 @@ class TestComputerParamType(AiidaTestCase):
         """
         identifier = '{}'.format(self.entity_01.uuid)
         result = self.param.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_01.uuid)
+        self.assertEqual(result.uuid, self.entity_01.uuid)
 
     def test_get_by_label(self):
         """
@@ -63,7 +65,7 @@ class TestComputerParamType(AiidaTestCase):
         """
         identifier = '{}'.format(self.entity_01.name)
         result = self.param.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_01.uuid)
+        self.assertEqual(result.uuid, self.entity_01.uuid)
 
     def test_ambiguous_label_pk(self):
         """
@@ -74,11 +76,11 @@ class TestComputerParamType(AiidaTestCase):
         """
         identifier = '{}'.format(self.entity_02.name)
         result = self.param.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_01.uuid)
+        self.assertEqual(result.uuid, self.entity_01.uuid)
 
-        identifier = '{}{}'.format(self.entity_02.name, OrmEntityLoader.LABEL_AMBIGUITY_BREAKER_CHARACTER)
+        identifier = '{}{}'.format(self.entity_02.name, OrmEntityLoader.label_ambiguity_breaker)
         result = self.param.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_02.uuid)
+        self.assertEqual(result.uuid, self.entity_02.uuid)
 
     def test_ambiguous_label_uuid(self):
         """
@@ -89,8 +91,8 @@ class TestComputerParamType(AiidaTestCase):
         """
         identifier = '{}'.format(self.entity_03.name)
         result = self.param.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_01.uuid)
+        self.assertEqual(result.uuid, self.entity_01.uuid)
 
-        identifier = '{}{}'.format(self.entity_03.name, OrmEntityLoader.LABEL_AMBIGUITY_BREAKER_CHARACTER)
+        identifier = '{}{}'.format(self.entity_03.name, OrmEntityLoader.label_ambiguity_breaker)
         result = self.param.convert(identifier, None, None)
-        self.assertEquals(result.uuid, self.entity_03.uuid)
+        self.assertEqual(result.uuid, self.entity_03.uuid)

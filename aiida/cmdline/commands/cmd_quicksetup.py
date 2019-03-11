@@ -12,6 +12,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import os
 import sys
 import hashlib
@@ -21,8 +22,8 @@ import click
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.utils import echo
-from aiida.control.profile import setup_profile
-from aiida.control.postgres import Postgres, manual_setup_instructions, prompt_db_info
+from aiida.manage.external.postgres import Postgres, manual_setup_instructions, prompt_db_info
+from aiida.manage.configuration.setup import setup_profile
 
 
 def _check_db_name(dbname, postgres):
@@ -56,41 +57,52 @@ def _check_db_name(dbname, postgres):
 def quicksetup(profile_name, only_config, set_default, non_interactive, backend, db_host, db_port, db_name, db_username,
                db_password, repository, email, first_name, last_name, institution):
     """Set up a sane configuration with as little interaction as possible."""
-    from aiida.common.setup import create_base_dirs, AIIDA_CONFIG_FOLDER
-    create_base_dirs()
+    import getpass
+    from aiida.common.hashing import get_random_string
+    from aiida.manage.configuration.utils import load_config
+    from aiida.manage.configuration.setup import create_instance_directories
 
-    aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
+    create_instance_directories()
+    config = load_config(create=True)
+
+    # create a profile, by default 'quicksetup' and prompt the user if already exists
+    profile_name = profile_name or 'quicksetup'
+    write_profile = False
+    while not write_profile:
+        if profile_name in config.profile_names:
+            echo.echo_warning("Profile '{}' already exists.".format(profile_name))
+            if click.confirm("Overwrite existing profile '{}'?".format(profile_name)):
+                write_profile = True
+            else:
+                profile_name = click.prompt('New profile name', type=str)
+        else:
+            write_profile = True
 
     # access postgres
-    postgres = Postgres(host=db_host, port=db_port, interactive=bool(not non_interactive), quiet=False)
+    dbinfo = {'host': db_host, 'port': db_port}
+    postgres = Postgres(interactive=bool(not non_interactive), quiet=False, dbinfo=dbinfo)
     postgres.set_setup_fail_callback(prompt_db_info)
     success = postgres.determine_setup()
     if not success:
         sys.exit(1)
 
-    # default database name is <profile_name>_<login-name>
-    # this ensures that for profiles named test_... the database will also
-    # be named test_...
-    import getpass
     osuser = getpass.getuser()
-    aiida_base_dir_hash = hashlib.md5(AIIDA_CONFIG_FOLDER.encode('utf-8')).hexdigest()
-    dbname = db_name or profile_name + '_' + osuser + '_' + aiida_base_dir_hash
+    config_dir_hash = hashlib.md5(config.dirpath.encode('utf-8')).hexdigest()
 
     # default database user name is aiida_qs_<login-name>
     # default password is random
-    dbuser = db_username or 'aiida_qs_' + osuser + '_' + aiida_base_dir_hash
-    from aiida.common.setup import generate_random_secret_key
-    dbpass = db_password or generate_random_secret_key()
+    # default database name is <profile_name>_<login-name>
+    # this ensures that for profiles named test_... the database will also be named test_...
+    dbuser = db_username or 'aiida_qs_' + osuser + '_' + config_dir_hash
+    dbpass = db_password or get_random_string(length=50)
 
     # check if there is a profile that contains the db user already
     # and if yes, take the db user password from there
     # This is ok because a user can only see his own config files
-    from aiida.common.setup import get_or_create_config
-    confs = get_or_create_config()
-    profs = confs.get('profiles', {})
-    for profile in profs.values():
-        if profile.get('AIIDADB_USER', '') == dbuser and not db_password:
-            dbpass = profile.get('AIIDADB_PASS')
+    dbname = db_name or profile_name + '_' + osuser + '_' + config_dir_hash
+    for profile in config.profiles:
+        if profile.dictionary.get('AIIDADB_USER', '') == dbuser and not db_password:
+            dbpass = profile.dictionary.get('AIIDADB_PASS')
             echo.echo('using found password for {}'.format(dbuser))
             break
 
@@ -112,27 +124,12 @@ def quicksetup(profile_name, only_config, set_default, non_interactive, backend,
         ]))
         raise exception
 
-    # create a profile, by default 'quicksetup' and prompt the user if
-    # already exists
-    confs = get_or_create_config()
-    profile_name = profile_name or 'quicksetup'
-    write_profile = False
-    while not write_profile:
-        if profile_name in confs.get('profiles', {}):
-            if click.confirm('overwrite existing profile {}?'.format(profile_name)):
-                write_profile = True
-            else:
-                profile_name = click.prompt('new profile name', type=str)
-        else:
-            write_profile = True
+    dbhost = postgres.get_dbinfo().get('host', 'localhost')
+    dbport = postgres.get_dbinfo().get('port', '5432')
 
-    dbhost = postgres.dbinfo.get('host', 'localhost')
-    dbport = postgres.dbinfo.get('port', '5432')
-
-    from os.path import isabs
-    repo = repository or 'repository-{}/'.format(profile_name)
-    if not isabs(repo):
-        repo = os.path.join(aiida_dir, repo)
+    repo = repository or 'repository/{}/'.format(profile_name)
+    if not os.path.isabs(repo):
+        repo = os.path.join(config.dirpath, repo)
 
     setup_args = {
         'backend': backend,

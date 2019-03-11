@@ -7,9 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-""""
-Manipulating and printing information of nodes.
-"""
+"""`verdi node` command."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -25,7 +23,6 @@ from aiida.cmdline.utils.decorators import with_dbenv
 @verdi.group('node')
 def verdi_node():
     """Inspect, create and manage nodes."""
-    pass
 
 
 @verdi_node.group('repo')
@@ -39,19 +36,12 @@ def verdi_node_repo():
 @with_dbenv()
 def repo_cat(node, relative_path):
     """Output the content of a file in the repository folder."""
-    from aiida.cmdline.utils.repository import cat_repo_files
-
     try:
-        cat_repo_files(node, relative_path)
-    except ValueError as exc:
-        echo.echo_critical(str(exc))
-    except IOError as exc:
-        import errno
-        # Ignore Broken pipe errors, re-raise everything else
-        if exc.errno == errno.EPIPE:
-            pass
-        else:
-            echo.echo_critical(str(exc))
+        content = node.get_object_content(relative_path)
+    except Exception as exception:  # pylint: disable=broad-except
+        echo.echo_critical('failed to get the content of file `{}`: {}'.format(relative_path, exception))
+    else:
+        echo.echo(content)
 
 
 @verdi_node_repo.command('ls')
@@ -61,12 +51,12 @@ def repo_cat(node, relative_path):
 @with_dbenv()
 def repo_ls(node, relative_path, color):
     """List files in the repository folder."""
-    from aiida.cmdline.utils.repository import list_repo_files
+    from aiida.cmdline.utils.repository import list_repository_contents
 
     try:
-        list_repo_files(node, relative_path, color)
-    except ValueError as exc:
-        echo.echo_critical(str(exc))
+        list_repository_contents(node, relative_path, color)
+    except ValueError as exception:
+        echo.echo_critical(exception)
 
 
 @verdi_node.command('label')
@@ -147,19 +137,19 @@ def show(nodes, print_groups):
 
     for node in nodes:
         # pylint: disable=fixme
-        #TODO: Add a check here on the node type, otherwise it might try to access
+        # TODO: Add a check here on the node type, otherwise it might try to access
         # attributes such as code which are not necessarily there
         echo.echo(get_node_info(node))
 
         if print_groups:
             from aiida.orm.querybuilder import QueryBuilder
-            from aiida.orm.group import Group
-            from aiida.orm.node import Node  # pylint: disable=redefined-outer-name
+            from aiida.orm.groups import Group
+            from aiida.orm import Node  # pylint: disable=redefined-outer-name
 
             # pylint: disable=invalid-name
             qb = QueryBuilder()
             qb.append(Node, tag='node', filters={'id': {'==': node.pk}})
-            qb.append(Group, tag='groups', group_of='node', project=['id', 'name'])
+            qb.append(Group, tag='groups', with_node='node', project=['id', 'name'])
 
             echo.echo("#### GROUPS:")
 
@@ -187,7 +177,7 @@ def tree(nodes, depth):
             echo.echo("")
 
 
-class NodeTreePrinter(object):
+class NodeTreePrinter(object):  # pylint: disable=useless-object-inheritance
     """Utility functions for printing node trees."""
 
     @classmethod
@@ -214,11 +204,11 @@ class NodeTreePrinter(object):
 
         children = []
         # pylint: disable=unused-variable
-        for label, child \
-                in sorted(node.get_outputs(also_labels=True,
-                                           link_type=follow_links),
+        for entry \
+                in sorted(node.get_outgoing(link_type=follow_links).all(),
                           key=cls._ctime):
-            child_str = cls._build_tree(child, show_pk, follow_links=follow_links, max_depth=max_depth, depth=depth + 1)
+            child_str = cls._build_tree(
+                entry.node, show_pk, follow_links=follow_links, max_depth=max_depth, depth=depth + 1)
             if child_str:
                 children.append(child_str)
 
@@ -251,7 +241,7 @@ def node_delete(nodes, follow_calls, dry_run, verbose, non_interactive):
     """
     Deletes a node and everything that originates from it.
     """
-    from aiida.utils.delete_nodes import delete_nodes
+    from aiida.manage.database.delete.nodes import delete_nodes
 
     if not nodes:
         return

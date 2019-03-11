@@ -16,13 +16,14 @@ Since the dbenv gets loaded on the temporary profile.
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import os
 import sys
 import unittest
 import tempfile
 import shutil
 
-from aiida.utils.fixtures import PluginTestCase, TestRunner
+from aiida.manage.fixtures import PluginTestCase, TestRunner
 from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 from aiida import is_dbenv_loaded
 
@@ -45,10 +46,10 @@ class PluginTestCase1(PluginTestCase):
     @staticmethod
     def get_data():
         """
-        Return some ParameterData
+        Return some Dict
         """
-        from aiida.orm.utils import DataFactory
-        data = DataFactory('parameter')(dict={'data': 'test'})
+        from aiida.plugins import DataFactory
+        data = DataFactory('dict')(dict={'data': 'test'})
         data.store()
         return data
 
@@ -78,7 +79,7 @@ class PluginTestCase1(PluginTestCase):
 
         self.assertTrue(is_dbenv_loaded())
         self.assertEqual(orm.load_node(self.data_pk).uuid, self.data.uuid)
-        self.assertEqual(orm.Computer.objects(self.backend).get(name='localhost').uuid, self.computer.uuid)
+        self.assertEqual(orm.Computer.objects.get(name='localhost').uuid, self.computer.uuid)
 
     def test_tear_down(self):
         """

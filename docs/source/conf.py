@@ -47,7 +47,7 @@ needs_sphinx = '1.5.0'
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.todo', 'sphinx.ext.coverage', 'sphinx.ext.imgmath', 'sphinx.ext.ifconfig', 'sphinx.ext.viewcode', 'IPython.sphinxext.ipython_console_highlighting', 'IPython.sphinxext.ipython_directive']
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.todo', 'sphinx.ext.coverage', 'sphinx.ext.imgmath', 'sphinx.ext.ifconfig', 'sphinx.ext.viewcode', 'IPython.sphinxext.ipython_console_highlighting', 'IPython.sphinxext.ipython_directive', 'sphinxcontrib.contentui']
 ipython_mplbackend = ""
 
 todo_include_todos = True
@@ -390,7 +390,7 @@ epub_copyright = copyright
 
 # Warnings to ignore when using the -n (nitpicky) option
 # We should ignore any python built-in exception, for instance
-nitpick_ignore = []
+nitpick_ignore = [('py:class','Warning'), ('py:class', 'exceptions.Warning')]
 
 for line in open('nitpick-exceptions'):
     if line.strip() == "" or line.startswith("#"):

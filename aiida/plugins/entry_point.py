@@ -10,17 +10,23 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import enum
+import six
 import traceback
 
-import six
-
 try:
-    from reentry import manager as epm
+    from reentry.default_manager import PluginManager
+    # I don't use the default manager as it has scan_for_not_found=True
+    # by default, which re-runs scan if no entrypoints are found (which is
+    # quite possible if no aiida.tests entrypoints are registered)
+    ENTRYPOINT_MANAGER = PluginManager(scan_for_not_found=False)
 except ImportError:
-    import pkg_resources as epm
+    import pkg_resources as ENTRYPOINT_MANAGER
 
 from aiida.common.exceptions import MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError
+
+__all__ = ('load_entry_point', 'load_entry_point_from_string')
 
 
 ENTRY_POINT_GROUP_PREFIX = 'aiida.'
@@ -35,9 +41,9 @@ class EntryPointFormat(enum.Enum):
 
     Under these definitions a potentially valid entry point string may have the following formats:
 
-        * FULL:    prefixed group plus entry point name     aiida.calculations:job
-        * PARTIAL: unprefixed group plus entry point name   calculations:job
-        * MINIMAL: no group but only entry point name:      job
+        * FULL:    prefixed group plus entry point name     aiida.transports:ssh
+        * PARTIAL: unprefixed group plus entry point name   transports:ssh
+        * MINIMAL: no group but only entry point name:      ssh
 
     Note that the MINIMAL format can potentially lead to ambiguity if the name appears in multiple
     entry point groups.
@@ -50,16 +56,15 @@ class EntryPointFormat(enum.Enum):
 
 
 entry_point_group_to_module_path_map = {
-    'aiida.calculations': 'aiida.orm.calculation.job',
-    'aiida.code': 'aiida.orm.code',
-    'aiida.data': 'aiida.orm.data',
-    'aiida.node': 'aiida.orm.node',
-    'aiida.parsers': 'aiida.parsers',
-    'aiida.schedulers': 'aiida.scheduler.plugins',
+    'aiida.calculations': 'aiida.orm.nodes.process.calculation.calcjob',
+    'aiida.data': 'aiida.orm.nodes.data',
+    'aiida.node': 'aiida.orm.nodes',
+    'aiida.parsers': 'aiida.parsers.plugins',
+    'aiida.schedulers': 'aiida.schedulers.plugins',
     'aiida.tools.dbexporters': 'aiida.tools.dbexporters',
     'aiida.tools.dbexporters.tcod_plugins': 'aiida.tools.dbexporters.tcod_plugins',
     'aiida.tools.dbimporters': 'aiida.tools.dbimporters.plugins',
-    'aiida.transports': 'aiida.transport.plugins',
+    'aiida.transports': 'aiida.transports.plugins',
     'aiida.workflows': 'aiida.workflows',
 }
 
@@ -101,7 +106,7 @@ def parse_entry_point_string(entry_point_string):
 
     try:
         group, name = entry_point_string.split(ENTRY_POINT_STRING_SEPARATOR)
-    except ValueError as exception:
+    except ValueError:
         raise ValueError('invalid entry_point_string format')
 
     return group, name
@@ -118,7 +123,7 @@ def get_entry_point_string_format(entry_point_string):
     """
     try:
         group, name = entry_point_string.split(ENTRY_POINT_STRING_SEPARATOR)
-    except ValueError as exception:
+    except ValueError:
         return EntryPointFormat.MINIMAL
     else:
         if group.startswith(ENTRY_POINT_GROUP_PREFIX):
@@ -135,8 +140,8 @@ def get_entry_point_from_string(entry_point_string):
     :return: the entry point if it exists else None
     :raises TypeError: if the entry_point_string is not a string type
     :raises ValueError: if the entry_point_string cannot be split into two parts on the entry point string separator
-    :raises MissingEntryPointError: entry point was not registered
-    :raises MultipleEntryPointError: entry point could not be uniquely resolved
+    :raises aiida.common.MissingEntryPointError: entry point was not registered
+    :raises aiida.common.MultipleEntryPointError: entry point could not be uniquely resolved
     """
     group, name = parse_entry_point_string(entry_point_string)
     return get_entry_point(group, name)
@@ -150,9 +155,9 @@ def load_entry_point_from_string(entry_point_string):
     :return: class registered at the given entry point
     :raises TypeError: if the entry_point_string is not a string type
     :raises ValueError: if the entry_point_string cannot be split into two parts on the entry point string separator
-    :raises MissingEntryPointError: entry point was not registered
-    :raises MultipleEntryPointError: entry point could not be uniquely resolved
-    :raises LoadingEntryPointError: entry point could not be loaded
+    :raises aiida.common.MissingEntryPointError: entry point was not registered
+    :raises aiida.common.MultipleEntryPointError: entry point could not be uniquely resolved
+    :raises aiida.common.LoadingEntryPointError: entry point could not be loaded
     """
     group, name = parse_entry_point_string(entry_point_string)
     return load_entry_point(group, name)
@@ -167,15 +172,15 @@ def load_entry_point(group, name):
     :return: class registered at the given entry point
     :raises TypeError: if the entry_point_string is not a string type
     :raises ValueError: if the entry_point_string cannot be split into two parts on the entry point string separator
-    :raises MissingEntryPointError: entry point was not registered
-    :raises MultipleEntryPointError: entry point could not be uniquely resolved
-    :raises LoadingEntryPointError: entry point could not be loaded
+    :raises aiida.common.MissingEntryPointError: entry point was not registered
+    :raises aiida.common.MultipleEntryPointError: entry point could not be uniquely resolved
+    :raises aiida.common.LoadingEntryPointError: entry point could not be loaded
     """
     entry_point = get_entry_point(group, name)
 
     try:
         loaded_entry_point = entry_point.load()
-    except ImportError as exception:
+    except ImportError:
         raise LoadingEntryPointError("Failed to load entry point '{}':\n{}".format(name, traceback.format_exc()))
 
     return loaded_entry_point
@@ -213,7 +218,7 @@ def get_entry_points(group):
     :param group: the entry point group
     :return: a list of entry points
     """
-    return [ep for ep in epm.iter_entry_points(group=group)]
+    return [ep for ep in ENTRYPOINT_MANAGER.iter_entry_points(group=group)]
 
 
 def get_entry_point(group, name):
@@ -223,8 +228,8 @@ def get_entry_point(group, name):
     :param group: the entry point group
     :param name: the name of the entry point
     :return: the entry point if it exists else None
-    :raises MissingEntryPointError: entry point was not registered
-    :raises MultipleEntryPointError: entry point could not be uniquely resolved
+    :raises aiida.common.MissingEntryPointError: entry point was not registered
+    :raises aiida.common.MultipleEntryPointError: entry point could not be uniquely resolved
     """
     entry_points = [ep for ep in get_entry_points(group) if ep.name == name]
 
@@ -245,15 +250,8 @@ def get_entry_point_from_class(class_module, class_name):
     :param class_name: name of the class
     :return: a tuple of the corresponding group and entry point or None if not found
     """
-    prefix = 'JobProcess_'
-
-    # Curiosity of the dynamically generated JobProcess classes
-    if class_name.startswith(prefix):
-        class_path = class_name[len(prefix):]
-        class_module, class_name = class_path.rsplit('.', 1)
-
-    for group in epm.get_entry_map().keys():
-        for entry_point in epm.iter_entry_points(group):
+    for group in ENTRYPOINT_MANAGER.get_entry_map().keys():
+        for entry_point in ENTRYPOINT_MANAGER.iter_entry_points(group):
 
             if entry_point.module_name != class_module:
                 continue
@@ -277,9 +275,11 @@ def get_entry_point_string_from_class(class_module, class_name):
     by splitting on the separator, which will give the group and entry point, which should
     the corresponding factory to uniquely determine and load the class
 
+
     :param class_module: module of the class
     :param class_name: name of the class
     :return: the corresponding entry point string or None
+    :rtype: str
     """
     group, entry_point = get_entry_point_from_class(class_module, class_name)
 

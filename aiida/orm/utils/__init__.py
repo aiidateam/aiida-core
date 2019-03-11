@@ -7,22 +7,26 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Utilities related to the ORM."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
 import six
 
-from aiida.plugins.factory import CalculationFactory, DataFactory, WorkflowFactory
-
-__all__ = 'CalculationFactory', 'DataFactory', 'WorkflowFactory', 'load_code', 'load_computer', 'load_group', \
-          'load_node', 'load_workflow'
+__all__ = ('load_code', 'load_computer', 'load_group', 'load_node')
 
 
-def load_entity(entity_loader=None, identifier=None, pk=None, uuid=None, label=None, sub_classes=None,
+def load_entity(entity_loader=None,
+                identifier=None,
+                pk=None,
+                uuid=None,
+                label=None,
+                sub_classes=None,
                 query_with_dashes=True):
+    # pylint: disable=too-many-arguments
     """
-    Load a Code instance by one of its identifiers: pk, uuid or label
+    Load an entity instance by one of its identifiers: pk, uuid or label
 
     If the type of the identifier is unknown simply pass it without a keyword and the loader will attempt to
     automatically infer the type.
@@ -37,8 +41,8 @@ def load_entity(entity_loader=None, identifier=None, pk=None, uuid=None, label=N
     :returns: the Code instance
     :raise ValueError: if none or more than one of the identifiers are supplied
     :raise TypeError: if the provided identifier has the wrong type
-    :raise NotExistent: if no matching Code is found
-    :raise MultipleObjectsError: if more than one Code was found
+    :raise aiida.common.NotExistent: if no matching Code is found
+    :raise aiida.common.MultipleObjectsError: if more than one Code was found
     """
     from aiida.orm.utils.loaders import OrmEntityLoader, IdentifierType
 
@@ -79,8 +83,8 @@ def load_entity(entity_loader=None, identifier=None, pk=None, uuid=None, label=N
         identifier = str(identifier)
         identifier_type = None
 
-    return entity_loader.load_entity(identifier, identifier_type, sub_classes=sub_classes,
-                                     query_with_dashes=query_with_dashes)
+    return entity_loader.load_entity(
+        identifier, identifier_type, sub_classes=sub_classes, query_with_dashes=query_with_dashes)
 
 
 def load_code(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True):
@@ -100,12 +104,18 @@ def load_code(identifier=None, pk=None, uuid=None, label=None, sub_classes=None,
     :return: the Code instance
     :raise ValueError: if none or more than one of the identifiers are supplied
     :raise TypeError: if the provided identifier has the wrong type
-    :raise NotExistent: if no matching Code is found
-    :raise MultipleObjectsError: if more than one Code was found
+    :raise aiida.common.NotExistent: if no matching Code is found
+    :raise aiida.common.MultipleObjectsError: if more than one Code was found
     """
     from aiida.orm.utils.loaders import CodeEntityLoader
-    return load_entity(CodeEntityLoader, identifier=identifier, pk=pk, uuid=uuid, label=label, sub_classes=sub_classes,
-                       query_with_dashes=query_with_dashes)
+    return load_entity(
+        CodeEntityLoader,
+        identifier=identifier,
+        pk=pk,
+        uuid=uuid,
+        label=label,
+        sub_classes=sub_classes,
+        query_with_dashes=query_with_dashes)
 
 
 def load_computer(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True):
@@ -125,12 +135,18 @@ def load_computer(identifier=None, pk=None, uuid=None, label=None, sub_classes=N
     :return: the Computer instance
     :raise ValueError: if none or more than one of the identifiers are supplied
     :raise TypeError: if the provided identifier has the wrong type
-    :raise NotExistent: if no matching Computer is found
-    :raise MultipleObjectsError: if more than one Computer was found
+    :raise aiida.common.NotExistent: if no matching Computer is found
+    :raise aiida.common.MultipleObjectsError: if more than one Computer was found
     """
     from aiida.orm.utils.loaders import ComputerEntityLoader
-    return load_entity(ComputerEntityLoader, identifier=identifier, pk=pk, uuid=uuid, label=label,
-                       sub_classes=sub_classes, query_with_dashes=query_with_dashes)
+    return load_entity(
+        ComputerEntityLoader,
+        identifier=identifier,
+        pk=pk,
+        uuid=uuid,
+        label=label,
+        sub_classes=sub_classes,
+        query_with_dashes=query_with_dashes)
 
 
 def load_group(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True):
@@ -150,12 +166,18 @@ def load_group(identifier=None, pk=None, uuid=None, label=None, sub_classes=None
     :return: the Group instance
     :raise ValueError: if none or more than one of the identifiers are supplied
     :raise TypeError: if the provided identifier has the wrong type
-    :raise NotExistent: if no matching Group is found
-    :raise MultipleObjectsError: if more than one Group was found
+    :raise aiida.common.NotExistent: if no matching Group is found
+    :raise aiida.common.MultipleObjectsError: if more than one Group was found
     """
     from aiida.orm.utils.loaders import GroupEntityLoader
-    return load_entity(GroupEntityLoader, identifier=identifier, pk=pk, uuid=uuid, label=label, sub_classes=sub_classes,
-                       query_with_dashes=query_with_dashes)
+    return load_entity(
+        GroupEntityLoader,
+        identifier=identifier,
+        pk=pk,
+        uuid=uuid,
+        label=label,
+        sub_classes=sub_classes,
+        query_with_dashes=query_with_dashes)
 
 
 def load_node(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True):
@@ -173,58 +195,15 @@ def load_node(identifier=None, pk=None, uuid=None, label=None, sub_classes=None,
     :returns: the node instance
     :raise ValueError: if none or more than one of the identifiers are supplied
     :raise TypeError: if the provided identifier has the wrong type
-    :raise NotExistent: if no matching Node is found
-    :raise MultipleObjectsError: if more than one Node was found
+    :raise aiida.common.NotExistent: if no matching Node is found
+    :raise aiida.common.MultipleObjectsError: if more than one Node was found
     """
     from aiida.orm.utils.loaders import NodeEntityLoader
-    return load_entity(NodeEntityLoader, identifier=identifier, pk=pk, uuid=uuid, label=label, sub_classes=sub_classes,
-                       query_with_dashes=query_with_dashes)
-
-
-def load_workflow(wf_id=None, pk=None, uuid=None):
-    """
-    Return an AiiDA workflow given PK or UUID.
-
-    :param wf_id: PK (integer) or UUID (string) or UUID instance or a workflow
-    :param pk: PK of a workflow
-    :param uuid: UUID of a workflow
-    :return: an AiiDA workflow
-    :raises: ValueError if none or more than one of parameters is supplied
-        or type of wf_id is neither string nor integer
-    """
-    # This must be done inside here, because at import time the profile
-    # must have been already loaded. If you put it at the module level,
-    # the implementation is frozen to the default one at import time.
-    from aiida.orm.implementation import Workflow
-    from uuid import UUID as uuid_type
-
-    if int(wf_id is None) + int(pk is None) + int(uuid is None) == 3:
-        raise ValueError("one of the parameters 'wf_id', 'pk' and 'uuid' "
-                         "has to be supplied")
-    if int(wf_id is None) + int(pk is None) + int(uuid is None) < 2:
-        raise ValueError("only one of parameters 'wf_id', 'pk' and 'uuid' "
-                         "has to be supplied")
-
-    if wf_id is not None:
-        if wf_id and isinstance(wf_id, uuid_type):
-            wf_id = str(wf_id)
-
-        if isinstance(wf_id, six.string_types):
-            return Workflow.get_subclass_from_uuid(wf_id)
-        elif isinstance(wf_id, int):
-            return Workflow.get_subclass_from_pk(wf_id)
-        else:
-            raise ValueError("'wf_id' has to be either string, unicode, "
-                             "integer or UUID instance, {} given".format(type(wf_id)))
-    if pk is not None:
-        if isinstance(pk, int):
-            return Workflow.get_subclass_from_pk(pk)
-        else:
-            raise ValueError("'pk' has to be an integer")
-    else:
-        if uuid and isinstance(uuid, uuid_type):
-            uuid = str(uuid)
-        if isinstance(uuid, six.string_types):
-            return Workflow.get_subclass_from_uuid(uuid)
-        else:
-            raise ValueError("'uuid' has to be a string, unicode or a UUID instance")
+    return load_entity(
+        NodeEntityLoader,
+        identifier=identifier,
+        pk=pk,
+        uuid=uuid,
+        label=label,
+        sub_classes=sub_classes,
+        query_with_dashes=query_with_dashes)

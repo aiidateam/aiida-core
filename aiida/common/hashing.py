@@ -105,7 +105,7 @@ try:
     using_sysrandom = True
 except NotImplementedError:
     import warnings
-    warnings.warn('A secure pseudo-random number generator is not available '
+    warnings.warn('A secure pseudo-random number generator is not available '  # pylint: disable=no-member
                   'on your system. Falling back to Mersenne Twister.')
     using_sysrandom = False  # pylint: disable=invalid-name
 
@@ -356,7 +356,7 @@ def truncate_float64(value, num_bits=4):
     possible truncation in float->str->float roundtrips
     """
     mask = ~(2**num_bits - 1)
-    int_repr = np.float64(value).view(np.int64)  # pylint: disable=no-member
+    int_repr = np.float64(value).view(np.int64)  # pylint: disable=no-member,too-many-function-args,assignment-from-no-return
     masked_int = int_repr & mask
     truncated_value = masked_int.view(np.float64)
     return truncated_value

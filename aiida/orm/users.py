@@ -7,71 +7,44 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Module for the ORM user classes yo
-"""
-
+"""Module for the ORM user class."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.common.hashing import is_password_usable
 from aiida.common import exceptions
-from aiida.utils.email import normalize_email
+from aiida.manage.manager import get_manager
 
-from . import backends
 from . import entities
 
 __all__ = ('User',)
 
 
 class User(entities.Entity):
-    """
-    This is the base class for User information in AiiDA.  An implementing
-    backend needs to provide a concrete version.
-    """
-
-    # pylint: disable=invalid-name
+    """AiiDA User"""
 
     class Collection(entities.Collection):
         """
-        The collection of users stored in a backend
-        """
-
-        def find(self, email=None, id=None):
+            The collection of users stored in a backend
             """
-            Final all users matching the given criteria
+        UNDEFINED = 'UNDEFINED'
+        _default_user = None  # type: aiida.orm.User
 
-            :param email: An email address to search for
-            :return: A collection of users matching the criteria
-            """
-            # pylint: disable=no-self-use, invalid-name, redefined-builtin
-            from .querybuilder import QueryBuilder
-
-            qb = QueryBuilder()
-
-            filters = {}
-            if id is not None:
-                filters['id'] = {'==': id}
-            if email is not None:
-                filters['email'] = {'==': email}
-
-            qb.append(User, filters=filters)
-            res = [_[0] for _ in qb.all()]
-            if res is None:
-                return []
-
-            return res
+        def __init__(self, *args, **kwargs):
+            super(User.Collection, self).__init__(*args, **kwargs)
+            self._default_user = self.UNDEFINED
 
         def get_or_create(self, **kwargs):
             """
-            Get the existing user with a given email address or create an unstored one
+                Get the existing user with a given email address or create an unstored one
 
-            :param kwargs: The properties of the user to get or create
-            :return: The corresponding user object
-            :rtype: :class:`aiida.orm.User`
-            :raises: :class:`aiida.common.exceptions.MultipleObjectsError`, :class:`aiida.common.exceptions.NotExistent`
-            """
+                :param kwargs: The properties of the user to get or create
+                :return: The corresponding user object
+                :rtype: :class:`aiida.orm.User`
+                :raises: :class:`aiida.common.exceptions.MultipleObjectsError`,
+                    :class:`aiida.common.exceptions.NotExistent`
+                """
             try:
                 return False, self.get(**kwargs)
             except exceptions.NotExistent:
@@ -84,27 +57,45 @@ class User(entities.Entity):
             :return: The default user
             :rtype: :class:`aiida.orm.User`
             """
-            from aiida.common.utils import get_configured_user_email
+            if self._default_user is self.UNDEFINED:
+                email = get_manager().get_profile().default_user_email
+                if not email:
+                    self._default_user = None
 
-            email = get_configured_user_email()
-            if not email:
-                return None
+                try:
+                    self._default_user = self.get(email=email)
+                except (exceptions.MultipleObjectsError, exceptions.NotExistent):
+                    self._default_user = None
 
-            try:
-                return self.get(email=email)
-            except (exceptions.MultipleObjectsError, exceptions.NotExistent):
-                return None
+            return self._default_user
 
     REQUIRED_FIELDS = ['first_name', 'last_name', 'institution']
 
     def __init__(self, email, first_name='', last_name='', institution='', backend=None):
-        backend = backend or backends.construct_backend()
-        email = normalize_email(email)
+        backend = backend or get_manager().get_backend()
+        email = self.normalize_email(email)
         backend_entity = backend.users.create(email, first_name, last_name, institution)
         super(User, self).__init__(backend_entity)
 
     def __str__(self):
         return self.email
+
+    @staticmethod
+    def normalize_email(email):
+        """
+        Normalize the address by lowercasing the domain part of the email
+        address.
+
+        Taken from Django.
+        """
+        email = email or ''
+        try:
+            email_name, domain_part = email.strip().rsplit('@', 1)
+        except ValueError:
+            pass
+        else:
+            email = '@'.join([email_name, domain_part.lower()])
+        return email
 
     @property
     def email(self):
@@ -192,13 +183,15 @@ class User(entities.Entity):
         :return: the user full name
         """
         if self.first_name and self.last_name:
-            return "{} {} ({})".format(self.first_name, self.last_name, self.email)
+            full_name = "{} {} ({})".format(self.first_name, self.last_name, self.email)
         elif self.first_name:
-            return "{} ({})".format(self.first_name, self.email)
+            full_name = "{} ({})".format(self.first_name, self.email)
         elif self.last_name:
-            return "{} ({})".format(self.last_name, self.email)
+            full_name = "{} ({})".format(self.last_name, self.email)
+        else:
+            full_name = "{}".format(self.email)
 
-        return "{}".format(self.email)
+        return full_name
 
     def get_short_name(self):
         """

@@ -11,9 +11,9 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from aiida.orm import JobCalculation
-from aiida.orm.data.parameter import ParameterData 
-from aiida.common.utils import classproperty
+from aiida.orm.calculation.job import JobCalculation
+from aiida.orm.nodes.data.dict import Dict 
+from aiida.common.lang import classproperty
 from aiida.common.exceptions import InputValidationError
 from aiida.common.exceptions import ValidationError
 from aiida.common.datastructures import CalcInfo, CodeInfo
@@ -39,7 +39,7 @@ class SumCalculation(JobCalculation):
         retdict = JobCalculation._use_methods
         retdict.update({
             "parameters": {
-               'valid_types': ParameterData,
+               'valid_types': Dict,
                'additional_parameter': None,
                'linkname': 'parameters',
                'docstring': ("Use a node that specifies the input parameters "
@@ -55,17 +55,17 @@ class SumCalculation(JobCalculation):
         
         :param tempfolder: a aiida.common.folders.Folder subclass where
                            the plugin should put all its files.
-        :param inputdict: a dictionary with the input nodes, as they would
-                be returned by get_inputs_dict (with the Code!)
+        :param inputdict: a dictionary with the input nodes in a format
+                           {label1: node1, ...} (with the Code!)
         """
         try:
             parameters = inputdict.pop(self.get_linkname('parameters'))
         except KeyError:
             raise InputValidationError("No parameters specified for this "
                                        "calculation")
-        if not isinstance(parameters, ParameterData):
+        if not isinstance(parameters, Dict):
             raise InputValidationError("parameters is not of type "
-                                       "ParameterData")
+                                       "Dict")
         try:
             code = inputdict.pop(self.get_linkname('code'))
         except KeyError:

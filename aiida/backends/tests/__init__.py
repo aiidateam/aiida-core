@@ -103,6 +103,7 @@ DB_TEST_LIST = {
         'engine.work_chain': ['aiida.backends.tests.engine.test_work_chain'],
         'engine.workfunctions': ['aiida.backends.tests.engine.test_workfunctions'],
         'export_and_import': ['aiida.backends.tests.test_export_and_import'],
+        'export_file_migrations': ['aiida.backends.tests.export_file_migrations'],
         'generic': ['aiida.backends.tests.test_generic'],
         'manage.configuration.config.': ['aiida.backends.tests.manage.configuration.test_config'],
         'manage.configuration.migrations.': ['aiida.backends.tests.manage.configuration.migrations.test_migrations'],

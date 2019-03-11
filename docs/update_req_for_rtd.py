@@ -15,7 +15,7 @@ also this script to update the requirements for Read the Docs.
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import sys
+
 import os
 import json
 import click
@@ -31,7 +31,6 @@ def update_req_for_rtd(pre_commit):
     with open(os.path.join(root_dir, 'setup.json'), 'r') as info:
         setup_json = json.load(info)
 
-    
     extras = setup_json['extras_require']
     reqs = set(extras['testing'] + extras['docs'] + extras['rest'] + extras['atomic_tools'] +
                # To avoid that it requires also the postgres libraries

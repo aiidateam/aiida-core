@@ -112,15 +112,6 @@ def run_for_all_plugins(actual_test_method):
     return test_all_plugins
 
 
-# class TestDebugTests(unittest.TestCase):
-#    """
-#    This is only meant to check if the tests for each plugin are performed.
-#    """
-#    @run_for_all_plugins
-#    def test_check_custom_transport(self, custom_transport):
-#        print custom_transport, type(custom_transport)
-
-
 class TestBasicFunctionality(unittest.TestCase):
     """
     Tests to check basic functionality of transports.
@@ -1259,7 +1250,7 @@ class TestPutGetTree(unittest.TestCase):
 class TestExecuteCommandWait(unittest.TestCase):
     """
     Test some simple command executions and stdin/stdout management.
-    
+
     It also checks for escaping of the folder names.
     """
 
@@ -1269,7 +1260,7 @@ class TestExecuteCommandWait(unittest.TestCase):
         I create a strange subfolder with a complicated name and
         then see if I can run pwd. This also checks the correct
         escaping of funny characters, both in the directory
-        creation (which should be done by paramiko) and in the command 
+        creation (which should be done by paramiko) and in the command
         execution (done in this module, in the _exec_command_internal function).
         """
         import os
@@ -1340,4 +1331,4 @@ class TestExecuteCommandWait(unittest.TestCase):
         # I pass a number
         with custom_transport as t:
             with self.assertRaises(ValueError):
-                _ = t.exec_command_wait('cat', stdin=1)
+                t.exec_command_wait('cat', stdin=1)

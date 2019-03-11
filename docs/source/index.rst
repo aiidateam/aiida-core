@@ -15,26 +15,16 @@ Welcome to AiiDA's documentation!
 
 AiiDA is a sophisticated framework designed from scratch to be a flexible and scalable infrastructure for computational science.
 Being able to store the full data provenance of each simulation, and based on a tailored database solution built for efficient data mining implementations, AiiDA gives the user the ability to interact seamlessly with any number of HPC machines and codes thanks to its flexible plugin interface, together with a powerful workflow engine for the automation of simulations.
-
 The software is available at http://www.aiida.net.
 
-If you use AiiDA for your research, please cite the following work:
-  
-.. highlights:: Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari,
-    and Boris Kozinsky, *AiiDA: automated interactive infrastructure and database 
-    for computational science*, Comp. Mat. Sci 111, 218-230 (2016);
-    http://dx.doi.org/10.1016/j.commatsci.2015.09.013; http://www.aiida.net.
-
-This is the documentation of the AiiDA framework.
-To install AiiDA follow the instructions in the :ref:`installation section<installation>`.
-After you have successfully installed AiiDA, you can find some tips in the :ref:`get started section<get_started>` to help you on your way.
-
-For advanced users and developers we point you to the developers section :doc:`developer's guide<developer_guide/index>`.
-
+ * To install AiiDA follow the instructions in the :ref:`installation section<installation>`
+ * After you have successfully installed AiiDA, you can find some tips in the :ref:`get started section<get_started>` to help you on your way
+ * Use the complete :doc:`API reference<apidoc/aiida>`, the :ref:`modindex` or the :ref:`genindex` to find code you're looking for
 
 .. toctree::
     :maxdepth: 1
     :caption: Installation
+    :hidden:
 
     install/quick_installation
     install/prerequisites
@@ -46,6 +36,7 @@ For advanced users and developers we point you to the developers section :doc:`d
 .. toctree::
     :maxdepth: 1
     :caption: Getting started
+    :hidden:
 
     get_started/index
     get_started/daemon
@@ -53,9 +44,11 @@ For advanced users and developers we point you to the developers section :doc:`d
     get_started/codes
     get_started/plugins
 
+
 .. toctree::
     :maxdepth: 1
     :caption: Working with AiiDA
+    :hidden:
 
     working_with_aiida/index
     import_export/index
@@ -64,6 +57,7 @@ For advanced users and developers we point you to the developers section :doc:`d
 .. toctree::
     :maxdepth: 1
     :caption: Concepts
+    :hidden:
 
     concepts/provenance
     concepts/calculations
@@ -75,6 +69,7 @@ For advanced users and developers we point you to the developers section :doc:`d
 .. toctree::
     :maxdepth: 1
     :caption: Development
+    :hidden:
 
     developer_guide/index
 
@@ -82,6 +77,7 @@ For advanced users and developers we point you to the developers section :doc:`d
 .. toctree::
     :maxdepth: 1
     :caption: Tutorials
+    :hidden:
 
     tutorial/index
 
@@ -89,17 +85,22 @@ For advanced users and developers we point you to the developers section :doc:`d
 .. toctree::
     :maxdepth: 1
     :caption: API reference
+    :hidden:
 
     apidoc/aiida
 
 
-******************
-Indices and tables
-******************
+***********
+How to cite
+***********
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+If you use AiiDA for your research, please cite the following work:
+  
+.. highlights:: Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari,
+    and Boris Kozinsky, *AiiDA: automated interactive infrastructure and database 
+    for computational science*, Comp. Mat. Sci 111, 218-230 (2016);
+    http://dx.doi.org/10.1016/j.commatsci.2015.09.013; http://www.aiida.net.
+
 
 ****************
 Acknowledgements

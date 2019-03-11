@@ -96,19 +96,18 @@ class FixtureManager(object):  # pylint: disable=too-many-public-methods,useless
 
         @pytest.fixture(scope='session')
         def aiida_profile():
-            with aiida.manage.fixtures.fixture_manager() as fixture_mgr:
-                fixture_mgr.create_profile()
+            # set up a test profile for the duration of the tests
+            with aiida.manage.fixtures.fixture_manager() as fixture_manager:
                 yield fixture_manager
 
         @pytest.fixture(scope='function')
-        def test_data(aiida_profile):
-            # load my test data
-            yield
-            fixture_manager.reset_db()
+        def new_database(aiida_profile):
+            # clear the database after each test
+            yield aiida_profile
+            aiida_profile.reset_db()
 
-        def test_my_stuff(test_data):
+        def test_my_stuff(new_database):
             # run a test
-
 
     """
 

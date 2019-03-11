@@ -48,4 +48,12 @@ case "$TEST_TYPE" in
     pre-commit)
         pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
         ;;
+    conda)
+        # Note: Not added to install in order not to slow down other tests
+        source ${CI_DIR}/install_conda.sh
+
+        # Replace dep1 dep2 ... with your dependencies
+        conda env create -f environment.yml -n test-environment python=$TRAVIS_PYTHON_VERSION
+        source activate test-environment
+        ;;
 esac

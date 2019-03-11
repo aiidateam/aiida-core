@@ -226,7 +226,7 @@ py:class  collections.abc.Sized
 py:class  WorkChainSpec
 py:class  aiida.orm.nodes.Node
 # This comes from ABCMeta
-py:meth   aiida.orm.group.Group.get_from_string
+py:meth   aiida.orm.groups.Group.get_from_string
 
 py:mod    click
 py:class  click.Choice

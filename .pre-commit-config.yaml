@@ -226,13 +226,24 @@
 
   - id: pyproject
     name: Validating pyproject.toml
-    entry: python ./utils/validate_pyproject.py
+    entry: python ./utils/validate_pyproject.py version
     language: system
     files: >-
       (?x)^(
         setup.json|
         setup.py|
-        utils/validate_pyproject|
+        utils/validate_pyproject.py|
+      )$
+    pass_filenames: false
+  - id: conda
+    name: Validating environment.yml
+    entry: python ./utils/validate_pyproject.py conda
+    language: system
+    files: >-
+      (?x)^(
+        setup_requirements.py|
+        utils/validate_pyproject.py|
+        environment.yml|
       )$
     pass_filenames: false
 

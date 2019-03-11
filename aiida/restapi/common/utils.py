@@ -513,6 +513,10 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
         filename = None
         rtype = None
 
+        # io tree limit parameters
+        tree_in_limit = None
+        tree_out_limit = None
+
         ## Count how many time a key has been used for the filters and check if
         # reserved keyword
         # have been used twice,
@@ -558,6 +562,10 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
             raise RestInputValidationError("You cannot specify filename more than once")
         if 'rtype' in field_counts.keys() and field_counts['rtype'] > 1:
             raise RestInputValidationError("You cannot specify rtype more than once")
+        if 'in_limit' in field_counts.keys() and field_counts['in_limit'] > 1:
+            raise RestInputValidationError("You cannot specify in_limit more than once")
+        if 'out_limit' in field_counts.keys() and field_counts['out_limit'] > 1:
+            raise RestInputValidationError("You cannot specify out_limit more than once")
 
         ## Extract results
         for field in field_list:
@@ -634,6 +642,18 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
                 else:
                     raise RestInputValidationError("only assignment operator '=' is permitted after 'rtype'")
 
+            elif field[0] == 'in_limit':
+                if field[1] == '=':
+                    tree_in_limit = field[2]
+                else:
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'in_limit'")
+
+            elif field[0] == 'out_limit':
+                if field[1] == '=':
+                    tree_out_limit = field[2]
+                else:
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'out_limit'")
+
             else:
 
                 ## Construct the filter entry.
@@ -661,7 +681,7 @@ class Utils(object):  # pylint: disable=useless-object-inheritance
         #     limit = self.limit_default
 
         return (limit, offset, perpage, orderby, filters, alist, nalist, elist, nelist, downloadformat, visformat,
-                filename, rtype)
+                filename, rtype, tree_in_limit, tree_out_limit)
 
     def parse_query_string(self, query_string):
         # pylint: disable=too-many-locals

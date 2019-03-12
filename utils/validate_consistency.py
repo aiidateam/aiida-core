@@ -123,28 +123,41 @@ def update_environment_yml():
     Updates environment.yml file for conda.
     """
     import yaml
+    import re
+
+    # needed for ordered dict, see
+    # https://stackoverflow.com/a/52621703
+    yaml.add_representer(
+        OrderedDict,
+        lambda self, data: yaml.representer.SafeRepresenter.represent_dict(self, data.items()),
+        Dumper=yaml.SafeDumper)
 
     # fix incompatibilities between conda and pypi
     replacements = {
         'psycopg2-binary': 'psycopg2',
-        'validate-email': 'validate_email',
     }
-    sep = '%'  # use something forbidden in conda package names
     install_requires = get_setup_json()['install_requires']
-    pkg_string = sep.join(install_requires)
-    for (pypi_pkg_name, conda_pkg_name) in iter(replacements.items()):
-        pkg_string = pkg_string.replace(pypi_pkg_name, conda_pkg_name)
-    install_requires = pkg_string.split(sep)
-    environment = dict(
-        name='aiida',
-        channels=['defaults', 'conda-forge', 'etetoolkit'],
-        dependencies=install_requires,
-    )
+
+    conda_requires = []
+    for req in install_requires:
+        # skip packages required for specific python versions
+        # (environment.yml aims at the latest python version)
+        if req.find("python_version") != -1:
+            continue
+
+        for (regex, replacement) in iter(replacements.items()):
+            conda_requires.append(re.sub(regex, replacement, req))
+
+    environment = OrderedDict([
+        ('name', 'aiida'),
+        ('channels', ['defaults', 'conda-forge', 'etetoolkit']),
+        ('dependencies', conda_requires),
+    ])
 
     environment_filename = 'environment.yml'
     file_path = os.path.join(ROOT_DIR, environment_filename)
     with open(file_path, 'w') as env_file:
-        env_file.write('# Usage: conda env create -f environment.yml\n')
+        env_file.write('# Usage: conda env create -f environment.yml python=3.6\n')
         yaml.safe_dump(
             environment, env_file, explicit_start=True, default_flow_style=False, encoding='utf-8', allow_unicode=True)
 

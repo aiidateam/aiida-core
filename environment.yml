@@ -1,5 +1,6 @@
-# Usage: conda env create -f environment.yml
+# Usage: conda env create -f environment.yml python=3.6
 ---
+name: aiida
 channels:
 - defaults
 - conda-forge
@@ -40,11 +41,4 @@ dependencies:
 - pika==1.0.0b1
 - circus==0.15.0
 - tornado<5.0
-- pyblake2==1.1.2; python_version<'3.6'
-- chainmap; python_version<'3.5'
-- pathlib2; python_version<'3.5'
-- singledispatch>=3.4.0.3; python_version<'3.5'
-- enum34==1.1.6; python_version<'3.5'
 - simplejson==3.16.0
-- typing==3.6.6; python_version<'3.5'
-name: aiida

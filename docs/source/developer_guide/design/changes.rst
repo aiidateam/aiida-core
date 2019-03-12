@@ -15,7 +15,7 @@ The provenance redesign
 In the early stages of AiiDA, the concept of its provenance graph was simple.
 Data is used as input for calculations, that in turn create new data as output.
 The data and calculations, produced and ran by AiiDA, were stored as nodes in a graph.
-Due to the causality principle, the resulting graph was naturally acyclic, as any piece of data can impossibly also have been an input to its own creation.
+Due to the causality principle, the resulting graph was naturally acyclic, as no piece of data could possibly be an input to its own creation.
 The directed acyclic graph that stored the data provenance in AiiDA was well defined and all was good.
 
 However, as AiiDA matured, its use cases became more complex and soon there was a need to be able to define and run workflows.
@@ -86,7 +86,7 @@ Since this internal structure is mostly to simplify development and for organiza
 Practically this means that anything that is intended to be used should be importable from a second-level package, for example::
 
     from aiida.engine import WorkChain, calcfunction
-    from aiida.orm import orm load_node, CalcJobNode
+    from aiida.orm import load_node, CalcJobNode
 
 With the definition of public components of the ``aiida-core`` package in place, from ``1.0.0`` we will maintain a standard deprecation policy to minimize the amount of breaking changes for plugins and users.
 In particular we will strive to:

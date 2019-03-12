@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """Make all uuid columns unique
 
 Revision ID: 37f3d4882837
@@ -7,6 +16,8 @@ Create Date: 2018-11-17 17:18:58.691209
 """
 # pylint: disable=invalid-name
 
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 from alembic import op
 

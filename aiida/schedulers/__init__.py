@@ -9,6 +9,9 @@
 ###########################################################################
 # pylint: disable=wildcard-import,undefined-variable
 """Module for classes and utilities to interact with cluster schedulers."""
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 
 from .datastructures import *
 from .scheduler import *

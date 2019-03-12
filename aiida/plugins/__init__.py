@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 ###########################################################################
-# Copyright ('c)', The AiiDA team. All rights reserved.                   #
+# Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
 # The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
@@ -9,6 +9,9 @@
 ###########################################################################
 # pylint: disable=wildcard-import,undefined-variable
 """Classes and functions to load and interact with plugin classes accessible through defined entry points."""
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 
 from .entry_point import *
 from .factories import *

@@ -1,7 +1,17 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 # pylint: disable=invalid-name,too-few-public-methods
 """Migration that renames name and type columns to label and type_string"""
 
+from __future__ import division
+from __future__ import print_function
 from __future__ import unicode_literals
 from __future__ import absolute_import
 

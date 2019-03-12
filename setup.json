@@ -1,6 +1,6 @@
 {
   "name": "aiida-core",
-  "version": "1.0.0a4",
+  "version": "1.0.0b1",
   "url": "http://www.aiida.net/",
   "license": "MIT License",
   "author": "The AiiDA team",
@@ -201,8 +201,7 @@
       "tcod = aiida.tools.dbexporters.tcod"
     ],
     "aiida.tests": [],
-    "aiida.tools.calculations": [
-    ],
+    "aiida.tools.calculations": [],
     "aiida.tools.dbimporters": [
       "cod = aiida.tools.dbimporters.plugins.cod:CodDbImporter",
       "icsd = aiida.tools.dbimporters.plugins.icsd:IcsdDbImporter",

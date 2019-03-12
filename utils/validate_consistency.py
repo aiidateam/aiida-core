@@ -70,7 +70,8 @@ def validate_version():
 
         setup_content['version'] = version
         with open(FILEPATH_SETUP_JSON, 'w') as fil:
-            json.dump(setup_content, fil, indent=2)
+            # Write with indentation of two spaces and explicitly define separators to not have spaces at end of lines
+            json.dump(setup_content, fil, indent=2, separators=(',', ': '))
 
         sys.exit(1)
 

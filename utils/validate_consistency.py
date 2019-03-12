@@ -8,15 +8,25 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+""" Validate consistency of versions and dependencies.
+
+Validates consistency of setup.json and
+
+ * environment.yml
+ * version in aiida/__init__.py
+ * reentry dependency in pyproject.toml
+
+"""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-import click
 import os
 import sys
-import toml
 import json
+from collections import OrderedDict
+import toml
+import click
 
 FILENAME_TOML = 'pyproject.toml'
 FILENAME_SETUP_JSON = 'setup.json'
@@ -26,12 +36,12 @@ FILEPATH_SETUP_JSON = os.path.join(ROOT_DIR, FILENAME_SETUP_JSON)
 FILEPATH_TOML = os.path.join(ROOT_DIR, FILENAME_TOML)
 
 
-def get_install_requires():
-    """Return the list of installation requirements from the `setup.json`"""
-    with open(FILEPATH_SETUP_JSON, 'r') as info:
-        setup_json = json.load(info)
+def get_setup_json():
+    """Return the `setup.json` as a python dictionary """
+    with open(FILEPATH_SETUP_JSON, 'r') as fil:
+        setup_json = json.load(fil, object_pairs_hook=OrderedDict)
 
-    return setup_json['install_requires']
+    return setup_json
 
 
 @click.group()
@@ -40,12 +50,38 @@ def cli():
 
 
 @click.command('version')
+def validate_version():
+    """Check that version numbers match.
+
+    Check version number in setup.json and aiida_core/__init__.py and make sure
+    they match.
+    """
+    # Get version from python package
+    sys.path.insert(0, ROOT_DIR)
+    import aiida  # pylint: disable=wrong-import-position
+    version = aiida.__version__
+
+    setup_content = get_setup_json()
+    if version != setup_content['version']:
+        print("Version number mismatch detected:")
+        print("Version number in '{}': {}".format(FILENAME_SETUP_JSON, setup_content['version']))
+        print("Version number in '{}/__init__.py': {}".format('aiida', version))
+        print("Updating version in '{}' to: {}".format(FILENAME_SETUP_JSON, version))
+
+        setup_content['version'] = version
+        with open(FILEPATH_SETUP_JSON, 'w') as fil:
+            json.dump(setup_content, fil, indent=2)
+
+        sys.exit(1)
+
+
+@click.command('toml')
 def validate_pyproject():
     """
     Ensure that the version of reentry in setup.json and pyproject.toml are identical
     """
     reentry_requirement = None
-    for requirement in get_install_requires():
+    for requirement in get_setup_json()['install_requires']:
         if 'reentry' in requirement:
             reentry_requirement = requirement
             break
@@ -63,7 +99,7 @@ def validate_pyproject():
 
     try:
         parsed_toml = toml.loads(toml_string)
-    except Exception as exception:
+    except Exception as exception:  # pylint: disable=broad-except
         click.echo('Could not parse {}: {}'.format(FILEPATH_TOML, exception), err=True)
         sys.exit(1)
 
@@ -74,8 +110,10 @@ def validate_pyproject():
         sys.exit(1)
 
     if reentry_requirement not in pyproject_toml_requires:
-        click.echo('Reentry requirement from {} {} is not mirrored in {}'.format(
-            FILEPATH_SETUP_JSON, reentry_requirement, FILEPATH_TOML), err=True)
+        click.echo(
+            'Reentry requirement from {} {} is not mirrored in {}'.format(FILEPATH_SETUP_JSON, reentry_requirement,
+                                                                          FILEPATH_TOML),
+            err=True)
         sys.exit(1)
 
 
@@ -92,7 +130,7 @@ def update_environment_yml():
         'validate-email': 'validate_email',
     }
     sep = '%'  # use something forbidden in conda package names
-    install_requires = get_install_requires()
+    install_requires = get_setup_json()['install_requires']
     pkg_string = sep.join(install_requires)
     for (pypi_pkg_name, conda_pkg_name) in iter(replacements.items()):
         pkg_string = pkg_string.replace(pypi_pkg_name, conda_pkg_name)
@@ -107,9 +145,11 @@ def update_environment_yml():
     file_path = os.path.join(ROOT_DIR, environment_filename)
     with open(file_path, 'w') as env_file:
         env_file.write('# Usage: conda env create -f environment.yml\n')
-        yaml.dump(environment, env_file, explicit_start=True, default_flow_style=False)
+        yaml.safe_dump(
+            environment, env_file, explicit_start=True, default_flow_style=False, encoding='utf-8', allow_unicode=True)
 
 
+cli.add_command(validate_version)
 cli.add_command(validate_pyproject)
 cli.add_command(update_environment_yml)
 

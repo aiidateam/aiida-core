@@ -5,46 +5,46 @@ channels:
 - conda-forge
 - etetoolkit
 dependencies:
-- !!python/unicode 'reentry==1.2.2'
-- !!python/unicode 'python-dateutil==2.8.0'
-- !!python/unicode 'python-mimeparse==1.6.0'
-- !!python/unicode 'django==1.11.20'
-- !!python/unicode 'tzlocal==1.5.1'
-- !!python/unicode 'pytz==2018.9'
-- !!python/unicode 'PyYAML==3.13'
-- !!python/unicode 'six==1.12.0'
-- !!python/unicode 'anyjson==0.3.3'
-- !!python/unicode 'psutil==5.5.1'
-- !!python/unicode 'meld3==1.0.2'
-- !!python/unicode 'mock==2.0.0'
-- !!python/unicode 'numpy==1.16.1'
-- !!python/unicode 'SQLAlchemy==1.2.18'
-- !!python/unicode 'SQLAlchemy-Utils==0.33.11'
-- !!python/unicode 'alembic==1.0.7'
-- !!python/unicode 'ujson==1.35'
-- !!python/unicode 'aldjemy==0.9.1'
-- !!python/unicode 'passlib==1.7.1'
-- !!python/unicode 'click==7.0'
-- !!python/unicode 'click-completion==0.5.0'
-- !!python/unicode 'click-plugins==1.0.4'
-- !!python/unicode 'click-spinner==0.1.8'
-- !!python/unicode 'tabulate==0.8.3'
-- !!python/unicode 'ete3==3.1.1'
-- !!python/unicode 'uritools==2.2.0'
-- !!python/unicode 'psycopg2==2.7.6'
-- !!python/unicode 'paramiko==2.4.2'
-- !!python/unicode 'ecdsa==0.13'
-- !!python/unicode 'ipython>=4.0,<6.0'
-- !!python/unicode 'plumpy==0.12.1'
-- !!python/unicode 'kiwipy[rmq]==0.4.2'
-- !!python/unicode 'pika==1.0.0b1'
-- !!python/unicode 'circus==0.15.0'
-- !!python/unicode 'tornado<5.0'
-- !!python/unicode 'pyblake2==1.1.2; python_version<''3.6'''
-- !!python/unicode 'chainmap; python_version<''3.5'''
-- !!python/unicode 'pathlib2; python_version<''3.5'''
-- !!python/unicode 'singledispatch>=3.4.0.3; python_version<''3.5'''
-- !!python/unicode 'enum34==1.1.6; python_version<''3.5'''
-- !!python/unicode 'simplejson==3.16.0'
-- !!python/unicode 'typing==3.6.6; python_version<''3.5'''
+- reentry==1.2.2
+- python-dateutil==2.8.0
+- python-mimeparse==1.6.0
+- django==1.11.20
+- tzlocal==1.5.1
+- pytz==2018.9
+- PyYAML==3.13
+- six==1.12.0
+- anyjson==0.3.3
+- psutil==5.5.1
+- meld3==1.0.2
+- mock==2.0.0
+- numpy==1.16.1
+- SQLAlchemy==1.2.18
+- SQLAlchemy-Utils==0.33.11
+- alembic==1.0.7
+- ujson==1.35
+- aldjemy==0.9.1
+- passlib==1.7.1
+- click==7.0
+- click-completion==0.5.0
+- click-plugins==1.0.4
+- click-spinner==0.1.8
+- tabulate==0.8.3
+- ete3==3.1.1
+- uritools==2.2.0
+- psycopg2==2.7.6
+- paramiko==2.4.2
+- ecdsa==0.13
+- ipython>=4.0,<6.0
+- plumpy==0.12.1
+- kiwipy[rmq]==0.4.2
+- pika==1.0.0b1
+- circus==0.15.0
+- tornado<5.0
+- pyblake2==1.1.2; python_version<'3.6'
+- chainmap; python_version<'3.5'
+- pathlib2; python_version<'3.5'
+- singledispatch>=3.4.0.3; python_version<'3.5'
+- enum34==1.1.6; python_version<'3.5'
+- simplejson==3.16.0
+- typing==3.6.6; python_version<'3.5'
 name: aiida

@@ -8,3 +8,4 @@ include setup.json
 include AUTHORS.txt
 include CHANGELOG.md
 include pyproject.toml
+include LICENSE.txt

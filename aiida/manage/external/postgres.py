@@ -18,6 +18,7 @@ default installation, additional information needs to be provided.
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 try:
     import subprocess32 as subprocess
 except ImportError:

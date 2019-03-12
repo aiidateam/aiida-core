@@ -50,7 +50,7 @@ before_install:
 
 install:
     # Upgrade pip setuptools and wheel to be able to run the next command
-    - pip install -U pip==18.1 wheel setuptools
+    - pip install -U pip==18.1 wheel setuptools coveralls
     - pip install coveralls
     # Install AiiDA with some optional dependencies
     - if [ "$TEST_TYPE" == "docs" ]; then pip install . && pip install -r docs/requirements_for_rtd.txt; else pip install --no-cache-dir .[all]; fi
@@ -64,6 +64,7 @@ env:
     - TEST_AIIDA_BACKEND=django TEST_TYPE="docs"
     - TEST_AIIDA_BACKEND=django TEST_TYPE="tests"
     - TEST_AIIDA_BACKEND=sqlalchemy TEST_TYPE="tests"
+    # - TEST_TYPE="conda"
 
 before_script:
     - .ci/setup_profiles.sh

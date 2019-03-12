@@ -284,8 +284,6 @@ class RESTApiTestCase(AiidaTestCase):
                     from aiida.common.exceptions import InputValidationError
                     raise InputValidationError("Pass the expected range of the dummydata")
 
-                self.assertEqual(len(response["data"][result_name]), len(expected_data))
-
                 expected_node_uuids = [node['uuid'] for node in expected_data]
                 result_node_uuids = [node['uuid'] for node in response["data"][result_name]]
                 self.assertEqual(expected_node_uuids, result_node_uuids)
@@ -304,7 +302,6 @@ class RESTApiTestSuite(RESTApiTestCase):
         Requests the details of single computer
         """
         node_uuid = self.get_dummy_data()["computers"][1]["uuid"]
-
         RESTApiTestCase.process_test(
             self, "computers", "/computers/" + str(node_uuid), expected_list_ids=[1], uuid=node_uuid)
 
@@ -708,6 +705,23 @@ class RESTApiTestSuite(RESTApiTestCase):
             uuid=node_uuid,
             result_node_type="data",
             result_name="inputs")
+
+    def test_calculation_iotree(self):
+        """
+        Get filtered inputs list for given calculations
+        """
+        node_uuid = self.get_dummy_data()["calculations"][1]["uuid"]
+        url = self.get_url_prefix() + '/calculations/' + str(node_uuid) + '/io/tree?in_limit=1&out_limit=1'
+        with self.app.test_client() as client:
+            response_value = client.get(url)
+            response = json.loads(response_value.data)
+            self.assertEqual(len(response["data"]["nodes"]), 3)
+            self.assertEqual(len(response["data"]["edges"]), 2)
+            expected_attr = ["nodelabel", "nodetype", "linklabel", "linktype", "nodeuuid", "description"]
+            received_attr = response["data"]["nodes"][1].keys()
+            for attr in expected_attr:
+                self.assertIn(attr, received_attr)
+            RESTApiTestCase.compare_extra_response_data(self, "calculations", url, response, uuid=node_uuid)
 
     ############### calculation attributes #############
     def test_calculation_attributes(self):

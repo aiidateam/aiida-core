@@ -197,7 +197,6 @@
         aiida/transports/plugins/test_local.py|
         aiida/transports/plugins/test_ssh.py|
         utils/create_requirements.py|
-        utils/validate_pyproject.py|
         .ci/test_daemon.py|
         .ci/workchains.py|
       )$
@@ -226,13 +225,24 @@
 
   - id: pyproject
     name: Validating pyproject.toml
-    entry: python ./utils/validate_pyproject.py
+    entry: python ./utils/validate_consistency.py toml
     language: system
     files: >-
       (?x)^(
         setup.json|
         setup.py|
-        utils/validate_pyproject|
+        utils/validate_consistency.py|
+      )$
+    pass_filenames: false
+  - id: conda
+    name: Validating environment.yml
+    entry: python ./utils/validate_consistency.py conda
+    language: system
+    files: >-
+      (?x)^(
+        setup_requirements.py|
+        utils/validate_consistency.py|
+        environment.yml|
       )$
     pass_filenames: false
 
@@ -245,11 +255,12 @@
 
   - id: version-number
     name: Check version numbers
-    entry: python ./utils/validate_version.py
+    entry: python ./utils/validate_consistency.py version
     language: system
     files: >-
       (?x)^(
         setup.json|
+        utils/validate_consistency.py|
         aiida/__init__.py
       )$
     pass_filenames: false

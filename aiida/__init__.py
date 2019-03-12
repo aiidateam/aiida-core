@@ -90,7 +90,7 @@ def get_strict_version():
 
     :returns: StrictVersion instance with the current version
     """
-    from distutils.version import StrictVersion  # pylint: disable=import-error,no-name-in-module
+    from distutils.version import StrictVersion
     return StrictVersion(__version__)
 
 

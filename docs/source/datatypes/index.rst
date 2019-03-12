@@ -58,7 +58,7 @@ Dict
 StructureData
 +++++++++++++
 
-* **Class**: :py:class:`~aiida.orm.nodes.data.upf.UpfData`
+* **Class**: :py:class:`~aiida.orm.nodes.data.structure.StructureData`
 * **String to pass to the** :py:func:`~aiida.plugins.factories.DataFactory`: ``structure``
 * **Aim**: store a crystal structure to be used by atomistic codes
 * **What is stored in the database**: all atomic positions, species, kinds,

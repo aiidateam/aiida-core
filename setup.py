@@ -19,8 +19,7 @@ from os import path
 # pylint: disable=wrong-import-order
 # Note: This speeds up command line scripts (e.g. verdi)
 from utils import fastentrypoints  # pylint: disable=unused-import
-# This is a pylint issue https://github.com/PyCQA/pylint/issues/73
-from distutils.version import StrictVersion  # pylint: disable=import-error,no-name-in-module
+from distutils.version import StrictVersion
 from setuptools import setup, find_packages
 
 if __name__ == '__main__':

@@ -16,6 +16,7 @@ from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm import Data, Node
+from six.moves import range
 
 
 class TestComputer(AiidaTestCase):
@@ -163,6 +164,25 @@ class TestGroupNoOrmSQLA(AiidaTestCase):
         # Try to add a node that is already present: there should be no problem
         group.add_nodes([node_01], skip_orm=True)
         self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))
+
+    def test_group_batch_size(self):
+        """
+        Test that the group addition in batches works as expected.
+        """
+        from aiida.orm.groups import Group
+
+        # Create 100 nodes
+        nodes = []
+        for _ in range(100):
+            nodes.append(Data().store().backend_entity)
+
+        # Add nodes to groups using different batch size. Check in the end the
+        # correct addition.
+        batch_sizes = (1, 3, 10, 1000)
+        for batch_size in batch_sizes:
+            group = Group(name='test_batches_' + str(batch_size)).store()
+            group.backend_entity.add_nodes(nodes, skip_orm=True, batch_size=batch_size)
+            self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))
 
 
 class TestDbExtrasSqla(AiidaTestCase):

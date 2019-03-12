@@ -128,7 +128,6 @@ def cmd_import(archives, webpages, group, extras_mode_existing, extras_mode_new,
                 comment_mode=comment_mode)
         except exceptions.IncompatibleArchiveVersionError as exception:
             echo.echo_warning('{} cannot be imported: {}'.format(archive, exception))
-            echo.echo_warning('run `verdi export migrate {}` to update it'.format(archive))
             continue
         except Exception:
             echo.echo_error('an exception occurred while importing the archive {}'.format(archive))

@@ -17,6 +17,7 @@ import click
 import six
 from six.moves import zip
 from six.moves.html_parser import HTMLParser
+from distutils.version import StrictVersion
 from aiida.common import exceptions
 from aiida.common.utils import export_shard_uuid, get_class_string, grouper, get_new_uuid
 from aiida.orm import Computer, Group, GroupTypeString, Node, QueryBuilder, User, Log, Comment
@@ -621,7 +622,7 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
     from aiida.backends.djsite.db.models import suppress_auto_now
 
     # This is the export version expected by this function
-    expected_export_version = '0.4'
+    expected_export_version = StrictVersion('0.4')
 
     # The name of the subfolder in which the node files are stored
     nodes_export_subfolder = 'nodes'
@@ -673,9 +674,16 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
         ######################
         # PRELIMINARY CHECKS #
         ######################
-        if metadata['export_version'] != expected_export_version:
-            raise exceptions.IncompatibleArchiveVersionError('Archive schema version {} is incompatible with the '
-                'currently supported schema version {}'.format(metadata['export_version'], expected_export_version))
+        export_version = StrictVersion(str(metadata['export_version']))
+        if export_version != expected_export_version:
+            msg = "Export file version is {}, can import only version {}"\
+                    .format(metadata['export_version'], expected_export_version)
+            if export_version < expected_export_version:
+                msg += "\nUse 'verdi export migrate' to update this export file."
+            else:
+                msg += "\nUpdate your AiiDA version in order to import this file."
+
+            raise exceptions.IncompatibleArchiveVersionError(msg)
 
         ##########################################################################
         # CREATE UUID REVERSE TABLES AND CHECK IF I HAVE ALL NODES FOR THE LINKS #
@@ -1272,7 +1280,7 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
     from aiida.common import json
 
     # This is the export version expected by this function
-    expected_export_version = '0.4'
+    expected_export_version = StrictVersion('0.4')
 
     # The name of the subfolder in which the node files are stored
     nodes_export_subfolder = 'nodes'
@@ -1319,9 +1327,16 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
         ######################
         # PRELIMINARY CHECKS #
         ######################
-        if metadata['export_version'] != expected_export_version:
-            raise exceptions.IncompatibleArchiveVersionError('Archive schema version {} is incompatible with the '
-                'currently supported schema version {}'.format(metadata['export_version'], expected_export_version))
+        export_version = StrictVersion(str(metadata['export_version']))
+        if export_version != expected_export_version:
+            msg = "Export file version is {}, can import only version {}"\
+                    .format(metadata['export_version'], expected_export_version)
+            if export_version < expected_export_version:
+                msg += "\nUse 'verdi export migrate' to update this export file."
+            else:
+                msg += "\nUpdate your AiiDA version in order to import this file."
+
+            raise exceptions.IncompatibleArchiveVersionError(msg)
 
         ###################################################################
         #           CREATE UUID REVERSE TABLES AND CHECK IF               #
@@ -1919,11 +1934,9 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
                         else:
                             counter += 1
 
-                # Add all the nodes to the new group
                 # Adding nodes to group avoiding the SQLA ORM to increase speed
                 nodes = [entry[0].backend_entity for entry in QueryBuilder().append(Node, filters={'id': {'in': pks_for_group}}).all()]
                 group.backend_entity.add_nodes(nodes, skip_orm=True)
-
                 if not silent:
                     print("IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.label))
             else:

@@ -13,197 +13,447 @@ Draw the provenance graphs
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import io
-import os
-import subprocess
-import tempfile
 
 
-def draw_graph(origin_node,
-               ancestor_depth=None,
-               descendant_depth=None,
-               image_format='dot',
-               include_calculation_inputs=False,
-               include_calculation_outputs=False):
-    """
-    The algorithm starts from the original node and goes both input-ward and output-ward via a breadth-first algorithm.
-
-    :param origin_node: An Aiida node, the starting point for drawing the graph
-    :param int ancestor_depth: The maximum depth of the ancestors drawn. If left to None, we recurse until the graph is
-        fully explored
-    :param int descendant_depth: The maximum depth of the descendants drawn. If left to None, we recurse until the graph
-        is fully explored
-    :param str image_format: The output plot format, by default dot
-
-    :returns: The exit_code of the subprocess.call() method that produced the valid file
-    :returns: The file name of the final output
-
-    ..note::
-        If an invalid format is provided graphviz prints a helpful message, so this doesn't need to be implemented here.
-    """
-    # pylint: disable=too-many-locals,too-many-statements,too-many-branches
-    from aiida.orm import ProcessNode
-    from aiida.orm import Code
-    from aiida.orm import Node
-    from aiida.common.links import LinkType
-    from aiida.orm.querybuilder import QueryBuilder
-
-    def draw_node_settings(node, **kwargs):
-        """
-        Returns a string with all infos needed in a .dot file  to define a node of a graph.
-        :param node:
-        :param kwargs: Additional key-value pairs to be added to the returned string
-        :return: a string
-        """
-        if isinstance(node, ProcessNode):
-            shape = "shape=polygon,sides=4"
-        elif isinstance(node, Code):
-            shape = "shape=diamond"
-        else:
-            shape = "shape=ellipse"
-        if kwargs:
-            additional_params = ",{}".format(",".join('{}="{}"'.format(k, v) for k, v in kwargs.items()))
-        else:
-            additional_params = ""
-        if node.label:
-            label_string = "\\n'{}'".format(node.label)
-            additional_string = ""
-        else:
-            additional_string = "\\n {}".format(node.get_description())
-            label_string = ""
-        labelstring = 'label="{} ({}){}{}"'.format(node.__class__.__name__, node.pk, label_string, additional_string)
-        return "N{} [{},{}{}];".format(node.pk, shape, labelstring, additional_params)
-
-    def draw_link_settings(inp_id, out_id, link_label, link_type):
-        """Return a string with label information."""
-        if link_type in (LinkType.CREATE.value, LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value):
-            style = 'solid'  # Solid lines and black colors
-            color = "0.0 0.0 0.0"  # for CREATE and INPUT (The provenance graph)
-        elif link_type == LinkType.RETURN.value:
-            style = 'dotted'  # Dotted  lines of
-            color = "0.0 0.0 0.0"  # black color for Returns
-        elif link_type == (LinkType.CALL_CALC.value or LinkType.CALL_WORK.value):
-            style = 'bold'  # Bold lines and
-            color = "0.0 1.0 1.0"  # Bright red for calls
-        else:
-            style = 'solid'  # Solid and
-            color = "0.0 0.0 0.5"  #grey lines for unspecified links!
-        return '    {} -> {} [label="{}", color="{}", style="{}"];'.format("N{}".format(inp_id), "N{}".format(out_id),
-                                                                           link_label, color, style)
-
-    # Breadth-first search of all ancestors and descendant nodes of a given node
-    links = {}  # Accumulate links here
-    nodes = {
-        origin_node.pk: draw_node_settings(origin_node, style='filled', color='lightblue')
-    }  #Accumulate nodes specs here
-    # Additional nodes (the ones added with either one of  include_calculation_inputs or include_calculation_outputs
-    # is set to true. I have to put them in a different dictionary because nodes is the one used for the recursion,
-    # whereas these should not be used for the recursion:
-    additional_nodes = {}
-
-    last_nodes = [origin_node]  # Put the nodes whose links have not been scanned yet
-
-    # Go through the graph on-ward (i.e. look at inputs)
-    depth = 0
-    while last_nodes:
-        # I augment depth every time I get through a new iteration
-        depth += 1
-        # I check whether I should stop here:
-        if ancestor_depth is not None and depth > ancestor_depth:
-            break
-        # I continue by adding new nodes here!
-        new_nodes = []
-        for node in last_nodes:
-            # This query gives me all the inputs of this node, and link labels and types!
-            input_query = QueryBuilder()
-            input_query.append(Node, filters={'id': node.pk}, tag='n')
-            input_query.append(Node, with_outgoing='n', edge_project=('id', 'label', 'type'), project='*', tag='inp')
-            for inp, link_id, link_label, link_type in input_query.iterall():
-                # I removed this check, to me there is no way that this link was already referred to!
-                # if link_id not in links:
-                links[link_id] = draw_link_settings(inp.pk, node.pk, link_label, link_type)
-                # For the nodes I need to check, maybe this same node is referred to multiple times.
-                if inp.pk not in nodes:
-                    nodes[inp.pk] = draw_node_settings(inp)
-                    new_nodes.append(inp)
-
-            # Checking whether I also should include all the outputs of a calculation into the drawing:
-            if include_calculation_outputs and isinstance(node, ProcessNode):
-                # Query for the outputs, giving me also link labels and types:
-                output_query = QueryBuilder()
-                output_query.append(Node, filters={'id': node.pk}, tag='n')
-                output_query.append(
-                    Node, with_incoming='n', edge_project=('id', 'label', 'type'), project='*', tag='out')
-                # Iterate through results
-                for out, link_id, link_label, link_type in output_query.iterall():
-                    # This link might have been drawn already, because the output is maybe
-                    # already drawn.
-                    # To check: Maybe it's more efficient not to check this, since
-                    # the dictionaries are large and contain many keys...
-                    # I.e. just always draw, also when overwriting an existing (identical) entry.
-                    if link_id not in links:
-                        links[link_id] = draw_link_settings(node.pk, out.pk, link_label, link_type)
-                    if out.pk not in nodes and out.pk not in additional_nodes:
-                        additional_nodes[out.pk] = draw_node_settings(out)
-
-        last_nodes = new_nodes
-
-    # Go through the graph down-ward (i.e. look at outputs)
-    last_nodes = [origin_node]
-    depth = 0
-    while last_nodes:
-        depth += 1
-        # Also here, checking of maximum descendant depth is set and applies.
-        if descendant_depth is not None and depth > descendant_depth:
-            break
-        new_nodes = []
-
-        for node in last_nodes:
-            # Query for the outputs:
-            output_query = QueryBuilder()
-            output_query.append(Node, filters={'id': node.pk}, tag='n')
-            output_query.append(Node, with_incoming='n', edge_project=('id', 'label', 'type'), project='*', tag='out')
-
-            for out, link_id, link_label, link_type in output_query.iterall():
-                # Draw the link
-                links[link_id] = draw_link_settings(node.pk, out.pk, link_label, link_type)
-                if out.pk not in nodes:
-                    nodes[out.pk] = draw_node_settings(out)
-                    new_nodes.append(out)
-
-            if include_calculation_inputs and isinstance(node, ProcessNode):
-                input_query = QueryBuilder()
-                input_query.append(Node, filters={'id': node.pk}, tag='n')
-                input_query.append(
-                    Node, with_outgoing='n', edge_project=('id', 'label', 'type'), project='*', tag='inp')
-                for inp, link_id, link_label, link_type in input_query.iterall():
-                    # Also here, maybe it's just better not to check?
-                    if link_id not in links:
-                        links[link_id] = draw_link_settings(inp.pk, node.pk, link_label, link_type)
-                    if inp.pk not in nodes and inp.pk not in additional_nodes:
-                        additional_nodes[inp.pk] = draw_node_settings(inp)
-        last_nodes = new_nodes
-
-    # Writing the graph to a temporary file
-    _, fname = tempfile.mkstemp(suffix='.dot')
-    with io.open(fname, 'w', encoding='utf8') as fhandle:
-        fhandle.write(u"digraph G {\n")
-        for _, l_values in links.items():
-            fhandle.write(u'    {}\n'.format(l_values))
-        for _, n_values in nodes.items():
-            fhandle.write(u"    {}\n".format(n_values))
-        for _, n_values in additional_nodes.items():
-            fhandle.write(u"    {}\n".format(n_values))
-        fhandle.write(u"}\n")
-
-    # Now I am producing the output file
-    output_file_name = "{0}.{1}".format(origin_node.pk, image_format)
-    # Try and convert the .dot file using the `dot` utility from graphviz
+def is_data_instance(node, plugin_name, allow_fail):
+    """ test if a node is an instance of a data class """
+    from aiida.orm import DataFactory
+    from aiida.common.exceptions import MissingPluginError
     try:
-        exit_code = subprocess.call(['dot', '-T', image_format, fname, '-o', output_file_name])
-    except OSError:
-        from aiida.cmdline.utils import echo
-        echo.echo_critical('Operating system error - perhaps Graphviz is not installed?')
-    # cleaning up by removing the temporary file
-    os.remove(fname)
-    return exit_code, output_file_name
+        kls = DataFactory(plugin_name)
+    except MissingPluginError:
+        if allow_fail:
+            return False
+        else:
+            raise
+    return isinstance(node, kls)
+
+
+def _std_label(node):
+    label = "{} ({})".format(
+        node.__class__.__name__,
+        node.pk
+    )
+    if hasattr(node, 'label') and node.label:
+        label += "\n{}".format(node.label)
+    return label
+
+
+def _style_default(node, override=None):
+    style = {'label': _std_label(node)}
+    if override:
+        style.update(override)
+    return style
+
+
+def _style_calculation(node, override=None):
+    style = {}
+    if node.get_attribute("process", None):
+        label = "{} ({})".format(node.get_attribute("process"), node.pk)
+    else:
+        label = _std_label(node)
+    state = node.get_attribute("state", None)
+    # if state:
+    #     label += "\n{}".format(state)
+    style.update({
+        'shape': 'polygon',
+        'sides': '4',
+        'label': label
+    })
+    if state == "FINISHED":
+        style['style'] = 'filled'
+        style['color'] = '#90EE90'
+    elif state == "FAILED":
+        style['style'] = 'filled'
+        style['color'] = 'red'
+    if override:
+        style.update(override)
+    return style
+
+
+def _style_code(node, override=None):
+    style = {
+        'shape': 'diamond',
+        'color': 'orange',
+        'label': _std_label(node)
+    }
+    if override:
+        style.update(override)
+    return style
+
+
+def _style_cif(node, override=None):
+    style = {}
+    label = "{}\n{} ({})".format(
+        _std_label(node),
+        node.get_attribute(
+            'formulae', [''])[0].replace(" ", ""),
+        node.get_attribute(
+            'spacegroup_numbers', [''])[0],
+    )
+    style['label'] = label
+    style['color'] = 'pink'
+    if override:
+        style.update(override)
+    return style
+
+
+def _style_basis_set(node, override=None):
+    label = "{}\n{}".format(
+        _std_label(node),
+        node.get_attribute(node, 'element', '')
+    )
+    style = {
+        'label': label,
+        'color': 'olive'
+    }
+    if override:
+        style.update(override)
+    return style
+
+
+def _add_graphviz_node(graph, node, override=None, style_func=None):
+    from aiida.orm import Code
+    from aiida.orm import ProcessNode  
+
+    if style_func is not None:
+        node_style = style_func(node, override)
+    elif isinstance(node, Code):
+        node_style = _style_code(node, override)
+    elif isinstance(node, ProcessNode  ):
+        node_style = _style_calculation(node, override)
+    elif is_data_instance(node, 'cif', allow_fail=True):
+        node_style = _style_cif(node, override)
+    else:
+        node_style = _style_default(node, override)
+
+    return graph.node("N{}".format(node.pk), **node_style)
+
+
+def _add_graphviz_edge(graph, in_node, out_node, style=None):
+    if style is None:
+        style = {}
+    return graph.edge("N{}".format(in_node.pk),
+                      "N{}".format(out_node.pk), **style)
+
+
+def _get_link_style(link_type):
+    from aiida.common.links import LinkType
+    if link_type in (LinkType.CREATE.value, LinkType.INPUT.value):
+        style = 'solid'  # Solid lines and black colors
+        # for CREATE and INPUT (The provenance graph)
+        color = "0.0 0.0 0.0"
+    elif link_type == LinkType.RETURN.value:
+        style = 'solid'  # Dotted  lines of
+        color = "blue"  # black color for Returns
+    elif link_type == LinkType.CALL.value:
+        style = 'bold'  # Bold lines and
+        color = "0.0 1.0 1.0"  # Bright red for calls
+    else:
+        style = 'solid'  # Solid and
+        color = "0.0 0.0 0.5"  # grey lines for unspecified links!
+
+    return {
+        'style': style,
+        'color': color
+    }
+
+
+class Graph(object):
+    """ a class to create graphviz graphs of the aiida node provenance """
+
+    def __init__(self, engine=None, graph_attr=None, global_node_style=None):
+        """ a class to create graphviz graphs of the aiida node provenance
+
+        Nodes and edges, are cached, so that they are only created once
+
+        Parameters
+        ----------
+        engine=None: str or None
+            the graphviz engine, e.g. dot, circo
+        graph_attr=None: dict or None
+            attributes for the graphviz graph
+        global_node_style=None: dict or None
+            styles which will be added to all nodes.
+            Note this will override any builtin attributes
+
+        """
+        from graphviz import Digraph
+
+        self._graph = Digraph(engine=engine, graph_attr=graph_attr)
+        self._nodes = set()
+        self._edges = set()
+        self._global_node_style = {}
+        if global_node_style:
+            self._global_node_style = global_node_style
+
+    @property
+    def graphviz(self):
+        return self._graph.copy()
+
+    @property
+    def nodes(self):
+        return self._nodes.copy()
+
+    @property
+    def edges(self):
+        return self._edges.copy()
+
+    def _load_node(self, node):
+        from aiida.orm import load_node
+        if isinstance(node, int):
+            return load_node(node)
+        else:
+            return node
+
+    def add_node(self, node, style=None, overwrite=False):
+        """add single node to the graph
+
+        Parameters
+        ----------
+        node: int or Node
+        style=None: dict or None
+            graphviz style parameters
+        overwrite=False: bool
+            whether to overrite an existing node
+
+        """
+        node = self._load_node(node)
+        style = {} if style is None else style
+        style.update(self._global_node_style)
+        if node.pk not in self.nodes or overwrite:
+            _add_graphviz_node(self._graph, node, style)
+            self._nodes.add(node.pk)
+
+    def add_edge(self, in_node, out_node, style=None, overwrite=False):
+        """add single node to the graph
+
+        Parameters
+        ----------
+        in_node: int or Node
+        out_node: int or Node
+        style=None: dict or None
+            graphviz style parameters
+        overwrite=False: bool
+            whether to overrite an existing node
+
+        """
+        in_node = self._load_node(in_node)
+        if in_node.pk not in self._nodes:
+            raise AssertionError(
+                "the in_node must have already been added to the graph")
+        out_node = self._load_node(out_node)
+        if out_node.pk not in self._nodes:
+            raise AssertionError(
+                "the out_node must have already been added to the graph")
+        style = {} if style is None else style
+        if (in_node.pk, out_node.pk) not in self.edges or overwrite:
+            self._edges.add((in_node.pk, out_node.pk))
+            _add_graphviz_edge(self._graph, in_node, out_node, style)
+
+    def add_inputs(self, node, link_labels=False, return_pks=True):
+        from aiida.orm import Node
+        from aiida.orm.querybuilder import QueryBuilder
+        self.add_node(node)
+        input_query = QueryBuilder(**{
+            "path": [
+                {
+                    'cls': node.__class__,
+                    "filters": {
+                        "id": node.pk
+                    },
+                    'tag': "target"
+                },
+                {
+                    'cls': Node,
+                    'input_of': 'target',
+                    'tag': "output",
+                    'project': "*",
+                    'edge_project': ('id', 'label', 'type')
+                }
+            ]
+        })
+        nodes = []
+        for (tin_node, link_id, link_label, link_type
+             ) in input_query.iterall():
+            self.add_node(tin_node)
+            style = _get_link_style(link_type)
+            if link_labels:
+                style['label'] = link_label
+            self.add_edge(tin_node, node, style)
+            nodes.append(tin_node.pk if return_pks else tin_node)
+
+        return nodes
+
+    def add_outputs(self, node, link_labels=False, return_pks=True):
+        from aiida.orm import Node
+        from aiida.orm.querybuilder import QueryBuilder
+
+        self.add_node(node)
+
+        output_query = QueryBuilder(**{
+            "path": [
+                {
+                    'cls': node.__class__,
+                    "filters": {
+                        "id": node.pk
+                    },
+                    'tag': "target"
+                },
+                {
+                    'cls': Node,
+                    'output_of': 'target',
+                    'tag': "output",
+                    'project': "*",
+                    'edge_project': ('id', 'label', 'type')
+                }
+            ]
+        })
+        nodes = []
+        for (tout_node, link_id, link_label, link_type
+             ) in output_query.iterall():
+            self.add_node(tout_node)
+            style = _get_link_style(link_type)
+            if link_labels:
+                style['label'] = link_label
+            self.add_edge(node, tout_node, style)
+            nodes.append(tout_node.pk if return_pks else tout_node)
+
+        return nodes
+
+    def recurse_descendants(self, origin, depth=None,
+                            origin_style=(('style', 'filled'),
+                                          ('color', 'lightblue')),
+                            link_labels=False,
+                            include_calculation_inputs=False):
+        """add nodes and edges from an origin recursively following outputs
+
+        Parameters
+        ----------
+        origin: int or class
+        depth: None or int
+            if not None, stop after travelling a certain depth into the graph
+        origin_style: dict
+        link_labels: bool
+            label edges with the link label
+
+        """
+        from aiida.orm.calculation import ProcessNode  
+        origin_node = self._load_node(origin)
+
+        self.add_node(origin_node, style=dict(origin_style))
+
+        last_nodes = [origin_node]
+        depth = 0
+        while last_nodes:
+            depth += 1
+            # checking of maximum descendant depth is set and applies.
+            if depth is not None and depth > depth:
+                break
+            new_nodes = []
+            for node in last_nodes:
+                new_nodes.extend(self.add_outputs(
+                    node, link_labels=link_labels, return_pks=False))
+            last_nodes = new_nodes
+
+            if include_calculation_inputs and isinstance(node, ProcessNode  ):
+                self.add_inputs(node, link_labels=link_labels)
+
+    def recurse_ancestors(self, origin, depth=None,
+                          origin_style=(('style', 'filled'),
+                                        ('color', 'lightblue')),
+                          link_labels=False,
+                          include_calculation_outputs=False):
+        """add nodes and edges from an origin recursively following inputs
+
+        Parameters
+        ----------
+        origin: int or class
+        depth: None or int
+            if not None, stop after travelling a certain depth into the graph
+        origin_style: dict
+        link_labels: bool
+            label edges with the link label
+
+        """
+        from aiida.orm.calculation import ProcessNode  
+
+        origin_node = self._load_node(origin)
+
+        self.add_node(origin_node, style=dict(origin_style))
+
+        last_nodes = [origin_node]
+        depth = 0
+        while last_nodes:
+            depth += 1
+            # checking of maximum descendant depth is set and applies.
+            if depth is not None and depth > depth:
+                break
+            new_nodes = []
+            for node in last_nodes:
+                new_nodes.extend(self.add_inputs(
+                    node, link_labels=link_labels, return_pks=False))
+            last_nodes = new_nodes
+
+            if include_calculation_outputs and isinstance(node, ProcessNode  ):
+                self.add_outputs(node, link_labels=link_labels)
+
+    def add_origin_to_target(self, origin, target_cls, target_filters=None,
+                             include_target_inputs=False,
+                             include_target_outputs=False,
+                             origin_style=(('style', 'filled'),
+                                           ('color', 'lightblue')),
+                             link_labels=False):
+        """add nodes and edges from an origin node to target nodes
+
+        Parameters
+        ----------
+        origin: int or class
+        target_cls: class
+        target_filters=None: dict or None
+        include_target_inputs=False: bool
+        include_target_outputs=False: bool
+        origin_style: dict
+        link_labels: bool
+            label edges with the link label
+
+
+        """
+        from aiida.orm.querybuilder import QueryBuilder
+
+        origin_node = self._load_node(origin)
+
+        if target_filters is None:
+            target_filters = {}
+
+        self.add_node(origin_node, style=dict(origin_style))
+
+        query = QueryBuilder(**{
+            "path": [
+                {
+                    'cls': origin_node.__class__,
+                    "filters": {
+                        "id": origin_node.pk
+                    },
+                    'tag': "origin"
+                },
+                {
+                    'cls': target_cls,
+                    'filters': target_filters,
+                    'descendant_of': 'origin',
+                    'tag': "target",
+                    'project': "*"
+                }
+            ]
+        })
+
+        for (target_node,) in query.iterall():
+            self.add_node(target_node)
+            self.add_edge(origin_node, target_node,
+                          {'style': 'dashed', 'color': 'grey'})
+
+            if include_target_inputs:
+                self.add_inputs(target_node, link_labels=link_labels)
+
+            if include_target_outputs:
+                self.add_outputs(target_node, link_labels=link_labels)

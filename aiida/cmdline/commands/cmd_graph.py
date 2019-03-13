@@ -22,7 +22,7 @@ from aiida.cmdline.utils import decorators, echo
 def verdi_graph():
     """
     Create visual representations of part of the provenance graph.
-    Requires that `graphviz<https://graphviz.org/download>` be installed.
+    Requires that `python-graphviz<https://graphviz.readthedocs.io>` be installed.
     """
 
 
@@ -41,26 +41,30 @@ def verdi_graph():
 @click.option('-o', '--outputs', is_flag=True, help="Always show all outputs of a calculation")
 @click.option('-i', '--inputs', is_flag=True, help="Always show all inputs of a calculation")
 @click.option(
-    '-f',
-    '--output-format',
-    help="The output format, something that can be recognized by graphviz"
+    '-e',
+    '--engine',
+    help="the graphviz engine, e.g. dot, circo"
     "(see http://www.graphviz.org/doc/info/output.html)",
     default='dot')
+@click.option(
+    '-f',
+    '--file-format',
+    help="The output format used for rendering (``'pdf'``, ``'png'``, etc.).",
+    default='pdf')
+@click.option('-v', '--view', is_flag=True, help="Open the rendered result with the default application")
 @decorators.with_dbenv()
-def generate(root_node, ancestor_depth, descendant_depth, outputs, inputs, output_format):
+def generate(root_node, ancestor_depth, descendant_depth, outputs, inputs,
+             engine, file_format, view):
     """
     Generate a graph from a given ROOT_NODE user-specified by its pk.
     """
-    from aiida.tools.visualization.graphviz import draw_graph
+    from aiida.tools.visualization.graphviz import Graph
 
-    exit_status, output_file_name = draw_graph(
-        root_node,
-        ancestor_depth=ancestor_depth,
-        descendant_depth=descendant_depth,
-        image_format=output_format,
-        include_calculation_inputs=inputs,
-        include_calculation_outputs=outputs)
-    if exit_status:
-        echo.echo_critical("Failed to generate graph")
-    else:
-        echo.echo_success("Output file is {}".format(output_file_name))
+    graph = Graph(engine=engine)
+    graph.recurse_ancestors(root_node, depth=ancestor_depth, link_labels=True,
+                            include_calculation_outputs=outputs)
+    graph.recurse_descendants(root_node, depth=descendant_depth, link_labels=True,
+                              include_calculation_inputs=inputs)
+    output_file_name = graph.graphviz.render(format=file_format, view=view, cleanup=True)
+
+    echo.echo_success("Output file is {}".format(output_file_name))

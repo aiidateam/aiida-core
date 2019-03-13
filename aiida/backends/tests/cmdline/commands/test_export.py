@@ -15,6 +15,8 @@ import errno
 import os
 import tempfile
 import tarfile
+import traceback
+import unittest
 import zipfile
 
 from click.testing import CliRunner
@@ -67,12 +69,11 @@ class TestVerdiExport(AiidaTestCase):
             hostname='localhost',
             transport_type='local',
             scheduler_type='direct',
-            workdir='/tmp/aiida',
-            backend=cls.backend).store()
+            workdir='/tmp/aiida').store()
 
         cls.code = orm.Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
-        cls.group = orm.Group(name='test_group').store()
-        cls.node = orm.Node().store()
+        cls.group = orm.Group(label='test_group').store()
+        cls.node = orm.Data().store()
 
         # some of the export tests write in the current directory,
         # make sure it is writeable and we don't pollute the current one
@@ -103,11 +104,11 @@ class TestVerdiExport(AiidaTestCase):
         with tempfile.NamedTemporaryFile() as handle:
             options = ['-f', handle.name]
             result = self.cli_runner.invoke(cmd_export.create, options)
-            self.assertIsNone(result.exception)
+            self.assertIsNone(result.exception, result.output)
 
             options = ['--force', handle.name]
             result = self.cli_runner.invoke(cmd_export.create, options)
-            self.assertIsNone(result.exception)
+            self.assertIsNone(result.exception, result.output)
 
     def test_create_zip(self):
         """Test that creating an archive for a set of various ORM entities works with the zip format."""
@@ -118,7 +119,7 @@ class TestVerdiExport(AiidaTestCase):
                 filename
             ]
             result = self.cli_runner.invoke(cmd_export.create, options)
-            self.assertIsNone(result.exception)
+            self.assertIsNone(result.exception, ''.join(traceback.format_exception(*result.exc_info)))
             self.assertTrue(os.path.isfile(filename))
             self.assertFalse(zipfile.ZipFile(filename).testzip(), None)
         finally:
@@ -133,7 +134,7 @@ class TestVerdiExport(AiidaTestCase):
                 'zip-uncompressed', filename
             ]
             result = self.cli_runner.invoke(cmd_export.create, options)
-            self.assertIsNone(result.exception)
+            self.assertIsNone(result.exception, ''.join(traceback.format_exception(*result.exc_info)))
             self.assertTrue(os.path.isfile(filename))
             self.assertFalse(zipfile.ZipFile(filename).testzip(), None)
         finally:
@@ -148,17 +149,19 @@ class TestVerdiExport(AiidaTestCase):
                 filename
             ]
             result = self.cli_runner.invoke(cmd_export.create, options)
-            self.assertIsNone(result.exception)
+            self.assertIsNone(result.exception, ''.join(traceback.format_exception(*result.exc_info)))
             self.assertTrue(os.path.isfile(filename))
             self.assertTrue(tarfile.is_tarfile(filename))
         finally:
             delete_temporary_file(filename)
 
+    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_migrate_versions_old(self):
         """Migrating archives with a version older than the current should work."""
         archives = [
             'export_v0.1.aiida',
             'export_v0.2.aiida',
+            'export_v0.3.aiida'
         ]
 
         for archive in archives:
@@ -169,16 +172,17 @@ class TestVerdiExport(AiidaTestCase):
             try:
                 options = [filename_input, filename_output]
                 result = self.cli_runner.invoke(cmd_export.migrate, options)
-                self.assertIsNone(result.exception)
+                self.assertIsNone(result.exception, result.output)
                 self.assertTrue(os.path.isfile(filename_output))
-                self.assertEquals(zipfile.ZipFile(filename_output).testzip(), None)
+                self.assertEqual(zipfile.ZipFile(filename_output).testzip(), None)
             finally:
                 delete_temporary_file(filename_output)
 
+    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_migrate_versions_recent(self):
         """Migrating an archive with the current version should exit with non-zero status."""
         archives = [
-            'export_v0.3.aiida',
+            'export_v0.4.aiida',
         ]
 
         for archive in archives:
@@ -215,9 +219,9 @@ class TestVerdiExport(AiidaTestCase):
                     filename_output = file_output.name
                     options = [option, filename_input, filename_output]
                     result = self.cli_runner.invoke(cmd_export.migrate, options)
-                    self.assertIsNone(result.exception)
+                    self.assertIsNone(result.exception, result.output)
                     self.assertTrue(os.path.isfile(filename_output))
-                    self.assertEquals(zipfile.ZipFile(filename_output).testzip(), None)
+                    self.assertEqual(zipfile.ZipFile(filename_output).testzip(), None)
 
     def test_migrate_silent(self):
         """Test that the captured output is an empty string when the -s/--silent option is passed."""
@@ -234,10 +238,10 @@ class TestVerdiExport(AiidaTestCase):
                 try:
                     options = [option, filename_input, filename_output]
                     result = self.cli_runner.invoke(cmd_export.migrate, options)
-                    self.assertEquals(result.output, '')
-                    self.assertIsNone(result.exception)
+                    self.assertEqual(result.output, '')
+                    self.assertIsNone(result.exception, result.output)
                     self.assertTrue(os.path.isfile(filename_output))
-                    self.assertEquals(zipfile.ZipFile(filename_output).testzip(), None)
+                    self.assertEqual(zipfile.ZipFile(filename_output).testzip(), None)
                 finally:
                     delete_temporary_file(filename_output)
 
@@ -256,18 +260,20 @@ class TestVerdiExport(AiidaTestCase):
                 try:
                     options = [option, 'tar.gz', filename_input, filename_output]
                     result = self.cli_runner.invoke(cmd_export.migrate, options)
-                    self.assertIsNone(result.exception)
+                    self.assertIsNone(result.exception, result.output)
                     self.assertTrue(os.path.isfile(filename_output))
                     self.assertTrue(tarfile.is_tarfile(filename_output))
                 finally:
                     delete_temporary_file(filename_output)
 
+    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_inspect(self):
         """Test the functionality of `verdi export inspect`."""
         archives = [
             ('export_v0.1.aiida', '0.1'),
             ('export_v0.2.aiida', '0.2'),
             ('export_v0.3.aiida', '0.3'),
+            ('export_v0.4.aiida', '0.4')
         ]
 
         for archive, version_number in archives:
@@ -278,10 +284,10 @@ class TestVerdiExport(AiidaTestCase):
             for option in ['-m', '-d']:
                 options = [option, filename_input]
                 result = self.cli_runner.invoke(cmd_export.inspect, options)
-                self.assertIsNone(result.exception)
+                self.assertIsNone(result.exception, result.output)
 
             # Test the --version option which should print the archive format version
             options = ['--version', filename_input]
             result = self.cli_runner.invoke(cmd_export.inspect, options)
-            self.assertIsNone(result.exception)
-            self.assertEquals(result.output.strip(), version_number)
+            self.assertIsNone(result.exception, result.output)
+            self.assertEqual(result.output.strip(), version_number)

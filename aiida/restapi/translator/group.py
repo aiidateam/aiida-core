@@ -15,6 +15,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from aiida.restapi.translator.base import BaseTranslator
+from aiida import orm
 
 
 class GroupTranslator(BaseTranslator):
@@ -25,10 +26,9 @@ class GroupTranslator(BaseTranslator):
     # A label associated to the present class (coincides with the resource name)
     __label__ = "groups"
     # The AiiDA class one-to-one associated to the present class
-    from aiida.orm.group import Group
-    _aiida_class = Group
+    _aiida_class = orm.Group
     # The string name of the AiiDA class
-    _aiida_type = "group.Group"
+    _aiida_type = "groups.Group"
     # The string associated to the AiiDA class in the query builder lexicon
     _qb_type = 'group'
 
@@ -41,15 +41,15 @@ class GroupTranslator(BaseTranslator):
     # All the values from column_order must present in additional info dict
     # Note: final schema will contain details for only the fields present in column order
     _schema_projections = {
-        "column_order": ["id", "name", "type", "description", "user_id", "user_email", "uuid"],
+        "column_order": ["id", "label", "type_string", "description", "user_id", "user_email", "uuid"],
         "additional_info": {
             "id": {
                 "is_display": True
             },
-            "name": {
+            "label": {
                 "is_display": True
             },
-            "type": {
+            "type_string": {
                 "is_display": True
             },
             "description": {

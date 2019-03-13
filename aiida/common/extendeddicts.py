@@ -7,31 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Various dictionary types with extended functionality."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import collections
 
-import six
+from . import exceptions
 
-from aiida.common.exceptions import ValidationError
-from aiida.common.lang import override
-
-
-class Enumerate(frozenset):
-    def __getattr__(self, name):
-        if name in self:
-            return six.text_type(name)  # always return unicode in Python 2
-        raise AttributeError("No attribute '{}' in Enumerate '{}'".format(
-            name, self.__class__.__name__))
-
-    def __setattr__(self, name, value):
-        raise AttributeError("Cannot set attribute in Enumerate '{}'".format(
-            self.__class__.__name__))
-
-    def __delattr__(self, name):
-        raise AttributeError("Cannot delete attribute in Enumerate '{}'".format(
-            self.__class__.__name__))
+__all__ = ('AttributeDict', 'FixedFieldsAttributeDict', 'DefaultFieldsAttributeDict')
 
 
 class AttributeDict(dict):
@@ -59,8 +42,7 @@ class AttributeDict(dict):
         try:
             return self[attr]
         except KeyError:
-            errmsg = "'{}' object has no attribute '{}'".format(
-                self.__class__.__name__, attr)
+            errmsg = "'{}' object has no attribute '{}'".format(self.__class__.__name__, attr)
             raise AttributeError(errmsg)
 
     def __setattr__(self, attr, value):
@@ -70,9 +52,8 @@ class AttributeDict(dict):
         try:
             self[attr] = value
         except KeyError:
-            raise AttributeError(
-                "AttributeError: '{}' is not a valid attribute of the object "
-                "'{}'".format(attr, self.__class__.__name__))
+            raise AttributeError("AttributeError: '{}' is not a valid attribute of the object "
+                                 "'{}'".format(attr, self.__class__.__name__))
 
     def __delattr__(self, attr):
         """
@@ -81,8 +62,7 @@ class AttributeDict(dict):
         try:
             del self[attr]
         except KeyError:
-            errmsg = "'{}' object has no attribute '{}'".format(
-                self.__class__.__name__, attr)
+            errmsg = "'{}' object has no attribute '{}'".format(self.__class__.__name__, attr)
             raise AttributeError(errmsg)
 
     def copy(self):
@@ -108,11 +88,11 @@ class AttributeDict(dict):
         """
         return self.__dict__.copy()
 
-    def __setstate__(self, dict):
+    def __setstate__(self, dictionary):
         """
         Needed for pickling this class.
         """
-        self.__dict__.update(dict)
+        self.__dict__.update(dictionary)
 
     def __dir__(self):
         return self.keys()
@@ -137,8 +117,7 @@ class FixedFieldsAttributeDict(AttributeDict):
 
         for key in init:
             if key not in self._valid_fields:
-                errmsg = "'{}' is not a valid key for object '{}'".format(
-                    key, self.__class__.__name__)
+                errmsg = "'{}' is not a valid key for object '{}'".format(key, self.__class__.__name__)
                 raise KeyError(errmsg)
         super(FixedFieldsAttributeDict, self).__init__(init)
 
@@ -147,8 +126,7 @@ class FixedFieldsAttributeDict(AttributeDict):
         Set a key as an attribute.
         """
         if item not in self._valid_fields:
-            errmsg = "'{}' is not a valid key for object '{}'".format(
-                item, self.__class__.__name__)
+            errmsg = "'{}' is not a valid key for object '{}'".format(item, self.__class__.__name__)
             raise KeyError(errmsg)
         super(FixedFieldsAttributeDict, self).__setitem__(item, value)
 
@@ -200,7 +178,7 @@ class DefaultFieldsAttributeDict(AttributeDict):
 
     It raises a ValidationError if any of the validate_KEY
     function raises an exception, otherwise it simply returns.
-    NOTE: the validate\_ functions are called also for unset fields, so if the
+    NOTE: the `validate_*` functions are called also for unset fields, so if the
     field can be empty on validation, you have to start your validation
     function with something similar to::
 
@@ -240,7 +218,7 @@ class DefaultFieldsAttributeDict(AttributeDict):
                 try:
                     validator(self[key])
                 except Exception as exc:
-                    raise ValidationError("Invalid value for key '{}' [{}]: {}".format(
+                    raise exceptions.ValidationError("Invalid value for key '{}' [{}]: {}".format(
                         key, exc.__class__.__name__, exc))
 
     def __setattr__(self, attr, value):
@@ -262,8 +240,7 @@ class DefaultFieldsAttributeDict(AttributeDict):
         except KeyError:
             if key in self._default_fields:
                 return None
-            else:
-                raise
+            raise
 
     @classmethod
     def get_default_fields(cls):

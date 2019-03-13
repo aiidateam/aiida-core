@@ -19,7 +19,7 @@ from six.moves import range
 import requests
 
 from aiida.tools.dbimporters.baseclasses import CifEntry, DbEntry, DbImporter, DbSearchResults
-import aiida.utils.json as json
+from aiida.common import json
 
 
 class ApiFormat(enum.Enum):
@@ -330,7 +330,7 @@ class MpdsCifEntry(CifEntry, MpdsEntry):
     def __init__(self, url, **kwargs):
         """
         The DbSearchResults base class instantiates a new DbEntry by explicitly passing the url
-        of the entry as an argument. In this case it is the same as the 'uri' value that is 
+        of the entry as an argument. In this case it is the same as the 'uri' value that is
         already contained in the source dictionary so we just copy it
         """
         cif = kwargs.pop('cif', None)

@@ -41,7 +41,7 @@ class ServerInfo(Resource):
         url = unquote(request.url)
         url_root = unquote(request.url_root)
 
-        pathlist = self.utils.split_path(self.utils.strip_prefix(path))
+        pathlist = self.utils.split_path(self.utils.strip_api_prefix(path))
 
         if len(pathlist) > 1:
             resource_type = pathlist.pop(1)
@@ -123,8 +123,10 @@ class BaseResource(Resource):
 
         ## Parse request
         (resource_type, page, node_id, query_type) = self.utils.parse_path(path, parse_pk_uuid=self.parse_pk_uuid)
+
+        # pylint: disable=unused-variable
         (limit, offset, perpage, orderby, filters, _alist, _nalist, _elist, _nelist, _downloadformat, _visformat,
-         _filename, _rtype) = self.utils.parse_query_string(query_string)
+         _filename, _rtype, tree_in_limit, tree_out_limit) = self.utils.parse_query_string(query_string)
 
         ## Validate request
         self.utils.validate_request(
@@ -220,7 +222,7 @@ class Node(Resource):
         (resource_type, page, node_id, query_type) = self.utils.parse_path(path, parse_pk_uuid=self.parse_pk_uuid)
 
         (limit, offset, perpage, orderby, filters, alist, nalist, elist, nelist, downloadformat, visformat, filename,
-         rtype) = self.utils.parse_query_string(query_string)
+         rtype, tree_in_limit, tree_out_limit) = self.utils.parse_query_string(query_string)
 
         ## Validate request
         self.utils.validate_request(
@@ -243,7 +245,7 @@ class Node(Resource):
         ## Treat the statistics
         elif query_type == "statistics":
             (limit, offset, perpage, orderby, filters, alist, nalist, elist, nelist, downloadformat, visformat,
-             filename, rtype) = self.utils.parse_query_string(query_string)
+             filename, rtype, tree_in_limit, tree_out_limit) = self.utils.parse_query_string(query_string)
             headers = self.utils.build_headers(url=request.url, total_count=0)
             if filters:
                 usr = filters["user"]["=="]
@@ -251,10 +253,11 @@ class Node(Resource):
                 usr = None
             results = self.trans.get_statistics(usr)
 
-        # TODO Might need to be improved
+        # TODO improve the performance of tree endpoint by getting the data from database faster
+        # TODO add pagination for this endpoint (add default max limit)
         elif query_type == "tree":
             headers = self.utils.build_headers(url=request.url, total_count=0)
-            results = self.trans.get_io_tree(node_id)
+            results = self.trans.get_io_tree(node_id, tree_in_limit, tree_out_limit)
         else:
             ## Initialize the translator
             self.trans.set_query(
@@ -298,8 +301,7 @@ class Node(Resource):
                             results["download"]["filename"])
                         return response
 
-                    else:
-                        results = results["download"]["data"]
+                    results = results["download"]["data"]
 
                 if query_type in ["retrieved_inputs", "retrieved_outputs"] and results:
                     try:
@@ -317,8 +319,7 @@ class Node(Resource):
                             results[query_type]["filename"])
                         return response
 
-                    elif status == 500:
-                        results = results[query_type]["data"]
+                    results = results[query_type]["data"]
 
                 headers = self.utils.build_headers(url=request.url, total_count=total_count)
 
@@ -383,7 +384,7 @@ class Calculation(Node):
 
         from aiida.restapi.translator.calculation import CalculationTranslator
         self.trans = CalculationTranslator(**kwargs)
-        from aiida.orm import Calculation as CalculationTclass
+        from aiida.orm import CalcJobNode as CalculationTclass
         self.tclass = CalculationTclass
 
         self.parse_pk_uuid = 'uuid'
@@ -427,7 +428,7 @@ class StructureData(Data):
         from aiida.restapi.translator.data.structure import \
             StructureDataTranslator
         self.trans = StructureDataTranslator(**kwargs)
-        from aiida.orm.data.structure import StructureData as StructureDataTclass
+        from aiida.orm import StructureData as StructureDataTclass
         self.tclass = StructureDataTclass
 
         self.parse_pk_uuid = 'uuid'
@@ -441,7 +442,7 @@ class KpointsData(Data):
 
         from aiida.restapi.translator.data.kpoints import KpointsDataTranslator
         self.trans = KpointsDataTranslator(**kwargs)
-        from aiida.orm.data.array.kpoints import KpointsData as KpointsDataTclass
+        from aiida.orm import KpointsData as KpointsDataTclass
         self.tclass = KpointsDataTclass
 
         self.parse_pk_uuid = 'uuid'
@@ -456,7 +457,7 @@ class BandsData(Data):
         from aiida.restapi.translator.data.bands import \
             BandsDataTranslator
         self.trans = BandsDataTranslator(**kwargs)
-        from aiida.orm.data.array.bands import BandsData as BandsDataTclass
+        from aiida.orm import BandsData as BandsDataTclass
         self.tclass = BandsDataTclass
 
         self.parse_pk_uuid = 'uuid'
@@ -472,7 +473,7 @@ class CifData(Data):
         from aiida.restapi.translator.data.cif import \
             CifDataTranslator
         self.trans = CifDataTranslator(**kwargs)
-        from aiida.orm.data.cif import CifData as CifDataTclass
+        from aiida.orm import CifData as CifDataTclass
         self.tclass = CifDataTclass
 
         self.parse_pk_uuid = 'uuid'
@@ -488,7 +489,7 @@ class UpfData(Data):
         from aiida.restapi.translator.data.upf import \
             UpfDataTranslator
         self.trans = UpfDataTranslator(**kwargs)
-        from aiida.orm.data.upf import UpfData as UpfDataTclass
+        from aiida.orm import UpfData as UpfDataTclass
         self.tclass = UpfDataTclass
 
         self.parse_pk_uuid = 'uuid'

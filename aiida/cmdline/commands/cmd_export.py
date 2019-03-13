@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments,import-error
 """`verdi export` command."""
 from __future__ import division
 from __future__ import print_function
@@ -29,7 +29,6 @@ from aiida.common.exceptions import DanglingLinkError
 @verdi.group('export')
 def verdi_export():
     """Create and manage export archives."""
-    pass
 
 
 @verdi_export.command('inspect')
@@ -89,8 +88,19 @@ def inspect(archive, version, data, meta_data):
     default=False,
     show_default=True,
     help='Follow reverse CALL links (recursively) when calculating the node set to export.')
-def create(output_file, codes, computers, groups, nodes, input_forward, create_reversed, return_reversed, call_reversed,
-           force, archive_format):
+@click.option(
+    '--include-logs/--exclude-logs',
+    default=True,
+    show_default=True,
+    help='Include or exclude logs for node(s) in export.')
+@click.option(
+    '--include-comments/--exclude-comments',
+    default=True,
+    show_default=True,
+    help='Include or exclude comments for node(s) in export. (Will also export extra users who commented).')
+@decorators.with_dbenv()
+def create(output_file, codes, computers, groups, nodes, archive_format, force, input_forward, create_reversed,
+           return_reversed, call_reversed, include_comments, include_logs):
     """
     Export various entities, such as Codes, Computers, Groups and Nodes, to an archive file for backup or
     sharing purposes.
@@ -116,7 +126,9 @@ def create(output_file, codes, computers, groups, nodes, input_forward, create_r
         'create_reversed': create_reversed,
         'return_reversed': return_reversed,
         'call_reversed': call_reversed,
-        'overwrite': force,
+        'include_comments': include_comments,
+        'include_logs': include_logs,
+        'overwrite': force
     }
 
     if archive_format == 'zip':
@@ -152,9 +164,9 @@ def migrate(input_file, output_file, force, silent, archive_format):
     import tarfile
     import zipfile
 
+    from aiida.common import json
     from aiida.common.folders import SandboxFolder
     from aiida.common.archive import extract_zip, extract_tar
-    import aiida.utils.json as json
 
     if os.path.exists(output_file) and not force:
         echo.echo_critical('the output file already exists')
@@ -177,21 +189,7 @@ def migrate(input_file, output_file, force, silent, archive_format):
             echo.echo_critical('export archive does not contain the required file {}'.format(fhandle.filename))
 
         old_version = verify_metadata_version(metadata)
-
-        try:
-            if old_version == '0.1':
-                migrate_v1_to_v2(metadata, data)
-            elif old_version == '0.2':
-                try:
-                    migrate_v2_to_v3(metadata, data)
-                except DanglingLinkError:
-                    echo.echo_critical('export file is invalid because it contains dangling links')
-            else:
-                echo.echo_critical('cannot migrate from version {}'.format(old_version))
-        except ValueError as exception:
-            echo.echo_critical(exception)
-
-        new_version = verify_metadata_version(metadata)
+        new_version = migrate_recursive(metadata, data)
 
         with io.open(folder.get_abs_path('data.json'), 'wb') as fhandle:
             json.dump(data, fhandle)
@@ -199,7 +197,7 @@ def migrate(input_file, output_file, force, silent, archive_format):
         with io.open(folder.get_abs_path('metadata.json'), 'wb') as fhandle:
             json.dump(metadata, fhandle)
 
-        if archive_format == 'zip' or archive_format == 'zip-uncompressed':
+        if archive_format in ['zip', 'zip-uncompressed']:
             compression = zipfile.ZIP_DEFLATED if archive_format == 'zip' else zipfile.ZIP_STORED
             with zipfile.ZipFile(output_file, mode='w', compression=compression, allowZip64=True) as archive:
                 src = folder.abspath
@@ -277,7 +275,7 @@ def migrate_v1_to_v2(metadata, data):
     try:
         verify_metadata_version(metadata, old_version)
         update_metadata(metadata, new_version)
-    except ValueError:
+    except ValueError:  # pylint: disable=try-except-raise
         raise
 
     def get_new_string(old_string):
@@ -327,15 +325,22 @@ def migrate_v2_to_v3(metadata, data):  # pylint: disable=too-many-locals,too-man
     :param metadata: the content of an export archive metadata.json file
     """
     import enum
-    from aiida.common.links import LinkType
 
     old_version = '0.2'
     new_version = '0.3'
 
+    class LinkType(enum.Enum):  # pylint: disable=too-few-public-methods
+        """This was the state of the `aiida.common.links.LinkType` enum before aiida-core v1.0.0a5"""
+
+        UNSPECIFIED = 'unspecified'
+        CREATE = 'createlink'
+        RETURN = 'returnlink'
+        INPUT = 'inputlink'
+        CALL = 'calllink'
+
     class NodeType(enum.Enum):  # pylint: disable=too-few-public-methods
-        """
-        A simple enum of relevant node types
-        """
+        """A simple enum of relevant node types"""
+
         NONE = 'none'
         CALC = 'calculation'
         CODE = 'code'
@@ -354,7 +359,7 @@ def migrate_v2_to_v3(metadata, data):  # pylint: disable=too-many-locals,too-man
     try:
         verify_metadata_version(metadata, old_version)
         update_metadata(metadata, new_version)
-    except ValueError:
+    except ValueError:  # pylint: disable=try-except-raise
         raise
 
     # Create a mapping from node uuid to node type
@@ -397,15 +402,13 @@ def migrate_v2_to_v3(metadata, data):  # pylint: disable=too-many-locals,too-man
         # (CALC)       -> (DATA)       : CREATE
         # (WORK)       -> (DATA)       : RETURN
         # (WORK)       -> (CALC, WORK) : CALL
-        if (input_type == NodeType.CODE or input_type == NodeType.DATA) \
-            and (output_type == NodeType.CALC or output_type == NodeType.WORK):
+        if input_type in [NodeType.CODE, NodeType.DATA] and output_type in [NodeType.CALC, NodeType.WORK]:
             link['type'] = LinkType.INPUT.value
         elif input_type == NodeType.CALC and output_type == NodeType.DATA:
             link['type'] = LinkType.CREATE.value
         elif input_type == NodeType.WORK and output_type == NodeType.DATA:
             link['type'] = LinkType.RETURN.value
-        elif input_type == NodeType.WORK \
-            and (output_type == NodeType.CALC or output_type == NodeType.WORK):
+        elif input_type == NodeType.WORK and output_type in [NodeType.CALC, NodeType.WORK]:
             link['type'] = LinkType.CALL.value
         else:
             link['type'] = LinkType.UNSPECIFIED.value
@@ -430,3 +433,36 @@ def migrate_v2_to_v3(metadata, data):  # pylint: disable=too-many-locals,too-man
             if old_key in data[field]:
                 data[field][new_key] = data[field][old_key]
                 del data[field][old_key]
+
+
+def migrate_recursive(metadata, data):
+    """
+    Recursive migration of export files from v0.1 to newest version,
+    See specific migration functions for detailed descriptions.
+    NOTE: Remember to update newest_version to the newest export version,
+    when/if a migration is available.
+
+    :param metadata: the content of an export archive metadata.json file
+    :param data: the content of an export archive data.json file
+    """
+    newest_version = '0.3'
+    old_version = verify_metadata_version(metadata)
+
+    try:
+        if old_version == '0.1':
+            migrate_v1_to_v2(metadata, data)
+        elif old_version == '0.2':
+            migrate_v2_to_v3(metadata, data)
+        else:
+            echo.echo_critical('cannot migrate from version {}'.format(old_version))
+    except ValueError as exception:
+        echo.echo_critical(exception)
+    except DanglingLinkError:
+        echo.echo_critical('export file is invalid because it contains dangling links')
+
+    new_version = verify_metadata_version(metadata)
+
+    if new_version < newest_version:
+        migrate_recursive(metadata, data)
+
+    return new_version

@@ -12,7 +12,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from __future__ import absolute_import
 
-import django_extensions.db.fields
+from django.db import models
 from django.db import migrations
 
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
@@ -42,7 +42,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='dbnode',
             name='uuid',
-            field=django_extensions.db.fields.UUIDField(db_index=True,
+            field=models.CharField(max_length=36,db_index=True,
                                                         editable=False,
                                                         blank=True),
             preserve_default=True,

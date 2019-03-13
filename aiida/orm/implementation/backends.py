@@ -13,32 +13,23 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import abc
+import typing
 import six
 
-__all__ = ('Backend', 'BackendEntity', 'BackendCollection')
+__all__ = ('Backend', 'BackendEntity', 'BackendCollection', 'EntityType')
+
+EntityType = typing.TypeVar('EntityType')  # pylint: disable=invalid-name
 
 
 @six.add_metaclass(abc.ABCMeta)
 class Backend(object):
     """The public interface that defines a backend factory that creates backend specific concrete objects."""
 
-    @abc.abstractproperty
-    def logs(self):
-        """
-        Return the collection of log entries
+    # pylint: disable=useless-object-inheritance
 
-        :return: the log collection
-        :rtype: :class:`aiida.orm.log.Log`
-        """
-
-    @abc.abstractproperty
-    def users(self):
-        """
-        Return the collection of users
-
-        :return: the users collection
-        :rtype: :class:`aiida.orm.implementation.BackendUserCollection`
-        """
+    @abc.abstractmethod
+    def migrate(self):
+        """Migrate the database to the latest schema version."""
 
     @abc.abstractproperty
     def authinfos(self):
@@ -50,12 +41,48 @@ class Backend(object):
         """
 
     @abc.abstractproperty
+    def comments(self):
+        """
+        Return the collection of comments
+
+        :return: the comment collection
+        :rtype: :class:`aiida.orm.implementation.BackendCommentCollection`
+        """
+
+    @abc.abstractproperty
     def computers(self):
         """
-        Return the collection of computer objects
+        Return the collection of computers
 
         :return: the computers collection
         :rtype: :class:`aiida.orm.implementation.BackendComputerCollection`
+        """
+
+    @abc.abstractproperty
+    def groups(self):
+        """
+        Return the collection of groups
+
+        :return: the groups collection
+        :rtype: :class:`aiida.orm.implementation.BackendGroupCollection`
+        """
+
+    @abc.abstractproperty
+    def logs(self):
+        """
+        Return the collection of logs
+
+        :return: the log collection
+        :rtype: :class:`aiida.orm.implementation.BackendLogCollection`
+        """
+
+    @abc.abstractproperty
+    def nodes(self):
+        """
+        Return the collection of nodes
+
+        :return: the nodes collection
+        :rtype: :class:`aiida.orm.implementation.BackendNodeCollection`
         """
 
     @abc.abstractproperty
@@ -76,90 +103,118 @@ class Backend(object):
         :rtype: :class:`aiida.orm.implementation.BackendQueryBuilder`
         """
 
+    @abc.abstractproperty
+    def users(self):
+        """
+        Return the collection of users
+
+        :return: the users collection
+        :rtype: :class:`aiida.orm.implementation.BackendUserCollection`
+        """
+
+    @abc.abstractmethod
+    def transaction(self):
+        """
+        Get a context manager that can be used as a transaction context for a series of backend operations.
+        If there is an exception within the context then the changes will be rolled back and the state will
+        be as before entering.  Transactions can be nested.
+
+        :return: a context manager to group database operations
+        """
+
 
 @six.add_metaclass(abc.ABCMeta)
 class BackendEntity(object):
     """An first-class entity in the backend"""
 
+    # pylint: disable=useless-object-inheritance
+
     def __init__(self, backend):
         self._backend = backend
-
-    @abc.abstractproperty
-    def id(self):  # pylint: disable=invalid-name
-        """
-        Get the id for this entity.  This is unique only amongst entities of this type
-        for a particular backend
-
-        :return: the entity id
-        """
+        self._dbmodel = None
 
     @property
     def backend(self):
-        """
-        Get the backend this entity belongs to
+        """Return the backend this entity belongs to
 
         :return: the backend instance
         """
         return self._backend
 
+    @property
+    def dbmodel(self):
+        return self._dbmodel
+
+    @abc.abstractproperty
+    def id(self):  # pylint: disable=invalid-name
+        """Return the id for this entity.
+
+        This is unique only amongst entities of this type for a particular backend.
+
+        :return: the entity id
+        """
+
+    @property
+    def pk(self):
+        """Return the id for this entity.
+
+        This is unique only amongst entities of this type for a particular backend.
+
+        :return: the entity id
+        """
+        return self.id
+
     @abc.abstractmethod
     def store(self):
-        """
-        Store this object.
+        """Store this entity in the backend.
 
         Whether it is possible to call store more than once is delegated to the object itself
         """
-        pass
 
-    @abc.abstractmethod
+    @abc.abstractproperty
     def is_stored(self):
-        """
-        Is the object stored?
+        """Return whether the entity is stored.
 
         :return: True if stored, False otherwise
         :rtype: bool
         """
-        pass
 
 
-@six.add_metaclass(abc.ABCMeta)
-class BackendCollection(object):
+class BackendCollection(typing.Generic[EntityType]):
     """Container class that represents a collection of entries of a particular backend entity."""
 
-    ENTRY_TYPE = None
+    ENTITY_CLASS = None  # type: EntityType
 
     def __init__(self, backend):
         """
         :param backend: the backend this collection belongs to
-        :type backend: :class:`aiida.orm.implementation.backends.Backend`
+        :type backend: :class:`aiida.orm.implementation.Backend`
         """
-        assert self.ENTRY_TYPE is not None, "Must set the ENTRY_CLASS class variable"
+        assert issubclass(self.ENTITY_CLASS, BackendEntity), 'Must set the ENTRY_CLASS class variable to an entity type'
         self._backend = backend
+
+    def from_dbmodel(self, dbmodel):
+        """
+        Create an entity from the backend dbmodel
+
+        :param dbmodel: the dbmodel to create the entity from
+        :return: the entity instance
+        """
+        return self.ENTITY_CLASS.from_dbmodel(dbmodel, self.backend)
 
     @property
     def backend(self):
         """
         Return the backend.
 
-        :rtype: :class:`aiida.orm.implementation.backends.Backend`
+        :rtype: :class:`aiida.orm.implementation.Backend`
         """
         return self._backend
 
-    @abc.abstractmethod
     def create(self, **kwargs):
         """
         Create new a entry and set the attributes to those specified in the keyword arguments
 
-        :return: the newly created entry
+        :return: the newly created entry of type ENTITY_CLASS
         """
-        pass
-
-    def query(self):
-        """
-        Get a query builder instance for entries of this collection
-
-        :return: a new query builder over the entries of this collection
-        """
-        query = self.backend.query()
-        query.append(self.ENTRY_TYPE)
-        return query
+        return self.ENTITY_CLASS(backend=self._backend, **kwargs)  # pylint: disable=not-callable

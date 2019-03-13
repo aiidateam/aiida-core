@@ -27,7 +27,7 @@ def validate_attribute_key(key):
     contain the separator symbol.).
 
     :return: None if the key is valid
-    :raise ValidationError: if the key is not valid
+    :raise aiida.common.ValidationError: if the key is not valid
     """
     from aiida.common.exceptions import ValidationError
 
@@ -93,32 +93,6 @@ def _load_dbenv_noschemacheck(profile=None, *args, **kwargs):
 
     settings.LOAD_DBENV_CALLED = True
     return to_return
-
-
-def get_workflow_list(*args, **kwargs):
-    if settings.BACKEND == BACKEND_SQLA:
-        from aiida.backends.sqlalchemy.cmdline import (
-            get_workflow_list as get_workflow_list_sqla)
-        return get_workflow_list_sqla(*args, **kwargs)
-    elif settings.BACKEND == BACKEND_DJANGO:
-        from aiida.backends.djsite.cmdline import (
-            get_workflow_list as get_workflow_list_dj)
-        return get_workflow_list_dj(*args, **kwargs)
-    else:
-        raise ValueError("This method doesn't exist for this backend")
-
-
-def get_log_messages(*args, **kwargs):
-    if settings.BACKEND == BACKEND_SQLA:
-        from aiida.backends.sqlalchemy.cmdline import (
-            get_log_messages as get_log_messages_sqla)
-        return get_log_messages_sqla(*args, **kwargs)
-    elif settings.BACKEND == BACKEND_DJANGO:
-        from aiida.backends.djsite.cmdline import (
-            get_log_messages as get_log_messages_dj)
-        return get_log_messages_dj(*args, **kwargs)
-    else:
-        raise ValueError("This method doesn't exist for this backend")
 
 
 def get_global_setting(key):
@@ -205,22 +179,3 @@ def delete_nodes_and_connections(pks):
         raise Exception("unknown backend {}".format(settings.BACKEND))
 
     delete_nodes_backend(pks)
-
-
-def get_column(colname, alias):
-    """
-    Return the column for a given projection. Needed by the QueryBuilder
-    """
-
-    try:
-        return getattr(alias, colname)
-    except:
-        from aiida.common.exceptions import InputValidationError
-        raise InputValidationError(
-            "\n{} is not a column of {}\n"
-            "Valid columns are:\n"
-            "{}".format(
-                colname, alias,
-                '\n'.join(alias._sa_class_manager.mapper.c.keys())
-            )
-        )

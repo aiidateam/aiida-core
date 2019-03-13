@@ -10,6 +10,9 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
+from contextlib import contextmanager
+
 from aiida.backends.general.abstractqueries import AbstractQueryManager
 
 
@@ -20,19 +23,6 @@ class SqlaQueryManager(AbstractQueryManager):
 
     def __init__(self, backend):
         super(SqlaQueryManager, self).__init__(backend)
-
-    def raw(self, query):
-        """Execute a raw SQL statement and return the result.
-
-        :param query: a string containing a raw SQL statement
-        :return: the result of the query
-        """
-        from aiida.backends.sqlalchemy import get_scoped_session
-
-        session = get_scoped_session()
-        result = session.execute(query)
-
-        return result.fetchall()
 
     def get_creation_statistics(
             self,
@@ -68,7 +58,7 @@ class SqlaQueryManager(AbstractQueryManager):
         retdict = {}
 
         total_query = s.query(m.node.DbNode)
-        types_query = s.query(m.node.DbNode.type.label('typestring'),
+        types_query = s.query(m.node.DbNode.node_type.label('typestring'),
                               sa.func.count(m.node.DbNode.id))
         stat_query = s.query(sa.func.date_trunc('day', m.node.DbNode.ctime).label('cday'),
                              sa.func.count(m.node.DbNode.id))

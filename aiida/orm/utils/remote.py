@@ -40,27 +40,24 @@ def clean_remote(transport, path):
         pass
 
 
-def get_calculation_remote_paths(calculation_pks=None, past_days=None, older_than=None, computers=None, user=None):
+def get_calcjob_remote_paths(pks=None, past_days=None, older_than=None, computers=None, user=None):
     """
-    Return a mapping of computer uuids to a list of remote paths, for a given set of calculations. The set of
-    calculations will be determined by a query with filters based on the calculations_pks, past_days, older_than,
+    Return a mapping of computer uuids to a list of remote paths, for a given set of calcjobs. The set of
+    calcjobs will be determined by a query with filters based on the pks, past_days, older_than,
     computers and user arguments.
 
-    :param calculations_pks: onlu include calculations with a pk in this list
-    :param past_days: only include calculations created since past_days
-    :param older_than: only include calculations older than
-    :param computers: only include calculations that were ran on these computers
-    :param user: only include calculations of this user
+    :param pks: onlu include calcjobs with a pk in this list
+    :param past_days: only include calcjobs created since past_days
+    :param older_than: only include calcjobs older than
+    :param computers: only include calcjobs that were ran on these computers
+    :param user: only include calcjobs of this user
     :return: mapping of computer uuid and list of remote paths, or None
     """
     from datetime import timedelta
 
-    from aiida.orm.computers import Computer as OrmComputer
-    from aiida.orm.users import User as OrmUser
-    from aiida.orm.calculation import Calculation as OrmCalculation
-    from aiida.orm.querybuilder import QueryBuilder
     from aiida import orm
-    from aiida.utils import timezone
+    from aiida.orm import CalcJobNode
+    from aiida.common import timezone
 
     filters_calc = {}
     filters_computer = {}
@@ -77,13 +74,13 @@ def get_calculation_remote_paths(calculation_pks=None, past_days=None, older_tha
     if older_than is not None:
         filters_calc['mtime'] = {'<': timezone.now() - timedelta(days=older_than)}
 
-    if calculation_pks:
-        filters_calc['id'] = {'in': calculation_pks}
+    if pks:
+        filters_calc['id'] = {'in': pks}
 
-    qb = QueryBuilder()
-    qb.append(OrmCalculation, tag='calc', project=['attributes.remote_workdir'], filters=filters_calc)
-    qb.append(OrmComputer, computer_of='calc', tag='computer', project=['*'], filters=filters_computer)
-    qb.append(OrmUser, creator_of='calc', filters={'email': user.email})
+    qb = orm.QueryBuilder()
+    qb.append(CalcJobNode, tag='calc', project=['attributes.remote_workdir'], filters=filters_calc)
+    qb.append(orm.Computer, with_node='calc', tag='computer', project=['*'], filters=filters_computer)
+    qb.append(orm.User, with_node='calc', filters={'email': user.email})
 
     if qb.count() == 0:
         return None

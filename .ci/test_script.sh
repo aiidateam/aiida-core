@@ -17,10 +17,6 @@ case "$TEST_TYPE" in
     tests)
         CI_DIR="${TRAVIS_BUILD_DIR}/.ci"
 
-        # make sure we have the correct pg_ctl in our path for pgtest, to prevent issue #1722
-        # this must match the version request in travis.yml
-        export PATH="/usr/lib/postgresql/9.5/bin:${PATH}"
-
         # Add the .ci folder to the python path so workchains within it can be found by the daemon
         export PYTHONPATH="${PYTHONPATH}:${CI_DIR}"
 
@@ -28,7 +24,7 @@ case "$TEST_TYPE" in
         coverage erase
 
         # Run preliminary tests
-        coverage run -a "${CI_DIR}/test_setup.py"
+        coverage run -a "${CI_DIR}/test_profile.py"
         coverage run -a "${CI_DIR}/test_fixtures.py"
         coverage run -a "${CI_DIR}/test_plugin_testcase.py"
 
@@ -51,5 +47,13 @@ case "$TEST_TYPE" in
         ;;
     pre-commit)
         pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
+        ;;
+    conda)
+        # Note: Not added to install in order not to slow down other tests
+        source ${CI_DIR}/install_conda.sh
+
+        # Replace dep1 dep2 ... with your dependencies
+        conda env create -f environment.yml -n test-environment python=$TRAVIS_PYTHON_VERSION
+        source activate test-environment
         ;;
 esac

@@ -7,13 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Issue 2380 will take care of dropping this model, which will have to be accompanied by a migration."""
 
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship
 from sqlalchemy.schema import Column, UniqueConstraint, Table
 from sqlalchemy.types import Integer, String, DateTime, Text
 
@@ -22,12 +23,66 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy_utils.types.choice import ChoiceType
 
 from aiida.backends.sqlalchemy.models.base import Base, _QueryProperty, _AiidaQuery
-from aiida.backends.sqlalchemy.models.utils import uuid_func
-from aiida.common.datastructures import (wf_states, wf_data_types,
-                                         wf_data_value_types, wf_default_call)
-from aiida.utils import timezone
-import aiida.utils.json as json
+from aiida.common import json
+from aiida.common import timezone
+from aiida.common.utils import get_new_uuid
 
+import six
+
+
+class Enumerate(frozenset):
+    """Custom implementation of enum.Enum."""
+
+    def __getattr__(self, name):
+        if name in self:
+            return six.text_type(name)  # always return unicode in Python 2
+        raise AttributeError("No attribute '{}' in Enumerate '{}'".format(name, self.__class__.__name__))
+
+    def __setattr__(self, name, value):
+        raise AttributeError("Cannot set attribute in Enumerate '{}'".format(self.__class__.__name__))
+
+    def __delattr__(self, name):
+        raise AttributeError("Cannot delete attribute in Enumerate '{}'".format(self.__class__.__name__))
+
+
+class WorkflowState(Enumerate):
+    pass
+
+
+wf_states = WorkflowState((
+    'CREATED',
+    'INITIALIZED',
+    'RUNNING',
+    'FINISHED',
+    'SLEEP',
+    'ERROR'
+))
+
+
+class WorkflowDataType(Enumerate):
+    pass
+
+
+wf_data_types = WorkflowDataType((
+    'PARAMETER',
+    'RESULT',
+    'ATTRIBUTE',
+))
+
+
+class WorkflowDataValueType(Enumerate):
+    pass
+
+
+wf_data_value_types = WorkflowDataValueType((
+    'NONE',
+    'JSON',
+    'AIIDA',
+))
+
+wf_start_call = "start"
+wf_exit_call = "exit"
+wf_default_call = "none"
 
 
 class DbWorkflow(Base):
@@ -36,10 +91,10 @@ class DbWorkflow(Base):
     aiida_query = _QueryProperty(_AiidaQuery)
 
     id = Column(Integer, primary_key=True)
-    uuid = Column(UUID(as_uuid=True), default=uuid_func)
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True)
 
     ctime = Column(DateTime(timezone=True), default=timezone.now)
-    mtime = Column(DateTime(timezone=True), default=timezone.now)
+    mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now)
 
     user_id = Column(Integer, ForeignKey('db_dbuser.id'))
     user = relationship('DbUser')
@@ -75,13 +130,6 @@ class DbWorkflow(Base):
     @property
     def pk(self):
         return self.id
-
-    def get_aiida_class(self):
-        """
-        Return the corresponding aiida instance of class aiida.worflow
-        """
-        from aiida.orm.workflow import Workflow
-        return Workflow.get_subclass_from_uuid(self.uuid)
 
     def set_state(self, state):
         self.state = state
@@ -186,8 +234,8 @@ class DbWorkflow(Base):
         self.save()
 
     def get_calculations(self):
-        from aiida.orm import JobCalculation
-        return JobCalculation.query(workflow_step=self.steps)
+        from aiida.orm import CalcJobNode
+        return CalcJobNode.query(workflow_step=self.steps)
 
     def get_sub_workflows(self):
         return DbWorkflow.objects.filter(parent_workflow_step=self.steps.all())
@@ -263,10 +311,12 @@ class DbWorkflowData(Base):
             raise ValueError("Cannot set the parameter {}\n{}".format(self.name, exc))
 
     def get_value(self):
+        from aiida.orm.implementation.sqlalchemy import convert
+
         if self.value_type == wf_data_value_types.JSON:
             return json.loads(self.json_value)
         elif self.value_type == wf_data_value_types.AIIDA:
-            return self.aiida_obj.get_aiida_class()
+            return convert.get_backend_entity(self.aiida_obj, None)
         elif self.value_type == wf_data_value_types.NONE:
             return None
         else:
@@ -322,8 +372,8 @@ class DbWorkflowStep(Base):
     )
 
     def add_calculation(self, step_calculation):
-        from aiida.orm import JobCalculation
-        if (not isinstance(step_calculation, JobCalculation)):
+        from aiida.orm import CalcJobNode
+        if (not isinstance(step_calculation, CalcJobNode)):
             raise ValueError("Cannot add a non-Calculation object to a workflow step")
 
         try:
@@ -332,12 +382,14 @@ class DbWorkflowStep(Base):
             raise ValueError("Error adding calculation to step")
 
     def get_calculations(self, state=None):
+        from aiida.orm.implementation.sqlalchemy import convert
+
         dbnodes = self.calculations
-        calcs = [_.get_aiida_class() for _ in dbnodes]
-        if (state == None):
+        calcs = [convert.get_backend_entity(model, None) for model in dbnodes]
+        if state is None:
             return calcs
-        else:
-            return [_ for _ in calcs if _.get_state() == state]
+
+        return [_ for _ in calcs if _.get_state() == state]
 
     def remove_calculations(self):
         self.calculations.all().delete()
@@ -353,7 +405,9 @@ class DbWorkflowStep(Base):
             raise ValueError("Error adding calculation to step")
 
     def get_sub_workflows(self):
-        return [_.get_aiida_class() for _ in self.sub_workflows]
+        from aiida.orm.implementation.sqlalchemy import convert
+
+        return [convert.get_backend_entity(model, None) for model in self.sub_workflows]
 
     def remove_sub_workflows(self):
         self.sub_workflows.all().delete()

@@ -2,11 +2,11 @@
 
 AiiDA calculations can be of two kinds:
 
-* :py:class:`JobCalculation <aiida.orm.implementation.general.calculation.job.AbstractJobCalculation>`: those who need to be run on a scheduler
+* :py:class:`CalcJobNode <aiida.orm.nodes.process.calculation.calcjob.CalcJobNode>`: those who need to be run on a scheduler
 
-* :py:class:`InlineCalculation <aiida.orm.calculation.inline.InlineCalculation>`: rapid executions that are executed by the daemon itself, on your local machine.
+* :py:class:`CalcFunctionNode <aiida.orm.nodes.process.calculation.calcfunction.CalcFunctionNode>`: rapid executions that are executed by the daemon itself, on your local machine.
 
-In the following, we will refer to the JobCalculations as a Calculation for the sake of simplicity, unless we explicitly say otherwise. In the same way, the command ``verdi calculation`` refers to JobCalculations.
+In the following, we will refer to the CalcJobNodes as a Calculation for the sake of simplicity, unless we explicitly say otherwise. In the same way, the command ``verdi calculation`` refers to CalcJobNodes.
 
 The calculation state
 =====================
@@ -40,7 +40,7 @@ The most common ones are the following:
     
     Other, more specific "failed" states are possible, including ``SUBMISSIONFAILED``, ``RETRIEVALFAILED`` and ``PARSINGFAILED``.
 
-5. For very short times, when the job completes on the remote computer and AiiDA retrieves and parses it, you may happen to see a calculation in the ``COMPUTED``, ``RETRIEVING`` and ``PARSING`` states.
+5. For very short times, when the job completes on the remote computer and AiiDA retrieves and parses it, you may happen to see a calculation in the ``RETRIEVING`` and ``PARSING`` states.
 
 Eventually, when the calculation has finished, you will find the computed quantities in the database, and you will be able to query the database for the results that were parsed.
 
@@ -62,7 +62,7 @@ If you prefer, you can check the state of a calculation from within python. For 
     from aiida import load_dbenv
     load_dbenv()
 
-    from aiida.orm import JobCalculation
+    from aiida.orm import CalcJobNode
 
     ## pk must be a valid integer pk
     calc = load_node(pk)
@@ -97,8 +97,8 @@ Setting calculation properties
 ==============================
 
 There are various options that can be set that control the behavior of a calculation.
-They can be set through the :meth:~`.AbstractJobCalculation.set_option`` method.
-Here follows a brief documentation of their action. You can also find them in the  :class:`.AbstractJobCalculation` API reference.
+They can be set through the :meth:~`aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.set_option`` method.
+Here follows a brief documentation of their action. You can also find them in the  :class:`aiida.orm.nodes.process.calculation.calcjob.CalcJobNode` API reference.
 
 * ``max_memory_kb``: require explicitely the memory to be allocated to the scheduler job.
 * ``append_text``: write a set of bash commands to be executed after the call to the executable. These commands are executed only for this instance of calculations. Look also at the computer and code append_text to write bash commands for any job run on that  computer or with that code.
@@ -116,5 +116,5 @@ Here follows a brief documentation of their action. You can also find them in th
 * ``account``: pass in a string the name of the account/project to use on the job-scheduler.
 * ``qos``: pass in a string the name of the quality-of-service to use on the job-scheduler.
 * ``import_sys_environment``: default=True. If True, the job-scheduling script will load the environment variables.
-* ``resources``: set the resources to be used by the calculation like the number of nodes, wall-time, ..., by passing a dictionary to  this method. The keys of this dictionary, i.e. the resources, depend  on the specific scheduler plugin that has to run them. Look at the  documentation of the scheduler (type is given by: ``calc.get_computer().get_scheduler_type()``).
+* ``resources``: set the resources to be used by the calculation like the number of nodes, wall-time, ..., by passing a dictionary to  this method. The keys of this dictionary, i.e. the resources, depend  on the specific scheduler plugin that has to run them. Look at the  documentation of the scheduler (type is given by: ``calc.computer.get_scheduler_type()``).
 * ``withmpi``: True or False, if True (the default) it will  call the executable as a parallel run.

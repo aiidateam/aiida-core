@@ -25,11 +25,11 @@ from aiida.restapi.common.utils import PK_DBSYNONYM
 
 
 class BaseTranslator(object):
-    # pylint: disable=too-many-instance-attributes,fixme
     """
     Generic class for translator. It contains the methods
     required to build a related QueryBuilder object
     """
+    # pylint: disable=useless-object-inheritance,too-many-instance-attributes,fixme
 
     # A label associated to the present class
     __label__ = None
@@ -92,8 +92,8 @@ class BaseTranslator(object):
         # basic query_help object
         self._query_help = {
             "path": [{
-                "type": self._qb_type,
-                "label": self.__label__
+                "entity_type": self._qb_type,
+                "tag": self.__label__
             }],
             "filters": {},
             "project": {},
@@ -117,14 +117,17 @@ class BaseTranslator(object):
         return ""
 
     def get_schema(self):
-        # pylint: disable=fixme
+        # pylint: disable=fixme,too-many-branches
         """
         Get node schema
         :return: node schema
         """
 
         # Construct the full class string
-        class_string = 'aiida.orm.' + self._aiida_type
+        if any([self._aiida_type.startswith(prefix) for prefix in ['node.', 'data.', 'process.']]):
+            class_string = 'aiida.orm.nodes.' + self._aiida_type
+        else:
+            class_string = 'aiida.orm.' + self._aiida_type
 
         # Load correspondent orm class
         orm_class = get_object_from_string(class_string)
@@ -186,7 +189,7 @@ class BaseTranslator(object):
         if self._is_qb_initialized:
             self._total_count = self.qbobj.count()
         else:
-            raise InvalidOperation("query builder object has not been " "initialized.")
+            raise InvalidOperation("query builder object has not been initialized.")
 
             # def caching_method(self):
             #     """
@@ -366,7 +369,7 @@ class BaseTranslator(object):
         if node_id is not None:
             self._is_id_query = True
             if self._result_type == self.__label__ and filters:
-                raise RestInputValidationError("selecting a specific id does " "not " "allow to specify filters")
+                raise RestInputValidationError("selecting a specific id does not allow to specify filters")
 
             try:
                 self._check_id_validity(node_id)
@@ -422,7 +425,7 @@ class BaseTranslator(object):
             except ValueError:
                 raise InputValidationError("Limit value must be an integer")
             if limit > self.limit_default:
-                raise RestValidationError("Limit and perpage cannot be bigger " "than {}".format(self.limit_default))
+                raise RestValidationError("Limit and perpage cannot be bigger than {}".format(self.limit_default))
         else:
             limit = self.limit_default
 
@@ -430,7 +433,7 @@ class BaseTranslator(object):
             try:
                 offset = int(offset)
             except ValueError:
-                raise InputValidationError("Offset value must be an " "integer")
+                raise InputValidationError("Offset value must be an integer")
 
         if self._is_qb_initialized:
             if limit is not None:
@@ -442,7 +445,7 @@ class BaseTranslator(object):
             else:
                 pass
         else:
-            raise InvalidOperation("query builder object has not been " "initialized.")
+            raise InvalidOperation("query builder object has not been initialized.")
 
     def get_formatted_result(self, label):
         """
@@ -455,19 +458,21 @@ class BaseTranslator(object):
         """
 
         if not self._is_qb_initialized:
-            raise InvalidOperation("query builder object has not been " "initialized.")
+            raise InvalidOperation("query builder object has not been initialized.")
 
         results = []
         if self._total_count > 0:
             results = [res[label] for res in self.qbobj.dict()]
 
         # TODO think how to make it less hardcoded
-        if self._result_type == 'input_of':
-            return {'inputs': results}
-        elif self._result_type == 'output_of':
-            return {'outputs': results}
+        if self._result_type == 'with_outgoing':
+            result = {'inputs': results}
+        elif self._result_type == 'with_incoming':
+            result = {'outputs': results}
+        else:
+            result = {self.__label__: results}
 
-        return {self.__label__: results}
+        return result
 
     def get_results(self):
         """
@@ -478,7 +483,7 @@ class BaseTranslator(object):
 
         ## Check whether the querybuilder object has been initialized
         if not self._is_qb_initialized:
-            raise InvalidOperation("query builder object has not been " "initialized.")
+            raise InvalidOperation("query builder object has not been initialized.")
 
         ## Count the total number of rows returned by the query (if not
         # already done)

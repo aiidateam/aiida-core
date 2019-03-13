@@ -7,3 +7,16 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=wildcard-import,undefined-variable
+"""
+Managing an AiiDA instance:
+
+    * configuration file
+    * profiles
+    * databases
+    * repositories
+    * external components (such as Postgres, RabbitMQ)
+
+.. note:: Modules in this sub package may require the database environment to be loaded
+
+"""

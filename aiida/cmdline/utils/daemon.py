@@ -15,7 +15,6 @@ import click
 from tabulate import tabulate
 
 from aiida.cmdline.utils.common import format_local_time
-from aiida.daemon.client import DaemonClient
 
 
 def print_client_response_status(response):
@@ -24,6 +23,8 @@ def print_client_response_status(response):
 
     :param response: the response object
     """
+    from aiida.engine.daemon.client import DaemonClient
+
     if 'status' not in response:
         return
 
@@ -54,9 +55,11 @@ def get_daemon_status(client):
 
     if status_response['status'] == 'stopped':
         return 'The daemon is paused'
-    elif status_response['status'] == 'error':
+
+    if status_response['status'] == 'error':
         return 'The daemon is in an unexpected state, try verdi daemon restart --reset'
-    elif status_response['status'] == 'timeout':
+
+    if status_response['status'] == 'timeout':
         return 'The daemon is running but the call to the circus controller timed out'
 
     worker_response = client.get_worker_info()

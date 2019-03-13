@@ -16,11 +16,11 @@ import logging
 import os
 import six
 
-# pylint: disable=cyclic-import
-
-from aiida import transport, scheduler
+from aiida import transports, schedulers
 from aiida.common import exceptions
-from . import backends
+from aiida.manage.manager import get_manager
+from aiida.plugins import SchedulerFactory, TransportFactory
+
 from . import entities
 from . import users
 
@@ -63,107 +63,6 @@ class Computer(entities.Entity):
             """Delete the computer with the given id"""
             return self._backend.computers.delete(id)
 
-    @staticmethod
-    def get_schema():
-        """
-        Every node property contains:
-            - display_name: display name of the property
-            - help text: short help text of the property
-            - is_foreign_key: is the property foreign key to other type of the node
-            - type: type of the property. e.g. str, dict, int
-
-        :return: get schema of the computer
-        """
-        return {
-            "description": {
-                "display_name": "Description",
-                "help_text": "short description of the Computer",
-                "is_foreign_key": False,
-                "type": "str"
-            },
-            "enabled": {
-                "display_name": "Enabled",
-                "help_text": "True(False) if the computer is(not) enabled to run jobs",
-                "is_foreign_key": False,
-                "type": "bool"
-            },
-            "hostname": {
-                "display_name": "Host",
-                "help_text": "Name of the host",
-                "is_foreign_key": False,
-                "type": "str"
-            },
-            "id": {
-                "display_name": "Id",
-                "help_text": "Id of the object",
-                "is_foreign_key": False,
-                "type": "int"
-            },
-            "name": {
-                "display_name": "Name",
-                "help_text": "Name of the object",
-                "is_foreign_key": False,
-                "type": "str"
-            },
-            "scheduler_type": {
-                "display_name": "Scheduler",
-                "help_text": "Scheduler type",
-                "is_foreign_key": False,
-                "type": "str",
-                "valid_choices": {
-                    "direct": {
-                        "doc": "Support for the direct execution bypassing schedulers."
-                    },
-                    "pbsbaseclasses.PbsBaseClass": {
-                        "doc": "Base class with support for the PBSPro scheduler"
-                    },
-                    "pbspro": {
-                        "doc": "Subclass to support the PBSPro scheduler"
-                    },
-                    "sge": {
-                        "doc":
-                        "Support for the Sun Grid Engine scheduler and its variants/forks (Son of Grid Engine, "
-                        "Oracle Grid Engine, ...)"
-                    },
-                    "slurm": {
-                        "doc": "Support for the SLURM scheduler (http://slurm.schedmd.com/)."
-                    },
-                    "torque": {
-                        "doc": "Subclass to support the Torque scheduler.."
-                    }
-                }
-            },
-            "transport_params": {
-                "display_name": "",
-                "help_text": "Transport Parameters",
-                "is_foreign_key": False,
-                "type": "str"
-            },
-            "transport_type": {
-                "display_name": "Transport type",
-                "help_text": "Transport Type",
-                "is_foreign_key": False,
-                "type": "str",
-                "valid_choices": {
-                    "local": {
-                        "doc":
-                        "Support copy and command execution on the same host on which AiiDA is running via direct file "
-                        "copy and execution commands."
-                    },
-                    "ssh": {
-                        "doc":
-                        "Support connection, command execution and data transfer to remote computers via SSH+SFTP."
-                    }
-                }
-            },
-            "uuid": {
-                "display_name": "Unique ID",
-                "help_text": "Universally Unique Identifier",
-                "is_foreign_key": False,
-                "type": "unicode"
-            }
-        }
-
     def __init__(self,
                  name,
                  hostname,
@@ -175,7 +74,7 @@ class Computer(entities.Entity):
                  backend=None):
         """Construct a new computer"""
         # pylint: disable=too-many-arguments
-        backend = backend or backends.construct_backend()
+        backend = backend or get_manager().get_backend()
         model = backend.computers.create(
             name=name,
             hostname=hostname,
@@ -195,9 +94,6 @@ class Computer(entities.Entity):
             return "{} ({}), pk: {}".format(self.name, self.hostname, self.pk)
 
         return "{} ({}) [DISABLED], pk: {}".format(self.name, self.hostname, self.pk)
-
-    def set(self, **kwargs):
-        self._backend_entity.set(**kwargs)
 
     @property
     def full_text_info(self):
@@ -277,14 +173,13 @@ class Computer(entities.Entity):
         Validates the description.
         """
         # The description is always valid
-        pass
 
     @classmethod
     def _transport_type_validator(cls, transport_type):
         """
         Validates the transport string.
         """
-        if transport_type not in transport.Transport.get_valid_transports():
+        if transport_type not in transports.Transport.get_valid_transports():
             raise exceptions.ValidationError("The specified transport is not a valid one")
 
     @classmethod
@@ -292,7 +187,7 @@ class Computer(entities.Entity):
         """
         Validates the transport string.
         """
-        if scheduler_type not in scheduler.Scheduler.get_valid_schedulers():
+        if scheduler_type not in schedulers.Scheduler.get_valid_schedulers():
             raise exceptions.ValidationError("The specified scheduler is not a valid one")
 
     @classmethod
@@ -301,7 +196,6 @@ class Computer(entities.Entity):
         Validates the prepend text string.
         """
         # no validation done
-        pass
 
     @classmethod
     def _append_text_validator(cls, append_text):
@@ -309,7 +203,6 @@ class Computer(entities.Entity):
         Validates the append text string.
         """
         # no validation done
-        pass
 
     @classmethod
     def _workdir_validator(cls, workdir):
@@ -446,10 +339,10 @@ class Computer(entities.Entity):
     def hostname(self):
         return self._backend_entity.hostname
 
-    def _get_metadata(self):
+    def get_metadata(self):
         return self._backend_entity.get_metadata()
 
-    def _set_metadata(self, metadata_dict):
+    def set_metadata(self, metadata_dict):
         """
         Set the metadata.
 
@@ -459,33 +352,33 @@ class Computer(entities.Entity):
         """
         self._backend_entity.set_metadata(metadata_dict)
 
-    def _del_property(self, name, raise_exception=True):
+    def delete_property(self, name, raise_exception=True):
         """
         Delete a property from this computer
 
         :param name: the name of the property
         :param raise_exception: if True raise if the property does not exist, otherwise return None
         """
-        olddata = self._get_metadata()
+        olddata = self.get_metadata()
         try:
             del olddata[name]
-            self._set_metadata(olddata)
+            self.set_metadata(olddata)
         except KeyError:
             if raise_exception:
                 raise AttributeError("'{}' property not found".format(name))
 
-    def _set_property(self, name, value):
+    def set_property(self, name, value):
         """
         Set a property on this computer
 
         :param name: the property name
         :param value: the new value
         """
-        olddata = self._get_metadata()
+        olddata = self.get_metadata()
         olddata[name] = value
-        self._set_metadata(olddata)
+        self.set_metadata(olddata)
 
-    def _get_property(self, name, *args):
+    def get_property(self, name, *args):
         """
         Get a property of this computer
 
@@ -494,8 +387,8 @@ class Computer(entities.Entity):
         :return: the property value
         """
         if len(args) > 1:
-            raise TypeError("_get_property expected at most 2 arguments")
-        olddata = self._get_metadata()
+            raise TypeError("get_property expected at most 2 arguments")
+        olddata = self.get_metadata()
         try:
             return olddata[name]
         except KeyError:
@@ -504,16 +397,16 @@ class Computer(entities.Entity):
             return args[0]
 
     def get_prepend_text(self):
-        return self._get_property("prepend_text", "")
+        return self.get_property("prepend_text", "")
 
     def set_prepend_text(self, val):
-        self._set_property("prepend_text", six.text_type(val))
+        self.set_property("prepend_text", six.text_type(val))
 
     def get_append_text(self):
-        return self._get_property("append_text", "")
+        return self.get_property("append_text", "")
 
     def set_append_text(self, val):
-        self._set_property("append_text", six.text_type(val))
+        self.set_property("append_text", six.text_type(val))
 
     def get_mpirun_command(self):
         """
@@ -522,7 +415,7 @@ class Computer(entities.Entity):
 
         I also provide a sensible default that may be ok in many cases.
         """
-        return self._get_property("mpirun_command", ["mpirun", "-np", "{tot_num_mpiprocs}"])
+        return self.get_property("mpirun_command", ["mpirun", "-np", "{tot_num_mpiprocs}"])
 
     def set_mpirun_command(self, val):
         """
@@ -531,14 +424,14 @@ class Computer(entities.Entity):
         """
         if not isinstance(val, (tuple, list)) or not all(isinstance(i, six.string_types) for i in val):
             raise TypeError("the mpirun_command must be a list of strings")
-        self._set_property("mpirun_command", val)
+        self.set_property("mpirun_command", val)
 
     def get_default_mpiprocs_per_machine(self):
         """
         Return the default number of CPUs per machine (node) for this computer,
         or None if it was not set.
         """
-        return self._get_property("default_mpiprocs_per_machine", None)
+        return self.get_property("default_mpiprocs_per_machine", None)
 
     def set_default_mpiprocs_per_machine(self, def_cpus_per_machine):
         """
@@ -546,11 +439,11 @@ class Computer(entities.Entity):
         Accepts None if you do not want to set this value.
         """
         if def_cpus_per_machine is None:
-            self._del_property("default_mpiprocs_per_machine", raise_exception=False)
+            self.delete_property("default_mpiprocs_per_machine", raise_exception=False)
         else:
             if not isinstance(def_cpus_per_machine, six.integer_types):
                 raise TypeError("def_cpus_per_machine must be an integer (or None)")
-        self._set_property("default_mpiprocs_per_machine", def_cpus_per_machine)
+        self.set_property("default_mpiprocs_per_machine", def_cpus_per_machine)
 
     def get_minimum_job_poll_interval(self):
         """
@@ -560,8 +453,8 @@ class Computer(entities.Entity):
         :return: The minimum interval (in seconds)
         :rtype: float
         """
-        return self._get_property(self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL,
-                                  self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL__DEFAULT)
+        return self.get_property(self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL,
+                                 self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL__DEFAULT)
 
     def set_minimum_job_poll_interval(self, interval):
         """
@@ -571,7 +464,7 @@ class Computer(entities.Entity):
         :param interval: The minimum interval in seconds
         :type interval: float
         """
-        self._set_property(self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL, interval)
+        self.set_property(self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL, interval)
 
     def get_transport_params(self):
         return self._backend_entity.get_transport_params()
@@ -584,12 +477,12 @@ class Computer(entities.Entity):
         Return a Transport class, configured with all correct parameters.
         The Transport is closed (meaning that if you want to run any operation with
         it, you have to open it first (i.e., e.g. for a SSH transport, you have
-        to open a connection). To do this you can call ``transport.open()``, or simply
+        to open a connection). To do this you can call ``transports.open()``, or simply
         run within a ``with`` statement::
 
            transport = Computer.get_transport()
            with transport:
-               print(transport.whoami())
+               print(transports.whoami())
 
         :param user: if None, try to obtain a transport for the default user.
             Otherwise, pass a valid User.
@@ -598,10 +491,10 @@ class Computer(entities.Entity):
             parameters to the supercomputer, as configured with ``verdi computer configure``
             for the user specified as a parameter ``user``.
         """
-        from . import authinfos
+        from . import authinfos  # pylint: disable=cyclic-import
 
         user = user or users.User.objects(self.backend).get_default()
-        authinfo = authinfos.AuthInfo.objects(self.backend).find(computer=self, user=user)[0]
+        authinfo = authinfos.AuthInfo.objects(self.backend).get(dbcomputer=self, aiidauser=user)
         return authinfo.get_transport()
 
     def get_workdir(self):
@@ -610,13 +503,13 @@ class Computer(entities.Entity):
         :return: The currently configured working directory
         :rtype: str
         """
-        return self._get_property(self.PROPERTY_WORKDIR, "/scratch/{username}/aiida_run/")
+        return self.get_property(self.PROPERTY_WORKDIR, "/scratch/{username}/aiida_run/")
 
     def set_workdir(self, val):
-        self._set_property(self.PROPERTY_WORKDIR, val)
+        self.set_property(self.PROPERTY_WORKDIR, val)
 
     def get_shebang(self):
-        return self._get_property(self.PROPERTY_SHEBANG, "#!/bin/bash")
+        return self.get_property(self.PROPERTY_SHEBANG, "#!/bin/bash")
 
     def set_shebang(self, val):
         """
@@ -626,9 +519,9 @@ class Computer(entities.Entity):
             raise ValueError("{} is invalid. Input has to be a string".format(val))
         if not val.startswith('#!'):
             raise ValueError("{} is invalid. A shebang line has to start with #!".format(val))
-        metadata = self._get_metadata()
+        metadata = self.get_metadata()
         metadata['shebang'] = val
-        self._set_metadata(metadata)
+        self.set_metadata(metadata)
 
     def get_name(self):
         return self._backend_entity.get_name()
@@ -658,7 +551,6 @@ class Computer(entities.Entity):
         :return: the description
         :rtype: str
         """
-        pass
 
     def set_description(self, val):
         """
@@ -680,7 +572,7 @@ class Computer(entities.Entity):
 
         :param user: a User instance.
         :return: a AuthInfo instance
-        :raise NotExistent: if the computer is not configured for the given
+        :raise aiida.common.NotExistent: if the computer is not configured for the given
             user.
         """
         from . import authinfos
@@ -767,7 +659,7 @@ class Computer(entities.Entity):
         """
         try:
             # I return the class, not an instance
-            return transport.TransportFactory(self.get_transport_type())
+            return TransportFactory(self.get_transport_type())
         except exceptions.MissingPluginError as exc:
             raise exceptions.ConfigurationError('No transport found for {} [type {}], message: {}'.format(
                 self.name, self.get_transport_type(), exc))
@@ -777,10 +669,10 @@ class Computer(entities.Entity):
         Get a scheduler instance for this computer
 
         :return: the scheduler instance
-        :rtype: :class:`aiida.scheduler.Scheduler`
+        :rtype: :class:`aiida.schedulers.Scheduler`
         """
         try:
-            scheduler_class = scheduler.SchedulerFactory(self.get_scheduler_type())
+            scheduler_class = SchedulerFactory(self.get_scheduler_type())
             # I call the init without any parameter
             return scheduler_class()
         except exceptions.MissingPluginError as exc:
@@ -800,6 +692,12 @@ class Computer(entities.Entity):
 
         transport_cls = self.get_transport_class()
         user = user or users.User.objects(self.backend).get_default()
+        valid_keys = set(transport_cls.get_valid_auth_params())
+
+        if not set(kwargs.keys()).issubset(valid_keys):
+            invalid_keys = [key for key in kwargs if key not in valid_keys]
+            raise ValueError('{transport}: recieved invalid authentication parameter(s) "{invalid}"'.format(
+                transport=transport_cls, invalid=invalid_keys))
 
         try:
             authinfo = self.get_authinfo(user)
@@ -807,12 +705,6 @@ class Computer(entities.Entity):
             authinfo = authinfos.AuthInfo(self, user)
 
         auth_params = authinfo.get_auth_params()
-        valid_keys = set(transport_cls.get_valid_auth_params())
-
-        if not set(kwargs.keys()).issubset(valid_keys):
-            invalid_keys = [key for key in kwargs if key not in valid_keys]
-            raise ValueError('{transport}: recieved invalid authentication parameter(s) "{invalid}"'.format(
-                transport=transport_cls, invalid=invalid_keys))
 
         if valid_keys:
             auth_params.update(kwargs)
@@ -840,3 +732,104 @@ class Computer(entities.Entity):
             pass
 
         return config
+
+    @staticmethod
+    def get_schema():
+        """
+        Every node property contains:
+            - display_name: display name of the property
+            - help text: short help text of the property
+            - is_foreign_key: is the property foreign key to other type of the node
+            - type: type of the property. e.g. str, dict, int
+
+        :return: get schema of the computer
+        """
+        return {
+            "description": {
+                "display_name": "Description",
+                "help_text": "short description of the Computer",
+                "is_foreign_key": False,
+                "type": "str"
+            },
+            "enabled": {
+                "display_name": "Enabled",
+                "help_text": "True(False) if the computer is(not) enabled to run jobs",
+                "is_foreign_key": False,
+                "type": "bool"
+            },
+            "hostname": {
+                "display_name": "Host",
+                "help_text": "Name of the host",
+                "is_foreign_key": False,
+                "type": "str"
+            },
+            "id": {
+                "display_name": "Id",
+                "help_text": "Id of the object",
+                "is_foreign_key": False,
+                "type": "int"
+            },
+            "name": {
+                "display_name": "Name",
+                "help_text": "Name of the object",
+                "is_foreign_key": False,
+                "type": "str"
+            },
+            "scheduler_type": {
+                "display_name": "Scheduler",
+                "help_text": "Scheduler type",
+                "is_foreign_key": False,
+                "type": "str",
+                "valid_choices": {
+                    "direct": {
+                        "doc": "Support for the direct execution bypassing schedulers."
+                    },
+                    "pbsbaseclasses.PbsBaseClass": {
+                        "doc": "Base class with support for the PBSPro scheduler"
+                    },
+                    "pbspro": {
+                        "doc": "Subclass to support the PBSPro scheduler"
+                    },
+                    "sge": {
+                        "doc":
+                        "Support for the Sun Grid Engine scheduler and its variants/forks (Son of Grid Engine, "
+                        "Oracle Grid Engine, ...)"
+                    },
+                    "slurm": {
+                        "doc": "Support for the SLURM scheduler (http://slurm.schedmd.com/)."
+                    },
+                    "torque": {
+                        "doc": "Subclass to support the Torque scheduler."
+                    }
+                }
+            },
+            "transport_params": {
+                "display_name": "",
+                "help_text": "Transport Parameters",
+                "is_foreign_key": False,
+                "type": "str"
+            },
+            "transport_type": {
+                "display_name": "Transport type",
+                "help_text": "Transport Type",
+                "is_foreign_key": False,
+                "type": "str",
+                "valid_choices": {
+                    "local": {
+                        "doc":
+                        "Support copy and command execution on the same host on which AiiDA is running via direct file "
+                        "copy and execution commands."
+                    },
+                    "ssh": {
+                        "doc":
+                        "Support connection, command execution and data transfer to remote computers via SSH+SFTP."
+                    }
+                }
+            },
+            "uuid": {
+                "display_name": "Unique ID",
+                "help_text": "Universally Unique Identifier",
+                "is_foreign_key": False,
+                "type": "unicode"
+            }
+        }

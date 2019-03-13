@@ -5,10 +5,10 @@ The main way of interacting with AiiDA is through a command line interface tool 
 You have already used ``verdi`` when installing AiiDA, either through ``verdi quicksetup`` or ``verdi setup``.
 But ``verdi`` is very versatile and provides a wealth of other functionalities; here is a list:
 
-* :ref:`calculation<calculation>`:   Inspect and manage calculations.
 * :ref:`code<code>`:                 Setup and manage codes.
 * :ref:`comment<comment>`:           Inspect, create and manage comments.
 * :ref:`computer<computer>`:         Setup and manage computers.
+* :ref:`config<config>`:             Set, unset and get profile specific or global configuration options.
 * :ref:`daemon<daemon>`:             Inspect and manage the daemon.
 * :ref:`data<data>`:                 Inspect, create and manage data nodes.
 * :ref:`devel<devel>`:               Commands for developers.
@@ -25,9 +25,8 @@ But ``verdi`` is very versatile and provides a wealth of other functionalities; 
 * :ref:`run<run>`:                   Execute an AiiDA script.
 * :ref:`setup<setup>`:               Setup and configure a new profile.
 * :ref:`shell<shell>`:               Start a python shell with preloaded AiiDA environment.
+* :ref:`status<status>`:             Show service status overview.
 * :ref:`user<user>`:                 Inspect and manage users.
-* :ref:`work<work>`:                 Inspect and manage work calculations.
-* :ref:`workflow<workflow>`:         [deprecated: since v1.0.0] Inspect and manage legacy workflows.
 
 
 Concepts
@@ -205,28 +204,6 @@ Commands
 
 Below is a list with all the available subcommands.
 
-.. _calculation:
-
-``verdi calculation``
----------------------
-
-  * **cleanworkdir**: cleans the work directory (remote folder) of AiiDA calculations
-  * **gotocomputer**: open a shell to the calc folder on the cluster
-  * **inputcat**: shows an input file of a calculation node
-  * **inputls**: shows the list of the input files of a calculation node
-  * **kill**: [deprecated: use ``verdi process kill`` instead] stop the execution on the cluster of a calculation
-  * **list**: list the AiiDA calculations. By default, lists only the running calculations
-  * **logshow**: shows the logs/errors produced by a calculation
-  * **outputcat**: shows an ouput file of a calculation node
-  * **outputls**: shows the list of the output files of a calculation node
-  * **plugins**: lists the supported calculation plugins
-  * **res**: shows the calculation results (from calc.res)
-  * **show**: shows the database information related to the calculation: used code, all the input nodes and all the output nodes
-
-.. warning:: When using gotocomputer, be careful not to change any file that AiiDA created,
-  nor to modify the output files or resubmit the calculation, 
-  unless you **really** know what you are doing, otherwise AiiDA may get very confused!   
-
 
 .. _code:
 
@@ -277,6 +254,18 @@ Setup and manage computer objects.
   *  **update**: [deprecated: use ``verdi computer duplicate`` instead] change configuration of a computer. Works only if the computer node is a disconnected node in the database (has not been used yet)
 
 
+.. _config:
+
+``verdi config``
+----------------
+This command allows you to set various configuration options that change how AiiDA works.
+The options can be set for specific profiles or globally.
+The command works just like ``git config`` does.
+Only passing the option name as an argument will print its value, if it is set.
+Passing a value as a second argument, will set that value for the given option.
+With the ``--unset`` flag an option can be unset and by using ``--global`` the get, set or unset operation is applied globally instead of the default profile.
+
+
 .. _daemon:
 
 ``verdi daemon``
@@ -298,14 +287,14 @@ Manage the daemon, i.e. the process that runs in background and that manages sub
 --------------
 Manage ``Data`` nodes.
 
-  * **array**: handles :class:`aiida.orm.data.array.ArrayData` objects
+  * **array**: handles :class:`aiida.orm.nodes.data.array.ArrayData` objects
 
     * **show**: visualizes the data object
 
-  * **bands**:  handles :class:`aiida.orm.data.array.bands.BandsData` objects (band structure object)
+  * **bands**:  handles :class:`aiida.orm.nodes.data.array.bands.BandsData` objects (band structure object)
 
     * **export**: export the node as a string of a specified format
-    * **list**:   list currently saved nodes of :class:`aiida.orm.data.array.bands.BandsData` kind
+    * **list**:   list currently saved nodes of :class:`aiida.orm.nodes.data.array.bands.BandsData` kind
     * **show**:   visualizes the data object
 
   * **cif**: handles the CifData objects
@@ -316,7 +305,7 @@ Manage ``Data`` nodes.
     * **list**: list currently saved nodes of CifData kind
     * **show**: use third-party visualizer (like jmol) to graphically show the CifData
 
-  * **parameter**: handles the ParameterData objects
+  * **parameter**: handles the Dict objects
 
     * **show**: output the content of the python dictionary in different formats.
 
@@ -355,12 +344,7 @@ Manage ``Data`` nodes.
 ---------------
 Commands intended for developers, such as setting :doc:`config properties<properties>` and running the unit test suite.
 
-  * **delproperty**: delete a property from the configuration
-  * **describeproperties**: print a list of available configuration properties
-  * **getproperty**: get the value of a property set for the configuration
-  * **listproperties**: print the properties defined in the configuration
   * **run_daemon**: run an instance of the daemon runner in the current interpreter
-  * **setproperty**: set a property with a given value for the configuration
   * **tests**: run the unittest suite
 
 
@@ -379,6 +363,7 @@ Create and manage export archives.
 ``verdi graph``
 ---------------
 Create graphical representations of part of the provenance graph.
+Requires that `graphviz <https://graphviz.org/download>`_ be installed. 
 
   * **generate**: generates a graph from a given root node either in a graphical or a  ``.dot`` format.
 
@@ -506,6 +491,13 @@ Create and setup a new profile.
 Start a python shell with preloaded AiiDA environment.
 Which modules will be preloaded can be configured through :doc:`properties<properties>` set in the configuration file.
 
+.. _status:
+
+``verdi status``
+----------------
+Show overview of status for services needed by AiiDA.
+This can be helpful for pinning down potential problems during debugging.
+
 
 .. _user:
 
@@ -515,35 +507,3 @@ Configure and manage users
 
   *  **configure**: configure a new AiiDA user
   *  **list**: list existing users configured for your AiiDA installation
-
-
-.. _work:
-
-``verdi work``
---------------
-Manage work calculations.
-
-  * **list**: list the work calculations present in the database
-  * **plugins**: show the registered work calculation plugins
-  * **report**: show the log messages for a work calculation
-  * **status**: shows an ASCII tree for a work calculation showing the status of itself and the calculations it called
-  * **kill**: [deprecated: use ``verdi process kill`` instead] kill a work calculation
-  * **pause**: [deprecated: use ``verdi process pause`` instead] pause a work calculation
-  * **play**: [deprecated: use ``verdi process play`` instead] play a paused work calculation
-  * **watch**: [deprecated: use ``verdi process watch`` instead] dynamically print the state transitions for the given work calculation
-
-
-.. _workflow:
-
-``verdi workflow``
-------------------
-
-.. warning::
-  As of v1.0.0 this command is deprecated, as legacy workflows are no longer maintained
-
-Manage legacy workflows:
-
-  * **kill**: kills a workflow
-  * **list**: lists the workflows present in the database. By default, shows only the running ones
-  * **logshow**: shows the log messages for the workflow
-  * **report**: display the information on how the workflow is evolving

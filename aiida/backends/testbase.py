@@ -10,19 +10,19 @@
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
+
 import os
 import sys
 import unittest
-from unittest import (
-    TestSuite, defaultTestLoader as test_loader)
+import traceback
 
 from tornado import ioloop
 
 from aiida.backends import settings
 from aiida.backends.tests import get_db_test_list
 from aiida.common.exceptions import ConfigurationError, TestsNotAllowedError, InternalError
-from aiida.common.utils import classproperty
-from aiida import work
+from aiida.common.lang import classproperty
+from aiida.manage.manager import reset_manager
 
 
 def check_if_tests_can_run():
@@ -88,8 +88,6 @@ class AiidaTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        from aiida.orm.backends import construct_backend
-
         # Note: this will raise an exception, that will be seen as a test
         # failure. To be safe, you should do the same check also in the tearDownClass
         # to avoid that it is run
@@ -97,7 +95,8 @@ class AiidaTestCase(unittest.TestCase):
 
         cls.__backend_instance = cls.get_backend_class()()
         cls.__backend_instance.setUpClass_method(*args, **kwargs)
-        cls.backend = construct_backend()
+        cls.backend = cls.__backend_instance.backend
+        cls.insert_data()
 
         cls._class_was_setup = True
 
@@ -112,10 +111,15 @@ class AiidaTestCase(unittest.TestCase):
         self.__backend_instance.tearDown_method()
         # Clean up the loop we created in set up.
         # Call this after the instance tear down just in case it uses the loop
-        work.AiiDAManager.reset()
+        reset_manager()
         loop = ioloop.IOLoop.current()
         if not loop._closing:
             loop.close()
+
+    def reset_database(self):
+        """Reset the database to the default state deleting any content currently stored"""
+        self.clean_db()
+        self.insert_data()
 
     @classmethod
     def insert_data(cls):
@@ -123,17 +127,45 @@ class AiidaTestCase(unittest.TestCase):
 
     @classmethod
     def clean_db(cls):
+        """Clean up database and reset caches.
+
+        Resets AiiDA manager cache, which could otherwise be left in an inconsistent state when cleaning the database.
+        """
+        from aiida.common.exceptions import InvalidOperation
+
         # Note: this will raise an exception, that will be seen as a test
         # failure. To be safe, you should do the same check also in the tearDownClass
         # to avoid that it is run
         check_if_tests_can_run()
 
-        from aiida.common.exceptions import InvalidOperation
-
         if not cls._class_was_setup:
             raise InvalidOperation("You cannot call clean_db before running the setUpClass")
 
         cls.__backend_instance.clean_db()
+
+        # Reset AiiDA manager cache
+        reset_manager()
+
+    @classmethod
+    def clean_repository(cls):
+        """
+        Cleans up file repository.
+        """
+        from aiida.settings import REPOSITORY_PATH
+        from aiida.common.setup import TEST_KEYWORD
+        from aiida.common.exceptions import InvalidOperation
+        import shutil
+
+        base_repo_path = os.path.basename(os.path.normpath(REPOSITORY_PATH))
+        if TEST_KEYWORD not in base_repo_path:
+            raise InvalidOperation("Warning: The repository folder {} does not "
+                                   "seem to belong to a test profile and will therefore not be deleted.\n"
+                                   "Full repository path: "
+                                   "{}".format(base_repo_path, REPOSITORY_PATH))
+
+        # Clean the test repository
+        shutil.rmtree(REPOSITORY_PATH, ignore_errors=True)
+        os.makedirs(REPOSITORY_PATH)
 
     @classproperty
     def computer(cls):
@@ -154,7 +186,16 @@ class AiidaTestCase(unittest.TestCase):
         # Double check for double security to avoid to run the tearDown
         # if this is not a test profile
         check_if_tests_can_run()
+        cls.clean_db()
+        cls.clean_repository()
         cls.__backend_instance.tearDownClass_method(*args, **kwargs)
+
+    def assertClickSuccess(self, cli_result):
+        self.assertEqual(cli_result.exit_code, 0)
+        self.assertClickResultNoException(cli_result)
+
+    def assertClickResultNoException(self, cli_result):
+        self.assertIsNone(cli_result.exception, ''.join(traceback.format_exception(*cli_result.exc_info)))
 
 
 def run_aiida_db_tests(tests_to_run, verbose=False):
@@ -163,7 +204,7 @@ def run_aiida_db_tests(tests_to_run, verbose=False):
     Return the list of test results.
     """
     # Empty test suite that will be populated
-    test_suite = TestSuite()
+    test_suite = unittest.TestSuite()
 
     actually_run_tests = []
     num_tests_expected = 0
@@ -185,11 +226,10 @@ def run_aiida_db_tests(tests_to_run, verbose=False):
         for modulename in modulenames:
             if modulename not in found_modulenames:
                 try:
-                    test_suite.addTest(test_loader.loadTestsFromName(modulename))
+                    test_suite.addTest(unittest.defaultTestLoader.loadTestsFromName(modulename))
                 except AttributeError as exception:
                     try:
                         import importlib
-                        import traceback
                         importlib.import_module(modulename)
                     except ImportError as exception:
                         print("[CRITICAL] The module '{}' has an import error and the tests cannot be run:\n{}"

@@ -1,33 +1,37 @@
 ## v1.0.0
 
 ### General
+
 - Code has been made python 3 compatible. [[#804]](https://github.com/aiidateam/aiida_core/pull/804)[[#2136]](https://github.com/aiidateam/aiida_core/pull/2136)[[#2125]](https://github.com/aiidateam/aiida_core/pull/2125)[[#2117]](https://github.com/aiidateam/aiida_core/pull/2117)[[#2110]](https://github.com/aiidateam/aiida_core/pull/2110)[[#2100]](https://github.com/aiidateam/aiida_core/pull/2100)[[#2094]](https://github.com/aiidateam/aiida_core/pull/2094)[[#2092]](https://github.com/aiidateam/aiida_core/pull/2092)
 - AiiDA now enforces UTF-8 encoding for text output in its files and databases. [[#2107]](https://github.com/aiidateam/aiida_core/pull/2107)
+- Drop the `DbCalcState` table [[#2198]](https://github.com/aiidateam/aiida_core/pull/2198)
 - All calculations now go through the `Process` layer, homogenizing the state of work and job calculations [[#1125]](https://github.com/aiidateam/aiida_core/pull/1125)
-- Implement the concept of an "exit status" for all calculations, allowing a programmatic definition of success or failure for all processes [[#1189]](https://github.com/aiidateam/aiida_core/pull/1189)
-- Implementation of the `AuthInfo` class which will allow custom configuration per configured computer [[#1184]](https://github.com/aiidateam/aiida_core/pull/1184)
-- Add utility functions based on the `click` library to simplify writing command line interface scripts [[#1194]](https://github.com/aiidateam/aiida_core/pull/1194)
-- Implemented the `DbImporter` for the Materials Platform of Data Science API, which exposed the content of the Pauling file [[#1238]](https://github.com/aiidateam/aiida_core/pull/1238)
-- Implement the `has_atomic_sites` and `has_unknown_species` properties for the `CifData` class [[#1257]](https://github.com/aiidateam/aiida_core/pull/1257)
-- Default library used in `_get_aiida_structure` to convert the `CifData` to `StructureData` has been changed from `ase` to `pymatgen` [[#1257]](https://github.com/aiidateam/aiida_core/pull/1257)
-- Do not allow the `copy` or `deepcopy` of `Node`, except for `Data`  [[#1705]](https://github.com/aiidateam/aiida_core/pull/1705)
-- Added element `X` to the elements list in order to support unknown species [[#1613]](https://github.com/aiidateam/aiida_core/pull/1613)
-- Enable use of tuple in `QueryBuilder.append` for all ORM classes [[#1608]](https://github.com/aiidateam/aiida_core/pull/1608), [[#1607]](https://github.com/aiidateam/aiida_core/pull/1607)
-- Bump version of Django to `1.8.19` for py3 support [[#1915]](https://github.com/aiidateam/aiida_core/pull/1915)
+- Bump version of Django to `1.11.16` for py3 support [[#2206]](https://github.com/aiidateam/aiida_core/pull/2206)
+- Implement new link types [[#2220]](https://github.com/aiidateam/aiida_core/pull/2220)
+- Make the node repository API backend agnostic [[#2506]](https://github.com/aiidateam/aiida_core/pull/2506)
+- Move the definition and import location of plugin factories [[#2498]](https://github.com/aiidateam/aiida_core/pull/2498)
+- Redesign the Parser class [[#2397]](https://github.com/aiidateam/aiida_core/pull/2397)
+- Remove implementation of legacy workflows [[#2379]](https://github.com/aiidateam/aiida_core/pull/2379)
+- Reorganization of some top level modules [[#2357]](https://github.com/aiidateam/aiida_core/pull/2357)
 
 ### Engine and daemon
+- Allow the definition of `None` as default in process functions [[#2582]](https://github.com/aiidateam/aiida_core/pull/2582)
+- Implement the new `calcfunction` decorator. [[#2203]](https://github.com/aiidateam/aiida_core/pull/2203)
+- Engine stability and communications improvements [[#2158]](https://github.com/aiidateam/aiida_core/pull/2158)
 - Each profile now has its own daemon that can be run completely independently in parallel [[#1217]](https://github.com/aiidateam/aiida_core/pull/1217)
 - Polling based daemon has been replaced with a much faster event-based daemon [[#1067]](https://github.com/aiidateam/aiida_core/pull/1067)
 - Replaced `Celery` with `Circus` as the daemonizer of the daemon [[#1213]](https://github.com/aiidateam/aiida_core/pull/1213)
 - The daemon can now be stopped without loading the database, making it possible to stop it even if the database version does not match the code [[#1231]](https://github.com/aiidateam/aiida_core/pull/1231)
-- Ported job calculation to use coroutines for tasks [[#1827]](https://github.com/aiidateam/aiida_core/pull/1827)
+- Ported calculation jobs to use coroutines for transport tasks [[#1827]](https://github.com/aiidateam/aiida_core/pull/1827)
 - Implement exponential backoff retry mechanism for transport tasks [[#1837]](https://github.com/aiidateam/aiida_core/pull/1837)
-- Pause `JobProcess` when transport task falls through exponential backoff [[#1903]](https://github.com/aiidateam/aiida_core/pull/1903)
-- Separate `JobProcess` submit task in folder upload and scheduler submit [[#1946]](https://github.com/aiidateam/aiida_core/pull/1946)
+- Pause `CalcJob` when transport task falls through exponential backoff [[#1903]](https://github.com/aiidateam/aiida_core/pull/1903)
+- Separate `CalcJob` submit task in folder upload and scheduler submit [[#1946]](https://github.com/aiidateam/aiida_core/pull/1946)
 - Each daemon worker now respects an optional minimum scheduler polling interval [[#1929]](https://github.com/aiidateam/aiida_core/pull/1929)
+- Prevent launching or construction of `WorkChain` and `CalcJob` base class [[#2564]](https://github.com/aiidateam/aiida_core/pull/2564)
+- Process queues are now properly removed and cleaned when a process terminates [[#2324]](https://github.com/aiidateam/aiida_core/pull/2324)
+- Implement the concept of an "exit status" for all calculations, allowing a programmatic definition of success or failure for all processes [[#1189]](https://github.com/aiidateam/aiida_core/pull/1189)
 
 ### Workflows
-- `InlineCalculations` have been ported to use the new `Process` infrastructure, while maintaining full backwards compatibility [[#1124]](https://github.com/aiidateam/aiida_core/pull/1124)
 - Implemented the `ProcessBuilder` which simplifies the definition of `Process` inputs and the launching of a `Process` [[#1116]](https://github.com/aiidateam/aiida_core/pull/1116)
 - Namespaces have been added to the port containers of the `ProcessSpec` class [[#1099]](https://github.com/aiidateam/aiida_core/pull/1099)
 - Convention of leading underscores for non-storable inputs has been replaced with a proper `non_db` attribute of the `Port` class [[#1105]](https://github.com/aiidateam/aiida_core/pull/1105)
@@ -36,12 +40,55 @@
 - Add built-in support and API for exit codes in `WorkChains` [[#1640]](https://github.com/aiidateam/aiida_core/pull/1640), [[#1704]](https://github.com/aiidateam/aiida_core/pull/1704), [[#1681]](https://github.com/aiidateam/aiida_core/pull/1681)
 - Overload `PortNamespace` mutable properties upon exposing [[#1635]](https://github.com/aiidateam/aiida_core/pull/1635)
 
-### Job calculations
-- Implement method for `JobCalculation` to create a restart builder  [[#1962]](https://github.com/aiidateam/aiida_core/pull/1962)
-- Implement the `get_options` method for `JobCalculation` [[#1961]](https://github.com/aiidateam/aiida_core/pull/1961)
+### CalcJob
+- Implement `CalcJob` process class that replaces the deprecated `JobCalculation` [[#2389]](https://github.com/aiidateam/aiida_core/pull/2389)
+- Implement method for `CalcJobNode` to create a restart builder  [[#1962]](https://github.com/aiidateam/aiida_core/pull/1962)
+- Implement the `get_options` method for `CalcJobNode` [[#1961]](https://github.com/aiidateam/aiida_core/pull/1961)
+- Redefine the structure of the `CalcInfo.local_copy_list` [[#2581]](https://github.com/aiidateam/aiida_core/pull/2581)
+- Add `CalculationTools` base and entry point `aiida.tools.calculations` [[#2331]](https://github.com/aiidateam/aiida_core/pull/2331)
+
+### ORM
+- Implementation of the `AuthInfo` class which will allow custom configuration per configured computer [[#1184]](https://github.com/aiidateam/aiida_core/pull/1184)
+- Rename the ORM classes for `Node` sub classes `JobCalculation`, `WorkCalculation`, `InlineCalculation` and `FunctionCalculation` [[#2184]](https://github.com/aiidateam/aiida_core/pull/2184)[[#2189]](https://github.com/aiidateam/aiida_core/pull/2189)[[#2192]](https://github.com/aiidateam/aiida_core/pull/2192)[[#2195]](https://github.com/aiidateam/aiida_core/pull/2195)[[#2201]](https://github.com/aiidateam/aiida_core/pull/2201)
+- Implement the new `QueryBuilder` relationship indicators [[#2224]](https://github.com/aiidateam/aiida_core/pull/2224)
+- Change 'ancestor_of'/'descendant_of' to 'with_descendants'/'with_ancestors' [[#2278]](https://github.com/aiidateam/aiida_core/pull/2278)
+- Add efficient `count` method for `aiida.orm.groups.Group` [[#2567]](https://github.com/aiidateam/aiida_core/pull/2567)
+- Implement the new generic link traversal methods for the `Node` class [[#2236]](https://github.com/aiidateam/aiida_core/pull/2236)[[#2569]](https://github.com/aiidateam/aiida_core/pull/2569)
+- Speed up creation of Nodes in the AiiDA ORM [[#2214]](https://github.com/aiidateam/aiida_core/pull/2214)
+- Enable use of tuple in `QueryBuilder.append` for all ORM classes [[#1608]](https://github.com/aiidateam/aiida_core/pull/1608), [[#1607]](https://github.com/aiidateam/aiida_core/pull/1607)
+- Do not allow the `copy` or `deepcopy` of `Node`, except for `Data`  [[#1705]](https://github.com/aiidateam/aiida_core/pull/1705)
+- Refactored the ORM to have explicit front-end and back-end layers [[#2190]](https://github.com/aiidateam/aiida_core/pull/2190)[[#2210]](https://github.com/aiidateam/aiida_core/pull/2210)[[#2225]](https://github.com/aiidateam/aiida_core/pull/2225)[[#2227]](https://github.com/aiidateam/aiida_core/pull/2227)[[#2481]](https://github.com/aiidateam/aiida_core/pull/2481)
+- Add support for indexing and slicing in `orm.Group.nodes` iterator [[#2371]](https://github.com/aiidateam/aiida_core/pull/2371)
+- Implement the exporting and importing of node extras [[#2416]](https://github.com/aiidateam/aiida_core/pull/2416)
+- Implement the exporting and importing of comments [[#2413]](https://github.com/aiidateam/aiida_core/pull/2413)
+- Implement the exporting and importing of logs [[#2393]](https://github.com/aiidateam/aiida_core/pull/2393)
+- Add support for process classes to QueryBuilder.append [[#2421]](https://github.com/aiidateam/aiida_core/pull/2421)
+- Renaming `DbNode.type` to `DbNode.node_type` [[#2552]](https://github.com/aiidateam/aiida_core/pull/2552)
+- Make various protected `Node` methods public [[#2544]](https://github.com/aiidateam/aiida_core/pull/2544)
+- Add option to add nodes to a group through the backend interface by directly generating an `INSERT` SQL statement for SqlAlchemy [[#2518]](https://github.com/aiidateam/aiida_core/pull/2518)
+- Rename the type strings of `Groups` and change the attributes `name` and `type` to `label` and `type_string` [[#2329]](https://github.com/aiidateam/aiida_core/pull/2329)
+- Changed type of uuids returned by the QueryBuilder to be unicode [[#2259]](https://github.com/aiidateam/aiida_core/pull/2259)
+- Prevent to store base `Node` and `ProcessNode` instances in the database but only their subclasses [[#2301]](https://github.com/aiidateam/aiida_core/pull/2301)
+
+### Data
+- Added element `X` to the elements list in order to support unknown species [[#1613]](https://github.com/aiidateam/aiida_core/pull/1613)
+- Various bug and consistency fixes for `CifData` and `StructureData` [[#2374]](https://github.com/aiidateam/aiida_core/pull/2374)
+- Changes to `Data` class attributes and `TrajectoryData` data storage [[#2310]](https://github.com/aiidateam/aiida_core/pull/2310)[[#2422]](https://github.com/aiidateam/aiida_core/pull/2422)
+- Rename `ParameterData` to `Dict` [[#2530]](https://github.com/aiidateam/aiida_core/pull/2530)
+- Remove the `FrozenDict` data sub class [[#2532]](https://github.com/aiidateam/aiida_core/pull/2532)
+- Remove the `Error` data sub class [[#2529]](https://github.com/aiidateam/aiida_core/pull/2529)
+- Make `Code` a real sub class of `Data` [[#2193]](https://github.com/aiidateam/aiida_core/pull/2193)
+- Implement the `has_atomic_sites` and `has_unknown_species` properties for the `CifData` class [[#1257]](https://github.com/aiidateam/aiida_core/pull/1257)
+- Default library used in `_get_aiida_structure` to convert the `CifData` to `StructureData` has been changed from `ase` to `pymatgen` [[#1257]](https://github.com/aiidateam/aiida_core/pull/1257)
 
 ### Verdi
+- Update `verdi export` and `verdi import` to the new export archive version `v0.4` [[#2554]](https://github.com/aiidateam/aiida_core/pull/2554)
+- Implement tab-completion for profile in the `-p` option of `verdi` [[#2345]](https://github.com/aiidateam/aiida_core/pull/2345)
 - Migrate `verdi` to the click infrastructure [[#1795]](https://github.com/aiidateam/aiida_core/pull/1795)
+- Allow existing profile to be overriden in `verdi setup` [[#2244]](https://github.com/aiidateam/aiida_core/pull/2244)
+- Added new command `verdi config` that supercedes the `verdi devel *property*` family of commands  [[#2354]](https://github.com/aiidateam/aiida_core/pull/2354)
+- Added new command `verdi data upf content` [[#2468]](https://github.com/aiidateam/aiida_core/pull/2468)
+- Added new command `verdi status` to give an overview of the status of required external components [[#2487]](https://github.com/aiidateam/aiida_core/pull/2487)
 - Added new command `verdi process` to interact with running processes [[#1855]](https://github.com/aiidateam/aiida_core/pull/1855)
 - Added new command `verdi group rename` [[#1224]](https://github.com/aiidateam/aiida_core/pull/1224)
 - Added new command `verdi code duplicate` [[#1737]](https://github.com/aiidateam/aiida_core/pull/1737)
@@ -49,30 +96,41 @@
 - Added new command `verdi profile show` [[#2028]](https://github.com/aiidateam/aiida_core/pull/2028)
 - Added new command `verdi work show` [[#1816]](https://github.com/aiidateam/aiida_core/pull/1816)
 - Added new command `verdi export inspect` [[#2128]](https://github.com/aiidateam/aiida_core/pull/2128)
+- Added new command `verdi database migrate` [[#2334]](https://github.com/aiidateam/aiida_core/pull/2334)
+- Added new command `verdi database integrity` with endpoints for links and nodes [[#2343]](https://github.com/aiidateam/aiida_core/pull/2343)
+- Add `--group` option to `verdi process list` [[#2254]](https://github.com/aiidateam/aiida_core/pull/2254)
 - Homogenize the interface of `verdi quicksetup` and `verdi setup` [[#1797]](https://github.com/aiidateam/aiida_core/pull/1797)
-- The output of `verdi calculation list` and `verdi work list` has been homogenized [[#1197]](https://github.com/aiidateam/aiida_core/pull/1197)
-- Determine active nodes in `verdi calculation list` based on process state [[#1873]](https://github.com/aiidateam/aiida_core/pull/1873)
-- Synchronize heuristics of `verdi work list` and `verdi calculation list` [[#1819]](https://github.com/aiidateam/aiida_core/pull/1819)
-- Improve the grouping and ordering of the output of `verdi calculation show` [[#1212]](https://github.com/aiidateam/aiida_core/pull/1212)
 - Add the option `--version` to `verdi` to display current version [[#1811]](https://github.com/aiidateam/aiida_core/pull/1811)
-- `verdi work tree` has been removed in favor of `verdi work status` [[#1299]](https://github.com/aiidateam/aiida_core/pull/1299)
+- `verdi work tree` has been removed in favor of `verdi process status` [[#1299]](https://github.com/aiidateam/aiida_core/pull/1299)
 - `verdi code show` no longer shows number of calculations by default to improve performance, with `--verbose` flag to restore old behavior [[#1428]](https://github.com/aiidateam/aiida_core/pull/1428)
 - `verdi export create` set `allowZip64=True` as the default when exporting as zip file [[#1619]](https://github.com/aiidateam/aiida_core/pull/1619)
 - Improve error message for `verdi import` when archive version is incompatible [[#1960]](https://github.com/aiidateam/aiida_core/pull/1960)
+- Modularize `verdi profile delete` [[#2151]](https://github.com/aiidateam/aiida_core/pull/2151)
+- Bug fix for `verdi node delete` [[#2545]](https://github.com/aiidateam/aiida_core/pull/2545)
 
 ### Database
-- Allow PostgreSQL connections via unix sockets [[#1721]](https://github.com/aiidateam/aiida_core/pull/1721)
+- Add an index to columns of `DbLink` for SqlAlchemy [[#2561]](https://github.com/aiidateam/aiida_core/pull/2561)
 - Creating unique constraint and indexes at the `db_dbgroup_dbnodes` table for SqlAlchemy [[#1680]](https://github.com/aiidateam/aiida_core/pull/1680)
 - Performance improvement for adding nodes to group [[#1677]](https://github.com/aiidateam/aiida_core/pull/1677)
+- Make UUID columns unique in SqlAlchemy [[#2323]](https://github.com/aiidateam/aiida_core/pull/2323)
+- Allow PostgreSQL connections via unix sockets [[#1721]](https://github.com/aiidateam/aiida_core/pull/1721)
 
 ### Schedulers
 - Renamed `aiida.daemon.execmanager.job_states` to `JOB_STATES`, conforming to python conventions [[#1799]](https://github.com/aiidateam/aiida_core/pull/1799)
 - Abstract method `aiida.scheduler.Scheduler._get_detailed_jobinfo_command()` raises `aiida.common.exceptions.FeatureNotAvailable` (was `NotImplemented`).
 
 ### Importers
+- Added an importer class for the Materials Platform of Data Science API, which exposed the content of the Pauling file [[#1238]](https://github.com/aiidateam/aiida_core/pull/1238)
 - Added an importer class for the Materials Project API [[#2097]](https://github.com/aiidateam/aiida_core/pull/2097)
 
+### REST API
+- Added node label in the tree end point response [[#2511]](https://github.com/aiidateam/aiida_core/pull/2511)
+- Added an IOtree limit [[#2458]](https://github.com/aiidateam/aiida_core/pull/2458)
+
 ### Documentation
+- Document optional graphviz dependency and removed use of os.system() in draw_graph [[#2287]](https://github.com/aiidateam/aiida_core/pull/2287)
+- Document the Windows Subsystem for Linux [[#2319]](https://github.com/aiidateam/aiida_core/pull/2319)
+- Add documentation for plugin fixtures [[#2314]](https://github.com/aiidateam/aiida_core/pull/2314)
 - Big reorganization of the documentation structure [[#1299]](https://github.com/aiidateam/aiida_core/pull/1299)
 - Added section on the basics of workchains and workfunctions [[#1384]](https://github.com/aiidateam/aiida_core/pull/1384)
 - Added section on how to launch workchains and workfunctions [[#1385]](https://github.com/aiidateam/aiida_core/pull/1385)
@@ -83,6 +141,17 @@
 - Added entry of potential issues for transports that enter bash login shells that write spurious output [[#2132]](https://github.com/aiidateam/aiida_core/pull/2132)
 
 ### Bug fixes
+- Escape newline chars in strings used to label nodes in visual provenance graphs [[#2275]](https://github.com/aiidateam/aiida_core/pull/2275)
+- Enforced the behavior of queries to ressemble backend, by disallowing deduplication of results by SQLAlchemy [[#2281]](https://github.com/aiidateam/aiida_core/pull/2281)
+- Improve robustness of parsing versions and element names from UPF files [[#2296]](https://github.com/aiidateam/aiida_core/pull/2296)
+- Prevent `verdi` from failing on empty profile list [[#2425]](https://github.com/aiidateam/aiida_core/pull/2425)
+- Fix bug in `delete_nodes` when passing pks of non-existing nodes [[#2440]](https://github.com/aiidateam/aiida_core/pull/2440)
+- Catch `UnroutableError` for orphaned processes in `verdi process` calls [[#2445]](https://github.com/aiidateam/aiida_core/pull/2445)
+- Remove unserializable data from metadata in `Log` records [[#2469]](https://github.com/aiidateam/aiida_core/pull/2469)
+- Fix bug in `verdi quicksetup` where check for existing profile was done too late [[#2473]](https://github.com/aiidateam/aiida_core/pull/2473)
+- Fix BandsData issue related to the k-points labels [[#2492]](https://github.com/aiidateam/aiida_core/pull/2492)
+- Fix bug in `TemplatereplacerCalculation` input check [[#2583]](https://github.com/aiidateam/aiida_core/pull/2583)
+- Fix bug in `parse_formula` for formula's with leading or trailing whitespace [[#2186]](https://github.com/aiidateam/aiida_core/pull/2186)
 - Fix leaking of SSH processes when using a proxy command for a computer using SSH transport [[#2019]](https://github.com/aiidateam/aiida_core/pull/2019)
 - Fixed a problem with the temporary folder containing the files of the `retrieve_temporary_list` that could be cleaned before parsing finished [[#1168]](https://github.com/aiidateam/aiida_core/pull/1168)
 - Fixed a bug in the `store` method of `CifData` which would raise and exception when called more than once [[#1136]](https://github.com/aiidateam/aiida_core/pull/1136)
@@ -97,11 +166,38 @@
 - Differentiate `quicksetup` profile settings based on project folder [[#1901]](https://github.com/aiidateam/aiida_core/pull/1901)
 - Ensure `WorkChain` does not exit unless stepper returns non-zero value [[#1945]](https://github.com/aiidateam/aiida_core/pull/1945)
 - Fix variable `virtual_memory_kb` in direct scheduler. [[#2050]](https://github.com/aiidateam/aiida_core/pull/2050)
+- Compile the scripts before calling exec in `verdi run` to keep introspection functional [[#2166]](https://github.com/aiidateam/aiida_core/pull/2166)
 
 ### Developers
+- Move requirements from setup_requirements.py to setup.json [[#2307]](https://github.com/aiidateam/aiida_core/pull/2307)
+- Refactor the management of the configuration file [[#2349]](https://github.com/aiidateam/aiida_core/pull/2349)
+- Add a transaction context manager to backend [[#2387]](https://github.com/aiidateam/aiida_core/pull/2387)
 - Enable tab-completion for `verdi devel tests` [[#1809]](https://github.com/aiidateam/aiida_core/pull/1809)
 - Add `-v/--verbose` flag to `verdi devel tests` [[#1807]](https://github.com/aiidateam/aiida_core/pull/1807)
 
+## v0.12.3
+### Improvements
+- Fast addition of nodes to groups with `skip_orm=True` [[#2471]](https://github.com/aiidateam/aiida_core/pull/2471)
+- Add `environment.yml` for installing dependencies using conda; release of `aiida-core` on conda-forge channel [[#2081]](https://github.com/aiidateam/aiida_core/pull/2081)
+- REST API: io tree response now includes link type and node label [[#2033]](https://github.com/aiidateam/aiida_core/pull/2033) [[#2511]](https://github.com/aiidateam/aiida_core/pull/2511)
+- Backport postgres improvements for quicksetup [[#2433]](https://github.com/aiidateam/aiida_core/pull/2433)
+- Backport `aiida.get_strict_version` (for plugin development) [[#2099]](https://github.com/aiidateam/aiida_core/pull/2099)
+
+### Minor bug fixes
+- Fix security vulnerability by upgrading `paramiko` to `2.4.2` [[#2043]](https://github.com/aiidateam/aiida_core/pull/2043)
+- Disable caching for inline calculations (broken since move to ``workfunction``-based implementation) [[#1872]](https://github.com/aiidateam/aiida_core/pull/1872)
+- Let `verdi help` return exit status 0 [[#2434]](https://github.com/aiidateam/aiida_core/pull/2434)
+- Decode dict keys only if strings (backport) [[#2436]](https://github.com/aiidateam/aiida_core/pull/2436)
+- Remove broken verdi-plug entry point [[#2356]](https://github.com/aiidateam/aiida_core/pull/2356)
+- `verdi node delete` (without arguments) no longer tries to delete all nodes [[#2545]](https://github.com/aiidateam/aiida_core/pull/2545)
+- Fix plotting of `BandsData` objects [[#2492]](https://github.com/aiidateam/aiida_core/pull/2492)
+
+### Miscellaneous
+- REST API: add tests for random sorting list entries of same type [[#2106]](https://github.com/aiidateam/aiida_core/pull/2106)
+- Add various badges to README [[#1969]](https://github.com/aiidateam/aiida_core/pull/1969)
+- Minor documentation improvements [[#1955]](https://github.com/aiidateam/aiida_core/pull/1955)
+- Add license file to MANIFEST [[#2339]](https://github.com/aiidateam/aiida_core/pull/2339)
+- Add instructions when `verdi import` fails [[#2420]](https://github.com/aiidateam/aiida_core/pull/2420)
 
 ## v0.12.2
 
@@ -231,7 +327,7 @@
 #### Core entities
 - `Computer`: the shebang line is now customizable [[#940]](https://github.com/aiidateam/aiida_core/pull/940)
 - `KpointsData`: deprecate buggy legacy implementation of k-point generation in favor of Seekpath [[#1015]](https://github.com/aiidateam/aiida_core/pull/1015)
-- `ParameterData`: `to_aiida_type` used on dictionaries now automatically converted to `ParameterData` [[#947]](https://github.com/aiidateam/aiida_core/pull/947)
+- `Dict`: `to_aiida_type` used on dictionaries now automatically converted to `Dict` [[#947]](https://github.com/aiidateam/aiida_core/pull/947)
 - `JobCalculation`: parsers can now specify files that are retrieved locally for parsing, but only temporarily, as they are deleted after parsing is completed [[#886]](https://github.com/aiidateam/aiida_core/pull/886) [[#894]](https://github.com/aiidateam/aiida_core/pull/894)
 
 #### Plugins
@@ -399,7 +495,7 @@
 
 ### Miscellaneous
 - Replacing dependency from old unmantained `pyspglib` to new `spglib`
-- Accept BaseTypes as attributes/extras, and convert them automatically to their value. In this way, for instance, it is now possible to pass a `Int`, `Float`, `Str`, ... as value of a dictionary, and store all into a `ParameterData`.
+- Accept BaseTypes as attributes/extras, and convert them automatically to their value. In this way, for instance, it is now possible to pass a `Int`, `Float`, `Str`, ... as value of a dictionary, and store all into a `Dict`.
 - Switch from `pkg_resources` to reentry to allow for much faster loading of modules when possible, and therefore allowing for good speed for bash completion
 - Removed obsolete code for Sqlite
 - Removed `mayavi2` package from dependencies

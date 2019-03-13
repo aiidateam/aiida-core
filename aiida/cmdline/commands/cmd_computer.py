@@ -26,15 +26,13 @@ from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.cmdline.utils.multi_line_input import ensure_scripts
 from aiida.common.exceptions import ValidationError, InputValidationError
-from aiida.control.computer import ComputerBuilder
 from aiida.plugins.entry_point import get_entry_points
-from aiida.transport import cli as transport_cli
+from aiida.transports import cli as transport_cli
 
 
 @verdi.group('computer')
 def verdi_computer():
     """Setup and manage computers."""
-    pass
 
 
 def get_computer_names():
@@ -43,7 +41,7 @@ def get_computer_names():
     """
     from aiida.orm.querybuilder import QueryBuilder
     builder = QueryBuilder()
-    builder.append(type='computer', project=['name'])
+    builder.append(entity_type='computer', project=['name'])
     if builder.count() > 0:
         return next(zip(*builder.all()))  # return the first entry
 
@@ -64,7 +62,7 @@ def _computer_test_get_jobs(transport, scheduler, authinfo):  # pylint: disable=
     :return: True if the test succeeds, False if it fails.
     """
     echo.echo("> Getting job list...")
-    found_jobs = scheduler.getJobs(as_dict=True)
+    found_jobs = scheduler.get_jobs(as_dict=True)
     echo.echo("  `-> OK, {} jobs found in the queue.".format(len(found_jobs)))
     return True
 
@@ -86,7 +84,7 @@ def _computer_test_no_unexpected_output(transport, scheduler, authinfo):  # pyli
     echo.echo("> Checking that no spurious output is present...")
     retval, stdout, stderr = transport.exec_command_wait('echo -n')
     if retval != 0:
-        echo.echo_error("* ERROR! The command 'echo -n' returned a " "non-zero return code ({})!".format(retval))
+        echo.echo_error("* ERROR! The command 'echo -n' returned a non-zero return code ({})!".format(retval))
         return False
     if stdout:
         echo.echo_error(u"""* ERROR! There is some spurious output in the standard output,
@@ -162,8 +160,8 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
     if not transport.path_exists(remote_file_path):
         echo.echo_error("* ERROR! The file was not found!")
         return False
-    else:
-        echo.echo("      [OK]")
+
+    echo.echo("      [OK]")
     echo.echo("  `-> Retrieving the file and checking its content...")
 
     handle, destfile = tempfile.mkstemp()
@@ -174,14 +172,14 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
             read_string = dfile.read()
         echo.echo("      [Retrieved]")
         if read_string != file_content:
-            echo.echo_error("* ERROR! The file content is different from what was " "expected!")
+            echo.echo_error("* ERROR! The file content is different from what was expected!")
             echo.echo("** Expected:")
             echo.echo(file_content)
             echo.echo("** Found:")
             echo.echo(read_string)
             return False
-        else:
-            echo.echo("      [Content OK]")
+
+        echo.echo("      [Content OK]")
     finally:
         os.remove(destfile)
 
@@ -218,6 +216,7 @@ def get_parameter_default(parameter, ctx):
 # pylint: disable=unused-argument
 def set_computer_builder(ctx, param, value):
     """Set the computer spec for defaults of following options."""
+    from aiida.orm.utils.builders.computer import ComputerBuilder
     ctx.computer_builder = ComputerBuilder.from_computer(value)
     return value
 
@@ -240,6 +239,8 @@ def set_computer_builder(ctx, param, value):
 @with_dbenv()
 def computer_setup(ctx, non_interactive, **kwargs):
     """Add a Computer."""
+    from aiida.orm.utils.builders.computer import ComputerBuilder
+
     if kwargs['label'] in get_computer_names():
         echo.echo_critical('A computer called {c} already exists. '
                            'Use "verdi computer duplicate {c}" to set up a new '
@@ -294,6 +295,7 @@ def computer_setup(ctx, non_interactive, **kwargs):
 def computer_duplicate(ctx, computer, non_interactive, **kwargs):
     """Duplicate a Computer."""
     from aiida import orm
+    from aiida.orm.utils.builders.computer import ComputerBuilder
 
     if kwargs['label'] in get_computer_names():
         echo.echo_critical('A computer called {} already exists'.format(kwargs['label']))
@@ -568,7 +570,7 @@ def computer_test(user, print_traceback, computer):
                         echo.echo("\n".join(["   {}".format(l) for l in traceback.format_exc().splitlines()]))
                     else:
                         echo.echo("** {}: {}".format(error.__class__.__name__, error))
-                        echo.echo("** (use the --print-traceback option to see the " "full traceback)")
+                        echo.echo("** (use the --print-traceback option to see the full traceback)")
                     succeeded = False
 
                 if not succeeded:
@@ -588,7 +590,7 @@ def computer_test(user, print_traceback, computer):
             echo.echo("\n".join(["   {}".format(l) for l in traceback.format_exc().splitlines()]))
         else:
             echo.echo("{}: {}".format(error.__class__.__name__, error))
-            echo.echo("(use the --print-traceback option to see the " "full traceback)")
+            echo.echo("(use the --print-traceback option to see the full traceback)")
         succeeded = False
 
 
@@ -603,14 +605,12 @@ def computer_delete(computer):
     it.
     """
     from aiida.common.exceptions import InvalidOperation
-    from aiida.orm.backends import construct_backend
-
-    backend = construct_backend()
+    from aiida import orm
 
     compname = computer.name
 
     try:
-        backend.computers.delete(computer.id)
+        orm.Computer.objects.delete(computer.id)
     except InvalidOperation as error:
         echo.echo_critical(str(error))
 
@@ -620,7 +620,6 @@ def computer_delete(computer):
 @verdi_computer.group('configure')
 def computer_configure():
     """Configure a computer with one of the available transport types."""
-    pass
 
 
 @computer_configure.command('show')
@@ -632,7 +631,7 @@ def computer_configure():
 def computer_config_show(computer, user, defaults, as_option_string):
     """Show the current or default configuration for COMPUTER."""
     import tabulate
-    from aiida.common.utils import escape_for_bash
+    from aiida.common.escaping import escape_for_bash
 
     transport_cls = computer.get_transport_class()
     option_list = [

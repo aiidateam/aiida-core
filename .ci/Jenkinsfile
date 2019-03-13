@@ -154,7 +154,7 @@ pipeline {
             //        // For now I'm not doing it as it's ~3 MB every time
             //        // NOTE MOREOVER that one should run 'zip -r html.zip html' in the
             //        // coverage folder, first
-            //        archiveArtifacts artifacts: 'coverage/html.zip', fingerprint: true
+            //        archiveArtifacts artifacts: '.ci/coverage/html.zip', fingerprint: true
             //    }
             // }
         }

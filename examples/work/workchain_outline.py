@@ -8,21 +8,20 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+This WorkChain example is a very contrived implementation of the infamous FizzBuzz problem, that serves to illustrate
+the various logical blocks that one can incorporate into the outline of the workchain's spec.
+"""
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
-from aiida.orm.data.int import Int
-from aiida import work
-from aiida.work.workchain import while_, if_
 
-"""
-This WorkChain example is a very contrived implementation of the infamous FizzBuzz
-problem, that serves to illustrate the various logical blocks that one can incorporate
-into the outline of the workchain's spec.
-"""
+from aiida.engine import WorkChain, run, while_, if_
+from aiida.orm import Int
 
 
-class OutlineWorkChain(work.WorkChain):
+class OutlineWorkChain(WorkChain):
+
     @classmethod
     def define(cls, spec):
         super(OutlineWorkChain, cls).define(spec)
@@ -75,7 +74,7 @@ class OutlineWorkChain(work.WorkChain):
 
 
 def main():
-    results = work.run(OutlineWorkChain, a=Int(16))
+    run(OutlineWorkChain, a=Int(16))
 
 
 if __name__ == '__main__':

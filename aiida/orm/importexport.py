@@ -10,22 +10,21 @@
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
-import io
-import sys
 
+import io
+
+import click
 import six
 from six.moves import zip
 from six.moves.html_parser import HTMLParser
+from distutils.version import StrictVersion
 from aiida.common import exceptions
-from aiida.common.utils import (export_shard_uuid, get_class_string,
-                                get_object_from_string, grouper)
-from aiida.orm.computers import Computer
-from aiida.orm.group import Group
-from aiida.orm.node import Node
-from aiida.orm.users import User
+from aiida.common.utils import export_shard_uuid, get_class_string, grouper, get_new_uuid
+from aiida.orm import Computer, Group, GroupTypeString, Node, QueryBuilder, User, Log, Comment
+from aiida.orm.utils.repository import Repository
 
-IMPORTGROUP_TYPE = 'aiida.import'
-COMP_DUPL_SUFFIX = ' (Imported #{})'
+IMPORTGROUP_TYPE = GroupTypeString.IMPORTGROUP_TYPE
+DUPL_SUFFIX = ' (Imported #{})'
 
 # Giving names to the various entities. Attributes and links are not AiiDA
 # entities but we will refer to them as entities in the file (to simplify
@@ -36,6 +35,8 @@ GROUP_ENTITY_NAME = "Group"
 ATTRIBUTE_ENTITY_NAME = "Attribute"
 COMPUTER_ENTITY_NAME = "Computer"
 USER_ENTITY_NAME = "User"
+LOG_ENTITY_NAME = "Log"
+COMMENT_ENTITY_NAME = "Comment"
 
 # The signatures used to reference the entities in the import/export file
 NODE_SIGNATURE = "aiida.backends.djsite.db.models.DbNode"
@@ -44,6 +45,8 @@ GROUP_SIGNATURE = "aiida.backends.djsite.db.models.DbGroup"
 COMPUTER_SIGNATURE = "aiida.backends.djsite.db.models.DbComputer"
 USER_SIGNATURE = "aiida.backends.djsite.db.models.DbUser"
 ATTRIBUTE_SIGNATURE = "aiida.backends.djsite.db.models.DbAttribute"
+LOG_SIGNATURE = "aiida.backends.djsite.db.models.DbLog"
+COMMENT_SIGNATURE = "aiida.backends.djsite.db.models.DbComment"
 
 # Mapping from entity names to signatures (used by the SQLA import/export)
 entity_names_to_signatures = {
@@ -53,6 +56,8 @@ entity_names_to_signatures = {
     COMPUTER_ENTITY_NAME: COMPUTER_SIGNATURE,
     USER_ENTITY_NAME: USER_SIGNATURE,
     ATTRIBUTE_ENTITY_NAME: ATTRIBUTE_SIGNATURE,
+    LOG_ENTITY_NAME: LOG_SIGNATURE,
+    COMMENT_ENTITY_NAME: COMMENT_SIGNATURE
 }
 
 # Mapping from signatures to entity names (used by the SQLA import/export)
@@ -63,6 +68,8 @@ signatures_to_entity_names = {
     COMPUTER_SIGNATURE: COMPUTER_ENTITY_NAME,
     USER_SIGNATURE: USER_ENTITY_NAME,
     ATTRIBUTE_SIGNATURE: ATTRIBUTE_ENTITY_NAME,
+    LOG_SIGNATURE: LOG_ENTITY_NAME,
+    COMMENT_SIGNATURE: COMMENT_ENTITY_NAME
 }
 
 # Mapping from entity names to AiiDA classes (used by the SQLA import/export)
@@ -70,7 +77,9 @@ entity_names_to_entities = {
     NODE_ENTITY_NAME: Node,
     GROUP_ENTITY_NAME: Group,
     COMPUTER_ENTITY_NAME: Computer,
-    USER_ENTITY_NAME: User
+    USER_ENTITY_NAME: User,
+    LOG_ENTITY_NAME: Log,
+    COMMENT_ENTITY_NAME: Comment
 }
 
 
@@ -82,6 +91,7 @@ def schema_to_entity_names(class_string):
     """
     if class_string is None or len(class_string) == 0:
         return
+
     if (class_string == "aiida.backends.djsite.db.models.DbNode" or
             class_string == "aiida.backends.sqlalchemy.models.node.DbNode"):
         return NODE_ENTITY_NAME
@@ -99,9 +109,18 @@ def schema_to_entity_names(class_string):
             class_string ==
             "aiida.backends.sqlalchemy.models.computer.DbComputer"):
         return COMPUTER_ENTITY_NAME
+
     if (class_string == "aiida.backends.djsite.db.models.DbUser" or
             class_string == "aiida.backends.sqlalchemy.models.user.DbUser"):
         return USER_ENTITY_NAME
+
+    if (class_string == "aiida.backends.djsite.db.models.DbLog" or
+            class_string == "aiida.backends.sqlalchemy.models.log.DbLog"):
+        return LOG_ENTITY_NAME
+
+    if (class_string == "aiida.backends.djsite.db.models.DbComment" or
+            class_string == "aiida.backends.sqlalchemy.models.comment.DbComment"):
+        return COMMENT_ENTITY_NAME
 
 
 # Mapping of entity names to SQLA class paths
@@ -110,7 +129,9 @@ entity_names_to_sqla_schema = {
     LINK_ENTITY_NAME: "aiida.backends.sqlalchemy.models.node.DbLink",
     GROUP_ENTITY_NAME: "aiida.backends.sqlalchemy.models.group.DbGroup",
     COMPUTER_ENTITY_NAME: "aiida.backends.sqlalchemy.models.computer.DbComputer",
-    USER_ENTITY_NAME: "aiida.backends.sqlalchemy.models.user.DbUser"
+    USER_ENTITY_NAME: "aiida.backends.sqlalchemy.models.user.DbUser",
+    LOG_ENTITY_NAME: "aiida.backends.sqlalchemy.models.log.DbLog",
+    COMMENT_ENTITY_NAME: "aiida.backends.sqlalchemy.models.comment.DbComment"
 }
 
 # Mapping of the export file fields (that coincide with the Django fields) to
@@ -120,26 +141,46 @@ entity_names_to_sqla_schema = {
 file_fields_to_model_fields = {
     NODE_ENTITY_NAME: {
         "dbcomputer": "dbcomputer_id",
-        "user": "user_id"},
+        "user": "user_id"
+    },
     GROUP_ENTITY_NAME: {
         "user": "user_id"
     },
     COMPUTER_ENTITY_NAME: {
-        "metadata": "_metadata"}
+        "metadata": "_metadata"
+    },
+    LOG_ENTITY_NAME: {
+        "dbnode": "dbnode_id",
+        "metadata": "_metadata"
+    },
+    COMMENT_ENTITY_NAME: {
+        "dbnode": "dbnode_id",
+        "user": "user_id"
+    }
 }
 
 # As above but the opposite procedure
 model_fields_to_file_fields = {
     NODE_ENTITY_NAME: {
         "dbcomputer_id": "dbcomputer",
-        "user_id": "user"},
+        "user_id": "user"
+    },
     LINK_ENTITY_NAME: {},
     GROUP_ENTITY_NAME: {
         "user_id": "user"
     },
     COMPUTER_ENTITY_NAME: {
-        "_metadata": "metadata"},
-    USER_ENTITY_NAME: {}
+        "_metadata": "metadata"
+    },
+    USER_ENTITY_NAME: {},
+    LOG_ENTITY_NAME: {
+        "dbnode_id": "dbnode",
+        "_metadata": "metadata"
+    },
+    COMMENT_ENTITY_NAME: {
+        "dbnode_id": "dbnode",
+        "user_id": "user"
+    }
 }
 
 
@@ -159,6 +200,8 @@ def get_all_fields_info():
         NODE_ENTITY_NAME: "uuid",
         ATTRIBUTE_ENTITY_NAME: None,
         GROUP_ENTITY_NAME: "uuid",
+        LOG_ENTITY_NAME: "uuid",
+        COMMENT_ENTITY_NAME: "uuid"
     }
 
     all_fields_info = dict()
@@ -200,7 +243,7 @@ def get_all_fields_info():
         "mtime": {
             "convert_type": "date"
         },
-        "type": {},
+        "node_type": {},
         "label": {},
         "nodeversion": {},
         "user": {
@@ -211,7 +254,8 @@ def get_all_fields_info():
             "requires": COMPUTER_ENTITY_NAME,
             "related_name": "dbnodes"
         },
-        "description": {}
+        "description": {},
+        "process_type": {}
     }
     all_fields_info[ATTRIBUTE_ENTITY_NAME] = {
         "dbnode": {
@@ -229,17 +273,49 @@ def get_all_fields_info():
         "ival": {}
     }
     all_fields_info[GROUP_ENTITY_NAME] = {
-        "description": {},
-        "user": {
+         "description": {},
+         "user": {
             "related_name": "dbgroups",
             "requires": USER_ENTITY_NAME
-        },
-        "time": {
+         },
+         "time": {
             "convert_type": "date"
-        },
-        "type": {},
-        "uuid": {},
-        "name": {}
+         },
+         "type_string": {},
+         "uuid": {},
+         "label": {}
+    }
+    all_fields_info[LOG_ENTITY_NAME] = {
+         "uuid": {},
+         "time": {
+             "convert_type": "date"
+         },
+         "loggername": {},
+         "levelname": {},
+         "message": {},
+         "metadata": {},
+         "dbnode": {
+             "related_name": "dblogs",
+             "requires": NODE_ENTITY_NAME
+         }
+    }
+    all_fields_info[COMMENT_ENTITY_NAME] = {
+         "uuid": {},
+         "ctime": {
+             "convert_type": "date"
+         },
+         "mtime": {
+             "convert_type": "date"
+         },
+         "content": {},
+         "dbnode": {
+             "related_name": "dbcomments",
+             "requires": NODE_ENTITY_NAME
+         },
+         "user": {
+             "related_name": "dbcomments",
+             "requires": USER_ENTITY_NAME
+         }
     }
     return all_fields_info, unique_identifiers
 
@@ -310,32 +386,224 @@ def deserialize_field(k, v, fields_info, import_unique_ids_mappings,
         else:
             return ("{}_id".format(k), None)
 
+def merge_extras(old_extras, new_extras, mode):
+    """
+    :param old_extras: a dictionary containing the old extras of an already existing node
+    :param new_extras: a dictionary containing the new extras of an imported node
+    :param extras_mode_existing: 3 letter code that will identify what to do with the extras import. The first letter acts on
+                        extras that are present in the original node and not present in the imported node. Can be
+                        either k (keep it) or n (do not keep it). The second letter acts on the imported extras that
+                        are not present in the original node. Can be either c (create it) or n (do not create it). The
+                        third letter says what to do in case of a name collision. Can be l (leave the old value), u
+                        (update with a new value), d (delete the extra), a (ask what to do if the content is
+                        different).
+    """
+    from six import string_types
+    if not isinstance(mode, string_types):
+        raise TypeError("Parameter 'mode' should be of string type, you provided '{}' type".format(type(mode)))
+    elif not len(mode) == 3:
+        raise ValueError("Parameter 'mode' should be a 3-letter string, you provided: '{}'".format(mode))
 
-def import_data(in_path, ignore_unknown_nodes=False,
-                silent=False):
+    old_keys = set(old_extras.keys())
+    new_keys = set(new_extras.keys())
+
+    collided_keys = old_keys.intersection(new_keys)
+    old_keys_only = old_keys.difference(collided_keys)
+    new_keys_only = new_keys.difference(collided_keys)
+
+    final_extras = {}
+
+    # Fast implementations for the common operations:
+    if mode == 'ncu': # 'mirror' operation: remove old extras, put only the new ones
+        return new_extras
+
+    if mode == 'knl': # 'none': keep old extras, do not add imported ones
+        return old_extras
+
+    if mode == 'kcu': # 'update_existing' operation: if an extra already exists,
+                      # overwrite its new value with a new one
+        final_extras = new_extras
+        for key in old_keys_only:
+            final_extras[key] = old_extras[key]
+
+    elif mode == 'kcl': # 'keep_existing': if an extra already exists, keep its original value
+        final_extras = old_extras
+        for key in new_keys_only:
+            final_extras[key] = new_extras[key]
+
+    elif mode == 'kca': # 'ask': if an extra already exists ask a user whether to update its value
+        final_extras = old_extras
+        for key in new_keys_only:
+            final_extras[key] = new_extras[key]
+        for key in collided_keys:
+            if old_extras[key] != new_extras[key]:
+                if click.confirm('The extra {} collided, would you'
+                        ' like to overwrite its value?\nOld value: {}\nNew value: {}\n'.format(key,
+                            old_extras[key], new_extras[key])):
+                    final_extras[key] = new_extras[key]
+
+    # Slow, but more general implementation
+    else:
+        if mode[0] == 'k':
+            for key in old_keys_only:
+                final_extras[key] = old_extras[key]
+        elif mode[0] != 'n':
+            raise ValueError("Unknown first letter of the update extras mode: '{}'. " \
+                             "Should be either 'k' or 'n'".format(mode))
+
+        if mode[1] == 'c':
+            for key in new_keys_only:
+                final_extras[key] = new_extras[key]
+        elif mode[1] != 'n':
+            raise ValueError("Unknown second letter of the update extras mode: '{}'. " \
+                             "Should be either 'c' or 'n'".format(mode))
+
+        if mode[2] == 'u':
+            for key in collided_keys:
+                final_extras[key] = new_extras[key]
+        elif mode[2] == 'l':
+            for key in collided_keys:
+                final_extras[key] = old_extras[key]
+        elif mode[2] == 'a':
+            for key in collided_keys:
+                if old_extras[key] != new_extras[key]:
+                    if click.confirm('The extra {} collided, would you'
+                            ' like to overwrite its value?\nOld value: {}\nNew value: {}\n'.format(key,
+                                old_extras[key], new_extras[key])):
+                        final_extras[key] = new_extras[key]
+                    else:
+                        final_extras[key] = old_extras[key]
+        elif mode[2] != 'd':
+            raise ValueError("Unknown third letter of the update extras mode: '{}'. " \
+                             "Should be one of 'u'/'l'/'a'/'d'".format(mode))
+
+    return final_extras
+
+
+def _merge_comment(incoming_comment, comment_mode):
+    """ Merge comment according comment_mode
+    :return: New UUID if new Comment should be created, else None.
+    """
+
+    # Get incoming Comment's UUID, 'mtime', and 'comment'
+    incoming_uuid = str(incoming_comment['uuid'])
+    incoming_mtime = incoming_comment['mtime']
+    incoming_content = incoming_comment['content']
+
+    # Compare modification time 'mtime'
+    if comment_mode == 'newest':
+        # Get existing Comment's 'mtime' and 'content'
+        builder = QueryBuilder().append(Comment,
+            filters={'uuid': incoming_uuid},
+            project=['mtime', 'content'])
+        if builder.count() != 1:
+            raise exceptions.ValidationError("Multiple Comments with the same "
+                                             "UUID: {}".format(incoming_uuid))
+        builder = builder.all()
+
+        existing_mtime = builder[0][0]
+        existing_content = builder[0][1]
+
+        # Existing Comment is "newer" than imported Comment: KEEP existing
+        if existing_mtime > incoming_mtime:
+            return None
+
+        # Existing Comment is "older" than imported Comment: OVERWRITE existing
+        if existing_mtime < incoming_mtime:
+            cmt = Comment.objects.get(uuid=incoming_uuid)
+            cmt.set_content(incoming_content)
+            cmt.set_mtime(incoming_mtime)
+            return None
+
+        # Existing Comment has the same modification time as the imported Comment
+        # Check content. If the same, ignore Comment. If different, add as new Comment.
+        if existing_mtime == incoming_mtime:
+            if existing_content == incoming_content:
+                # Ignore
+                return None
+
+            # ELSE: Add it as a new comment
+            return get_new_uuid()
+
+    # Overwrite existing Comment
+    elif comment_mode == 'overwrite':
+        cmt = Comment.objects.get(uuid=incoming_uuid)
+        cmt.set_content(incoming_content)
+        cmt.set_mtime(incoming_mtime)
+        return None
+
+    # Invalid comment_mode
+    else:
+        raise ValueError("Unknown comment_mode value: {}. Should be "
+                         "either 'newest' or 'overwrite'".format(comment_mode))
+
+
+def import_data(in_path, group=None, silent=False, **kwargs):
+    """
+    Import exported AiiDA environment to the AiiDA database.
+    If the 'in_path' is a folder, calls extract_tree; otherwise, tries to
+    detect the compression format (zip, tar.gz, tar.bz2, ...) and calls the
+    correct function.
+    :param in_path: the path to a file or folder that can be imported in AiiDA
+    :param extras_mode_existing: 3 letter code that will identify what to do with the extras import.
+    The first letter acts on extras that are present in the original node and not present in the imported node.
+    Can be either:
+    'k' (keep it) or
+    'n' (do not keep it).
+    The second letter acts on the imported extras that are not present in the original node.
+    Can be either:
+    'c' (create it) or
+    'n' (do not create it).
+    The third letter defines what to do in case of a name collision.
+    Can be either:
+    'l' (leave the old value),
+    'u' (update with a new value),
+    'd' (delete the extra),
+    'a' (ask what to do if the content is different).
+    :param extras_mode_new: 'import' to import extras of new nodes or 'none' to ignore them
+    :param comment_node_existing: Similar to param extras_mode_existing, but for Comments.
+    :param comment_mode_new: Similar to param extras_mode_new, but for Comments.
+    """
     from aiida.backends.settings import BACKEND
     from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
 
     if BACKEND == BACKEND_SQLA:
-        return import_data_sqla(in_path, ignore_unknown_nodes=ignore_unknown_nodes,
-                                silent=silent)
+        return import_data_sqla(in_path, user_group=group, silent=silent, **kwargs)
     elif BACKEND == BACKEND_DJANGO:
-        return import_data_dj(in_path, ignore_unknown_nodes=ignore_unknown_nodes,
-                              silent=silent)
+        return import_data_dj(in_path, user_group=group, silent=silent, **kwargs)
     else:
         raise Exception("Unknown settings.BACKEND: {}".format(
             BACKEND))
 
 
-def import_data_dj(in_path, ignore_unknown_nodes=False,
-                   silent=False):
+def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
+                   extras_mode_existing='kcl', extras_mode_new='import',
+                   comment_mode='newest', silent=False):
     """
     Import exported AiiDA environment to the AiiDA database.
-    If the 'in_path' is a folder, calls export_tree; otherwise, tries to
+    If the 'in_path' is a folder, calls extract_tree; otherwise, tries to
     detect the compression format (zip, tar.gz, tar.bz2, ...) and calls the
     correct function.
-
     :param in_path: the path to a file or folder that can be imported in AiiDA
+    :param extras_mode_existing: 3 letter code that will identify what to do with the extras import.
+    The first letter acts on extras that are present in the original node and not present in the imported node.
+    Can be either:
+    'k' (keep it) or
+    'n' (do not keep it).
+    The second letter acts on the imported extras that are not present in the original node.
+    Can be either:
+    'c' (create it) or
+    'n' (do not create it).
+    The third letter defines what to do in case of a name collision.
+    Can be either:
+    'l' (leave the old value),
+    'u' (update with a new value),
+    'd' (delete the extra),
+    'a' (ask what to do if the content is different).
+    :param extras_mode_new: 'import' to import extras of new nodes or 'none' to ignore them
+    :param comment_mode: Comment import modes (when same UUIDs are found):
+    'newest': Will keep the Comment with the most recent modification time (mtime)
+    'overwrite': Will overwrite existing Comments with the ones from the import file
     """
     import os
     import tarfile
@@ -343,20 +611,18 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
     from itertools import chain
 
     from django.db import transaction
-    from aiida.utils import timezone
+    from aiida.common import timezone
 
-    from aiida.orm import Node, Group
     from aiida.common.archive import extract_tree, extract_tar, extract_zip, extract_cif
     from aiida.common.links import LinkType
-    from aiida.common.exceptions import UniquenessError
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.backends.djsite.db import models
-    from aiida.common.utils import get_class_string, get_object_from_string
-    from aiida.common.datastructures import calc_states
-    import aiida.utils.json as json
+    from aiida.common.utils import get_object_from_string
+    from aiida.common import json
+    from aiida.backends.djsite.db.models import suppress_auto_now
 
     # This is the export version expected by this function
-    expected_export_version = '0.3'
+    expected_export_version = StrictVersion('0.4')
 
     # The name of the subfolder in which the node files are stored
     nodes_export_subfolder = 'nodes'
@@ -370,7 +636,7 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
     # The sandbox has to remain open until the end
     with SandboxFolder() as folder:
         if os.path.isdir(in_path):
-            extract_tree(in_path, folder, silent=silent)
+            extract_tree(in_path, folder)
         else:
             if tarfile.is_tarfile(in_path):
                 extract_tar(in_path, folder, silent=silent,
@@ -408,9 +674,16 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
         ######################
         # PRELIMINARY CHECKS #
         ######################
-        if metadata['export_version'] != expected_export_version:
-            raise exceptions.IncompatibleArchiveVersionError('Archive schema version {} is incompatible with the '
-                'currently supported schema version {}'.format(metadata['export_version'], expected_export_version))
+        export_version = StrictVersion(str(metadata['export_version']))
+        if export_version != expected_export_version:
+            msg = "Export file version is {}, can import only version {}"\
+                    .format(metadata['export_version'], expected_export_version)
+            if export_version < expected_export_version:
+                msg += "\nUse 'verdi export migrate' to update this export file."
+            else:
+                msg += "\nUpdate your AiiDA version in order to import this file."
+
+            raise exceptions.IncompatibleArchiveVersionError(msg)
 
         ##########################################################################
         # CREATE UUID REVERSE TABLES AND CHECK IF I HAVE ALL NODES FOR THE LINKS #
@@ -437,7 +710,8 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
             import_nodes_uuid = set()
 
         # the combined set of linked_nodes and group_nodes was obtained from looking at all the links
-        # the combined set of db_nodes_uuid and import_nodes_uuid was received from the staff actually referred to in export_data
+        # the combined set of db_nodes_uuid and import_nodes_uuid was received from the staff
+        # actually referred to in export_data
         unknown_nodes = linked_nodes.union(group_nodes) - db_nodes_uuid.union(
             import_nodes_uuid)
 
@@ -455,9 +729,9 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
         # I hardcode here the model order, for simplicity; in any case, this is
         # fixed by the export version
 
-        model_order = (USER_ENTITY_NAME, COMPUTER_ENTITY_NAME, NODE_ENTITY_NAME, GROUP_ENTITY_NAME)
-        # Models that do appear in the import file, but whose import is
-        # managed manually
+        model_order = (USER_ENTITY_NAME, COMPUTER_ENTITY_NAME, NODE_ENTITY_NAME,
+                      GROUP_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME)
+        # Models that do appear in the import file, but whose import is managed manually
         model_manual = (LINK_ENTITY_NAME, ATTRIBUTE_ENTITY_NAME)
 
         all_known_models = model_order + model_manual
@@ -518,14 +792,16 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                 # Not necessarily all models are exported
                 if model_name in data['export_data']:
 
+                    # skip nodes that are already present in the DB
                     if unique_identifier is not None:
                         import_unique_ids = set(v[unique_identifier] for v in
                                                 data['export_data'][model_name].values())
 
-                        relevant_db_entries = {getattr(n, unique_identifier): n
-                                               for n in Model.objects.filter(
-                            **{'{}__in'.format(unique_identifier):
-                                   import_unique_ids})}
+                        relevant_db_entries_result = Model.objects.filter(
+                            **{'{}__in'.format(unique_identifier): import_unique_ids})
+                        # Note: uuids need to be converted to strings
+                        relevant_db_entries = {str(getattr(n, unique_identifier)):
+                                n for n in relevant_db_entries_result}
 
                         foreign_ids_reverse_mappings[model_name] = {
                             k: v.pk for k, v in relevant_db_entries.items()}
@@ -539,6 +815,11 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                     else:
                         new_entries[model_name] = data['export_data'][model_name].copy()
 
+            # Show Comment mode if not silent and Comments exist in existing_entries
+            if not silent:
+                if COMMENT_ENTITY_NAME in existing_entries:
+                    print("Comment mode: {}".format(comment_mode))
+
             # I import data from the given model
             for model_name in model_order:
                 cls_signature = entity_names_to_signatures[model_name]
@@ -551,7 +832,19 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                 for import_entry_id, entry_data in existing_entries[model_name].items():
                     unique_id = entry_data[unique_identifier]
                     existing_entry_id = foreign_ids_reverse_mappings[model_name][unique_id]
+                    import_data = dict(deserialize_field(
+                        k, v, fields_info=fields_info,
+                        import_unique_ids_mappings=import_unique_ids_mappings,
+                        foreign_ids_reverse_mappings=foreign_ids_reverse_mappings)
+                                       for k, v in entry_data.items())
                     # TODO COMPARE, AND COMPARE ATTRIBUTES
+
+                    if Model is models.DbComment:
+                        new_entry_uuid = _merge_comment(import_data, comment_mode)
+                        if new_entry_uuid is not None:
+                            entry_data[unique_identifier] = new_entry_uuid
+                            new_entries[model_name][import_entry_id] = entry_data
+
                     if model_name not in ret_dict:
                         ret_dict[model_name] = {'new': [], 'existing': []}
                     ret_dict[model_name]['existing'].append((import_entry_id,
@@ -568,7 +861,6 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                 objects_to_create = []
                 # This is needed later to associate the import entry with the new pk
                 import_entry_ids = {}
-                dupl_counter = 0
                 imported_comp_names = set()
                 for import_entry_id, entry_data in new_entries[model_name].items():
                     unique_id = entry_data[unique_identifier]
@@ -578,33 +870,50 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                         foreign_ids_reverse_mappings=foreign_ids_reverse_mappings)
                                        for k, v in entry_data.items())
 
-                    if Model is models.DbComputer:
-                        # Check if there is already a computer with the same
-                        # name in the database
+                    if Model is models.DbGroup:
+                        # Check if there is already a group with the same name
+                        dupl_counter = 0
+                        orig_label = import_data['label']
+                        while Model.objects.filter(label=import_data['label']):
+                            import_data['label'] = orig_label + DUPL_SUFFIX.format(dupl_counter)
+                            dupl_counter += 1
+                            if dupl_counter == 100:
+                                raise exceptions.UniquenessError("A group of that label ( {} ) already exists"
+                                    " and I could not create a new one".format(orig_label))
+
+                    elif Model is models.DbComputer:
+                        # Check if there is already a computer with the same name in the database
                         dupl = (Model.objects.filter(name=import_data['name'])
                                 or import_data['name'] in imported_comp_names)
                         orig_name = import_data['name']
+                        dupl_counter = 0
                         while dupl:
                             # Rename the new computer
                             import_data['name'] = (
                                     orig_name +
-                                    COMP_DUPL_SUFFIX.format(dupl_counter))
-                            dupl_counter += 1
-                            dupl = (
-                                    Model.objects.filter(name=import_data['name'])
+                                    DUPL_SUFFIX.format(dupl_counter))
+                            dupl = (Model.objects.filter(name=import_data['name'])
                                     or import_data['name'] in imported_comp_names)
+                            dupl_counter += 1
+                            if dupl_counter == 100:
+                                raise exceptions.UniquenessError("A computer of that name ( {} ) already exists"
+                                    " and I could not create a new one".format(orig_name))
 
                         # The following is done for compatibility reasons
                         # In case the export file was generate with the SQLA
                         # export method
-                        if type(import_data['metadata']) is dict:
-                            import_data['metadata'] = json.dumps(
-                                import_data['metadata'])
-                        if type(import_data['transport_params']) is dict:
-                            import_data['transport_params'] = json.dumps(
-                                import_data['transport_params'])
+                        if isinstance(import_data['metadata'], dict):
+                            import_data['metadata'] = json.dumps(import_data['metadata'])
+                        if isinstance(import_data['transport_params'], dict):
+                            import_data['transport_params'] = json.dumps(import_data['transport_params'])
 
                         imported_comp_names.add(import_data['name'])
+
+                    elif Model is models.DbLog:
+                        # Django requires metadata as a string.
+                        # A JSON-serializable string.
+                        if isinstance(import_data['metadata'], dict):
+                            import_data['metadata'] = json.dumps(import_data['metadata'])
 
                     objects_to_create.append(Model(**import_data))
                     import_entry_ids[unique_id] = import_entry_id
@@ -624,7 +933,7 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                                              "in the exported "
                                              "file".format(o.uuid))
                         destdir = RepositoryFolder(
-                            section=Node._section_name,
+                            section=Repository._section_name,
                             uuid=o.uuid)
                         # Replace the folder, possibly destroying existing
                         # previous folders, and move the files (faster if we
@@ -633,28 +942,24 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                         destdir.replace_with_folder(subfolder.abspath,
                                                     move=True, overwrite=True)
 
-                # Store them all in once; however, the PK are not set in this way...
-                Model.objects.bulk_create(objects_to_create)
+                # If there is an mtime in the field, disable the automatic update
+                # to keep the mtime that we have set here
+                if 'mtime' in [field.name for field in Model._meta.local_fields]:
+                    with suppress_auto_now([(Model, ['mtime'])]):
+                        # Store them all in once; however, the PK are not set in this way...
+                        Model.objects.bulk_create(objects_to_create)
+                else:
+                    Model.objects.bulk_create(objects_to_create)
 
                 # Get back the just-saved entries
-                just_saved = dict(Model.objects.filter(
+                just_saved_queryset = Model.objects.filter(
                     **{"{}__in".format(unique_identifier):
-                           import_entry_ids.keys()}).values_list(unique_identifier, 'pk'))
-
-                imported_states = []
-                if model_name == NODE_ENTITY_NAME:
-                    if not silent:
-                        print("SETTING THE IMPORTED STATES FOR NEW NODES...")
-                    # I set for all nodes, even if I should set it only
-                    # for calculations
-                    for unique_id, new_pk in just_saved.items():
-                        imported_states.append(
-                            models.DbCalcState(dbnode_id=new_pk,
-                                               state=calc_states.IMPORTED))
-                    models.DbCalcState.objects.bulk_create(imported_states)
+                           import_entry_ids.keys()}).values_list(unique_identifier, 'pk')
+                # note: convert uuids from type UUID to strings
+                just_saved = { str(k) : v for k,v in just_saved_queryset }
 
                 # Now I have the PKs, print the info
-                # Moreover, set the foreing_ids_reverse_mappings
+                # Moreover, set the foreign_ids_reverse_mappings
                 for unique_id, new_pk in just_saved.items():
                     import_entry_id = import_entry_ids[unique_id]
                     foreign_ids_reverse_mappings[model_name][unique_id] = new_pk
@@ -668,7 +973,7 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                                                        import_entry_id,
                                                        new_pk))
 
-                # For DbNodes, we also have to store Attributes!
+                # For DbNodes, we also have to store its attributes
                 if model_name == NODE_ENTITY_NAME:
                     if not silent:
                         print("STORING NEW NODE ATTRIBUTES...")
@@ -683,8 +988,7 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                                 str(import_entry_id)]
                         except KeyError:
                             raise ValueError("Unable to find attribute info "
-                                             "for DbNode with UUID = {}".format(
-                                unique_id))
+                                             "for DbNode with UUID = {}".format(unique_id))
 
                         # Here I have to deserialize the attributes
                         deserialized_attributes = deserialize_attributes(
@@ -692,6 +996,79 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
                         models.DbAttribute.reset_values_for_node(
                             dbnode=new_pk,
                             attributes=deserialized_attributes,
+                            with_transaction=False)
+
+                # For DbNodes, we also have to store its extras
+                if model_name == NODE_ENTITY_NAME:
+                    if extras_mode_new == 'import':
+                        if not silent:
+                            print("STORING NEW NODE EXTRAS...")
+                        for unique_id, new_pk in just_saved.items():
+                            import_entry_id = import_entry_ids[unique_id]
+                            # Get extras from import file
+                            try:
+                                extras = data['node_extras'][
+                                    str(import_entry_id)]
+                                extras_conversion = data[
+                                    'node_extras_conversion'][
+                                    str(import_entry_id)]
+                            except KeyError:
+                                raise ValueError("Unable to find extras info "
+                                                 "for DbNode with UUID = {}".format(unique_id))
+                            deserialized_extras = deserialize_attributes(extras, extras_conversion)
+                            # TODO: remove when aiida extras will be moved somewhere else
+                            # from here
+                            deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
+                                    key.startswith('_aiida_')}
+                            if models.DbNode.objects.filter(uuid=unique_id)[0].node_type.endswith('code.Code.'):
+                                deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
+                                        key == 'hidden'}
+                            # till here
+                            models.DbExtra.reset_values_for_node(
+                                dbnode=new_pk,
+                                attributes=deserialized_extras,
+                                with_transaction=False)
+                    elif extras_mode_new == 'none':
+                        if not silent:
+                            print("SKIPPING NEW NODE EXTRAS...")
+                    else:
+                        raise ValueError("Unknown extras_mode_new value: {}, should be either 'import' or "
+                                "'none'".format(extras_mode_new))
+
+                    # For the existing DbNodes we may want to choose the import mode
+                    if not silent:
+                        print("UPDATING EXISTING NODE EXTRAS (mode: {})".format(extras_mode_existing))
+
+                    for import_entry_id, entry_data in existing_entries[model_name].items():
+                        unique_id = entry_data[unique_identifier]
+                        existing_entry_id = foreign_ids_reverse_mappings[model_name][unique_id]
+                        # Get extras from import file
+                        try:
+                            extras = data['node_extras'][
+                                str(import_entry_id)]
+                            extras_conversion = data[
+                                'node_extras_conversion'][
+                                str(import_entry_id)]
+                        except KeyError:
+                            raise ValueError("Unable to find extras info "
+                                             "for DbNode with UUID = {}".format(unique_id))
+
+                        # Here I have to deserialize the extras
+                        old_extras = models.DbExtra.get_all_values_for_nodepk(existing_entry_id)
+                        deserialized_extras = deserialize_attributes(extras, extras_conversion)
+                        # TODO: remove when aiida extras will be moved somewhere else
+                        # from here
+                        deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
+                                key.startswith('_aiida_')}
+                        if models.DbNode.objects.filter(uuid=unique_id)[0].node_type.endswith('code.Code.'):
+                            deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
+                                    key == 'hidden'}
+                        # till here
+                        merged_extras = merge_extras(old_extras, deserialized_extras, extras_mode_existing)
+
+                        models.DbExtra.reset_values_for_node(
+                            dbnode=existing_entry_id,
+                            attributes=merged_extras,
                             with_transaction=False)
 
             if not silent:
@@ -802,30 +1179,34 @@ def import_data_dj(in_path, ignore_unknown_nodes=False,
 
             # So that we do not create empty groups
             if pks_for_group:
-                # Get an unique name for the import group, based on the
-                # current (local) time
-                basename = timezone.localtime(timezone.now()).strftime(
-                    "%Y%m%d-%H%M%S")
-                counter = 0
-                created = False
-                while not created:
-                    if counter == 0:
-                        group_name = basename
-                    else:
-                        group_name = "{}_{}".format(basename, counter)
-                    try:
-                        group = Group(name=group_name, type_string=IMPORTGROUP_TYPE).store()
-                        created = True
-                    except (exceptions.UniquenessError, exceptions.IntegrityError):
-                        counter += 1
+                # If user specified a group, import all things in it
+                if user_group:
+                    group = user_group[0]
+                else:
+                    # Get an unique name for the import group, based on the
+                    # current (local) time
+                    basename = timezone.localtime(timezone.now()).strftime(
+                        "%Y%m%d-%H%M%S")
+                    counter = 0
+                    created = False
+                    while not created:
+                        if counter == 0:
+                            group_label = basename
+                        else:
+                            group_label = "{}_{}".format(basename, counter)
+                        try:
+                            group = Group(label=group_label, type_string=IMPORTGROUP_TYPE).store()
+                            created = True
+                        except (exceptions.UniquenessError, exceptions.IntegrityError):
+                            counter += 1
 
                 # Add all the nodes to the new group
-                # TODO: decide if we want to return the group name
-                group.add_nodes(models.DbNode.objects.filter(
-                    pk__in=pks_for_group))
+                # TODO: decide if we want to return the group label
+                nodes = [entry[0] for entry in QueryBuilder().append(Node, filters={'id': {'in': pks_for_group}}).all()]
+                group.add_nodes(nodes)
 
                 if not silent:
-                    print("IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.name))
+                    print("IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.label))
             else:
                 if not silent:
                     print("NO DBNODES TO IMPORT, SO NO GROUP CREATED")
@@ -854,36 +1235,52 @@ def validate_uuid(given_uuid):
     return str(parsed_uuid) == given_uuid
 
 
-def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
+def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
+        extras_mode_existing='kcl', extras_mode_new='import',
+        comment_mode='newest', silent=False):
     """
     Import exported AiiDA environment to the AiiDA database.
-    If the 'in_path' is a folder, calls export_tree; otherwise, tries to
+    If the 'in_path' is a folder, calls extract_tree; otherwise, tries to
     detect the compression format (zip, tar.gz, tar.bz2, ...) and calls the
     correct function.
-
     :param in_path: the path to a file or folder that can be imported in AiiDA
+    :param extras_mode_existing: 3 letter code that will identify what to do with the extras import.
+    The first letter acts on extras that are present in the original node and not present in the imported node.
+    Can be either:
+    'k' (keep it) or
+    'n' (do not keep it).
+    The second letter acts on the imported extras that are not present in the original node.
+    Can be either:
+    'c' (create it) or
+    'n' (do not create it).
+    The third letter defines what to do in case of a name collision.
+    Can be either:
+    'l' (leave the old value),
+    'u' (update with a new value),
+    'd' (delete the extra), or
+    'a' (ask what to do if the content is different).
+    :param extras_mode_new: 'import' to import extras of new nodes or 'none' to ignore them
+    :param comment_mode: Comment import modes (when same UUIDs are found):
+    'newest': Will keep the Comment with the most recent modification time (mtime)
+    'overwrite': Will overwrite existing Comments with the ones from the import file
     """
     import os
     import tarfile
     import zipfile
     from itertools import chain
 
-    from aiida.utils import timezone
+    from aiida.common import timezone
 
-    from aiida.orm import Node, Group
+    from aiida.backends.sqlalchemy.models.node import DbNode
+    from aiida.backends.sqlalchemy.utils import flag_modified
     from aiida.common.archive import extract_tree, extract_tar, extract_zip, extract_cif
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.common.utils import get_object_from_string
-    from aiida.common.datastructures import calc_states
-    from aiida.orm.querybuilder import QueryBuilder
     from aiida.common.links import LinkType
-    import aiida.utils.json as json
-
-    # Backend specific imports
-    from aiida.backends.sqlalchemy.models.node import DbCalcState
+    from aiida.common import json
 
     # This is the export version expected by this function
-    expected_export_version = '0.3'
+    expected_export_version = StrictVersion('0.4')
 
     # The name of the subfolder in which the node files are stored
     nodes_export_subfolder = 'nodes'
@@ -897,7 +1294,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
     # The sandbox has to remain open until the end
     with SandboxFolder() as folder:
         if os.path.isdir(in_path):
-            extract_tree(in_path, folder, silent=silent)
+            extract_tree(in_path, folder)
         else:
             if tarfile.is_tarfile(in_path):
                 extract_tar(in_path, folder, silent=silent,
@@ -930,9 +1327,16 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
         ######################
         # PRELIMINARY CHECKS #
         ######################
-        if metadata['export_version'] != expected_export_version:
-            raise exceptions.IncompatibleArchiveVersionError('Archive schema version {} is incompatible with the '
-                'currently supported schema version {}'.format(metadata['export_version'], expected_export_version))
+        export_version = StrictVersion(str(metadata['export_version']))
+        if export_version != expected_export_version:
+            msg = "Export file version is {}, can import only version {}"\
+                    .format(metadata['export_version'], expected_export_version)
+            if export_version < expected_export_version:
+                msg += "\nUse 'verdi export migrate' to update this export file."
+            else:
+                msg += "\nUpdate your AiiDA version in order to import this file."
+
+            raise exceptions.IncompatibleArchiveVersionError(msg)
 
         ###################################################################
         #           CREATE UUID REVERSE TABLES AND CHECK IF               #
@@ -984,11 +1388,12 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
         # ['aiida.backends.djsite.db.models.DbUser', 'aiida.backends.djsite.db.models.DbComputer', 'aiida.backends.djsite.db.models.DbNode', 'aiida.backends.djsite.db.models.DbGroup']
         entity_sig_order = [entity_names_to_signatures[m]
                             for m in (USER_ENTITY_NAME, COMPUTER_ENTITY_NAME,
-                                      NODE_ENTITY_NAME, GROUP_ENTITY_NAME)]
+                                      NODE_ENTITY_NAME, GROUP_ENTITY_NAME,
+                                      LOG_ENTITY_NAME, COMMENT_ENTITY_NAME)]
         # "Entities" that do appear in the import file, but whose import is
         # managed manually
         entity_sig_manual = [entity_names_to_signatures[m]
-                             for m in (LINK_ENTITY_NAME, ATTRIBUTE_ENTITY_NAME)]
+                         for m in (LINK_ENTITY_NAME, ATTRIBUTE_ENTITY_NAME)]
 
         all_known_entity_sigs = entity_sig_order + entity_sig_manual
 
@@ -1022,7 +1427,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
         ###################################################
         # CREATE IMPORT DATA DIRECT UNIQUE_FIELD MAPPINGS #
         ###################################################
-        # This is ndested dictionary of entity_name:{id:uuid}
+        # This is nested dictionary of entity_name:{id:uuid}
         # to map one id (the pk) to a different one.
         # One of the things to remove for v0.4
         # {
@@ -1055,11 +1460,11 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
             for entity_sig in entity_sig_order:
                 entity_name = signatures_to_entity_names[entity_sig]
                 entity = entity_names_to_entities[entity_name]
-                # I get the unique identifier, since v0.3 stored under enity_name
+                # I get the unique identifier, since v0.3 stored under entity_name
                 unique_identifier = metadata['unique_identifiers'].get(entity_name, None)
 
-                # so, new_entries. Also,since v0.3 it makes more sense to used the entity_name
-                # ~ new_entries[entity_sig] = {}
+                # so, new_entries. Also, since v0.3 it makes more sense to use the entity_name
+                #~ new_entries[entity_sig] = {}
                 new_entries[entity_name] = {}
                 # existing_entries[entity_sig] = {}
                 existing_entries[entity_name] = {}
@@ -1079,17 +1484,32 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                                 unique_identifier: {"in": import_unique_ids}},
                                       project=["*"], tag="res")
                             relevant_db_entries = {
-                                getattr(v[0], unique_identifier):
+                                str(getattr(v[0], unique_identifier)):  # str() to convert UUID() to string
                                     v[0] for v in qb.all()}
 
                             foreign_ids_reverse_mappings[entity_name] = {
                                 k: v.pk for k, v in
                                 relevant_db_entries.items()}
 
-                        dupl_counter = 0
                         imported_comp_names = set()
                         for k, v in data['export_data'][entity_name].items():
-                            if entity_name == COMPUTER_ENTITY_NAME:
+                            if entity_name == GROUP_ENTITY_NAME:
+                                # Check if there is already a group with the same name,
+                                # and if so, recreate the name
+                                orig_label = v["label"]
+                                dupl_counter = 0
+                                while QueryBuilder().append(entity,
+                                            filters={'label': {"==": v["label"]}}).count():
+                                    # Rename the new group
+                                    v["label"] = orig_label + DUPL_SUFFIX.format(dupl_counter)
+                                    dupl_counter += 1
+                                    if dupl_counter == 100:
+                                        raise exceptions.UniquenessError("A group of that label ( {} )"
+                                                "  already exists and I could not create a new one"
+                                                "".format(orig_label))
+
+
+                            elif entity_name == COMPUTER_ENTITY_NAME:
                                 # The following is done for compatibility
                                 # reasons in case the export file was generated
                                 # with the Django export method. In Django the
@@ -1113,13 +1533,13 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                                           project=["*"], tag="res")
                                 dupl = (qb.count()
                                         or v["name"] in imported_comp_names)
-
+                                dupl_counter = 0
                                 orig_name = v["name"]
                                 while dupl:
                                     # Rename the new computer
                                     v["name"] = (
                                             orig_name +
-                                            COMP_DUPL_SUFFIX.format(
+                                            DUPL_SUFFIX.format(
                                                 dupl_counter))
                                     dupl_counter += 1
                                     qb = QueryBuilder()
@@ -1132,7 +1552,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
                                 imported_comp_names.add(v["name"])
 
-                            if v[unique_identifier] in (relevant_db_entries.keys()):
+                            if v[unique_identifier] in relevant_db_entries:
                                 # Already in DB
                                 # again, switched to entity_name in v0.3
                                 existing_entries[entity_name][k] = v
@@ -1143,6 +1563,11 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                         # Why the copy:
                         new_entries[entity_name] = data['export_data'][entity_name].copy()
 
+            # Show Comment mode if not silent and Comments exist in existing_entries
+            if not silent:
+                if COMMENT_ENTITY_NAME in existing_entries:
+                    print("Comment mode: {}".format(comment_mode))
+
             # I import data from the given model
             for entity_sig in entity_sig_order:
                 entity_name = signatures_to_entity_names[entity_sig]
@@ -1150,10 +1575,22 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 fields_info = metadata['all_fields_info'].get(entity_name, {})
                 unique_identifier = metadata['unique_identifiers'].get(entity_name, None)
 
-                for import_entry_id, entry_data in (existing_entries[entity_name].items()):
+                for import_entry_id, entry_data in existing_entries[entity_name].items():
                     unique_id = entry_data[unique_identifier]
                     existing_entry_id = foreign_ids_reverse_mappings[entity_name][unique_id]
+                    import_data = dict(deserialize_field(
+                        k, v, fields_info=fields_info,
+                        import_unique_ids_mappings=import_unique_ids_mappings,
+                        foreign_ids_reverse_mappings=foreign_ids_reverse_mappings)
+                                       for k, v in entry_data.items())
                     # TODO COMPARE, AND COMPARE ATTRIBUTES
+
+                    if entity_sig is entity_names_to_signatures[COMMENT_ENTITY_NAME]:
+                        new_entry_uuid = _merge_comment(import_data, comment_mode)
+                        if new_entry_uuid is not None:
+                            entry_data[unique_identifier] = new_entry_uuid
+                            new_entries[entity_name][import_entry_id] = entry_data
+
                     if entity_name not in ret_dict:
                         ret_dict[entity_name] = {'new': [], 'existing': []}
                     ret_dict[entity_name]['existing'].append((import_entry_id, existing_entry_id))
@@ -1169,7 +1606,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 # This is needed later to associate the import entry with the new pk
                 import_entry_ids = dict()
 
-                for import_entry_id, entry_data in (new_entries[entity_name].items()):
+                for import_entry_id, entry_data in new_entries[entity_name].items():
                     unique_id = entry_data[unique_identifier]
                     import_data = dict(deserialize_field(
                         k, v, fields_info=fields_info,
@@ -1184,16 +1621,25 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                     # compatible with the SQLA schema and they don't need any
                     # further conversion.
                     if entity_name in file_fields_to_model_fields:
-                        for file_fkey in (
-                                file_fields_to_model_fields[entity_name].keys()):
+                        for file_fkey in file_fields_to_model_fields[entity_name]:
+
+                            # This is an exception because the DbLog model defines the `_metadata` column instead of the
+                            # `metadata` column used in the Django model. This is because the SqlAlchemy model base
+                            # class already has a metadata attribute that cannot be overridden. For consistency, the
+                            # `DbLog` class however expects the `metadata` keyword in its constructor, so we should
+                            # ignore the mapping here
+                            if entity_name == LOG_ENTITY_NAME and file_fkey == 'metadata':
+                                continue
+
                             model_fkey = file_fields_to_model_fields[entity_name][file_fkey]
-                            if model_fkey in import_data.keys():
+                            if model_fkey in import_data:
                                 continue
                             import_data[model_fkey] = import_data[file_fkey]
                             import_data.pop(file_fkey, None)
 
                     db_entity = get_object_from_string(
                         entity_names_to_sqla_schema[entity_name])
+
                     objects_to_create.append(db_entity(**import_data))
                     import_entry_ids[unique_id] = import_entry_id
 
@@ -1214,7 +1660,7 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                                              "in the exported file"
                                              .format(o.uuid))
                         destdir = RepositoryFolder(
-                            section=Node._section_name,
+                            section=Repository._section_name,
                             uuid=o.uuid)
                         # Replace the folder, possibly destroying existing
                         # previous folders, and move the files (faster if we
@@ -1237,17 +1683,85 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                             raise ValueError(
                                 "Unable to find attribute info "
                                 "for DbNode with UUID = {}".format(
-                                    unique_id))
+                                    o.uuid))
 
                         # Here I have to deserialize the attributes
                         deserialized_attributes = deserialize_attributes(
                             attributes, attributes_conversion)
 
                         if deserialized_attributes:
-                            from sqlalchemy.dialects.postgresql import JSONB
                             o.attributes = dict()
                             for k, v in deserialized_attributes.items():
                                 o.attributes[k] = v
+
+                        # For DbNodes, we also have to store extras
+                        # Get extras from import file
+                        if extras_mode_new == 'import':
+                            if not silent:
+                                print("STORING NEW NODE EXTRAS...")
+                            try:
+                                extras = data['node_extras'][
+                                    str(import_entry_id)]
+
+                                extras_conversion = data[
+                                    'node_extras_conversion'][
+                                    str(import_entry_id)]
+                            except KeyError:
+                                raise ValueError(
+                                    "Unable to find extras info "
+                                    "for DbNode with UUID = {}".format(
+                                        o.uuid))
+                            # Here I have to deserialize the extras
+                            deserialized_extras = deserialize_attributes(extras, extras_conversion)
+                            # TODO: remove when aiida extras will be moved somewhere else
+                            # from here
+                            deserialized_extras = {key:value for key, value in deserialized_extras.items() if not
+                                    key.startswith('_aiida_')}
+                            if o.node_type.endswith('code.Code.'):
+                                deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
+                                        key == 'hidden'}
+                            # till here
+                            o.extras = dict()
+                            for k, v in deserialized_extras.items():
+                                o.extras[k] = v
+                        elif extras_mode_new == 'none':
+                            if not silent:
+                                print("SKIPPING NEW NODE EXTRAS...")
+                        else:
+                            raise ValueError("Unknown extras_mode_new value: {}, should be either 'import' or "
+                                    "'none'".format(extras_mode_new))
+
+                    if not silent:
+                        print("UPDATING EXISTING NODE EXTRAS (mode: {})".format(extras_mode_existing))
+
+                    uuid_import_pk_match = {entry_data[unique_identifier]:import_entry_id for
+                            import_entry_id, entry_data in existing_entries[entity_name].items()}
+                    for db_node in session.query(DbNode).filter(DbNode.uuid.in_(uuid_import_pk_match)).distinct().all():
+                        import_entry_id = uuid_import_pk_match[str(db_node.uuid)]
+                        # Get extras from import file
+                        try:
+                            extras = data['node_extras'][
+                                str(import_entry_id)]
+                            extras_conversion = data[
+                                'node_extras_conversion'][
+                                str(import_entry_id)]
+                        except KeyError:
+                            raise ValueError("Unable to find extras info "
+                                             "for DbNode with UUID = {}".format(db_node.uuid))
+
+                        # Here I have to deserialize the extras
+                        old_extras = db_node.extras
+                        deserialized_extras = deserialize_attributes(extras, extras_conversion)
+                        # TODO: remove when aiida extras will be moved somewhere else
+                        # from here
+                        deserialized_extras = {key:value for key, value in deserialized_extras.items() if not
+                                key.startswith('_aiida_')}
+                        if db_node.node_type.endswith('code.Code.'):
+                            deserialized_extras = {key:value for key,value in deserialized_extras.items() if not
+                                    key == 'hidden'}
+                        # till here
+                        db_node.extras = merge_extras(old_extras, deserialized_extras, extras_mode_existing)
+                        flag_modified(db_node, "extras")
 
                 # Store them all in once; However, the PK
                 # are not set in this way...
@@ -1265,24 +1779,8 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                 else:
                     just_saved = dict()
 
-                imported_states = []
-                if entity_sig == entity_names_to_signatures[NODE_ENTITY_NAME]:
-                    ################################################
-                    # Needs more from here and below
-                    ################################################
-                    if not silent:
-                        print("SETTING THE IMPORTED STATES FOR NEW NODES...")
-                    # I set for all nodes, even if I should set it only
-                    # for calculations
-                    for unique_id, new_pk in just_saved.items():
-                        imported_states.append(
-                            DbCalcState(dbnode_id=new_pk,
-                                        state=calc_states.IMPORTED))
-
-                    session.add_all(imported_states)
-
                 # Now I have the PKs, print the info
-                # Moreover, set the foreing_ids_reverse_mappings
+                # Moreover, set the foreign_ids_reverse_mappings
                 for unique_id, new_pk in just_saved.items():
                     from uuid import UUID
                     if isinstance(unique_id, UUID):
@@ -1393,8 +1891,9 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
                                     for node_uuid in groupnodes]
                 qb_nodes = QueryBuilder().append(
                     Node, filters={'id': {'in': nodes_ids_to_add}})
-                nodes_to_add = [n[0] for n in qb_nodes.all()]
-                group.add_nodes(nodes_to_add)
+                # Adding nodes to group avoiding the SQLA ORM to increase speed
+                nodes_to_add = [n[0].backend_entity for n in qb_nodes.all()]
+                group.backend_entity.add_nodes(nodes_to_add, skip_orm=True)
 
             ######################################################
             # Put everything in a specific group
@@ -1409,39 +1908,37 @@ def import_data_sqla(in_path, ignore_unknown_nodes=False, silent=False):
 
             # So that we do not create empty groups
             if pks_for_group:
-                # Get an unique name for the import group, based on the
-                # current (local) time
-                basename = timezone.localtime(timezone.now()).strftime(
-                    "%Y%m%d-%H%M%S")
-                counter = 0
-                created = False
-                while not created:
-                    if counter == 0:
-                        group_name = basename
-                    else:
-                        group_name = "{}_{}".format(basename, counter)
+                # If user specified a group, import all things in it
+                if user_group:
+                    group = user_group[0]
+                else:
+                    # Get an unique name for the import group, based on the
+                    # current (local) time
+                    basename = timezone.localtime(timezone.now()).strftime(
+                        "%Y%m%d-%H%M%S")
+                    counter = 0
+                    created = False
+                    while not created:
+                        if counter == 0:
+                            group_label = basename
+                        else:
+                            group_label = "{}_{}".format(basename, counter)
 
-                    group = Group(name=group_name,
-                                  type_string=IMPORTGROUP_TYPE)
-                    from aiida.backends.sqlalchemy.models.group import DbGroup
-                    if session.query(DbGroup).filter(
-                            DbGroup.name == group._dbgroup.name).count() == 0:
-                        session.add(group._dbgroup)
-                        created = True
-                    else:
-                        counter += 1
+                        group = Group(label=group_label,
+                                      type_string=IMPORTGROUP_TYPE)
+                        from aiida.backends.sqlalchemy.models.group import DbGroup
+                        if session.query(DbGroup).filter(
+                                DbGroup.label == group.backend_entity._dbmodel.label).count() == 0:
+                            session.add(group.backend_entity._dbmodel)
+                            created = True
+                        else:
+                            counter += 1
 
-                # Add all the nodes to the new group
-                # TODO: decide if we want to return the group name
-                from aiida.backends.sqlalchemy.models.node import DbNode
-                group.add_nodes(session.query(DbNode).filter(
-                    DbNode.id.in_(pks_for_group)).distinct().all())
-
-                # group.add_nodes(models.DbNode.objects.filter(
-                #     pk__in=pks_for_group))
-
+                # Adding nodes to group avoiding the SQLA ORM to increase speed
+                nodes = [entry[0].backend_entity for entry in QueryBuilder().append(Node, filters={'id': {'in': pks_for_group}}).all()]
+                group.backend_entity.add_nodes(nodes, skip_orm=True)
                 if not silent:
-                    print("IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.name))
+                    print("IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.label))
             else:
                 if not silent:
                     print("NO DBNODES TO IMPORT, SO NO GROUP CREATED")
@@ -1609,13 +2106,6 @@ def serialize_dict(datadict, remove_fields=[], rename_fields={},
         return ret_dict
 
 
-fields_to_export = {
-    'aiida.backends.djsite.db.models.DbNode':
-        ['description', 'public', 'nodeversion', 'uuid', 'mtime', 'user',
-         'ctime', 'dbcomputer', 'label', 'type'],
-}
-
-
 def fill_in_query(partial_query, originating_entity_str, current_entity_str,
                   tag_suffixes=[], entity_separator="_"):
     """
@@ -1630,19 +2120,29 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str,
 
     relationship_dic = {
         "Node": {
-            "Computer": "has_computer",
-            "Group": "member_of",
-            "User": "created_by"
+            "Computer": "with_computer",
+            "Group": "with_group",
+            "User": "with_user",
+            "Log": "with_log",
+            "Comment": "with_comment"
         },
         "Group": {
-            "Node": "group_of"
+            "Node": "with_node"
         },
         "Computer": {
-            "Node": "computer_of"
+            "Node": "with_node"
         },
         "User": {
-            "Node": "creator_of",
-            "Group": "owner_of"
+            "Node": "with_node",
+            "Group": "with_group",
+            "Comment": "with_comment",
+        },
+        "Log": {
+            "Node": "with_node"
+        },
+        "Comment": {
+            "Node": "with_node",
+            "User": "with_user"
         }
     }
 
@@ -1684,9 +2184,10 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str,
                       new_tag_suffixes)
 
 
-def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
+def export_tree(what, folder, allowed_licenses=None, forbidden_licenses=None,
                 silent=False, input_forward=False, create_reversed=True,
-                return_reversed=False, call_reversed=False, **kwargs):
+                return_reversed=False, call_reversed=False, include_comments=True,
+                include_logs=True, **kwargs):
     """
     Export the entries passed in the 'what' list to a file tree.
     :todo: limit the export to finished or failed calculations.
@@ -1709,21 +2210,29 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     whether all licenses of Data nodes are in the list. If a function,
     then calls function for licenses of Data nodes expecting True if
     license is allowed, False otherwise.
+    :param include_comments: Bool: In-/exclude export of comments for given node(s).
+    Default: True, *include* comments in export (as well as relevant users).
+    :param include_logs: Bool: In-/exclude export of logs for given node(s).
+    Default: True, *include* logs in export.
     :param silent: suppress debug prints
     :raises LicensingException: if any node is licensed under forbidden
     license
     """
+    import os
     import aiida
-    from aiida.orm import Node, Calculation, Data, Group, Code
+    from aiida.orm import Node, Data, Group, Log, Comment
+    from aiida.orm import ProcessNode
+    from aiida.common.exceptions import ContentNotExistent
     from aiida.common.links import LinkType
     from aiida.common.folders import RepositoryFolder
     from aiida.orm.querybuilder import QueryBuilder
-    import aiida.utils.json as json
+    from aiida.common import json
+    from django.core.exceptions import ImproperlyConfigured
 
     if not silent:
         print("STARTING EXPORT...")
 
-    EXPORT_VERSION = '0.3'
+    EXPORT_VERSION = '0.4'
 
     all_fields_info, unique_identifiers = get_all_fields_info()
 
@@ -1735,6 +2244,8 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
     given_group_entry_ids = set()
     given_computer_entry_ids = set()
     given_groups = set()
+    given_log_entry_ids = set()
+    given_comment_entry_ids = set()
 
     # I store a list of the actual dbnodes
     for entry in what:
@@ -1744,26 +2255,25 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
         # Now a load the backend-independent name into entry_entity_name, e.g. Node!
         entry_entity_name = schema_to_entity_names(entry_class_string)
         if issubclass(entry.__class__, Group):
-            given_group_entry_ids.add(entry.pk)
+            given_group_entry_ids.add(entry.id)
             given_groups.add(entry)
         elif issubclass(entry.__class__, Node):
-            # The Code node should be treated as a Data node
-            if (issubclass(entry.__class__, Data) or issubclass(entry.__class__, Code)):
+            if issubclass(entry.__class__, Data):
                 given_data_entry_ids.add(entry.pk)
-            elif issubclass(entry.__class__, Calculation):
+            elif issubclass(entry.__class__, ProcessNode):
                 given_calculation_entry_ids.add(entry.pk)
         elif issubclass(entry.__class__, Computer):
             given_computer_entry_ids.add(entry.pk)
         else:
-            raise ValueError("I was given {}, which is not a DbNode or DbGroup instance".format(entry))
+            raise ValueError("I was given {} ({}), which is not a Node, Computer, or Group instance"
+                            .format(entry, type(entry)))
 
     # Add all the nodes contained within the specified groups
     for group in given_groups:
         for entry in group.nodes:
-            # The Code node should be treated as a Data nodes
-            if (issubclass(entry.__class__, Data) or issubclass(entry.__class__, Code)):
+            if issubclass(entry.__class__, Data):
                 given_data_entry_ids.add(entry.pk)
-            elif issubclass(entry.__class__, Calculation):
+            elif issubclass(entry.__class__, ProcessNode):
                 given_calculation_entry_ids.add(entry.pk)
 
     # We will iteratively explore the AiiDA graph to find further nodes that
@@ -1782,67 +2292,30 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             else:
                 to_be_exported.add(curr_node_id)
 
-            # INPUT(Data, Calculation) - Reversed
+            # INPUT(Data, ProcessNode) - Reversed
             qb = QueryBuilder()
             qb.append(Data, tag='predecessor', project=['id'])
-            qb.append(Calculation, output_of='predecessor',
+            qb.append(ProcessNode, with_incoming='predecessor',
                       filters={'id': {'==': curr_node_id}},
-                      edge_filters={
-                          'type': {
-                              '==': LinkType.INPUT.value}})
-            res = {_[0] for _ in qb.all()}
-            given_data_entry_ids.update(res - to_be_exported)
-            # The same until Code becomes a subclass of Data
-            qb = QueryBuilder()
-            qb.append(Code, tag='predecessor', project=['id'])
-            qb.append(Calculation, output_of='predecessor',
-                      filters={'id': {'==': curr_node_id}},
-                      edge_filters={
-                          'type': {
-                              '==': LinkType.INPUT.value}})
+                      edge_filters={'type': {'in': [LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value]}})
             res = {_[0] for _ in qb.all()}
             given_data_entry_ids.update(res - to_be_exported)
 
-
-            # INPUT(Data, Calculation) - Forward
+            # INPUT(Data, ProcessNode) - Forward
             if input_forward:
                 qb = QueryBuilder()
                 qb.append(Data, tag='predecessor', project=['id'],
                           filters={'id': {'==': curr_node_id}})
-                qb.append(Calculation, output_of='predecessor',
-                          edge_filters={
-                              'type': {
-                                  '==': LinkType.INPUT.value}})
-                res = {_[0] for _ in qb.all()}
-                given_data_entry_ids.update(res - to_be_exported)
-                # The same until Code becomes a subclass of Data
-                qb = QueryBuilder()
-                qb.append(Code, tag='predecessor', project=['id'],
-                          filters={'id': {'==': curr_node_id}})
-                qb.append(Calculation, output_of='predecessor',
-                          edge_filters={
-                              'type': {
-                                  '==': LinkType.INPUT.value}})
+                qb.append(ProcessNode, with_incoming='predecessor',
+                      edge_filters={'type': {'in': [LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value]}})
                 res = {_[0] for _ in qb.all()}
                 given_data_entry_ids.update(res - to_be_exported)
 
-
-            # CREATE/RETURN(Calculation, Data) - Forward
+            # CREATE/RETURN(ProcessNode, Data) - Forward
             qb = QueryBuilder()
-            qb.append(Calculation, tag='predecessor',
+            qb.append(ProcessNode, tag='predecessor',
                       filters={'id': {'==': curr_node_id}})
-            qb.append(Data, output_of='predecessor', project=['id'],
-                      edge_filters={
-                          'type': {
-                              'in': [LinkType.CREATE.value,
-                                     LinkType.RETURN.value]}})
-            res = {_[0] for _ in qb.all()}
-            given_data_entry_ids.update(res - to_be_exported)
-            # The same until Code becomes a subclass of Data
-            qb = QueryBuilder()
-            qb.append(Calculation, tag='predecessor',
-                      filters={'id': {'==': curr_node_id}})
-            qb.append(Code, output_of='predecessor', project=['id'],
+            qb.append(Data, with_incoming='predecessor', project=['id'],
                       edge_filters={
                           'type': {
                               'in': [LinkType.CREATE.value,
@@ -1850,22 +2323,11 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             res = {_[0] for _ in qb.all()}
             given_data_entry_ids.update(res - to_be_exported)
 
-
-            # CREATE(Calculation, Data) - Reversed
+            # CREATE(ProcessNode, Data) - Reversed
             if create_reversed:
                 qb = QueryBuilder()
-                qb.append(Calculation, tag='predecessor')
-                qb.append(Data, output_of='predecessor', project=['id'],
-                          filters={'id': {'==': curr_node_id}},
-                          edge_filters={
-                              'type': {
-                                  'in': [LinkType.CREATE.value]}})
-                res = {_[0] for _ in qb.all()}
-                given_data_entry_ids.update(res - to_be_exported)
-                # The same until Code becomes a subclass of Data
-                qb = QueryBuilder()
-                qb.append(Calculation, tag='predecessor')
-                qb.append(Code, output_of='predecessor', project=['id'],
+                qb.append(ProcessNode, tag='predecessor')
+                qb.append(Data, with_incoming='predecessor', project=['id'],
                           filters={'id': {'==': curr_node_id}},
                           edge_filters={
                               'type': {
@@ -1873,22 +2335,11 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 res = {_[0] for _ in qb.all()}
                 given_data_entry_ids.update(res - to_be_exported)
 
-
-            # RETURN(Calculation, Data) - Reversed
+            # RETURN(ProcessNode, Data) - Reversed
             if return_reversed:
                 qb = QueryBuilder()
-                qb.append(Calculation, tag='predecessor')
-                qb.append(Data, output_of='predecessor', project=['id'],
-                          filters={'id': {'==': curr_node_id}},
-                          edge_filters={
-                              'type': {
-                                  'in': [LinkType.RETURN.value]}})
-                res = {_[0] for _ in qb.all()}
-                given_data_entry_ids.update(res - to_be_exported)
-                # The same until Code becomes a subclass of Data
-                qb = QueryBuilder()
-                qb.append(Calculation, tag='predecessor')
-                qb.append(Code, output_of='predecessor', project=['id'],
+                qb.append(ProcessNode, tag='predecessor')
+                qb.append(Data, with_incoming='predecessor', project=['id'],
                           filters={'id': {'==': curr_node_id}},
                           edge_filters={
                               'type': {
@@ -1896,27 +2347,22 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 res = {_[0] for _ in qb.all()}
                 given_data_entry_ids.update(res - to_be_exported)
 
-            # CALL(Calculation, Calculation) - Forward
+            # CALL(ProcessNode, ProcessNode) - Forward
             qb = QueryBuilder()
-            qb.append(Calculation, tag='predecessor',
+            qb.append(ProcessNode, tag='predecessor',
                       filters={'id': {'==': curr_node_id}})
-            qb.append(Calculation, output_of='predecessor', project=['id'],
-                      edge_filters={
-                          'type': {
-                              '==': LinkType.CALL.value}})
+            qb.append(ProcessNode, with_incoming='predecessor', project=['id'],
+                edge_filters={'type': {'in': [LinkType.CALL_CALC.value, LinkType.CALL_WORK.value]}})
             res = {_[0] for _ in qb.all()}
             given_calculation_entry_ids.update(res - to_be_exported)
 
-
-            # CALL(Calculation, Calculation) - Reversed
+            # CALL(ProcessNode, ProcessNode) - Reversed
             if call_reversed:
                 qb = QueryBuilder()
-                qb.append(Calculation, tag='predecessor')
-                qb.append(Calculation, output_of='predecessor', project=['id'],
-                          filters={'id': {'==': curr_node_id}},
-                          edge_filters={
-                              'type': {
-                                  '==': LinkType.CALL.value}})
+                qb.append(ProcessNode, tag='predecessor')
+                qb.append(ProcessNode, with_incoming='predecessor', project=['id'],
+                    filters={'id': {'==': curr_node_id}},
+                    edge_filters={'type': {'in': [LinkType.CALL_CALC.value, LinkType.CALL_WORK.value]}})
                 res = {_[0] for _ in qb.all()}
                 given_calculation_entry_ids.update(res - to_be_exported)
 
@@ -1932,27 +2378,47 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 to_be_exported.add(curr_node_id)
 
             # Case 2:
-            # CREATE(Calculation, Data) - Reversed
+            # CREATE(ProcessNode, Data) - Reversed
             if create_reversed:
                 qb = QueryBuilder()
-                qb.append(Calculation, tag='predecessor', project=['id'])
-                qb.append(Data, output_of='predecessor',
+                qb.append(ProcessNode, tag='predecessor', project=['id'])
+                qb.append(Data, with_incoming='predecessor',
                           filters={'id': {'==': curr_node_id}},
                           edge_filters={
                               'type': {
-                                  '==': LinkType.CREATE.value}})
+                                  'in': [LinkType.CREATE.value]}})
                 res = {_[0] for _ in qb.all()}
                 given_calculation_entry_ids.update(res - to_be_exported)
-                # The same until Code becomes a subclass of Data
+
+            # Case 3:
+            # RETURN(ProcessNode, Data) - Reversed
+            if return_reversed:
                 qb = QueryBuilder()
-                qb.append(Calculation, tag='predecessor', project=['id'])
-                qb.append(Code, output_of='predecessor',
+                qb.append(ProcessNode, tag='predecessor', project=['id'])
+                qb.append(Data, with_incoming='predecessor',
                           filters={'id': {'==': curr_node_id}},
                           edge_filters={
                               'type': {
-                                  '==': LinkType.CREATE.value}})
+                                  'in': [LinkType.RETURN.value]}})
                 res = {_[0] for _ in qb.all()}
                 given_calculation_entry_ids.update(res - to_be_exported)
+
+    ## Universal "entities" attributed to all types of nodes
+    # Logs
+    if include_logs and to_be_exported:
+        # Get related log(s) - universal for all nodes
+        builder = QueryBuilder()
+        builder.append(Log, filters={'dbnode_id': {'in': to_be_exported}}, project=['id'])
+        res = {_[0] for _ in builder.all()}
+        given_log_entry_ids.update(res)
+
+    # Comments
+    if include_comments and to_be_exported:
+        # Get related log(s) - universal for all nodes
+        builder = QueryBuilder()
+        builder.append(Comment, filters={'dbnode_id': {'in': to_be_exported}}, project=['id'])
+        res = {_[0] for _ in builder.all()}
+        given_comment_entry_ids.update(res)
 
     # Here we get all the columns that we plan to project per entity that we
     # would like to extract
@@ -1963,6 +2429,10 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
         given_entities.append(NODE_ENTITY_NAME)
     if len(given_computer_entry_ids) > 0:
         given_entities.append(COMPUTER_ENTITY_NAME)
+    if len(given_log_entry_ids) > 0:
+        given_entities.append(LOG_ENTITY_NAME)
+    if len(given_comment_entry_ids) > 0:
+        given_entities.append(COMMENT_ENTITY_NAME)
 
     entries_to_add = dict()
     for given_entity in given_entities:
@@ -1986,6 +2456,10 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             entry_ids_to_add = to_be_exported
         elif given_entity == COMPUTER_ENTITY_NAME:
             entry_ids_to_add = given_computer_entry_ids
+        elif given_entity == LOG_ENTITY_NAME:
+            entry_ids_to_add = given_log_entry_ids
+        elif given_entity == COMMENT_ENTITY_NAME:
+            entry_ids_to_add = given_comment_entry_ids
 
         qb = QueryBuilder()
         qb.append(entity_names_to_entities[given_entity],
@@ -2079,42 +2553,41 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             n = res[0]
             (node_attributes[str(n.pk)],
              node_attributes_conversion[str(n.pk)]) = serialize_dict(
-                n.get_attrs(), track_conversion=True)
+                n.attributes, track_conversion=True)
+
+    ## EXTRAS
+    if not silent:
+        print("STORING NODE EXTRAS...")
+    node_extras = {}
+    node_extras_conversion = {}
+
+    # A second QueryBuilder query to get the extras. See if this can be
+    # optimized
+    if len(all_nodes_pk) > 0:
+        all_nodes_query = QueryBuilder()
+        all_nodes_query.append(Node, filters={"id": {"in": all_nodes_pk}},
+                               project=["*"])
+        for res in all_nodes_query.iterall():
+            n = res[0]
+            (node_extras[str(n.pk)],
+             node_extras_conversion[str(n.pk)]) = serialize_dict(n.extras, track_conversion=True)
 
     if not silent:
         print("STORING NODE LINKS...")
 
     links_uuid_dict = dict()
     if len(all_nodes_pk) > 0:
-        # INPUT (Data, Calculation) - Forward, by the Calculation node
+        # INPUT (Data, ProcessNode) - Forward, by the ProcessNode node
         if input_forward:
-            # INPUT (Data, Calculation)
+            # INPUT (Data, ProcessNode)
             links_qb = QueryBuilder()
             links_qb.append(Data,
                             project=['uuid'], tag='input',
                             filters = {'id': {'in': all_nodes_pk}})
-            links_qb.append(Calculation,
+            links_qb.append(ProcessNode,
                             project=['uuid'], tag='output',
-                            edge_filters={'type':{'==':LinkType.INPUT.value}},
-                            edge_project=['label', 'type'], output_of='input')
-            for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-                val = {
-                    'input': str(input_uuid),
-                    'output': str(output_uuid),
-                    'label': str(link_label),
-                    'type':str(link_type)
-                }
-                links_uuid_dict[frozenset(val.items())] = val
-            # INPUT (Code, Calculation)
-            # The same as above until Code becomes a subclass of Data
-            links_qb = QueryBuilder()
-            links_qb.append(Code,
-                            project=['uuid'], tag='input',
-                            filters = {'id': {'in': all_nodes_pk}})
-            links_qb.append(Calculation,
-                            project=['uuid'], tag='output',
-                            edge_filters={'type':{'==':LinkType.INPUT.value}},
-                            edge_project=['label', 'type'], output_of='input')
+                            edge_filters={'type': {'in': [LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value]}},
+                            edge_project=['label', 'type'], with_incoming='input')
             for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
                 val = {
                     'input': str(input_uuid),
@@ -2124,15 +2597,15 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 }
                 links_uuid_dict[frozenset(val.items())] = val
 
-        # INPUT (Data, Calculation) - Backward, by the Calculation node
+        # INPUT (Data, ProcessNode) - Backward, by the ProcessNode node
         links_qb = QueryBuilder()
         links_qb.append(Data,
                         project=['uuid'], tag='input')
-        links_qb.append(Calculation,
+        links_qb.append(ProcessNode,
                         project=['uuid'], tag='output',
                         filters={'id': {'in': all_nodes_pk}},
-                        edge_filters={'type':{'==':LinkType.INPUT.value}},
-                        edge_project=['label', 'type'], output_of='input')
+                        edge_filters={'type': {'in': [LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value]}},
+                        edge_project=['label', 'type'], with_incoming='input')
         for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
             val = {
                 'input': str(input_uuid),
@@ -2141,35 +2614,16 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 'type':str(link_type)
             }
             links_uuid_dict[frozenset(val.items())] = val
-        # INPUT (Data, Calculation) - Backward, by the Calculation node
-        # The same as above until Code becomes a subclass of Data
-        links_qb = QueryBuilder()
-        links_qb.append(Code,
-                        project=['uuid'], tag='input')
-        links_qb.append(Calculation,
-                        project=['uuid'], tag='output',
-                        filters={'id': {'in': all_nodes_pk}},
-                        edge_filters={
-                            'type': {'==': LinkType.INPUT.value}},
-                        edge_project=['label', 'type'], output_of='input')
-        for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-            val = {
-                'input': str(input_uuid),
-                'output': str(output_uuid),
-                'label': str(link_label),
-                'type': str(link_type)
-            }
-            links_uuid_dict[frozenset(val.items())] = val
 
-        # CREATE (Calculation, Data) - Forward, by the Calculation node
+        # CREATE (ProcessNode, Data) - Forward, by the ProcessNode node
         links_qb = QueryBuilder()
-        links_qb.append(Calculation,
+        links_qb.append(ProcessNode,
                         project=['uuid'], tag='input',
                         filters={'id': {'in': all_nodes_pk}})
         links_qb.append(Data,
                         project=['uuid'], tag='output',
                         edge_filters={'type': {'==': LinkType.CREATE.value}},
-                        edge_project=['label', 'type'], output_of='input')
+                        edge_project=['label', 'type'], with_incoming='input')
         for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
             val = {
                 'input': str(input_uuid),
@@ -2178,59 +2632,17 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 'type':str(link_type)
             }
             links_uuid_dict[frozenset(val.items())] = val
-        # CREATE (Calculation, Code) - Forward, by the Calculation node
-        # The same as above until Code becomes a subclass of Data
-        # This case will not happen (with the current setup - a code is not
-        # created by a calculation) but it is addded for completeness
-        links_qb = QueryBuilder()
-        links_qb.append(Calculation,
-                        project=['uuid'], tag='input',
-                        filters={'id': {'in': all_nodes_pk}})
-        links_qb.append(Code,
-                        project=['uuid'], tag='output',
-                        edge_filters={'type': {'==': LinkType.CREATE.value}},
-                        edge_project=['label', 'type'], output_of='input')
-        for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-            val = {
-                'input': str(input_uuid),
-                'output': str(output_uuid),
-                'label': str(link_label),
-                'type': str(link_type)
-            }
-            links_uuid_dict[frozenset(val.items())] = val
 
-
-        # CREATE (Calculation, Data) - Backward, by the Data node
+        # CREATE (ProcessNode, Data) - Backward, by the Data node
         if create_reversed:
             links_qb = QueryBuilder()
-            links_qb.append(Calculation,
+            links_qb.append(ProcessNode,
                             project=['uuid'], tag='input',
                             filters={'id': {'in': all_nodes_pk}})
             links_qb.append(Data,
                             project=['uuid'], tag='output',
                             edge_filters={'type': {'==': LinkType.CREATE.value}},
-                            edge_project=['label', 'type'], output_of='input')
-            for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
-                val = {
-                    'input': str(input_uuid),
-                    'output': str(output_uuid),
-                    'label': str(link_label),
-                    'type':str(link_type)
-                }
-                links_uuid_dict[frozenset(val.items())] = val
-        # CREATE (Calculation, Code) - Backward, by the Code node
-        # The same as above until Code becomes a subclass of Data
-        # This case will not happen (with the current setup - a code is not
-        # created by a calculation) but it is addded for completeness
-        if create_reversed:
-            links_qb = QueryBuilder()
-            links_qb.append(Calculation,
-                            project=['uuid'], tag='input',
-                            filters={'id': {'in': all_nodes_pk}})
-            links_qb.append(Data,
-                            project=['uuid'], tag='output',
-                            edge_filters={'type': {'==': LinkType.CREATE.value}},
-                            edge_project=['label', 'type'], output_of='input')
+                            edge_project=['label', 'type'], with_incoming='input')
             for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
                 val = {
                     'input': str(input_uuid),
@@ -2240,15 +2652,15 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 }
                 links_uuid_dict[frozenset(val.items())] = val
 
-        # RETURN (Calculation, Data) - Forward, by the Calculation node
+        # RETURN (ProcessNode, Data) - Forward, by the ProcessNode node
         links_qb = QueryBuilder()
-        links_qb.append(Calculation,
+        links_qb.append(ProcessNode,
                         project=['uuid'], tag='input',
                         filters={'id': {'in': all_nodes_pk}})
         links_qb.append(Data,
                         project=['uuid'], tag='output',
                         edge_filters={'type': {'==': LinkType.RETURN.value}},
-                        edge_project=['label', 'type'], output_of='input')
+                        edge_project=['label', 'type'], with_incoming='input')
         for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
             val = {
                 'input': str(input_uuid),
@@ -2258,16 +2670,16 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             }
             links_uuid_dict[frozenset(val.items())] = val
 
-        # RETURN (Calculation, Data) - Backward, by the Data node
+        # RETURN (ProcessNode, Data) - Backward, by the Data node
         if return_reversed:
             links_qb = QueryBuilder()
-            links_qb.append(Calculation,
+            links_qb.append(ProcessNode,
                             project=['uuid'], tag='input')
             links_qb.append(Data,
                             project=['uuid'], tag='output',
                             filters={'id': {'in': all_nodes_pk}},
                             edge_filters={'type': {'==': LinkType.RETURN.value}},
-                            edge_project=['label', 'type'], output_of='input')
+                            edge_project=['label', 'type'], with_incoming='input')
             for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
                 val = {
                     'input': str(input_uuid),
@@ -2277,16 +2689,16 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                 }
                 links_uuid_dict[frozenset(val.items())] = val
 
-        # CALL (Calculation [caller], Calculation [called]) - Forward, by
-        # the Calculation node
+        # CALL (ProcessNode [caller], ProcessNode [called]) - Forward, by
+        # the ProcessNode node
         links_qb = QueryBuilder()
-        links_qb.append(Calculation,
+        links_qb.append(ProcessNode,
                         project=['uuid'], tag='input',
                         filters={'id': {'in': all_nodes_pk}})
-        links_qb.append(Calculation,
+        links_qb.append(ProcessNode,
                         project=['uuid'], tag='output',
-                        edge_filters={'type': {'==': LinkType.CALL.value}},
-                        edge_project=['label', 'type'], output_of='input')
+                        edge_filters={'type': {'in': [LinkType.CALL_CALC.value, LinkType.CALL_WORK.value]}},
+                        edge_project=['label', 'type'], with_incoming='input')
         for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
             val = {
                 'input': str(input_uuid),
@@ -2296,17 +2708,17 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             }
             links_uuid_dict[frozenset(val.items())] = val
 
-        # CALL (Calculation [caller], Calculation [called]) - Backward,
-        # by the Calculation [called] node
+        # CALL (ProcessNode [caller], ProcessNode [called]) - Backward,
+        # by the ProcessNode [called] node
         if call_reversed:
             links_qb = QueryBuilder()
-            links_qb.append(Calculation,
+            links_qb.append(ProcessNode,
                             project=['uuid'], tag='input')
-            links_qb.append(Calculation,
+            links_qb.append(ProcessNode,
                             project=['uuid'], tag='output',
                             filters={'id': {'in': all_nodes_pk}},
-                            edge_filters={'type': {'==': LinkType.CALL.value}},
-                            edge_project=['label', 'type'], output_of='input')
+                            edge_filters={'type': {'in': [LinkType.CALL_CALC.value, LinkType.CALL_WORK.value]}},
+                            edge_project=['label', 'type'], with_incoming='input')
             for input_uuid, output_uuid, link_label, link_type in links_qb.iterall():
                 val = {
                     'input': str(input_uuid),
@@ -2329,7 +2741,7 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
                                  filters={'id': {'==': curr_group}},
                                  project=['uuid'], tag='group')
             group_uuid_qb.append(entity_names_to_entities[NODE_ENTITY_NAME],
-                                 project=['uuid'], member_of='group')
+                                 project=['uuid'], with_group='group')
             for res in group_uuid_qb.iterall():
                 if str(res[0]) in groups_uuid:
                     groups_uuid[str(res[0])].append(str(res[1]))
@@ -2350,19 +2762,20 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
 
     if not silent:
         print("STORING DATA...")
-    
 
     data = {
         'node_attributes': node_attributes,
         'node_attributes_conversion': node_attributes_conversion,
+        'node_extras': node_extras,
+        'node_extras_conversion': node_extras_conversion,
         'export_data': export_data,
         'links_uuid': links_uuid,
         'groups_uuid': groups_uuid,
     }
 
-
     # N.B. We're really calling zipfolder.open
     with folder.open('data.json', mode='w') as fhandle:
+        # fhandle.write(json.dumps(data, cls=UUIDEncoder))
         fhandle.write(json.dumps(data))
 
     # Add proper signature to unique identifiers & all_fields_info
@@ -2397,11 +2810,9 @@ def export_tree(what, folder,allowed_licenses=None, forbidden_licenses=None,
             thisnodefolder = nodesubfolder.get_subfolder(
                 sharded_uuid, create=False,
                 reset_limit=True)
-            # In this way, I copy the content of the folder, and not the folder
-            # itself
-            thisnodefolder.insert_path(src=RepositoryFolder(
-                section=Node._section_name, uuid=uuid).abspath,
-                                       dest_name='.')
+            # In this way, I copy the content of the folder, and not the folder itself
+            src = RepositoryFolder(section=Repository._section_name, uuid=uuid).abspath
+            thisnodefolder.insert_path(src=src, dest_name='.')
 
 
 def check_licences(node_licenses, allowed_licenses, forbidden_licenses):

@@ -19,7 +19,7 @@ from __future__ import absolute_import
 
 # pylint: disable=no-name-in-module, import-error, invalid-name
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import (Column, Table, ForeignKey, UniqueConstraint, select, func, join, case)
+from sqlalchemy import (Column, Table, ForeignKey, UniqueConstraint, select)
 
 from sqlalchemy.types import (
     Integer,
@@ -34,14 +34,9 @@ from sqlalchemy.orm import (relationship, backref, sessionmaker)
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.dialects.postgresql import UUID
 
-# SETTINGS:
-from aiida.common.setup import get_profile_config
-from aiida.backends import settings
-
 # MISC
-from aiida.backends.sqlalchemy.models.utils import uuid_func
-from aiida.utils import timezone
-from aiida.common.datastructures import (_sorted_datastates, sort_states)
+from aiida.common import timezone
+from aiida.common.utils import get_new_uuid
 
 Base = declarative_base()
 
@@ -57,16 +52,6 @@ class DbLink(Base):
     input = relationship("DbNode", primaryjoin="DbLink.input_id == DbNode.id")
     output = relationship("DbNode", primaryjoin="DbLink.output_id == DbNode.id")
     label = Column(String(255), index=True, nullable=False)
-
-
-class DbCalcState(Base):
-    __tablename__ = "db_dbcalcstate"
-    id = Column(Integer, primary_key=True)
-    dbnode = relationship('DbNode', backref=backref('dbstates', passive_deletes=True))
-    state = Column(String(255))
-    time = Column(DateTime(timezone=True), default=timezone.now)
-    dbnode_id = Column(Integer, ForeignKey('db_dbnode.id', ondelete="CASCADE", deferrable=True, initially="DEFERRED"))
-    __table_args__ = (UniqueConstraint('dbnode_id', 'state'),)
 
 
 class DbAttribute(Base):
@@ -100,7 +85,7 @@ class DbComputer(Base):
 
     id = Column(Integer, primary_key=True)
 
-    uuid = Column(UUID(as_uuid=True), default=uuid_func)
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid)
     name = Column(String(255), unique=True, nullable=False)
     hostname = Column(String(255))
 
@@ -112,21 +97,6 @@ class DbComputer(Base):
 
     transport_params = Column(String(255))
     _metadata = Column('metadata', String(255), default="{}")
-
-    def get_aiida_class(self):
-        from aiida.backends.djsite.db.models import DbComputer as DjangoSchemaDbComputer
-        djcomputer = DjangoSchemaDbComputer(
-            id=self.id,
-            uuid=self.uuid,
-            name=self.name,
-            hostname=self.hostname,
-            description=self.description,
-            enabled=self.enabled,
-            transport_type=self.transport_type,
-            scheduler_type=self.scheduler_type,
-            transport_params=self.transport_params,
-            metadata=self._metadata)
-        return djcomputer.get_aiida_class()
 
 
 class DbUser(Base):
@@ -145,21 +115,6 @@ class DbUser(Base):
     last_login = Column(DateTime(timezone=True), default=timezone.now)
     date_joined = Column(DateTime(timezone=True), default=timezone.now)
 
-    def get_aiida_class(self):
-        from aiida.backends.djsite.db.models import DbUser as DjangoSchemaDbUser
-        djuser = DjangoSchemaDbUser(
-            id=self.id,
-            email=self.email,
-            password=self.password,
-            first_name=self.first_name,
-            last_name=self.last_name,
-            institution=self.institution,
-            is_staff=self.is_staff,
-            is_active=self.is_active,
-            last_login=self.last_login,
-            date_joined=self.date_joined)
-        return djuser.get_aiida_class()
-
 
 table_groups_nodes = Table(
     'db_dbgroup_dbnodes', Base.metadata, Column('id', Integer, primary_key=True),
@@ -172,10 +127,10 @@ class DbGroup(Base):
 
     id = Column(Integer, primary_key=True)
 
-    uuid = Column(UUID(as_uuid=True), default=uuid_func)
-    name = Column(String(255), index=True)
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid)
+    label = Column(String(255), index=True)
 
-    type = Column(String(255), default="", index=True)
+    type_string = Column(String(255), default="", index=True)
 
     time = Column(DateTime(timezone=True), default=timezone.now)
     description = Column(Text, nullable=True)
@@ -185,35 +140,17 @@ class DbGroup(Base):
 
     dbnodes = relationship('DbNode', secondary=table_groups_nodes, backref="dbgroups", lazy='dynamic')
 
-    __table_args__ = (UniqueConstraint('name', 'type'),)
+    __table_args__ = (UniqueConstraint('label', 'type_string'),)
 
     def __str__(self):
-        if self.type:
-            return '<DbGroup [type: {}] "{}">'.format(self.type, self.name)
-
-        return '<DbGroup [user-defined] "{}">'.format(self.name)
-
-    def get_aiida_class(self):
-        from aiida.orm.implementation.django.group import Group as DjangoAiidaGroup
-        from aiida.backends.djsite.db.models import DbGroup as DjangoSchemaDbGroup
-        dbgroup = DjangoSchemaDbGroup(
-            id=self.id,
-            type=self.type,
-            uuid=self.uuid,
-            name=self.name,
-            time=self.time,
-            description=self.description,
-            user_id=self.user_id,
-        )
-
-        return DjangoAiidaGroup(dbgroup=dbgroup)
+        return '<DbGroup [type: {}] "{}">'.format(self.type_string, self.label)
 
 
 class DbNode(Base):
     __tablename__ = "db_dbnode"
     id = Column(Integer, primary_key=True)
-    uuid = Column(UUID(as_uuid=True), default=uuid_func)
-    type = Column(String(255), index=True)
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid)
+    node_type = Column(String(255), index=True)
     process_type = Column(String(255), index=True)
     label = Column(String(255), index=True, nullable=True)
     description = Column(Text(), nullable=True)
@@ -239,41 +176,6 @@ class DbNode(Base):
         secondaryjoin="DbNode.id == DbLink.output_id",
         backref=backref("inputs", passive_deletes=True),
         passive_deletes=True)
-
-    def get_aiida_class(self):
-        """
-        Return the corresponding instance of
-        :func:`~aiida.orm.implementation.django.node.Node`
-        or a subclass return by the plugin loader.
-
-        .. todo::
-            The behavior is quite pathetic, creating a django DbNode instance
-            to instantiate the aiida instance.
-            These means that every time you load Aiida instances with
-            the QueryBuilder when using Django as a backend, three instances
-            are instantiated for every Aiida instance you load!
-            Could be fixed by allowing DbNode from the dummy nodel to be passed
-            to AiidaNode's __init__.
-
-        :returns: An instance of the plugin class
-        """
-        # I need to import the DbNode in the Django model,
-        # and instantiate an object that has the same attributes as self.
-        from aiida.backends.djsite.db.models import DbNode as DjangoSchemaDbNode
-        dbnode = DjangoSchemaDbNode(
-            id=self.id,
-            type=self.type,
-            process_type=self.process_type,
-            uuid=self.uuid,
-            ctime=self.ctime,
-            mtime=self.mtime,
-            label=self.label,
-            description=self.description,
-            dbcomputer_id=self.dbcomputer_id,
-            user_id=self.user_id,
-            public=self.public,
-            nodeversion=self.nodeversion)
-        return dbnode.get_aiida_class()
 
     @hybrid_property
     def user_email(self):
@@ -304,71 +206,6 @@ class DbNode(Base):
         """
         return select([DbComputer.name]).where(DbComputer.id == self.dbcomputer_id).label('computer_name')
 
-    # State
-    @hybrid_property
-    def state(self):
-        """
-        Return the most recent state from DbCalcState
-        """
-        if not self.id:
-            return None
-        all_states = DbCalcState.query.filter(DbCalcState.dbnode_id == self.id).all()
-        if all_states:
-            # return max((st.time, st.state) for st in all_states)[1]
-            return sort_states(
-                ((dbcalcstate.state, dbcalcstate.state.value) for dbcalcstate in all_states), use_key=True)[0]
-
-        return None
-
-    @state.expression
-    def state(self):
-        """
-        Return the expression to get the 'latest' state from DbCalcState,
-        to be used in queries, where 'latest' is defined using the state order
-        defined in _sorted_datastates.
-        """
-        # Sort first the latest states
-        whens = {v: idx for idx, v in enumerate(_sorted_datastates[::-1], start=1)}
-        custom_sort_order = case(
-            value=DbCalcState.state, whens=whens, else_=100)  # else: high value to put it at the bottom
-
-        # Add numerical state to string, to allow to sort them
-        states_with_num = select([
-            DbCalcState.id.label('id'),
-            DbCalcState.dbnode_id.label('dbnode_id'),
-            DbCalcState.state.label('state_string'),
-            custom_sort_order.label('num_state')
-        ]).select_from(DbCalcState).alias()
-
-        # Get the most 'recent' state (using the state ordering, and the min function) for
-        # each calc
-        calc_state_num = select([
-            states_with_num.c.dbnode_id.label('dbnode_id'),
-            func.min(states_with_num.c.num_state).label('recent_state')
-        ]).group_by(states_with_num.c.dbnode_id).alias()
-
-        # Join the most-recent-state table with the DbCalcState table
-        all_states_q = select([
-            DbCalcState.dbnode_id.label('dbnode_id'),
-            DbCalcState.state.label('state_string'),
-            calc_state_num.c.recent_state.label('recent_state'),
-            custom_sort_order.label('num_state'),
-        ]).select_from(  # DbCalcState).alias().join(
-            join(DbCalcState, calc_state_num, DbCalcState.dbnode_id == calc_state_num.c.dbnode_id)).alias()
-
-        # Get the association between each calc and only its corresponding most-recent-state row
-        subq = select([
-            all_states_q.c.dbnode_id.label('dbnode_id'),
-            all_states_q.c.state_string.label('state')
-        ]).select_from(all_states_q).where(all_states_q.c.num_state == all_states_q.c.recent_state).alias()
-
-        # Final filtering for the actual query
-        return select([subq.c.state]). \
-            where(
-            subq.c.dbnode_id == self.id,
-        ). \
-            label('laststate')
-
 
 class DbAuthInfo(Base):
     __tablename__ = "db_dbauthinfo"
@@ -388,20 +225,40 @@ class DbAuthInfo(Base):
 
     __table_args__ = (UniqueConstraint("aiidauser_id", "dbcomputer_id"),)
 
-    def get_aiida_class(self):
-        from aiida.backends.djsite.db.models import DbAuthInfo as DjangoSchemaDbAuthInfo
-        dbauthinfo = DjangoSchemaDbAuthInfo(
-            id=self.id,
-            aiidauser_id=self.aiidauser_id,
-            dbcomputer_id=self.dbcomputer_id,
-            metadata=self._metadata,
-            auth_params=self.auth_params,
-            enabled=self.enabled,
-        )
-        return dbauthinfo.get_aiida_class()
+
+class DbLog(Base):
+    __tablename__ = "db_dblog"
+
+    id = Column(Integer, primary_key=True)
+
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid)
+
+    time = Column(DateTime(timezone=True), default=timezone.now)
+    loggername = Column(String(255), index=True)
+    levelname = Column(String(255), index=True)
+
+    dbnode_id = Column(Integer, ForeignKey('db_dbnode.id', deferrable=True, initially="DEFERRED"), nullable=True)
+    dbnode = relationship('DbNode', backref=backref('dblogs', passive_deletes=True))
+
+    message = Column(Text(), nullable=True)
+    _metadata = Column('metadata', String(255), default="{}")
 
 
-profile = get_profile_config(settings.AIIDADB_PROFILE)
+class DbComment(Base):
+    __tablename__ = "db_dbcomment"
+
+    id = Column(Integer, primary_key=True)
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid)
+    dbnode_id = Column(Integer, ForeignKey('db_dbnode.id', ondelete="CASCADE", deferrable=True, initially="DEFERRED"))
+
+    ctime = Column(DateTime(timezone=True), default=timezone.now)
+    mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now)
+
+    user_id = Column(Integer, ForeignKey('db_dbuser.id', ondelete="CASCADE", deferrable=True, initially="DEFERRED"))
+    content = Column(Text, nullable=True)
+
+    dbnode = relationship('DbNode', backref='dbcomments')
+    user = relationship("DbUser")
 
 
 def get_aldjemy_session():

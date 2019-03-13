@@ -13,11 +13,9 @@ Base class for AiiDA tests
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import shutil
-import os
 
-from aiida.orm.implementation.django.backend import DjangoBackend
 from aiida.backends.testimplbase import AiidaTestImplementation
+from aiida.orm.implementation.django.backend import DjangoBackend
 
 # Add a new entry here if you add a file with tests under aiida.backends.djsite.db.subtests
 # The key is the name to use in the 'verdi test' command (e.g., a key 'generic'
@@ -40,91 +38,23 @@ class DjangoTests(AiidaTestImplementation):
     def setUpClass_method(self):
         self.clean_db()
         self.backend = DjangoBackend()
-        self.insert_data()
-
-    def setUp_method(self):
-        pass
-
-    def tearDown_method(self):
-        pass
-
-    def insert_data(self):
-        """
-        Insert default data into the DB.
-        """
-        from django.core.exceptions import ObjectDoesNotExist  # pylint: disable=import-error, no-name-in-module
-
-        from aiida.backends.djsite.db.models import DbUser
-        from aiida.common.utils import get_configured_user_email
-        # We create the user only once:
-        # Otherwise, get_automatic_user() will fail when the
-        # user is recreated because it caches the user!
-        # In any case, store it in self.user though
-        try:
-            self.user = DbUser.objects.get(email=get_configured_user_email())
-        except ObjectDoesNotExist:
-            self.user = DbUser.objects.create_user(get_configured_user_email(), 'fakepwd')
-        # Reqired by the calling class
-        self.user_email = self.user.email
-
-        super(DjangoTests, self).insert_data()
 
     def clean_db(self):
-        from aiida.backends.djsite.db.models import (DbComputer, DbUser, DbWorkflow, DbWorkflowStep, DbWorkflowData)
-        from aiida.common.utils import get_configured_user_email
+        from aiida.backends.djsite.db import models
 
-        # Complicated way to make sure we 'unwind' all the relationships
-        # between workflows and their children.
-        DbWorkflowStep.calculations.through.objects.all().delete()
-        DbWorkflowStep.sub_workflows.through.objects.all().delete()
-        DbWorkflowData.objects.all().delete()
-        DbWorkflowStep.objects.all().delete()
-        DbWorkflow.objects.all().delete()  # pylint: disable=no-member
+        # I first need to delete the links, because in principle I could not delete input nodes, only outputs.
+        # For simplicity, since I am deleting everything, I delete the links first
+        models.DbLink.objects.all().delete()
 
-        # Delete groups
-        from aiida.backends.djsite.db.models import DbGroup
+        # Then I delete the nodes, otherwise I cannot delete computers and users
+        models.DbLog.objects.all().delete()
+        models.DbNode.objects.all().delete()  # pylint: disable=no-member
+        models.DbWorkflow.objects.all().delete()  # pylint: disable=no-member
+        models.DbUser.objects.all().delete()  # pylint: disable=no-member
+        models.DbComputer.objects.all().delete()
+        models.DbGroup.objects.all().delete()
 
-        DbGroup.objects.all().delete()
-
-        # I first need to delete the links, because in principle I could
-        # not delete input nodes, only outputs. For simplicity, since
-        # I am deleting everything, I delete the links first
-        from aiida.backends.djsite.db.models import DbLink
-
-        DbLink.objects.all().delete()
-
-        # Then I delete the nodes, otherwise I cannot
-        # delete computers and users
-        from aiida.backends.djsite.db.models import DbNode
-
-        DbNode.objects.all().delete()  # pylint: disable=no-member
-
-        # I delete all the users except the default user.
-        # See discussion in setUpClass
-        DbUser.objects.exclude(email=get_configured_user_email()).delete()
-
-        DbComputer.objects.all().delete()
-
-        from aiida.backends.djsite.db.models import DbLog
-
-        DbLog.objects.all().delete()
-
-    # Note this is has to be a normal method, not a class method
     def tearDownClass_method(self):
-        from aiida.settings import REPOSITORY_PATH
-        from aiida.common.setup import TEST_KEYWORD
-        from aiida.common.exceptions import InvalidOperation
-
-        base_repo_path = os.path.basename(os.path.normpath(REPOSITORY_PATH))
-        if TEST_KEYWORD not in base_repo_path:
-            raise InvalidOperation("Be careful. The repository for the tests "
-                                   "is not a test repository. I will not "
-                                   "empty the database and I will not delete "
-                                   "the repository. Repository path: "
-                                   "{}".format(REPOSITORY_PATH))
-
-        self.clean_db()
-
-        # I clean the test repository
-        shutil.rmtree(REPOSITORY_PATH, ignore_errors=True)
-        os.makedirs(REPOSITORY_PATH)
+        """
+        Backend-specific tasks for tearing down the test environment.
+        """

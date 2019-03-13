@@ -71,7 +71,7 @@ and the ``repository`` directory, is properly backed up by
 your backup software (under Ubuntu, Backup -> check the "Folders" tab).
 
 .. note:: If your database is very large (more than a few hundreds of thousands 
-  of nodes and workflows), a standard backup of your repository folder will be
+  of nodes), a standard backup of your repository folder will be
   very slow (up to days), thus slowing down your computer dramatically. To fix
   this problem you can set up an incremental backup of your repository by following
   the instructions :ref:`here<repository_backup>`.
@@ -195,9 +195,9 @@ making efficient backups of the AiiDA repository.
 
 Before running the backup script, you will have to configure it. Therefore you
 should execute the ``backup_setup.py`` which is located under
-``MY_AIIDA_FOLDER/aiida/common/additions/backup_script``. For example::
+``MY_AIIDA_FOLDER/aiida/manage/backup``. For example::
 
-	verdi -p PROFILENAME run MY_AIIDA_FOLDER/aiida/common/additions/backup_script/backup_setup.py
+	verdi -p PROFILENAME run MY_AIIDA_FOLDER/aiida/manage/backup/backup_setup.py
 
 where PROFILENAME is the name of the profile you want to use (if you don't specify the ``-p`` option, the default profile will be used). This will ask a set of questions. More precisely, it will initially ask for:
 
@@ -224,9 +224,10 @@ where PROFILENAME is the name of the profile you want to use (if you don't speci
   
   You should put this line into the actions performed at start-up (under gnome you 
   can access them by typing ``gnome-session-properties`` in a terminal), so that the 
-  remote directory is mounted automatically after a reboot (but do not put it in 
-  your ``.bashrc`` file otherwise each time you open a new terminal, your 
-  computer will complain that the mount point is not empty...). 
+  remote directory is mounted automatically after a reboot.
+  Do **not** put it in your shell's startup file (e.g. ``.bashrc``) -
+  otherwise each time you open a new terminal, your computer will complain that
+  the mount point is not empty... 
 
 
 A template backup configuration file (``backup_info.json.tmpl``) will be copied
@@ -236,7 +237,7 @@ by the script, and then ``backup_info.json`` will be created based on you answer
 
 The main script backs up the AiiDA repository that is referenced by the current
 AiiDA database. The script will start from the ``oldest_object_backedup`` date
-or the date of the oldest node/workflow object found and it will periodically
+or the date of the oldest node object found and it will periodically
 backup (in periods of ``periodicity`` days) until the ending date of the backup
 specified by ``end_date_of_backup`` or ``days_to_backup``
 
@@ -256,7 +257,7 @@ The backup parameters to be set in the ``backup_info.json`` are:
    oldest object that was backed up. If you are not aware of this value or if it
    is the first time that you start a backup up for this repository, then set
    this value to ``null``. Then the script will search the creation date of the
-   oldest workflow or node object in the database and it will start
+   oldest node object in the database and it will start
    the backup from that date. E.g. ``"oldest_object_backedup": "2015-07-20 11:13:08.145804+02:00"``
 
  * ``end_date_of_backup``: If set, the backup script will backup files that

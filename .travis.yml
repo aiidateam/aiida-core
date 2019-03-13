@@ -16,11 +16,11 @@ services:
 
 addons:
     # make sure the path in .ci/test_script.sh matches the version requested here
-    postgresql: "9.5"
+    postgresql: "9.6"
 
     apt:
         packages:
-            - postgresql-server-dev-9.5
+            - postgresql-server-dev-9.6
             - texlive-base
             - texlive-generic-recommended
             - texlive-fonts-recommended
@@ -32,6 +32,9 @@ addons:
             - graphviz
 
 before_install:
+    # We need to replace `TRAVIS_HOME` with `HOME` because the former won't be set when SSH'ing to localhost on the
+    # the Travis machine, causing certain scripts sourced in the `.bashrc` to fail
+    - sed -i 's/TRAVIS_HOME/HOME/g' /home/travis/.travis/job_stages
     # This is needed for the SSH tests (being able to ssh to localhost)
     # And will also be used for the docker test
     - ssh-keygen -t rsa -N "" -f "${HOME}/.ssh/id_rsa"
@@ -47,10 +50,10 @@ before_install:
 
 install:
     # Upgrade pip setuptools and wheel to be able to run the next command
-    - pip install -U pip wheel setuptools
+    - pip install -U pip==18.1 wheel setuptools coveralls
     - pip install coveralls
     # Install AiiDA with some optional dependencies
-    - if [ "$TEST_TYPE" == "docs" ]; then pip install . && pip install -r docs/requirements_for_rtd.txt; else pip install .[all]; fi
+    - if [ "$TEST_TYPE" == "docs" ]; then pip install . && pip install -r docs/requirements_for_rtd.txt; else pip install --no-cache-dir .[all]; fi
 
 env:
     ## Build matrix to test both backends, and the docs
@@ -61,6 +64,7 @@ env:
     - TEST_AIIDA_BACKEND=django TEST_TYPE="docs"
     - TEST_AIIDA_BACKEND=django TEST_TYPE="tests"
     - TEST_AIIDA_BACKEND=sqlalchemy TEST_TYPE="tests"
+    # - TEST_TYPE="conda"
 
 before_script:
     - .ci/setup_profiles.sh

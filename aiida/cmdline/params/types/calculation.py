@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """
-Module for the calculation parametre type
+Module for the calculation parameter type
 """
 
 from __future__ import division

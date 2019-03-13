@@ -34,7 +34,6 @@ VISUALIZATION_FORMATS = ['xmgrace']
 @verdi_data.group('bands')
 def bands():
     """Manipulate BandsData objects."""
-    pass
 
 
 # pylint: disable=too-many-arguments
@@ -46,11 +45,11 @@ def bands():
 @options.FORMULA_MODE()
 def bands_list(elements, elements_exclusive, raw, formula_mode, past_days, groups, all_users):
     """List BandsData objects."""
-    from aiida.orm import construct_backend
+    from aiida.manage.manager import get_manager
     from tabulate import tabulate
     from argparse import Namespace
 
-    backend = construct_backend()
+    backend = get_manager().get_backend()
 
     args = Namespace()
     args.element = elements

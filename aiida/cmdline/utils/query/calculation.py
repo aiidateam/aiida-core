@@ -11,16 +11,20 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from aiida.common.utils import classproperty
+from aiida.common.lang import classproperty
 from aiida.cmdline.utils.query.mapping import CalculationProjectionMapper
 
 
-class CalculationQueryBuilder(object):
+class CalculationQueryBuilder(object):  # pylint: disable=useless-object-inheritance
     """Utility class to construct a QueryBuilder instance for Calculation nodes and project the query set."""
 
+    # This tuple serves to mark compound projections that cannot explicitly be projected in the QueryBuilder, but will
+    # have to be manually projected from composing its individual projection constituents
+    _compound_projections = ('state',)
     _default_projections = ('pk', 'ctime', 'state', 'process_label', 'process_status')
     _valid_projections = ('pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'process_status', 'exit_status',
-                          'sealed', 'process_label', 'label', 'description', 'type', 'paused', 'process_type')
+                          'sealed', 'process_label', 'label', 'description', 'node_type', 'paused', 'process_type',
+                          'job_state', 'scheduler_state')
 
     def __init__(self, mapper=None):
         if mapper is None:
@@ -51,7 +55,7 @@ class CalculationQueryBuilder(object):
         :param failed: boolean to filter only failed processes
         :return: dictionary of filters suitable for a QueryBuilder.append() call
         """
-        from aiida.work import ProcessState
+        from aiida.engine import ProcessState
 
         exit_status_attribute = self.mapper.get_attribute('exit_status')
         process_state_attribute = self.mapper.get_attribute('process_state')
@@ -60,8 +64,8 @@ class CalculationQueryBuilder(object):
 
         if node_types is not None:
             filters['or'] = []
-            for node_type in node_types:
-                filters['or'].append({'type': node_type.plugin_type_string})
+            for node_class in node_types:
+                filters['or'].append({'type': node_class.class_node_type})
 
         if process_state and not all_entries:
             filters[process_state_attribute] = {'in': process_state}
@@ -76,10 +80,13 @@ class CalculationQueryBuilder(object):
 
         return filters
 
-    def get_query_set(self, filters=None, order_by=None, past_days=None, limit=None):
+    def get_query_set(self, relationships=None, filters=None, order_by=None, past_days=None, limit=None):
         """
         Return the query set of calculations for the given filters and query parameters
 
+        :param relationships: a mapping of relationships to join on, e.g. {'with_node': Group} to join on a Group. The
+            keys in this dictionary should be the keyword used in the `append` method of the `QueryBuilder` to join the
+            entity on that is defined as the value.
         :param filters: rules to filter query results with
         :param order_by: order the query set by this criterion
         :param past_days: only include entries from the last past days
@@ -88,11 +95,15 @@ class CalculationQueryBuilder(object):
         """
         import datetime
 
-        from aiida.orm.calculation import Calculation
-        from aiida.orm.querybuilder import QueryBuilder
-        from aiida.utils import timezone
+        from aiida import orm
+        from aiida.common import timezone
 
-        projected_attributes = [self.mapper.get_attribute(projection) for projection in self._valid_projections]
+        # Define the list of projections for the QueryBuilder, which are all valid minus the compound projections
+        projected_attributes = [
+            self.mapper.get_attribute(projection)
+            for projection in self._valid_projections
+            if projection not in self._compound_projections
+        ]
 
         if filters is None:
             filters = {}
@@ -100,13 +111,17 @@ class CalculationQueryBuilder(object):
         if past_days is not None:
             filters['ctime'] = {'>': timezone.now() - datetime.timedelta(days=past_days)}
 
-        builder = QueryBuilder()
-        builder.append(cls=Calculation, filters=filters, project=projected_attributes, tag='calculation')
+        builder = orm.QueryBuilder()
+        builder.append(cls=orm.ProcessNode, filters=filters, project=projected_attributes, tag='process')
+
+        if relationships is not None:
+            for tag, entity in relationships.items():
+                builder.append(cls=type(entity), filters={'id': entity.id}, **{tag: 'process'})
 
         if order_by is not None:
-            builder.order_by({'calculation': order_by})
+            builder.order_by({'process': order_by})
         else:
-            builder.order_by({'calculation': {'ctime': 'asc'}})
+            builder.order_by({'process': {'ctime': 'asc'}})
 
         if limit is not None:
             builder.limit(limit)
@@ -121,7 +136,7 @@ class CalculationQueryBuilder(object):
         result = [header]
 
         for query_result in query_set:
-            result_row = [self.mapper.format(projection, query_result['calculation']) for projection in projections]
+            result_row = [self.mapper.format(projection, query_result['process']) for projection in projections]
             result.append(result_row)
 
         return result

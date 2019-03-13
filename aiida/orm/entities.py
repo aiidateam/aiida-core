@@ -8,24 +8,46 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for all common top level AiiDA entity classes and methods"""
+from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from __future__ import absolute_import
+
+import typing
+
+from plumpy.base.utils import super_check, call_with_super_check
 
 from aiida.common import exceptions
-from aiida.common.utils import classproperty, type_check
-
-from . import backends
+from aiida.common import datastructures
+from aiida.common.lang import classproperty, type_check
+from aiida.manage.manager import get_manager
 
 __all__ = ('Entity', 'Collection')
 
+EntityType = typing.TypeVar('EntityType')  # pylint: disable=invalid-name
 
-class Collection(object):
+
+class Collection(typing.Generic[EntityType]):
     """Container class that represents the collection of objects of a particular type."""
 
+    # A store for any backend specific collections that already exist
+    _COLLECTIONS = datastructures.LazyStore()
+
+    @classmethod
+    def get_collection(cls, entity_type, backend):
+        """
+        Get the collection for a given entity type and backend instance
+
+        :param entity_type: the entity type e.g. User, Computer, etc
+        :param backend: the backend instance to get the collection for
+        :return: the collection instance
+        """
+        # Lazily get the collection i.e. create only if we haven't done so yet
+        return cls._COLLECTIONS.get((entity_type, backend), lambda: entity_type.Collection(backend, entity_type))
+
     def __init__(self, backend, entity_class):
-        # assert issubclass(entity_class, Entity), "Must provide an entity type"
-        self._backend = backend
+        """Construct a new entity collection"""
+        assert issubclass(entity_class, Entity), "Must provide an entity type"
+        self._backend = backend or get_manager().get_backend()
         self._entity_type = entity_class
 
     def __call__(self, backend):
@@ -39,7 +61,7 @@ class Collection(object):
             # Special case if they actually want the same collection
             return self
 
-        return self.__class__(backend, self._entity_type)
+        return self.get_collection(self.entity_type, backend)
 
     @property
     def backend(self):
@@ -57,49 +79,50 @@ class Collection(object):
         :return: a new query builder instance
         :rtype: :class:`aiida.orm.QueryBuilder`
         """
-        # pylint: disable=no-self-use, fixme
+        # pylint: disable=no-self-use
         from . import querybuilder
 
         query = querybuilder.QueryBuilder()
         query.append(self._entity_type, project='*')
         return query
 
-    def get(self, **kwargs):
+    def get(self, **filters):
         """
-        Get a collection entry using keyword parameter filters
+        Get a single collection entry that matches the filter criteria
 
-        :param kwargs: the filters identifying the object to get
+        :param filters: the filters identifying the object to get
         :return: the entry
         """
-        query = self.query()
-        query.add_filter(self.entity_type, kwargs)
-        res = [_[0] for _ in query.all()]
-        if not res:
-            raise exceptions.NotExistent("No {} with filter '{}' found".format(self.entity_type.__name__, kwargs))
-        if len(res) > 1:
-            raise exceptions.MultipleObjectsError("Multiple {}s found with the same id '{}'".format(
-                self.entity_type.__name__, id))
-
-        return res[0]
-
-    def find(self, **filters):
-        """
-        Find entries matching the given filters
-
-        :param filters: the keyword value pair filters to match
-        :return: a list of resulting matches
-        :rtype: list
-        """
-        query = self.query()
-        query.add_filter(self.entity_type, filters)
-        res = [_[0] for _ in query.all()]
+        res = self.find(filters=filters)
         if not res:
             raise exceptions.NotExistent("No {} with filter '{}' found".format(self.entity_type.__name__, filters))
         if len(res) > 1:
             raise exceptions.MultipleObjectsError("Multiple {}s found with the same id '{}'".format(
                 self.entity_type.__name__, id))
 
-        return res
+        return res[0]
+
+    def find(self, filters=None, order_by=None, limit=None):
+        """
+        Find collection entries matching the filter criteria
+
+        :param filters: the keyword value pair filters to match
+        :param order_by: a list of (key, direction) pairs specifying the sort order
+        :type order_by: list
+        :param limit: the maximum number of results to return
+        :type limit: int
+        :return: a list of resulting matches
+        :rtype: list
+        """
+        query = self.query()
+        filters = filters or {}
+        query.add_filter(self.entity_type, filters)
+        if order_by:
+            query.order_by({self.entity_type: order_by})
+        if limit:
+            query.limit(limit)
+
+        return [_[0] for _ in query.all()]
 
     def all(self):
         """
@@ -110,13 +133,12 @@ class Collection(object):
         return [_[0] for _ in self.query().all()]
 
 
-class Entity(object):
+class Entity(object):  # pylint: disable=useless-object-inheritance
     """An AiiDA entity"""
 
-    _BACKEND = None
-    _OBJECTS = None
+    _objects = None
 
-    # Define out collection type
+    # Define our collection type
     Collection = Collection
 
     @classproperty
@@ -125,10 +147,10 @@ class Entity(object):
         Get an collection for objects of this type.
 
         :param backend: the optional backend to use (otherwise use default)
-        :return: an object that can be used to access entites of this type
+        :return: an object that can be used to access entities of this type
         """
-        backend = backend or backends.construct_backend()
-        return cls.Collection(backend, cls)
+        backend = backend or get_manager().get_backend()
+        return cls.Collection.get_collection(cls, backend)
 
     @classmethod
     def get(cls, **kwargs):
@@ -146,9 +168,10 @@ class Entity(object):
         from . import implementation
 
         type_check(backend_entity, implementation.BackendEntity)
-        computer = cls.__new__(cls)
-        computer.init_from_backend(backend_entity)
-        return computer
+        entity = cls.__new__(cls)
+        entity.init_from_backend(backend_entity)
+        call_with_super_check(entity.initialize)
+        return entity
 
     def __init__(self, backend_entity):
         """
@@ -156,6 +179,7 @@ class Entity(object):
         :type backend_entity: :class:`aiida.orm.implementation.BackendEntity`
         """
         self._backend_entity = backend_entity
+        call_with_super_check(self.initialize)
 
     def init_from_backend(self, backend_entity):
         """
@@ -163,6 +187,13 @@ class Entity(object):
         :type backend_entity: :class:`aiida.orm.implementation.BackendEntity`
         """
         self._backend_entity = backend_entity
+
+    @super_check
+    def initialize(self):
+        """Initialize instance attributes.
+
+        This will be called after the constructor is called or an entity is created from an existing backend entity.
+        """
 
     @property
     def id(self):

@@ -8,13 +8,15 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Backend user"""
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 import abc
 import six
 
 from . import backends
 
-__all__ = 'BackendUser', 'BackendUserCollection'
+__all__ = ('BackendUser', 'BackendUserCollection')
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -38,47 +40,91 @@ class BackendUser(backends.BackendEntity):
 
     @abc.abstractproperty
     def email(self):
-        pass
+        """
+        Get the email address of the user
+
+        :return: the email address
+        """
 
     @abc.abstractmethod
     @email.setter
     def email(self, val):
-        pass
+        """
+        Set the email address of the user
+
+        :param val: the new email address
+        """
 
     @abc.abstractmethod
     def get_password(self):
-        pass
+        """
+        Get the password for the user
+
+        :return: the password
+        """
 
     @abc.abstractmethod
     def set_password(self, new_pass):
-        pass
+        """
+        Set the password of the user
+
+        :param new_pass: the new password
+        """
 
     @abc.abstractproperty
     def first_name(self):
-        pass
+        """
+        Get the user's first name
+
+        :return: the first name
+        :rtype: str
+        """
 
     @abc.abstractmethod
     @first_name.setter
     def first_name(self, val):
-        pass
+        """
+        Set the user's first name
+
+        :param val: the new first name
+        """
 
     @abc.abstractproperty
     def last_name(self):
-        pass
+        """
+        Get the user's last name
+
+        :return: the last name
+        :rtype: str
+        """
 
     @abc.abstractmethod
     @last_name.setter
     def last_name(self, val):
-        pass
+        """
+        Set the user's last name
+
+        :param val: the new last name
+        :type val: str
+        """
 
     @abc.abstractproperty
     def institution(self):
-        pass
+        """
+        Get the user's institution
+
+        :return: the institution
+        :rtype: str
+        """
 
     @abc.abstractmethod
     @institution.setter
     def institution(self, val):
-        pass
+        """
+        Set the user's institution
+
+        :param val: the new institution
+        """
 
     @abc.abstractproperty
     def is_active(self):
@@ -108,6 +154,7 @@ class BackendUser(backends.BackendEntity):
         pass
 
 
-class BackendUserCollection(backends.BackendCollection):
+class BackendUserCollection(backends.BackendCollection[BackendUser]):
     # pylint: disable=too-few-public-methods
-    ENTRY_TYPE = BackendUser
+
+    ENTITY_CLASS = BackendUser

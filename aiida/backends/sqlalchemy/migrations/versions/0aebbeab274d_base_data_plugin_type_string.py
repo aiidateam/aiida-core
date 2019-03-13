@@ -10,7 +10,7 @@
 """Correct the type string for the base data types
 
 Revision ID: 0aebbeab274d
-Revises: 35d4ee9a1b0e
+Revises: 7a6587e16f4c
 Create Date: 2018-02-24 20:12:44.731358
 
 """
@@ -23,7 +23,7 @@ from sqlalchemy.sql import text
 
 # revision identifiers, used by Alembic.
 revision = '0aebbeab274d'
-down_revision = '35d4ee9a1b0e'
+down_revision = '7a6587e16f4c'
 branch_labels = None
 depends_on = None
 

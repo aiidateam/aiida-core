@@ -66,11 +66,9 @@ class App(Flask):
                 # Generic server-side error (not to make the api crash if an
                 # unhandled exception is raised. Caution is never enough!!)
                 else:
-                    response = jsonify({
-                        'message':
-                        'Internal server error. The original '
-                        'message was: \"{}\"'.format(error)
-                    })
+                    response = jsonify(
+                        {'message': 'Internal server error. The original '
+                         'message was: \"{}\"'.format(error)})
                     response.status_code = 500
 
                 return response

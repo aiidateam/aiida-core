@@ -75,16 +75,19 @@ py:class  bool
 py:class  basestring
 py:class  None
 py:class  type
+py:class  typing.Final
 # this is required for metaclasses(?)
 py:class  __builtin__.bool
 py:class  __builtin__.float
 py:class  __builtin__.int
+py:class  __builtin__.object
 py:class  __builtin__.str
 py:class  __builtin__.dict
 # ... and the same for Python 3
 py:class  builtins.bool
 py:class  builtins.float
 py:class  builtins.int
+py:class  builtins.object
 py:class  builtins.str
 py:class  builtins.dict
 
@@ -105,6 +108,7 @@ py:obj bool
 py:class  abc.ABCMeta
 
 py:exc    click.BadParameter
+py:exc    click.UsageError
 py:class  click.ParamType
 py:class  click.core.Group
 py:class  click.core.Option
@@ -122,6 +126,7 @@ py:class  distutils.version.Version
 py:class  docutils.parsers.rst.Directive
 
 py:class  enum.Enum
+py:class  enum.IntEnum
 
 py:class  flask.app.Flask
 py:class  flask.json.JSONEncoder
@@ -134,9 +139,11 @@ py:class  logging.Filter
 py:class  logging.Handler
 py:class  logging.record
 py:class  logging.Logger
+py:class  logging.LoggerAdapter
 
 py:class  paramiko.proxy.ProxyCommand
 
+py:class  StateMachine
 py:class  plumpy.futures.Future
 py:class  plumpy.processes.Process
 py:class  plumpy.process_comms.ProcessLauncher
@@ -146,15 +153,18 @@ py:class  plumpy.Communicator
 py:class  plumpy.RemoteProcessThreadController
 py:class  plumpy.Bundle
 py:class  plumpy.workchains.WorkChainSpec
+py:class  plumpy.WorkChainSpec
 py:class  plumpy.Persister
 py:class  plumpy.persistence.Persister
 py:class  plumpy.PersistenceError
 py:class  plumpy.ports.Port
 py:class  plumpy.ports.InputPort
+py:class  plumpy.ports.OutputPort
 py:class  plumpy.ports.PortNamespace
 py:class  plumpy.utils.AttributesDict
 py:class  plumpy.loaders.DefaultObjectLoader
 py:class  plumpy.ObjectLoader
+py:class  plumpy.process_states.Waiting
 py:class  plumpy.process_comms.RemoteProcessThreadController
 py:exc    plumpy.TaskRejected
 py:meth   plumpy.process_spec.ProcessSpec.expose_inputs
@@ -179,7 +189,8 @@ py:class  tuple
 
 py:class  staticmethod
 
-
+py:class  django.contrib.auth.base_user.AbstractBaseUser
+py:class  django.contrib.auth.base_user.BaseUserManager
 py:class  django.contrib.auth.models.AbstractBaseUser
 py:class  django.contrib.auth.models.BaseUserManager
 py:class  django.contrib.auth.models.PermissionsMixin
@@ -194,6 +205,7 @@ py:class  sqlalchemy.ext.declarative.api.Base
 py:class  sqlalchemy.ext.declarative.api.Model
 py:class  sqlalchemy.sql.functions.FunctionElement
 py:class  sqlalchemy.orm.query.Query
+py:class  sqlalchemy.orm.util.AliasedClass
 py:exc    sqlalchemy.orm.exc.MultipleResultsFound
 
 py:class  sphinx.ext.autodoc.ClassDocumenter
@@ -201,15 +213,20 @@ py:class  sphinx.ext.autodoc.ClassDocumenter
 py:class  _abcoll.Mapping
 py:class  _abcoll.MutableMapping
 py:class  _abcoll.MutableSequence
+py:class  _abcoll.Iterator
+py:class  _abcoll.Sized
 # repeat for Python 3:
 py:class  collections.abc.Mapping
 py:class  collections.abc.MutableMapping
 py:class  collections.abc.MutableSequence
+py:class  collections.abc.Iterator
+py:class  collections.abc.Sized
 
 # backend-dependent implementation
-py:class  aiida.orm.node.Node
+py:class  WorkChainSpec
+py:class  aiida.orm.nodes.Node
 # This comes from ABCMeta
-py:meth   aiida.orm.group.Group.get_from_string
+py:meth   aiida.orm.groups.Group.get_from_string
 
 py:mod    click
 py:class  click.Choice
@@ -221,3 +238,14 @@ py:class yaml.dumper.Dumper
 py:class yaml.loader.Loader
 
 py:class uuid.UUID
+
+# typing
+py:class typing.Generic
+py:class typing.TypeVar
+
+# Python 3 complains about this because of orm.Entity.Collection inner class (no idea why)
+py:class Collection
+
+
+# psychopg2
+py:class psycopg2.extensions.cursor

@@ -23,7 +23,7 @@ To start the REST server open a terminal and type
 
 .. code-block:: bash
 
-    $ verdi restapi
+    verdi restapi
 
 This command will hook up a REST api with the default parameters, namely on port ``5000``
 of ``localhost``,
@@ -33,7 +33,7 @@ For an overview of options accepted by ``verdi restapi`` you can type
 
 .. code-block:: bash
 
-    $ verdi restapi --help
+    verdi restapi --help
 
 
 Like all ``verdi`` commands, the AiiDA profile can be changed by putting ``-p PROFILE`` right after ``verdi``.
@@ -114,27 +114,27 @@ AiiDA object(s) you want to request. The following resources are available:
 +--------------------------------------------------------------------------------------------+-------------------+
 | Class                                                                                      | Resource          |
 +============================================================================================+===================+
-| :py:class:`Calculation <aiida.orm.implementation.general.calculation.AbstractCalculation>` | ``/calculations`` |
+| :py:class:`ProcessNode <aiida.orm.nodes.process.ProcessNode>`                              | ``/calculations`` |
 +--------------------------------------------------------------------------------------------+-------------------+
 | :py:class:`Computer <aiida.orm.Computer>`                                                  | ``/computers``    |
 +--------------------------------------------------------------------------------------------+-------------------+
-| :py:class:`Data <aiida.orm.data.Data>`                                                     | ``/data``         |
+| :py:class:`Data <aiida.orm.nodes.data.data.Data>`                                          | ``/data``         |
 +--------------------------------------------------------------------------------------------+-------------------+
-| :py:class:`Group <aiida.orm.implementation.general.group.AbstractGroup>`                   | ``/groups``       |
+| :py:class:`Group <aiida.orm.groups.Group>`                                                 | ``/groups``       |
 +--------------------------------------------------------------------------------------------+-------------------+
-| :py:class:`Node <aiida.orm.implementation.general.node.AbstractNode>`                      | ``/nodes``        |
+| :py:class:`Node <aiida.orm.nodes.Node>`                                                    | ``/nodes``        |
 +--------------------------------------------------------------------------------------------+-------------------+
 | :py:class:`User <aiida.orm.User>`                                                          | ``/users``        |
 +--------------------------------------------------------------------------------------------+-------------------+
-| :py:class:`BandsData <aiida.orm.data.array.bands.BandsData>`                               | ``/bands``        |
+| :py:class:`BandsData <aiida.orm.nodes.data.array.bands.BandsData>`                         | ``/bands``        |
 +--------------------------------------------------------------------------------------------+-------------------+
-| :py:class:`CifData <aiida.orm.data.cif.CifData>`                                           | ``/cifs``         |
+| :py:class:`CifData <aiida.orm.nodes.data.cif.CifData>`                                     | ``/cifs``         |
 +--------------------------------------------------------------------------------------------+-------------------+
-| :py:class:`KpointsData <aiida.orm.data.array.kpoints.KpointsData>`                         | ``/kpoints``      |
+| :py:class:`KpointsData <aiida.orm.nodes.data.array.kpoints.KpointsData>`                   | ``/kpoints``      |
 +--------------------------------------------------------------------------------------------+-------------------+
-| :py:class:`StructureData <aiida.orm.data.structure.StructureData>`                         | ``/structures``   |
+| :py:class:`StructureData <aiida.orm.nodes.data.structure.StructureData>`                   | ``/structures``   |
 +--------------------------------------------------------------------------------------------+-------------------+
-| :py:class:`UpfData <aiida.orm.data.upf.UpfData>`                                           | ``/upfs``         |
+| :py:class:`UpfData <aiida.orm.nodes.data.upf.UpfData>`                                     | ``/upfs``         |
 +--------------------------------------------------------------------------------------------+-------------------+
 
 For a **full list** of available endpoints for each resource, simply query the base URL of the REST API.
@@ -443,8 +443,8 @@ The latest step is to move either ``one.conf`` or ``many.conf`` into the Apache 
 
 .. code-block:: bash
 
-    $ cp <conf_file>.conf /etc/apache2/sites-enabled/000-default.conf
-    $ sudo service apache2 restart
+    cp <conf_file>.conf /etc/apache2/sites-enabled/000-default.conf
+    sudo service apache2 restart
 
 We believe the two basic architectures we have just explained can be successfully applied in many different deployment scenarios. Nevertheless, we suggest users who need finer tuning of the deployment setup to look into to the official documentation of `Apache <https://httpd.apache.org/>`_ and, more importantly,  `WSGI <modwsgi.readthedocs.io/>`_.
 
@@ -452,8 +452,8 @@ The URLs of the requests handled by Apache must start with one of the paths spec
 
 .. code-block:: bash
 
-    $ curl http://localhost/django/api/v2/computers -X GET
-    $ curl http://localhost/sqlalchemy/api/v2/computers -X GET
+    curl http://localhost/django/api/v2/computers -X GET
+    curl http://localhost/sqlalchemy/api/v2/computers -X GET
 
 The first (second)request will be handled by the app ``django`` (``sqlalchemy``), namely will serve results fetched from the profile ``django`` (``sqlalchemy``). Notice that we haven't specified any port in the URLs since Apache listens conventionally to port 80, where any request lacking the port is automatically redirected.
 
@@ -591,7 +591,7 @@ Nodes
                 "label": "",
                 "mtime": "Fri, 29 Apr 2016 19:24:13 GMT",
                 "state": null,
-                "type": "calculation.inline.InlineCalculation.",
+                "type": "node.process.calculation.CalcFunctionNode.",
                 "uuid": "68d2ed6c-6f51-4546-8d10-7fe063525ab8"
               },
               {
@@ -600,7 +600,7 @@ Nodes
                 "label": "",
                 "mtime": "Fri, 29 Apr 2016 19:24:00 GMT",
                 "state": null,
-                "type": "data.parameter.ParameterData.",
+                "type": "data.dict.Dict.",
                 "uuid": "a39dc158-fedd-4ea1-888d-d90ec6f86f35"
               }
             ]
@@ -635,7 +635,7 @@ Nodes
                 "label": "",
                 "mtime": "Mon, 25 Jan 2016 14:34:59 GMT",
                 "state": "IMPORTED",
-                "type": "data.parameter.ParameterData.",
+                "type": "data.dict.Dict.",
                 "uuid": "e30da7cc-af50-40ca-a940-2ac8d89b2e0d"
               }
             ]

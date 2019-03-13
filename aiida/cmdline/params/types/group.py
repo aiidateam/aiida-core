@@ -13,15 +13,22 @@ Module for custom click param type group
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
+import click
+
+from aiida.cmdline.utils.decorators import with_dbenv
+
 from .identifier import IdentifierParamType
 
 
 class GroupParamType(IdentifierParamType):
-    """
-    The ParamType for identifying Group entities or its subclasses
-    """
+    """The ParamType for identifying Group entities or its subclasses."""
 
     name = 'Group'
+
+    def __init__(self, create_if_not_exist=False):
+        self._create_if_not_exist = create_if_not_exist
+        super(GroupParamType, self).__init__()
 
     @property
     def orm_class_loader(self):
@@ -33,3 +40,16 @@ class GroupParamType(IdentifierParamType):
         """
         from aiida.orm.utils.loaders import GroupEntityLoader
         return GroupEntityLoader
+
+    @with_dbenv()
+    def convert(self, value, param, ctx):
+        from aiida.orm import Group, GroupTypeString
+        try:
+            group = super(GroupParamType, self).convert(value, param, ctx)
+        except click.BadParameter:
+            if self._create_if_not_exist:
+                group = Group(label=value, type_string=GroupTypeString.USER.value)
+            else:
+                raise
+
+        return group

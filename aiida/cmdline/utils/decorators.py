@@ -22,6 +22,7 @@ Provides:
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from contextlib import contextmanager
 from functools import wraps
 
@@ -30,6 +31,8 @@ from click_spinner import spinner
 from . import echo
 
 DAEMON_NOT_RUNNING_DEFAULT_MESSAGE = 'daemon is not running'
+
+__all__ = ('with_dbenv', 'dbenv', 'only_if_daemon_running')
 
 
 def load_dbenv_if_not_loaded(**kwargs):
@@ -54,9 +57,9 @@ def with_dbenv(*load_dbenv_args, **load_dbenv_kwargs):
         Example::
 
             @with_dbenv()
-            def create_my_calculation():
-                from aiida.orm import CalculationFactory  # note the local import
-                my_calc = CalculationFactory('mycalc.mycalc')
+            def create_node():
+                from aiida.orm import Int  # note the local import
+                node = Int(5)
         """
 
         @wraps(function)
@@ -143,7 +146,7 @@ def only_if_daemon_running(echo_function=echo.echo_critical, message=None):
         @wraps(function)
         def decorated_function(*args, **kwargs):
             """If daemon pid file is not found / empty, echo message and call decorated function."""
-            from aiida.daemon.client import get_daemon_client
+            from aiida.engine.daemon.client import get_daemon_client
 
             daemon_client = get_daemon_client()
 
@@ -209,11 +212,16 @@ def deprecated_command(message):
         def decorated_function(*args, **kwargs):
             """Echo a deprecation warning before doing anything else."""
             from aiida.cmdline.utils import templates
+            from aiida.manage.configuration import get_config
             from textwrap import wrap
 
-            template = templates.env.get_template('deprecated.tpl')
-            width = 80
-            echo.echo(template.render(msg=wrap(message, width), width=width))
+            profile = get_config().current_profile
+
+            if not profile.is_test_profile:
+                template = templates.env.get_template('deprecated.tpl')
+                width = 80
+                echo.echo(template.render(msg=wrap(message, width), width=width))
+
             return function(*args, **kwargs)
 
         return decorated_function

@@ -7,17 +7,23 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Module for all logging methods/classes that don't need the ORM."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import logging
-from copy import deepcopy
-from aiida.common import setup
 
-# Custom logging level, intended specifically for informative log messages
-# reported during WorkChains and Workflows. We want the level between INFO(20)
-# and WARNING(30) such that it will be logged for the default loglevel, however
+import collections
+import logging
+import types
+
+from aiida.manage.configuration import get_config_option
+
+__all__ = ('AIIDA_LOGGER',)
+
+# Custom logging level, intended specifically for informative log messages reported during WorkChains.
+# We want the level between INFO(20) and WARNING(30) such that it will be logged for the default loglevel, however
 # the value 25 is already reserved for SUBWARNING by the multiprocessing module.
+
 LOG_LEVEL_REPORT = 23
 logging.addLevelName(LOG_LEVEL_REPORT, 'REPORT')
 
@@ -33,7 +39,7 @@ LOG_LEVELS = {
 }
 
 # The AiiDA logger
-aiidalogger = logging.getLogger('aiida')
+AIIDA_LOGGER = logging.getLogger('aiida')
 
 
 # A logging filter that can be used to disable logging
@@ -44,40 +50,6 @@ class NotInTestingFilter(logging.Filter):
         return not settings.TESTING_MODE
 
 
-# A logging handler that will store the log record in the database DbLog table
-class DBLogHandler(logging.Handler):
-
-    def emit(self, record):
-        # If this is reached before a backend is defined, simply pass
-        from aiida.backends.utils import is_dbenv_loaded
-        if not is_dbenv_loaded():
-            return
-
-        if record.exc_info:
-            # We do this because if there is exc_info this will put an appropriate string in exc_text.
-            # See: https://github.com/python/cpython/blob/1c2cb516e49ceb56f76e90645e67e8df4e5df01a/Lib/logging/handlers.py#L590
-            self.format(record)
-
-        from aiida.orm.backends import construct_backend
-        from django.core.exceptions import ImproperlyConfigured
-
-        try:
-            backend = construct_backend()
-            backend.logs.create_entry_from_record(record)
-
-        except ImproperlyConfigured:
-            # Probably, the logger was called without the
-            # Django settings module loaded. Then,
-            # This ignore should be a no-op.
-            pass
-        except Exception:
-            # To avoid loops with the error handler, I just print.
-            # Hopefully, though, this should not happen!
-            import traceback
-
-            traceback.print_exc()
-
-
 # The default logging dictionary for AiiDA that can be used in conjunction
 # with the config.dictConfig method of python's logging module
 LOGGING = {
@@ -86,7 +58,7 @@ LOGGING = {
     'formatters': {
         'verbose': {
             'format': '%(levelname)s %(asctime)s %(module)s %(process)d '
-                      '%(thread)d %(message)s',
+            '%(thread)d %(message)s',
         },
         'halfverbose': {
             'format': '%(asctime)s <%(process)d> %(name)s: [%(levelname)s] %(message)s',
@@ -105,63 +77,72 @@ LOGGING = {
             'formatter': 'halfverbose',
             'filters': ['testing']
         },
-        'dblogger': {
-            # setup.get_property takes the property from the config json file
-            # The key used in the json, and the default value, are
-            # specified in the _property_table inside aiida.common.setup
-            # NOTE: To modify properties, use the 'verdi devel setproperty'
-            #   command and similar ones (getproperty, describeproperties, ...)
-            'level': setup.get_property('logging.db_loglevel'),
-            'class': 'aiida.common.log.DBLogHandler',
-        },
     },
     'loggers': {
         'aiida': {
-            'handlers': ['console', 'dblogger'],
-            'level': setup.get_property('logging.aiida_loglevel'),
+            'handlers': ['console'],
+            'level': lambda: get_config_option('logging.aiida_loglevel'),
             'propagate': False,
         },
         'tornado': {
             'handlers': ['console'],
-            'level': setup.get_property('logging.tornado_loglevel'),
+            'level': lambda: get_config_option('logging.tornado_loglevel'),
             'propagate': False,
         },
         'plumpy': {
             'handlers': ['console'],
-            'level': setup.get_property('logging.plumpy_loglevel'),
+            'level': lambda: get_config_option('logging.plumpy_loglevel'),
             'propagate': False,
         },
         'kiwipy': {
             'handlers': ['console'],
-            'level': setup.get_property('logging.kiwipy_loglevel'),
+            'level': lambda: get_config_option('logging.kiwipy_loglevel'),
             'propagate': False,
         },
         'paramiko': {
             'handlers': ['console'],
-            'level': setup.get_property('logging.paramiko_loglevel'),
+            'level': lambda: get_config_option('logging.paramiko_loglevel'),
             'propagate': False,
         },
         'alembic': {
             'handlers': ['console'],
-            'level': setup.get_property('logging.alembic_loglevel'),
+            'level': lambda: get_config_option('logging.alembic_loglevel'),
             'propagate': False,
         },
         'sqlalchemy': {
             'handlers': ['console'],
-            'level': setup.get_property('logging.sqlalchemy_loglevel'),
+            'level': lambda: get_config_option('logging.sqlalchemy_loglevel'),
             'propagate': False,
             'qualname': 'sqlalchemy.engine',
         },
-        'pika': {
+        'py.warnings': {
             'handlers': ['console'],
-            'level': 'ERROR',
-            'propagate': False,
         },
     },
 }
 
 
-def configure_logging(daemon=False, daemon_log_file=None):
+def evaluate_logging_configuration(dictionary):
+    """Recursively evaluate the logging configuration, calling lambdas when encountered.
+
+    This allows the configuration options that are dependent on the active profile to be loaded lazily.
+
+    :return: evaluated logging configuration dictionary
+    """
+    result = {}
+
+    for key, value in dictionary.items():
+        if isinstance(value, collections.Mapping):
+            result[key] = evaluate_logging_configuration(value)
+        elif isinstance(value, types.LambdaType):  # pylint: disable=no-member
+            result[key] = value()
+        else:
+            result[key] = value
+
+    return result
+
+
+def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
     """
     Setup the logging by retrieving the LOGGING dictionary from aiida and passing it to
     the python module logging.config.dictConfig. If the logging needs to be setup for the
@@ -175,11 +156,14 @@ def configure_logging(daemon=False, daemon_log_file=None):
     """
     from logging.config import dictConfig
 
-    config = deepcopy(LOGGING)
+    config = evaluate_logging_configuration(LOGGING)
     daemon_handler_name = 'daemon_log_file'
 
     # Add the daemon file handler to all loggers if daemon=True
     if daemon is True:
+
+        # Daemon always needs to run with ORM enabled
+        with_orm = True
 
         if daemon_log_file is None:
             raise ValueError('daemon_log_file has to be defined when configuring for the daemon')
@@ -194,26 +178,18 @@ def configure_logging(daemon=False, daemon_log_file=None):
             'maxBytes': 100000,
         }
 
-        for name, logger in config.get('loggers', {}).items():
+        for logger in config.get('loggers', {}).values():
             logger.setdefault('handlers', []).append(daemon_handler_name)
 
+    # Add the `DbLogHandler` if `with_orm` is `True`
+    if with_orm:
+
+        handler_dblogger = 'dblogger'
+
+        config['handlers'][handler_dblogger] = {
+            'level': get_config_option('logging.db_loglevel'),
+            'class': 'aiida.orm.utils.log.DBLogHandler',
+        }
+        config['loggers']['aiida']['handlers'].append(handler_dblogger)
+
     dictConfig(config)
-
-
-def get_dblogger_extra(obj):
-    """
-    Given an object (Node, Calculation, ...) return a dictionary to be passed
-    as extra to the aiidalogger in order to store the exception also in the DB.
-    If no such extra is passed, the exception is only logged on file.
-    """
-    from aiida.orm import Node
-
-    if isinstance(obj, Node):
-        if obj._plugin_type_string:
-            objname = "node." + obj._plugin_type_string
-        else:
-            objname = "node"
-    else:
-        objname = obj.__class__.__module__ + "." + obj.__class__.__name__
-    objpk = obj.pk
-    return {'objpk': objpk, 'objname': objname}

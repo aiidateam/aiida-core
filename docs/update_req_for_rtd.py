@@ -9,14 +9,15 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """
-Whenever the requirements in ../setup_requirements.py are updated,
-run also this script to update the requirements for Read the Docs.
+Whenever the requirements in ../setup.json are updated, run
+also this script to update the requirements for Read the Docs.
 """
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import sys
+
 import os
+import json
 import click
 
 
@@ -25,14 +26,15 @@ import click
 def update_req_for_rtd(pre_commit):
     """Update the separate requirements file for Read the Docs"""
     docs_dir = os.path.abspath(os.path.dirname(__file__))
-    sys.path.append(os.path.join(docs_dir, os.pardir))
+    root_dir = os.path.join(docs_dir, os.pardir)
 
-    import setup_requirements
+    with open(os.path.join(root_dir, 'setup.json'), 'r') as info:
+        setup_json = json.load(info)
 
-    reqs = set(setup_requirements.extras_require['docs'] + setup_requirements.extras_require['rest'] +
-               setup_requirements.extras_require['testing'] +
+    extras = setup_json['extras_require']
+    reqs = set(extras['testing'] + extras['docs'] + extras['rest'] + extras['atomic_tools'] +
                # To avoid that it requires also the postgres libraries
-               [p for p in setup_requirements.install_requires if not p.startswith('psycopg2')])
+               [p for p in setup_json['install_requires'] if not p.startswith('psycopg2')])
     reqs_str = "\n".join(sorted(reqs))
 
     basename = 'requirements_for_rtd.txt'

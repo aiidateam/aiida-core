@@ -12,23 +12,20 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from datetime import datetime
-
+import uuid
 import six
 
 # pylint: disable=no-name-in-module, import-error
 from sqlalchemy_utils.types.choice import Choice
 from sqlalchemy import and_, or_, not_
-from sqlalchemy.types import Integer, Float, Boolean, DateTime, String
+from sqlalchemy.types import Integer, Float, Boolean, DateTime
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.sql.expression import case, ColumnClause, FunctionElement
-from sqlalchemy.sql.elements import Label, Cast
-from sqlalchemy.orm.attributes import InstrumentedAttribute, QueryableAttribute
+from sqlalchemy.sql.expression import case, FunctionElement
 from sqlalchemy.ext.compiler import compiles
 
 import aiida.backends.sqlalchemy
 from aiida.common.exceptions import InputValidationError
 from aiida.orm.implementation.querybuilder import BackendQueryBuilder
-from aiida.backends.utils import get_column
 
 
 class jsonb_array_length(FunctionElement):  # pylint: disable=invalid-name
@@ -109,19 +106,19 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         return aiida.backends.sqlalchemy.models.authinfo.DbAuthInfo
 
     @property
+    def Comment(self):
+        import aiida.backends.sqlalchemy.models.comment
+        return aiida.backends.sqlalchemy.models.comment.DbComment
+
+    @property
+    def Log(self):
+        import aiida.backends.sqlalchemy.models.log
+        return aiida.backends.sqlalchemy.models.log.DbLog
+
+    @property
     def table_groups_nodes(self):
         import aiida.backends.sqlalchemy.models.group
         return aiida.backends.sqlalchemy.models.group.table_groups_nodes
-
-    @property
-    def AiidaNode(self):
-        import aiida.orm.implementation.sqlalchemy.node
-        return aiida.orm.implementation.sqlalchemy.node.Node
-
-    @property
-    def AiidaGroup(self):
-        import aiida.orm.implementation.sqlalchemy.group
-        return aiida.orm.implementation.sqlalchemy.group.Group
 
     def get_session(self):
         return aiida.backends.sqlalchemy.get_scoped_session()
@@ -131,7 +128,9 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         For sqlalchemy, there are no additional expansions for now, so
         I am returning an empty list
         """
-        if issubclass(alias._sa_class_manager.class_, self.Computer):  # pylint: disable=protected-access
+        # pylint: disable=protected-access
+        if issubclass(alias._sa_class_manager.class_, self.Computer) or \
+            issubclass(alias._sa_class_manager.class_, self.Log):
             try:
                 expansions.remove('metadata')
                 expansions.append('_metadata')
@@ -234,7 +233,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                                            "".format(operator, value))
 
         elif operator == 'in':
-            value_type_set = set([type(i) for i in value])
+            value_type_set = set(type(i) for i in value)
             if len(value_type_set) > 1:
                 raise InputValidationError('{}  contains more than one type'.format(value))
             elif not value_type_set:
@@ -264,47 +263,15 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             else:
                 if column is None:
                     if (alias is None) and (column_name is None):
-                        raise RuntimeError("I need to get the column but do not know \n"
-                                           "the alias and the column name")
-                    column = get_column(column_name, alias)
-                expr = self._get_filter_expr_from_column(operator, value, column)
+                        raise RuntimeError("I need to get the column but do not know the alias and the column name")
+                    column = self.get_column(column_name, alias)
+                expr = self.get_filter_expr_from_column(operator, value, column)
+
         if negation:
             return not_(expr)
         return expr
 
-    @staticmethod
-    def _get_filter_expr_from_column(operator, value, column):
-        """Get the filter expression based on the column"""
-
-        # Label is used because it is what is returned for the
-        # 'state' column by the hybrid_column construct
-        if not isinstance(column, (Cast, InstrumentedAttribute, Label, QueryableAttribute, ColumnClause)):
-            raise TypeError('column ({}) {} is not a valid column'.format(type(column), column))
-        database_entity = column
-        if operator == '==':
-            expr = database_entity == value
-        elif operator == '>':
-            expr = database_entity > value
-        elif operator == '<':
-            expr = database_entity < value
-        elif operator == '>=':
-            expr = database_entity >= value
-        elif operator == '<=':
-            expr = database_entity <= value
-        elif operator == 'like':
-            # This operator can only exist for strings, so I cast to avoid problems
-            # as they occured for the UUID, which does not support the like operator
-            expr = database_entity.cast(String).like(value)
-        elif operator == 'ilike':
-            expr = database_entity.cast(String).ilike(value)
-        elif operator == 'in':
-            expr = database_entity.in_(value)
-        else:
-            raise InputValidationError('Unknown operator {} for filters on columns'.format(operator))
-        return expr
-
-    @classmethod
-    def get_filter_expr_from_attributes(cls, operator, value, attr_key, column=None, column_name=None, alias=None):
+    def get_filter_expr_from_attributes(self, operator, value, attr_key, column=None, column_name=None, alias=None):
         # Too many everything!
         # pylint: disable=too-many-branches, too-many-arguments, too-many-statements
 
@@ -345,7 +312,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             return type_filter, casted_entity
 
         if column is None:
-            column = get_column(column_name, alias)
+            column = self.get_column(column_name, alias)
 
         database_entity = column[tuple(attr_key)]
         if operator == '==':
@@ -405,8 +372,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         """
         :returns: An attribute store in a JSON field of the give column
         """
-
-        entity = get_column(column_name, alias)[(attrpath)]
+        entity = self.get_column(column_name, alias)[attrpath]
         if cast is None:
             entity = entity
         elif cast == 'f':
@@ -436,12 +402,16 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
         :returns: an aiida-compatible instance
         """
-        if isinstance(res, (self.Group, self.Node, self.Computer, self.User, self.AuthInfo)):
-            returnval = res.get_aiida_class()
-        elif isinstance(res, Choice):
+        if isinstance(res, Choice):
             returnval = res.value
+        elif isinstance(res, uuid.UUID):
+            returnval = six.text_type(res)
         else:
-            returnval = res
+            try:
+                returnval = self._backend.get_backend_entity(res)
+            except TypeError:
+                returnval = res
+
         return returnval
 
     def yield_per(self, query, batch_size):

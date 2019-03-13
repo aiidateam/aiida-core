@@ -32,7 +32,6 @@ VISUALIZATION_FORMATS = ['ase', 'jmol', 'vesta', 'vmd', 'xcrysden']
 @verdi_data.group('structure')
 def structure():
     """Manipulation of StructureData objects."""
-    pass
 
 
 # pylint: disable=too-many-locals,too-many-branches
@@ -43,8 +42,7 @@ def structure():
 @decorators.with_dbenv()
 def structure_list(elements, raw, formula_mode, past_days, groups, all_users):
     """List stored StructureData objects."""
-    from aiida.orm.data.structure import StructureData
-    from aiida.orm.data.structure import (get_formula, get_symbols_string)
+    from aiida.orm.nodes.data.structure import StructureData, get_formula, get_symbols_string
     from tabulate import tabulate
 
     elements_only = False

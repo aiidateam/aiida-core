@@ -16,6 +16,7 @@ from aiida.common.exceptions import InputValidationError, ValidationError, \
     InvalidOperation
 from aiida.restapi.common.exceptions import RestValidationError
 from aiida.restapi.translator.base import BaseTranslator
+from aiida.manage.manager import get_manager
 from aiida import orm
 
 
@@ -28,8 +29,7 @@ class NodeTranslator(BaseTranslator):
     # A label associated to the present class (coincides with the resource name)
     __label__ = "nodes"
     # The AiiDA class one-to-one associated to the present class
-    from aiida.orm.node import Node
-    _aiida_class = Node
+    _aiida_class = orm.Node
     # The string name of the AiiDA class
     _aiida_type = "node.Node"
     # The string associated to the AiiDA class in the query builder lexicon
@@ -66,7 +66,7 @@ class NodeTranslator(BaseTranslator):
         super(NodeTranslator, self).__init__(Class=Class, **kwargs)
 
         self._default_projections = [
-            "id", "label", "type", "ctime", "mtime", "uuid", "user_id", "user_email", "attributes", "extras"
+            "id", "label", "node_type", "ctime", "mtime", "uuid", "user_id", "user_email", "attributes", "extras"
         ]
 
         ## node schema
@@ -74,7 +74,7 @@ class NodeTranslator(BaseTranslator):
         # Note: final schema will contain details for only the fields present in column order
         self._schema_projections = {
             "column_order":
-            ["id", "label", "type", "ctime", "mtime", "uuid", "user_id", "user_email", "attributes", "extras"],
+            ["id", "label", "node_type", "ctime", "mtime", "uuid", "user_id", "user_email", "attributes", "extras"],
             "additional_info": {
                 "id": {
                     "is_display": True
@@ -82,7 +82,7 @@ class NodeTranslator(BaseTranslator):
                 "label": {
                     "is_display": False
                 },
-                "type": {
+                "node_type": {
                     "is_display": True
                 },
                 "ctime": {
@@ -123,7 +123,7 @@ class NodeTranslator(BaseTranslator):
         """
 
         self._subclasses = self._get_subclasses()
-        self._backend = orm.construct_backend()
+        self._backend = get_manager().get_backend()
 
     def set_query_type(self,
                        query_type,
@@ -145,9 +145,9 @@ class NodeTranslator(BaseTranslator):
         if query_type == "default":
             pass
         elif query_type == "inputs":
-            self._result_type = 'input_of'
+            self._result_type = 'with_outgoing'
         elif query_type == "outputs":
-            self._result_type = "output_of"
+            self._result_type = "with_incoming"
         elif query_type == "attributes":
             self._content_type = "attributes"
             self._alist = alist
@@ -173,11 +173,11 @@ class NodeTranslator(BaseTranslator):
         else:
             raise InputValidationError("invalid result/content value: {}".format(query_type))
 
-        ## Add input/output relation to the query help
-        if self._result_type is not self.__label__:
+        # Add input/output relation to the query help
+        if self._result_type != self.__label__:
             self._query_help["path"].append({
-                "type": "node.Node.",
-                "label": self._result_type,
+                "entity_type": ("node.Node.", "data.Data."),
+                "tag": self._result_type,
                 self._result_type: self.__label__
             })
 
@@ -237,7 +237,7 @@ class NodeTranslator(BaseTranslator):
         if self._content_type is not None:
             # Use '*' so that the object itself will be returned.
             # In get_results() we access attributes/extras by
-            # calling the get_attrs()/get_extras().
+            # calling the attributes/extras.
             projections = ['*']
         else:
             pass  # i.e. use the input parameter projection
@@ -256,7 +256,7 @@ class NodeTranslator(BaseTranslator):
         running the query
         """
         if not self._is_qb_initialized:
-            raise InvalidOperation("query builder object has not been " "initialized.")
+            raise InvalidOperation("query builder object has not been initialized.")
 
         ## Count the total number of rows returned by the query (if not
         # already done)
@@ -274,34 +274,34 @@ class NodeTranslator(BaseTranslator):
         if self._content_type == "attributes":
             # Get all attrs if nalist and alist are both None
             if self._alist is None and self._nalist is None:
-                data = {self._content_type: node.get_attrs()}
+                data = {self._content_type: node.attributes}
             # Get all attrs except those contained in nalist
             elif self._alist is None and self._nalist is not None:
                 attrs = {}
-                for key in node.get_attrs().keys():
+                for key in node.attributes.keys():
                     if key not in self._nalist:
-                        attrs[key] = node.get_attr(key)
+                        attrs[key] = node.get_attribute(key)
                 data = {self._content_type: attrs}
             # Get all attrs contained in alist
             elif self._alist is not None and self._nalist is None:
                 attrs = {}
-                for key in node.get_attrs().keys():
+                for key in node.attributes.keys():
                     if key in self._alist:
-                        attrs[key] = node.get_attr(key)
+                        attrs[key] = node.get_attribute(key)
                 data = {self._content_type: attrs}
             else:
-                raise RestValidationError("you cannot specify both alist " "and nalist")
+                raise RestValidationError("you cannot specify both alist and nalist")
         # content/extras
         elif self._content_type == "extras":
 
             # Get all extras if nelist and elist are both None
             if self._elist is None and self._nelist is None:
-                data = {self._content_type: node.get_extras()}
+                data = {self._content_type: node.extras}
 
             # Get all extras except those contained in nelist
             elif self._elist is None and self._nelist is not None:
                 extras = {}
-                for key in node.get_extras().keys():
+                for key in node.extras.keys():
                     if key not in self._nelist:
                         extras[key] = node.get_extra(key)
                 data = {self._content_type: extras}
@@ -309,13 +309,13 @@ class NodeTranslator(BaseTranslator):
             # Get all extras contained in elist
             elif self._elist is not None and self._nelist is None:
                 extras = {}
-                for key in node.get_extras().keys():
+                for key in node.extras.keys():
                     if key in self._elist:
                         extras[key] = node.get_extra(key)
                 data = {self._content_type: extras}
 
             else:
-                raise RestValidationError("you cannot specify both elist " "and nelist")
+                raise RestValidationError("you cannot specify both elist and nelist")
 
         # Data needed for visualization appropriately serialized (this
         # actually works only for data derived classes)
@@ -425,7 +425,7 @@ class NodeTranslator(BaseTranslator):
 
         :param node: node object that has to be visualized
         :param visformat: visualization format
-        :returns: data selected and serializaed for visualization
+        :returns: data selected and serialized for visualization
 
         If this method is called by Node resource it will look for the type
         of object and invoke the correct method in the lowest-compatibel
@@ -541,16 +541,15 @@ class NodeTranslator(BaseTranslator):
         qmanager = self._backend.query_manager
         return qmanager.get_creation_statistics(user_pk=user_pk)
 
-    def get_io_tree(self, uuid_pattern):
-        # pylint: disable=too-many-statements
+    def get_io_tree(self, uuid_pattern, tree_in_limit, tree_out_limit):
+        # pylint: disable=too-many-statements,too-many-locals
         """
         json data to display nodes in tree format
         :param uuid_pattern: main node uuid
         :return: json data to display node tree
         """
-
         from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm.node import Node
+        from aiida.orm import Node
 
         def get_node_shape(ntype):
             """
@@ -585,17 +584,19 @@ class NodeTranslator(BaseTranslator):
             main_node = qb_obj.first()[0]
             pk = main_node.pk
             uuid = main_node.uuid
-            nodetype = main_node.type
+            nodetype = main_node.node_type
+            nodelabel = main_node.label
             display_type = nodetype.split('.')[-2]
-            description = main_node.get_desc()
+            description = main_node.get_description()
             if description == '':
-                description = main_node.type.split('.')[-2]
+                description = main_node.node_type.split('.')[-2]
 
             nodes.append({
                 "id": node_count,
                 "nodeid": pk,
                 "nodeuuid": uuid,
                 "nodetype": nodetype,
+                "nodelabel": nodelabel,
                 "displaytype": display_type,
                 "group": "main_node",
                 "description": description,
@@ -606,33 +607,49 @@ class NodeTranslator(BaseTranslator):
         # get all inputs
         qb_obj = QueryBuilder()
         qb_obj.append(Node, tag="main", project=['*'], filters=self._id_filter)
-        qb_obj.append(Node, tag="in", project=['*'], edge_project=['label'], input_of='main')
+        qb_obj.append(Node, tag="in", project=['*'], edge_project=['label', 'type'], with_outgoing='main')
+        if tree_in_limit is not None:
+            qb_obj.limit(tree_in_limit)
 
-        if qb_obj.count() > 0:
+        input_node_pks = {}
+        sent_no_of_incomings = qb_obj.count()
+
+        if sent_no_of_incomings > 0:
             for node_input in qb_obj.iterdict():
                 node = node_input['in']['*']
-                linktype = node_input['main--in']['label']
                 pk = node.pk
-                uuid = node.uuid
-                nodetype = node.type
-                display_type = nodetype.split('.')[-2]
-                description = node.get_desc()
-                if description == '':
-                    description = node.type.split('.')[-2]
+                linklabel = node_input['main--in']['label']
+                linktype = node_input['main--in']['type']
 
-                nodes.append({
-                    "id": node_count,
-                    "nodeid": pk,
-                    "nodeuuid": uuid,
-                    "nodetype": nodetype,
-                    "displaytype": display_type,
-                    "group": "inputs",
-                    "description": description,
-                    "linktype": linktype,
-                    "shape": get_node_shape(nodetype)
-                })
+                # add node if it is not present
+                if pk not in input_node_pks.keys():
+                    input_node_pks[pk] = node_count
+                    uuid = node.uuid
+                    nodetype = node.node_type
+                    nodelabel = node.label
+                    display_type = nodetype.split('.')[-2]
+                    description = node.get_description()
+                    if description == '':
+                        description = node.node_type.split('.')[-2]
+
+                    nodes.append({
+                        "id": node_count,
+                        "nodeid": pk,
+                        "nodeuuid": uuid,
+                        "nodetype": nodetype,
+                        "nodelabel": nodelabel,
+                        "displaytype": display_type,
+                        "group": "inputs",
+                        "description": description,
+                        "linklabel": linklabel,
+                        "linktype": linktype,
+                        "shape": get_node_shape(nodetype)
+                    })
+                    node_count += 1
+
+                from_edge = input_node_pks[pk]
                 edges.append({
-                    "from": node_count,
+                    "from": from_edge,
                     "to": 0,
                     "arrows": "to",
                     "color": {
@@ -640,44 +657,77 @@ class NodeTranslator(BaseTranslator):
                     },
                     "linktype": linktype,
                 })
-                node_count += 1
 
         # get all outputs
         qb_obj = QueryBuilder()
         qb_obj.append(Node, tag="main", project=['*'], filters=self._id_filter)
-        qb_obj.append(Node, tag="out", project=['*'], edge_project=['label'], output_of='main')
-        if qb_obj.count() > 0:
+        qb_obj.append(Node, tag="out", project=['*'], edge_project=['label', 'type'], with_incoming='main')
+        if tree_out_limit is not None:
+            qb_obj.limit(tree_out_limit)
+
+        output_node_pks = {}
+        sent_no_of_outgoings = qb_obj.count()
+
+        if sent_no_of_outgoings > 0:
             for output in qb_obj.iterdict():
                 node = output['out']['*']
-                linktype = output['main--out']['label']
                 pk = node.pk
-                uuid = node.uuid
-                nodetype = node.type
-                display_type = nodetype.split('.')[-2]
-                description = node.get_desc()
-                if description == '':
-                    description = node.type.split('.')[-2]
+                linklabel = output['main--out']['label']
+                linktype = output['main--out']['type']
 
-                nodes.append({
-                    "id": node_count,
-                    "nodeid": pk,
-                    "nodeuuid": uuid,
-                    "nodetype": nodetype,
-                    "displaytype": display_type,
-                    "group": "outputs",
-                    "description": description,
-                    "linktype": linktype,
-                    "shape": get_node_shape(nodetype)
-                })
+                # add node if it is not present
+                if pk not in output_node_pks.keys():
+                    output_node_pks[pk] = node_count
+                    uuid = node.uuid
+                    nodetype = node.node_type
+                    nodelabel = node.label
+                    display_type = nodetype.split('.')[-2]
+                    description = node.get_description()
+                    if description == '':
+                        description = node.node_type.split('.')[-2]
+
+                    nodes.append({
+                        "id": node_count,
+                        "nodeid": pk,
+                        "nodeuuid": uuid,
+                        "nodetype": nodetype,
+                        "nodelabel": nodelabel,
+                        "displaytype": display_type,
+                        "group": "outputs",
+                        "description": description,
+                        "linklabel": linklabel,
+                        "linktype": linktype,
+                        "shape": get_node_shape(nodetype)
+                    })
+                    node_count += 1
+
+                to_edge = output_node_pks[pk]
                 edges.append({
                     "from": 0,
-                    "to": node_count,
+                    "to": to_edge,
                     "arrows": "to",
                     "color": {
                         "inherit": 'to'
                     },
                     "linktype": linktype
                 })
-                node_count += 1
 
-        return {"nodes": nodes, "edges": edges}
+        # count total no of nodes
+        builder = QueryBuilder()
+        builder.append(Node, tag="main", project=['id'], filters=self._id_filter)
+        builder.append(Node, tag="in", project=['id'], input_of='main')
+        total_no_of_incomings = builder.count()
+
+        builder = QueryBuilder()
+        builder.append(Node, tag="main", project=['id'], filters=self._id_filter)
+        builder.append(Node, tag="out", project=['id'], output_of='main')
+        total_no_of_outgoings = builder.count()
+
+        return {
+            "nodes": nodes,
+            "edges": edges,
+            "total_no_of_incomings": total_no_of_incomings,
+            "total_no_of_outgoings": total_no_of_outgoings,
+            "sent_no_of_incomings": sent_no_of_incomings,
+            "sent_no_of_outgoings": sent_no_of_outgoings
+        }

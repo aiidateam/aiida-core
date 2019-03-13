@@ -201,4 +201,4 @@ class MaterialsProjectSearchResults(DbSearchResults):  # pylint: disable=abstrac
 
         :param result_dict: query result entry dictionary
         """
-        return self._material_base_url + result_dict['material_id'],
+        return self._material_base_url + result_dict['material_id']

@@ -11,12 +11,13 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import unittest
 
 import click
 from click.testing import CliRunner
 
-from aiida.cmdline.params.options.conditional import ConditionalOption
+from .conditional import ConditionalOption
 
 
 class ConditionalOptionTest(unittest.TestCase):
@@ -170,10 +171,11 @@ class ConditionalOptionTest(unittest.TestCase):
         """
         if not value:
             return -1
-        elif value != 42:
+
+        if value != 42:
             raise click.BadParameter('invalid', param=param)
-        else:
-            return value
+
+        return value
 
     @staticmethod
     def setup_flag_cond(**kwargs):

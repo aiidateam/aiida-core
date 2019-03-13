@@ -13,8 +13,6 @@ from __future__ import print_function
 from __future__ import absolute_import
 import click
 
-from aiida.cmdline.utils.decorators import with_dbenv
-
 
 class TestModuleParamType(click.ParamType):
     """Parameter type to represent a unittest module."""
@@ -28,10 +26,7 @@ class TestModuleParamType(click.ParamType):
 
         prefix_db = 'db'
         modules_db = get_db_test_names()
-        modules_base = [
-            'aiida.scheduler', 'aiida.transport', 'aiida.common', 'aiida.tests.work', 'aiida.utils', 'aiida.control',
-            'aiida.cmdline.tests'
-        ]
+        modules_base = ['aiida.cmdline', 'aiida.common', 'aiida.schedulers', 'aiida.transports']
 
         test_modules = {}
 
@@ -45,11 +40,6 @@ class TestModuleParamType(click.ParamType):
 
         return test_modules
 
-    @with_dbenv()
-    def convert(self, value, param, ctx):
-        return value
-
-    @with_dbenv()
     def complete(self, ctx, incomplete):  # pylint: disable=unused-argument,no-self-use
         """
         Return possible completions based on an incomplete value

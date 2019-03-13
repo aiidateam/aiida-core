@@ -12,56 +12,38 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from six.moves import range
-
-try:
-    from reentry import manager as epm
-except ImportError:
-    import pkg_resources as epm
-
+from aiida.plugins.entry_point import ENTRYPOINT_MANAGER
 from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
 
-# TODO: define only folders in which tests should be put, and each
-#       file defines a new test
 db_test_list = {
     BACKEND_DJANGO: {
-        'generic': ['aiida.backends.djsite.db.subtests.generic'],
-        'nodes': ['aiida.backends.djsite.db.subtests.nodes'],
-        'djangomigrations': ['aiida.backends.djsite.db.subtests.djangomigrations'],
-        'migrations': ['aiida.backends.djsite.db.subtests.migrations'],
-        'query': ['aiida.backends.djsite.db.subtests.query'],
+        'generic': ['aiida.backends.djsite.db.subtests.test_generic'],
+        'nodes': ['aiida.backends.djsite.db.subtests.test_nodes'],
+        'migrations': ['aiida.backends.djsite.db.subtests.test_migrations'],
+        'query': ['aiida.backends.djsite.db.subtests.test_query'],
     },
     BACKEND_SQLA: {
-        'generic': ['aiida.backends.sqlalchemy.tests.generic'],
-        'nodes': ['aiida.backends.sqlalchemy.tests.nodes'],
-        'query': ['aiida.backends.sqlalchemy.tests.query'],
-        'session': ['aiida.backends.sqlalchemy.tests.session'],
-        'schema': ['aiida.backends.sqlalchemy.tests.schema'],
-        'migrations': ['aiida.backends.sqlalchemy.tests.migrations'],
+        'generic': ['aiida.backends.sqlalchemy.tests.test_generic'],
+        'nodes': ['aiida.backends.sqlalchemy.tests.test_nodes'],
+        'query': ['aiida.backends.sqlalchemy.tests.test_query'],
+        'session': ['aiida.backends.sqlalchemy.tests.test_session'],
+        'schema': ['aiida.backends.sqlalchemy.tests.test_schema'],
+        'migrations': ['aiida.backends.sqlalchemy.tests.test_migrations'],
     },
     # Must be always defined (in the worst case, an empty dict)
     'common': {
-        'generic': ['aiida.backends.tests.generic'],
-        'nodes': ['aiida.backends.tests.nodes'],
-        'base_dataclasses': ['aiida.backends.tests.base_dataclasses'],
-        'dataclasses': ['aiida.backends.tests.dataclasses'],
-        'dbimporters': ['aiida.backends.tests.dbimporters'],
-        'export_and_import': ['aiida.backends.tests.export_and_import'],
-        'parsers': ['aiida.backends.tests.parsers'],
-        'tcodexporter': ['aiida.backends.tests.tcodexporter'],
-        'query': ['aiida.backends.tests.query'],
-        'utils.serialize': ['aiida.backends.tests.utils.test_serialize'],
-        'workflows': ['aiida.backends.tests.workflows'],
-        'calculation_node': ['aiida.backends.tests.calculation_node'],
-        'backup_script': ['aiida.backends.tests.backup_script'],
-        'backup_setup_script': ['aiida.backends.tests.backup_setup_script'],
-        'restapi': ['aiida.backends.tests.restapi'],
-        'examplehelpers': ['aiida.backends.tests.example_helpers'],
-        'cmdline.commands.calculation': ['aiida.backends.tests.cmdline.commands.test_calculation'],
+        'backup_script': ['aiida.backends.tests.test_backup_script'],
+        'backup_setup_script': ['aiida.backends.tests.test_backup_setup_script'],
+        'base_dataclasses': ['aiida.backends.tests.test_base_dataclasses'],
+        'caching_config': ['aiida.backends.tests.test_caching_config'],
+        'calculation_node': ['aiida.backends.tests.test_calculation_node'],
+        'cmdline.commands.calcjob': ['aiida.backends.tests.cmdline.commands.test_calcjob'],
         'cmdline.commands.code': ['aiida.backends.tests.cmdline.commands.test_code'],
         'cmdline.commands.comment': ['aiida.backends.tests.cmdline.commands.test_comment'],
         'cmdline.commands.computer': ['aiida.backends.tests.cmdline.commands.test_computer'],
+        'cmdline.commands.config': ['aiida.backends.tests.cmdline.commands.test_config'],
         'cmdline.commands.data': ['aiida.backends.tests.cmdline.commands.test_data'],
-        'cmdline.commands.devel': ['aiida.backends.tests.cmdline.commands.test_devel'],
+        'cmdline.commands.database': ['aiida.backends.tests.cmdline.commands.test_database'],
         'cmdline.commands.export': ['aiida.backends.tests.cmdline.commands.test_export'],
         'cmdline.commands.graph': ['aiida.backends.tests.cmdline.commands.test_graph'],
         'cmdline.commands.group': ['aiida.backends.tests.cmdline.commands.test_group'],
@@ -72,10 +54,9 @@ db_test_list = {
         'cmdline.commands.rehash': ['aiida.backends.tests.cmdline.commands.test_rehash'],
         'cmdline.commands.run': ['aiida.backends.tests.cmdline.commands.test_run'],
         'cmdline.commands.setup': ['aiida.backends.tests.cmdline.commands.test_setup'],
+        'cmdline.commands.status': ['aiida.backends.tests.cmdline.commands.test_status'],
         'cmdline.commands.user': ['aiida.backends.tests.cmdline.commands.test_user'],
         'cmdline.commands.verdi': ['aiida.backends.tests.cmdline.commands.test_verdi'],
-        'cmdline.commands.work': ['aiida.backends.tests.cmdline.commands.test_work'],
-        'cmdline.commands.workflow': ['aiida.backends.tests.cmdline.commands.test_workflow'],
         'cmdline.params.types.calculation': ['aiida.backends.tests.cmdline.params.types.test_calculation'],
         'cmdline.params.types.code': ['aiida.backends.tests.cmdline.params.types.test_code'],
         'cmdline.params.types.computer': ['aiida.backends.tests.cmdline.params.types.test_computer'],
@@ -84,37 +65,66 @@ db_test_list = {
         'cmdline.params.types.identifier': ['aiida.backends.tests.cmdline.params.types.test_identifier'],
         'cmdline.params.types.node': ['aiida.backends.tests.cmdline.params.types.test_node'],
         'cmdline.params.types.plugin': ['aiida.backends.tests.cmdline.params.types.test_plugin'],
-        'cmdline.params.types.workflow': ['aiida.backends.tests.cmdline.params.types.test_workflow'],
+        'cmdline.utils.common': ['aiida.backends.tests.cmdline.utils.test_common'],
         'common.archive': ['aiida.backends.tests.common.test_archive'],
-        'common.datastructures': ['aiida.backends.tests.common.test_datastructures'],
-        'daemon.client': ['aiida.backends.tests.daemon.test_client'],
-        'orm.computer': ['aiida.backends.tests.computer'],
-        'orm.authinfo': ['aiida.backends.tests.orm.authinfo'],
-        'orm.data.frozendict': ['aiida.backends.tests.orm.data.frozendict'],
-        'orm.data.remote': ['aiida.backends.tests.orm.data.remote'],
-        'orm.log': ['aiida.backends.tests.orm.log'],
-        'orm.mixins': ['aiida.backends.tests.orm.mixins'],
-        'orm.utils.loaders': ['aiida.backends.tests.orm.utils.loaders'],
-        'work.class_loader': ['aiida.backends.tests.work.class_loader'],
-        'work.daemon': ['aiida.backends.tests.work.daemon'],
-        'work.futures': ['aiida.backends.tests.work.test_futures'],
-        'work.launch': ['aiida.backends.tests.work.test_launch'],
-        'work.persistence': ['aiida.backends.tests.work.persistence'],
-        'work.process': ['aiida.backends.tests.work.process'],
-        'work.process_builder': ['aiida.backends.tests.work.test_process_builder'],
-        'work.process_spec': ['aiida.backends.tests.work.test_process_spec'],
-        'work.rmq': ['aiida.backends.tests.work.test_rmq'],
-        'work.run': ['aiida.backends.tests.work.run'],
-        'work.runners': ['aiida.backends.tests.work.test_runners'],
-        'work.transport': ['aiida.backends.tests.work.test_transport'],
-        'work.utils': ['aiida.backends.tests.work.test_utils'],
-        'work.work_chain': ['aiida.backends.tests.work.work_chain'],
-        'work.workfunctions': ['aiida.backends.tests.work.test_workfunctions'],
-        'work.job_processes': ['aiida.backends.tests.work.job_processes'],
+        'common.extendeddicts': ['aiida.backends.tests.common.test_extendeddicts'],
+        'common.folders': ['aiida.backends.tests.common.test_folders'],
+        'common.hashing': ['aiida.backends.tests.common.test_hashing'],
+        'common.logging': ['aiida.backends.tests.common.test_logging'],
+        'common.serialize': ['aiida.backends.tests.common.test_serialize'],
+        'common.timezone': ['aiida.backends.tests.common.test_timezone'],
+        'common.utils': ['aiida.backends.tests.common.test_utils'],
+        'dataclasses': ['aiida.backends.tests.test_dataclasses'],
+        'dbimporters': ['aiida.backends.tests.test_dbimporters'],
+        'engine.daemon.client': ['aiida.backends.tests.engine.daemon.test_client'],
+        'engine.calc_job': ['aiida.backends.tests.engine.test_calc_job'],
+        'engine.calcfunctions': ['aiida.backends.tests.engine.test_calcfunctions'],
+        'engine.class_loader': ['aiida.backends.tests.engine.test_class_loader'],
+        'engine.daemon': ['aiida.backends.tests.engine.test_daemon'],
+        'engine.futures': ['aiida.backends.tests.engine.test_futures'],
+        'engine.launch': ['aiida.backends.tests.engine.test_launch'],
+        'engine.persistence': ['aiida.backends.tests.engine.test_persistence'],
+        'engine.process': ['aiida.backends.tests.engine.test_process'],
+        'engine.process_builder': ['aiida.backends.tests.engine.test_process_builder'],
+        'engine.process_function': ['aiida.backends.tests.engine.test_process_function'],
+        'engine.process_spec': ['aiida.backends.tests.engine.test_process_spec'],
+        'engine.rmq': ['aiida.backends.tests.engine.test_rmq'],
+        'engine.run': ['aiida.backends.tests.engine.test_run'],
+        'engine.runners': ['aiida.backends.tests.engine.test_runners'],
+        'engine.transport': ['aiida.backends.tests.engine.test_transport'],
+        'engine.utils': ['aiida.backends.tests.engine.test_utils'],
+        'engine.work_chain': ['aiida.backends.tests.engine.test_work_chain'],
+        'engine.workfunctions': ['aiida.backends.tests.engine.test_workfunctions'],
+        'export_and_import': ['aiida.backends.tests.test_export_and_import'],
+        'generic': ['aiida.backends.tests.test_generic'],
+        'manage.configuration.config.': ['aiida.backends.tests.manage.configuration.test_config'],
+        'manage.configuration.migrations.': ['aiida.backends.tests.manage.configuration.migrations.test_migrations'],
+        'manage.configuration.options.': ['aiida.backends.tests.manage.configuration.test_options'],
+        'manage.configuration.profile.': ['aiida.backends.tests.manage.configuration.test_profile'],
+        'manage.external.postgres': ['aiida.backends.tests.manage.external.test_postgres'],
+        'nodes': ['aiida.backends.tests.test_nodes'],
+        'orm.authinfos': ['aiida.backends.tests.orm.test_authinfos'],
+        'orm.comments': ['aiida.backends.tests.orm.test_comments'],
+        'orm.computers': ['aiida.backends.tests.orm.test_computers'],
+        'orm.data.remote': ['aiida.backends.tests.orm.data.test_remote'],
+        'orm.data.upf': ['aiida.backends.tests.orm.data.test_upf'],
+        'orm.entities': ['aiida.backends.tests.orm.test_entities'],
+        'orm.groups': ['aiida.backends.tests.orm.test_groups'],
+        'orm.implementation.backend': ['aiida.backends.tests.orm.implementation.test_backend'],
+        'orm.implementation.nodes': ['aiida.backends.tests.orm.implementation.test_nodes'],
+        'orm.implementation.comments': ['aiida.backends.tests.orm.implementation.test_comments'],
+        'orm.logs': ['aiida.backends.tests.orm.test_logs'],
+        'orm.mixins': ['aiida.backends.tests.orm.test_mixins'],
+        'orm.node': ['aiida.backends.tests.orm.node.test_node'],
+        'orm.utils.calcjob': ['aiida.backends.tests.orm.utils.test_calcjob'],
+        'orm.utils.node': ['aiida.backends.tests.orm.utils.test_node'],
+        'orm.utils.loaders': ['aiida.backends.tests.orm.utils.test_loaders'],
+        'orm.utils.repository': ['aiida.backends.tests.orm.utils.test_repository'],
+        'parsers': ['aiida.backends.tests.test_parsers'],
         'plugin_loader': ['aiida.backends.tests.test_plugin_loader'],
-        'daemon': ['aiida.backends.tests.daemon'],
-        'caching_config': ['aiida.backends.tests.test_caching_config'],
-        'inline_calculation': ['aiida.backends.tests.inline_calculation'],
+        'query': ['aiida.backends.tests.test_query'],
+        'restapi': ['aiida.backends.tests.test_restapi'],
+        'tcodexporter': ['aiida.backends.tests.test_tcodexporter'],
     }
 }
 
@@ -127,7 +137,7 @@ def get_db_test_names():
 
     # This is a temporary solution to be able to run tests in plugins. Once the plugin fixtures
     # have been made working and are released, we can replace this logic with them
-    for ep in [ep for ep in epm.iter_entry_points(group='aiida.tests')]:
+    for ep in [ep for ep in ENTRYPOINT_MANAGER.iter_entry_points(group='aiida.tests')]:
         retlist.append(ep.name)
 
     # Explode the list so that if I have a.b.c,
@@ -178,7 +188,7 @@ def get_db_test_list():
 
     # This is a temporary solution to be able to run tests in plugins. Once the plugin fixtures
     # have been made working and are released, we can replace this logic with them
-    for ep in [ep for ep in epm.iter_entry_points(group='aiida.tests')]:
+    for ep in [ep for ep in ENTRYPOINT_MANAGER.iter_entry_points(group='aiida.tests')]:
         retdict[ep.name].append(ep.module_name)
 
     # Explode the dictionary so that if I have a.b.c,

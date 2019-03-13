@@ -7,17 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from aiida.plugins.factory import BaseFactory
-from aiida.tools.dbimporters.baseclasses import DbImporter
+from .baseclasses import DbImporter
 
-
-def DbImporterFactory(entry_point):
-    """
-    Return the DbImporter plugin class for a given entry point
-
-    :param entry_point: the entry point name of the DbImporter plugin
-    """
-    return BaseFactory('aiida.tools.dbimporters', entry_point)
+__all__ = ('DbImporter',)

@@ -8,31 +8,29 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+This example implements exactly the same functionality as seen in the basic WorkChain example, except in this case it
+utilizes calcfunctions instead of workchains.
+"""
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
-from aiida.orm.data.float import Float
-from aiida.orm.data.int import Int
-from aiida import work
-from aiida.work import workfunction
 
-"""
-This example implements exactly the same functionality as seen in the basic WorkChain
-example, except in this case it utilizes workfunctions instead of workchains.
-"""
+from aiida.engine import calcfunction
+from aiida.orm import Float, Int
 
 
-@workfunction
+@calcfunction
 def sum(a, b):
     return a + b
 
 
-@workfunction
+@calcfunction
 def product(a, b):
     return a * b
 
 
-@workfunction
+@calcfunction
 def sumproduct(a, b, c):
     return product(sum(a, b), c)
 

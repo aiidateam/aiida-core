@@ -12,23 +12,21 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import datetime
 from datetime import datetime
 from json import loads as json_loads
+import uuid
 import six
 
+# Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-name-in-module, import-error
 from sqlalchemy import and_, or_, not_, select, exists, case
 from sqlalchemy.types import Float, String
 from sqlalchemy.orm import aliased
-from sqlalchemy.orm.attributes import InstrumentedAttribute, QueryableAttribute
-from sqlalchemy.sql.expression import cast, ColumnClause
-from sqlalchemy.sql.elements import Cast, Label
+from sqlalchemy.sql.expression import cast
 from aiida.orm.implementation.querybuilder import BackendQueryBuilder
 from aiida.common.exceptions import InputValidationError
 from aiida.orm.implementation.django import dummy_model
 from aiida.backends.djsite.db.models import DbAttribute, DbExtra, ObjectDoesNotExist
-from aiida.backends.utils import get_column
 
 
 class DjangoQueryBuilder(BackendQueryBuilder):
@@ -61,47 +59,16 @@ class DjangoQueryBuilder(BackendQueryBuilder):
         return dummy_model.DbAuthInfo
 
     @property
+    def Comment(self):
+        return dummy_model.DbComment
+
+    @property
+    def Log(self):
+        return dummy_model.DbLog
+
+    @property
     def table_groups_nodes(self):
         return dummy_model.table_groups_nodes
-
-    @property
-    def AiidaNode(self):
-        import aiida.orm.implementation.django.node
-        return aiida.orm.implementation.django.node.Node
-
-    @property
-    def AiidaGroup(self):
-        import aiida.orm.implementation.django.group
-        return aiida.orm.implementation.django.group.Group
-
-    @staticmethod
-    def get_filter_expr_from_column(operator, value, column):
-        """Get the filter expression for a particular column"""
-
-        # Label is used because it is what is returned for the
-        # 'state' column by the hybrid_column construct
-        if not isinstance(column, (Cast, InstrumentedAttribute, QueryableAttribute, Label, ColumnClause)):
-            raise TypeError('column ({}) {} is not a valid column'.format(type(column), column))
-        database_entity = column
-        if operator == '==':
-            expr = database_entity == value
-        elif operator == '>':
-            expr = database_entity > value
-        elif operator == '<':
-            expr = database_entity < value
-        elif operator == '>=':
-            expr = database_entity >= value
-        elif operator == '<=':
-            expr = database_entity <= value
-        elif operator == 'like':
-            expr = database_entity.like(value)
-        elif operator == 'ilike':
-            expr = database_entity.ilike(value)
-        elif operator == 'in':
-            expr = database_entity.in_(value)
-        else:
-            raise InputValidationError('Unknown operator {} for filters on columns'.format(operator))
-        return expr
 
     def get_filter_expr(self, operator, value, attr_key, is_attribute, alias=None, column=None, column_name=None):
         """
@@ -197,7 +164,7 @@ class DjangoQueryBuilder(BackendQueryBuilder):
                 raise InputValidationError("Value for operator {} has to be a string (you gave {})"
                                            "".format(operator, value))
         elif operator == 'in':
-            value_type_set = set([type(i) for i in value])
+            value_type_set = set(type(i) for i in value)
             if len(value_type_set) > 1:
                 raise InputValidationError('{}  contains more than one type'.format(value))
             elif not value_type_set:
@@ -227,8 +194,8 @@ class DjangoQueryBuilder(BackendQueryBuilder):
             else:
                 if column is None:
                     if (alias is None) and (column_name is None):
-                        raise Exception("I need to get the column but do not know \n" "the alias and the column name")
-                    column = get_column(column_name, alias)
+                        raise Exception("I need to get the column but do not know the alias and the column name")
+                    column = self.get_column(column_name, alias)
                 expr = self.get_filter_expr_from_column(operator, value, column)
         if negation:
             return not_(expr)
@@ -240,10 +207,8 @@ class DjangoQueryBuilder(BackendQueryBuilder):
 
     def modify_expansions(self, alias, expansions):
         """
-        For the Django schema, we have as additioanl expansions 'attributes'
-        and 'extras'
+        For the Django schema, we have as additional expansions 'attributes' and 'extras'
         """
-
         if issubclass(alias._sa_class_manager.class_, self.Node):  # pylint: disable=protected-access
             expansions.append("attributes")
             expansions.append("extras")
@@ -307,7 +272,7 @@ class DjangoQueryBuilder(BackendQueryBuilder):
         # If the user specified in what to cast, he wants an operation to
         #   be performed to cast the value to a different type
         if isinstance(value, (list, tuple)):
-            value_type_set = set([type(i) for i in value])
+            value_type_set = set(type(i) for i in value)
             if len(value_type_set) > 1:
                 raise InputValidationError('{}  contains more than one type'.format(value))
             elif not value_type_set:
@@ -371,7 +336,7 @@ class DjangoQueryBuilder(BackendQueryBuilder):
             if column_name in ('attributes', 'extras'):
                 entity = alias.id
             else:
-                raise NotImplementedError("Whatever you asked for " "({}) is not implemented" "".format(column_name))
+                raise NotImplementedError("Whatever you asked for ({}) is not implemented" "".format(column_name))
         else:
             aliased_attributes = aliased(getattr(alias, column_name).prop.mapper.class_)
 
@@ -384,21 +349,18 @@ class DjangoQueryBuilder(BackendQueryBuilder):
                 select([1], correlate=True).select_from(aliased_attributes).where(
                     and_(aliased_attributes.key == attrkey, aliased_attributes.dbnode_id == alias.id)))
 
-            select_stmt = select(
-                [aliased_attributes.id], correlate=True).select_from(aliased_attributes).where(
-                    and_(aliased_attributes.key == attrkey, aliased_attributes.dbnode_id == alias.id)).label('miao')
+            select_stmt = select([aliased_attributes.id], correlate=True).select_from(aliased_attributes).where(
+                and_(aliased_attributes.key == attrkey, aliased_attributes.dbnode_id == alias.id)).label('miao')
 
-            entity = case(
-                [
-                    (exists_stmt, select_stmt),
-                ], else_=None)
+            entity = case([
+                (exists_stmt, select_stmt),
+            ], else_=None)
 
         return entity
 
     def get_aiida_res(self, key, res):
         """
-        Some instance returned by ORM (django or SA) need to be converted
-        to Aiida instances (eg nodes)
+        Some instance returned by ORM (django or SA) need to be converted to Aiida instances (eg nodes)
 
         :param res: the result returned by the query
         :param key: the key that this entry would be return with
@@ -431,10 +393,14 @@ class DjangoQueryBuilder(BackendQueryBuilder):
         elif key in ('_metadata', 'transport_params') and res is not None:
             # Metadata and transport_params are stored as json strings in the DB:
             return json_loads(res)
-        elif isinstance(res, (self.Group, self.Node, self.Computer, self.User, self.AuthInfo)):
-            returnval = res.get_aiida_class()
+        elif isinstance(res, uuid.UUID):
+            returnval = six.text_type(res)
         else:
-            returnval = res
+            try:
+                returnval = self._backend.get_backend_entity(res)
+            except TypeError:
+                returnval = res
+
         return returnval
 
     def yield_per(self, query, batch_size):
@@ -474,7 +440,7 @@ class DjangoQueryBuilder(BackendQueryBuilder):
             results = query.yield_per(batch_size)
 
             if len(tag_to_index_dict) == 1:
-                # Sqlalchemy, for some strange reason, does not return a list of lsits
+                # Sqlalchemy, for some strange reason, does not return a list of lists
                 # if you have provided an ormclass
 
                 if list(tag_to_index_dict.values()) == ['*']:

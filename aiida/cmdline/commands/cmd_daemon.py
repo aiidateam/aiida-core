@@ -11,6 +11,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import os
 import subprocess
 import time
@@ -22,15 +23,12 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils import decorators, echo
 from aiida.cmdline.utils.common import get_env_with_venv_bin
 from aiida.cmdline.utils.daemon import get_daemon_status, print_client_response_status
-from aiida.common.profile import get_current_profile_name
-from aiida.common.setup import get_profiles_list
-from aiida.daemon.client import get_daemon_client
+from aiida.manage.configuration import get_config
 
 
 @verdi.group('daemon')
 def verdi_daemon():
     """Inspect and manage the daemon."""
-    pass
 
 
 @verdi_daemon.command()
@@ -41,14 +39,16 @@ def start(foreground):
     """
     Start the daemon
     """
+    from aiida.engine.daemon.client import get_daemon_client
+
     client = get_daemon_client()
 
     echo.echo('Starting the daemon... ', nl=False)
 
     if foreground:
-        command = ['verdi', '-p', client.profile.name, 'daemon', '_start_circus', '--foreground']
+        command = ['verdi', '-p', client.profile.name, 'daemon', 'start-circus', '--foreground']
     else:
-        command = ['verdi', '-p', client.profile.name, 'daemon', '_start_circus']
+        command = ['verdi', '-p', client.profile.name, 'daemon', 'start-circus']
 
     try:
         currenv = get_env_with_venv_bin()
@@ -70,15 +70,19 @@ def status(all_profiles):
     """
     Print the status of the current daemon or all daemons
     """
-    if all_profiles is True:
-        profiles = [p for p in get_profiles_list() if not p.startswith('test_')]
-    else:
-        profiles = [get_current_profile_name()]
+    from aiida.engine.daemon.client import get_daemon_client
 
-    for profile_name in profiles:
-        client = get_daemon_client(profile_name)
+    config = get_config()
+
+    if all_profiles is True:
+        profiles = [profile for profile in config.profiles if not profile.is_test_profile]
+    else:
+        profiles = [config.current_profile]
+
+    for profile in profiles:
+        client = get_daemon_client(profile.name)
         click.secho('Profile: ', fg='red', bold=True, nl=False)
-        click.secho('{}'.format(profile_name), bold=True)
+        click.secho('{}'.format(profile.name), bold=True)
         result = get_daemon_status(client)
         echo.echo(result)
 
@@ -90,6 +94,8 @@ def incr(number):
     """
     Add NUMBER [default=1] workers to the running daemon
     """
+    from aiida.engine.daemon.client import get_daemon_client
+
     client = get_daemon_client()
     response = client.increase_workers(number)
     print_client_response_status(response)
@@ -102,6 +108,8 @@ def decr(number):
     """
     Remove NUMBER [default=1] workers from the running daemon
     """
+    from aiida.engine.daemon.client import get_daemon_client
+
     client = get_daemon_client()
     response = client.decrease_workers(number)
     print_client_response_status(response)
@@ -112,6 +120,8 @@ def logshow():
     """
     Show the log of the daemon, press CTRL+C to quit
     """
+    from aiida.engine.daemon.client import get_daemon_client
+
     client = get_daemon_client()
 
     try:
@@ -129,17 +139,21 @@ def stop(no_wait, all_profiles):
     """
     Stop the daemon
     """
+    from aiida.engine.daemon.client import get_daemon_client
+
+    config = get_config()
+
     if all_profiles is True:
-        profiles = [p for p in get_profiles_list() if not p.startswith('test_')]
+        profiles = [profile for profile in config.profiles if not profile.is_test_profile]
     else:
-        profiles = [get_current_profile_name()]
+        profiles = [config.current_profile]
 
-    for profile_name in profiles:
+    for profile in profiles:
 
-        client = get_daemon_client(profile_name)
+        client = get_daemon_client(profile.name)
 
         click.secho('Profile: ', fg='red', bold=True, nl=False)
-        click.secho('{}'.format(profile_name), bold=True)
+        click.secho('{}'.format(profile.name), bold=True)
 
         if not client.is_daemon_running:
             echo.echo('Daemon was not running')
@@ -171,6 +185,8 @@ def restart(ctx, reset, no_wait):
     is passed, however, the full circus daemon will be stopped and restarted with just
     a single worker
     """
+    from aiida.engine.daemon.client import get_daemon_client
+
     client = get_daemon_client()
 
     wait = not no_wait
@@ -195,7 +211,7 @@ def restart(ctx, reset, no_wait):
 @click.option('--foreground', is_flag=True, help='Run in foreground.')
 @decorators.with_dbenv()
 @decorators.check_circus_zmq_version
-def _start_circus(foreground):
+def start_circus(foreground):
     """
     This will actually launch the circus daemon, either daemonized in the background
     or in the foreground, printing all logs to stdout.
@@ -207,6 +223,8 @@ def _start_circus(foreground):
     from circus.circusd import daemonize
     from circus.pidfile import Pidfile
     from circus.util import check_future_exception_and_log, configure_logger
+
+    from aiida.engine.daemon.client import get_daemon_client
 
     client = get_daemon_client()
 

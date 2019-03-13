@@ -10,14 +10,11 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from aiida.orm.data.int import Int
-from aiida.orm.data.list import List
-from aiida.orm.data.str import Str
-from aiida.orm.calculation.inline import make_inline
-from aiida.work import submit
-from aiida.work.persistence import ObjectLoader
-from aiida.work.workfunctions import workfunction
-from aiida.work.workchain import WorkChain, ToContext, append_
+
+from aiida.engine import calcfunction, workfunction, WorkChain, ToContext, append_
+from aiida.engine.persistence import ObjectLoader
+from aiida.orm import Int, List, Str
+
 
 class NestedWorkChain(WorkChain):
     """
@@ -50,10 +47,11 @@ class NestedWorkChain(WorkChain):
         if self.should_submit():
             self.report('Getting sub-workchain output.')
             sub_workchain = self.ctx.workchain[0]
-            self.out('output', sub_workchain.out.output + 1)
+            self.out('output', sub_workchain.outputs.output + 1)
         else:
             self.report('Bottom-level workchain reached.')
             self.out('output', Int(0))
+
 
 class SerializeWorkChain(WorkChain):
     @classmethod
@@ -71,6 +69,7 @@ class SerializeWorkChain(WorkChain):
     def echo(self):
         self.out('output', self.inputs.test)
 
+
 class NestedInputNamespace(WorkChain):
     @classmethod
     def define(cls, spec):
@@ -82,6 +81,7 @@ class NestedInputNamespace(WorkChain):
 
     def do_echo(self):
         self.out('output', self.inputs.foo.bar.baz)
+
 
 class ListEcho(WorkChain):
     @classmethod
@@ -95,6 +95,7 @@ class ListEcho(WorkChain):
 
     def do_echo(self):
         self.out('output', self.inputs.list)
+
 
 class DynamicNonDbInput(WorkChain):
     @classmethod
@@ -110,6 +111,7 @@ class DynamicNonDbInput(WorkChain):
         assert not isinstance(input_list, List)
         self.out('output', List(list=list(input_list)))
 
+
 class DynamicDbInput(WorkChain):
     @classmethod
     def define(cls, spec):
@@ -122,6 +124,7 @@ class DynamicDbInput(WorkChain):
         input_value = self.inputs.namespace.input
         assert isinstance(input_value, Int)
         self.out('output', input_value)
+
 
 class DynamicMixedInput(WorkChain):
     @classmethod
@@ -139,21 +142,23 @@ class DynamicMixedInput(WorkChain):
         assert isinstance(input_db, Int)
         self.out('output', input_db + input_non_db)
 
-class InlineCalcRunnerWorkChain(WorkChain):
+
+class CalcFunctionRunnerWorkChain(WorkChain):
     """
     WorkChain which calls an InlineCalculation in its step.
     """
     @classmethod
     def define(cls, spec):
-        super(InlineCalcRunnerWorkChain, cls).define(spec)
+        super(CalcFunctionRunnerWorkChain, cls).define(spec)
 
-        spec.input('input', valid_type=Str)
-        spec.output('output', valid_type=Str)
+        spec.input('input', valid_type=Int)
+        spec.output('output', valid_type=Int)
 
         spec.outline(cls.do_run)
 
     def do_run(self):
-        self.out('output', echo_inline(input_string=self.inputs.input)[1]['output'])
+        self.out('output', increment(self.inputs.input))
+
 
 class WorkFunctionRunnerWorkChain(WorkChain):
     """
@@ -171,10 +176,12 @@ class WorkFunctionRunnerWorkChain(WorkChain):
     def do_run(self):
         self.out('output', echo(self.inputs.input))
 
+
 @workfunction
 def echo(value):
     return value
 
-@make_inline
-def echo_inline(input_string):
-    return {'output': input_string}
+
+@calcfunction
+def increment(data):
+    return Int(data + 1)

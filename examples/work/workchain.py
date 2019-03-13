@@ -8,22 +8,19 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+This example illustrates in a very minimal way how a WorkChain can be defined and how it can be run. This mostly
+illustrates how the spec of the WorkChain is defined and how functions in the outline of the spec have to be defined.
+"""
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
-from aiida.orm.data.base import NumericType
-from aiida.orm.data.float import Float
-from aiida.orm.data.int import Int
-from aiida import work
 
-"""
-This example illustrates in a very minimal way how a WorkChain can be defined
-and how it can be run. This mostly illustrates how the spec of the WorkChain
-is defined and how functions in the outline of the spec have to be defined.
-"""
+from aiida.engine import WorkChain, run
+from aiida.orm import NumericType, Float, Int
 
 
-class SumWorkChain(work.WorkChain):
+class SumWorkChain(WorkChain):
 
     @classmethod
     def define(cls, spec):
@@ -39,7 +36,7 @@ class SumWorkChain(work.WorkChain):
         self.out('sum', self.inputs.a + self.inputs.b)
 
 
-class ProductWorkChain(work.WorkChain):
+class ProductWorkChain(WorkChain):
 
     @classmethod
     def define(cls, spec):
@@ -53,9 +50,9 @@ class ProductWorkChain(work.WorkChain):
 
     def product(self):
         self.out('product', self.inputs.a * self.inputs.b)
-    
 
-class SumProductWorkChain(work.WorkChain):
+
+class SumProductWorkChain(WorkChain):
 
     @classmethod
     def define(cls, spec):
@@ -83,13 +80,13 @@ def main():
         'c': Int(6)
     }
 
-    results = work.run(SumWorkChain, **inputs)
+    results = run(SumWorkChain, **inputs)
     print('Result of SumWorkChain: {}'.format(results))
 
-    results = work.run(ProductWorkChain, **inputs)
+    results = run(ProductWorkChain, **inputs)
     print('Result of ProductWorkChain: {}'.format(results))
 
-    results = work.run(SumProductWorkChain, **inputs)
+    results = run(SumProductWorkChain, **inputs)
     print('Result of SumProductWorkChain: {}'.format(results))
 
 

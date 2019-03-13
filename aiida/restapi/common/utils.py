@@ -64,7 +64,7 @@ class CustomJSONEncoder(JSONEncoder):
 
 
 class DatetimePrecision(object):
-    # pylint: disable=too-few-public-methods
+    # pylint: disable=too-few-public-methods,useless-object-inheritance
     """
     A simple class which stores a datetime object with its precision. No
     internal check is done (cause itis not possible).
@@ -88,7 +88,7 @@ class DatetimePrecision(object):
         self.precision = precision
 
 
-class Utils(object):
+class Utils(object):  # pylint: disable=useless-object-inheritance
     """
     A class that gathers all the utility functions for parsing URI,
     validating request, pass it to the translator, and building HTTP response
@@ -124,23 +124,22 @@ class Utils(object):
         self.perpage_default = kwargs['PERPAGE_DEFAULT']
         self.limit_default = kwargs['LIMIT_DEFAULT']
 
-    def strip_prefix(self, path):
+    def strip_api_prefix(self, path):
         """
         Removes the PREFIX from an URL path. PREFIX must be defined in the
         config.py file::
 
             PREFIX = "/api/v2"
             path = "/api/v2/calculations/page/2"
-            strip_prefix(path) ==> "/calculations/page/2"
+            strip_api_prefix(path) ==> "/calculations/page/2"
 
         :param path: the URL path string
         :return: the same URL without the prefix
         """
-
         if path.startswith(self.prefix):
             return path[len(self.prefix):]
-        else:
-            raise ValidationError('path has to start with {}'.format(self.prefix))
+
+        raise ValidationError('path has to start with {}'.format(self.prefix))
 
     @staticmethod
     def split_path(path):
@@ -148,8 +147,6 @@ class Utils(object):
         :param path: entire path contained in flask request
         :return: list of each element separated by '/'
         """
-
-        # type: (string) -> (list_of_strings).
         return [f for f in path.split('/') if f]
 
     def parse_path(self, path_string, parse_pk_uuid=None):
@@ -171,7 +168,7 @@ class Utils(object):
         page = None
         node_id = None
         query_type = "default"
-        path = self.split_path(self.strip_prefix(path_string))
+        path = self.split_path(self.strip_api_prefix(path_string))
 
         ## Pop out iteratively the "words" of the path until it is an empty
         # list.
@@ -217,13 +214,13 @@ class Utils(object):
         if path[0] == 'schema':
             query_type = path.pop(0)
             if path:
-                raise RestInputValidationError("url requesting schema resources do not " "admit further fields")
+                raise RestInputValidationError("url requesting schema resources do not admit further fields")
             else:
                 return (resource_type, page, node_id, query_type)
         elif path[0] == 'statistics':
             query_type = path.pop(0)
             if path:
-                raise RestInputValidationError("url requesting statistics resources do not " "admit further fields")
+                raise RestInputValidationError("url requesting statistics resources do not admit further fields")
             else:
                 return (resource_type, page, node_id, query_type)
         elif path[0] == "io" or path[0] == "content":
@@ -260,10 +257,10 @@ class Utils(object):
         # TODO Consider using **kwargs so to make easier to add more validations
         # 1. perpage incompatible with offset and limits
         if perpage is not None and (limit is not None or offset is not None):
-            raise RestValidationError("perpage key is incompatible with " "limit and offset")
+            raise RestValidationError("perpage key is incompatible with limit and offset")
         # 2. /page/<int: page> in path is incompatible with limit and offset
         if page is not None and (limit is not None or offset is not None):
-            raise RestValidationError("requesting a specific page is " "incompatible " "with limit and offset")
+            raise RestValidationError("requesting a specific page is incompatible with limit and offset")
         # 3. perpage requires that the path contains a page request
         if perpage is not None and page is None:
             raise RestValidationError("perpage key requires that a page is "
@@ -271,7 +268,7 @@ class Utils(object):
                                       "/page/)")
         # 4. No querystring if query type = schema'
         if query_type in ('schema') and is_querystring_defined:
-            raise RestInputValidationError("schema requests do not allow " "specifying a query string")
+            raise RestInputValidationError("schema requests do not allow specifying a query string")
 
     def paginate(self, page, perpage, total_count):
         """
@@ -366,7 +363,7 @@ class Utils(object):
         ## Input consistency
         # rel_pages cannot be defined without url
         if rel_pages is not None and url is None:
-            raise InputValidationError("'rel_pages' parameter requires 'url' " "parameter to be defined")
+            raise InputValidationError("'rel_pages' parameter requires 'url' parameter to be defined")
 
         headers = {}
 
@@ -516,6 +513,10 @@ class Utils(object):
         filename = None
         rtype = None
 
+        # io tree limit parameters
+        tree_in_limit = None
+        tree_out_limit = None
+
         ## Count how many time a key has been used for the filters and check if
         # reserved keyword
         # have been used twice,
@@ -538,29 +539,33 @@ class Utils(object):
 
         ## Check the reserved keywords
         if 'limit' in field_counts.keys() and field_counts['limit'] > 1:
-            raise RestInputValidationError("You cannot specify limit more than " "once")
+            raise RestInputValidationError("You cannot specify limit more than once")
         if 'offset' in field_counts.keys() and field_counts['offset'] > 1:
-            raise RestInputValidationError("You cannot specify offset more than " "once")
+            raise RestInputValidationError("You cannot specify offset more than once")
         if 'perpage' in field_counts.keys() and field_counts['perpage'] > 1:
-            raise RestInputValidationError("You cannot specify perpage more than " "once")
+            raise RestInputValidationError("You cannot specify perpage more than once")
         if 'orderby' in field_counts.keys() and field_counts['orderby'] > 1:
-            raise RestInputValidationError("You cannot specify orderby more than " "once")
+            raise RestInputValidationError("You cannot specify orderby more than once")
         if 'alist' in field_counts.keys() and field_counts['alist'] > 1:
-            raise RestInputValidationError("You cannot specify alist more than " "once")
+            raise RestInputValidationError("You cannot specify alist more than once")
         if 'nalist' in field_counts.keys() and field_counts['nalist'] > 1:
-            raise RestInputValidationError("You cannot specify nalist more than " "once")
+            raise RestInputValidationError("You cannot specify nalist more than once")
         if 'elist' in field_counts.keys() and field_counts['elist'] > 1:
-            raise RestInputValidationError("You cannot specify elist more than " "once")
+            raise RestInputValidationError("You cannot specify elist more than once")
         if 'nelist' in field_counts.keys() and field_counts['nelist'] > 1:
-            raise RestInputValidationError("You cannot specify nelist more than " "once")
+            raise RestInputValidationError("You cannot specify nelist more than once")
         if 'format' in field_counts.keys() and field_counts['format'] > 1:
-            raise RestInputValidationError("You cannot specify format more than " "once")
+            raise RestInputValidationError("You cannot specify format more than once")
         if 'visformat' in field_counts.keys() and field_counts['visformat'] > 1:
-            raise RestInputValidationError("You cannot specify visformat more than " "once")
+            raise RestInputValidationError("You cannot specify visformat more than once")
         if 'filename' in field_counts.keys() and field_counts['filename'] > 1:
-            raise RestInputValidationError("You cannot specify filename more than " "once")
+            raise RestInputValidationError("You cannot specify filename more than once")
         if 'rtype' in field_counts.keys() and field_counts['rtype'] > 1:
-            raise RestInputValidationError("You cannot specify rtype more than " "once")
+            raise RestInputValidationError("You cannot specify rtype more than once")
+        if 'in_limit' in field_counts.keys() and field_counts['in_limit'] > 1:
+            raise RestInputValidationError("You cannot specify in_limit more than once")
+        if 'out_limit' in field_counts.keys() and field_counts['out_limit'] > 1:
+            raise RestInputValidationError("You cannot specify out_limit more than once")
 
         ## Extract results
         for field in field_list:
@@ -569,38 +574,38 @@ class Utils(object):
                 if field[1] == '=':
                     limit = field[2]
                 else:
-                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'limit'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'limit'")
             elif field[0] == 'offset':
                 if field[1] == '=':
                     offset = field[2]
                 else:
-                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'offset'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'offset'")
             elif field[0] == 'perpage':
                 if field[1] == '=':
                     perpage = field[2]
                 else:
-                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'perpage'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'perpage'")
 
             elif field[0] == 'alist':
                 if field[1] == '=':
                     alist = field[2]
                 else:
-                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'alist'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'alist'")
             elif field[0] == 'nalist':
                 if field[1] == '=':
                     nalist = field[2]
                 else:
-                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'nalist'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'nalist'")
             elif field[0] == 'elist':
                 if field[1] == '=':
                     elist = field[2]
                 else:
-                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'elist'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'elist'")
             elif field[0] == 'nelist':
                 if field[1] == '=':
                     nelist = field[2]
                 else:
-                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'nelist'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'nelist'")
 
             elif field[0] == 'orderby':
                 if field[1] == '=':
@@ -611,31 +616,43 @@ class Utils(object):
                     else:
                         orderby.extend([field[2]])
                 else:
-                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'orderby'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'orderby'")
 
             elif field[0] == 'format':
                 if field[1] == '=':
                     downloadformat = field[2]
                 else:
-                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'format'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'format'")
 
             elif field[0] == 'visformat':
                 if field[1] == '=':
                     visformat = field[2]
                 else:
-                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'visformat'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'visformat'")
 
             elif field[0] == 'filename':
                 if field[1] == '=':
                     filename = field[2]
                 else:
-                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'filename'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'filename'")
 
             elif field[0] == 'rtype':
                 if field[1] == '=':
                     rtype = field[2]
                 else:
-                    raise RestInputValidationError("only assignment operator '=' " "is permitted after 'rtype'")
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'rtype'")
+
+            elif field[0] == 'in_limit':
+                if field[1] == '=':
+                    tree_in_limit = field[2]
+                else:
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'in_limit'")
+
+            elif field[0] == 'out_limit':
+                if field[1] == '=':
+                    tree_out_limit = field[2]
+                else:
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'out_limit'")
 
             else:
 
@@ -664,7 +681,7 @@ class Utils(object):
         #     limit = self.limit_default
 
         return (limit, offset, perpage, orderby, filters, alist, nalist, elist, nelist, downloadformat, visformat,
-                filename, rtype)
+                filename, rtype, tree_in_limit, tree_out_limit)
 
     def parse_query_string(self, query_string):
         # pylint: disable=too-many-locals

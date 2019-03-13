@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-from aiida.work.launch import run_get_node, run_get_pid
-from aiida.work.workfunctions import workfunction
+from aiida.engine import run_get_node, run_get_pid
+from aiida.engine import calcfunction
 
 a = 1
 b = 2
 
-@workfunction
+@calcfunction
 def add(a, b):
     return a + b
 

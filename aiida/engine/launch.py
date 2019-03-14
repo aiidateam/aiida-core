@@ -13,8 +13,8 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.manage import manager
-from .processes.process import Process, instantiate_process
-from .utils import is_process_function
+from .processes.process import Process
+from .utils import is_process_function, instantiate_process
 
 __all__ = ('run', 'run_get_pid', 'run_get_node', 'submit')
 

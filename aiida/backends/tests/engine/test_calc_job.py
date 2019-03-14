@@ -43,3 +43,19 @@ class TestCalcJob(AiidaTestCase):
 
         with self.assertRaises(exceptions.InvalidOperation):
             launch.submit(CalcJob)
+
+    def test_define_not_calling_super(self):
+        """A `CalcJob` that does not call super in `define` classmethod should raise."""
+
+        class IncompleteDefineCalcJob(CalcJob):
+            """Test class with incomplete define method"""
+
+            @classmethod
+            def define(cls, spec):
+                pass
+
+            def prepare_for_submission(self, folder):
+                pass
+
+        with self.assertRaises(AssertionError):
+            launch.run(IncompleteDefineCalcJob)

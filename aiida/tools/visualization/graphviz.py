@@ -84,13 +84,20 @@ def _style_code(node, override=None):
 
 def _style_cif(node, override=None):
     style = {}
-    label = "{}\n{} ({})".format(
-        _std_label(node),
-        node.get_attribute(
-            'formulae', [''])[0].replace(" ", ""),
-        node.get_attribute(
-            'spacegroup_numbers', [''])[0],
-    )
+    label = _std_label(node)
+    formulae = [str(f).replace(" ", "")
+                for f in aid.get_attribute(node, 'formulae', []) if f]
+    formulae = ", ".join(formulae)
+    sg_numbers = [str(s) for s in
+                  aid.get_attribute(node, 'spacegroup_numbers', []) if f]
+    sg_numbers = ", ".join(sg_numbers)
+    if formulae or sg_numbers:
+        label += "\n"
+    if formulae:
+        label += formulae + " "
+    if sg_numbers:
+        label += "({})".format(sg_numbers)
+
     style['label'] = label
     style['color'] = 'pink'
     if override:

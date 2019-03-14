@@ -26,13 +26,35 @@ class WithNonDb(object):  # pylint: disable=useless-object-inheritance
     """
 
     def __init__(self, *args, **kwargs):
+        self._non_db_explicitly_set = bool('non_db' in kwargs)
         non_db = kwargs.pop('non_db', False)
         super(WithNonDb, self).__init__(*args, **kwargs)
         self._non_db = non_db
 
     @property
+    def non_db_explicitly_set(self):
+        """Return whether the a value for `non_db` was explicitly passed in the construction of the `Port`.
+
+        :return: boolean, True if `non_db` was explicitly defined during construction, False otherwise
+        """
+        return self._non_db_explicitly_set
+
+    @property
     def non_db(self):
+        """Return whether the value of this `Port` should be stored as a `Node` in the database.
+
+        :return: boolean, True if it should be storable as a `Node`, False otherwise
+        """
         return self._non_db
+
+    @non_db.setter
+    def non_db(self, non_db):
+        """Set whether the value of this `Port` should be stored as a `Node` in the database.
+
+        :param non_db: boolean
+        """
+        self._non_db_explicitly_set = True
+        self._non_db = non_db
 
 
 class WithSerialize(object):  # pylint: disable=useless-object-inheritance
@@ -97,6 +119,23 @@ class PortNamespace(WithNonDb, ports.PortNamespace):
     Sub class of plumpy.PortNamespace which implements the serialize method to support automatic recursive
     serialization of a given mapping onto the ports of the PortNamespace.
     """
+
+    def __setitem__(self, key, port):
+        """Ensure that a `Port` being added inherits the `non_db` attribute if not explicitly defined at construction.
+
+        The reasoning is that if a `PortNamespace` has `non_db=True`, which is different from the default value, very
+        often all leaves should be also `non_db=True`. To prevent a user from having to specify it manually everytime
+        we overload the value here, unless it was specifically set during construction.
+
+        Note that the `non_db` attribute is not present for all `Port` sub classes so we have to check for it first.
+        """
+        if not isinstance(port, ports.Port):
+            raise TypeError('port needs to be an instance of Port')
+
+        if hasattr(port, 'non_db_explicitly_set') and not port.non_db_explicitly_set:
+            port.non_db = self.non_db
+
+        super(PortNamespace, self).__setitem__(key, port)
 
     def serialize(self, mapping):
         """

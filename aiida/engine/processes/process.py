@@ -54,7 +54,7 @@ class Process(plumpy.Process):
     # pylint: disable=too-many-public-methods
 
     _node_class = ProcessNode
-    _spec_type = ProcessSpec
+    _spec_class = ProcessSpec
 
     SINGLE_OUTPUT_LINKNAME = 'result'
 
@@ -68,12 +68,11 @@ class Process(plumpy.Process):
     @classmethod
     def define(cls, spec):
         super(Process, cls).define(spec)
-        spec.input_namespace(spec.metadata_key, required=False, non_db=True, default={})
+        spec.input_namespace(spec.metadata_key, required=False, non_db=True)
         spec.input_namespace('{}.{}'.format(spec.metadata_key, spec.options_key), required=False)
-        spec.input('{}.store_provenance'.format(spec.metadata_key), valid_type=bool, default=True, non_db=True)
-        spec.input(
-            '{}.description'.format(spec.metadata_key), valid_type=six.string_types[0], required=False, non_db=True)
-        spec.input('{}.label'.format(spec.metadata_key), valid_type=six.string_types[0], required=False, non_db=True)
+        spec.input('{}.store_provenance'.format(spec.metadata_key), valid_type=bool, default=True)
+        spec.input('{}.description'.format(spec.metadata_key), valid_type=six.string_types[0], required=False)
+        spec.input('{}.label'.format(spec.metadata_key), valid_type=six.string_types[0], required=False)
         spec.inputs.valid_type = (orm.Data,)
         spec.outputs.valid_type = (orm.Data,)
 

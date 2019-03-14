@@ -44,7 +44,7 @@ class WorkChain(Process):
     A WorkChain, the base class for AiiDA workflows.
     """
     _node_class = WorkChainNode
-    _spec_type = WorkChainSpec
+    _spec_class = WorkChainSpec
     _STEPPER_STATE = 'stepper_state'
     _CONTEXT = 'CONTEXT'
 

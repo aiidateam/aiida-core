@@ -84,6 +84,7 @@ db_test_list = {
         'engine.futures': ['aiida.backends.tests.engine.test_futures'],
         'engine.launch': ['aiida.backends.tests.engine.test_launch'],
         'engine.persistence': ['aiida.backends.tests.engine.test_persistence'],
+        'engine.ports': ['aiida.backends.tests.engine.test_ports'],
         'engine.process': ['aiida.backends.tests.engine.test_process'],
         'engine.process_builder': ['aiida.backends.tests.engine.test_process_builder'],
         'engine.process_function': ['aiida.backends.tests.engine.test_process_function'],

@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=cyclic-import
 """The AiiDA process class"""
 from __future__ import division
 from __future__ import print_function
@@ -43,40 +42,6 @@ from .ports import InputPort, PortNamespace
 from .process_spec import ProcessSpec
 
 __all__ = ('Process', 'ProcessState')
-
-
-def instantiate_process(runner, process, *args, **inputs):
-    """
-    Return an instance of the process with the given inputs. The function can deal with various types
-    of the `process`:
-
-        * Process instance: will simply return the instance
-        * ProcessBuilder instance: will instantiate the Process from the class and inputs defined within it
-        * Process class: will instantiate with the specified inputs
-
-    If anything else is passed, a ValueError will be raised
-
-    :param process: Process instance or class, CalcJobNode class or ProcessBuilder instance
-    :param inputs: the inputs for the process to be instantiated with
-    """
-    if isinstance(process, Process):
-        assert not args
-        assert not inputs
-        assert runner is process.runner
-        return process
-
-    if isinstance(process, ProcessBuilder):
-        builder = process
-        process_class = builder.process_class
-        inputs.update(**builder)
-    elif issubclass(process, Process):
-        process_class = process
-    else:
-        raise ValueError('invalid process {}, needs to be Process or ProcessBuilder'.format(type(process)))
-
-    process = process_class(runner=runner, inputs=inputs)
-
-    return process
 
 
 @plumpy.auto_persist('_parent_pid', '_enable_persistence')

@@ -13,10 +13,12 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+from .builder import *
 from .calcjobs import *
 from .exit_code import *
 from .functions import *
 from .process import *
 from .workchains import *
 
-__all__ = (calcjobs.__all__ + exit_code.__all__ + functions.__all__ + process.__all__ + workchains.__all__)
+__all__ = (
+    builder.__all__ + calcjobs.__all__ + exit_code.__all__ + functions.__all__ + process.__all__ + workchains.__all__)

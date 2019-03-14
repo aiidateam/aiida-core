@@ -12,6 +12,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+from collections import Mapping
 from plumpy import ports
 
 
@@ -105,8 +106,12 @@ class PortNamespace(WithNonDb, ports.PortNamespace):
         :param mapping: a mapping of values to be serialized
         :returns: the serialized mapping
         """
+        from aiida.common.lang import type_check
+
         if mapping is None:
             return None
+
+        type_check(mapping, Mapping)
 
         result = {}
 

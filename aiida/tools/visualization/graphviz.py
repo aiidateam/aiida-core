@@ -457,3 +457,51 @@ class Graph(object):
 
             if include_target_outputs:
                 self.add_outputs(target_node, link_labels=link_labels)
+
+    def add_origins_to_targets(self, origin_cls, target_cls,
+                               origin_filters=None,
+                               target_filters=None,
+                               include_target_inputs=False,
+                               include_target_outputs=False,
+                               origin_style=(('style', 'filled'),
+                                             ('color', 'lightblue')),
+                               link_labels=False):
+        """add nodes and edges from multiple origin node to target nodes
+
+        Parameters
+        ----------
+        origin_cls: class
+        target_cls: class
+        origin_filters=None: dict or None
+        target_filters=None: dict or None
+        include_target_inputs=False: bool
+        include_target_outputs=False: bool
+        origin_style: dict
+        link_labels: bool
+            label edges with the link label
+
+        """
+        from aiida.orm.querybuilder import QueryBuilder
+
+        if origin_filters is None:
+            origin_filters = {}
+
+        query = QueryBuilder(**{
+            "path": [
+                {
+                    'cls': origin_cls,
+                    "filters": origin_filters,
+                    'tag': "origin",
+                    'project': "*"
+                }
+            ]
+        })
+
+        for (node,) in query.iterall():
+            self.add_origin_to_target(
+                node, target_cls, target_filters=target_filters,
+                include_target_inputs=include_target_inputs,
+                include_target_outputs=include_target_outputs,
+                origin_style=origin_style,
+                link_labels=link_labels)
+

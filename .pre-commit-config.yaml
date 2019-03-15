@@ -246,6 +246,17 @@
       )$
     pass_filenames: false
 
+  - id: verdi-autodocs
+    name: Automatically generating verdi docs
+    entry: python ./utils/validate_consistency.py verdi-autodocs
+    language: system
+    files: >-
+      (?x)^(
+        aiida/cmdline/commands/.*|
+        utils/validate_consistency.py|
+      )$
+    pass_filenames: false
+
   - id: travis-linter
     name: travis
     entry: travis lint

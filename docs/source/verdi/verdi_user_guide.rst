@@ -1,33 +1,4 @@
-Introduction
-============
-
-The main way of interacting with AiiDA is through a command line interface tool called ``verdi``.
-You have already used ``verdi`` when installing AiiDA, either through ``verdi quicksetup`` or ``verdi setup``.
-But ``verdi`` is very versatile and provides a wealth of other functionalities; here is a list:
-
-* :ref:`code<code>`:                 Setup and manage codes.
-* :ref:`comment<comment>`:           Inspect, create and manage comments.
-* :ref:`computer<computer>`:         Setup and manage computers.
-* :ref:`config<config>`:             Set, unset and get profile specific or global configuration options.
-* :ref:`daemon<daemon>`:             Inspect and manage the daemon.
-* :ref:`data<data>`:                 Inspect, create and manage data nodes.
-* :ref:`devel<devel>`:               Commands for developers.
-* :ref:`export<export>`:             Create and manage export archives.
-* :ref:`graph<graph>`:               Create visual representations of the provenance graph.
-* :ref:`group<group>`:               Inspect, create and manage groups.
-* :ref:`import<import>`:             Import one or multiple exported AiiDA archives
-* :ref:`node<node>`:                 Inspect, create and manage nodes.
-* :ref:`process<process>`:           Inspect and manage processes.
-* :ref:`profile<profile>`:           Inspect and manage the configured profiles.
-* :ref:`quicksetup<quicksetup>`:     Quick setup for the most common usecase (1 user, 1 machine).
-* :ref:`rehash<rehash>`:             Recompute the hash for nodes in the database
-* :ref:`restapi<restapi>`:           Run the AiiDA REST API server
-* :ref:`run<run>`:                   Execute an AiiDA script.
-* :ref:`setup<setup>`:               Setup and configure a new profile.
-* :ref:`shell<shell>`:               Start a python shell with preloaded AiiDA environment.
-* :ref:`status<status>`:             Show service status overview.
-* :ref:`user<user>`:                 Inspect and manage users.
-
+.. _cli_concepts:
 
 Concepts
 ========
@@ -199,311 +170,625 @@ The previous command can therefore be made unambiguous as follows::
 
 This time the parser will notice the ``--`` end options marker and correctly identify ``archive.aiida`` as the positional argument.
 
+
+.. _verdi_commands:
+
 Commands
 ========
+Below is a list with all available subcommands.
 
-Below is a list with all the available subcommands.
+.. _verdi_calcjob:
+
+``verdi calcjob``
+-----------------
+
+::
+
+    Usage:  [OPTIONS] COMMAND [ARGS]...
+
+      Inspect and manage calcjobs.
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      cleanworkdir  Clean all content of all output remote folders of calcjobs.
+      gotocomputer  Open a shell and go to the calcjob folder on the computer...
+      inputcat      Show the contents of a file with relative PATH in the raw...
+      inputls       Show the list of files in the directory with relative PATH...
+      outputcat     Show the contents of a file with relative PATH in the...
+      outputls      Show the list of files in the directory with relative PATH...
+      res           Print data from the result output node of a calcjob.
 
 
-.. _code:
+.. _verdi_code:
 
 ``verdi code``
 --------------
-Setup and manage code objects.
 
-  *  **delete**: delete a code from the database. Only possible for disconnected codes (i.e. a code that has not been used yet)
-  *  **duplicate**: setup a new code, starting from the settings of an existing one
-  *  **hide**: hide codes from `verdi code list`
-  *  **list**: lists the installed codes
-  *  **relabel**: change the label (name) of a code. If you like to load codes based on their labels and not on their UUID's or PK's, make sure to use unique labels!
-  *  **reveal**: un-hide codes for `verdi code list`
-  *  **setup**: setup a new code
-  *  **show**: shows the information of the installed code
+::
 
-.. _comment:
+    Usage:  [OPTIONS] COMMAND [ARGS]...
+
+      Setup and manage codes.
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      delete     Delete codes that have not yet been used for calculations, i.e.
+      duplicate  Create duplicate of existing Code.
+      hide       Hide one or more codes from the `verdi code list` command.
+      list       List the codes in the database.
+      relabel    Relabel a code.
+      rename     Rename a code.
+      reveal     Reveal one or more hidden codes to the `verdi code list`...
+      setup      Setup a new Code.
+      show       Display detailed information for the given CODE.
+      update     Update an existing code.
+
+
+.. _verdi_comment:
 
 ``verdi comment``
 -----------------
-There are various ways of attaching notes/comments to a node within AiiDA. In the first scripting examples, you might already have noticed the possibility of storing a ``label`` or a ``description`` to any AiiDA Node.
-However, these properties are defined when the Node is created, and it is not possible to modify them after the Node has been stored.
-The Node ``comment`` provides a simple way to have a more dynamic management of comments, in which any user can write a comment on the Node, or modify it or delete it.
-The ``verdi comment`` command provides a set of methods that are used to manipulate the comments:
 
-  * **add**: add a new comment to a Node
-  * **remove**: remove a comment
-  * **show**: show the existing comments attached for a given Node
-  * **update**: modify a comment
+::
+
+    Usage:  [OPTIONS] COMMAND [ARGS]...
+
+      Inspect, create and manage node comments.
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      add     Add a comment to one or multiple nodes.
+      remove  Remove a comment.
+      show    Show the comments for one or multiple nodes.
+      update  Update a comment.
 
 
-.. _computer:
+.. _verdi_completioncommand:
+
+``verdi completioncommand``
+---------------------------
+
+::
+
+    Usage:  [OPTIONS]
+
+      Return the bash code to activate completion.
+
+      :note: this command is mainly for back-compatibility.     You should
+      rather use:;
+
+              eval "$(_VERDI_COMPLETE=source verdi)"
+
+    Options:
+      --help  Show this message and exit.
+
+
+.. _verdi_computer:
 
 ``verdi computer``
 ------------------
-Setup and manage computer objects.
 
-  *  **configure**: set up some extra info that can be used in the connection with that computer
-  *  **delete**: deletes a computer node. Works only if the computer node is a disconnected node in the database (has not been used yet)
-  *  **disable**: disable a computer (see enable for a larger description)
-  *  **enable**: to enable a computer. If the computer is disabled, the daemon will not try to connect to the computer, so it will not retrieve or launch calculations. Useful if a computer is under mantainance
-  *  **list**: list all installed computers
-  *  **rename**: changes the name of a computer
-  *  **setup**: creates a new computer object
-  *  **show**: shows the details of an installed computer
-  *  **test**: tests if the current user (or a given user) can connect to the computer and if basic operations perform as expected (file copy, getting the list of jobs in the scheduler queue, ...)
-  *  **duplicate**: setup a new computer, starting from the settings of an existing one
-  *  **update**: [deprecated: use ``verdi computer duplicate`` instead] change configuration of a computer. Works only if the computer node is a disconnected node in the database (has not been used yet)
+::
+
+    Usage:  [OPTIONS] COMMAND [ARGS]...
+
+      Setup and manage computers.
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      configure  Configure a computer with one of the available transport types.
+      delete     Configure the authentication information for a given computer...
+      disable    Disable a computer.
+      duplicate  Duplicate a Computer.
+      enable     Enable a computer.
+      list       List available computers.
+      rename     Rename a computer
+      setup      Add a Computer.
+      show       Show information on a given computer
+      test       Test the connection to a computer.
 
 
-.. _config:
+.. _verdi_config:
 
 ``verdi config``
 ----------------
-This command allows you to set various configuration options that change how AiiDA works.
-The options can be set for specific profiles or globally.
-The command works just like ``git config`` does.
-Only passing the option name as an argument will print its value, if it is set.
-Passing a value as a second argument, will set that value for the given option.
-With the ``--unset`` flag an option can be unset and by using ``--global`` the get, set or unset operation is applied globally instead of the default profile.
+
+::
+
+    Usage:  [OPTIONS] OPTION_NAME OPTION_VALUE
+
+      Set, unset and get profile specific or global configuration options.
+
+    Options:
+      --global  Apply the option configuration wide.
+      --unset   Remove the line matching the option name from the config file.
+      --help    Show this message and exit.
 
 
-.. _daemon:
+.. _verdi_daemon:
 
 ``verdi daemon``
 ----------------
-Manage the daemon, i.e. the process that runs in background and that manages submission/retrieval of calculations and workflows.
 
-  *  **decr**: decrease the number of workers of the daemon
-  *  **incr**: increase the number of workers of the daemon
-  *  **logshow**: show the last lines of the daemon log (use for debugging)
-  *  **restart**: restarts the daemon
-  *  **start**: starts the daemon
-  *  **status**: see the status of the daemon
-  *  **stop**: stops the daemon
+::
 
-  
-.. _data:
+    Usage:  [OPTIONS] COMMAND [ARGS]...
+
+      Inspect and manage the daemon.
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      decr          Remove NUMBER [default=1] workers from the running daemon
+      incr          Add NUMBER [default=1] workers to the running daemon
+      logshow       Show the log of the daemon, press CTRL+C to quit
+      restart       Restart the daemon.
+      start         Start the daemon
+      start-circus  This will actually launch the circus daemon, either...
+      status        Print the status of the current daemon or all daemons
+      stop          Stop the daemon
+
+
+.. _verdi_data:
 
 ``verdi data``
 --------------
-Manage ``Data`` nodes.
 
-  * **array**: handles :class:`aiida.orm.nodes.data.array.ArrayData` objects
+::
 
-    * **show**: visualizes the data object
+    Usage:  [OPTIONS] COMMAND [ARGS]...
 
-  * **bands**:  handles :class:`aiida.orm.nodes.data.array.bands.BandsData` objects (band structure object)
+      Inspect, create and manage data nodes.
 
-    * **export**: export the node as a string of a specified format
-    * **list**:   list currently saved nodes of :class:`aiida.orm.nodes.data.array.bands.BandsData` kind
-    * **show**:   visualizes the data object
+    Options:
+      --help  Show this message and exit.
 
-  * **cif**: handles the CifData objects
-
-    * **deposit**: deposit the node to a remote database
-    * **export**: export the node as a string of a specified format
-    * **import**: create or return (if already present) a database node, having the contents of a supplied file
-    * **list**: list currently saved nodes of CifData kind
-    * **show**: use third-party visualizer (like jmol) to graphically show the CifData
-
-  * **parameter**: handles the Dict objects
-
-    * **show**: output the content of the python dictionary in different formats.
-
-  * **remote**: handle RemoteData objects
-
-    * **cat**: output the content of a file in the RemoteData folder.
-    * **ls**: list the contents of the RemoteData folder.
-    * **show**: display general information about the RemoteData object.
-
-  * **structure**: handles the StructureData
-
-    * **deposit**: deposit the node to a remote database
-    * **export**: export the node as a string of a specified format
-    * **import**: import a StructureData node from file
-    * **list**: list currently saved nodes of StructureData kind
-    * **show**: use a third-party visualizer (like vmd or xcrysden) to graphically show the StructureData
-
-  * **trajectory**: handles the TrajectoryData objects
-
-    * **deposit**: deposit the node to a remote database
-    * **export**: export the node as a string of a specified format
-    * **list**: list currently saved nodes of TrajectoryData kind
-    * **show**: use third-party visualizer (like jmol) to graphically show the TrajectoryData
-
-  * **upf**: handles the Pseudopotential Datas
-
-    * **exportfamily**: export a family of pseudopotential files into a folder
-    * **import**: create or return (if already present) a database node, having the contents of a supplied file
-    * **listfamilies**: list presently stored families of pseudopotentials
-    * **uploadfamily**: install a new family (group) of pseudopotentials
+    Commands:
+      array       Manipulate ArrayData objects.
+      bands       Manipulate BandsData objects.
+      cif         Manipulation of CIF data objects.
+      parameter   View and manipulate Dict objects.
+      plugins     Print a list of registered data plugins or details of a...
+      remote      Managing RemoteData objects.
+      structure   Manipulation of StructureData objects.
+      trajectory  View and manipulate TrajectoryData instances.
+      upf         Manipulation of the upf families.
 
 
-.. _devel:
+.. _verdi_database:
+
+``verdi database``
+------------------
+
+::
+
+    Usage:  [OPTIONS] COMMAND [ARGS]...
+
+      Inspect and manage the database.
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      integrity  Various commands that will check the integrity of the database...
+      migrate    Migrate the database to the latest schema version.
+
+
+.. _verdi_devel:
 
 ``verdi devel``
 ---------------
-Commands intended for developers, such as setting :doc:`config properties<properties>` and running the unit test suite.
 
-  * **run_daemon**: run an instance of the daemon runner in the current interpreter
-  * **tests**: run the unittest suite
+::
+
+    Usage:  [OPTIONS] COMMAND [ARGS]...
+
+      Commands for developers.
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      play        Open a browser and play the Aida triumphal march by Giuseppe...
+      run_daemon  Run a daemon instance in the current interpreter.
+      tests       Run the unittest suite or parts of it.
 
 
-.. _export:
+.. _verdi_export:
 
 ``verdi export``
 ----------------
-Create and manage export archives.
 
- * **create**: export a selection of nodes to an aiida export file. See also :ref:`import` and the :ref:`export-file-format`.
- * **migrate**: migrate export archives between file format versions.
+::
+
+    Usage:  [OPTIONS] COMMAND [ARGS]...
+
+      Create and manage export archives.
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      create   Export various entities, such as Codes, Computers, Groups and...
+      inspect  Inspect the contents of an exported archive without importing
+               the...
+      migrate  Migrate an existing export archive file to the most recent...
 
 
-.. _graph:
+.. _verdi_graph:
 
 ``verdi graph``
 ---------------
-Create graphical representations of part of the provenance graph.
-Requires that `graphviz <https://graphviz.org/download>`_ be installed. 
 
-  * **generate**: generates a graph from a given root node either in a graphical or a  ``.dot`` format.
+::
+
+    Usage:  [OPTIONS] COMMAND [ARGS]...
+
+      Create visual representations of part of the provenance graph. Requires
+      that `graphviz<https://graphviz.org/download>` be installed.
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      generate  Generate a graph from a given ROOT_NODE user-specified by its...
 
 
-.. _group:
+.. _verdi_group:
 
 ``verdi group``
 ---------------
-Create and manage group objects.
 
-  *  **addnodes**: add nodes to a group.
-  *  **list**: list all the groups in the database.
-  *  **description**: show or change the description of a group
-  *  **show**: show the content of a group.
-  *  **create**: create a new empty group.
-  *  **rename**: change the name of a group.
-  *  **delete**: delete an existing group (but not the nodes belonging to it).
-  *  **removenodes**: remove nodes from a group.
+::
+
+    Usage:  [OPTIONS] COMMAND [ARGS]...
+
+      Inspect, create and manage groups.
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      addnodes     Add NODES to a given AiiDA group.
+      copy         Add all nodes that belong to source group to the destination...
+      create       Create a new empty group with the name GROUP_NAME.
+      delete       Pass the GROUP to delete an existing group.
+      description  Change the description of a given group.
+      list         Show a list of groups.
+      removenodes  Remove NODES from a given AiiDA group.
+      rename       Rename an existing group.
+      show         Show information on a given group.
 
 
-.. _help:
-
-``verdi help``
---------------
-This command is deprecated, please use ``verdi --help`` instead
-
-
-.. _import:
+.. _verdi_import:
 
 ``verdi import``
 ----------------
-Import archive files that were created with ``verdi export create``.
+
+::
+
+    Usage:  [OPTIONS] [ARCHIVES]...
+
+      Import one or multiple exported AiiDA archives
+
+      The ARCHIVES can be specified by their relative or absolute file path, or
+      their HTTP URL.
+
+    Options:
+      -w, --webpages TEXT...          Discover all URL targets pointing to files
+                                      with the .aiida extension for these HTTP
+                                      addresses. Automatically discovered archive
+                                      URLs will be downloadeded and added to
+                                      ARCHIVES for importing
+      -G, --group GROUP               Specify group to which all the import nodes
+                                      will be added. If such a group does not
+                                      exist, it will be created automatically.
+      -e, --extras-mode-existing [keep_existing|update_existing|mirror|none|ask]
+                                      Specify which extras from the export archive
+                                      should be imported for nodes that are
+                                      already contained in the database: ask:
+                                      import all extras and prompt what to do for
+                                      existing extras. keep_existing: import all
+                                      extras and keep original value of existing
+                                      extras. update_existing: import all extras
+                                      and overwrite value of existing extras.
+                                      mirror: import all extras and remove any
+                                      existing extras that are not present in the
+                                      archive. none: do not import any extras.
+      -n, --extras-mode-new [import|none]
+                                      Specify whether to import extras of new
+                                      nodes: import: import extras. none: do not
+                                      import extras.
+      --comment-mode [newest|overwrite]
+                                      Specify the way to import Comments with
+                                      identical UUIDs: newest: Only the newest
+                                      Comments (based on mtime)
+                                      (default).overwrite: Replace existing
+                                      Comments with those from the import file.
+      --help                          Show this message and exit.
 
 
-.. _install:
-
-``verdi install``
------------------
-This command is deprecated, please use the :ref:`setup <setup>` command instead
-
-
-.. _node:
+.. _verdi_node:
 
 ``verdi node``
 --------------
-Manage ``Node`` instances from the provenance graph.
 
-  * **delete**: delete a node and all its descendants from the provenance graph
-  * **description**: view or set the description of a node
-  * **label**: view or set the label of a node
-  * **repo**: shows files and their contents in the local repository
-  * **show**: shows basic node information (PK, UUID, class, inputs and outputs)
-  * **tree**: shows a tree represenatation in ASCII of the node and its links
+::
 
-.. warning:: In order to preserve the provenance, ``verdi node delete`` will delete not only the list of specified nodes, but also all the children nodes!
-  So please be sure to double check what is going to be deleted before running this function.
-  This command cannot be undone.
+    Usage:  [OPTIONS] COMMAND [ARGS]...
+
+      Inspect, create and manage nodes.
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      delete       Deletes a node and everything that originates from it.
+      description  View or set the descriptions of one or more nodes.
+      label        View or set the labels of one or more nodes.
+      repo
+      show         Show generic information on node(s).
+      tree         Show trees of nodes.
 
 
-.. _process:
+.. _verdi_plugin:
+
+``verdi plugin``
+----------------
+
+::
+
+    Usage:  [OPTIONS] COMMAND [ARGS]...
+
+      Inspect installed plugins for various entry point categories.
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      list  Display a list of all available plugins.
+
+
+.. _verdi_process:
 
 ``verdi process``
 -----------------
-Inspect and manage processes.
 
- * **list**: Show a list of processes that are still running.
- * **kill**: Kill running processes.
- * **pause**: Pause running processes.
- * **play**: Play paused processes.
- * **watch**: Watch the state transitions for a process.
+::
+
+    Usage:  [OPTIONS] COMMAND [ARGS]...
+
+      Inspect and manage processes.
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      kill    Kill running processes.
+      list    Show a list of processes that are still running.
+      pause   Pause running processes.
+      play    Play paused processes.
+      report  Show the log report for one or multiple processes.
+      show    Show a summary for one or multiple processes.
+      status  Print the status of the process.
+      watch   Watch the state transitions for a process.
 
 
-.. _profile:
+.. _verdi_profile:
 
 ``verdi profile``
 -----------------
-List and change the default profiles.
 
-  * **delete**: delete a profile and the corresponding database and repository
-  * **list**: show the list of currently available profiles and the current default profile
-  * **setdefault**: set the default profile, i.e. the profile that is used for all ``verdi`` commands if not explicitly specified
+::
+
+    Usage:  [OPTIONS] COMMAND [ARGS]...
+
+      Inspect and manage the configured profiles.
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      delete      Delete PROFILES (names, separated by spaces) from the aiida...
+      list        Displays list of all available profiles.
+      setdefault  Set PROFILE as the default profile.
+      show        Show details for PROFILE or, when not specified, the default...
 
 
-.. _quicksetup:
+.. _verdi_quicksetup:
 
 ``verdi quicksetup``
 --------------------
-Set up a sane aiida configuration with as little interaction as possible.
+
+::
+
+    Usage:  [OPTIONS] [PROFILE_NAME]
+
+      Set up a sane configuration with as little interaction as possible.
+
+    Options:
+      --only-config                  Only configure the user and skip creating the
+                                     database.
+      --set-default                  Set the profile as the new default.
+      -n, --non-interactive          Non-interactive mode: never prompt for input.
+      --backend [django|sqlalchemy]  Database backend to use.
+      --db-host TEXT                 Database server host.
+      --db-port INTEGER              Database server port.
+      --db-name TEXT                 Database name.
+      --db-username TEXT             Database user name.
+      --db-password TEXT             Database user password.
+      --repository DIRECTORY         Absolute path for the file system repository.
+      --email TEXT                   Email address that will be associated with
+                                     your data and will be exported along with it,
+                                     should you choose to share any of your work.
+      --first-name TEXT              First name of the user.
+      --last-name TEXT               Last name of the user.
+      --institution TEXT             Institution name of the user.
+      --help                         Show this message and exit.
 
 
-.. _rehash:
+.. _verdi_rehash:
 
 ``verdi rehash``
 ----------------
-Rehash all nodes in the database filtered by their identifier and/or based on their class.
+
+::
+
+    Usage:  [OPTIONS] [NODES]...
+
+      Recompute the hash for nodes in the database
+
+      The set of nodes that will be rehashed can be filtered by their identifier
+      and/or based on their class.
+
+    Options:
+      -e, --entry-point PLUGIN  Only include nodes that are class or sub class of
+                                the class identified by this entry point.
+      --help                    Show this message and exit.
 
 
-.. _restapi:
+.. _verdi_restapi:
 
 ``verdi restapi``
 -----------------
-Run an instance of the REST API server on localhost.
+
+::
+
+    Usage:  [OPTIONS]
+
+      Run the AiiDA REST API server
+
+      Example Usage:
+
+              verdi -p <profile_name> restapi --host 127.0.0.5 --port 6789 --config-dir <location of the config.py file>
+
+    Options:
+      -H, --host TEXT        the hostname to use
+      -p, --port INTEGER     the port to use
+      -c, --config-dir PATH  the path of the configuration directory
+      --help                 Show this message and exit.
 
 
-.. _run:
+.. _verdi_run:
 
 ``verdi run``
 -------------
-Run a python script for AiiDA.
-This is the command line equivalent of the verdi shell.
-Has also features of autogrouping: by default, every node created in one a call of verdi run will be grouped together.
+
+::
+
+    Usage:  [OPTIONS] SCRIPTNAME [VARARGS]...
+
+      Execute an AiiDA script.
+
+    Options:
+      -g, --group                   Enables the autogrouping  [default: True]
+      -n, --group-name TEXT         Specify the name of the auto group
+      -e, --exclude TEXT            Exclude these classes from auto grouping
+      -i, --include TEXT            Include these classes from auto grouping
+      -E, --excludesubclasses TEXT  Exclude these classes and their sub classes
+                                    from auto grouping
+      -I, --includesubclasses TEXT  Include these classes and their sub classes
+                                    from auto grouping
+      --help                        Show this message and exit.
 
 
-.. _setup:
+.. _verdi_setup:
 
 ``verdi setup``
 ---------------
-Create and setup a new profile.
+
+::
+
+    Usage:  [OPTIONS] PROFILE_NAME
+
+      Setup and configure a new profile.
+
+    Options:
+      --only-config                  Only configure the user and skip creating the
+                                     database.
+      --set-default                  Set the profile as the new default.
+      -n, --non-interactive          Non-interactive mode: never prompt for input.
+      --backend [django|sqlalchemy]  Database backend to use.
+      --db-host TEXT                 Database server host.
+      --db-port INTEGER              Database server port.
+      --db-name TEXT                 Database name.
+      --db-username TEXT             Database user name.
+      --db-password TEXT             Database user password.
+      --repository DIRECTORY         Absolute path for the file system repository.
+      --email TEXT                   Email address that will be associated with
+                                     your data and will be exported along with it,
+                                     should you choose to share any of your work.
+      --first-name TEXT              First name of the user.
+      --last-name TEXT               Last name of the user.
+      --institution TEXT             Institution name of the user.
+      -f, --force                    Do not ask for confirmation.
+      --help                         Show this message and exit.
 
 
-.. _shell:
+.. _verdi_shell:
 
 ``verdi shell``
 ---------------
-Start a python shell with preloaded AiiDA environment.
-Which modules will be preloaded can be configured through :doc:`properties<properties>` set in the configuration file.
 
-.. _status:
+::
+
+    Usage:  [OPTIONS]
+
+      Start a python shell with preloaded AiiDA environment.
+
+    Options:
+      --plain                         Use a plain Python shell.)
+      --no-startup                    When using plain Python, ignore the
+                                      PYTHONSTARTUP environment variable and
+                                      ~/.pythonrc.py script.
+      -i, --interface [ipython|bpython]
+                                      Specify an interactive interpreter
+                                      interface.
+      --help                          Show this message and exit.
+
+
+.. _verdi_status:
 
 ``verdi status``
 ----------------
-Show overview of status for services needed by AiiDA.
-This can be helpful for pinning down potential problems during debugging.
+
+::
+
+    Usage:  [OPTIONS]
+
+      Print status of AiiDA services.
+
+    Options:
+      --help  Show this message and exit.
 
 
-.. _user:
+.. _verdi_user:
 
 ``verdi user``
 --------------
-Configure and manage users
 
-  *  **configure**: configure a new AiiDA user
-  *  **list**: list existing users configured for your AiiDA installation
+::
+
+    Usage:  [OPTIONS] COMMAND [ARGS]...
+
+      Inspect and manage users.
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      configure  Create or update a user.
+      list       List all the users.
+
+
+
+.. END_OF_VERDI_COMMANDS_MARKER

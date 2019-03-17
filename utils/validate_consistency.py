@@ -21,6 +21,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+import io
 import os
 import sys
 import json
@@ -44,12 +45,135 @@ def get_setup_json():
     return setup_json
 
 
+def determine_block_positions(lines, block_start_marker, block_end_marker):
+    """Determine the line indices of a block in a list of lines indicated by a given start and end marker.
+
+    :param lines: list of strings
+    :param block_start_marker: string marking the beginning of the block
+    :param block_end_marker: string marking the end of the block
+    :return: tuple of two integers representing the line indices that indicate the start and end of the block
+    """
+    block_start_index = -1
+    block_end_index = -1
+
+    for line_number, line in enumerate(lines):
+        if block_start_marker in line:
+            block_start_index = line_number + 1
+
+        if block_end_marker in line:
+            block_end_index = line_number
+            break
+
+    if block_start_index < 0 or block_end_index < 0:
+        raise RuntimeError('failed to determine the starting or end point of the block')
+
+    return block_start_index, block_end_index
+
+
+def replace_line_block(lines, block, index_start, index_end):
+    """Replace a block of lines between two line indices with a new set of lines.
+
+    :param lines: list of lines representing the whole file
+    :param block: list of lines representing the new block that should be inserted after old block is removed
+    :param index_start: start of the block to be removed
+    :param index_end: end of the block to be removed
+    :return: list of lines with block of lines replaced
+    """
+    # Slice out the old block by removing the lines between the markers of the block
+    lines = lines[:index_start] + lines[index_end:]
+
+    # Now insert the new block starting at the beginning of the original block
+    lines[index_start:index_start] = block
+
+    return lines
+
+
+def replace_block_in_file(filepath, block_start_marker, block_end_marker, block):
+    """Replace a block of text between the given string markers with the provided new block of lines.
+
+    :param filepath: absolute path of the file
+    :param block_start_marker: string marking the beginning of the block
+    :param block_end_marker: string marking the end of the block
+    :param block: list of lines representing the new block that should be inserted after old block is removed
+    """
+    with io.open(filepath) as handle:
+        lines = handle.readlines()
+
+    try:
+        index_start, index_end = determine_block_positions(lines, block_start_marker, block_end_marker)
+    except RuntimeError as exception:
+        raise RuntimeError('problem rewriting file `{}`:: {}'.format(filepath, exception))
+
+    lines = replace_line_block(lines, block, index_start, index_end)
+
+    with io.open(filepath, 'w') as handle:
+        for line in lines:
+            handle.write(line)
+
+
 @click.group()
 def cli():
     pass
 
 
-@click.command('version')
+@cli.command('verdi-autodocs')
+def validate_verdi_documentation():
+    """Auto-generate the documentation for `verdi` through `click`."""
+    from aiida.cmdline.commands.cmd_verdi import verdi
+
+    # Replacing the block with the overview of `verdi`
+    filepath_verdi_overview = os.path.join(ROOT_DIR, 'docs', 'source', 'working_with_aiida', 'index.rst')
+    overview_block_start_marker = '.. _verdi_overview:'
+    overview_block_end_marker = '.. END_OF_VERDI_OVERVIEW_MARKER'
+
+    # Generate the new block with the command index
+    block = []
+    for name, command in sorted(verdi.commands.items()):
+        short_help = command.help.split('\n')[0]
+        block.append(u'* :ref:`{name:}<verdi_{name:}>`:  {help:}\n'.format(name=name, help=short_help))
+
+    # New block should start and end with an empty line after and before the literal block marker
+    block.insert(0, u'\n')
+    block.append(u'\n')
+
+    replace_block_in_file(filepath_verdi_overview, overview_block_start_marker, overview_block_end_marker, block)
+
+    # Replacing the block with the commands of `verdi`
+    filepath_verdi_commands = os.path.join(ROOT_DIR, 'docs', 'source', 'verdi', 'verdi_user_guide.rst')
+    commands_block_start_marker = '.. _verdi_commands:'
+    commands_block_end_marker = '.. END_OF_VERDI_COMMANDS_MARKER'
+
+    # Generate the new block with the command help strings
+    header = u'Commands'
+    message = u'Below is a list with all available subcommands.'
+    block = [u'{}\n{}\n{}\n\n'.format(header, '=' * len(header), message)]
+
+    for name, command in sorted(verdi.commands.items()):
+        ctx = click.Context(command)
+
+        header_label = u'.. _verdi_{name:}:'.format(name=name)
+        header_string = u'``verdi {name:}``'.format(name=name)
+        header_underline = u'-' * len(header_string)
+
+        block.append(header_label + '\n\n')
+        block.append(header_string + '\n')
+        block.append(header_underline + '\n\n')
+        block.append(u'::\n\n')  # Mark the beginning of a literal block
+        for line in ctx.get_help().split('\n'):
+            if line:
+                block.append(u'    {}\n'.format(line))
+            else:
+                block.append(u'\n')
+        block.append(u'\n\n')
+
+    # New block should start and end with an empty line after and before the literal block marker
+    block.insert(0, u'\n')
+    block.append(u'\n')
+
+    replace_block_in_file(filepath_verdi_commands, commands_block_start_marker, commands_block_end_marker, block)
+
+
+@cli.command('version')
 def validate_version():
     """Check that version numbers match.
 
@@ -63,10 +187,10 @@ def validate_version():
 
     setup_content = get_setup_json()
     if version != setup_content['version']:
-        print("Version number mismatch detected:")
-        print("Version number in '{}': {}".format(FILENAME_SETUP_JSON, setup_content['version']))
-        print("Version number in '{}/__init__.py': {}".format('aiida', version))
-        print("Updating version in '{}' to: {}".format(FILENAME_SETUP_JSON, version))
+        click.echo("Version number mismatch detected:")
+        click.echo("Version number in '{}': {}".format(FILENAME_SETUP_JSON, setup_content['version']))
+        click.echo("Version number in '{}/__init__.py': {}".format('aiida', version))
+        click.echo("Updating version in '{}' to: {}".format(FILENAME_SETUP_JSON, version))
 
         setup_content['version'] = version
         with open(FILEPATH_SETUP_JSON, 'w') as fil:
@@ -76,7 +200,7 @@ def validate_version():
         sys.exit(1)
 
 
-@click.command('toml')
+@cli.command('toml')
 def validate_pyproject():
     """
     Ensure that the version of reentry in setup.json and pyproject.toml are identical
@@ -118,7 +242,7 @@ def validate_pyproject():
         sys.exit(1)
 
 
-@click.command('conda')
+@cli.command('conda')
 def update_environment_yml():
     """
     Updates environment.yml file for conda.
@@ -162,10 +286,6 @@ def update_environment_yml():
         yaml.safe_dump(
             environment, env_file, explicit_start=True, default_flow_style=False, encoding='utf-8', allow_unicode=True)
 
-
-cli.add_command(validate_version)
-cli.add_command(validate_pyproject)
-cli.add_command(update_environment_yml)
 
 if __name__ == '__main__':
     cli()  # pylint: disable=no-value-for-parameter

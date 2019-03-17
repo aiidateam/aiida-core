@@ -613,7 +613,7 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
     from django.db import transaction
     from aiida.common import timezone
 
-    from aiida.common.archive import extract_tree, extract_tar, extract_zip, extract_cif
+    from aiida.common.archive import extract_tree, extract_tar, extract_zip
     from aiida.common.links import LinkType
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.backends.djsite.db import models
@@ -649,9 +649,6 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
                     print("The following problem occured while processing the "
                           "provided file: {}".format(exc))
                     return
-            elif os.path.isfile(in_path) and in_path.endswith('.cif'):
-                extract_cif(in_path, folder, silent=silent,
-                            nodes_export_subfolder=nodes_export_subfolder)
             else:
                 raise ValueError("Unable to detect the input file format, it "
                                  "is neither a (possibly compressed) tar file, "
@@ -1273,7 +1270,7 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
 
     from aiida.backends.sqlalchemy.models.node import DbNode
     from aiida.backends.sqlalchemy.utils import flag_modified
-    from aiida.common.archive import extract_tree, extract_tar, extract_zip, extract_cif
+    from aiida.common.archive import extract_tree, extract_tar, extract_zip
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.common.utils import get_object_from_string
     from aiida.common.links import LinkType
@@ -1301,9 +1298,6 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
                             nodes_export_subfolder=nodes_export_subfolder)
             elif zipfile.is_zipfile(in_path):
                 extract_zip(in_path, folder, silent=silent,
-                            nodes_export_subfolder=nodes_export_subfolder)
-            elif os.path.isfile(in_path) and in_path.endswith('.cif'):
-                extract_cif(in_path, folder, silent=silent,
                             nodes_export_subfolder=nodes_export_subfolder)
             else:
                 raise ValueError("Unable to detect the input file format, it "

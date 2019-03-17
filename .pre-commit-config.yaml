@@ -107,7 +107,6 @@
         aiida/backends/tests/orm/data/test_remote.py|
         aiida/backends/tests/orm/utils/test_loaders.py|
         aiida/backends/tests/test_parsers.py|
-        aiida/backends/tests/test_tcodexporter.py|
         aiida/backends/tests/test_caching_config.py|
         aiida/backends/tests/test_plugin_loader.py|
         aiida/backends/tests/engine/test_class_loader.py|
@@ -179,8 +178,6 @@
         aiida/tools/data/__init__.py|
         aiida/tools/data/structure/__init__.py|
         aiida/tools/dbexporters/__init__.py|
-        aiida/tools/dbexporters/tcod_plugins/__init__.py|
-        aiida/tools/dbexporters/tcod.py|
         aiida/tools/dbimporters/baseclasses.py|
         aiida/tools/dbimporters/__init__.py|
         aiida/tools/dbimporters/plugins/cod.py|
@@ -191,7 +188,6 @@
         aiida/tools/dbimporters/plugins/nninc.py|
         aiida/tools/dbimporters/plugins/oqmd.py|
         aiida/tools/dbimporters/plugins/pcod.py|
-        aiida/tools/dbimporters/plugins/tcod.py|
         aiida/transports/plugins/ssh.py|
         aiida/transports/plugins/test_all_plugins.py|
         aiida/transports/plugins/test_local.py|

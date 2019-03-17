@@ -760,14 +760,6 @@ class CifData(SinglefileData):
         with self.open() as handle:
             return handle.read().encode('utf-8'), {}
 
-    # pylint: disable=unused-argument
-    def _prepare_tcod(self, main_file_name="", **kwargs):
-        """
-        Write the given CIF to a string of format TCOD CIF.
-        """
-        from aiida.tools.dbexporters.tcod import export_cif
-        return export_cif(self, **kwargs), {}
-
     def _get_object_ase(self):
         """
         Converts CifData to ase.Atoms

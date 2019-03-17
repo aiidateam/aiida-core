@@ -994,13 +994,6 @@ class StructureData(Data):
         cif = CifData(ase=self.get_ase())
         return cif._prepare_cif()
 
-    def _prepare_tcod(self, main_file_name="", **kwargs):
-        """
-        Write the given structure to a string of format TCOD CIF.
-        """
-        from aiida.tools.dbexporters.tcod import export_cif
-        return export_cif(self, **kwargs), {}
-
     def _prepare_chemdoodle(self, main_file_name=""):
         """
         Write the given structure to a string of format required by ChemDoodle.

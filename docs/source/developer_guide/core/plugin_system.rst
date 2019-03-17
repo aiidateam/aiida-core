@@ -47,7 +47,6 @@ Terms
    * workflows
    * tools.dbexporters
    * tools.dbimporters
-   * tools.dbexporters.tcod_plugins
 
    Each category maps to an entry point group called::
    

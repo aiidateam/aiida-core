@@ -196,12 +196,9 @@
       "local = aiida.transports.plugins.local:LocalTransport",
       "ssh = aiida.transports.plugins.ssh:SshTransport"
     ],
-    "aiida.workflows": [],
-    "aiida.tools.dbexporters": [
-      "tcod = aiida.tools.dbexporters.tcod"
-    ],
     "aiida.tests": [],
     "aiida.tools.calculations": [],
+    "aiida.tools.dbexporters": [],
     "aiida.tools.dbimporters": [
       "cod = aiida.tools.dbimporters.plugins.cod:CodDbImporter",
       "icsd = aiida.tools.dbimporters.plugins.icsd:IcsdDbImporter",
@@ -212,7 +209,8 @@
       "oqmd = aiida.tools.dbimporters.plugins.oqmd:OqmdDbImporter",
       "pcod = aiida.tools.dbimporters.plugins.pcod:PcodDbImporter",
       "tcod = aiida.tools.dbimporters.plugins.tcod:TcodDbImporter"
-    ]
+    ],
+    "aiida.workflows": []
   },
   "scripts": [
     "bin/runaiida"

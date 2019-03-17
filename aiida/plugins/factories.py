@@ -16,7 +16,7 @@ from __future__ import absolute_import
 from .entry_point import load_entry_point
 
 __all__ = ('BaseFactory', 'CalculationFactory', 'DataFactory', 'DbImporterFactory', 'OrbitalFactory', 'ParserFactory',
-           'SchedulerFactory', 'TransportFactory', 'TcodExporterFactory', 'WorkflowFactory')
+           'SchedulerFactory', 'TransportFactory', 'WorkflowFactory')
 
 
 def BaseFactory(group, name):
@@ -93,15 +93,6 @@ def TransportFactory(entry_point):
     :return: sub class of :py:class:`~aiida.transports.transport.Transport`
     """
     return BaseFactory('aiida.transports', entry_point)
-
-
-def TcodExporterFactory(entry_point):
-    """Return the `BaseTcodtranslator` sub class registered under the given entry point.
-
-    :param entry_point: the entry point name
-    :return: sub class of :py:class:`~aiida.tools.dbexporters.tcod_plugins.BaseTcodtranslator`
-    """
-    return BaseFactory('aiida.tools.dbexporters.tcod_plugins', entry_point)
 
 
 def WorkflowFactory(entry_point):

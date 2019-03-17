@@ -552,11 +552,6 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable, TestVerdiDat
 
         self.cli_runner = CliRunner()
 
-    def test_deposithelp(self):
-        res = self.runner.invoke(cmd_trajectory.trajectory_deposit, ['--help'])
-        self.assertIn(b'Usage:', res.stdout_bytes, 'The string "Usage: " was not found in the output'
-                                                   ' of verdi data trajectory deposit --help')
-
     def test_showhelp(self):
         res = self.runner.invoke(cmd_trajectory.trajectory_show, ['--help'])
         self.assertIn(b'Usage:', res.stdout_bytes, 'The string "Usage: " was not found in the output'
@@ -570,15 +565,7 @@ class TestVerdiDataTrajectory(AiidaTestCase, TestVerdiDataListable, TestVerdiDat
         from aiida.cmdline.commands.cmd_data.cmd_trajectory import EXPORT_FORMATS, trajectory_export
 
         new_supported_formats = list(EXPORT_FORMATS)
-        # TCOD export needs special arguments
-        new_supported_formats.remove('tcod')
         self.data_export_test(TrajectoryData, self.ids, new_supported_formats)
-        # Check independently the TCOD export that needs special arguments
-        dump_flags = ['-F', '--format']
-        for flag in dump_flags:
-            options = [flag, 'tcod', '-i', '0', str(self.ids[self.NODE_ID_STR])]
-            res = self.cli_runner.invoke(trajectory_export, options, catch_exceptions=False)
-            self.assertEqual(res.exit_code, 0, 'The command did not finish correctly')
 
 
 class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExportable):
@@ -690,11 +677,6 @@ class TestVerdiDataStructure(AiidaTestCase, TestVerdiDataListable, TestVerdiData
         self.assertIn(b'Usage:', res.stdout_bytes, 'The string "Usage: " was not found in the output'
                                                    ' of verdi data show --help')
 
-    def test_deposithelp(self):
-        res = self.runner.invoke(cmd_structure.structure_import, ['--help'])
-        self.assertIn(b'Usage:', res.stdout_bytes, 'The string "Usage: " was not found in the output'
-                                                   ' of verdi data show --help')
-
     def test_list(self):
         self.data_listing_test(StructureData, 'BaO3Ti', self.ids)
 
@@ -780,12 +762,6 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExport
         res = self.cli_runner.invoke(cmd_cif.cif_show, options, catch_exceptions=False)
         self.assertIn(b'Usage:', res.stdout_bytes, 'The string "Usage: " was not found in the output'
                                                    ' of verdi data show help')
-
-    def test_deposithelp(self):
-        options = ['--help']
-        res = self.cli_runner.invoke(cmd_cif.cif_deposit, options, catch_exceptions=False)
-        self.assertIn(b'Usage:', res.stdout_bytes, 'The string "Usage: " was not found in the output'
-                                                   ' of verdi data show deposit')
 
     def test_importhelp(self):
         options = ['--help']

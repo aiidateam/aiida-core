@@ -17,14 +17,13 @@ import click
 
 from aiida.cmdline.commands.cmd_data import verdi_data
 from aiida.cmdline.commands.cmd_data import cmd_show
-from aiida.cmdline.commands.cmd_data.cmd_deposit import data_deposit_tcod, deposit_options
 from aiida.cmdline.commands.cmd_data.cmd_export import data_export, export_options
 from aiida.cmdline.commands.cmd_data.cmd_list import data_list, list_options
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
 
 LIST_PROJECT_HEADERS = ['Id', 'Label', 'Kinds', 'Sites']
-EXPORT_FORMATS = ['cif', 'tcod', 'xsf', 'xyz']
+EXPORT_FORMATS = ['cif', 'xsf', 'xyz']
 IMPORT_FORMATS = ['ase', 'pwi', 'xyz']
 VISUALIZATION_FORMATS = ['ase', 'jmol', 'vesta', 'vmd', 'xcrysden']
 
@@ -135,26 +134,6 @@ def structure_export(**kwargs):
     kwargs = {k: v for k, v in kwargs.items() if v is not None}
 
     data_export(node, output, fmt, other_args=kwargs, overwrite=force)
-
-
-@structure.command('deposit')
-@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:structure',)))
-@deposit_options
-@decorators.with_dbenv()
-def structure_deposit(**kwargs):
-    """Deposit StructureData object."""
-    node = kwargs.pop('datum')
-    database = kwargs.pop('database')
-    deposition_type = kwargs.pop('deposition_type')
-    parameters = kwargs.pop('parameters')
-
-    kwargs = {k: v for k, v in kwargs.items() if v is not None}
-
-    if database == 'tcod':
-        calculation = data_deposit_tcod(node, deposition_type, parameters, **kwargs)
-        echo.echo_success('Created deposition calculation<{}>'.format(calculation.pk))
-    else:
-        echo.echo_critical('Unsupported database {}'.format(database))
 
 
 # pylint: disable=too-many-arguments

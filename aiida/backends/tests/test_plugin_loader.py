@@ -19,7 +19,6 @@ from aiida.plugins import factories
 from aiida.plugins.entry_point import get_entry_points
 from aiida.schedulers import Scheduler
 from aiida.transports import Transport
-from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator
 from aiida.tools.dbimporters import DbImporter
 
 
@@ -94,16 +93,6 @@ class TestExistingPlugins(AiidaTestCase):
             self.assertTrue(issubclass(cls, WorkChain),
                 'Workflow plugin class {} is not a subclass of {}'.format(cls, WorkChain))
 
-    def test_existing_tcod_plugins(self):
-        """Test listing all preinstalled tcod exporter plugins."""
-        entry_points = get_entry_points('aiida.tools.dbexporters.tcod_plugins')
-        self.assertIsInstance(entry_points, list)
-
-        for entry_point in entry_points:
-            cls = factories.TcodExporterFactory(entry_point.name)
-            self.assertTrue(issubclass(cls, BaseTcodtranslator),
-                'TcodExporter plugin class {} is not subclass of {}'.format(cls, BaseTcodtranslator))
-
     def test_existing_dbimporters(self):
         """Test listing all preinstalled dbimporter plugins."""
         entry_points = get_entry_points('aiida.tools.dbimporters')
@@ -112,4 +101,4 @@ class TestExistingPlugins(AiidaTestCase):
         for entry_point in entry_points:
             cls = factories.DbImporterFactory(entry_point.name)
             self.assertTrue(issubclass(cls, DbImporter),
-                'DbImporter plugin class {} is not subclass of {}'.format(cls, BaseTcodtranslator))
+                'DbImporter plugin class {} is not subclass of {}'.format(cls, DbImporter))

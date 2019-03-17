@@ -125,7 +125,6 @@ db_test_list = {
         'plugin_loader': ['aiida.backends.tests.test_plugin_loader'],
         'query': ['aiida.backends.tests.test_query'],
         'restapi': ['aiida.backends.tests.test_restapi'],
-        'tcodexporter': ['aiida.backends.tests.test_tcodexporter'],
     }
 }
 

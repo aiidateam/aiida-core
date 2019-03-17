@@ -101,16 +101,16 @@ class TestPluginParamType(AiidaTestCase):
         Test the functionality of the get_entry_point_from_string which will take an entry point string
         and try to map it onto a valid entry point that is part of the groups defined for the parameter.
         """
-        param = PluginParamType(group=('aiida.tools.dbexporters', 'aiida.tools.dbimporters'))
-        entry_point = get_entry_point_from_string('aiida.tools.dbexporters:tcod')
+        param = PluginParamType(group=('aiida.calculations', 'aiida.parsers'))
+        entry_point = get_entry_point_from_string('aiida.calculations:arithmetic.add')
 
-        # Both groups contain entry point `tcod` so passing only name is ambiguous and should raise
+        # Both groups contain entry point `arithmetic.add` so passing only name is ambiguous and should raise
         with self.assertRaises(ValueError):
-            param.get_entry_point_from_string('tcod')
+            param.get_entry_point_from_string('arithmetic.add')
 
         # Passing PARTIAL or FULL should allow entry point to be returned
-        self.assertEqual(param.get_entry_point_from_string('aiida.tools.dbexporters:tcod').name, entry_point.name)
-        self.assertEqual(param.get_entry_point_from_string('tools.dbexporters:tcod').name, entry_point.name)
+        self.assertEqual(param.get_entry_point_from_string('aiida.calculations:arithmetic.add').name, entry_point.name)
+        self.assertEqual(param.get_entry_point_from_string('calculations:arithmetic.add').name, entry_point.name)
 
     def test_convert(self):
         """
@@ -209,35 +209,35 @@ class TestPluginParamType(AiidaTestCase):
         with the same name, which can lead to ambiguity. In this case the autocomplete should always return the
         possibilites in the FULL entry point string format. When the user tries to autocomplete
         """
-        param = PluginParamType(group=('aiida.tools.dbexporters', 'aiida.tools.dbimporters'))
-        entry_point_full_exporters = 'aiida.tools.dbexporters:tcod'
-        entry_point_full_importers = 'aiida.tools.dbimporters:tcod'
+        param = PluginParamType(group=('aiida.calculations', 'aiida.parsers'))
+        entry_point_full_calculations = 'aiida.calculations:arithmetic.add'
+        entry_point_full_parsers = 'aiida.parsers:arithmetic.add'
 
-        options = [item[0] for item in param.complete(None, 'aiida.tools.dbexporters:tc')]
-        self.assertIn(entry_point_full_exporters, options)
+        options = [item[0] for item in param.complete(None, 'aiida.calculations:arith')]
+        self.assertIn(entry_point_full_calculations, options)
 
-        options = [item[0] for item in param.complete(None, 'aiida.tools.dbexporters:tcod')]
-        self.assertIn(entry_point_full_exporters, options)
+        options = [item[0] for item in param.complete(None, 'aiida.calculations:arithmetic.add')]
+        self.assertIn(entry_point_full_calculations, options)
 
-        options = [item[0] for item in param.complete(None, 'aiida.tools.dbimporters:tc')]
-        self.assertIn(entry_point_full_importers, options)
+        options = [item[0] for item in param.complete(None, 'aiida.parsers:arith')]
+        self.assertIn(entry_point_full_parsers, options)
 
-        options = [item[0] for item in param.complete(None, 'aiida.tools.dbimporters:tcod')]
-        self.assertIn(entry_point_full_importers, options)
+        options = [item[0] for item in param.complete(None, 'aiida.parsers:arithmetic.add')]
+        self.assertIn(entry_point_full_parsers, options)
 
         # PARTIAL or MINIMAL string formats will not be autocompleted
-        options = [item[0] for item in param.complete(None, 'tools.dbimporters:tc')]
-        self.assertNotIn(entry_point_full_exporters, options)
-        self.assertNotIn(entry_point_full_importers, options)
+        options = [item[0] for item in param.complete(None, 'parsers:arith')]
+        self.assertNotIn(entry_point_full_calculations, options)
+        self.assertNotIn(entry_point_full_parsers, options)
 
-        options = [item[0] for item in param.complete(None, 'tools.dbimporters:tcod')]
-        self.assertNotIn(entry_point_full_exporters, options)
-        self.assertNotIn(entry_point_full_importers, options)
+        options = [item[0] for item in param.complete(None, 'parsers:arithmetic.add')]
+        self.assertNotIn(entry_point_full_calculations, options)
+        self.assertNotIn(entry_point_full_parsers, options)
 
-        options = [item[0] for item in param.complete(None, 'tc')]
-        self.assertNotIn(entry_point_full_exporters, options)
-        self.assertNotIn(entry_point_full_importers, options)
+        options = [item[0] for item in param.complete(None, 'arith')]
+        self.assertNotIn(entry_point_full_calculations, options)
+        self.assertNotIn(entry_point_full_parsers, options)
 
-        options = [item[0] for item in param.complete(None, 'tcod')]
-        self.assertNotIn(entry_point_full_exporters, options)
-        self.assertNotIn(entry_point_full_importers, options)
+        options = [item[0] for item in param.complete(None, 'arithmetic.add')]
+        self.assertNotIn(entry_point_full_calculations, options)
+        self.assertNotIn(entry_point_full_parsers, options)

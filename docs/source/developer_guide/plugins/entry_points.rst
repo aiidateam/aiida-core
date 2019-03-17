@@ -255,19 +255,6 @@ If your plugin adds support for importing from an external database, use this en
 ..        ]
 ..    }
 
-``aiida.tools.dbexporters.tcod_plugins``
-----------------------------------------
-
-If you want to support exporting your plugin classes to tcod, use this entry point for your :py:class:`~aiida.tools.dbexporters.tcod_plugins.BaseTcodtranslator` subclass.
-
-Spec::
-
-   entry_points={
-       "aiida.tools.dbexporters.tcod_plugins": [
-           "myplugin.mycalc = aiida_myplugin.tcod_plugins.mycalc:MycalcTcodtranslator"
-       ]
-   }
-
 
 
 ``aiida.schedulers``

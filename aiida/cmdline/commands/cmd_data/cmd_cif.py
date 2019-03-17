@@ -17,14 +17,13 @@ import click
 
 from aiida.cmdline.commands.cmd_data import verdi_data
 from aiida.cmdline.commands.cmd_data import cmd_show
-from aiida.cmdline.commands.cmd_data.cmd_deposit import data_deposit_tcod, deposit_options
 from aiida.cmdline.commands.cmd_data.cmd_export import data_export, export_options
 from aiida.cmdline.commands.cmd_data.cmd_list import data_list, list_options
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
 
 LIST_PROJECT_HEADERS = ['Id', 'Formulae', 'Source.URI']
-EXPORT_FORMATS = ['cif', 'tcod']
+EXPORT_FORMATS = ['cif']
 VISUALIZATION_FORMATS = ['jmol', 'vesta']
 
 
@@ -129,23 +128,3 @@ def cif_import(filename):
         echo.echo_success('imported {}'.format(str(node)))
     except ValueError as err:
         echo.echo_critical(err)
-
-
-@cif.command('deposit')
-@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:cif',)))
-@deposit_options
-@decorators.with_dbenv()
-def cif_deposit(**kwargs):
-    """Deposit CifData object."""
-    node = kwargs.pop('datum')
-    database = kwargs.pop('database')
-    deposition_type = kwargs.pop('deposition_type')
-    parameters = kwargs.pop('parameters')
-
-    kwargs = {k: v for k, v in kwargs.items() if v is not None}
-
-    if database == 'tcod':
-        calculation = data_deposit_tcod(node, deposition_type, parameters, **kwargs)
-        echo.echo_success('Created deposition calculation<{}>'.format(calculation.pk))
-    else:
-        echo.echo_critical('Unsupported database {}'.format(database))

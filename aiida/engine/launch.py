@@ -16,13 +16,11 @@ from aiida.manage import manager
 from .processes.process import Process
 from .utils import is_process_function, instantiate_process
 
-__all__ = ('run', 'run_get_pid', 'run_get_node', 'submit')
+__all__ = ('run', 'run_get_pk', 'run_get_node', 'submit')
 
 
 def run(process, *args, **inputs):
-    """
-    Run the process with the supplied inputs in a local runner that will block until the process is completed.
-    The return value will be the results of the completed process
+    """Run the process with the supplied inputs in a local runner that will block until the process is completed.
 
     :param process: the process class or process function to run
     :param inputs: the inputs to be passed to the process
@@ -37,13 +35,11 @@ def run(process, *args, **inputs):
 
 
 def run_get_node(process, *args, **inputs):
-    """
-    Run the process with the supplied inputs in a local runner that will block until the process is completed.
-    The return value will be the results of the completed process
+    """Run the process with the supplied inputs in a local runner that will block until the process is completed.
 
     :param process: the process class or process function to run
     :param inputs: the inputs to be passed to the process
-    :return: tuple of the outputs of the process and the calculation node
+    :return: tuple of the outputs of the process and the process node
     """
     if isinstance(process, Process):
         runner = process.runner
@@ -53,27 +49,23 @@ def run_get_node(process, *args, **inputs):
     return runner.run_get_node(process, *args, **inputs)
 
 
-def run_get_pid(process, *args, **inputs):
-    """
-    Run the process with the supplied inputs in a local runner that will block until the process is completed.
-    The return value will be the results of the completed process
+def run_get_pk(process, *args, **inputs):
+    """Run the process with the supplied inputs in a local runner that will block until the process is completed.
 
     :param process: the process class or process function to run
     :param inputs: the inputs to be passed to the process
-    :return: tuple of the outputs of the process and process pid
+    :return: tuple of the outputs of the process and process node pk
     """
     if isinstance(process, Process):
         runner = process.runner
     else:
         runner = manager.get_manager().get_runner()
 
-    return runner.run_get_pid(process, *args, **inputs)
+    return runner.run_get_pk(process, *args, **inputs)
 
 
 def submit(process, **inputs):
-    """
-    Submit the process with the supplied inputs to the daemon runners immediately returning control to
-    the interpreter. The return value will be the calculation node of the submitted process.
+    """Submit the process with the supplied inputs to the daemon immediately returning control to the interpreter.
 
     :param process: the process class to submit
     :param inputs: the inputs to be passed to the process
@@ -94,6 +86,6 @@ def submit(process, **inputs):
     return process.node
 
 
-# Allow one to also use run.get_node and run.get_pid as a shortcut, without having to import the functions themselves
+# Allow one to also use run.get_node and run.get_pk as a shortcut, without having to import the functions themselves
 run.get_node = run_get_node
-run.get_pid = run_get_pid
+run.get_pk = run_get_pk

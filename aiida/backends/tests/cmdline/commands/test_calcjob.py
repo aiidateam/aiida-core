@@ -13,8 +13,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-import unittest
-
 from click.testing import CliRunner
 
 from aiida import orm
@@ -32,9 +30,6 @@ def get_result_lines(result):
 
 class TestVerdiCalculation(AiidaTestCase):
     """Tests for `verdi calcjob`."""
-
-    # Note remove this when reenabling the tests after solving issue #2426
-    # pylint: disable=no-member
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
@@ -96,14 +91,13 @@ class TestVerdiCalculation(AiidaTestCase):
         calc.set_process_state(ProcessState.FINISHED)
         cls.calcs.append(calc)
 
-        # Uncomment when issue 2426 is addressed
-        # # Load the fixture containing a single ArithmeticAddCalculation node
-        # import_archive_fixture('calcjob/arithmetic.add.aiida')
+        # Load the fixture containing a single ArithmeticAddCalculation node
+        import_archive_fixture('calcjob/arithmetic.add.aiida')
 
-        # # Get the imported ArithmeticAddCalculation node
-        # ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
-        # calculations = orm.QueryBuilder().append(ArithmeticAddCalculation).all()[0]
-        # cls.arithmetic_job = calculations[0]
+        # Get the imported ArithmeticAddCalculation node
+        ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+        calculations = orm.QueryBuilder().append(ArithmeticAddCalculation).all()[0]
+        cls.arithmetic_job = calculations[0]
 
     def setUp(self):
         self.cli_runner = CliRunner()
@@ -127,7 +121,6 @@ class TestVerdiCalculation(AiidaTestCase):
             self.assertNotIn(self.KEY_TWO, result.output)
             self.assertNotIn(self.VAL_TWO, result.output)
 
-    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_calcjob_inputls(self):
         """Test verdi calcjob inputls"""
         options = []
@@ -149,7 +142,6 @@ class TestVerdiCalculation(AiidaTestCase):
         self.assertIn('calcinfo.json', get_result_lines(result))
         self.assertIn('job_tmpl.json', get_result_lines(result))
 
-    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_calcjob_outputls(self):
         """Test verdi calcjob outputls"""
         options = []
@@ -164,7 +156,6 @@ class TestVerdiCalculation(AiidaTestCase):
         self.assertIn('_scheduler-stdout.txt', get_result_lines(result))
         self.assertIn('aiida.out', get_result_lines(result))
 
-    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_calcjob_inputcat(self):
         """Test verdi calcjob inputcat"""
         options = []
@@ -183,7 +174,6 @@ class TestVerdiCalculation(AiidaTestCase):
         self.assertEqual(len(get_result_lines(result)), 1)
         self.assertEqual(get_result_lines(result)[0], '2 3')
 
-    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_calcjob_outputcat(self):
         """Test verdi calcjob outputcat"""
         options = []
@@ -234,16 +224,12 @@ class TestVerdiCalculation(AiidaTestCase):
         import_archive_fixture('calcjob/arithmetic.add_old.aiida')
         ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
         calculations = orm.QueryBuilder().append(ArithmeticAddCalculation).all()
-        # Uncomment when issue 2426 is addressed
-        # for job in calculations:
-        #     if job[0].uuid == self.arithmetic_job.uuid:
-        #         continue
-        #     else:
-        #         add_job = job[0]
-        #         return
-
-        # Remove when issue 2426 is addressed
-        add_job = calculations[0][0]
+        for job in calculations:
+            if job[0].uuid == self.arithmetic_job.uuid:
+                continue
+            else:
+                add_job = job[0]
+                return
 
         # Make sure add_job does not specify options 'input_filename' and 'output_filename'
         self.assertIsNone(

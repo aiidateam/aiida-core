@@ -16,7 +16,6 @@ from __future__ import absolute_import
 from __future__ import with_statement
 
 import io
-import unittest
 import os
 import shutil
 import tempfile
@@ -1307,7 +1306,6 @@ class TestComputer(AiidaTestCase):
                             comp1_metadata,
                             "Not the expected metadata were found")
 
-    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_import_of_django_sqla_export_file(self):
         """Check that sqla import manages to import the django export file correctly"""
         from aiida.backends.tests.utils.fixtures import import_archive_fixture

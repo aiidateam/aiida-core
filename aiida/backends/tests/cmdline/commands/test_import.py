@@ -11,30 +11,14 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import os
 
-import unittest
 from click.testing import CliRunner
 from click.exceptions import BadParameter
 
 from aiida.backends.testbase import AiidaTestCase
+from aiida.backends.tests.utils.fixtures import get_archive_file
 from aiida.cmdline.commands import cmd_import
 from aiida.orm import Group
-
-
-def get_archive_file(archive):
-    """
-    Return the absolute path of the archive file used for testing purposes. The expected base path for these files:
-
-        aiida.backends.tests.fixtures
-
-    :param archive: the relative filename of the archive
-    :returns: absolute filepath of the archive test file
-    """
-    dirpath_current = os.path.dirname(os.path.abspath(__file__))
-    dirpath_archive = os.path.join(dirpath_current, os.pardir, os.pardir, 'fixtures')
-
-    return os.path.join(dirpath_archive, archive)
 
 
 class TestVerdiImport(AiidaTestCase):
@@ -60,7 +44,6 @@ class TestVerdiImport(AiidaTestCase):
         self.assertIsNotNone(result.exception, result.output)
         self.assertNotEqual(result.exit_code, 0, result.output)
 
-    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_import_archive(self):
         """
         Test import for archive files from disk
@@ -70,7 +53,7 @@ class TestVerdiImport(AiidaTestCase):
         """
         archives = [
             get_archive_file('calcjob/arithmetic.add.aiida'),
-            get_archive_file('export/migrate/export_v0.4.aiida')
+            get_archive_file('export/migrate/export_v0.4_no_UPF.aiida')
         ]
 
         options = [] + archives
@@ -79,7 +62,6 @@ class TestVerdiImport(AiidaTestCase):
         self.assertIsNone(result.exception, result.output)
         self.assertEqual(result.exit_code, 0, result.output)
 
-    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_import_to_group(self):
         """
         Test import to existing Group and that Nodes are added correctly for multiple imports
@@ -87,7 +69,7 @@ class TestVerdiImport(AiidaTestCase):
         """
         archives = [
             get_archive_file('calcjob/arithmetic.add.aiida'),
-            get_archive_file('export/migrate/export_v0.4.aiida')
+            get_archive_file('export/migrate/export_v0.4_simple.aiida')
         ]
 
         group_label = "import_madness"
@@ -129,7 +111,6 @@ class TestVerdiImport(AiidaTestCase):
             msg="There should now be more than {} nodes in group {} , instead there are {}".format(
                 nodes_in_group, group_label, group.count()))
 
-    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_import_make_new_group(self):
         """Make sure imported entities are saved in new Group"""
         # Initialization
@@ -152,12 +133,11 @@ class TestVerdiImport(AiidaTestCase):
         self.assertFalse(new_group, msg="The Group should not have been created now, but instead when it was imported.")
         self.assertFalse(group.is_empty, msg="The Group should not be empty.")
 
-    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_comment_mode(self):
         """
         Test comment mode flag works as intended
         """
-        archives = [get_archive_file('export/migrate/export_v0.4.aiida')]
+        archives = [get_archive_file('export/migrate/export_v0.4_no_UPF.aiida')]
 
         options = ['--comment-mode', 'newest'] + archives
         result = self.cli_runner.invoke(cmd_import.cmd_import, options)
@@ -171,13 +151,13 @@ class TestVerdiImport(AiidaTestCase):
         self.assertIn('Comment mode: overwrite', result.output)
         self.assertEqual(result.exit_code, 0, result.output)
 
-    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_import_old_local_archives(self):
         """ Test import of old local archives
         Expected behavior: Automatically migrate to newest version and import correctly.
         """
-        archives = [('export/migrate/export_v0.1.aiida', '0.1'), ('export/migrate/export_v0.2.aiida', '0.2'),
-                    ('export/migrate/export_v0.3.aiida', '0.3')]
+        archives = [('export/migrate/export_v0.1_no_UPF.aiida', '0.1'),
+                    ('export/migrate/export_v0.2_no_UPF.aiida', '0.2'),
+                    ('export/migrate/export_v0.3_no_UPF.aiida', '0.3')]
 
         for archive, version in archives:
             options = [get_archive_file(archive)]
@@ -188,7 +168,6 @@ class TestVerdiImport(AiidaTestCase):
             self.assertIn(version, result.output, msg=result.exception)
             self.assertIn("Success: imported archive {}".format(options[0]), result.output, msg=result.exception)
 
-    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_import_old_url_archives(self):
         """ Test import of old URL archives
         Expected behavior: Automatically migrate to newest version and import correctly.
@@ -210,7 +189,6 @@ class TestVerdiImport(AiidaTestCase):
         self.assertIn(version, result.output, msg=result.exception)
         self.assertIn("Success: imported archive {}".format(options[0]), result.output, msg=result.exception)
 
-    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_import_url_and_local_archives(self):
         """Test import of both a remote and local archive
         TODO: Update 'url' to point at correct commit.
@@ -252,7 +230,6 @@ class TestVerdiImport(AiidaTestCase):
         error_message = 'It may be neither a valid path nor a valid URL.'
         self.assertIn(error_message, result.output, result.exception)
 
-    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_non_interactive_and_migration(self):
         """Test options `--non-interactive` and `--migration`/`--no-migration`
         `migration` = True (default), `non_interactive` = False (default), Expected: Query user, migrate
@@ -260,7 +237,7 @@ class TestVerdiImport(AiidaTestCase):
         `migration` = False, `non_interactive` = False (default), Expected: No query, no migrate
         `migration` = False, `non_interactive` = True, Expected: No query, no migrate
         """
-        archive = get_archive_file('export/migrate/export_v0.3.aiida')
+        archive = get_archive_file('export/migrate/export_v0.3_simple.aiida')
         confirm_message = "Do you want to try and migrate {} to the newest export file version?".format(archive)
         success_message = "Success: imported archive {}".format(archive)
 

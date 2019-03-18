@@ -17,7 +17,7 @@ import io
 import os
 
 import enum
-import click
+import click  # pylint: disable=import-error
 import tabulate
 
 import numpy as np
@@ -250,14 +250,15 @@ def update_metadata(metadata, version):
     :param metadata: the content of an export archive metadata.json file
     :param version: string version number that the updated metadata should get
     """
-    import aiida
+    from aiida import get_version
+
     old_version = metadata['export_version']
     conversion_info = metadata.get('conversion_info', [])
 
     conversion_message = 'Converted from version {} to {} with external script'.format(old_version, version)
     conversion_info.append(conversion_message)
 
-    metadata['aiida_version'] = aiida.get_version()
+    metadata['aiida_version'] = get_version()
     metadata['export_version'] = version
     metadata['conversion_info'] = conversion_info
 
@@ -438,96 +439,23 @@ def migrate_v2_to_v3(metadata, data):  # pylint: disable=too-many-locals,too-man
                 del data[field][old_key]
 
 
-def migrate_v3_to_v4(metadata, data, folder):  # pylint: disable=too-many-locals,too-many-statements,too-many-branches
-    """
-    Migration of export files from v0.3 to v0.4
-    """
-    old_version = '0.3'
-    new_version = '0.4'
-
-    verify_metadata_version(metadata, old_version)
-    update_metadata(metadata, new_version)
-
-    # Apply migration: 0009 - REV. 1.0.9
-    #
-    # 'data.base.Bool.'  -> 'data.bool.Bool.'
-    # 'data.base.Float.' -> 'data.float.Float.'
-    # 'data.base.Int.'   -> 'data.int.Int.'
-    # 'data.base.Str.'   -> 'data.str.Str.'
-    # 'data.base.List.'  -> 'data.list.List.'
-
-    for content in data['export_data']['Node'].values():
-        if content['type'].startswith('data.base.'):
-            type_str = content['type'].replace('data.base.', '')
-            type_str = 'data.' + type_str.lower() + type_str
-            content['type'] = type_str
-
-    # Do apply migrations: 0010 - REV. 1.0.10
-    # I assume if the content of a column is empty - it won't be present at all in the Node dictionary. Taking this
-    # into account I skip this migration, because it simply adds an empty column
-    #
-    # for content in data['export_data']['Node'].values():
-    #    content['process_type'] = None
-
-    # Apply migrations: 0016 - REV. 1.0.16
-    # The Code class used to be just a sub class of Node but was changed to act like a Data node.
-    # code.Code. -> data.code.Code.
-
-    for content in data['export_data']['Node'].values():
-        if content['type'] == 'code.Code.':
-            content['type'] = 'data.code.Code.'
-
-    # Apply migration: 0014 - REV. 1.0.14, 0018 - REV. 1.0.18
-    # Check that no entries with the same uuid are present in the export file
-    # if yes - stop the import process
-
-    for entry_type in ['Group', 'Computer', 'Node']:
-        if not entry_type in data['export_data']:  # if a particular entry type is not present - skip
-            continue
-        all_uuids = [content['uuid'] for content in data['export_data'][entry_type].values()]
-        unique_uuids = set(all_uuids)
-        if len(all_uuids) != len(unique_uuids):
-            echo.echo_critical("""{}s with exactly the same uuid found, cannot proceed further. Please contact AiiDA
-            developers: http://www.aiida.net/mailing-list/ to help you resolve this issue.""".format(entry_type))
-
-    # Apply migrations: 0019 - REV. 1.0.19
-    # remove 'simpleplugin' from ArithmeticAddCalculation and TemplatereplacerCalculation type
-    #
-    # ATTENTION:
-    #
-    # The 'process_type' column did not exist before the migration 0010, consequently, it could not be present in any
-    # export of the currently existing stable releases (0.12.*). Here, however, the migration acts
-    # on the content of 'process_type' column which could only be introduced in alpha releases of AiiDA 1.0.
-    # Assuming that 'add' and 'templateplacer' calculations are expected to have both 'type' and 'process_type' columns
-    # I will add them based on 'type' column content solely (unlike it is done in the DB migration where the
-    # 'type_string' content was also checked).
-
-    for key, content in data['export_data']['Node'].items():
-        if content['type'] == 'calculation.job.simpleplugins.arithmetic.add.ArithmeticAddCalculation.':
-            content['type'] = 'calculation.job.arithmetic.add.ArithmeticAddCalculation.'
-            content['process_type'] = 'aiida.calculations:arithmetic.add'
-        elif content['type'] == 'calculation.job.simpleplugins.templatereplacer.TemplatereplacerCalculation.':
-            content['type'] = 'calculation.job.templatereplacer.TemplatereplacerCalculation.'
-            content['process_type'] = 'aiida.calculations:templatereplacer'
-        elif content['type'] == 'data.code.Code.':
-            if data['node_attributes'][key]['input_plugin'] == 'simpleplugins.arithmetic.add':
-                data['node_attributes'][key]['input_plugin'] = 'arithmetic.add'
-
-            elif data['node_attributes'][key]['input_plugin'] == 'simpleplugins.templatereplacer':
-                data['node_attributes'][key]['input_plugin'] = 'templatereplacer'
-
-    # Apply migrations: 0020 - REV. 1.0.20
-
+def migrate_provenance_redesign(data):  # pylint: disable=too-many-locals,too-many-statements,too-many-branches
+    """Utility function for `migrate_v3_to_v4` to handle REV. 1.0.20 (provenance redesign)"""
     # step1: rename the type column of process nodes
     from aiida.manage.database.integrity.plugins import infer_calculation_entry_point
     from aiida.manage.database.integrity import write_database_integrity_violation
     from aiida.plugins.entry_point import ENTRY_POINT_STRING_SEPARATOR
 
     fallback_cases = []
+    nodes_to_migrate = {}
 
-    nodes_to_migrate = {
-        key: value for key, value in data['export_data']['Node'].items() if value['type'].startswith('calculation.job.')
-    }
+    for key, value in data['export_data']['Node'].items():
+        if 'type' in value and value['type'].startswith('calculation.job.'):
+            nodes_to_migrate[key] = value
+
+    if not nodes_to_migrate:
+        return
+
     mapping_node_entry = infer_calculation_entry_point(type_strings=[e['type'] for e in nodes_to_migrate.values()])
     for uuid, content in nodes_to_migrate.items():
         type_string = content['type']
@@ -638,14 +566,109 @@ def migrate_v3_to_v4(metadata, data, folder):  # pylint: disable=too-many-locals
             elif uuid_node_type_mapping[inp_uuid].startswith('node.process.workflow'):
                 link['type'] = 'call_work'
 
+
+def migrate_v3_to_v4(metadata, data, folder):  # pylint: disable=too-many-locals,too-many-statements,too-many-branches
+    """
+    Migration of export files from v0.3 to v0.4
+    """
+    old_version = '0.3'
+    new_version = '0.4'
+
+    verify_metadata_version(metadata, old_version)
+    update_metadata(metadata, new_version)
+
+    # Apply migration: 0009 - REV. 1.0.9
+    # `DbNode.type` content changes:
+    # 'data.base.Bool.'  -> 'data.bool.Bool.'
+    # 'data.base.Float.' -> 'data.float.Float.'
+    # 'data.base.Int.'   -> 'data.int.Int.'
+    # 'data.base.Str.'   -> 'data.str.Str.'
+    # 'data.base.List.'  -> 'data.list.List.'
+    if 'Node' in data['export_data']:
+        for content in data['export_data']['Node'].values():
+            if 'type' in content and content['type'].startswith('data.base.'):
+                type_str = content['type'].replace('data.base.', '')
+                type_str = 'data.' + type_str.lower() + type_str
+                content['type'] = type_str
+
+    # Apply migrations: 0010 - REV. 1.0.10
+    # Add `DbNode.process_type` column
+    # For data.json
+    if 'Node' in data['export_data']:
+        for content in data['export_data']['Node'].values():
+            if 'process_type' not in content:
+                content['process_type'] = ''
+    # For metadata.json
+    metadata['all_fields_info']['Node']['process_type'] = {}
+
+    # Apply migrations: 0016 - REV. 1.0.16
+    # The Code class used to be just a sub class of Node but was changed to act like a Data node.
+    # code.Code. -> data.code.Code.
+    if 'Node' in data['export_data']:
+        for content in data['export_data']['Node'].values():
+            if 'type' in content and content['type'] == 'code.Code.':
+                content['type'] = 'data.code.Code.'
+
+    # Apply migration: 0014 - REV. 1.0.14, 0018 - REV. 1.0.18
+    # Check that no entries with the same uuid are present in the export file
+    # if yes - stop the import process
+    for entry_type in ['Group', 'Computer', 'Node']:
+        if not entry_type in data['export_data']:  # if a particular entry type is not present - skip
+            continue
+        all_uuids = [content['uuid'] for content in data['export_data'][entry_type].values()]
+        unique_uuids = set(all_uuids)
+        if len(all_uuids) != len(unique_uuids):
+            echo.echo_critical("""{}s with exactly the same UUID found, cannot proceed further. Please contact AiiDA
+            developers: http://www.aiida.net/mailing-list/ to help you resolve this issue.""".format(entry_type))
+
+    # Apply migrations: 0019 - REV. 1.0.19
+    # remove 'simpleplugin' from ArithmeticAddCalculation and TemplatereplacerCalculation type
+    #
+    # ATTENTION:
+    #
+    # The 'process_type' column did not exist before the migration 0010, consequently, it could not be present in any
+    # export of the currently existing stable releases (0.12.*). Here, however, the migration acts
+    # on the content of 'process_type' column which could only be introduced in alpha releases of AiiDA 1.0.
+    # Assuming that 'add' and 'templateplacer' calculations are expected to have both 'type' and 'process_type' columns
+    # I will add them based on 'type' column content solely (unlike it is done in the DB migration where the
+    # 'type_string' content was also checked).
+    if 'Node' in data['export_data']:
+        for key, content in data['export_data']['Node'].items():
+            if 'type' in content:
+                if content['type'] == 'calculation.job.simpleplugins.arithmetic.add.ArithmeticAddCalculation.':
+                    content['type'] = 'calculation.job.arithmetic.add.ArithmeticAddCalculation.'
+                    content['process_type'] = 'aiida.calculations:arithmetic.add'
+                elif content['type'] == 'calculation.job.simpleplugins.templatereplacer.TemplatereplacerCalculation.':
+                    content['type'] = 'calculation.job.templatereplacer.TemplatereplacerCalculation.'
+                    content['process_type'] = 'aiida.calculations:templatereplacer'
+                elif content['type'] == 'data.code.Code.':
+                    if data['node_attributes'][key]['input_plugin'] == 'simpleplugins.arithmetic.add':
+                        data['node_attributes'][key]['input_plugin'] = 'arithmetic.add'
+
+                    elif data['node_attributes'][key]['input_plugin'] == 'simpleplugins.templatereplacer':
+                        data['node_attributes'][key]['input_plugin'] = 'templatereplacer'
+
+    # Apply migrations: 0020 - REV. 1.0.20
+    if 'Node' in data['export_data']:
+        migrate_provenance_redesign(data)
+
     # Apply migrations: 0021 - REV. 1.0.21
     # rename dbgroup fields:
     # name -> label
     # type -> type_string
+    # For data.json
     if 'Group' in data['export_data']:
-        for key, content in data['export_data']['Group'].items():
-            content['label'] = content.pop('name')
-            content['type_string'] = content.pop('type')
+        for content in data['export_data']['Group'].values():
+            if 'name' in content:
+                content['label'] = content.pop('name')
+            if 'type' in content:
+                content['type_string'] = content.pop('type')
+    # For metadata.json
+    metadata_group = metadata['all_fields_info']['Group']
+    if 'name' in metadata_group:
+        metadata_group['label'] = metadata_group.pop('name')
+    if 'type' in metadata_group:
+        metadata_group['type_string'] = metadata_group.pop('type')
 
     # Apply migrations: 0022 - REV. 1.0.22
     # change type_string according to the following rule:
@@ -669,10 +692,10 @@ def migrate_v3_to_v4(metadata, data, folder):  # pylint: disable=too-many-locals
     # `jobresource_params` -> `resources`
     # `_process_label` -> `process_label`
     # `parser` -> `parser_name`
-    uuid_node_type_mapping = {node['uuid']: node['type'] for node in data['export_data']['Node'].values()}
-    for attr_id, content in data['node_attributes'].items():
+    def migration_23(attr_id, content):
+        """Apply migration 0023 - REV. 1.0.23 for both `node_attributes*` dicts in `data.json`"""
         if data['export_data']['Node'][attr_id]['type'] == 'node.process.calculation.calcjob.CalcJobNode.':
-            for key in content.keys():
+            for key in content:
                 # custom_environment_variables -> environment_variables
                 if key == 'custom_environment_variables':
                     content['environment_variables'] = content.pop('custom_environment_variables')
@@ -696,61 +719,174 @@ def migrate_v3_to_v4(metadata, data, folder):  # pylint: disable=too-many-locals
             if '_process_label' in content:
                 content['process_label'] = content.pop('_process_label')
 
+    # For node_attributes
+    for attr_id, content in data['node_attributes'].items():
+        if 'type' in data['export_data']['Node'][attr_id]:
+            migration_23(attr_id, content)
+
+    # For node_attributes_conversion
+    for attr_id, content in data['node_attributes_conversion'].items():
+        if 'type' in data['export_data']['Node'][attr_id]:
+            migration_23(attr_id, content)
+
     # Apply migrations: 0025 - REV. 1.0.25
     # The type string for `Data` nodes changed from `data.*` to `node.data.*`.
-    for value in data['export_data']['Node'].values():
-        if value['type'].startswith('data.'):
-            value['type'] = value['type'].replace('data.', 'node.data.', 1)
+    if 'Node' in data['export_data']:
+        for value in data['export_data']['Node'].values():
+            if 'type' in value and value['type'].startswith('data.'):
+                value['type'] = value['type'].replace('data.', 'node.data.', 1)
 
     # Apply migrations: 0026 - REV. 1.0.26 and 0027 - REV. 1.0.27
     # Create the symbols attribute from the repository array for all `TrajectoryData` nodes.
-    for node_id, content in data['export_data']['Node'].items():
-        if content['type'] == 'node.data.array.trajectory.TrajectoryData.':
-            uuid = content['uuid']
-            symbols_path = os.path.join(
-                folder.get_abs_path('nodes'), uuid[0:2], uuid[2:4], uuid[4:], 'path', 'symbols.npy')
-            symbols = np.load(symbols_path).tolist()
-            os.remove(symbols_path)
-            data['node_attributes'][node_id].pop('array|symbols')
-            data['node_attributes'][node_id]['symbols'] = symbols
+    if 'Node' in data['export_data']:
+        for node_id, content in data['export_data']['Node'].items():
+            if 'type' in content and content['type'] == 'node.data.array.trajectory.TrajectoryData.':
+                uuid = content['uuid']
+                symbols_path = os.path.join(
+                    folder.get_abs_path('nodes'), uuid[0:2], uuid[2:4], uuid[4:], 'path', 'symbols.npy')
+                symbols = np.load(symbols_path).tolist()
+                os.remove(symbols_path)
+                data['node_attributes'][node_id].pop('array|symbols')
+                data['node_attributes'][node_id]['symbols'] = symbols
 
     # Apply migrations: 0028 - REV. 1.0.28
     # change node type strings:
     # 'node.data.' -> 'data.'
     # 'node.process.' -> 'process.'
-    for value in data['export_data']['Node'].values():
-        if value['type'].startswith('node.data.'):
-            value['type'] = value['type'].replace('node.data.', 'data.', 1)
-        elif value['type'].startswith('node.process.'):
-            value['type'] = value['type'].replace('node.process.', 'process.', 1)
+    if 'Node' in data['export_data']:
+        for value in data['export_data']['Node'].values():
+            if 'type' in value:
+                if value['type'].startswith('node.data.'):
+                    value['type'] = value['type'].replace('node.data.', 'data.', 1)
+                elif value['type'].startswith('node.process.'):
+                    value['type'] = value['type'].replace('node.process.', 'process.', 1)
+
+    # Apply migration: 0029 - REV. 1.0.29
+    # Update ParameterData to Dict
+    if 'Node' in data['export_data']:
+        for value in data['export_data']['Node'].values():
+            if 'type' in value and value['type'] == 'data.parameter.ParameterData.':
+                value['type'] = 'data.dict.Dict.'
+
+    # Apply migration: 0030 - REV. 1.0.30
+    # Renaming DbNode.type to DbNode.node_type
+    # For data.json
+    if 'Node' in data['export_data']:
+        for content in data['export_data']['Node'].values():
+            if 'type' in content:
+                content['node_type'] = content.pop('type')
+    # For metadata.json
+    if 'type' in metadata['all_fields_info']['Node']:
+        metadata['all_fields_info']['Node']['node_type'] = metadata['all_fields_info']['Node'].pop('type')
+
+    # Apply migration: 0031 - REV. 1.0.31
+    # Remove DbComputer.enabled
+    # For data.json
+    if 'Computer' in data['export_data']:
+        for content in data['export_data']['Computer'].values():
+            if 'enabled' in content:
+                content.pop('enabled')
+    # For metadata.json
+    if 'enabled' in metadata['all_fields_info']['Computer']:
+        metadata['all_fields_info']['Computer'].pop('enabled')
+
+    # Apply migration 0032 - REV. 1.0.32
+    # Remove legacy workflow tables: DbWorkflow, DbWorkflowData, DbWorkflowStep
+    # These were (according to Antimo Marrazzo) never exported.
+
+    # Apply migration 0033 - REV. 1.0.33
+    # Store dict-values as JSON serializable dicts instead of strings
+    # NB! Specific for Django backend
+    import six
+    from aiida.common import json
+    if 'Computer' in data['export_data']:
+        for content in data['export_data']['Computer'].values():
+            for value in ['metadata', 'transport_params']:
+                if isinstance(content[value], six.text_type):
+                    content[value] = json.loads(content[value])
+    if 'Log' in data['export_data']:
+        for content in data['export_data']['Log'].values():
+            if isinstance(content['metadata'], six.text_type):
+                content['metadata'] = json.loads(content['metadata'])
+
+    # Update metadata.json with the new Log and Comment entities
+    new_entities = {
+        "Log": {
+            "uuid": {},
+            "time": {
+                "convert_type": "date"
+            },
+            "loggername": {},
+            "levelname": {},
+            "message": {},
+            "metadata": {},
+            "dbnode": {
+                "related_name": "dblogs",
+                "requires": "Node"
+            }
+        },
+        "Comment": {
+            "uuid": {},
+            "ctime": {
+                "convert_type": "date"
+            },
+            "mtime": {
+                "convert_type": "date"
+            },
+            "content": {},
+            "dbnode": {
+                "related_name": "dbcomments",
+                "requires": "Node"
+            },
+            "user": {
+                "related_name": "dbcomments",
+                "requires": "User"
+            }
+        }
+    }
+    metadata['all_fields_info'].update(new_entities)
+    metadata['unique_identifiers'].update({"Log": "uuid", "Comment": "uuid"})
+
+    # Update data.json with the new Extras
+    # Since Extras were not available previously and usually only include hashes,
+    # the Node ids will be added, but included as empty dicts
+    node_extras = {}
+    node_extras_conversion = {}
+
+    if 'Node' in data['export_data']:
+        for node_id in data['export_data']['Node']:
+            node_extras[node_id] = {}
+            node_extras_conversion[node_id] = {}
+    data.update({'node_extras': node_extras, 'node_extras_conversion': node_extras_conversion})
 
 
 def migrate_recursive(metadata, data, folder):
     """
     Recursive migration of export files from v0.1 to newest version,
     See specific migration functions for detailed descriptions.
-    NOTE: Remember to update newest_version to the newest export version,
-    when/if a migration is available.
 
     :param metadata: the content of an export archive metadata.json file
     :param data: the content of an export archive data.json file
     """
-    newest_version = '0.4'
+    from aiida.orm.importexport import EXPORT_VERSION as newest_version
+
     old_version = verify_metadata_version(metadata)
 
     try:
-        if old_version == '0.1':
+        if old_version == newest_version:
+            echo.echo_critical('Your export file is already at the newest export version {}'.format(newest_version))
+        elif old_version == '0.1':
             migrate_v1_to_v2(metadata, data)
         elif old_version == '0.2':
             migrate_v2_to_v3(metadata, data)
         elif old_version == '0.3':
             migrate_v3_to_v4(metadata, data, folder)
         else:
-            echo.echo_critical('cannot migrate from version {}'.format(old_version))
+            echo.echo_critical('Cannot migrate from version {}'.format(old_version))
     except ValueError as exception:
         echo.echo_critical(exception)
     except DanglingLinkError:
-        echo.echo_critical('export file is invalid because it contains dangling links')
+        echo.echo_critical('Export file is invalid because it contains dangling links')
 
     new_version = verify_metadata_version(metadata)
 

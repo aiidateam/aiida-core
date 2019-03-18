@@ -47,23 +47,33 @@ The software is available at http://www.aiida.net.
 
 .. toctree::
     :maxdepth: 1
+    :caption: Concepts
+    :hidden:
+
+    concepts/provenance
+    concepts/processes
+    concepts/calculations
+    concepts/workflows
+
+
+.. toctree::
+    :maxdepth: 1
+    :caption: Working with
+    :hidden:
+
+    working/processes
+    working/functions
+    working/calculations
+    working/workflows
+
+
+.. toctree::
+    :maxdepth: 1
     :caption: Working with AiiDA
     :hidden:
 
     working_with_aiida/index
     import_export/index
-
-
-.. toctree::
-    :maxdepth: 1
-    :caption: Concepts
-    :hidden:
-
-    concepts/provenance
-    concepts/calculations
-    concepts/workflows
-    concepts/processes
-    concepts/caching
 
 
 .. toctree::

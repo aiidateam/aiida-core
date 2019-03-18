@@ -6,9 +6,6 @@ Data plugin - Float Summation
 .. toctree::
    :maxdepth: 2
 
-Now that you have written :doc:`your first AiiDA plugin <code_plugin_int_sum>`,
-we can try to extend it to see how we can introduce different type of parameters
-and how the plugins have to be modified to encompass these changes.
 
 Introducing a new data type
 ---------------------------
@@ -101,9 +98,7 @@ Your exercise consists in creating a new calculation plugin (let's call it for i
 ``SumFloatCalculation``) that will also perform the sum, but accept as input two ``FloatData``
 node and return also a ``FloatData`` node containing the sum.
 
-Below, you will find some hints on the parts you need to modify with respect
-to the :doc:`previous tutorial<code_plugin_int_sum>` using instead 
-``Dict`` both as inputs and outputs.
+Below, you will find some hints on the parts you need to modify with respect to the previous tutoria using instead ``Dict`` both as inputs and outputs.
 
 .. note:: Remember to add an entry point for the ``SumFloatCalculation`` in the ``setup.json`` file and re-install the package and refresh entry points.
    It is up to you to either put the new class in the same ``sum.py`` or create a new ``floatsum.py``.

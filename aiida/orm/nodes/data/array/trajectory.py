@@ -464,13 +464,6 @@ class TrajectoryData(ArrayData):
                 cif = cif + ciffile.WriteOut()
         return cif.encode('utf-8'), {}
 
-    def _prepare_tcod(self, main_file_name="", **kwargs):  # pylint: disable=unused-argument
-        """
-        Write the given trajectory to a string of format TCOD CIF.
-        """
-        from aiida.tools.dbexporters.tcod import export_cif
-        return export_cif(self, **kwargs), {}
-
     def _get_aiida_structure(self, store=False, **kwargs):
         """
         Creates :py:class:`aiida.orm.nodes.data.structure.StructureData`.

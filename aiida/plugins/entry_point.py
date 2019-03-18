@@ -62,7 +62,6 @@ entry_point_group_to_module_path_map = {
     'aiida.parsers': 'aiida.parsers.plugins',
     'aiida.schedulers': 'aiida.schedulers.plugins',
     'aiida.tools.dbexporters': 'aiida.tools.dbexporters',
-    'aiida.tools.dbexporters.tcod_plugins': 'aiida.tools.dbexporters.tcod_plugins',
     'aiida.tools.dbimporters': 'aiida.tools.dbimporters.plugins',
     'aiida.transports': 'aiida.transports.plugins',
     'aiida.workflows': 'aiida.workflows',

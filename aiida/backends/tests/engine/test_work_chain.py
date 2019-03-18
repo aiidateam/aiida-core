@@ -353,6 +353,18 @@ class TestWorkchain(AiidaTestCase):
         with self.assertRaises(TypeError):
             Wf.spec()
 
+    def test_define_not_calling_super(self):
+        """A `WorkChain` that does not call super in `define` classmethod should raise."""
+
+        class IncompleteDefineWorkChain(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                pass
+
+        with self.assertRaises(AssertionError):
+            launch.run(IncompleteDefineWorkChain)
+
     def test_same_input_node(self):
 
         class Wf(WorkChain):

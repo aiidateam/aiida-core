@@ -33,12 +33,3 @@ Plugin development
     ../developer_guide/devel_tutorial/plugin_tests
     ../developer_guide/devel_tutorial/cmdline_plugin
 
-*************
-TCOD exporter
-*************
-
-.. toctree::
-    :maxdepth: 2
-
-    tcod_exporter.rst
-

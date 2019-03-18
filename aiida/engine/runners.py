@@ -21,8 +21,8 @@ import plumpy
 
 from aiida.orm import load_node
 from .processes import futures
-from .processes.process import instantiate_process
 from .processes.calcjobs import manager
+from .utils import instantiate_process
 from . import transports
 from . import utils
 

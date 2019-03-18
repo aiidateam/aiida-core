@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=cyclic-import
 """The AiiDA process class"""
 from __future__ import division
 from __future__ import print_function
@@ -45,40 +44,6 @@ from .process_spec import ProcessSpec
 __all__ = ('Process', 'ProcessState')
 
 
-def instantiate_process(runner, process, *args, **inputs):
-    """
-    Return an instance of the process with the given inputs. The function can deal with various types
-    of the `process`:
-
-        * Process instance: will simply return the instance
-        * ProcessBuilder instance: will instantiate the Process from the class and inputs defined within it
-        * Process class: will instantiate with the specified inputs
-
-    If anything else is passed, a ValueError will be raised
-
-    :param process: Process instance or class, CalcJobNode class or ProcessBuilder instance
-    :param inputs: the inputs for the process to be instantiated with
-    """
-    if isinstance(process, Process):
-        assert not args
-        assert not inputs
-        assert runner is process.runner
-        return process
-
-    if isinstance(process, ProcessBuilder):
-        builder = process
-        process_class = builder.process_class
-        inputs.update(**builder)
-    elif issubclass(process, Process):
-        process_class = process
-    else:
-        raise ValueError('invalid process {}, needs to be Process or ProcessBuilder'.format(type(process)))
-
-    process = process_class(runner=runner, inputs=inputs)
-
-    return process
-
-
 @plumpy.auto_persist('_parent_pid', '_enable_persistence')
 @six.add_metaclass(abc.ABCMeta)
 class Process(plumpy.Process):
@@ -89,7 +54,7 @@ class Process(plumpy.Process):
     # pylint: disable=too-many-public-methods
 
     _node_class = ProcessNode
-    _spec_type = ProcessSpec
+    _spec_class = ProcessSpec
 
     SINGLE_OUTPUT_LINKNAME = 'result'
 
@@ -103,12 +68,11 @@ class Process(plumpy.Process):
     @classmethod
     def define(cls, spec):
         super(Process, cls).define(spec)
-        spec.input_namespace(spec.metadata_key, required=False, non_db=True, default={})
+        spec.input_namespace(spec.metadata_key, required=False, non_db=True)
         spec.input_namespace('{}.{}'.format(spec.metadata_key, spec.options_key), required=False)
-        spec.input('{}.store_provenance'.format(spec.metadata_key), valid_type=bool, default=True, non_db=True)
-        spec.input(
-            '{}.description'.format(spec.metadata_key), valid_type=six.string_types[0], required=False, non_db=True)
-        spec.input('{}.label'.format(spec.metadata_key), valid_type=six.string_types[0], required=False, non_db=True)
+        spec.input('{}.store_provenance'.format(spec.metadata_key), valid_type=bool, default=True)
+        spec.input('{}.description'.format(spec.metadata_key), valid_type=six.string_types[0], required=False)
+        spec.input('{}.label'.format(spec.metadata_key), valid_type=six.string_types[0], required=False)
         spec.inputs.valid_type = (orm.Data,)
         spec.outputs.valid_type = (orm.Data,)
 

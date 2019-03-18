@@ -46,7 +46,7 @@ pathlib2; python_version<'3.5'
 pg8000<1.13.0
 pgtest==1.1.0
 pika==1.0.0b1
-plumpy==0.12.1
+plumpy==0.12.2
 psutil==5.5.1
 pyblake2==1.1.2; python_version<'3.6'
 pymatgen<=2018.12.12

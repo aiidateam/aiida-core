@@ -31,7 +31,7 @@ class CalcJob(Process):
     """Implementation of the CalcJob process."""
 
     _node_class = orm.CalcJobNode
-    _spec_type = CalcJobProcessSpec
+    _spec_class = CalcJobProcessSpec
     link_label_retrieved = 'retrieved'
 
     def __init__(self, *args, **kwargs):
@@ -54,45 +54,45 @@ class CalcJob(Process):
             help='Filename to which the content of stdout of the scheduler will be written.')
         spec.input('metadata.options.scheduler_stderr', valid_type=six.string_types, default='_scheduler-stderr.txt',
             help='Filename to which the content of stderr of the scheduler will be written.')
-        spec.input('metadata.options.resources', valid_type=dict, non_db=True, required=True,
+        spec.input('metadata.options.resources', valid_type=dict, required=True,
             help='Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '
                  'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the '
                  'scheduler for more details.')
-        spec.input('metadata.options.max_wallclock_seconds', valid_type=int, non_db=True, required=False,
+        spec.input('metadata.options.max_wallclock_seconds', valid_type=int, required=False,
             help='Set the wallclock in seconds asked to the scheduler')
-        spec.input('metadata.options.custom_scheduler_commands', valid_type=six.string_types, non_db=True, default='',
+        spec.input('metadata.options.custom_scheduler_commands', valid_type=six.string_types, default='',
             help='Set a (possibly multiline) string with the commands that the user wants to manually set for the '
                  'scheduler. The difference of this option with respect to the `prepend_text` is the position in '
                  'the scheduler submission file where such text is inserted: with this option, the string is '
                  'inserted before any non-scheduler command')
-        spec.input('metadata.options.queue_name', valid_type=six.string_types, non_db=True, required=False,
+        spec.input('metadata.options.queue_name', valid_type=six.string_types, required=False,
             help='Set the name of the queue on the remote computer')
-        spec.input('metadata.options.account', valid_type=six.string_types, non_db=True, required=False,
+        spec.input('metadata.options.account', valid_type=six.string_types, required=False,
             help='Set the account to use in for the queue on the remote computer')
-        spec.input('metadata.options.qos', valid_type=six.string_types, non_db=True, required=False,
+        spec.input('metadata.options.qos', valid_type=six.string_types, required=False,
             help='Set the quality of service to use in for the queue on the remote computer')
-        spec.input('metadata.options.computer', valid_type=orm.Computer, non_db=True, required=False,
+        spec.input('metadata.options.computer', valid_type=orm.Computer, required=False,
             help='Set the computer to be used by the calculation')
-        spec.input('metadata.options.withmpi', valid_type=bool, non_db=True, default=True,
+        spec.input('metadata.options.withmpi', valid_type=bool, default=True,
             help='Set the calculation to use mpi',)
-        spec.input('metadata.options.mpirun_extra_params', valid_type=(list, tuple), non_db=True, default=[],
+        spec.input('metadata.options.mpirun_extra_params', valid_type=(list, tuple), default=[],
             help='Set the extra params to pass to the mpirun (or equivalent) command after the one provided in '
                  'computer.mpirun_command. Example: mpirun -np 8 extra_params[0] extra_params[1] ... exec.x',)
-        spec.input('metadata.options.import_sys_environment', valid_type=bool, non_db=True, default=True,
+        spec.input('metadata.options.import_sys_environment', valid_type=bool, default=True,
             help='If set to true, the submission script will load the system environment variables',)
-        spec.input('metadata.options.environment_variables', valid_type=dict, non_db=True, default={},
+        spec.input('metadata.options.environment_variables', valid_type=dict, default={},
             help='Set a dictionary of custom environment variables for this calculation',)
-        spec.input('metadata.options.priority', valid_type=six.string_types[0], non_db=True, required=False,
+        spec.input('metadata.options.priority', valid_type=six.string_types[0], required=False,
             help='Set the priority of the job to be queued')
-        spec.input('metadata.options.max_memory_kb', valid_type=int, non_db=True, required=False,
+        spec.input('metadata.options.max_memory_kb', valid_type=int, required=False,
             help='Set the maximum memory (in KiloBytes) to be asked to the scheduler')
-        spec.input('metadata.options.prepend_text', valid_type=six.string_types[0], non_db=True, default='',
+        spec.input('metadata.options.prepend_text', valid_type=six.string_types[0], default='',
             help='Set the calculation-specific prepend text, which is going to be prepended in the scheduler-job '
                  'script, just before the code execution',)
-        spec.input('metadata.options.append_text', valid_type=six.string_types[0], non_db=True, default='',
+        spec.input('metadata.options.append_text', valid_type=six.string_types[0], default='',
             help='Set the calculation-specific append text, which is going to be appended in the scheduler-job '
                  'script, just after the code execution',)
-        spec.input('metadata.options.parser_name', valid_type=six.string_types[0], non_db=True, required=False,
+        spec.input('metadata.options.parser_name', valid_type=six.string_types[0], required=False,
             help='Set a string for the output parser. Can be None if no output plugin is available or needed')
 
         spec.output('remote_folder', valid_type=orm.RemoteData,

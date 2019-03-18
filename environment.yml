@@ -36,7 +36,7 @@ dependencies:
 - paramiko==2.4.2
 - ecdsa==0.13
 - ipython>=4.0,<6.0
-- plumpy==0.12.1
+- plumpy==0.12.2
 - kiwipy[rmq]==0.4.2
 - pika==1.0.0b1
 - circus==0.15.0

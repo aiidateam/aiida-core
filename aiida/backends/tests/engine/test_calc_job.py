@@ -46,7 +46,7 @@ class TestCalcJob(AiidaTestCase):
             launch.run_get_node(CalcJob)
 
         with self.assertRaises(exceptions.InvalidOperation):
-            launch.run_get_pid(CalcJob)
+            launch.run_get_pk(CalcJob)
 
         with self.assertRaises(exceptions.InvalidOperation):
             launch.submit(CalcJob)

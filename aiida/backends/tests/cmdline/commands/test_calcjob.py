@@ -17,9 +17,12 @@ import unittest
 
 from click.testing import CliRunner
 
+from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
+from aiida.backends.tests.utils.fixtures import import_archive_fixture
 from aiida.cmdline.commands import cmd_calcjob as command
 from aiida.common.datastructures import CalcJobState
+from aiida.plugins import CalculationFactory
 from aiida.plugins.entry_point import get_entry_point_string_from_class
 
 
@@ -31,17 +34,13 @@ class TestVerdiCalculation(AiidaTestCase):
     """Tests for `verdi calcjob`."""
 
     # Note remove this when reenabling the tests after solving issue #2426
-    # pylint: disable=no-member,unused-variable,unused-import
+    # pylint: disable=no-member
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         super(TestVerdiCalculation, cls).setUpClass(*args, **kwargs)
-        from aiida.backends.tests.utils.fixtures import import_archive_fixture
         from aiida.common.links import LinkType
         from aiida.engine import ProcessState
-        from aiida.orm import Data, CalcJobNode, Dict
-        from aiida.plugins import CalculationFactory
-        from aiida import orm
 
         cls.computer = orm.Computer(
             name='comp', hostname='localhost', transport_type='local', scheduler_type='direct',
@@ -49,7 +48,7 @@ class TestVerdiCalculation(AiidaTestCase):
 
         cls.code = orm.Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
         cls.group = orm.Group(label='test_group').store()
-        cls.node = Data().store()
+        cls.node = orm.Data().store()
         cls.calcs = []
 
         user = orm.User.objects.get_default()
@@ -62,7 +61,7 @@ class TestVerdiCalculation(AiidaTestCase):
         # Create 5 CalcJobNodes (one for each CalculationState)
         for calculation_state in CalcJobState:
 
-            calc = CalcJobNode(computer=cls.computer, process_type=process_type)
+            calc = orm.CalcJobNode(computer=cls.computer, process_type=process_type)
             calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
             calc.store()
 
@@ -75,7 +74,7 @@ class TestVerdiCalculation(AiidaTestCase):
                 cls.VAL_ONE = 'val_one'
                 cls.VAL_TWO = 'val_two'
 
-                output_parameters = Dict(dict={
+                output_parameters = orm.Dict(dict={
                     cls.KEY_ONE: cls.VAL_ONE,
                     cls.KEY_TWO: cls.VAL_TWO,
                 }).store()
@@ -90,7 +89,7 @@ class TestVerdiCalculation(AiidaTestCase):
 
         # Create a single failed CalcJobNode
         cls.EXIT_STATUS = 100
-        calc = CalcJobNode(computer=cls.computer)
+        calc = orm.CalcJobNode(computer=cls.computer)
         calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         calc.store()
         calc.set_exit_status(cls.EXIT_STATUS)
@@ -155,7 +154,7 @@ class TestVerdiCalculation(AiidaTestCase):
         """Test verdi calcjob outputls"""
         options = []
         result = self.cli_runner.invoke(command.calcjob_outputls, options)
-        self.assertIsNotNone(result.exception)
+        self.assertIsNotNone(result.exception, msg=result.output)
 
         options = [self.arithmetic_job.uuid]
         result = self.cli_runner.invoke(command.calcjob_outputls, options)
@@ -165,22 +164,16 @@ class TestVerdiCalculation(AiidaTestCase):
         self.assertIn('_scheduler-stdout.txt', get_result_lines(result))
         self.assertIn('aiida.out', get_result_lines(result))
 
-        options = [self.arithmetic_job.uuid, 'aiida.out']
-        result = self.cli_runner.invoke(command.calcjob_outputls, options)
-        self.assertIsNone(result.exception, result.output)
-        self.assertEqual(len(get_result_lines(result)), 1)
-        self.assertIn('aiida.out', get_result_lines(result))
-
     @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_calcjob_inputcat(self):
         """Test verdi calcjob inputcat"""
         options = []
         result = self.cli_runner.invoke(command.calcjob_inputcat, options)
-        self.assertIsNotNone(result.exception)
+        self.assertIsNotNone(result.exception, msg=result.output)
 
         options = [self.arithmetic_job.uuid]
         result = self.cli_runner.invoke(command.calcjob_inputcat, options)
-        self.assertIsNone(result.exception, result.output)
+        self.assertIsNone(result.exception, msg=result.output)
         self.assertEqual(len(get_result_lines(result)), 1)
         self.assertEqual(get_result_lines(result)[0], '2 3')
 
@@ -233,3 +226,42 @@ class TestVerdiCalculation(AiidaTestCase):
         options = ['-f', str(self.result_job.uuid)]
         result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
         self.assertIsNone(result.exception, result.output)
+
+    def test_calcjob_inoutputcat_old(self):
+        """Test most recent process class / plug-in can be successfully used to find filenames"""
+
+        # Import old archive of ArithmeticAddCalculation
+        import_archive_fixture('calcjob/arithmetic.add_old.aiida')
+        ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+        calculations = orm.QueryBuilder().append(ArithmeticAddCalculation).all()
+        # Uncomment when issue 2426 is addressed
+        # for job in calculations:
+        #     if job[0].uuid == self.arithmetic_job.uuid:
+        #         continue
+        #     else:
+        #         add_job = job[0]
+        #         return
+
+        # Remove when issue 2426 is addressed
+        add_job = calculations[0][0]
+
+        # Make sure add_job does not specify options 'input_filename' and 'output_filename'
+        self.assertIsNone(
+            add_job.get_option('input_filename'), msg="'input_filename' should not be an option for {}".format(add_job))
+        self.assertIsNone(
+            add_job.get_option('output_filename'),
+            msg="'output_filename' should not be an option for {}".format(add_job))
+
+        # Run `verdi calcjob inputcat add_job`
+        options = [add_job.uuid]
+        result = self.cli_runner.invoke(command.calcjob_inputcat, options)
+        self.assertIsNone(result.exception, result.output)
+        self.assertEqual(len(get_result_lines(result)), 1)
+        self.assertEqual(get_result_lines(result)[0], '2 3')
+
+        # Run `verdi calcjob outputcat add_job`
+        options = [add_job.uuid]
+        result = self.cli_runner.invoke(command.calcjob_outputcat, options)
+        self.assertIsNone(result.exception, result.output)
+        self.assertEqual(len(get_result_lines(result)), 1)
+        self.assertEqual(get_result_lines(result)[0], '5')

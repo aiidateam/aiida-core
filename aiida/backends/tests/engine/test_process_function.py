@@ -200,13 +200,22 @@ class TestProcessFunction(AiidaTestCase):
         """Simple process function that defines keyword arguments."""
         kwargs = {'data_a': orm.Int(DEFAULT_INT)}
 
-        result = self.function_kwargs()
+        result, node = self.function_kwargs.run_get_node()
         self.assertTrue(isinstance(result, dict))
+        self.assertEqual(len(node.get_incoming().all()), 0)
         self.assertEqual(result, {})
 
-        result = self.function_kwargs(**kwargs)
+        result, node = self.function_kwargs.run_get_node(**kwargs)
         self.assertTrue(isinstance(result, dict))
+        self.assertEqual(len(node.get_incoming().all()), 1)
         self.assertEqual(result, kwargs)
+
+        # Calling with any number of positional arguments should raise
+        with self.assertRaises(TypeError):
+            self.function_kwargs.run_get_node(orm.Int(1))
+
+        with self.assertRaises(TypeError):
+            self.function_kwargs.run_get_node(orm.Int(1), b=orm.Int(2))
 
     def test_function_args_and_kwargs(self):
         """Simple process function that defines a positional argument and keyword arguments."""
@@ -221,6 +230,13 @@ class TestProcessFunction(AiidaTestCase):
         result = self.function_args_and_kwargs(*args, **kwargs)
         self.assertTrue(isinstance(result, dict))
         self.assertEqual(result, {'data_a': args[0], 'data_b': kwargs['data_b']})
+
+        # Calling with more positional arguments than defined in the signature should raise
+        with self.assertRaises(TypeError):
+            self.function_kwargs.run_get_node(orm.Int(1), orm.Int(2))
+
+        with self.assertRaises(TypeError):
+            self.function_kwargs.run_get_node(orm.Int(1), orm.Int(2), b=orm.Int(2))
 
     def test_function_args_and_kwargs_default(self):
         """Simple process function that defines a positional argument and an argument with a default."""

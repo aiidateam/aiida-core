@@ -229,8 +229,29 @@ class FunctionProcess(Process):
             })
 
     @classmethod
+    def validate_inputs(cls, *args, **kwargs):  # pylint: disable=unused-argument
+        """
+        Validate the positional and keyword arguments passed in the function call.
+
+        :raises TypeError: if more positional arguments are passed than the function defines
+        """
+        nargs = len(args)
+        nparameters = len(cls._func_args)
+
+        # If the spec is dynamic, i.e. the function signature includes `**kwargs` and the number of positional arguments
+        # passed is larger than the number of explicitly defined parameters in the signature, the inputs are invalid and
+        # we should raise. If we don't, some of the passed arguments, intended to be positional arguments, will be
+        # misinterpreted as keyword arguments, but they won't have an explicit name to use for the link label, causing
+        # the input link to be completely lost.
+        if cls.spec().inputs.dynamic and nargs > nparameters:
+            name = cls._func.__name__
+            raise TypeError('{}() takes {} positional arguments but {} were given'.format(name, nparameters, nargs))
+
+    @classmethod
     def create_inputs(cls, *args, **kwargs):
         """Create the input args for the FunctionProcess"""
+        cls.validate_inputs(*args, **kwargs)
+
         ins = {}
         if kwargs:
             ins.update(kwargs)
@@ -290,11 +311,10 @@ class FunctionProcess(Process):
         from aiida.orm import Data
         from .exit_code import ExitCode
 
-        args = []
-
         # Split the inputs into positional and keyword arguments
         args = [None] * len(self._func_args)
         kwargs = {}
+
         for name, value in self.inputs.items():
             try:
                 if self.spec().inputs[name].non_db:

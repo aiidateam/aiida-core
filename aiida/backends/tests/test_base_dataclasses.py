@@ -202,6 +202,22 @@ class TestFloat(AiidaTestCase):
         res = a ** b
         self.assertAlmostEqual(res.value, 16.)
 
+    def test_division(self):
+        """Test the normal division operator."""
+        a = Float(3)
+        b = Float(2)
+
+        self.assertAlmostEqual(a / b, 1.5)
+        self.assertIsInstance(a / b, Float)
+
+    def test_division_integer(self):
+        """Test the integer division operator."""
+        a = Float(3)
+        b = Float(2)
+
+        self.assertAlmostEqual(a // b, 1.0)
+        self.assertIsInstance(a // b, Float)
+
     def test_modulo(self):
         a = Float(12.0)
         b = Float(10.0)
@@ -229,6 +245,22 @@ class TestFloatIntMix(AiidaTestCase):
 
 
 class TestInt(AiidaTestCase):
+
+    def test_division(self):
+        """Test the normal division operator."""
+        a = Int(3)
+        b = Int(2)
+
+        self.assertAlmostEqual(a / b, 1.5)
+        self.assertIsInstance(a / b, Float)
+
+    def test_division_integer(self):
+        """Test the integer division operator."""
+        a = Int(3)
+        b = Int(2)
+
+        self.assertAlmostEqual(a // b, 1)
+        self.assertIsInstance(a // b, Int)
 
     def test_modulo(self):
         a = Int(12)

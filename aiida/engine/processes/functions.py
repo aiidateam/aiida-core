@@ -23,7 +23,7 @@ from aiida.manage.manager import get_manager
 
 from .process import Process
 
-__all__ = ('calcfunction', 'workfunction')
+__all__ = ('calcfunction', 'workfunction', 'FunctionProcess')
 
 
 def calcfunction(function):
@@ -134,12 +134,19 @@ def process_function(node_class):
 
             return result, process.node
 
+        def run_get_pk(*args, **kwargs):
+            """Recreate the `run_get_pk` utility launcher."""
+            result, node = run_get_node(*args, **kwargs)
+            return result, node.pk
+
         @functools.wraps(function)
         def decorated_function(*args, **kwargs):
             """This wrapper function is the actual function that is called."""
             result, _ = run_get_node(*args, **kwargs)
             return result
 
+        decorated_function.run = decorated_function
+        decorated_function.run_get_pk = run_get_pk
         decorated_function.run_get_node = run_get_node
         decorated_function.is_process_function = is_process_function
 

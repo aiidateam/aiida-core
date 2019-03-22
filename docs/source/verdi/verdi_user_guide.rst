@@ -11,15 +11,20 @@ Help strings
 ------------
 Each ``verdi`` command and any optional sub commands have automatically generated help strings that explain the command's functionality and usage.
 To show the help string for any command, simply append the ``--help`` option.
-For example ``verdi calculation kill --help`` will display::
+For example ``verdi process kill --help`` will display:
 
-  Usage: verdi calculation kill [OPTIONS] [CALCULATIONS]...
+::
 
-    Kill one or multiple running calculations.
+  Usage: verdi process kill [OPTIONS] [PROCESSES]...
+
+    Kill running processes.
 
   Options:
-    -f, --force  do not ask for confirmation
-    -h, --help   Show this message and exit.
+    -t, --timeout FLOAT  Time in seconds to wait for a response before timing
+                         out.  [default: 5.0]
+    --wait / --no-wait   Wait for the action to be completed otherwise return as
+                         soon as it's scheduled.
+    -h, --help           Show this message and exit.
 
 All help strings have the same format and consist of three parts:
 
@@ -27,7 +32,7 @@ All help strings have the same format and consist of three parts:
   * A description of the commands functionality
   * A list of the available options
 
-The ``[OPTIONS]`` and ``[CALCULATIONS]...`` tags in the usage description, denote the 'parameters' that the command takes.
+The ``[OPTIONS]`` and ``[PROCESSES]...`` tags in the usage description, denote the 'parameters' that the command takes.
 A more detailed description of the available options will be listed after the description of the commands functionality
 The positional arguments will only be described in the command description itself.
 For a more detailed explanation of the difference between options and arguments, see the section about command line :ref:`parameters<cli_parameters>`.
@@ -46,9 +51,9 @@ In the language of command line interfaces, these parameters come in two flavors
 Arguments are positional parameters, whereas options are indicated by a flag that precedes the value, typically of the form ``-f``, or ``--flag``.
 The command line :ref:`help string<cli_help_strings>` section explained that each command will have a help string with a usage line, for example::
 
-  Usage: verdi calculation kill [OPTIONS] [CALCULATIONS]...
+  Usage: verdi process kill [OPTIONS] [PROCESSES]...
 
-The ``[OPTIONS]`` tag indicates that the command takes one or multiple options and one or multiple ``[CALCULATIONS]`` as arguments.
+The ``[OPTIONS]`` tag indicates that the command takes one or multiple options and one or multiple ``[PROCESSES]`` as arguments.
 The square brackets in the usage line, indicate that the parameter is optional and not required.
 Three dots ``...`` following a parameter indicate that it can not take just one, but also more than one values.
 
@@ -67,9 +72,9 @@ The default profile will be highlighted.
 By default, all ``verdi`` commands will always use the default profile.
 Having to change the default profile, anytime one wants to apply the ``verdi`` command to another profile is cumbersome.
 Therefore, each ``verdi`` command supports the ``-p/--profile`` option, that will force ``verdi`` to use the given profile.
-For example, if you wanted to display the list of calculations for a profile that is not the current default, you can execute::
+For example, if you wanted to display the list of processes for a profile that is not the current default, you can execute::
 
-  verdi -p <profile> calculation list
+  verdi -p <profile> process list
 
 Note that the specified profile will be used for this and only this command.
 All subsequent commands, when no specific profile is given, will return to using the default profile.

@@ -61,16 +61,6 @@ running a script. Both methods are described below.
     scripting
 
 
-============
-Calculations
-============
-
-.. toctree::
-    :maxdepth: 4
-
-    ../state/calculation_state
-    resultmanager
-    inline_calculations
 
 ==========
 Data types
@@ -106,15 +96,6 @@ Interfaces have been written for some of the most used schedulers.
 
     ../scheduler/index
 
-==========
-Link types
-==========
-
-.. toctree::
-    :maxdepth: 4
-
-    ../link_types/index.rst
-
 =============
 Querying data
 =============
@@ -127,6 +108,23 @@ Querying data
     ../querying/querybuilder/queryhelp
     ../querying/backend
 
+=======
+Caching
+=======
+
+.. toctree::
+    :maxdepth: 4
+
+    caching.rst
+
+==============
+Result manager
+==============
+
+.. toctree::
+    :maxdepth: 4
+
+    resultmanager.rst
 
 
 =======

@@ -29,14 +29,14 @@ Code Download
 
 Code can be downloaded like this.
 
-Download: :download:`this example script <../devel_tutorial/sum_executable.py>`
+Download: :download:`this example script <../../concepts/include/snippets/calculations/calcfunctions/add_multiply_plain_python.py>`
 
 Code Display
 ============
 
 Can be done like this. This entire document can be seen unformatted below using this method.
 
-.. literalinclude:: ../devel_tutorial/sum_executable.py
+.. literalinclude:: ../../concepts/include/snippets/calculations/calcfunctions/add_multiply_plain_python.py
 
 .. _self-reference:
 

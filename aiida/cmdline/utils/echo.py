@@ -132,7 +132,7 @@ def echo_deprecated(message, bold=False, nl=True, err=True, exit=False):
     click.secho(message, bold=bold, nl=nl, err=err)
 
     if exit:
-        sys.exit(ExitCode.DEPRECATED.value)
+        sys.exit(ExitCode.DEPRECATED)
 
 
 def echo_dictionary(dictionary, fmt='json+date'):

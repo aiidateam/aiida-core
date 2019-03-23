@@ -12,7 +12,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-import enum
+from enum import IntEnum
 import sys
 
 import click
@@ -21,11 +21,12 @@ __all__ = ('echo', 'echo_info', 'echo_success', 'echo_warning', 'echo_error', 'e
 
 
 # pylint: disable=too-few-public-methods
-class ExitCode(enum.Enum):
+class ExitCode(IntEnum):
     """Exit codes for the verdi command line."""
     CRITICAL = 1
     DEPRECATED = 80
     UNKNOWN = 99
+    SUCCESS = 0
 
 
 # pylint: disable=invalid-name
@@ -110,7 +111,7 @@ def echo_critical(message, bold=False, nl=True, err=True):
     """
     click.secho('Critical: ', fg='red', bold=True, nl=False, err=err)
     click.secho(message, bold=bold, nl=nl, err=err)
-    sys.exit(ExitCode.CRITICAL.value)
+    sys.exit(ExitCode.CRITICAL)
 
 
 # pylint: disable=redefined-builtin

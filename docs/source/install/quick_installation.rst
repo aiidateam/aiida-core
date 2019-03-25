@@ -24,7 +24,7 @@ Prerequisites
     .. code-block:: bash
 
         brew install git python postgresql rabbitmq
-        pg_ctl -D /usr/local/var/postgres start
+        brew services start postgresql
         brew services start rabbitmq
 
     See :ref:`MacOS X (Homebrew) instructions<details_brew>` for details.

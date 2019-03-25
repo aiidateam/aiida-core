@@ -12,7 +12,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.engine import run, run_get_node, run_get_pid, Process, WorkChain, calcfunction
+from aiida.engine import run, run_get_node, run_get_pk, Process, WorkChain, calcfunction
 from aiida.orm import Int, WorkChainNode, CalcFunctionNode
 
 
@@ -57,10 +57,10 @@ class TestLaunchers(AiidaTestCase):
         self.assertEquals(result, self.result)
         self.assertTrue(isinstance(node, CalcFunctionNode))
 
-    def test_calcfunction_run_get_pid(self):
-        result, pid = run_get_pid(add, a=self.a, b=self.b)
+    def test_calcfunction_run_get_pk(self):
+        result, pk = run_get_pk(add, a=self.a, b=self.b)
         self.assertEquals(result, self.result)
-        self.assertTrue(isinstance(pid, int))
+        self.assertTrue(isinstance(pk, int))
 
     def test_workchain_run(self):
         result = run(AddWorkChain, a=self.a, b=self.b)
@@ -71,10 +71,10 @@ class TestLaunchers(AiidaTestCase):
         self.assertEquals(result['result'], self.result)
         self.assertTrue(isinstance(node, WorkChainNode))
 
-    def test_workchain_run_get_pid(self):
-        result, pid = run_get_pid(AddWorkChain, a=self.a, b=self.b)
+    def test_workchain_run_get_pk(self):
+        result, pk = run_get_pk(AddWorkChain, a=self.a, b=self.b)
         self.assertEquals(result['result'], self.result)
-        self.assertTrue(isinstance(pid, int))
+        self.assertTrue(isinstance(pk, int))
 
     def test_workchain_builder_run(self):
         builder = AddWorkChain.get_builder()
@@ -91,10 +91,10 @@ class TestLaunchers(AiidaTestCase):
         self.assertEquals(result['result'], self.result)
         self.assertTrue(isinstance(node, WorkChainNode))
 
-    def test_workchain_builder_run_get_pid(self):
+    def test_workchain_builder_run_get_pk(self):
         builder = AddWorkChain.get_builder()
         builder.a = self.a
         builder.b = self.b
-        result, pid = run_get_pid(builder)
+        result, pk = run_get_pk(builder)
         self.assertEquals(result['result'], self.result)
-        self.assertTrue(isinstance(pid, int))
+        self.assertTrue(isinstance(pk, int))

@@ -308,7 +308,7 @@ class TestWorkchain(AiidaTestCase):
             launch.run_get_node(WorkChain)
 
         with self.assertRaises(exceptions.InvalidOperation):
-            launch.run_get_pid(WorkChain)
+            launch.run_get_pk(WorkChain)
 
         with self.assertRaises(exceptions.InvalidOperation):
             launch.submit(WorkChain)

@@ -18,7 +18,7 @@ from plumpy.utils import AttributesFrozendict
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.tests.utils import processes as test_processes
 from aiida.common.lang import override
-from aiida.engine import Process, run, run_get_pid
+from aiida.engine import Process, run, run_get_pk
 from aiida.orm import load_node, Dict, Int, Str, WorkflowNode
 
 
@@ -123,8 +123,8 @@ class TestProcess(AiidaTestCase):
         run(test_processes.DummyProcess)
 
     def test_seal(self):
-        pid = run_get_pid(test_processes.DummyProcess).pid
-        self.assertTrue(load_node(pk=pid).is_sealed)
+        result, pk = run_get_pk(test_processes.DummyProcess)
+        self.assertTrue(load_node(pk=pk).is_sealed)
 
     def test_description(self):
         dp = test_processes.DummyProcess(inputs={'metadata': {'description': "Rockin' process"}})

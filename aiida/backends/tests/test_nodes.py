@@ -1696,8 +1696,8 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
         # I create some objects
         d1 = orm.Data().store()
-        with tempfile.NamedTemporaryFile('w+') as tmpf:
-            d2 = SinglefileData(filepath=tmpf.name).store()
+        with tempfile.NamedTemporaryFile('w+') as handle:
+            d2 = SinglefileData(file=handle).store()
 
         unsavedcomputer = orm.Computer(name='localhost2', hostname='localhost', scheduler_type='direct', transport_type='local')
 

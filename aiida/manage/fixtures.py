@@ -150,7 +150,7 @@ class FixtureManager(object):  # pylint: disable=too-many-public-methods,useless
 
     def create_db_cluster(self):
         if not self.pg_cluster:
-            self.pg_cluster = PGTest(max_connections=256)
+            self.pg_cluster = PGTest()
         self.db_params.update(self.pg_cluster.dsn)
 
     def create_aiida_db(self):

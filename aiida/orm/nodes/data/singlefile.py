@@ -13,6 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import os
+import six
 
 from aiida.common import exceptions
 from .data import Data
@@ -23,10 +24,15 @@ __all__ = ('SinglefileData',)
 class SinglefileData(Data):
     """Data class that can be used to store a single file in its repository."""
 
-    def __init__(self, filepath, **kwargs):
+    def __init__(self, file, **kwargs):
+        """Construct a new instance and set the contents to that of the file.
+
+        :param file: an absolute filepath or filelike object whose contents to copy
+        """
+        # pylint: disable=redefined-builtin
         super(SinglefileData, self).__init__(**kwargs)
-        if filepath is not None:
-            self.put_object_from_file(filepath)
+        if file is not None:
+            self.set_file(file)
 
     @property
     def filename(self):
@@ -56,20 +62,25 @@ class SinglefileData(Data):
         with self.open() as handle:
             return handle.read()
 
-    def set_file(self, filepath):
-        """Add the file located at `path` on file system to repository, deleting any other existing objects."""
-        self.put_object_from_file(filepath)
+    def set_file(self, file):
+        """Store the content of the file in the node's repository, deleting any other existing objects.
 
-    def put_object_from_file(self, path, key=None, mode='w', encoding='utf8', force=False):
-        """Add the file located at `path` on file system to repository, deleting any other existing objects."""
-        if not os.path.isabs(path):
-            raise ValueError('path `{}` is not absolute'.format(path))
+        :param file: an absolute filepath or filelike object whose contents to copy
+        """
+        # pylint: disable=redefined-builtin
 
-        if not os.path.isfile(path):
-            raise ValueError('path `{}` does not correspond to an existing file'.format(path))
+        if isinstance(file, six.string_types):
+            is_filelike = False
 
-        if key is None:
-            key = os.path.split(path)[1]
+            key = os.path.basename(file)
+            if not os.path.isabs(file):
+                raise ValueError('path `{}` is not absolute'.format(file))
+
+            if not os.path.isfile(file):
+                raise ValueError('path `{}` does not correspond to an existing file'.format(file))
+        else:
+            is_filelike = True
+            key = os.path.basename(file.name)
 
         existing_object_names = self.list_object_names()
 
@@ -79,7 +90,10 @@ class SinglefileData(Data):
         except ValueError:
             pass
 
-        super(SinglefileData, self).put_object_from_file(path, key, mode, encoding, force)
+        if is_filelike:
+            self.put_object_from_filelike(file, key)
+        else:
+            self.put_object_from_file(file, key)
 
         # Delete any other existing objects (minus the current `key` which was already removed from the list)
         for existing_key in existing_object_names:

@@ -38,7 +38,6 @@ AiiDA plugins
    :maxdepth: 1
 
    plugins/index
-   devel_tutorial/code_plugin_int_sum
    devel_tutorial/code_plugin_float_sum
    devel_tutorial/plugin_tests
    devel_tutorial/cmdline_plugin

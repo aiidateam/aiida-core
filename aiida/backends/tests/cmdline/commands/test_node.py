@@ -713,7 +713,7 @@ class TestVerdiDataCif(AiidaTestCase, TestVerdiDataListable, TestVerdiDataExport
             filename = fhandle.name
             fhandle.write(cls.valid_sample_cif_str)
             fhandle.flush()
-            a = CifData(filepath=filename, source={'version': '1234', 'db_name': 'COD', 'id': '0000001'})
+            a = CifData(file=filename, source={'version': '1234', 'db_name': 'COD', 'id': '0000001'})
             a.store()
 
             g_ne = orm.Group(label='non_empty_group')

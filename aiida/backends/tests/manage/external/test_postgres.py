@@ -30,7 +30,7 @@ class PostgresTest(unittest.TestCase):
 
     def setUp(self):
         """Set up a temporary database cluster for testing potentially destructive operations"""
-        self.pg_test = PGTest(max_connections=11)  # set to 11 to avoid https://github.com/jamesnunn/pgtest/issues/9
+        self.pg_test = PGTest()
         self.dbuser = 'aiida'
         self.dbpass = 'password'
         self.dbname = 'aiida_db'

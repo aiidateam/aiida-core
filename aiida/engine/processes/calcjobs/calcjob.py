@@ -20,6 +20,7 @@ from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.common.links import LinkType
 
+from ..builder import CalcJobBuilder
 from ..process import Process, ProcessState
 from ..process_spec import CalcJobProcessSpec
 from .tasks import Waiting, UPLOAD_COMMAND
@@ -40,6 +41,10 @@ class CalcJob(Process):
             raise exceptions.InvalidOperation('cannot construct or launch a base `CalcJob` class.')
 
         super(CalcJob, self).__init__(*args, **kwargs)
+    
+    @classmethod
+    def get_builder(cls):
+        return CalcJobBuilder(cls)
 
     @classmethod
     def define(cls, spec):

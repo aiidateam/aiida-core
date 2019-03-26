@@ -135,7 +135,7 @@ class CalcJobBuilder(ProcessBuilder):
             default a unique string will be generated based on the current datetime with the format ``yymmdd-``
             followed by an auto incrementing index
         """
-        inputs = {'store_provenance': False}
+        inputs = {'metadata': {'store_provenance': False}}
         inputs.update(**self)
         process = self._process_class(inputs=inputs)
 

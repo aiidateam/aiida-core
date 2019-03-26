@@ -13,6 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import collections
+from contextlib import contextmanager
 import enum
 import io
 import os
@@ -95,13 +96,15 @@ class Repository(object):  # pylint: disable=useless-object-inheritance
         """
         return [entry.name for entry in self.list_objects(key)]
 
+    @contextmanager
     def open(self, key, mode='r'):
         """Open a file handle to an object stored under the given key.
 
         :param key: fully qualified identifier for the object within the repository
         :param mode: the mode under which to open the handle
         """
-        return io.open(self._get_base_folder().get_abs_path(key), mode=mode)
+        with io.open(self._get_base_folder().get_abs_path(key), mode=mode) as fileobj:
+            yield fileobj
 
     def get_object(self, key):
         """Return the object identified by key.

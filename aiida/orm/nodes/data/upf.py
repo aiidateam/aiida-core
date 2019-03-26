@@ -26,7 +26,7 @@ from aiida.orm import GroupTypeString
 __all__ = ('UpfData',)
 
 
-UPFGROUP_TYPE = GroupTypeString.UPFGROUP_TYPE
+UPFGROUP_TYPE = GroupTypeString.UPFGROUP_TYPE.value
 
 _upfversion_regexp = re.compile(
     r"""

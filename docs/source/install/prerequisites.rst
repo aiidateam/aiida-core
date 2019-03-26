@@ -102,7 +102,7 @@ To start the `postgres` database server, execute:
 
 .. code-block:: bash
 
-    pg_ctl -D /usr/local/var/postgres start
+    brew services start postgresql
 
 For a more detailed description of database requirements and usage see the :ref:`database<database>` section.
 Installing the RabbitMQ message broke through Homebrew is as easy as:

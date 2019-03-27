@@ -58,7 +58,7 @@ if six.PY2:
     warnings.warn('python 2 will be deprecated in `aiida-core v2.0.0`', DeprecationWarning)  # pylint: disable=no-member
 
 # Disable psycopg2 warning. Remove this after upgrading psycopg2 to 2.8
-warnings.filterwarnings("ignore", category=UserWarning, module='psycopg2')
+warnings.filterwarnings("ignore", category=UserWarning, module='psycopg2')  # pylint: disable=no-member
 
 
 def try_load_dbenv(*argc, **argv):

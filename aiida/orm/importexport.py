@@ -23,7 +23,7 @@ from aiida.common.utils import export_shard_uuid, get_class_string, grouper, get
 from aiida.orm import Computer, Group, GroupTypeString, Node, QueryBuilder, User, Log, Comment
 from aiida.orm.utils.repository import Repository
 
-IMPORTGROUP_TYPE = GroupTypeString.IMPORTGROUP_TYPE
+IMPORTGROUP_TYPE = GroupTypeString.IMPORTGROUP_TYPE.value
 DUPL_SUFFIX = ' (Imported #{})'
 
 # Giving names to the various entities. Attributes and links are not AiiDA

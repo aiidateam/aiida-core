@@ -20,7 +20,7 @@ from aiida.orm import GroupTypeString
 
 current_autogroup = None
 
-VERDIAUTOGROUP_TYPE = GroupTypeString.VERDIAUTOGROUP_TYPE
+VERDIAUTOGROUP_TYPE = GroupTypeString.VERDIAUTOGROUP_TYPE.value
 
 # TODO: make the Autogroup usable to the user, and not only to the verdi run
 

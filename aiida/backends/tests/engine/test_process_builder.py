@@ -72,6 +72,18 @@ class TestProcessBuilder(AiidaTestCase):
         builder.c.d = Bool(True)
         self.assertEquals(builder, {'a': Int(2), 'b': Float(2.3), 'c': {'d': Bool(True)}, 'metadata': {'options': {}}})
 
+    def test_workchain_update(self):
+        """
+        Verify that the attributes of the TestWorkChain can be set by the update() method
+        """
+        builder = TestWorkChain.get_builder()
+        builder.update({
+            "a": Int(2),
+            "b": Float(2.3),
+            "c": {"d": Bool(True)}
+        })
+        self.assertEquals(builder, {'a': Int(2), 'b': Float(2.3), 'c': {'d': Bool(True)}, 'metadata': {'options': {}}})
+
     def test_invalid_setattr_raises(self):
         """
         Verify that __setattr__ cannot be called on a terminal Port

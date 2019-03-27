@@ -13,14 +13,14 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from collections import Mapping
+from collections import MutableMapping
 
 from aiida.engine.processes.ports import PortNamespace
 
 __all__ = ('ProcessBuilder', 'CalcJobBuilder', 'ProcessBuilderNamespace')
 
 
-class ProcessBuilderNamespace(Mapping):
+class ProcessBuilderNamespace(MutableMapping):
     """
     Input namespace for the ProcessBuilder. Dynamically generates the getters and setters
     for the input ports of a given PortNamespace
@@ -102,6 +102,12 @@ class ProcessBuilderNamespace(Mapping):
 
     def __getitem__(self, item):
         return self._data[item]
+
+    def __setitem__(self, item, value):
+        self.__setattr__(item, value)
+
+    def __delitem__(self, item):
+        self._data.__delitem__(item)
 
 
 class ProcessBuilder(ProcessBuilderNamespace):

@@ -135,16 +135,16 @@ class CalcJobBuilder(ProcessBuilder):
             default a unique string will be generated based on the current datetime with the format ``yymmdd-``
             followed by an auto incrementing index
         """
+        # pylint: disable=too-many-locals,too-many-statements,too-many-branches
         import os
         import errno
         from tempfile import NamedTemporaryFile
 
         from aiida.common import timezone
         from aiida.transports.plugins.local import LocalTransport
-        from aiida.orm import Computer
         from aiida.common.folders import Folder
-        from aiida.common.exceptions import NotExistent
-        from aiida.orm import load_node, Code
+        from aiida.common import exceptions
+        from aiida.orm import load_node, Code, Computer
 
         inputs = {'metadata': {'store_provenance': False}}
         inputs.update(**self)
@@ -157,8 +157,7 @@ class CalcJobBuilder(ProcessBuilder):
         folder.create()
 
         if subfolder_name is None:
-            subfolder_basename = timezone.localtime(timezone.now()).strftime(
-                '%Y%m%d')
+            subfolder_basename = timezone.localtime(timezone.now()).strftime('%Y%m%d')
         else:
             subfolder_basename = subfolder_name
 
@@ -169,9 +168,7 @@ class CalcJobBuilder(ProcessBuilder):
         counter = 0
         while True:
             counter += 1
-            subfolder_path = os.path.join(folder.abspath,
-                                          "{}-{:05d}".format(subfolder_basename,
-                                                             counter))
+            subfolder_path = os.path.join(folder.abspath, "{}-{:05d}".format(subfolder_basename, counter))
             # This check just tried to avoid to try to create the folder
             # (hoping that a test of existence is faster than a
             # test and failure in directory creation)
@@ -183,8 +180,8 @@ class CalcJobBuilder(ProcessBuilder):
                 # Directory found, and created
                 os.mkdir(subfolder_path)
                 break
-            except OSError as e:
-                if e.errno == errno.EEXIST:
+            except OSError as error:
+                if error.errno == errno.EEXIST:
                     # The directory has been created in the meantime,
                     # retry with a new one...
                     continue
@@ -193,9 +190,7 @@ class CalcJobBuilder(ProcessBuilder):
                 # permissions
                 raise
 
-        subfolder = folder.get_subfolder(
-            os.path.relpath(subfolder_path, folder.abspath),
-            reset_limit=True)
+        subfolder = folder.get_subfolder(os.path.relpath(subfolder_path, folder.abspath), reset_limit=True)
 
         # I use the local transport where possible, to be as similar
         # as possible to a real submission
@@ -212,8 +207,8 @@ class CalcJobBuilder(ProcessBuilder):
             for code in input_codes:
                 if code.is_local():
                     # Note: this will possibly overwrite files
-                    for f in code.get_folder_list():
-                        transport.put(code.get_abs_path(f), f)
+                    for filepath in code.get_folder_list():
+                        transport.put(code.get_abs_path(filepath), filepath)
                     transport.chmod(code.get_local_executable(), 0o755)  # rwxr-xr-x
 
             local_copy_list = calc_info.local_copy_list
@@ -226,7 +221,7 @@ class CalcJobBuilder(ProcessBuilder):
                     try:
                         data_node = load_node(uuid=uuid)
                     except exceptions.NotExistent:
-                        logger.warning('failed to load Node<{}> specified in the `local_copy_list`'.format(uuid))
+                        pass
 
                     with NamedTemporaryFile(mode='w+') as handle:
                         handle.write(data_node.get_object_content(filename))
@@ -234,38 +229,26 @@ class CalcJobBuilder(ProcessBuilder):
                         transport.put(handle.name, target)
 
             if remote_copy_list:
-                with open(os.path.join(subfolder.abspath,
-                                       '_aiida_remote_copy_list.txt'),
-                          'w') as f:
-                    for (remote_computer_uuid, remote_abs_path,
-                         dest_rel_path) in remote_copy_list:
+                with open(os.path.join(subfolder.abspath, '_aiida_remote_copy_list.txt'), 'w') as handle:
+                    for (remote_computer_uuid, remote_abs_path, dest_rel_path) in remote_copy_list:
                         try:
-                            remote_computer = Computer(
-                                uuid=remote_computer_uuid)
-                        except NotExistent:
+                            remote_computer = Computer.objects.get(uuid=remote_computer_uuid)
+                        except exceptions.NotExistent:
                             remote_computer = "[unknown]"
-                        f.write("* I WOULD REMOTELY COPY "
-                                "FILES/DIRS FROM COMPUTER {} (UUID {}) "
-                                "FROM {} TO {}\n".format(remote_computer.name,
-                                                         remote_computer_uuid,
-                                                         remote_abs_path,
-                                                         dest_rel_path))
+                        handle.write("* I WOULD REMOTELY COPY "
+                                     "FILES/DIRS FROM COMPUTER {} (UUID {}) "
+                                     "FROM {} TO {}\n".format(remote_computer.name, remote_computer_uuid,
+                                                              remote_abs_path, dest_rel_path))
 
             if remote_symlink_list:
-                with open(os.path.join(subfolder.abspath,
-                                       '_aiida_remote_symlink_list.txt'),
-                          'w') as f:
-                    for (remote_computer_uuid, remote_abs_path,
-                         dest_rel_path) in remote_symlink_list:
+                with open(os.path.join(subfolder.abspath, '_aiida_remote_symlink_list.txt'), 'w') as handle:
+                    for (remote_computer_uuid, remote_abs_path, dest_rel_path) in remote_symlink_list:
                         try:
-                            remote_computer = Computer(
-                                uuid=remote_computer_uuid)
-                        except NotExistent:
+                            remote_computer = Computer.objects.get(uuid=remote_computer_uuid)
+                        except exceptions.NotExistent:
                             remote_computer = "[unknown]"
-                        f.write("* I WOULD PUT SYMBOLIC LINKS FOR "
-                                "FILES/DIRS FROM COMPUTER {} (UUID {}) "
-                                "FROM {} TO {}\n".format(remote_computer.name,
-                                                         remote_computer_uuid,
-                                                         remote_abs_path,
-                                                         dest_rel_path))
+                        handle.write("* I WOULD PUT SYMBOLIC LINKS FOR "
+                                     "FILES/DIRS FROM COMPUTER {} (UUID {}) "
+                                     "FROM {} TO {}\n".format(remote_computer.name, remote_computer_uuid,
+                                                              remote_abs_path, dest_rel_path))
         return subfolder, script_filename

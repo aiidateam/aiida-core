@@ -78,7 +78,7 @@ def upf_listfamilies(elements, with_description):
         tag='group',
         project=["label", "description"],
         filters={"type_string": {
-            '==': UPFGROUP_TYPE.value
+            '==': UPFGROUP_TYPE
         }})
 
     query.distinct()

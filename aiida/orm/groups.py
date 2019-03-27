@@ -13,6 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from enum import Enum
+import six
 
 from aiida.cmdline.utils import echo
 from aiida.common import exceptions
@@ -71,11 +72,11 @@ class Group(entities.Entity):
             filters = {'label': label}
 
             if 'type_string' in kwargs:
-                if isinstance(kwargs['type_string'], GroupTypeString):
-                    filters['type_string'] = kwargs['type_string'].value
-                else:
+                if not isinstance(kwargs['type_string'], six.string_types):
                     raise exceptions.ValidationError("type_string must be {}, you provided an object of type "
-                                                     "{}".format(GroupTypeString, type(kwargs['type_string'])))
+                                                     "{}".format(str, type(kwargs['type_string'])))
+
+                filters['type_string'] = kwargs['type_string']
 
             res = self.find(filters=filters)
 
@@ -100,7 +101,7 @@ class Group(entities.Entity):
                  label=None,
                  user=None,
                  description='',
-                 type_string=GroupTypeString.USER,
+                 type_string=GroupTypeString.USER.value,
                  backend=None,
                  name=None,
                  type=None):
@@ -133,16 +134,16 @@ class Group(entities.Entity):
             echo.echo_critical("Group label must be provided")
 
         # Check that chosen type_string is allowed
-        if not isinstance(type_string, GroupTypeString):
+        if not isinstance(type_string, six.string_types):
             raise exceptions.ValidationError("type_string must be {}, you provided an object of type "
-                                             "{}".format(GroupTypeString, system_type(type_string)))
+                                             "{}".format(str, system_type(type_string)))
 
         backend = backend or get_manager().get_backend()
         user = user or users.User.objects(backend).get_default()
         type_check(user, users.User)
 
         model = backend.groups.create(
-            label=label, user=user.backend_entity, description=description, type_string=type_string.value)
+            label=label, user=user.backend_entity, description=description, type_string=type_string)
         super(Group, self).__init__(model)
 
     def __repr__(self):
@@ -348,11 +349,9 @@ class Group(entities.Entity):
 
         filters = {}
         if 'type_string' in kwargs:
-            if isinstance(kwargs['type_string'], GroupTypeString):
-                filters['type_string'] = kwargs.pop('type_string').value
-            else:
+            if not isinstance(kwargs['type_string'], six.string_types):
                 raise exceptions.ValidationError("type_string must be {}, you provided an object of type "
-                                                 "{}".format(GroupTypeString, type(kwargs['type_string'])))
+                                                 "{}".format(str, type(kwargs['type_string'])))
 
         query = QueryBuilder()
         for key, val in kwargs.items():
@@ -402,16 +401,10 @@ class Group(entities.Entity):
         label, sep, typestr = string.rpartition(':')
         if not sep:
             label = typestr
-            typestr = GroupTypeString.USER
-        try:
-            internal_type_string = GroupTypeString(typestr)
-        except ValueError:
-            msg = ("Invalid group type '{}'. Valid group types are: "
-                   "{}".format(typestr, ', '.join([i.value for i in GroupTypeString])))
-            raise ValueError(msg)
+            typestr = GroupTypeString.USER.value
 
         try:
-            group = cls.get(label=label, type_string=internal_type_string)
+            group = cls.get(label=label, type_string=typestr)
             return group
         except exceptions.NotExistent:
             if typestr:

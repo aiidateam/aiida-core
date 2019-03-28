@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi import` command."""
+# pylint: disable=too-many-locals
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -16,7 +17,7 @@ import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params.options import MultipleValueOption
-from aiida.cmdline.params.types import GroupParamType
+from aiida.cmdline.params.types import GroupParamType, ImportPath
 from aiida.cmdline.utils import decorators, echo
 from aiida.common import exceptions
 
@@ -36,7 +37,7 @@ class ExtrasImportCode(Enum):
 
 
 @verdi.command('import')
-@click.argument('archives', nargs=-1, type=click.Path(exists=True, readable=True))
+@click.argument('archives', nargs=-1, type=ImportPath(exists=True, readable=True))
 @click.option(
     '-w',
     '--webpages',
@@ -127,8 +128,7 @@ def cmd_import(archives, webpages, group, extras_mode_existing, extras_mode_new,
                 extras_mode_new=extras_mode_new,
                 comment_mode=comment_mode)
         except exceptions.IncompatibleArchiveVersionError as exception:
-            echo.echo_warning('{} cannot be imported: {}'.format(archive, exception))
-            continue
+            echo.echo_critical('{} cannot be imported: {}'.format(archive, exception))
         except Exception:
             echo.echo_error('an exception occurred while importing the archive {}'.format(archive))
             echo.echo(traceback.format_exc())
@@ -158,9 +158,10 @@ def cmd_import(archives, webpages, group, extras_mode_existing, extras_mode_new,
                     extras_mode_new=extras_mode_new,
                     comment_mode=comment_mode)
             except exceptions.IncompatibleArchiveVersionError as exception:
-                echo.echo_warning('{} cannot be imported: {}'.format(archive, exception))
-                echo.echo_warning('download the archive file and run `verdi export migrate` to update it')
-                continue
+                crit_message = '{} cannot be imported.\n' \
+                    'Download the archive file and run `verdi export migrate` to update it.\n{}'.format(
+                    archive, exception)
+                echo.echo_critical(crit_message)
             except Exception:
                 echo.echo_error('an exception occurred while importing the archive {}'.format(archive))
                 echo.echo(traceback.format_exc())

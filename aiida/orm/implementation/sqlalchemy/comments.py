@@ -7,13 +7,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Sqla implementations for the Comment entity and collection."""
+"""SQLA implementations for the Comment entity and collection."""
+# pylint: disable=import-error,no-name-in-module
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-# pylint: disable=import-error,no-name-in-module,fixme
 from datetime import datetime
+from sqlalchemy.orm.exc import NoResultFound
+
 from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models import comment as models
 from aiida.common import exceptions
@@ -115,18 +117,69 @@ class SqlaCommentCollection(BackendCommentCollection):
         """
         return SqlaComment(self.backend, node, user, content, **kwargs)
 
-    def delete(self, comment):
+    def delete(self, comment_id):
         """
         Remove a Comment from the collection with the given id
 
-        :param comment: the id of the comment to delete
+        :param comment_id: the id of the comment to delete
+        :type comment_id: int
+
+        :raises TypeError: if ``comment_id`` is not an `int`
+        :raises `~aiida.common.exceptions.NotExistent`: if Comment with ID ``comment_id`` is not found
         """
-        # pylint: disable=no-name-in-module,import-error
-        from sqlalchemy.orm.exc import NoResultFound
+        if not isinstance(comment_id, int):
+            raise TypeError("comment_id must be an int")
+
         session = get_scoped_session()
 
         try:
-            session.query(models.DbComment).filter_by(id=comment).one().delete()
+            session.query(models.DbComment).filter_by(id=comment_id).one().delete()
             session.commit()
         except NoResultFound:
-            raise exceptions.NotExistent("Comment with id '{}' not found".format(comment))
+            session.rollback()
+            raise exceptions.NotExistent("Comment with id '{}' not found".format(comment_id))
+
+    def delete_all(self):
+        """
+        Delete all Comment entries.
+
+        :raises `~aiida.common.exceptions.IntegrityError`: if all Comments could not be deleted
+        """
+        session = get_scoped_session()
+
+        try:
+            session.query(models.DbComment).delete()
+            session.commit()
+        except Exception as exc:
+            session.rollback()
+            raise exceptions.IntegrityError("Could not delete all Comments. Full exception: {}".format(exc))
+
+    def delete_many(self, filters):
+        """
+        Delete Comments based on ``filters``
+
+        :param filters: similar to QueryBuilder filter
+        :type filters: dict
+
+        :return: (former) ``PK`` s of deleted Comments
+        :rtype: list
+
+        :raises TypeError: if ``filters`` is not a `dict`
+        :raises `~aiida.common.exceptions.ValidationError`: if ``filters`` is empty
+        """
+        from aiida.orm import Comment, QueryBuilder
+
+        # Checks
+        if not isinstance(filters, dict):
+            raise TypeError("filters must be a dictionary")
+        if not filters:
+            raise exceptions.ValidationError("filters must not be empty")
+
+        # Apply filter and delete found entities
+        builder = QueryBuilder().append(Comment, filters=filters, project='id').all()
+        entities_to_delete = [_[0] for _ in builder]
+        for entity in entities_to_delete:
+            self.delete(entity)
+
+        # Return list of deleted entities' (former) PKs for checking
+        return entities_to_delete

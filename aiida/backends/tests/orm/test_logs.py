@@ -16,13 +16,12 @@ import logging
 
 from six.moves import range
 
+from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.common.timezone import now
-from aiida.orm import Data
 from aiida.orm import Log
-from aiida.orm import CalculationNode
 
 
 class TestBackendLog(AiidaTestCase):
@@ -46,10 +45,10 @@ class TestBackendLog(AiidaTestCase):
         Delete all the created log entries
         """
         super(TestBackendLog, self).tearDown()
-        Log.objects.delete_many({})
+        Log.objects.delete_all()
 
     def create_log(self):
-        node = CalculationNode().store()
+        node = orm.CalculationNode().store()
         record = self.log_record
         record['dbnode_id'] = node.id
         return Log(**record), node
@@ -58,14 +57,15 @@ class TestBackendLog(AiidaTestCase):
         """
         Test the manual creation of a log entry
         """
-        entry, _ = self.create_log()
+        entry, node = self.create_log()
 
         self.assertEqual(entry.time, self.log_record['time'])
         self.assertEqual(entry.loggername, self.log_record['loggername'])
         self.assertEqual(entry.levelname, self.log_record['levelname'])
-        self.assertEqual(entry.dbnode_id, self.log_record['dbnode_id'])
         self.assertEqual(entry.message, self.log_record['message'])
         self.assertEqual(entry.metadata, self.log_record['metadata'])
+        self.assertEqual(entry.dbnode_id, self.log_record['dbnode_id'])
+        self.assertEqual(entry.dbnode_id, node.id)
 
     def test_create_log_unserializable_metadata(self):
         """Test that unserializable data will be removed before reaching the database causing an error."""
@@ -76,7 +76,7 @@ class TestBackendLog(AiidaTestCase):
 
         partial = functools.partial(unbound_method, 'argument')
 
-        node = CalculationNode().store()
+        node = orm.CalculationNode().store()
 
         # An unbound method in the `args` of the metadata
         node.logger.error('problem occurred in method %s', unbound_method)
@@ -107,23 +107,58 @@ class TestBackendLog(AiidaTestCase):
         with self.assertRaises(exceptions.NotExistent):
             Log.objects.delete(log_id)
 
-    def test_delete_many(self):
-        """
-        Test deleting all log entries
-        Bit superfluous, given that other tests most likely would fail
-        anyway if this method does not work properly
-        """
+    def test_log_collection_delete_all(self):
+        """Test deleting all Log entries through collection"""
         count = 10
         for _ in range(count):
             self.create_log()
+        log_id = Log.objects.find(limit=1)[0].id
 
         self.assertEqual(len(Log.objects.all()), count)
-        Log.objects.delete_many({})
+
+        # Delete all
+        Log.objects.delete_all()
+
+        # Checks
         self.assertEqual(len(Log.objects.all()), 0)
+
+        with self.assertRaises(exceptions.NotExistent):
+            Log.objects.delete(log_id)
+
+        with self.assertRaises(exceptions.NotExistent):
+            Log.objects.get(id=log_id)
+
+    def test_log_collection_delete_many(self):
+        """Test deleting many Logs through the collection."""
+        log_ids = []
+        count = 5
+        for _ in range(count):
+            log_, _ = self.create_log()
+            log_ids.append(log_.id)
+        special_log, _ = self.create_log()
+
+        # Assert the Logs exist
+        self.assertEqual(len(Log.objects.all()), count + 1)
+
+        # Delete new Logs using filter
+        filters = {'id': {'in': log_ids}}
+        Log.objects.delete_many(filters=filters)
+
+        # Make sure only the special_log Log is left
+        builder = orm.QueryBuilder().append(Log, project='id')
+        self.assertEqual(builder.count(), 1)
+        self.assertEqual(builder.all()[0][0], special_log.id)
+
+        for log_id in log_ids:
+            with self.assertRaises(exceptions.NotExistent):
+                Log.objects.delete(log_id)
+
+            with self.assertRaises(exceptions.NotExistent):
+                Log.objects.get(id=log_id)
 
     def test_objects_find(self):
         """Put logs in and find them"""
-        node = Data().store()
+        node = orm.Data().store()
         for _ in range(10):
             record = self.log_record
             record['dbnode_id'] = node.id
@@ -157,7 +192,7 @@ class TestBackendLog(AiidaTestCase):
         """
         Test the limit option of log.find
         """
-        node = Data().store()
+        node = orm.Data().store()
         limit = 2
         for _ in range(limit * 2):
             self.log_record['dbnode_id'] = node.id
@@ -191,7 +226,7 @@ class TestBackendLog(AiidaTestCase):
         from aiida.orm.logs import OrderSpecifier, ASCENDING
 
         message = 'Testing logging of critical failure'
-        node = CalculationNode()
+        node = orm.CalculationNode()
 
         # Firing a log for an unstored should not end up in the database
         node.logger.critical(message)
@@ -231,7 +266,7 @@ class TestBackendLog(AiidaTestCase):
         # Retrieve a node by joining on a specific log ('log_1')
         builder = QueryBuilder()
         builder.append(Log, tag='log', filters={'id': log_2.id})
-        builder.append(CalculationNode, with_log='log', project=['uuid'])
+        builder.append(orm.CalculationNode, with_log='log', project=['uuid'])
         nodes = builder.all()
 
         self.assertEqual(len(nodes), 1)
@@ -240,7 +275,7 @@ class TestBackendLog(AiidaTestCase):
 
         # Retrieve all logs for a specific node by joining on a said node
         builder = QueryBuilder()
-        builder.append(CalculationNode, tag='calc', filters={'id': calc.id})
+        builder.append(orm.CalculationNode, tag='calc', filters={'id': calc.id})
         builder.append(Log, with_node='calc', project=['uuid'])
         logs = builder.all()
 
@@ -256,7 +291,7 @@ class TestBackendLog(AiidaTestCase):
         from aiida.common import json
 
         # Create CalculationNode
-        calc = CalculationNode().store()
+        calc = orm.CalculationNode().store()
 
         # dict metadata
         correct_metadata_format = {

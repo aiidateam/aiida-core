@@ -31,8 +31,34 @@ class Comment(entities.Entity):
 
             :param comment_id: the id of the comment to delete
             :type comment_id: int
+
+            :raises TypeError: if ``comment_id`` is not an `int`
+            :raises `~aiida.common.exceptions.NotExistent`: if Comment with ID ``comment_id`` is not found
             """
             self._backend.comments.delete(comment_id)
+
+        def delete_all(self):
+            """
+            Delete all Comments from the Collection
+
+            :raises `~aiida.common.exceptions.IntegrityError`: if all Comments could not be deleted
+            """
+            self._backend.comments.delete_all()
+
+        def delete_many(self, filters):
+            """
+            Delete Comments from the Collection based on ``filters``
+
+            :param filters: similar to QueryBuilder filter
+            :type filters: dict
+
+            :return: (former) ``PK`` s of deleted Comments
+            :rtype: list
+
+            :raises TypeError: if ``filters`` is not a `dict`
+            :raises `~aiida.common.exceptions.ValidationError`: if ``filters`` is empty
+            """
+            self._backend.comments.delete_many(filters)
 
     def __init__(self, node, user, content=None, backend=None):
         """

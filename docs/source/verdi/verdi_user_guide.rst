@@ -361,7 +361,7 @@ Below is a list with all available subcommands.
       array       Manipulate ArrayData objects.
       bands       Manipulate BandsData objects.
       cif         Manipulation of CIF data objects.
-      parameter   View and manipulate Dict objects.
+      dict        View and manipulate Dict objects.
       plugins     Print a list of registered data plugins or details of a...
       remote      Managing RemoteData objects.
       structure   Manipulation of StructureData objects.

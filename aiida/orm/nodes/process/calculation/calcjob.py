@@ -107,30 +107,6 @@ class CalcJobNode(CalculationNode):
         return super(CalcJobNode, self).get_hash(
             ignore_errors=ignore_errors, ignored_folder_content=ignored_folder_content, **kwargs)
 
-    @property
-    def process_class(self):
-        """Return the CalcJob class that was used to create this node.
-
-        :return: CalcJob class
-        :raises ValueError: if no process type is defined or it is an invalid process type string
-        """
-        from aiida.common.exceptions import MultipleEntryPointError, MissingEntryPointError, LoadingEntryPointError
-        from aiida.plugins.entry_point import load_entry_point_from_string
-
-        if not self.process_type:
-            raise ValueError('no process type for CalcJobNode<{}>: cannot recreate process class'.format(self.pk))
-
-        try:
-            process_class = load_entry_point_from_string(self.process_type)
-        except ValueError:
-            raise ValueError('process type for CalcJobNode<{}> contains an invalid entry point string: {}'.format(
-                self.pk, self.process_type))
-        except (MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError) as exception:
-            raise ValueError('could not load process class for entry point {} for CalcJobNode<{}>: {}'.format(
-                self.pk, self.process_type, exception))
-
-        return process_class
-
     def get_builder_restart(self):
         """
         Return a CalcJobBuilder instance, tailored for this calculation instance

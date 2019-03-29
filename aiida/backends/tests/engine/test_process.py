@@ -190,8 +190,8 @@ class TestProcess(AiidaTestCase):
         expected_process_type = 'aiida.calculations:{}'.format(entry_point)
         self.assertEqual(process.node.process_type, expected_process_type)
 
-        # Verify that load_process_class on the calculation node returns the original entry point class
-        recovered_process = process.node.load_process_class()
+        # Verify that process_class on the calculation node returns the original entry point class
+        recovered_process = process.node.process_class
         self.assertEqual(recovered_process, process_class)
 
     def test_process_type_without_entry_point(self):
@@ -203,8 +203,8 @@ class TestProcess(AiidaTestCase):
         expected_process_type = '{}.{}'.format(process.__class__.__module__, process.__class__.__name__)
         self.assertEqual(process.node.process_type, expected_process_type)
 
-        # Verify that load_process_class on the calculation node returns the original entry point class
-        recovered_process = process.node.load_process_class()
+        # Verify that process_class on the calculation node returns the original entry point class
+        recovered_process = process.node.process_class
         self.assertEqual(recovered_process, process.__class__)
 
     def test_validation_error(self):

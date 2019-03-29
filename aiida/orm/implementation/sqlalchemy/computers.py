@@ -75,7 +75,7 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
         try:
             self._dbmodel.save()
         except SQLAlchemyError:
-            raise ValueError("Integrity error, probably the hostname already exists in the" " DB")
+            raise ValueError("Integrity error, probably the hostname already exists in the DB")
 
         return self
 

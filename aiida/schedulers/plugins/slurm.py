@@ -511,7 +511,7 @@ class SlurmScheduler(aiida.schedulers.Scheduler):
             except KeyError:
                 # I skip this calculation if I couldn't find this basic info
                 # (I don't append anything to job_list before continuing)
-                self.logger.error("Wrong line length in squeue output! '{}'" "".format(job))
+                self.logger.error("Wrong line length in squeue output! '{}'".format(job))
                 continue
 
             try:

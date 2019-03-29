@@ -336,7 +336,7 @@ class DjangoQueryBuilder(BackendQueryBuilder):
             if column_name in ('attributes', 'extras'):
                 entity = alias.id
             else:
-                raise NotImplementedError("Whatever you asked for ({}) is not implemented" "".format(column_name))
+                raise NotImplementedError("Whatever you asked for ({}) is not implemented".format(column_name))
         else:
             aliased_attributes = aliased(getattr(alias, column_name).prop.mapper.class_)
 

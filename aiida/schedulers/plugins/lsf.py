@@ -527,7 +527,7 @@ fi
             if len(job) != num_fields:
                 # I skip this calculation
                 # (I don't append anything to job_list before continuing)
-                self.logger.error("Wrong line length in squeue output! '{}'" "".format(job))
+                self.logger.error("Wrong line length in squeue output! '{}'".format(job))
                 continue
 
             this_job = JobInfo()
@@ -666,7 +666,7 @@ fi
         try:
             return stdout.strip().split('Job <')[1].split('>')[0]
         except IndexError:
-            raise SchedulerParsingError("Cannot parse submission output: {}" "".format(stdout))
+            raise SchedulerParsingError("Cannot parse submission output: {}".format(stdout))
 
     def _parse_time_string(self, string, fmt='%b %d %H:%M'):
         """

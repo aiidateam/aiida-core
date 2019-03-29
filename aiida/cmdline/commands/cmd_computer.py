@@ -540,7 +540,7 @@ def computer_test(user, print_traceback, computer):
         warning_string = ("** NOTE! Computer is disabled for the "
                           "specified user!\n   Do you really want to test it? [y/N] ")
     if not computer.is_enabled():
-        warning_string = ("** NOTE! Computer is disabled!\n" "   Do you really want to test it? [y/N] ")
+        warning_string = ("** NOTE! Computer is disabled!\n   Do you really want to test it? [y/N] ")
     if warning_string:
         if not click.confirm(warning_string):
             sys.exit(0)

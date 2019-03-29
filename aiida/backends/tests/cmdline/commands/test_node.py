@@ -401,7 +401,7 @@ class TestVerdiDataDict(AiidaTestCase):
         for format in supported_formats:
             options = [str(self.p.id)]
             res = self.cli_runner.invoke(cmd_dict.dictionary_show, options, catch_exceptions=False)
-            self.assertEqual(res.exit_code, 0, "The command verdi data dict show did not" " finish correctly")
+            self.assertEqual(res.exit_code, 0, "The command verdi data dict show did not finish correctly")
         self.assertIn(b'"a": 1', res.stdout_bytes, 'The string "a": 1 was not found in the output'
                                                    ' of verdi data dict show')
 
@@ -438,7 +438,7 @@ class TestVerdiDataRemote(AiidaTestCase):
     def test_remoteshow(self):
         options = [str(self.r.id)]
         res = self.cli_runner.invoke(cmd_remote.remote_show, options, catch_exceptions=False)
-        self.assertEqual(res.exit_code, 0, "The command verdi data remote show did not" " finish correctly")
+        self.assertEqual(res.exit_code, 0, "The command verdi data remote show did not finish correctly")
         self.assertIn(b'Remote computer name:', res.stdout_bytes,
                       'The string "Remote computer name:" was not found in the'
                       ' output of verdi data remote show')
@@ -453,7 +453,7 @@ class TestVerdiDataRemote(AiidaTestCase):
     def test_remotels(self):
         options = ['--long', str(self.r.id)]
         res = self.cli_runner.invoke(cmd_remote.remote_ls, options, catch_exceptions=False)
-        self.assertEqual(res.exit_code, 0, "The command verdi data remote ls did not" " finish correctly")
+        self.assertEqual(res.exit_code, 0, "The command verdi data remote ls did not finish correctly")
         self.assertIn(b'file.txt', res.stdout_bytes, 'The file "file.txt" was not found in the output'
                                                      ' of verdi data remote ls')
 
@@ -464,7 +464,7 @@ class TestVerdiDataRemote(AiidaTestCase):
     def test_remotecat(self):
         options = [str(self.r.id), 'file.txt']
         res = self.cli_runner.invoke(cmd_remote.remote_cat, options, catch_exceptions=False)
-        self.assertEqual(res.exit_code, 0, "The command verdi data remote cat did not" " finish correctly")
+        self.assertEqual(res.exit_code, 0, "The command verdi data remote cat did not finish correctly")
         self.assertIn(b'test string', res.stdout_bytes, 'The string "test string" was not found in the output'
                                                         ' of verdi data remote cat file.txt')
 

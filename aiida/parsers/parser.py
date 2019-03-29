@@ -15,9 +15,9 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from aiida.common import exceptions
-from aiida.common import extendeddicts
+from aiida.common import exceptions, extendeddicts
 from aiida.engine import calcfunction
+from aiida.engine.processes.ports import CalcJobOutputPort
 
 __all__ = ('Parser',)
 
@@ -96,7 +96,7 @@ class Parser(object):  # pylint: disable=useless-object-inheritance
         result = {}
 
         for label, port in self.node.process_class.spec().outputs.items():
-            if port.pass_to_parser:
+            if isinstance(port, CalcJobOutputPort) and port.pass_to_parser:
                 try:
                     result[label] = link_triples.get_node_by_label(label)
                 except exceptions.NotExistent:

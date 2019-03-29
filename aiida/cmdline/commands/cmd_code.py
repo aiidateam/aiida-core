@@ -335,7 +335,6 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
         echo.echo("# No codes found matching the specified criteria.")
 
 
-
 def print_list_res(qb_query, show_owner):
     """Print list of codes."""
     # pylint: disable=invalid-name

@@ -24,7 +24,7 @@ from .multiple import MultipleValueParamType
 from .node import NodeParamType
 from .process import ProcessParamType
 from .nonemptystring import NonEmptyStringParamType
-from .path import AbsolutePathParamType
+from .path import AbsolutePathParamType, ImportPath
 from .plugin import PluginParamType
 from .profile import ProfileParamType
 from .user import UserParamType
@@ -35,4 +35,4 @@ __all__ = ('LazyChoice', 'IdentifierParamType', 'CalculationParamType', 'CodePar
            'ConfigOptionParamType', 'DataParamType', 'GroupParamType', 'NodeParamType', 'MpirunCommandParamType',
            'MultipleValueParamType', 'NonEmptyStringParamType', 'PluginParamType', 'AbsolutePathParamType',
            'ShebangParamType', 'UserParamType', 'TestModuleParamType', 'ProfileParamType', 'WorkflowParamType',
-           'ProcessParamType')
+           'ProcessParamType', 'ImportPath')

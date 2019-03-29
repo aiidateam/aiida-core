@@ -73,8 +73,6 @@ class Process(plumpy.Process):
         spec.input('{}.store_provenance'.format(spec.metadata_key), valid_type=bool, default=True)
         spec.input('{}.description'.format(spec.metadata_key), valid_type=six.string_types[0], required=False)
         spec.input('{}.label'.format(spec.metadata_key), valid_type=six.string_types[0], required=False)
-        spec.inputs.valid_type = (orm.Data,)
-        spec.outputs.valid_type = (orm.Data,)
 
     @classmethod
     def get_builder(cls):

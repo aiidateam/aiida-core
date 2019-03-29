@@ -24,6 +24,8 @@ class TestProcessSpec(AiidaTestCase):
         super(TestProcessSpec, self).setUp()
         self.assertIsNone(Process.current())
         self.spec = Process.spec()
+        self.spec.inputs.valid_type = Data
+        self.spec.outputs.valid_type = Data
 
     def tearDown(self):
         super(TestProcessSpec, self).tearDown()

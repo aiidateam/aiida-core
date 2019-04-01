@@ -24,7 +24,7 @@ from aiida.cmdline.utils.decorators import with_dbenv
 
 @verdi.group('group')
 def verdi_group():
-    """Inspect, create and manage groups."""
+    """Create, inspect and manage groups."""
 
 
 @verdi_group.command('add-nodes')
@@ -62,28 +62,35 @@ def group_remove_nodes(group, nodes, clear, force):
         group.remove_nodes(nodes)
 
 
-@verdi_group.command("delete")
+@verdi_group.command('delete')
 @arguments.GROUP()
-@options.FORCE(help="Force deletion of the group even if it is not empty. Note that this deletes only the "
-               "group and not the nodes.")
+@options.GROUP_CLEAR(help='Remove all nodes before deleting the group itself.')
+@options.FORCE()
 @with_dbenv()
-def group_delete(group, force):
-    """Delete a GROUP"""
-    from aiida import orm
-    group_id = group.id
-    group_label = group.label
+def group_delete(group, clear, force):
+    """Delete a GROUP.
 
-    num_nodes = len(group.nodes)
-    if num_nodes > 0 and not force:
-        echo.echo_critical(("Group '{}' is not empty (it contains {} "
-                            "nodes). Pass the -f option if you really want to delete "
-                            "it.".format(group_label, num_nodes)))
+    Note that a group that contains nodes cannot be deleted if it contains any nodes. If you still want to delete the
+    group, use the `-c/--clear` flag to remove the contents before deletion. Note that in any case, the nodes themselves
+    will not actually be deleted from the database.
+    """
+    from aiida import orm
+
+    label = group.label
+
+    if group.count() > 0 and not clear:
+        echo.echo_critical(
+            ('Group<{}> contains {} nodes. Pass `--clear` if you want to empty it before deleting the group'.format(
+                label, group.count())))
 
     if not force:
-        click.confirm('Are you sure to kill the group with PK = {} ({})?'.format(group_id, group_label), abort=True)
+        click.confirm('Are you sure to delete Group<{}>?'.format(label), abort=True)
 
-    orm.Group.objects.delete(group_id)
-    echo.echo_success("Group '{}' (PK={}) deleted.".format(group_label, group_id))
+    if clear:
+        group.clear()
+
+    orm.Group.objects.delete(group.pk)
+    echo.echo_success('Group<{}> deleted.'.format(label))
 
 
 @verdi_group.command('rename')

@@ -107,7 +107,7 @@ class Group(entities.Entity):
                  type=None):
         """
         Create a new group. Either pass a dbgroup parameter, to reload
-        ad group from the DB (and then, no further parameters are allowed),
+        a group from the DB (and then, no further parameters are allowed),
         or pass the parameters for the Group creation.
 
         :param dbgroup: the dbgroup object, if you want to reload the group

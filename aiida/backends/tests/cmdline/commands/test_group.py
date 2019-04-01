@@ -15,7 +15,7 @@ from __future__ import absolute_import
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
-from aiida.cmdline.commands.cmd_group import (group_list, group_create, group_delete, group_rename, group_description,
+from aiida.cmdline.commands.cmd_group import (group_list, group_create, group_delete, group_relabel, group_description,
                                               group_add_nodes, group_remove_nodes, group_show, group_copy)
 
 
@@ -52,8 +52,8 @@ class TestVerdiGroup(AiidaTestCase):
         self.assertIsNone(result.exception, result.output)
         self.assertIn('Usage', result.output)
 
-        # verdi group rename
-        result = self.cli_runner.invoke(group_rename, options)
+        # verdi group relabel
+        result = self.cli_runner.invoke(group_relabel, options)
         self.assertIsNone(result.exception, result.output)
         self.assertIn('Usage', result.output)
 
@@ -152,25 +152,30 @@ class TestVerdiGroup(AiidaTestCase):
 
     def test_description(self):
         """Test `verdi group description` command."""
-        result = self.cli_runner.invoke(group_description, ['dummygroup2', 'It is a new description'])
-        self.assertIsNone(result.exception, result.output)
+        description = 'It is a new description'
+        group = orm.load_group(label='dummygroup2')
+        self.assertNotEqual(group.description, description)
 
-        result = self.cli_runner.invoke(group_show, ['dummygroup2'])
+        # Change the description of the group
+        result = self.cli_runner.invoke(group_description, [group.label, description])
         self.assertClickResultNoException(result)
-        self.assertIn('Group description', result.output)
-        self.assertNotIn('<no description>', result.output)
-        self.assertIn('It is a new description', result.output)
+        self.assertEqual(group.description, description)
 
-    def test_rename(self):
-        """Test `verdi group rename` command."""
-        result = self.cli_runner.invoke(group_rename, ['dummygroup4', 'renamedgroup'])
+        # When no description argument is passed the command should just echo the current description
+        result = self.cli_runner.invoke(group_description, [group.label])
+        self.assertClickResultNoException(result)
+        self.assertIn(description, result.output)
+
+    def test_relabel(self):
+        """Test `verdi group relabel` command."""
+        result = self.cli_runner.invoke(group_relabel, ['dummygroup4', 'relabeled_group'])
         self.assertIsNone(result.exception, result.output)
 
         # check if group list command shows changed group name
         result = self.cli_runner.invoke(group_list)
         self.assertClickResultNoException(result)
         self.assertNotIn('dummygroup4', result.output)
-        self.assertIn('renamedgroup', result.output)
+        self.assertIn('relabeled_group', result.output)
 
     def test_add_remove_nodes(self):
         """Test `verdi group remove-nodes` command."""

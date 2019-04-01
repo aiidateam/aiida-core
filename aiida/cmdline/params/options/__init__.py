@@ -27,8 +27,8 @@ __all__ = (
     'BACKEND', 'DB_HOST', 'DB_PORT', 'DB_USERNAME', 'DB_PASSWORD', 'DB_NAME', 'REPOSITORY_PATH', 'PROFILE_ONLY_CONFIG',
     'PROFILE_SET_DEFAULT', 'PREPEND_TEXT', 'APPEND_TEXT', 'LABEL', 'DESCRIPTION', 'INPUT_PLUGIN', 'CALC_JOB_STATE',
     'PROCESS_STATE', 'EXIT_STATUS', 'FAILED', 'LIMIT', 'PROJECT', 'ORDER_BY', 'PAST_DAYS', 'OLDER_THAN', 'ALL',
-    'ALL_STATES', 'ALL_USERS', 'RAW', 'HOSTNAME', 'TRANSPORT', 'SCHEDULER', 'USER', 'PORT', 'FREQUENCY', 'VERBOSE',
-    'TIMEOUT', 'FORMULA_MODE', 'TRAJECTORY_INDEX', 'WITH_ELEMENTS', 'WITH_ELEMENTS_EXCLUSIVE'
+    'ALL_STATES', 'ALL_USERS', 'GROUP_CLEAR', 'RAW', 'HOSTNAME', 'TRANSPORT', 'SCHEDULER', 'USER', 'PORT', 'FREQUENCY',
+    'VERBOSE', 'TIMEOUT', 'FORMULA_MODE', 'TRAJECTORY_INDEX', 'WITH_ELEMENTS', 'WITH_ELEMENTS_EXCLUSIVE'
 )
 
 
@@ -102,12 +102,12 @@ DATA = OverridableOption(
 GROUP = OverridableOption(
     '-G', '--group', 'group',
     type=types.GroupParamType(),
-    help='A single group identified by its ID, UUID or name.')
+    help='A single group identified by its ID, UUID or label.')
 
 GROUPS = OverridableOption(
     '-G', '--groups', 'groups',
     type=types.GroupParamType(), cls=MultipleValueOption,
-    help='One or multiple groups identified by their ID, UUID or name.')
+    help='One or multiple groups identified by their ID, UUID or label.')
 
 NODE = OverridableOption(
     '-N', '--node', 'node',
@@ -298,6 +298,11 @@ ALL_USERS = OverridableOption(
     '-A', '--all-users', 'all_users',
     is_flag=True, default=False,
     help='Include all entries regardless of the owner.')
+
+GROUP_CLEAR = OverridableOption(
+    '-c', '--clear',
+    is_flag=True, default=False,
+    help='Remove all the nodes from the group.')
 
 RAW = OverridableOption(
     '-r', '--raw', 'raw',

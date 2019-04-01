@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
+from aiida.common import exceptions
 from aiida.cmdline.commands.cmd_group import (group_list, group_create, group_delete, group_rename, group_description,
                                               group_add_nodes, group_remove_nodes, group_show, group_copy)
 
@@ -109,13 +110,35 @@ class TestVerdiGroup(AiidaTestCase):
 
     def test_delete(self):
         """Test `verdi group delete` command."""
-        result = self.cli_runner.invoke(group_delete, ['--force', 'dummygroup3'])
+        group_01 = orm.Group(label='group_test_delete_01').store()
+        group_02 = orm.Group(label='group_test_delete_02').store()
+
+        result = self.cli_runner.invoke(group_delete, ['--force', 'group_test_delete_01'])
         self.assertClickResultNoException(result)
 
-        # check if removed group is not present in list
+        # Verify that removed group is not present in list
         result = self.cli_runner.invoke(group_list)
         self.assertClickResultNoException(result)
-        self.assertNotIn('dummygroup3', result.output)
+        self.assertNotIn('group_test_delete_01', result.output)
+
+        node_01 = orm.CalculationNode().store()
+        node_02 = orm.CalculationNode().store()
+
+        # Add some nodes and then use `verdi group delete --clear` to delete a node even when it contains nodes
+        group = orm.load_group(label='group_test_delete_02')
+        group.add_nodes([node_01, node_02])
+        self.assertEqual(group.count(), 2)
+
+        # Calling delete on a group without the `--clear` option should raise
+        result = self.cli_runner.invoke(group_delete, ['--force', 'group_test_delete_02'])
+        self.assertIsNotNone(result.exception, result.output)
+
+        # With `--clear` option should delete group and nodes
+        result = self.cli_runner.invoke(group_delete, ['--force', '--clear', 'group_test_delete_02'])
+        self.assertClickResultNoException(result)
+
+        with self.assertRaises(exceptions.NotExistent):
+            group = orm.load_group(label='group_test_delete_02')
 
     def test_show(self):
         """Test `verdi group show` command."""
@@ -151,11 +174,9 @@ class TestVerdiGroup(AiidaTestCase):
 
     def test_add_remove_nodes(self):
         """Test `verdi group remove-nodes` command."""
-        from aiida.orm import CalculationNode
-
-        node_01 = CalculationNode().store()
-        node_02 = CalculationNode().store()
-        node_03 = CalculationNode().store()
+        node_01 = orm.CalculationNode().store()
+        node_02 = orm.CalculationNode().store()
+        node_03 = orm.CalculationNode().store()
 
         result = self.cli_runner.invoke(group_add_nodes, ['--force', '--group=dummygroup1', node_01.uuid])
         self.assertClickResultNoException(result)

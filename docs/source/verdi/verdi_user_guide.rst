@@ -457,7 +457,7 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS] COMMAND [ARGS]...
 
-      Inspect, create and manage groups.
+      Create, inspect and manage groups.
 
     Options:
       --help  Show this message and exit.
@@ -467,7 +467,7 @@ Below is a list with all available subcommands.
       copy          Add all nodes that belong to source group to the
                     destination...
       create        Create a new empty group with the name GROUP_NAME.
-      delete        Delete a GROUP
+      delete        Delete a GROUP.
       description   Change the description of a given group.
       list          Show a list of groups.
       remove-nodes  Remove NODES from the given GROUP.

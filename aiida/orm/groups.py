@@ -281,6 +281,10 @@ class Group(entities.Entity):
         else:
             return False
 
+    def clear(self):
+        """Remove all the nodes from this group."""
+        return self._backend_entity.clear()
+
     def add_nodes(self, nodes):
         """Add a node or a set of nodes to the group.
 

@@ -463,15 +463,16 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      addnodes     Add NODES to a given AiiDA group.
-      copy         Add all nodes that belong to source group to the destination...
-      create       Create a new empty group with the name GROUP_NAME.
-      delete       Pass the GROUP to delete an existing group.
-      description  Change the description of a given group.
-      list         Show a list of groups.
-      removenodes  Remove NODES from a given AiiDA group.
-      rename       Rename an existing group.
-      show         Show information on a given group.
+      add-nodes     Add NODES to the given GROUP.
+      copy          Add all nodes that belong to source group to the
+                    destination...
+      create        Create a new empty group with the name GROUP_NAME.
+      delete        Delete a GROUP
+      description   Change the description of a given group.
+      list          Show a list of groups.
+      remove-nodes  Remove NODES from the given GROUP.
+      rename        Rename an existing group.
+      show          Show information on a given group.
 
 
 .. _verdi_import:

@@ -332,6 +332,13 @@ def group_copy(source_group, destination_group):
     """Add all nodes that belong to source group to the destination group (which may or may not exist)."""
     from aiida import orm
 
-    dest_group = orm.Group.objects.get_or_create(label=destination_group, type_string=source_group.type_string)[0]
+    dest_group, created = orm.Group.objects.get_or_create(label=destination_group, type_string=source_group.type_string)
+
+    # Issue warning if destination group is not empty and get user confirmation to continue
+    if not created and not dest_group.is_empty:
+        echo.echo_warning('Destination group<{}> already exists and is not empty.'.format(dest_group.label))
+        click.confirm('Do you wish to continue anyway?', abort=True)
+
+    # Copy nodes
     dest_group.add_nodes(list(source_group.nodes))
-    echo.echo_success('Nodes copied from group<{}> to group<{}>'.format(source_group, destination_group))
+    echo.echo_success('Nodes copied from group<{}> to group<{}>'.format(source_group.label, dest_group.label))

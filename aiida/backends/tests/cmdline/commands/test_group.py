@@ -210,3 +210,44 @@ class TestVerdiGroup(AiidaTestCase):
         result = self.cli_runner.invoke(group_remove_nodes, ['--force', '--clear', '--group=dummygroup1'])
         self.assertClickResultNoException(result)
         self.assertEqual(group.count(), 0)
+
+    def test_copy_existing_group(self):
+        """Test user is prompted to continue if destination group exists and is not empty"""
+        source_label = "source_copy_existing_group"
+        dest_label = "dest_copy_existing_group"
+
+        # Create source group with nodes
+        calc_s1 = orm.CalculationNode().store()
+        calc_s2 = orm.CalculationNode().store()
+        nodes_source_group = {str(node.uuid) for node in [calc_s1, calc_s2]}
+        source_group = orm.Group(label=source_label).store()
+        source_group.add_nodes([calc_s1, calc_s2])
+
+        # Copy using `verdi group copy` - making sure all is successful
+        options = [source_label, dest_label]
+        result = self.cli_runner.invoke(group_copy, options)
+        self.assertClickResultNoException(result)
+        self.assertIn(
+            "Success: Nodes copied from group<{}> to group<{}>".format(source_label, dest_label),
+            result.output,
+            result.exception)
+
+        # Check destination group exists with source group's nodes
+        dest_group = orm.load_group(label=dest_label)
+        self.assertEqual(dest_group.count(), 2)
+        nodes_dest_group = {str(node.uuid) for node in dest_group.nodes}
+        self.assertSetEqual(nodes_source_group, nodes_dest_group)
+
+        # Copy again, making sure an abort error is raised, since no user input can be made and default is abort
+        result = self.cli_runner.invoke(group_copy, options)
+        self.assertIsNotNone(result.exception, result.output)
+        self.assertIn(
+            "Warning: Destination group<{}> already exists and is not empty.".format(dest_label),
+            result.output,
+            result.exception)
+
+        # Check destination group is unchanged
+        dest_group = orm.load_group(label=dest_label)
+        self.assertEqual(dest_group.count(), 2)
+        nodes_dest_group = {str(node.uuid) for node in dest_group.nodes}
+        self.assertSetEqual(nodes_source_group, nodes_dest_group)

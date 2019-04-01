@@ -7,12 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-It defines subcommands for verdi group command.
-"""
+"""`verdi group` commands"""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import click
 
 from aiida.common.exceptions import UniquenessError
@@ -93,31 +92,34 @@ def group_delete(group, clear, force):
     echo.echo_success('Group<{}> deleted.'.format(label))
 
 
-@verdi_group.command('rename')
+@verdi_group.command('relabel')
 @arguments.GROUP()
-@click.argument('label', nargs=1, type=click.STRING)
+@click.argument('label', type=click.STRING)
 @with_dbenv()
-def group_rename(group, label):
-    """Rename an existing group. Pass the GROUP which you want to rename and its new LABEL."""
+def group_relabel(group, label):
+    """Change the label of the given GROUP to LABEL."""
     try:
         group.label = label
     except UniquenessError as exception:
         echo.echo_critical('Error: {}.'.format(exception))
     else:
-        echo.echo_success('Name successfully changed')
+        echo.echo_success('Label changed to {}'.format(label))
 
 
 @verdi_group.command('description')
 @arguments.GROUP()
-@click.argument('description', type=click.STRING)
+@click.argument('description', type=click.STRING, required=False)
 @with_dbenv()
 def group_description(group, description):
+    """Change the description of the given GROUP to DESCRIPTION.
+
+    If no DESCRIPTION is defined, the current description will simply be echoed.
     """
-    Change the description of a given group.
-    Pass the GROUP for which you want to edit the description and its
-    new DESCRIPTION. If DESCRIPTION is not provided, just show the current description.
-    """
-    group.description = description
+    if description:
+        group.description = description
+        echo.echo_success('Changed the description of Group<{}>'.format(group.label))
+    else:
+        echo.echo(group.description)
 
 
 @verdi_group.command('show')

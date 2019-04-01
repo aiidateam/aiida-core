@@ -468,10 +468,10 @@ Below is a list with all available subcommands.
                     destination...
       create        Create a new empty group with the name GROUP_NAME.
       delete        Delete a GROUP.
-      description   Change the description of a given group.
+      description   Change the description of the given GROUP to DESCRIPTION.
       list          Show a list of groups.
+      relabel       Change the label of the given GROUP to LABEL.
       remove-nodes  Remove NODES from the given GROUP.
-      rename        Rename an existing group.
       show          Show information on a given group.
 
 

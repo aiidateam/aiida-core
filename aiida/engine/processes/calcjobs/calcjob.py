@@ -106,9 +106,6 @@ class CalcJob(Process):
             help='Files that are retrieved by the daemon will be stored in this node. By default the stdout and stderr '
                  'of the scheduler will be added, but one can add more by specifying them in `CalcInfo.retrieve_list`.')
 
-        spec.exit_code(10, 'ERROR_PARSING_FAILED', message='the parsing of the job failed')
-        spec.exit_code(20, 'ERROR_FAILED', message='the job failed for an unspecified reason')
-
     @classmethod
     def get_state_classes(cls):
         # Overwrite the waiting state

@@ -49,7 +49,7 @@ def load_node_class(type_string):
     try:
         base_path = type_string.rsplit('.', 2)[0]
     except ValueError:
-        raise exceptions.MissingPluginError
+        raise exceptions.EntryPointError
 
     # This exception needs to be there to make migrations work that rely on the old type string starting with `node.`
     # Since now the type strings no longer have that prefix, we simply strip it and continue with the normal logic.
@@ -69,7 +69,7 @@ def load_node_class(type_string):
         entry_point_name = strip_prefix(base_path, 'nodes.')
         return load_entry_point('aiida.node', entry_point_name)
 
-    raise exceptions.MissingPluginError('unknown type string {}'.format(type_string))
+    raise exceptions.EntryPointError('unknown type string {}'.format(type_string))
 
 
 def get_type_string_from_class(class_module, class_name):

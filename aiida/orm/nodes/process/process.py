@@ -94,7 +94,7 @@ class ProcessNode(Sealable, Node):
         :raises ValueError: if no process type is defined, it is an invalid process type string or cannot be resolved
             to load the corresponding class
         """
-        from aiida.common.exceptions import MultipleEntryPointError, MissingEntryPointError, LoadingEntryPointError
+        from aiida.common import exceptions
         from aiida.plugins.entry_point import load_entry_point_from_string
 
         if not self.process_type:
@@ -102,7 +102,7 @@ class ProcessNode(Sealable, Node):
 
         try:
             process_class = load_entry_point_from_string(self.process_type)
-        except (MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError) as exception:
+        except exceptions.EntryPointError as exception:
             raise ValueError('could not load process class for entry point {} for CalcJobNode<{}>: {}'.format(
                 self.pk, self.process_type, exception))
         except ValueError:

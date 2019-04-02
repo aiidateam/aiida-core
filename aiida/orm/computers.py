@@ -232,7 +232,7 @@ class Computer(entities.Entity):
 
         try:
             job_resource_keys = self.get_scheduler().job_resource_class.get_valid_keys()
-        except exceptions.MissingPluginError:
+        except exceptions.EntryPointError:
             raise exceptions.ValidationError("Unable to load the scheduler for this computer")
 
         subst = {i: 'value' for i in job_resource_keys}
@@ -658,11 +658,10 @@ class Computer(entities.Entity):
         :return: the transport class
         """
         try:
-            # I return the class, not an instance
             return TransportFactory(self.get_transport_type())
-        except exceptions.MissingPluginError as exc:
+        except exceptions.EntryPointError as exception:
             raise exceptions.ConfigurationError('No transport found for {} [type {}], message: {}'.format(
-                self.name, self.get_transport_type(), exc))
+                self.name, self.get_transport_type(), exception))
 
     def get_scheduler(self):
         """
@@ -675,9 +674,9 @@ class Computer(entities.Entity):
             scheduler_class = SchedulerFactory(self.get_scheduler_type())
             # I call the init without any parameter
             return scheduler_class()
-        except exceptions.MissingPluginError as exc:
+        except exceptions.EntryPointError as exception:
             raise exceptions.ConfigurationError('No scheduler found for {} [type {}], message: {}'.format(
-                self.name, self.get_scheduler_type(), exc))
+                self.name, self.get_scheduler_type(), exception))
 
     def configure(self, user=None, **kwargs):
         """

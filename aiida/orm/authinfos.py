@@ -12,7 +12,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from aiida.common.exceptions import (ConfigurationError, MissingPluginError)
+from aiida.common import exceptions
 from aiida.plugins import TransportFactory
 from aiida.manage.manager import get_manager
 from . import entities
@@ -144,9 +144,9 @@ class AuthInfo(entities.Entity):
         computer = self.computer
         try:
             this_transport_class = TransportFactory(computer.get_transport_type())
-        except MissingPluginError as exc:
-            raise ConfigurationError('No transport found for {} [type {}], message: {}'.format(
-                computer.hostname, computer.get_transport_type(), exc))
+        except exceptions.EntryPointError as exception:
+            raise exceptions.ConfigurationError('No transport found for {} [type {}], message: {}'.format(
+                computer.hostname, computer.get_transport_type(), exception))
 
         params = dict(list(computer.get_transport_params().items()) + list(self.get_auth_params().items()))
         return this_transport_class(machine=computer.hostname, **params)

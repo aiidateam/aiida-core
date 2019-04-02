@@ -58,7 +58,6 @@ class CalcJobNode(CalculationNode):
 
         :return: CalculationTools instance
         """
-        from aiida.common.exceptions import MultipleEntryPointError, MissingEntryPointError, LoadingEntryPointError
         from aiida.plugins.entry_point import is_valid_entry_point_string, get_entry_point_from_string, load_entry_point
         from aiida.tools.calculations import CalculationTools
 
@@ -71,7 +70,7 @@ class CalcJobNode(CalculationNode):
                 try:
                     tools_class = load_entry_point('aiida.tools.calculations', entry_point.name)
                     self._tools = tools_class(self)
-                except (MultipleEntryPointError, MissingEntryPointError, LoadingEntryPointError) as exception:
+                except exceptions.EntryPointError as exception:
                     self._tools = CalculationTools(self)
                     self.logger.warning('could not load the calculation tools entry point {}: {}'.format(
                         entry_point.name, exception))
@@ -164,7 +163,7 @@ class CalcJobNode(CalculationNode):
 
         try:
             self.get_parser_class()
-        except exceptions.MissingPluginError:
+        except exceptions.EntryPointError:
             raise exceptions.ValidationError("No valid class/implementation found for the parser '{}'. "
                                              "Set the parser to None if you do not need an automatic "
                                              "parser.".format(self.get_option('parser_name')))
@@ -489,7 +488,7 @@ class CalcJobNode(CalculationNode):
         """Return the output parser object for this calculation or None if no parser is set.
 
         :return: a `Parser` class.
-        :raise: MissingPluginError from ParserFactory no plugin is found.
+        :raises `aiida.common.exceptions.EntryPointError`: if the parser entry point can not be resolved.
         """
         from aiida.plugins import ParserFactory
 

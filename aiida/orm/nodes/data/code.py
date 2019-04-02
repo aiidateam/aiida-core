@@ -15,7 +15,7 @@ import io
 import os
 import six
 
-from aiida.common.exceptions import (ValidationError, MissingPluginError, InputValidationError)
+from aiida.common.exceptions import ValidationError, EntryPointError, InputValidationError
 
 from .data import Data
 
@@ -459,7 +459,7 @@ class Code(Data):
 
         :note: it also sets the ``builder.code`` value.
 
-        :raise aiida.common.MissingPluginError: if the specified plugin does not exist.
+        :raise aiida.common.EntryPointError: if the specified plugin does not exist.
         :raise ValueError: if no default plugin was specified.
 
         :return:
@@ -470,10 +470,8 @@ class Code(Data):
             raise ValueError("You did not specify a default input plugin for this code")
         try:
             C = CalculationFactory(plugin_name)
-        except MissingPluginError:
-            raise MissingPluginError("The input_plugin name for this code is "
-                                     "'{}', but it is not an existing plugin"
-                                     "name".format(plugin_name))
+        except EntryPointError:
+            raise EntryPointError('the calculation entry point `{}` could not be loaded'.format(plugin_name))
 
         builder = C.get_builder()
         # Setup the code already

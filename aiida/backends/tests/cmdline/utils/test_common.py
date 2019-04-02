@@ -26,13 +26,11 @@ class TestCommonUtilities(AiidaTestCase):
         from aiida.cmdline.utils.common import get_node_summary
 
         computer_label = self.computer.name  # pylint: disable=no-member
-        code_label = 'test_code'
 
         code = Code(
             input_plugin_name='arithmetic.add',
             remote_computer_exec=[self.computer, '/remote/abs/path'],
         )
-        code.label = code_label
         code.store()
 
         node = CalculationNode()
@@ -42,7 +40,6 @@ class TestCommonUtilities(AiidaTestCase):
 
         summary = get_node_summary(node)
         self.assertIn(node.uuid, summary)
-        self.assertIn(code_label, summary)
         self.assertIn(computer_label, summary)
 
     def test_get_process_function_report(self):

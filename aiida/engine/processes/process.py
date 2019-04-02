@@ -38,7 +38,7 @@ from aiida.orm.utils import serialize
 from .. import utils
 from .exit_code import ExitCode
 from .builder import ProcessBuilder
-from .ports import InputPort, OutputPort, PortNamespace
+from .ports import InputPort, OutputPort, PortNamespace, PORT_NAMESPACE_SEPARATOR
 from .process_spec import ProcessSpec
 
 __all__ = ('Process', 'ProcessState')
@@ -597,7 +597,7 @@ class Process(plumpy.Process):
         """
         return dict(self._flatten_outputs(self.spec().outputs, self.outputs))
 
-    def _flatten_inputs(self, port, port_value, parent_name='', separator='_'):
+    def _flatten_inputs(self, port, port_value, parent_name='', separator=PORT_NAMESPACE_SEPARATOR):
         """
         Function that will recursively flatten the inputs dictionary, omitting inputs for ports that
         are marked as being non database storable
@@ -630,7 +630,7 @@ class Process(plumpy.Process):
         assert (port is None) or (isinstance(port, InputPort) and port.non_db)
         return []
 
-    def _flatten_outputs(self, port, port_value, parent_name='', separator='_'):
+    def _flatten_outputs(self, port, port_value, parent_name='', separator=PORT_NAMESPACE_SEPARATOR):
         """
         Function that will recursively flatten the outputs dictionary.
 

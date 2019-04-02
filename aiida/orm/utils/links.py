@@ -12,7 +12,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from collections import namedtuple
+from collections import namedtuple, OrderedDict, Mapping
 
 from aiida.common import exceptions
 
@@ -190,6 +190,13 @@ class LinkManager(object):  # pylint: disable=useless-object-inheritance
         for link_triple in self.link_triples:
             yield link_triple
 
+    # Python 2 specific, python 3 uses `__bool__`
+    def __nonzero__(self):
+        return len(self.link_triples)
+
+    def __bool__(self):
+        return bool(len(self.link_triples))
+
     def next(self):
         """Return the next element in the iterator.
 
@@ -268,3 +275,33 @@ class LinkManager(object):  # pylint: disable=useless-object-inheritance
             raise exceptions.NotExistent('no neighbor with the label {} found'.format(label))
 
         return matching_entry
+
+    def nested(self, sort=True):
+        """Return the matched nodes in the original nested form by expanding the collapsed link labels.
+
+        :return: dictionary of nested namespaces
+        """
+        from aiida.engine.processes.ports import PORT_NAMESPACE_SEPARATOR
+
+        nested = {}
+
+        for entry in self.link_triples:
+
+            current_namespace = nested
+            breadcrumbs = entry.link_label.split(PORT_NAMESPACE_SEPARATOR)
+
+            # The last element is the "leaf" port name the preceding elements are nested port namespaces
+            port_name = breadcrumbs[-1]
+            port_namespaces = breadcrumbs[:-1]
+
+            # Get the nested namespace
+            for subspace in port_namespaces:
+                current_namespace = current_namespace.setdefault(subspace, {})
+
+            # Insert the node at the given port name
+            current_namespace[port_name] = entry.node
+
+        if sort:
+            return OrderedDict(sorted(nested.items(), key=lambda x: (not isinstance(x[1], Mapping), x)))
+
+        return nested

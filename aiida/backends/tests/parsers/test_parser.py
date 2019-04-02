@@ -19,7 +19,7 @@ class CustomCalcJob(CalcJob):
     @classmethod
     def define(cls, spec):
         super(CustomCalcJob, cls).define(spec)
-        spec.input('in', valid_type=orm.Data)
+        spec.input('inp', valid_type=orm.Data)
         spec.output('output', pass_to_parser=True)
         spec.output_namespace('out.space', dynamic=True)
 

@@ -38,7 +38,7 @@ from aiida.orm.utils import serialize
 from .. import utils
 from .exit_code import ExitCode
 from .builder import ProcessBuilder
-from .ports import InputPort, PortNamespace
+from .ports import InputPort, OutputPort, PortNamespace
 from .process_spec import ProcessSpec
 
 __all__ = ('Process', 'ProcessState')
@@ -73,6 +73,8 @@ class Process(plumpy.Process):
         spec.input('{}.store_provenance'.format(spec.metadata_key), valid_type=bool, default=True)
         spec.input('{}.description'.format(spec.metadata_key), valid_type=six.string_types[0], required=False)
         spec.input('{}.label'.format(spec.metadata_key), valid_type=six.string_types[0], required=False)
+        spec.exit_code(10, 'ERROR_INVALID_OUTPUT', message='the process returned an invalid output')
+        spec.exit_code(11, 'ERROR_MISSING_OUTPUT', message='the process did not register a required output')
 
     @classmethod
     def get_builder(cls):
@@ -251,7 +253,6 @@ class Process(plumpy.Process):
         for key, value in out_dict.items():
             self.out(key, value)
 
-    # region Process event hooks
     def on_create(self):
         super(Process, self).on_create()
         # If parent PID hasn't been supplied try to get it from the stack
@@ -309,7 +310,13 @@ class Process(plumpy.Process):
         """
         super(Process, self).on_finish(result, successful)
 
-        if result is None or isinstance(result, int):
+        if result is None:
+            if not successful:
+                result = self.exit_codes.ERROR_MISSING_OUTPUT  # pylint: disable=no-member
+            else:
+                result = ExitCode()
+
+        if isinstance(result, int):
             self.node.set_exit_status(result)
         elif isinstance(result, ExitCode):
             self.node.set_exit_status(result.status)
@@ -345,11 +352,9 @@ class Process(plumpy.Process):
         """
         super(Process, self).on_output_emitting(output_port, value)
 
-        if not isinstance(value, orm.Data):
-            raise TypeError('Values output from process must be instances of AiiDA orm.Data types, got {}'.format(
-                value.__class__))
-
-    # end region
+        # Note that `PortNamespaces` should be able to receive non `Data` types such as a normal dictionary
+        if isinstance(output_port, OutputPort) and not isinstance(value, orm.Data):
+            raise TypeError('Processes can only return `orm.Data` instances as output, got {}'.format(value.__class__))
 
     def set_status(self, status):
         """
@@ -478,12 +483,14 @@ class Process(plumpy.Process):
         if self.metadata.store_provenance is False:
             return
 
+        outputs_flat = self._flat_outputs()
         outputs_stored = self.node.get_outgoing(link_type=(LinkType.CREATE, LinkType.RETURN)).all_link_labels()
-        outputs_new = set(self.outputs.keys()) - set(outputs_stored)
+        outputs_new = set(outputs_flat.keys()) - set(outputs_stored)
 
-        for link_label in outputs_new:
+        for link_label, output in outputs_flat.items():
 
-            output = self.outputs[link_label]
+            if link_label not in outputs_new:
+                continue
 
             if isinstance(self.node, CalculationNode):
                 output.add_incoming(self.node, LinkType.CREATE, link_label)
@@ -580,6 +587,16 @@ class Process(plumpy.Process):
         inputs = {key: value for key, value in self.inputs.items() if key != self.spec().metadata_key}
         return dict(self._flatten_inputs(self.spec().inputs, inputs))
 
+    def _flat_outputs(self):
+        """
+        Return a flattened version of the registered outputs dictionary.
+
+        The eventual keys will be a concatenation of the nested keys.
+
+        :return: flat dictionary of parsed outputs
+        """
+        return dict(self._flatten_outputs(self.spec().outputs, self.outputs))
+
     def _flatten_inputs(self, port, port_value, parent_name='', separator='_'):
         """
         Function that will recursively flatten the inputs dictionary, omitting inputs for ports that
@@ -611,6 +628,37 @@ class Process(plumpy.Process):
             return items
 
         assert (port is None) or (isinstance(port, InputPort) and port.non_db)
+        return []
+
+    def _flatten_outputs(self, port, port_value, parent_name='', separator='_'):
+        """
+        Function that will recursively flatten the outputs dictionary.
+
+        :param port: port against which to map the port value, can be OutputPort or PortNamespace
+        :param port_value: value for the current port, can be a Mapping
+        :param parent_name: the parent key with which to prefix the keys
+        :param separator: character to use for the concatenation of keys
+        """
+        if port is None and isinstance(port_value, orm.Node) or isinstance(port, OutputPort):
+            return [(parent_name, port_value)]
+
+        if (port is None and isinstance(port_value, collections.Mapping) or isinstance(port, PortNamespace)):
+            items = []
+            for name, value in port_value.items():
+
+                prefixed_key = parent_name + separator + name if parent_name else name
+
+                try:
+                    nested_port = port[name]
+                except (KeyError, TypeError):
+                    nested_port = None
+
+                sub_items = self._flatten_outputs(
+                    port=nested_port, port_value=value, parent_name=prefixed_key, separator=separator)
+                items.extend(sub_items)
+            return items
+
+        assert port is None, port
         return []
 
     def exposed_inputs(self, process_class, namespace=None, agglomerate=True):

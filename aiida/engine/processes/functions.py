@@ -224,8 +224,10 @@ class FunctionProcess(Process):
             # If the function support kwargs then allow dynamic inputs, otherwise disallow
             spec.inputs.dynamic = keywords is not None
 
-            # Function processes return data types
-            spec.outputs.valid_type = orm.Data
+            # Function processes must have a dynamic output namespace since we do not know beforehand what outputs
+            # will be returned and the valid types for the value should be `Data` nodes as well as a dictionary because
+            # the output namespace can be nested.
+            spec.outputs.valid_type = (orm.Data, dict)
 
         return type(
             func.__name__, (FunctionProcess,), {

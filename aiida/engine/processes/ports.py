@@ -15,6 +15,10 @@ from __future__ import absolute_import
 from collections import Mapping
 from plumpy import ports
 
+__all__ = ('PortNamespace', 'InputPort', 'OutputPort', 'CalcJobOutputPort', 'WithNonDb', 'WithSerialize')
+
+OutputPort = ports.OutputPort  # pylint: disable=invalid-name
+
 
 class WithNonDb(object):  # pylint: disable=useless-object-inheritance
     """

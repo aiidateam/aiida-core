@@ -15,21 +15,21 @@ import threading
 import plumpy
 from plumpy.utils import AttributesFrozendict
 
+from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.tests.utils import processes as test_processes
 from aiida.common.lang import override
-from aiida.engine import Process, run, run_get_pk
-from aiida.orm import load_node, Dict, Int, Str, WorkflowNode
+from aiida.engine import Process, run, run_get_pk, run_get_node
 
 
 class NameSpacedProcess(Process):
 
-    _node_class = WorkflowNode
+    _node_class = orm.WorkflowNode
 
     @classmethod
     def define(cls, spec):
         super(NameSpacedProcess, cls).define(spec)
-        spec.input('some.name.space.a', valid_type=Int)
+        spec.input('some.name.space.a', valid_type=orm.Int)
 
 
 class TestProcessNamespace(AiidaTestCase):
@@ -47,7 +47,7 @@ class TestProcessNamespace(AiidaTestCase):
         Test that inputs in nested namespaces are properly validated and the link labels
         are properly formatted by connecting the namespaces with underscores
         """
-        proc = NameSpacedProcess(inputs={'some': {'name': {'space': {'a': Int(5)}}}})
+        proc = NameSpacedProcess(inputs={'some': {'name': {'space': {'a': orm.Int(5)}}}})
 
         # Test that the namespaced inputs are AttributesFrozenDicts
         self.assertIsInstance(proc.inputs, AttributesFrozendict)
@@ -57,17 +57,16 @@ class TestProcessNamespace(AiidaTestCase):
 
         # Test that the input node is in the inputs of the process
         input_node = proc.inputs.some.name.space.a
-        self.assertTrue(isinstance(input_node, Int))
+        self.assertTrue(isinstance(input_node, orm.Int))
         self.assertEquals(input_node.value, 5)
 
         # Check that the link of the process node has the correct link name
         self.assertTrue('some_name_space_a' in proc.node.get_incoming().all_link_labels())
         self.assertEquals(proc.node.get_incoming().get_node_by_label('some_name_space_a'), 5)
 
-
 class ProcessStackTest(Process):
 
-    _node_class = WorkflowNode
+    _node_class = orm.WorkflowNode
 
     @override
     def run(self):
@@ -100,13 +99,13 @@ class TestProcess(AiidaTestCase):
         run(ProcessStackTest)
 
     def test_inputs(self):
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             run(test_processes.BadOutput)
 
     def test_input_link_creation(self):
         dummy_inputs = ["1", "2", "3", "4"]
 
-        inputs = {l: Int(l) for l in dummy_inputs}
+        inputs = {l: orm.Int(l) for l in dummy_inputs}
         inputs['metadata'] = {'store_provenance': True}
         process = test_processes.DummyProcess(inputs)
 
@@ -124,7 +123,7 @@ class TestProcess(AiidaTestCase):
 
     def test_seal(self):
         result, pk = run_get_pk(test_processes.DummyProcess)
-        self.assertTrue(load_node(pk=pk).is_sealed)
+        self.assertTrue(orm.load_node(pk=pk).is_sealed)
 
     def test_description(self):
         dp = test_processes.DummyProcess(inputs={'metadata': {'description': "Rockin' process"}})
@@ -164,8 +163,8 @@ class TestProcess(AiidaTestCase):
         code.set_remote_computer_exec((self.computer, '/bin/true'))
         code.store()
 
-        parameters = Dict(dict={})
-        template = Dict(dict={})
+        parameters = orm.Dict(dict={})
+        template = orm.Dict(dict={})
         options = {
             'resources': {
                 'num_machines': 1,
@@ -207,16 +206,36 @@ class TestProcess(AiidaTestCase):
         recovered_process = process.node.process_class
         self.assertEqual(recovered_process, process.__class__)
 
-    def test_validation_error(self):
-        """Test that validating a port produces an meaningful message"""
+    def test_output_validation_error(self):
+        """Test that a process is marked as failed if its output namespace validation fails."""
 
-        class TestProc(Process):
+        class TestProcess(Process):
+
+            _node_class = orm.WorkflowNode
 
             @classmethod
             def define(cls, spec):
-                super(TestProc, cls).define(spec)
-                spec.input('a.b', valid_type=Str)
+                super(TestProcess, cls).define(spec)
+                spec.input('add_outputs', valid_type=orm.Bool, default=orm.Bool(False))
+                spec.output_namespace('integer.namespace', valid_type=orm.Int, dynamic=True)
+                spec.output('required_string', valid_type=orm.Str, required=True)
 
-        with self.assertRaises(ValueError) as context:
-            TestProc({'a': {'b': Int(5)}})
-        self.assertIn('inputs.a.b', str(context.exception))
+            def run(self):
+                if self.inputs.add_outputs:
+                    self.out('required_string', orm.Str('testing'))
+                    self.out('integer.namespace.two', orm.Int(2))
+
+        results, node = run_get_node(TestProcess)
+
+        # For default inputs, no outputs will be attached, causing the validation to fail at the end so an internal
+        # exit status will be set, which is a negative integer
+        self.assertTrue(node.is_finished)
+        self.assertFalse(node.is_finished_ok)
+        self.assertEqual(node.exit_status, TestProcess.exit_codes.ERROR_MISSING_OUTPUT.status)
+        self.assertEqual(node.exit_message, TestProcess.exit_codes.ERROR_MISSING_OUTPUT.message)
+
+        # When settings `add_outputs` to True, the outputs should be added and validation should pass
+        results, node = run_get_node(TestProcess, add_outputs=orm.Bool(True))
+        self.assertTrue(node.is_finished)
+        self.assertTrue(node.is_finished_ok)
+        self.assertEqual(node.exit_status, 0)

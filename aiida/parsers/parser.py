@@ -147,4 +147,4 @@ class Parser(object):  # pylint: disable=useless-object-inheritance
         :param kwargs: output nodes attached to the `CalcJobNode` of the parser instance.
         :return: an instance of ExitCode or None
         """
-        raise NotImplementedError
+        raise NotImplementedError("No 'parse' method for your parser, please implement it.")

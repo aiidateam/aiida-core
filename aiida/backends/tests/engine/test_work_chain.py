@@ -1312,6 +1312,6 @@ class TestDefaultUniqueness(AiidaTestCase):
 
         # Trying to load one of the inputs through the UUID should fail,
         # as both `child_one.a` and `child_two.a` should have the same UUID.
-        node = load_node(uuid=node.get_incoming().get_node_by_label('child_one_a').uuid)
+        node = load_node(uuid=node.get_incoming().get_node_by_label('child_one__a').uuid)
         self.assertEquals(
             len(uuids), len(nodes), 'Only {} unique UUIDS for {} input nodes'.format(len(uuids), len(nodes)))

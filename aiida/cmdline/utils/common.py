@@ -86,7 +86,7 @@ def get_node_summary(node):
     :return: a string summary of the node
     """
     from plumpy import ProcessState
-    from aiida.orm import Code, ProcessNode
+    from aiida.orm import ProcessNode
 
     table_headers = ['Property', 'Value']
     table = []
@@ -105,7 +105,7 @@ def get_node_summary(node):
             process_state = None
 
         try:
-            table.append(['process state', ProcessState(process_state)])
+            table.append(['process state', ProcessState(process_state).value.capitalize()])
         except ValueError:
             table.append(['process state', process_state])
 
@@ -122,22 +122,13 @@ def get_node_summary(node):
         if computer is not None:
             table.append(['computer', '[{}] {}'.format(node.computer.pk, node.computer.name)])
 
-    try:
-        code = node.get_incoming(node_class=Code).first()
-    except ValueError:
-        pass
-    else:
-        table.append(['code', code.node.label])
-
     return tabulate(table, headers=table_headers)
 
 
 def get_node_info(node, include_summary=True):
-    # pylint: disable=too-many-branches
-    """
-    Return a multi line string of information about the given node, such as the incoming and outcoming links
+    """Return a multi line string of information about the given node, such as the incoming and outcoming links.
 
-    :param include_summary: also include a summary of node properties
+    :param include_summary: boolean, if True, also include a summary of node properties
     :return: a string summary of the node including a description of all its links and log messages
     """
     from aiida.common.links import LinkType
@@ -148,44 +139,22 @@ def get_node_info(node, include_summary=True):
     else:
         result = ''
 
-    nodes_input_calc = node.get_incoming(link_type=LinkType.INPUT_CALC).all()
-    nodes_input_work = node.get_incoming(link_type=LinkType.INPUT_WORK).all()
-    nodes_caller = node.get_incoming(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
-    nodes_create = node.get_outgoing(link_type=LinkType.CREATE).all()
-    nodes_return = node.get_outgoing(link_type=LinkType.RETURN).all()
-    nodes_called = node.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
-    nodes_input = nodes_input_calc + nodes_input_work
-    nodes_output = nodes_create + nodes_return
+    nodes_caller = node.get_incoming(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK))
+    nodes_called = node.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK))
+    nodes_input = node.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK))
+    nodes_output = node.get_outgoing(link_type=(LinkType.CREATE, LinkType.RETURN))
 
     if nodes_caller:
-        table = []
-        table_headers = ['Called by', 'PK', 'Type']
-        for entry in nodes_caller:
-            table.append([entry.link_label, entry.node.pk, entry.node.__class__.__name__])
-        result += '\n{}'.format(tabulate(table, headers=table_headers))
+        result += '\n' + format_nested_links(nodes_caller.nested(), headers=['Called by', 'PK', 'Type'])
 
     if nodes_input:
-        table = []
-        table_headers = ['Inputs', 'PK', 'Type']
-        for entry in nodes_input:
-            if entry.link_label == 'code':
-                continue
-            table.append([entry.link_label, entry.node.pk, entry.node.__class__.__name__])
-        result += '\n{}'.format(tabulate(table, headers=table_headers))
+        result += '\n' + format_nested_links(nodes_input.nested(), headers=['Inputs', 'PK', 'Type'])
 
     if nodes_output:
-        table = []
-        table_headers = ['Outputs', 'PK', 'Type']
-        for entry in nodes_output:
-            table.append([entry.link_label, entry.node.pk, entry.node.__class__.__name__])
-        result += '\n{}'.format(tabulate(table, headers=table_headers))
+        result += '\n' + format_nested_links(nodes_output.nested(), headers=['Outputs', 'PK', 'Type'])
 
     if nodes_called:
-        table = []
-        table_headers = ['Called', 'PK', 'Type']
-        for entry in nodes_called:
-            table.append([entry.link_label, entry.node.pk, entry.node.__class__.__name__])
-        result += '\n{}'.format(tabulate(table, headers=table_headers))
+        result += '\n' + format_nested_links(nodes_called.nested(), headers=['Called', 'PK', 'Type'])
 
     log_messages = orm.Log.objects.get_logs_for(node)
 
@@ -194,7 +163,43 @@ def get_node_info(node, include_summary=True):
         table_headers = ['Log messages']
         table.append(['There are {} log messages for this calculation'.format(len(log_messages))])
         table.append(["Run 'verdi process report {}' to see them".format(node.pk)])
-        result += '\n{}'.format(tabulate(table, headers=table_headers))
+        result += '\n\n{}'.format(tabulate(table, headers=table_headers))
+
+    return result
+
+
+def format_nested_links(links, headers):
+    """Given a nested dictionary of nodes, return a nested string representation.
+
+    :param links: a nested dictionary of nodes
+    :param headers: headers to use
+    :return: nested formatted string
+    """
+    import collections
+    import tabulate as tb
+
+    tb.PRESERVE_WHITESPACE = True
+
+    indent_size = 4
+
+    def format_recursive(links, depth=0):
+        """Recursively format a dictionary of nodes into indented strings."""
+        rows = []
+        for label, value in links.items():
+            if isinstance(value, collections.Mapping):
+                rows.append([depth, label, '', ''])
+                rows.extend(format_recursive(value, depth=depth + 1))
+            else:
+                rows.append([depth, label, value.pk, value.__class__.__name__])
+        return rows
+
+    table = []
+
+    for depth, label, pk, class_name in format_recursive(links):
+        table.append(['{indent}{label}'.format(indent=' ' * (depth * indent_size), label=label), pk, class_name])
+
+    result = '\n{}'.format(tabulate(table, headers=headers))
+    tb.PRESERVE_WHITESPACE = False
 
     return result
 

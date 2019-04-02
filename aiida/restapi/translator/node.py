@@ -518,6 +518,31 @@ class NodeTranslator(BaseTranslator):
         qmanager = QueryFactory()()
         return qmanager.get_creation_statistics(user_pk=user_pk)
 
+    def get_types(self):
+        """
+        return available distinct types of nodes from database
+        """
+        from aiida.orm.querybuilder import QueryBuilder
+
+        qb = QueryBuilder()
+        qb.append(self._aiida_class, project=["type"])
+        qb_response = qb.distinct().all()
+
+        results = {}
+        if len(qb_response) > 0:
+            for ntype in qb_response:
+                ntype = ntype[0]
+                ntype_parts = ntype.split(".")
+                if len(ntype_parts) > 0:
+                    dict_key =ntype_parts[0]
+                    if dict_key not in results.keys():
+                        results[dict_key] = []
+                    results[dict_key].append(ntype)
+
+        for key, values in results.items():
+            results[key] = sorted(values)
+
+        return results
 
     def get_io_tree(self, uuid_pattern, tree_in_limit, tree_out_limit):
         from aiida.orm.querybuilder import QueryBuilder

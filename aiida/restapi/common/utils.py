@@ -216,6 +216,14 @@ class Utils(object):
                     "admit further fields")
             else:
                 return (resource_type, page, id, query_type)
+        elif path[0] == 'types':
+            query_type = path.pop(0)
+            if path:
+                raise RestInputValidationError(
+                    "url requesting statistics resources do not "
+                    "admit further fields")
+            else:
+                return (resource_type, page, id, query_type)
         elif path[0] == "io" or path[0] == "content":
             path.pop(0)
             query_type = path.pop(0)

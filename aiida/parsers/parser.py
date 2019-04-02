@@ -15,6 +15,9 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+from abc import ABCMeta, abstractmethod
+import six
+
 from aiida.common import exceptions, extendeddicts
 from aiida.engine import calcfunction
 from aiida.engine.processes.ports import CalcJobOutputPort
@@ -22,8 +25,11 @@ from aiida.engine.processes.ports import CalcJobOutputPort
 __all__ = ('Parser',)
 
 
-class Parser(object):  # pylint: disable=useless-object-inheritance
+@six.add_metaclass(ABCMeta)
+class Parser(object):
     """Base class for a Parser that can parse the outputs produced by a CalcJob process."""
+
+    # pylint: disable=useless-object-inheritance
 
     def __init__(self, node):
         """Construct the Parser instance.
@@ -138,6 +144,7 @@ class Parser(object):  # pylint: disable=useless-object-inheritance
 
         return parse_calcfunction.run_get_node(**inputs)
 
+    @abstractmethod
     def parse(self, **kwargs):
         """Parse the contents of the output files retrieved in the `FolderData`.
 
@@ -147,4 +154,3 @@ class Parser(object):  # pylint: disable=useless-object-inheritance
         :param kwargs: output nodes attached to the `CalcJobNode` of the parser instance.
         :return: an instance of ExitCode or None
         """
-        raise NotImplementedError

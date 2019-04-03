@@ -49,7 +49,6 @@ class DjangoTests(AiidaTestImplementation):
         # Then I delete the nodes, otherwise I cannot delete computers and users
         models.DbLog.objects.all().delete()
         models.DbNode.objects.all().delete()  # pylint: disable=no-member
-        models.DbWorkflow.objects.all().delete()  # pylint: disable=no-member
         models.DbUser.objects.all().delete()  # pylint: disable=no-member
         models.DbComputer.objects.all().delete()
         models.DbGroup.objects.all().delete()

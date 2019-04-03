@@ -107,43 +107,19 @@ class CalcJobNode(CalculationNode):
             ignore_errors=ignore_errors, ignored_folder_content=ignored_folder_content, **kwargs)
 
     def get_builder_restart(self):
+        """Return a `CalcJobBuilder` that is ready to relaunch the same `CalcJob` that created this node.
+
+        The process class will be set based on the `process_type` of this node and the inputs of the builder will be
+        prepopulated with the inputs registered for this node. This functionality is very useful if a process has
+        completed and you want to relaunch it with slightly different inputs.
+
+        In addition to prepopulating the input nodes, which is implemented by the base `ProcessNode` class, here we
+        also add the `options` that were passed in the `metadata` input of the `CalcJob` process.
+
+        :return: `~aiida.engine.processes.builder.CalcJobBuilder` instance
         """
-        Return a CalcJobBuilder instance, tailored for this calculation instance
-
-        This builder is a mapping of the inputs of the CalcJobNode class, supports tab-completion, automatic
-        validation when settings values as well as automated docstrings for each input.
-
-        The fields of the builder will be pre-populated with all the inputs recorded for this instance as well as
-        settings all the options that were explicitly set for this calculation instance.
-
-        This builder can then directly be launched again to effectively run a duplicate calculation. But more useful
-        is that it serves as a starting point to, after changing one or more inputs, launch a similar calculation by
-        using this already completed calculation as a starting point.
-
-        :return: CalcJobBuilder instance
-        """
-        from aiida.engine.processes.ports import PortNamespace
-
-        process_class = self.process_class
-        inputs = self.get_incoming()
-        options = self.get_options()
-        builder = process_class.get_builder()
-
-        for port_name, port in process_class.spec().inputs.items():
-            if port_name == process_class.spec().metadata_key:
-                builder.metadata.options = options
-            elif isinstance(port, PortNamespace):
-                namespace = port_name + '_'
-                sub = {
-                    entry.link_label[len(namespace):]: entry.node
-                    for entry in inputs
-                    if entry.link_label.startswith(namespace)
-                }
-                if sub:
-                    setattr(builder, port_name, sub)
-            else:
-                if port_name in inputs.all_link_labels():
-                    setattr(builder, port_name, inputs.get_node_by_label(port_name))
+        builder = super(CalcJobNode, self).get_builder_restart()
+        builder.metadata.options = self.get_options()
 
         return builder
 

@@ -86,6 +86,20 @@ class ProcessNode(Sealable, Node):
         from aiida.orm.utils.log import create_logger_adapter
         return create_logger_adapter(self._logger, self)
 
+    def get_builder_restart(self):
+        """Return a `ProcessBuilder` that is ready to relaunch the process that created this node.
+
+        The process class will be set based on the `process_type` of this node and the inputs of the builder will be
+        prepopulated with the inputs registered for this node. This functionality is very useful if a process has
+        completed and you want to relaunch it with slightly different inputs.
+
+        :return: `~aiida.engine.processes.builder.ProcessBuilder` instance
+        """
+        builder = self.process_class.get_builder()
+        builder._update(self.get_incoming().nested())  # pylint: disable=protected-access
+
+        return builder
+
     @property
     def process_class(self):
         """Return the process class that was used to create this node.

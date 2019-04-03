@@ -114,14 +114,6 @@ class BackendComputer(backends.BackendEntity):
         pass
 
     @abc.abstractmethod
-    def is_enabled(self):
-        pass
-
-    @abc.abstractmethod
-    def set_enabled_state(self, enabled):
-        pass
-
-    @abc.abstractmethod
     def get_scheduler_type(self):
         pass
 

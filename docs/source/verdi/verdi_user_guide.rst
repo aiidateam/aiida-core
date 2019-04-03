@@ -291,13 +291,13 @@ Below is a list with all available subcommands.
     Commands:
       configure  Configure a computer with one of the available transport types.
       delete     Configure the authentication information for a given computer...
-      disable    Disable a computer.
-      duplicate  Duplicate a Computer.
-      enable     Enable a computer.
+      disable    Disable the computer for the given user.
+      duplicate  Duplicate a computer.
+      enable     Enable the computer for the given user.
       list       List available computers.
-      rename     Rename a computer
-      setup      Add a Computer.
-      show       Show information on a given computer
+      rename     Rename a computer.
+      setup      Add a computer.
+      show       Show information for a computer.
       test       Test the connection to a computer.
 
 

@@ -48,9 +48,6 @@ def upload_calculation(node, transport, calc_info, script_filename):
 
     computer = node.computer
 
-    if not computer.is_enabled():
-        return
-
     codes_info = calc_info.codes_info
     input_codes = [load_node(_.code_uuid, sub_classes=(Code,)) for _ in codes_info]
 

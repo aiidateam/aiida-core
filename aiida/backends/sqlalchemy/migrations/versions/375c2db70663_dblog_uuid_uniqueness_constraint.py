@@ -30,10 +30,10 @@ depends_on = None
 
 
 def upgrade():
-    """ Add unique key constraint to the UUID column"""
+    """Add unique key constraint to the UUID column."""
     op.create_unique_constraint('db_dblog_uuid_key', 'db_dblog', ['uuid'])
 
 
 def downgrade():
-    """ Remove unique key constraint to the UUID column"""
+    """Remove unique key constraint to the UUID column."""
     op.drop_constraint('db_dblog_uuid_key', 'db_dblog')

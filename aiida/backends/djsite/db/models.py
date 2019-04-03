@@ -1294,69 +1294,18 @@ class DbComputer(m.Model):
         * ... (further limits per user etc.)
 
     """
-    # TODO: understand if we want that this becomes simply another type of dbnode.
-
     uuid = m.UUIDField(default=get_new_uuid, unique=True)
     name = m.CharField(max_length=255, unique=True, blank=False)
     hostname = m.CharField(max_length=255)
     description = m.TextField(blank=True)
-    enabled = m.BooleanField(default=True)
     # TODO: next three fields should not be blank...
     transport_type = m.CharField(max_length=255)
     scheduler_type = m.CharField(max_length=255)
     transport_params = m.TextField(default="{}")  # Will store a json
     metadata = m.TextField(default="{}")  # Will store a json
 
-    @classmethod
-    def get_dbcomputer(cls, computer):
-        """
-        Return a DbComputer from its name (or from another Computer or DbComputer instance)
-        """
-        from django.core.exceptions import MultipleObjectsReturned
-        from aiida.common.exceptions import NotExistent
-
-        if isinstance(computer, six.string_types):
-            try:
-                dbcomputer = DbComputer.objects.get(name=computer)
-            except ObjectDoesNotExist:
-                raise NotExistent("No computer found in the table of computers with "
-                                  "the given name '{}'".format(computer))
-            except MultipleObjectsReturned:
-                raise DbContentError("There is more than one computer with name '{}', "
-                                     "pass a Django Computer instance".format(computer))
-        elif isinstance(computer, int):
-            try:
-                dbcomputer = DbComputer.objects.get(pk=computer)
-            except ObjectDoesNotExist:
-                raise NotExistent("No computer found in the table of computers with "
-                                  "the given pk '{}'".format(computer))
-        elif isinstance(computer, DbComputer):
-            if computer.pk is None:
-                raise ValueError("The computer instance you are passing has not been stored yet")
-            dbcomputer = computer
-        else:
-            raise TypeError(
-                "Pass either a computer name, a DbComputer django instance, a Computer pk or a Computer object")
-        return dbcomputer
-
-    def _get_val_from_metadata(self, key):
-        from aiida.common import json
-
-        try:
-            metadata = json.loads(self.metadata)
-        except ValueError:
-            raise DbContentError(
-                "Error while reading metadata for DbComputer {} ({})".format(self.name, self.hostname))
-        try:
-            return metadata[key]
-        except KeyError:
-            raise ConfigurationError('No {} found for DbComputer {} '.format(key, self.name))
-
     def __str__(self):
-        if self.enabled:
-            return "{} ({})".format(self.name, self.hostname)
-        else:
-            return "{} ({}) [DISABLED]".format(self.name, self.hostname)
+        return '{} ({})'.format(self.name, self.hostname)
 
 
 @python_2_unicode_compatible

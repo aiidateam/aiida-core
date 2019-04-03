@@ -120,16 +120,6 @@ class DjangoComputer(entities.DjangoModelEntity[models.DbComputer], BackendCompu
     def set_description(self, val):
         self._dbmodel.description = val
 
-    def is_enabled(self):
-        return self._dbmodel.enabled
-
-    def set_enabled_state(self, enabled):
-        """Set the enabled state.
-
-        :param enabled: the new state
-        """
-        self._dbmodel.enabled = enabled
-
     def get_scheduler_type(self):
         return self._dbmodel.scheduler_type
 

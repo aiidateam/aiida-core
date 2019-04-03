@@ -150,7 +150,6 @@ def _(dbmodel, backend):
         name=dbmodel.name,
         hostname=dbmodel.hostname,
         description=dbmodel.description,
-        enabled=dbmodel.enabled,
         transport_type=dbmodel.transport_type,
         scheduler_type=dbmodel.scheduler_type,
         transport_params=dbmodel.transport_params,

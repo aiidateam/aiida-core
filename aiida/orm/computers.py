@@ -54,23 +54,14 @@ class Computer(entities.Entity):
         """The collection of Computer entries."""
 
         def list_names(self):
-            """
-            Return a list with all the names of the computers in the DB.
-            """
+            """Return a list with all the names of the computers in the DB."""
             return self._backend.computers.list_names()
 
-        def delete(self, id):  # pylint: disable=redefined-builtin, invalid-name
+        def delete(self, id):  # pylint: disable=redefined-builtin,invalid-name
             """Delete the computer with the given id"""
             return self._backend.computers.delete(id)
 
-    def __init__(self,
-                 name,
-                 hostname,
-                 description='',
-                 transport_type='',
-                 scheduler_type='',
-                 workdir=None,
-                 enabled_state=True,
+    def __init__(self, name, hostname, description='', transport_type='', scheduler_type='', workdir=None,
                  backend=None):
         """Construct a new computer"""
         # pylint: disable=too-many-arguments
@@ -80,8 +71,7 @@ class Computer(entities.Entity):
             hostname=hostname,
             description=description,
             transport_type=transport_type,
-            scheduler_type=scheduler_type,
-            enabled=enabled_state)
+            scheduler_type=scheduler_type)
         super(Computer, self).__init__(model)
         if workdir is not None:
             self.set_workdir(workdir)
@@ -90,10 +80,7 @@ class Computer(entities.Entity):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))
 
     def __str__(self):
-        if self.is_enabled():
-            return "{} ({}), pk: {}".format(self.name, self.hostname, self.pk)
-
-        return "{} ({}) [DISABLED], pk: {}".format(self.name, self.hostname, self.pk)
+        return '{} ({}), pk: {}'.format(self.name, self.hostname, self.pk)
 
     @property
     def full_text_info(self):
@@ -108,7 +95,6 @@ class Computer(entities.Entity):
         ret_lines.append(" * UUID:           {}".format(self.uuid))
         ret_lines.append(" * Description:    {}".format(self.description))
         ret_lines.append(" * Hostname:       {}".format(self.hostname))
-        ret_lines.append(" * Enabled:        {}".format("True" if self.is_enabled() else "False"))
         ret_lines.append(" * Transport type: {}".format(self.get_transport_type()))
         ret_lines.append(" * Scheduler type: {}".format(self.get_scheduler_type()))
         ret_lines.append(" * Work directory: {}".format(self.get_workdir()))
@@ -157,15 +143,6 @@ class Computer(entities.Entity):
         """
         if not hostname.strip():
             raise exceptions.ValidationError("No hostname specified")
-
-    @classmethod
-    def _enabled_state_validator(cls, enabled_state):
-        """
-        Validates the hostname.
-        """
-        if not isinstance(enabled_state, bool):
-            raise exceptions.ValidationError("Invalid value '{}' for the enabled state, must "
-                                             "be a boolean".format(str(enabled_state)))
 
     @classmethod
     def _description_validator(cls, description):
@@ -262,7 +239,6 @@ class Computer(entities.Entity):
 
         self._hostname_validator(self.get_hostname())
         self._description_validator(self.get_description())
-        self._enabled_state_validator(self.is_enabled())
         self._transport_type_validator(self.get_transport_type())
         self._scheduler_type_validator(self.get_scheduler_type())
         self._workdir_validator(self.get_workdir())
@@ -561,9 +537,6 @@ class Computer(entities.Entity):
         """
         self._backend_entity.set_description(val)
 
-    def is_enabled(self):
-        return self._backend_entity.is_enabled()
-
     def get_authinfo(self, user):
         """
         Return the aiida.orm.authinfo.AuthInfo instance for the
@@ -608,14 +581,6 @@ class Computer(entities.Entity):
             # Return False if the user is not configured (in a sense,
             # it is disabled for that user)
             return False
-
-    def set_enabled_state(self, enabled):
-        """
-        Set the enable state for this computer
-
-        :param enabled: True if enabled, False otherwise
-        """
-        self._backend_entity.set_enabled_state(enabled)
 
     def get_scheduler_type(self):
         """
@@ -749,12 +714,6 @@ class Computer(entities.Entity):
                 "help_text": "short description of the Computer",
                 "is_foreign_key": False,
                 "type": "str"
-            },
-            "enabled": {
-                "display_name": "Enabled",
-                "help_text": "True(False) if the computer is(not) enabled to run jobs",
-                "is_foreign_key": False,
-                "type": "bool"
             },
             "hostname": {
                 "display_name": "Host",

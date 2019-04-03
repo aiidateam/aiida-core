@@ -218,7 +218,6 @@ def get_all_fields_info():
         "description": {},
         "scheduler_type": {},
         "metadata": {},
-        "enabled": {},
         "uuid": {},
         "name": {}
     }

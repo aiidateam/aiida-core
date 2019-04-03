@@ -538,7 +538,7 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      delete       Deletes a node and everything that originates from it.
+      delete       Delete nodes and everything that originates from them.
       description  View or set the descriptions of one or more nodes.
       label        View or set the labels of one or more nodes.
       repo

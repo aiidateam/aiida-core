@@ -49,7 +49,7 @@ class IdentifierParamType(click.ParamType):
             will be mapped upon. These classes have to be strict sub classes of the base orm class defined
             by the orm class loader
         """
-        from aiida.common.exceptions import MissingEntryPointError, MultipleEntryPointError
+        from aiida.common import exceptions
 
         self._sub_classes = None
         self._entry_points = []
@@ -63,7 +63,7 @@ class IdentifierParamType(click.ParamType):
 
                 try:
                     entry_point = get_entry_point_from_string(entry_point_string)
-                except (ValueError, MissingEntryPointError, MultipleEntryPointError) as exception:
+                except (ValueError, exceptions.EntryPointError) as exception:
                     raise ValueError('{} is not a valid entry point string: {}'.format(entry_point_string, exception))
                 else:
                     self._entry_points.append(entry_point)
@@ -88,7 +88,7 @@ class IdentifierParamType(click.ParamType):
         :raises click.BadParameter: if the value cannot be mapped onto any existing instance
         :raises RuntimeError: if the defined orm class loader is not a subclass of the OrmEntityLoader class
         """
-        from aiida.common.exceptions import MultipleObjectsError, NotExistent
+        from aiida.common import exceptions
         from aiida.orm.utils.loaders import OrmEntityLoader
 
         if not value:
@@ -122,7 +122,7 @@ class IdentifierParamType(click.ParamType):
 
         try:
             entity = loader.load_entity(value, sub_classes=self._sub_classes)
-        except (MultipleObjectsError, NotExistent, ValueError) as exception:
+        except (exceptions.MultipleObjectsError, exceptions.NotExistent, ValueError) as exception:
             raise click.BadParameter(str(exception))
 
         return entity

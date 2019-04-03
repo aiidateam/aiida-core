@@ -17,7 +17,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from aiida.common.exceptions import ValidationError, MissingPluginError
+from aiida.common.exceptions import ValidationError, EntryPointError
 from aiida.plugins import OrbitalFactory
 
 
@@ -81,7 +81,7 @@ class Orbital(object):
                     raise TypeError
                 try:
                     OrbitalFactory(v)
-                except (MissingPluginError, TypeError):
+                except (EntryPointError, TypeError):
                     raise ValidationError("The module name {} was found to "
                                           "be invalid".format(v))
             if k == "position":

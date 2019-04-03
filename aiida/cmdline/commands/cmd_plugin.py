@@ -29,7 +29,7 @@ def verdi_plugin():
 @decorators.with_dbenv()
 def plugin_list(entry_point_group, entry_point):
     """Display a list of all available plugins."""
-    from aiida.common.exceptions import LoadingPluginFailed, MissingPluginError
+    from aiida.common import EntryPointError
     from aiida.plugins.entry_point import get_entry_point_names, load_entry_point
 
     if entry_point_group is None:
@@ -44,7 +44,7 @@ def plugin_list(entry_point_group, entry_point):
     if entry_point:
         try:
             plugin = load_entry_point(entry_point_group, entry_point)
-        except (LoadingPluginFailed, MissingPluginError) as exception:
+        except EntryPointError as exception:
             echo.echo_critical(exception)
         else:
             echo.echo_info(entry_point)

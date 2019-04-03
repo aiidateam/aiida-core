@@ -13,8 +13,7 @@ from __future__ import absolute_import
 
 import six
 
-from aiida.common import timezone
-from aiida.common.exceptions import ValidationError, MissingPluginError
+from aiida.common import exceptions, timezone
 from aiida.orm import GroupTypeString
 
 
@@ -49,7 +48,7 @@ class Autogroup(object):
                         i.startswith('data'),
                         i == 'all',
             ]):
-                raise ValidationError("Module not recognized, allow prefixes "
+                raise exceptions.ValidationError("Module not recognized, allow prefixes "
                                       " are: calculation, code or data")
         the_param = [i + '.' for i in param]
 
@@ -60,15 +59,15 @@ class Autogroup(object):
             base, module = i.split('.', 1)
             if base == 'code':
                 if module:
-                    raise ValidationError("Cannot have subclasses for codes")
+                    raise exceptions.ValidationError("Cannot have subclasses for codes")
             elif base == 'all':
                 continue
             else:
                 if is_exact:
                     try:
                         factorydict[base](module.rstrip('.'))
-                    except MissingPluginError:
-                        raise ValidationError("Cannot find the class to be excluded")
+                    except exceptions.EntryPointError:
+                        raise exceptions.ValidationError("Cannot find the class to be excluded")
         return the_param
 
     def get_exclude(self):
@@ -120,7 +119,7 @@ class Autogroup(object):
         if self.get_include() is not None:
             if 'all.' in self.get_include():
                 if 'all.' in the_exclude_classes:
-                    raise ValidationError("Cannot exclude and include all classes")
+                    raise exceptions.ValidationError("Cannot exclude and include all classes")
         self.exclude = the_exclude_classes
 
     def set_exclude_with_subclasses(self, exclude):
@@ -139,7 +138,7 @@ class Autogroup(object):
         if self.get_exclude() is not None:
             if 'all.' in self.get_exclude():
                 if 'all.' in the_include_classes:
-                    raise ValidationError("Cannot exclude and include all classes")
+                    raise exceptions.ValidationError("Cannot exclude and include all classes")
 
         self.include = the_include_classes
 
@@ -156,7 +155,7 @@ class Autogroup(object):
         Set the name of the group to be created
         """
         if not isinstance(gname, six.string_types):
-            raise ValidationError("group name must be a string")
+            raise exceptions.ValidationError("group name must be a string")
         self.group_name = gname
 
     def is_to_be_grouped(self, the_class):

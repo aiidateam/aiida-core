@@ -73,7 +73,6 @@
         aiida/backends/sqlalchemy/models/settings.py|
         aiida/backends/sqlalchemy/models/user.py|
         aiida/backends/sqlalchemy/models/utils.py|
-        aiida/backends/sqlalchemy/models/workflow.py|
         aiida/backends/sqlalchemy/queries.py|
         aiida/backends/sqlalchemy/tests/test_generic.py|
         aiida/backends/sqlalchemy/tests/__init__.py|

@@ -30,12 +30,18 @@ def verdi_profile():
 @verdi_profile.command('list')
 def profile_list():
     """Displays list of all available profiles."""
+
     try:
         config = get_config()
     except (exceptions.MissingConfigurationError, exceptions.ConfigurationError) as exception:
+        # This can happen for a fresh install and the `verdi setup` has not yet been run. In this case it is still nice
+        # to be able to see the configuration directory, for instance for those who have set `AIIDA_PATH`. This way
+        # they can at least verify that it is correctly set.
+        from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
+        echo.echo_info('configuration folder: {}'.format(AIIDA_CONFIG_FOLDER))
         echo.echo_critical(str(exception))
-
-    echo.echo_info('configuration folder: {}'.format(config.dirpath))
+    else:
+        echo.echo_info('configuration folder: {}'.format(config.dirpath))
 
     if not config.profiles:
         echo.echo_info('no profiles configured')

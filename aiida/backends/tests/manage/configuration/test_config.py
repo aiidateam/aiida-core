@@ -18,11 +18,139 @@ import tempfile
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.tests.utils.configuration import create_mock_profile
-from aiida.common import exceptions
-from aiida.manage.configuration import Config, Profile
+from aiida.common import exceptions, json
+from aiida.manage.configuration import Config, Profile, settings
 from aiida.manage.configuration.migrations import CURRENT_CONFIG_VERSION, OLDEST_COMPATIBLE_CONFIG_VERSION
 from aiida.manage.configuration.options import get_option
-from aiida.common import json
+
+
+class TestConfigDirectory(AiidaTestCase):
+    """Tests to make sure that the detection and creation of configuration folder is done correctly."""
+
+    @classmethod
+    def setUpClass(cls, *args, **kwargs):
+        """Save the current environment variable settings."""
+        super(TestConfigDirectory, cls).setUpClass(*args, **kwargs)
+        cls.aiida_path_original = os.environ.get(settings.DEFAULT_AIIDA_PATH_VARIABLE, None)
+
+    @classmethod
+    def tearDownClass(cls, *args, **kwargs):
+        """Restore the original environment variable settings."""
+        super(TestConfigDirectory, cls).tearDownClass(*args, **kwargs)
+        if cls.aiida_path_original is not None:
+            os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = cls.aiida_path_original
+        else:
+            try:
+                del os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE]
+            except KeyError:
+                pass
+
+    def test_environment_variable_not_set(self):
+        """Check that if the environment variable is not set, config folder will be created in `DEFAULT_AIIDA_PATH`.
+
+        To make sure we do not mess with the actual default `.aiida` folder, which often lives in the home folder
+        we create a temporary directory and set the `DEFAULT_AIIDA_PATH` to it.
+        """
+        try:
+            directory = tempfile.mkdtemp()
+
+            # Change the default configuration folder path to temp folder instead of probably `~`.
+            settings.DEFAULT_AIIDA_PATH = directory
+
+            # Make sure that the environment variable is not set
+            try:
+                del os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE]
+            except KeyError:
+                pass
+            settings.set_configuration_directory()
+
+            config_folder = os.path.join(directory, settings.DEFAULT_CONFIG_DIR_NAME)
+            self.assertTrue(os.path.isdir(config_folder))
+            self.assertEqual(settings.AIIDA_CONFIG_FOLDER, config_folder)
+        finally:
+            shutil.rmtree(directory)
+
+    def test_environment_variable_set_single_path_without_config_folder(self):  # pylint: disable=invalid-name
+        """If `AIIDA_PATH` is set but does not contain a configuration folder, it should be created."""
+        try:
+            directory = tempfile.mkdtemp()
+
+            # Set the environment variable and call configuration initialization
+            env_variable = '{}'.format(directory)
+            os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = env_variable
+            settings.set_configuration_directory()
+
+            # This should have created the configuration directory in the path
+            config_folder = os.path.join(directory, settings.DEFAULT_CONFIG_DIR_NAME)
+            self.assertTrue(os.path.isdir(config_folder))
+            self.assertEqual(settings.AIIDA_CONFIG_FOLDER, config_folder)
+
+        finally:
+            shutil.rmtree(directory)
+
+    def test_environment_variable_set_single_path_with_config_folder(self):  # pylint: disable=invalid-name
+        """If `AIIDA_PATH` is set and already contains a configuration folder it should simply be used."""
+        try:
+            directory = tempfile.mkdtemp()
+            os.makedirs(os.path.join(directory, settings.DEFAULT_CONFIG_DIR_NAME))
+
+            # Set the environment variable and call configuration initialization
+            env_variable = '{}'.format(directory)
+            os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = env_variable
+            settings.set_configuration_directory()
+
+            # This should have created the configuration directory in the pathpath
+            config_folder = os.path.join(directory, settings.DEFAULT_CONFIG_DIR_NAME)
+            self.assertTrue(os.path.isdir(config_folder))
+            self.assertEqual(settings.AIIDA_CONFIG_FOLDER, config_folder)
+        finally:
+            shutil.rmtree(directory)
+
+    def test_environment_variable_path_including_config_folder(self):  # pylint: disable=invalid-name
+        """If `AIIDA_PATH` is set and the path contains the base name of the config folder, it should work, i.e:
+
+            `/home/user/.virtualenvs/dev/`
+            `/home/user/.virtualenvs/dev/.aiida`
+
+        Are both legal and will both result in the same configuration folder path.
+        """
+        try:
+            directory = tempfile.mkdtemp()
+
+            # Set the environment variable with a path that include base folder name and call config initialization
+            env_variable = '{}'.format(os.path.join(directory, settings.DEFAULT_CONFIG_DIR_NAME))
+            os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = env_variable
+            settings.set_configuration_directory()
+
+            # This should have created the configuration directory in the pathpath
+            config_folder = os.path.join(directory, settings.DEFAULT_CONFIG_DIR_NAME)
+            self.assertTrue(os.path.isdir(config_folder))
+            self.assertEqual(settings.AIIDA_CONFIG_FOLDER, config_folder)
+
+        finally:
+            shutil.rmtree(directory)
+
+    def test_environment_variable_set_multiple_path(self):  # pylint: disable=invalid-name
+        """If `AIIDA_PATH` is set with multiple paths without actual config folder, one is created in the last."""
+        try:
+            directory_a = tempfile.mkdtemp()
+            directory_b = tempfile.mkdtemp()
+            directory_c = tempfile.mkdtemp()
+
+            # Set the environment variable to contain three paths and call configuration initialization
+            env_variable = '{}:{}:{}'.format(directory_a, directory_b, directory_c)
+            os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = env_variable
+            settings.set_configuration_directory()
+
+            # This should have created the configuration directory in the last path
+            config_folder = os.path.join(directory_c, settings.DEFAULT_CONFIG_DIR_NAME)
+            self.assertTrue(os.path.isdir(config_folder))
+            self.assertEqual(settings.AIIDA_CONFIG_FOLDER, config_folder)
+
+        finally:
+            shutil.rmtree(directory_a)
+            shutil.rmtree(directory_b)
+            shutil.rmtree(directory_c)
 
 
 class TestConfig(AiidaTestCase):

@@ -76,7 +76,7 @@ class TestVerdiProfileSetup(AiidaTestCase):
 
         result = self.cli_runner.invoke(cmd_profile.profile_list)
         self.assertClickSuccess(result)
-        self.assertIn('configuration folder: ' + self.config.dirpath, result.output)
+        self.assertIn('Info: configuration folder: ' + self.config.dirpath, result.output)
         self.assertIn('* {}'.format(self.profile_list[0]), result.output)
         self.assertIn(self.profile_list[1], result.output)
 
@@ -91,7 +91,7 @@ class TestVerdiProfileSetup(AiidaTestCase):
         result = self.cli_runner.invoke(cmd_profile.profile_list)
 
         self.assertClickSuccess(result)
-        self.assertIn('configuration folder: ' + self.config.dirpath, result.output)
+        self.assertIn('Info: configuration folder: ' + self.config.dirpath, result.output)
         self.assertIn('* {}'.format(self.profile_list[1]), result.output)
         self.assertClickSuccess(result)
 

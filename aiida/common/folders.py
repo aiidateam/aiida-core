@@ -14,15 +14,9 @@ from __future__ import absolute_import
 
 import fnmatch
 import io
-import itertools
 import os
 import shutil
 import tempfile
-
-try:
-    from pathlib import Path
-except ImportError:
-    from pathlib2 import Path
 
 import six
 
@@ -33,22 +27,6 @@ from aiida.common.utils import get_repository_folder
 GROUP_WRITABLE = True
 
 VALID_SECTIONS = ['node']
-
-
-def find_path(root, dir_name):
-    """Iteratively recurse uopwards from a root folder to try and find a given directory.
-
-    :param root: path to start from
-    :param dir_name: name of the directory to try and find
-    :return: path of the directory if found
-    :raises OSError: if directory could not be found
-    """
-    path = Path(os.path.abspath(root))
-    for parent in itertools.chain([path], path.parents):
-        directory = parent / dir_name
-        if directory.is_dir():
-            return directory
-    raise OSError('No directory found')
 
 
 class Folder(object):  # pylint: disable=useless-object-inheritance

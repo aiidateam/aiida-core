@@ -16,6 +16,9 @@ from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
 from aiida.engine import launch, CalcJob, Process, CalcJobBuilder
+from aiida.plugins import CalculationFactory
+
+ArithmeticAddCalculation = CalculationFactory('arithmetic.add')  # pylint: disable=invalid-name
 
 
 class TestCalcJob(AiidaTestCase):
@@ -88,3 +91,23 @@ class TestCalcJob(AiidaTestCase):
         """ verify that `CalcJob.get_builder` returns CalcJobBuilder"""
         builder = CalcJob.get_builder()
         self.assertIsInstance(builder, CalcJobBuilder)
+
+    def test_invalid_parser_name(self):
+        """Passing an invalid parser name should already stop during input validation."""
+        inputs = {
+            'code': self.code,
+            'x': orm.Int(1),
+            'y': orm.Int(2),
+            'metadata': {
+                'options': {
+                    'resources': {
+                        'num_machines': 1,
+                        'num_mpiprocs_per_machine': 1
+                    },
+                    'parser_name': 'invalid_parser'
+                }
+            }
+        }
+
+        with self.assertRaises(exceptions.ValidationError):
+            ArithmeticAddCalculation(inputs=inputs)

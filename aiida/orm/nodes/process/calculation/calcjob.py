@@ -162,11 +162,16 @@ class CalcJobNode(CalculationNode):
             raise exceptions.ValidationError('invalid calculation state `{}`'.format(self.get_state()))
 
         try:
-            self.get_parser_class()
-        except exceptions.EntryPointError:
-            raise exceptions.ValidationError("No valid class/implementation found for the parser '{}'. "
-                                             "Set the parser to None if you do not need an automatic "
-                                             "parser.".format(self.get_option('parser_name')))
+            parser_class = self.get_parser_class()
+        except exceptions.EntryPointError as exception:
+            raise exceptions.ValidationError('invalid parser specified: {}'.format(exception))
+
+        try:
+            # Since a parser is not required to be set, so `get_parser_class` will return `None` in that case
+            if parser_class is not None:
+                parser_class(self)
+        except TypeError as exception:
+            raise exceptions.ValidationError('invalid parser specified: {}'.format(exception))
 
         computer = self.computer
         scheduler = computer.get_scheduler()

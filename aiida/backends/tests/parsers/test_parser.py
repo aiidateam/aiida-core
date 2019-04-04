@@ -7,9 +7,10 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.common import LinkType
 from aiida.engine import CalcJob
 from aiida.parsers import Parser
-from aiida.plugins import CalculationFactory
+from aiida.plugins import CalculationFactory, ParserFactory
 
 ArithmeticAddCalculation = CalculationFactory('arithmetic.add')  # pylint: disable=invalid-name
+ArithmeticAddParser = ParserFactory('arithmetic.add')  # pylint: disable=invalid-name
 
 
 class CustomCalcJob(CalcJob):
@@ -29,6 +30,11 @@ class CustomCalcJob(CalcJob):
 class TestParser(AiidaTestCase):
     """Test backend entities and their collections"""
 
+    def test_abstract_parse_method(self):
+        """Verify that trying to instantiate base class will raise `TypeError` because of abstract `parse` method."""
+        with self.assertRaises(TypeError):
+            Parser()  # pylint: disable=abstract-class-instantiated,no-value-for-parameter
+
     def test_parser_retrieved(self):
         """Verify that the `retrieved` property returns the retrieved `FolderData` node."""
         node = orm.CalcJobNode(computer=self.computer, process_type=ArithmeticAddCalculation.build_process_type())
@@ -39,14 +45,14 @@ class TestParser(AiidaTestCase):
         retrieved = orm.FolderData().store()
         retrieved.add_incoming(node, link_type=LinkType.CREATE, link_label='retrieved')
 
-        parser = Parser(node)
+        parser = ArithmeticAddParser(node)
         self.assertEqual(parser.node.uuid, node.uuid)
         self.assertEqual(parser.retrieved.uuid, retrieved.uuid)
 
     def test_parser_exit_codes(self):
         """Ensure that exit codes from the `CalcJob` can be retrieved through the parser instance."""
         node = orm.CalcJobNode(computer=self.computer, process_type=ArithmeticAddCalculation.build_process_type())
-        parser = Parser(node)
+        parser = ArithmeticAddParser(node)
         self.assertEqual(parser.exit_codes, ArithmeticAddCalculation.spec().exit_codes)
 
     def test_parser_get_outputs_for_parsing(self):
@@ -63,7 +69,7 @@ class TestParser(AiidaTestCase):
         output = orm.Data().store()
         output.add_incoming(node, link_type=LinkType.CREATE, link_label='output')
 
-        parser = Parser(node)
+        parser = ArithmeticAddParser(node)
         outputs_for_parsing = parser.get_outputs_for_parsing()
         self.assertIn('retrieved', outputs_for_parsing)
         self.assertEqual(outputs_for_parsing['retrieved'].uuid, retrieved.uuid)

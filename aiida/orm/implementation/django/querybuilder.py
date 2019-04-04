@@ -12,8 +12,8 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from datetime import datetime
-from json import loads as json_loads
 import uuid
 import six
 
@@ -390,9 +390,6 @@ class DjangoQueryBuilder(BackendQueryBuilder):
         elif key == 'extras':
             # same as attributes
             return DbExtra.get_all_values_for_nodepk(res)
-        elif key in ('_metadata', 'transport_params') and res is not None:
-            # Metadata and transport_params are stored as json strings in the DB:
-            return json_loads(res)
         elif isinstance(res, uuid.UUID):
             returnval = six.text_type(res)
         else:

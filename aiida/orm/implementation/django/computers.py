@@ -18,7 +18,7 @@ import six
 from django.db import IntegrityError, transaction
 
 from aiida.backends.djsite.db import models
-from aiida.common import exceptions, json
+from aiida.common import exceptions
 
 from ..computers import BackendComputerCollection, BackendComputer
 from . import entities
@@ -84,23 +84,16 @@ class DjangoComputer(entities.DjangoModelEntity[models.DbComputer], BackendCompu
         return self._dbmodel.hostname
 
     def get_metadata(self):
-        return json.loads(self._dbmodel.metadata)
+        return self._dbmodel.metadata
 
-    def set_metadata(self, metadata_dict):
-        self._dbmodel.metadata = json.dumps(metadata_dict)
+    def set_metadata(self, metadata):
+        self._dbmodel.metadata = metadata
 
     def get_transport_params(self):
-        try:
-            return json.loads(self._dbmodel.transport_params)
-        except ValueError:
-            raise exceptions.DbContentError('Error while reading transport params for Computer<{}>'.format(
-                self.hostname))
+        return self._dbmodel.transport_params
 
     def set_transport_params(self, val):
-        try:
-            self._dbmodel.transport_params = json.dumps(val)
-        except ValueError:
-            raise ValueError('The set of transport_params are not JSON-able')
+        self._dbmodel.transport_params = val
 
     def get_name(self):
         return self._dbmodel.name

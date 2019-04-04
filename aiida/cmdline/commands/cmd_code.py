@@ -283,6 +283,8 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
     echo.echo("# List of configured codes:")
     echo.echo("# (use 'verdi code show CODEID' to see the details)")
 
+    showed_results = False
+
     # pylint: disable=invalid-name
     if computer is not None:
         qb = orm.QueryBuilder()
@@ -296,6 +298,7 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
         # remote codes.
         qb.append(orm.Computer, with_node="code", project=["name"], filters=qb_computer_filters)
         qb.order_by({Code: {'id': 'asc'}})
+        showed_results = qb.count() > 0
         print_list_res(qb, show_owner)
 
     # If there is no filter on computers
@@ -310,6 +313,7 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
         qb.append(orm.Computer, with_node="code", project=["name"])
         qb.order_by({Code: {'id': 'asc'}})
         print_list_res(qb, show_owner)
+        showed_results = showed_results or qb.count() > 0
 
         # Now print all the local codes. To get the local codes we ask
         # the dbcomputer_id variable to be None.
@@ -325,31 +329,31 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
         # presence of a user even if there is no user filter
         qb.append(orm.User, with_node="code", project=["email"], filters=qb_user_filters)
         qb.order_by({Code: {'id': 'asc'}})
+        showed_results = showed_results or qb.count() > 0
         print_list_res(qb, show_owner)
+    if not showed_results:
+        echo.echo("# No codes found matching the specified criteria.")
 
 
 def print_list_res(qb_query, show_owner):
     """Print list of codes."""
     # pylint: disable=invalid-name
-    if qb_query.count() > 0:
-        for tuple_ in qb_query.all():
-            if len(tuple_) == 3:
-                (pk, label, useremail) = tuple_
-                computername = None
-            elif len(tuple_) == 4:
-                (pk, label, useremail, computername) = tuple_
-            else:
-                echo.echo_warning("Wrong tuple size")
-                return
+    for tuple_ in qb_query.all():
+        if len(tuple_) == 3:
+            (pk, label, useremail) = tuple_
+            computername = None
+        elif len(tuple_) == 4:
+            (pk, label, useremail, computername) = tuple_
+        else:
+            echo.echo_warning("Wrong tuple size")
+            return
 
-            if show_owner:
-                owner_string = " ({})".format(useremail)
-            else:
-                owner_string = ""
-            if computername is None:
-                computernamestring = ""
-            else:
-                computernamestring = "@{}".format(computername)
-            echo.echo("* pk {} - {}{}{}".format(pk, label, computernamestring, owner_string))
-    else:
-        echo.echo("# No codes found matching the specified criteria.")
+        if show_owner:
+            owner_string = " ({})".format(useremail)
+        else:
+            owner_string = ""
+        if computername is None:
+            computernamestring = ""
+        else:
+            computernamestring = "@{}".format(computername)
+        echo.echo("* pk {} - {}{}{}".format(pk, label, computernamestring, owner_string))

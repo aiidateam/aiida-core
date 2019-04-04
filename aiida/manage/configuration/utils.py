@@ -42,7 +42,9 @@ def load_config(create=False):
 
     if not os.path.isfile(filepath):
         if not create:
-            raise exceptions.MissingConfigurationError('configuration file {} does not exist'.format(filepath))
+            aiida_path = os.environ.get('AIIDA_PATH', None)
+            raise exceptions.MissingConfigurationError('configuration file {} does not exist: {} and {}'.format(
+                filepath, AIIDA_CONFIG_FOLDER, aiida_path))
         else:
             config = Config(filepath, {}).store()
     else:

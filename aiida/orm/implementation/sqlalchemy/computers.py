@@ -75,7 +75,7 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
         try:
             self._dbmodel.save()
         except SQLAlchemyError:
-            raise ValueError("Integrity error, probably the hostname already exists in the" " DB")
+            raise ValueError("Integrity error, probably the hostname already exists in the DB")
 
         return self
 
@@ -127,12 +127,6 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
 
     def set_description(self, val):
         self._dbmodel.description = val
-
-    def is_enabled(self):
-        return self._dbmodel.enabled
-
-    def set_enabled_state(self, enabled):
-        self._dbmodel.enabled = enabled
 
     def get_scheduler_type(self):
         return self._dbmodel.scheduler_type

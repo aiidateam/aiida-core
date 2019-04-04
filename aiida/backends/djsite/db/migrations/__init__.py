@@ -22,7 +22,7 @@ class DeserializationException(AiidaException):
     pass
 
 
-LATEST_MIGRATION = '0030_dbnode_type_to_dbnode_node_type'
+LATEST_MIGRATION = '0032_remove_legacy_workflows'
 
 
 def _update_schema_version(version, apps, schema_editor):

@@ -165,6 +165,21 @@ class TestGroups(AiidaTestCase):
         group.remove_nodes([node_01, node_02])
         self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))
 
+    def test_clear(self):
+        """Test the `clear` method to remove all nodes."""
+        node_01 = orm.Data().store()
+        node_02 = orm.Data().store()
+        node_03 = orm.Data().store()
+        nodes = [node_01, node_02, node_03]
+        group = orm.Group(label='test_clear_nodes').store()
+
+        # Add initial nodes
+        group.add_nodes(nodes)
+        self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))
+
+        group.clear()
+        self.assertEqual(list(group.nodes), [])
+
     def test_name_desc(self):
         """Test Group description."""
         group = orm.Group(label='testgroup2', description='some desc')

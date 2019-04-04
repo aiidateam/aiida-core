@@ -24,5 +24,5 @@ from aiida.cmdline.commands import (cmd_calcjob, cmd_code, cmd_comment, cmd_comp
                                     cmd_rehash, cmd_restapi, cmd_run, cmd_setup, cmd_shell, cmd_status, cmd_user)
 
 # Import to populate the `verdi data` sub commands
-from aiida.cmdline.commands.cmd_data import (cmd_array, cmd_bands, cmd_cif, cmd_parameter, cmd_remote, cmd_structure,
+from aiida.cmdline.commands.cmd_data import (cmd_array, cmd_bands, cmd_cif, cmd_dict, cmd_remote, cmd_structure,
                                              cmd_trajectory, cmd_upf)

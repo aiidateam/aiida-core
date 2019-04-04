@@ -42,9 +42,6 @@ def generate_setup_options_dict(replace_args={}, non_interactive=True):
     valid_noninteractive_options['label'] = 'noninteractive_computer'
     valid_noninteractive_options['hostname'] = "localhost"
     valid_noninteractive_options['description'] = "my description"
-    # Specifically give a string value for interactive prompts
-    if not non_interactive:
-        valid_noninteractive_options['enabled'] = "True"
     valid_noninteractive_options['transport'] = "local"
     valid_noninteractive_options['scheduler'] = "direct"
     valid_noninteractive_options['shebang'] = "#!/bin/bash"
@@ -137,7 +134,6 @@ class TestVerdiComputerSetup(AiidaTestCase):
         self.assertEqual(new_computer.hostname, options_dict['hostname'])
         self.assertEqual(new_computer.get_transport_type(), options_dict['transport'])
         self.assertEqual(new_computer.get_scheduler_type(), options_dict['scheduler'])
-        self.assertTrue(new_computer.is_enabled())
         self.assertEqual(new_computer.get_mpirun_command(), options_dict['mpirun-command'].split())
         self.assertEqual(new_computer.get_shebang(), options_dict['shebang'])
         self.assertEqual(new_computer.get_workdir(), options_dict['work-dir'])
@@ -157,8 +153,6 @@ class TestVerdiComputerSetup(AiidaTestCase):
         options_dict.pop('non-interactive', 'None')
 
         non_interactive_options_dict = {}
-        non_interactive_options_dict['enabled'] = None
-
         non_interactive_options_dict['prepend-text'] = options_dict.pop('prepend-text')
         non_interactive_options_dict['append-text'] = options_dict.pop('append-text')
         non_interactive_options_dict['shebang'] = options_dict.pop('shebang')
@@ -178,7 +172,6 @@ class TestVerdiComputerSetup(AiidaTestCase):
         self.assertEqual(new_computer.hostname, options_dict_full['hostname'])
         self.assertEqual(new_computer.get_transport_type(), options_dict_full['transport'])
         self.assertEqual(new_computer.get_scheduler_type(), options_dict_full['scheduler'])
-        self.assertTrue(new_computer.is_enabled())
         self.assertEqual(new_computer.get_mpirun_command(), options_dict_full['mpirun-command'].split())
         self.assertEqual(new_computer.get_shebang(), options_dict_full['shebang'])
         self.assertEqual(new_computer.get_workdir(), options_dict_full['work-dir'])
@@ -205,7 +198,6 @@ class TestVerdiComputerSetup(AiidaTestCase):
         self.assertEqual(new_computer.hostname, options_dict['hostname'])
         self.assertEqual(new_computer.get_transport_type(), options_dict['transport'])
         self.assertEqual(new_computer.get_scheduler_type(), options_dict['scheduler'])
-        self.assertTrue(new_computer.is_enabled())
         self.assertEqual(new_computer.get_mpirun_command(), options_dict['mpirun-command'].split())
         self.assertEqual(new_computer.get_shebang(), options_dict['shebang'])
         self.assertEqual(new_computer.get_workdir(), options_dict['work-dir'])
@@ -217,45 +209,6 @@ class TestVerdiComputerSetup(AiidaTestCase):
         result = self.cli_runner.invoke(computer_setup, options)
         self.assertIsInstance(result.exception, SystemExit)
         self.assertIn("already exists", result.output)
-
-    def test_noninteractive_disabled(self):
-        """
-        I check what happens if the computer should be disabled.
-
-        I only check the changes, the rest is already checked in ``test_noninteractive()``.
-        """
-        options_dict = generate_setup_options_dict({
-            'label': 'computer_disabled',
-            'disabled': None
-        })
-        options_dict.pop('enabled', None)  # Make sure --enabled is not there
-        options = generate_setup_options(options_dict)
-
-        result = self.cli_runner.invoke(computer_setup, options)
-
-        self.assertIsNone(result.exception, result.output[-1000:])
-        new_computer = orm.Computer.objects.get(name=options_dict['label'])
-        self.assertIsInstance(new_computer, orm.Computer)
-        self.assertFalse(new_computer.is_enabled())
-
-    def test_noninteractive_enabled(self):
-        """
-        I check what happens if the computer should be enabled, explicitly setting
-        --enabled.
-
-        I only check the changes, the rest is already checked in ``test_noninteractive()``.
-        """
-        options_dict = generate_setup_options_dict({'label': 'computer_enabled'})
-        options_dict.pop('disabled', None)  # Make sure 'disabled' is not there
-        options_dict['enabled'] = None  # Activate --enabled
-        options = generate_setup_options(options_dict)
-
-        result = self.cli_runner.invoke(computer_setup, options)
-
-        self.assertIsNone(result.exception, result.output[-1000:])
-        new_computer = orm.Computer.objects.get(name=options_dict['label'])
-        self.assertIsInstance(new_computer, orm.Computer)
-        self.assertTrue(new_computer.is_enabled())
 
     def test_noninteractive_optional_default_mpiprocs(self):
         """
@@ -357,7 +310,6 @@ class TestVerdiComputerConfigure(AiidaTestCase):
         self.comp_builder = ComputerBuilder(label='test_comp_setup')
         self.comp_builder.hostname = 'localhost'
         self.comp_builder.description = 'Test Computer'
-        self.comp_builder.enabled = True
         self.comp_builder.scheduler = 'direct'
         self.comp_builder.work_dir = '/tmp/aiida'
         self.comp_builder.prepend_text = ''
@@ -521,79 +473,6 @@ class TestVerdiComputerCommands(AiidaTestCase):
 
         assert self.comp.is_user_configured(self.user), "There was a problem configuring the test computer"
         self.cli_runner = CliRunner()
-
-    def test_enable_disable_globally(self):
-        """
-        Test if enabling and disabling a computer has the intended effect.
-        Note I have to do it three times, because if because of a bug
-        'enable' is a no-op and the computer was already enabled, the
-        test would pass.
-        """
-
-        def enable_disable_globally_loop(self, user=None, user_enabled_state=True):
-            result = self.cli_runner.invoke(computer_enable, [str(self.comp.label)])
-            self.assertIsNone(result.exception, result.output)
-            self.assertTrue(self.comp.is_enabled())
-            """
-            Change global state check if user states are affected
-            """
-
-            # Check that the change of global state did not affect the
-            # per-user state
-            if user is not None:
-                if user_enabled_state:
-                    self.assertTrue(self.comp.is_user_enabled(user))
-                else:
-                    self.assertFalse(self.comp.is_user_enabled(user))
-
-            result = self.cli_runner.invoke(computer_disable, [str(self.comp.label)])
-            self.assertIsNone(result.exception, result.output)
-            self.assertFalse(self.comp.is_enabled())
-
-            # Check that the change of global state did not affect the
-            # per-user state
-            if user is not None:
-                if user_enabled_state:
-                    self.assertTrue(self.comp.is_user_enabled(user))
-                else:
-                    self.assertFalse(self.comp.is_user_enabled(user))
-
-            result = self.cli_runner.invoke(computer_enable, [str(self.comp.label)])
-            self.assertIsNone(result.exception, result.output)
-            self.assertTrue(self.comp.is_enabled())
-
-            # Check that the change of global state did not affect the
-            # per-user state
-            if user is not None:
-                if user_enabled_state:
-                    self.assertTrue(self.comp.is_user_enabled(user))
-                else:
-                    self.assertFalse(self.comp.is_user_enabled(user))
-
-        # Start of actual tests
-        result = self.cli_runner.invoke(computer_enable,
-                                        ['--user={}'.format(self.user_email),
-                                         str(self.comp.label)])
-        self.assertClickResultNoException(result)
-        self.assertTrue(self.comp.is_user_enabled(self.user))
-        # enable and disable the computer globally as well
-        enable_disable_globally_loop(self, self.user, user_enabled_state=True)
-
-        result = self.cli_runner.invoke(computer_disable,
-                                        ['--user={}'.format(self.user_email),
-                                         str(self.comp.label)])
-        self.assertIsNone(result.exception, msg="Error, output: {}".format(result.output))
-        self.assertFalse(self.comp.is_user_enabled(self.user))
-        # enable and disable the computer globally as well
-        enable_disable_globally_loop(self, self.user, user_enabled_state=False)
-
-        result = self.cli_runner.invoke(computer_enable,
-                                        ['--user={}'.format(self.user_email),
-                                         str(self.comp.label)])
-        self.assertIsNone(result.exception, msg="Error, output: {}".format(result.output))
-        self.assertTrue(self.comp.is_user_enabled(self.user))
-        # enable and disable the computer globally as well
-        enable_disable_globally_loop(self, self.user, user_enabled_state=True)
 
     def test_computer_test(self):
         """

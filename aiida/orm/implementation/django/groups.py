@@ -116,6 +116,10 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
         """
         return self._dbmodel.dbnodes.count()
 
+    def clear(self):
+        """Remove all the nodes from this group."""
+        self._dbmodel.dbnodes.clear()
+
     @property
     def nodes(self):
         """Get an iterator to the nodes in the group"""

@@ -610,6 +610,27 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
     migrate_from = '7ca08c391c49'  # 7ca08c391c49_calc_job_option_attribute_keys
     migrate_to = '041a79fc615f'  # 041a79fc615f_dblog_cleaning
 
+    def tearDown(self):
+        """Need to manually delete all the workflows created for the test because the model does not exist any more.
+
+        Because the model does not exist anymore, they are no longer being cleaned in the database reset of the test
+        base class. To prevent foreign keys from other tables still referencing these tables, we have to make sure to
+        clean them here manually, before we call the parent, which will call the standard reset database methods.
+        """
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
+        DbWorkflow = self.get_auto_base().classes.db_dbworkflow  # pylint: disable=invalid-name
+
+        with sa.engine.begin() as connection:
+            try:
+                session = Session(connection.engine)
+                session.query(DbWorkflow).delete()
+                session.commit()
+            finally:
+                session.close()
+
+        super(TestDbLogMigrationRecordCleaning, self).tearDown()
+
     def setUpBeforeMigration(self):
         # pylint: disable=too-many-locals,too-many-statements
         import importlib
@@ -777,6 +798,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
                 raise
             finally:
                 session.close()
+
 
     def test_dblog_calculation_node(self):
         """

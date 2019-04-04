@@ -225,7 +225,7 @@ def _show_xmgrace(exec_name, list_bands):
         print("Note: the call to {} ended with an error.".format(exec_name))
     except OSError as err:
         if err.errno == 2:
-            print("No executable '{}' found. Add to the path," " or try with an absolute path.".format(exec_name))
+            print("No executable '{}' found. Add to the path, or try with an absolute path.".format(exec_name))
             sys.exit(1)
         else:
             raise

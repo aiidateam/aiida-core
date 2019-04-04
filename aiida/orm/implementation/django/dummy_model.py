@@ -90,7 +90,6 @@ class DbComputer(Base):
     hostname = Column(String(255))
 
     description = Column(Text, nullable=True)
-    enabled = Column(Boolean)
 
     transport_type = Column(String(255))
     scheduler_type = Column(String(255))

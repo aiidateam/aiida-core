@@ -86,24 +86,34 @@ class ProcessNode(Sealable, Node):
         from aiida.orm.utils.log import create_logger_adapter
         return create_logger_adapter(self._logger, self)
 
-    def load_process_class(self):
-        """
-        For nodes that were ran by a Process, the process_type will be set. This can either be an entry point
-        string or a module path, which is the identifier for that Process. This method will attempt to load
-        the Process class and return
-        """
-        import importlib
-        from aiida.plugins.entry_point import load_entry_point_from_string, is_valid_entry_point_string
+    @property
+    def process_class(self):
+        """Return the process class that was used to create this node.
 
-        if self.process_type is None:
-            return None
+        :return: `Process` class
+        :raises ValueError: if no process type is defined, it is an invalid process type string or cannot be resolved
+            to load the corresponding class
+        """
+        from aiida.common import exceptions
+        from aiida.plugins.entry_point import load_entry_point_from_string
 
-        if is_valid_entry_point_string(self.process_type):
+        if not self.process_type:
+            raise ValueError('no process type for CalcJobNode<{}>: cannot recreate process class'.format(self.pk))
+
+        try:
             process_class = load_entry_point_from_string(self.process_type)
-        else:
-            class_module, class_name = self.process_type.rsplit('.', 1)
-            module = importlib.import_module(class_module)
-            process_class = getattr(module, class_name)
+        except exceptions.EntryPointError as exception:
+            raise ValueError('could not load process class for entry point {} for CalcJobNode<{}>: {}'.format(
+                self.pk, self.process_type, exception))
+        except ValueError:
+            try:
+                import importlib
+                module_name, class_name = self.process_type.rsplit('.', 1)
+                module = importlib.import_module(module_name)
+                process_class = getattr(module, class_name)
+            except (ValueError, ImportError):
+                raise ValueError('could not load process class CalcJobNode<{}> given its `process_type`: {}'.format(
+                    self.pk, self.process_type))
 
         return process_class
 

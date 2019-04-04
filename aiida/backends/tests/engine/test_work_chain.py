@@ -1168,10 +1168,16 @@ class TestWorkChainExpose(AiidaTestCase):
         self.assertEquals(
             res, {
                 'a': Float(2.2),
-                'sub_1.b': Float(2.3),
-                'sub_1.c': Bool(True),
-                'sub_2.b': Float(1.2),
-                'sub_2.sub_3.c': Bool(False)
+                'sub_1': {
+                    'b': Float(2.3),
+                    'c': Bool(True)
+                },
+                'sub_2': {
+                    'b': Float(1.2),
+                    'sub_3': {
+                        'c': Bool(False)
+                    }
+                }
             })
 
     @unittest.skip('Reenable when issue #2515 is solved: references to deleted ORM instances')
@@ -1194,11 +1200,21 @@ class TestWorkChainExpose(AiidaTestCase):
                 )))
         self.assertEquals(
             res, {
-                'sub.sub.a': Float(2.2),
-                'sub.sub.sub_1.b': Float(2.3),
-                'sub.sub.sub_1.c': Bool(True),
-                'sub.sub.sub_2.b': Float(1.2),
-                'sub.sub.sub_2.sub_3.c': Bool(False)
+                'sub': {
+                    'sub': {
+                        'a': Float(2.2),
+                        'sub_1': {
+                            'b': Float(2.3),
+                            'c': Bool(True)
+                        },
+                        'sub_2': {
+                            'b': Float(1.2),
+                            'sub_3': {
+                                'c': Bool(False)
+                            }
+                        }
+                    }
+                }
             })
 
     def test_issue_1741_expose_inputs(self):

@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Module for authinfo backend classes."""
+"""Module for the backend implementation of the `AuthInfo` ORM class."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -22,133 +22,87 @@ __all__ = ('BackendAuthInfo', 'BackendAuthInfoCollection')
 
 @six.add_metaclass(abc.ABCMeta)
 class BackendAuthInfo(backends.BackendEntity):
-    """
-    Base class for backend authorization information which contains computer configuration
-    specific to a given user (authorization info and other metadata, like
-    how often to check on a given computer etc.)
-    """
+    """Backend implementation for the `AuthInfo` ORM class."""
 
     METADATA_WORKDIR = 'workdir'
 
-    def pk(self):
-        """
-        Return the principal key in the DB.
-        """
-        return self.id
-
-    @abc.abstractproperty
-    def id(self):  # pylint: disable=invalid-name
-        """
-        Return the ID in the DB.
-        """
-
     @abc.abstractproperty
     def enabled(self):
-        """
-        Is the computer enabled for this user?
+        """Return whether this instance is enabled.
 
-        :rtype: bool
+        :return: boolean, True if enabled, False otherwise
         """
 
     @enabled.setter
     def enabled(self, value):
-        """
-        Set the enabled state for the computer
+        """Set the enabled state
 
-        :return: Boolean
+        :param enabled: boolean, True to enable the instance, False to disable it
         """
 
     @abc.abstractproperty
     def computer(self):
-        """
-        The computer that this authinfo relates to
+        """Return the computer associated with this instance.
 
-        :return: The corresponding computer
-        :rtype: :class:`aiida.orm.Computer`
+        :return: :class:`aiida.orm.implementation.computers.BackendComputer`
         """
 
     @abc.abstractproperty
     def user(self):
-        """
-        The user that this authinfo relates to
+        """Return the user associated with this instance.
 
-        :return: The corresponding user
-        :rtype: :class:`aiida.orm.User`
-        """
-
-    @abc.abstractproperty
-    def is_stored(self):
-        """
-        Is it already stored or not?
-
-        :return: Boolean
-        :rtype: bool
+        :return: :class:`aiida.orm.implementation.users.BackendUser`
         """
 
     @abc.abstractmethod
     def get_auth_params(self):
-        """
-        Get the dictionary of auth_params
+        """Return the dictionary of authentication parameters
 
-        :return: a dictionary
+        :return: a dictionary with authentication parameters
         """
 
     @abc.abstractmethod
     def set_auth_params(self, auth_params):
-        """
-        Set the dictionary of auth_params
+        """Set the dictionary of authentication parameters
 
-        :param auth_params: a dictionary with the new auth_params
+        :param auth_params: a dictionary with authentication parameters
         """
 
     @abc.abstractmethod
     def get_metadata(self):
-        """
-        Get the metadata dictionary
+        """Return the dictionary of metadata
 
-        :return: a dictionary
+        :return: a dictionary with metadata
         """
 
     @abc.abstractmethod
     def set_metadata(self, metadata):
-        """
-        Replace the metadata dictionary in the DB with the provided dictionary
-        """
+        """Set the dictionary of metadata
 
-    def get_property(self, name):
-        try:
-            return self.get_metadata()[name]
-        except KeyError:
-            raise ValueError('Unknown property: {}'.format(name))
-
-    def set_property(self, name, value):
-        metadata = self.get_metadata()
-        metadata[name] = value
-        self.set_metadata(metadata)
+        :param metadata: a dictionary with metadata
+        """
 
 
 @six.add_metaclass(abc.ABCMeta)
 class BackendAuthInfoCollection(backends.BackendCollection[BackendAuthInfo]):
-    """The collection of AuthInfo entries."""
+    """The collection of backend `AuthInfo` entries."""
 
     ENTITY_CLASS = BackendAuthInfo
 
     @abc.abstractmethod
-    def delete(self, authinfo_id):
-        """
-        Remove an AuthInfo from the collection with the given id
-        :param authinfo_id: The ID of the authinfo to delete
+    def delete(self, pk):
+        """Delete an entry from the collection.
+
+        :param pk: the pk of the entry to delete
         """
 
     @abc.abstractmethod
     def get(self, computer, user):
-        """
-        Return a AuthInfo given a computer and a user
+        """Return an entry from the collection that is configured for the given computer and user
 
-        :param computer: a Computer instance
-        :param user: a User instance
-        :return: a AuthInfo object associated to the given computer and user
-        :raise aiida.common.NotExistent: if the user is not configured to use computer
-        :raise sqlalchemy.orm.exc.MultipleResultsFound: if the user is configured
-            more than once to use the computer! Should never happen
+        :param computer: a :class:`aiida.orm.implementation.computers.BackendComputer` instance
+        :param user: a :class:`aiida.orm.implementation.users.BackendUser` instance
+        :return: :class:`aiida.orm.implementation.authinfos.BackendAuthInfo`
+        :raise aiida.common.exceptions.NotExistent: if no entry exists for the computer/user pair
+        :raise aiida.common.exceptions.MultipleObjectsError: if multiple entries exist for the computer/user pair
         """

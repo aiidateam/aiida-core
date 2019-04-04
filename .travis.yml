@@ -83,7 +83,7 @@ git:
 jobs:
     include:
         - stage: deploy
-          if: "branch = master AND tag =~ ^v[0-9]+\\.[0-9]+\\.[0-9]+(a|b|rc)?[0-9]*$"
+          if: "tag =~ ^v[0-9]+\\.[0-9]+\\.[0-9]+(a|b|rc)?[0-9]*$"
           services: ignore
           addons: skip
           python: 3.6

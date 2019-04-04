@@ -14,7 +14,6 @@ from __future__ import absolute_import
 
 from aiida.backends.djsite.db.models import DbAuthInfo
 from aiida.common import exceptions
-from aiida.common import json
 from aiida.common.lang import type_check
 
 from ..authinfos import BackendAuthInfo, BackendAuthInfoCollection
@@ -89,20 +88,13 @@ class DjangoAuthInfo(entities.DjangoModelEntity[DbAuthInfo], BackendAuthInfo):
 
         :return: a dictionary
         """
-        try:
-            return json.loads(self._dbmodel.auth_params)
-        except ValueError:
-            email = self._dbmodel.aiidauser.email
-            hostname = self._dbmodel.dbcomputer.hostname
-            raise exceptions.DbContentError(
-                "Error while reading auth_params for dbauthinfo, aiidauser={}, computer={}".format(email, hostname))
+        return self._dbmodel.auth_params
 
     def set_auth_params(self, auth_params):
         """
         Replace the auth_params dictionary in the DB with the provided dictionary
         """
-        # Raises ValueError if data is not JSON-serializable
-        self._dbmodel.auth_params = json.dumps(auth_params)
+        self._dbmodel.auth_params = auth_params
 
     def get_metadata(self):
         """
@@ -110,19 +102,13 @@ class DjangoAuthInfo(entities.DjangoModelEntity[DbAuthInfo], BackendAuthInfo):
 
         :return: a dictionary
         """
-        try:
-            return json.loads(self._dbmodel.metadata)
-        except ValueError:
-            raise exceptions.DbContentError(
-                "Error while reading metadata for dbauthinfo, aiidauser={}, computer={}".format(
-                    self.aiidauser.email, self.dbcomputer.hostname))
+        return self._dbmodel.metadata
 
     def set_metadata(self, metadata):
         """
         Replace the metadata dictionary in the DB with the provided dictionary
         """
-        # Raises ValueError if data is not JSON-serializable
-        self._dbmodel.metadata = json.dumps(metadata)
+        self._dbmodel.metadata = metadata
 
     def store(self):
         """

@@ -17,6 +17,7 @@ from six.moves import zip, range
 from django.db import models as m
 from django.contrib.auth.models import (
     AbstractBaseUser, BaseUserManager, PermissionsMixin)
+from django.contrib.postgres.fields import JSONField
 from django.utils.encoding import python_2_unicode_compatible
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.query import QuerySet
@@ -1301,8 +1302,8 @@ class DbComputer(m.Model):
     # TODO: next three fields should not be blank...
     transport_type = m.CharField(max_length=255)
     scheduler_type = m.CharField(max_length=255)
-    transport_params = m.TextField(default="{}")  # Will store a json
-    metadata = m.TextField(default="{}")  # Will store a json
+    transport_params = JSONField(default=dict)
+    metadata = JSONField(default=dict)
 
     def __str__(self):
         return '{} ({})'.format(self.name, self.hostname)
@@ -1317,13 +1318,12 @@ class DbAuthInfo(m.Model):
     # Delete the DbAuthInfo if either the user or the computer are removed
     aiidauser = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.CASCADE)
     dbcomputer = m.ForeignKey(DbComputer, on_delete=m.CASCADE)
-    auth_params = m.TextField(default="{}")  # Will store a json; contains mainly the remoteuser
-    # and the private_key
+    auth_params = JSONField(default=dict)  # contains mainly the remoteuser and the private_key
 
     # The keys defined in the metadata of the DbAuthInfo will override the
     # keys with the same name defined in the DbComputer (using a dict.update()
     # call of python).
-    metadata = m.TextField(default="{}")  # Will store a json
+    metadata = JSONField(default=dict)
     # Whether this computer is enabled (user-level enabling feature)
     enabled = m.BooleanField(default=True)
 
@@ -1355,18 +1355,13 @@ class DbComment(m.Model):
 
 @python_2_unicode_compatible
 class DbLog(m.Model):
-    # Creation time
     uuid = m.UUIDField(default=get_new_uuid, unique=True)
     time = m.DateTimeField(default=timezone.now, editable=False)
     loggername = m.CharField(max_length=255, db_index=True)
     levelname = m.CharField(max_length=50, db_index=True)
-    # A string to know what is the referred object (e.g. a Calculation,
-    # or other)
     dbnode = m.ForeignKey(DbNode, related_name='dblogs', on_delete=m.CASCADE)
-    # because it may be in different
-    # tables
     message = m.TextField(blank=True)
-    metadata = m.TextField(default="{}")  # Will store a json
+    metadata = JSONField(default=dict)
 
     def __str__(self):
         return 'DbLog: {} for node {}: {}'.format(self.levelname, self.dbnode.id, self.message)

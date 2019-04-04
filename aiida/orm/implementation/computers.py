@@ -66,7 +66,7 @@ class BackendComputer(backends.BackendEntity):
         pass
 
     @abc.abstractmethod
-    def set_metadata(self, metadata_dict):
+    def set_metadata(self, metadata):
         """
         Set the metadata.
 

@@ -94,8 +94,8 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
     def get_metadata(self):
         return self._dbmodel._metadata  # pylint: disable=protected-access
 
-    def set_metadata(self, metadata_dict):
-        self._dbmodel._metadata = metadata_dict  # pylint: disable=protected-access
+    def set_metadata(self, metadata):
+        self._dbmodel._metadata = metadata  # pylint: disable=protected-access
 
     def get_transport_params(self):
         """

@@ -318,7 +318,7 @@ class Computer(entities.Entity):
     def get_metadata(self):
         return self._backend_entity.get_metadata()
 
-    def set_metadata(self, metadata_dict):
+    def set_metadata(self, metadata):
         """
         Set the metadata.
 
@@ -326,7 +326,7 @@ class Computer(entities.Entity):
            data to the database! (The store method can be called multiple
            times, differently from AiiDA Node objects).
         """
-        self._backend_entity.set_metadata(metadata_dict)
+        self._backend_entity.set_metadata(metadata)
 
     def delete_property(self, name, raise_exception=True):
         """
@@ -350,9 +350,9 @@ class Computer(entities.Entity):
         :param name: the property name
         :param value: the new value
         """
-        olddata = self.get_metadata()
-        olddata[name] = value
-        self.set_metadata(olddata)
+        metadata = self.get_metadata() or {}
+        metadata[name] = value
+        self.set_metadata(metadata)
 
     def get_property(self, name, *args):
         """

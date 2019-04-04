@@ -895,21 +895,7 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
                                 raise exceptions.UniquenessError("A computer of that name ( {} ) already exists"
                                     " and I could not create a new one".format(orig_name))
 
-                        # The following is done for compatibility reasons
-                        # In case the export file was generate with the SQLA
-                        # export method
-                        if isinstance(import_data['metadata'], dict):
-                            import_data['metadata'] = json.dumps(import_data['metadata'])
-                        if isinstance(import_data['transport_params'], dict):
-                            import_data['transport_params'] = json.dumps(import_data['transport_params'])
-
                         imported_comp_names.add(import_data['name'])
-
-                    elif Model is models.DbLog:
-                        # Django requires metadata as a string.
-                        # A JSON-serializable string.
-                        if isinstance(import_data['metadata'], dict):
-                            import_data['metadata'] = json.dumps(import_data['metadata'])
 
                     objects_to_create.append(Model(**import_data))
                     import_entry_ids[unique_id] = import_entry_id

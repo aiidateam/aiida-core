@@ -660,7 +660,7 @@ class Computer(entities.Entity):
 
         if not set(kwargs.keys()).issubset(valid_keys):
             invalid_keys = [key for key in kwargs if key not in valid_keys]
-            raise ValueError('{transport}: recieved invalid authentication parameter(s) "{invalid}"'.format(
+            raise ValueError('{transport}: received invalid authentication parameter(s) "{invalid}"'.format(
                 transport=transport_cls, invalid=invalid_keys))
 
         try:

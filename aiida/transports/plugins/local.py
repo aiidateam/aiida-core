@@ -67,8 +67,9 @@ class LocalTransport(Transport):
         if self._machine and self._machine != 'localhost':
             self.logger.debug('machine was passed, but it is not localhost')
         self._safe_open_interval = kwargs.pop('safe_interval', self._DEFAULT_SAFE_OPEN_INTERVAL)
+
         if kwargs:
-            raise ValueError("Input parameters to LocalTransport are not recognized")
+            raise ValueError('the following keywords are not recognized: {}'.format(kwargs))
 
     def open(self):
         """

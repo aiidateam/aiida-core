@@ -41,30 +41,29 @@ To leave or deactivate the environment, simply run::
 
 .. _aiida_path_in_virtualenv:
 
-Creating an ``.aiida`` folder in your virtualenvironment
---------------------------------------------------------
+Isolating the configuration folder in your virtual environment
+--------------------------------------------------------------
 
-When you run AiiDA in multiple virtual environments, it can be convenient to use a separate ``.aiida`` folder for each virtualenv. To do this, you can use the :ref:`AIIDA_PATH mechanism <directory_location>` as follows:
+When you run AiiDA in multiple virtual environments, it can be convenient to use a separate ``.aiida`` configuration folder for each environment.
+To do this, you can use the :ref:```AIIDA_PATH`` mechanism <directory_location>` as follows:
 
-1. Create your virtualenv, as described above
-2. Create a ``.aiida`` directory in your virtualenv directory::
-
-    mkdir ~/.virtualenvs/my_env/.aiida
-3. At the end of ``~/.virtualenvs/my_env/bin/activate``, add the following line::
+1. Create your virtual environment, as described above
+2. At the end of ``~/.virtualenvs/my_env/bin/activate``, add the following line, which will set the ``AIIDA_PATH`` environment variable::
 
     export AIIDA_PATH='~/.virtualenvs/my_env'
-4. Deactivate and re-activate the virtualenv
-5. You can test that everything is set up correctly if you can reproduce the following::
+
+3. Deactivate and re-activate the virtual environment
+4. You can test that everything is set up correctly if you can reproduce the following::
 
     (my_env)$ echo $AIIDA_PATH
     >>> ~/.virtualenvs/my_env
 
     (my_env)$ verdi profile list
-    >>> Configuration folder: /home/my_username/.virtualenvs/my_env/.aiida
-    >>> Stopping: No configuration file found
-    >>> Note: if no configuration file was found, it means that you have not run
-    >>> 'verdi setup' yet to configure at least one AiiDA profile.
-6. Continue setting up AiiDA with ``verdi setup`` or ``verdi quicksetup``.
+    >>> Info: configuration folder: /home/my_username/.virtualenvs/my_env/.aiida
+    >>> Critical: configuration file /home/my_username/.virtualenvs/my_env/.aiida/config.json does not exist
+
+   Note: if you get the 'Critical' message, it simply means that you have not yet run `verdi setup` to configure at least one AiiDA profile.
+5. Continue setting up AiiDA with ``verdi setup`` or ``verdi quicksetup``.
 
 Aiida python package
 ====================
@@ -80,7 +79,7 @@ Install the ``aiida`` python package from `PyPI`_ using:
 
     pip install --pre aiida
 
-.. note:: 
+.. note::
     If you are installing AiiDA in your system environment,
     consider adding the ``--user`` flag to avoid the need for
     administrator privileges.
@@ -134,7 +133,7 @@ Most users should use the interactive quicksetup:
 .. code-block:: bash
 
     verdi quicksetup <profile_name>
-    
+
 which leads through the installation process and takes care of creating the corresponding AiiDA database.
 
 For maximum control and customizability, one can use ``verdi setup``
@@ -208,9 +207,9 @@ If you uses the same names used in the example commands above, during the ``verd
 Database setup using Unix sockets
 +++++++++++++++++++++++++++++++++
 
-Instead of using passwords to protect access to the database 
+Instead of using passwords to protect access to the database
 (which could be used by other users on the same machine),
-PostgreSQL allows password-less logins via Unix sockets. 
+PostgreSQL allows password-less logins via Unix sockets.
 
 In this scenario PostgreSQL compares the user connecting to the socket with its
 own database of users and will allow a connection if a matching user exists.
@@ -317,7 +316,7 @@ Place this command in your startup file, i.e. one of
 * the `activate script <https://virtualenv.pypa.io/en/latest/userguide/#activate-script>`_ of your virtual environment
 * a `startup file <https://conda.io/docs/user-guide/tasks/manage-environments.html#saving-environment-variables>`_ for your conda environment
 
-In order to enable tab completion in your current shell, 
+In order to enable tab completion in your current shell,
 make sure to source the startup file once.
 
 .. note::
@@ -356,31 +355,36 @@ After updating your ``PATH`` you can check if it worked in the following way:
 
 .. _directory_location:
 
+
 Customizing the configuration directory location
 ------------------------------------------------
 
-By default, the AiiDA configuration is stored in the directory ``~/.aiida``. This can be changed by setting the ``AIIDA_PATH`` environment variable. The value of ``AIIDA_PATH`` can be a colon-separated list of paths. For each of the paths in the list, AiiDA will look for a ``.aiida`` directory in the given path and all of its parent folders. If no ``.aiida`` directory is found, ``~/.aiida`` will be used.
+By default, the AiiDA configuration is stored in the directory ``~/.aiida``.
+This can be changed by setting the ``AIIDA_PATH`` environment variable.
+The value of ``AIIDA_PATH`` can be a colon-separated list of paths.
+For each of the paths in the list, AiiDA will look for a ``.aiida`` directory in the given path.
+The first configuration folder that is encountered will be used
+If no ``.aiida`` directory is found in any of the paths found in the environment variable, one will be created automatically in the last path that was considered.
 
 For example, the directory structure in your home might look like this ::
 
     .
     ├── .aiida
-    ├── project_a
-    │   ├── .aiida
-    │   └── subfolder
-    └── project_b
-        └── .aiida
+    └── project_a
+        ├── .aiida
+        └── subfolder
 
-If you set ::
 
-    export AIIDA_PATH='~/project_a:~/project_b'
+If you leave the ``AIIDA_PATH`` variable unset, the default location in your home will be used.
+However, if you set ::
 
-the configuration directory used will be ``~/project_a/.aiida``. The same is true if you set ``AIIDA_PATH='~/project_a/subdir'``, because ``subdir`` itself does not contain a ``.aiida`` folder, so AiiDA will first check its parent directories.
+    export AIIDA_PATH='~/project_a:'
 
-If you set ``AIIDA_PATH='.'``, the configuration directory used depends on the current working directory. Inside the ``project_a`` and ``project_b`` directories, their respective ``.aiida`` directory will be used. Outside of these directories, ``~/.aiida`` is used.
+The configuration directory used will be ``~/project_a/.aiida``.
 
-An example for when this option might be used is when two different AiiDA versions are used simultaneously. Using two different ``.aiida`` directories also allows running two daemon concurrently.
-Note however that this option does **not** change the database cluster that is being used. This means that by default you still need to take care that the database names do not clash.
+.. warning::
+    Note that even if the sub directory ``.aiida`` would not yet have existed in ``~/project_a``, AiiDA will automatically create it for you.
+    Be careful therefore to check that the path you set for ``AIIDA_PATH`` is correct.
 
 Using AiiDA in Jupyter
 ----------------------
@@ -414,7 +418,7 @@ add the following code to a ``.py`` file (create one if there isn't any) in ``<h
 
       # Get the current Ipython session
       ipython = IPython.get_ipython()
-  
+
       # Register the line magic
       load_ipython_extension(ipython)
 

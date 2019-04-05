@@ -46,14 +46,9 @@ def profile_list():
     if not config.profiles:
         echo.echo_info('no profiles configured')
     else:
-
-        default_profile = config.default_profile_name
-
-        for profile in sorted(config.profiles, key=lambda p: p.name):
-            if profile.name == default_profile:
-                click.secho('{} {}'.format('*', profile.name), fg='green')
-            else:
-                click.secho('{} {}'.format(' ', profile.name))
+        sort = lambda profile: profile.name
+        highlight = lambda profile: profile.name == config.default_profile_name
+        echo.echo_formatted_list(config.profiles, ['name'], sort=sort, highlight=highlight)
 
 
 @verdi_profile.command('show')

@@ -388,50 +388,22 @@ def computer_disable(computer, user):
 @with_dbenv()
 def computer_list(all_entries, raw):
     """List available computers."""
-    from aiida import orm
-
-    computer_names = get_computer_names()
+    from aiida.orm import Computer, User
 
     if not raw:
         echo.echo_info('List of configured computers')
-        echo.echo_info("Use 'verdi computer show COMPUTERNAME' to see detailed information")
-    if computer_names:
-        for name in sorted(computer_names):
-            computer = orm.Computer.objects.get(name=name)
+        echo.echo_info("Use 'verdi computer show COMPUTERNAME' to display more detailed information")
 
-            user = orm.User.objects.get_default()
-            is_configured = computer.is_user_configured(user)
-            is_user_enabled = computer.is_user_enabled(user)
+    computers = Computer.objects.all()
+    user = User.objects.get_default()
 
-            if not all_entries:
-                if not is_configured or not is_user_enabled:
-                    continue
-
-            if is_configured:
-                configured_str = ''
-                if is_user_enabled:
-                    symbol = '*'
-                    color = 'green'
-                    enabled_str = ''
-                else:
-                    symbol = 'x'
-                    color = 'red'
-                    enabled_str = '[DISABLED for this user]'
-            else:
-                symbol = 'x'
-                color = 'reset'
-                enabled_str = ''
-                configured_str = ' [unconfigured]'
-
-            if raw:
-                echo.echo(click.style('{}'.format(name), fg=color))
-            else:
-                echo.echo(click.style('{} '.format(symbol), fg=color), nl=False)
-                echo.echo(click.style('{} '.format(name), bold=True, fg=color), nl=False)
-                echo.echo(click.style('{}{}'.format(enabled_str, configured_str), fg=color))
-
-    else:
+    if not computers:
         echo.echo_info("No computers configured yet. Use 'verdi computer setup'")
+
+    sort = lambda computer: computer.name
+    highlight = lambda comp: comp.is_user_configured(user) and comp.is_user_enabled(user)
+    hide = lambda comp: not (comp.is_user_configured(user) and comp.is_user_enabled(user)) and not all_entries
+    echo.echo_formatted_list(computers, ['name'], sort=sort, highlight=highlight, hide=hide)
 
 
 @verdi_computer.command('show')
@@ -439,7 +411,7 @@ def computer_list(all_entries, raw):
 @with_dbenv()
 def computer_show(computer):
     """Show information for a computer."""
-    return echo.echo(computer.full_text_info)
+    echo.echo(computer.full_text_info)
 
 
 @verdi_computer.command('rename')

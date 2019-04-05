@@ -128,8 +128,9 @@ class BackendGroup(backends.BackendEntity):
 
     @abc.abstractproperty
     def is_stored(self):
-        """
-        :return: True if the respective DbNode has been already saved in the DB, False otherwise
+        """Return whether the group is stored.
+
+        :return: boolean, True if the group is stored, False otherwise
         """
 
     @abc.abstractmethod
@@ -150,6 +151,10 @@ class BackendGroup(backends.BackendEntity):
 
         :return: integer number of entities contained within the group
         """
+
+    @abc.abstractmethod
+    def clear(self):
+        """Remove all the nodes from this group."""
 
     def add_nodes(self, nodes, **kwargs):  # pylint: disable=unused-argument
         """Add a set of nodes to the group.

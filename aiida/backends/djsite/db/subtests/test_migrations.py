@@ -702,3 +702,76 @@ class TestParameterDataToDictMigration(TestMigrations):
         """Verify that type string of the nodes was successfully adapted."""
         node = self.load_node(self.node.id)
         self.assertEqual(node.type, 'data.dict.Dict.')
+
+
+class TestTextFieldToJSONFieldMigration(TestMigrations):
+
+    migrate_from = '0032_remove_legacy_workflows'
+    migrate_to = '0033_replace_text_field_with_json_field'
+
+    def setUpBeforeMigration(self):
+        from aiida.common import json
+
+        self.DbNode = self.apps.get_model('db', 'DbNode')
+        self.DbComputer = self.apps.get_model('db', 'DbComputer')
+        self.DbAuthInfo = self.apps.get_model('db', 'DbAuthInfo')
+        self.DbLog = self.apps.get_model('db', 'DbLog')
+
+        self.node = self.DbNode(node_type="node.process.calculation.CalculationNode.", user_id=self.default_user.id)
+        self.node.save()
+
+        self.computer_metadata = {'shebang': '#!/bin/bash', 'workdir': '/scratch/', 'append_text': '', 'prepend_text': '', 'mpirun_command': ['mpirun', '-np', '{tot_num_mpiprocs}'], 'default_mpiprocs_per_machine': 1}
+        self.computer_transport_params = {'append_text': 'sometext\ntest', 'max_machines': 1}
+        self.computer_kwargs = {
+            'name': 'localhost_testing',
+            'hostname': 'localhost',
+            'transport_type': 'local',
+            'scheduler_type': 'direct',
+            'transport_params': json.dumps(self.computer_transport_params),
+            'metadata': json.dumps(self.computer_metadata),
+        }
+        self.computer = self.DbComputer(**self.computer_kwargs)
+        self.computer.save()
+
+        self.auth_info_auth_params = {'safe_interval': 2}
+        self.auth_info_metadata = {'safe_interval': 2}
+        self.auth_info_kwargs = {
+            'aiidauser_id': self.default_user.pk,
+            'dbcomputer': self.computer,
+            'auth_params': json.dumps(self.auth_info_auth_params),
+            'metadata': json.dumps(self.auth_info_metadata),
+        }
+        self.auth_info = self.DbAuthInfo(**self.auth_info_kwargs)
+        self.auth_info.save()
+
+        self.log_metadata = {
+            'msecs': 719.0849781036377,
+            'lineno': 350,
+            'thread': 140011612940032,
+            'asctime': '10/21/2018 12:39:51 PM',
+            'created': 1540118391.719085,
+            'levelno': 23,
+            'message': 'calculation node 1',
+        }
+        self.log_kwargs = {
+            'loggername': 'localhost',
+            'levelname': 'localhost',
+            'dbnode_id': self.node.id,
+            'metadata': json.dumps(self.log_metadata)
+        }
+        self.log = self.DbLog(**self.log_kwargs)
+        self.log.save()
+
+    def test_text_field_to_json_field_migration(self):
+        """Verify that the values in the text fields were maintained after migrating the field to JSONField."""
+        # Reload the objects to make sure the new data is loaded
+        computer = self.DbComputer.objects.get(pk=self.computer.id)
+        auth_info = self.DbAuthInfo.objects.get(pk=self.auth_info.id)
+        log = self.DbLog.objects.get(pk=self.log.id)
+
+        # Make sure that the migrated data matches the original
+        self.assertDictEqual(computer.metadata, self.computer_metadata)
+        self.assertDictEqual(computer.transport_params, self.computer_transport_params)
+        self.assertDictEqual(auth_info.metadata, self.auth_info_metadata)
+        self.assertDictEqual(auth_info.auth_params, self.auth_info_auth_params)
+        self.assertDictEqual(log.metadata, self.log_metadata)

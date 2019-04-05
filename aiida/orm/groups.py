@@ -107,7 +107,7 @@ class Group(entities.Entity):
                  type=None):
         """
         Create a new group. Either pass a dbgroup parameter, to reload
-        ad group from the DB (and then, no further parameters are allowed),
+        a group from the DB (and then, no further parameters are allowed),
         or pass the parameters for the Group creation.
 
         :param dbgroup: the dbgroup object, if you want to reload the group
@@ -280,6 +280,10 @@ class Group(entities.Entity):
             return True
         else:
             return False
+
+    def clear(self):
+        """Remove all the nodes from this group."""
+        return self._backend_entity.clear()
 
     def add_nodes(self, nodes):
         """Add a node or a set of nodes to the group.

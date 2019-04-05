@@ -14,12 +14,12 @@ from __future__ import absolute_import
 
 __all__ = ('AiidaException', 'NotExistent', 'MultipleObjectsError', 'RemoteOperationError', 'ContentNotExistent',
            'FailedError', 'StoringNotAllowed', 'ModificationNotAllowed', 'IntegrityError', 'UniquenessError',
-           'MissingEntryPointError', 'MultipleEntryPointError', 'LoadingEntryPointError', 'MissingPluginError',
-           'LoadingPluginFailed', 'InvalidOperation', 'ParsingError', 'InternalError', 'PluginInternalError',
-           'ValidationError', 'ConfigurationError', 'ProfileConfigurationError', 'MissingConfigurationError',
-           'ConfigurationVersionError', 'DbContentError', 'InputValidationError', 'FeatureNotAvailable',
-           'FeatureDisabled', 'LicensingException', 'TestsNotAllowedError', 'UnsupportedSpeciesError',
-           'DanglingLinkError', 'TransportTaskException', 'IncompatibleArchiveVersionError', 'OutputParsingError')
+           'EntryPointError', 'MissingEntryPointError', 'MultipleEntryPointError', 'LoadingEntryPointError',
+           'InvalidOperation', 'ParsingError', 'InternalError', 'PluginInternalError', 'ValidationError',
+           'ConfigurationError', 'ProfileConfigurationError', 'MissingConfigurationError', 'ConfigurationVersionError',
+           'DbContentError', 'InputValidationError', 'FeatureNotAvailable', 'FeatureDisabled', 'LicensingException',
+           'TestsNotAllowedError', 'UnsupportedSpeciesError', 'DanglingLinkError', 'TransportTaskException',
+           'IncompatibleArchiveVersionError', 'OutputParsingError')
 
 
 class AiidaException(Exception):
@@ -92,34 +92,20 @@ class UniquenessError(AiidaException):
     """
 
 
-class MissingEntryPointError(AiidaException):
-    """
-    Raised when the requested entry point is not registered with the entry point manager
-    """
+class EntryPointError(AiidaException):
+    """Raised when an entry point cannot be uniquely resolved and imported."""
 
 
-class MultipleEntryPointError(AiidaException):
-    """
-    Raised when the requested entry point cannot uniquely be resolved by the entry point manager
-    """
+class MissingEntryPointError(EntryPointError):
+    """Raised when the requested entry point is not registered with the entry point manager."""
 
 
-class LoadingEntryPointError(AiidaException):
-    """
-    Raised when the class corresponding to requested entry point cannot be loaded
-    """
+class MultipleEntryPointError(EntryPointError):
+    """Raised when the requested entry point cannot uniquely be resolved by the entry point manager."""
 
 
-class MissingPluginError(AiidaException):
-    """
-    Raised when the user tries to use a plugin that is not available or does not exist.
-    """
-
-
-class LoadingPluginFailed(AiidaException):
-    """
-    Raised when loading a plugin through the plugin loader fails
-    """
+class LoadingEntryPointError(EntryPointError):
+    """Raised when the resource corresponding to requested entry point cannot be imported."""
 
 
 class InvalidOperation(AiidaException):

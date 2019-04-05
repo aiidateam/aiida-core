@@ -64,3 +64,24 @@ class TestPortNamespace(AiidaTestCase):
         port = InputPort('not_storable')
         port_namespace['not_storable'] = port
         self.assertEqual(port.non_db, namespace_non_db)
+
+    def test_validate_port_name(self):
+        """This test will ensure that illegal port names will raise a `ValueError` when trying to add it."""
+        port = InputPort('port')
+        port_namespace = PortNamespace('namespace')
+
+        illegal_port_names = [
+            'two__underscores',
+            'three___underscores',
+            '_leading_underscore',
+            'trailing_underscore_',
+            'non_numeric_%',
+            'including.period',
+            'disallowed👻unicodecharacters',
+            'white space',
+            'das-hes',
+        ]
+
+        for port_name in illegal_port_names:
+            with self.assertRaises(ValueError):
+                port_namespace[port_name] = port

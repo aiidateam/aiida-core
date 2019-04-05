@@ -1168,10 +1168,16 @@ class TestWorkChainExpose(AiidaTestCase):
         self.assertEquals(
             res, {
                 'a': Float(2.2),
-                'sub_1.b': Float(2.3),
-                'sub_1.c': Bool(True),
-                'sub_2.b': Float(1.2),
-                'sub_2.sub_3.c': Bool(False)
+                'sub_1': {
+                    'b': Float(2.3),
+                    'c': Bool(True)
+                },
+                'sub_2': {
+                    'b': Float(1.2),
+                    'sub_3': {
+                        'c': Bool(False)
+                    }
+                }
             })
 
     @unittest.skip('Reenable when issue #2515 is solved: references to deleted ORM instances')
@@ -1194,11 +1200,21 @@ class TestWorkChainExpose(AiidaTestCase):
                 )))
         self.assertEquals(
             res, {
-                'sub.sub.a': Float(2.2),
-                'sub.sub.sub_1.b': Float(2.3),
-                'sub.sub.sub_1.c': Bool(True),
-                'sub.sub.sub_2.b': Float(1.2),
-                'sub.sub.sub_2.sub_3.c': Bool(False)
+                'sub': {
+                    'sub': {
+                        'a': Float(2.2),
+                        'sub_1': {
+                            'b': Float(2.3),
+                            'c': Bool(True)
+                        },
+                        'sub_2': {
+                            'b': Float(1.2),
+                            'sub_3': {
+                                'c': Bool(False)
+                            }
+                        }
+                    }
+                }
             })
 
     def test_issue_1741_expose_inputs(self):
@@ -1296,6 +1312,6 @@ class TestDefaultUniqueness(AiidaTestCase):
 
         # Trying to load one of the inputs through the UUID should fail,
         # as both `child_one.a` and `child_two.a` should have the same UUID.
-        node = load_node(uuid=node.get_incoming().get_node_by_label('child_one_a').uuid)
+        node = load_node(uuid=node.get_incoming().get_node_by_label('child_one__a').uuid)
         self.assertEquals(
             len(uuids), len(nodes), 'Only {} unique UUIDS for {} input nodes'.format(len(uuids), len(nodes)))

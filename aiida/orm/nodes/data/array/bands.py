@@ -1164,9 +1164,9 @@ class BandsData(KpointsData):
         import math
         # load the x and y of every set
         if color_number > max_num_agr_colors:
-            raise ValueError("Color number is too high (should be less than {})" "".format(max_num_agr_colors))
+            raise ValueError("Color number is too high (should be less than {})".format(max_num_agr_colors))
         if color_number2 > max_num_agr_colors:
-            raise ValueError("Color number 2 is too high (should be less than {})" "".format(max_num_agr_colors))
+            raise ValueError("Color number 2 is too high (should be less than {})".format(max_num_agr_colors))
 
         bands = plot_info['y']
         x = plot_info['x']

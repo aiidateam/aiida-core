@@ -12,8 +12,8 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import io
-import sys
 from functools import partial
 from six.moves import zip
 
@@ -225,7 +225,6 @@ def set_computer_builder(ctx, param, value):
 @options_computer.LABEL()
 @options_computer.HOSTNAME()
 @options_computer.DESCRIPTION()
-@options_computer.ENABLED()
 @options_computer.TRANSPORT()
 @options_computer.SCHEDULER()
 @options_computer.SHEBANG()
@@ -238,7 +237,7 @@ def set_computer_builder(ctx, param, value):
 @click.pass_context
 @with_dbenv()
 def computer_setup(ctx, non_interactive, **kwargs):
-    """Add a Computer."""
+    """Add a computer."""
     from aiida.orm.utils.builders.computer import ComputerBuilder
 
     if kwargs['label'] in get_computer_names():
@@ -280,7 +279,6 @@ def computer_setup(ctx, non_interactive, **kwargs):
 @options_computer.LABEL(contextual_default=partial(get_parameter_default, 'label'))
 @options_computer.HOSTNAME(contextual_default=partial(get_parameter_default, 'hostname'))
 @options_computer.DESCRIPTION(contextual_default=partial(get_parameter_default, 'description'))
-@options_computer.ENABLED(contextual_default=partial(get_parameter_default, 'enabled'))
 @options_computer.TRANSPORT(contextual_default=partial(get_parameter_default, 'transport'))
 @options_computer.SCHEDULER(contextual_default=partial(get_parameter_default, 'scheduler'))
 @options_computer.SHEBANG(contextual_default=partial(get_parameter_default, 'shebang'))
@@ -293,7 +291,7 @@ def computer_setup(ctx, non_interactive, **kwargs):
 @click.pass_context
 @with_dbenv()
 def computer_duplicate(ctx, computer, non_interactive, **kwargs):
-    """Duplicate a Computer."""
+    """Duplicate a computer."""
     from aiida import orm
     from aiida.orm.utils.builders.computer import ComputerBuilder
 
@@ -339,61 +337,49 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
 
 
 @verdi_computer.command('enable')
-@options.USER(required=False, help='Enable only for this user instead of globally.')
 @arguments.COMPUTER()
+@arguments.USER()
 @with_dbenv()
-def computer_enable(user, computer):
-    """Enable a computer."""
+def computer_enable(computer, user):
+    """Enable the computer for the given user."""
     from aiida.common.exceptions import NotExistent
 
-    if user is None:
-        if computer.is_enabled():
-            echo.echo_info("Computer '{}' already enabled.".format(computer.name))
-        else:
-            computer.set_enabled_state(True)
-            echo.echo_info("Computer '{}' enabled.".format(computer.name))
-    else:
-        try:
-            authinfo = computer.get_authinfo(user)
-        except NotExistent:
-            echo.echo_critical("User with email '{}' is not configured for computer '{}' yet.".format(
-                user.email, computer.name))
+    try:
+        authinfo = computer.get_authinfo(user)
+    except NotExistent:
+        echo.echo_critical("User with email '{}' is not configured for computer '{}' yet.".format(
+            user.email, computer.name))
 
-        if not authinfo.enabled:
-            authinfo.enabled = True
-            echo.echo_info("Computer '{}' enabled for user {}.".format(computer.name, user.get_full_name()))
-        else:
-            echo.echo_info("Computer '{}' was already enabled for user {} {}.".format(
-                computer.name, user.first_name, user.last_name))
+    if not authinfo.enabled:
+        authinfo.enabled = True
+        echo.echo_info("Computer '{}' enabled for user {}.".format(computer.name, user.get_full_name()))
+    else:
+        echo.echo_info("Computer '{}' was already enabled for user {} {}.".format(computer.name, user.first_name,
+                                                                                  user.last_name))
 
 
 @verdi_computer.command('disable')
-@options.USER(required=False, help='Disable only for this user instead of globally.')
 @arguments.COMPUTER()
+@arguments.USER()
 @with_dbenv()
-def computer_disable(user, computer):
-    """Disable a computer. Useful, for instance, when a computer is under maintenance."""
+def computer_disable(computer, user):
+    """Disable the computer for the given user.
+
+    Thi can be useful, for example, when a computer is under maintenance."""
     from aiida.common.exceptions import NotExistent
 
-    if user is None:
-        if not computer.is_enabled():
-            echo.echo_info("Computer '{}' already disabled.".format(computer.name))
-        else:
-            computer.set_enabled_state(False)
-            echo.echo_info("Computer '{}' disabled.".format(computer.name))
-    else:
-        try:
-            authinfo = computer.get_authinfo(user)
-        except NotExistent:
-            echo.echo_critical("User with email '{}' is not configured for computer '{}' yet.".format(
-                user.email, computer.name))
+    try:
+        authinfo = computer.get_authinfo(user)
+    except NotExistent:
+        echo.echo_critical("User with email '{}' is not configured for computer '{}' yet.".format(
+            user.email, computer.name))
 
-        if authinfo.enabled:
-            authinfo.enabled = False
-            echo.echo_info("Computer '{}' disabled for user {}.".format(computer.name, user.get_full_name()))
-        else:
-            echo.echo_info("Computer '{}' was already disabled for user {} {}.".format(
-                computer.name, user.first_name, user.last_name))
+    if authinfo.enabled:
+        authinfo.enabled = False
+        echo.echo_info("Computer '{}' disabled for user {}.".format(computer.name, user.get_full_name()))
+    else:
+        echo.echo_info("Computer '{}' was already disabled for user {} {}.".format(computer.name, user.first_name,
+                                                                                   user.last_name))
 
 
 @verdi_computer.command('list')
@@ -407,8 +393,8 @@ def computer_list(all_entries, raw):
     computer_names = get_computer_names()
 
     if not raw:
-        echo.echo_info("List of configured computers:")
-        echo.echo_info("(use 'verdi computer show COMPUTERNAME' to see the details)")
+        echo.echo_info('List of configured computers')
+        echo.echo_info("Use 'verdi computer show COMPUTERNAME' to see detailed information")
     if computer_names:
         for name in sorted(computer_names):
             computer = orm.Computer.objects.get(name=name)
@@ -418,36 +404,24 @@ def computer_list(all_entries, raw):
             is_user_enabled = computer.is_user_enabled(user)
 
             if not all_entries:
-                if not is_configured or not is_user_enabled or not computer.is_enabled():
+                if not is_configured or not is_user_enabled:
                     continue
 
-            if computer.is_enabled():
-                if is_configured:
-                    configured_str = ''
-                    if is_user_enabled:
-                        symbol = '*'
-                        color = 'green'
-                        enabled_str = ''
-                    else:
-                        symbol = 'x'
-                        color = 'red'
-                        enabled_str = '[DISABLED for this user]'
+            if is_configured:
+                configured_str = ''
+                if is_user_enabled:
+                    symbol = '*'
+                    color = 'green'
+                    enabled_str = ''
                 else:
                     symbol = 'x'
-                    color = 'reset'
-                    enabled_str = ''
-                    configured_str = ' [unconfigured]'
-            else:  # GLOBALLY DISABLED
+                    color = 'red'
+                    enabled_str = '[DISABLED for this user]'
+            else:
                 symbol = 'x'
-                color = 'red'
-                if is_configured and not is_user_enabled:
-                    enabled_str = ' [DISABLED globally AND for this user]'
-                else:
-                    enabled_str = ' [DISABLED globally]'
-                if is_configured:
-                    configured_str = ''
-                else:
-                    configured_str = ' [unconfigured]'
+                color = 'reset'
+                enabled_str = ''
+                configured_str = ' [unconfigured]'
 
             if raw:
                 echo.echo(click.style('{}'.format(name), fg=color))
@@ -464,9 +438,7 @@ def computer_list(all_entries, raw):
 @arguments.COMPUTER()
 @with_dbenv()
 def computer_show(computer):
-    """
-    Show information on a given computer
-    """
+    """Show information for a computer."""
     return echo.echo(computer.full_text_info)
 
 
@@ -475,9 +447,7 @@ def computer_show(computer):
 @arguments.LABEL('NEW_NAME')
 @with_dbenv()
 def computer_rename(computer, new_name):
-    """
-    Rename a computer
-    """
+    """Rename a computer."""
     from aiida.common.exceptions import UniquenessError
 
     old_name = computer.get_name()
@@ -528,69 +498,60 @@ def computer_test(user, print_traceback, computer):
     if user is None:
         user = orm.User.objects.get_default()
 
-    echo.echo("Testing computer '{}' for user {}...".format(computer.get_name(), user.email))
+    echo.echo('Testing computer<{}> for user<{}>...'.format(computer.name, user.email))
+
     try:
         authinfo = computer.get_authinfo(user)
     except NotExistent:
-        echo.echo_critical("User with email '{}' is not yet configured "
-                           "for computer '{}' yet.".format(user.email, computer.get_name()))
+        echo.echo_critical('Computer<{}> is not yet configured for user<{}>'.format(computer.name, user.email))
 
-    warning_string = None
     if not authinfo.enabled:
-        warning_string = ("** NOTE! Computer is disabled for the "
-                          "specified user!\n   Do you really want to test it? [y/N] ")
-    if not computer.is_enabled():
-        warning_string = ("** NOTE! Computer is disabled!\n" "   Do you really want to test it? [y/N] ")
-    if warning_string:
-        if not click.confirm(warning_string):
-            sys.exit(0)
+        echo.echo_warning('Computer<{}> is disabled for user<{}>'.format(computer.name, user.email))
+        click.confirm('Do you really want to test it?', abort=True)
 
-    sched = authinfo.computer.get_scheduler()
-    trans = authinfo.get_transport()
+    scheduler = authinfo.computer.get_scheduler()
+    transport = authinfo.get_transport()
 
-    ## STARTING TESTS HERE
+    # STARTING TESTS HERE
     num_failures = 0
     num_tests = 0
 
     try:
-        echo.echo("> Testing connection...")
-        with trans:
-            sched.set_transport(trans)
+        echo.echo('> Testing connection...')
+        with transport:
+            scheduler.set_transport(transport)
             num_tests += 1
             for test in [_computer_test_no_unexpected_output, _computer_test_get_jobs, _computer_create_temp_file]:
                 num_tests += 1
                 try:
-                    succeeded = test(transport=trans, scheduler=sched, authinfo=authinfo)
+                    succeeded = test(transport=transport, scheduler=scheduler, authinfo=authinfo)
                 # pylint:disable=broad-except
                 except Exception as error:
-                    echo.echo_error("* The test raised an exception!")
+                    echo.echo_error('* The test raised an exception!')
                     if print_traceback:
-                        echo.echo("** Full traceback:")
+                        echo.echo('** Full traceback:')
                         # Indent
-                        echo.echo("\n".join(["   {}".format(l) for l in traceback.format_exc().splitlines()]))
+                        echo.echo('\n'.join(['   {}'.format(l) for l in traceback.format_exc().splitlines()]))
                     else:
-                        echo.echo("** {}: {}".format(error.__class__.__name__, error))
-                        echo.echo("** (use the --print-traceback option to see the full traceback)")
+                        echo.echo('** {}: {}'.format(error.__class__.__name__, error))
+                        echo.echo('** (use the --print-traceback option to see the full traceback)')
                     succeeded = False
 
                 if not succeeded:
                     num_failures += 1
 
         if num_failures:
-            echo.echo("Some tests failed! ({} out of {} failed)".format(num_failures, num_tests))
+            echo.echo('Some tests failed! ({} out of {} failed)'.format(num_failures, num_tests))
         else:
-            echo.echo("Test completed (all {} tests succeeded)".format(num_tests))
-    # pylint:disable=broad-except
-    except Exception as error:
-        echo.echo_error("** Error while trying to connect to the computer! Cannot "
-                        "   perform following tests, stopping.")
+            echo.echo('Test completed (all {} tests succeeded)'.format(num_tests))
+    except Exception as error:  # pylint:disable=broad-except
+        echo.echo_error('** Error while trying to connect to the computer! Cannot perform following tests, stopping.')
         if print_traceback:
-            echo.echo("** Full traceback:")
-            # Indent
-            echo.echo("\n".join(["   {}".format(l) for l in traceback.format_exc().splitlines()]))
+            echo.echo('** Full traceback:')
+            echo.echo('\n'.join(['   {}'.format(l) for l in traceback.format_exc().splitlines()]))
         else:
-            echo.echo("{}: {}".format(error.__class__.__name__, error))
-            echo.echo("(use the --print-traceback option to see the full traceback)")
+            echo.echo('{}: {}'.format(error.__class__.__name__, error))
+            echo.echo('(use the --print-traceback option to see the full traceback)')
         succeeded = False
 
 

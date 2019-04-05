@@ -291,13 +291,13 @@ Below is a list with all available subcommands.
     Commands:
       configure  Configure a computer with one of the available transport types.
       delete     Configure the authentication information for a given computer...
-      disable    Disable a computer.
-      duplicate  Duplicate a Computer.
-      enable     Enable a computer.
+      disable    Disable the computer for the given user.
+      duplicate  Duplicate a computer.
+      enable     Enable the computer for the given user.
       list       List available computers.
-      rename     Rename a computer
-      setup      Add a Computer.
-      show       Show information on a given computer
+      rename     Rename a computer.
+      setup      Add a computer.
+      show       Show information for a computer.
       test       Test the connection to a computer.
 
 
@@ -361,7 +361,7 @@ Below is a list with all available subcommands.
       array       Manipulate ArrayData objects.
       bands       Manipulate BandsData objects.
       cif         Manipulation of CIF data objects.
-      parameter   View and manipulate Dict objects.
+      dict        View and manipulate Dict objects.
       plugins     Print a list of registered data plugins or details of a...
       remote      Managing RemoteData objects.
       structure   Manipulation of StructureData objects.
@@ -457,21 +457,22 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS] COMMAND [ARGS]...
 
-      Inspect, create and manage groups.
+      Create, inspect and manage groups.
 
     Options:
       --help  Show this message and exit.
 
     Commands:
-      addnodes     Add NODES to a given AiiDA group.
-      copy         Add all nodes that belong to source group to the destination...
-      create       Create a new empty group with the name GROUP_NAME.
-      delete       Pass the GROUP to delete an existing group.
-      description  Change the description of a given group.
-      list         Show a list of groups.
-      removenodes  Remove NODES from a given AiiDA group.
-      rename       Rename an existing group.
-      show         Show information on a given group.
+      add-nodes     Add NODES to the given GROUP.
+      copy          Add all nodes that belong to source group to the
+                    destination...
+      create        Create a new empty group with the name GROUP_NAME.
+      delete        Delete a GROUP.
+      description   Change the description of the given GROUP to DESCRIPTION.
+      list          Show a list of groups.
+      relabel       Change the label of the given GROUP to LABEL.
+      remove-nodes  Remove NODES from the given GROUP.
+      show          Show information on a given group.
 
 
 .. _verdi_import:
@@ -537,7 +538,7 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      delete       Deletes a node and everything that originates from it.
+      delete       Delete nodes and everything that originates from them.
       description  View or set the descriptions of one or more nodes.
       label        View or set the labels of one or more nodes.
       repo

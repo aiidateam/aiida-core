@@ -78,7 +78,7 @@ class CalcJob(Process):
             help='Set the quality of service to use in for the queue on the remote computer')
         spec.input('metadata.options.computer', valid_type=orm.Computer, required=False,
             help='Set the computer to be used by the calculation')
-        spec.input('metadata.options.withmpi', valid_type=bool, default=True,
+        spec.input('metadata.options.withmpi', valid_type=bool, default=False,
             help='Set the calculation to use mpi',)
         spec.input('metadata.options.mpirun_extra_params', valid_type=(list, tuple), default=[],
             help='Set the extra params to pass to the mpirun (or equivalent) command after the one provided in '
@@ -105,9 +105,6 @@ class CalcJob(Process):
         spec.output(cls.link_label_retrieved, valid_type=orm.FolderData, pass_to_parser=True,
             help='Files that are retrieved by the daemon will be stored in this node. By default the stdout and stderr '
                  'of the scheduler will be added, but one can add more by specifying them in `CalcInfo.retrieve_list`.')
-
-        spec.exit_code(10, 'ERROR_PARSING_FAILED', message='the parsing of the job failed')
-        spec.exit_code(20, 'ERROR_FAILED', message='the job failed for an unspecified reason')
 
     @classmethod
     def get_state_classes(cls):

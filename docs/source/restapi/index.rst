@@ -277,8 +277,6 @@ The following table reports what is the value type and the supported resources a
 +----------------+----------+----------------------------------------------------------+
 |scheduler_type  |string    |computers                                                 |
 +----------------+----------+----------------------------------------------------------+
-|enabled         |bool      |computers                                                 |
-+----------------+----------+----------------------------------------------------------+
 |is_active *     |bool      |users                                                     |
 +----------------+----------+----------------------------------------------------------+
 |ctime           |datetime  |nodes, calculations, codes, data                          |
@@ -483,7 +481,6 @@ Computers
             "computers": [
               {
                 "description": "Alpha Computer",
-                "enabled": true,
                 "hostname": "alpha.aiida.net",
                 "id": 3,
                 "name": "Alpha",
@@ -494,7 +491,6 @@ Computers
               },
               {
                 "description": "Beta Computer",
-                "enabled": true,
                 "hostname": "beta.aiida.net",
                 "id": 4,
                 "name": "Beta",
@@ -505,7 +501,6 @@ Computers
               },
               {
                 "description": "Gamma Computer",
-                "enabled": true,
                 "hostname": "gamma.aiida.net",
                 "id": 5,
                 "name": "Gamma",
@@ -544,7 +539,6 @@ Computers
             "computers": [
               {
                 "description": "Beta Computer",
-                "enabled": true,
                 "hostname": "beta.aiida.net",
                 "id": 4,
                 "name": "Beta",

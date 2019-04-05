@@ -15,7 +15,6 @@ from __future__ import absolute_import
 # pylint: disable=import-error,no-name-in-module,fixme
 from aiida.backends.djsite.db import models
 from aiida.common import exceptions
-from aiida.common import json
 
 from . import entities
 from .. import BackendLog, BackendLogCollection
@@ -35,7 +34,7 @@ class DjangoLog(entities.DjangoModelEntity[models.DbLog], BackendLog):
             levelname=levelname,
             dbnode_id=dbnode_id,
             message=message,
-            metadata=json.dumps(metadata) if metadata else "{}")  # Make sure a json-serializable dict is created
+            metadata=metadata or {})
 
     @property
     def uuid(self):
@@ -84,7 +83,7 @@ class DjangoLog(entities.DjangoModelEntity[models.DbLog], BackendLog):
         """
         Get the metadata corresponding to the entry
         """
-        return json.loads(self._dbmodel.metadata)
+        return self._dbmodel.metadata
 
 
 class DjangoLogCollection(BackendLogCollection):

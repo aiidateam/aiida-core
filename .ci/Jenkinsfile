@@ -112,8 +112,6 @@ pipeline {
                         environment name: 'RUN_ALSO_DJANGO', value: 'true'
                     }
                     steps {
-                        // An empty .aiida folder must be present in the AIIDA_PATH
-                        sh 'mkdir -p "$AIIDA_PATH/.aiida"'
                         sh '.ci/setup_profiles.sh'
                         sh '.ci/before_script.sh'
                         sh '.ci/test_script.sh'
@@ -131,8 +129,6 @@ pipeline {
                         environment name: 'RUN_ALSO_SQLALCHEMY', value: 'true'
                     }
                     steps {
-                        // An empty .aiida folder must be present in the AIIDA_PATH
-                        sh 'mkdir -p "$AIIDA_PATH/.aiida"'
                         sh '.ci/setup_profiles.sh'
                         sh '.ci/before_script.sh'
                         sh '.ci/test_script.sh'

@@ -536,7 +536,7 @@ class BaseTranslator(object):
         try:
             pk = qbobj.one()[0].pk
         except MultipleObjectsError:
-            raise RestValidationError("More than one node found." " Provide longer starting pattern" " for id.")
+            raise RestValidationError("More than one node found. Provide longer starting pattern for id.")
         except NotExistent:
             raise RestValidationError("either no object's id starts"
                                       " with '{}' or the corresponding object"

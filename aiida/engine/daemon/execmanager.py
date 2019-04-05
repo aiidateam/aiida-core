@@ -48,9 +48,6 @@ def upload_calculation(node, transport, calc_info, script_filename):
 
     computer = node.computer
 
-    if not computer.is_enabled():
-        return
-
     codes_info = calc_info.codes_info
     input_codes = [load_node(_.code_uuid, sub_classes=(Code,)) for _ in codes_info]
 
@@ -367,8 +364,12 @@ def parse_results(process, retrieved_temporary_folder=None):
             parser.logger.error('parser returned exit code<{}>: {}'.format(exit_code.status, exit_code.message))
 
         for link_label, node in parser.outputs.items():
-            node.add_incoming(process.node, link_type=LinkType.CREATE, link_label=link_label)
-            node.store()
+            try:
+                process.out(link_label, node)
+            except ValueError as exception:
+                parser.logger.error('invalid value {} specified with label {}: {}'.format(node, link_label, exception))
+                exit_code = process.exit_codes.ERROR_INVALID_OUTPUT
+                break
 
     return exit_code
 

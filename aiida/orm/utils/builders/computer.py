@@ -42,7 +42,6 @@ class ComputerBuilder(object):  # pylint: disable=useless-object-inheritance
         spec = {}
         spec['label'] = computer.label
         spec['description'] = computer.description
-        spec['enabled'] = computer.is_enabled()
         spec['hostname'] = computer.get_hostname()
         spec['scheduler'] = computer.get_scheduler_type()
         spec['transport'] = computer.get_transport_type()
@@ -82,7 +81,6 @@ class ComputerBuilder(object):  # pylint: disable=useless-object-inheritance
         computer = Computer(name=self._get_and_count('label', used), hostname=self._get_and_count('hostname', used))
 
         computer.set_description(self._get_and_count('description', used))
-        computer.set_enabled_state(self._get_and_count('enabled', used))
         computer.set_scheduler_type(self._get_and_count('scheduler', used))
         computer.set_transport_type(self._get_and_count('transport', used))
         computer.set_prepend_text(self._get_and_count('prepend_text', used))

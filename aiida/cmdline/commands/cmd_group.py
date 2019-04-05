@@ -7,12 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-It defines subcommands for verdi group command.
-"""
+"""`verdi group` commands"""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import click
 
 from aiida.common.exceptions import UniquenessError
@@ -24,99 +23,106 @@ from aiida.cmdline.utils.decorators import with_dbenv
 
 @verdi.group('group')
 def verdi_group():
-    """Inspect, create and manage groups."""
+    """Create, inspect and manage groups."""
 
 
-@verdi_group.command("removenodes")
+@verdi_group.command('add-nodes')
 @options.GROUP(required=True)
-@arguments.NODES()
-@options.FORCE(help="Force to remove the nodes from group.")
-@with_dbenv()
-def group_removenodes(group, nodes, force):
-    """Remove NODES from a given AiiDA group."""
-
-    if not force:
-        click.confirm(
-            "Are you sure to remove {} nodes from the group with PK = {} "
-            "({})?".format(len(nodes), group.id, group.label),
-            abort=True)
-
-    group.remove_nodes(nodes)
-
-
-@verdi_group.command("addnodes")
-@options.GROUP(required=True)
-@options.FORCE(help="Force to add nodes in the group.")
+@options.FORCE()
 @arguments.NODES()
 @with_dbenv()
-def group_addnodes(group, force, nodes):
-    """Add NODES to a given AiiDA group."""
-
+def group_add_nodes(group, force, nodes):
+    """Add NODES to the given GROUP."""
     if not force:
-        click.confirm(
-            "Are you sure to add {} nodes the group with PK = {} "
-            "({})?".format(len(nodes), group.id, group.label),
-            abort=True)
+        click.confirm('Do you really want to add {} nodes to Group<{}>?'.format(len(nodes), group.label), abort=True)
 
     group.add_nodes(nodes)
 
 
-@verdi_group.command("delete")
-@arguments.GROUP()
-@options.FORCE(help="Force deletion of the group even if it "
-               "is not empty. Note that this deletes only the "
-               "group and not the nodes.")
+@verdi_group.command('remove-nodes')
+@options.GROUP(required=True)
+@arguments.NODES()
+@options.GROUP_CLEAR()
+@options.FORCE()
 @with_dbenv()
-def group_delete(group, force):
-    """
-    Pass the GROUP to delete an existing group.
-    """
-    from aiida import orm
-    group_id = group.id
-    group_label = group.label
-
-    num_nodes = len(group.nodes)
-    if num_nodes > 0 and not force:
-        echo.echo_critical(("Group '{}' is not empty (it contains {} "
-                            "nodes). Pass the -f option if you really want to delete "
-                            "it.".format(group_label, num_nodes)))
+def group_remove_nodes(group, nodes, clear, force):
+    """Remove NODES from the given GROUP."""
+    if clear:
+        message = 'Do you really want to remove ALL the nodes from Group<{}>?'.format(group.label)
+    else:
+        message = 'Do you really want to remove {} nodes from Group<{}>?'.format(len(nodes), group.label)
 
     if not force:
-        click.confirm('Are you sure to kill the group with PK = {} ({})?'.format(group_id, group_label), abort=True)
+        click.confirm(message, abort=True)
 
-    orm.Group.objects.delete(group_id)
-    echo.echo_success("Group '{}' (PK={}) deleted.".format(group_label, group_id))
+    if clear:
+        group.clear()
+    else:
+        group.remove_nodes(nodes)
 
 
-@verdi_group.command("rename")
+@verdi_group.command('delete')
 @arguments.GROUP()
-@click.argument("label", nargs=1, type=click.STRING)
+@options.GROUP_CLEAR(help='Remove all nodes before deleting the group itself.')
+@options.FORCE()
 @with_dbenv()
-def group_rename(group, label):
-    """Rename an existing group. Pass the GROUP which you want to rename and its new LABEL."""
+def group_delete(group, clear, force):
+    """Delete a GROUP.
+
+    Note that a group that contains nodes cannot be deleted if it contains any nodes. If you still want to delete the
+    group, use the `-c/--clear` flag to remove the contents before deletion. Note that in any case, the nodes themselves
+    will not actually be deleted from the database.
+    """
+    from aiida import orm
+
+    label = group.label
+
+    if group.count() > 0 and not clear:
+        echo.echo_critical(
+            ('Group<{}> contains {} nodes. Pass `--clear` if you want to empty it before deleting the group'.format(
+                label, group.count())))
+
+    if not force:
+        click.confirm('Are you sure to delete Group<{}>?'.format(label), abort=True)
+
+    if clear:
+        group.clear()
+
+    orm.Group.objects.delete(group.pk)
+    echo.echo_success('Group<{}> deleted.'.format(label))
+
+
+@verdi_group.command('relabel')
+@arguments.GROUP()
+@click.argument('label', type=click.STRING)
+@with_dbenv()
+def group_relabel(group, label):
+    """Change the label of the given GROUP to LABEL."""
     try:
         group.label = label
     except UniquenessError as exception:
-        echo.echo_critical("Error: {}.".format(exception))
+        echo.echo_critical('Error: {}.'.format(exception))
     else:
-        echo.echo_success('Name successfully changed')
+        echo.echo_success('Label changed to {}'.format(label))
 
 
-@verdi_group.command("description")
+@verdi_group.command('description')
 @arguments.GROUP()
-@click.argument("description", type=click.STRING)
+@click.argument('description', type=click.STRING, required=False)
 @with_dbenv()
 def group_description(group, description):
+    """Change the description of the given GROUP to DESCRIPTION.
+
+    If no DESCRIPTION is defined, the current description will simply be echoed.
     """
-    Change the description of a given group.
-    Pass the GROUP for which you want to edit the description and its
-    new DESCRIPTION. If DESCRIPTION is not provided, just show the current description.
+    if description:
+        group.description = description
+        echo.echo_success('Changed the description of Group<{}>'.format(group.label))
+    else:
+        echo.echo(group.description)
 
-    """
-    group.description = description
 
-
-@verdi_group.command("show")
+@verdi_group.command('show')
 @options.RAW(help="Show only a space-separated list of PKs of the calculations in the group")
 @click.option(
     '-u',
@@ -135,18 +141,18 @@ def group_show(group, raw, uuid):
 
     if raw:
         if uuid:
-            echo.echo(" ".join(str(_.uuid) for _ in group.nodes))
+            echo.echo(' '.join(str(_.uuid) for _ in group.nodes))
         else:
-            echo.echo(" ".join(str(_.pk) for _ in group.nodes))
+            echo.echo(' '.join(str(_.pk) for _ in group.nodes))
     else:
         type_string = group.type_string
         desc = group.description
         now = timezone.now()
 
         table = []
-        table.append(["Group label", group.label])
-        table.append(["Group type_string", type_string])
-        table.append(["Group description", desc if desc else "<no description>"])
+        table.append(['Group label', group.label])
+        table.append(['Group type_string', type_string])
+        table.append(['Group description', desc if desc else '<no description>'])
         echo.echo(tabulate(table))
 
         table = []
@@ -154,7 +160,7 @@ def group_show(group, raw, uuid):
         if uuid:
             header.append('UUID')
         header.extend(['PK', 'Type', 'Created'])
-        echo.echo("# Nodes:")
+        echo.echo('# Nodes:')
         for node in group.nodes:
             row = []
             if uuid:
@@ -178,9 +184,8 @@ def user_defined_group():
     return GroupTypeString.USER.value
 
 
-# pylint: disable=too-many-arguments, too-many-locals
-@verdi_group.command("list")
-@options.ALL_USERS(help="Show groups for all users, rather than only for the current user")
+@verdi_group.command('list')
+@options.ALL_USERS(help='Show groups for all users, rather than only for the current user')
 @click.option(
     '-u',
     '--user',
@@ -222,8 +227,8 @@ def user_defined_group():
 @with_dbenv()
 def group_list(all_users, user_email, all_types, group_type, with_description, count, past_days, startswith, endswith,
                contains, node):
-    # pylint: disable=too-many-branches
     """Show a list of groups."""
+    # pylint: disable=too-many-branches,too-many-arguments, too-many-locals
     import datetime
     from aiida.common.escaping import escape_for_sql_like
     from aiida.common import timezone
@@ -303,7 +308,7 @@ def group_list(all_users, user_email, all_types, group_type, with_description, c
     echo.echo(tabulate(table, headers=projection_header))
 
 
-@verdi_group.command("create")
+@verdi_group.command('create')
 @click.argument('group_label', nargs=1, type=click.STRING)
 @with_dbenv()
 def group_create(group_label):
@@ -319,7 +324,7 @@ def group_create(group_label):
         echo.echo_info("Group '{}' already exists, PK = {}".format(group.label, group.id))
 
 
-@verdi_group.command("copy")
+@verdi_group.command('copy')
 @arguments.GROUP('source_group')
 @click.argument('destination_group', nargs=1, type=click.STRING)
 @with_dbenv()
@@ -327,6 +332,13 @@ def group_copy(source_group, destination_group):
     """Add all nodes that belong to source group to the destination group (which may or may not exist)."""
     from aiida import orm
 
-    dest_group = orm.Group.objects.get_or_create(label=destination_group, type_string=source_group.type_string)[0]
+    dest_group, created = orm.Group.objects.get_or_create(label=destination_group, type_string=source_group.type_string)
+
+    # Issue warning if destination group is not empty and get user confirmation to continue
+    if not created and not dest_group.is_empty:
+        echo.echo_warning('Destination group<{}> already exists and is not empty.'.format(dest_group.label))
+        click.confirm('Do you wish to continue anyway?', abort=True)
+
+    # Copy nodes
     dest_group.add_nodes(list(source_group.nodes))
-    echo.echo_success("Nodes copied from group<{}> to group<{}>".format(source_group, destination_group))
+    echo.echo_success('Nodes copied from group<{}> to group<{}>'.format(source_group.label, dest_group.label))

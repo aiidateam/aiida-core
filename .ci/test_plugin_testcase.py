@@ -67,7 +67,6 @@ class PluginTestCase1(PluginTestCase):
             transport_type='local',
             scheduler_type='direct',
             workdir=temp_dir,
-            enabled_state=True,
             backend=cls.backend).store()
         return computer
 

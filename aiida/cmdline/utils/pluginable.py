@@ -13,7 +13,8 @@ from __future__ import print_function
 from __future__ import absolute_import
 import click
 
-from aiida.plugins.entry_point import load_entry_point, get_entry_point_names, MissingEntryPointError
+from aiida.common import exceptions
+from aiida.plugins.entry_point import load_entry_point, get_entry_point_names
 
 
 class Pluginable(click.Group):
@@ -35,6 +36,6 @@ class Pluginable(click.Group):
         command = None
         try:
             command = load_entry_point(self._entry_point_group, name)
-        except MissingEntryPointError:
+        except exceptions.EntryPointError:
             command = super(Pluginable, self).get_command(ctx, name)
         return command

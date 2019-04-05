@@ -19,6 +19,25 @@ import click
 from .. import types
 
 
+def collect_usage_pieces(self, ctx):
+    """Returns all the pieces that go into the usage line and returns it as a list of strings."""
+    result = [self.options_metavar]
+
+    # If the command contains a `MultipleValueOption` make sure to add `[--]` to the help string before the
+    # arguments, which hints the use of the optional `endopts` marker
+    if any([isinstance(param, MultipleValueOption) for param in self.get_params(ctx)]):
+        result.append('[--]')
+
+    for param in self.get_params(ctx):
+        result.extend(param.get_usage_pieces(ctx))
+
+    return result
+
+
+# Override the `collect_usage_pieces` method of the `click.Command` class to automatically affect all commands
+click.Command.collect_usage_pieces = collect_usage_pieces
+
+
 class MultipleValueOption(click.Option):
     """
     An option that can handle multiple values with a single flag. For example::

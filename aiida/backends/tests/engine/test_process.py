@@ -103,15 +103,15 @@ class TestProcess(AiidaTestCase):
             run(test_processes.BadOutput)
 
     def test_input_link_creation(self):
-        dummy_inputs = ["1", "2", "3", "4"]
+        dummy_inputs = ['a', 'b', 'c', 'd']
 
-        inputs = {l: orm.Int(l) for l in dummy_inputs}
+        inputs = {string: orm.Str(string) for string in dummy_inputs}
         inputs['metadata'] = {'store_provenance': True}
         process = test_processes.DummyProcess(inputs)
 
         for entry in process.node.get_incoming().all():
             self.assertTrue(entry.link_label in inputs)
-            self.assertEqual(int(entry.link_label), int(entry.node.value))
+            self.assertEqual(entry.link_label, entry.node.value)
             dummy_inputs.remove(entry.link_label)
 
         # Make sure there are no other inputs

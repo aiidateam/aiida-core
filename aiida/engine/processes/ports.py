@@ -14,15 +14,15 @@ from __future__ import absolute_import
 
 import collections
 import re
-import six
 
 from plumpy import ports
 
-from aiida.common.lang import isidentifier, type_check
+from aiida.common.lang import type_check
 
 __all__ = ('PortNamespace', 'InputPort', 'OutputPort', 'CalcJobOutputPort', 'WithNonDb', 'WithSerialize',
            'PORT_NAMESPACE_SEPARATOR')
 
+PORT_NAME_MAX_CONSECUTIVE_UNDERSCORES = 1  # pylint: disable=invalid-name
 PORT_NAMESPACE_SEPARATOR = '__'  # The character sequence to represent a nested port namespace in a flat link label
 OutputPort = ports.OutputPort  # pylint: disable=invalid-name
 
@@ -152,41 +152,36 @@ class PortNamespace(WithNonDb, ports.PortNamespace):
 
     @staticmethod
     def validate_port_name(port_name):
-        """Validate the name of a port.
+        """Validate the given port name.
 
-        A valid port name obeys the following rules:
+        Valid port names adhere to the following restrictions:
 
-            * Does not containe two or more consecutive underscores
-            * Does not start *or* end with a single underscore
+            * Is a valid link label (see below)
+            * Does not contain two or more consecutive underscores
+
+        Valid link labels adhere to the following restrictions:
+
+            * Has to be a valid python identifier
+            * Can only contain alphanumeric characters and underscores
+            * Can not start or end with an underscore
 
         :param port_name: the proposed name of the port to be added
         :raise TypeError: if the port name is not a string type
-        :raise ValueError: if the port name is illegal
+        :raise ValueError: if the port name is invalid
         """
-        max_consecutive_underscores = 1
-        allowed_character_set = '[a-zA-Z0-9_]'
+        from aiida.orm.utils.links import validate_link_label
 
-        message = 'invalid port name `{}`: should be string type but is instead: {}'.format(port_name, type(port_name))
-        type_check(port_name, six.string_types, message)
+        try:
+            validate_link_label(port_name)
+        except ValueError as exception:
+            raise ValueError('invalid port name `{}`: {}'.format(port_name, exception))
 
         # Following regexes will match all groups of consecutive underscores where each group will be of the form
         # `('___', '_')`, where the first element is the matched group of consecutive underscores.
         consecutive_underscores = [match[0] for match in re.findall(r'((_)\2+)', port_name)]
 
-        if any([len(entry) > max_consecutive_underscores for entry in consecutive_underscores]):
+        if any([len(entry) > PORT_NAME_MAX_CONSECUTIVE_UNDERSCORES for entry in consecutive_underscores]):
             raise ValueError('invalid port name `{}`: more than two consecutive underscores'.format(port_name))
-
-        if port_name.startswith('_'):
-            raise ValueError('invalid port name `{}`: cannot start with an underscore'.format(port_name))
-
-        if port_name.endswith('_'):
-            raise ValueError('invalid port name `{}`: cannot end with an underscore'.format(port_name))
-
-        if re.sub(allowed_character_set, '', port_name):
-            raise ValueError('invalid port name `{}`: can only use alphanumeric characters'.format(port_name))
-
-        if not isidentifier(port_name):
-            raise ValueError('invalid port name `{}`: not a valid python identifier'.format(port_name))
 
     def serialize(self, mapping):
         """

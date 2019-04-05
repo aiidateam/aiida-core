@@ -26,14 +26,12 @@ from pika.exceptions import ConnectionClosed
 import plumpy
 from plumpy import ProcessState
 
+from aiida import orm
 from aiida.common import exceptions
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import classproperty, override, protected
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
-from aiida import orm
-from aiida.orm import ProcessNode, CalculationNode, WorkflowNode
-from aiida.orm.utils import serialize
 
 from .. import utils
 from .exit_code import ExitCode
@@ -53,7 +51,7 @@ class Process(plumpy.Process):
     """
     # pylint: disable=too-many-public-methods
 
-    _node_class = ProcessNode
+    _node_class = orm.ProcessNode
     _spec_class = ProcessSpec
 
     SINGLE_OUTPUT_LINKNAME = 'result'
@@ -462,6 +460,7 @@ class Process(plumpy.Process):
         :param inputs: A mapping of the inputs as passed to the process
         :return: The encoded inputs
         """
+        from aiida.orm.utils import serialize
         return serialize.serialize(inputs)
 
     @override
@@ -472,6 +471,7 @@ class Process(plumpy.Process):
         :param encoded:
         :return: The decoded input args
         """
+        from aiida.orm.utils import serialize
         return serialize.deserialize(encoded)
 
     def update_node_state(self, state):
@@ -492,9 +492,9 @@ class Process(plumpy.Process):
             if link_label not in outputs_new:
                 continue
 
-            if isinstance(self.node, CalculationNode):
+            if isinstance(self.node, orm.CalculationNode):
                 output.add_incoming(self.node, LinkType.CREATE, link_label)
-            elif isinstance(self.node, WorkflowNode):
+            elif isinstance(self.node, orm.WorkflowNode):
                 output.add_incoming(self.node, LinkType.RETURN, link_label)
 
             output.store()
@@ -524,13 +524,13 @@ class Process(plumpy.Process):
 
         if parent_calc and self.metadata.store_provenance:
 
-            if isinstance(parent_calc, CalculationNode):
+            if isinstance(parent_calc, orm.CalculationNode):
                 raise exceptions.InvalidOperation('calling processes from a calculation type process is forbidden.')
 
-            if isinstance(self.node, CalculationNode):
+            if isinstance(self.node, orm.CalculationNode):
                 self.node.add_incoming(parent_calc, LinkType.CALL_CALC, 'CALL_CALC')
 
-            elif isinstance(self.node, WorkflowNode):
+            elif isinstance(self.node, orm.WorkflowNode):
                 self.node.add_incoming(parent_calc, LinkType.CALL_WORK, 'CALL_WORK')
 
         self._setup_metadata()
@@ -553,8 +553,6 @@ class Process(plumpy.Process):
 
     def _setup_inputs(self):
         """Create the links between the input nodes and the ProcessNode that represents this process."""
-        from aiida.orm import Code
-
         for name, node in self._flat_inputs().items():
 
             # Certain processes allow to specify ports with `None` as acceptable values
@@ -562,17 +560,18 @@ class Process(plumpy.Process):
                 continue
 
             # Special exception: set computer if node is a remote Code and our node does not yet have a computer set
-            if isinstance(node, Code) and not node.is_local() and not self.node.computer:
+            if isinstance(node, orm.Code) and not node.is_local() and not self.node.computer:
                 self.node.computer = node.get_remote_computer()
 
             # Need this special case for tests that use ProcessNodes as classes
-            if isinstance(self.node, ProcessNode) and not isinstance(self.node, (CalculationNode, WorkflowNode)):
+            if isinstance(self.node, orm.ProcessNode) and not isinstance(self.node,
+                                                                         (orm.CalculationNode, orm.WorkflowNode)):
                 self.node.add_incoming(node, LinkType.INPUT_WORK, name)
 
-            elif isinstance(self.node, CalculationNode):
+            elif isinstance(self.node, orm.CalculationNode):
                 self.node.add_incoming(node, LinkType.INPUT_CALC, name)
 
-            elif isinstance(self.node, WorkflowNode):
+            elif isinstance(self.node, orm.WorkflowNode):
                 self.node.add_incoming(node, LinkType.INPUT_WORK, name)
 
     def _flat_inputs(self):
@@ -607,11 +606,10 @@ class Process(plumpy.Process):
         :param parent_name: the parent key with which to prefix the keys
         :param separator: character to use for the concatenation of keys
         """
-        if ((port is None and isinstance(port_value, orm.Node)) or
-            (isinstance(port, InputPort) and not getattr(port, 'non_db', False))):
+        if (port is None and isinstance(port_value, orm.Node)) or (isinstance(port, InputPort) and not port.non_db):
             return [(parent_name, port_value)]
 
-        if (port is None and isinstance(port_value, collections.Mapping) or isinstance(port, PortNamespace)):
+        if port is None and isinstance(port_value, collections.Mapping) or isinstance(port, PortNamespace):
             items = []
             for name, value in port_value.items():
 

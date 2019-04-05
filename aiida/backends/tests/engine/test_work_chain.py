@@ -647,7 +647,7 @@ class TestWorkchain(AiidaTestCase):
                 spec.outline(cls.result)
 
             def result(self):
-                self.out('_return', val)
+                self.out('result', val)
 
         class Workchain(WorkChain):
 
@@ -661,8 +661,8 @@ class TestWorkchain(AiidaTestCase):
                 return ToContext(result_b=self.submit(SimpleWc))
 
             def result(self):
-                test_case.assertEquals(self.ctx.result_a.outputs._return, val)
-                test_case.assertEquals(self.ctx.result_b.outputs._return, val)
+                test_case.assertEquals(self.ctx.result_a.outputs.result, val)
+                test_case.assertEquals(self.ctx.result_b.outputs.result, val)
 
         run_and_check_success(Workchain)
 

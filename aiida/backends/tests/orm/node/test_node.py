@@ -256,8 +256,8 @@ class TestNodeLinks(AiidaTestCase):
         data = Data()
 
         # Verify that adding two return links with the same link label but from different source is allowed
-        data.add_incoming(return_one, link_type=LinkType.RETURN, link_label='return')
-        data.add_incoming(return_two, link_type=LinkType.RETURN, link_label='return')
+        data.add_incoming(return_one, link_type=LinkType.RETURN, link_label='returned')
+        data.add_incoming(return_two, link_type=LinkType.RETURN, link_label='returned')
         data.store()
 
         uuids_incoming = set(node.uuid for node in data.get_incoming().all_nodes())

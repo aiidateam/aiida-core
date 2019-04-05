@@ -10,7 +10,7 @@ node {
 }
 
 pipeline {
-    /* The tutorial was setting here agent none, and setting the 
+    /* The tutorial was setting here agent none, and setting the
        agent in each stage, using therefore different agents in each
        stage. I think that for what we are trying to achieve, having
        a single agent and running all in the same docker image is better,
@@ -48,7 +48,7 @@ pipeline {
                 sh 'sudo chown -R jenkins:jenkins /home/jenkins/.cache/'
                 // (re)start rabbitmq (both to start it or to reload the configuration)
                 sh 'sudo /etc/init.d/rabbitmq-server restart'
-                
+
                 // Make sure the tmpfs folder is owned by postgres, and that it
                 // contains the right data
                 sh 'sudo chown postgres:postgres /var/lib/postgresql-tmp'
@@ -79,6 +79,7 @@ pipeline {
         }
         stage('Build') {
             steps {
+                sh 'pip install -U pip==18.1'
                 sh 'pip install --user .[all]'
                 // To be able to do ssh localhost
                 sh 'ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa'
@@ -99,8 +100,8 @@ pipeline {
                 stage('Test-Django') {
                     environment {
                         TEST_AIIDA_BACKEND="django"
-                        // I run the two tests in two different folders, otherwise 
-                        // they might get at the point of writing the config.json at the 
+                        // I run the two tests in two different folders, otherwise
+                        // they might get at the point of writing the config.json at the
                         // same time and one of the two would crash
                         AIIDA_PATH="/tmp/aiida-django-folder"
                         // To collect coverage info for each backend in a different file
@@ -184,10 +185,10 @@ pipeline {
                     echo "This is the first build, and its status is: ${currentBuild.currentResult}."
                 }
             }
-        } 
-    } 
+        }
+    }
     options {
-        // we do not want the whole run to hang forever - 
+        // we do not want the whole run to hang forever -
  	// we set a total timeout of 1 hour
         timeout(time: 60, unit: 'MINUTES')
     }
@@ -199,7 +200,7 @@ pipeline {
 // retry-on-failure for some specific tasks: https://jenkins.io/doc/book/pipeline/syntax/#available-stage-options
 // parameters: https://jenkins.io/doc/book/pipeline/syntax/#parameters
 // input: interesting for user input before continuing: https://jenkins.io/doc/book/pipeline/syntax/#input
-// when conditions, e.g. to depending on details on the commit (e.g. only when specific 
+// when conditions, e.g. to depending on details on the commit (e.g. only when specific
 //     files are changed, where there is a string in the commit log, for a specific branch,
-//     for a Pull Request,for a specific environment variable, ...): 
+//     for a Pull Request,for a specific environment variable, ...):
 //     https://jenkins.io/doc/book/pipeline/syntax/#when

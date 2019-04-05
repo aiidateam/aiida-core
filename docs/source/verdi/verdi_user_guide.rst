@@ -140,7 +140,7 @@ This is fairly typical for command line arguments, but slightly more unorthodox 
 However, ``verdi`` has multiple commands where an option needs to be able to support options that take more than one value.
 Take for example the ``verdi export create`` command, with part of its help string::
 
-  Usage: verdi export create [OPTIONS] OUTPUT_FILE
+  Usage: verdi export create [OPTIONS] [--] OUTPUT_FILE
 
     Export various entities, such as Codes, Computers, Groups and Nodes, to an
     archive file for backup or sharing purposes.
@@ -169,6 +169,7 @@ Unfortunately, this leads to an ambiguity, as the 'greedy' multi value option ``
 This will cause the command to abort if the validation fails, but even worse it might be silently accepted.
 The root of the problem is that the multi value option needs to necessarily be greedy and cannot distinguish which value belongs to it and which value is just another argument.
 The typical solution for this problem is to use the so called 'endopts' marker, which is defined as two dashes ``--``, which can be used to mark the end of the options and clearly distinguish them from the arguments.
+Note that this is also indicated by the usage string of the command where it shows ``[--]`` between the ``[OPTIONS]`` and ``OUTPUT_FILE`` parameters, meaning that the ``--`` endopts marker can optionally be used.
 The previous command can therefore be made unambiguous as follows::
 
   verdi export create -N 10 11 12 -- archive.aiida
@@ -482,7 +483,7 @@ Below is a list with all available subcommands.
 
 ::
 
-    Usage:  [OPTIONS] [ARCHIVES]...
+    Usage:  [OPTIONS] [--] [ARCHIVES]...
 
       Import one or multiple exported AiiDA archives
 
@@ -691,7 +692,7 @@ Below is a list with all available subcommands.
 
 ::
 
-    Usage:  [OPTIONS] SCRIPTNAME [VARARGS]...
+    Usage:  [OPTIONS] [--] SCRIPTNAME [VARARGS]...
 
       Execute an AiiDA script.
 

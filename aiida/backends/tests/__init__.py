@@ -48,7 +48,6 @@ db_test_list = {
         'cmdline.commands.graph': ['aiida.backends.tests.cmdline.commands.test_graph'],
         'cmdline.commands.group': ['aiida.backends.tests.cmdline.commands.test_group'],
         'cmdline.commands.import': ['aiida.backends.tests.cmdline.commands.test_import'],
-        'cmdline.commands.node': ['aiida.backends.tests.cmdline.commands.test_node'],
         'cmdline.commands.process': ['aiida.backends.tests.cmdline.commands.test_process'],
         'cmdline.commands.profile': ['aiida.backends.tests.cmdline.commands.test_profile'],
         'cmdline.commands.rehash': ['aiida.backends.tests.cmdline.commands.test_rehash'],

@@ -72,9 +72,38 @@ before_script:
 
 script: .ci/test_script.sh
 
+
 after_success:
   # upload coverage report to coveralls.io
   - if [ "$TEST_TYPE" == "tests" ]; then coveralls; fi
 
 git:
   depth: 3
+
+jobs:
+    include:
+        - stage: deploy
+          if: "tag =~ ^v[0-9]+\\.[0-9]+\\.[0-9]+(a|b|rc)?[0-9]*$"
+          services: ignore
+          addons: skip
+          python: 3.6
+          before_install: skip
+          install: skip
+          before_script: skip
+          script: skip
+          env: ignore
+          before_deploy:
+            - echo "We'll deploy $TRAVIS_TAG"
+          after_deploy:
+            - echo "Deployed $TRAVIS_TAG"
+            - echo "We'll hook up some things in the future"
+          deploy: &pypi
+              provider: pypi
+              skip_existing: true
+              username: aiida-bot
+              password:
+                  secure: NhV11e1kVJaumNMb7YGENngZwa6qJjzoGWzmzqdU5BwFgpXaxbaFAk2fn+Cckrkz4MmNJaW1HaKEAhn07WsbrkjOXK7QVNK48/eagiquKbCQbyNZNjzF+C24EYQHI93y40JQcl2JaCahSqKXbYQCpLlX0Rbtob4psQH29uHRcbq4lm5t3Jmb8WckEzcDLMZX3+uPFwDJxMbbsDW+pONGF1z2/B0j+7m4beTgCepuvIEaXS97rTQj2egKYEJV+V3DbH2o2nr0+3z4lzH2FAdoAnZMlFwHfWoY3WIuYcHcwXDWyLGWQKvncaoh1sLU7gfjjup3dZ4Iq74Zp43x2eXUhbmZBp2cPN3CZpN9baE4NE6MNKeQ/erkg31qdq50OG/rjGgPKyfg5ShO3Kt1CyVbSJX5dqPxtDQblYE8TAGhHfO2O8M1kLhyWvrV5TaQuVB/IAsTkRC+t1NtdWTxaU6wdMz36O5so89oKbFljjk9744m4Ei8DCgc98WH6b96qn0VifjxGuBs6o1aqRoa8O7e29a0TwDVAwxkczgjxbXkP6okRY5IAxsr5Rsbm8urXEo874uQA8n1gGyN6+YKSbjvPbHD9RIRl9IddC6y2wKTv/1JBifNjHcLhadl7RVRPSU7vFSs2cknN+5Gkw3FgZ/jA8SoMxMLFsvHcFxchrurAkE=
+              on:
+                  repo: aiidateam/aiida_core
+                  branch: master
+                  tags: true

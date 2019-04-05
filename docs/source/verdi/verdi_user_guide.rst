@@ -792,8 +792,8 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      configure  Create or update a user.
-      list       List all the users.
+      configure  Create or update a USER.
+      list       Displays list of all users.
 
 
 

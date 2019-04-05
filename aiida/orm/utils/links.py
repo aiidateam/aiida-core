@@ -14,9 +14,12 @@ from __future__ import absolute_import
 
 from collections import namedtuple, OrderedDict, Mapping
 
-from aiida.common import exceptions
+import six
 
-__all__ = ('LinkPair', 'LinkTriple', 'LinkManager', 'validate_link')
+from aiida.common import exceptions
+from aiida.common.lang import isidentifier, type_check
+
+__all__ = ('LinkPair', 'LinkTriple', 'LinkManager', 'validate_link', 'validate_link_label')
 
 LinkPair = namedtuple('LinkPair', ['link_type', 'link_label'])
 LinkTriple = namedtuple('LinkTriple', ['node', 'link_type', 'link_label'])
@@ -87,20 +90,20 @@ def validate_link(source, target, link_type, link_label):
     from aiida.common.links import LinkType
     from aiida.orm import Node, Data, CalculationNode, WorkflowNode
 
-    if not isinstance(link_type, LinkType):
-        raise TypeError('the link_type should be a value from the LinkType enum')
-
-    if not isinstance(source, Node):
-        raise TypeError('the source should be a Node instance')
-
-    if not isinstance(target, Node):
-        raise TypeError('the target should be a Node instance')
+    type_check(link_type, LinkType, 'link_type should be a LinkType enum but got: {}'.format(type(link_type)))
+    type_check(source, Node, 'source should be a `Node` but got: {}'.format(type(source)))
+    type_check(target, Node, 'target should be a `Node` but got: {}'.format(type(target)))
 
     if source.uuid is None or target.uuid is None:
         raise ValueError('source or target node does not have a UUID')
 
     if source.uuid == target.uuid:
         raise ValueError('cannot add a link to oneself')
+
+    try:
+        validate_link_label(link_label)
+    except ValueError as exception:
+        raise ValueError('invalid link label `{}`: {}'.format(link_label, exception))
 
     # For each link type, define a tuple that defines the valid types for the source and target node, as well as
     # the outdegree and indegree character. If the degree is `unique` that means that there can only be a single
@@ -154,6 +157,38 @@ def validate_link(source, target, link_type, link_label):
     elif indegree == 'unique_triple' and LinkTriple(source, link_type, link_label) in incoming.all():
         raise ValueError('node<{}> already has an incoming {} link with label "{}" from node<{}>'.format(
             target.uuid, link_type, link_label, source.uuid))
+
+
+def validate_link_label(link_label):
+    """Validate the given link label.
+
+    Valid link labels adhere to the following restrictions:
+
+        * Has to be a valid python identifier
+        * Can only contain alphanumeric characters and underscores
+        * Can not start or end with an underscore
+
+    :raises TypeError: if the link label is not a string type
+    :raises ValueError: if the link label is invalid
+    """
+    import re
+
+    message = 'invalid link label `{}`: should be string type but is instead: {}'.format(link_label, type(link_label))
+    type_check(link_label, six.string_types, message)
+
+    allowed_character_set = '[a-zA-Z0-9_]'
+
+    if link_label.endswith('_'):
+        raise ValueError('cannot end with an underscore')
+
+    if link_label.startswith('_'):
+        raise ValueError('cannot start with an underscore')
+
+    if re.sub(allowed_character_set, '', link_label):
+        raise ValueError('only alphanumeric and underscores are allowed')
+
+    if not isidentifier(link_label):
+        raise ValueError('not a valid python identifier')
 
 
 class LinkManager(object):  # pylint: disable=useless-object-inheritance

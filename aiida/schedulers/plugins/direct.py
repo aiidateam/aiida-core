@@ -93,7 +93,8 @@ class DirectScheduler(aiida.schedulers.Scheduler):
         TODO: in the case of job arrays, decide what to do (i.e., if we want
               to pass the -t options to list each subjob).
         """
-        command = 'ps -o pid,stat,user,time'
+        # x:  include processes which do not have a controlling terminal
+        command = 'ps -xo pid,stat,user,time'
 
         if jobs:
             if isinstance(jobs, six.string_types):

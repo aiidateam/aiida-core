@@ -24,6 +24,8 @@ __all__ = ('SinglefileData',)
 class SinglefileData(Data):
     """Data class that can be used to store a single file in its repository."""
 
+    DEFAULT_FILENAME = 'file.txt'
+
     def __init__(self, file, **kwargs):
         """Construct a new instance and set the contents to that of the file.
 
@@ -80,7 +82,10 @@ class SinglefileData(Data):
                 raise ValueError('path `{}` does not correspond to an existing file'.format(file))
         else:
             is_filelike = True
-            key = os.path.basename(file.name)
+            try:
+                key = os.path.basename(file.name)
+            except AttributeError:
+                key = self.DEFAULT_FILENAME
 
         existing_object_names = self.list_object_names()
 

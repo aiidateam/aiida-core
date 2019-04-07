@@ -24,6 +24,8 @@ __all__ = ('SinglefileData',)
 class SinglefileData(Data):
     """Data class that can be used to store a single file in its repository."""
 
+    DEFAULT_FILENAME = 'file.txt'
+
     def __init__(self, file, **kwargs):
         """Construct a new instance and set the contents to that of the file.
 
@@ -46,8 +48,8 @@ class SinglefileData(Data):
         """Return an open file handle to the content of this data node.
 
         :param key: optional key within the repository, by default is the `filename` set in the attributes
-        :param mode: the mode with which to open the file handle
-        :return: a file handle in read mode
+        :param mode: the mode with which to open the file handle (default: read mode)
+        :return: a file handle
         """
         if key is None:
             key = self.filename
@@ -57,7 +59,7 @@ class SinglefileData(Data):
     def get_content(self):
         """Return the content of the single file stored for this data node.
 
-        :return: the string content of the file
+        :return: the content of the file as a string
         """
         with self.open() as handle:
             return handle.read()
@@ -66,6 +68,7 @@ class SinglefileData(Data):
         """Store the content of the file in the node's repository, deleting any other existing objects.
 
         :param file: an absolute filepath or filelike object whose contents to copy
+            Hint: Pass io.StringIO("my string") to construct the file directly from a string.
         """
         # pylint: disable=redefined-builtin
 
@@ -80,7 +83,10 @@ class SinglefileData(Data):
                 raise ValueError('path `{}` does not correspond to an existing file'.format(file))
         else:
             is_filelike = True
-            key = os.path.basename(file.name)
+            try:
+                key = os.path.basename(file.name)
+            except AttributeError:
+                key = self.DEFAULT_FILENAME
 
         existing_object_names = self.list_object_names()
 

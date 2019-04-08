@@ -23,7 +23,7 @@ from aiida.orm.importexport import import_data
 from aiida.backends.tests.utils.fixtures import get_archive_file
 
 
-class TestExportFileMigration(AiidaTestCase):
+class TestExportFileMigrationV03toV04(AiidaTestCase):
     """Test migration of exported files"""
 
     def setUp(self):

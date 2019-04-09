@@ -241,7 +241,7 @@ class Config(object):  # pylint: disable=useless-object-inheritance
         """
         option, parsed_value = parse_option(option_name, option_value)
 
-        if scope is not None:
+        if not option.global_only and scope is not None:
             dictionary = self._get_profile_dictionary(scope)
         else:
             dictionary = self.dictionary
@@ -283,7 +283,10 @@ class Config(object):  # pylint: disable=useless-object-inheritance
         else:
             dictionary = self.dictionary
 
-        return dictionary.get(option.key, option.default if default else None)
+        # Default value is `None` unless `default=True` and the `option.default` is not `NO_DEFAULT`
+        default_value = option.default if default and option.default is not NO_DEFAULT else None
+
+        return dictionary.get(option.key, default_value)
 
     def store(self):
         """Write the current config to file."""

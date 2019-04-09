@@ -311,6 +311,22 @@ class TestConfig(AiidaTestCase):
         config.option_set(option_name, option_value)
         self.assertEqual(config.option_get(option_name, scope=None, default=False), option_value)
 
+    def test_option_global_only(self):
+        """Test that `global_only` options are only set globally even if a profile specific scope is set."""
+        option_name = 'user.email'
+        option_value = 'some@email.com'
+
+        config = Config(self.config_filepath, self.config_dictionary)
+
+        # Setting an option globally should be fine
+        config.option_set(option_name, option_value, scope=None)
+        self.assertEqual(config.option_get(option_name, scope=None, default=False), option_value)
+
+        # Setting an option profile specific should actually not set it on the profile since it is `global_only`
+        config.option_set(option_name, option_value, scope=None)
+        self.assertEqual(config.option_get(option_name, scope=self.profile_name, default=False), None)
+        self.assertEqual(config.option_get(option_name, scope=None, default=False), option_value)
+
     def test_store(self):
         """Test that the store method writes the configuration properly to disk."""
         config = Config(self.config_filepath, self.config_dictionary)

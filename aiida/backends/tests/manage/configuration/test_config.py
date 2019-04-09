@@ -306,6 +306,11 @@ class TestConfig(AiidaTestCase):
         self.assertEqual(config.option_get(option_name, scope=None, default=False), None)
         self.assertEqual(config.option_get(option_name, scope=None, default=True), option.default)
 
+        # Setting a `None` like option
+        option_value = 0
+        config.option_set(option_name, option_value)
+        self.assertEqual(config.option_get(option_name, scope=None, default=False), option_value)
+
     def test_store(self):
         """Test that the store method writes the configuration properly to disk."""
         config = Config(self.config_filepath, self.config_dictionary)

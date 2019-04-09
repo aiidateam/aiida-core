@@ -105,5 +105,4 @@ jobs:
               on:
                   repo: aiidateam/aiida_core
                   all_branches: true
-                  condition: $TRAVIS_BRANCH =~ ^master|develop$
                   tags: true

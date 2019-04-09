@@ -246,7 +246,7 @@ class Config(object):  # pylint: disable=useless-object-inheritance
         else:
             dictionary = self.dictionary
 
-        if parsed_value:
+        if parsed_value is not None:
             dictionary[option.key] = parsed_value
         elif option.default is not NO_DEFAULT:
             dictionary[option.key] = option.default

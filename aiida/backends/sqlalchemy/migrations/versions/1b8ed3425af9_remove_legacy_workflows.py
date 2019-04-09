@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 # pylint: disable=invalid-name
 """Remove legacy workflows
 
@@ -7,6 +15,8 @@ Revises: 3d6190594e19
 Create Date: 2019-04-03 17:11:44.073582
 
 """
+from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 import sys
 import click

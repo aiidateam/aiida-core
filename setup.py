@@ -15,7 +15,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 import sys
 import json
-from os import path
+from os import path, environ
 # pylint: disable=wrong-import-order
 # Note: This speeds up command line scripts (e.g. verdi)
 from utils import fastentrypoints  # pylint: disable=unused-import
@@ -37,8 +37,9 @@ if __name__ == '__main__':
     REQUIRED_VERSION_MIN = StrictVersion(PIP_REQUIRED_VERSION_MIN)
     REQUIRED_VERSION_MAX = StrictVersion(PIP_REQUIRED_VERSION_MAX)
     INSTALLED_VERSION = StrictVersion(pip.__version__)
+    CI = environ.get('CI', False)
 
-    if INSTALLED_VERSION < REQUIRED_VERSION_MIN or INSTALLED_VERSION >= REQUIRED_VERSION_MAX:
+    if (INSTALLED_VERSION < REQUIRED_VERSION_MIN or INSTALLED_VERSION >= REQUIRED_VERSION_MAX) and not CI:
         print('The installation requires {}<=pip<{}, whereas currently {} is installed'.format(
             REQUIRED_VERSION_MIN, REQUIRED_VERSION_MAX, INSTALLED_VERSION))
         sys.exit(1)

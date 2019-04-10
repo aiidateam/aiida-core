@@ -111,15 +111,31 @@ class Process(plumpy.Process):
             self.set_logger(self.node.logger)
 
     @classproperty
-    def exit_codes(self):
-        """
-        Return the namespace of exit codes defined for this WorkChain through its ProcessSpec.
+    def exit_codes(cls):  # pylint: disable=no-self-argument
+        """Return the namespace of exit codes defined for this WorkChain through its ProcessSpec.
+
         The namespace supports getitem and getattr operations with an ExitCode label to retrieve a specific code.
         Additionally, the namespace can also be called with either the exit code integer status to retrieve it.
 
         :returns: ExitCodesNamespace of ExitCode named tuples
         """
-        return self.spec().exit_codes
+        return cls.spec().exit_codes
+
+    @classproperty
+    def spec_metadata(cls):  # pylint: disable=no-self-argument
+        """Return the metadata port namespace of the process specification of this process.
+
+        :return: metadata dictionary
+        """
+        return cls.spec().inputs['metadata']
+
+    @classproperty
+    def spec_options(cls):  # pylint: disable=no-self-argument
+        """Return the metadata options port namespace of the process specification of this process.
+
+        :return: options dictionary
+        """
+        return cls.spec_metadata['options']  # pylint: disable=unsubscriptable-object
 
     @property
     def node(self):
@@ -139,7 +155,7 @@ class Process(plumpy.Process):
 
     @property
     def metadata(self):
-        """Return the metadata passed when launching this process.
+        """Return the metadata that were specified when this process instance was launched.
 
         :return: metadata dictionary
         """
@@ -150,7 +166,7 @@ class Process(plumpy.Process):
 
     @property
     def options(self):
-        """Return the options of the metadata passed when launching this process.
+        """Return the options of the metadata that were specified when this process instance was launched.
 
         :return: options dictionary
         """

@@ -30,9 +30,7 @@ def delete_repository(profile, non_interactive=True):
     """
     from six.moves.urllib.parse import urlparse  # pylint: disable=import-error
 
-    pconfig = profile.dictionary
-    repo_uri = pconfig.get('AIIDADB_REPOSITORY_URI', '')
-    repo_path = urlparse(repo_uri).path
+    repo_path = urlparse(profile.repository_uri).path
     repo_path = os.path.expanduser(repo_path)
 
     if not os.path.isabs(repo_path):
@@ -65,8 +63,6 @@ def delete_db(profile, non_interactive=True, verbose=False):
     from aiida.manage.external.postgres import Postgres
     from aiida.common import json
 
-    pdict = profile.dictionary
-
     postgres = Postgres.from_profile(profile, interactive=not non_interactive, quiet=False)
     postgres.determine_setup()
 
@@ -74,17 +70,17 @@ def delete_db(profile, non_interactive=True, verbose=False):
         echo.echo_info("Parameters used to connect to postgres:")
         echo.echo(json.dumps(postgres.get_dbinfo(), indent=4))
 
-    db_name = pdict.get('AIIDADB_NAME', '')
-    if not postgres.db_exists(db_name):
-        echo.echo_info("Associated database '{}' does not exist.".format(db_name))
+    database_name = profile.database_name
+    if not postgres.db_exists(database_name):
+        echo.echo_info("Associated database '{}' does not exist.".format(database_name))
     elif non_interactive or click.confirm("Delete associated database '{}'?\n"
-                                          "WARNING: All data will be lost.".format(db_name)):
-        echo.echo_info("Deleting database '{}'.".format(db_name))
-        postgres.drop_db(db_name)
+                                          "WARNING: All data will be lost.".format(database_name)):
+        echo.echo_info("Deleting database '{}'.".format(database_name))
+        postgres.drop_db(database_name)
 
-    user = pdict.get('AIIDADB_USER', '')
+    user = profile.database_username
     config = get_config()
-    users = [profile.dictionary.get('AIIDADB_USER', '') for profile in config.profiles]
+    users = [available_profile.database_username for available_profile in config.profiles]
 
     if not postgres.dbuser_exists(user):
         echo.echo_info("Associated database user '{}' does not exist.".format(user))

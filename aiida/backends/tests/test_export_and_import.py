@@ -427,7 +427,7 @@ class TestUsers(AiidaTestCase):
             node = orm.load_node(uuid=uuid)
             self.assertEqual(node.user.email, new_email)
         for uuid in uuids_u2:
-            self.assertEqual(orm.load_node(uuid).user.email, manager.get_profile().default_user_email)
+            self.assertEqual(orm.load_node(uuid).user.email, manager.get_profile().default_user)
 
     @with_temp_dir
     def test_non_default_user_nodes(self, temp_dir):
@@ -513,7 +513,7 @@ class TestUsers(AiidaTestCase):
         for uuid in uuids1:
             self.assertEqual(orm.load_node(uuid).user.email, new_email)
         for uuid in uuids2:
-            self.assertEqual(orm.load_node(uuid).user.email, manager.get_profile().default_user_email)
+            self.assertEqual(orm.load_node(uuid).user.email, manager.get_profile().default_user)
 
 
 class TestGroups(AiidaTestCase):

@@ -46,14 +46,14 @@ class TestConfigurationOptions(AiidaTestCase):
 
     def test_options(self):
         """Test that all defined options can be converted into Option namedtuples."""
-        for option_name, option_settings in CONFIG_OPTIONS.items():
+        for option_name, set_optiontings in CONFIG_OPTIONS.items():
             option = get_option(option_name)
             self.assertEqual(option.name, option_name)
-            self.assertEqual(option.key, option_settings['key'])
-            self.assertEqual(option.valid_type, option_settings['valid_type'])
-            self.assertEqual(option.valid_values, option_settings['valid_values'])
-            self.assertEqual(option.default, option_settings['default'])
-            self.assertEqual(option.description, option_settings['description'])
+            self.assertEqual(option.key, set_optiontings['key'])
+            self.assertEqual(option.valid_type, set_optiontings['valid_type'])
+            self.assertEqual(option.valid_values, set_optiontings['valid_values'])
+            self.assertEqual(option.default, set_optiontings['default'])
+            self.assertEqual(option.description, set_optiontings['description'])
 
     @with_temporary_config_instance
     def test_get_config_option_default(self):
@@ -75,7 +75,7 @@ class TestConfigurationOptions(AiidaTestCase):
         option_value_profile = 'WARNING'
 
         # Setting a specific value for the current profile which should then be returned by `get_config_option`
-        config.option_set(option_name, option_value_profile, scope=profile.name)
+        config.set_option(option_name, option_value_profile, scope=profile.name)
         option_value = get_config_option(option_name)
         self.assertEqual(option_value, option_value_profile)
 
@@ -88,6 +88,6 @@ class TestConfigurationOptions(AiidaTestCase):
         option_value_global = 'CRITICAL'
 
         # Setting a specific value globally which should then be returned by `get_config_option` due to agglomeration
-        config.option_set(option_name, option_value_global)
+        config.set_option(option_name, option_value_global)
         option_value = get_config_option(option_name)
         self.assertEqual(option_value, option_value_global)

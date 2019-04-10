@@ -36,7 +36,7 @@ class TestVerdiQuickSetup(AiidaTestCase):
         self.cli_runner = CliRunner()
 
     @with_temporary_config_instance
-    def test_quicksetup(self):
+    def test_setup(self):
         """Test `verdi quicksetup`."""
         profile_name = 'testing'
         user_email = 'some@email.com'

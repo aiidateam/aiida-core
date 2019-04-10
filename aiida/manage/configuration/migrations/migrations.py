@@ -39,8 +39,8 @@ class ConfigMigration(object):  # pylint: disable=useless-object-inheritance
     def apply(self, config):
         """Apply the migration to the configuration."""
         config = self.migrate_function(config)
-        config.version = self.version
-        config.version_oldest_compatible = self.version_oldest_compatible
+        config.setdefault('CONFIG_VERSION', {})['CURRENT'] = self.version
+        config.setdefault('CONFIG_VERSION', {})['OLDEST_COMPATIBLE'] = self.version_oldest_compatible
         return config
 
 
@@ -53,9 +53,9 @@ def _1_add_profile_uuid(config):
     The profile uuid will be used as a general purpose identifier for the profile, in
     for example the RabbitMQ message queues and exchanges.
     """
-    for profile in config.profiles:
-        profile.uuid = profile.generate_uuid()
-        config.update_profile(profile)
+    for profile in config.get('profiles', {}).values():
+        from uuid import uuid4
+        profile['PROFILE_UUID'] = uuid4().hex
 
     return config
 
@@ -68,14 +68,12 @@ def _2_simplify_default_profiles(config):
     """
     from aiida.manage.configuration import PROFILE
 
-    default_profiles = config.dictionary.pop('default_profiles', None)
+    default_profiles = config.pop('default_profiles', None)
 
     if default_profiles:
-        default_profile = default_profiles['daemon']
-    else:
-        default_profile = PROFILE.name
-
-    config.set_default_profile(default_profile)
+        config['default_profile'] = default_profiles['daemon']
+    elif PROFILE is not None:
+        config['default_profile'] = PROFILE.name
 
     return config
 

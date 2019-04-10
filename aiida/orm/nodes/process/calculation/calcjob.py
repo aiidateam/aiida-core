@@ -179,14 +179,6 @@ class CalcJobNode(CalculationNode):
 
         raise NotExistent('the `_raw_input_folder` has not yet been created')
 
-    @property
-    def options(self):
-        """Return the available process options for the process class that created this node."""
-        try:
-            return self.process_class.spec().inputs._ports['metadata']['options']  # pylint: disable=protected-access
-        except ValueError:
-            return {}
-
     def get_option(self, name):
         """
         Retun the value of an option that was set for this CalcJobNode
@@ -215,7 +207,7 @@ class CalcJobNode(CalculationNode):
         :return: dictionary of the options and their values
         """
         options = {}
-        for name in self.options.keys():
+        for name in self.process_class.spec_options.keys():
             value = self.get_option(name)
             if value is not None:
                 options[name] = value

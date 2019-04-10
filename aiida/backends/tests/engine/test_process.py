@@ -20,6 +20,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.tests.utils import processes as test_processes
 from aiida.common.lang import override
 from aiida.engine import Process, run, run_get_pk, run_get_node
+from aiida.engine.processes.ports import PortNamespace
 
 
 class NameSpacedProcess(Process):
@@ -101,6 +102,16 @@ class TestProcess(AiidaTestCase):
     def test_inputs(self):
         with self.assertRaises(ValueError):
             run(test_processes.BadOutput)
+
+    def test_spec_metadata_property(self):
+        """ `Process.spec_metadata` should return the metadata port namespace of its spec."""
+        self.assertIsInstance(Process.spec_metadata, PortNamespace)
+        self.assertEqual(Process.spec_metadata, Process.spec().inputs['metadata'])
+
+    def test_spec_options_property(self):
+        """ `Process.spec_options` should return the options port namespace of its spec."""
+        self.assertIsInstance(Process.spec_options, PortNamespace)
+        self.assertEqual(Process.spec_options, Process.spec().inputs['metadata']['options'])
 
     def test_input_link_creation(self):
         dummy_inputs = ['a', 'b', 'c', 'd']

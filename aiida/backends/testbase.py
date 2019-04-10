@@ -21,15 +21,15 @@ from tornado import ioloop
 from aiida.backends.tests import get_db_test_list
 from aiida.common.exceptions import ConfigurationError, TestsNotAllowedError, InternalError
 from aiida.common.lang import classproperty
+from aiida.manage import configuration
 from aiida.manage.manager import reset_manager
 
 
 def check_if_tests_can_run():
-    """
-    Check if the tests can run (i.e., if we are in a test profile).
-    Otherwise, raise TestsNotAllowedError.
-    """
-    pass
+    """Verify that the currently loaded profile is a test profile, otherwise raise `TestsNotAllowedError`."""
+    profile = configuration.PROFILE
+    if not profile.is_test_profile:
+        raise TestsNotAllowedError('currently loaded profile {} is not a valid test profile'.format(profile.name))
 
 
 class AiidaTestCase(unittest.TestCase):

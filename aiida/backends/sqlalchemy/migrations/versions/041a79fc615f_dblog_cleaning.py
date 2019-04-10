@@ -30,8 +30,8 @@ import sqlalchemy as sa
 from sqlalchemy.sql import text
 from alembic import op
 
-from aiida import settings
 from aiida.backends.sqlalchemy.utils import dumps_json
+from aiida.manage import configuration
 
 # revision identifiers, used by Alembic.
 revision = '041a79fc615f'
@@ -137,7 +137,7 @@ def export_and_clean_workflow_logs(connection):
     if lwf_no_number == 0 and other_number == 0 and log_no_node_number == 0:
         return
 
-    if not settings.TESTING_MODE:
+    if not configuration.PROFILE.is_test_profile:
         click.echo('We found {} log records that correspond to legacy workflows and {} log records to correspond '
                    'to an unknown entity.'.format(lwf_no_number, other_number))
         click.echo(
@@ -146,9 +146,7 @@ def export_and_clean_workflow_logs(connection):
         if not proceed:
             sys.exit(1)
 
-    delete_on_close = False
-    if settings.TESTING_MODE:
-        delete_on_close = True
+    delete_on_close = configuration.PROFILE.is_test_profile
 
     # Exporting the legacy workflow log records
     if lwf_no_number != 0:

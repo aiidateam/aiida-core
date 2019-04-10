@@ -81,12 +81,9 @@ def devel_tests(paths, verbose):  # pylint: disable=too-many-locals,too-many-sta
     import unittest
 
     import aiida
-    from aiida import settings
     from aiida.backends.testbase import run_aiida_db_tests
     from aiida.backends.testbase import check_if_tests_can_run
     from aiida.manage import configuration
-
-    settings.TESTING_MODE = True
 
     test_failures = []
     test_errors = []

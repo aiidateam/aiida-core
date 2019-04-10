@@ -31,10 +31,10 @@ def write_database_integrity_violation(results, headers, reason_message, action_
     from tabulate import tabulate
     from tempfile import NamedTemporaryFile
 
-    from aiida import settings
     from aiida.cmdline.utils import echo
+    from aiida.manage import configuration
 
-    if settings.TESTING_MODE:
+    if configuration.PROFILE.is_test_profile:
         return
 
     if action_message is None:

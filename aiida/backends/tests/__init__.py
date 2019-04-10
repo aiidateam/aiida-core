@@ -7,6 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+Module for defining tests that required access to (a temporary) database
+"""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -15,7 +18,7 @@ from six.moves import range
 from aiida.plugins.entry_point import ENTRYPOINT_MANAGER
 from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
 
-db_test_list = {
+DB_TEST_LIST = {
     BACKEND_DJANGO: {
         'generic': ['aiida.backends.djsite.db.subtests.test_generic'],
         'nodes': ['aiida.backends.djsite.db.subtests.test_nodes'],
@@ -129,20 +132,24 @@ db_test_list = {
         'plugin_loader': ['aiida.backends.tests.test_plugin_loader'],
         'query': ['aiida.backends.tests.test_query'],
         'restapi': ['aiida.backends.tests.test_restapi'],
+        'tools.data.orbital': ['aiida.backends.tests.tools.data.orbital.test_orbitals']
     }
 }
 
 
 def get_db_test_names():
+    """
+    Return a sorted list of test names
+    """
     retlist = []
-    for backend in db_test_list:
-        for name in db_test_list[backend]:
+    for backend in DB_TEST_LIST:
+        for name in DB_TEST_LIST[backend]:
             retlist.append(name)
 
     # This is a temporary solution to be able to run tests in plugins. Once the plugin fixtures
     # have been made working and are released, we can replace this logic with them
-    for ep in [ep for ep in ENTRYPOINT_MANAGER.iter_entry_points(group='aiida.tests')]:
-        retlist.append(ep.name)
+    for entrypoint in [ep for ep in ENTRYPOINT_MANAGER.iter_entry_points(group='aiida.tests')]:
+        retlist.append(entrypoint.name)
 
     # Explode the list so that if I have a.b.c,
     # I can run it also just with 'a' or with 'a.b'
@@ -160,7 +167,7 @@ def get_db_test_names():
 
 def get_db_test_list():
     """
-    This function returns the db_test_list for the current backend,
+    This function returns the DB_TEST_LIST for the current backend,
     merged with the 'common' tests.
 
     :note: This function should be called only after setting the
@@ -172,39 +179,39 @@ def get_db_test_list():
 
     current_backend = settings.BACKEND
     try:
-        be_tests = db_test_list[current_backend]
+        be_tests = DB_TEST_LIST[current_backend]
     except KeyError:
         raise ConfigurationError("No backend configured yet")
 
     # Could be undefined, so put to empty dict by default
     try:
-        common_tests = db_test_list["common"]
+        common_tests = DB_TEST_LIST["common"]
     except KeyError:
         raise ConfigurationError("A 'common' key must always be defined!")
 
     retdict = defaultdict(list)
     for k, tests in common_tests.items():
-        for t in tests:
-            retdict[k].append(t)
+        for test in tests:
+            retdict[k].append(test)
     for k, tests in be_tests.items():
-        for t in tests:
-            retdict[k].append(t)
+        for test in tests:
+            retdict[k].append(test)
 
     # This is a temporary solution to be able to run tests in plugins. Once the plugin fixtures
     # have been made working and are released, we can replace this logic with them
-    for ep in [ep for ep in ENTRYPOINT_MANAGER.iter_entry_points(group='aiida.tests')]:
-        retdict[ep.name].append(ep.module_name)
+    for entrypoint in [ep for ep in ENTRYPOINT_MANAGER.iter_entry_points(group='aiida.tests')]:
+        retdict[entrypoint.name].append(entrypoint.module_name)
 
     # Explode the dictionary so that if I have a.b.c,
     # I can run it also just with 'a' or with 'a.b'
     final_retdict = defaultdict(list)
-    for k, v in retdict.items():
-        final_retdict[k] = v
-    for k, v in retdict.items():
-        if '.' in k:
-            parts = k.split('.')
+    for key, val in retdict.items():
+        final_retdict[key] = val
+    for key, val in retdict.items():
+        if '.' in key:
+            parts = key.split('.')
             for last_idx in range(1, len(parts)):
                 parentkey = ".".join(parts[:last_idx])
-                final_retdict[parentkey].extend(v)
+                final_retdict[parentkey].extend(val)
 
     return dict(final_retdict)

@@ -18,7 +18,7 @@ from pgtest import pgtest
 
 from aiida.manage.fixtures import FixtureManager, FixtureError
 from aiida.common.utils import Capturing
-from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
+from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
 
 
 class FixtureManagerTestCase(unittest.TestCase):
@@ -48,7 +48,6 @@ class FixtureManagerTestCase(unittest.TestCase):
         * reset_db deletes all data added after profile creation
         * destroy_all removes all traces of the test run
         """
-        from aiida import is_dbenv_loaded
         with Capturing() as output:
             self.fixture_manager.create_profile()
 
@@ -57,7 +56,6 @@ class FixtureManagerTestCase(unittest.TestCase):
         self.assertTrue(self.fixture_manager.repo_ok, msg=output)
         from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
         self.assertEqual(AIIDA_CONFIG_FOLDER, self.fixture_manager.config_dir, msg=output)
-        self.assertTrue(is_dbenv_loaded())
 
         from aiida.orm import load_node
         from aiida.plugins import DataFactory

@@ -68,6 +68,7 @@ def verdi_status():
         sys.exit(exit_code)  # stop here - without a profile we cannot access anything
 
     # getting the repository
+    repo_folder = 'undefined'
     try:
         repo_folder = get_repository_folder()
     except Exception as exc:

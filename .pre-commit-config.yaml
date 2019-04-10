@@ -38,8 +38,7 @@
         aiida/backends/djsite/__init__.py|
         aiida/backends/djsite/manage.py|
         aiida/backends/djsite/queries.py|
-        aiida/backends/djsite/settings/__init__.py|
-        aiida/backends/djsite/settings/settings_profile.py|
+        aiida/backends/profile.py|
         aiida/backends/general/abstractqueries.py|
         aiida/backends/profile.py|
         aiida/backends/settings.py|
@@ -81,7 +80,6 @@
         aiida/backends/sqlalchemy/tests/test_session.py|
         aiida/backends/sqlalchemy/tests/testbase.py|
         aiida/backends/sqlalchemy/tests/test_utils.py|
-        aiida/backends/sqlalchemy/transition_06dj_to_07sqla.py|
         aiida/backends/sqlalchemy/utils.py|
         aiida/backends/testbase.py|
         aiida/backends/testimplbase.py|

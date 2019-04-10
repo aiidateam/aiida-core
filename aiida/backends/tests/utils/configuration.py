@@ -42,7 +42,7 @@ def create_mock_profile(name, repository_dirpath=None):
     dictionary[Profile.KEY_PROFILE_UUID] = Profile.generate_uuid()
     dictionary[Profile.KEY_DEFAULT_USER] = 'dummy@localhost'
 
-    return dictionary
+    return Profile(name, dictionary)
 
 
 @contextlib.contextmanager
@@ -50,37 +50,34 @@ def temporary_config_instance():
     """Create a temporary AiiDA instance."""
     current_config = None
     current_config_path = None
-    current_profile_name = None
+    current_profile = None
     temporary_config_directory = None
 
+    from aiida.manage import configuration
+    from aiida.manage.configuration import settings
+
     try:
-        from aiida.backends import settings as backend_settings
-        from aiida.common.setup import create_profile_noninteractive
-        from aiida.manage import configuration
-        from aiida.manage.configuration.utils import load_config
-        from aiida.manage.configuration import settings
-        from aiida.manage.configuration.setup import create_instance_directories
+        from aiida.manage.configuration.settings import create_instance_directories
 
         # Store the current configuration instance and config directory path
         current_config = configuration.CONFIG
         current_config_path = current_config.dirpath
-        current_profile_name = backend_settings.AIIDADB_PROFILE
+        current_profile = configuration.PROFILE
 
         # Create a temporary folder, set it as the current config directory path and reset the loaded configuration
         profile_name = 'test_profile_1234'
         temporary_config_directory = tempfile.mkdtemp()
         configuration.CONFIG = None
         settings.AIIDA_CONFIG_FOLDER = temporary_config_directory
-        backend_settings.AIIDADB_PROFILE = profile_name
 
         # Create the instance base directory structure, the config file and a dummy profile
         create_instance_directories()
-        configuration.CONFIG = load_config(create=True)
-        profile_content = create_mock_profile(name=profile_name, repository_dirpath=temporary_config_directory)
-        profile = create_profile_noninteractive(configuration.CONFIG, profile_name=profile_name, **profile_content)
+        configuration.CONFIG = configuration.load_config(create=True)
+        profile = create_mock_profile(name=profile_name, repository_dirpath=temporary_config_directory)
+        configuration.PROFILE = profile
 
         # Add the created profile and set it as the default
-        configuration.CONFIG.add_profile(profile_name, profile)
+        configuration.CONFIG.add_profile(profile)
         configuration.CONFIG.set_default_profile(profile_name, overwrite=True)
         configuration.CONFIG.store()
 
@@ -89,7 +86,7 @@ def temporary_config_instance():
         # Reset the config folder path and the config instance
         configuration.CONFIG = current_config
         settings.AIIDA_CONFIG_FOLDER = current_config_path
-        backend_settings.AIIDADB_PROFILE = current_profile_name
+        configuration.PROFILE = current_profile
 
         # Destroy the temporary instance directory
         if temporary_config_directory and os.path.isdir(temporary_config_directory):

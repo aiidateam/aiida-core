@@ -16,15 +16,23 @@ from functools import partial
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import options, types
+from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
 
 PASSWORD_UNCHANGED = '***'  # noqa
 
 
-@verdi.group('user')
-def verdi_user():
-    """Inspect and manage users."""
+def set_default_user(profile, user):
+    """Set the user as the default user for the given profile.
+
+    :param profile: the profile
+    :param user: the user
+    """
+    from aiida.manage.configuration import get_config
+    config = get_config()
+    profile.default_user = user.email
+    config.update_profile(profile)
+    config.store()
 
 
 def get_user_attribute_default(attribute, ctx):
@@ -41,6 +49,11 @@ def get_user_attribute_default(attribute, ctx):
         return None
 
     return default
+
+
+@verdi.group('user')
+def verdi_user():
+    """Inspect and manage users."""
 
 
 @verdi_user.command('list')
@@ -60,39 +73,59 @@ def user_list():
     echo.echo_formatted_list(User.objects.all(), attributes, sort=sort, highlight=highlight)
 
 
-@verdi_user.command()
-@click.argument('user', metavar='USER', type=types.UserParamType(create=True))
-@options.NON_INTERACTIVE()
+@verdi_user.command('configure')
+@click.option(
+    '--email',
+    'user',
+    prompt='User email',
+    help='Email address that serves as the user name and a way to identify data created by it.',
+    type=types.UserParamType(create=True),
+    cls=options.interactive.InteractiveOption)
 @click.option(
     '--first-name',
     prompt='First name',
+    help='First name of the user.',
     type=click.STRING,
     contextual_default=partial(get_user_attribute_default, 'first_name'),
     cls=options.interactive.InteractiveOption)
 @click.option(
     '--last-name',
     prompt='Last name',
+    help='Last name of the user.',
     type=click.STRING,
     contextual_default=partial(get_user_attribute_default, 'last_name'),
     cls=options.interactive.InteractiveOption)
 @click.option(
     '--institution',
     prompt='Institution',
+    help='Institution of the user.',
     type=click.STRING,
     contextual_default=partial(get_user_attribute_default, 'institution'),
     cls=options.interactive.InteractiveOption)
 @click.option(
     '--password',
     prompt='Password',
+    help='Optional password to connect to REST API.',
     hide_input=True,
     required=False,
     type=click.STRING,
     default=PASSWORD_UNCHANGED,
     confirmation_prompt=True,
     cls=options.interactive.InteractiveOption)
+@click.option(
+    '--set-default',
+    prompt='Set as default?',
+    help='Set the user as the default user for the current profile.',
+    is_flag=True,
+    cls=options.interactive.InteractiveOption)
+@click.pass_context
 @decorators.with_dbenv()
-def configure(user, first_name, last_name, institution, password, non_interactive):  # pylint: disable=unused-argument
-    """Create or update a USER."""
+def user_configure(ctx, user, first_name, last_name, institution, password, set_default):
+    """Configure a new or existing user.
+
+    An e-mail address is used as the user name.
+    """
+    # pylint: disable=too-many-arguments
     if first_name is not None:
         user.first_name = first_name
     if last_name is not None:
@@ -110,3 +143,16 @@ def configure(user, first_name, last_name, institution, password, non_interactiv
 
     if not user.has_usable_password():
         echo.echo_warning('no password set, so authentication for the REST API will be disabled')
+
+    if set_default:
+        ctx.invoke(user_set_default, user=user)
+
+
+@verdi_user.command('set-default')
+@arguments.USER()
+@click.pass_context
+@decorators.with_dbenv()
+def user_set_default(ctx, user):
+    """Set the USER as the default user."""
+    set_default_user(ctx.obj.profile, user)
+    echo.echo_success('set `{}` as the new default user for profile `{}`'.format(user.email, ctx.obj.profile.name))

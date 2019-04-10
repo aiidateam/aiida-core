@@ -66,14 +66,14 @@ def _2_simplify_default_profiles(config):
     default profiles key in the configuration no longer needs a value per process ('verdi', 'daemon')
     We remove the dictionary 'default_profiles' and replace it with a simple value 'default_profile'
     """
-    from aiida.backends import settings
+    from aiida.manage.configuration import PROFILE
 
     default_profiles = config.dictionary.pop('default_profiles', None)
 
     if default_profiles:
         default_profile = default_profiles['daemon']
     else:
-        default_profile = settings.AIIDADB_PROFILE
+        default_profile = PROFILE.name
 
     config.set_default_profile(default_profile)
 

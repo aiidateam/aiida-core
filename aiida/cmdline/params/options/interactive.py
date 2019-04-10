@@ -115,9 +115,16 @@ class InteractiveOption(ConditionalOption):
     def _get_default(self, ctx):
         """provides the functionality of :func:`click.Option.get_default`"""
         if self._contextual_default is not None:
-            return self._contextual_default(ctx)
+            default = self._contextual_default(ctx)
+        else:
+            default = super(InteractiveOption, self).get_default(ctx)
 
-        return super(InteractiveOption, self).get_default(ctx)
+        try:
+            default = self.type.deconvert_default(default)
+        except AttributeError:
+            pass
+
+        return default
 
     @staticmethod
     def custom_value_proc(value):

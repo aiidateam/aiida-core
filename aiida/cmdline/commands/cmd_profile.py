@@ -44,7 +44,7 @@ def profile_list():
         echo.echo_info('configuration folder: {}'.format(config.dirpath))
 
     if not config.profiles:
-        echo.echo_info('no profiles configured')
+        echo.echo_warning('no profiles configured: run `verdi setup` to create one')
     else:
         sort = lambda profile: profile.name
         highlight = lambda profile: profile.name == config.default_profile_name

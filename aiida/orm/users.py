@@ -35,7 +35,7 @@ class User(entities.Entity):
             super(User.Collection, self).__init__(*args, **kwargs)
             self._default_user = self.UNDEFINED
 
-        def get_or_create(self, **kwargs):
+        def get_or_create(self, email, **kwargs):
             """
                 Get the existing user with a given email address or create an unstored one
 
@@ -46,9 +46,9 @@ class User(entities.Entity):
                     :class:`aiida.common.exceptions.NotExistent`
                 """
             try:
-                return False, self.get(**kwargs)
+                return False, self.get(email=email)
             except exceptions.NotExistent:
-                return True, User(backend=self.backend, **kwargs)
+                return True, User(backend=self.backend, email=email, **kwargs)
 
         def get_default(self):
             """
@@ -58,7 +58,9 @@ class User(entities.Entity):
             :rtype: :class:`aiida.orm.User`
             """
             if self._default_user is self.UNDEFINED:
-                email = get_manager().get_profile().default_user_email
+                from aiida.manage.configuration import get_profile
+                profile = get_profile()
+                email = profile.default_user
                 if not email:
                     self._default_user = None
 

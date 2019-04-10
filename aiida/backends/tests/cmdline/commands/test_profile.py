@@ -42,7 +42,7 @@ class TestVerdiProfileSetup(AiidaTestCase):
 
         for profile_name in self.profile_list:
             profile = create_mock_profile(profile_name)
-            self.config.add_profile(profile_name, profile)
+            self.config.add_profile(profile)
 
         self.config.set_default_profile(self.profile_list[0], overwrite=True).store()
 

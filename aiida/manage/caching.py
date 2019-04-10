@@ -22,7 +22,6 @@ from contextlib import contextmanager
 import yaml
 import six
 
-from aiida.backends.utils import get_current_profile
 from aiida.common import exceptions
 from aiida.common.utils import get_object_from_string
 
@@ -50,9 +49,16 @@ def _get_config(config_file):
     :param config_file: the absolute path to the caching configuration file
     :return: the configuration dictionary
     """
+    from aiida.manage.configuration import get_profile
+
+    profile = get_profile()
+
+    if profile is None:
+        exceptions.ConfigurationError('no profile has been loaded')
+
     try:
         with io.open(config_file, 'r', encoding='utf8') as handle:
-            config = yaml.load(handle)[get_current_profile()]
+            config = yaml.load(handle)[profile.name]
     # no config file, or no config for this profile
     except (OSError, IOError, KeyError):
         return DEFAULT_CONFIG

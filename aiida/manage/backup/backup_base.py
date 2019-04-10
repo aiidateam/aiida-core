@@ -278,25 +278,11 @@ class AbstractBackup(object):
         return 0, query_sets
 
     def _get_repository_path(self):
-        from aiida.common.setup import parse_repository_uri
-        from aiida.common.exceptions import MissingConfigurationError
-        from aiida.manage.configuration import get_config
-
-        try:
-            config = get_config()
-        except MissingConfigurationError:
-            raise MissingConfigurationError("Please run the AiiDA Installation, no config found")
-
-        profile_dictionary = config.current_profile.dictionary
-
-        REPOSITORY_URI = profile_dictionary.get('AIIDADB_REPOSITORY_URI', '')
-        REPOSITORY_PROTOCOL, REPOSITORY_PATH = parse_repository_uri(REPOSITORY_URI)
-
-        return REPOSITORY_PATH
+        from aiida.manage.configuration import get_profile
+        return get_profile().repository_path
 
     def _backup_needed_files(self, query_sets):
-        REPOSITORY_PATH = self._get_repository_path()
-        repository_path = os.path.normpath(REPOSITORY_PATH)
+        repository_path = os.path.normpath(self._get_repository_path())
 
         parent_dir_set = set()
         copy_counter = 0

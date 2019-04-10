@@ -15,7 +15,7 @@ from __future__ import absolute_import
 
 import click
 
-from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
+from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
 from .. import types
 from .multivalue import MultipleValueOption
 from .overridable import OverridableOption

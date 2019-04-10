@@ -18,22 +18,19 @@
 #
 # All configuration values have a default; values that are commented out
 # serve to show the default.
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-import sys, os
 
-# Following 3 lines avoid the need of importing load_dbenv() for compiling the
-# documentation -> works also without verdi install
-sys.path.append( os.path.join( os.path.split(__file__)[0],
-                                   os.pardir,os.pardir) )
-sys.path.append( os.path.join( os.path.split(__file__)[0],
-                                   os.pardir))
+import os
+import sys
+
+# Following 3 lines avoid the need of importing load_dbenv() for compiling the documentation -> works also without verdi install
+sys.path.append(os.path.join(os.path.split(__file__)[0], os.pardir, os.pardir))
+sys.path.append(os.path.join(os.path.split(__file__)[0], os.pardir))
 os.environ['DJANGO_SETTINGS_MODULE'] = 'rtd_settings'
 
 import aiida
-from aiida.backends import settings
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -240,9 +237,6 @@ latex_documents = [
 # If false, no module index is generated.
 #latex_domain_indices = True
 
-# We set that we are in documentation mode - even for local compilation
-settings.IN_DOC_MODE = True
-
 # on_rtd is whether we are on readthedocs.org, this line of code grabbed
 # from docs.readthedocs.org
 # NOTE: it is needed to have these lines before load_dbenv()
@@ -256,17 +250,17 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
     except ImportError:
         # No sphinx_rtd_theme installed
         pass
-    # Loading the dbenv. The backend should be fixed before compiling the
-    # documentation.
-    from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-    if not is_dbenv_loaded():
-        load_dbenv()
+    # Load the database environment by first loading the profile and then loading the backend through the manager
+    from aiida.manage.configuration import get_config, load_profile
+    from aiida.manage.manager import get_manager
+    config = get_config()
+    load_profile(config.default_profile_name)
+    get_manager().get_backend()
 else:
     # Back-end settings for readthedocs online documentation.
-    # from aiida.backends import settings
-    settings.IN_RT_DOC_MODE = True
-    settings.BACKEND = "django"
-    settings.AIIDADB_PROFILE = "default"
+    from aiida.manage import configuration
+    configuration.IN_RT_DOC_MODE = True
+    configuration.BACKEND = "django"
 
 
 def run_apidoc(_):

@@ -93,7 +93,10 @@ class DirectScheduler(aiida.schedulers.Scheduler):
         TODO: in the case of job arrays, decide what to do (i.e., if we want
               to pass the -t options to list each subjob).
         """
-        # x:  include processes which do not have a controlling terminal
+        # Using subprocess.Popen with `preexec_fn=os.setsid` (as done in both local and ssh transport) results in
+        # processes without a controlling terminal.
+        # The -x option tells ps to include processes which do not have a controlling terminal, which would not be
+        # listed otherwise (leading the direct scheduler to conclude that the process already completed).
         command = 'ps -xo pid,stat,user,time'
 
         if jobs:

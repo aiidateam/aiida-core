@@ -18,22 +18,15 @@ import tempfile
 
 from dateutil.parser import parse
 
-from aiida.backends.utils import is_dbenv_loaded, load_dbenv, BACKEND_SQLA, BACKEND_DJANGO
-from aiida.backends.settings import BACKEND
+from aiida.backends.utils import BACKEND_SQLA, BACKEND_DJANGO
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common import utils
+from aiida.common import utils, json
+from aiida.manage.configuration import BACKEND, PROFILE, load_profile
 from aiida.manage.backup import backup_setup
 from aiida.manage.backup import backup_utils
-from aiida.orm import Data
-from aiida.common import json
-
-
-if not is_dbenv_loaded():
-    load_dbenv()
 
 
 class TestBackupScriptUnit(AiidaTestCase):
-
 
     _json_test_input_1 = '{"backup_length_threshold": 2, "periodicity": 2,' + \
         ' "oldest_object_backedup": "2014-07-18 13:54:53.688484+00:00", ' + \
@@ -69,8 +62,8 @@ class TestBackupScriptUnit(AiidaTestCase):
 
     def setUp(self):
         super(TestBackupScriptUnit, self).setUp()
-        if not is_dbenv_loaded():
-            load_dbenv()
+        if not PROFILE:
+            load_profile()
 
         if BACKEND == BACKEND_SQLA:
             from aiida.manage.backup.backup_sqlalchemy import Backup
@@ -328,12 +321,12 @@ class TestBackupScriptIntegration(AiidaTestCase):
             importlib.import_module(self._bs_instance._script_filename[:-3])
 
             # Check the backup
-            from aiida import settings
-            from filecmp import dircmp
             import os
+            from aiida.manage.configuration import get_profile
             from aiida.common.utils import are_dir_trees_equal
-            source_dir = os.path.join(settings.REPOSITORY_PATH,
-                                      self._repo_rel_path)
+
+            dirpath_repository = get_profile().repository_path
+            source_dir = os.path.join(dirpath_repository, self._repo_rel_path)
             dest_dir = os.path.join(backup_full_path,
                                     self._bs_instance._file_backup_folder_rel,
                                     self._repo_rel_path)
@@ -344,13 +337,10 @@ class TestBackupScriptIntegration(AiidaTestCase):
             shutil.rmtree(temp_folder, ignore_errors=True)
 
     def fill_repo(self):
-        from aiida.orm import CalcJobNode, Data
-        from aiida.plugins import CalculationFactory, DataFactory
+        from aiida.orm import CalcJobNode, Data, Dict
 
         extra_name = self.__class__.__name__ + "/test_with_subclasses"
         resources = {'num_machines': 1, 'num_mpiprocs_per_machine': 1}
-
-        Dict = DataFactory('dict')
 
         a1 = CalcJobNode(computer=self.computer)
         a1.set_option('resources', resources)

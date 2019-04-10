@@ -8,23 +8,21 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=inconsistent-return-statements
 """
 It defines the method with all required parameters to run restapi locally.
 """
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import argparse
 import imp
 import os
 
 from flask_cors import CORS
 
-from aiida.backends.utils import load_dbenv
 
-
-# pylint: disable=inconsistent-return-statements,too-many-locals
 def run_api(flask_app, flask_api, *args, **kwargs):
     """
     Takes a flask.Flask instance and runs it. Parses
@@ -47,8 +45,9 @@ def run_api(flask_app, flask_api, *args, **kwargs):
     profile
     All other passed parameters are ignored.
     """
-
+    # pylint: disable=too-many-locals
     import aiida  # Mainly needed to locate the correct aiida path
+    from aiida.manage.configuration import load_profile
 
     # Unpack parameters and assign defaults if needed
     prog_name = kwargs['prog_name'] if 'prog_name' in kwargs else ""
@@ -112,8 +111,6 @@ def run_api(flask_app, flask_api, *args, **kwargs):
     confs = imp.load_source(
         os.path.join(parsed_args.config_dir, 'config'), os.path.join(parsed_args.config_dir, 'config.py'))
 
-    import aiida.backends.settings as settings
-
     # Set aiida profile
     #
     # General logic:
@@ -138,15 +135,8 @@ def run_api(flask_app, flask_api, *args, **kwargs):
     else:
         aiida_profile = "default"
 
-    if aiida_profile != "default":
-        settings.AIIDADB_PROFILE = aiida_profile
-    else:
-        pass  # This way the default of .aiida/config.json will be used
-
-    # Set the AiiDA environment. If already loaded, load_dbenv will raise an
-    # exception
-    # if not is_dbenv_loaded():
-    load_dbenv()
+    # Load the default profile
+    load_profile(aiida_profile)
 
     # Instantiate an app
     app_kwargs = dict(catch_internal_server=catch_internal_server)
@@ -204,7 +194,7 @@ if __name__ == '__main__':
     import sys
     from aiida.restapi.api import AiidaApi, App
 
-    #Or, equivalently, (useful starting point for derived apps)
-    #import the app object and the Api class that you want to combine.
+    # Or, equivalently, (useful starting point for derived apps)
+    # import the app object and the Api class that you want to combine.
 
     run_api(App, AiidaApi, *sys.argv[1:], parse_aiida_profile=True, hookup=True, catch_internal_server=True)

@@ -14,8 +14,6 @@ from __future__ import absolute_import
 
 import functools
 
-from .configuration import get_config
-
 __all__ = ('get_manager', 'reset_manager')
 
 MANAGER = None
@@ -37,6 +35,16 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
       * reset manager cache when loading a new profile
     """
 
+    @staticmethod
+    def get_profile():
+        """Return the current loaded profile, if any
+
+        :return: current loaded profile instance
+        :rtype: :class:`~aiida.manage.configuration.profile.Profile` or None
+        """
+        from .configuration import get_profile
+        return get_profile()
+
     def _load_backend(self, schema_check=True):
         """Load the backend for the currently configured profile and return it.
 
@@ -44,18 +52,32 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         :return: the database backend
         :rtype: :class:`aiida.orm.Backend`
         """
-        from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
-        from aiida.backends.utils import is_dbenv_loaded, load_dbenv, _load_dbenv_noschemacheck
+        from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
+        from aiida.common import ConfigurationError
+        from aiida.manage import configuration
 
         profile = self.get_profile()
 
-        if not is_dbenv_loaded():
-            if schema_check:
-                load_dbenv(profile.name)
-            else:
-                _load_dbenv_noschemacheck(profile.name)
+        if profile is None:
+            raise RuntimeError('could not determine the current profile')
+
+        if configuration.BACKEND is not None and configuration.BACKEND is not profile.database_backend:
+            raise ConfigurationError('corrupt configuration: current backend does not match that of loaded profile')
 
         backend_type = profile.dictionary.AIIDADB_BACKEND
+
+        if backend_type == BACKEND_DJANGO:
+            from aiida.backends.djsite.utils import load_dbenv, _load_dbenv_noschemacheck
+            load_backend = load_dbenv if schema_check else _load_dbenv_noschemacheck
+        elif backend_type == BACKEND_SQLA:
+            from aiida.backends.sqlalchemy.utils import load_dbenv, _load_dbenv_noschemacheck
+            load_backend = load_dbenv if schema_check else _load_dbenv_noschemacheck
+        else:
+            raise RuntimeError('Invalid backend type {} in profile: {}'.format(backend_type, profile.name))
+
+        if configuration.BACKEND is None:
+            load_backend(profile)
+            configuration.BACKEND = backend_type
 
         if backend_type == BACKEND_DJANGO:
             from aiida.orm.implementation.django.backend import DjangoBackend
@@ -63,10 +85,12 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         elif backend_type == BACKEND_SQLA:
             from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
             self._backend = SqlaBackend()
-        else:
-            raise RuntimeError('Invalid backend type {} in profile: {}'.format(backend_type, profile.name))
 
         return self._backend
+
+    def load_backend(self):
+        """Load the database backend for the currently loaded profile."""
+        self._load_backend()
 
     def get_backend(self):
         """
@@ -79,19 +103,6 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
             self._load_backend()
 
         return self._backend
-
-    def get_profile(self):
-        """
-        Get the current profile
-
-        :return: current loaded profile instance
-        :rtype: :class:`~aiida.manage.configuration.profile.Profile`
-        """
-        if self._profile is None:
-            config = get_config()
-            self._profile = config.current_profile
-
-        return self._profile
 
     def get_persister(self):
         """
@@ -232,6 +243,7 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         :rtype: :class:`aiida.engine.runners.Runner`
         """
         from aiida.engine import runners
+        from .configuration import get_config
 
         config = get_config()
         profile = self.get_profile()

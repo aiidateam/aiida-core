@@ -35,19 +35,14 @@ DAEMON_NOT_RUNNING_DEFAULT_MESSAGE = 'daemon is not running'
 __all__ = ('with_dbenv', 'dbenv', 'only_if_daemon_running')
 
 
-def load_dbenv_if_not_loaded(**kwargs):
-    """
-    load dbenv if necessary, run spinner meanwhile to show command hasn't crashed
-    """
-    from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-    from aiida.backends.settings import AIIDADB_PROFILE
-    kwargs['profile'] = kwargs.get('profile', AIIDADB_PROFILE)
-    if not is_dbenv_loaded():
-        with spinner():
-            load_dbenv(**kwargs)
+def load_backend_if_not_loaded():
+    """Load the current profile if necessary while running the spinner to show command hasn't crashed."""
+    from aiida.manage.manager import get_manager
+    with spinner():
+        get_manager().get_backend()
 
 
-def with_dbenv(*load_dbenv_args, **load_dbenv_kwargs):
+def with_dbenv():
     """Function decorator that will load the database environment only when the function is called."""
 
     def decorator(function):
@@ -68,7 +63,7 @@ def with_dbenv(*load_dbenv_args, **load_dbenv_kwargs):
             from aiida.common.exceptions import ConfigurationError, IntegrityError
 
             try:
-                load_dbenv_if_not_loaded(*load_dbenv_args, **load_dbenv_kwargs)
+                load_backend_if_not_loaded()
             except (IntegrityError, ConfigurationError) as exception:
                 echo.echo_critical(str(exception))
 
@@ -115,7 +110,7 @@ def dbenv():
 
             # do db unrelated stuff
     """
-    load_dbenv_if_not_loaded()
+    load_backend_if_not_loaded()
     yield
 
 

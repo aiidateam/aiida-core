@@ -41,13 +41,11 @@ from contextlib import contextmanager
 
 from pgtest.pgtest import PGTest
 
-from aiida import is_dbenv_loaded
-from aiida.backends import settings as backend_settings
-from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
+from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
 from aiida.common import exceptions
+from aiida.manage import configuration
+from aiida.manage.configuration.settings import create_instance_directories
 from aiida.manage.manager import get_manager, reset_manager
-from aiida.manage.configuration.setup import create_instance_directories
-from aiida.manage.configuration.utils import load_config
 from aiida.manage.external.postgres import Postgres
 
 
@@ -114,11 +112,11 @@ class FixtureManager(object):  # pylint: disable=too-many-public-methods,useless
     _test_case = None
 
     def __init__(self):
-        from aiida.manage import configuration
-        from aiida.manage.configuration import settings as configuration_settings
+        from aiida.manage.configuration import settings
         self.db_params = {}
         self.fs_env = {'repo': 'test_repo', 'config': '.aiida'}
         self.profile_info = {
+            'engine': 'postgresql_psycopg2',
             'backend': 'django',
             'email': 'test@aiida.mail',
             'first_name': 'AiiDA',
@@ -134,8 +132,8 @@ class FixtureManager(object):  # pylint: disable=too-many-public-methods,useless
         self.__is_running_on_test_profile = False
         self._backup = {}
         self._backup['config'] = configuration.CONFIG
-        self._backup['config_dir'] = configuration_settings.AIIDA_CONFIG_FOLDER
-        self._backup['profile'] = backend_settings.AIIDADB_PROFILE
+        self._backup['config_dir'] = settings.AIIDA_CONFIG_FOLDER
+        self._backup['profile'] = configuration.PROFILE
         self.__backend = None
 
     @property
@@ -155,7 +153,7 @@ class FixtureManager(object):  # pylint: disable=too-many-public-methods,useless
 
     def create_aiida_db(self):
         """Create the necessary database on the temporary postgres instance"""
-        if is_dbenv_loaded():
+        if configuration.PROFILE is not None:
             raise FixtureError('AiiDA dbenv can not be loaded while creating a test db environment')
         if not self.db_params:
             self.create_db_cluster()
@@ -174,31 +172,40 @@ class FixtureManager(object):  # pylint: disable=too-many-public-methods,useless
 
         Warning: the AiiDA dbenv must not be loaded when this is called!
         """
-        if is_dbenv_loaded():
+        if configuration.PROFILE is not None:
             raise FixtureError('AiiDA dbenv can not be loaded while creating a test profile')
         if not self.__is_running_on_test_db:
             self.create_aiida_db()
-        from aiida.manage import configuration
-        from aiida.manage.configuration import settings as configuration_settings
-        from aiida.manage.configuration.setup import setup_profile
+        from aiida.manage.configuration import settings, load_profile, reset_profile
         if not self.root_dir:
             self.root_dir = tempfile.mkdtemp()
         configuration.CONFIG = None
-        configuration_settings.AIIDA_CONFIG_FOLDER = self.config_dir
-        backend_settings.AIIDADB_PROFILE = None
+        settings.AIIDA_CONFIG_FOLDER = self.config_dir
+        configuration.PROFILE = None
         create_instance_directories()
-        config = load_config(create=True)
         profile_name = 'test_profile'
-        setup_profile(profile_name=profile_name, only_config=False, non_interactive=True, **self.profile)
-        config = load_config()
+        config = configuration.get_config(create=True)
+        profile = config.create_profile(profile_name, **self.profile_dictionary)
         config.set_default_profile(profile_name).store()
+        load_profile(profile_name)
+        backend = get_manager()._load_backend(schema_check=False)
+        backend.migrate()
+
+        from aiida.orm import User
+        from aiida.cmdline.commands.cmd_user import set_default_user
+
+        user = User(**self.user_dictionary)
+        user.store()
+        set_default_user(profile, user)
+        reset_profile()
+        load_profile(profile_name)
+
         self.__is_running_on_test_profile = True
         self._create_test_case()
         self.init_db()
 
     def reset_db(self):
         """Cleans all data from the database between tests"""
-
         self._test_case.clean_db()
         reset_manager()
         self.init_db()
@@ -206,6 +213,8 @@ class FixtureManager(object):  # pylint: disable=too-many-public-methods,useless
     @staticmethod
     def init_db():
         """Initialise the database state"""
+        # Until the profile becomes switchable and the `BACKEND` get's automatically reset, we have to do it manually
+        configuration.BACKEND = None
         # Create the default user
         from aiida import orm
         try:
@@ -213,6 +222,32 @@ class FixtureManager(object):  # pylint: disable=too-many-public-methods,useless
         except exceptions.IntegrityError:
             # The default user already exists, no problem
             pass
+
+    @property
+    def profile_dictionary(self):
+        """Profile parameters"""
+        dictionary = {
+            'database_engine': self.engine,
+            'database_backend': self.backend,
+            'database_port': self.db_port,
+            'database_name': self.db_name,
+            'database_hostname': self.db_host,
+            'database_username': self.db_user,
+            'database_password': self.db_pass,
+            'repository_path': self.repo,
+        }
+        return dictionary
+
+    @property
+    def user_dictionary(self):
+        """User parameters"""
+        dictionary = {
+            'email': self.email,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            'institution': self.institution
+        }
+        return dictionary
 
     @property
     def profile(self):
@@ -301,6 +336,10 @@ class FixtureManager(object):  # pylint: disable=too-many-public-methods,useless
         self.profile_info['email'] = email
 
     @property
+    def engine(self):
+        return self.profile_info['engine']
+
+    @property
     def backend(self):
         return self.profile_info['backend']
 
@@ -364,8 +403,7 @@ class FixtureManager(object):  # pylint: disable=too-many-public-methods,useless
 
     def destroy_all(self):
         """Remove all traces of the test run"""
-        from aiida.manage import configuration
-        from aiida.manage.configuration import settings as configuration_settings
+        from aiida.manage.configuration import settings
         if self.root_dir:
             shutil.rmtree(self.root_dir)
             self.root_dir = None
@@ -377,9 +415,9 @@ class FixtureManager(object):  # pylint: disable=too-many-public-methods,useless
         if 'config' in self._backup:
             configuration.CONFIG = self._backup['config']
         if 'config_dir' in self._backup:
-            configuration_settings.AIIDA_CONFIG_FOLDER = self._backup['config_dir']
+            settings.AIIDA_CONFIG_FOLDER = self._backup['config_dir']
         if 'profile' in self._backup:
-            backend_settings.AIIDADB_PROFILE = self._backup['profile']
+            configuration.PROFILE = self._backup['profile']
 
     def _create_test_case(self):
         """

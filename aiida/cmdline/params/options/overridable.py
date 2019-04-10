@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=cyclic-import
 """
 .. py:module::overridable
     :synopsis: Convenience class which can be used to defined a set of commonly used options that

@@ -38,7 +38,6 @@ def database_migrate(force):
     if force:
         backend.migrate()
         return
-        # raise NotImplementedError('--force is disabled currently to prevent accidental migrations.')
 
     echo.echo('\n' + '*' * 79 + '\n')
     echo.echo_warning('Before continuing, make sure the daemon is stopped and you have a backup of your database.')

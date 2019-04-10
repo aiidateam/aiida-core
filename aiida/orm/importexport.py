@@ -563,16 +563,15 @@ def import_data(in_path, group=None, silent=False, **kwargs):
     :param comment_node_existing: Similar to param extras_mode_existing, but for Comments.
     :param comment_mode_new: Similar to param extras_mode_new, but for Comments.
     """
-    from aiida.backends.settings import BACKEND
-    from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
+    from aiida.manage.configuration import BACKEND
+    from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
 
     if BACKEND == BACKEND_SQLA:
         return import_data_sqla(in_path, user_group=group, silent=silent, **kwargs)
     elif BACKEND == BACKEND_DJANGO:
         return import_data_dj(in_path, user_group=group, silent=silent, **kwargs)
     else:
-        raise Exception("Unknown settings.BACKEND: {}".format(
-            BACKEND))
+        raise Exception("Unknown backend: {}".format(BACKEND))
 
 
 def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,

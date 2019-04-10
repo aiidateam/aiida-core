@@ -27,9 +27,9 @@ from __future__ import absolute_import
 import warnings
 import six
 
-import aiida.common.warnings
 from aiida.common.log import configure_logging
-from aiida.manage.configuration import get_config_option
+from aiida.common.warnings import AiidaDeprecationWarning
+from aiida.manage.configuration import get_config_option, get_profile, load_profile
 
 __copyright__ = (u'Copyright (c), This file is part of the AiiDA platform. '
                  u'For further information please visit http://www.aiida.net/. All rights reserved.')
@@ -49,39 +49,51 @@ if get_config_option('warnings.showdeprecations'):
     # If the user does not want to get AiiDA deprecation warnings, we disable them - this can be achieved with::
     #   verdi config warnings.showdeprecations False
     # Note that the AiidaDeprecationWarning does NOT inherit from DeprecationWarning
-    warnings.simplefilter('default', aiida.common.warnings.AiidaDeprecationWarning)  # pylint: disable=no-member
+    warnings.simplefilter('default', AiidaDeprecationWarning)  # pylint: disable=no-member
     # This should default to 'once', i.e. once per different message
 else:
-    warnings.simplefilter('ignore', aiida.common.warnings.AiidaDeprecationWarning)  # pylint: disable=no-member
+    warnings.simplefilter('ignore', AiidaDeprecationWarning)  # pylint: disable=no-member
 
 if six.PY2:
     warnings.warn('python 2 will be deprecated in `aiida-core v2.0.0`', DeprecationWarning)  # pylint: disable=no-member
 
 
-def try_load_dbenv(*argc, **argv):
+def load_dbenv(profile=None):
+    """Alias for `load_dbenv` from `aiida.backends.utils`
+
+    .. deprecated:: 1.0.0
+        Will be removed in `v1.1.0`, use :func:`aiida.manage.configuration.load_profile` instead.
     """
-    Run `load_dbenv` unless the dbenv has already been loaded.
-    """
-    if not is_dbenv_loaded():
-        load_dbenv(*argc, **argv)
-        return True
-    return False
+    warnings.warn('function is deprecated, use `load_profile` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
+    profile = get_profile()
+    if profile is None:
+        profile = load_profile(profile)
+
+    return profile
 
 
-def load_dbenv(*argc, **argv):
+def try_load_dbenv(profile=None):
+    """Run `load_dbenv` unless the dbenv has already been loaded.
+
+    .. deprecated:: 1.0.0
+        Will be removed in `v1.1.0`, use :func:`aiida.manage.configuration.load_profile` instead.
     """
-    Alias for `load_dbenv` from `aiida.backends.utils`
-    """
-    from aiida.backends.utils import load_dbenv as _load_dbenv
-    return _load_dbenv(*argc, **argv)
+    warnings.warn('function is deprecated, use `load_profile` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
+    profile = get_profile()
+    if profile is None:
+        profile = load_profile(profile)
+
+    return profile
 
 
-def is_dbenv_loaded(*argc, **argv):
+def is_dbenv_loaded():
+    """Alias for `is_dbenv_loaded` from `aiida.backends.utils`
+
+    .. deprecated:: 1.0.0
+        Will be removed in `v1.1.0`, use :func:`aiida.manage.configuration.load_profile` instead.
     """
-    Alias for `is_dbenv_loaded` from `aiida.backends.utils`
-    """
-    from aiida.backends.utils import is_dbenv_loaded as _is_dbenv_loaded
-    return _is_dbenv_loaded(*argc, **argv)
+    warnings.warn('function is deprecated, use `load_profile` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
+    return get_profile() is not None
 
 
 def get_strict_version():

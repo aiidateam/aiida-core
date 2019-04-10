@@ -30,10 +30,10 @@ AVAIL_AL_COMMANDS = [REVISION_CMD, CURRENT_CMD, HISTORY_CMD,
 
 if __name__ == "__main__":
     import argparse
-    from aiida.backends.profile import load_profile
     from aiida.backends.sqlalchemy.utils import _load_dbenv_noschemacheck
-    from aiida.backends.profile import BACKEND_SQLA
+    from aiida.backends import BACKEND_SQLA
     from aiida.common.exceptions import InvalidOperation
+    from aiida.manage import configuration
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -68,18 +68,13 @@ if __name__ == "__main__":
         # Use the default profile if not specified
         profile_name = args.aiida_profile
 
-        # Perform the same loading procedure as the normal load_dbenv does
-        from aiida.backends import settings
-        settings.LOAD_DBENV_CALLED = True
         # We load the needed profile.
-        # This is going to set global variables in settings, including
-        # settings.BACKEND
-        load_profile(profile=profile_name)
-        if settings.BACKEND != BACKEND_SQLA:
+        configuration.load_profile(profile=profile_name)
+        if configuration.PROFILE.database_backend != BACKEND_SQLA:
             raise InvalidOperation("A SQLAlchemy (alembic) revision "
                                    "generation procedure is initiated "
                                    "but a different backend is used!")
-        _load_dbenv_noschemacheck(profile=profile_name)
+        _load_dbenv_noschemacheck(profile=configuration.PROFILE)
 
         # Get the requested alembic command from the available commands
         command = getattr(alembic_command, args.command)

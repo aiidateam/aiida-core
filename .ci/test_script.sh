@@ -25,7 +25,6 @@ case "$TEST_TYPE" in
         coverage erase
 
         # Run preliminary tests
-        coverage run -a "${CI_DIR}/test_profile.py"
         coverage run -a "${CI_DIR}/test_fixtures.py"
         coverage run -a "${CI_DIR}/test_plugin_testcase.py"
 

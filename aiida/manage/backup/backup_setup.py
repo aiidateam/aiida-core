@@ -20,19 +20,14 @@ import shutil
 import stat
 import sys
 
-from aiida.backends.profile import BACKEND_DJANGO
-from aiida.backends.profile import BACKEND_SQLA
-from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
 from aiida.common import json
 from aiida.manage.backup.backup_base import AbstractBackup, BackupError
 from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
 
 from . import backup_utils as utils
 
-if not is_dbenv_loaded():
-    load_dbenv()
-
-from aiida.backends.settings import BACKEND, AIIDADB_PROFILE  # pylint: disable=wrong-import-order,wrong-import-position
+from aiida.manage.configuration import BACKEND, PROFILE  # pylint: disable=wrong-import-order,wrong-import-position
 
 
 class BackupSetup(object):  # pylint: disable=useless-object-inheritance
@@ -46,7 +41,7 @@ class BackupSetup(object):  # pylint: disable=useless-object-inheritance
 
     def __init__(self):
         # The backup directory names
-        self._conf_backup_folder_rel = "backup_{}".format(AIIDADB_PROFILE)
+        self._conf_backup_folder_rel = "backup_{}".format(PROFILE.name)
         self._file_backup_folder_rel = "backup_dest"
 
         # The backup configuration file (& template) names
@@ -229,10 +224,9 @@ class BackupSetup(object):  # pylint: disable=useless-object-inheritance
         script_content = \
 u"""#!/usr/bin/env python
 import logging
-from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+from aiida.manage.configuration import load_profile
 
-if not is_dbenv_loaded():
-    load_dbenv(profile="{}")
+load_profile(profile='{}')
 
 {}
 
@@ -244,7 +238,7 @@ backup_inst._logger.setLevel(logging.INFO)
 
 # Start the backup
 backup_inst.run()
-""".format(AIIDADB_PROFILE, backup_import, final_conf_filepath)
+""".format(PROFILE.name, backup_import, final_conf_filepath)
 
         # Script full path
         script_path = os.path.join(conf_backup_folder_abs, self._script_filename)

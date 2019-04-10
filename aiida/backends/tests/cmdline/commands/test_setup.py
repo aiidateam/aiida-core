@@ -7,68 +7,119 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for `verdi setup`."""
+"""Tests for `verdi profile`."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from click.testing import CliRunner
+import os
+import unittest
 
-from aiida.backends import settings
+from click.testing import CliRunner
+from pgtest.pgtest import PGTest
+
+from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.tests.utils.configuration import with_temporary_config_instance
 from aiida.cmdline.commands import cmd_setup
 from aiida.manage.configuration import get_config
+from aiida.manage.external.postgres import Postgres
 
 
+@unittest.skip('Problem with automatic Postgres setup detection for `verdi quicksetup`')
+class TestVerdiQuickSetup(AiidaTestCase):
+    """Tests for `verdi quicksetup`."""
+
+    def setUp(self):
+        """Create a CLI runner to invoke the CLI commands."""
+        super(TestVerdiQuickSetup, self).setUp()
+        self.cli_runner = CliRunner()
+
+    @with_temporary_config_instance
+    def test_quicksetup(self):
+        """Test `verdi quicksetup`."""
+        profile_name = 'testing'
+        user_email = 'some@email.com'
+        user_first_name = 'John'
+        user_last_name = 'Smith'
+        user_institution = 'ECMA'
+
+        options = [
+            '--profile',
+            profile_name,
+            '--email',
+            user_email,
+            '--first-name',
+            user_first_name,
+            '--last-name',
+            user_last_name,
+            '--institution',
+            user_institution,
+        ]
+
+        result = self.cli_runner.invoke(cmd_setup.quicksetup, options)
+        self.assertClickSuccess(result)
+
+        config = get_config()
+        self.assertIn(profile_name, config.profile_names)
+
+        profile = config.get_profile(profile_name)
+        profile.default_user = user_email
+
+        user = orm.User.objects.get(email=user_email)
+        self.assertEqual(user.first_name, user_first_name)
+        self.assertEqual(user.last_name, user_last_name)
+        self.assertEqual(user.institution, user_institution)
+
+
+@unittest.skip('Problem with automatic Postgres setup detection for `verdi setup` on SqlAlchemy')
 class TestVerdiSetup(AiidaTestCase):
     """Tests for `verdi setup`."""
 
     def setUp(self):
-        """Create runner object to run tests."""
+        """Create a CLI runner to invoke the CLI commands."""
+        super(TestVerdiSetup, self).setUp()
         self.cli_runner = CliRunner()
+        self.pg_test = PGTest()
+        self.postgres = Postgres(interactive=False, quiet=True, dbinfo=self.pg_test.dsn)
+        self.postgres.determine_setup()
+        self.db_name = 'aiida_test_setup'
+        self.db_user = 'aiida_test_setup'
+        self.db_pass = 'aiida_test_setup'
+        self.postgres.create_dbuser(self.db_user, self.db_pass)
+        self.postgres.create_db(self.db_user, self.db_name)
+        self.repository = os.path.abspath('./aiida_test_setup')
+
+    def tearDown(self):
+        self.postgres.drop_db(self.db_name)
+        self.postgres.drop_dbuser(self.db_user)
+        self.pg_test.close()
 
     @with_temporary_config_instance
-    def test_non_interactive_override(self):
-        """Tests that existing profile can be overridden in non-interactive mode with the `--force` option."""
+    def test_quicksetup(self):
+        """Test `verdi quicksetup`."""
+        profile_name = 'testing'
+        user_email = 'some@email.com'
+        user_first_name = 'John'
+        user_last_name = 'Smith'
+        user_institution = 'ECMA'
+
+        options = [
+            '--profile', profile_name, '--email', user_email, '--first-name', user_first_name, '--last-name',
+            user_last_name, '--institution', user_institution, '--db-name', self.db_name, '--db-username', self.db_user,
+            '--db-password', self.db_pass
+        ]
+
+        result = self.cli_runner.invoke(cmd_setup.setup, options)
+        self.assertClickSuccess(result)
+
         config = get_config()
-        profile = config.current_profile
+        self.assertIn(profile_name, config.profile_names)
 
-        option_string = '--backend={backend} --email={email} --repository={repo} --db-host={db_host} ' \
-                        '--db-port={db_port} --db-name={db_name} --db-username={db_user} --db-password={db_pass} ' \
-                        '--first-name={first} --last-name={last} --institution={institution}'
+        profile = config.get_profile(profile_name)
+        profile.default_user = user_email
 
-        profile_settings = {
-            'email': profile.dictionary['default_user_email'],
-            'backend': profile.dictionary['AIIDADB_BACKEND'],
-            'db_host': profile.dictionary['AIIDADB_HOST'],
-            'db_port': profile.dictionary['AIIDADB_PORT'],
-            'db_name': profile.dictionary['AIIDADB_NAME'],
-            'db_user': profile.dictionary['AIIDADB_USER'],
-            'db_pass': profile.dictionary['AIIDADB_PASS'],
-            'repo': '/tmp',
-            'first': 'nim',
-            'last': 'porte',
-            'institution': 'quoi',
-        }
-
-        options = ['--non-interactive'] + option_string.format(**profile_settings).split()
-
-        # Without profile name should raise exception
-        result = self.cli_runner.invoke(cmd_setup.setup, options)
-        self.assertIsNotNone(result.exception)
-        self.assertIn('Missing argument', result.output)
-        self.assertIn('PROFILE_NAME', result.output)
-
-        # With existing profile name should raise exception
-        options.append(profile.name)
-        result = self.cli_runner.invoke(cmd_setup.setup, options)
-        self.assertIsNotNone(result.exception, result.output)
-
-        # Need to set the current profile to None again, otherwise it will complain that `verdi` is using `-p` flag
-        settings.AIIDADB_PROFILE = None
-
-        # Adding the `--force` option should allow it
-        options.append('--force')
-        result = self.cli_runner.invoke(cmd_setup.setup, options)
-        self.assertIsNone(result.exception, result.output)
+        user = orm.User.objects.get(email=user_email)
+        self.assertEqual(user.first_name, user_first_name)
+        self.assertEqual(user.last_name, user_last_name)
+        self.assertEqual(user.institution, user_institution)

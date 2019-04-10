@@ -22,7 +22,6 @@ import six
 from six.moves import range
 from six.moves import cStringIO as StringIO
 
-from aiida.common.exceptions import ConfigurationError
 from .lang import classproperty
 
 
@@ -32,14 +31,8 @@ def get_new_uuid():
     It uses the UUID version specified in
     aiida.backends.settings.AIIDANODES_UUID_VERSION
     """
-    from aiida.backends.settings import AIIDANODES_UUID_VERSION
     import uuid
-
-    if AIIDANODES_UUID_VERSION != 4:
-        raise NotImplementedError("Only version 4 of UUID supported currently")
-
-    the_uuid = uuid.uuid4()
-    return six.text_type(the_uuid)
+    return six.text_type(uuid.uuid4())
 
 
 # To speed up the process (os.path.abspath calls are slow)
@@ -53,19 +46,17 @@ def get_repository_folder(subfolder=None):
     try:
         return _repository_folder_cache[subfolder]
     except KeyError:
-        try:
-            from aiida.settings import REPOSITORY_PATH
+        from aiida.manage.configuration import get_profile
+        repository_path = get_profile().repository_path
 
-            if not os.path.isdir(REPOSITORY_PATH):
-                raise ImportError
-        except ImportError:
-            raise ConfigurationError("The REPOSITORY_PATH variable is not set correctly.")
+        if not os.path.isdir(repository_path):
+            raise ImportError
         if subfolder is None:
-            retval = os.path.abspath(REPOSITORY_PATH)
+            retval = os.path.abspath(repository_path)
         elif subfolder == "sandbox":
-            retval = os.path.abspath(os.path.join(REPOSITORY_PATH, 'sandbox'))
+            retval = os.path.abspath(os.path.join(repository_path, 'sandbox'))
         elif subfolder == "repository":
-            retval = os.path.abspath(os.path.join(REPOSITORY_PATH, 'repository'))
+            retval = os.path.abspath(os.path.join(repository_path, 'repository'))
         else:
             raise ValueError("Invalid 'subfolder' passed to get_repository_folder: {}".format(subfolder))
         _repository_folder_cache[subfolder] = retval

@@ -16,7 +16,7 @@ from __future__ import absolute_import
 
 from six.moves import range
 from aiida.plugins.entry_point import ENTRYPOINT_MANAGER
-from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
+from aiida.backends import BACKEND_SQLA, BACKEND_DJANGO
 
 DB_TEST_LIST = {
     BACKEND_DJANGO: {
@@ -174,13 +174,12 @@ def get_db_test_list():
     :note: This function should be called only after setting the
       backend, and then it returns only the tests for this backend, and the common ones.
     """
-    from aiida.backends import settings
-    from aiida.common.exceptions import ConfigurationError
     from collections import defaultdict
+    from aiida.common.exceptions import ConfigurationError
+    from aiida.manage.configuration import BACKEND
 
-    current_backend = settings.BACKEND
     try:
-        be_tests = DB_TEST_LIST[current_backend]
+        be_tests = DB_TEST_LIST[BACKEND]
     except KeyError:
         raise ConfigurationError("No backend configured yet")
 

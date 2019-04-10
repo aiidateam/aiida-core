@@ -81,16 +81,12 @@ class AiiDALoaderMagics(magic.Magics):
         .. todo:: implement parameters, e.g. for the profile to load.
         """
         # pylint: disable=unused-argument,attribute-defined-outside-init
-        from aiida import is_dbenv_loaded, load_dbenv
+        from aiida.manage.configuration import load_profile
         from aiida.cmdline.utils.shell import get_start_namespace
 
         self.is_warning = False
-        if is_dbenv_loaded():
-            self.current_state = "Note! AiiDA DB environment already loaded! I do not reload it again."
-            self.is_warning = True
-        else:
-            load_dbenv()
-            self.current_state = "Loaded AiiDA DB environment."
+        load_profile()
+        self.current_state = "Loaded AiiDA DB environment."
 
         user_ns = get_start_namespace()
         for key, value in six.iteritems(user_ns):

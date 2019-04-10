@@ -617,29 +617,20 @@ Below is a list with all available subcommands.
 
 ::
 
-    Usage:  [OPTIONS] [PROFILE_NAME]
+    Usage:  [OPTIONS]
 
-      Set up a sane configuration with as little interaction as possible.
+      Setup a new profile where the database is automatically created and
+      configured.
 
     Options:
-      --only-config                  Only configure the user and skip creating the
-                                     database.
-      --set-default                  Set the profile as the new default.
-      -n, --non-interactive          Non-interactive mode: never prompt for input.
-      --backend [django|sqlalchemy]  Database backend to use.
-      --db-host TEXT                 Database server host.
-      --db-port INTEGER              Database server port.
-      --db-name TEXT                 Database name.
-      --db-username TEXT             Database user name.
-      --db-password TEXT             Database user password.
-      --repository DIRECTORY         Absolute path for the file system repository.
-      --email TEXT                   Email address that will be associated with
-                                     your data and will be exported along with it,
-                                     should you choose to share any of your work.
-      --first-name TEXT              First name of the user.
-      --last-name TEXT               Last name of the user.
-      --institution TEXT             Institution name of the user.
-      --help                         Show this message and exit.
+      --profile PROFILE   The name of the new profile.
+      --email TEXT        Email address that serves as the user name and a way to
+                          identify data created by it.
+      --first-name TEXT   First name of the user.
+      --last-name TEXT    Last name of the user.
+      --institution TEXT  Institution of the user.
+      --password TEXT     Optional password to connect to REST API.
+      --help              Show this message and exit.
 
 
 .. _verdi_rehash:
@@ -714,30 +705,30 @@ Below is a list with all available subcommands.
 
 ::
 
-    Usage:  [OPTIONS] PROFILE_NAME
+    Usage:  [OPTIONS]
 
-      Setup and configure a new profile.
+      Setup a new profile.
 
     Options:
-      --only-config                  Only configure the user and skip creating the
-                                     database.
-      --set-default                  Set the profile as the new default.
-      -n, --non-interactive          Non-interactive mode: never prompt for input.
-      --backend [django|sqlalchemy]  Database backend to use.
-      --db-host TEXT                 Database server host.
-      --db-port INTEGER              Database server port.
-      --db-name TEXT                 Database name.
-      --db-username TEXT             Database user name.
-      --db-password TEXT             Database user password.
-      --repository DIRECTORY         Absolute path for the file system repository.
-      --email TEXT                   Email address that will be associated with
-                                     your data and will be exported along with it,
-                                     should you choose to share any of your work.
-      --first-name TEXT              First name of the user.
-      --last-name TEXT               Last name of the user.
-      --institution TEXT             Institution name of the user.
-      -f, --force                    Do not ask for confirmation.
-      --help                         Show this message and exit.
+      --profile PROFILE               The name of the new profile.
+      --email TEXT                    Email address that serves as the user name
+                                      and a way to identify data created by it.
+      --first-name TEXT               First name of the user.
+      --last-name TEXT                Last name of the user.
+      --institution TEXT              Institution of the user.
+      --password TEXT                 Optional password to connect to REST API.
+      --db-engine [postgresql_psycopg2]
+                                      Engine to use to connect to the database.
+      --db-backend [django|sqlalchemy]
+                                      Backend type to use to map the database.
+      --db-host TEXT                  Hostname to connect to the database.
+      --db-port INTEGER               Port to connect to the database.
+      --db-name TEXT                  Name of the database to connect to.
+      --db-username TEXT              User name to connect to the database.
+      --db-password TEXT              Password to connect to the database.
+      --repository DIRECTORY          Absolute path for the file system
+                                      repository.
+      --help                          Show this message and exit.
 
 
 .. _verdi_shell:
@@ -792,8 +783,9 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      configure  Create or update a USER.
-      list       Displays list of all users.
+      configure    Configure a new or existing user.
+      list         Displays list of all users.
+      set-default  Set the USER as the default user.
 
 
 

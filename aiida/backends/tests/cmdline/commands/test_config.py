@@ -81,3 +81,22 @@ class TestVerdiConfig(AiidaTestCase):
         result = self.cli_runner.invoke(cmd_verdi.verdi, options)
         self.assertClickSuccess(result)
         self.assertEqual(result.output, '')
+
+    @with_temporary_config_instance
+    def test_config_option_set_global_only(self):
+        """Test that `global_only` options are only set globally even if the `--global` flag is not set."""
+        config = get_config()
+        option_name = 'user.email'
+        option_value = 'some@email.com'
+
+        options = ['config', option_name, str(option_value)]
+        result = self.cli_runner.invoke(cmd_verdi.verdi, options)
+        self.assertClickSuccess(result)
+
+        options = ['config', option_name]
+        result = self.cli_runner.invoke(cmd_verdi.verdi, options)
+
+        # Check that the current profile name is not in the output
+        self.assertClickSuccess(result)
+        self.assertIn(option_value, result.output.strip())
+        self.assertNotIn(config.current_profile.name, result.output.strip())

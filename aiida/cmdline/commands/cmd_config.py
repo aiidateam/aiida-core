@@ -30,9 +30,12 @@ def verdi_config(ctx, option, value, globally, unset):
     config = ctx.obj.config
     profile = ctx.obj.profile
 
+    if option.global_only:
+        globally = True
+
     # Define the string that determines the scope: for specific profile or globally
-    scope = profile.name if not globally else None
-    scope_text = 'for {}'.format(profile.name) if not globally else 'globally'
+    scope = profile.name if (not globally and profile) else None
+    scope_text = 'for {}'.format(profile.name) if (not globally and profile) else 'globally'
 
     # Unset the specified option
     if unset:

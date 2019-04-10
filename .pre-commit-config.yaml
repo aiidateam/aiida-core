@@ -32,7 +32,6 @@
         aiida/backends/djsite/db/models.py|
         aiida/backends/djsite/db/subtests/test_migrations.py|
         aiida/backends/djsite/db/subtests/test_generic.py|
-        aiida/backends/djsite/db/subtests/__init__.py|
         aiida/backends/djsite/db/subtests/test_nodes.py|
         aiida/backends/djsite/db/subtests/test_query.py|
         aiida/backends/djsite/globalsettings.py|
@@ -171,8 +170,6 @@
         aiida/tools/data/array/kpoints/__init__.py|
         aiida/tools/data/array/kpoints/legacy.py|
         aiida/tools/data/array/kpoints/seekpath.py|
-        aiida/tools/data/orbital/orbital.py|
-        aiida/tools/data/orbital/realhydrogen.py|
         aiida/tools/data/__init__.py|
         aiida/tools/data/structure/__init__.py|
         aiida/tools/dbexporters/__init__.py|

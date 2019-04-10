@@ -65,7 +65,7 @@ def OrbitalFactory(entry_point):
     :param entry_point: the entry point name
     :return: sub class of :py:class:`~aiida.tools.data.orbital.orbital.Orbital`
     """
-    return BaseFactory('aiida.tools.data.orbital', entry_point)
+    return BaseFactory('aiida.tools.data.orbitals', entry_point)
 
 
 def ParserFactory(entry_point):

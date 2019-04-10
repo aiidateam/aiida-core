@@ -207,6 +207,9 @@
       "pcod = aiida.tools.dbimporters.plugins.pcod:PcodDbImporter",
       "tcod = aiida.tools.dbimporters.plugins.tcod:TcodDbImporter"
     ],
+    "aiida.tools.data.orbitals": [
+      "realhydrogen = aiida.tools.data.orbital.realhydrogen:RealhydrogenOrbital"
+    ],
     "aiida.workflows": []
   },
   "scripts": [

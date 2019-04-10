@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""`verdi setup` command."""
+"""The `verdi setup` and `verdi quicksetup` commands."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -15,8 +15,10 @@ from __future__ import absolute_import
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.utils import echo
 from aiida.cmdline.params.options.commands import setup as options
+from aiida.cmdline.utils import echo
+from aiida.manage.configuration import load_profile
+from aiida.manage.manager import get_manager
 
 
 @verdi.command('setup')
@@ -34,34 +36,25 @@ from aiida.cmdline.params.options.commands import setup as options
 @options.SETUP_DATABASE_USERNAME()
 @options.SETUP_DATABASE_PASSWORD()
 @options.SETUP_REPOSITORY_URI()
-def setup(profile, user_email, user_first_name, user_last_name, user_institution, user_password, db_engine, db_backend,
-          db_host, db_port, db_name, db_username, db_password, repository):
+@click.pass_context
+def setup(ctx, profile, email, first_name, last_name, institution, password, db_engine, db_backend, db_host, db_port,
+          db_name, db_username, db_password, repository):
     """Setup a new profile."""
-    # pylint: disable=too-many-arguments,too-many-locals,unused-argument,protected-access
+    # pylint: disable=too-many-arguments
     from aiida import orm
-    from aiida.common import exceptions
-    from aiida.manage.manager import get_manager
-    from aiida.manage.configuration import get_config, load_profile, Profile
 
-    dictionary = {
-        'AIIDADB_ENGINE': db_engine,
-        'AIIDADB_BACKEND': db_backend,
-        'AIIDADB_NAME': db_name,
-        'AIIDADB_PORT': db_port,
-        'AIIDADB_HOST': db_host,
-        'AIIDADB_USER': db_username,
-        'AIIDADB_PASS': db_password,
-        'AIIDADB_REPOSITORY_URI': 'file://' + repository,
-        Profile.KEY_PROFILE_UUID: Profile.generate_uuid()
-    }
-
-    profile._dictionary = dictionary
+    profile.database_engine = db_engine
+    profile.database_backend = db_backend
+    profile.database_name = db_name
+    profile.database_port = db_port
+    profile.database_hostname = db_host
+    profile.database_username = db_username
+    profile.database_password = db_password
+    profile.repository_uri = 'file://' + repository
 
     # Creating the profile
-    config = get_config(create=True)
-    config.add_profile(profile)
-    config.set_default_profile(profile.name, overwrite=False)
-    config.store()
+    ctx.obj.config.add_profile(profile)
+    ctx.obj.config.set_default_profile(profile.name)
 
     # Load the profile
     load_profile(profile.name)
@@ -69,28 +62,18 @@ def setup(profile, user_email, user_first_name, user_last_name, user_institution
 
     # Migrate the database
     echo.echo_info('migrating the database.')
-    backend = get_manager()._load_backend(schema_check=False)
+    backend = get_manager()._load_backend(schema_check=False)  # pylint: disable=protected-access
     backend.migrate()
     echo.echo_success('database migration completed.')
 
     # Create the user if it does not yet exist
-    user_settings = {
-        'email': user_email,
-        'first_name': user_first_name,
-        'last_name': user_last_name,
-        'institution': user_institution,
-        'password': user_password,
-    }
-
-    try:
-        user = orm.User.objects.get(email=user_email)
-    except exceptions.NotExistent:
-        user = orm.User(**user_settings)
+    created, user = orm.User.objects.get_or_create(
+        email=email, first_name=first_name, last_name=last_name, institution=institution, password=password)
+    if created:
         user.store()
-
     profile.default_user = user.email
-    config.update_profile(profile)
-    config.store()
+    ctx.obj.config.update_profile(profile)
+    ctx.obj.config.store()
 
 
 @verdi.command('quicksetup')
@@ -101,7 +84,7 @@ def setup(profile, user_email, user_first_name, user_last_name, user_institution
 @options.SETUP_USER_INSTITUTION()
 @options.SETUP_USER_PASSWORD()
 @click.pass_context
-def quicksetup(ctx, profile, user_email, user_first_name, user_last_name, user_institution, user_password):
+def quicksetup(ctx, profile, email, first_name, last_name, institution, password):
     """Setup a new profile where the database is automatically created and configured."""
     # pylint: disable=too-many-arguments,too-many-locals,too-many-statements,too-many-branches,unused-argument,protected-access
     import os
@@ -159,8 +142,8 @@ def quicksetup(ctx, profile, user_email, user_first_name, user_last_name, user_i
     # This is ok because a user can only see his own config files
     dbname = profile_name + '_' + osuser + '_' + config_dir_hash
     for available_profile in config.profiles:
-        if available_profile.dictionary.get('AIIDADB_USER', '') == dbuser:
-            dbpass = available_profile.dictionary.get('AIIDADB_PASS')
+        if available_profile.database_username == dbuser:
+            dbpass = available_profile.database_password
             echo.echo('using found password for {}'.format(dbuser))
             break
     try:
@@ -191,11 +174,11 @@ def quicksetup(ctx, profile, user_email, user_first_name, user_last_name, user_i
 
     setup_parameters = {
         'profile': profile_name,
-        'user_email': 'test',
-        'user_first_name': 'test',
-        'user_last_name': 'test',
-        'user_institution': 'test',
-        'user_password': 'test',
+        'email': 'test',
+        'first_name': 'test',
+        'last_name': 'test',
+        'institution': 'test',
+        'password': 'test',
         'db_engine': 'postgresql_psycopg2',
         'db_backend': backend,
         'db_name': dbname,

@@ -19,7 +19,7 @@ from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
 from aiida.cmdline.params import options, types
 from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.params.options.overridable import OverridableOption
-from aiida.manage.configuration import get_config_option
+from aiida.manage.configuration import get_config_option, Profile
 
 PASSWORD_UNCHANGED = '***'  # noqa
 
@@ -31,13 +31,19 @@ def get_profile_attribute_default(attribute_tuple, ctx=None):
     :param ctx: click context which should contain the selected profile
     :return: profile attribute default value if set, or None
     """
+    if ctx.params['profile'] is None or not isinstance(ctx.params['profile'], Profile):
+        raise click.BadParameter('specifying the name of the profile is required', param_hint='"--profile"')
+
     attribute, default = attribute_tuple
     profile = ctx.params['profile']
 
     if not profile:
         return default
 
-    return getattr(profile.dictionary, attribute, default)
+    try:
+        return getattr(profile, attribute)
+    except KeyError:
+        return default
 
 
 def get_repository_path_default(ctx):
@@ -48,6 +54,10 @@ def get_repository_path_default(ctx):
     """
     import os
     from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
+
+    if ctx.params['profile'] is None or not isinstance(ctx.params['profile'], Profile):
+        raise click.BadParameter('specifying the name of the profile is required', param_hint='"--profile"')
+
     return os.path.join(AIIDA_CONFIG_FOLDER, 'repository', ctx.params['profile'].name)
 
 
@@ -60,7 +70,7 @@ SETUP_PROFILE = OverridableOption(
 
 SETUP_USER_EMAIL = OverridableOption(
     '--email',
-    'user_email',
+    'email',
     prompt='User email',
     help='Email address that serves as the user name and a way to identify data created by it.',
     default=get_config_option('user.email'),
@@ -68,7 +78,7 @@ SETUP_USER_EMAIL = OverridableOption(
 
 SETUP_USER_FIRST_NAME = OverridableOption(
     '--first-name',
-    'user_first_name',
+    'first_name',
     prompt='First name',
     help='First name of the user.',
     type=click.STRING,
@@ -77,7 +87,7 @@ SETUP_USER_FIRST_NAME = OverridableOption(
 
 SETUP_USER_LAST_NAME = OverridableOption(
     '--last-name',
-    'user_last_name',
+    'last_name',
     prompt='Last name',
     help='Last name of the user.',
     type=click.STRING,
@@ -86,7 +96,7 @@ SETUP_USER_LAST_NAME = OverridableOption(
 
 SETUP_USER_INSTITUTION = OverridableOption(
     '--institution',
-    'user_institution',
+    'institution',
     prompt='Institution',
     help='Institution of the user.',
     type=click.STRING,
@@ -95,7 +105,7 @@ SETUP_USER_INSTITUTION = OverridableOption(
 
 SETUP_USER_PASSWORD = OverridableOption(
     '--password',
-    'user_password',
+    'password',
     prompt='Password',
     help='Optional password to connect to REST API.',
     hide_input=True,
@@ -111,7 +121,7 @@ SETUP_DATABASE_ENGINE = OverridableOption(
     help='Engine to use to connect to the database.',
     default='postgresql_psycopg2',
     type=click.Choice(['postgresql_psycopg2']),
-    contextual_default=functools.partial(get_profile_attribute_default, ('AIIDADB_ENGINE', 'postgresql_psycopg2')),
+    contextual_default=functools.partial(get_profile_attribute_default, ('database_engine', 'postgresql_psycopg2')),
     cls=options.interactive.InteractiveOption)
 
 SETUP_DATABASE_BACKEND = OverridableOption(
@@ -119,7 +129,7 @@ SETUP_DATABASE_BACKEND = OverridableOption(
     prompt='Database backend',
     help='Backend type to use to map the database.',
     type=click.Choice([BACKEND_DJANGO, BACKEND_SQLA]),
-    contextual_default=functools.partial(get_profile_attribute_default, ('AIIDADB_BACKEND', BACKEND_DJANGO)),
+    contextual_default=functools.partial(get_profile_attribute_default, ('database_backend', BACKEND_DJANGO)),
     cls=options.interactive.InteractiveOption)
 
 SETUP_DATABASE_HOSTNAME = OverridableOption(
@@ -127,7 +137,7 @@ SETUP_DATABASE_HOSTNAME = OverridableOption(
     prompt='Database hostname',
     help='Hostname to connect to the database.',
     type=click.STRING,
-    contextual_default=functools.partial(get_profile_attribute_default, ('AIIDADB_HOST', 'localhost')),
+    contextual_default=functools.partial(get_profile_attribute_default, ('database_hostname', 'localhost')),
     cls=options.interactive.InteractiveOption)
 
 SETUP_DATABASE_PORT = OverridableOption(
@@ -135,7 +145,7 @@ SETUP_DATABASE_PORT = OverridableOption(
     prompt='Database port',
     help='Port to connect to the database.',
     type=click.INT,
-    contextual_default=functools.partial(get_profile_attribute_default, ('AIIDADB_PORT', 5432)),
+    contextual_default=functools.partial(get_profile_attribute_default, ('database_port', 5432)),
     cls=options.interactive.InteractiveOption)
 
 SETUP_DATABASE_NAME = OverridableOption(
@@ -143,7 +153,7 @@ SETUP_DATABASE_NAME = OverridableOption(
     prompt='Database name',
     help='Name of the database to connect to.',
     type=click.STRING,
-    contextual_default=functools.partial(get_profile_attribute_default, ('AIIDADB_NAME', None)),
+    contextual_default=functools.partial(get_profile_attribute_default, ('database_name', None)),
     cls=options.interactive.InteractiveOption)
 
 SETUP_DATABASE_USERNAME = OverridableOption(
@@ -151,7 +161,7 @@ SETUP_DATABASE_USERNAME = OverridableOption(
     prompt='Database username',
     help='User name to connect to the database.',
     type=click.STRING,
-    contextual_default=functools.partial(get_profile_attribute_default, ('AIIDADB_USER', None)),
+    contextual_default=functools.partial(get_profile_attribute_default, ('database_username', None)),
     cls=options.interactive.InteractiveOption)
 
 SETUP_DATABASE_PASSWORD = OverridableOption(
@@ -160,7 +170,7 @@ SETUP_DATABASE_PASSWORD = OverridableOption(
     help='Password to connect to the database.',
     type=click.STRING,
     hide_input=True,
-    contextual_default=functools.partial(get_profile_attribute_default, ('AIIDADB_PASS', None)),
+    contextual_default=functools.partial(get_profile_attribute_default, ('database_password', None)),
     cls=options.interactive.InteractiveOption)
 
 SETUP_REPOSITORY_URI = OverridableOption(

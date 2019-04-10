@@ -12,6 +12,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+import six
+
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
@@ -107,8 +109,9 @@ class TestVerdiProfileSetup(AiidaTestCase):
         result = self.cli_runner.invoke(cmd_profile.profile_show, [profile_name])
         self.assertClickSuccess(result)
         for key, value in profile.dictionary.items():
-            self.assertIn(key.lower(), result.output)
-            self.assertIn(value, result.output)
+            if isinstance(value, six.string_types):
+                self.assertIn(key.lower(), result.output)
+                self.assertIn(value, result.output)
 
     @with_temporary_config_instance
     def test_delete(self):

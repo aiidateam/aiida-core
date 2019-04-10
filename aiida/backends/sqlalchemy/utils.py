@@ -71,18 +71,23 @@ def recreate_after_fork(engine):
     sa.scopedsessionclass = scoped_session(sessionmaker(bind=sa.engine, expire_on_commit=True))
 
 
-def reset_session(config):
+def reset_session(profile):
     """
-    :param config: the configuration of the profile from the
-       configuration file
+    :param profile: the profile whose configuration to use to connect to the database
 
     Resets (global) engine and sessionmaker classes, to create a new one
     (or creates a new one from scratch if not already available)
     """
     from multiprocessing.util import register_after_fork
 
-    engine_url = 'postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@{AIIDADB_HOST}{sep}{AIIDADB_PORT}/{AIIDADB_NAME}'.format(
-        sep=':' if config['AIIDADB_PORT'] else '', **config)
+    separator = ':' if profile.database_port else ''
+    engine_url = 'postgresql://{user}:{password}@{hostname}{separator}{port}/{name}'.format(
+        separator=separator,
+        user=profile.database_username,
+        password=profile.database_password,
+        hostname=profile.database_hostname,
+        port=profile.database_port,
+        name=profile.database_name)
 
     sa.engine = create_engine(engine_url, json_serializer=dumps_json, json_deserializer=loads_json, encoding='utf-8')
     sa.scopedsessionclass = scoped_session(sessionmaker(bind=sa.engine, expire_on_commit=True))
@@ -104,7 +109,7 @@ def _load_dbenv_noschemacheck(profile):
     """
     Load the SQLAlchemy database.
     """
-    reset_session(profile.dictionary)
+    reset_session(profile)
 
 
 _aiida_autouser_cache = None

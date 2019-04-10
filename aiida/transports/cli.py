@@ -44,7 +44,7 @@ def configure_computer_main(computer, user, **kwargs):
     user = user or orm.User.objects.get_default()
 
     echo.echo_info('Configuring computer {} for user {}.'.format(computer.name, user.email))
-    if user.email != get_manager().get_profile().default_user_email:
+    if user.email != get_manager().get_profile().default_user:
         echo.echo_info('Configuring different user, defaults may not be appropriate.')
 
     computer.configure(user=user, **kwargs)

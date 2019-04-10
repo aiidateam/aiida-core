@@ -29,29 +29,30 @@ class TestProfile(AiidaTestCase):
         super(TestProfile, cls).setUpClass(*args, **kwargs)
         cls.profile_name = 'test_profile'
         cls.profile_dictionary = {
-            'db_name': cls.profile_name,
-            'db_host': 'localhost',
-            'db_port': '5432',
-            'db_user': 'user',
-            'db_pass': 'pass',
-            'email': 'dummy@localhost',
-            'backend': 'django',
-            'repo': os.path.join('/some/path', 'repository_' + cls.profile_name),
-            Profile.KEY_PROFILE_UUID: Profile.generate_uuid(),
-            Profile.KEY_DEFAULT_USER: 'dummy@localhost'
+            'default_user': 'dummy@localhost',
+            'database_engine': 'postgresql_psycopg2',
+            'database_backend': 'django',
+            'database_name': cls.profile_name,
+            'database_port': '5432',
+            'database_hostname': 'localhost',
+            'database_username': 'user',
+            'database_password': 'pass',
+            'repository_uri': 'file:///' + os.path.join('/some/path', 'repository_' + cls.profile_name),
         }
         cls.profile = Profile(cls.profile_name, cls.profile_dictionary)
 
     def test_base_properties(self):
         """Test the basic properties of a Profile instance."""
         self.assertEqual(self.profile.name, self.profile_name)
-        self.assertEqual(self.profile.dictionary, self.profile_dictionary)
+
+        for attribute, value in self.profile_dictionary.items():
+            self.assertEqual(getattr(self.profile, attribute), value)
 
         # Verify that the uuid property returns a valid UUID by attempting to construct an UUID instance from it
         uuid.UUID(self.profile.uuid)
 
         # Check that the default user email field is not None
-        self.assertIsNotNone(self.profile.default_user_email)
+        self.assertIsNotNone(self.profile.default_user)
 
         # The RabbitMQ prefix should contain the profile UUID
         self.assertIn(self.profile.uuid, self.profile.rmq_prefix)

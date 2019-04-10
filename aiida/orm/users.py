@@ -73,10 +73,16 @@ class User(entities.Entity):
 
     REQUIRED_FIELDS = ['first_name', 'last_name', 'institution']
 
-    def __init__(self, email, first_name='', last_name='', institution='', backend=None):
+    def __init__(self, email, first_name='', last_name='', institution='', password=None, backend=None):
+        """Create a new `User`."""
+        # pylint: disable=too-many-arguments
+        from aiida.common.hashing import create_unusable_pass
+        if password is None:
+            password = create_unusable_pass()
+
         backend = backend or get_manager().get_backend()
         email = self.normalize_email(email)
-        backend_entity = backend.users.create(email, first_name, last_name, institution)
+        backend_entity = backend.users.create(email, first_name, last_name, institution, password)
         super(User, self).__init__(backend_entity)
 
     def __str__(self):
@@ -84,12 +90,7 @@ class User(entities.Entity):
 
     @staticmethod
     def normalize_email(email):
-        """
-        Normalize the address by lowercasing the domain part of the email
-        address.
-
-        Taken from Django.
-        """
+        """Normalize the address by lowercasing the domain part of the email address (taken from Django)."""
         email = email or ''
         try:
             email_name, domain_part = email.strip().rsplit('@', 1)
@@ -124,7 +125,6 @@ class User(entities.Entity):
 
     def verify_password(self, password):
         from aiida.common.hashing import pwd_context
-
         return pwd_context.verify(password, self.password)
 
     @property

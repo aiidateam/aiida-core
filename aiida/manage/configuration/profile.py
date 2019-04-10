@@ -15,8 +15,7 @@ from __future__ import absolute_import
 import collections
 import os
 
-from aiida.common import exceptions, extendeddicts
-
+from aiida.common import exceptions
 from .settings import DAEMON_DIR, DAEMON_LOG_DIR
 
 __all__ = ('Profile',)
@@ -32,133 +31,199 @@ CIRCUS_PUBSUB_SOCKET_TEMPLATE = 'circus.p.sock'
 CIRCUS_STATS_SOCKET_TEMPLATE = 'circus.s.sock'
 
 
-class Profile(object):  # pylint: disable=useless-object-inheritance
-    """
-    Convenience class that loads the current profile name and corresponding configuration and
-    can subsequently provide profile specific information
-    """
+class Profile(object):  # pylint: disable=useless-object-inheritance,too-many-public-methods
+    """Class that models a profile as it is stored in the configuration file of an AiiDA instance."""
 
-    KEY_DEFAULT_USER = 'default_user_email'
-    KEY_PROFILE_UUID = 'PROFILE_UUID'
-    KEY_REPOSITORY_URI = 'AIIDADB_REPOSITORY_URI'
     RMQ_PREFIX = 'aiida-{uuid}'
+    KEY_OPTIONS = 'options'
+    KEY_UUID = 'PROFILE_UUID'
+    KEY_DEFAULT_USER = 'default_user_email'
+    KEY_DATABASE_ENGINE = 'AIIDADB_ENGINE'
+    KEY_DATABASE_BACKEND = 'AIIDADB_BACKEND'
+    KEY_DATABASE_NAME = 'AIIDADB_NAME'
+    KEY_DATABASE_PORT = 'AIIDADB_PORT'
+    KEY_DATABASE_HOSTNAME = 'AIIDADB_HOST'
+    KEY_DATABASE_USERNAME = 'AIIDADB_USER'
+    KEY_DATABASE_PASSWORD = 'AIIDADB_PASS'  # noqa
+    KEY_REPOSITORY_URI = 'AIIDADB_REPOSITORY_URI'
 
-    def __init__(self, name, dictionary):
-        if not isinstance(dictionary, collections.Mapping):
-            raise TypeError('dictionary should be a mapping but is {}'.format(type(dictionary)))
+    # A mapping of valid attributes to the key under which they are stored in the configuration dictionary
+    _map_config_to_internal = {
+        KEY_OPTIONS: 'options',
+        KEY_UUID: 'uuid',
+        KEY_DEFAULT_USER: 'default_user',
+        KEY_DATABASE_ENGINE: 'database_engine',
+        KEY_DATABASE_BACKEND: 'database_backend',
+        KEY_DATABASE_NAME: 'database_name',
+        KEY_DATABASE_PORT: 'database_port',
+        KEY_DATABASE_HOSTNAME: 'database_hostname',
+        KEY_DATABASE_USERNAME: 'database_username',
+        KEY_DATABASE_PASSWORD: 'database_password',
+        KEY_REPOSITORY_URI: 'repository_uri',
+    }
+
+    def __init__(self, name, attributes, from_config=False):
+        if not isinstance(attributes, collections.Mapping):
+            raise TypeError('attributes should be a mapping but is {}'.format(type(attributes)))
 
         self._name = name
-        self._dictionary = extendeddicts.AttributeDict(dictionary)
+        self._attributes = {}
 
-        if self.KEY_PROFILE_UUID not in dictionary:
-            self.uuid = self.generate_uuid()
+        for internal_key, value in attributes.items():
+            if from_config:
+                try:
+                    internal_key = self._map_config_to_internal[internal_key]
+                except KeyError:
+                    from aiida.cmdline.utils import echo
+                    echo.echo_warning('removed unsupported key `{}` with value `{}` from profile `{}`'.format(
+                        internal_key, value, name))
+                    continue
+            setattr(self, internal_key, value)
+
+        # Create a default UUID if not specified
+        if self.uuid is None:
+            from uuid import uuid4
+            self.uuid = uuid4().hex
 
         # Currently, whether a profile is a test profile is solely determined by its name starting with 'test_'
         self._test_profile = bool(self.name.startswith('test_'))
 
-    @staticmethod
-    def generate_uuid():
-        """
-        Return a UUID for a new profile
+    @property
+    def uuid(self):
+        """Return the profile uuid.
 
-        :returns: the hexadecimal represenation of a uuid4 UUID
+        :return: string UUID
         """
-        from uuid import uuid4
-        return uuid4().hex
+        try:
+            return self._attributes[self.KEY_UUID]
+        except KeyError:
+            return None
+
+    @uuid.setter
+    def uuid(self, value):
+        self._attributes[self.KEY_UUID] = value
 
     @property
-    def dictionary(self):
-        """
-        Get the profile configuration dictionary
+    def default_user(self):
+        return self._attributes[self.KEY_DEFAULT_USER]
 
-        :return: the profile configuration
-        :rtype: dict
-        """
-        return self._dictionary
+    @default_user.setter
+    def default_user(self, value):
+        self._attributes[self.KEY_DEFAULT_USER] = value
+
+    @property
+    def database_engine(self):
+        return self._attributes[self.KEY_DATABASE_ENGINE]
+
+    @database_engine.setter
+    def database_engine(self, value):
+        self._attributes[self.KEY_DATABASE_ENGINE] = value
+
+    @property
+    def database_backend(self):
+        return self._attributes[self.KEY_DATABASE_BACKEND]
+
+    @database_backend.setter
+    def database_backend(self, value):
+        self._attributes[self.KEY_DATABASE_BACKEND] = value
+
+    @property
+    def database_name(self):
+        return self._attributes[self.KEY_DATABASE_NAME]
+
+    @database_name.setter
+    def database_name(self, value):
+        self._attributes[self.KEY_DATABASE_NAME] = value
+
+    @property
+    def database_port(self):
+        return self._attributes[self.KEY_DATABASE_PORT]
+
+    @database_port.setter
+    def database_port(self, value):
+        self._attributes[self.KEY_DATABASE_PORT] = value
+
+    @property
+    def database_hostname(self):
+        return self._attributes[self.KEY_DATABASE_HOSTNAME]
+
+    @database_hostname.setter
+    def database_hostname(self, value):
+        self._attributes[self.KEY_DATABASE_HOSTNAME] = value
+
+    @property
+    def database_username(self):
+        return self._attributes[self.KEY_DATABASE_USERNAME]
+
+    @database_username.setter
+    def database_username(self, value):
+        self._attributes[self.KEY_DATABASE_USERNAME] = value
+
+    @property
+    def database_password(self):
+        return self._attributes[self.KEY_DATABASE_PASSWORD]
+
+    @database_password.setter
+    def database_password(self, value):
+        self._attributes[self.KEY_DATABASE_PASSWORD] = value
+
+    @property
+    def repository_uri(self):
+        return self._attributes[self.KEY_REPOSITORY_URI]
+
+    @repository_uri.setter
+    def repository_uri(self, value):
+        self._attributes[self.KEY_REPOSITORY_URI] = value
+
+    @property
+    def options(self):
+        self._attributes.setdefault(self.KEY_OPTIONS, {})
+        return self._attributes[self.KEY_OPTIONS]
+
+    @options.setter
+    def options(self, value):
+        self._attributes[self.KEY_OPTIONS] = value
+
+    def get_option(self, option, default):
+        return self.options.get(option, default)
+
+    def set_option(self, option, value):
+        self.options[option] = value
+
+    def unset_option(self, option):
+        self.options.pop(option, None)
 
     @property
     def name(self):
-        """
-        Get the profile name
+        """Return the profile name.
 
         :return: the profile name
-        :rtype: str
         """
         return self._name
 
     @property
-    def uuid(self):
-        """
-        Get the UUID of this profile
+    def dictionary(self):
+        """Return the profile attributes as a dictionary with keys as it is stored in the config
 
-        :return: the profile UUID
+        :return: the profile configuration dictionary
         """
-        return self.dictionary[self.KEY_PROFILE_UUID]
-
-    @uuid.setter
-    def uuid(self, uuid):
-        """
-        Set the UUID of this profile
-
-        :param uuid: the UUID to set
-        """
-        self.dictionary[self.KEY_PROFILE_UUID] = uuid
+        return self._attributes
 
     @property
     def rmq_prefix(self):
-        """
-        Get the RMQ prefix
+        """Return the prefix that should be used for RMQ resources
 
         :return: the rmq prefix string
-        :rtype: str
         """
         return self.RMQ_PREFIX.format(uuid=self.uuid)
 
     @property
     def is_test_profile(self):
-        """
-        Is this a test profile
+        """Return whether the profile is a test profile
 
-        :return: True if test profile, False otherwise
-        :rtype: bool
+        :return: boolean, True if test profile, False otherwise
         """
         return self._test_profile
-
-    @property
-    def default_user(self):
-        """Return the default user for this profile.
-
-        :return: default user email
-        """
-        try:
-            user = self.dictionary[self.KEY_DEFAULT_USER]
-        except KeyError:
-            user = None
-
-        return user
-
-    @default_user.setter
-    def default_user(self, user):
-        """Set the default user for this profile.
-
-        :param user: the default user email
-        """
-        self.dictionary[self.KEY_DEFAULT_USER] = user
-
-    @property
-    def default_user_email(self):
-        """
-        Return the email (that is used as the username) configured during the first verdi setup.
-
-        :return: the currently configured user email address or None if not defined
-        :rtype: str or None
-        """
-        try:
-            email = self.dictionary[self.KEY_DEFAULT_USER]
-        except KeyError:
-            email = None
-
-        return email
 
     @property
     def repository_path(self):
@@ -166,9 +231,9 @@ class Profile(object):  # pylint: disable=useless-object-inheritance
 
         :return: absolute filepath of the profile's file repository
         """
-        return self.parse_repository_uri()[1]
+        return self._parse_repository_uri()[1]
 
-    def parse_repository_uri(self):
+    def _parse_repository_uri(self):
         """
         This function validates the REPOSITORY_URI, that should be in the format protocol://address
 
@@ -177,7 +242,7 @@ class Profile(object):  # pylint: disable=useless-object-inheritance
         :return: a tuple (protocol, address).
         """
         import uritools
-        parts = uritools.urisplit(self.dictionary[self.KEY_REPOSITORY_URI])
+        parts = uritools.urisplit(self.repository_uri)
 
         if parts.scheme != u'file':
             raise exceptions.ConfigurationError('invalid repository protocol, only the local `file://` is supported')
@@ -200,11 +265,9 @@ class Profile(object):  # pylint: disable=useless-object-inheritance
 
     @property
     def filepaths(self):
-        """
-        Get the filepaths used by this profile
+        """Return the filepaths used by this profile.
 
         :return: a dictionary of filepaths
-        :rtype: dict
         """
         return {
             'circus': {

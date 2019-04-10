@@ -30,19 +30,19 @@ def create_mock_profile(name, repository_dirpath=None):
         config = get_config()
         repository_dirpath = config.dirpath
 
-    dictionary = {}
-    dictionary['db_name'] = name
-    dictionary['db_host'] = 'localhost'
-    dictionary['db_port'] = '5432'
-    dictionary['db_user'] = 'user'
-    dictionary['db_pass'] = 'pass'
-    dictionary['email'] = 'dummy@localhost'
-    dictionary['backend'] = 'django'
-    dictionary['repo'] = os.path.join(repository_dirpath, 'repository_' + name)
-    dictionary[Profile.KEY_PROFILE_UUID] = Profile.generate_uuid()
-    dictionary[Profile.KEY_DEFAULT_USER] = 'dummy@localhost'
+    profile_dictionary = {
+        'default_user': 'dummy@localhost',
+        'database_engine': 'postgresql_psycopg2',
+        'database_backend': 'django',
+        'database_name': name,
+        'database_port': '5432',
+        'database_hostname': 'localhost',
+        'database_username': 'user',
+        'database_password': 'pass',
+        'repository_uri': 'file:///' + os.path.join(repository_dirpath, 'repository_' + name),
+    }
 
-    return Profile(name, dictionary)
+    return Profile(name, profile_dictionary)
 
 
 @contextlib.contextmanager

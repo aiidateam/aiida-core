@@ -36,21 +36,20 @@ except exceptions.MissingConfigurationError as exception:
 if PROFILE is None:
     raise exceptions.ProfileConfigurationError('no profile has been loaded')
 
-DATABASE_BACKEND = PROFILE.dictionary.get('AIIDADB_BACKEND', None)
-if DATABASE_BACKEND != 'django':
+if PROFILE.database_backend != 'django':
     raise exceptions.ProfileConfigurationError('incommensurate database backend `{}` for profile `{}`'.format(
-        DATABASE_BACKEND, PROFILE.name))
+        PROFILE.database_backend, PROFILE.name))
 
 PROFILE_CONF = PROFILE.dictionary
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.' + PROFILE_CONF.get('AIIDADB_ENGINE', ''),
-        'NAME': PROFILE_CONF.get('AIIDADB_NAME', ''),
-        'USER': PROFILE_CONF.get('AIIDADB_USER', ''),
-        'PASSWORD': PROFILE_CONF.get('AIIDADB_PASS', ''),
-        'HOST': PROFILE_CONF.get('AIIDADB_HOST', ''),
-        'PORT': PROFILE_CONF.get('AIIDADB_PORT', ''),
+        'ENGINE': 'django.db.backends.' + PROFILE.database_engine,
+        'NAME': PROFILE.database_name,
+        'PORT': PROFILE.database_port,
+        'HOST': PROFILE.database_hostname,
+        'USER': PROFILE.database_username,
+        'PASSWORD': PROFILE.database_password,
     }
 }
 

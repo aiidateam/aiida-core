@@ -64,7 +64,7 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         if configuration.BACKEND is not None and configuration.BACKEND is not profile.database_backend:
             raise ConfigurationError('corrupt configuration: current backend does not match that of loaded profile')
 
-        backend_type = profile.dictionary.AIIDADB_BACKEND
+        backend_type = profile.database_backend
 
         if backend_type == BACKEND_DJANGO:
             from aiida.backends.djsite.utils import load_dbenv, _load_dbenv_noschemacheck
@@ -247,7 +247,7 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
 
         config = get_config()
         profile = self.get_profile()
-        poll_interval = 0.0 if profile.is_test_profile else config.option_get('runner.poll.interval')
+        poll_interval = 0.0 if profile.is_test_profile else config.get_option('runner.poll.interval')
 
         settings = {'rmq_submit': False, 'poll_interval': poll_interval}
         settings.update(kwargs)

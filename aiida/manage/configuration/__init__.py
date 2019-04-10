@@ -101,15 +101,18 @@ def load_config(create=False):
         if not create:
             raise exceptions.MissingConfigurationError('configuration file {} does not exist'.format(filepath))
         else:
-            config = Config(filepath, {}).store()
+            config_dictionary = {}
     else:
         try:
             with io.open(filepath, 'r', encoding='utf8') as handle:
-                config = Config(filepath, json.load(handle))
+                config_dictionary = json.load(handle)
         except ValueError:
             raise exceptions.ConfigurationError('configuration file {} contains invalid JSON'.format(filepath))
 
-    return check_and_migrate_config(config, store=True)
+    config = Config(filepath, check_and_migrate_config(config_dictionary))
+    config.store()
+
+    return config
 
 
 def get_profile():
@@ -149,7 +152,7 @@ def get_config_option(option_name):
     defined configuration wide. If no configuration is yet loaded, this function will fall back on the default that may
     be defined for the option itself. This is useful for options that need to be defined at loading time of AiiDA when
     no configuration is yet loaded or may not even yet exist. In cases where one expects a profile to be loaded,
-    preference should be given to retrieving the option through the Config instance and its `option_get` method.
+    preference should be given to retrieving the option through the Config instance and its `get_option` method.
 
     :param option_name: the name of the configuration option
     :return: option value as specified for the profile/configuration if loaded, otherwise option default
@@ -159,17 +162,17 @@ def get_config_option(option_name):
     option = options.get_option(option_name)
 
     try:
-        config = get_config()
+        config = get_config(create=True)
     except exceptions.ConfigurationError:
         value = option.default if option.default is not options.NO_DEFAULT else None
     else:
         if config.current_profile:
             # Try to get the option for the profile, but do not return the option default
-            value_profile = config.option_get(option_name, scope=config.current_profile.name, default=False)
+            value_profile = config.get_option(option_name, scope=config.current_profile.name, default=False)
         else:
             value_profile = None
 
         # Value is the profile value if defined or otherwise the global value, which will be None if not set
-        value = value_profile if value_profile else config.option_get(option_name)
+        value = value_profile if value_profile else config.get_option(option_name)
 
     return value

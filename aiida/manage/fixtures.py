@@ -176,7 +176,7 @@ class FixtureManager(object):  # pylint: disable=too-many-public-methods,useless
             raise FixtureError('AiiDA dbenv can not be loaded while creating a test profile')
         if not self.__is_running_on_test_db:
             self.create_aiida_db()
-        from aiida.manage.configuration import settings, load_profile, reset_profile
+        from aiida.manage.configuration import settings, load_profile, reset_profile, Profile
         if not self.root_dir:
             self.root_dir = tempfile.mkdtemp()
         configuration.CONFIG = None
@@ -185,7 +185,8 @@ class FixtureManager(object):  # pylint: disable=too-many-public-methods,useless
         create_instance_directories()
         profile_name = 'test_profile'
         config = configuration.get_config(create=True)
-        profile = config.create_profile(profile_name, **self.profile_dictionary)
+        profile = Profile(profile_name, self.profile_dictionary)
+        config.add_profile(profile)
         config.set_default_profile(profile_name).store()
         load_profile(profile_name)
         backend = get_manager()._load_backend(schema_check=False)
@@ -218,7 +219,7 @@ class FixtureManager(object):  # pylint: disable=too-many-public-methods,useless
         # Create the default user
         from aiida import orm
         try:
-            orm.User(email=get_manager().get_profile().default_user_email).store()
+            orm.User(email=get_manager().get_profile().default_user).store()
         except exceptions.IntegrityError:
             # The default user already exists, no problem
             pass
@@ -234,7 +235,7 @@ class FixtureManager(object):  # pylint: disable=too-many-public-methods,useless
             'database_hostname': self.db_host,
             'database_username': self.db_user,
             'database_password': self.db_pass,
-            'repository_path': self.repo,
+            'repository_uri': 'file://' + self.repo,
         }
         return dictionary
 
@@ -248,24 +249,6 @@ class FixtureManager(object):  # pylint: disable=too-many-public-methods,useless
             'institution': self.institution
         }
         return dictionary
-
-    @property
-    def profile(self):
-        """Profile parameters"""
-        profile = {
-            'backend': self.backend,
-            'email': self.email,
-            'repo': self.repo,
-            'db_host': self.db_host,
-            'db_port': self.db_port,
-            'db_name': self.db_name,
-            'db_user': self.db_user,
-            'db_pass': self.db_pass,
-            'first_name': self.first_name,
-            'last_name': self.last_name,
-            'institution': self.institution
-        }
-        return profile
 
     @property
     def db_host(self):

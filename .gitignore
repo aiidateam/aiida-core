@@ -23,3 +23,6 @@
 
 # Files created by RPN tests
 .ci/polish/polish_workchains/polish*
+
+# Build files
+dist/

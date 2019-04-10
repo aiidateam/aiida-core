@@ -78,7 +78,8 @@ def setup(profile, user_email, user_first_name, user_last_name, user_institution
         'email': user_email,
         'first_name': user_first_name,
         'last_name': user_last_name,
-        'institution': user_institution
+        'institution': user_institution,
+        'password': user_password,
     }
 
     try:

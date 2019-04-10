@@ -460,3 +460,8 @@ You should be aware of this while developing code which runs in the daemon. In p
 
     print(subprocess.check_output('sleep 3; echo bar', preexec_fn=os.setsid))
 
+.. note::
+
+    When dropping python 2.7 support, ``preexec_fn=os.setsid`` should be replaced
+    by the thread safe ``start_new_session=True`` introduced in python 3.2.
+

@@ -46,8 +46,8 @@ AIIDA_LOGGER = logging.getLogger('aiida')
 class NotInTestingFilter(logging.Filter):
 
     def filter(self, record):
-        from aiida import settings
-        return not settings.TESTING_MODE
+        from aiida.manage import configuration
+        return not configuration.PROFILE.is_test_profile
 
 
 # The default logging dictionary for AiiDA that can be used in conjunction

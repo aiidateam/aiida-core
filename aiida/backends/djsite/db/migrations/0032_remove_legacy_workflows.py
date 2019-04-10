@@ -22,10 +22,10 @@ import click
 from django.core import serializers
 from django.db import migrations
 
-from aiida import settings
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
 from aiida.common import json
 from aiida.cmdline.utils import echo
+from aiida.manage import configuration
 
 REVISION = '1.0.32'
 DOWN_REVISION = '1.0.31'
@@ -47,7 +47,7 @@ def export_workflow_data(apps, _):
     if count_workflow == 0 and count_workflow_data == 0 and count_workflow_step == 0:
         return
 
-    if not settings.TESTING_MODE:
+    if not configuration.PROFILE.is_test_profile:
         echo.echo('\n')
         echo.echo_warning('The legacy workflow tables contain data but will have to be dropped to continue.')
         echo.echo_warning('If you continue, the content will be dumped to a JSON file, before dropping the tables.')
@@ -56,7 +56,7 @@ def export_workflow_data(apps, _):
         if not click.confirm('Are you sure you want to continue', default=True):
             sys.exit(1)
 
-    delete_on_close = settings.TESTING_MODE
+    delete_on_close = configuration.PROFILE.is_test_profile
 
     data = {
         'workflow': serializers.serialize('json', DbWorkflow.objects.all()),

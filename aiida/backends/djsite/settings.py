@@ -17,10 +17,9 @@ from __future__ import absolute_import
 import sys
 import os
 
-from aiida import settings
 from aiida.common import exceptions
 from aiida.common.timezone import get_current_timezone
-from aiida.manage.configuration import get_profile
+from aiida.manage.configuration import get_profile, settings
 
 # Assumes that parent directory of aiida is root for
 # things like templates/, SQL/ etc.  If not, change what follows...

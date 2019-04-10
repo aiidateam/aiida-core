@@ -15,7 +15,7 @@ from __future__ import absolute_import
 import errno
 import os
 
-from aiida.common import ConfigurationError
+USE_TZ = True
 
 DEFAULT_UMASK = 0o0077
 DEFAULT_AIIDA_PATH_VARIABLE = 'AIIDA_PATH'
@@ -57,6 +57,8 @@ def create_directory(path):
 
     :param path: an absolute path to create a directory at
     """
+    from aiida.common import ConfigurationError
+
     try:
         os.makedirs(path)
     except OSError as exception:

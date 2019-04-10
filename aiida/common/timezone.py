@@ -30,7 +30,7 @@ def now():
     :return: datetime object represeting current time
     """
     import pytz
-    from aiida import settings
+    from aiida.manage.configuration import settings
 
     if getattr(settings, 'USE_TZ', None):
         return datetime.utcnow().replace(tzinfo=pytz.utc)

@@ -14,9 +14,9 @@ from __future__ import absolute_import
 
 import six
 
-from aiida.backends import settings
-from aiida.backends.profile import load_profile, BACKEND_SQLA, BACKEND_DJANGO
-from aiida.common.exceptions import ConfigurationError, NotExistent, InvalidOperation
+from aiida.backends import BACKEND_SQLA, BACKEND_DJANGO
+from aiida.common.exceptions import ConfigurationError
+from aiida.manage import configuration
 
 AIIDA_ATTRIBUTE_SEP = '.'
 
@@ -41,78 +41,55 @@ def validate_attribute_key(key):
             AIIDA_ATTRIBUTE_SEP))
 
 
-def is_dbenv_loaded():
-    """
-    Return True of the dbenv was already loaded (with a call to load_dbenv),
-    False otherwise.
-    """
-    return settings.LOAD_DBENV_CALLED
-
-
 def load_dbenv(profile=None, *args, **kwargs):
-    if is_dbenv_loaded():
-        raise InvalidOperation("You cannot call load_dbenv multiple times!")
-
-    # This is going to set global variables in settings, including settings.BACKEND
-    load_profile(profile=profile)
-
-    if settings.BACKEND == BACKEND_SQLA:
+    if configuration.PROFILE.database_backend == BACKEND_SQLA:
         # Maybe schema version should be also checked for SQLAlchemy version.
         from aiida.backends.sqlalchemy.utils \
             import load_dbenv as load_dbenv_sqlalchemy
         to_return = load_dbenv_sqlalchemy(profile=profile, *args, **kwargs)
-    elif settings.BACKEND == BACKEND_DJANGO:
+    elif configuration.PROFILE.database_backend == BACKEND_DJANGO:
         from aiida.backends.djsite.utils import load_dbenv as load_dbenv_django
         to_return = load_dbenv_django(profile=profile, *args, **kwargs)
     else:
-        raise ConfigurationError("Invalid settings.BACKEND: {}".format(
-            settings.BACKEND))
+        raise ConfigurationError("Invalid configuration.PROFILE.database_backend: {}".format(
+            configuration.PROFILE.database_backend))
 
-    settings.LOAD_DBENV_CALLED = True
     return to_return
 
 
 def _load_dbenv_noschemacheck(profile=None, *args, **kwargs):
-    if is_dbenv_loaded():
-        raise InvalidOperation("You cannot call load_dbenv multiple times!")
-
-    # This is going to set global variables in settings, including settings.BACKEND
-    load_profile(profile=profile)
-
-    if settings.BACKEND == BACKEND_SQLA:
+    if configuration.PROFILE.database_backend == BACKEND_SQLA:
         # Maybe schema version should be also checked for SQLAlchemy version.
         from aiida.backends.sqlalchemy.utils \
             import _load_dbenv_noschemacheck as _load_dbenv_noschemacheck_sqlalchemy
         to_return = _load_dbenv_noschemacheck_sqlalchemy(profile=profile, *args, **kwargs)
-    elif settings.BACKEND == BACKEND_DJANGO:
+    elif configuration.PROFILE.database_backend == BACKEND_DJANGO:
         from aiida.backends.djsite.utils import _load_dbenv_noschemacheck as _load_dbenv_noschemacheck_django
         to_return = _load_dbenv_noschemacheck_django(profile=profile, *args, **kwargs)
     else:
-        raise ConfigurationError("Invalid settings.BACKEND: {}".format(
-            settings.BACKEND))
+        raise ConfigurationError("Invalid configuration.PROFILE.database_backend: {}".format(configuration.PROFILE.database_backend))
 
-    settings.LOAD_DBENV_CALLED = True
     return to_return
 
 
 def get_global_setting(key):
-    if settings.BACKEND == BACKEND_DJANGO:
+    if configuration.PROFILE.database_backend == BACKEND_DJANGO:
         from aiida.backends.djsite.globalsettings import get_global_setting
-    elif settings.BACKEND == BACKEND_SQLA:
+    elif configuration.PROFILE.database_backend == BACKEND_SQLA:
         from aiida.backends.sqlalchemy.globalsettings import get_global_setting
     else:
-        raise Exception("unknown backend {}".format(settings.BACKEND))
+        raise Exception("unknown backend {}".format(configuration.PROFILE.database_backend))
 
     return get_global_setting(key)
 
 
 def get_global_setting_description(key):
-    if settings.BACKEND == BACKEND_DJANGO:
+    if configuration.PROFILE.database_backend == BACKEND_DJANGO:
         from aiida.backends.djsite.globalsettings import get_global_setting_description
-    elif settings.BACKEND == BACKEND_SQLA:
+    elif configuration.PROFILE.database_backend == BACKEND_SQLA:
         from aiida.backends.sqlalchemy.globalsettings import get_global_setting_description
     else:
-        raise Exception("unknown backend {}".format(settings.BACKEND))
+        raise Exception("unknown backend {}".format(configuration.PROFILE.database_backend))
 
     return get_global_setting_description(key)
 
@@ -126,56 +103,40 @@ def get_backend_type():
 
 
 def set_global_setting(key, value, description=None):
-    if settings.BACKEND == BACKEND_DJANGO:
+    if configuration.PROFILE.database_backend == BACKEND_DJANGO:
         from aiida.backends.djsite.globalsettings import set_global_setting
-    elif settings.BACKEND == BACKEND_SQLA:
+    elif configuration.PROFILE.database_backend == BACKEND_SQLA:
         from aiida.backends.sqlalchemy.globalsettings import set_global_setting
     else:
-        raise Exception("unknown backend {}".format(settings.BACKEND))
+        raise Exception("unknown backend {}".format(configuration.PROFILE.database_backend))
 
     set_global_setting(key, value, description)
 
 
 def del_global_setting(key):
-    if settings.BACKEND == BACKEND_DJANGO:
+    if configuration.PROFILE.database_backend == BACKEND_DJANGO:
         from aiida.backends.djsite.globalsettings import del_global_setting
-    elif settings.BACKEND == BACKEND_SQLA:
+    elif configuration.PROFILE.database_backend == BACKEND_SQLA:
         from aiida.backends.sqlalchemy.globalsettings import del_global_setting
     else:
-        raise Exception("unknown backend {}".format(settings.BACKEND))
+        raise Exception("unknown backend {}".format(configuration.PROFILE.database_backend))
 
     del_global_setting(key)
 
 
 def set_backend_type(backend_name):
-    """
-    Set the schema version stored in the DB. Use only if you know what
-    you are doing.
-    """
+    """Set the schema version stored in the DB. Use only if you know what you are doing."""
     return set_global_setting(
         'db|backend', backend_name,
         description="The backend used to communicate with the database.")
 
 
-def get_current_profile():
-    """
-    Return, as a string, the current profile being used.
-
-    Return None if load_dbenv has not been loaded yet.
-    """
-
-    if is_dbenv_loaded():
-        return settings.AIIDADB_PROFILE
-    else:
-        return None
-
-
 def delete_nodes_and_connections(pks):
-    if settings.BACKEND == BACKEND_DJANGO:
+    if configuration.PROFILE.database_backend == BACKEND_DJANGO:
         from aiida.backends.djsite.utils import delete_nodes_and_connections_django as delete_nodes_backend
-    elif settings.BACKEND == BACKEND_SQLA:
+    elif configuration.PROFILE.database_backend == BACKEND_SQLA:
         from aiida.backends.sqlalchemy.utils import delete_nodes_and_connections_sqla as delete_nodes_backend
     else:
-        raise Exception("unknown backend {}".format(settings.BACKEND))
+        raise Exception("unknown backend {}".format(configuration.PROFILE.database_backend))
 
     delete_nodes_backend(pks)

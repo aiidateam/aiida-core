@@ -13,15 +13,14 @@ Django settings for the AiiDA project.
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import sys
 import os
 
-from aiida.common.exceptions import ConfigurationError, MissingConfigurationError
-
-from aiida.backends import settings
-from aiida.common.setup import parse_repository_uri
-from aiida.manage.configuration import get_config
+from aiida import settings
+from aiida.common import exceptions
 from aiida.common.timezone import get_current_timezone
+from aiida.manage.configuration import get_profile
 
 # Assumes that parent directory of aiida is root for
 # things like templates/, SQL/ etc.  If not, change what follows...
@@ -31,20 +30,22 @@ BASE_DIR = os.path.split(AIIDA_DIR)[0]
 sys.path = [BASE_DIR] + sys.path
 
 try:
-    CONFIG = get_config()
-except MissingConfigurationError:
-    raise MissingConfigurationError("Please run the AiiDA Installation, no config found")
+    PROFILE = get_profile()
+except exceptions.MissingConfigurationError as exception:
+    raise exceptions.MissingConfigurationError('the configuration could not be loaded: {}'.format(exception))
 
-if settings.AIIDADB_PROFILE is None:
-    raise ConfigurationError("settings.AIIDADB_PROFILE not defined, did you load django"
-                             "through the AiiDA load_dbenv()?")
+if PROFILE is None:
+    raise exceptions.ProfileConfigurationError('no profile has been loaded')
 
-PROFILE = CONFIG.current_profile
+DATABASE_BACKEND = PROFILE.dictionary.get('AIIDADB_BACKEND', None)
+if DATABASE_BACKEND != 'django':
+    raise exceptions.ProfileConfigurationError('incommensurate database backend `{}` for profile `{}`'.format(
+        DATABASE_BACKEND, PROFILE.name))
+
 PROFILE_CONF = PROFILE.dictionary
 
 DATABASES = {
     'default': {
-        # Add 'postgresql_psycopg2', 'mysql', or 'oracle'.
         'ENGINE': 'django.db.backends.' + PROFILE_CONF.get('AIIDADB_ENGINE', ''),
         'NAME': PROFILE_CONF.get('AIIDADB_NAME', ''),
         'USER': PROFILE_CONF.get('AIIDADB_USER', ''),
@@ -53,33 +54,6 @@ DATABASES = {
         'PORT': PROFILE_CONF.get('AIIDADB_PORT', ''),
     }
 }
-
-# Checks on the REPOSITORY_* variables
-try:
-    REPOSITORY_URI = PROFILE_CONF['AIIDADB_REPOSITORY_URI']
-except KeyError:
-    raise ConfigurationError("Please setup correctly the REPOSITORY_URI variable to "
-                             "a suitable directory on which you have write permissions.")
-
-# Note: this variable might disappear in the future
-REPOSITORY_PROTOCOL, REPOSITORY_PATH = parse_repository_uri(REPOSITORY_URI)
-
-if settings.IN_RT_DOC_MODE:
-    pass
-elif REPOSITORY_PROTOCOL == 'file':
-    # Note: to verify whether this is too slow to do at every startup
-    if not os.path.isdir(REPOSITORY_PATH):
-        try:
-            # Try to create the local repository folders with needed parent
-            # folders
-            os.makedirs(REPOSITORY_PATH)
-        except OSError:
-            # Possibly here due to permission problems
-            raise ConfigurationError("Please setup correctly the REPOSITORY_PATH variable to "
-                                     "a suitable directory on which you have write permissions. "
-                                     "(I was not able to create the directory.)")
-else:
-    raise ConfigurationError("Only file protocol supported")
 
 # CUSTOM USER CLASS
 AUTH_USER_MODEL = 'db.DbUser'
@@ -118,7 +92,7 @@ USE_L10N = False
 
 # If you set this to False, Django will not use timezone-aware datetimes.
 # For AiiDA, leave it as True, otherwise setting properties with dates will not work.
-USE_TZ = True
+USE_TZ = settings.USE_TZ
 
 TEMPLATES = [
     {

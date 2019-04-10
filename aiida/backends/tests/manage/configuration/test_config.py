@@ -170,7 +170,7 @@ class TestConfig(AiidaTestCase):
                 Config.KEY_VERSION_OLDEST_COMPATIBLE: OLDEST_COMPATIBLE_CONFIG_VERSION,
             },
             Config.KEY_PROFILES: {
-                self.profile_name: self.profile
+                self.profile_name: self.profile.dictionary
             },
         }
 
@@ -227,13 +227,13 @@ class TestConfig(AiidaTestCase):
             config.set_default_profile('non_existing_profile')
 
         # After setting a default profile, it should return the right name
-        config.add_profile(self.profile_name, create_mock_profile(self.profile_name))
+        config.add_profile(create_mock_profile(self.profile_name))
         config.set_default_profile(self.profile_name)
         self.assertTrue(config.default_profile_name, self.profile_name)
 
         # Setting it when a default is already set, should not overwrite by default
-        alternative_profile_name = 'alterantive_profile_name'
-        config.add_profile(alternative_profile_name, create_mock_profile(alternative_profile_name))
+        alternative_profile_name = 'alternative_profile_name'
+        config.add_profile(create_mock_profile(alternative_profile_name))
         config.set_default_profile(self.profile_name)
         self.assertTrue(config.default_profile_name, self.profile_name)
 
@@ -254,11 +254,11 @@ class TestConfig(AiidaTestCase):
         self.assertEqual(config.profile_names, list(self.config_dictionary[Config.KEY_PROFILES]))
 
         # Test get_profile
-        profile = Profile(self.profile_name, self.profile)
+        profile = Profile(self.profile_name, self.profile.dictionary)
         self.assertEqual(config.get_profile(self.profile_name).dictionary, profile.dictionary)
 
         # Update a profile
-        updated_profile = Profile(self.profile_name, create_mock_profile(self.profile_name))
+        updated_profile = Profile(self.profile_name, create_mock_profile(self.profile_name).dictionary)
         config.update_profile(updated_profile)
         self.assertEqual(config.get_profile(self.profile_name).dictionary, updated_profile.dictionary)
 

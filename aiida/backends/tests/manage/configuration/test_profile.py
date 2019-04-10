@@ -12,6 +12,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+import os
 import uuid
 
 from aiida.backends.testbase import AiidaTestCase
@@ -27,7 +28,18 @@ class TestProfile(AiidaTestCase):
         """Setup a mock profile."""
         super(TestProfile, cls).setUpClass(*args, **kwargs)
         cls.profile_name = 'test_profile'
-        cls.profile_dictionary = create_mock_profile(name=cls.profile_name)
+        cls.profile_dictionary = {
+            'db_name': cls.profile_name,
+            'db_host': 'localhost',
+            'db_port': '5432',
+            'db_user': 'user',
+            'db_pass': 'pass',
+            'email': 'dummy@localhost',
+            'backend': 'django',
+            'repo': os.path.join('/some/path', 'repository_' + cls.profile_name),
+            Profile.KEY_PROFILE_UUID: Profile.generate_uuid(),
+            Profile.KEY_DEFAULT_USER: 'dummy@localhost'
+        }
         cls.profile = Profile(cls.profile_name, cls.profile_dictionary)
 
     def test_base_properties(self):
@@ -47,8 +59,7 @@ class TestProfile(AiidaTestCase):
     def test_is_test_profile(self):
         """Test that a profile whose name starts with `test_` is marked as a test profile."""
         profile_name = 'not_a_test_profile'
-        profile_dictionary = create_mock_profile(name=profile_name)
-        profile = Profile(profile_name, profile_dictionary)
+        profile = create_mock_profile(name=profile_name)
 
         # The one constructed in the setUpClass should be a test profile
         self.assertTrue(self.profile.is_test_profile)

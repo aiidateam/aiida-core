@@ -113,14 +113,8 @@ class Config(object):  # pylint: disable=useless-object-inheritance
 
         :return: the current profile or None if not defined
         """
-        from aiida.backends import settings
-
-        current_profile_name = settings.AIIDADB_PROFILE
-
-        if current_profile_name:
-            return self.get_profile(current_profile_name)
-
-        return None
+        from . import get_profile
+        return get_profile()
 
     @property
     def profile_names(self):
@@ -187,14 +181,35 @@ class Config(object):  # pylint: disable=useless-object-inheritance
         self.validate_profile(name)
         return self.dictionary[self.KEY_PROFILES][name]
 
-    def add_profile(self, name, profile):
+    def create_profile(self, name, **kwargs):
+        """Create a new profile and add it to the configuration."""
+        from aiida.common import exceptions
+
+        try:
+            dictionary = {
+                'AIIDADB_ENGINE': kwargs['database_engine'],
+                'AIIDADB_BACKEND': kwargs['database_backend'],
+                'AIIDADB_NAME': kwargs['database_name'],
+                'AIIDADB_PORT': kwargs['database_port'],
+                'AIIDADB_HOST': kwargs['database_hostname'],
+                'AIIDADB_USER': kwargs['database_username'],
+                'AIIDADB_PASS': kwargs['database_password'],
+                'AIIDADB_REPOSITORY_URI': 'file://' + kwargs['repository_path']
+            }
+        except KeyError as exception:
+            raise exceptions.ProfileConfigurationError('required field is missing: {}'.format(exception))
+
+        profile = Profile(name, dictionary)
+        self.add_profile(profile)
+        return profile
+
+    def add_profile(self, profile):
         """Add a profile to the configuration.
 
-        :param name: the name of the profile to remove
         :param profile: the profile configuration dictionary
         :return: self
         """
-        self.dictionary[self.KEY_PROFILES][name] = profile
+        self.dictionary[self.KEY_PROFILES][profile.name] = profile.dictionary
         return self
 
     def update_profile(self, profile):

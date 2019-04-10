@@ -13,11 +13,6 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from datetime import datetime
-import pytz
-
-from aiida.common import setup
-
-UTC = pytz.utc
 
 
 def get_current_timezone():
@@ -34,8 +29,11 @@ def now():
 
     :return: datetime object represeting current time
     """
-    if getattr(setup, 'USE_TZ', None):
-        return datetime.utcnow().replace(tzinfo=UTC)
+    import pytz
+    from aiida import settings
+
+    if getattr(settings, 'USE_TZ', None):
+        return datetime.utcnow().replace(tzinfo=pytz.utc)
 
     return datetime.now()
 

@@ -32,7 +32,27 @@ DAEMON_DIR = None
 DAEMON_LOG_DIR = None
 
 
-def create_configuration_directory(path):
+def create_instance_directories():
+    """Create the base directories required for a new AiiDA instance.
+
+    This will create the base AiiDA directory defined by the AIIDA_CONFIG_FOLDER variable, unless it already exists.
+    Subsequently, it will create the daemon directory within it and the daemon log directory.
+    """
+    directory_base = os.path.expanduser(AIIDA_CONFIG_FOLDER)
+    directory_daemon = os.path.join(directory_base, DAEMON_DIR)
+    directory_daemon_log = os.path.join(directory_base, DAEMON_LOG_DIR)
+
+    umask = os.umask(DEFAULT_UMASK)
+
+    try:
+        create_directory(directory_base)
+        create_directory(directory_daemon)
+        create_directory(directory_daemon_log)
+    finally:
+        os.umask(umask)
+
+
+def create_directory(path):
     """Attempt to create the configuration folder at the given path skipping if it already exists
 
     :param path: an absolute path to create a directory at
@@ -41,8 +61,7 @@ def create_configuration_directory(path):
         os.makedirs(path)
     except OSError as exception:
         if exception.errno != errno.EEXIST:
-            raise ConfigurationError("could not create the '{}' configuration folder in '{}'".format(
-                DEFAULT_CONFIG_DIR_NAME, DEFAULT_AIIDA_PATH))
+            raise ConfigurationError("could not create the '{}' configuration directory".format(path))
 
 
 def set_configuration_directory():
@@ -80,17 +99,15 @@ def set_configuration_directory():
             # If the directory exists, we leave it set and break the loop
             if os.path.isdir(AIIDA_CONFIG_FOLDER):
                 break
-        else:
-            # Simply create the folder at the last considered path
-            create_configuration_directory(AIIDA_CONFIG_FOLDER)
 
     else:
         # The `AIIDA_PATH` variable is not set, so default to the default path and try to create it if it does not exist
         AIIDA_CONFIG_FOLDER = os.path.expanduser(os.path.join(DEFAULT_AIIDA_PATH, DEFAULT_CONFIG_DIR_NAME))
-        create_configuration_directory(AIIDA_CONFIG_FOLDER)
 
     DAEMON_DIR = os.path.join(AIIDA_CONFIG_FOLDER, DEFAULT_DAEMON_DIR_NAME)
     DAEMON_LOG_DIR = os.path.join(DAEMON_DIR, DEFAULT_DAEMON_LOG_DIR_NAME)
+
+    create_instance_directories()
 
 
 # Initialize the configuration directory settings

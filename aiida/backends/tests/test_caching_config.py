@@ -15,9 +15,9 @@ import tempfile
 import unittest
 import yaml
 
-from aiida.backends.utils import get_current_profile
 from aiida.calculations.plugins.templatereplacer import TemplatereplacerCalculation
 from aiida.manage.caching import configure, get_use_cache, enable_caching, disable_caching
+from aiida.manage.configuration import get_profile
 from aiida.orm import Bool, Float, Int
 
 
@@ -27,7 +27,7 @@ class CacheConfigTest(unittest.TestCase):
     def setUp(self):
         """Write a temporary config file, and load the configuration."""
         self.config_reference = {
-            get_current_profile(): {
+            get_profile().name: {
                 'default': True,
                 'enabled': ['aiida.orm.Bool', 'aiida.orm.Float'],
                 'disabled': ['aiida.calculations.plugins.templatereplacer.TemplatereplacerCalculation', 'aiida.orm.Bool']

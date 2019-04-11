@@ -25,13 +25,6 @@ from setuptools import setup, find_packages
 if __name__ == '__main__':
     THIS_FOLDER = path.split(path.abspath(__file__))[0]
 
-    ## Ensure that pip is installed and the version is between the required limits
-    #try:
-    #    import pip
-    #except ImportError:
-    #    print('Could not import pip, which is required for installation')
-    #    sys.exit(1)
-
     with open(path.join(THIS_FOLDER, 'setup.json'), 'r') as info:
         SETUP_JSON = json.load(info)
 

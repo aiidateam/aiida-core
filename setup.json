@@ -130,9 +130,6 @@
     ]
   },
   "reentry_register": true,
-  "reentry_scan": [
-    "aiida"
-  ],
   "entry_points": {
     "console_scripts": [
       "verdi=aiida.cmdline.commands.cmd_verdi:verdi"

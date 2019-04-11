@@ -53,9 +53,6 @@ install:
     - pip install --upgrade pip wheel setuptools coveralls
     # Install AiiDA with some optional dependencies
     - if [ "$TEST_TYPE" == "docs" ]; then pip install . && pip install -r docs/requirements_for_rtd.txt; else pip install --no-cache-dir .[all]; fi
-    - reentry map
-    - reentry scan
-    - reentry map
 
 env:
     ## Build matrix to test both backends, and the docs

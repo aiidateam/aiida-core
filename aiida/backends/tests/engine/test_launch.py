@@ -32,7 +32,7 @@ class AddWorkChain(WorkChain):
         spec.output('result', valid_type=Int)
 
     def add(self):
-        self.out('result', self.inputs.a + self.inputs.b)
+        self.out('result', Int(self.inputs.a + self.inputs.b).store())
 
 
 class TestLaunchers(AiidaTestCase):

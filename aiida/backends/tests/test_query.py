@@ -156,7 +156,7 @@ class TestQueryBuilder(AiidaTestCase):
                         return ExitCode()
 
             def success(self):
-                self.out(self.OUTPUT_LABEL, orm.Int(self.OUTPUT_VALUE))
+                self.out(self.OUTPUT_LABEL, orm.Int(self.OUTPUT_VALUE).store())
 
         class DummyWorkChain(WorkChain):
             pass

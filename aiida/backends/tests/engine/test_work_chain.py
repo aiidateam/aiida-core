@@ -184,7 +184,7 @@ class PotentialFailureWorkChain(WorkChain):
                 return ExitCode()
 
     def success(self):
-        self.out(self.OUTPUT_LABEL, Int(self.OUTPUT_VALUE))
+        self.out(self.OUTPUT_LABEL, Int(self.OUTPUT_VALUE).store())
         return
 
 
@@ -365,6 +365,25 @@ class TestWorkchain(AiidaTestCase):
         with self.assertRaises(AssertionError):
             launch.run(IncompleteDefineWorkChain)
 
+    def test_out_unstored(self):
+        """Calling `self.out` on an unstored `Node` should raise.
+
+        It indicates that users created new data whose provenance will be lost.
+        """
+
+        class IllegalWorkChain(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super(IllegalWorkChain, cls).define(spec)
+                spec.outline(cls.illegal)
+
+            def illegal(self):
+                self.out('not_allowed', orm.Int(2))
+
+        with self.assertRaises(ValueError):
+            launch.run(IllegalWorkChain)
+
     def test_same_input_node(self):
 
         class Wf(WorkChain):
@@ -385,8 +404,8 @@ class TestWorkchain(AiidaTestCase):
         run_and_check_success(Wf, a=x, b=x)
 
     def test_context(self):
-        A = Str("a")
-        B = Str("b")
+        A = Str("a").store()
+        B = Str("b").store()
 
         test_case = self
 
@@ -541,11 +560,13 @@ class TestWorkchain(AiidaTestCase):
                 spec.outline(cls.do_run)
 
             def do_run(self):
-                self.out("value", Int(5))
+                self.out("value", Int(5).store())
 
         run_and_check_success(MainWorkChain)
 
     def test_tocontext_schedule_workchain(self):
+
+        node = Int(5).store()
 
         class MainWorkChain(WorkChain):
 
@@ -559,7 +580,7 @@ class TestWorkchain(AiidaTestCase):
                 return ToContext(subwc=self.submit(SubWorkChain))
 
             def check(self):
-                assert self.ctx.subwc.outputs.value == Int(5)
+                assert self.ctx.subwc.outputs.value == node
 
         class SubWorkChain(WorkChain):
 
@@ -569,7 +590,7 @@ class TestWorkchain(AiidaTestCase):
                 spec.outline(cls.do_run)
 
             def do_run(self):
-                self.out('value', Int(5))
+                self.out('value', node)
 
         run_and_check_success(MainWorkChain)
 
@@ -635,7 +656,7 @@ class TestWorkchain(AiidaTestCase):
         run_and_check_success(TestWorkChain)
 
     def test_to_context(self):
-        val = Int(5)
+        val = Int(5).store()
 
         test_case = self
 
@@ -1140,7 +1161,9 @@ class ChildExposeWorkChain(WorkChain):
         spec.outline(cls.do_run)
 
     def do_run(self):
-        self.out('a', self.inputs.a + self.inputs.b)
+        summed = self.inputs.a + self.inputs.b
+        summed.store()
+        self.out('a', summed)
         self.out('b', self.inputs.b)
         self.out('c', self.inputs.c)
 

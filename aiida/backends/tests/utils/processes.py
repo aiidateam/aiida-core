@@ -46,7 +46,8 @@ class AddProcess(Process):
         spec.output('result', required=True)
 
     def run(self):
-        self.out(self.inputs.a + self.inputs.b)
+        summed = self.inputs.a + self.inputs.b
+        self.out(summed.store())
 
 
 class BadOutput(Process):

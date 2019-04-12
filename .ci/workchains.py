@@ -47,10 +47,10 @@ class NestedWorkChain(WorkChain):
         if self.should_submit():
             self.report('Getting sub-workchain output.')
             sub_workchain = self.ctx.workchain[0]
-            self.out('output', sub_workchain.outputs.output + 1)
+            self.out('output', Int(sub_workchain.outputs.output + 1).store())
         else:
             self.report('Bottom-level workchain reached.')
-            self.out('output', Int(0))
+            self.out('output', Int(0).store())
 
 
 class SerializeWorkChain(WorkChain):
@@ -109,7 +109,7 @@ class DynamicNonDbInput(WorkChain):
         input_list = self.inputs.namespace.input
         assert isinstance(input_list, list)
         assert not isinstance(input_list, List)
-        self.out('output', List(list=list(input_list)))
+        self.out('output', List(list=list(input_list)).store())
 
 
 class DynamicDbInput(WorkChain):
@@ -140,7 +140,7 @@ class DynamicMixedInput(WorkChain):
         assert isinstance(input_non_db, int)
         assert not isinstance(input_non_db, Int)
         assert isinstance(input_db, Int)
-        self.out('output', input_db + input_non_db)
+        self.out('output', Int(input_db + input_non_db).store())
 
 
 class CalcFunctionRunnerWorkChain(WorkChain):

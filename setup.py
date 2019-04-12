@@ -13,36 +13,15 @@ from __future__ import division
 from __future__ import print_function
 
 from __future__ import absolute_import
-import sys
 import json
-from os import path, environ
+from os import path
 # pylint: disable=wrong-import-order
 # Note: This speeds up command line scripts (e.g. verdi)
 from utils import fastentrypoints  # pylint: disable=unused-import
-from distutils.version import StrictVersion
 from setuptools import setup, find_packages
 
 if __name__ == '__main__':
     THIS_FOLDER = path.split(path.abspath(__file__))[0]
-
-    # Ensure that pip is installed and the version is between the required limits
-    try:
-        import pip
-    except ImportError:
-        print('Could not import pip, which is required for installation')
-        sys.exit(1)
-
-    PIP_REQUIRED_VERSION_MIN = '10.0.0'
-    PIP_REQUIRED_VERSION_MAX = '19.0.0'
-    REQUIRED_VERSION_MIN = StrictVersion(PIP_REQUIRED_VERSION_MIN)
-    REQUIRED_VERSION_MAX = StrictVersion(PIP_REQUIRED_VERSION_MAX)
-    INSTALLED_VERSION = StrictVersion(pip.__version__)
-    CI = environ.get('CI', False)
-
-    if (INSTALLED_VERSION < REQUIRED_VERSION_MIN or INSTALLED_VERSION >= REQUIRED_VERSION_MAX) and not CI:
-        print('The installation requires {}<=pip<{}, whereas currently {} is installed'.format(
-            REQUIRED_VERSION_MIN, REQUIRED_VERSION_MAX, INSTALLED_VERSION))
-        sys.exit(1)
 
     with open(path.join(THIS_FOLDER, 'setup.json'), 'r') as info:
         SETUP_JSON = json.load(info)

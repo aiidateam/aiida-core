@@ -17,7 +17,7 @@ import collections
 
 from aiida.engine.processes.ports import PortNamespace
 
-__all__ = ('ProcessBuilder', 'CalcJobBuilder', 'ProcessBuilderNamespace')
+__all__ = ('ProcessBuilder', 'ProcessBuilderNamespace')
 
 
 class ProcessBuilderNamespace(collections.MutableMapping):
@@ -147,28 +147,3 @@ class ProcessBuilder(ProcessBuilderNamespace):
     @property
     def process_class(self):
         return self._process_class
-
-
-class CalcJobBuilder(ProcessBuilder):
-    """A process builder specific to CalcJob implementations that provides also the `submit_test` functionality."""
-
-    def __dir__(self):
-        return super(CalcJobBuilder, self).__dir__() + ['submit_test']
-
-    def submit_test(self, folder=None, subfolder_name=None):
-        """
-        Run a test submission by creating the files that would be generated for the real calculation in a local folder,
-        without actually storing the calculation nor the input nodes. This functionality therefore also does not
-        require any of the inputs nodes to be stored yet.
-
-        :param folder: a Folder object, within which to create the calculation files. By default a folder
-            will be created in the current working directory
-        :param subfolder_name: the name of the subfolder to use within the directory of the ``folder`` object. By
-            default a unique string will be generated based on the current datetime with the format ``yymmdd-``
-            followed by an auto incrementing index
-        """
-        inputs = {'store_provenance': False}
-        inputs.update(**self)
-        process = self._process_class(inputs=inputs)
-
-        return process.node.submit_test(folder, subfolder_name)

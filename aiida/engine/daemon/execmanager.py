@@ -34,7 +34,7 @@ REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
 execlogger = AIIDA_LOGGER.getChild('execmanager')
 
 
-def upload_calculation(node, transport, calc_info, script_filename):
+def upload_calculation(node, transport, calc_info, script_filename, dry_run=False):
     """Upload a `CalcJob` instance
 
     :param node: the `CalcJobNode`.
@@ -55,77 +55,78 @@ def upload_calculation(node, transport, calc_info, script_filename):
     transport.set_logger_extra(logger_extra)
     logger = LoggerAdapter(logger=execlogger, extra=logger_extra)
 
-    if node.has_cached_links():
-        raise ValueError("Cannot submit calculation {} because it has cached input links! If you just want to test the "
-                         "submission, use the test_submit() method, otherwise store all links first".format(node.pk))
+    if not dry_run and node.has_cached_links():
+        raise ValueError('Cannot submit calculation {} because it has cached input links! If you just want to test the '
+                         'submission, set `metadata.dry_run` to True in the inputs.'.format(node.pk))
 
     folder = node._raw_input_folder
 
-    # NOTE: some logic is partially replicated in the 'test_submit'
-    # method of CalcJobNode. If major logic changes are done
-    # here, make sure to update also the test_submit routine
-    remote_user = transport.whoami()
-    # TODO Doc: {username} field
-    # TODO: if something is changed here, fix also 'verdi computer test'
-    remote_working_directory = computer.get_workdir().format(username=remote_user)
-    if not remote_working_directory.strip():
-        raise exceptions.ConfigurationError(
-            "[submission of calculation {}] No remote_working_directory configured for computer '{}'".format(
-                node.pk, computer.name))
-
-    # If it already exists, no exception is raised
-    try:
-        transport.chdir(remote_working_directory)
-    except IOError:
-        logger.debug(
-            "[submission of calculation {}] Unable to chdir in {}, trying to create it".format(
-                node.pk, remote_working_directory))
-        try:
-            transport.makedirs(remote_working_directory)
-            transport.chdir(remote_working_directory)
-        except EnvironmentError as exc:
+    # If we are performing a dry-run, the working directory should actually be a local folder that should already exist
+    if dry_run:
+        workdir = transport.getcwd()
+    else:
+        remote_user = transport.whoami()
+        # TODO Doc: {username} field
+        # TODO: if something is changed here, fix also 'verdi computer test'
+        remote_working_directory = computer.get_workdir().format(username=remote_user)
+        if not remote_working_directory.strip():
             raise exceptions.ConfigurationError(
-                "[submission of calculation {}] "
-                "Unable to create the remote directory {} on "
-                "computer '{}': {}".format(
-                    node.pk, remote_working_directory, computer.name, exc))
-    # Store remotely with sharding (here is where we choose
-    # the folder structure of remote jobs; then I store this
-    # in the calculation properties using _set_remote_dir
-    # and I do not have to know the logic, but I just need to
-    # read the absolute path from the calculation properties.
-    transport.mkdir(calc_info.uuid[:2], ignore_existing=True)
-    transport.chdir(calc_info.uuid[:2])
-    transport.mkdir(calc_info.uuid[2:4], ignore_existing=True)
-    transport.chdir(calc_info.uuid[2:4])
+                "[submission of calculation {}] No remote_working_directory configured for computer '{}'".format(
+                    node.pk, computer.name))
 
-    try:
-        # The final directory may already exist, most likely because this function was already executed once, but
-        # failed and as a result was rescheduled by the eninge. In this case it would be fine to delete the folder
-        # and create it from scratch, except that we cannot be sure that this the actual case. Therefore, to err on
-        # the safe side, we move the folder to the lost+found directory before recreating the folder from scratch
-        transport.mkdir(calc_info.uuid[4:])
-    except OSError:
-        # Move the existing directory to lost+found, log a warning and create a clean directory anyway
-        path_existing = os.path.join(transport.getcwd(), calc_info.uuid[4:])
-        path_lost_found = os.path.join(remote_working_directory, REMOTE_WORK_DIRECTORY_LOST_FOUND)
-        path_target = os.path.join(path_lost_found, calc_info.uuid)
-        logger.warning('tried to create path {} but it already exists, moving the entire folder to {}'.format(
-            path_existing, path_target))
+        # If it already exists, no exception is raised
+        try:
+            transport.chdir(remote_working_directory)
+        except IOError:
+            logger.debug(
+                "[submission of calculation {}] Unable to chdir in {}, trying to create it".format(
+                    node.pk, remote_working_directory))
+            try:
+                transport.makedirs(remote_working_directory)
+                transport.chdir(remote_working_directory)
+            except EnvironmentError as exc:
+                raise exceptions.ConfigurationError(
+                    "[submission of calculation {}] "
+                    "Unable to create the remote directory {} on "
+                    "computer '{}': {}".format(
+                        node.pk, remote_working_directory, computer.name, exc))
+        # Store remotely with sharding (here is where we choose
+        # the folder structure of remote jobs; then I store this
+        # in the calculation properties using _set_remote_dir
+        # and I do not have to know the logic, but I just need to
+        # read the absolute path from the calculation properties.
+        transport.mkdir(calc_info.uuid[:2], ignore_existing=True)
+        transport.chdir(calc_info.uuid[:2])
+        transport.mkdir(calc_info.uuid[2:4], ignore_existing=True)
+        transport.chdir(calc_info.uuid[2:4])
 
-        # Make sure the lost+found directory exists, then copy the existing folder there and delete the original
-        transport.mkdir(path_lost_found, ignore_existing=True)
-        transport.copytree(path_existing, path_target)
-        transport.rmtree(path_existing)
+        try:
+            # The final directory may already exist, most likely because this function was already executed once, but
+            # failed and as a result was rescheduled by the eninge. In this case it would be fine to delete the folder
+            # and create it from scratch, except that we cannot be sure that this the actual case. Therefore, to err on
+            # the safe side, we move the folder to the lost+found directory before recreating the folder from scratch
+            transport.mkdir(calc_info.uuid[4:])
+        except OSError:
+            # Move the existing directory to lost+found, log a warning and create a clean directory anyway
+            path_existing = os.path.join(transport.getcwd(), calc_info.uuid[4:])
+            path_lost_found = os.path.join(remote_working_directory, REMOTE_WORK_DIRECTORY_LOST_FOUND)
+            path_target = os.path.join(path_lost_found, calc_info.uuid)
+            logger.warning('tried to create path {} but it already exists, moving the entire folder to {}'.format(
+                path_existing, path_target))
 
-        # Now we can create a clean folder for this calculation
-        transport.mkdir(calc_info.uuid[4:])
-    finally:
-        transport.chdir(calc_info.uuid[4:])
+            # Make sure the lost+found directory exists, then copy the existing folder there and delete the original
+            transport.mkdir(path_lost_found, ignore_existing=True)
+            transport.copytree(path_existing, path_target)
+            transport.rmtree(path_existing)
 
-    # I store the workdir of the calculation for later file retrieval
-    workdir = transport.getcwd()
-    node.set_remote_workdir(workdir)
+            # Now we can create a clean folder for this calculation
+            transport.mkdir(calc_info.uuid[4:])
+        finally:
+            transport.chdir(calc_info.uuid[4:])
+
+        # I store the workdir of the calculation for later file retrieval
+        workdir = transport.getcwd()
+        node.set_remote_workdir(workdir)
 
     # I first create the code files, so that the code can put
     # default files to be overwritten by the plugin itself.
@@ -138,35 +139,48 @@ def upload_calculation(node, transport, calc_info, script_filename):
                 transport.put(code.get_abs_path(f), f)
             transport.chmod(code.get_local_executable(), 0o755)  # rwxr-xr-x
 
-    # copy all files, recursively with folders
-    for f in folder.get_content_list():
-        logger.debug("[submission of calculation {}] copying file/folder {}...".format(node.pk, f))
-        transport.put(folder.get_abs_path(f), f)
+    # In a dry_run, the working directory is the raw input folder, which will already contain these resources
+    if not dry_run:
+        for filename in folder.get_content_list():
+            logger.debug("[submission of calculation {}] copying file/folder {}...".format(node.pk, filename))
+            transport.put(folder.get_abs_path(filename), filename)
 
-    # local_copy_list is a list of tuples,
-    # each with (uuid, dest_rel_path)
+    # local_copy_list is a list of tuples, each with (uuid, dest_rel_path)
     # NOTE: validation of these lists are done inside calculation.presubmit()
-    local_copy_list = calc_info.local_copy_list
-    remote_copy_list = calc_info.remote_copy_list
-    remote_symlink_list = calc_info.remote_symlink_list
+    local_copy_list = calc_info.local_copy_list or []
+    remote_copy_list = calc_info.remote_copy_list or []
+    remote_symlink_list = calc_info.remote_symlink_list or []
 
-    if local_copy_list is not None:
-        for uuid, filename, target in local_copy_list:
-            logger.debug("[submission of calculation {}] copying local file/folder to {}".format(node.pk, target))
+    for uuid, filename, target in local_copy_list:
+        logger.debug("[submission of calculation {}] copying local file/folder to {}".format(node.pk, target))
 
-            try:
-                data_node = load_node(uuid=uuid)
-            except exceptions.NotExistent:
-                logger.warning('failed to load Node<{}> specified in the `local_copy_list`'.format(uuid))
+        try:
+            data_node = load_node(uuid=uuid)
+        except exceptions.NotExistent:
+            logger.warning('failed to load Node<{}> specified in the `local_copy_list`'.format(uuid))
 
-            # Note, once #2579 is implemented, use the `node.open` method instead of the named temporary file in
-            # combination with the new `Transport.put_object_from_filelike`
-            with NamedTemporaryFile(mode='w+') as handle:
-                handle.write(data_node.get_object_content(filename))
-                handle.flush()
-                transport.put(handle.name, target)
+        # Note, once #2579 is implemented, use the `node.open` method instead of the named temporary file in
+        # combination with the new `Transport.put_object_from_filelike`
+        with NamedTemporaryFile(mode='w+') as handle:
+            handle.write(data_node.get_object_content(filename))
+            handle.flush()
+            transport.put(handle.name, target)
 
-    if remote_copy_list is not None:
+    if dry_run:
+        if remote_copy_list:
+            with open(os.path.join(workdir, '_aiida_remote_copy_list.txt'), 'w') as handle:
+                for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_copy_list:
+                    handle.write('would have copied {} to {} in working directory on remote {}'.format(
+                        remote_abs_path, dest_rel_path, computer.name))
+
+        if remote_symlink_list:
+            with open(os.path.join(workdir, '_aiida_remote_symlink_list.txt'), 'w') as handle:
+                for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_symlink_list:
+                    handle.write('would have created symlinks from {} to {} in working directory on remote {}'.format(
+                        remote_abs_path, dest_rel_path, computer.name))
+
+    else:
+
         for (remote_computer_uuid, remote_abs_path, dest_rel_path) in remote_copy_list:
             if remote_computer_uuid == computer.uuid:
                 logger.debug("[submission of calculation {}] copying {} remotely, directly on the machine {}".format(
@@ -178,14 +192,11 @@ def upload_calculation(node, transport, calc_info, script_filename):
                                    "Stopping.".format(node.pk, remote_abs_path, dest_rel_path))
                     raise
             else:
-                # TODO: implement copy between two different machines!
                 raise NotImplementedError(
                     "[submission of calculation {}] Remote copy between two different machines is "
                     "not implemented yet".format(node.pk))
 
-    if remote_symlink_list is not None:
-        for (remote_computer_uuid, remote_abs_path,
-             dest_rel_path) in remote_symlink_list:
+        for (remote_computer_uuid, remote_abs_path, dest_rel_path) in remote_symlink_list:
             if remote_computer_uuid == computer.uuid:
                 logger.debug("[submission of calculation {}] copying {} remotely, directly on the machine {}".format(
                     node.pk, dest_rel_path, computer.name))
@@ -199,9 +210,10 @@ def upload_calculation(node, transport, calc_info, script_filename):
                 raise IOError("It is not possible to create a symlink between two different machines for "
                               "calculation {}".format(node.pk))
 
-    remotedata = RemoteData(computer=computer, remote_path=workdir)
-    remotedata.add_incoming(node, link_type=LinkType.CREATE, link_label='remote_folder')
-    remotedata.store()
+    if not dry_run:
+        remotedata = RemoteData(computer=computer, remote_path=workdir)
+        remotedata.add_incoming(node, link_type=LinkType.CREATE, link_label='remote_folder')
+        remotedata.store()
 
     return calc_info, script_filename
 

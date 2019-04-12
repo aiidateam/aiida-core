@@ -12,6 +12,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+import errno
 import fnmatch
 import io
 import os
@@ -20,7 +21,8 @@ import tempfile
 
 import six
 
-from aiida.common.utils import get_repository_folder
+from . import timezone
+from .utils import get_repository_folder
 
 # If True, tries to make everything (dirs, files) group-writable.
 # Otherwise, tries to make everything only readable and writable by the user.
@@ -458,6 +460,57 @@ class SandboxFolder(Folder):
         In exit, I remove the sandbox folder from disk, if it still exists
         """
         self.erase()
+
+
+class SubmitTestFolder(Folder):
+    """Sandbox folder that can be used for the test submission of `CalcJobs`.
+
+    The directory will be created in the current working directory with a configurable basename.
+    Then a sub folder will be created within this base folder based on the current date and an index in order to
+    not overwrite already existing created test folders.
+    """
+
+    _sub_folder = None
+
+    def __init__(self, basepath='submit_test'):
+        """Construct and create the sandbox folder.
+
+        The directory will be created in the current working directory with the name given by `basepath`.
+        Then a sub folder will be created within this base folder based on the current date and an index in order to
+        not overwrite already existing created test folders.
+
+        :param basepath: name of the base directory that will be created in the current working directory
+        """
+        super(SubmitTestFolder, self).__init__(abspath=os.path.abspath(basepath))
+
+        self.create()
+
+        # Iteratively try to create a new sub folder based on the current date and an index that automatically increases
+        counter = 0
+        subfolder_basename = timezone.localtime(timezone.now()).strftime('%Y%m%d')
+
+        while True:
+            counter += 1
+            subfolder_path = os.path.join(self.abspath, '{}-{:05d}'.format(subfolder_basename, counter))
+
+            try:
+                os.mkdir(subfolder_path)
+                break
+            except OSError as error:
+                if error.errno == errno.EEXIST:
+                    # The directory already exists, try the next iteration
+                    continue
+                # For all other errors re-raise to prevent endless loops
+                raise
+
+        self._sub_folder = self.get_subfolder(os.path.relpath(subfolder_path, self.abspath), reset_limit=True)
+
+    def __enter__(self):
+        """Return the sub folder that should be Called when entering in the with statement."""
+        return self._sub_folder
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        """When context manager is exited, do not delete the folder."""
 
 
 class RepositoryFolder(Folder):

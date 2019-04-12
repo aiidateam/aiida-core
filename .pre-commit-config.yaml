@@ -234,7 +234,8 @@
     language: system
     files: >-
       (?x)^(
-        setup_requirements.py|
+        setup.json|
+        setup.py|
         utils/validate_consistency.py|
         environment.yml|
       )$

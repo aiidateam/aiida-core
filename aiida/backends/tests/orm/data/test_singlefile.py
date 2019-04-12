@@ -66,9 +66,9 @@ class TestSinglefileData(AiidaTestCase):
         """Test constructing an instance from filelike instead of filepath."""
         content_original = u'some testing text\nwith a newline'
 
-        with tempfile.NamedTemporaryFile(mode='w+') as handle:
+        with tempfile.NamedTemporaryFile(mode='wb+') as handle:
             basename = os.path.basename(handle.name)
-            handle.write(content_original)
+            handle.write(content_original.encode('utf-8'))
             handle.flush()
             handle.seek(0)
             node = SinglefileData(file=handle)
@@ -91,7 +91,7 @@ class TestSinglefileData(AiidaTestCase):
         """Test constructing an instance from a string."""
         content_original = u'some testing text\nwith a newline'
 
-        with io.StringIO(content_original) as handle:
+        with io.BytesIO(content_original.encode('utf-8')) as handle:
             node = SinglefileData(file=handle)
 
         with node.open() as handle:

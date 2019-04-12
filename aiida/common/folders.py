@@ -230,6 +230,9 @@ class Folder(object):  # pylint: disable=useless-object-inheritance
         filename = six.text_type(filename)
         filepath = self.get_abs_path(filename)
 
+        if 'b' in mode:
+            encoding = None
+
         with io.open(filepath, mode=mode, encoding=encoding) as handle:
 
             # In python 2 a string literal can either be of unicode or string (bytes) type. Since we do not know what
@@ -243,6 +246,7 @@ class Folder(object):  # pylint: disable=useless-object-inheritance
                 try:
                     shutil.copyfileobj(utf8reader(filelike), handle)
                 except (UnicodeDecodeError, UnicodeEncodeError):
+                    filelike.seek(0)
                     shutil.copyfileobj(filelike, handle)
             else:
                 shutil.copyfileobj(filelike, handle)

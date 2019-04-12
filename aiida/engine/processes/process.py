@@ -22,6 +22,7 @@ import traceback
 import six
 from six.moves import filter, range
 from pika.exceptions import ConnectionClosed
+from kiwipy.communications import UnroutableError
 
 import plumpy
 from plumpy import ProcessState
@@ -239,6 +240,8 @@ class Process(plumpy.Process):
                         killing.append(result)
                 except ConnectionClosed:
                     self.logger.info('no connection available to kill child<%s>', child.pk)
+                except UnroutableError:
+                    self.logger.info('kill signal was unable to reach child<%s>', child.pk)
 
             if isinstance(result, plumpy.Future):
                 # We ourselves are waiting to be killed so add it to the list

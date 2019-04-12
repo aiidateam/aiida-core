@@ -13,8 +13,9 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from collections import namedtuple
+import collections
 import logging
+import signal
 import tornado.ioloop
 
 import plumpy
@@ -31,8 +32,8 @@ __all__ = ('Runner',)
 
 LOGGER = logging.getLogger(__name__)
 
-ResultAndNode = namedtuple('ResultAndNode', ['result', 'node'])
-ResultAndPk = namedtuple('ResultAndPk', ['result', 'pk'])
+ResultAndNode = collections.namedtuple('ResultAndNode', ['result', 'node'])
+ResultAndPk = collections.namedtuple('ResultAndPk', ['result', 'pk'])
 
 
 class Runner(object):  # pylint: disable=useless-object-inheritance
@@ -198,6 +199,15 @@ class Runner(object):  # pylint: disable=useless-object-inheritance
 
         with utils.loop_scope(self.loop):
             process = instantiate_process(self, process, *args, **inputs)
+
+            def kill_process(_num, _frame):
+                """Send the kill signal to the process in the current scope."""
+                LOGGER.critical('runner received interrupt, killing process %s', process.pid)
+                process.kill(msg='Process was killed because the runner received an interrupt')
+
+            signal.signal(signal.SIGINT, kill_process)
+            signal.signal(signal.SIGTERM, kill_process)
+
             process.execute()
             return process.outputs, process.node
 

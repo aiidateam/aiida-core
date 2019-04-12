@@ -13,13 +13,11 @@ from __future__ import division
 from __future__ import print_function
 
 from __future__ import absolute_import
-import sys
 import json
-from os import path, environ
+from os import path
 # pylint: disable=wrong-import-order
 # Note: This speeds up command line scripts (e.g. verdi)
 from utils import fastentrypoints  # pylint: disable=unused-import
-from distutils.version import StrictVersion
 from setuptools import setup, find_packages
 
 if __name__ == '__main__':

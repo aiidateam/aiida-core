@@ -20,7 +20,6 @@ from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.common.links import LinkType
 
-from ..builder import CalcJobBuilder
 from ..process import Process, ProcessState
 from ..process_spec import CalcJobProcessSpec
 from .tasks import Waiting, UPLOAD_COMMAND
@@ -43,14 +42,12 @@ class CalcJob(Process):
         super(CalcJob, self).__init__(*args, **kwargs)
 
     @classmethod
-    def get_builder(cls):
-        return CalcJobBuilder(cls)
-
-    @classmethod
     def define(cls, spec):
         # yapf: disable
         super(CalcJob, cls).define(spec)
         spec.input('code', valid_type=orm.Code, help='The Code to use for this job.')
+        spec.input('metadata.dry_run', valid_type=bool, default=False,
+            help='When set to True will prepare the calculation job for submission but not actually launch it.')
         spec.input('metadata.options.input_filename', valid_type=six.string_types, required=False,
             help='Filename to which the input for the code that is to be run will be written.')
         spec.input('metadata.options.output_filename', valid_type=six.string_types, required=False,
@@ -126,7 +123,7 @@ class CalcJob(Process):
     def run(self):
         """Run the calculation, we put it in the TOSUBMIT state and then wait for it to be completed."""
         from aiida.orm import Code, load_node
-        from aiida.common.folders import SandboxFolder
+        from aiida.common.folders import SandboxFolder, SubmitTestFolder
         from aiida.common.exceptions import InputValidationError
 
         # The following conditional is required for the caching to properly work. Even if the source node has a process
@@ -136,10 +133,17 @@ class CalcJob(Process):
         if self.node.exit_status is not None:
             return self.node.exit_status
 
-        with SandboxFolder() as folder:
+        if self.inputs.metadata.dry_run:
+            folder_class = SubmitTestFolder
+        else:
+            folder_class = SandboxFolder
+
+        with folder_class() as folder:
             computer = self.node.computer
-            if self.node.has_cached_links():
+
+            if not self.inputs.metadata.dry_run and self.node.has_cached_links():
                 raise exceptions.InvalidOperation('calculation node has unstored links in cache')
+
             calc_info, script_filename = self.presubmit(folder)
             input_codes = [load_node(_.code_uuid, sub_classes=(Code,)) for _ in calc_info.codes_info]
 
@@ -151,6 +155,14 @@ class CalcJob(Process):
 
             # After this call, no modifications to the folder should be done
             self.node.put_object_from_tree(folder.abspath, force=True)
+
+            if self.inputs.metadata.dry_run:
+                from aiida.engine.daemon.execmanager import upload_calculation
+                from aiida.transports.plugins.local import LocalTransport
+                with LocalTransport() as transport:
+                    transport.chdir(folder.abspath)
+                    upload_calculation(self.node, transport, calc_info, script_filename, dry_run=True)
+                return plumpy.Stop(None, True)
 
         # Launch the upload operation
         return plumpy.Wait(msg='Waiting to upload', data=(UPLOAD_COMMAND, calc_info, script_filename))

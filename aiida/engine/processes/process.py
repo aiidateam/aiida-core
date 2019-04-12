@@ -462,6 +462,9 @@ class Process(plumpy.Process):
             except exceptions.ModificationNotAllowed:
                 # The calculation was already stored
                 pass
+        else:
+            # Cannot persist the process if were not storing provenance because that would require a stored node
+            self._enable_persistence = False
 
         if self.node.pk is not None:
             return self.node.pk
@@ -555,7 +558,7 @@ class Process(plumpy.Process):
     def _setup_metadata(self):
         """Store the metadata on the ProcessNode."""
         for name, metadata in self.metadata.items():
-            if name == 'store_provenance':
+            if name in ['store_provenance', 'dry_run']:
                 continue
             elif name == 'label':
                 self.node.label = metadata

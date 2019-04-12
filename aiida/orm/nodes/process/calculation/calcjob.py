@@ -107,7 +107,7 @@ class CalcJobNode(CalculationNode):
             ignore_errors=ignore_errors, ignored_folder_content=ignored_folder_content, **kwargs)
 
     def get_builder_restart(self):
-        """Return a `CalcJobBuilder` that is ready to relaunch the same `CalcJob` that created this node.
+        """Return a `ProcessBuilder` that is ready to relaunch the same `CalcJob` that created this node.
 
         The process class will be set based on the `process_type` of this node and the inputs of the builder will be
         prepopulated with the inputs registered for this node. This functionality is very useful if a process has
@@ -116,7 +116,7 @@ class CalcJobNode(CalculationNode):
         In addition to prepopulating the input nodes, which is implemented by the base `ProcessNode` class, here we
         also add the `options` that were passed in the `metadata` input of the `CalcJob` process.
 
-        :return: `~aiida.engine.processes.builder.CalcJobBuilder` instance
+        :return: `~aiida.engine.processes.builder.ProcessBuilder` instance
         """
         builder = super(CalcJobNode, self).get_builder_restart()
         builder.metadata.options = self.get_options()

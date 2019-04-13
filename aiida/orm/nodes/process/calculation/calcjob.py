@@ -515,7 +515,7 @@ class CalcJobNode(CalculationNode):
 
         try:
             stdout = retrieved_node.get_object_content(filename)
-        except exceptions.NotExistent:
+        except IOError:
             stdout = None
 
         return stdout
@@ -533,7 +533,7 @@ class CalcJobNode(CalculationNode):
 
         try:
             stderr = retrieved_node.get_object_content(filename)
-        except exceptions.NotExistent:
+        except IOError:
             stderr = None
 
         return stderr

@@ -233,8 +233,8 @@ class TestProcess(AiidaTestCase):
 
             def run(self):
                 if self.inputs.add_outputs:
-                    self.out('required_string', orm.Str('testing'))
-                    self.out('integer.namespace.two', orm.Int(2))
+                    self.out('required_string', orm.Str('testing').store())
+                    self.out('integer.namespace.two', orm.Int(2).store())
 
         results, node = run_get_node(TestProcess)
 

@@ -13,7 +13,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm.utils.links import validate_link_label
+from aiida.common.links import validate_link_label
 
 
 class TestValidateLinkLabel(AiidaTestCase):

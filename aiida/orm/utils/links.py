@@ -14,12 +14,10 @@ from __future__ import absolute_import
 
 from collections import namedtuple, OrderedDict, Mapping
 
-import six
-
 from aiida.common import exceptions
-from aiida.common.lang import isidentifier, type_check
+from aiida.common.lang import type_check
 
-__all__ = ('LinkPair', 'LinkTriple', 'LinkManager', 'validate_link', 'validate_link_label')
+__all__ = ('LinkPair', 'LinkTriple', 'LinkManager', 'validate_link')
 
 LinkPair = namedtuple('LinkPair', ['link_type', 'link_label'])
 LinkTriple = namedtuple('LinkTriple', ['node', 'link_type', 'link_label'])
@@ -87,7 +85,7 @@ def validate_link(source, target, link_type, link_label):
     :raise TypeError: if `source` or `target` is not a Node instance, or `link_type` is not a `LinkType` enum
     :raise ValueError: if the proposed link is invalid
     """
-    from aiida.common.links import LinkType
+    from aiida.common.links import LinkType, validate_link_label
     from aiida.orm import Node, Data, CalculationNode, WorkflowNode
 
     type_check(link_type, LinkType, 'link_type should be a LinkType enum but got: {}'.format(type(link_type)))
@@ -157,38 +155,6 @@ def validate_link(source, target, link_type, link_label):
     elif indegree == 'unique_triple' and LinkTriple(source, link_type, link_label) in incoming.all():
         raise ValueError('node<{}> already has an incoming {} link with label "{}" from node<{}>'.format(
             target.uuid, link_type, link_label, source.uuid))
-
-
-def validate_link_label(link_label):
-    """Validate the given link label.
-
-    Valid link labels adhere to the following restrictions:
-
-        * Has to be a valid python identifier
-        * Can only contain alphanumeric characters and underscores
-        * Can not start or end with an underscore
-
-    :raises TypeError: if the link label is not a string type
-    :raises ValueError: if the link label is invalid
-    """
-    import re
-
-    message = 'invalid link label `{}`: should be string type but is instead: {}'.format(link_label, type(link_label))
-    type_check(link_label, six.string_types, message)
-
-    allowed_character_set = '[a-zA-Z0-9_]'
-
-    if link_label.endswith('_'):
-        raise ValueError('cannot end with an underscore')
-
-    if link_label.startswith('_'):
-        raise ValueError('cannot start with an underscore')
-
-    if re.sub(allowed_character_set, '', link_label):
-        raise ValueError('only alphanumeric and underscores are allowed')
-
-    if not isidentifier(link_label):
-        raise ValueError('not a valid python identifier')
 
 
 class LinkManager(object):  # pylint: disable=useless-object-inheritance

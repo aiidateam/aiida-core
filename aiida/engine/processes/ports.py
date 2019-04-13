@@ -169,7 +169,7 @@ class PortNamespace(WithNonDb, ports.PortNamespace):
         :raise TypeError: if the port name is not a string type
         :raise ValueError: if the port name is invalid
         """
-        from aiida.orm.utils.links import validate_link_label
+        from aiida.common.links import validate_link_label
 
         try:
             validate_link_label(port_name)

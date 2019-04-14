@@ -156,7 +156,8 @@ Similarly, as soon as the task disappears, either because the process was intent
 .. _concepts_process_checkpoints:
 
 Process checkpoints
-===================
-Explain the concept of a process checkpoint, how it allows the daemon to restart a process from one of the checkpoints and how it is currently implemented, with limitations.
-
-`Issue [#2624] <https://github.com/aiidateam/aiida_core/issues/2624>`_
+-------------------
+A process checkpoint is a complete representation of a ``Process`` instance in memory that can be stored in the database.
+Since it is a complete representation, the ``Process`` instance can also be fully reconstructed from such a checkpoint.
+At any state transition of a process, a checkpoint will be created, by serializing the process instance and storing it as an attribute on the corresponding process node.
+This mechanism is the final cog in the machine, together with the persisted process queue of RabbitMQ as explained in the previous section, that allows processes to continue after the machine they were running on, has been shutdown and restarted.

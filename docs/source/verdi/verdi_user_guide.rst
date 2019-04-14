@@ -334,14 +334,13 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      decr          Remove NUMBER [default=1] workers from the running daemon
-      incr          Add NUMBER [default=1] workers to the running daemon
-      logshow       Show the log of the daemon, press CTRL+C to quit
-      restart       Restart the daemon.
-      start         Start the daemon
-      start-circus  This will actually launch the circus daemon, either...
-      status        Print the status of the current daemon or all daemons
-      stop          Stop the daemon
+      decr     Remove NUMBER [default=1] workers from the running daemon
+      incr     Add NUMBER [default=1] workers to the running daemon
+      logshow  Show the log of the daemon, press CTRL+C to quit
+      restart  Restart the daemon.
+      start    Start the daemon
+      status   Print the status of the current daemon or all daemons
+      stop     Stop the daemon
 
 
 .. _verdi_data:

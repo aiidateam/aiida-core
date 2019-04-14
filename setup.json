@@ -38,7 +38,7 @@
     "aldjemy==0.9.1",
     "passlib==1.7.1",
     "click==7.0",
-    "click-completion==0.5.0",
+    "click-completion==0.5.1",
     "click-plugins==1.0.4",
     "click-spinner==0.1.8",
     "tabulate==0.8.3",

@@ -20,7 +20,7 @@ anyjson==0.3.3
 ase==3.17.0
 chainmap; python_version<'3.5'
 circus==0.15.0
-click-completion==0.5.0
+click-completion==0.5.1
 click-plugins==1.0.4
 click-spinner==0.1.8
 click==7.0

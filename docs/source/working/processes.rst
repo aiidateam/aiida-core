@@ -543,12 +543,69 @@ This overview should give you all the information if you want to inspect a proce
 
 Manipulating processes
 ======================
-To understand how one can manipulate running processes, one has to understand the principles of a :ref:`process' lifetime<concepts_process_lifetime>` and :ref:`checkpoints<concepts_process_checkpoints>` first, so be sure to have read those sections first.
+To understand how one can manipulate running processes, one has to understand the principles of the :ref:`process/node distinction<concepts_process_node_distinction>` and a :ref:`process' lifetime<concepts_process_lifetime>` first, so be sure to have read those sections first.
 
 verdi process pause/play/kill
 -----------------------------
+The ``verdi`` command line interface provides three commands to interact with 'live' processes.
 
-`Issue [#2626] <https://github.com/aiidateam/aiida_core/issues/2626>`_
+    * ``verdi process pause``
+    * ``verdi process play``
+    * ``verdi process kill``
+
+The first pauses a process temporarily, the second resumes any paused processes and the third one permanently kills them.
+The sub command names might seem to tell you this already and it might look like that is all there is to know, but the functionality underneath is quite complicated and deserves additional explanation nonetheless.
+
+As the section on :ref:`the distinction between the process and the node<concepts_process_node_distinction>` explained, manipulating a process means interacting with the live process instance that lives in the memory of the runner that is running it.
+By definition, these runners will always run in a different system process then the one from which you want to interact, because otherwise, you would *be* the runner, given that there can only be a single runner in an interpreter and if it is running, the interpreter would be blocked from performing any other operations.
+This means that in order to interact with the live process, one has to interact with another interpreter running in a different system process.
+This is once again facilitated by the RabbitMQ message broker.
+When a runner starts to run a process, it will also add listeners for incoming messages that are being sent for that specific process over RabbitMQ.
+
+.. note::
+
+    This does not just apply to daemon runners, but also normal runners.
+    That is to say that if you were to launch a process in a local runner, that interpreter will be blocked, but it will still setup the listeners for that process on RabbitMQ.
+    This means that you can manipulate the process from another terminal, just as if you would do with a process that is being run by a daemon runner.
+
+In the case of 'pause', 'play' and 'kill', one is sending what is called a Remote Procedure Call (RPC) over RabbitMQ.
+The RPC will include the process identifier for which the action is intended and RabbitMQ will send it to whoever registered itself to be listening for that specific process, in this case the runner that is running the process.
+This immediately reveals a potential problem: the RPC will fall on deaf ears if there is no one listening, which can have multiple causes.
+For example, as explained in the section on a :ref:`process' lifetime<concepts_process_lifetime>`, this can be the case for a submitted process, where the corresponding task is still queued, as all available process slots are occupied.
+But even if the task *were* to be with a runner, it might be too busy to respond to the RPC and the process appears to be unreachable.
+Whenever a process is unreachable for an RPC, the command will return an error:
+
+.. code:: bash
+
+    Error: Process<100> is unreachable
+
+Depending on the cause of the process being unreachable, the problem may resolve itself automatically over time and one can try again at a later time, as for example in the case of the runner being too busy to respond.
+However, to prevent this from happening, the runner has been designed to have the communication happen over a separate thread and to schedule callbacks for any necessary actions on the main thread, which performs all the heavy lifting.
+This should make occurrences of the runner being too busy to respond very rare.
+If you think the
+The problem is, however, there is unfortunately no way of telling what the actual problem is for the process not being reachable.
+The problem will manifest itself identically if the runner just could not respond in time or if the task has accidentally been lost forever due to a bug, even though these are two completely separate situations.
+
+This brings us to another potential unintuitive aspect of interacting with processes.
+The previous paragraph already mentioned it in passing, but when a remote procedure call is sent, it first needs to be answered by the responsible runner, if applicable, but it will not *directly execute* the call.
+This is because the call will be incoming on the communcation thread who is not allowed to have direct access to the process instance, but instead it will schedule a callback on the main thread who can perform the action.
+The callback will however not necessarily be executed directly, as there may be other actions waiting to be performed.
+So when you pause, play or kill a process, you are not doing so directly, but rather you are *scheduling* a request to do so.
+If the runner has successfully received the request and scheduled the callback, the command will therefore show something like the following:
+
+.. code:: bash
+
+    Success: scheduled killing Process<100>
+
+The 'scheduled' indicates that the actual killing might not necessarily have happened just yet.
+This means that even after having called ``verdi process kill`` and getting the success message, the corresponding process may still be listed as active in the output of ``verdi process list``.
+
+By default, the ``pause``, ``play`` and ``kill`` commands will only ask for the confirmation of the runner that the request has been scheduled and not actually wait for the command to have been executed.
+This is because, as explained, the actual action being performed might not be instantaneous as the runner may be busy working with other processes, which would mean that the command would block for a long time.
+If you want to send multiple requests to a lot of processes in one go, this would be ineffective, as each one would have to wait for the previous one to be completed.
+To change the default and actually wait for the action to be completed and await its response, you can use the ``--wait`` flag.
+If you know that your daemon runners may be experiencing a heavy load, you can also increase the time that the command waits before timing out, with the ``-t/--timeout`` flag.
+
 
 .. rubric:: Footnotes
 

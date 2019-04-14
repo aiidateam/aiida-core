@@ -118,9 +118,40 @@ How exit codes can be defined and returned depends on the process type and will 
 
 Process lifetime
 ================
-A section that explain the lifetime of a process, how it is instantiated, represented in memory and database, sent as a 'task' to and maintained by RabbitMQ and when it terminates.
 
-`Issue [#2623] <https://github.com/aiidateam/aiida_core/issues/2623>`_
+The lifetime of a process is defined as the time from the moment it is launched until it reaches a :ref:`terminal state<concepts_process_state>`.
+
+Process and node distinction
+----------------------------
+As explained in the :ref:`introduction of this section<concepts_processes>`, there is a clear and important distinction between the 'process' and the 'node' that represents its execution in the provenance graph.
+When a process is launched, an instance of the ``Process`` class is created in memory which will be propagated to completion by the responsible runner.
+This 'process' instance only exists in the memory of the python interpreter that it is running in, for example that of a daemon runner, and so we cannot directly inspect its state.
+That is why the process will write any of its state changes to the corresponding node representing it in the provenance graph.
+In this way, the node acts as a 'proxy' or a mirror image that reflects the state of the process in memory.
+This means that the output of many of the ``verdi`` commands, such as ``verdi process list``, do not actually show the state of the process instances, but rather the state of the node to which they have last written their state.
+
+Process tasks
+-------------
+The previous section explained how launching a process means creating an instance of the ``Process`` class in memory.
+When the process is being 'ran' (see the section on :ref:`launching processes<working_processes_launch>` for more details), that is to say in a local interpreter, that process instance will die as soon as the interpreter dies.
+This is what makes 'submitting' a process, often times the preferred launching method.
+When a process is 'submitted', an instance of the ``Process`` is created, along with the node that represents it in the database, and its state is then persisted to the database.
+This is called a 'process checkpoint', more information on which :ref:`will follow later<concepts_process_checkpoints>`.
+Subsequently, the process instance is shutdown and a 'continuation task' is sent to the process queue of RabbitMQ.
+This task is simply a small message that just contains an identifier for the process.
+
+All the daemon runners, when they are launched, subscribe to the process queue and RabbitMQ will distribute the continuation tasks to them as they come in, making sure that each task is only sent to one runner at a time.
+The receiving daemon runner can restore the process instance in memory from the checkpoint that was stored in the database and continue the execution.
+As soon as the process reaches a terminal state, the daemon worker will acknowledge to RabbitMQ that the task has been completed.
+Until the runner has confirmed that a task is completed, RabbitMQ will consider the task as incomplete.
+If a daemon runner is shutdown or dies before it got the chance to finish running a process, the task will automatically be requeued by RabbitMQ and sent to another.
+Together with the fact that all the tasks in the process queue are persisted to disk by RabbitMQ, guarantees that once a continuation task has been sent to RabbitMQ, it will at some point be finished, while allowing the machine to be shutdown.
+
+Each daemon runner has a maximum number of tasks that it can run concurrently, which means that if there are more active tasks than available slots, some of the tasks will remain queued.
+Processes whose task is in the queue and not with any runner, though technically 'active' as it is not terminated, it is not actually being run at the moment.
+While a process is not actually being run, i.e. it is not in memory with a runner, one also cannot interact with it.
+Similarly, as soon as the task disappears, either because the process was intentionally terminated, or unintentionally due to a bug or problem, the process will never continue running again.
+
 
 .. _concepts_process_checkpoints:
 

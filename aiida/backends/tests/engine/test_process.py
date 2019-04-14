@@ -217,6 +217,28 @@ class TestProcess(AiidaTestCase):
         recovered_process = process.node.process_class
         self.assertEqual(recovered_process, process.__class__)
 
+    def test_output_dictionary(self):
+        """Verify that a dictionary can be passed as an output for a namespace."""
+
+        class TestProcess(Process):
+
+            _node_class = orm.WorkflowNode
+            
+            @classmethod
+            def define(cls, spec):
+                super(TestProcess, cls).define(spec)
+                spec.input_namespace('namespace', valid_type=orm.Int, dynamic=True)
+                spec.output_namespace('namespace', valid_type=orm.Int, dynamic=True)
+
+            def run(self):
+                self.out('namespace', self.inputs.namespace)
+
+        results, node = run_get_node(TestProcess, namespace={'alpha': orm.Int(1), 'beta': orm.Int(2)})
+
+        self.assertTrue(node.is_finished_ok)
+        self.assertEqual(results['namespace']['alpha'], orm.Int(1))
+        self.assertEqual(results['namespace']['beta'], orm.Int(2))
+
     def test_output_validation_error(self):
         """Test that a process is marked as failed if its output namespace validation fails."""
 

@@ -148,6 +148,7 @@ py:class  plumpy.futures.Future
 py:class  plumpy.processes.Process
 py:class  plumpy.process_comms.ProcessLauncher
 py:class  plumpy.process_spec.ProcessSpec
+py:class  plumpy.Port
 py:class  plumpy.Process
 py:class  plumpy.Communicator
 py:class  plumpy.RemoteProcessThreadController
@@ -167,6 +168,7 @@ py:class  plumpy.ObjectLoader
 py:class  plumpy.process_states.Waiting
 py:class  plumpy.process_comms.RemoteProcessThreadController
 py:exc    plumpy.TaskRejected
+py:meth   plumpy.ProcessSpec.output
 py:meth   plumpy.process_spec.ProcessSpec.expose_inputs
 py:meth   plumpy.process_spec.ProcessSpec.expose_outputs
 

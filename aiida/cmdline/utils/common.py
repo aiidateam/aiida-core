@@ -16,6 +16,7 @@ from __future__ import absolute_import
 import os
 import sys
 
+import click
 from tabulate import tabulate
 
 
@@ -352,3 +353,60 @@ def get_workchain_report(node, levelname, indent_size=4, max_depth=None):
         report.append(line)
 
     return '\n'.join(report)
+
+
+def print_process_spec(process_spec):
+    """Print the process spec in a human-readable formatted way.
+
+    :param process_spec: a `ProcessSpec` instance
+    """
+
+    def build_entries(ports):
+        """Build a list of entries to be printed for a `PortNamespace.
+
+        :param ports: the port namespace
+        :return: list of tuples with port name, required, valid types and info strings
+        """
+        result = []
+
+        for name, port in sorted(ports.items(), key=lambda x: (not x[1].required, x[0])):
+
+            if name.startswith('_'):
+                continue
+
+            valid_types = port.valid_type if isinstance(port.valid_type, (list, tuple)) else (port.valid_type,)
+            valid_types = ', '.join([valid_type.__name__ for valid_type in valid_types if valid_type is not None])
+            required = 'required' if port.required else 'optional'
+            info = port.help if port.help is not None else ''
+            info = info[:75] + ' ...' if len(info) > 75 else info
+            result.append([name, required, valid_types, info])
+
+        return result
+
+    template = '{:>{width_name}s}:  {:10s}{:{width_type}}{}'
+    inputs = build_entries(process_spec.inputs)
+    outputs = build_entries(process_spec.outputs)
+    max_width_name = max([len(entry[0]) for entry in inputs + outputs]) + 2
+    max_width_type = max([len(entry[2]) for entry in inputs + outputs]) + 2
+
+    if process_spec.inputs:
+        click.secho('Inputs', fg='red', bold=True)
+    for entry in inputs:
+        if entry[1] == 'required':
+            click.secho(template.format(*entry, width_name=max_width_name, width_type=max_width_type), bold=True)
+        else:
+            click.secho(template.format(*entry, width_name=max_width_name, width_type=max_width_type))
+
+    if process_spec.outputs:
+        click.secho('Outputs', fg='red', bold=True)
+    for entry in outputs:
+        if entry[1] == 'required':
+            click.secho(template.format(*entry, width_name=max_width_name, width_type=max_width_type), bold=True)
+        else:
+            click.secho(template.format(*entry, width_name=max_width_name, width_type=max_width_type))
+
+    if process_spec.exit_codes:
+        click.secho('Exit codes', fg='red', bold=True)
+    for exit_code in sorted(process_spec.exit_codes.values(), key=lambda exit_code: exit_code.status):
+        message = exit_code.message.capitalize()
+        click.secho('{:>{width_name}d}:  {}'.format(exit_code.status, message, width_name=max_width_name))

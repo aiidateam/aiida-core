@@ -76,6 +76,12 @@ def setup(non_interactive, profile, email, first_name, last_name, institution, p
     else:
         echo.echo_success('database migration completed.')
 
+    # Optionally setting configuration default user settings
+    config.set_option('user.email', email, override=False)
+    config.set_option('user.first_name', first_name, override=False)
+    config.set_option('user.last_name', last_name, override=False)
+    config.set_option('user.institution', institution, override=False)
+
     # Create the user if it does not yet exist
     created, user = orm.User.objects.get_or_create(
         email=email, first_name=first_name, last_name=last_name, institution=institution, password=password)

@@ -147,7 +147,7 @@ class Config(object):  # pylint: disable=useless-object-inheritance,too-many-pub
 
         :return: list of profile names
         """
-        return self._profiles.keys()
+        return list(self._profiles.keys())
 
     @property
     def profiles(self):
@@ -156,7 +156,7 @@ class Config(object):  # pylint: disable=useless-object-inheritance,too-many-pub
         :return: the profiles
         :rtype: list of `Profile` instances
         """
-        return self._profiles.values()
+        return list(self._profiles.values())
 
     def validate_profile(self, name):
         """Validate that a profile exists.
@@ -239,12 +239,13 @@ class Config(object):  # pylint: disable=useless-object-inheritance,too-many-pub
     def options(self, value):
         self._options = value
 
-    def set_option(self, option_name, option_value, scope=None):
+    def set_option(self, option_name, option_value, scope=None, override=True):
         """Set a configuration option for a certain scope.
 
         :param option_name: the name of the configuration option
         :param option_value: the option value
         :param scope: set the option for this profile or globally if not specified
+        :param override: boolean, if False, will not override the option if it already exists
         """
         option, parsed_value = parse_option(option_name, option_value)
 
@@ -256,9 +257,10 @@ class Config(object):  # pylint: disable=useless-object-inheritance,too-many-pub
             return
 
         if not option.global_only and scope is not None:
-            self.get_profile(scope).set_option(option.key, value)
+            self.get_profile(scope).set_option(option.key, value, override=override)
         else:
-            self.options[option.key] = value
+            if option.key not in self.options or override:
+                self.options[option.key] = value
 
     def unset_option(self, option_name, scope=None):
         """Unset a configuration option for a certain scope.

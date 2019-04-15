@@ -326,6 +326,26 @@ class TestConfig(AiidaTestCase):
         self.assertEqual(config.get_option(option_name, scope=self.profile_name, default=False), None)
         self.assertEqual(config.get_option(option_name, scope=None, default=False), option_value)
 
+    def test_set_option_override(self):
+        """Test that `global_only` options are only set globally even if a profile specific scope is set."""
+        option_name = 'user.email'
+        option_value_one = 'first@email.com'
+        option_value_two = 'second@email.com'
+
+        config = Config(self.config_filepath, self.config_dictionary)
+
+        # Setting an option if it does not exist should work
+        config.set_option(option_name, option_value_one)
+        self.assertEqual(config.get_option(option_name, scope=None, default=False), option_value_one)
+
+        # Setting it again will override it by default
+        config.set_option(option_name, option_value_two)
+        self.assertEqual(config.get_option(option_name, scope=None, default=False), option_value_two)
+
+        # If we set override to False, it should not override, big surprise
+        config.set_option(option_name, option_value_one, override=False)
+        self.assertEqual(config.get_option(option_name, scope=None, default=False), option_value_two)
+
     def test_store(self):
         """Test that the store method writes the configuration properly to disk."""
         config = Config(self.config_filepath, self.config_dictionary)

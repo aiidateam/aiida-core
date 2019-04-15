@@ -7,7 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Migration from v0.1 to v0.2, used by `verdi export migrate` command."""
+"""Migration export files from old export versions to the newest, used by `verdi export migrate` command."""
+# pylint: disable=wildcard-import
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -20,16 +21,19 @@ from .v01_to_v02 import migrate_v1_to_v2
 from .v02_to_v03 import migrate_v2_to_v3
 from .v03_to_v04 import migrate_v3_to_v4
 
-__all__ = ('migrate_recursive', 'verify_metadata_version', 'update_metadata')
+__all__ = ('migrate_recursively', 'verify_metadata_version', 'update_metadata')
+
+MIGRATE_FUNCTIONS = {'0.1': migrate_v1_to_v2, '0.2': migrate_v2_to_v3, '0.3': migrate_v3_to_v4}
 
 
-def migrate_recursive(metadata, data, folder):
+def migrate_recursively(metadata, data, folder):
     """
     Recursive migration of export files from v0.1 to newest version,
     See specific migration functions for detailed descriptions.
 
     :param metadata: the content of an export archive metadata.json file
     :param data: the content of an export archive data.json file
+    :param folder: SandboxFolder in which the archive has been unpacked (workdir)
     """
     from aiida.orm.importexport import EXPORT_VERSION as newest_version
 
@@ -38,12 +42,8 @@ def migrate_recursive(metadata, data, folder):
     try:
         if old_version == newest_version:
             echo.echo_critical('Your export file is already at the newest export version {}'.format(newest_version))
-        elif old_version == '0.1':
-            migrate_v1_to_v2(metadata, data)
-        elif old_version == '0.2':
-            migrate_v2_to_v3(metadata, data)
-        elif old_version == '0.3':
-            migrate_v3_to_v4(metadata, data, folder)
+        elif old_version in MIGRATE_FUNCTIONS:
+            MIGRATE_FUNCTIONS[old_version](metadata, data, folder)
         else:
             echo.echo_critical('Cannot migrate from version {}'.format(old_version))
     except ValueError as exception:
@@ -54,6 +54,6 @@ def migrate_recursive(metadata, data, folder):
     new_version = verify_metadata_version(metadata)
 
     if new_version < newest_version:
-        migrate_recursive(metadata, data, folder)
+        new_version = migrate_recursively(metadata, data, folder)
 
     return new_version

@@ -1308,14 +1308,14 @@ class TestComputer(AiidaTestCase):
 
     def test_import_of_django_sqla_export_file(self):
         """Check that sqla import manages to import the django export file correctly"""
-        from aiida.backends.tests.utils.fixtures import import_archive_fixture
+        from aiida.backends.tests.utils.archives import import_archive
 
         for archive in ['export/compare/django.aiida', 'export/compare/sqlalchemy.aiida']:
             # Clean the database
             self.reset_database()
 
             # Import the needed data
-            import_archive_fixture(archive)
+            import_archive(archive)
 
             # The expected metadata
             comp1_metadata = {

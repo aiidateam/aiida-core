@@ -22,7 +22,7 @@ from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_export
-from aiida.backends.tests.utils.fixtures import get_archive_file
+from aiida.backends.tests.utils.archives import get_archive_file
 
 
 def delete_temporary_file(filepath):
@@ -144,9 +144,9 @@ class TestVerdiExport(AiidaTestCase):
     def test_migrate_versions_old(self):
         """Migrating archives with a version older than the current should work."""
         archives = [
-            'export_v0.1_no_UPF.aiida',
-            'export_v0.2_no_UPF.aiida',
-            'export_v0.3_no_UPF.aiida'
+            'export_v0.1_simple.aiida',
+            'export_v0.2_simple.aiida',
+            'export_v0.3_simple.aiida'
         ]
 
         for archive in archives:
@@ -166,7 +166,7 @@ class TestVerdiExport(AiidaTestCase):
     def test_migrate_versions_recent(self):
         """Migrating an archive with the current version should exit with non-zero status."""
         archives = [
-            'export_v0.4_no_UPF.aiida',
+            'export_v0.4_simple.aiida',
         ]
 
         for archive in archives:
@@ -184,7 +184,7 @@ class TestVerdiExport(AiidaTestCase):
     def test_migrate_force(self):
         """Test that passing the -f/--force option will overwrite the output file even if it exists."""
         archives = [
-            'export_v0.1_no_UPF.aiida',
+            'export_v0.1_simple.aiida',
         ]
 
         for archive in archives:
@@ -210,7 +210,7 @@ class TestVerdiExport(AiidaTestCase):
     def test_migrate_silent(self):
         """Test that the captured output is an empty string when the -s/--silent option is passed."""
         archives = [
-            'export_v0.1_no_UPF.aiida',
+            'export_v0.1_simple.aiida',
         ]
 
         for archive in archives:
@@ -232,7 +232,7 @@ class TestVerdiExport(AiidaTestCase):
     def test_migrate_tar_gz(self):
         """Test that -F/--archive-format option can be used to write a tar.gz instead."""
         archives = [
-            'export_v0.1_no_UPF.aiida',
+            'export_v0.1_simple.aiida',
         ]
 
         for archive in archives:
@@ -253,10 +253,10 @@ class TestVerdiExport(AiidaTestCase):
     def test_inspect(self):
         """Test the functionality of `verdi export inspect`."""
         archives = [
-            ('export_v0.1_no_UPF.aiida', '0.1'),
-            ('export_v0.2_no_UPF.aiida', '0.2'),
-            ('export_v0.3_no_UPF.aiida', '0.3'),
-            ('export_v0.4_no_UPF.aiida', '0.4')
+            ('export_v0.1_simple.aiida', '0.1'),
+            ('export_v0.2_simple.aiida', '0.2'),
+            ('export_v0.3_simple.aiida', '0.3'),
+            ('export_v0.4_simple.aiida', '0.4')
         ]
 
         for archive, version_number in archives:

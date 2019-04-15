@@ -16,7 +16,7 @@ from click.testing import CliRunner
 from click.exceptions import BadParameter
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.backends.tests.utils.fixtures import get_archive_file
+from aiida.backends.tests.utils.archives import get_archive_file
 from aiida.cmdline.commands import cmd_import
 from aiida.orm import Group
 
@@ -53,7 +53,7 @@ class TestVerdiImport(AiidaTestCase):
         """
         archives = [
             get_archive_file('calcjob/arithmetic.add.aiida'),
-            get_archive_file('export/migrate/export_v0.4_no_UPF.aiida')
+            get_archive_file('export/migrate/export_v0.4_simple.aiida')
         ]
 
         options = [] + archives
@@ -137,7 +137,7 @@ class TestVerdiImport(AiidaTestCase):
         """
         Test comment mode flag works as intended
         """
-        archives = [get_archive_file('export/migrate/export_v0.4_no_UPF.aiida')]
+        archives = [get_archive_file('export/migrate/export_v0.4_simple.aiida')]
 
         options = ['--comment-mode', 'newest'] + archives
         result = self.cli_runner.invoke(cmd_import.cmd_import, options)
@@ -155,9 +155,9 @@ class TestVerdiImport(AiidaTestCase):
         """ Test import of old local archives
         Expected behavior: Automatically migrate to newest version and import correctly.
         """
-        archives = [('export/migrate/export_v0.1_no_UPF.aiida', '0.1'),
-                    ('export/migrate/export_v0.2_no_UPF.aiida', '0.2'),
-                    ('export/migrate/export_v0.3_no_UPF.aiida', '0.3')]
+        archives = [('export/migrate/export_v0.1_simple.aiida', '0.1'),
+                    ('export/migrate/export_v0.2_simple.aiida', '0.2'),
+                    ('export/migrate/export_v0.3_simple.aiida', '0.3')]
 
         for archive, version in archives:
             options = [get_archive_file(archive)]
@@ -191,13 +191,14 @@ class TestVerdiImport(AiidaTestCase):
 
     def test_import_url_and_local_archives(self):
         """Test import of both a remote and local archive
-        TODO: Update 'url' to point at correct commit.
+        TODO: Update 'url' to point at correct commit and file.
         Now it is pointing to yakutovicha's commit, but when PR #2478 has been merged in aiidateam:develop,
         url should be updated to point to the, essentially same, commit, but in aiidateam.
+        Furthermore, the filename should be change from '_no_UPF.aiida' to '_simple.aiida'.
         """
         url = "https://raw.githubusercontent.com/yakutovicha/aiida_core/f5fff1846a62051b898f13db67f5eef18892d5f4/"
         url_archive = "aiida/backends/tests/fixtures/export/migrate/export_v0.4_no_UPF.aiida"
-        local_archive = "export/migrate/export_v0.4_no_UPF.aiida"
+        local_archive = "export/migrate/export_v0.4_simple.aiida"
 
         options = [get_archive_file(local_archive), url + url_archive, get_archive_file(local_archive)]
         result = self.cli_runner.invoke(cmd_import.cmd_import, options)

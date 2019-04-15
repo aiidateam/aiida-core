@@ -190,7 +190,7 @@ def migrate(input_file, output_file, force, silent, archive_format):
             echo.echo_critical('export archive does not contain the required file {}'.format(fhandle.filename))
 
         old_version = migration.verify_metadata_version(metadata)
-        new_version = migration.migrate_recursive(metadata, data, folder)
+        new_version = migration.migrate_recursively(metadata, data, folder)
 
         with io.open(folder.get_abs_path('data.json'), 'wb') as fhandle:
             json.dump(data, fhandle, indent=4)

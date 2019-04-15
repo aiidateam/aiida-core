@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Migration from v0.1 to v0.2, used by `verdi export migrate` command."""
+# pylint: disable=unused-argument
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -15,13 +16,13 @@ from __future__ import absolute_import
 from aiida.cmdline.utils.migration.utils import verify_metadata_version, update_metadata
 
 
-def migrate_v1_to_v2(metadata, data):
+def migrate_v1_to_v2(metadata, data, *args):
     """
     Migration of export files from v0.1 to v0.2, which means generalizing the
     field names with respect to the database backend
 
-    :param data: the content of an export archive data.json file
     :param metadata: the content of an export archive metadata.json file
+    :param data: the content of an export archive data.json file
     """
     old_version = '0.1'
     new_version = '0.2'
@@ -29,11 +30,8 @@ def migrate_v1_to_v2(metadata, data):
     old_start = "aiida.djsite"
     new_start = "aiida.backends.djsite"
 
-    try:
-        verify_metadata_version(metadata, old_version)
-        update_metadata(metadata, new_version)
-    except ValueError:  # pylint: disable=try-except-raise
-        raise
+    verify_metadata_version(metadata, old_version)
+    update_metadata(metadata, new_version)
 
     def get_new_string(old_string):
         """Replace the old module prefix with the new."""

@@ -25,13 +25,13 @@ def verify_metadata_version(metadata, version=None):
     try:
         metadata_version = metadata['export_version']
     except KeyError:
-        raise ValueError('could not find the export_version field in the metadata')
+        raise ValueError("metadata is missing the 'export_version' key")
 
     if version is None:
         return metadata_version
 
     if metadata_version != version:
-        raise ValueError('expected export file with version {} but found version {}'.format(version, metadata_version))
+        raise ValueError("expected export file with version {} but found version {}".format(version, metadata_version))
 
     return None
 
@@ -49,7 +49,7 @@ def update_metadata(metadata, version):
     old_version = metadata['export_version']
     conversion_info = metadata.get('conversion_info', [])
 
-    conversion_message = 'Converted from version {} to {} with external script'.format(old_version, version)
+    conversion_message = 'Converted from version {} to {} with AiiDA v{}'.format(old_version, version, get_version())
     conversion_info.append(conversion_message)
 
     metadata['aiida_version'] = get_version()

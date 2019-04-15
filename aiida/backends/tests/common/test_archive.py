@@ -15,7 +15,7 @@ from __future__ import absolute_import
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.archive import Archive, CorruptArchive
 from aiida.common.exceptions import InvalidOperation
-from aiida.backends.tests.utils.fixtures import get_archive_file
+from aiida.backends.tests.utils.archives import get_archive_file
 
 
 class TestCommonArchive(AiidaTestCase):
@@ -24,13 +24,13 @@ class TestCommonArchive(AiidaTestCase):
     def test_context_required(self):
         """Verify that accessing a property of an Archive outside of a context manager raises."""
         with self.assertRaises(InvalidOperation):
-            filepath = get_archive_file('export_v0.1_no_UPF.aiida', filepath='export/migrate')
+            filepath = get_archive_file('export_v0.1_simple.aiida', filepath='export/migrate')
             archive = Archive(filepath)
             archive.version_format  # pylint: disable=pointless-statement
 
     def test_version_format(self):
         """Verify that `version_format` return the correct archive format version."""
-        filepath = get_archive_file('export_v0.1_no_UPF.aiida', filepath='export/migrate')
+        filepath = get_archive_file('export_v0.1_simple.aiida', filepath='export/migrate')
         with Archive(filepath) as archive:
             self.assertEqual(archive.version_format, '0.1')
 

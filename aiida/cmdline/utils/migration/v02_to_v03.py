@@ -7,8 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-locals,too-many-statements,too-many-branches
 """Migration from v0.2 to v0.3, used by `verdi export migrate` command."""
+# pylint: disable=too-many-locals,too-many-statements,too-many-branches,unused-argument
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -19,7 +19,7 @@ from aiida.cmdline.utils.migration.utils import verify_metadata_version, update_
 from aiida.common.exceptions import DanglingLinkError
 
 
-def migrate_v2_to_v3(metadata, data):
+def migrate_v2_to_v3(metadata, data, *args):
     """
     Migration of export files from v0.2 to v0.3, which means adding the link
     types to the link entries and making the entity key names backend agnostic
@@ -59,11 +59,8 @@ def migrate_v2_to_v3(metadata, data):
         'aiida.backends.djsite.db.models.DbAttribute': 'Attribute'
     }
 
-    try:
-        verify_metadata_version(metadata, old_version)
-        update_metadata(metadata, new_version)
-    except ValueError:  # pylint: disable=try-except-raise
-        raise
+    verify_metadata_version(metadata, old_version)
+    update_metadata(metadata, new_version)
 
     # Create a mapping from node uuid to node type
     mapping = {}
@@ -100,7 +97,7 @@ def migrate_v2_to_v3(metadata, data):
         except KeyError:
             raise DanglingLinkError('Unknown node UUID {} or {}'.format(link['input'], link['output']))
 
-        # The following table demonstrates the logic for infering the link type
+        # The following table demonstrates the logic for inferring the link type
         # (CODE, DATA) -> (WORK, CALC) : INPUT
         # (CALC)       -> (DATA)       : CREATE
         # (WORK)       -> (DATA)       : RETURN

@@ -17,7 +17,7 @@ from click.testing import CliRunner
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.backends.tests.utils.fixtures import import_archive_fixture
+from aiida.backends.tests.utils.archives import import_archive
 from aiida.cmdline.commands import cmd_calcjob as command
 from aiida.common.datastructures import CalcJobState
 from aiida.plugins import CalculationFactory
@@ -92,7 +92,7 @@ class TestVerdiCalculation(AiidaTestCase):
         cls.calcs.append(calc)
 
         # Load the fixture containing a single ArithmeticAddCalculation node
-        import_archive_fixture('calcjob/arithmetic.add.aiida')
+        import_archive('calcjob/arithmetic.add.aiida')
 
         # Get the imported ArithmeticAddCalculation node
         ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
@@ -221,7 +221,7 @@ class TestVerdiCalculation(AiidaTestCase):
         """Test most recent process class / plug-in can be successfully used to find filenames"""
 
         # Import old archive of ArithmeticAddCalculation
-        import_archive_fixture('calcjob/arithmetic.add_old.aiida')
+        import_archive('calcjob/arithmetic.add_old.aiida')
         ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
         calculations = orm.QueryBuilder().append(ArithmeticAddCalculation).all()
         for job in calculations:

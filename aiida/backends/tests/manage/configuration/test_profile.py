@@ -67,3 +67,21 @@ class TestProfile(AiidaTestCase):
 
         # The profile created here should *not* be a test profile
         self.assertFalse(profile.is_test_profile)
+
+    def test_set_option(self):
+        """Test the `set_option` method."""
+        option_key = 'user_email'
+        option_value_one = 'first@email.com'
+        option_value_two = 'second@email.com'
+
+        # Setting an option if it does not exist should work
+        self.profile.set_option(option_key, option_value_one)
+        self.assertEqual(self.profile.get_option(option_key), option_value_one)
+
+        # Setting it again will override it by default
+        self.profile.set_option(option_key, option_value_two)
+        self.assertEqual(self.profile.get_option(option_key), option_value_two)
+
+        # If we set override to False, it should not override, big surprise
+        self.profile.set_option(option_key, option_value_one, override=False)
+        self.assertEqual(self.profile.get_option(option_key), option_value_two)

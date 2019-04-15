@@ -184,14 +184,21 @@ class Profile(object):  # pylint: disable=useless-object-inheritance,too-many-pu
     def options(self, value):
         self._attributes[self.KEY_OPTIONS] = value
 
-    def get_option(self, option, default):
-        return self.options.get(option, default)
+    def get_option(self, option_key, default=None):
+        return self.options.get(option_key, default)
 
-    def set_option(self, option, value):
-        self.options[option] = value
+    def set_option(self, option_key, value, override=True):
+        """Set a configuration option for a certain scope.
 
-    def unset_option(self, option):
-        self.options.pop(option, None)
+        :param option_key: the key of the configuration option
+        :param option_value: the option value
+        :param override: boolean, if False, will not override the option if it already exists
+        """
+        if option_key not in self.options or override:
+            self.options[option_key] = value
+
+    def unset_option(self, option_key):
+        self.options.pop(option_key, None)
 
     @property
     def name(self):

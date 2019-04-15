@@ -38,9 +38,6 @@ class BaseTranslator(object):
     # The string name of the AiiDA class
     _aiida_type = None
 
-    # The string associated to the AiiDA class in the query builder lexicon
-    _qb_type = None
-
     # If True (False) the corresponding AiiDA class has (no) uuid property
     _has_uuid = None
 
@@ -76,7 +73,6 @@ class BaseTranslator(object):
         self.__label__ = Class.__label__
         self._aiida_class = Class._aiida_class  # pylint: disable=protected-access
         self._aiida_type = Class._aiida_type  # pylint: disable=protected-access
-        self._qb_type = Class._qb_type  # pylint: disable=protected-access
         self._result_type = Class.__label__
 
         self._default = Class._default  # pylint: disable=protected-access
@@ -317,7 +313,8 @@ class BaseTranslator(object):
             :param columns: (list of strings)
             :return: a dictionary
             """
-            order_dict = {}
+            from collections import OrderedDict
+            order_dict = OrderedDict()
             for column in columns:
                 if column[0] == '-':
                     order_dict[column[1:]] = 'desc'

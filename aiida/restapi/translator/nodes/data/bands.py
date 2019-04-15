@@ -14,7 +14,7 @@ Translator for bands data
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from aiida.restapi.translator.data import DataTranslator
+from aiida.restapi.translator.nodes.data import DataTranslator
 
 
 class BandsDataTranslator(DataTranslator):
@@ -29,8 +29,6 @@ class BandsDataTranslator(DataTranslator):
     _aiida_class = BandsData
     # The string name of the AiiDA class
     _aiida_type = "data.array.bands.BandsData"
-    # The string associated to the AiiDA class in the query builder lexicon
-    _qb_type = _aiida_type + '.'
 
     _result_type = __label__
 

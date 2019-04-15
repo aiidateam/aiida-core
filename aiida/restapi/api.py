@@ -203,6 +203,7 @@ class AiidaApi(Api):
             '/codes/<id>/content/attributes/',
             '/codes/<id>/content/extras/',
             '/codes/<id>/content/visualization/',
+            '/codes/<id>/content/download/',
             endpoint='codes',
             strict_slashes=False,
             resource_class_kwargs=kwargs)

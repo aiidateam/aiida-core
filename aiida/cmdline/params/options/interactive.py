@@ -230,14 +230,14 @@ class InteractiveOption(ConditionalOption):
         if ctx.resilient_parsing:
             return None
 
-        # a value was given on the command line: then  just go with validation
+        # a value was given on the command line: then just go with validation
         if value is not None:
             return self.after_callback(ctx, param, value)
 
         # The same if the user specified --non-interactive
         if noninteractive(ctx):
-            # Check if it is required
 
+            # Check if it is required
             default = self._get_default(ctx) or self.default
 
             if default is not None:

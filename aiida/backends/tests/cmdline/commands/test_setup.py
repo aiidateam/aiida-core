@@ -26,7 +26,7 @@ from aiida.manage.configuration import get_config
 from aiida.manage.external.postgres import Postgres
 
 
-@unittest.skip('Problem with automatic Postgres setup detection for `verdi quicksetup`')
+@unittest.skip('Reenable when #2759 is addressed')
 class TestVerdiQuickSetup(AiidaTestCase):
     """Tests for `verdi quicksetup`."""
 
@@ -34,6 +34,13 @@ class TestVerdiQuickSetup(AiidaTestCase):
         """Create a CLI runner to invoke the CLI commands."""
         super(TestVerdiQuickSetup, self).setUp()
         self.cli_runner = CliRunner()
+        self.pg_test = PGTest()
+        self.database_user = 'aiida'
+        self.database_pass = 'password'
+        self.database_name = 'aiida_db'
+
+    def tearDown(self):
+        self.pg_test.close()
 
     @with_temporary_config_instance
     def test_setup(self):
@@ -45,6 +52,7 @@ class TestVerdiQuickSetup(AiidaTestCase):
         user_institution = 'ECMA'
 
         options = [
+            '--non-interactive',
             '--profile',
             profile_name,
             '--email',
@@ -58,6 +66,7 @@ class TestVerdiQuickSetup(AiidaTestCase):
         ]
 
         result = self.cli_runner.invoke(cmd_setup.quicksetup, options)
+        self.assertClickResultNoException(result)
         self.assertClickSuccess(result)
 
         config = get_config()
@@ -72,7 +81,7 @@ class TestVerdiQuickSetup(AiidaTestCase):
         self.assertEqual(user.institution, user_institution)
 
 
-@unittest.skip('Problem with automatic Postgres setup detection for `verdi setup` on SqlAlchemy')
+@unittest.skip('Reenable when #2759 is addressed')
 class TestVerdiSetup(AiidaTestCase):
     """Tests for `verdi setup`."""
 
@@ -96,8 +105,8 @@ class TestVerdiSetup(AiidaTestCase):
         self.pg_test.close()
 
     @with_temporary_config_instance
-    def test_quicksetup(self):
-        """Test `verdi quicksetup`."""
+    def test_setup(self):
+        """Test `verdi setup`."""
         profile_name = 'testing'
         user_email = 'some@email.com'
         user_first_name = 'John'
@@ -105,12 +114,13 @@ class TestVerdiSetup(AiidaTestCase):
         user_institution = 'ECMA'
 
         options = [
-            '--profile', profile_name, '--email', user_email, '--first-name', user_first_name, '--last-name',
-            user_last_name, '--institution', user_institution, '--db-name', self.db_name, '--db-username', self.db_user,
-            '--db-password', self.db_pass
+            '--non-interactive', '--profile', profile_name, '--email', user_email, '--first-name', user_first_name,
+            '--last-name', user_last_name, '--institution', user_institution, '--db-name', self.db_name,
+            '--db-username', self.db_user, '--db-password', self.db_pass
         ]
 
         result = self.cli_runner.invoke(cmd_setup.setup, options)
+        self.assertClickResultNoException(result)
         self.assertClickSuccess(result)
 
         config = get_config()

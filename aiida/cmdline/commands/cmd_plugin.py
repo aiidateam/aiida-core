@@ -11,6 +11,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -30,6 +31,8 @@ def verdi_plugin():
 def plugin_list(entry_point_group, entry_point):
     """Display a list of all available plugins."""
     from aiida.common import EntryPointError
+    from aiida.cmdline.utils.common import print_process_spec
+    from aiida.engine import Process
     from aiida.plugins.entry_point import get_entry_point_names, load_entry_point
 
     if entry_point_group is None:
@@ -45,13 +48,15 @@ def plugin_list(entry_point_group, entry_point):
         try:
             plugin = load_entry_point(entry_point_group, entry_point)
         except EntryPointError as exception:
-            echo.echo_critical(exception)
+            echo.echo_critical(str(exception))
         else:
-            echo.echo_info(entry_point)
             try:
-                echo.echo(plugin.get_description())
-            except AttributeError:
-                echo.echo('No description available')
+                if issubclass(plugin, Process):
+                    print_process_spec(plugin.spec())
+                else:
+                    echo.echo(str(plugin.get_description()))
+            except (AttributeError, TypeError):
+                echo.echo_error('No description available for {}'.format(entry_point))
     else:
         entry_points = get_entry_point_names(entry_point_group)
         if entry_points:

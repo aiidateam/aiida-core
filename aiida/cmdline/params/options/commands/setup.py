@@ -65,6 +65,7 @@ SETUP_PROFILE = OverridableOption(
     '--profile',
     prompt='Profile name',
     help='The name of the new profile.',
+    required=True,
     type=types.ProfileParamType(must_exist=False),
     cls=InteractiveOption)
 
@@ -74,6 +75,8 @@ SETUP_USER_EMAIL = OverridableOption(
     prompt='User email',
     help='Email address that serves as the user name and a way to identify data created by it.',
     default=get_config_option('user.email'),
+    required_fn=lambda x: get_config_option('user.email') is None,
+    required=True,
     cls=InteractiveOption)
 
 SETUP_USER_FIRST_NAME = OverridableOption(
@@ -83,6 +86,8 @@ SETUP_USER_FIRST_NAME = OverridableOption(
     help='First name of the user.',
     type=click.STRING,
     default=get_config_option('user.first_name'),
+    required_fn=lambda x: get_config_option('user.first_name') is None,
+    required=True,
     cls=InteractiveOption)
 
 SETUP_USER_LAST_NAME = OverridableOption(
@@ -92,6 +97,8 @@ SETUP_USER_LAST_NAME = OverridableOption(
     help='Last name of the user.',
     type=click.STRING,
     default=get_config_option('user.last_name'),
+    required_fn=lambda x: get_config_option('user.last_name') is None,
+    required=True,
     cls=InteractiveOption)
 
 SETUP_USER_INSTITUTION = OverridableOption(
@@ -101,6 +108,8 @@ SETUP_USER_INSTITUTION = OverridableOption(
     help='Institution of the user.',
     type=click.STRING,
     default=get_config_option('user.institution'),
+    required_fn=lambda x: get_config_option('user.institution') is None,
+    required=True,
     cls=InteractiveOption)
 
 SETUP_USER_PASSWORD = OverridableOption(
@@ -109,7 +118,6 @@ SETUP_USER_PASSWORD = OverridableOption(
     prompt='Password',
     help='Optional password to connect to REST API.',
     hide_input=True,
-    required=False,
     type=click.STRING,
     default=PASSWORD_UNCHANGED,
     confirmation_prompt=True,
@@ -154,6 +162,7 @@ SETUP_DATABASE_NAME = OverridableOption(
     help='Name of the database to connect to.',
     type=click.STRING,
     contextual_default=functools.partial(get_profile_attribute_default, ('database_name', None)),
+    required=True,
     cls=options.interactive.InteractiveOption)
 
 SETUP_DATABASE_USERNAME = OverridableOption(
@@ -162,6 +171,7 @@ SETUP_DATABASE_USERNAME = OverridableOption(
     help='User name to connect to the database.',
     type=click.STRING,
     contextual_default=functools.partial(get_profile_attribute_default, ('database_username', None)),
+    required=True,
     cls=options.interactive.InteractiveOption)
 
 SETUP_DATABASE_PASSWORD = OverridableOption(
@@ -171,6 +181,7 @@ SETUP_DATABASE_PASSWORD = OverridableOption(
     type=click.STRING,
     hide_input=True,
     contextual_default=functools.partial(get_profile_attribute_default, ('database_password', None)),
+    required=True,
     cls=options.interactive.InteractiveOption)
 
 SETUP_REPOSITORY_URI = OverridableOption(

@@ -377,10 +377,10 @@ def _pg_execute_sh(command, user='postgres', **kwargs):
     kwargs.pop('password', None)
     host = kwargs.pop('host', None)
     if host:
-        options += '-h {}'.format(host)
+        options += ' -h {}'.format(host)
     port = kwargs.pop('port', None)
     if port:
-        options += '-p {}'.format(port)
+        options += ' -p {}'.format(port)
 
     # Build command line
     sudo_cmd = ['sudo']

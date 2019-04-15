@@ -15,33 +15,35 @@ from __future__ import absolute_import
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params.options.commands import setup as options
+from aiida.cmdline.params import options
+from aiida.cmdline.params.options.commands import setup as options_setup
 from aiida.cmdline.utils import echo
 from aiida.manage.configuration import load_profile
 from aiida.manage.manager import get_manager
 
 
 @verdi.command('setup')
-@options.SETUP_PROFILE()
-@options.SETUP_USER_EMAIL()
-@options.SETUP_USER_FIRST_NAME()
-@options.SETUP_USER_LAST_NAME()
-@options.SETUP_USER_INSTITUTION()
-@options.SETUP_USER_PASSWORD()
-@options.SETUP_DATABASE_ENGINE()
-@options.SETUP_DATABASE_BACKEND()
-@options.SETUP_DATABASE_HOSTNAME()
-@options.SETUP_DATABASE_PORT()
-@options.SETUP_DATABASE_NAME()
-@options.SETUP_DATABASE_USERNAME()
-@options.SETUP_DATABASE_PASSWORD()
-@options.SETUP_REPOSITORY_URI()
-@click.pass_context
-def setup(ctx, profile, email, first_name, last_name, institution, password, db_engine, db_backend, db_host, db_port,
-          db_name, db_username, db_password, repository):
+@options.NON_INTERACTIVE()
+@options_setup.SETUP_PROFILE()
+@options_setup.SETUP_USER_EMAIL()
+@options_setup.SETUP_USER_FIRST_NAME()
+@options_setup.SETUP_USER_LAST_NAME()
+@options_setup.SETUP_USER_INSTITUTION()
+@options_setup.SETUP_USER_PASSWORD()
+@options_setup.SETUP_DATABASE_ENGINE()
+@options_setup.SETUP_DATABASE_BACKEND()
+@options_setup.SETUP_DATABASE_HOSTNAME()
+@options_setup.SETUP_DATABASE_PORT()
+@options_setup.SETUP_DATABASE_NAME()
+@options_setup.SETUP_DATABASE_USERNAME()
+@options_setup.SETUP_DATABASE_PASSWORD()
+@options_setup.SETUP_REPOSITORY_URI()
+def setup(non_interactive, profile, email, first_name, last_name, institution, password, db_engine, db_backend, db_host,
+          db_port, db_name, db_username, db_password, repository):
     """Setup a new profile."""
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments,too-many-locals,unused-argument
     from aiida import orm
+    from aiida.manage.configuration import get_config
 
     profile.database_engine = db_engine
     profile.database_backend = db_backend
@@ -52,9 +54,11 @@ def setup(ctx, profile, email, first_name, last_name, institution, password, db_
     profile.database_password = db_password
     profile.repository_uri = 'file://' + repository
 
+    config = get_config()
+
     # Creating the profile
-    ctx.obj.config.add_profile(profile)
-    ctx.obj.config.set_default_profile(profile.name)
+    config.add_profile(profile)
+    config.set_default_profile(profile.name)
 
     # Load the profile
     load_profile(profile.name)
@@ -63,8 +67,14 @@ def setup(ctx, profile, email, first_name, last_name, institution, password, db_
     # Migrate the database
     echo.echo_info('migrating the database.')
     backend = get_manager()._load_backend(schema_check=False)  # pylint: disable=protected-access
-    backend.migrate()
-    echo.echo_success('database migration completed.')
+
+    try:
+        backend.migrate()
+    except Exception as exception:  # pylint: disable=broad-except
+        echo.echo_critical(
+            'database migration failed, probably because connection details are incorrect:\n{}'.format(exception))
+    else:
+        echo.echo_success('database migration completed.')
 
     # Create the user if it does not yet exist
     created, user = orm.User.objects.get_or_create(
@@ -72,19 +82,20 @@ def setup(ctx, profile, email, first_name, last_name, institution, password, db_
     if created:
         user.store()
     profile.default_user = user.email
-    ctx.obj.config.update_profile(profile)
-    ctx.obj.config.store()
+    config.update_profile(profile)
+    config.store()
 
 
 @verdi.command('quicksetup')
-@options.SETUP_PROFILE(default='quicksetup')
-@options.SETUP_USER_EMAIL()
-@options.SETUP_USER_FIRST_NAME()
-@options.SETUP_USER_LAST_NAME()
-@options.SETUP_USER_INSTITUTION()
-@options.SETUP_USER_PASSWORD()
+@options.NON_INTERACTIVE()
+@options_setup.SETUP_PROFILE(default='quicksetup')
+@options_setup.SETUP_USER_EMAIL()
+@options_setup.SETUP_USER_FIRST_NAME()
+@options_setup.SETUP_USER_LAST_NAME()
+@options_setup.SETUP_USER_INSTITUTION()
+@options_setup.SETUP_USER_PASSWORD()
 @click.pass_context
-def quicksetup(ctx, profile, email, first_name, last_name, institution, password):
+def quicksetup(ctx, non_interactive, profile, email, first_name, last_name, institution, password):
     """Setup a new profile where the database is automatically created and configured."""
     # pylint: disable=too-many-arguments,too-many-locals,too-many-statements,too-many-branches,unused-argument,protected-access
     import os
@@ -105,7 +116,7 @@ def quicksetup(ctx, profile, email, first_name, last_name, institution, password
                 create = False
         return dbname, create
 
-    config = get_config(create=True)
+    config = get_config()
 
     # create a profile, by default 'quicksetup' and prompt the user if already exists
     profile_name = profile.name or 'quicksetup'
@@ -121,7 +132,7 @@ def quicksetup(ctx, profile, email, first_name, last_name, institution, password
             write_profile = True
 
     # access postgres
-    postgres = Postgres(interactive=False, quiet=False)
+    postgres = Postgres(interactive=not non_interactive, quiet=False)
     postgres.set_setup_fail_callback(prompt_db_info)
     success = postgres.determine_setup()
     if not success:
@@ -166,21 +177,23 @@ def quicksetup(ctx, profile, email, first_name, last_name, institution, password
 
     dbhost = postgres.get_dbinfo().get('host', 'localhost')
     dbport = postgres.get_dbinfo().get('port', '5432')
-    backend = 'django'
 
-    repo = 'repository/{}/'.format(profile_name)
+    repo = 'repository/{}/'.format(profile.name)
     if not os.path.isabs(repo):
         repo = os.path.join(config.dirpath, repo)
 
+    # The contextual defaults or `verdi setup` are not being called when `invoking`, so we have to explicitly define
+    # them here, even though the `verdi setup` command would populate those when called from the command line.
     setup_parameters = {
-        'profile': profile_name,
-        'email': 'test',
-        'first_name': 'test',
-        'last_name': 'test',
-        'institution': 'test',
-        'password': 'test',
+        'non_interactive': non_interactive,
+        'profile': profile,
+        'email': email,
+        'first_name': first_name,
+        'last_name': last_name,
+        'institution': institution,
+        'password': password,
         'db_engine': 'postgresql_psycopg2',
-        'db_backend': backend,
+        'db_backend': 'django',
         'db_name': dbname,
         'db_host': dbhost,
         'db_port': dbport,

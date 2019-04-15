@@ -3,7 +3,7 @@ import os
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.6.0"
+__version__ = "0.6.0.1"
 __authors__ = "The AiiDA team."
 
 try:
@@ -24,7 +24,7 @@ if os.path.exists('CHANGELOG_EPFL.txt'):
     aiida_name = 'aiida-epfl'
     aiida_license = 'MIT and EPFL licenses, see LICENSE.txt'
 else:
-    aiida_name = 'aiida'
+    aiida_name = 'aiida-core'
     aiida_license = 'MIT license, see LICENSE.txt'
 
 bin_folder = os.path.join(aiida_folder, 'bin')

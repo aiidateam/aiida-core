@@ -47,11 +47,11 @@ python-mimeparse==0.1.4
 # SQLAlchemy support
 SQLAlchemy==1.0.12
 SQLAlchemy-Utils==0.31.2
-ultrajson==1.35
+ujson==1.35
 
 # For workflows
 enum34==1.1.2
-git+https://bitbucket.org/aiida_team/plum.git@v0.4.3#egg=plum
+plumpy==0.4.3.1
 voluptuous==0.8.11
 
 # For the QueryBuilder in Django when testing:
@@ -70,3 +70,5 @@ tabulate==0.7.5
 
 # To get ASCII trees, may make this optional later
 ete3==3.0.0b35
+
+simplejson

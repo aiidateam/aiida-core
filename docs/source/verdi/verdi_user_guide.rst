@@ -87,7 +87,7 @@ Identifiers
 Many commands will support arguments or options that serve to identify specific entities in the database, such as nodes, users, groups etc.
 Any entity in AiiDA typically will have three different types of identifier:
 
-  * ``ID``: the integer primary key in the database 
+  * ``ID``: the integer primary key in the database
   * ``UUID``: the universally unique identifier, a dash-separated hexadecimal string
   * ``LABEL``: a custom string-based label
 
@@ -623,14 +623,15 @@ Below is a list with all available subcommands.
       configured.
 
     Options:
-      --profile PROFILE   The name of the new profile.
-      --email TEXT        Email address that serves as the user name and a way to
-                          identify data created by it.
-      --first-name TEXT   First name of the user.
-      --last-name TEXT    Last name of the user.
-      --institution TEXT  Institution of the user.
-      --password TEXT     Optional password to connect to REST API.
-      --help              Show this message and exit.
+      -n, --non-interactive  Non-interactive mode: never prompt for input.
+      --profile PROFILE      The name of the new profile.  [required]
+      --email TEXT           Email address that serves as the user name and a way
+                             to identify data created by it.  [required]
+      --first-name TEXT      First name of the user.  [required]
+      --last-name TEXT       Last name of the user.  [required]
+      --institution TEXT     Institution of the user.  [required]
+      --password TEXT        Optional password to connect to REST API.
+      --help                 Show this message and exit.
 
 
 .. _verdi_rehash:
@@ -710,12 +711,15 @@ Below is a list with all available subcommands.
       Setup a new profile.
 
     Options:
-      --profile PROFILE               The name of the new profile.
+      -n, --non-interactive           Non-interactive mode: never prompt for
+                                      input.
+      --profile PROFILE               The name of the new profile.  [required]
       --email TEXT                    Email address that serves as the user name
                                       and a way to identify data created by it.
-      --first-name TEXT               First name of the user.
-      --last-name TEXT                Last name of the user.
-      --institution TEXT              Institution of the user.
+                                      [required]
+      --first-name TEXT               First name of the user.  [required]
+      --last-name TEXT                Last name of the user.  [required]
+      --institution TEXT              Institution of the user.  [required]
       --password TEXT                 Optional password to connect to REST API.
       --db-engine [postgresql_psycopg2]
                                       Engine to use to connect to the database.
@@ -724,8 +728,11 @@ Below is a list with all available subcommands.
       --db-host TEXT                  Hostname to connect to the database.
       --db-port INTEGER               Port to connect to the database.
       --db-name TEXT                  Name of the database to connect to.
+                                      [required]
       --db-username TEXT              User name to connect to the database.
+                                      [required]
       --db-password TEXT              Password to connect to the database.
+                                      [required]
       --repository DIRECTORY          Absolute path for the file system
                                       repository.
       --help                          Show this message and exit.

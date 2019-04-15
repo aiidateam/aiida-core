@@ -121,6 +121,8 @@ Process lifetime
 
 The lifetime of a process is defined as the time from the moment it is launched until it reaches a :ref:`terminal state<concepts_process_state>`.
 
+.. _concepts_process_node_distinction:
+
 Process and node distinction
 ----------------------------
 As explained in the :ref:`introduction of this section<concepts_processes>`, there is a clear and important distinction between the 'process' and the 'node' that represents its execution in the provenance graph.

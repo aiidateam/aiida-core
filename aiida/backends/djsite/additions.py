@@ -5,7 +5,7 @@ from aiida.common.additions import CustomEmailValidator
 
 __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.6.0"
+__version__ = "0.6.0.1"
 __authors__ = "The AiiDA team."
 
 custom_validate_email = CustomEmailValidator()

@@ -273,7 +273,7 @@ def extract_zip(infile, folder, nodes_export_subfolder="nodes", silent=False):
                     continue
                 handle.extract(path=folder.abspath, member=membername)
     except zipfile.BadZipfile:
-        raise ValueError("The input file format for import is not valid (not" " a zip file)")
+        raise ValueError("The input file format for import is not valid (not a zip file)")
 
 
 def extract_tar(infile, folder, nodes_export_subfolder="nodes", silent=False):

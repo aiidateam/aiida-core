@@ -16,7 +16,7 @@ import six
 import click
 
 from aiida.cmdline.utils import decorators
-from aiida.common.exceptions import MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError
+from aiida.common import exceptions
 from aiida.plugins.entry_point import ENTRY_POINT_STRING_SEPARATOR, ENTRY_POINT_GROUP_PREFIX, EntryPointFormat
 from aiida.plugins.entry_point import format_entry_point_string, get_entry_point_string_format
 from aiida.plugins.entry_point import get_entry_point, get_entry_points, get_entry_point_groups
@@ -192,7 +192,7 @@ class PluginParamType(click.ParamType):
 
         try:
             entry_point = get_entry_point(group, name)
-        except (MissingEntryPointError, MultipleEntryPointError) as exception:
+        except exceptions.EntryPointError as exception:
             raise ValueError(exception)
 
         return entry_point
@@ -214,7 +214,7 @@ class PluginParamType(click.ParamType):
         if self.load:
             try:
                 return entry_point.load()
-            except LoadingEntryPointError as exception:
+            except exceptions.LoadingEntryPointError as exception:
                 raise click.BadParameter(str(exception))
         else:
             return entry_point

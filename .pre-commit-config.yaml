@@ -32,7 +32,6 @@
         aiida/backends/djsite/db/models.py|
         aiida/backends/djsite/db/subtests/test_migrations.py|
         aiida/backends/djsite/db/subtests/test_generic.py|
-        aiida/backends/djsite/db/subtests/__init__.py|
         aiida/backends/djsite/db/subtests/test_nodes.py|
         aiida/backends/djsite/db/subtests/test_query.py|
         aiida/backends/djsite/globalsettings.py|
@@ -73,7 +72,6 @@
         aiida/backends/sqlalchemy/models/settings.py|
         aiida/backends/sqlalchemy/models/user.py|
         aiida/backends/sqlalchemy/models/utils.py|
-        aiida/backends/sqlalchemy/models/workflow.py|
         aiida/backends/sqlalchemy/queries.py|
         aiida/backends/sqlalchemy/tests/test_generic.py|
         aiida/backends/sqlalchemy/tests/__init__.py|
@@ -96,7 +94,6 @@
         aiida/backends/tests/cmdline/commands/test_data.py|
         aiida/backends/tests/cmdline/commands/test_export.py|
         aiida/backends/tests/cmdline/commands/test_group.py|
-        aiida/backends/tests/cmdline/commands/test_node.py|
         aiida/backends/tests/cmdline/commands/test_user.py|
         aiida/backends/tests/test_dataclasses.py|
         aiida/backends/tests/test_dbimporters.py|
@@ -173,8 +170,6 @@
         aiida/tools/data/array/kpoints/__init__.py|
         aiida/tools/data/array/kpoints/legacy.py|
         aiida/tools/data/array/kpoints/seekpath.py|
-        aiida/tools/data/orbital/orbital.py|
-        aiida/tools/data/orbital/realhydrogen.py|
         aiida/tools/data/__init__.py|
         aiida/tools/data/structure/__init__.py|
         aiida/tools/dbexporters/__init__.py|
@@ -236,7 +231,8 @@
     language: system
     files: >-
       (?x)^(
-        setup_requirements.py|
+        setup.json|
+        setup.py|
         utils/validate_consistency.py|
         environment.yml|
       )$

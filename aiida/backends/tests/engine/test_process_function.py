@@ -94,6 +94,10 @@ class TestProcessFunction(AiidaTestCase):
         def function_excepts(exception):
             raise RuntimeError(exception.value)
 
+        @workfunction
+        def function_out_unstored():
+            return orm.Int(DEFAULT_INT)
+
         self.function_return_input = function_return_input
         self.function_return_true = function_return_true
         self.function_args = function_args
@@ -105,6 +109,7 @@ class TestProcessFunction(AiidaTestCase):
         self.function_defaults = function_defaults
         self.function_exit_code = function_exit_code
         self.function_excepts = function_excepts
+        self.function_out_unstored = function_out_unstored
 
     def tearDown(self):
         super(TestProcessFunction, self).tearDown()
@@ -331,6 +336,11 @@ class TestProcessFunction(AiidaTestCase):
             _, node = self.function_excepts.run_get_node(exception=orm.Str(exception))
             self.assertTrue(node.is_excepted)
             self.assertEqual(node.exception, exception)
+
+    def test_function_out_unstored(self):
+        """A workfunction that returns an unstored node should raise as it indicates users tried to create data."""
+        with self.assertRaises(ValueError):
+            self.function_out_unstored()
 
     def test_simple_workflow(self):
         """Test construction of simple workflow by chaining process functions."""

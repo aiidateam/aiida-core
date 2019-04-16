@@ -62,7 +62,7 @@ def get_config_option(option_name):
     try:
         config = get_config()
     except exceptions.ConfigurationError:
-        value = option.default
+        value = option.default if option.default is not options.NO_DEFAULT else None
     else:
         if config.current_profile:
             # Try to get the option for the profile, but do not return the option default

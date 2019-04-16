@@ -156,7 +156,7 @@ class TestQueryBuilder(AiidaTestCase):
                         return ExitCode()
 
             def success(self):
-                self.out(self.OUTPUT_LABEL, orm.Int(self.OUTPUT_VALUE))
+                self.out(self.OUTPUT_LABEL, orm.Int(self.OUTPUT_VALUE).store())
 
         class DummyWorkChain(WorkChain):
             pass
@@ -1143,7 +1143,7 @@ class TestConsistency(AiidaTestCase):
         # adding 5 links going out:
         for inode in range(5):
             output_node = orm.Data().store()
-            output_node.add_incoming(parent, link_type=LinkType.CREATE, link_label='link-{}'.format(inode))
+            output_node.add_incoming(parent, link_type=LinkType.CREATE, link_label='link_{}'.format(inode))
         for projection in ('id', '*'):
             qb = orm.QueryBuilder()
             qb.append(orm.CalculationNode, filters={'id': parent.id}, tag='parent', project=projection)

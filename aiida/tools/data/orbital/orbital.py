@@ -17,11 +17,72 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from aiida.common.exceptions import ValidationError, MissingPluginError
-from aiida.plugins import OrbitalFactory
+from aiida.common.exceptions import ValidationError
 
 
-class Orbital(object):
+def validate_int(value):
+    """
+    Validate that the value is an int
+    """
+    try:
+        conv_value = int(value)
+    except ValueError:
+        raise ValidationError("must be an int number")
+    return conv_value
+
+
+def validate_int_or_none(value):
+    """
+    Validate that the value is a int or is None
+    """
+    if value is None:
+        return None
+    return validate_int(value)
+
+
+def validate_float(value):
+    """
+    Validate that the value is a float
+    """
+    try:
+        conv_value = float(value)
+    except ValueError:
+        raise ValidationError("must be a float number")
+    return conv_value
+
+
+def validate_float_or_none(value):
+    """
+    Validate that the value is a float or is None
+    """
+    if value is None:
+        return None
+    return validate_float(value)
+
+
+def validate_len3_list(value):
+    """
+    Validate that the value is a list of three floats
+    """
+    try:
+        conv_value = list(float(i) for i in value)
+        if len(conv_value) != 3:
+            raise ValueError
+    except (ValueError, TypeError):
+        raise ValidationError("must be a list of three float number")
+    return conv_value
+
+
+def validate_len3_list_or_none(value):
+    """
+    Validate that the value is a list of three floats or is None
+    """
+    if value is None:
+        return None
+    return validate_len3_list(value)
+
+
+class Orbital(object):  # pylint: disable=useless-object-inheritance
     """
     Base class for Orbitals. Can handle certain basic fields, their setting
     and validation. More complex Orbital objects should then inherit from
@@ -36,33 +97,25 @@ class Orbital(object):
                              unitless
     :param diffusivity: Float controls the radial term in orbital equation
                         units are reciprocal Angstrom.
-    :param module_name: internal parameter, stores orbital type
-
     """
-    #NOTE x_orientation, z_orientation, spin_orientation, diffusivity might
-    #all need to be moved to RealHydrogenOrbital
+    # len-2 tuples, with name and validator function
+    # Validator function should either return, or raise ValidationError
+    _base_fields_required = (('position', validate_len3_list),)
 
-    _base_fields = ('position',
-                    'x_orientation',
-                    'z_orientation',
-                    'spin_orientation',
-                    'diffusivity',
-                    'module_name', # Actually, this one is system reserved
-                    )
+    # len-3 tuples, with (name, validator, default_value)
+    # See how it is defined in the RealhydrogenOrbital class
+    _base_fields_optional = tuple()
 
-    def __init__(self):
-        self._orbital_dict = {}
+    def __init__(self, **kwargs):
+        # This runs the validator as well
+        self.set_orbital_dict(kwargs)
 
     def __repr__(self):
-        module_name = self.get_orbital_dict()['module_name']
-        return '<{}: {}>'.format(module_name, str(self))
-
-    def __str__(self):
-        raise NotImplementedError
+        return '<{}: {}>'.format(self.__class__.__name__, str(self))
 
     def _validate_keys(self, input_dict):
         """
-        Checks all the input_dict and tries to validate them , to ensure
+        Checks all the input_dict and tries to validate them, to ensure
         that they have been properly set raises Exceptions indicating any
         problems that should arise during the validation
 
@@ -74,60 +127,32 @@ class Orbital(object):
         """
 
         validated_dict = {}
-        for k in self._base_fields:
-            v = input_dict.pop(k, None)
-            if k == "module_name":
-                if v is None:
-                    raise TypeError
-                try:
-                    OrbitalFactory(v)
-                except (MissingPluginError, TypeError):
-                    raise ValidationError("The module name {} was found to "
-                                          "be invalid".format(v))
-            if k == "position":
-                if v is None:
-                    validated_dict.update({k: v})
-                    continue
-                try:
-                    v = list(float(i) for i in v)
-                    if len(v) != 3:
-                        raise ValueError
-                except (ValueError, TypeError):
-                        raise ValueError("Wrong format for position, must be a"
-                                         " list of three float numbers.")
-            if "orientation" in k :
-                if v is None:
-                    validated_dict.update({k: v})
-                    continue
-                try:
-                    v = list(float(i) for i in v)
-                    if len(v) != 3:
-                        raise ValueError
-                except (ValueError, TypeError):
-                        raise ValueError("Wrong format for {}, must be a"
-                                         " list of three float numbers.")
-            # From a spherical cooridnate version of orientation
-            # try:
-            #     v = tuple(float(i) for i in v)
-            #     if len(v) != (2):
-            #         raise ValueError
-            #     if v[0] >= 2*math.pi or v[0] <= 0:
-            #         raise ValueError
-            #     if v[1] >= math.pi or v[1] <= 0:
-            #         raise ValueError
-            # except(ValueError, TypeError):
-            #     raise ValueError("Wrong format for {}, must be two tuples"
-            #                      " each having two floats theta, phi where"
-            #                      " 0<=theta<2pi and 0<=phi<=pi.".format(k))
-            if k == "diffusivity":
-                if v is None:
-                    validated_dict.update({k: v})
-                    continue
-                try:
-                    v = float(v)
-                except ValueError:
-                    raise ValidationError("Diffusivity must always be a float")
-            validated_dict.update({k: v})
+        for name, validator in self._base_fields_required:
+            try:
+                value = input_dict.pop(name)
+            except KeyError:
+                raise ValidationError("Missing required parameter '{}'".format(name))
+            # This might raise ValidationError
+            try:
+                value = validator(value)
+            except ValidationError as exc:
+                raise exc.__class__("Error validating '{}': {}".format(name, str(exc)))
+            validated_dict[name] = value
+
+        for name, validator, default_value in self._base_fields_optional:
+            try:
+                value = input_dict.pop(name)
+            except KeyError:
+                value = default_value
+            # This might raise ValidationError
+            try:
+                value = validator(value)
+            except ValidationError as exc:
+                raise exc.__class__("Error validating '{}': {}".format(name, str(exc)))
+            validated_dict[name] = value
+
+        if input_dict:
+            raise ValidationError('Unknown keys: {}'.format(list(input_dict.keys())))
         return validated_dict
 
     def set_orbital_dict(self, init_dict):
@@ -137,28 +162,10 @@ class Orbital(object):
 
         :param init_dict: the initialization dictionary
         """
-        if not isinstance(init_dict, dict):
-            raise Exception('You must supply a dict as an init')
-        # Adds the module_name in hard-coded manner
-        init_dict.update({"module_name": self._get_module_name()})
-        validated_dict = self._validate_keys(init_dict)
-        for k, v in validated_dict.items():
-            self._orbital_dict[k] = v
+        self._orbital_dict = self._validate_keys(init_dict)
 
     def get_orbital_dict(self):
         """
         returns the internal keys as a dictionary
         """
-        output = {}
-        for k in self._default_fields:
-            try:
-                output[k] = self._orbital_dict[k]
-            except KeyError:
-                pass
-        return output
-
-    def _get_module_name(self):
-        """
-        Sets the module name, or label, to the orbital
-        """
-        return self.__module__.split('.')[-1]
+        return self._orbital_dict

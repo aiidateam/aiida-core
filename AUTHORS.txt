@@ -34,22 +34,22 @@ Former members of the AiiDA team
 
 Contributors
 ############
-We would like to thank the following people for their contibution 
+We would like to thank the following people for their contibution
 (beside generic comments and bugfixes):
 
-* Valentin Bersier (EPFL, Switzerland): for the early version of the 
+* Valentin Bersier (EPFL, Switzerland): for the early version of the
   AiiDA web interface
-* Jocelyn Boullier (EPFL, Switzerland): for the first version of the 
+* Jocelyn Boullier (EPFL, Switzerland): for the first version of the
   SQLAlchemy implementation
 * Jens Bröder: (FZ Jülich, Germany) contributions to the workflow engine
 * Marco Dorigo (ICAMS, Germany): for the SGE scheduler plugin
-* Marco Gibertini: for the Quantum ESPRESSO plugin for the NEB code and 
+* Marco Gibertini: for the Quantum ESPRESSO plugin for the NEB code and
   the extension of the PW plugin to the ENVIRON code
 * Dominik Gresch (ETHZ): for the caching mechanism and contributions to the workflow engine
 * Eric Hontz (MIT, USA): for the Quantum Espresso pwimmigrant plugin
-* Daniel Marchand (EPFL, Switzerland): for the Quantum ESPRESSO plugins 
+* Daniel Marchand (EPFL, Switzerland): for the Quantum ESPRESSO plugins
   for PP, PROJWFC, and the first version of the Wannier90 plugin
-* Tiziano Müller (ETHZ, Switzerland): for the first implementation of 
+* Tiziano Müller (ETHZ, Switzerland): for the first implementation of
   the new plugin system (developed in 2017) and making the code python 3 compatible
 * Phillippe Schwaller (EPFL, Switzerland): for the ICSD importer
 
@@ -58,9 +58,9 @@ corrections and improvements to the documentation and useful suggestions:
 
 Ivano E. Castelli, Ian Lee, Gianluca Prandini, Jianxing Huang, Antimo Marrazzo, Nicola Varini, Mario Zic,
 Vladimir Dikan, Michael Atambo, Ole Schütt, Y.-W. Fang, Philipp Rüßmann, Bonan Zhu, Andreas Stamminger, Keija Cui,
-Daniel Hollas, Jianxing Huang, Espen Flage-Larsen
+Daniel Hollas, Jianxing Huang, Espen Flage-Larsen, Chris Sewell
 
 ---
 
-Please, don't hesitate to contact the AiiDA team if you see that 
+Please, don't hesitate to contact the AiiDA team if you see that
 information is wrong or missing in this file.

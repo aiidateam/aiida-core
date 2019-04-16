@@ -1102,7 +1102,7 @@ class QueryBuilder(object):
             elif isinstance(projection, six.string_types):
                 _thisprojection = {projection: {}}
             else:
-                raise InputValidationError("Cannot deal with projection specification {}\n" "".format(projection))
+                raise InputValidationError("Cannot deal with projection specification {}\n".format(projection))
             for p, spec in _thisprojection.items():
                 if not isinstance(spec, dict):
                     raise InputValidationError("\nThe value of a key-value pair in a projection\n"

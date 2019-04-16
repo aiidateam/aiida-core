@@ -13,17 +13,17 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from collections import Mapping
+import collections
 
 from aiida.engine.processes.ports import PortNamespace
 
-__all__ = ('ProcessBuilder', 'CalcJobBuilder', 'ProcessBuilderNamespace')
+__all__ = ('ProcessBuilder', 'ProcessBuilderNamespace')
 
 
-class ProcessBuilderNamespace(Mapping):
-    """
-    Input namespace for the ProcessBuilder. Dynamically generates the getters and setters
-    for the input ports of a given PortNamespace
+class ProcessBuilderNamespace(collections.MutableMapping):
+    """Input namespace for the `ProcessBuilder`.
+
+    Dynamically generates the getters and setters for the input ports of a given PortNamespace
     """
 
     def __init__(self, port_namespace):
@@ -78,12 +78,13 @@ class ProcessBuilderNamespace(Mapping):
             try:
                 port = self._port_namespace[attr]
             except KeyError:
-                raise AttributeError('Unknown builder parameter: {}'.format(attr))
-
-            value = port.serialize(value)
-            validation_error = port.validate(value)
-            if validation_error:
-                raise ValueError('invalid attribute value {}'.format(validation_error.message))
+                if not self._port_namespace.dynamic:
+                    raise AttributeError('Unknown builder parameter: {}'.format(attr))
+            else:
+                value = port.serialize(value)
+                validation_error = port.validate(value)
+                if validation_error:
+                    raise ValueError('invalid attribute value {}'.format(validation_error.message))
 
             self._data[attr] = value
 
@@ -103,6 +104,37 @@ class ProcessBuilderNamespace(Mapping):
     def __getitem__(self, item):
         return self._data[item]
 
+    def __setitem__(self, item, value):
+        self.__setattr__(item, value)
+
+    def __delitem__(self, item):
+        self._data.__delitem__(item)
+
+    def _update(self, *args, **kwds):
+        """Update the values of the builder namespace passing a mapping as argument or individual keyword value pairs.
+
+        The method is prefixed with an underscore in order to not reserve the name for a potential port, but in
+        principle the method functions just as `collections.MutableMapping.update`.
+
+        :param args: a single mapping that should be mapped on the namespace
+        :param kwds: keyword value pairs that should be mapped onto the ports
+        """
+        if len(args) > 1:
+            raise TypeError('update expected at most 1 arguments, got %d' % len(args))
+
+        if args:
+            for key, value in args[0].items():
+                if isinstance(value, collections.Mapping):
+                    self[key].update(value)
+                else:
+                    self.__setattr__(key, value)
+
+        for key, value in kwds.items():
+            if isinstance(value, collections.Mapping):
+                self[key].update(value)
+            else:
+                self.__setattr__(key, value)
+
 
 class ProcessBuilder(ProcessBuilderNamespace):
     """A process builder that helps setting up the inputs for creating a new process."""
@@ -115,28 +147,3 @@ class ProcessBuilder(ProcessBuilderNamespace):
     @property
     def process_class(self):
         return self._process_class
-
-
-class CalcJobBuilder(ProcessBuilder):
-    """A process builder specific to CalcJob implementations that provides also the `submit_test` functionality."""
-
-    def __dir__(self):
-        return super(CalcJobBuilder, self).__dir__() + ['submit_test']
-
-    def submit_test(self, folder=None, subfolder_name=None):
-        """
-        Run a test submission by creating the files that would be generated for the real calculation in a local folder,
-        without actually storing the calculation nor the input nodes. This functionality therefore also does not
-        require any of the inputs nodes to be stored yet.
-
-        :param folder: a Folder object, within which to create the calculation files. By default a folder
-            will be created in the current working directory
-        :param subfolder_name: the name of the subfolder to use within the directory of the ``folder`` object. By
-            default a unique string will be generated based on the current datetime with the format ``yymmdd-``
-            followed by an auto incrementing index
-        """
-        inputs = {'store_provenance': False}
-        inputs.update(**self)
-        process = self._process_class(inputs=inputs)
-
-        return process.node.submit_test(folder, subfolder_name)

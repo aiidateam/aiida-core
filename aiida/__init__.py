@@ -34,7 +34,7 @@ from aiida.manage.configuration import get_config_option
 __copyright__ = (u'Copyright (c), This file is part of the AiiDA platform. '
                  u'For further information please visit http://www.aiida.net/. All rights reserved.')
 __license__ = 'MIT license, see LICENSE.txt file.'
-__version__ = '1.0.0b1'
+__version__ = '1.0.0b2'
 __authors__ = 'The AiiDA team.'
 __paper__ = (u'G. Pizzi, A. Cepellotti, R. Sabatini, N. Marzari, and B. Kozinsky,'
              u'"AiiDA: automated interactive infrastructure and database for computational science", '

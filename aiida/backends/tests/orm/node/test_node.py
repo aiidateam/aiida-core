@@ -190,7 +190,7 @@ class TestNodeLinks(AiidaTestCase):
         """Nodes can have an infinite amount of incoming RETURN links, as long as the link triple is unique."""
         source_one = WorkflowNode()
         source_two = WorkflowNode()
-        target = Data()
+        target = Data().store()  # Needs to be stored: see `test_validate_outgoing_workflow`
 
         target.add_incoming(source_one, LinkType.RETURN, 'link_label')
 
@@ -201,6 +201,19 @@ class TestNodeLinks(AiidaTestCase):
         # From another source node or using another label is fine
         target.validate_incoming(source_one, LinkType.RETURN, 'other_label')
         target.validate_incoming(source_two, LinkType.RETURN, 'link_label')
+
+    def test_validate_outgoing_workflow(self):
+        """Verify that attaching an unstored `Data` node with `RETURN` link from a `WorkflowNode` raises.
+
+        This would for example be the case if a user inside a workfunction or work chain creates a new node based on its
+        inputs or the outputs returned by another process and tries to attach it as an output. This would the provenance
+        of that data node to be lost and should be explicitly forbidden by raising.
+        """
+        source = WorkflowNode().store()
+        target = Data()
+
+        with self.assertRaises(ValueError):
+            target.add_incoming(source, LinkType.RETURN, 'link_label')
 
     def test_get_incoming(self):
         """Test that `Node.get_incoming` will return stored and cached input links."""
@@ -253,12 +266,11 @@ class TestNodeLinks(AiidaTestCase):
         """
         return_one = WorkflowNode().store()
         return_two = WorkflowNode().store()
-        data = Data()
+        data = Data().store()  # Needs to be stored: see `test_validate_outgoing_workflow`
 
         # Verify that adding two return links with the same link label but from different source is allowed
-        data.add_incoming(return_one, link_type=LinkType.RETURN, link_label='return')
-        data.add_incoming(return_two, link_type=LinkType.RETURN, link_label='return')
-        data.store()
+        data.add_incoming(return_one, link_type=LinkType.RETURN, link_label='returned')
+        data.add_incoming(return_two, link_type=LinkType.RETURN, link_label='returned')
 
         uuids_incoming = set(node.uuid for node in data.get_incoming().all_nodes())
         uuids_expected = set([return_one.uuid, return_two.uuid])
@@ -325,9 +337,8 @@ class TestNodeLinks(AiidaTestCase):
         output1 = Data().store()
         output2 = Data().store()
 
-        # top_workflow has two inputs, proxies them to workflow, that in turn
-        # calls two calcs (passing 1 data to each),
-        # and return the two data nodes returned one by each called calculation
+        # The `top_workflow` has two inputs, proxies them to `workflow`, that in turn calls two calculations, passing
+        # one data node to each as input, and return the two data nodes returned one by each called calculation
         top_workflow.add_incoming(input1, link_type=LinkType.INPUT_WORK, link_label='a')
         top_workflow.add_incoming(input2, link_type=LinkType.INPUT_WORK, link_label='b')
 
@@ -348,7 +359,6 @@ class TestNodeLinks(AiidaTestCase):
         output1.add_incoming(top_workflow, link_type=LinkType.RETURN, link_label='result_a')
         output2.add_incoming(top_workflow, link_type=LinkType.RETURN, link_label='result_b')
 
-        ## Now we test the methods
         # creator
         self.assertEqual(output1.creator.pk, calc1.pk)
         self.assertEqual(output2.creator.pk, calc2.pk)
@@ -386,4 +396,4 @@ class TestNodeLinks(AiidaTestCase):
         self.assertEqual(workflow.outputs.result_a.pk, output1.pk)
         self.assertEqual(workflow.outputs.result_b.pk, output2.pk)
         with self.assertRaises(exceptions.NotExistent):
-            _ = workflow.outputs.some_label  #  noqa
+            _ = workflow.outputs.some_label

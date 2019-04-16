@@ -204,9 +204,7 @@ class NodeTreePrinter(object):  # pylint: disable=useless-object-inheritance
 
         children = []
         # pylint: disable=unused-variable
-        for entry \
-                in sorted(node.get_outgoing(link_type=follow_links).all(),
-                          key=cls._ctime):
+        for entry in sorted(node.get_outgoing(link_type=follow_links).all(), key=cls._ctime):
             child_str = cls._build_tree(
                 entry.node, show_pk, follow_links=follow_links, max_depth=max_depth, depth=depth + 1)
             if child_str:
@@ -229,30 +227,24 @@ class NodeTreePrinter(object):  # pylint: disable=useless-object-inheritance
 
 
 @verdi_node.command('delete')
-@arguments.NODES('nodes')
-@click.option('-c', '--follow-calls', is_flag=True, help='follow call links downwards when deleting')
+@arguments.NODES('nodes', required=True)
+@options.VERBOSE()
+@options.DRY_RUN()
+@click.option('-c', '--follow-calls', is_flag=True, help='Follow call links forwards when deleting.')
 # Commenting also the option for follow returns. This is dangerous for the inexperienced user.
-#@click.option('-r', '--follow-returns', is_flag=True, help='follow return links downwards when deleting')
-@click.option('-n', '--dry-run', is_flag=True, help='dry run, does not delete')
-@click.option('-v', '--verbose', is_flag=True, help='print individual nodes marked for deletion.')
-@options.NON_INTERACTIVE()
+# @click.option('-r', '--follow-returns', is_flag=True, help='follow return links forwards when deleting')
+@click.option('--force', is_flag=True, default=False, help='Do not ask for confirmation.')
 @with_dbenv()
-def node_delete(nodes, follow_calls, dry_run, verbose, non_interactive):
-    """
-    Deletes a node and everything that originates from it.
-    """
+def node_delete(nodes, follow_calls, dry_run, verbose, force):
+    """Delete nodes and everything that originates from them."""
     from aiida.manage.database.delete.nodes import delete_nodes
 
-    if not nodes:
-        return
-
     verbosity = 1
-    if non_interactive:
+    if force:
         verbosity = 0
     elif verbose:
         verbosity = 2
 
     node_pks_to_delete = [node.pk for node in nodes]
 
-    delete_nodes(
-        node_pks_to_delete, follow_calls=follow_calls, dry_run=dry_run, verbosity=verbosity, force=non_interactive)
+    delete_nodes(node_pks_to_delete, follow_calls=follow_calls, dry_run=dry_run, verbosity=verbosity, force=force)

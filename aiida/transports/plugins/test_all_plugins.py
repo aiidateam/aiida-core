@@ -63,7 +63,7 @@ def get_all_custom_transports():
         module = importlib.import_module(".".join([modulename, m]))
         custom_transport = module.__dict__.get('plugin_transport', None)
         if custom_transport is None:
-            print("Define the plugin_transport variable inside the {} module!" "".format(m))
+            print("Define the plugin_transport variable inside the {} module!".format(m))
         else:
             all_custom_transports[m] = custom_transport
 

@@ -184,7 +184,7 @@ class PotentialFailureWorkChain(WorkChain):
                 return ExitCode()
 
     def success(self):
-        self.out(self.OUTPUT_LABEL, Int(self.OUTPUT_VALUE))
+        self.out(self.OUTPUT_LABEL, Int(self.OUTPUT_VALUE).store())
         return
 
 
@@ -365,6 +365,25 @@ class TestWorkchain(AiidaTestCase):
         with self.assertRaises(AssertionError):
             launch.run(IncompleteDefineWorkChain)
 
+    def test_out_unstored(self):
+        """Calling `self.out` on an unstored `Node` should raise.
+
+        It indicates that users created new data whose provenance will be lost.
+        """
+
+        class IllegalWorkChain(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super(IllegalWorkChain, cls).define(spec)
+                spec.outline(cls.illegal)
+
+            def illegal(self):
+                self.out('not_allowed', orm.Int(2))
+
+        with self.assertRaises(ValueError):
+            launch.run(IllegalWorkChain)
+
     def test_same_input_node(self):
 
         class Wf(WorkChain):
@@ -385,8 +404,8 @@ class TestWorkchain(AiidaTestCase):
         run_and_check_success(Wf, a=x, b=x)
 
     def test_context(self):
-        A = Str("a")
-        B = Str("b")
+        A = Str("a").store()
+        B = Str("b").store()
 
         test_case = self
 
@@ -541,11 +560,13 @@ class TestWorkchain(AiidaTestCase):
                 spec.outline(cls.do_run)
 
             def do_run(self):
-                self.out("value", Int(5))
+                self.out("value", Int(5).store())
 
         run_and_check_success(MainWorkChain)
 
     def test_tocontext_schedule_workchain(self):
+
+        node = Int(5).store()
 
         class MainWorkChain(WorkChain):
 
@@ -559,7 +580,7 @@ class TestWorkchain(AiidaTestCase):
                 return ToContext(subwc=self.submit(SubWorkChain))
 
             def check(self):
-                assert self.ctx.subwc.outputs.value == Int(5)
+                assert self.ctx.subwc.outputs.value == node
 
         class SubWorkChain(WorkChain):
 
@@ -569,7 +590,7 @@ class TestWorkchain(AiidaTestCase):
                 spec.outline(cls.do_run)
 
             def do_run(self):
-                self.out('value', Int(5))
+                self.out('value', node)
 
         run_and_check_success(MainWorkChain)
 
@@ -635,7 +656,7 @@ class TestWorkchain(AiidaTestCase):
         run_and_check_success(TestWorkChain)
 
     def test_to_context(self):
-        val = Int(5)
+        val = Int(5).store()
 
         test_case = self
 
@@ -647,7 +668,7 @@ class TestWorkchain(AiidaTestCase):
                 spec.outline(cls.result)
 
             def result(self):
-                self.out('_return', val)
+                self.out('result', val)
 
         class Workchain(WorkChain):
 
@@ -661,8 +682,8 @@ class TestWorkchain(AiidaTestCase):
                 return ToContext(result_b=self.submit(SimpleWc))
 
             def result(self):
-                test_case.assertEquals(self.ctx.result_a.outputs._return, val)
-                test_case.assertEquals(self.ctx.result_b.outputs._return, val)
+                test_case.assertEquals(self.ctx.result_a.outputs.result, val)
+                test_case.assertEquals(self.ctx.result_b.outputs.result, val)
 
         run_and_check_success(Workchain)
 
@@ -1140,7 +1161,9 @@ class ChildExposeWorkChain(WorkChain):
         spec.outline(cls.do_run)
 
     def do_run(self):
-        self.out('a', self.inputs.a + self.inputs.b)
+        summed = self.inputs.a + self.inputs.b
+        summed.store()
+        self.out('a', summed)
         self.out('b', self.inputs.b)
         self.out('c', self.inputs.c)
 
@@ -1168,10 +1191,16 @@ class TestWorkChainExpose(AiidaTestCase):
         self.assertEquals(
             res, {
                 'a': Float(2.2),
-                'sub_1.b': Float(2.3),
-                'sub_1.c': Bool(True),
-                'sub_2.b': Float(1.2),
-                'sub_2.sub_3.c': Bool(False)
+                'sub_1': {
+                    'b': Float(2.3),
+                    'c': Bool(True)
+                },
+                'sub_2': {
+                    'b': Float(1.2),
+                    'sub_3': {
+                        'c': Bool(False)
+                    }
+                }
             })
 
     @unittest.skip('Reenable when issue #2515 is solved: references to deleted ORM instances')
@@ -1194,11 +1223,21 @@ class TestWorkChainExpose(AiidaTestCase):
                 )))
         self.assertEquals(
             res, {
-                'sub.sub.a': Float(2.2),
-                'sub.sub.sub_1.b': Float(2.3),
-                'sub.sub.sub_1.c': Bool(True),
-                'sub.sub.sub_2.b': Float(1.2),
-                'sub.sub.sub_2.sub_3.c': Bool(False)
+                'sub': {
+                    'sub': {
+                        'a': Float(2.2),
+                        'sub_1': {
+                            'b': Float(2.3),
+                            'c': Bool(True)
+                        },
+                        'sub_2': {
+                            'b': Float(1.2),
+                            'sub_3': {
+                                'c': Bool(False)
+                            }
+                        }
+                    }
+                }
             })
 
     def test_issue_1741_expose_inputs(self):
@@ -1296,6 +1335,6 @@ class TestDefaultUniqueness(AiidaTestCase):
 
         # Trying to load one of the inputs through the UUID should fail,
         # as both `child_one.a` and `child_two.a` should have the same UUID.
-        node = load_node(uuid=node.get_incoming().get_node_by_label('child_one_a').uuid)
+        node = load_node(uuid=node.get_incoming().get_node_by_label('child_one__a').uuid)
         self.assertEquals(
             len(uuids), len(nodes), 'Only {} unique UUIDS for {} input nodes'.format(len(uuids), len(nodes)))

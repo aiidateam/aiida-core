@@ -21,7 +21,7 @@ This will make understanding and using ``verdi`` a lot easier!
 * :ref:`devel<verdi_devel>`:  Commands for developers.
 * :ref:`export<verdi_export>`:  Create and manage export archives.
 * :ref:`graph<verdi_graph>`:  Create visual representations of part of the provenance graph.
-* :ref:`group<verdi_group>`:  Inspect, create and manage groups.
+* :ref:`group<verdi_group>`:  Create, inspect and manage groups.
 * :ref:`import<verdi_import>`:  Import one or multiple exported AiiDA archives
 * :ref:`node<verdi_node>`:  Inspect, create and manage nodes.
 * :ref:`plugin<verdi_plugin>`:  Inspect installed plugins for various entry point categories.

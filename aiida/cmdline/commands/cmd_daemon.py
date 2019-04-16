@@ -207,7 +207,7 @@ def restart(ctx, reset, no_wait):
             print_client_response_status(response)
 
 
-@verdi_daemon.command()
+@verdi_daemon.command(hidden=True)
 @click.option('--foreground', is_flag=True, help='Run in foreground.')
 @decorators.with_dbenv()
 @decorators.check_circus_zmq_version

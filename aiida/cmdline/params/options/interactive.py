@@ -218,11 +218,8 @@ class InteractiveOption(ConditionalOption):
         """decide wether to initiate the prompt_loop or not"""
 
         # From click.core.Context:
-        # if resilient_parsing is enabled then Click will
-        # parse without any interactivity or callback
-        # invocation.
-        # Therefore if this flag is set, we should not
-        # do any prompting.
+        # if resilient_parsing is enabled then Click will parse without any interactivity or callback invocation.
+        # Therefore if this flag is set, we should not do any prompting.
         if ctx.resilient_parsing:
             return None
 

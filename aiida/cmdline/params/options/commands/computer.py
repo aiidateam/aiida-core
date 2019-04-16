@@ -59,18 +59,6 @@ HOSTNAME = options.HOSTNAME.clone(
 DESCRIPTION = options.DESCRIPTION.clone(
     prompt='Description', cls=InteractiveOption, help='A human-readable description of this computer.')
 
-ENABLED = OverridableOption(
-    '-e/-d',
-    '--enabled/--disabled',
-    is_flag=True,
-    default=True,
-    help='Calculations on disabled computers will not be submitted until the computer is re-enabled.',
-    prompt='Enable the computer?',
-    cls=InteractiveOption,
-    # IMPORTANT! Do not specify explicitly type=click.BOOL,
-    # Otherwise you would not get a default value when prompting
-)
-
 TRANSPORT = options.TRANSPORT.clone(prompt='Transport plugin', cls=InteractiveOption)
 
 SCHEDULER = options.SCHEDULER.clone(prompt='Scheduler plugin', cls=InteractiveOption)

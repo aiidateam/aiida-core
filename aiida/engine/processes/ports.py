@@ -12,8 +12,19 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from collections import Mapping
+import collections
+import re
+
 from plumpy import ports
+
+from aiida.common.lang import type_check
+
+__all__ = ('PortNamespace', 'InputPort', 'OutputPort', 'CalcJobOutputPort', 'WithNonDb', 'WithSerialize',
+           'PORT_NAMESPACE_SEPARATOR')
+
+PORT_NAME_MAX_CONSECUTIVE_UNDERSCORES = 1  # pylint: disable=invalid-name
+PORT_NAMESPACE_SEPARATOR = '__'  # The character sequence to represent a nested port namespace in a flat link label
+OutputPort = ports.OutputPort  # pylint: disable=invalid-name
 
 
 class WithNonDb(object):  # pylint: disable=useless-object-inheritance
@@ -132,10 +143,45 @@ class PortNamespace(WithNonDb, ports.PortNamespace):
         if not isinstance(port, ports.Port):
             raise TypeError('port needs to be an instance of Port')
 
+        self.validate_port_name(key)
+
         if hasattr(port, 'non_db_explicitly_set') and not port.non_db_explicitly_set:
             port.non_db = self.non_db
 
         super(PortNamespace, self).__setitem__(key, port)
+
+    @staticmethod
+    def validate_port_name(port_name):
+        """Validate the given port name.
+
+        Valid port names adhere to the following restrictions:
+
+            * Is a valid link label (see below)
+            * Does not contain two or more consecutive underscores
+
+        Valid link labels adhere to the following restrictions:
+
+            * Has to be a valid python identifier
+            * Can only contain alphanumeric characters and underscores
+            * Can not start or end with an underscore
+
+        :param port_name: the proposed name of the port to be added
+        :raise TypeError: if the port name is not a string type
+        :raise ValueError: if the port name is invalid
+        """
+        from aiida.common.links import validate_link_label
+
+        try:
+            validate_link_label(port_name)
+        except ValueError as exception:
+            raise ValueError('invalid port name `{}`: {}'.format(port_name, exception))
+
+        # Following regexes will match all groups of consecutive underscores where each group will be of the form
+        # `('___', '_')`, where the first element is the matched group of consecutive underscores.
+        consecutive_underscores = [match[0] for match in re.findall(r'((_)\2+)', port_name)]
+
+        if any([len(entry) > PORT_NAME_MAX_CONSECUTIVE_UNDERSCORES for entry in consecutive_underscores]):
+            raise ValueError('invalid port name `{}`: more than two consecutive underscores'.format(port_name))
 
     def serialize(self, mapping):
         """
@@ -145,12 +191,10 @@ class PortNamespace(WithNonDb, ports.PortNamespace):
         :param mapping: a mapping of values to be serialized
         :returns: the serialized mapping
         """
-        from aiida.common.lang import type_check
-
         if mapping is None:
             return None
 
-        type_check(mapping, Mapping)
+        type_check(mapping, collections.Mapping)
 
         result = {}
 

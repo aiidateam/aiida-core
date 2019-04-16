@@ -140,7 +140,7 @@ This is fairly typical for command line arguments, but slightly more unorthodox 
 However, ``verdi`` has multiple commands where an option needs to be able to support options that take more than one value.
 Take for example the ``verdi export create`` command, with part of its help string::
 
-  Usage: verdi export create [OPTIONS] OUTPUT_FILE
+  Usage: verdi export create [OPTIONS] [--] OUTPUT_FILE
 
     Export various entities, such as Codes, Computers, Groups and Nodes, to an
     archive file for backup or sharing purposes.
@@ -169,6 +169,7 @@ Unfortunately, this leads to an ambiguity, as the 'greedy' multi value option ``
 This will cause the command to abort if the validation fails, but even worse it might be silently accepted.
 The root of the problem is that the multi value option needs to necessarily be greedy and cannot distinguish which value belongs to it and which value is just another argument.
 The typical solution for this problem is to use the so called 'endopts' marker, which is defined as two dashes ``--``, which can be used to mark the end of the options and clearly distinguish them from the arguments.
+Note that this is also indicated by the usage string of the command where it shows ``[--]`` between the ``[OPTIONS]`` and ``OUTPUT_FILE`` parameters, meaning that the ``--`` endopts marker can optionally be used.
 The previous command can therefore be made unambiguous as follows::
 
   verdi export create -N 10 11 12 -- archive.aiida
@@ -291,13 +292,13 @@ Below is a list with all available subcommands.
     Commands:
       configure  Configure a computer with one of the available transport types.
       delete     Configure the authentication information for a given computer...
-      disable    Disable a computer.
-      duplicate  Duplicate a Computer.
-      enable     Enable a computer.
+      disable    Disable the computer for the given user.
+      duplicate  Duplicate a computer.
+      enable     Enable the computer for the given user.
       list       List available computers.
-      rename     Rename a computer
-      setup      Add a Computer.
-      show       Show information on a given computer
+      rename     Rename a computer.
+      setup      Add a computer.
+      show       Show information for a computer.
       test       Test the connection to a computer.
 
 
@@ -333,14 +334,13 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      decr          Remove NUMBER [default=1] workers from the running daemon
-      incr          Add NUMBER [default=1] workers to the running daemon
-      logshow       Show the log of the daemon, press CTRL+C to quit
-      restart       Restart the daemon.
-      start         Start the daemon
-      start-circus  This will actually launch the circus daemon, either...
-      status        Print the status of the current daemon or all daemons
-      stop          Stop the daemon
+      decr     Remove NUMBER [default=1] workers from the running daemon
+      incr     Add NUMBER [default=1] workers to the running daemon
+      logshow  Show the log of the daemon, press CTRL+C to quit
+      restart  Restart the daemon.
+      start    Start the daemon
+      status   Print the status of the current daemon or all daemons
+      stop     Stop the daemon
 
 
 .. _verdi_data:
@@ -361,7 +361,7 @@ Below is a list with all available subcommands.
       array       Manipulate ArrayData objects.
       bands       Manipulate BandsData objects.
       cif         Manipulation of CIF data objects.
-      parameter   View and manipulate Dict objects.
+      dict        View and manipulate Dict objects.
       plugins     Print a list of registered data plugins or details of a...
       remote      Managing RemoteData objects.
       structure   Manipulation of StructureData objects.
@@ -457,21 +457,22 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS] COMMAND [ARGS]...
 
-      Inspect, create and manage groups.
+      Create, inspect and manage groups.
 
     Options:
       --help  Show this message and exit.
 
     Commands:
-      addnodes     Add NODES to a given AiiDA group.
-      copy         Add all nodes that belong to source group to the destination...
-      create       Create a new empty group with the name GROUP_NAME.
-      delete       Pass the GROUP to delete an existing group.
-      description  Change the description of a given group.
-      list         Show a list of groups.
-      removenodes  Remove NODES from a given AiiDA group.
-      rename       Rename an existing group.
-      show         Show information on a given group.
+      add-nodes     Add NODES to the given GROUP.
+      copy          Add all nodes that belong to source group to the
+                    destination...
+      create        Create a new empty group with the name GROUP_NAME.
+      delete        Delete a GROUP.
+      description   Change the description of the given GROUP to DESCRIPTION.
+      list          Show a list of groups.
+      relabel       Change the label of the given GROUP to LABEL.
+      remove-nodes  Remove NODES from the given GROUP.
+      show          Show information on a given group.
 
 
 .. _verdi_import:
@@ -481,7 +482,7 @@ Below is a list with all available subcommands.
 
 ::
 
-    Usage:  [OPTIONS] [ARCHIVES]...
+    Usage:  [OPTIONS] [--] [ARCHIVES]...
 
       Import one or multiple exported AiiDA archives
 
@@ -537,7 +538,7 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      delete       Deletes a node and everything that originates from it.
+      delete       Delete nodes and everything that originates from them.
       description  View or set the descriptions of one or more nodes.
       label        View or set the labels of one or more nodes.
       repo
@@ -690,7 +691,7 @@ Below is a list with all available subcommands.
 
 ::
 
-    Usage:  [OPTIONS] SCRIPTNAME [VARARGS]...
+    Usage:  [OPTIONS] [--] SCRIPTNAME [VARARGS]...
 
       Execute an AiiDA script.
 
@@ -791,8 +792,8 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      configure  Create or update a user.
-      list       List all the users.
+      configure  Create or update a USER.
+      list       Displays list of all users.
 
 
 

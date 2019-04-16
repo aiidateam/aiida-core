@@ -166,11 +166,23 @@ class Postgres(object):  # pylint: disable=useless-object-inheritance
             self.setup_fail_counter += 1
             self._no_setup_detected()
         elif not self.interactive and not self.quiet:
+            self.pg_execute = _pg_execute_not_connected
             echo.echo_warning(('Database setup not confirmed, (non-interactive). '
                                'This may cause problems if the current user is not '
                                'allowed to create databases.'))
 
         return bool(self.pg_execute != _pg_execute_not_connected)  # pylint: disable=comparison-with-callable
+
+    def check_db_name(self, dbname):
+        """Looks up if a database with the name exists, prompts for using or creating a differently named one."""
+        create = True
+        while create and self.db_exists(dbname):
+            echo.echo_info('database {} already exists!'.format(dbname))
+            if not click.confirm('Use it (make sure it is not used by another profile)?'):
+                dbname = click.prompt('new name', type=str, default=dbname)
+            else:
+                create = False
+        return dbname, create
 
     def create_dbuser(self, dbuser, dbpass):
         """

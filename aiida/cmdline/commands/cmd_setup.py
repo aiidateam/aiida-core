@@ -94,99 +94,58 @@ def setup(non_interactive, profile, email, first_name, last_name, institution, p
 
 @verdi.command('quicksetup')
 @options.NON_INTERACTIVE()
-@options_setup.SETUP_PROFILE(default='quicksetup')
+# Cannot use `default` because that will fail validation of the `ProfileParamType` if the profile already exists and it
+# will be validated before the prompt to choose another. The `contextual_default` however, will not trigger the
+# validation but will populate the default in the prompt.
+@options_setup.SETUP_PROFILE(contextual_default=lambda x: 'quicksetup')
 @options_setup.SETUP_USER_EMAIL()
 @options_setup.SETUP_USER_FIRST_NAME()
 @options_setup.SETUP_USER_LAST_NAME()
 @options_setup.SETUP_USER_INSTITUTION()
 @options_setup.SETUP_USER_PASSWORD()
+@options_setup.QUICKSETUP_DATABASE_ENGINE()
+@options_setup.QUICKSETUP_DATABASE_BACKEND()
+@options_setup.QUICKSETUP_DATABASE_HOSTNAME()
+@options_setup.QUICKSETUP_DATABASE_PORT()
+@options_setup.QUICKSETUP_DATABASE_NAME()
+@options_setup.QUICKSETUP_DATABASE_USERNAME()
+@options_setup.QUICKSETUP_DATABASE_PASSWORD()
+@options_setup.QUICKSETUP_REPOSITORY_URI()
 @click.pass_context
-def quicksetup(ctx, non_interactive, profile, email, first_name, last_name, institution, password):
+def quicksetup(ctx, non_interactive, profile, email, first_name, last_name, institution, password, db_engine,
+               db_backend, db_host, db_port, db_name, db_username, db_password, repository):
     """Setup a new profile where the database is automatically created and configured."""
-    # pylint: disable=too-many-arguments,too-many-locals,too-many-statements,too-many-branches,unused-argument,protected-access
-    import os
-    import getpass
-    import hashlib
-    from aiida.common.hashing import get_random_string
-    from aiida.manage.configuration import get_config
+    # pylint: disable=too-many-arguments,too-many-locals
     from aiida.manage.external.postgres import Postgres, manual_setup_instructions, prompt_db_info
 
-    def _check_db_name(dbname, postgres):
-        """Looks up if a database with the name exists, prompts for using or creating a differently named one."""
-        create = True
-        while create and postgres.db_exists(dbname):
-            echo.echo_info('database {} already exists!'.format(dbname))
-            if not click.confirm('Use it (make sure it is not used by another profile)?'):
-                dbname = click.prompt('new name', type=str, default=dbname)
-            else:
-                create = False
-        return dbname, create
-
-    config = get_config()
-
-    # create a profile, by default 'quicksetup' and prompt the user if already exists
-    profile_name = profile.name or 'quicksetup'
-    write_profile = False
-    while not write_profile:
-        if profile_name in config.profile_names:
-            echo.echo_warning("Profile '{}' already exists.".format(profile_name))
-            if click.confirm("Overwrite existing profile '{}'?".format(profile_name)):
-                write_profile = True
-            else:
-                profile_name = click.prompt('New profile name', type=str)
-        else:
-            write_profile = True
-
-    # access postgres
-    postgres = Postgres(interactive=not non_interactive, quiet=False)
+    dbinfo = {
+        'host': db_host,
+        'port': db_port,
+        'user': db_username,
+    }
+    postgres = Postgres(interactive=not non_interactive, quiet=False, dbinfo=dbinfo)
     postgres.set_setup_fail_callback(prompt_db_info)
-    success = postgres.determine_setup()
-    if not success:
+
+    if not postgres.determine_setup():
         echo.echo_critical('failed to determine the PostgreSQL setup')
 
-    osuser = getpass.getuser()
-    config_dir_hash = hashlib.md5(config.dirpath.encode('utf-8')).hexdigest()
-
-    # default database user name is aiida_qs_<login-name>
-    # default password is random
-    # default database name is <profile_name>_<login-name>
-    # this ensures that for profiles named test_... the database will also be named test_...
-    dbuser = 'aiida_qs_' + osuser + '_' + config_dir_hash
-    dbpass = get_random_string(length=50)
-
-    # check if there is a profile that contains the db user already
-    # and if yes, take the db user password from there
-    # This is ok because a user can only see his own config files
-    dbname = profile_name + '_' + osuser + '_' + config_dir_hash
-    for available_profile in config.profiles:
-        if available_profile.database_username == dbuser:
-            dbpass = available_profile.database_password
-            echo.echo('using found password for {}'.format(dbuser))
-            break
     try:
         create = True
-        if not postgres.dbuser_exists(dbuser):
-            postgres.create_dbuser(dbuser, dbpass)
+        if not postgres.dbuser_exists(db_username):
+            postgres.create_dbuser(db_username, db_password)
         else:
-            dbname, create = _check_db_name(dbname, postgres)
+            db_name, create = postgres.check_db_name(db_name)
         if create:
-            postgres.create_db(dbuser, dbname)
+            postgres.create_db(db_username, db_name)
     except Exception as exception:
         echo.echo_error('\n'.join([
             'Oops! Something went wrong while creating the database for you.',
             'You may continue with the quicksetup, however:',
             'For aiida to work correctly you will have to do that yourself as follows.',
-            manual_setup_instructions(dbuser=dbuser, dbname=dbname), '',
+            manual_setup_instructions(dbuser=db_username, dbname=db_name), '',
             'Or setup your (OS-level) user to have permissions to create databases and rerun quicksetup.', ''
         ]))
         raise exception
-
-    dbhost = postgres.get_dbinfo().get('host', 'localhost')
-    dbport = postgres.get_dbinfo().get('port', '5432')
-
-    repo = 'repository/{}/'.format(profile.name)
-    if not os.path.isabs(repo):
-        repo = os.path.join(config.dirpath, repo)
 
     # The contextual defaults or `verdi setup` are not being called when `invoking`, so we have to explicitly define
     # them here, even though the `verdi setup` command would populate those when called from the command line.
@@ -198,13 +157,13 @@ def quicksetup(ctx, non_interactive, profile, email, first_name, last_name, inst
         'last_name': last_name,
         'institution': institution,
         'password': password,
-        'db_engine': 'postgresql_psycopg2',
-        'db_backend': 'django',
-        'db_name': dbname,
-        'db_host': dbhost,
-        'db_port': dbport,
-        'db_username': dbuser,
-        'db_password': dbpass,
-        'repository': repo,
+        'db_engine': db_engine,
+        'db_backend': db_backend,
+        'db_name': db_name,
+        'db_host': db_host,
+        'db_port': db_port,
+        'db_username': db_username,
+        'db_password': db_password,
+        'repository': repository,
     }
     ctx.invoke(setup, **setup_parameters)

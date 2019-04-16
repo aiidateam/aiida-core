@@ -53,6 +53,13 @@ class Config(object):  # pylint: disable=useless-object-inheritance,too-many-pub
         self._oldest_compatible_version = compatible_version
         self._profiles = {}
 
+        known_keys = [self.KEY_VERSION, self.KEY_PROFILES, self.KEY_OPTIONS, self.KEY_DEFAULT_PROFILE]
+        unknown_keys = set(config.keys()) - set(known_keys)
+
+        if unknown_keys:
+            keys = ', '.join(unknown_keys)
+            self.handle_invalid('encountered unknown keys [{}] in `{}` which have been removed'.format(keys, filepath))
+
         try:
             self._options = config[self.KEY_OPTIONS]
         except KeyError:
@@ -64,6 +71,8 @@ class Config(object):  # pylint: disable=useless-object-inheritance,too-many-pub
             self._default_profile = None
 
         for name, config_profile in config.get(self.KEY_PROFILES, {}).items():
+            if Profile.contains_unknown_keys(config_profile):
+                self.handle_invalid('encountered unknown keys in profile `{}` which have been removed'.format(name))
             self._profiles[name] = Profile(name, config_profile, from_config=True)
 
     def __eq__(self, other):
@@ -73,6 +82,19 @@ class Config(object):  # pylint: disable=useless-object-inheritance,too-many-pub
     def __ne__(self, other):
         """Two configurations are considered unequal, when their dictionaries are unequal."""
         return self.dictionary != other.dictionary
+
+    def handle_invalid(self, message):
+        """Handle an incoming invalid configuration dictionary.
+
+        The current content of the configuration file will be written to a backup file.
+
+        :param message: a string message to echo with describing the infraction
+        """
+        from aiida.cmdline.utils import echo
+        filepath = self._filepath + '.bak'
+        self._backup(filepath)
+        echo.echo_warning(message)
+        echo.echo_warning('backup of the original config file written to: `{}`'.format(filepath))
 
     @property
     def dictionary(self):
@@ -309,14 +331,17 @@ class Config(object):  # pylint: disable=useless-object-inheritance,too-many-pub
 
         return self
 
-    def _backup(self):
+    def _backup(self, filepath=None):
         """Create a backup of the current config as it exists on disk."""
         if not os.path.isfile(self.filepath):
             return
 
         umask = os.umask(DEFAULT_UMASK)
 
+        if filepath is None:
+            filepath = self.filepath + '~'
+
         try:
-            shutil.copy(self.filepath, self.filepath + '~')
+            shutil.copy(self.filepath, filepath)
         finally:
             os.umask(umask)

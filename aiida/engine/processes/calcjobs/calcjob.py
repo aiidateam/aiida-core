@@ -139,6 +139,10 @@ class CalcJob(Process):
             folder_class = SandboxFolder
 
         with folder_class() as folder:
+
+            if self.inputs.metadata.dry_run:
+                self.node.set_attribute("dry_run_path", folder.abspath)
+
             computer = self.node.computer
 
             if not self.inputs.metadata.dry_run and self.node.has_cached_links():

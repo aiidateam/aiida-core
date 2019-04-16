@@ -14,13 +14,13 @@ Defines an rst directive to auto-document AiiDA workchains.
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 from docutils import nodes
 from docutils.core import publish_doctree
 from docutils.parsers.rst import Directive, directives
 from sphinx import addnodes
 from sphinx.ext.autodoc import ClassDocumenter
 
-import aiida
 from aiida.common.utils import get_object_from_string
 from plumpy.ports import OutputPort
 
@@ -38,8 +38,8 @@ class WorkChainDocumenter(ClassDocumenter):
     @classmethod
     def can_document_member(cls, member, membername, isattr, parent):
         try:
-            import aiida
-            aiida.try_load_dbenv()
+            from aiida.manage.configuration import load_profile
+            load_profile()
             from aiida.engine import WorkChain
             return issubclass(member, WorkChain)
         except Exception:
@@ -60,14 +60,16 @@ class AiidaWorkchainDirective(Directive):
     has_content = True
 
     def run(self):
-        aiida.try_load_dbenv()
+        from aiida.manage.configuration import load_profile
+        load_profile()
         self.load_workchain()
         return self.build_node_tree()
 
     def load_workchain(self):
         """Loads the workchain and sets up additional attributes."""
         # pylint: disable=attribute-defined-outside-init
-        aiida.try_load_dbenv()
+        from aiida.manage.configuration import load_profile
+        load_profile()
 
         self.class_name = self.arguments[0].split('(')[0]
         self.module_name = self.options['module']

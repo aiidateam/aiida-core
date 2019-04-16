@@ -78,7 +78,7 @@ def echo_warning(message, bold=False, nl=True, err=False):
     :param nl: whether to print a newline at the end of the message
     :param err: whether to print to stderr
     """
-    click.secho('Warning: ', fg='yellow', bold=True, nl=False, err=err)
+    click.secho('Warning: ', fg='bright_yellow', bold=True, nl=False, err=err)
     click.secho(message, bold=bold, nl=nl, err=err)
 
 

@@ -85,7 +85,7 @@ class AiidaTestImplementation(object):
             backend=self.backend
         ).store()
 
-        self.user_email = get_config().current_profile.default_user_email
+        self.user_email = get_config().current_profile.default_user
 
         # Since the default user is needed for many operations in AiiDA, it is not deleted by clean_db.
         # In principle, it should therefore always exist - if not we create it anyhow.

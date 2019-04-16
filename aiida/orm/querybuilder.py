@@ -435,7 +435,7 @@ class QueryBuilder(object):
         from aiida.manage.configuration import get_config
 
         config = get_config()
-        engine = config.current_profile.dictionary['AIIDADB_ENGINE']
+        engine = config.current_profile.database_engine
 
         if engine.startswith("mysql"):
             from sqlalchemy.dialects import mysql as mydialect

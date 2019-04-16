@@ -81,11 +81,9 @@ def devel_tests(paths, verbose):  # pylint: disable=too-many-locals,too-many-sta
     import unittest
 
     import aiida
-    from aiida import settings
     from aiida.backends.testbase import run_aiida_db_tests
     from aiida.backends.testbase import check_if_tests_can_run
-
-    settings.TESTING_MODE = True
+    from aiida.manage import configuration
 
     test_failures = []
     test_errors = []
@@ -143,7 +141,7 @@ def devel_tests(paths, verbose):  # pylint: disable=too-many-locals,too-many-sta
             echo.echo_critical(str(exception))
 
         echo.echo('v' * 75)
-        echo.echo('>>> Tests for {} db application'.format(settings.BACKEND))
+        echo.echo('>>> Tests for {} db application'.format(configuration.PROFILE.database_backend))
         echo.echo('^' * 75)
         db_results = run_aiida_db_tests(db_test_list, verbose)
         test_skipped.extend(db_results.skipped)

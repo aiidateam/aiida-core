@@ -26,7 +26,7 @@ from .settings import DEFAULT_UMASK, DEFAULT_CONFIG_INDENT_SIZE
 __all__ = ('Config',)
 
 
-class Config(object):  # pylint: disable=useless-object-inheritance
+class Config(object):  # pylint: disable=useless-object-inheritance,too-many-public-methods
     """Object that represents the configuration file of an AiiDA instance."""
 
     KEY_VERSION = 'CONFIG_VERSION'
@@ -34,27 +34,46 @@ class Config(object):  # pylint: disable=useless-object-inheritance
     KEY_VERSION_OLDEST_COMPATIBLE = 'OLDEST_COMPATIBLE'
     KEY_DEFAULT_PROFILE = 'default_profile'
     KEY_PROFILES = 'profiles'
+    KEY_OPTIONS = 'options'
 
-    def __init__(self, filepath, dictionary):
+    def __init__(self, filepath, config):
         """Instantiate a configuration object from a configuration dictionary and its filepath.
 
         If an empty dictionary is passed, the constructor will create the skeleton configuration dictionary.
 
         :param filepath: the absolute filepath of the configuration file
-        :param dictionary: the content of the configuration file in dictionary form
+        :param config: the content of the configuration file in dictionary form
         """
-        if not dictionary:
-            # Construct the default configuration template
-            dictionary = {
-                self.KEY_VERSION: {
-                    self.KEY_VERSION_CURRENT: CURRENT_CONFIG_VERSION,
-                    self.KEY_VERSION_OLDEST_COMPATIBLE: OLDEST_COMPATIBLE_CONFIG_VERSION,
-                },
-                self.KEY_PROFILES: {},
-            }
+        version = config.get(self.KEY_VERSION, {})
+        current_version = version.get(self.KEY_VERSION_CURRENT, CURRENT_CONFIG_VERSION)
+        compatible_version = version.get(self.KEY_VERSION_OLDEST_COMPATIBLE, OLDEST_COMPATIBLE_CONFIG_VERSION)
 
         self._filepath = filepath
-        self._dictionary = dictionary
+        self._current_version = current_version
+        self._oldest_compatible_version = compatible_version
+        self._profiles = {}
+
+        known_keys = [self.KEY_VERSION, self.KEY_PROFILES, self.KEY_OPTIONS, self.KEY_DEFAULT_PROFILE]
+        unknown_keys = set(config.keys()) - set(known_keys)
+
+        if unknown_keys:
+            keys = ', '.join(unknown_keys)
+            self.handle_invalid('encountered unknown keys [{}] in `{}` which have been removed'.format(keys, filepath))
+
+        try:
+            self._options = config[self.KEY_OPTIONS]
+        except KeyError:
+            self._options = {}
+
+        try:
+            self._default_profile = config[self.KEY_DEFAULT_PROFILE]
+        except KeyError:
+            self._default_profile = None
+
+        for name, config_profile in config.get(self.KEY_PROFILES, {}).items():
+            if Profile.contains_unknown_keys(config_profile):
+                self.handle_invalid('encountered unknown keys in profile `{}` which have been removed'.format(name))
+            self._profiles[name] = Profile(name, config_profile, from_config=True)
 
     def __eq__(self, other):
         """Two configurations are considered equal, when their dictionaries are equal."""
@@ -64,29 +83,60 @@ class Config(object):  # pylint: disable=useless-object-inheritance
         """Two configurations are considered unequal, when their dictionaries are unequal."""
         return self.dictionary != other.dictionary
 
+    def handle_invalid(self, message):
+        """Handle an incoming invalid configuration dictionary.
+
+        The current content of the configuration file will be written to a backup file.
+
+        :param message: a string message to echo with describing the infraction
+        """
+        from aiida.cmdline.utils import echo
+        filepath = self._filepath + '.bak'
+        self._backup(filepath)
+        echo.echo_warning(message)
+        echo.echo_warning('backup of the original config file written to: `{}`'.format(filepath))
+
     @property
     def dictionary(self):
-        return self._dictionary
+        """Return the dictionary representation of the config as it would be written to file.
+
+        :return: dictionary representation of config as it should be written to file
+        """
+        config = {
+            self.KEY_VERSION: self.version_settings,
+            self.KEY_PROFILES: {name: profile.dictionary for name, profile in self._profiles.items()}
+        }
+
+        if self._default_profile:
+            config[self.KEY_DEFAULT_PROFILE] = self._default_profile
+
+        if self._options:
+            config[self.KEY_OPTIONS] = self._options
+
+        return config
 
     @property
     def version(self):
-        return self._version_settings.get(self.KEY_VERSION_CURRENT, 0)
+        return self._current_version
 
     @version.setter
     def version(self, version):
-        self._version_settings[self.KEY_VERSION_CURRENT] = version
+        self._current_version = version
 
     @property
     def version_oldest_compatible(self):
-        return self._version_settings.get(self.KEY_VERSION_OLDEST_COMPATIBLE, 0)
+        return self._oldest_compatible_version
 
     @version_oldest_compatible.setter
     def version_oldest_compatible(self, version_oldest_compatible):
-        self._version_settings[self.KEY_VERSION_OLDEST_COMPATIBLE] = version_oldest_compatible
+        self._oldest_compatible_version = version_oldest_compatible
 
     @property
-    def _version_settings(self):
-        return self.dictionary.setdefault(self.KEY_VERSION, {})
+    def version_settings(self):
+        return {
+            self.KEY_VERSION_CURRENT: self.version,
+            self.KEY_VERSION_OLDEST_COMPATIBLE: self.version_oldest_compatible
+        }
 
     @property
     def filepath(self):
@@ -102,10 +152,7 @@ class Config(object):  # pylint: disable=useless-object-inheritance
 
         :return: the default profile name or None if not defined
         """
-        try:
-            return self.dictionary[self.KEY_DEFAULT_PROFILE]
-        except KeyError:
-            return None
+        return self._default_profile
 
     @property
     def current_profile(self):
@@ -113,14 +160,8 @@ class Config(object):  # pylint: disable=useless-object-inheritance
 
         :return: the current profile or None if not defined
         """
-        from aiida.backends import settings
-
-        current_profile_name = settings.AIIDADB_PROFILE
-
-        if current_profile_name:
-            return self.get_profile(current_profile_name)
-
-        return None
+        from . import get_profile
+        return get_profile()
 
     @property
     def profile_names(self):
@@ -128,12 +169,7 @@ class Config(object):  # pylint: disable=useless-object-inheritance
 
         :return: list of profile names
         """
-        try:
-            profiles = self.dictionary[self.KEY_PROFILES]
-        except KeyError:
-            return []
-        else:
-            return list(profiles)
+        return list(self._profiles.keys())
 
     @property
     def profiles(self):
@@ -142,12 +178,7 @@ class Config(object):  # pylint: disable=useless-object-inheritance
         :return: the profiles
         :rtype: list of `Profile` instances
         """
-        try:
-            profiles = self.dictionary[self.KEY_PROFILES]
-        except KeyError:
-            return []
-        else:
-            return [Profile(name, profile) for name, profile in profiles.items()]
+        return list(self._profiles.values())
 
     def validate_profile(self, name):
         """Validate that a profile exists.
@@ -176,25 +207,15 @@ class Config(object):  # pylint: disable=useless-object-inheritance
 
         self.validate_profile(name)
 
-        return Profile(name, self.dictionary[self.KEY_PROFILES][name])
+        return self._profiles[name]
 
-    def _get_profile_dictionary(self, name):
-        """Return the internal profile dictionary for the given name or the default one if not specified.
-
-        :return: the profile instance or None if it does not exist
-        :raises aiida.common.ProfileConfigurationError: if the name is not found in the configuration file
-        """
-        self.validate_profile(name)
-        return self.dictionary[self.KEY_PROFILES][name]
-
-    def add_profile(self, name, profile):
+    def add_profile(self, profile):
         """Add a profile to the configuration.
 
-        :param name: the name of the profile to remove
         :param profile: the profile configuration dictionary
         :return: self
         """
-        self.dictionary[self.KEY_PROFILES][name] = profile
+        self._profiles[profile.name] = profile
         return self
 
     def update_profile(self, profile):
@@ -203,7 +224,7 @@ class Config(object):  # pylint: disable=useless-object-inheritance
         :param profile: the profile instance to update
         :return: self
         """
-        self.dictionary[self.KEY_PROFILES][profile.name] = profile.dictionary
+        self._profiles[profile.name] = profile
         return self
 
     def remove_profile(self, name):
@@ -214,7 +235,7 @@ class Config(object):  # pylint: disable=useless-object-inheritance
         :return: self
         """
         self.validate_profile(name)
-        self.dictionary[self.KEY_PROFILES].pop(name)
+        self._profiles.pop(name)
         return self
 
     def set_default_profile(self, name, overwrite=False):
@@ -229,32 +250,42 @@ class Config(object):  # pylint: disable=useless-object-inheritance
             return self
 
         self.validate_profile(name)
-        self.dictionary[self.KEY_DEFAULT_PROFILE] = name
+        self._default_profile = name
         return self
 
-    def option_set(self, option_name, option_value, scope=None):
-        """Set a configuration option.
+    @property
+    def options(self):
+        return self._options
+
+    @options.setter
+    def options(self, value):
+        self._options = value
+
+    def set_option(self, option_name, option_value, scope=None, override=True):
+        """Set a configuration option for a certain scope.
 
         :param option_name: the name of the configuration option
         :param option_value: the option value
         :param scope: set the option for this profile or globally if not specified
+        :param override: boolean, if False, will not override the option if it already exists
         """
         option, parsed_value = parse_option(option_name, option_value)
 
-        if not option.global_only and scope is not None:
-            dictionary = self._get_profile_dictionary(scope)
-        else:
-            dictionary = self.dictionary
-
         if parsed_value is not None:
-            dictionary[option.key] = parsed_value
+            value = parsed_value
         elif option.default is not NO_DEFAULT:
-            dictionary[option.key] = option.default
+            value = option.default
         else:
-            pass
+            return
 
-    def option_unset(self, option_name, scope=None):
-        """Unset a configuration option.
+        if not option.global_only and scope is not None:
+            self.get_profile(scope).set_option(option.key, value, override=override)
+        else:
+            if option.key not in self.options or override:
+                self.options[option.key] = value
+
+    def unset_option(self, option_name, scope=None):
+        """Unset a configuration option for a certain scope.
 
         :param option_name: the name of the configuration option
         :param scope: unset the option for this profile or globally if not specified
@@ -262,14 +293,12 @@ class Config(object):  # pylint: disable=useless-object-inheritance
         option = get_option(option_name)
 
         if scope is not None:
-            dictionary = self._get_profile_dictionary(scope)
+            self.get_profile(scope).unset_option(option.key)
         else:
-            dictionary = self.dictionary
+            self.options.pop(option.key, None)
 
-        dictionary.pop(option.key, None)
-
-    def option_get(self, option_name, scope=None, default=True):
-        """Get a configuration option.
+    def get_option(self, option_name, scope=None, default=True):
+        """Get a configuration option for a certain scope.
 
         :param option_name: the name of the configuration option
         :param scope: get the option for this profile or globally if not specified
@@ -278,15 +307,15 @@ class Config(object):  # pylint: disable=useless-object-inheritance
         """
         option = get_option(option_name)
 
-        if scope is not None:
-            dictionary = self.get_profile(scope).dictionary
-        else:
-            dictionary = self.dictionary
-
         # Default value is `None` unless `default=True` and the `option.default` is not `NO_DEFAULT`
         default_value = option.default if default and option.default is not NO_DEFAULT else None
 
-        return dictionary.get(option.key, default_value)
+        if scope is not None:
+            value = self.get_profile(scope).get_option(option.key, default_value)
+        else:
+            value = self.options.get(option.key, default_value)
+
+        return value
 
     def store(self):
         """Write the current config to file."""
@@ -302,14 +331,17 @@ class Config(object):  # pylint: disable=useless-object-inheritance
 
         return self
 
-    def _backup(self):
+    def _backup(self, filepath=None):
         """Create a backup of the current config as it exists on disk."""
         if not os.path.isfile(self.filepath):
             return
 
         umask = os.umask(DEFAULT_UMASK)
 
+        if filepath is None:
+            filepath = self.filepath + '~'
+
         try:
-            shutil.copy(self.filepath, self.filepath + '~')
+            shutil.copy(self.filepath, filepath)
         finally:
             os.umask(umask)

@@ -27,11 +27,11 @@ This will make understanding and using ``verdi`` a lot easier!
 * :ref:`plugin<verdi_plugin>`:  Inspect installed plugins for various entry point categories.
 * :ref:`process<verdi_process>`:  Inspect and manage processes.
 * :ref:`profile<verdi_profile>`:  Inspect and manage the configured profiles.
-* :ref:`quicksetup<verdi_quicksetup>`:  Set up a sane configuration with as little interaction as possible.
+* :ref:`quicksetup<verdi_quicksetup>`:  Setup a new profile where the database is automatically created and configured.
 * :ref:`rehash<verdi_rehash>`:  Recompute the hash for nodes in the database
 * :ref:`restapi<verdi_restapi>`:  Run the AiiDA REST API server
 * :ref:`run<verdi_run>`:  Execute an AiiDA script.
-* :ref:`setup<verdi_setup>`:  Setup and configure a new profile.
+* :ref:`setup<verdi_setup>`:  Setup a new profile.
 * :ref:`shell<verdi_shell>`:  Start a python shell with preloaded AiiDA environment.
 * :ref:`status<verdi_status>`:  Print status of AiiDA services.
 * :ref:`user<verdi_user>`:  Inspect and manage users.

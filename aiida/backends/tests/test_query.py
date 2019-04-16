@@ -19,7 +19,7 @@ import warnings
 from six.moves import range, zip
 
 from aiida import orm
-from aiida.backends import settings
+from aiida.manage import configuration
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 
@@ -701,7 +701,7 @@ class TestAttributes(AiidaTestCase):
         qb = orm.QueryBuilder().append(orm.Node, filters={'attributes.{}'.format(key): {'==': '1'}}, project='uuid')
         res = [str(_) for _, in qb.all()]
         self.assertEqual(set(res), set((n_str.uuid,)))
-        if settings.BACKEND == u'sqlalchemy':
+        if configuration.PROFILE.database_backend == u'sqlalchemy':
             # I can't query the length of an array with Django,
             # so I exclude. Not the nicest way, But I would like to keep this piece
             # of code because of the initialization part, that would need to be
@@ -716,7 +716,8 @@ class TestAttributes(AiidaTestCase):
 
 class QueryBuilderDateTimeAttribute(AiidaTestCase):
 
-    @unittest.skipIf(settings.BACKEND == u'sqlalchemy', "SQLA doesn't have full datetime support in attributes")
+    @unittest.skipIf(configuration.PROFILE.database_backend == u'sqlalchemy',
+                     "SQLA doesn't have full datetime support in attributes")
     def test_date(self):
         from aiida.common import timezone
         from datetime import timedelta

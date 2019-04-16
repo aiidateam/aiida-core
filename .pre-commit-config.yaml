@@ -38,11 +38,8 @@
         aiida/backends/djsite/__init__.py|
         aiida/backends/djsite/manage.py|
         aiida/backends/djsite/queries.py|
-        aiida/backends/djsite/settings/__init__.py|
-        aiida/backends/djsite/settings/settings_profile.py|
-        aiida/backends/general/abstractqueries.py|
         aiida/backends/profile.py|
-        aiida/backends/settings.py|
+        aiida/backends/general/abstractqueries.py|
         aiida/backends/sqlalchemy/alembic_manage.py|
         aiida/backends/sqlalchemy/globalsettings.py|
         aiida/backends/sqlalchemy/__init__.py|
@@ -81,7 +78,6 @@
         aiida/backends/sqlalchemy/tests/test_session.py|
         aiida/backends/sqlalchemy/tests/testbase.py|
         aiida/backends/sqlalchemy/tests/test_utils.py|
-        aiida/backends/sqlalchemy/transition_06dj_to_07sqla.py|
         aiida/backends/sqlalchemy/utils.py|
         aiida/backends/testbase.py|
         aiida/backends/testimplbase.py|
@@ -144,7 +140,6 @@
         aiida/parsers/plugins/templatereplacer/__init__.py|
         aiida/plugins/entry_point.py|
         aiida/plugins/entry.py|
-        aiida/plugins/factory.py|
         aiida/plugins/info.py|
         aiida/plugins/registry.py|
         aiida/plugins/utils.py|
@@ -161,7 +156,6 @@
         aiida/schedulers/plugins/test_sge.py|
         aiida/schedulers/plugins/test_slurm.py|
         aiida/schedulers/plugins/test_torque.py|
-        aiida/settings.py|
         aiida/sphinxext/tests/conftest.py|
         aiida/sphinxext/tests/test_workchain.py|
         aiida/sphinxext/tests/workchain_source/conf.py|
@@ -187,7 +181,6 @@
         aiida/transports/plugins/test_all_plugins.py|
         aiida/transports/plugins/test_local.py|
         aiida/transports/plugins/test_ssh.py|
-        utils/create_requirements.py|
         .ci/test_daemon.py|
         .ci/workchains.py|
       )$

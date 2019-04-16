@@ -21,32 +21,27 @@ import django
 # pylint: disable=no-name-in-module, no-member, import-error
 
 
-def load_dbenv(profile=None):
+def load_dbenv(profile):
     """
     Load the database environment (Django) and perform some checks.
 
-    :param profile: the string with the profile to use. If not specified,
-        use the default one specified in the AiiDA configuration file.
+    :param profile: the string with the profile to use
     """
     _load_dbenv_noschemacheck(profile)
     # Check schema version and the existence of the needed tables
-    check_schema_version(profile_name=profile)
+    check_schema_version(profile_name=profile.name)
 
 
 def _load_dbenv_noschemacheck(profile):  # pylint: disable=unused-argument
     """
     Load the database environment (Django) WITHOUT CHECKING THE SCHEMA VERSION.
 
-    :param profile: the string with the profile to use. If not specified,
-        use the default one specified in the AiiDA configuration file.
+    :param profile: the string with the profile to use
 
     This should ONLY be used internally, inside load_dbenv, and for schema
     migrations. DO NOT USE OTHERWISE!
     """
-    # This function does not use process and profile because they are read
-    # from global variables (set before by load_profile) inside the
-    # djsite.settings.settings module.
-    os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.backends.djsite.settings.settings'
+    os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.backends.djsite.settings'
     django.setup()
 
 

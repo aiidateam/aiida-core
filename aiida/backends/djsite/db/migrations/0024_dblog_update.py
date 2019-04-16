@@ -23,8 +23,8 @@ import click
 # pylint: disable=no-name-in-module,import-error
 from django.db import migrations, models
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
-from aiida import settings
-import aiida.common.utils
+from aiida.common.utils import get_new_uuid
+from aiida.manage import configuration
 
 REVISION = '1.0.24'
 DOWN_REVISION = '1.0.23'
@@ -82,7 +82,7 @@ def set_new_uuid(apps, _):
     """
     DbLog = apps.get_model('db', 'DbLog')
     for log in DbLog.objects.all():
-        log.uuid = aiida.common.utils.get_new_uuid()
+        log.uuid = get_new_uuid()
         log.save(update_fields=['uuid'])
 
 
@@ -103,7 +103,7 @@ def export_and_clean_workflow_logs(apps, _):
     if lwf_number == 0 and other_number == 0 and log_no_node_number == 0:
         return
 
-    if not settings.TESTING_MODE:
+    if not configuration.PROFILE.is_test_profile:
         click.echo('We found {} log records that correspond to legacy workflows and {} log records to correspond '
                    'to an unknown entity.'.format(lwf_number, other_number))
         click.echo(
@@ -112,9 +112,7 @@ def export_and_clean_workflow_logs(apps, _):
         if not proceed:
             sys.exit(1)
 
-    delete_on_close = False
-    if settings.TESTING_MODE:
-        delete_on_close = True
+    delete_on_close = configuration.PROFILE.is_test_profile
 
     # Exporting the legacy workflow log records
     if lwf_number != 0:
@@ -260,7 +258,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dblog',
             name='uuid',
-            field=models.UUIDField(default=aiida.common.utils.get_new_uuid, null=True),
+            field=models.UUIDField(default=get_new_uuid, null=True),
         ),
 
         # Add unique UUIDs to the UUID field. There is no need for a reverse migration for a field
@@ -271,7 +269,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='dblog',
             name='uuid',
-            field=models.UUIDField(default=aiida.common.utils.get_new_uuid, unique=True),
+            field=models.UUIDField(default=get_new_uuid, unique=True),
         ),
         upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

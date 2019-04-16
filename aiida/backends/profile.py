@@ -23,3 +23,12 @@ warnings.warn('this module is deprecated', DeprecationWarning)  # pylint: disabl
 # Possible choices for backend
 BACKEND_DJANGO = 'django'
 BACKEND_SQLA = 'sqlalchemy'
+
+# These appearingly random attributes *need* to be here, otherwise the building of the docs will fail on python 3.
+# This problem appeared after the mechanism for loading profiles and the database backend was changed significantly.
+# Since then Sphinx started failing with an exception that the attributes `run` and `runctx` are not defined in the
+# `profile` module. What it should be targeting is the `cProfile` method, but somehow it ends up here. Simply adding
+# the attributes here fixes the problem, even though we have absolutely no idea why. Given that the module is deprecated
+# anyway and will soon be removed at which point the problem should no longer exist.
+run = None
+runctx = None

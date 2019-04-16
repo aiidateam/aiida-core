@@ -12,7 +12,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-import errno
 import fnmatch
 import io
 import os
@@ -21,7 +20,6 @@ import tempfile
 
 import six
 
-from . import timezone
 from .utils import get_repository_folder
 
 # If True, tries to make everything (dirs, files) group-writable.

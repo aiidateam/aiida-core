@@ -20,7 +20,8 @@ from aiida.backends.sqlalchemy.models.comment import DbComment
 from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.backends.sqlalchemy.models.group import DbGroup
 from aiida.backends.sqlalchemy.models.log import DbLog
-from aiida.backends.sqlalchemy.models.node import DbComputer, DbLink, DbNode
+from aiida.backends.sqlalchemy.models.node import DbLink, DbNode
+from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.backends.sqlalchemy.models.settings import DbSetting
 from aiida.backends.sqlalchemy.models.user import DbUser
 from aiida.common.exceptions import DbContentError

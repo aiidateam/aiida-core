@@ -13,7 +13,6 @@ from __future__ import print_function
 from __future__ import absolute_import
 from sqlalchemy import ForeignKey, select
 from sqlalchemy.orm import relationship, backref
-from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.schema import Column
 from sqlalchemy.types import Integer, String, Boolean, DateTime, Text
 # Specific to PGSQL. If needed to be agnostic
@@ -25,8 +24,6 @@ from aiida.common import timezone
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.common.utils import get_new_uuid
 from aiida.backends.sqlalchemy.utils import flag_modified
-from aiida.backends.sqlalchemy.models.user import DbUser
-from aiida.backends.sqlalchemy.models.computer import DbComputer
 
 
 class DbNode(Base):
@@ -208,39 +205,6 @@ class DbNode(Base):
             return "{} node [{}]: {}".format(simplename, self.pk, self.label)
         else:
             return "{} node [{}]".format(simplename, self.pk)
-
-    # User email
-    @hybrid_property
-    def user_email(self):
-        """
-        Returns: the email of the user
-        """
-        return self.user.email
-
-    @user_email.expression
-    def user_email(cls):
-        """
-        Returns: the email of the user at a class level (i.e. in the database)
-        """
-        return select([DbUser.email]).where(DbUser.id == cls.user_id).label(
-            'user_email')
-
-    # Computer name
-    @hybrid_property
-    def computer_name(self):
-        """
-        Returns: the of the computer
-        """
-        return self.dbcomputer.name
-
-    @computer_name.expression
-    def computer_name(cls):
-        """
-        Returns: the name of the computer at a class level (i.e. in the database)
-        """
-        return select([DbComputer.name]).where(DbComputer.id ==
-                                               cls.dbcomputer_id).label(
-            'computer_name')
 
 
 class DbLink(Base):

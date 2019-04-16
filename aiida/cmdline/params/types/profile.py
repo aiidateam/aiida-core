@@ -21,7 +21,7 @@ class ProfileParamType(click.ParamType):
     name = 'profile'
 
     def __init__(self, *args, **kwargs):
-        self._must_exist = kwargs.pop('must_exist', True)
+        self._cannot_exist = kwargs.pop('cannot_exist', False)
         super(ProfileParamType, self).__init__(*args, **kwargs)
 
     @staticmethod
@@ -37,11 +37,14 @@ class ProfileParamType(click.ParamType):
             config = get_config()
             profile = config.get_profile(value)
         except (MissingConfigurationError, ProfileConfigurationError) as exception:
-            if self._must_exist:
+            if not self._cannot_exist:
                 self.fail(str(exception))
 
             # Create a new empty profile
             profile = Profile(value, {})
+        else:
+            if self._cannot_exist:
+                self.fail(str('the profile `{}` already exists'.format(value)))
 
         return profile
 
@@ -53,6 +56,9 @@ class ProfileParamType(click.ParamType):
         """
         from aiida.common.exceptions import MissingConfigurationError
         from aiida.manage.configuration import get_config
+
+        if self._cannot_exist:
+            return []
 
         try:
             config = get_config()

@@ -123,7 +123,7 @@ class CalcJob(Process):
     def run(self):
         """Run the calculation, we put it in the TOSUBMIT state and then wait for it to be completed."""
         from aiida.orm import Code, load_node
-        from aiida.common.folders import SandboxFolder, SubmitTestFolder
+        from aiida.common.folders import SandboxFolder
         from aiida.common.exceptions import InputValidationError
 
         # The following conditional is required for the caching to properly work. Even if the source node has a process
@@ -133,15 +133,7 @@ class CalcJob(Process):
         if self.node.exit_status is not None:
             return self.node.exit_status
 
-        if self.inputs.metadata.dry_run:
-            folder_class = SubmitTestFolder
-        else:
-            folder_class = SandboxFolder
-
-        with folder_class() as folder:
-
-            if self.inputs.metadata.dry_run:
-                self.node.set_attribute("dry_run_path", folder.abspath)
+        with SandboxFolder() as folder:
 
             computer = self.node.computer
 

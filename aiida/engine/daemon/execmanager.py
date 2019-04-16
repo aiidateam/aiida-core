@@ -214,6 +214,8 @@ def upload_calculation(node, transport, calc_info, script_filename, dry_run=Fals
         remotedata = RemoteData(computer=computer, remote_path=workdir)
         remotedata.add_incoming(node, link_type=LinkType.CREATE, link_label='remote_folder')
         remotedata.store()
+    else:
+        node.put_object_from_tree(workdir, key=".submit_folder", force=True)
 
     return calc_info, script_filename
 

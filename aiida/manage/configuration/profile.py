@@ -62,6 +62,15 @@ class Profile(object):  # pylint: disable=useless-object-inheritance,too-many-pu
         KEY_REPOSITORY_URI: 'repository_uri',
     }
 
+    @classmethod
+    def contains_unknown_keys(cls, dictionary):
+        """Return whether the profile dictionary contains any unsupported keys.
+
+        :param dictionary: a profile dictionary
+        :return: boolean, True when the dictionay contains unsupported keys
+        """
+        return set(dictionary.keys()) - set(cls._map_config_to_internal.keys())
+
     def __init__(self, name, attributes, from_config=False):
         if not isinstance(attributes, collections.Mapping):
             raise TypeError('attributes should be a mapping but is {}'.format(type(attributes)))

@@ -16,13 +16,13 @@ import six
 
 from click.testing import CliRunner
 
-from aiida.backends.testbase import AiidaTestCase
+from aiida.backends.testbase import AiidaPostgresTestCase
 from aiida.cmdline.commands import cmd_profile
 from aiida.backends.tests.utils.configuration import create_mock_profile, with_temporary_config_instance
-from aiida.manage.configuration import get_config
+from aiida.manage import configuration
 
 
-class TestVerdiProfileSetup(AiidaTestCase):
+class TestVerdiProfileSetup(AiidaPostgresTestCase):
     """Tests for `verdi profile`."""
 
     def setUp(self):
@@ -32,18 +32,18 @@ class TestVerdiProfileSetup(AiidaTestCase):
         self.config = None
         self.profile_list = []
 
-    def mock_profiles(self):
+    def mock_profiles(self, **kwargs):
         """Create mock profiles and a runner object to invoke the CLI commands.
 
         Note: this cannot be done in the `setUp` or `setUpClass` methods, because the temporary configuration instance
         is not generated until the test function is entered, which calls the `with_temporary_config_instance`
         decorator.
         """
-        self.config = get_config()
+        self.config = configuration.get_config()
         self.profile_list = ['mock_profile1', 'mock_profile2', 'mock_profile3', 'mock_profile4']
 
         for profile_name in self.profile_list:
-            profile = create_mock_profile(profile_name)
+            profile = create_mock_profile(profile_name, **kwargs)
             self.config.add_profile(profile)
 
         self.config.set_default_profile(self.profile_list[0], overwrite=True).store()
@@ -102,7 +102,7 @@ class TestVerdiProfileSetup(AiidaTestCase):
         """Test the `verdi profile show` command."""
         self.mock_profiles()
 
-        config = get_config()
+        config = configuration.get_config()
         profile_name = self.profile_list[0]
         profile = config.get_profile(profile_name)
 
@@ -114,7 +114,7 @@ class TestVerdiProfileSetup(AiidaTestCase):
                 self.assertIn(value, result.output)
 
     @with_temporary_config_instance
-    def test_delete(self):
+    def test_delete_partial(self):
         """Test the `verdi profile delete` command.
 
         .. note:: we skip deleting the database as this might require sudo rights and this is tested in the CI tests
@@ -128,3 +128,33 @@ class TestVerdiProfileSetup(AiidaTestCase):
         result = self.cli_runner.invoke(cmd_profile.profile_list)
         self.assertClickSuccess(result)
         self.assertNotIn(self.profile_list[1], result.output)
+
+    @with_temporary_config_instance
+    def test_delete(self):
+        """Test for verdi profile delete command."""
+        from aiida.cmdline.commands.cmd_profile import profile_delete, profile_list
+
+        configuration.reset_profile()
+
+        kwargs = {'database_port': self.pg_test.dsn['port']}
+        self.mock_profiles(**kwargs)
+
+        # Delete single profile
+        result = self.cli_runner.invoke(profile_delete, ['--force', self.profile_list[1]])
+        self.assertIsNone(result.exception, result.output)
+
+        result = self.cli_runner.invoke(profile_list)
+        self.assertIsNone(result.exception, result.output)
+
+        self.assertNotIn(self.profile_list[1], result.output)
+        self.assertIsNone(result.exception, result.output)
+
+        # Delete multiple profiles
+        result = self.cli_runner.invoke(profile_delete, ['--force', self.profile_list[2], self.profile_list[3]])
+        self.assertIsNone(result.exception, result.output)
+
+        result = self.cli_runner.invoke(profile_list)
+        self.assertIsNone(result.exception, result.output)
+        self.assertNotIn(self.profile_list[2], result.output)
+        self.assertNotIn(self.profile_list[3], result.output)
+        self.assertIsNone(result.exception, result.output)

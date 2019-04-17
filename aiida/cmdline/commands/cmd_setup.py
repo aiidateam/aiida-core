@@ -122,6 +122,7 @@ def quicksetup(ctx, non_interactive, profile, email, first_name, last_name, inst
         'host': db_host,
         'port': db_port,
         'user': db_username,
+        'password': db_password,
     }
     postgres = Postgres(interactive=not non_interactive, quiet=False, dbinfo=dbinfo)
     postgres.set_setup_fail_callback(prompt_db_info)
@@ -139,11 +140,11 @@ def quicksetup(ctx, non_interactive, profile, email, first_name, last_name, inst
             postgres.create_db(db_username, db_name)
     except Exception as exception:
         echo.echo_error('\n'.join([
-            'Oops! Something went wrong while creating the database for you.',
-            'You may continue with the quicksetup, however:',
-            'For aiida to work correctly you will have to do that yourself as follows.',
+            'Oops! quicksetup was unable to create the AiiDA database for you.',
+            'For AiiDA to work, please either create the database yourself as follows:',
             manual_setup_instructions(dbuser=db_username, dbname=db_name), '',
-            'Or setup your (OS-level) user to have permissions to create databases and rerun quicksetup.', ''
+            'Alternatively, give your (operating system) user permission to create postgresql databases' +
+            'and run quicksetup again.', ''
         ]))
         raise exception
 

@@ -18,7 +18,7 @@ import shutil
 import tempfile
 
 
-def create_mock_profile(name, repository_dirpath=None):
+def create_mock_profile(name, repository_dirpath=None, **kwargs):
     """Create mock profile for testing purposes.
 
     :param name: name of the profile
@@ -31,14 +31,14 @@ def create_mock_profile(name, repository_dirpath=None):
         repository_dirpath = config.dirpath
 
     profile_dictionary = {
-        'default_user': 'dummy@localhost',
-        'database_engine': 'postgresql_psycopg2',
-        'database_backend': 'django',
-        'database_name': name,
-        'database_port': '5432',
-        'database_hostname': 'localhost',
-        'database_username': 'user',
-        'database_password': 'pass',
+        'default_user': kwargs.pop('default_user', 'dummy@localhost'),
+        'database_engine': kwargs.pop('database_engine', 'postgresql_psycopg2'),
+        'database_backend': kwargs.pop('database_backend', 'django'),
+        'database_name': kwargs.pop('database_name', name),
+        'database_port': kwargs.pop('database_port', '5432'),
+        'database_hostname': kwargs.pop('database_hostname', 'localhost'),
+        'database_username': kwargs.pop('database_username', 'user'),
+        'database_password': kwargs.pop('database_password', 'pass'),
         'repository_uri': 'file:///' + os.path.join(repository_dirpath, 'repository_' + name),
     }
 
@@ -51,23 +51,27 @@ def temporary_config_instance():
     current_config = None
     current_config_path = None
     current_profile = None
+    current_backend_uuid = None
     temporary_config_directory = None
 
     from aiida.manage import configuration
-    from aiida.manage.configuration import settings
+    from aiida.manage.configuration import settings, reset_profile
 
     try:
         from aiida.manage.configuration.settings import create_instance_directories
 
         # Store the current configuration instance and config directory path
         current_config = configuration.CONFIG
-        current_config_path = current_config.dirpath
         current_profile = configuration.PROFILE
+        current_backend_uuid = configuration.BACKEND_UUID
+        current_config_path = current_config.dirpath
+
+        reset_profile()
+        configuration.CONFIG = None
 
         # Create a temporary folder, set it as the current config directory path and reset the loaded configuration
         profile_name = 'test_profile_1234'
         temporary_config_directory = tempfile.mkdtemp()
-        configuration.CONFIG = None
         settings.AIIDA_CONFIG_FOLDER = temporary_config_directory
 
         # Create the instance base directory structure, the config file and a dummy profile
@@ -84,9 +88,10 @@ def temporary_config_instance():
         yield configuration.CONFIG
     finally:
         # Reset the config folder path and the config instance
-        configuration.CONFIG = current_config
         settings.AIIDA_CONFIG_FOLDER = current_config_path
+        configuration.CONFIG = current_config
         configuration.PROFILE = current_profile
+        configuration.BACKEND_UUID = current_backend_uuid
 
         # Destroy the temporary instance directory
         if temporary_config_directory and os.path.isdir(temporary_config_directory):

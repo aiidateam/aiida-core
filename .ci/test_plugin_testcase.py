@@ -24,8 +24,7 @@ import tempfile
 import shutil
 
 from aiida.manage.fixtures import PluginTestCase, TestRunner
-from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
-from aiida import is_dbenv_loaded
+from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
 
 
 def determine_backend():
@@ -67,7 +66,6 @@ class PluginTestCase1(PluginTestCase):
             transport_type='local',
             scheduler_type='direct',
             workdir=temp_dir,
-            enabled_state=True,
             backend=cls.backend).store()
         return computer
 
@@ -76,8 +74,6 @@ class PluginTestCase1(PluginTestCase):
         Check that the data is indeed in the DB when calling load_node
         """
         from aiida import orm
-
-        self.assertTrue(is_dbenv_loaded())
         self.assertEqual(orm.load_node(self.data_pk).uuid, self.data.uuid)
         self.assertEqual(orm.Computer.objects.get(name='localhost').uuid, self.computer.uuid)
 

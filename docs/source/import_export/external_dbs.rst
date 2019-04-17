@@ -2,8 +2,7 @@
 Structures and external databases
 =================================
 
-AiiDA support the automatic import and export of atomic
-structures from and to selected external databases.
+AiiDA support the automatic import and export of atomic structures from and to selected external databases.
 
 Import
 +++++++
@@ -18,23 +17,3 @@ Below is a list of available plugins:
  
    dbimporters/icsd
    dbimporters/cod
-
-Export
-++++++
-In general terms, the export to external databases can be viewed as a
-subworkflow, taking data as input and resulting in the deposition of it to
-external database(s). 
-
-Below is a list of supported databases with deposition routines described in
-*comments-type* style.
-
-.. toctree::
-   :maxdepth: 4
-
-   dbexporters/tcod
-
-
-
-
-   
-

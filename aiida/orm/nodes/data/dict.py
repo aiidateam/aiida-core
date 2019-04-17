@@ -39,6 +39,9 @@ class Dict(Data):
         if dictionary:
             self.set_dict(dictionary)
 
+    def __getitem__(self, key):
+        return self.get_dict()[key]
+
     def set_dict(self, dictionary):
         """ Replace the current dictionary with another one.
 

@@ -6,6 +6,8 @@ set -ev
 # Needed on Jenkins
 if [ -e ~/.bashrc ] ; then source ~/.bashrc ; fi
 
+CI_DIR="${TRAVIS_BUILD_DIR}/.ci"
+
 case "$TEST_TYPE" in
     docs)
         # Compile the docs (HTML format);
@@ -15,7 +17,6 @@ case "$TEST_TYPE" in
         SPHINXOPTS="-nW" make -C docs
         ;;
     tests)
-        CI_DIR="${TRAVIS_BUILD_DIR}/.ci"
 
         # Add the .ci folder to the python path so workchains within it can be found by the daemon
         export PYTHONPATH="${PYTHONPATH}:${CI_DIR}"
@@ -24,7 +25,6 @@ case "$TEST_TYPE" in
         coverage erase
 
         # Run preliminary tests
-        coverage run -a "${CI_DIR}/test_profile.py"
         coverage run -a "${CI_DIR}/test_fixtures.py"
         coverage run -a "${CI_DIR}/test_plugin_testcase.py"
 
@@ -55,5 +55,6 @@ case "$TEST_TYPE" in
         # Replace dep1 dep2 ... with your dependencies
         conda env create -f environment.yml -n test-environment python=$TRAVIS_PYTHON_VERSION
         source activate test-environment
+        verdi --help
         ;;
 esac

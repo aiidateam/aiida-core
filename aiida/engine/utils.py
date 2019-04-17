@@ -27,6 +27,42 @@ PROCESS_STATE_CHANGE_KEY = 'process|state_change|{}'
 PROCESS_STATE_CHANGE_DESCRIPTION = 'The last time a process of type {}, changed state'
 
 
+def instantiate_process(runner, process, *args, **inputs):
+    """
+    Return an instance of the process with the given inputs. The function can deal with various types
+    of the `process`:
+
+        * Process instance: will simply return the instance
+        * ProcessBuilder instance: will instantiate the Process from the class and inputs defined within it
+        * Process class: will instantiate with the specified inputs
+
+    If anything else is passed, a ValueError will be raised
+
+    :param process: Process instance or class, CalcJobNode class or ProcessBuilder instance
+    :param inputs: the inputs for the process to be instantiated with
+    """
+    from .processes import Process, ProcessBuilder
+
+    if isinstance(process, Process):
+        assert not args
+        assert not inputs
+        assert runner is process.runner
+        return process
+
+    if isinstance(process, ProcessBuilder):
+        builder = process
+        process_class = builder.process_class
+        inputs.update(**builder)
+    elif issubclass(process, Process):
+        process_class = process
+    else:
+        raise ValueError('invalid process {}, needs to be Process or ProcessBuilder'.format(type(process)))
+
+    process = process_class(runner=runner, inputs=inputs)
+
+    return process
+
+
 class InterruptableFuture(concurrent.Future):
     """A future that can be interrupted by calling `interrupt`."""
 

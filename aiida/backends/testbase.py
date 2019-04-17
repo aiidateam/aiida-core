@@ -18,34 +18,18 @@ import traceback
 
 from tornado import ioloop
 
-from aiida.backends import settings
 from aiida.backends.tests import get_db_test_list
 from aiida.common.exceptions import ConfigurationError, TestsNotAllowedError, InternalError
 from aiida.common.lang import classproperty
+from aiida.manage import configuration
 from aiida.manage.manager import reset_manager
 
 
 def check_if_tests_can_run():
-    """
-    Check if the tests can run (i.e., if we are in a test profile).
-    Otherwise, raise TestsNotAllowedError.
-    """
-    from aiida import settings as settings2
-    from aiida.common.setup import TEST_KEYWORD
-
-    base_repo_path = os.path.basename(
-        os.path.normpath(settings2.REPOSITORY_PATH))
-    if (not settings.AIIDADB_PROFILE.startswith(TEST_KEYWORD) or
-            TEST_KEYWORD not in base_repo_path or
-            not settings2.DBNAME.startswith(TEST_KEYWORD)):
-        msg = [
-            "A non-test profile was given for tests. Please note "
-            "that the test profile should have test specific "
-            "database name and test specific repository name.",
-            "Given profile: {}".format(settings.AIIDADB_PROFILE),
-            "Related repository path: {}".format(base_repo_path),
-            "Related database name: {}".format(settings2.DBNAME)]
-        raise TestsNotAllowedError("\n".join(msg))
+    """Verify that the currently loaded profile is a test profile, otherwise raise `TestsNotAllowedError`."""
+    profile = configuration.PROFILE
+    if not profile.is_test_profile:
+        raise TestsNotAllowedError('currently loaded profile {} is not a valid test profile'.format(profile.name))
 
 
 class AiidaTestCase(unittest.TestCase):
@@ -61,15 +45,16 @@ class AiidaTestCase(unittest.TestCase):
     @classmethod
     def get_backend_class(cls):
         from aiida.backends.testimplbase import AiidaTestImplementation
+        from aiida.backends import BACKEND_SQLA, BACKEND_DJANGO
+        from aiida.manage.configuration import PROFILE
 
-        from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
         # Freeze the __impl_class after the first run
         if not hasattr(cls, '__impl_class'):
-            if settings.BACKEND == BACKEND_SQLA:
+            if PROFILE.database_backend == BACKEND_SQLA:
                 from aiida.backends.sqlalchemy.tests.testbase import (
                     SqlAlchemyTests)
                 cls.__impl_class = SqlAlchemyTests
-            elif settings.BACKEND == BACKEND_DJANGO:
+            elif PROFILE.database_backend == BACKEND_DJANGO:
                 from aiida.backends.djsite.db.testbase import DjangoTests
                 cls.__impl_class = DjangoTests
             else:
@@ -151,21 +136,23 @@ class AiidaTestCase(unittest.TestCase):
         """
         Cleans up file repository.
         """
-        from aiida.settings import REPOSITORY_PATH
-        from aiida.common.setup import TEST_KEYWORD
+        from aiida.manage.configuration import get_profile
         from aiida.common.exceptions import InvalidOperation
         import shutil
 
-        base_repo_path = os.path.basename(os.path.normpath(REPOSITORY_PATH))
+        dirpath_repository = get_profile().repository_path
+
+        TEST_KEYWORD = 'test_'
+        base_repo_path = os.path.basename(os.path.normpath(dirpath_repository))
         if TEST_KEYWORD not in base_repo_path:
             raise InvalidOperation("Warning: The repository folder {} does not "
                                    "seem to belong to a test profile and will therefore not be deleted.\n"
                                    "Full repository path: "
-                                   "{}".format(base_repo_path, REPOSITORY_PATH))
+                                   "{}".format(base_repo_path, dirpath_repository))
 
         # Clean the test repository
-        shutil.rmtree(REPOSITORY_PATH, ignore_errors=True)
-        os.makedirs(REPOSITORY_PATH)
+        shutil.rmtree(dirpath_repository, ignore_errors=True)
+        os.makedirs(dirpath_repository)
 
     @classproperty
     def computer(cls):
@@ -191,11 +178,27 @@ class AiidaTestCase(unittest.TestCase):
         cls.__backend_instance.tearDownClass_method(*args, **kwargs)
 
     def assertClickSuccess(self, cli_result):
-        self.assertEqual(cli_result.exit_code, 0)
+        self.assertEqual(cli_result.exit_code, 0, cli_result.output)
         self.assertClickResultNoException(cli_result)
 
     def assertClickResultNoException(self, cli_result):
         self.assertIsNone(cli_result.exception, ''.join(traceback.format_exception(*cli_result.exc_info)))
+
+
+class AiidaPostgresTestCase(AiidaTestCase):
+
+    @classmethod
+    def setUpClass(cls, *args, **kwargs):
+        """Setup the PGTest postgres test cluster."""
+        from pgtest.pgtest import PGTest
+        cls.pg_test = PGTest()
+        super(AiidaPostgresTestCase, cls).setUpClass(*args, **kwargs)
+
+    @classmethod
+    def tearDownClass(cls, *args, **kwargs):
+        """Close the PGTest postgres test cluster."""
+        super(AiidaPostgresTestCase, cls).tearDownClass(*args, **kwargs)
+        cls.pg_test.close()
 
 
 def run_aiida_db_tests(tests_to_run, verbose=False):

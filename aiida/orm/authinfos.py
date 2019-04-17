@@ -7,12 +7,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Authinfo objects and functions"""
+"""Module for the `AuthInfo` ORM class."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from aiida.common.exceptions import (ConfigurationError, MissingPluginError)
+from aiida.common import exceptions
 from aiida.plugins import TransportFactory
 from aiida.manage.manager import get_manager
 from . import entities
@@ -22,31 +22,26 @@ __all__ = ('AuthInfo',)
 
 
 class AuthInfo(entities.Entity):
-    """
-    Base class to map a DbAuthInfo, that contains computer configuration
-    specific to a given user (authorization info and other metadata, like
-    how often to check on a given computer etc.)
-    """
+    """ORM class that models the authorization information that allows a `User` to connect to a `Computer`."""
 
     class Collection(entities.Collection):
-        """The collection of AuthInfo entries."""
+        """The collection of `AuthInfo` entries."""
 
-        def delete(self, authinfo_id):
+        def delete(self, pk):
+            """Delete an entry from the collection.
+
+            :param pk: the pk of the entry to delete
             """
-            Remove an AuthInfo from the collection with the given id
-            :param authinfo_id: The ID of the authinfo to delete
-            """
-            self._backend.authinfos.delete(authinfo_id)
+            self._backend.authinfos.delete(pk)
 
     PROPERTY_WORKDIR = 'workdir'
 
     def __init__(self, computer, user, backend=None):
-        """
-        Create a AuthInfo given a computer and a user
+        """Create an `AuthInfo` instance for the given computer and user.
 
-        :param computer: a Computer instance
-        :param user: a User instance
-        :return: an AuthInfo object associated with the given computer and user
+        :param computer: a `Computer` instance
+        :param user: a `User` instance
+        :return: :class:`aiida.orm.authinfos.AuthInfo`
         """
         backend = backend or get_manager().get_backend()
         model = backend.authinfos.create(computer=computer.backend_entity, user=user.backend_entity)
@@ -54,99 +49,99 @@ class AuthInfo(entities.Entity):
 
     def __str__(self):
         if self.enabled:
-            return "AuthInfo for {} on {}".format(self.user.email, self.computer.name)
+            return 'AuthInfo for {} on {}'.format(self.user.email, self.computer.name)
 
-        return "AuthInfo for {} on {} [DISABLED]".format(self.user.email, self.computer.name)
+        return 'AuthInfo for {} on {} [DISABLED]'.format(self.user.email, self.computer.name)
 
     @property
     def enabled(self):
-        """
-        Is the computer enabled for this user?
+        """Return whether this instance is enabled.
 
-        :rtype: bool
+        :return: boolean, True if enabled, False otherwise
         """
         return self._backend_entity.enabled
 
     @enabled.setter
     def enabled(self, enabled):
-        """
-        Set the enabled state for the computer
+        """Set the enabled state
+
+        :param enabled: boolean, True to enable the instance, False to disable it
         """
         self._backend_entity.enabled = enabled
 
     @property
     def computer(self):
+        """Return the computer associated with this instance.
+
+        :return: :class:`aiida.orm.computers.Computer`
+        """
         from . import computers  # pylint: disable=cyclic-import
         return computers.Computer.from_backend_entity(self._backend_entity.computer)
 
     @property
     def user(self):
+        """Return the user associated with this instance.
+
+        :return: :class:`aiida.orm.users.User`
+        """
         return users.User.from_backend_entity(self._backend_entity.user)
 
-    def is_stored(self):
-        """
-        Is it already stored or not?
-
-        :return: Boolean
-        """
-        return self._backend_entity.is_stored()
-
     def get_auth_params(self):
-        """
-        Get the dictionary of auth_params
+        """Return the dictionary of authentication parameters
 
-        :return: a dictionary
+        :return: a dictionary with authentication parameters
         """
         return self._backend_entity.get_auth_params()
 
     def set_auth_params(self, auth_params):
-        """
-        Set the dictionary of auth_params
+        """Set the dictionary of authentication parameters
 
-        :param auth_params: a dictionary with the new auth_params
+        :param auth_params: a dictionary with authentication parameters
         """
         self._backend_entity.set_auth_params(auth_params)
 
-    def get_property(self, name):
-        """
-        Get an authinfo property
+    def get_metadata(self):
+        """Return the dictionary of metadata
 
-        :param name: the property name
-        :return: the property value
+        :return: a dictionary with metadata
         """
-        return self._backend_entity.get_property(name)
+        return self._backend_entity.get_metadata()
 
-    def set_property(self, name, value):
-        """
-        Set an authinfo property
+    def set_metadata(self, metadata):
+        """Set the dictionary of metadata
 
-        :param name: the property name
-        :param value: the property value
+        :param metadata: a dictionary with metadata
         """
-        self._backend_entity.set_property(name, value)
+        self._backend_entity.set_metadata(metadata)
 
     def get_workdir(self):
-        """
-        Get the workdir; defaults to the value of the corresponding computer, if not explicitly set
+        """Return the working directory.
 
-        :return: the workdir
+        If no explicit work directory is set for this instance, the working directory of the computer will be returned.
+
+        :return: the working directory
         :rtype: str
         """
         try:
-            return self.get_property(self.PROPERTY_WORKDIR)
-        except ValueError:
+            return self.get_metadata()[self.PROPERTY_WORKDIR]
+        except KeyError:
             return self.computer.get_workdir()
 
     def get_transport(self):
-        """
-        Return a configured transport to connect to the computer.
+        """Return a fully configured transport that can be used to connect to the computer set for this instance.
+
+        :return: :class:`aiida.transports.Transport`
         """
         computer = self.computer
-        try:
-            this_transport_class = TransportFactory(computer.get_transport_type())
-        except MissingPluginError as exc:
-            raise ConfigurationError('No transport found for {} [type {}], message: {}'.format(
-                computer.hostname, computer.get_transport_type(), exc))
+        transport_type = computer.get_transport_type()
+        transport_params = computer.get_transport_params()
 
-        params = dict(list(computer.get_transport_params().items()) + list(self.get_auth_params().items()))
-        return this_transport_class(machine=computer.hostname, **params)
+        try:
+            transport_class = TransportFactory(transport_type)
+        except exceptions.EntryPointError as exception:
+            raise exceptions.ConfigurationError('transport type `{}` could not be loaded: {}'.format(
+                transport_type, exception))
+
+        parameters = dict(list(transport_params.items()) + list(self.get_auth_params().items()))
+
+        return transport_class(machine=computer.hostname, **parameters)

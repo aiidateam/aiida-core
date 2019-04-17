@@ -225,13 +225,13 @@ class CifData(SinglefileData):
     """
     Wrapper for Crystallographic Interchange File (CIF)
 
-    .. note:: the filepath (physical) is held as the authoritative source of
+    .. note:: the file (physical) is held as the authoritative source of
         information, so all conversions are done through the physical file:
         when setting ``ase`` or ``values``, a physical CIF file is generated
         first, the values are updated from the physical CIF file.
     """
     # pylint: disable=abstract-method, too-many-public-methods
-    _set_incompatibilities = [('ase', 'filepath'), ('ase', 'values'), ('filepath', 'values')]
+    _set_incompatibilities = [('ase', 'file'), ('ase', 'values'), ('file', 'values')]
     _scan_types = ('standard', 'flex')
     _parse_policies = ('eager', 'lazy')
     _values = None
@@ -239,7 +239,7 @@ class CifData(SinglefileData):
 
     def __init__(self,
                  ase=None,
-                 filepath=None,
+                 file=None,
                  values=None,
                  source=None,
                  scan_type='standard',
@@ -249,7 +249,7 @@ class CifData(SinglefileData):
 
         args = {
             'ase': ase,
-            'filepath': filepath,
+            'file': file,
             'values': values,
         }
 
@@ -257,7 +257,7 @@ class CifData(SinglefileData):
             if args[left] is not None and args[right] is not None:
                 raise ValueError('cannot pass {} and {} at the same time'.format(left, right))
 
-        super(CifData, self).__init__(filepath, **kwargs)
+        super(CifData, self).__init__(file, **kwargs)
         self.set_scan_type(scan_type)
         self.set_parse_policy(parse_policy)
 
@@ -270,7 +270,7 @@ class CifData(SinglefileData):
         if values is not None:
             self.set_values(values)
 
-        if not self.is_stored and filepath is not None and self.get_attribute('parse_policy') == 'eager':
+        if not self.is_stored and file is not None and self.get_attribute('parse_policy') == 'eager':
             self.parse()
 
     @staticmethod
@@ -332,9 +332,9 @@ class CifData(SinglefileData):
         cifs = cls.from_md5(md5)
         if not cifs:
             if store_cif:
-                instance = cls(filepath=filename).store()
+                instance = cls(file=filename).store()
                 return (instance, True)
-            instance = cls(filepath=filename)
+            instance = cls(file=filename)
             return (instance, True)
 
         if len(cifs) > 1:
@@ -383,7 +383,7 @@ class CifData(SinglefileData):
             with Capturing():
                 tmpf.write(pycifrw_from_cif(cif, loops=ase_loops).WriteOut())
             tmpf.flush()
-            self.put_object_from_file(tmpf.name)
+            self.set_file(tmpf.name)
 
     @ase.setter
     def ase(self, aseatoms):
@@ -422,7 +422,7 @@ class CifData(SinglefileData):
             with Capturing():
                 tmpf.write(values.WriteOut())
             tmpf.flush()
-            self.put_object_from_file(tmpf.name)
+            self.set_file(tmpf.name)
 
         self._values = values
 
@@ -453,15 +453,15 @@ class CifData(SinglefileData):
 
         return super(CifData, self).store(*args, **kwargs)
 
-    # pylint: disable=attribute-defined-outside-init
-    def put_object_from_file(self, path, key=None, mode='w', encoding='utf8', force=False):
+    def set_file(self, file):
         """
         Set the file.
 
         If the source is set and the MD5 checksum of new file
         is different from the source, the source has to be deleted.
         """
-        super(CifData, self).put_object_from_file(path, key, mode, encoding, force)
+        # pylint: disable=redefined-builtin
+        super(CifData, self).set_file(file)
         md5sum = self.generate_md5()
         if isinstance(self.source, dict) and \
                 self.source.get('source_md5', None) is not None and \
@@ -759,14 +759,6 @@ class CifData(SinglefileData):
 
         with self.open() as handle:
             return handle.read().encode('utf-8'), {}
-
-    # pylint: disable=unused-argument
-    def _prepare_tcod(self, main_file_name="", **kwargs):
-        """
-        Write the given CIF to a string of format TCOD CIF.
-        """
-        from aiida.tools.dbexporters.tcod import export_cif
-        return export_cif(self, **kwargs), {}
 
     def _get_object_ase(self):
         """

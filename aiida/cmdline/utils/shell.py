@@ -102,7 +102,7 @@ def get_start_namespace():
     for app_mod, model_name, alias in DEFAULT_MODULES_LIST:
         user_ns[alias] = getattr(__import__(app_mod, {}, {}, model_name), model_name)
 
-    verdi_shell_auto_import = config.option_get('verdi.shell.auto_import', config.current_profile.name).split(':')
+    verdi_shell_auto_import = config.get_option('verdi.shell.auto_import', config.current_profile.name).split(':')
 
     # Load custom modules
     modules_list = [(str(e[0]), str(e[2])) for e in [p.rpartition('.') for p in verdi_shell_auto_import] if e[1] == '.']

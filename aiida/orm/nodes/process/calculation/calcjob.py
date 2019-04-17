@@ -58,7 +58,6 @@ class CalcJobNode(CalculationNode):
 
         :return: CalculationTools instance
         """
-        from aiida.common.exceptions import MultipleEntryPointError, MissingEntryPointError, LoadingEntryPointError
         from aiida.plugins.entry_point import is_valid_entry_point_string, get_entry_point_from_string, load_entry_point
         from aiida.tools.calculations import CalculationTools
 
@@ -71,7 +70,7 @@ class CalcJobNode(CalculationNode):
                 try:
                     tools_class = load_entry_point('aiida.tools.calculations', entry_point.name)
                     self._tools = tools_class(self)
-                except (MultipleEntryPointError, MissingEntryPointError, LoadingEntryPointError) as exception:
+                except exceptions.EntryPointError as exception:
                     self._tools = CalculationTools(self)
                     self.logger.warning('could not load the calculation tools entry point {}: {}'.format(
                         entry_point.name, exception))
@@ -107,68 +106,20 @@ class CalcJobNode(CalculationNode):
         return super(CalcJobNode, self).get_hash(
             ignore_errors=ignore_errors, ignored_folder_content=ignored_folder_content, **kwargs)
 
-    @property
-    def process_class(self):
-        """Return the CalcJob class that was used to create this node.
-
-        :return: CalcJob class
-        :raises ValueError: if no process type is defined or it is an invalid process type string
-        """
-        from aiida.common.exceptions import MultipleEntryPointError, MissingEntryPointError, LoadingEntryPointError
-        from aiida.plugins.entry_point import load_entry_point_from_string
-
-        if not self.process_type:
-            raise ValueError('no process type for CalcJobNode<{}>: cannot recreate process class'.format(self.pk))
-
-        try:
-            process_class = load_entry_point_from_string(self.process_type)
-        except ValueError:
-            raise ValueError('process type for CalcJobNode<{}> contains an invalid entry point string: {}'.format(
-                self.pk, self.process_type))
-        except (MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError) as exception:
-            raise ValueError('could not load process class for entry point {} for CalcJobNode<{}>: {}'.format(
-                self.pk, self.process_type, exception))
-
-        return process_class
-
     def get_builder_restart(self):
+        """Return a `ProcessBuilder` that is ready to relaunch the same `CalcJob` that created this node.
+
+        The process class will be set based on the `process_type` of this node and the inputs of the builder will be
+        prepopulated with the inputs registered for this node. This functionality is very useful if a process has
+        completed and you want to relaunch it with slightly different inputs.
+
+        In addition to prepopulating the input nodes, which is implemented by the base `ProcessNode` class, here we
+        also add the `options` that were passed in the `metadata` input of the `CalcJob` process.
+
+        :return: `~aiida.engine.processes.builder.ProcessBuilder` instance
         """
-        Return a CalcJobBuilder instance, tailored for this calculation instance
-
-        This builder is a mapping of the inputs of the CalcJobNode class, supports tab-completion, automatic
-        validation when settings values as well as automated docstrings for each input.
-
-        The fields of the builder will be pre-populated with all the inputs recorded for this instance as well as
-        settings all the options that were explicitly set for this calculation instance.
-
-        This builder can then directly be launched again to effectively run a duplicate calculation. But more useful
-        is that it serves as a starting point to, after changing one or more inputs, launch a similar calculation by
-        using this already completed calculation as a starting point.
-
-        :return: CalcJobBuilder instance
-        """
-        from aiida.engine.processes.ports import PortNamespace
-
-        process_class = self.process_class
-        inputs = self.get_incoming()
-        options = self.get_options()
-        builder = process_class.get_builder()
-
-        for port_name, port in process_class.spec().inputs.items():
-            if port_name == process_class.spec().metadata_key:
-                builder.metadata.options = options
-            elif isinstance(port, PortNamespace):
-                namespace = port_name + '_'
-                sub = {
-                    entry.link_label[len(namespace):]: entry.node
-                    for entry in inputs
-                    if entry.link_label.startswith(namespace)
-                }
-                if sub:
-                    setattr(builder, port_name, sub)
-            else:
-                if port_name in inputs.all_link_labels():
-                    setattr(builder, port_name, inputs.get_node_by_label(port_name))
+        builder = super(CalcJobNode, self).get_builder_restart()
+        builder.metadata.options = self.get_options()
 
         return builder
 
@@ -187,11 +138,16 @@ class CalcJobNode(CalculationNode):
             raise exceptions.ValidationError('invalid calculation state `{}`'.format(self.get_state()))
 
         try:
-            self.get_parser_class()
-        except exceptions.MissingPluginError:
-            raise exceptions.ValidationError("No valid class/implementation found for the parser '{}'. "
-                                             "Set the parser to None if you do not need an automatic "
-                                             "parser.".format(self.get_option('parser_name')))
+            parser_class = self.get_parser_class()
+        except exceptions.EntryPointError as exception:
+            raise exceptions.ValidationError('invalid parser specified: {}'.format(exception))
+
+        try:
+            # Since a parser is not required to be set, so `get_parser_class` will return `None` in that case
+            if parser_class is not None:
+                parser_class(self)
+        except TypeError as exception:
+            raise exceptions.ValidationError('invalid parser specified: {}'.format(exception))
 
         computer = self.computer
         scheduler = computer.get_scheduler()
@@ -223,14 +179,6 @@ class CalcJobNode(CalculationNode):
 
         raise NotExistent('the `_raw_input_folder` has not yet been created')
 
-    @property
-    def options(self):
-        """Return the available process options for the process class that created this node."""
-        try:
-            return self.process_class.spec().inputs._ports['metadata']['options']  # pylint: disable=protected-access
-        except ValueError:
-            return {}
-
     def get_option(self, name):
         """
         Retun the value of an option that was set for this CalcJobNode
@@ -259,7 +207,7 @@ class CalcJobNode(CalculationNode):
         :return: dictionary of the options and their values
         """
         options = {}
-        for name in self.options.keys():
+        for name in self.process_class.spec_options.keys():
             value = self.get_option(name)
             if value is not None:
                 options[name] = value
@@ -513,7 +461,7 @@ class CalcJobNode(CalculationNode):
         """Return the output parser object for this calculation or None if no parser is set.
 
         :return: a `Parser` class.
-        :raise: MissingPluginError from ParserFactory no plugin is found.
+        :raises `aiida.common.exceptions.EntryPointError`: if the parser entry point can not be resolved.
         """
         from aiida.plugins import ParserFactory
 
@@ -567,7 +515,7 @@ class CalcJobNode(CalculationNode):
 
         try:
             stdout = retrieved_node.get_object_content(filename)
-        except exceptions.NotExistent:
+        except IOError:
             stdout = None
 
         return stdout
@@ -585,7 +533,7 @@ class CalcJobNode(CalculationNode):
 
         try:
             stderr = retrieved_node.get_object_content(filename)
-        except exceptions.NotExistent:
+        except IOError:
             stderr = None
 
         return stderr

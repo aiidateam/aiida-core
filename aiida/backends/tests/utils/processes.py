@@ -14,7 +14,7 @@ from __future__ import absolute_import
 
 import plumpy
 
-from aiida.orm import WorkflowNode
+from aiida.orm import Data, WorkflowNode
 from aiida.engine import Process
 
 
@@ -26,8 +26,8 @@ class DummyProcess(Process):
     @classmethod
     def define(cls, spec):
         super(DummyProcess, cls).define(spec)
-        spec.inputs.dynamic = True
-        spec.outputs.dynamic = True
+        spec.inputs.valid_type = Data
+        spec.outputs.valid_type = Data
 
     def run(self):
         pass
@@ -46,7 +46,8 @@ class AddProcess(Process):
         spec.output('result', required=True)
 
     def run(self):
-        self.out(self.inputs.a + self.inputs.b)
+        summed = self.inputs.a + self.inputs.b
+        self.out(summed.store())
 
 
 class BadOutput(Process):
@@ -57,7 +58,7 @@ class BadOutput(Process):
     @classmethod
     def define(cls, spec):
         super(BadOutput, cls).define(spec)
-        spec.outputs.dynamic = True
+        spec.outputs.valid_type = Data
 
     def run(self):
         self.out("bad_output", 5)

@@ -7,18 +7,17 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""`verdi profile` command."""
+"""`verdi status` command."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+import sys
 from enum import IntEnum
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.utils.daemon import get_daemon_status
-from aiida.common.utils import Capturing, get_repository_folder
-from aiida.manage.manager import get_manager
+from ..utils.echo import ExitCode
 
 
 class ServiceStatus(IntEnum):
@@ -48,10 +47,14 @@ STATUS_SYMBOLS = {
 @verdi.command('status')
 def verdi_status():
     """Print status of AiiDA services."""
-    # pylint: disable=broad-except
+    # pylint: disable=broad-except,too-many-statements
     from aiida.manage.external.rmq import get_rmq_url
     from aiida.manage.external.postgres import Postgres
+    from aiida.cmdline.utils.daemon import get_daemon_status
+    from aiida.common.utils import Capturing, get_repository_folder
+    from aiida.manage.manager import get_manager
 
+    exit_code = ExitCode.SUCCESS
     manager = get_manager()
 
     # getting the profile
@@ -61,13 +64,16 @@ def verdi_status():
 
     except Exception as exc:
         print_status(ServiceStatus.ERROR, 'profile', "Unable to read AiiDA profile")
-        raise exc  # without a profile, we cannot access anything
+        exit_code = ExitCode.CRITICAL
+        sys.exit(exit_code)  # stop here - without a profile we cannot access anything
 
     # getting the repository
+    repo_folder = 'undefined'
     try:
         repo_folder = get_repository_folder()
     except Exception as exc:
         print_status(ServiceStatus.ERROR, 'repository', "Error with repo folder", exception=exc)
+        exit_code = ExitCode.CRITICAL
 
     print_status(ServiceStatus.UP, 'repository', repo_folder)
 
@@ -85,14 +91,15 @@ def verdi_status():
         else:
             print_status(ServiceStatus.DOWN, 'postgres', "Unable to connect to {}:{}".format(
                 dbinfo['host'], dbinfo['port']))
+            exit_code = ExitCode.CRITICAL
 
     except Exception as exc:
-        pd_dict = profile.dictionary
         print_status(
             ServiceStatus.ERROR,
             'postgres',
-            "Error connecting to {}:{}".format(pd_dict['AIIDADB_HOST'], pd_dict['AIIDADB_PORT']),
+            "Error connecting to {}:{}".format(profile.database_hostname, profile.database_port),
             exception=exc)
+        exit_code = ExitCode.CRITICAL
 
     # getting the rmq status
     try:
@@ -104,6 +111,7 @@ def verdi_status():
 
     except Exception as exc:
         print_status(ServiceStatus.ERROR, 'rabbitmq', "Unable to connect to rabbitmq", exception=exc)
+        exit_code = ExitCode.CRITICAL
 
     # getting the daemon status
     try:
@@ -115,11 +123,15 @@ def verdi_status():
             print_status(ServiceStatus.UP, 'daemon', daemon_status)
         else:
             print_status(ServiceStatus.DOWN, 'daemon', daemon_status)
+            exit_code = ExitCode.CRITICAL
 
     except Exception as exc:
         print_status(ServiceStatus.ERROR, 'daemon', "Error getting daemon status", exception=exc)
+        exit_code = ExitCode.CRITICAL
 
-    return 0
+    # Note: click does not forward return values to the exit code, see
+    # https://github.com/pallets/click/issues/747
+    sys.exit(exit_code)
 
 
 def print_status(status, service, msg="", exception=None):

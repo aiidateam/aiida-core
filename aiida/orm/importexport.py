@@ -23,7 +23,7 @@ from aiida.common.utils import export_shard_uuid, get_class_string, grouper, get
 from aiida.orm import Computer, Group, GroupTypeString, Node, QueryBuilder, User, Log, Comment
 from aiida.orm.utils.repository import Repository
 
-IMPORTGROUP_TYPE = GroupTypeString.IMPORTGROUP_TYPE
+IMPORTGROUP_TYPE = GroupTypeString.IMPORTGROUP_TYPE.value
 DUPL_SUFFIX = ' (Imported #{})'
 
 # Giving names to the various entities. Attributes and links are not AiiDA
@@ -218,7 +218,6 @@ def get_all_fields_info():
         "description": {},
         "scheduler_type": {},
         "metadata": {},
-        "enabled": {},
         "uuid": {},
         "name": {}
     }
@@ -564,16 +563,15 @@ def import_data(in_path, group=None, silent=False, **kwargs):
     :param comment_node_existing: Similar to param extras_mode_existing, but for Comments.
     :param comment_mode_new: Similar to param extras_mode_new, but for Comments.
     """
-    from aiida.backends.settings import BACKEND
-    from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
+    from aiida.manage import configuration
+    from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
 
-    if BACKEND == BACKEND_SQLA:
+    if configuration.PROFILE.database_backend == BACKEND_SQLA:
         return import_data_sqla(in_path, user_group=group, silent=silent, **kwargs)
-    elif BACKEND == BACKEND_DJANGO:
+    elif configuration.PROFILE.database_backend == BACKEND_DJANGO:
         return import_data_dj(in_path, user_group=group, silent=silent, **kwargs)
     else:
-        raise Exception("Unknown settings.BACKEND: {}".format(
-            BACKEND))
+        raise Exception("Unknown backend: {}".format(configuration.PROFILE.database_backend))
 
 
 def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
@@ -613,7 +611,7 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
     from django.db import transaction
     from aiida.common import timezone
 
-    from aiida.common.archive import extract_tree, extract_tar, extract_zip, extract_cif
+    from aiida.common.archive import extract_tree, extract_tar, extract_zip
     from aiida.common.links import LinkType
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.backends.djsite.db import models
@@ -649,9 +647,6 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
                     print("The following problem occured while processing the "
                           "provided file: {}".format(exc))
                     return
-            elif os.path.isfile(in_path) and in_path.endswith('.cif'):
-                extract_cif(in_path, folder, silent=silent,
-                            nodes_export_subfolder=nodes_export_subfolder)
             else:
                 raise ValueError("Unable to detect the input file format, it "
                                  "is neither a (possibly compressed) tar file, "
@@ -899,21 +894,7 @@ def import_data_dj(in_path, user_group=None, ignore_unknown_nodes=False,
                                 raise exceptions.UniquenessError("A computer of that name ( {} ) already exists"
                                     " and I could not create a new one".format(orig_name))
 
-                        # The following is done for compatibility reasons
-                        # In case the export file was generate with the SQLA
-                        # export method
-                        if isinstance(import_data['metadata'], dict):
-                            import_data['metadata'] = json.dumps(import_data['metadata'])
-                        if isinstance(import_data['transport_params'], dict):
-                            import_data['transport_params'] = json.dumps(import_data['transport_params'])
-
                         imported_comp_names.add(import_data['name'])
-
-                    elif Model is models.DbLog:
-                        # Django requires metadata as a string.
-                        # A JSON-serializable string.
-                        if isinstance(import_data['metadata'], dict):
-                            import_data['metadata'] = json.dumps(import_data['metadata'])
 
                     objects_to_create.append(Model(**import_data))
                     import_entry_ids[unique_id] = import_entry_id
@@ -1273,7 +1254,7 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
 
     from aiida.backends.sqlalchemy.models.node import DbNode
     from aiida.backends.sqlalchemy.utils import flag_modified
-    from aiida.common.archive import extract_tree, extract_tar, extract_zip, extract_cif
+    from aiida.common.archive import extract_tree, extract_tar, extract_zip
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.common.utils import get_object_from_string
     from aiida.common.links import LinkType
@@ -1301,9 +1282,6 @@ def import_data_sqla(in_path, user_group=None, ignore_unknown_nodes=False,
                             nodes_export_subfolder=nodes_export_subfolder)
             elif zipfile.is_zipfile(in_path):
                 extract_zip(in_path, folder, silent=silent,
-                            nodes_export_subfolder=nodes_export_subfolder)
-            elif os.path.isfile(in_path) and in_path.endswith('.cif'):
-                extract_cif(in_path, folder, silent=silent,
                             nodes_export_subfolder=nodes_export_subfolder)
             else:
                 raise ValueError("Unable to detect the input file format, it "

@@ -200,6 +200,7 @@ class TestVerdiCodeCommands(AiidaTestCase):
         self.assertTrue(str(self.code.pk) in result.output, 'PK of first code should be included')
         self.assertTrue('code2' not in result.output, 'label of second code should not be included')
         self.assertTrue('comp' in result.output, 'computer name should be included')
+        self.assertNotIn(result.output, "# No codes found matching the specified criteria.")
 
     def test_code_list_hide(self):
         self.code.hide()
@@ -243,3 +244,11 @@ class TestVerdiCodeCommands(AiidaTestCase):
         self.assertEqual(self.code.get_prepend_text(), new_code.get_prepend_text())
         self.assertEqual(self.code.get_append_text(), new_code.get_append_text())
         self.assertEqual(self.code.get_input_plugin_name(), new_code.get_input_plugin_name())
+
+
+class TestVerdiCodeCommands(AiidaTestCase):
+    def setUp(self):
+        self.cli_runner = CliRunner()
+    def test_code_list_with_no_codes_one_error_message(self):
+        result = self.cli_runner.invoke(code_list)
+        self.assertEqual(1, result.output.count("# No codes found matching the specified criteria."))

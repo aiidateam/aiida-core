@@ -12,7 +12,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-import enum
+from enum import IntEnum
 import sys
 
 import click
@@ -21,11 +21,12 @@ __all__ = ('echo', 'echo_info', 'echo_success', 'echo_warning', 'echo_error', 'e
 
 
 # pylint: disable=too-few-public-methods
-class ExitCode(enum.Enum):
+class ExitCode(IntEnum):
     """Exit codes for the verdi command line."""
     CRITICAL = 1
     DEPRECATED = 80
     UNKNOWN = 99
+    SUCCESS = 0
 
 
 # pylint: disable=invalid-name
@@ -77,7 +78,7 @@ def echo_warning(message, bold=False, nl=True, err=False):
     :param nl: whether to print a newline at the end of the message
     :param err: whether to print to stderr
     """
-    click.secho('Warning: ', fg='yellow', bold=True, nl=False, err=err)
+    click.secho('Warning: ', fg='bright_yellow', bold=True, nl=False, err=err)
     click.secho(message, bold=bold, nl=nl, err=err)
 
 
@@ -110,7 +111,7 @@ def echo_critical(message, bold=False, nl=True, err=True):
     """
     click.secho('Critical: ', fg='red', bold=True, nl=False, err=err)
     click.secho(message, bold=bold, nl=nl, err=err)
-    sys.exit(ExitCode.CRITICAL.value)
+    sys.exit(ExitCode.CRITICAL)
 
 
 # pylint: disable=redefined-builtin
@@ -131,7 +132,34 @@ def echo_deprecated(message, bold=False, nl=True, err=True, exit=False):
     click.secho(message, bold=bold, nl=nl, err=err)
 
     if exit:
-        sys.exit(ExitCode.DEPRECATED.value)
+        sys.exit(ExitCode.DEPRECATED)
+
+
+def echo_formatted_list(collection, attributes, sort=None, highlight=None, hide=None):
+    """Print a collection of entries as a formatted list, one entry per line.
+
+    :param collection: a list of objects
+    :param attributes: a list of attributes to print for each entry in the collection
+    :param sort: optional lambda to sort the collection
+    :param highlight: optional lambda to highlight an entry in the collection if it returns True
+    :param hide: optional lambda to skip an entry if it returns True
+    """
+    if sort:
+        entries = sorted(collection, key=sort)
+    else:
+        entries = collection
+
+    template = '{symbol}' + ' {}' * len(attributes)
+
+    for entry in entries:
+        if hide and hide(entry):
+            continue
+
+        values = [getattr(entry, attribute) for attribute in attributes]
+        if highlight and highlight(entry):
+            click.secho(template.format(symbol='*', *values), fg='green')
+        else:
+            click.secho(template.format(symbol=' ', *values))
 
 
 def echo_dictionary(dictionary, fmt='json+date'):

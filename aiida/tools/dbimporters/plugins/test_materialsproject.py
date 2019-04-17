@@ -19,8 +19,9 @@ from aiida.plugins import DbImporterFactory
 
 
 def run_materialsproject_api_tests():
-    from aiida.settings import PROFILE_CONF
-    return PROFILE_CONF.get('run_materialsproject_api_tests', False)
+    from aiida.manage.configuration import get_profile
+    profile = get_profile()
+    return profile.dictionary.get('run_materialsproject_api_tests', False)
 
 
 class TestMaterialsProject(AiidaTestCase):

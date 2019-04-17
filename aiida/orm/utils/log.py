@@ -18,11 +18,6 @@ class DBLogHandler(logging.Handler):
     """A custom db log handler for writing logs tot he database"""
 
     def emit(self, record):
-        # If this is reached before a backend is defined, simply pass
-        from aiida.backends.utils import is_dbenv_loaded
-        if not is_dbenv_loaded():
-            return
-
         if record.exc_info:
             # We do this because if there is exc_info this will put an appropriate string in exc_text.
             # See:

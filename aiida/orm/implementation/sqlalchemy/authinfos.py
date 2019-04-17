@@ -7,36 +7,32 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""SqlAlchemy implementations for the AuthInfo entity and collection."""
+"""Module for the SqlAlchemy backend implementation of the `AuthInfo` ORM class."""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-
-# pylint: disable=import-error,no-name-in-module
-from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 
 from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
 from aiida.common import exceptions
 from aiida.common.lang import type_check
-from aiida.orm.implementation.authinfos import BackendAuthInfo, BackendAuthInfoCollection
 
+from ..authinfos import BackendAuthInfo, BackendAuthInfoCollection
 from . import entities
 from . import utils
 
 
 class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
-    """AuthInfo implementation for SQLAlchemy."""
+    """SqlAlchemy backend implementation for the `AuthInfo` ORM class."""
 
     MODEL_CLASS = DbAuthInfo
 
     def __init__(self, backend, computer, user):
-        """
-        Construct an SqlaAuthInfo
+        """Construct a new instance.
 
-        :param computer: a Computer instance
-        :param user: a User instance
-        :return: an AuthInfo object associated with the given computer and user
+        :param computer: a :class:`aiida.orm.implementation.computers.BackendComputer` instance
+        :param user: a :class:`aiida.orm.implementation.users.BackendUser` instance
+        :return: an :class:`aiida.orm.implementation.authinfos.BackendAuthInfo` instance
         """
         from . import computers
         from . import users
@@ -46,106 +42,121 @@ class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
         self._dbmodel = utils.ModelWrapper(DbAuthInfo(dbcomputer=computer.dbmodel, aiidauser=user.dbmodel))
 
     @property
-    def dbauthinfo(self):
-        return self._dbmodel._model  # pylint: disable=protected-access
+    def id(self):  # pylint: disable=invalid-name
+        return self._dbmodel.id
 
     @property
     def is_stored(self):
-        """
-        Return whether the AuthInfo is stored
+        """Return whether the entity is stored.
 
         :return: True if stored, False otherwise
+        :rtype: bool
         """
         return self._dbmodel.is_saved()
 
     @property
-    def id(self):
-        return self._dbmodel.id
-
-    @property
     def enabled(self):
+        """Return whether this instance is enabled.
+
+        :return: boolean, True if enabled, False otherwise
+        """
         return self._dbmodel.enabled
 
     @enabled.setter
     def enabled(self, enabled):
+        """Set the enabled state
+
+        :param enabled: boolean, True to enable the instance, False to disable it
+        """
         self._dbmodel.enabled = enabled
 
     @property
     def computer(self):
-        return self._backend.computers.from_dbmodel(self._dbmodel.dbcomputer)
+        """Return the computer associated with this instance.
+
+        :return: :class:`aiida.orm.implementation.computers.BackendComputer`
+        """
+        return self.backend.computers.from_dbmodel(self._dbmodel.dbcomputer)
 
     @property
     def user(self):
+        """Return the user associated with this instance.
+
+        :return: :class:`aiida.orm.implementation.users.BackendUser`
+        """
         return self._backend.users.from_dbmodel(self._dbmodel.aiidauser)
 
     def get_auth_params(self):
-        """
-        Get the auth_params dictionary from the DB
+        """Return the dictionary of authentication parameters
 
-        :return: a dictionary
+        :return: a dictionary with authentication parameters
         """
         return self._dbmodel.auth_params
 
     def set_auth_params(self, auth_params):
+        """Set the dictionary of authentication parameters
+
+        :param auth_params: a dictionary with authentication parameters
         """
-        Replace the auth_params dictionary in the DB with the provided dictionary
-        """
-        # Raises ValueError if data is not JSON-serializable
         self._dbmodel.auth_params = auth_params
 
     def get_metadata(self):
-        """
-        Get the metadata dictionary from the DB
+        """Return the dictionary of metadata
 
-        :return: a dictionary
+        :return: a dictionary with metadata
         """
         return self._dbmodel._metadata  # pylint: disable=protected-access
 
     def set_metadata(self, metadata):
+        """Set the dictionary of metadata
+
+        :param metadata: a dictionary with metadata
         """
-        Replace the metadata dictionary in the DB with the provided dictionary
-        """
-        # Raises ValueError if data is not JSON-serializable
         self._dbmodel._metadata = metadata  # pylint: disable=protected-access
 
 
 class SqlaAuthInfoCollection(BackendAuthInfoCollection):
-    """Collection of AuthInfo instances."""
+    """The collection of SqlAlchemy backend `AuthInfo` entries."""
 
     ENTITY_CLASS = SqlaAuthInfo
 
-    def get(self, computer, user):
-        """
-        Return a SqlaAuthInfo given a computer and a user
+    def delete(self, pk):
+        """Delete an entry from the collection.
 
-        :param computer: a Computer instance
-        :param user: a User instance
-        :return: an AuthInfo object associated with the given computer and user
-        :raise aiida.common.NotExistent: if the user is not configured to use computer
-        :raise sqlalchemy.orm.exc.MultipleResultsFound: if the user is configured
-             more than once to use the computer! Should never happen
+        :param pk: the pk of the entry to delete
         """
+        # pylint: disable=import-error,no-name-in-module
+        from sqlalchemy.orm.exc import NoResultFound
+
         session = get_scoped_session()
 
         try:
-            authinfo = session.query(DbAuthInfo).filter_by(
-                dbcomputer_id=computer.id,
-                aiidauser_id=user.id,
-            ).one()
-
-            return self.from_dbmodel(authinfo)
-        except NoResultFound:
-            raise exceptions.NotExistent('The aiida user {} is not configured to use computer {}'.format(
-                user.email, computer.name))
-        except MultipleResultsFound:
-            raise exceptions.ConfigurationError('The aiida user {} is configured more than once to use '
-                                                'computer {}! Only one configuration is allowed'.format(
-                                                    user.email, computer.name))
-
-    def delete(self, authinfo_id):
-        session = get_scoped_session()
-        try:
-            session.query(DbAuthInfo).filter_by(id=authinfo_id).one().delete()
+            session.query(DbAuthInfo).filter_by(id=pk).one().delete()
             session.commit()
         except NoResultFound:
-            raise exceptions.NotExistent("AuthInfo with id '{}' not found".format(authinfo_id))
+            raise exceptions.NotExistent('AuthInfo<{}> does not exist'.format(pk))
+
+    def get(self, computer, user):
+        """Return an entry from the collection that is configured for the given computer and user
+
+        :param computer: a :class:`aiida.orm.implementation.computers.BackendComputer` instance
+        :param user: a :class:`aiida.orm.implementation.users.BackendUser` instance
+        :return: :class:`aiida.orm.implementation.authinfos.BackendAuthInfo`
+        :raise aiida.common.exceptions.NotExistent: if no entry exists for the computer/user pair
+        :raise aiida.common.exceptions.MultipleObjectsError: if multiple entries exist for the computer/user pair
+        """
+        # pylint: disable=import-error,no-name-in-module
+        from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
+
+        session = get_scoped_session()
+
+        try:
+            authinfo = session.query(DbAuthInfo).filter_by(dbcomputer_id=computer.id, aiidauser_id=user.id).one()
+        except NoResultFound:
+            raise exceptions.NotExistent('User<{}> has no configuration for Computer<{}>'.format(
+                user.email, computer.name))
+        except MultipleResultsFound:
+            raise exceptions.MultipleObjectsError('User<{}> has multiple configurations for Computer<{}>'.format(
+                user.email, computer.name))
+        else:
+            return self.from_dbmodel(authinfo)

@@ -12,9 +12,10 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from collections import namedtuple
+from collections import namedtuple, OrderedDict, Mapping
 
 from aiida.common import exceptions
+from aiida.common.lang import type_check
 
 __all__ = ('LinkPair', 'LinkTriple', 'LinkManager', 'validate_link')
 
@@ -84,23 +85,23 @@ def validate_link(source, target, link_type, link_label):
     :raise TypeError: if `source` or `target` is not a Node instance, or `link_type` is not a `LinkType` enum
     :raise ValueError: if the proposed link is invalid
     """
-    from aiida.common.links import LinkType
+    from aiida.common.links import LinkType, validate_link_label
     from aiida.orm import Node, Data, CalculationNode, WorkflowNode
 
-    if not isinstance(link_type, LinkType):
-        raise TypeError('the link_type should be a value from the LinkType enum')
-
-    if not isinstance(source, Node):
-        raise TypeError('the source should be a Node instance')
-
-    if not isinstance(target, Node):
-        raise TypeError('the target should be a Node instance')
+    type_check(link_type, LinkType, 'link_type should be a LinkType enum but got: {}'.format(type(link_type)))
+    type_check(source, Node, 'source should be a `Node` but got: {}'.format(type(source)))
+    type_check(target, Node, 'target should be a `Node` but got: {}'.format(type(target)))
 
     if source.uuid is None or target.uuid is None:
         raise ValueError('source or target node does not have a UUID')
 
     if source.uuid == target.uuid:
         raise ValueError('cannot add a link to oneself')
+
+    try:
+        validate_link_label(link_label)
+    except ValueError as exception:
+        raise ValueError('invalid link label `{}`: {}'.format(link_label, exception))
 
     # For each link type, define a tuple that defines the valid types for the source and target node, as well as
     # the outdegree and indegree character. If the degree is `unique` that means that there can only be a single
@@ -190,6 +191,13 @@ class LinkManager(object):  # pylint: disable=useless-object-inheritance
         for link_triple in self.link_triples:
             yield link_triple
 
+    # Python 2 specific, python 3 uses `__bool__`
+    def __nonzero__(self):
+        return len(self.link_triples)
+
+    def __bool__(self):
+        return bool(len(self.link_triples))
+
     def next(self):
         """Return the next element in the iterator.
 
@@ -268,3 +276,33 @@ class LinkManager(object):  # pylint: disable=useless-object-inheritance
             raise exceptions.NotExistent('no neighbor with the label {} found'.format(label))
 
         return matching_entry
+
+    def nested(self, sort=True):
+        """Return the matched nodes in the original nested form by expanding the collapsed link labels.
+
+        :return: dictionary of nested namespaces
+        """
+        from aiida.engine.processes.ports import PORT_NAMESPACE_SEPARATOR
+
+        nested = {}
+
+        for entry in self.link_triples:
+
+            current_namespace = nested
+            breadcrumbs = entry.link_label.split(PORT_NAMESPACE_SEPARATOR)
+
+            # The last element is the "leaf" port name the preceding elements are nested port namespaces
+            port_name = breadcrumbs[-1]
+            port_namespaces = breadcrumbs[:-1]
+
+            # Get the nested namespace
+            for subspace in port_namespaces:
+                current_namespace = current_namespace.setdefault(subspace, {})
+
+            # Insert the node at the given port name
+            current_namespace[port_name] = entry.node
+
+        if sort:
+            return OrderedDict(sorted(nested.items(), key=lambda x: (not isinstance(x[1], Mapping), x)))
+
+        return nested

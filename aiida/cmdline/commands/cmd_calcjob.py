@@ -88,22 +88,25 @@ def calcjob_inputcat(calcjob, path):
 
     If PATH is not specified, the default input file path will be used, if defined by the calcjob plugin class.
     """
-    from aiida.plugins.entry_point import get_entry_point_from_class
-
+    # Get path from the given CalcJobNode if not defined by user
     if path is None:
-
         path = calcjob.get_option('input_filename')
 
-        if path is None:
-            cls = calcjob.__class__
-            _, entry_point = get_entry_point_from_class(cls.__module__, cls.__name__)
-            echo.echo_critical('{} does not define a default input file. Please specify a path explicitly'.format(
-                entry_point.name))
+    # Get path from current process class of CalcJobNode if still not defined
+    if path is None:
+        fname = calcjob.process_class.spec_options.get('input_filename')
+        if fname and fname.has_default():
+            path = fname.default
 
     try:
         content = calcjob.get_object_content(path)
     except Exception as exception:  # pylint: disable=broad-except
-        echo.echo_critical('failed to get the content of file `{}`: {}'.format(path, exception))
+        # No path available or is incorrect
+        echo.echo_critical('"{}" and its process class "{}" do not define a default input file '
+                           '(option "input_filename" not found).\n'
+                           'Please specify a path explicitly.\n'
+                           'Exception: {}'.format(calcjob.__class__.__name__, calcjob.process_class.__name__,
+                                                  exception))
     else:
         echo.echo(content)
 
@@ -119,27 +122,30 @@ def calcjob_outputcat(calcjob, path):
     If PATH is not specified, the default output file path will be used, if defined by the calcjob plugin class.
     Content can only be shown after the daemon has retrieved the remote files.
     """
-    from aiida.plugins.entry_point import get_entry_point_from_class
-
-    if path is None:
-
-        path = calcjob.get_option('output_filename')
-
-        if path is None:
-            cls = calcjob.__class__
-            _, entry_point = get_entry_point_from_class(cls.__module__, cls.__name__)
-            echo.echo_critical('{} does not define a default output file. Please specify a path explicitly'.format(
-                entry_point.name))
-
     try:
         retrieved = calcjob.outputs.retrieved
     except AttributeError:
         echo.echo_critical("No 'retrieved' node found. Have the calcjob files already been retrieved?")
 
+    # Get path from the given CalcJobNode if not defined by user
+    if path is None:
+        path = calcjob.get_option('output_filename')
+
+    # Get path from current process class of CalcJobNode if still not defined
+    if path is None:
+        fname = calcjob.process_class.spec_options.get('output_filename')
+        if fname and fname.has_default():
+            path = fname.default
+
     try:
         content = retrieved.get_object_content(path)
     except Exception as exception:  # pylint: disable=broad-except
-        echo.echo_critical('failed to get the content of file `{}`: {}'.format(path, exception))
+        # No path available or is incorrect
+        echo.echo_critical('"{}" and its process class "{}" do not define a default output file '
+                           '(option "output_filename" not found).\n'
+                           'Please specify a path explicitly.\n'
+                           'Exception: {}'.format(calcjob.__class__.__name__, calcjob.process_class.__name__,
+                                                  exception))
     else:
         echo.echo(content)
 
@@ -170,10 +176,10 @@ def calcjob_inputls(calcjob, path, color):
 @click.option('-c', '--color', 'color', is_flag=True, default=False, help='color folders with a different color')
 def calcjob_outputls(calcjob, path, color):
     """
-    Show the list of files in the directory with relative PATH in the raw input folder of the CALCULATION.
+    Show the list of files in the directory with relative PATH in the retrieved folder of the CALCULATION.
 
     If PATH is not specified, the base path of the retrieved folder will be used.
-    Content can only be showm after the daemon has retrieved the remote files.
+    Content can only be shown after the daemon has retrieved the remote files.
     """
     from aiida.cmdline.utils.repository import list_repository_contents
 

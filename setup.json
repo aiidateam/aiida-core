@@ -1,12 +1,13 @@
 {
   "name": "aiida-core",
-  "version": "1.0.0b1",
+  "version": "1.0.0b2",
   "url": "http://www.aiida.net/",
   "license": "MIT License",
   "author": "The AiiDA team",
   "author_email": "developers@aiida.net",
   "include_package_data": true,
   "classifiers": [
+    "Framework :: AiiDA",
     "License :: OSI Approved :: MIT License",
     "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS :: MacOS X",
@@ -17,7 +18,7 @@
     "Topic :: Scientific/Engineering"
   ],
   "install_requires": [
-    "reentry==1.2.2",
+    "reentry>=1.3.0",
     "python-dateutil==2.8.0",
     "python-mimeparse==1.6.0",
     "django==1.11.20",
@@ -37,24 +38,23 @@
     "aldjemy==0.9.1",
     "passlib==1.7.1",
     "click==7.0",
-    "click-completion==0.5.0",
+    "click-completion==0.5.1",
     "click-plugins==1.0.4",
     "click-spinner==0.1.8",
     "tabulate==0.8.3",
     "ete3==3.1.1",
     "uritools==2.2.0",
-    "psycopg2==2.7.6",
+    "psycopg2-binary==2.8",
     "paramiko==2.4.2",
     "ecdsa==0.13",
     "ipython>=4.0,<6.0",
-    "plumpy==0.12.1",
-    "kiwipy[rmq]==0.4.2",
-    "pika==1.0.0b1",
+    "plumpy==0.13.1",
+    "kiwipy[rmq]==0.5.0",
+    "pika==1.0.0",
     "circus==0.15.0",
     "tornado<5.0",
     "pyblake2==1.1.2; python_version<'3.6'",
     "chainmap; python_version<'3.5'",
-    "pathlib2; python_version<'3.5'",
     "singledispatch>=3.4.0.3; python_version<'3.5'",
     "enum34==1.1.6; python_version<'3.5'",
     "simplejson==3.16.0",
@@ -103,7 +103,7 @@
     ],
     "testing": [
       "unittest2==1.1.0; python_version<'3.5'",
-      "pgtest==1.1.0",
+      "pgtest==1.2.0",
       "pg8000<1.13.0",
       "sqlalchemy-diff==0.1.3",
       "coverage==4.5.2",
@@ -130,9 +130,6 @@
     ]
   },
   "reentry_register": true,
-  "reentry_scan": [
-    "aiida"
-  ],
   "entry_points": {
     "console_scripts": [
       "verdi=aiida.cmdline.commands.cmd_verdi:verdi"
@@ -196,12 +193,9 @@
       "local = aiida.transports.plugins.local:LocalTransport",
       "ssh = aiida.transports.plugins.ssh:SshTransport"
     ],
-    "aiida.workflows": [],
-    "aiida.tools.dbexporters": [
-      "tcod = aiida.tools.dbexporters.tcod"
-    ],
     "aiida.tests": [],
     "aiida.tools.calculations": [],
+    "aiida.tools.dbexporters": [],
     "aiida.tools.dbimporters": [
       "cod = aiida.tools.dbimporters.plugins.cod:CodDbImporter",
       "icsd = aiida.tools.dbimporters.plugins.icsd:IcsdDbImporter",
@@ -212,7 +206,11 @@
       "oqmd = aiida.tools.dbimporters.plugins.oqmd:OqmdDbImporter",
       "pcod = aiida.tools.dbimporters.plugins.pcod:PcodDbImporter",
       "tcod = aiida.tools.dbimporters.plugins.tcod:TcodDbImporter"
-    ]
+    ],
+    "aiida.tools.data.orbitals": [
+      "realhydrogen = aiida.tools.data.orbital.realhydrogen:RealhydrogenOrbital"
+    ],
+    "aiida.workflows": []
   },
   "scripts": [
     "bin/runaiida"

@@ -435,7 +435,7 @@ class QueryBuilder(object):
         from aiida.manage.configuration import get_config
 
         config = get_config()
-        engine = config.current_profile.dictionary['AIIDADB_ENGINE']
+        engine = config.current_profile.database_engine
 
         if engine.startswith("mysql"):
             from sqlalchemy.dialects import mysql as mydialect
@@ -1102,7 +1102,7 @@ class QueryBuilder(object):
             elif isinstance(projection, six.string_types):
                 _thisprojection = {projection: {}}
             else:
-                raise InputValidationError("Cannot deal with projection specification {}\n" "".format(projection))
+                raise InputValidationError("Cannot deal with projection specification {}\n".format(projection))
             for p, spec in _thisprojection.items():
                 if not isinstance(spec, dict):
                     raise InputValidationError("\nThe value of a key-value pair in a projection\n"

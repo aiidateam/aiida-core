@@ -17,7 +17,6 @@ import click
 
 from aiida.cmdline.commands.cmd_data import verdi_data
 from aiida.cmdline.commands.cmd_data import cmd_show
-from aiida.cmdline.commands.cmd_data.cmd_deposit import data_deposit_tcod, deposit_options
 from aiida.cmdline.commands.cmd_data.cmd_export import data_export, export_options
 from aiida.cmdline.commands.cmd_data.cmd_list import data_list, list_options
 from aiida.cmdline.commands.cmd_data.cmd_show import show_options
@@ -25,7 +24,7 @@ from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
 
 LIST_PROJECT_HEADERS = ['Id', 'Label']
-EXPORT_FORMATS = ['cif', 'tcod', 'xsf']
+EXPORT_FORMATS = ['cif', 'xsf']
 VISUALIZATION_FORMATS = ['jmol', 'xcrysden', 'mpl_heatmap', 'mpl_pos']
 
 
@@ -98,24 +97,3 @@ def trajectory_export(**kwargs):
     kwargs = {k: v for k, v in kwargs.items() if v is not None}
 
     data_export(node, output, fmt, other_args=kwargs, overwrite=force)
-
-
-@trajectory.command('deposit')
-@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:array.trajectory',)))
-@options.TRAJECTORY_INDEX()
-@deposit_options
-@decorators.with_dbenv()
-def trajectory_deposit(**kwargs):
-    """Deposit trajectory object."""
-    node = kwargs.pop('datum')
-    database = kwargs.pop('database')
-    deposition_type = kwargs.pop('deposition_type')
-    parameters = kwargs.pop('parameters')
-
-    kwargs = {k: v for k, v in kwargs.items() if v is not None}
-
-    if database == 'tcod':
-        calculation = data_deposit_tcod(node, deposition_type, parameters, **kwargs)
-        echo.echo_success('Created deposition calculation<{}>'.format(calculation.pk))
-    else:
-        echo.echo_critical('Unsupported database {}'.format(database))

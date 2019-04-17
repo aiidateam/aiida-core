@@ -71,6 +71,30 @@ class NumericType(BaseType):
         return other * self
 
     @_left_operator
+    def __div__(self, other):
+        return self / other
+
+    @_right_operator
+    def __rdiv__(self, other):
+        return other / self
+
+    @_left_operator
+    def __truediv__(self, other):
+        return self / other
+
+    @_right_operator
+    def __rtruediv__(self, other):
+        return other / self
+
+    @_left_operator
+    def __floordiv__(self, other):
+        return self // other
+
+    @_right_operator
+    def __rfloordiv__(self, other):
+        return other // self
+
+    @_left_operator
     def __pow__(self, power):
         return self**power
 

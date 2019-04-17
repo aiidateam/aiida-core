@@ -15,6 +15,7 @@ import os
 
 import unittest
 from click.testing import CliRunner
+from click.exceptions import BadParameter
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_import
@@ -46,15 +47,17 @@ class TestVerdiImport(AiidaTestCase):
         options = []
         result = self.cli_runner.invoke(cmd_import.cmd_import, options)
 
-        self.assertIsNotNone(result.exception)
+        self.assertIsNotNone(result.exception, result.output)
         self.assertIn('Critical', result.output)
+        self.assertNotEqual(result.exit_code, 0, result.output)
 
     def test_import_non_existing_archives(self):
         """Test that passing a non-existing archive will lead to command failure."""
         options = ['non-existing-archive.aiida']
         result = self.cli_runner.invoke(cmd_import.cmd_import, options)
 
-        self.assertIsNotNone(result.exception)
+        self.assertIsNotNone(result.exception, result.output)
+        self.assertNotEqual(result.exit_code, 0, result.output)
 
     @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_import_archive(self):
@@ -73,6 +76,7 @@ class TestVerdiImport(AiidaTestCase):
         result = self.cli_runner.invoke(cmd_import.cmd_import, options)
 
         self.assertIsNone(result.exception, result.output)
+        self.assertEqual(result.exit_code, 0, result.output)
 
     @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
     def test_comment_mode(self):
@@ -85,8 +89,83 @@ class TestVerdiImport(AiidaTestCase):
         result = self.cli_runner.invoke(cmd_import.cmd_import, options)
         self.assertIsNone(result.exception, result.output)
         self.assertIn('Comment mode: newest', result.output)
+        self.assertEqual(result.exit_code, 0, result.output)
 
         options = ['--comment-mode', 'overwrite'] + archives
         result = self.cli_runner.invoke(cmd_import.cmd_import, options)
         self.assertIsNone(result.exception, result.output)
         self.assertIn('Comment mode: overwrite', result.output)
+        self.assertEqual(result.exit_code, 0, result.output)
+
+    def test_import_old_local_archives(self):
+        """ Test import of old local archives
+        Expected behavior: Return message in terminal and error code != 0
+        """
+        archives = [('export/migrate/export_v0.1.aiida', '0.1'), ('export/migrate/export_v0.2.aiida', '0.2'),
+                    ('export/migrate/export_v0.3.aiida', '0.3')]
+
+        for archive, version in archives:
+            options = [get_archive_file(archive)]
+            result = self.cli_runner.invoke(cmd_import.cmd_import, options)
+
+            self.assertIsNotNone(result.exception, result.output)
+            self.assertNotEqual(result.exit_code, 0, result.output)
+            self.assertIn(version, result.output, result.exception)
+
+    def test_import_old_url_archives(self):
+        """ Test import of old URL archives
+        Expected behavior: Return message in terminal and error code != 0
+        """
+        url = "https://raw.githubusercontent.com/aiidateam/aiida_core/f685844b290ed23df254873df62da7162bde0f1b/"
+        archive_path = "aiida/backends/tests/fixtures/export/migrate/"
+        archive = 'export_v0.1.aiida'
+        version = '0.1'
+
+        options = [url + archive_path + archive]
+        result = self.cli_runner.invoke(cmd_import.cmd_import, options)
+
+        self.assertIsNotNone(result.exception, result.output)
+        self.assertNotEqual(result.exit_code, 0, result.output)
+        self.assertIn(version, result.output, result.exception)
+
+    @unittest.skip("Reenable when issue #2426 has been solved (migrate exported files from 0.3 to 0.4)")
+    def test_import_url_and_local_archives(self):
+        """Test import of both a remote and local archive
+        TODO: Update 'url' to point at correct commit.
+        Now it is pointing to yakutovicha's commit, but when PR #2478 has been merged in aiidateam:develop,
+        url should be updated to point to the, essentially same, commit, but in aiidateam.
+        """
+        url = "https://raw.githubusercontent.com/yakutovicha/aiida_core/f5fff1846a62051b898f13db67f5eef18892d5f4/"
+        url_archive = "aiida/backends/tests/fixtures/export/migrate/export_v0.4_no_UPF.aiida"
+        local_archive = "export/migrate/export_v0.4_no_UPF.aiida"
+
+        options = [get_archive_file(local_archive), url + url_archive, get_archive_file(local_archive)]
+        result = self.cli_runner.invoke(cmd_import.cmd_import, options)
+
+        self.assertIsNone(result.exception, result.output)
+        self.assertEqual(result.exit_code, 0, result.output)
+
+    def test_import_url_timeout(self):
+        """Test a timeout to valid URL is correctly errored"""
+        from aiida.cmdline.params.types import ImportPath
+
+        timeout_url = "http://www.google.com:81"
+
+        test_timeout_path = ImportPath(exists=True, readable=True, timeout_seconds=0)
+        with self.assertRaises(BadParameter) as cmd_exc:
+            test_timeout_path(timeout_url)
+
+        error_message = 'Path "{}" could not be reached within 0 s.'.format(timeout_url)
+        self.assertIn(error_message, str(cmd_exc.exception), str(cmd_exc.exception))
+
+    def test_raise_malformed_url(self):
+        """Test the correct error is raised when supplying a malformed URL"""
+        malformed_url = "htp://www.aiida.net"
+
+        result = self.cli_runner.invoke(cmd_import.cmd_import, [malformed_url])
+
+        self.assertIsNotNone(result.exception, result.output)
+        self.assertNotEqual(result.exit_code, 0, result.output)
+
+        error_message = 'It may be neither a valid path nor a valid URL.'
+        self.assertIn(error_message, result.output, result.exception)

@@ -23,7 +23,7 @@ from aiida.manage.manager import get_manager
 
 from .process import Process
 
-__all__ = ('calcfunction', 'workfunction')
+__all__ = ('calcfunction', 'workfunction', 'FunctionProcess')
 
 
 def calcfunction(function):
@@ -134,12 +134,19 @@ def process_function(node_class):
 
             return result, process.node
 
+        def run_get_pk(*args, **kwargs):
+            """Recreate the `run_get_pk` utility launcher."""
+            result, node = run_get_node(*args, **kwargs)
+            return result, node.pk
+
         @functools.wraps(function)
         def decorated_function(*args, **kwargs):
             """This wrapper function is the actual function that is called."""
             result, _ = run_get_node(*args, **kwargs)
             return result
 
+        decorated_function.run = decorated_function
+        decorated_function.run_get_pk = run_get_pk
         decorated_function.run_get_node = run_get_node
         decorated_function.is_process_function = is_process_function
 
@@ -217,8 +224,10 @@ class FunctionProcess(Process):
             # If the function support kwargs then allow dynamic inputs, otherwise disallow
             spec.inputs.dynamic = keywords is not None
 
-            # Function processes return data types
-            spec.outputs.valid_type = orm.Data
+            # Function processes must have a dynamic output namespace since we do not know beforehand what outputs
+            # will be returned and the valid types for the value should be `Data` nodes as well as a dictionary because
+            # the output namespace can be nested.
+            spec.outputs.valid_type = (orm.Data, dict)
 
         return type(
             func.__name__, (FunctionProcess,), {
@@ -229,8 +238,29 @@ class FunctionProcess(Process):
             })
 
     @classmethod
+    def validate_inputs(cls, *args, **kwargs):  # pylint: disable=unused-argument
+        """
+        Validate the positional and keyword arguments passed in the function call.
+
+        :raises TypeError: if more positional arguments are passed than the function defines
+        """
+        nargs = len(args)
+        nparameters = len(cls._func_args)
+
+        # If the spec is dynamic, i.e. the function signature includes `**kwargs` and the number of positional arguments
+        # passed is larger than the number of explicitly defined parameters in the signature, the inputs are invalid and
+        # we should raise. If we don't, some of the passed arguments, intended to be positional arguments, will be
+        # misinterpreted as keyword arguments, but they won't have an explicit name to use for the link label, causing
+        # the input link to be completely lost.
+        if cls.spec().inputs.dynamic and nargs > nparameters:
+            name = cls._func.__name__
+            raise TypeError('{}() takes {} positional arguments but {} were given'.format(name, nparameters, nargs))
+
+    @classmethod
     def create_inputs(cls, *args, **kwargs):
         """Create the input args for the FunctionProcess"""
+        cls.validate_inputs(*args, **kwargs)
+
         ins = {}
         if kwargs:
             ins.update(kwargs)
@@ -290,11 +320,10 @@ class FunctionProcess(Process):
         from aiida.orm import Data
         from .exit_code import ExitCode
 
-        args = []
-
         # Split the inputs into positional and keyword arguments
         args = [None] * len(self._func_args)
         kwargs = {}
+
         for name, value in self.inputs.items():
             try:
                 if self.spec().inputs[name].non_db:

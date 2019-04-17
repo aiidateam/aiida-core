@@ -26,7 +26,7 @@ from aiida.orm import GroupTypeString
 __all__ = ('UpfData',)
 
 
-UPFGROUP_TYPE = GroupTypeString.UPFGROUP_TYPE
+UPFGROUP_TYPE = GroupTypeString.UPFGROUP_TYPE.value
 
 _upfversion_regexp = re.compile(
     r"""
@@ -316,9 +316,9 @@ class UpfData(SinglefileData):
     Function not yet documented.
     """
 
-    def __init__(self, filepath=None, source=None, **kwargs):
+    def __init__(self, file=None, source=None, **kwargs):
 
-        super(UpfData, self).__init__(filepath, **kwargs)
+        super(UpfData, self).__init__(file, **kwargs)
 
         if source is not None:
             self.set_source(source)
@@ -349,10 +349,10 @@ class UpfData(SinglefileData):
         pseudos = cls.from_md5(md5)
         if len(pseudos) == 0:
             if store_upf:
-                instance = cls(filepath=filepath).store()
+                instance = cls(file=filepath).store()
                 return (instance, True)
             else:
-                instance = cls(filepath=filepath)
+                instance = cls(file=filepath)
                 return (instance, True)
         else:
             if len(pseudos) > 1:
@@ -412,23 +412,26 @@ class UpfData(SinglefileData):
         qb.append(cls, filters={'attributes.md5': {'==': md5}})
         return [_ for [_] in qb.all()]
 
-    def put_object_from_file(self, filename):
+    def set_file(self, file):
         """
         I pre-parse the file to store the attributes.
         """
         from aiida.common.exceptions import ParsingError
-        from aiida.common.files import md5_file
+        from aiida.common.files import md5_file, md5_from_filelike
 
-        parsed_data = parse_upf(filename)
-        md5sum = md5_file(filename)
+        parsed_data = parse_upf(file)
+
+        try:
+            md5sum = md5_file(file)
+        except TypeError:
+            md5sum = md5_from_filelike(file)
 
         try:
             element = parsed_data['element']
         except KeyError:
-            raise ParsingError("No 'element' parsed in the UPF file {};"
-                               " unable to store".format(self.filename))
+            raise ParsingError("No 'element' parsed in the UPF file {}; unable to store".format(self.filename))
 
-        super(UpfData, self).put_object_from_file(filename)
+        super(UpfData, self).set_file(file)
 
         self.set_attribute('element', str(element))
         self.set_attribute('md5', md5sum)

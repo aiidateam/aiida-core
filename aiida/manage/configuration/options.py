@@ -17,16 +17,12 @@ import six
 
 __all__ = ('get_option', 'get_option_names', 'parse_option')
 
-
-class NO_DEFAULT_PLACEHOLDER(object):  # pylint: disable=too-few-public-methods,invalid-name,useless-object-inheritance
-    """A dummy class to serve as a marker for no default being specified in the `get_option` function."""
-
-
-NO_DEFAULT = NO_DEFAULT_PLACEHOLDER()
+NO_DEFAULT = ()
 DEFAULT_DAEMON_TIMEOUT = 20  # Default timeout in seconds for circus client calls
 VALID_LOG_LEVELS = ['CRITICAL', 'ERROR', 'WARNING', 'REPORT', 'INFO', 'DEBUG']
 
-Option = collections.namedtuple('Option', ['name', 'key', 'valid_type', 'valid_values', 'default', 'description'])
+Option = collections.namedtuple('Option',
+                                ['name', 'key', 'valid_type', 'valid_values', 'default', 'description', 'global_only'])
 
 
 def get_option(option_name):
@@ -96,6 +92,7 @@ CONFIG_OPTIONS = {
         'valid_values': None,
         'default': 1,
         'description': 'The polling interval in seconds to be used by process runners',
+        'global_only': False,
     },
     'daemon.timeout': {
         'key': 'daemon_timeout',
@@ -103,6 +100,7 @@ CONFIG_OPTIONS = {
         'valid_values': None,
         'default': DEFAULT_DAEMON_TIMEOUT,
         'description': 'The timeout in seconds for calls to the circus client',
+        'global_only': False,
     },
     'verdi.shell.auto_import': {
         'key': 'verdi_shell_auto_import',
@@ -110,6 +108,7 @@ CONFIG_OPTIONS = {
         'valid_values': None,
         'default': '',
         'description': 'Additional modules/functions/classes to be automatically loaded in `verdi shell`',
+        'global_only': False,
     },
     'logging.aiida_loglevel': {
         'key': 'logging_aiida_log_level',
@@ -117,6 +116,7 @@ CONFIG_OPTIONS = {
         'valid_values': VALID_LOG_LEVELS,
         'default': 'REPORT',
         'description': 'Minimum level to log to daemon log and the `DbLog` table for the `aiida` logger',
+        'global_only': False,
     },
     'logging.db_loglevel': {
         'key': 'logging_db_log_level',
@@ -124,6 +124,7 @@ CONFIG_OPTIONS = {
         'valid_values': VALID_LOG_LEVELS,
         'default': 'REPORT',
         'description': 'Minimum level to log to the DbLog table',
+        'global_only': False,
     },
     'logging.tornado_loglevel': {
         'key': 'logging_tornado_log_level',
@@ -131,6 +132,7 @@ CONFIG_OPTIONS = {
         'valid_values': VALID_LOG_LEVELS,
         'default': 'WARNING',
         'description': 'Minimum level to log to daemon log and the `DbLog` table for the `tornado` logger',
+        'global_only': False,
     },
     'logging.plumpy_loglevel': {
         'key': 'logging_plumpy_log_level',
@@ -138,6 +140,7 @@ CONFIG_OPTIONS = {
         'valid_values': VALID_LOG_LEVELS,
         'default': 'WARNING',
         'description': 'Minimum level to log to daemon log and the `DbLog` table for the `plumpy` logger',
+        'global_only': False,
     },
     'logging.kiwipy_loglevel': {
         'key': 'logging_kiwipy_log_level',
@@ -145,6 +148,7 @@ CONFIG_OPTIONS = {
         'valid_values': VALID_LOG_LEVELS,
         'default': 'WARNING',
         'description': 'Minimum level to log to daemon log and the `DbLog` table for the `kiwipy` logger',
+        'global_only': False,
     },
     'logging.paramiko_loglevel': {
         'key': 'logging_paramiko_log_level',
@@ -152,6 +156,7 @@ CONFIG_OPTIONS = {
         'valid_values': VALID_LOG_LEVELS,
         'default': 'WARNING',
         'description': 'Minimum level to log to daemon log and the `DbLog` table for the `paramiko` logger',
+        'global_only': False,
     },
     'logging.alembic_loglevel': {
         'key': 'logging_alembic_log_level',
@@ -159,6 +164,7 @@ CONFIG_OPTIONS = {
         'valid_values': VALID_LOG_LEVELS,
         'default': 'WARNING',
         'description': 'Minimum level to log to daemon log and the `DbLog` table for the `alembic` logger',
+        'global_only': False,
     },
     'logging.sqlalchemy_loglevel': {
         'key': 'logging_sqlalchemy_loglevel',
@@ -166,6 +172,7 @@ CONFIG_OPTIONS = {
         'valid_values': VALID_LOG_LEVELS,
         'default': 'WARNING',
         'description': 'Minimum level to log to daemon log and the `DbLog` table for the `sqlalchemy` logger',
+        'global_only': False,
     },
     'logging.circus_loglevel': {
         'key': 'logging_circus_log_level',
@@ -173,41 +180,39 @@ CONFIG_OPTIONS = {
         'valid_values': VALID_LOG_LEVELS,
         'default': 'INFO',
         'description': 'Minimum level to log to daemon log and the `DbLog` table for the `circus` logger',
+        'global_only': False,
     },
-    'tcod.depositor_username': {
-        'key': 'tcod_depositor_username',
+    'user.email': {
+        'key': 'user_email',
         'valid_type': 'string',
         'valid_values': None,
         'default': NO_DEFAULT,
-        'description': 'Username for TCOD deposition',
+        'description': 'Default user email to use when creating new profiles.',
+        'global_only': True,
     },
-    'tcod.depositor_password': {
-        'key': 'tcod_depositor_password',
+    'user.first_name': {
+        'key': 'user_first_name',
         'valid_type': 'string',
         'valid_values': None,
         'default': NO_DEFAULT,
-        'description': 'Password for TCOD deposition',
+        'description': 'Default user first name to use when creating new profiles.',
+        'global_only': True,
     },
-    'tcod.depositor_email': {
-        'key': 'tcod_depositor_email',
+    'user.last_name': {
+        'key': 'user_last_name',
         'valid_type': 'string',
         'valid_values': None,
         'default': NO_DEFAULT,
-        'description': 'E-mail address for TCOD deposition',
+        'description': 'Default user last name to use when creating new profiles.',
+        'global_only': True,
     },
-    'tcod.depositor_author_name': {
-        'key': 'tcod_depositor_author_name',
+    'user.institution': {
+        'key': 'user_institution',
         'valid_type': 'string',
         'valid_values': None,
         'default': NO_DEFAULT,
-        'description': 'Author name for TCOD depositions',
-    },
-    'tcod.depositor_author_email': {
-        'key': 'tcod_depositor_author_email',
-        'valid_type': 'string',
-        'valid_values': None,
-        'default': NO_DEFAULT,
-        'description': 'E-mail address for TCOD depositions',
+        'description': 'Default user institution to use when creating new profiles.',
+        'global_only': True,
     },
     'warnings.showdeprecations': {
         'key': 'show_deprecations',
@@ -215,5 +220,6 @@ CONFIG_OPTIONS = {
         'valid_values': None,
         'default': True,
         'description': 'Boolean whether to print AiiDA deprecation warnings',
+        'global_only': False,
     },
 }

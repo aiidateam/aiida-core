@@ -28,17 +28,7 @@ Plugin development
 .. toctree::
     :maxdepth: 2
 
-    ../developer_guide/devel_tutorial/code_plugin_int_sum
     ../developer_guide/devel_tutorial/code_plugin_float_sum
     ../developer_guide/devel_tutorial/plugin_tests
     ../developer_guide/devel_tutorial/cmdline_plugin
-
-*************
-TCOD exporter
-*************
-
-.. toctree::
-    :maxdepth: 2
-
-    tcod_exporter.rst
 

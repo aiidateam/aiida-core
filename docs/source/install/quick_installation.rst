@@ -24,7 +24,7 @@ Prerequisites
     .. code-block:: bash
 
         brew install git python postgresql rabbitmq
-        pg_ctl -D /usr/local/var/postgres start
+        brew services start postgresql
         brew services start rabbitmq
 
     See :ref:`MacOS X (Homebrew) instructions<details_brew>` for details.
@@ -83,13 +83,25 @@ After completing the setup, your newly created profile should show up in the lis
 
 .. code-block:: bash
 
-    $ verdi profile list
+    verdi profile list
 
     Info: configuration folder: /path.to/.aiida
     Info: default profile is highlighted and marked by the * symbol
     * coding_day
 
-Time to :ref:`get started<get_started>`!
+To make sure all the required resources such as the database and RabbitMQ are up and running, you can run the following command:
+
+.. code-block:: bash
+
+    verdi status
+
+     ✓ profile:     On profile django
+     ✓ repository:  /repo/aiida_dev/django
+     ✓ postgres:    Connected to aiida@localhost:5432
+     ✓ rabbitmq:    Connected to amqp://127.0.0.1?heartbeat=600
+     ✓ daemon:      Daemon is running as PID 2809 since 2019-03-15 16:27:52
+
+If everything is up and running, it is time to :ref:`get started<get_started>`!
 
 If the quick installation failed at any point, please refer 
 to the :ref:`full installation guide<installation>` for more details 

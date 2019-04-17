@@ -11,6 +11,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import click
 
 
@@ -19,16 +20,31 @@ class ProfileParamType(click.ParamType):
 
     name = 'profile'
 
+    def __init__(self, *args, **kwargs):
+        self._cannot_exist = kwargs.pop('cannot_exist', False)
+        super(ProfileParamType, self).__init__(*args, **kwargs)
+
+    @staticmethod
+    def deconvert_default(value):
+        return value.name
+
     def convert(self, value, param, ctx):
         """Attempt to match the given value to a valid profile."""
         from aiida.common.exceptions import MissingConfigurationError, ProfileConfigurationError
-        from aiida.manage.configuration import get_config
+        from aiida.manage.configuration import get_config, Profile
 
         try:
             config = get_config()
             profile = config.get_profile(value)
         except (MissingConfigurationError, ProfileConfigurationError) as exception:
-            self.fail(str(exception))
+            if not self._cannot_exist:
+                self.fail(str(exception))
+
+            # Create a new empty profile
+            profile = Profile(value, {})
+        else:
+            if self._cannot_exist:
+                self.fail(str('the profile `{}` already exists'.format(value)))
 
         return profile
 
@@ -40,6 +56,9 @@ class ProfileParamType(click.ParamType):
         """
         from aiida.common.exceptions import MissingConfigurationError
         from aiida.manage.configuration import get_config
+
+        if self._cannot_exist:
+            return []
 
         try:
             config = get_config()

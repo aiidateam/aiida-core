@@ -427,7 +427,7 @@ class TestUsers(AiidaTestCase):
             node = orm.load_node(uuid=uuid)
             self.assertEqual(node.user.email, new_email)
         for uuid in uuids_u2:
-            self.assertEqual(orm.load_node(uuid).user.email, manager.get_profile().default_user_email)
+            self.assertEqual(orm.load_node(uuid).user.email, manager.get_profile().default_user)
 
     @with_temp_dir
     def test_non_default_user_nodes(self, temp_dir):
@@ -513,7 +513,7 @@ class TestUsers(AiidaTestCase):
         for uuid in uuids1:
             self.assertEqual(orm.load_node(uuid).user.email, new_email)
         for uuid in uuids2:
-            self.assertEqual(orm.load_node(uuid).user.email, manager.get_profile().default_user_email)
+            self.assertEqual(orm.load_node(uuid).user.email, manager.get_profile().default_user)
 
 
 class TestGroups(AiidaTestCase):
@@ -1708,9 +1708,9 @@ class TestLinks(AiidaTestCase):
         i1 = orm.Int(1).store()
         o1 = orm.Int(2).store()
 
-        w1.add_incoming(i1, LinkType.INPUT_WORK, 'input-i1')
+        w1.add_incoming(i1, LinkType.INPUT_WORK, 'input_i1')
         w1.add_incoming(w2, LinkType.CALL_WORK, 'call')
-        o1.add_incoming(w1, LinkType.RETURN, 'return')
+        o1.add_incoming(w1, LinkType.RETURN, 'returned')
 
         links_count_wanted = 2  # All 3 links, except CALL links (the CALL_WORK)
         links_wanted = [l for l in self.get_all_node_links() if l[3] not in
@@ -1751,7 +1751,7 @@ class TestLinks(AiidaTestCase):
         i1 = orm.Int(1).store()
         o1 = orm.Int(2).store()
 
-        w1.add_incoming(i1, LinkType.INPUT_WORK, 'input-i1')
+        w1.add_incoming(i1, LinkType.INPUT_WORK, 'input_i1')
         w1.add_incoming(w2, LinkType.CALL_WORK, 'call')
         o1.add_incoming(w1, LinkType.RETURN, 'return1')
         o1.add_incoming(w2, LinkType.RETURN, 'return2')

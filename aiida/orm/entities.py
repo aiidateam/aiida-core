@@ -197,31 +197,30 @@ class Entity(object):  # pylint: disable=useless-object-inheritance
 
     @property
     def id(self):
-        """
-        Get the id for this entity.  This is unique only amongst entities of this type
-        for a particular backend
+        """Return the id for this entity.
 
-        :return: the entity id
+        This identifier is guaranteed to be unique amongst entities of the same type for a single backend instance.
+
+        :return: the entity's id
         """
         # pylint: disable=redefined-builtin, invalid-name
         return self._backend_entity.id
 
     @property
     def pk(self):
-        """
-        Get the primary key for this entity
+        """Return the primary key for this entity.
 
-        .. note:: Deprecated because the backend need not be a database and so principle key doesn't
-            always make sense.  Use `id()` instead.
+        This identifier is guaranteed to be unique amongst entities of the same type for a single backend instance.
 
-        :return: the principal key
+        :return: the entity's principal key
         """
         return self.id
 
     @property
     def uuid(self):
-        """
-        Get the UUID for this entity.  This is unique across all entities types and backends
+        """Return the UUID for this entity.
+
+        This identifier is unique across all entities types and backend instances.
 
         :return: the entity uuid
         :rtype: :class:`uuid.UUID`
@@ -229,18 +228,15 @@ class Entity(object):  # pylint: disable=useless-object-inheritance
         return self._backend_entity.uuid
 
     def store(self):
-        """
-        Store the entity.
-        """
+        """Store the entity."""
         self._backend_entity.store()
         return self
 
     @property
     def is_stored(self):
-        """
-        Is the computer stored?
+        """Return whether the entity is stored.
 
-        :return: True if stored, False otherwise
+        :return: boolean, True if stored, False otherwise
         :rtype: bool
         """
         return self._backend_entity.is_stored

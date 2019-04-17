@@ -14,8 +14,6 @@ from __future__ import absolute_import
 
 import functools
 
-from .configuration import get_config
-
 __all__ = ('get_manager', 'reset_manager')
 
 MANAGER = None
@@ -37,34 +35,61 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
       * reset manager cache when loading a new profile
     """
 
+    @staticmethod
+    def get_profile():
+        """Return the current loaded profile, if any
+
+        :return: current loaded profile instance
+        :rtype: :class:`~aiida.manage.configuration.profile.Profile` or None
+        """
+        from .configuration import get_profile
+        return get_profile()
+
     def _load_backend(self, schema_check=True):
         """Load the backend for the currently configured profile and return it.
+
+        .. note:: this will reconstruct the `Backend` instance in `self._backend` so the preferred method to load the
+            backend is to call `get_backend` which will create it only when not yet instantiated.
 
         :param schema_check: force a database schema check if the database environment has not yet been loaded
         :return: the database backend
         :rtype: :class:`aiida.orm.Backend`
         """
-        from aiida.backends.profile import BACKEND_DJANGO, BACKEND_SQLA
-        from aiida.backends.utils import is_dbenv_loaded, load_dbenv, _load_dbenv_noschemacheck
+        from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
+        from aiida.common import ConfigurationError, InvalidOperation
+        from aiida.manage import configuration
 
         profile = self.get_profile()
 
-        if not is_dbenv_loaded():
-            if schema_check:
-                load_dbenv(profile.name)
-            else:
-                _load_dbenv_noschemacheck(profile.name)
+        if profile is None:
+            raise ConfigurationError('could not determine the current profile')
 
-        backend_type = profile.dictionary.AIIDADB_BACKEND
+        if configuration.BACKEND_UUID is not None and configuration.BACKEND_UUID != profile.uuid:
+            raise InvalidOperation('cannot load backend because backend of another profile is already loaded')
 
+        backend_type = profile.database_backend
+
+        if backend_type == BACKEND_DJANGO:
+            from aiida.backends.djsite.utils import load_dbenv, _load_dbenv_noschemacheck
+            load_backend = load_dbenv if schema_check else _load_dbenv_noschemacheck
+        elif backend_type == BACKEND_SQLA:
+            from aiida.backends.sqlalchemy.utils import load_dbenv, _load_dbenv_noschemacheck
+            load_backend = load_dbenv if schema_check else _load_dbenv_noschemacheck
+        else:
+            raise ConfigurationError('Invalid backend type {} in profile: {}'.format(backend_type, profile.name))
+
+        # Do NOT reload the backend environment if already loaded, simply reload the backend instance after
+        if configuration.BACKEND_UUID is None:
+            load_backend(profile)
+            configuration.BACKEND_UUID = profile.uuid
+
+        # Can only import the backend classes after the backend has been loaded
         if backend_type == BACKEND_DJANGO:
             from aiida.orm.implementation.django.backend import DjangoBackend
             self._backend = DjangoBackend()
         elif backend_type == BACKEND_SQLA:
             from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
             self._backend = SqlaBackend()
-        else:
-            raise RuntimeError('Invalid backend type {} in profile: {}'.format(backend_type, profile.name))
 
         return self._backend
 
@@ -79,19 +104,6 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
             self._load_backend()
 
         return self._backend
-
-    def get_profile(self):
-        """
-        Get the current profile
-
-        :return: current loaded profile instance
-        :rtype: :class:`~aiida.manage.configuration.profile.Profile`
-        """
-        if self._profile is None:
-            config = get_config()
-            self._profile = config.current_profile
-
-        return self._profile
 
     def get_persister(self):
         """
@@ -232,10 +244,11 @@ class Manager(object):  # pylint: disable=useless-object-inheritance
         :rtype: :class:`aiida.engine.runners.Runner`
         """
         from aiida.engine import runners
+        from .configuration import get_config
 
         config = get_config()
         profile = self.get_profile()
-        poll_interval = 0.0 if profile.is_test_profile else config.option_get('runner.poll.interval')
+        poll_interval = 0.0 if profile.is_test_profile else config.get_option('runner.poll.interval')
 
         settings = {'rmq_submit': False, 'poll_interval': poll_interval}
         settings.update(kwargs)

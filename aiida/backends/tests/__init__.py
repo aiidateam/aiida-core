@@ -7,15 +7,18 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+Module for defining tests that required access to (a temporary) database
+"""
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
 from six.moves import range
 from aiida.plugins.entry_point import ENTRYPOINT_MANAGER
-from aiida.backends.profile import BACKEND_SQLA, BACKEND_DJANGO
+from aiida.backends import BACKEND_SQLA, BACKEND_DJANGO
 
-db_test_list = {
+DB_TEST_LIST = {
     BACKEND_DJANGO: {
         'generic': ['aiida.backends.djsite.db.subtests.test_generic'],
         'nodes': ['aiida.backends.djsite.db.subtests.test_nodes'],
@@ -48,7 +51,6 @@ db_test_list = {
         'cmdline.commands.graph': ['aiida.backends.tests.cmdline.commands.test_graph'],
         'cmdline.commands.group': ['aiida.backends.tests.cmdline.commands.test_group'],
         'cmdline.commands.import': ['aiida.backends.tests.cmdline.commands.test_import'],
-        'cmdline.commands.node': ['aiida.backends.tests.cmdline.commands.test_node'],
         'cmdline.commands.process': ['aiida.backends.tests.cmdline.commands.test_process'],
         'cmdline.commands.profile': ['aiida.backends.tests.cmdline.commands.test_profile'],
         'cmdline.commands.rehash': ['aiida.backends.tests.cmdline.commands.test_rehash'],
@@ -64,12 +66,14 @@ db_test_list = {
         'cmdline.params.types.group': ['aiida.backends.tests.cmdline.params.types.test_group'],
         'cmdline.params.types.identifier': ['aiida.backends.tests.cmdline.params.types.test_identifier'],
         'cmdline.params.types.node': ['aiida.backends.tests.cmdline.params.types.test_node'],
+        'cmdline.params.types.path': ['aiida.backends.tests.cmdline.params.types.test_path'],
         'cmdline.params.types.plugin': ['aiida.backends.tests.cmdline.params.types.test_plugin'],
         'cmdline.utils.common': ['aiida.backends.tests.cmdline.utils.test_common'],
         'common.archive': ['aiida.backends.tests.common.test_archive'],
         'common.extendeddicts': ['aiida.backends.tests.common.test_extendeddicts'],
         'common.folders': ['aiida.backends.tests.common.test_folders'],
         'common.hashing': ['aiida.backends.tests.common.test_hashing'],
+        'common.links': ['aiida.backends.tests.common.test_links'],
         'common.logging': ['aiida.backends.tests.common.test_logging'],
         'common.serialize': ['aiida.backends.tests.common.test_serialize'],
         'common.timezone': ['aiida.backends.tests.common.test_timezone'],
@@ -84,6 +88,7 @@ db_test_list = {
         'engine.futures': ['aiida.backends.tests.engine.test_futures'],
         'engine.launch': ['aiida.backends.tests.engine.test_launch'],
         'engine.persistence': ['aiida.backends.tests.engine.test_persistence'],
+        'engine.ports': ['aiida.backends.tests.engine.test_ports'],
         'engine.process': ['aiida.backends.tests.engine.test_process'],
         'engine.process_builder': ['aiida.backends.tests.engine.test_process_builder'],
         'engine.process_function': ['aiida.backends.tests.engine.test_process_function'],
@@ -106,7 +111,9 @@ db_test_list = {
         'orm.authinfos': ['aiida.backends.tests.orm.test_authinfos'],
         'orm.comments': ['aiida.backends.tests.orm.test_comments'],
         'orm.computers': ['aiida.backends.tests.orm.test_computers'],
+        'orm.data.dict': ['aiida.backends.tests.orm.data.test_dict'],
         'orm.data.remote': ['aiida.backends.tests.orm.data.test_remote'],
+        'orm.data.singlefile': ['aiida.backends.tests.orm.data.test_singlefile'],
         'orm.data.upf': ['aiida.backends.tests.orm.data.test_upf'],
         'orm.entities': ['aiida.backends.tests.orm.test_entities'],
         'orm.groups': ['aiida.backends.tests.orm.test_groups'],
@@ -115,30 +122,35 @@ db_test_list = {
         'orm.implementation.comments': ['aiida.backends.tests.orm.implementation.test_comments'],
         'orm.logs': ['aiida.backends.tests.orm.test_logs'],
         'orm.mixins': ['aiida.backends.tests.orm.test_mixins'],
-        'orm.node': ['aiida.backends.tests.orm.node.test_node'],
+        'orm.node.calcjob': ['aiida.backends.tests.orm.node.test_calcjob'],
+        'orm.node.node': ['aiida.backends.tests.orm.node.test_node'],
         'orm.utils.calcjob': ['aiida.backends.tests.orm.utils.test_calcjob'],
         'orm.utils.node': ['aiida.backends.tests.orm.utils.test_node'],
         'orm.utils.loaders': ['aiida.backends.tests.orm.utils.test_loaders'],
         'orm.utils.repository': ['aiida.backends.tests.orm.utils.test_repository'],
+        'parsers.parser': ['aiida.backends.tests.parsers.test_parser'],
         'parsers': ['aiida.backends.tests.test_parsers'],
         'plugin_loader': ['aiida.backends.tests.test_plugin_loader'],
         'query': ['aiida.backends.tests.test_query'],
         'restapi': ['aiida.backends.tests.test_restapi'],
-        'tcodexporter': ['aiida.backends.tests.test_tcodexporter'],
+        'tools.data.orbital': ['aiida.backends.tests.tools.data.orbital.test_orbitals']
     }
 }
 
 
 def get_db_test_names():
+    """
+    Return a sorted list of test names
+    """
     retlist = []
-    for backend in db_test_list:
-        for name in db_test_list[backend]:
+    for backend in DB_TEST_LIST:
+        for name in DB_TEST_LIST[backend]:
             retlist.append(name)
 
     # This is a temporary solution to be able to run tests in plugins. Once the plugin fixtures
     # have been made working and are released, we can replace this logic with them
-    for ep in [ep for ep in ENTRYPOINT_MANAGER.iter_entry_points(group='aiida.tests')]:
-        retlist.append(ep.name)
+    for entrypoint in [ep for ep in ENTRYPOINT_MANAGER.iter_entry_points(group='aiida.tests')]:
+        retlist.append(entrypoint.name)
 
     # Explode the list so that if I have a.b.c,
     # I can run it also just with 'a' or with 'a.b'
@@ -156,51 +168,50 @@ def get_db_test_names():
 
 def get_db_test_list():
     """
-    This function returns the db_test_list for the current backend,
+    This function returns the DB_TEST_LIST for the current backend,
     merged with the 'common' tests.
 
     :note: This function should be called only after setting the
       backend, and then it returns only the tests for this backend, and the common ones.
     """
-    from aiida.backends import settings
-    from aiida.common.exceptions import ConfigurationError
     from collections import defaultdict
+    from aiida.common.exceptions import ConfigurationError
+    from aiida.manage import configuration
 
-    current_backend = settings.BACKEND
     try:
-        be_tests = db_test_list[current_backend]
+        be_tests = DB_TEST_LIST[configuration.PROFILE.database_backend]
     except KeyError:
         raise ConfigurationError("No backend configured yet")
 
     # Could be undefined, so put to empty dict by default
     try:
-        common_tests = db_test_list["common"]
+        common_tests = DB_TEST_LIST["common"]
     except KeyError:
         raise ConfigurationError("A 'common' key must always be defined!")
 
     retdict = defaultdict(list)
     for k, tests in common_tests.items():
-        for t in tests:
-            retdict[k].append(t)
+        for test in tests:
+            retdict[k].append(test)
     for k, tests in be_tests.items():
-        for t in tests:
-            retdict[k].append(t)
+        for test in tests:
+            retdict[k].append(test)
 
     # This is a temporary solution to be able to run tests in plugins. Once the plugin fixtures
     # have been made working and are released, we can replace this logic with them
-    for ep in [ep for ep in ENTRYPOINT_MANAGER.iter_entry_points(group='aiida.tests')]:
-        retdict[ep.name].append(ep.module_name)
+    for entrypoint in [ep for ep in ENTRYPOINT_MANAGER.iter_entry_points(group='aiida.tests')]:
+        retdict[entrypoint.name].append(entrypoint.module_name)
 
     # Explode the dictionary so that if I have a.b.c,
     # I can run it also just with 'a' or with 'a.b'
     final_retdict = defaultdict(list)
-    for k, v in retdict.items():
-        final_retdict[k] = v
-    for k, v in retdict.items():
-        if '.' in k:
-            parts = k.split('.')
+    for key, val in retdict.items():
+        final_retdict[key] = val
+    for key, val in retdict.items():
+        if '.' in key:
+            parts = key.split('.')
             for last_idx in range(1, len(parts)):
                 parentkey = ".".join(parts[:last_idx])
-                final_retdict[parentkey].extend(v)
+                final_retdict[parentkey].extend(val)
 
     return dict(final_retdict)

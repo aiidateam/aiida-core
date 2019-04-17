@@ -133,6 +133,14 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
         session = get_scoped_session()
         return session.query(self.MODEL_CLASS).join(self.MODEL_CLASS.dbnodes).filter(DbGroup.id == self.pk).count()
 
+    def clear(self):
+        """Remove all the nodes from this group."""
+        from aiida.backends.sqlalchemy import get_scoped_session
+        session = get_scoped_session()
+        # Note we have to call `dbmodel` and `_dbmodel` to circumvent the `ModelWrapper`
+        self.dbmodel.dbnodes = []
+        session.commit()
+
     @property
     def nodes(self):
         """Get an iterator to all the nodes in the group"""

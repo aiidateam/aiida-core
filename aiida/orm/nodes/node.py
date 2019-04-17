@@ -116,12 +116,19 @@ class Node(Entity):
             raise ValueError('the computer is not stored')
 
         computer = computer.backend_entity if computer else None
-        user = user.backend_entity if user else User.objects(backend).get_default().backend_entity
+        user = user.backend_entity if user else User.objects(backend).get_default()
 
         if user is None:
+            from aiida.manage.configuration import get_config, get_profile
+            config = get_config()
+            profile = get_profile()
+            print('CONFIG', config.dictionary)
+            print('PROFILE', profile.dictionary)
+            print('USERS', [user.email for user in User.objects(backend).all()])
             raise ValueError('the user cannot be None')
 
-        backend_entity = backend.nodes.create(node_type=self.class_node_type, user=user, computer=computer, **kwargs)
+        backend_entity = backend.nodes.create(
+            node_type=self.class_node_type, user=user.backend_entity, computer=computer, **kwargs)
         super(Node, self).__init__(backend_entity)
 
     def __repr__(self):
@@ -817,23 +824,14 @@ class Node(Entity):
         """
         from aiida.orm.utils.links import validate_link
 
-        type_check(link_type, LinkType, 'the link_type should be a value from the LinkType enum but got: {}'.format(
-            type(link_type)))
-        type_check(source, Node, 'the source should be a Node instance but got: {}'.format(type(source)))
-
         validate_link(source, self, link_type, link_label)
 
-        # Check for cycles. This works if the transitive closure is enabled; if it isn't, this test will never fail,
-        # but then having a circular link is not meaningful but does not pose a huge threat. I am linking source -> self
-        # a loop would be created if a DbPath exists already in the TC table from self to source.
-        if link_type in [LinkType.CREATE, LinkType.INPUT_CALC, LinkType.INPUT_WORK]:  # yapf:disable
-            if QueryBuilder().append(
-                    Node, filters={
-                        'id': self.pk
-                    }, tag='parent').append(
-                        Node, filters={
-                            'id': source.pk
-                        }, tag='child', with_ancestors='parent').count() > 0:
+        # Check if the proposed link would introduce a cycle in the graph following ancestor/descendant rules
+        if link_type in [LinkType.CREATE, LinkType.INPUT_CALC, LinkType.INPUT_WORK]:
+            builder = QueryBuilder().append(
+                Node, filters={'id': self.pk}, tag='parent').append(
+                Node, filters={'id': source.pk}, tag='child', with_ancestors='parent')  # yapf:disable
+            if builder.count() > 0:
                 raise ValueError('the link you are attempting to create would generate a cycle in the graph')
 
     def validate_outgoing(self, target, link_type, link_label):  # pylint: disable=unused-argument,no-self-use
@@ -849,9 +847,8 @@ class Node(Entity):
         :raise TypeError: if `target` is not a Node instance or `link_type` is not a `LinkType` enum
         :raise ValueError: if the proposed link is invalid
         """
-        type_check(link_type, LinkType, 'the link_type should be a value from the LinkType enum but got: {}'.format(
-            type(link_type)))
-        type_check(target, Node, 'the target should be a Node instance but got: {}'.format(type(target)))
+        type_check(link_type, LinkType, 'link_type should be a LinkType enum but got: {}'.format(type(link_type)))
+        type_check(target, Node, 'target should be a `Node` instance but got: {}'.format(type(target)))
 
     def _add_incoming_cache(self, source, link_type, link_label):
         """Add an incoming link to the cache.

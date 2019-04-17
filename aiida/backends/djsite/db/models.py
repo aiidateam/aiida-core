@@ -17,6 +17,7 @@ from six.moves import zip, range
 from django.db import models as m
 from django.contrib.auth.models import (
     AbstractBaseUser, BaseUserManager, PermissionsMixin)
+from django.contrib.postgres.fields import JSONField
 from django.utils.encoding import python_2_unicode_compatible
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.query import QuerySet
@@ -24,7 +25,7 @@ from django.db.models.query import QuerySet
 from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
 from aiida.common.exceptions import (ConfigurationError, DbContentError)
-from aiida.backends.djsite.settings.settings import AUTH_USER_MODEL
+from aiida.backends.djsite.settings import AUTH_USER_MODEL
 import aiida.backends.djsite.db.migrations as migrations
 from aiida.backends.utils import AIIDA_ATTRIBUTE_SEP
 
@@ -1294,69 +1295,18 @@ class DbComputer(m.Model):
         * ... (further limits per user etc.)
 
     """
-    # TODO: understand if we want that this becomes simply another type of dbnode.
-
     uuid = m.UUIDField(default=get_new_uuid, unique=True)
     name = m.CharField(max_length=255, unique=True, blank=False)
     hostname = m.CharField(max_length=255)
     description = m.TextField(blank=True)
-    enabled = m.BooleanField(default=True)
     # TODO: next three fields should not be blank...
     transport_type = m.CharField(max_length=255)
     scheduler_type = m.CharField(max_length=255)
-    transport_params = m.TextField(default="{}")  # Will store a json
-    metadata = m.TextField(default="{}")  # Will store a json
-
-    @classmethod
-    def get_dbcomputer(cls, computer):
-        """
-        Return a DbComputer from its name (or from another Computer or DbComputer instance)
-        """
-        from django.core.exceptions import MultipleObjectsReturned
-        from aiida.common.exceptions import NotExistent
-
-        if isinstance(computer, six.string_types):
-            try:
-                dbcomputer = DbComputer.objects.get(name=computer)
-            except ObjectDoesNotExist:
-                raise NotExistent("No computer found in the table of computers with "
-                                  "the given name '{}'".format(computer))
-            except MultipleObjectsReturned:
-                raise DbContentError("There is more than one computer with name '{}', "
-                                     "pass a Django Computer instance".format(computer))
-        elif isinstance(computer, int):
-            try:
-                dbcomputer = DbComputer.objects.get(pk=computer)
-            except ObjectDoesNotExist:
-                raise NotExistent("No computer found in the table of computers with "
-                                  "the given pk '{}'".format(computer))
-        elif isinstance(computer, DbComputer):
-            if computer.pk is None:
-                raise ValueError("The computer instance you are passing has not been stored yet")
-            dbcomputer = computer
-        else:
-            raise TypeError(
-                "Pass either a computer name, a DbComputer django instance, a Computer pk or a Computer object")
-        return dbcomputer
-
-    def _get_val_from_metadata(self, key):
-        from aiida.common import json
-
-        try:
-            metadata = json.loads(self.metadata)
-        except ValueError:
-            raise DbContentError(
-                "Error while reading metadata for DbComputer {} ({})".format(self.name, self.hostname))
-        try:
-            return metadata[key]
-        except KeyError:
-            raise ConfigurationError('No {} found for DbComputer {} '.format(key, self.name))
+    transport_params = JSONField(default=dict)
+    metadata = JSONField(default=dict)
 
     def __str__(self):
-        if self.enabled:
-            return "{} ({})".format(self.name, self.hostname)
-        else:
-            return "{} ({}) [DISABLED]".format(self.name, self.hostname)
+        return '{} ({})'.format(self.name, self.hostname)
 
 
 @python_2_unicode_compatible
@@ -1368,13 +1318,12 @@ class DbAuthInfo(m.Model):
     # Delete the DbAuthInfo if either the user or the computer are removed
     aiidauser = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.CASCADE)
     dbcomputer = m.ForeignKey(DbComputer, on_delete=m.CASCADE)
-    auth_params = m.TextField(default="{}")  # Will store a json; contains mainly the remoteuser
-    # and the private_key
+    auth_params = JSONField(default=dict)  # contains mainly the remoteuser and the private_key
 
     # The keys defined in the metadata of the DbAuthInfo will override the
     # keys with the same name defined in the DbComputer (using a dict.update()
     # call of python).
-    metadata = m.TextField(default="{}")  # Will store a json
+    metadata = JSONField(default=dict)
     # Whether this computer is enabled (user-level enabling feature)
     enabled = m.BooleanField(default=True)
 
@@ -1406,156 +1355,16 @@ class DbComment(m.Model):
 
 @python_2_unicode_compatible
 class DbLog(m.Model):
-    # Creation time
     uuid = m.UUIDField(default=get_new_uuid, unique=True)
     time = m.DateTimeField(default=timezone.now, editable=False)
     loggername = m.CharField(max_length=255, db_index=True)
     levelname = m.CharField(max_length=50, db_index=True)
-    # A string to know what is the referred object (e.g. a Calculation,
-    # or other)
     dbnode = m.ForeignKey(DbNode, related_name='dblogs', on_delete=m.CASCADE)
-    # because it may be in different
-    # tables
     message = m.TextField(blank=True)
-    metadata = m.TextField(default="{}")  # Will store a json
+    metadata = JSONField(default=dict)
 
     def __str__(self):
         return 'DbLog: {} for node {}: {}'.format(self.levelname, self.dbnode.id, self.message)
-
-
-# Issue 2380 will take care of dropping these models, which will have to be accompanied by a migration.
-# The datastructures can then also be removed
-
-class Enumerate(frozenset):
-    """Custom implementation of enum.Enum."""
-
-    def __getattr__(self, name):
-        if name in self:
-            return six.text_type(name)  # always return unicode in Python 2
-        raise AttributeError("No attribute '{}' in Enumerate '{}'".format(name, self.__class__.__name__))
-
-    def __setattr__(self, name, value):
-        raise AttributeError("Cannot set attribute in Enumerate '{}'".format(self.__class__.__name__))
-
-    def __delattr__(self, name):
-        raise AttributeError("Cannot delete attribute in Enumerate '{}'".format(self.__class__.__name__))
-
-
-class WorkflowState(Enumerate):
-    pass
-
-
-wf_states = WorkflowState((
-    'CREATED',
-    'INITIALIZED',
-    'RUNNING',
-    'FINISHED',
-    'SLEEP',
-    'ERROR'
-))
-
-
-class WorkflowDataType(Enumerate):
-    pass
-
-
-wf_data_types = WorkflowDataType((
-    'PARAMETER',
-    'RESULT',
-    'ATTRIBUTE',
-))
-
-
-class WorkflowDataValueType(Enumerate):
-    pass
-
-
-wf_data_value_types = WorkflowDataValueType((
-    'NONE',
-    'JSON',
-    'AIIDA',
-))
-
-wf_start_call = "start"
-wf_exit_call = "exit"
-wf_default_call = "none"
-
-@python_2_unicode_compatible
-class DbWorkflow(m.Model):
-    uuid = m.UUIDField(default=get_new_uuid, unique=True)
-    ctime = m.DateTimeField(default=timezone.now, editable=False)
-    mtime = m.DateTimeField(auto_now=True, editable=False)
-    user = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.PROTECT)
-    label = m.CharField(max_length=255, db_index=True, blank=True)
-    description = m.TextField(blank=True)
-    # still to implement, similarly to the DbNode class
-    nodeversion = m.IntegerField(default=1, editable=False)
-    # to be implemented similarly to the DbNode class
-    lastsyncedversion = m.IntegerField(default=0, editable=False)
-    state = m.CharField(max_length=255, choices=list(zip(sorted(wf_states), sorted(wf_states))),
-                        default=wf_states.INITIALIZED)
-    report = m.TextField(blank=True)
-    # File variables, script is the complete dump of the workflow python script
-    module = m.TextField(blank=False)
-    module_class = m.TextField(blank=False)
-    script_path = m.TextField(blank=False)
-    script_md5 = m.CharField(max_length=255, blank=False)
-
-    objects = m.Manager()
-    # Return aiida Node instances or their subclasses instead of DbNode instances
-    aiidaobjects = AiidaObjectManager()
-
-    def __str__(self):
-        simplename = self.module_class
-        # node pk + type
-        if self.label:
-            return "{} workflow [{}]: {}".format(simplename, self.pk, self.label)
-        else:
-            return "{} workflow [{}]".format(simplename, self.pk)
-
-
-@python_2_unicode_compatible
-class DbWorkflowData(m.Model):
-    parent = m.ForeignKey(DbWorkflow, related_name='data')
-    name = m.CharField(max_length=255, blank=False)
-    time = m.DateTimeField(default=timezone.now, editable=False)
-    data_type = m.CharField(max_length=255,
-                            blank=False, default=wf_data_types.PARAMETER)
-    value_type = m.CharField(max_length=255, blank=False,
-                             default=wf_data_value_types.NONE)
-    json_value = m.TextField(blank=True)
-    aiida_obj = m.ForeignKey(DbNode, blank=True, null=True)
-
-    class Meta:
-        unique_together = (("parent", "name", "data_type"))
-
-    def __str__(self):
-        return "Data for workflow {} [{}]: {}".format(
-            self.parent.module_class, self.parent.pk, self.name)
-
-
-@python_2_unicode_compatible
-class DbWorkflowStep(m.Model):
-    parent = m.ForeignKey(DbWorkflow, related_name='steps')
-    name = m.CharField(max_length=255, blank=False)
-    user = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.PROTECT)
-    time = m.DateTimeField(default=timezone.now, editable=False)
-    nextcall = m.CharField(max_length=255, blank=False,
-                           default=wf_default_call)
-    calculations = m.ManyToManyField(DbNode, symmetrical=False,
-                                     related_name="workflow_step")
-    sub_workflows = m.ManyToManyField(DbWorkflow, symmetrical=False,
-                                      related_name="parent_workflow_step")
-    state = m.CharField(max_length=255,
-                        choices=list(zip(sorted(wf_states), sorted(wf_states))),
-                        default=wf_states.CREATED)
-
-    class Meta:
-        unique_together = (("parent", "name"))
-
-    def __str__(self):
-        return "Step {} for workflow {} [{}]".format(self.name,
-                                                     self.parent.module_class, self.parent.pk)
 
 
 @contextlib.contextmanager

@@ -437,7 +437,7 @@ class PbsBaseClass(Scheduler):
             # There are lines without equals sign: this is bad
             if lines_without_equals_sign:
                 # Should I only warn?
-                _LOGGER.error("There are lines without equals sign! {}" "".format(lines_without_equals_sign))
+                _LOGGER.error("There are lines without equals sign! {}".format(lines_without_equals_sign))
                 raise SchedulerParsingError("There are lines without equals sign.")
 
             raw_data = {

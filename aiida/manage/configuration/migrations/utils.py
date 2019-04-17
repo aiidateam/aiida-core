@@ -18,17 +18,14 @@ from .migrations import _MIGRATION_LOOKUP, CURRENT_CONFIG_VERSION
 __all__ = ('check_and_migrate_config',)
 
 
-def check_and_migrate_config(config, store=True):
+def check_and_migrate_config(config):
     """Checks if the config needs to be migrated, and performs the migration if needed.
 
-    :param config: the configuration instance
-    :param store: boolean, if True will write the configuration file to disk after migration has completed
-    :return: the migrated configuration instance
+    :param config: the configuration dictionary
+    :return: the migrated configuration dictionary
     """
     if config_needs_migrating(config):
         config = migrate_config(config)
-        if store:
-            config.store()
 
     return config
 
@@ -42,21 +39,40 @@ def config_needs_migrating(config):
     :return: True if the configuration has an older version and needs to be migrated, False otherwise
     :raises ConfigurationVersionError: if the oldest compatible version of the config is higher than the current.
     """
-    if config.version_oldest_compatible > CURRENT_CONFIG_VERSION:
-        raise exceptions.ConfigurationVersionError(
-            'The configuration file "{}" has version {} which is not compatible with the current version {}.'.format(
-                config.filepath, config.version, CURRENT_CONFIG_VERSION))
+    current_version = get_current_version(config)
+    oldest_compatible_version = get_oldest_compatible_version(config)
 
-    return CURRENT_CONFIG_VERSION > config.version
+    if oldest_compatible_version > CURRENT_CONFIG_VERSION:
+        raise exceptions.ConfigurationVersionError(
+            'The configuration file has version {} which is not compatible with the current version {}.'.format(
+                current_version, CURRENT_CONFIG_VERSION))
+
+    return CURRENT_CONFIG_VERSION > current_version
 
 
 def migrate_config(config):
     """Run the registered configuration migrations until the version matches the current configuration version.
 
-    :param config: the configuration instance
-    :return: the migrated configuration instance
+    :param config: the configuration dictionary
+    :return: the migrated configuration dictionary
     """
-    while config.version < CURRENT_CONFIG_VERSION:
-        config = _MIGRATION_LOOKUP[config.version].apply(config)
+    while get_current_version(config) < CURRENT_CONFIG_VERSION:
+        config = _MIGRATION_LOOKUP[get_current_version(config)].apply(config)
 
     return config
+
+
+def get_current_version(config):
+    """Return the current version of the config.
+
+    :return: current config version or 0 if not defined
+    """
+    return config.get('CONFIG_VERSION', {}).get('CURRENT', 0)
+
+
+def get_oldest_compatible_version(config):
+    """Return the current oldest compatible version of the config.
+
+    :return: current oldest compatible config version or 0 if not defined
+    """
+    return config.get('CONFIG_VERSION', {}).get('OLDEST_COMPATIBLE', 0)

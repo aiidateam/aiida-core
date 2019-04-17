@@ -21,8 +21,8 @@ import plumpy
 
 from aiida.orm import load_node
 from .processes import futures
-from .processes.process import instantiate_process
 from .processes.calcjobs import manager
+from .utils import instantiate_process
 from . import transports
 from . import utils
 
@@ -31,7 +31,7 @@ __all__ = ('Runner',)
 LOGGER = logging.getLogger(__name__)
 
 ResultAndNode = namedtuple('ResultAndNode', ['result', 'node'])
-ResultAndPid = namedtuple('ResultAndPid', ['result', 'pid'])
+ResultAndPk = namedtuple('ResultAndPk', ['result', 'pk'])
 
 
 class Runner(object):  # pylint: disable=useless-object-inheritance
@@ -218,17 +218,17 @@ class Runner(object):  # pylint: disable=useless-object-inheritance
         result, node = self._run(process, *args, **inputs)
         return ResultAndNode(result, node)
 
-    def run_get_pid(self, process, *args, **inputs):
+    def run_get_pk(self, process, *args, **inputs):
         """
         Run the process with the supplied inputs in this runner that will block until the process is completed.
         The return value will be the results of the completed process
 
         :param process: the process class or process function to run
         :param inputs: the inputs to be passed to the process
-        :return: tuple of the outputs of the process and process pid
+        :return: tuple of the outputs of the process and process node pk
         """
         result, node = self._run(process, *args, **inputs)
-        return ResultAndPid(result, node.pk)
+        return ResultAndPk(result, node.pk)
 
     def call_on_calculation_finish(self, pk, callback):
         """

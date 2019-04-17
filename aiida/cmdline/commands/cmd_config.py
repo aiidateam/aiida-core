@@ -30,24 +30,27 @@ def verdi_config(ctx, option, value, globally, unset):
     config = ctx.obj.config
     profile = ctx.obj.profile
 
+    if option.global_only:
+        globally = True
+
     # Define the string that determines the scope: for specific profile or globally
-    scope = profile.name if not globally else None
-    scope_text = 'for {}'.format(profile.name) if not globally else 'globally'
+    scope = profile.name if (not globally and profile) else None
+    scope_text = 'for {}'.format(profile.name) if (not globally and profile) else 'globally'
 
     # Unset the specified option
     if unset:
-        config.option_unset(option.name, scope=scope)
+        config.unset_option(option.name, scope=scope)
         config.store()
         echo.echo_success('{} unset {}'.format(option.name, scope_text))
 
     # Get the specified option
     elif value is None:
-        option_value = config.option_get(option.name, scope=scope, default=False)
+        option_value = config.get_option(option.name, scope=scope, default=False)
         if option_value:
             echo.echo('{}'.format(option_value))
 
     # Set the specified option
     else:
-        config.option_set(option.name, value, scope=scope)
+        config.set_option(option.name, value, scope=scope)
         config.store()
         echo.echo_success('{} set to {} {}'.format(option.name, value, scope_text))

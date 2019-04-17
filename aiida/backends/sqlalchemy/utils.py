@@ -71,49 +71,45 @@ def recreate_after_fork(engine):
     sa.scopedsessionclass = scoped_session(sessionmaker(bind=sa.engine, expire_on_commit=True))
 
 
-def reset_session(config):
+def reset_session(profile):
     """
-    :param config: the configuration of the profile from the
-       configuration file
+    :param profile: the profile whose configuration to use to connect to the database
 
     Resets (global) engine and sessionmaker classes, to create a new one
     (or creates a new one from scratch if not already available)
     """
     from multiprocessing.util import register_after_fork
 
-    engine_url = (
-        "postgresql://{AIIDADB_USER}:{AIIDADB_PASS}@"
-        "{AIIDADB_HOST}{sep}{AIIDADB_PORT}/{AIIDADB_NAME}"
-        ).format(sep=':' if config['AIIDADB_PORT'] else '', **config)
+    separator = ':' if profile.database_port else ''
+    engine_url = 'postgresql://{user}:{password}@{hostname}{separator}{port}/{name}'.format(
+        separator=separator,
+        user=profile.database_username,
+        password=profile.database_password,
+        hostname=profile.database_hostname,
+        port=profile.database_port,
+        name=profile.database_name)
 
-    sa.engine = create_engine(engine_url, json_serializer=dumps_json,
-                              json_deserializer=loads_json, encoding='utf-8')
-    sa.scopedsessionclass = scoped_session(sessionmaker(bind=sa.engine,
-                                                        expire_on_commit=True))
+    sa.engine = create_engine(engine_url, json_serializer=dumps_json, json_deserializer=loads_json, encoding='utf-8')
+    sa.scopedsessionclass = scoped_session(sessionmaker(bind=sa.engine, expire_on_commit=True))
     register_after_fork(sa.engine, recreate_after_fork)
 
 
-def load_dbenv(profile=None, connection=None):
+def load_dbenv(profile):
     """
     Load the database environment (SQLAlchemy) and perform some checks.
 
-    :param profile: the string with the profile to use. If not specified,
-        use the default one specified in the AiiDA configuration file.
+    :param profile: the string with the profile to use
     """
-    _load_dbenv_noschemacheck(profile=profile)
+    _load_dbenv_noschemacheck(profile)
     # Check schema version and the existence of the needed tables
-    check_schema_version(profile_name=profile)
+    check_schema_version(profile_name=profile.name)
 
 
-def _load_dbenv_noschemacheck(profile=None, connection=None):
+def _load_dbenv_noschemacheck(profile):
     """
     Load the SQLAlchemy database.
     """
-    from aiida.manage.configuration import get_config
-
-    config = get_config()
-    profile = config.current_profile
-    reset_session(profile.dictionary)
+    reset_session(profile)
 
 
 _aiida_autouser_cache = None
@@ -391,13 +387,7 @@ def check_schema_version(profile_name=None):
     :raise aiida.common.ConfigurationError: if the two schema versions do not match
     """
     from aiida.backends import sqlalchemy as sa
-    from aiida.backends.settings import IN_DOC_MODE
     from aiida.common.exceptions import ConfigurationError
-
-    # Early exit if we compile the documentation since the schema check is not needed and it creates problems
-    # with the sqlalchemy migrations
-    if IN_DOC_MODE:
-        return
 
     alembic_cfg = get_alembic_conf()
 
@@ -414,7 +404,7 @@ def check_schema_version(profile_name=None):
         raise ConfigurationError('Database schema version {} is outdated compared to the code schema version {}\n'
                                  'To migrate the database to the current version, run the following commands:'
                                  '\n  verdi -p {} daemon stop\n  verdi -p {} database migrate'.format(
-                                    code_schema_version, db_schema_version, profile_name, profile_name))
+                                    db_schema_version, code_schema_version, profile_name, profile_name))
 
 
 

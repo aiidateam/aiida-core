@@ -7,13 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import functools
-import os
-import shutil
 
 from sqlalchemy.orm import sessionmaker
 
@@ -89,7 +87,6 @@ class SqlAlchemyTests(AiidaTestImplementation):
         DbLink = table('db_dblink')
         DbNode = table('db_dbnode')
         DbLog = table('db_dblog')
-        DbWorkflow = table('db_dbworkflow')
         DbAuthInfo = table('db_dbauthinfo')
         DbUser = table('db_dbuser')
         DbComputer = table('db_dbcomputer')
@@ -99,7 +96,6 @@ class SqlAlchemyTests(AiidaTestImplementation):
         self.test_session.execute(DbLog.delete())
         self.test_session.execute(DbLink.delete())
         self.test_session.execute(DbNode.delete())
-        self.test_session.execute(DbWorkflow.delete())
         self.test_session.execute(DbAuthInfo.delete())
         self.test_session.execute(DbComputer.delete())
         self.test_session.execute(DbUser.delete())

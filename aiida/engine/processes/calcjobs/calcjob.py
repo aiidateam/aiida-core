@@ -31,7 +31,7 @@ class CalcJob(Process):
     """Implementation of the CalcJob process."""
 
     _node_class = orm.CalcJobNode
-    _spec_type = CalcJobProcessSpec
+    _spec_class = CalcJobProcessSpec
     link_label_retrieved = 'retrieved'
 
     def __init__(self, *args, **kwargs):
@@ -46,6 +46,8 @@ class CalcJob(Process):
         # yapf: disable
         super(CalcJob, cls).define(spec)
         spec.input('code', valid_type=orm.Code, help='The Code to use for this job.')
+        spec.input('metadata.dry_run', valid_type=bool, default=False,
+            help='When set to True will prepare the calculation job for submission but not actually launch it.')
         spec.input('metadata.options.input_filename', valid_type=six.string_types, required=False,
             help='Filename to which the input for the code that is to be run will be written.')
         spec.input('metadata.options.output_filename', valid_type=six.string_types, required=False,
@@ -54,45 +56,45 @@ class CalcJob(Process):
             help='Filename to which the content of stdout of the scheduler will be written.')
         spec.input('metadata.options.scheduler_stderr', valid_type=six.string_types, default='_scheduler-stderr.txt',
             help='Filename to which the content of stderr of the scheduler will be written.')
-        spec.input('metadata.options.resources', valid_type=dict, non_db=True, required=True,
+        spec.input('metadata.options.resources', valid_type=dict, required=True,
             help='Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '
                  'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the '
                  'scheduler for more details.')
-        spec.input('metadata.options.max_wallclock_seconds', valid_type=int, non_db=True, required=False,
+        spec.input('metadata.options.max_wallclock_seconds', valid_type=int, required=False,
             help='Set the wallclock in seconds asked to the scheduler')
-        spec.input('metadata.options.custom_scheduler_commands', valid_type=six.string_types, non_db=True, default='',
+        spec.input('metadata.options.custom_scheduler_commands', valid_type=six.string_types, default='',
             help='Set a (possibly multiline) string with the commands that the user wants to manually set for the '
                  'scheduler. The difference of this option with respect to the `prepend_text` is the position in '
                  'the scheduler submission file where such text is inserted: with this option, the string is '
                  'inserted before any non-scheduler command')
-        spec.input('metadata.options.queue_name', valid_type=six.string_types, non_db=True, required=False,
+        spec.input('metadata.options.queue_name', valid_type=six.string_types, required=False,
             help='Set the name of the queue on the remote computer')
-        spec.input('metadata.options.account', valid_type=six.string_types, non_db=True, required=False,
+        spec.input('metadata.options.account', valid_type=six.string_types, required=False,
             help='Set the account to use in for the queue on the remote computer')
-        spec.input('metadata.options.qos', valid_type=six.string_types, non_db=True, required=False,
+        spec.input('metadata.options.qos', valid_type=six.string_types, required=False,
             help='Set the quality of service to use in for the queue on the remote computer')
-        spec.input('metadata.options.computer', valid_type=orm.Computer, non_db=True, required=False,
+        spec.input('metadata.options.computer', valid_type=orm.Computer, required=False,
             help='Set the computer to be used by the calculation')
-        spec.input('metadata.options.withmpi', valid_type=bool, non_db=True, default=True,
+        spec.input('metadata.options.withmpi', valid_type=bool, default=False,
             help='Set the calculation to use mpi',)
-        spec.input('metadata.options.mpirun_extra_params', valid_type=(list, tuple), non_db=True, default=[],
+        spec.input('metadata.options.mpirun_extra_params', valid_type=(list, tuple), default=[],
             help='Set the extra params to pass to the mpirun (or equivalent) command after the one provided in '
                  'computer.mpirun_command. Example: mpirun -np 8 extra_params[0] extra_params[1] ... exec.x',)
-        spec.input('metadata.options.import_sys_environment', valid_type=bool, non_db=True, default=True,
+        spec.input('metadata.options.import_sys_environment', valid_type=bool, default=True,
             help='If set to true, the submission script will load the system environment variables',)
-        spec.input('metadata.options.environment_variables', valid_type=dict, non_db=True, default={},
+        spec.input('metadata.options.environment_variables', valid_type=dict, default={},
             help='Set a dictionary of custom environment variables for this calculation',)
-        spec.input('metadata.options.priority', valid_type=six.string_types[0], non_db=True, required=False,
+        spec.input('metadata.options.priority', valid_type=six.string_types[0], required=False,
             help='Set the priority of the job to be queued')
-        spec.input('metadata.options.max_memory_kb', valid_type=int, non_db=True, required=False,
+        spec.input('metadata.options.max_memory_kb', valid_type=int, required=False,
             help='Set the maximum memory (in KiloBytes) to be asked to the scheduler')
-        spec.input('metadata.options.prepend_text', valid_type=six.string_types[0], non_db=True, default='',
+        spec.input('metadata.options.prepend_text', valid_type=six.string_types[0], default='',
             help='Set the calculation-specific prepend text, which is going to be prepended in the scheduler-job '
                  'script, just before the code execution',)
-        spec.input('metadata.options.append_text', valid_type=six.string_types[0], non_db=True, default='',
+        spec.input('metadata.options.append_text', valid_type=six.string_types[0], default='',
             help='Set the calculation-specific append text, which is going to be appended in the scheduler-job '
                  'script, just after the code execution',)
-        spec.input('metadata.options.parser_name', valid_type=six.string_types[0], non_db=True, required=False,
+        spec.input('metadata.options.parser_name', valid_type=six.string_types[0], required=False,
             help='Set a string for the output parser. Can be None if no output plugin is available or needed')
 
         spec.output('remote_folder', valid_type=orm.RemoteData,
@@ -100,9 +102,6 @@ class CalcJob(Process):
         spec.output(cls.link_label_retrieved, valid_type=orm.FolderData, pass_to_parser=True,
             help='Files that are retrieved by the daemon will be stored in this node. By default the stdout and stderr '
                  'of the scheduler will be added, but one can add more by specifying them in `CalcInfo.retrieve_list`.')
-
-        spec.exit_code(10, 'ERROR_PARSING_FAILED', message='the parsing of the job failed')
-        spec.exit_code(20, 'ERROR_FAILED', message='the job failed for an unspecified reason')
 
     @classmethod
     def get_state_classes(cls):
@@ -124,7 +123,7 @@ class CalcJob(Process):
     def run(self):
         """Run the calculation, we put it in the TOSUBMIT state and then wait for it to be completed."""
         from aiida.orm import Code, load_node
-        from aiida.common.folders import SandboxFolder
+        from aiida.common.folders import SandboxFolder, SubmitTestFolder
         from aiida.common.exceptions import InputValidationError
 
         # The following conditional is required for the caching to properly work. Even if the source node has a process
@@ -134,10 +133,17 @@ class CalcJob(Process):
         if self.node.exit_status is not None:
             return self.node.exit_status
 
-        with SandboxFolder() as folder:
+        if self.inputs.metadata.dry_run:
+            folder_class = SubmitTestFolder
+        else:
+            folder_class = SandboxFolder
+
+        with folder_class() as folder:
             computer = self.node.computer
-            if self.node.has_cached_links():
+
+            if not self.inputs.metadata.dry_run and self.node.has_cached_links():
                 raise exceptions.InvalidOperation('calculation node has unstored links in cache')
+
             calc_info, script_filename = self.presubmit(folder)
             input_codes = [load_node(_.code_uuid, sub_classes=(Code,)) for _ in calc_info.codes_info]
 
@@ -149,6 +155,14 @@ class CalcJob(Process):
 
             # After this call, no modifications to the folder should be done
             self.node.put_object_from_tree(folder.abspath, force=True)
+
+            if self.inputs.metadata.dry_run:
+                from aiida.engine.daemon.execmanager import upload_calculation
+                from aiida.transports.plugins.local import LocalTransport
+                with LocalTransport() as transport:
+                    transport.chdir(folder.abspath)
+                    upload_calculation(self.node, transport, calc_info, script_filename, dry_run=True)
+                return plumpy.Stop(None, True)
 
         # Launch the upload operation
         return plumpy.Wait(msg='Waiting to upload', data=(UPLOAD_COMMAND, calc_info, script_filename))

@@ -12,6 +12,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+import os
 import uuid
 
 from aiida.backends.testbase import AiidaTestCase
@@ -27,19 +28,31 @@ class TestProfile(AiidaTestCase):
         """Setup a mock profile."""
         super(TestProfile, cls).setUpClass(*args, **kwargs)
         cls.profile_name = 'test_profile'
-        cls.profile_dictionary = create_mock_profile(name=cls.profile_name)
+        cls.profile_dictionary = {
+            'default_user': 'dummy@localhost',
+            'database_engine': 'postgresql_psycopg2',
+            'database_backend': 'django',
+            'database_name': cls.profile_name,
+            'database_port': '5432',
+            'database_hostname': 'localhost',
+            'database_username': 'user',
+            'database_password': 'pass',
+            'repository_uri': 'file:///' + os.path.join('/some/path', 'repository_' + cls.profile_name),
+        }
         cls.profile = Profile(cls.profile_name, cls.profile_dictionary)
 
     def test_base_properties(self):
         """Test the basic properties of a Profile instance."""
         self.assertEqual(self.profile.name, self.profile_name)
-        self.assertEqual(self.profile.dictionary, self.profile_dictionary)
+
+        for attribute, value in self.profile_dictionary.items():
+            self.assertEqual(getattr(self.profile, attribute), value)
 
         # Verify that the uuid property returns a valid UUID by attempting to construct an UUID instance from it
         uuid.UUID(self.profile.uuid)
 
         # Check that the default user email field is not None
-        self.assertIsNotNone(self.profile.default_user_email)
+        self.assertIsNotNone(self.profile.default_user)
 
         # The RabbitMQ prefix should contain the profile UUID
         self.assertIn(self.profile.uuid, self.profile.rmq_prefix)
@@ -47,11 +60,28 @@ class TestProfile(AiidaTestCase):
     def test_is_test_profile(self):
         """Test that a profile whose name starts with `test_` is marked as a test profile."""
         profile_name = 'not_a_test_profile'
-        profile_dictionary = create_mock_profile(name=profile_name)
-        profile = Profile(profile_name, profile_dictionary)
+        profile = create_mock_profile(name=profile_name)
 
         # The one constructed in the setUpClass should be a test profile
         self.assertTrue(self.profile.is_test_profile)
 
         # The profile created here should *not* be a test profile
         self.assertFalse(profile.is_test_profile)
+
+    def test_set_option(self):
+        """Test the `set_option` method."""
+        option_key = 'user_email'
+        option_value_one = 'first@email.com'
+        option_value_two = 'second@email.com'
+
+        # Setting an option if it does not exist should work
+        self.profile.set_option(option_key, option_value_one)
+        self.assertEqual(self.profile.get_option(option_key), option_value_one)
+
+        # Setting it again will override it by default
+        self.profile.set_option(option_key, option_value_two)
+        self.assertEqual(self.profile.get_option(option_key), option_value_two)
+
+        # If we set override to False, it should not override, big surprise
+        self.profile.set_option(option_key, option_value_one, override=False)
+        self.assertEqual(self.profile.get_option(option_key), option_value_two)

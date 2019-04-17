@@ -13,7 +13,6 @@ from __future__ import with_statement
 from __future__ import absolute_import
 
 from alembic import context
-from aiida.backends.settings import IN_DOC_MODE
 
 # The available SQLAlchemy tables
 from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
@@ -24,7 +23,6 @@ from aiida.backends.sqlalchemy.models.log import DbLog
 from aiida.backends.sqlalchemy.models.node import DbComputer, DbLink, DbNode
 from aiida.backends.sqlalchemy.models.settings import DbSetting
 from aiida.backends.sqlalchemy.models.user import DbUser
-from aiida.backends.sqlalchemy.models.workflow import DbWorkflow
 from aiida.common.exceptions import DbContentError
 from aiida.backends.sqlalchemy.models.base import Base
 target_metadata = Base.metadata
@@ -75,9 +73,11 @@ def run_migrations_online():
         with context.begin_transaction():
             context.run_migrations()
 
-
-if not IN_DOC_MODE:
+try:
     if context.is_offline_mode():
         run_migrations_offline()
     else:
         run_migrations_online()
+except NameError:
+    # This will occur in an environment that is just compiling the documentation
+    pass

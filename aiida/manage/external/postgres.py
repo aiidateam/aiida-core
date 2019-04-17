@@ -24,6 +24,7 @@ try:
 except ImportError:
     import subprocess
 
+from enum import IntEnum
 import click
 
 from aiida.cmdline.utils import echo
@@ -38,6 +39,22 @@ _GRANT_PRIV_COMMAND = 'GRANT ALL PRIVILEGES ON DATABASE "{}" TO "{}"'
 _GET_USERS_COMMAND = "SELECT usename FROM pg_user WHERE usename='{}'"
 _CHECK_DB_EXISTS_COMMAND = "SELECT datname FROM pg_database WHERE datname='{}'"
 _COPY_DB_COMMAND = 'CREATE DATABASE "{}" WITH TEMPLATE "{}" OWNER "{}"'
+
+DEFAULT_DBINFO = {
+    'host': 'localhost',
+    'port': 5432,
+    'user': None,
+    'database': None,
+    'password': None,
+}
+
+
+class PostgresConnectionMode(IntEnum):
+    """Describe mode of connecting to postgres."""
+
+    DISCONNECTED = 0
+    PSYCOPG = 1
+    SHELL = 2
 
 
 class Postgres(object):  # pylint: disable=useless-object-inheritance
@@ -86,31 +103,43 @@ class Postgres(object):  # pylint: disable=useless-object-inheritance
         """
         self.interactive = interactive
         self.quiet = quiet
-        self.pg_execute = _pg_execute_not_connected
+        self._pg_connection_mode = PostgresConnectionMode.DISCONNECTED
         self.setup_fail_callback = None
         self.setup_fail_counter = 0
         self.setup_max_tries = 1
 
         if dbinfo is None:
-            dbinfo = {
-                'host': 'localhost',
-                'port': 5432,
-                'user': None,
-            }
-
-        self._dbinfo = dbinfo
+            self._dbinfo = DEFAULT_DBINFO
+        else:
+            self._dbinfo = dbinfo
 
     @classmethod
     def from_profile(cls, profile, **kwargs):
         """Create Postgres instance with dbinfo from profile data."""
+        get = profile.dictionary.get
         dbinfo = dict(
-            port=profile.database_port or 5432,
-            host=profile.database_hostname or 'localhost',
-            user=profile.database_username,
-            database=profile.database_name,
-            password=profile.database_password,
+            host=get('AIIDADB_HOST', DEFAULT_DBINFO['host']),
+            port=get('AIIDADB_PORT', DEFAULT_DBINFO['port']),
+            user=get('AIIDADB_USER', DEFAULT_DBINFO['user']),
+            database=get('AIIDADB_NAME', DEFAULT_DBINFO['database']),
+            password=get('AIIDADB_PASS', DEFAULT_DBINFO['password']),
         )
         return Postgres(dbinfo=dbinfo, **kwargs)
+
+    def pg_execute(self, command, **kwargs):
+        """Execute postgres command using determined connection mode.
+
+        :param command: A psql command line as a str
+        :param kwargs: will be forwarded to _pg_execute_... function
+        """
+        from aiida.common.exceptions import FailedError
+
+        if self._pg_connection_mode == PostgresConnectionMode.PSYCOPG:  # pylint: disable=no-else-return
+            return _pg_execute_psyco(command, **kwargs)
+        elif self._pg_connection_mode == PostgresConnectionMode.SHELL:
+            return _pg_execute_sh(command, **kwargs)
+
+        raise FailedError('Could not connect to postgres.')
 
     def set_setup_fail_callback(self, callback):
         """
@@ -139,39 +168,29 @@ class Postgres(object):  # pylint: disable=useless-object-inheritance
         """
         # find out if we run as a postgres superuser or can connect as postgres
         # This will work on OSX in some setups but not in the default Debian one
-        dbinfo = self.get_dbinfo()
+        dbinfo = self._dbinfo.copy()
         dbinfo['database'] = 'template1'
-        dbinfo['password'] = None
         for pg_user in (None, 'postgres'):
-            local_dbinfo = dbinfo.copy()
-            local_dbinfo['user'] = pg_user
-            if _try_connect_psycopg(**local_dbinfo):
-                self.pg_execute = _pg_execute_psyco
-                self._dbinfo = local_dbinfo
-                break
+            dbinfo['user'] = pg_user
+            if _try_connect_psycopg(**dbinfo):
+                self._dbinfo = dbinfo
+                self._pg_connection_mode = PostgresConnectionMode.PSYCOPG
+                return True
 
         # This will work for the default Debian postgres setup, assuming that sudo is available to the user
-        if self.pg_execute == _pg_execute_not_connected:  # pylint: disable=comparison-with-callable
-            # Check if the user can find the sudo command
-            if _sudo_exists():
-                dbinfo['user'] = 'postgres'
-                if _try_subcmd(non_interactive=bool(not self.interactive), **dbinfo):
-                    self.pg_execute = _pg_execute_sh
-                    self._dbinfo = dbinfo
-            else:
-                echo.echo_warning('Could not find `sudo`. No way of connecting to the database could be found.')
+        # Check if the user can find the sudo command
+        if _sudo_exists():
+            dbinfo['user'] = 'postgres'
+            if _try_subcmd(non_interactive=bool(not self.interactive), **dbinfo):
+                self._dbinfo = dbinfo
+                self._pg_connection_mode = PostgresConnectionMode.SHELL
+                return True
+        elif not self.quiet:
+            echo.echo_warning('Could not find `sudo` for connecting to the database.')
 
-        # This is to allow for any other setup
-        if self.pg_execute == _pg_execute_not_connected:  # pylint: disable=comparison-with-callable
-            self.setup_fail_counter += 1
-            self._no_setup_detected()
-        elif not self.interactive and not self.quiet:
-            self.pg_execute = _pg_execute_not_connected
-            echo.echo_warning(('Database setup not confirmed, (non-interactive). '
-                               'This may cause problems if the current user is not '
-                               'allowed to create databases.'))
-
-        return bool(self.pg_execute != _pg_execute_not_connected)  # pylint: disable=comparison-with-callable
+        self.setup_fail_counter += 1
+        self._no_setup_detected()
+        return False
 
     def check_db_name(self, dbname):
         """Looks up if a database with the name exists, prompts for using or creating a differently named one."""
@@ -250,7 +269,7 @@ class Postgres(object):  # pylint: disable=useless-object-inheritance
         ])
         if not self.quiet:
             echo.echo_warning(message)
-        if self.setup_fail_callback and self.setup_fail_counter <= self.setup_max_tries:
+        if self.interactive and self.setup_fail_callback and self.setup_fail_counter <= self.setup_max_tries:
             self._dbinfo = self.setup_fail_callback(self.interactive, self._dbinfo)
             self.determine_setup()
 
@@ -275,7 +294,7 @@ def manual_setup_instructions(dbuser, dbname):
 
 def prompt_db_info(*args):  # pylint: disable=unused-argument
     """
-    Prompt interactively for postgres database connecting details
+    Prompt interactively for postgres database connection details
 
     Can be used as a setup fail callback for :py:class:`aiida.manage.external.postgres.Postgres`
 
@@ -284,8 +303,8 @@ def prompt_db_info(*args):  # pylint: disable=unused-argument
     access = False
     while not access:
         dbinfo = {}
-        dbinfo['host'] = click.prompt('postgres host', default='localhost', type=str)
-        dbinfo['port'] = click.prompt('postgres port', default=5432, type=int)
+        dbinfo['host'] = click.prompt('postgres host', default=DEFAULT_DBINFO['host'], type=str)
+        dbinfo['port'] = click.prompt('postgres port', default=DEFAULT_DBINFO['port'], type=int)
         dbinfo['database'] = click.prompt('template', default='template1', type=str)
         dbinfo['user'] = click.prompt('postgres super user', default='postgres', type=str)
         echo.echo('')
@@ -408,13 +427,3 @@ def _pg_execute_sh(command, user='postgres', **kwargs):
     result = [i for i in result if i]
 
     return result
-
-
-def _pg_execute_not_connected(command, **kwargs):  # pylint: disable=unused-argument
-    """
-    A dummy implementation of a postgres command execution function.
-
-    Represents inability to execute postgres commands.
-    """
-    from aiida.common.exceptions import FailedError
-    raise FailedError('could not connect to postgres')

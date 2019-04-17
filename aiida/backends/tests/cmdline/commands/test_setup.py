@@ -12,6 +12,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+import copy
 import os
 import unittest
 
@@ -22,7 +23,7 @@ from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.tests.utils.configuration import with_temporary_config_instance
 from aiida.cmdline.commands import cmd_setup
-from aiida.manage.configuration import get_config
+from aiida.manage import configuration
 from aiida.manage.external.postgres import Postgres
 
 
@@ -33,6 +34,7 @@ class TestVerdiQuickSetup(AiidaTestCase):
     def setUp(self):
         """Create a CLI runner to invoke the CLI commands."""
         super(TestVerdiQuickSetup, self).setUp()
+        self.profile = copy.copy(configuration.PROFILE)
         self.cli_runner = CliRunner()
         self.pg_test = PGTest()
         self.database_user = 'aiida'
@@ -41,10 +43,14 @@ class TestVerdiQuickSetup(AiidaTestCase):
 
     def tearDown(self):
         self.pg_test.close()
+        configuration.reset_profile()
+        configuration.PROFILE = self.profile
 
     @with_temporary_config_instance
     def test_setup(self):
         """Test `verdi quicksetup`."""
+        configuration.reset_profile()
+
         profile_name = 'testing'
         user_email = 'some@email.com'
         user_first_name = 'John'
@@ -69,7 +75,7 @@ class TestVerdiQuickSetup(AiidaTestCase):
         self.assertClickResultNoException(result)
         self.assertClickSuccess(result)
 
-        config = get_config()
+        config = configuration.get_config()
         self.assertIn(profile_name, config.profile_names)
 
         profile = config.get_profile(profile_name)
@@ -81,13 +87,13 @@ class TestVerdiQuickSetup(AiidaTestCase):
         self.assertEqual(user.institution, user_institution)
 
 
-@unittest.skip('Reenable when #2759 is addressed')
 class TestVerdiSetup(AiidaTestCase):
     """Tests for `verdi setup`."""
 
     def setUp(self):
         """Create a CLI runner to invoke the CLI commands."""
         super(TestVerdiSetup, self).setUp()
+        self.profile = copy.copy(configuration.PROFILE)
         self.cli_runner = CliRunner()
         self.pg_test = PGTest()
         self.postgres = Postgres(interactive=False, quiet=True, dbinfo=self.pg_test.dsn)
@@ -103,10 +109,14 @@ class TestVerdiSetup(AiidaTestCase):
         self.postgres.drop_db(self.db_name)
         self.postgres.drop_dbuser(self.db_user)
         self.pg_test.close()
+        configuration.reset_profile()
+        configuration.PROFILE = self.profile
 
     @with_temporary_config_instance
     def test_setup(self):
         """Test `verdi setup`."""
+        configuration.reset_profile()
+
         profile_name = 'testing'
         user_email = 'some@email.com'
         user_first_name = 'John'
@@ -123,7 +133,7 @@ class TestVerdiSetup(AiidaTestCase):
         self.assertClickResultNoException(result)
         self.assertClickSuccess(result)
 
-        config = get_config()
+        config = configuration.get_config()
         self.assertIn(profile_name, config.profile_names)
 
         profile = config.get_profile(profile_name)

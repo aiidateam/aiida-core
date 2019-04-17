@@ -176,7 +176,7 @@ class FixtureManager(object):  # pylint: disable=too-many-public-methods,useless
             raise FixtureError('AiiDA dbenv can not be loaded while creating a test profile')
         if not self.__is_running_on_test_db:
             self.create_aiida_db()
-        from aiida.manage.configuration import settings, load_profile, reset_profile, Profile
+        from aiida.manage.configuration import settings, load_profile, Profile
         if not self.root_dir:
             self.root_dir = tempfile.mkdtemp()
         configuration.CONFIG = None
@@ -198,7 +198,6 @@ class FixtureManager(object):  # pylint: disable=too-many-public-methods,useless
         user = User(**self.user_dictionary)
         user.store()
         set_default_user(profile, user)
-        reset_profile()
         load_profile(profile_name)
 
         self.__is_running_on_test_profile = True
@@ -214,8 +213,9 @@ class FixtureManager(object):  # pylint: disable=too-many-public-methods,useless
     @staticmethod
     def init_db():
         """Initialise the database state"""
-        # Until the profile becomes switchable and the `BACKEND` get's automatically reset, we have to do it manually
-        configuration.BACKEND = None
+        configuration.reset_profile()
+        configuration.load_profile()
+
         # Create the default user
         from aiida import orm
         try:

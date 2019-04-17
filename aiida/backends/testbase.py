@@ -185,6 +185,22 @@ class AiidaTestCase(unittest.TestCase):
         self.assertIsNone(cli_result.exception, ''.join(traceback.format_exception(*cli_result.exc_info)))
 
 
+class AiidaPostgresTestCase(AiidaTestCase):
+
+    @classmethod
+    def setUpClass(cls, *args, **kwargs):
+        """Setup the PGTest postgres test cluster."""
+        from pgtest.pgtest import PGTest
+        cls.pg_test = PGTest()
+        super(AiidaPostgresTestCase, cls).setUpClass(*args, **kwargs)
+
+    @classmethod
+    def tearDownClass(cls, *args, **kwargs):
+        """Close the PGTest postgres test cluster."""
+        super(AiidaPostgresTestCase, cls).tearDownClass(*args, **kwargs)
+        cls.pg_test.close()
+
+
 def run_aiida_db_tests(tests_to_run, verbose=False):
     """
     Run all tests specified in tests_to_run.

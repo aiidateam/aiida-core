@@ -123,13 +123,24 @@ def load_config(create=False):
 
 
 def get_profile():
+    """Return the currently loaded profile.
+
+    :return: the globally loaded `Profile` instance or `None`
+    """
     global PROFILE
     return PROFILE
 
 
 def reset_profile():
+    """Reset the globally loaded profile.
+
+    .. warning:: This is experimental functionality and should for now be used only internally. If the reset is unclean
+        weird unknown side-effects may occur that end up corrupting or destroying data.
+    """
     global PROFILE
+    global BACKEND_UUID
     PROFILE = None
+    BACKEND_UUID = None
 
 
 def get_config(create=False):

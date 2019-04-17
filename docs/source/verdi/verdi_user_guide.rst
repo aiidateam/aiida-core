@@ -623,15 +623,28 @@ Below is a list with all available subcommands.
       configured.
 
     Options:
-      -n, --non-interactive  Non-interactive mode: never prompt for input.
-      --profile PROFILE      The name of the new profile.  [required]
-      --email TEXT           Email address that serves as the user name and a way
-                             to identify data created by it.  [required]
-      --first-name TEXT      First name of the user.  [required]
-      --last-name TEXT       Last name of the user.  [required]
-      --institution TEXT     Institution of the user.  [required]
-      --password TEXT        Optional password to connect to REST API.
-      --help                 Show this message and exit.
+      -n, --non-interactive           Non-interactive mode: never prompt for
+                                      input.
+      --profile PROFILE               The name of the new profile.  [required]
+      --email TEXT                    Email address that serves as the user name
+                                      and a way to identify data created by it.
+                                      [required]
+      --first-name TEXT               First name of the user.  [required]
+      --last-name TEXT                Last name of the user.  [required]
+      --institution TEXT              Institution of the user.  [required]
+      --password TEXT                 Optional password to connect to REST API.
+      --db-engine [postgresql_psycopg2]
+                                      Engine to use to connect to the database.
+      --db-backend [django|sqlalchemy]
+                                      Backend type to use to map the database.
+      --db-host TEXT                  Hostname to connect to the database.
+      --db-port INTEGER               Port to connect to the database.
+      --db-name TEXT                  Name of the database to connect to.
+      --db-username TEXT              User name to connect to the database.
+      --db-password TEXT              Password to connect to the database.
+      --repository DIRECTORY          Absolute path for the file system
+                                      repository.
+      --help                          Show this message and exit.
 
 
 .. _verdi_rehash:

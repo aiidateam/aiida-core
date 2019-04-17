@@ -35,6 +35,7 @@ from click.testing import CliRunner
 
 from aiida.backends.tests.utils.configuration import create_mock_profile, with_temporary_config_instance
 from aiida.cmdline.commands.cmd_setup import quicksetup
+from aiida.manage import configuration
 
 
 class QuicksetupTestCase(unittest.TestCase):
@@ -47,8 +48,7 @@ class QuicksetupTestCase(unittest.TestCase):
     @with_temporary_config_instance
     def test_quicksetup(self):
         """Test `verdi quicksetup` non-interactively."""
-        from aiida.manage import configuration
-        configuration.BACKEND_UUID = None
+        configuration.reset_profile()
         result = self.runner.invoke(quicksetup, [
             '--profile', 'giuseppe-{}'.format(self.backend), '--db-backend={}'.format(
                 self.backend), '--email=giuseppe.verdi@ope.ra', '--first-name=Giuseppe', '--last-name=Verdi',
@@ -60,6 +60,7 @@ class QuicksetupTestCase(unittest.TestCase):
     @with_temporary_config_instance
     def test_postgres_failure(self):
         """Test `verdi quicksetup` non-interactively with incorrect database connection parameters."""
+        configuration.reset_profile()
         result = self.runner.invoke(quicksetup, [
             '--profile', 'giuseppe2-{}'.format(self.backend), '--db-backend={}'.format(
                 self.backend), '--email=giuseppe2.verdi@ope.ra', '--first-name=Giuseppe', '--last-name=Verdi',
@@ -99,7 +100,14 @@ class DeleteTestCase(unittest.TestCase):
         """Test for verdi profile delete command."""
         from aiida.cmdline.commands.cmd_profile import profile_delete, profile_list
 
-        self.mock_profiles()
+        configuration.reset_profile()
+
+        # Create mock profiles
+        mock_profiles = ['mock_profile1', 'mock_profile2', 'mock_profile3', 'mock_profile4']
+        config = get_config()
+        for profile_name in mock_profiles:
+            config.add_profile(create_mock_profile(profile_name))
+        config.set_default_profile(mock_profiles[0], overwrite=True).store()
 
         # Delete single profile
         result = self.runner.invoke(profile_delete, ['--force', self.profile_list[1]])

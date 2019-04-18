@@ -78,7 +78,14 @@ def default_data_styles(node):
             "fillcolor": "#FFFFF0",  # ivory
             "pencolor": "black"
         }
-    mapping = {"data.code.Code.": {'shape': 'diamond', "color": "orange", "style": "solid"}}
+    mapping = {
+        "data.code.Code.": {
+            "shape": "diamond",
+            "style": "filled",
+            "fillcolor": "#FFFFF0",  # ivory
+            "pencolor": "orange"
+        }
+    }
     return mapping.get(class_node_type, default)
 
 

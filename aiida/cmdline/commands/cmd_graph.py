@@ -50,7 +50,7 @@ def verdi_graph():
     '-f', '--output-format', help="The output format used for rendering (``'pdf'``, ``'png'``, etc.).", default='pdf')
 @click.option('-v', '--view', is_flag=True, help="Open the rendered result with the default application")
 @decorators.with_dbenv()
-def generate(root_node, ancestor_depth, descendant_depth, outputs, inputs, engine, file_format, view):
+def generate(root_node, ancestor_depth, descendant_depth, outputs, inputs, engine, output_format, view):
     """
     Generate a graph from a given ROOT_NODE user-specified by its pk.
     """
@@ -62,6 +62,6 @@ def generate(root_node, ancestor_depth, descendant_depth, outputs, inputs, engin
     graph.recurse_descendants(
         root_node, depth=descendant_depth, annotate_links="both", include_calculation_inputs=inputs)
     output_file_name = graph.graphviz.render(
-        filename='{}.dot'.format(root_node.pk), format=file_format, view=view, cleanup=True)
+        filename='{}.dot'.format(root_node.pk), format=output_format, view=view, cleanup=True)
 
     echo.echo_success("Output file is {}".format(output_file_name))

@@ -260,6 +260,7 @@ def update_environment_yml():
     # fix incompatibilities between conda and pypi
     replacements = {
         'psycopg2-binary': 'psycopg2',
+        'graphviz': 'python-graphviz'
     }
     install_requires = get_setup_json()['install_requires']
 

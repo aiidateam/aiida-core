@@ -439,7 +439,7 @@ Below is a list with all available subcommands.
     Usage:  [OPTIONS] COMMAND [ARGS]...
 
       Create visual representations of part of the provenance graph. Requires
-      that `graphviz<https://graphviz.org/download>` be installed.
+      that `python-graphviz<https://graphviz.readthedocs.io>` be installed.
 
     Options:
       --help  Show this message and exit.

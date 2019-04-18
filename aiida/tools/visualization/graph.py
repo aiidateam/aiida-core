@@ -24,7 +24,11 @@ from aiida.common import LinkType
 
 
 def default_link_styles(link_type):
-    """return a dictionary for the graphviz edge style """
+    """map link_type to a graphviz edge style
+
+    :param link_type: a LinkType attribute
+
+    """
     return {
         LinkType.INPUT_CALC: {
             "style": "solid",
@@ -54,15 +58,24 @@ def default_link_styles(link_type):
 
 
 def default_data_styles(node):
-    """return a dictionary for the graphviz node style """
+    """map a data node to a graphviz node style
+
+    :param node: the node to map
+    :type node: aiida.orm.nodes.node.Node
+
+    """
     class_node_type = node.class_node_type
     default = {"shape": "polygon", "sides": "4", "color": "black", "style": "solid"}
     return {"data.code.Code.": {'shape': 'diamond', "color": "orange", "style": "solid"}}.get(class_node_type, default)
 
 
 def default_data_sublabels(node):
-    """ function mapping data nodes to a sublabel
+    """function mapping data nodes to a sublabel
     (e.g. specifying some attribute values)
+
+    :param node: the node to map
+    :type node: aiida.orm.nodes.node.Node
+
     """
     sublabel = None
     class_node_type = node.class_node_type
@@ -94,18 +107,18 @@ def default_data_sublabels(node):
 def _add_graphviz_node(graph, node, data_style_func, data_sublabel_func, style_override=None, include_sublabels=True):
     """create a node in the graph
 
-    Parameters
-    ----------
-    graph: graphviz.Digraph
-    node: aiida.orm.nodes.node.Node
-    data_style_func: func
-        maps a node instance to a dictionary for the graphviz node style
-    data_sublabel_func: func
-        maps a node instance to a sub-label for the node text
-    style_override=None: None or dict
-        style dictionary, whose keys will override the final computed style
-    include_sublabels=True: bool
-        whether to include the sublabels for nodes
+    :param graph: the graph to add the node to
+    :type graph: graphviz.Digraph
+    :param node: the node to add
+    :type node: aiida.orm.nodes.node.Node
+    :param data_style_func: maps a node instance to a dictionary for the graphviz node style
+    :type data_style_func: func
+    :param data_sublabel_func: maps a node instance to a sub-label for the node text
+    :type data_sublabel_func: func
+    :param style_override: style dictionary, whose keys will override the final computed style (Default value = None)
+    :type style_override: None or dict
+    :param include_sublabels: whether to include the sublabels for nodes (Default value = True)
+    :type include_sublabels: bool
 
     Notes
     -----
@@ -173,15 +186,21 @@ def _add_graphviz_node(graph, node, data_style_func, data_sublabel_func, style_o
 
 
 def _add_graphviz_edge(graph, in_node, out_node, style=None):
-    """ add graphviz edge between two nodes"""
+    """add graphviz edge between two nodes
+
+    :param graph: graphviz.DiGraph
+    :param in_node: the head node
+    :param out_node: the tail node
+    :param style: the graphviz style (Default value = None)
+
+    """
     if style is None:
         style = {}
     return graph.edge("N{}".format(in_node.pk), "N{}".format(out_node.pk), **style)
 
 
 class Graph(object):
-    """a class to create graphviz graphs of the AiiDA node provenance
-    """
+    """a class to create graphviz graphs of the AiiDA node provenance"""
 
     # pylint: disable=useless-object-inheritance
 
@@ -197,27 +216,25 @@ class Graph(object):
 
         Nodes and edges, are cached, so that they are only created once
 
-        Parameters
-        ----------
-        engine=None: str or None
-            the graphviz engine, e.g. dot, circo
-        graph_attr=None: dict or None
-            attributes for the graphviz graph
-        global_node_style=None: dict or None
-            styles which will be added to all nodes.
-            Note this will override any builtin attributes
-        include_sublabels: bool
-            if True, the note text will include node dependant sub-labels
-        link_styles: func or None
-            function mapping LinkType to graphviz style dict;
-            link_styles(link_type) -> dict
-        data_styles: func or None
-            function mapping data node to a graphviz style dict;
-            data_styles(node) -> dict
-        data_sublabels: func or None
-            function mapping data node to a sublabel
-            (e.g. specifying some attribute values);
-            data_sublabels(node) -> str
+        :param engine: the graphviz engine, e.g. dot, circo (Default value = None)
+        :type engine: str or None
+        :param graph_attr: attributes for the graphviz graph (Default value = None)
+        :type graph_attr: dict or None
+        :param global_node_style: styles which will be added to all nodes.
+            Note this will override any builtin attributes (Default value = None)
+        :type global_node_style: dict or None
+        :param include_sublabels: if True, the note text will include node dependant sub-labels (Default value = True)
+        :type include_sublabels: bool
+        :param link_styles: function mapping LinkType to graphviz style dict;
+            link_styles(link_type) -> dict (Default value = None)
+        :type link_styles: func or None
+        :param data_styles: function mapping data node to a graphviz style dict;
+            data_styles(node) -> dict (Default value = None)
+        :type data_styles: func or None
+        :param data_sublabels: function mapping data node to a sublabel
+             (e.g. specifying some attribute values);
+            data_sublabels(node) -> str (Default value = None)
+        :type data_sublabels: func or None
 
         """
         # pylint: disable=too-many-arguments
@@ -243,18 +260,27 @@ class Graph(object):
 
     @property
     def graphviz(self):
+        """retrun a copy of the graphviz.Digraph"""
         return self._graph.copy()
 
     @property
     def nodes(self):
+        """return a copy of the nodes"""
         return self._nodes.copy()
 
     @property
     def edges(self):
+        """return a copy of the edges"""
         return self._edges.copy()
 
     @staticmethod
     def _load_node(node):
+        """ load a node
+
+        :param node: node or node pk
+        :type node: int or aiida.orm.nodes.node.Node
+
+        """
         if isinstance(node, int):
             return load_node(node)
         return node
@@ -262,14 +288,12 @@ class Graph(object):
     def add_node(self, node, style_override=None, overwrite=False):
         """add single node to the graph
 
-        Parameters
-        ----------
-        node: int or aiida.orm.nodes.node.Node
-            node or node pk
-        style_override=None: dict or None
-            graphviz style parameters that will override default values
-        overwrite=False: bool
-            whether to overrite an existing node
+        :param node: node or node pk
+        :type node: int or aiida.orm.nodes.node.Node
+        :param style_override: graphviz style parameters that will override default values
+        :type style_override: dict or None
+        :param overwrite: whether to overrite an existing node (Default value = False)
+        :type overwrite: bool
 
         """
         node = self._load_node(node)
@@ -288,16 +312,14 @@ class Graph(object):
     def add_edge(self, in_node, out_node, style=None, overwrite=False):
         """add single node to the graph
 
-        Parameters
-        ----------
-        in_node: int or aiida.orm.nodes.node.Node
-            node or node pk
-        out_node: int or aiida.orm.nodes.node.Node
-            node or node pk
-        override_style=None: dict or None
-            graphviz style parameters
-        overwrite=False: bool
-            whether to overrite existing edge
+        :param in_node: node or node pk
+        :type in_node: int or aiida.orm.nodes.node.Node
+        :param out_node: node or node pk
+        :type out_node: int or aiida.orm.nodes.node.Node
+        :param style: graphviz style parameters (Default value = None)
+        :type style: dict or None
+        :param overwrite: whether to overrite existing edge (Default value = False)
+        :type overwrite: bool
 
         """
         in_node = self._load_node(in_node)
@@ -317,21 +339,14 @@ class Graph(object):
     def add_incoming(self, node, link_types=(), annotate_links=False, return_pks=True):
         """add nodes and edges for incoming links to a node
 
-        Parameters
-        ----------
-        node: aiida.orm.nodes.node.Node or int
-            node or node pk
-        link_types: str or tuple[str] or LinkType or tuple[LinkType]
-            filter by link types
-        annotate_links: bool or str
-            label edges with the link 'label', 'type' or 'both'
-        return_pks=True: bool
-            whether to return a list of nodes, or list of node pks
-
-        Returns
-        -------
-        list:
-            list of nodes or node pks
+        :param node: node or node pk
+        :type node: aiida.orm.nodes.node.Node or int
+        :param link_types: filter by link types (Default value = ())
+        :type link_types: str or tuple[str] or LinkType or tuple[LinkType]
+        :param annotate_links: label edges with the link 'label', 'type' or 'both' (Default value = False)
+        :type annotate_links: bool or str
+        :param return_pks: whether to return a list of nodes, or list of node pks (Default value = True)
+        :type return_pks: bool
 
         """
         if annotate_links not in [False, "label", "type", "both"]:
@@ -361,21 +376,14 @@ class Graph(object):
     def add_outgoing(self, node, link_types=(), annotate_links=False, return_pks=True):
         """add nodes and edges for outgoing links to a node
 
-        Parameters
-        ----------
-        node: aiida.orm.nodes.node.Node or int
-            node or node pk
-        link_types: str or tuple[str] or LinkType or tuple[LinkType]
-            filter by link types
-        annotate_links: bool or str
-            label edges with the link 'label', 'type' or 'both'
-        return_pks=True: bool
-            whether to return a list of nodes, or list of node pks
-
-        Returns
-        -------
-        list:
-            list of nodes or node pks
+        :param node: node or node pk
+        :type node: aiida.orm.nodes.node.Node or int
+        :param link_types: filter by link types (Default value = ())
+        :type link_types: str or tuple[str] or LinkType or tuple[LinkType]
+        :param annotate_links: label edges with the link 'label', 'type' or 'both' (Default value = False)
+        :type annotate_links: bool or str
+        :param return_pks: whether to return a list of nodes, or list of node pks (Default value = True)
+        :type return_pks: bool
 
         """
         if annotate_links not in [False, "label", "type", "both"]:
@@ -412,18 +420,18 @@ class Graph(object):
         """add nodes and edges from an origin recursively,
         following outgoing links
 
-        Parameters
-        ----------
-        origin: aiida.orm.nodes.node.Node or int
-            node or node pk
-        depth: None or int
-            if not None, stop after travelling a certain depth into the graph
-        link_type: tuple or str
-            filter by subset of link types
-        annotate_links: bool or str
-            label edges with the link 'label', 'type' or 'both'
-        origin_style: dict or tuple
-            node style map for origin node
+        :param origin: node or node pk
+        :type origin: aiida.orm.nodes.node.Node or int
+        :param depth: if not None, stop after travelling a certain depth into the graph (Default value = None)
+        :type depth: None or int
+        :param link_types: filter by subset of link types (Default value = ())
+        :type link_types: tuple or str
+        :param annotate_links: label edges with the link 'label', 'type' or 'both' (Default value = False)
+        :type annotate_links: bool or str
+        :param origin_style: node style map for origin node (Default value = ())
+        :type origin_style: dict or tuple
+        :param include_calculation_inputs:  (Default value = False)
+        :type include_calculation_inputs: bool
 
         """
         # pylint: disable=too-many-arguments
@@ -442,11 +450,12 @@ class Graph(object):
             for node in last_nodes:
                 new_nodes.extend(
                     self.add_outgoing(node, link_types=link_types, annotate_links=annotate_links, return_pks=False))
-            last_nodes = new_nodes
 
-            if include_calculation_inputs and isinstance(node, BaseFactory("aiida.node",
-                                                                           "process.calculation.calcjob")):
-                self.add_incoming(node, link_types=link_types, annotate_links=annotate_links)
+                if include_calculation_inputs and isinstance(node,
+                                                             BaseFactory("aiida.node", "process.calculation.calcjob")):
+                    self.add_incoming(node, link_types=link_types, annotate_links=annotate_links)
+
+            last_nodes = new_nodes
 
     def recurse_ancestors(self,
                           origin,
@@ -458,18 +467,18 @@ class Graph(object):
         """add nodes and edges from an origin recursively,
         following incoming links
 
-        Parameters
-        ----------
-        origin: aiida.orm.nodes.node.Node or int
-            node or node pk
-        depth: None or int
-            if not None, stop after travelling a certain depth into the graph
-        link_type: tuple or str
-            filter by subset of link types
-        annotate_links: bool
-            label edges with the link 'label', 'type' or 'both'
-        origin_style: dict or tuple
-            node style map for origin node
+        :param origin: node or node pk
+        :type origin: aiida.orm.nodes.node.Node or int
+        :param depth: if not None, stop after travelling a certain depth into the graph (Default value = None)
+        :type depth: None or int
+        :param link_types: filter by subset of link types (Default value = ())
+        :type link_types: tuple or str
+        :param annotate_links: label edges with the link 'label', 'type' or 'both' (Default value = False)
+        :type annotate_links: bool
+        :param origin_style: node style map for origin node (Default value = ())
+        :type origin_style: dict or tuple
+        :param include_calculation_outputs:  (Default value = False)
+        :type include_calculation_outputs: bool
 
         """
         # pylint: disable=too-many-arguments
@@ -488,11 +497,12 @@ class Graph(object):
             for node in last_nodes:
                 new_nodes.extend(
                     self.add_incoming(node, link_types=link_types, annotate_links=annotate_links, return_pks=False))
-            last_nodes = new_nodes
 
-            if include_calculation_outputs and isinstance(node, BaseFactory("aiida.node",
-                                                                            "process.calculation.calcjob")):
-                self.add_outgoing(node, link_types=link_types, annotate_links=annotate_links)
+                if include_calculation_outputs and isinstance(node,
+                                                              BaseFactory("aiida.node", "process.calculation.calcjob")):
+                    self.add_outgoing(node, link_types=link_types, annotate_links=annotate_links)
+
+            last_nodes = new_nodes
 
     def add_origin_to_target(self,
                              origin,
@@ -504,18 +514,19 @@ class Graph(object):
                              annotate_links=False):
         """add nodes and edges from an origin node to target nodes
 
-        Parameters
-        ----------
-        origin: aiida.orm.nodes.node.Node or int
-            node or node pk
-        target_cls: class
-        target_filters=None: dict or None
-        include_target_inputs=False: bool
-        include_target_outputs=False: bool
-        origin_style: dict or tuple
-            node style map for origin node
-        annotate_links: bool
-            label edges with the link 'label', 'type' or 'both'
+        :param origin: node or node pk
+        :type origin: aiida.orm.nodes.node.Node or int
+        :param target_cls: target node class
+        :param target_filters:  (Default value = None)
+        :type target_filters: dict or None
+        :param include_target_inputs:  (Default value = False)
+        :type include_target_inputs: bool
+        :param include_target_outputs:  (Default value = False)
+        :type include_target_outputs: bool
+        :param origin_style: node style map for origin node (Default value = ())
+        :type origin_style: dict or tuple
+        :param annotate_links: label edges with the link 'label', 'type' or 'both' (Default value = False)
+        :type annotate_links: bool
 
         """
         # pylint: disable=too-many-arguments
@@ -565,18 +576,20 @@ class Graph(object):
                                annotate_links=False):
         """add nodes and edges from multiple origin node to target nodes
 
-        Parameters
-        ----------
-        origin_cls: class
-        target_cls: class
-        origin_filters=None: dict or None
-        target_filters=None: dict or None
-        include_target_inputs=False: bool
-        include_target_outputs=False: bool
-        origin_style: dict or tuple
-            node style map for origin node
-        annotate_links: bool
-            label edges with the link 'label', 'type' or 'both'
+        :param origin_cls: origin node class
+        :param target_cls: target node class
+        :param origin_filters:  (Default value = None)
+        :type origin_filters: dict or None
+        :param target_filters:  (Default value = None)
+        :type target_filters: dict or None
+        :param include_target_inputs:  (Default value = False)
+        :type include_target_inputs: bool
+        :param include_target_outputs:  (Default value = False)
+        :type include_target_outputs: bool
+        :param origin_style: node style map for origin node (Default value = ())
+        :type origin_style: dict or tuple
+        :param annotate_links: label edges with the link 'label', 'type' or 'both' (Default value = False)
+        :type annotate_links: bool
 
         """
         # pylint: disable=too-many-arguments

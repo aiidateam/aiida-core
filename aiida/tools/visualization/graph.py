@@ -70,7 +70,8 @@ def default_data_styles(node):
     """
     class_node_type = node.class_node_type
     default = {"shape": "polygon", "sides": "4", "color": "black", "style": "solid"}
-    return {"data.code.Code.": {'shape': 'diamond', "color": "orange", "style": "solid"}}.get(class_node_type, default)
+    mapping = {"data.code.Code.": {'shape': 'diamond', "color": "orange", "style": "solid"}}
+    return mapping.get(class_node_type, default)
 
 
 def default_data_sublabels(node):
@@ -110,13 +111,66 @@ def default_data_sublabels(node):
     return sublabel
 
 
-def _add_graphviz_node(graph, node, data_style_func, data_sublabel_func, style_override=None, include_sublabels=True):
+def default_process_styles(node):
+    """map a process node to a graphviz node style
+
+    :param node: the node to map
+    :type node: aiida.orm.nodes.node.Node
+    :rtype: dict
+
+    """
+    class_node_type = node.class_node_type
+
+    default = {"shape": "polygon", "sides": "6", "pencolor": "black"}
+
+    process_map = {
+        "process.calculation.calcjob.CalcJobNode.": {
+            'shape': 'ellipse',
+            "pencolor": "black"
+        },
+        "process.calculation.calcfunction.CalcFunctionNode.": {
+            'shape': 'ellipse',
+            "pencolor": "#FFF0F5"
+        },
+        "process.workflow.workchain.WorkChainNode.": {
+            "shape": "polygon",
+            "sides": "6",
+            "pencolor": "black"
+        },
+        "process.workflow.workfunction.WorkFunctionNode.": {
+            "shape": "polygon",
+            "sides": "6",
+            "pencolor": "FFF0F5"
+        }
+    }
+
+    node_style = process_map.get(class_node_type, default)
+
+    # style process node, based on success/failure of process
+    if node.is_failed:
+        node_style['style'] = 'filled'
+        node_style['fillcolor'] = 'red'
+    elif node.is_finished_ok:
+        node_style['style'] = 'filled'
+        node_style['fillcolor'] = '#90EE90'
+
+    return node_style
+
+
+def _add_graphviz_node(graph,
+                       node,
+                       data_style_func,
+                       process_style_func,
+                       data_sublabel_func,
+                       style_override=None,
+                       include_sublabels=True):
     """create a node in the graph
 
     :param graph: the graphviz.Digraph to add the node to
     :param node: the node to add
     :type node: aiida.orm.nodes.node.Node
-    :param data_style_func: callable mapping a node instance to a dictionary for the graphviz node style
+    :param data_style_func: callable mapping a data node instance to a dictionary defining the graphviz node style
+    :param process_style_func: callable mapping a process node instance to a dictionary defining the graphviz node style
     :param data_sublabel_func: callable mapping a node instance to a sub-label for the node text
     :param style_override: style dictionary, whose keys will override the final computed style (Default value = None)
     :type style_override: None or dict
@@ -129,14 +183,14 @@ def _add_graphviz_node(graph, node, data_style_func, data_sublabel_func, style_o
     for mapping to type specific styles
 
     For subclasses of ProcessNode, we choose styles to distinguish between
-    workflows (4 sides) and calculations (6 sides), and also color the nodes
-    green/red for successful/failed processes
+    types, and also color the nodes for successful/failed processes
 
     The first line of the node text is always '<node.name> (<node.pk>)'.
     Then, if ``include_sublabels=True``, subsequent lines are added,
     which are node type dependant.
 
     """
+    # pylint: disable=too-many-arguments
     node_style = {}
     if isinstance(node, BaseFactory("aiida.node", "data")):
 
@@ -149,24 +203,8 @@ def _add_graphviz_node(graph, node, data_style_func, data_sublabel_func, style_o
         node_style["label"] = "\n".join(label)
 
     elif isinstance(node, BaseFactory("aiida.node", "process")):
-        # style process nodes, based on type
 
-        if isinstance(node, BaseFactory("aiida.node", "process.workflow")):
-            node_style = {"shape": "polygon", "sides": "6", "pencolor": "black"}
-        else:
-            node_style = {'shape': 'ellipse', "pencolor": "black"}
-
-        if isinstance(node, (BaseFactory("aiida.node", "process.calculation.calcfunction"),
-                             BaseFactory("aiida.node", "process.workflow.workfunction"))):
-            node_style["pencolor"] = "#FFF0F5"
-
-        # style process node, based on success/failure of process
-        if node.is_failed:
-            node_style['style'] = 'filled'
-            node_style['fillcolor'] = 'red'
-        elif node.is_finished_ok:
-            node_style['style'] = 'filled'
-            node_style['fillcolor'] = '#90EE90'
+        node_style = process_style_func(node)
 
         label = [
             "{} ({})".format(node.__class__.__name__ if node.process_label is None else node.process_label, node.pk)
@@ -212,6 +250,7 @@ class Graph(object):
                  include_sublabels=True,
                  link_styles=None,
                  data_styles=None,
+                 process_styles=None,
                  data_sublabels=None):
         """a class to create graphviz graphs of the AiiDA node provenance
 
@@ -230,6 +269,8 @@ class Graph(object):
             link_styles(link_type) -> dict (Default value = None)
         :param data_styles: callable mapping data node to a graphviz style dict;
             data_styles(node) -> dict (Default value = None)
+        :param process_styles: callable mapping process node to a graphviz style dict;
+            process_styles(node) -> dict (Default value = None)
         :param data_sublabels: callable mapping data node to a sublabel (e.g. specifying some attribute values)
             data_sublabels(node) -> str (Default value = None)
 
@@ -250,6 +291,10 @@ class Graph(object):
             self._data_styles = data_styles
         else:
             self._data_styles = default_data_styles
+        if process_styles is not None:
+            self._process_styles = process_styles
+        else:
+            self._process_styles = default_process_styles
         if data_sublabels is not None:
             self._data_sublabels = data_sublabels
         else:
@@ -302,6 +347,7 @@ class Graph(object):
                 self._graph,
                 node,
                 self._data_styles,
+                self._process_styles,
                 self._data_sublabels,
                 style_override=style,
                 include_sublabels=self._include_sublabels)

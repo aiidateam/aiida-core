@@ -69,7 +69,10 @@ def default_data_styles(node):
 
     """
     class_node_type = node.class_node_type
-    default = {"shape": "polygon", "sides": "4", "color": "black", "style": "solid"}
+    if hasattr(node, "get_style_default"):
+        default = node.get_style_default()
+    else:
+        default = {"shape": "polygon", "sides": "4", "color": "black", "style": "solid"}
     mapping = {"data.code.Code.": {'shape': 'diamond', "color": "orange", "style": "solid"}}
     return mapping.get(class_node_type, default)
 
@@ -121,7 +124,10 @@ def default_process_styles(node):
     """
     class_node_type = node.class_node_type
 
-    default = {"shape": "polygon", "sides": "6", "pencolor": "black"}
+    if hasattr(node, "get_style_default"):
+        default = node.get_style_default()
+    else:
+        default = {"shape": "polygon", "sides": "6", "pencolor": "black"}
 
     process_map = {
         "process.calculation.calcjob.CalcJobNode.": {

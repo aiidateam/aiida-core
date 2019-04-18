@@ -82,7 +82,7 @@ def default_data_styles(node):
         "data.code.Code.": {
             "shape": "diamond",
             "style": "filled",
-            "fillcolor": "#FFFFF0",  # ivory
+            "fillcolor": "#FFFFFF",  # white
             "pencolor": "orange"
         }
     }

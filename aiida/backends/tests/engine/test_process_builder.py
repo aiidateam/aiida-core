@@ -32,7 +32,7 @@ class TestWorkChain(WorkChain):
         spec.input('name.spaced', valid_type=orm.Int, help='Namespaced port')
         spec.input('name_spaced', valid_type=orm.Str, help='Not actually a namespaced port')
         spec.input('boolean', valid_type=orm.Bool, help='A pointless boolean')
-        spec.input('default', valid_type=orm.Int, default=orm.Int(DEFAULT_INT))
+        spec.input('default', valid_type=orm.Int, default=orm.Int(DEFAULT_INT).store())
 
 
 class TestProcessBuilder(AiidaTestCase):
@@ -46,14 +46,14 @@ class TestProcessBuilder(AiidaTestCase):
         self.inputs = {
             'dynamic': {
                 'namespace': {
-                    'alp': orm.Int(1)
+                    'alp': orm.Int(1).store()
                 }
             },
             'name': {
-                'spaced': orm.Int(1),
+                'spaced': orm.Int(1).store(),
             },
-            'name_spaced': orm.Str('underscored'),
-            'boolean': orm.Bool(True),
+            'name_spaced': orm.Str('underscored').store(),
+            'boolean': orm.Bool(True).store(),
             'metadata': {'options': {}}
         }
 
@@ -112,12 +112,13 @@ class TestProcessBuilder(AiidaTestCase):
 
     def test_builder_restart_work_chain(self):
         """Verify that nested namespaces imploded into flat link labels can be reconstructed into nested namespaces."""
-        node = orm.WorkChainNode(process_type=TestWorkChain.build_process_type()).store()
+        node = orm.WorkChainNode(process_type=TestWorkChain.build_process_type())
         node.add_incoming(self.inputs['dynamic']['namespace']['alp'], LinkType.INPUT_WORK, 'dynamic__namespace__alp')
         node.add_incoming(self.inputs['name']['spaced'], LinkType.INPUT_WORK, 'name__spaced')
         node.add_incoming(self.inputs['name_spaced'], LinkType.INPUT_WORK, 'name_spaced')
         node.add_incoming(self.inputs['boolean'], LinkType.INPUT_WORK, 'boolean')
-        node.add_incoming(orm.Int(DEFAULT_INT), LinkType.INPUT_WORK, 'default')
+        node.add_incoming(orm.Int(DEFAULT_INT).store(), LinkType.INPUT_WORK, 'default')
+        node.store()
 
         builder = node.get_builder_restart()
         self.assertIn('dynamic', builder)
@@ -175,10 +176,10 @@ class TestProcessBuilder(AiidaTestCase):
         original = orm.CalcJobNode(computer=self.computer, process_type='aiida.calculations:arithmetic.add', label='original')
         original.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         original.set_option('max_wallclock_seconds', 1800)
-        original.store()
 
-        original.add_incoming(orm.Int(1), link_type=LinkType.INPUT_CALC, link_label='x')
-        original.add_incoming(orm.Int(2), link_type=LinkType.INPUT_CALC, link_label='y')
+        original.add_incoming(orm.Int(1).store(), link_type=LinkType.INPUT_CALC, link_label='x')
+        original.add_incoming(orm.Int(2).store(), link_type=LinkType.INPUT_CALC, link_label='y')
+        original.store()
 
         builder = original.get_builder_restart()
 

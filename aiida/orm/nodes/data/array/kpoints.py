@@ -7,6 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""
+Module of the KpointsData class, defining the AiiDA data type for storing
+lists and meshes of k-points (i.e., points in the reciprocal space of a
+periodic crystal structure).
+"""
 from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
@@ -15,13 +20,13 @@ import six
 from six.moves import range, zip
 import numpy
 
+from aiida.common.warnings import AiidaDeprecationWarning
 from .array import ArrayData
-
 
 DEPRECATION_DOCS_URL = 'http://aiida-core.readthedocs.io/en/latest/datatypes/kpoints.html#deprecated-methods'
 
-_default_epsilon_length = 1e-5
-_default_epsilon_angle = 1e-5
+_DEFAULT_EPSILON_LENGTH = 1e-5
+_DEFAULT_EPSILON_ANGLE = 1e-5
 
 
 class KpointsData(ArrayData):
@@ -38,13 +43,6 @@ class KpointsData(ArrayData):
     set_cell_from_structure methods.
     """
 
-    def __init__(self, *args, **kwargs):
-        super(KpointsData, self).__init__(*args, **kwargs)
-        try:
-            self._set_reciprocal_cell()
-        except AttributeError:
-            pass
-
     def get_description(self):
         """
         Returns a string with infos retrieved from  kpoints node's properties.
@@ -53,9 +51,8 @@ class KpointsData(ArrayData):
         """
         try:
             mesh = self.get_kpoints_mesh()
-            return "Kpoints mesh: {}x{}x{} (+{:.1f},{:.1f},{:.1f})".format(
-                mesh[0][0], mesh[0][1], mesh[0][2],
-                mesh[1][0], mesh[1][1], mesh[1][2])
+            return "Kpoints mesh: {}x{}x{} (+{:.1f},{:.1f},{:.1f})".format(mesh[0][0], mesh[0][1], mesh[0][2],
+                                                                           mesh[1][0], mesh[1][1], mesh[1][2])
         except AttributeError:
             try:
                 return '(Path of {} kpts)'.format(len(self.get_kpoints()))
@@ -87,8 +84,7 @@ class KpointsData(ArrayData):
         from aiida.orm.nodes.data.structure import _get_valid_cell
 
         if self.is_stored:
-            raise ModificationNotAllowed(
-                "KpointsData cannot be modified, it has already been stored")
+            raise ModificationNotAllowed("KpointsData cannot be modified, it has already been stored")
 
         the_cell = _get_valid_cell(value)
 
@@ -103,8 +99,7 @@ class KpointsData(ArrayData):
             boundary conditions for the i-th real-space direction (i=1,2,3)
         """
         # return copy.deepcopy(self._pbc)
-        return (
-        self.get_attribute('pbc1'), self.get_attribute('pbc2'), self.get_attribute('pbc3'))
+        return (self.get_attribute('pbc1'), self.get_attribute('pbc2'), self.get_attribute('pbc3'))
 
     @pbc.setter
     def pbc(self, value):
@@ -122,8 +117,7 @@ class KpointsData(ArrayData):
         from aiida.orm.nodes.data.structure import get_valid_pbc
 
         if self.is_stored:
-            raise ModificationNotAllowed(
-                "The KpointsData object cannot be modified, it has already been stored")
+            raise ModificationNotAllowed("The KpointsData object cannot be modified, it has already been stored")
         the_pbc = get_valid_pbc(value)
         self.set_attribute('pbc1', the_pbc[0])
         self.set_attribute('pbc2', the_pbc[1])
@@ -161,8 +155,7 @@ class KpointsData(ArrayData):
         try:
             label_numbers = [int(i[0]) for i in value]
         except ValueError:
-            raise ValueError("The input must contain an integer index, to map"
-                             " the labels into the kpoint list")
+            raise ValueError("The input must contain an integer index, to map the labels into the kpoint list")
         labels = [str(i[1]) for i in value]
 
         if any([i > len(self.get_kpoints()) - 1 for i in label_numbers]):
@@ -184,8 +177,7 @@ class KpointsData(ArrayData):
             rec_cell = self.reciprocal_cell
         except AttributeError:
             # rec_cell = numpy.eye(3)
-            raise AttributeError(
-                "Cannot use cartesian coordinates without having defined a cell")
+            raise AttributeError("Cannot use cartesian coordinates without having defined a cell")
 
         trec_cell = numpy.transpose(numpy.array(rec_cell))
         if to_cartesian:
@@ -209,8 +201,7 @@ class KpointsData(ArrayData):
 
         if not isinstance(structuredata, StructureData):
             raise ValueError("An instance of StructureData should be passed to "
-                             "the KpointsData, found instead {}"
-                             .format(structuredata.__class__))
+                             "the KpointsData, found instead {}".format(structuredata.__class__))
         cell = structuredata.cell
         self.set_cell(cell, structuredata.pbc)
 
@@ -228,16 +219,17 @@ class KpointsData(ArrayData):
         if pbc is None:
             pbc = [True, True, True]
         self.pbc = pbc
-        self._set_reciprocal_cell()
 
-    def _set_reciprocal_cell(self):
+    @property
+    def reciprocal_cell(self):
         """
-        Sets the reciprocal cell in units of 1/Angstrom from the internally set cell
+        Return the reciprocal cell in units of 1/Angstrom from the internally set cell
         """
         the_cell = numpy.array(self.cell)
-        self.reciprocal_cell = 2. * numpy.pi * numpy.linalg.inv(the_cell).transpose()
+        reciprocal_cell = 2. * numpy.pi * numpy.linalg.inv(the_cell).transpose()
+        return reciprocal_cell
 
-    def set_kpoints_mesh(self, mesh, offset=[0., 0., 0.]):
+    def set_kpoints_mesh(self, mesh, offset=None):
         """
         Set KpointsData to represent a uniformily spaced mesh of kpoints in the
         Brillouin zone. This excludes the possibility of set/get kpoints
@@ -258,6 +250,8 @@ class KpointsData(ArrayData):
                 raise ValueError
         except (IndexError, ValueError, TypeError):
             raise ValueError("The kpoint mesh must be a list of three integers")
+        if offset is None:
+            offset = [0., 0., 0.]
         try:
             the_offset = tuple(float(i) for i in offset)
             if len(the_offset) != 3:
@@ -268,8 +262,7 @@ class KpointsData(ArrayData):
         # I cannot have both of them at the same time
         try:
             _ = self.get_array('kpoints')
-            raise ModificationNotAllowed("KpointsData has already a kpoint-"
-                                         "list stored")
+            raise ModificationNotAllowed("KpointsData has already a kpoint-list stored")
         except KeyError:
             pass
 
@@ -291,24 +284,24 @@ class KpointsData(ArrayData):
         """
         mesh = self.get_attribute('mesh')
         offset = self.get_attribute('offset')
+
         if not print_list:
             return mesh, offset
-        else:
-            kpoints = numpy.mgrid[0:mesh[0], 0:mesh[1], 0:mesh[2]]
-            kpoints = kpoints.reshape(3, -1).T
-            offset_kpoints = kpoints + numpy.array(offset)
-            offset_kpoints[:, 0] /= mesh[0]
-            offset_kpoints[:, 1] /= mesh[1]
-            offset_kpoints[:, 2] /= mesh[2]
-            return offset_kpoints
 
-    def set_kpoints_mesh_from_density(self, distance, offset=[0., 0., 0.],
-                                      force_parity=False):
+        kpoints = numpy.mgrid[0:mesh[0], 0:mesh[1], 0:mesh[2]]
+        kpoints = kpoints.reshape(3, -1).T
+        offset_kpoints = kpoints + numpy.array(offset)
+        offset_kpoints[:, 0] /= mesh[0]
+        offset_kpoints[:, 1] /= mesh[1]
+        offset_kpoints[:, 2] /= mesh[2]
+        return offset_kpoints
+
+    def set_kpoints_mesh_from_density(self, distance, offset=None, force_parity=False):
         """
         Set a kpoints mesh using a kpoints density, expressed as the maximum
         distance between adjacent points along a reciprocal axis
 
-        :param distance: distance (in 1/Angstrom) between adjacent 
+        :param distance: distance (in 1/Angstrom) between adjacent
             kpoints, i.e. the number of kpoints along each reciprocal
             axis i is :math:`|b_i|/distance`
             where :math:`|b_i|` is the norm of the reciprocal cell vector.
@@ -317,25 +310,27 @@ class KpointsData(ArrayData):
             [0.5,0.5,0.5] is half shifted
             Default = [0.,0.,0.].
         :param force_parity: (optional) if True, force each integer in the mesh
-            to be even (except for the non-periodic directions). 
+            to be even (except for the non-periodic directions).
 
         :note: a cell should be defined first.
         :note: the number of kpoints along non-periodic axes is always 1.
         """
+        if offset is None:
+            offset = [0., 0., 0.]
+
         try:
             rec_cell = self.reciprocal_cell
         except AttributeError:
             # rec_cell = numpy.eye(3)
-            raise AttributeError("Cannot define a mesh from a density without "
-                                 "having defined a cell")
+            raise AttributeError("Cannot define a mesh from a density without having defined a cell")
         # I first round to the fifth digit |b|/distance (to avoid that e.g.
         # 3.00000001 becomes 4)
         kpointsmesh = [
-            max(int(numpy.ceil(round(numpy.linalg.norm(b) / distance, 5))), 1)
-            if pbc else 1 for pbc, b in zip(self.pbc, rec_cell)]
+            max(int(numpy.ceil(round(numpy.linalg.norm(b) / distance, 5))), 1) if pbc else 1
+            for pbc, b in zip(self.pbc, rec_cell)
+        ]
         if force_parity:
-            kpointsmesh = [k + (k % 2) if pbc else 1
-                           for pbc, k in zip(self.pbc, kpointsmesh)]
+            kpointsmesh = [k + (k % 2) if pbc else 1 for pbc, k in zip(self.pbc, kpointsmesh)]
         self.set_kpoints_mesh(kpointsmesh, offset=offset)
 
     @property
@@ -359,15 +354,16 @@ class KpointsData(ArrayData):
         """
         kpoints = numpy.array(kpoints)
 
-        if len(kpoints) == 0:
+        # I cannot just use `if not kpoints` because it's a numpy array and
+        # `not` of a numpy array does not work
+        if len(kpoints) == 0:  # pylint: disable=len-as-condition
             if self._dimension == 0:
                 # replace empty list by Gamma point
                 kpoints = numpy.array([[0., 0., 0.]])
             else:
-                raise ValueError(
-                    "empty kpoints list is valid only in zero dimension"
-                    "; instead here with have {} dimensions"
-                    "".format(self._dimension))
+                raise ValueError("empty kpoints list is valid only in zero dimension"
+                                 "; instead here with have {} dimensions"
+                                 "".format(self._dimension))
 
         if len(kpoints.shape) <= 1:
             # list of scalars is accepted only in the 0D and 1D cases
@@ -375,31 +371,25 @@ class KpointsData(ArrayData):
                 # replace by singletons
                 kpoints = kpoints.reshape(kpoints.shape[0], 1)
             else:
-                raise ValueError("kpoints must be a list of lists in {}D case"
-                                 "".format(self._dimension))
+                raise ValueError("kpoints must be a list of lists in {}D case".format(self._dimension))
 
         if kpoints.dtype != numpy.dtype(numpy.float):
-            raise ValueError("kpoints must be an array of type floats. "
-                             "Found instead {}".format(kpoints.dtype))
+            raise ValueError("kpoints must be an array of type floats. Found instead {}".format(kpoints.dtype))
 
         if kpoints.shape[1] < self._dimension:
             raise ValueError("In a system which has {0} dimensions, kpoint need"
-                             "more than {0} coordinates (found instead {1})"
-                             .format(self._dimension, kpoints.shape[1]))
+                             "more than {0} coordinates (found instead {1})".format(self._dimension, kpoints.shape[1]))
 
         if weights is not None:
             weights = numpy.array(weights)
             if weights.shape[0] != kpoints.shape[0]:
-                raise ValueError("Found {} weights but {} kpoints"
-                                 .format(weights.shape[0], kpoints.shape[0]))
+                raise ValueError("Found {} weights but {} kpoints".format(weights.shape[0], kpoints.shape[0]))
             if weights.dtype != numpy.dtype(numpy.float):
-                raise ValueError("weights must be an array of type floats. "
-                                 "Found instead {}".format(weights.dtype))
+                raise ValueError("weights must be an array of type floats. Found instead {}".format(weights.dtype))
 
         return kpoints, weights
 
-    def set_kpoints(self, kpoints, cartesian=False, labels=None, weights=None,
-                    fill_values=0):
+    def set_kpoints(self, kpoints, cartesian=False, labels=None, weights=None, fill_values=0):
         """
         Set the list of kpoints. If a mesh has already been stored, raise a
         ModificationNotAllowed
@@ -434,8 +424,7 @@ class KpointsData(ArrayData):
         from aiida.common.exceptions import ModificationNotAllowed
 
         # check that it is a 'dim'x #kpoints dimensional array
-        the_kpoints, the_weights = self._validate_kpoints_weights(kpoints,
-                                                                  weights)
+        the_kpoints, the_weights = self._validate_kpoints_weights(kpoints, weights)
 
         # if k-points have less than 3 coordinates (low dimensionality), fill
         # with constant values the non-periodic dimensions
@@ -447,8 +436,7 @@ class KpointsData(ArrayData):
 
             if len(fill_values) < 3 - the_kpoints.shape[1]:
                 raise ValueError("fill_values should be either a scalar or a "
-                                 "length-{} list".format(
-                    3 - the_kpoints.shape[1]))
+                                 "length-{} list".format(3 - the_kpoints.shape[1]))
             else:
                 tmp_kpoints = numpy.zeros((the_kpoints.shape[0], 0))
                 i_kpts = 0
@@ -460,15 +448,12 @@ class KpointsData(ArrayData):
                     # - if it's non-periodic, fill with one of the values in
                     # fill_values
                     if self.pbc[idim]:
-                        tmp_kpoints = numpy.hstack(
-                            (tmp_kpoints, the_kpoints[:, i_kpts].reshape((
-                                the_kpoints.shape[0], 1))))
+                        tmp_kpoints = numpy.hstack((tmp_kpoints, the_kpoints[:, i_kpts].reshape((the_kpoints.shape[0],
+                                                                                                 1))))
                         i_kpts += 1
                     else:
-                        tmp_kpoints = numpy.hstack(
-                            (tmp_kpoints,numpy.ones(
-                                (the_kpoints.shape[0], 1)
-                            ) * fill_values[i_fill]))
+                        tmp_kpoints = numpy.hstack((tmp_kpoints, numpy.ones(
+                            (the_kpoints.shape[0], 1)) * fill_values[i_fill]))
                         i_fill += 1
                 the_kpoints = tmp_kpoints
 
@@ -478,8 +463,7 @@ class KpointsData(ArrayData):
 
         # check that we did not saved a mesh already
         if self.get_attribute('mesh', None) is not None:
-            raise ModificationNotAllowed(
-                "KpointsData has already a mesh stored")
+            raise ModificationNotAllowed("KpointsData has already a mesh stored")
 
         # store
         self.set_array('kpoints', the_kpoints)
@@ -513,8 +497,8 @@ class KpointsData(ArrayData):
 
             weights = numpy.array(the_weights)
             return kpoints, weights
-        else:
-            return kpoints
+
+        return kpoints
 
 
 # All functions below are deprecated and have been moved to aiida.tools.data.array.kpoints.legacy
@@ -527,8 +511,9 @@ class KpointsData(ArrayData):
         .. deprecated:: 0.11
         """
         import warnings
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
-        warnings.warn('the bravais_lattice method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
+        warnings.warn(  # pylint: disable=no-member
+            'the bravais_lattice method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL),
+            AiidaDeprecationWarning)
         return self.get_attribute('bravais_lattice')
 
     @bravais_lattice.setter
@@ -539,8 +524,9 @@ class KpointsData(ArrayData):
         .. deprecated:: 0.11
         """
         import warnings
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
-        warnings.warn('the bravais_lattice method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
+        warnings.warn(  # pylint: disable=no-member
+            'the bravais_lattice method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL),
+            AiidaDeprecationWarning)
         self._set_bravais_lattice(value)
 
     def _set_bravais_lattice(self, value):
@@ -550,8 +536,9 @@ class KpointsData(ArrayData):
         .. deprecated:: 0.11
         """
         import warnings
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
-        warnings.warn('the _set_bravais_lattice method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
+        warnings.warn(  # pylint: disable=no-member
+            'the _set_bravais_lattice method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL),
+            AiidaDeprecationWarning)
 
         import copy
         if not isinstance(value, dict):
@@ -578,8 +565,8 @@ class KpointsData(ArrayData):
         self.set_attribute('bravais_lattice', bravais_lattice)
 
     def _get_or_create_bravais_lattice(self,
-                                       epsilon_length=_default_epsilon_length,
-                                       epsilon_angle=_default_epsilon_angle):
+                                       epsilon_length=_DEFAULT_EPSILON_LENGTH,
+                                       epsilon_angle=_DEFAULT_EPSILON_ANGLE):
         """
         Try to get the bravais_lattice info if stored already, otherwise analyze
         the cell with the default settings and save this in the attribute.
@@ -595,20 +582,23 @@ class KpointsData(ArrayData):
         :return bravais_lattice: the dictionary containing the symmetry info
         """
         import warnings
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
-        warnings.warn('the _get_or_create_bravais_lattice method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
+        warnings.warn(  # pylint: disable=no-member
+            'the _get_or_create_bravais_lattice method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL),
+            AiidaDeprecationWarning)
 
         try:
             bravais_lattice = self.bravais_lattice
         except AttributeError:
-            bravais_lattice = self._find_bravais_info(epsilon_length=epsilon_length,
-                                                      epsilon_angle=epsilon_angle)
+            bravais_lattice = self._find_bravais_info(epsilon_length=epsilon_length, epsilon_angle=epsilon_angle)
             self.bravais_lattice = bravais_lattice
         return bravais_lattice
 
-    def set_kpoints_path(self, value=None, kpoint_distance=None, cartesian=False,
-                         epsilon_length=_default_epsilon_length,
-                         epsilon_angle=_default_epsilon_angle):
+    def set_kpoints_path(self,
+                         value=None,
+                         kpoint_distance=None,
+                         cartesian=False,
+                         epsilon_length=_DEFAULT_EPSILON_LENGTH,
+                         epsilon_angle=_DEFAULT_EPSILON_ANGLE):
         """
         Set a path of kpoints in the Brillouin zone.
 
@@ -644,8 +634,9 @@ class KpointsData(ArrayData):
 
         """
         import warnings
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
-        warnings.warn('the set_kpoints_path method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
+        warnings.warn(  # pylint: disable=no-member
+            'the set_kpoints_path method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL),
+            AiidaDeprecationWarning)
 
         from aiida.tools.data.array.kpoints.legacy import get_explicit_kpoints_path
 
@@ -659,18 +650,19 @@ class KpointsData(ArrayData):
         except AttributeError:
             pbc = None
 
-        point_coords, path, bravais_info, explicit_kpoints, labels = get_explicit_kpoints_path(
-            value=value, cell=cell, pbc=pbc, kpoint_distance=kpoint_distance, cartesian=cartesian,
+        point_coords, path, bravais_info, explicit_kpoints, labels = get_explicit_kpoints_path(  # pylint: disable=unused-variable
+            value=value,
+            cell=cell,
+            pbc=pbc,
+            kpoint_distance=kpoint_distance,
+            cartesian=cartesian,
             epsilon_length=epsilon_length,
-            epsilon_angle=epsilon_angle
-        )
+            epsilon_angle=epsilon_angle)
 
         self.set_kpoints(explicit_kpoints)
         self.labels = labels
 
-
-    def _find_bravais_info(self, epsilon_length=_default_epsilon_length,
-                           epsilon_angle=_default_epsilon_angle):
+    def _find_bravais_info(self, epsilon_length=_DEFAULT_EPSILON_LENGTH, epsilon_angle=_DEFAULT_EPSILON_ANGLE):
         """
         Finds the Bravais lattice of the cell passed in input to the Kpoint class
         :note: We assume that the cell given by the cell property is the
@@ -685,19 +677,15 @@ class KpointsData(ArrayData):
                 with extra parameters used by the get_special_points method)
         """
         import warnings
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
-        warnings.warn('the _find_bravais_info method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
+        warnings.warn(  # pylint: disable=no-member
+            'the _find_bravais_info method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL),
+            AiidaDeprecationWarning)
 
         from aiida.tools.data.array.kpoints.legacy import find_bravais_info
         return find_bravais_info(
-            cell=self.cell, pbc=self.pbc,
-            epsilon_length=epsilon_length,
-            epsilon_angle=epsilon_angle
-        )
+            cell=self.cell, pbc=self.pbc, epsilon_length=epsilon_length, epsilon_angle=epsilon_angle)
 
-
-    def find_bravais_lattice(self, epsilon_length=_default_epsilon_length,
-                             epsilon_angle=_default_epsilon_angle):
+    def find_bravais_lattice(self, epsilon_length=_DEFAULT_EPSILON_LENGTH, epsilon_angle=_DEFAULT_EPSILON_ANGLE):
         """
         Analyze the symmetry of the cell. Allows to relax or tighten the
         thresholds used to compare angles and lengths of the cell. Save the
@@ -719,12 +707,12 @@ class KpointsData(ArrayData):
              eventual variation
         """
         import warnings
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
-        warnings.warn('the find_bravais_lattice method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
+        warnings.warn(  # pylint: disable=no-member
+            'the find_bravais_lattice method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL),
+            AiidaDeprecationWarning)
 
         if not self.is_stored:
-            bravais_lattice = self._find_bravais_info(epsilon_length=epsilon_length,
-                                                      epsilon_angle=epsilon_angle)
+            bravais_lattice = self._find_bravais_info(epsilon_length=epsilon_length, epsilon_angle=epsilon_angle)
             self.bravais_lattice = bravais_lattice
         else:
             bravais_info = self.bravais_lattice
@@ -736,9 +724,10 @@ class KpointsData(ArrayData):
 
         return bravais_info['extended_name'] + variation
 
-    def get_special_points(self, cartesian=False,
-                           epsilon_length=_default_epsilon_length,
-                           epsilon_angle=_default_epsilon_angle):
+    def get_special_points(self,
+                           cartesian=False,
+                           epsilon_length=_DEFAULT_EPSILON_LENGTH,
+                           epsilon_angle=_DEFAULT_EPSILON_ANGLE):
         """
         Get the special point and path of a given structure.
 
@@ -764,14 +753,16 @@ class KpointsData(ArrayData):
         :note: We assume that the cell given by the cell property is the primitive unit cell
         """
         import warnings
-        from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning  # pylint: disable=redefined-builtin
-        warnings.warn('the get_special_points method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL), DeprecationWarning)
+        warnings.warn(  # pylint: disable=no-member
+            'the get_special_points method has been deprecated, see {}'.format(DEPRECATION_DOCS_URL),
+            AiidaDeprecationWarning)
 
         from aiida.tools.data.array.kpoints.legacy import get_kpoints_path
-        point_coords, path, bravais_info = get_kpoints_path(
-            cell=self.cell, pbc=self.pbc, cartesian=cartesian,
+        point_coords, path, bravais_info = get_kpoints_path(  # pylint: disable=unused-variable
+            cell=self.cell,
+            pbc=self.pbc,
+            cartesian=cartesian,
             epsilon_length=epsilon_length,
-            epsilon_angle=epsilon_angle
-        )
+            epsilon_angle=epsilon_angle)
 
         return point_coords, path

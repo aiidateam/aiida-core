@@ -112,6 +112,7 @@ DB_TEST_LIST = {
         'orm.comments': ['aiida.backends.tests.orm.test_comments'],
         'orm.computers': ['aiida.backends.tests.orm.test_computers'],
         'orm.data.dict': ['aiida.backends.tests.orm.data.test_dict'],
+        'orm.data.kpoints': ['aiida.backends.tests.orm.data.test_kpoints'],
         'orm.data.remote': ['aiida.backends.tests.orm.data.test_remote'],
         'orm.data.singlefile': ['aiida.backends.tests.orm.data.test_singlefile'],
         'orm.data.upf': ['aiida.backends.tests.orm.data.test_upf'],

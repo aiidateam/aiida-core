@@ -10,6 +10,10 @@
 """ provides functionality to create graphs of the AiiDa data providence,
 *via* graphviz.
 """
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
+
 import os
 import six
 from graphviz import Digraph
@@ -52,56 +56,42 @@ def default_link_styles(link_type):
 def default_data_styles(node):
     """return a dictionary for the graphviz node style """
     class_node_type = node.class_node_type
-    default = {
-        "shape": "polygon",
-        "sides": "4",
-        "color": "black",
-        "style": "solid"
-    }
-    return {
-        "data.code.Code.": {
-            'shape': 'diamond',
-            "color": "orange",
-            "style": "solid"
-        }
-    }.get(class_node_type, default)
+    default = {"shape": "polygon", "sides": "4", "color": "black", "style": "solid"}
+    return {"data.code.Code.": {'shape': 'diamond', "color": "orange", "style": "solid"}}.get(class_node_type, default)
 
 
 def default_data_sublabels(node):
     """ function mapping data nodes to a sublabel
     (e.g. specifying some attribute values)
     """
+    sublabel = None
     class_node_type = node.class_node_type
     if class_node_type == "data.int.Int.":
-        return "value: {}".format(node.get_attribute("value", ""))
-    if class_node_type == "data.float.Float.":
-        return "value: {}".format(node.get_attribute("value", ""))
-    if class_node_type == "data.code.Code.":
-        return "{}@{}".format(os.path.basename(node.get_execname()),
-                              node.get_computer_name())
-    if class_node_type == "data.singlefile.SinglefileData.":
-        return node.filename
-    if class_node_type == "data.remote.RemoteData.":
-        return "@{}".format(node.get_computer_name())
-    if class_node_type == "data.structure.StructureData.":
-        return node.get_formula()
-    if class_node_type == "data.cif.CifData.":
-        formulae = [str(f).replace(" ", "")
-                    for f in node.get_attribute('formulae', []) if f]
-        sg_numbers = [str(s) for s in
-                      node.get_attribute('spacegroup_numbers', []) if s]
-        sublabel = []
+        sublabel = "value: {}".format(node.get_attribute("value", ""))
+    elif class_node_type == "data.float.Float.":
+        sublabel = "value: {}".format(node.get_attribute("value", ""))
+    elif class_node_type == "data.code.Code.":
+        sublabel = "{}@{}".format(os.path.basename(node.get_execname()), node.get_computer_name())
+    elif class_node_type == "data.singlefile.SinglefileData.":
+        sublabel = node.filename
+    elif class_node_type == "data.remote.RemoteData.":
+        sublabel = "@{}".format(node.get_computer_name())
+    elif class_node_type == "data.structure.StructureData.":
+        sublabel = node.get_formula()
+    elif class_node_type == "data.cif.CifData.":
+        formulae = [str(f).replace(" ", "") for f in node.get_attribute('formulae', []) if f]
+        sg_numbers = [str(s) for s in node.get_attribute('spacegroup_numbers', []) if s]
+        sublabel_lines = []
         if formulae:
-            sublabel.append(", ".join(formulae))
+            sublabel_lines.append(", ".join(formulae))
         if sg_numbers:
-            sublabel.append(", ".join(sg_numbers))
-        return "; ".join(sublabel)
+            sublabel_lines.append(", ".join(sg_numbers))
+        sublabel = "; ".join(sublabel_lines)
 
-    return None
+    return sublabel
 
 
-def _add_graphviz_node(graph, node, data_style_func, data_sublabel_func, 
-                       style_override=None, include_sublabels=True):
+def _add_graphviz_node(graph, node, data_style_func, data_sublabel_func, style_override=None, include_sublabels=True):
     """create a node in the graph
 
     Parameters
@@ -149,16 +139,9 @@ def _add_graphviz_node(graph, node, data_style_func, data_sublabel_func,
         # style process nodes, based on type
 
         if isinstance(node, BaseFactory("aiida.node", "process.workflow")):
-            node_style = {
-                "shape": "polygon",
-                "sides": "6",
-                "pencolor": "black"
-            }
+            node_style = {"shape": "polygon", "sides": "6", "pencolor": "black"}
         else:
-            node_style = {
-                'shape': 'ellipse',
-                "pencolor": "black"
-            }
+            node_style = {'shape': 'ellipse', "pencolor": "black"}
 
         if isinstance(node, (BaseFactory("aiida.node", "process.calculation.calcfunction"),
                              BaseFactory("aiida.node", "process.workflow.workfunction"))):
@@ -172,15 +155,14 @@ def _add_graphviz_node(graph, node, data_style_func, data_sublabel_func,
             node_style['style'] = 'filled'
             node_style['fillcolor'] = '#90EE90'
 
-        label = ["{} ({})".format(
-            node.__class__.__name__ if node.process_label is None else node.process_label,
-            node.pk)]
+        label = [
+            "{} ({})".format(node.__class__.__name__ if node.process_label is None else node.process_label, node.pk)
+        ]
 
-        if include_sublabels:
-            if node.process_state is not None:
-                label.append("State: {}".format(node.process_state.value))
-            if node.exit_status is not None:
-                label.append("Exit Code: {}".format(node.exit_status))
+        if include_sublabels and node.process_state is not None:
+            label.append("State: {}".format(node.process_state.value))
+        if include_sublabels and node.exit_status is not None:
+            label.append("Exit Code: {}".format(node.exit_status))
 
         node_style["label"] = "\n".join(label)
 
@@ -194,17 +176,24 @@ def _add_graphviz_edge(graph, in_node, out_node, style=None):
     """ add graphviz edge between two nodes"""
     if style is None:
         style = {}
-    return graph.edge("N{}".format(in_node.pk),
-                      "N{}".format(out_node.pk), **style)
+    return graph.edge("N{}".format(in_node.pk), "N{}".format(out_node.pk), **style)
 
 
 class Graph(object):
+    """a class to create graphviz graphs of the AiiDA node provenance
+    """
 
-    def __init__(self, engine=None, graph_attr=None,
+    # pylint: disable=useless-object-inheritance
+
+    def __init__(self,
+                 engine=None,
+                 graph_attr=None,
                  global_node_style=None,
                  include_sublabels=True,
-                 link_styles=None, data_styles=None, data_sublabels=None):
-        """ a class to create graphviz graphs off the aiida node provenance
+                 link_styles=None,
+                 data_styles=None,
+                 data_sublabels=None):
+        """a class to create graphviz graphs of the AiiDA node provenance
 
         Nodes and edges, are cached, so that they are only created once
 
@@ -231,6 +220,7 @@ class Graph(object):
             data_sublabels(node) -> str
 
         """
+        # pylint: disable=too-many-arguments
         self._graph = Digraph(engine=engine, graph_attr=graph_attr)
         self._nodes = set()
         self._edges = set()
@@ -263,11 +253,11 @@ class Graph(object):
     def edges(self):
         return self._edges.copy()
 
-    def _load_node(self, node):
+    @staticmethod
+    def _load_node(node):
         if isinstance(node, int):
             return load_node(node)
-        else:
-            return node
+        return node
 
     def add_node(self, node, style_override=None, overwrite=False):
         """add single node to the graph
@@ -286,10 +276,13 @@ class Graph(object):
         style = {} if style_override is None else style_override
         style.update(self._global_node_style)
         if node.pk not in self.nodes or overwrite:
-            _add_graphviz_node(self._graph, node,
-                               self._data_styles, self._data_sublabels,
-                               style_override=style,
-                               include_sublabels=self._include_sublabels)
+            _add_graphviz_node(
+                self._graph,
+                node,
+                self._data_styles,
+                self._data_sublabels,
+                style_override=style,
+                include_sublabels=self._include_sublabels)
             self._nodes.add(node.pk)
 
     def add_edge(self, in_node, out_node, style=None, overwrite=False):
@@ -309,12 +302,10 @@ class Graph(object):
         """
         in_node = self._load_node(in_node)
         if in_node.pk not in self._nodes:
-            raise AssertionError(
-                "the in_node must have already been added to the graph")
+            raise AssertionError("the in_node must have already been added to the graph")
         out_node = self._load_node(out_node)
         if out_node.pk not in self._nodes:
-            raise AssertionError(
-                "the out_node must have already been added to the graph")
+            raise AssertionError("the out_node must have already been added to the graph")
 
         if (in_node.pk, out_node.pk) in self.edges and not overwrite:
             return
@@ -344,15 +335,13 @@ class Graph(object):
 
         """
         if annotate_links not in [False, "label", "type", "both"]:
-            raise AssertionError(
-                'annotate_links must be one of False, "label", "type" or "both"')
+            raise AssertionError('annotate_links must be one of False, "label", "type" or "both"')
 
         if link_types:
             if isinstance(link_types, six.string_types):
                 link_types = [link_types]
             link_types = tuple(
-                [getattr(LinkType, l.upper())
-                 if isinstance(l, six.string_types) else l for l in link_types])
+                [getattr(LinkType, l.upper()) if isinstance(l, six.string_types) else l for l in link_types])
 
         nodes = []
         for link_triple in node.get_incoming(link_type=link_types).link_triples:
@@ -363,11 +352,9 @@ class Graph(object):
             elif annotate_links == "type":
                 style['label'] = link_triple.link_type.name
             elif annotate_links == "both":
-                style['label'] = "{}\n{}".format(
-                    link_triple.link_type.name, link_triple.link_label)
+                style['label'] = "{}\n{}".format(link_triple.link_type.name, link_triple.link_label)
             self.add_edge(link_triple.node, node, style=style)
-            nodes.append(
-                link_triple.node.pk if return_pks else link_triple.node)
+            nodes.append(link_triple.node.pk if return_pks else link_triple.node)
 
         return nodes
 
@@ -392,15 +379,13 @@ class Graph(object):
 
         """
         if annotate_links not in [False, "label", "type", "both"]:
-            raise AssertionError(
-                'annotate_links must be one of False, "label", "type" or "both"')
+            raise AssertionError('annotate_links must be one of False, "label", "type" or "both"')
 
         if link_types:
             if isinstance(link_types, six.string_types):
                 link_types = [link_types]
             link_types = tuple(
-                [getattr(LinkType, l.upper())
-                 if isinstance(l, six.string_types) else l for l in link_types])
+                [getattr(LinkType, l.upper()) if isinstance(l, six.string_types) else l for l in link_types])
 
         nodes = []
         for link_triple in node.get_outgoing(link_type=link_types).link_triples:
@@ -411,18 +396,18 @@ class Graph(object):
             elif annotate_links == "type":
                 style['label'] = link_triple.link_type.name
             elif annotate_links == "both":
-                style['label'] = "{}\n{}".format(
-                    link_triple.link_type.name, link_triple.link_label)
+                style['label'] = "{}\n{}".format(link_triple.link_type.name, link_triple.link_label)
             self.add_edge(node, link_triple.node, style=style)
-            nodes.append(
-                link_triple.node.pk if return_pks else link_triple.node)
+            nodes.append(link_triple.node.pk if return_pks else link_triple.node)
 
         return nodes
 
-    def recurse_descendants(self, origin, depth=None, link_types=(),
+    def recurse_descendants(self,
+                            origin,
+                            depth=None,
+                            link_types=(),
                             annotate_links=False,
-                            origin_style=(('style', 'filled'),
-                                          ('color', 'lightblue')),
+                            origin_style=(),
                             include_calculation_inputs=False):
         """add nodes and edges from an origin recursively,
         following outgoing links
@@ -437,33 +422,36 @@ class Graph(object):
             filter by subset of link types
         annotate_links: bool or str
             label edges with the link 'label', 'type' or 'both'
-        origin_style: dict
+        origin_style: dict or tuple
+            node style map for origin node
 
         """
-        Calculation = BaseFactory("aiida.node", "process.calculation.calcjob")
+        # pylint: disable=too-many-arguments
         origin_node = self._load_node(origin)
 
         self.add_node(origin_node, style_override=dict(origin_style))
 
         last_nodes = [origin_node]
-        depth = 0
+        cur_depth = 0
         while last_nodes:
-            depth += 1
+            cur_depth += 1
             # checking of maximum descendant depth is set and applies.
-            if depth is not None and depth > depth:
+            if depth is not None and cur_depth > depth:
                 break
             new_nodes = []
             for node in last_nodes:
-                new_nodes.extend(self.add_outgoing(
-                    node, link_types=link_types,
-                    annotate_links=annotate_links, return_pks=False))
+                new_nodes.extend(
+                    self.add_outgoing(node, link_types=link_types, annotate_links=annotate_links, return_pks=False))
             last_nodes = new_nodes
 
-            if include_calculation_inputs and isinstance(node, Calculation):
-                self.add_incoming(
-                    node, link_types=link_types, annotate_links=annotate_links)
+            if include_calculation_inputs and isinstance(node, BaseFactory("aiida.node",
+                                                                           "process.calculation.calcjob")):
+                self.add_incoming(node, link_types=link_types, annotate_links=annotate_links)
 
-    def recurse_ancestors(self, origin, depth=None, link_types=(),
+    def recurse_ancestors(self,
+                          origin,
+                          depth=None,
+                          link_types=(),
                           annotate_links=False,
                           origin_style=(),
                           include_calculation_outputs=False):
@@ -480,34 +468,36 @@ class Graph(object):
             filter by subset of link types
         annotate_links: bool
             label edges with the link 'label', 'type' or 'both'
-        origin_style: dict
+        origin_style: dict or tuple
+            node style map for origin node
 
         """
-        Calculation = BaseFactory("aiida.node", "process.calculation.calcjob")
-
+        # pylint: disable=too-many-arguments
         origin_node = self._load_node(origin)
 
         self.add_node(origin_node, style_override=dict(origin_style))
 
         last_nodes = [origin_node]
-        depth = 0
+        cur_depth = 0
         while last_nodes:
-            depth += 1
+            cur_depth += 1
             # checking of maximum descendant depth is set and applies.
-            if depth is not None and depth > depth:
+            if depth is not None and cur_depth > depth:
                 break
             new_nodes = []
             for node in last_nodes:
-                new_nodes.extend(self.add_incoming(
-                    node, link_types=link_types,
-                    annotate_links=annotate_links, return_pks=False))
+                new_nodes.extend(
+                    self.add_incoming(node, link_types=link_types, annotate_links=annotate_links, return_pks=False))
             last_nodes = new_nodes
 
-            if include_calculation_outputs and isinstance(node, Calculation):
-                self.add_outgoing(
-                    node, link_types=link_types, annotate_links=annotate_links)
+            if include_calculation_outputs and isinstance(node, BaseFactory("aiida.node",
+                                                                            "process.calculation.calcjob")):
+                self.add_outgoing(node, link_types=link_types, annotate_links=annotate_links)
 
-    def add_origin_to_target(self, origin, target_cls, target_filters=None,
+    def add_origin_to_target(self,
+                             origin,
+                             target_cls,
+                             target_filters=None,
                              include_target_inputs=False,
                              include_target_outputs=False,
                              origin_style=(),
@@ -522,12 +512,13 @@ class Graph(object):
         target_filters=None: dict or None
         include_target_inputs=False: bool
         include_target_outputs=False: bool
-        origin_style: dict
+        origin_style: dict or tuple
+            node style map for origin node
         annotate_links: bool
             label edges with the link 'label', 'type' or 'both'
 
-
         """
+        # pylint: disable=too-many-arguments
         origin_node = self._load_node(origin)
 
         if target_filters is None:
@@ -535,29 +526,27 @@ class Graph(object):
 
         self.add_node(origin_node, style_override=dict(origin_style))
 
-        query = QueryBuilder()(**{
-            "path": [
-                {
+        query = QueryBuilder(
+            **{
+                "path": [{
                     'cls': origin_node.__class__,
                     "filters": {
                         "id": origin_node.pk
                     },
                     'tag': "origin"
                 },
-                {
-                    'cls': target_cls,
-                    'filters': target_filters,
-                    'descendant_of': 'origin',
-                    'tag': "target",
-                    'project': "*"
-                }
-            ]
-        })
+                         {
+                             'cls': target_cls,
+                             'filters': target_filters,
+                             'descendant_of': 'origin',
+                             'tag': "target",
+                             'project': "*"
+                         }]
+            })
 
         for (target_node,) in query.iterall():
             self.add_node(target_node)
-            self.add_edge(origin_node, target_node,
-                          style={'style': 'dashed', 'color': 'grey'})
+            self.add_edge(origin_node, target_node, style={'style': 'dashed', 'color': 'grey'})
 
             if include_target_inputs:
                 self.add_incoming(target_node, annotate_links=annotate_links)
@@ -565,7 +554,8 @@ class Graph(object):
             if include_target_outputs:
                 self.add_outgoing(target_node, annotate_links=annotate_links)
 
-    def add_origins_to_targets(self, origin_cls,
+    def add_origins_to_targets(self,
+                               origin_cls,
                                target_cls,
                                origin_filters=None,
                                target_filters=None,
@@ -583,28 +573,29 @@ class Graph(object):
         target_filters=None: dict or None
         include_target_inputs=False: bool
         include_target_outputs=False: bool
-        origin_style: dict
+        origin_style: dict or tuple
+            node style map for origin node
         annotate_links: bool
             label edges with the link 'label', 'type' or 'both'
 
         """
+        # pylint: disable=too-many-arguments
         if origin_filters is None:
             origin_filters = {}
 
-        query = QueryBuilder()(**{
-            "path": [
-                {
-                    'cls': origin_cls,
-                    "filters": origin_filters,
-                    'tag': "origin",
-                    'project': "*"
-                }
-            ]
-        })
+        query = QueryBuilder(
+            **{"path": [{
+                'cls': origin_cls,
+                "filters": origin_filters,
+                'tag': "origin",
+                'project': "*"
+            }]})
 
         for (node,) in query.iterall():
             self.add_origin_to_target(
-                node, target_cls, target_filters=target_filters,
+                node,
+                target_cls,
+                target_filters=target_filters,
                 include_target_inputs=include_target_inputs,
                 include_target_outputs=include_target_outputs,
                 origin_style=origin_style,

@@ -47,24 +47,20 @@ def verdi_graph():
     "(see http://www.graphviz.org/doc/info/output.html)",
     default='dot')
 @click.option(
-    '-f',
-    '--file-format',
-    help="The output format used for rendering (``'pdf'``, ``'png'``, etc.).",
-    default='pdf')
+    '-f', '--file-format', help="The output format used for rendering (``'pdf'``, ``'png'``, etc.).", default='pdf')
 @click.option('-v', '--view', is_flag=True, help="Open the rendered result with the default application")
 @decorators.with_dbenv()
-def generate(root_node, ancestor_depth, descendant_depth, outputs, inputs,
-             engine, file_format, view):
+def generate(root_node, ancestor_depth, descendant_depth, outputs, inputs, engine, file_format, view):
     """
     Generate a graph from a given ROOT_NODE user-specified by its pk.
     """
+    # pylint: disable=too-many-arguments
     from aiida.tools.visualization.graph import Graph
 
     graph = Graph(engine=engine)
-    graph.recurse_ancestors(root_node, depth=ancestor_depth, annotate_links="both",
-                            include_calculation_outputs=outputs)
-    graph.recurse_descendants(root_node, depth=descendant_depth, annotate_links="both",
-                              include_calculation_inputs=inputs)
-    output_file_name = graph.graphviz.render(format=file_format, view=view, cleanup=True)
+    graph.recurse_ancestors(root_node, depth=ancestor_depth, annotate_links="both", include_calculation_outputs=outputs)
+    graph.recurse_descendants(
+        root_node, depth=descendant_depth, annotate_links="both", include_calculation_inputs=inputs)
+    output_file_name = graph.graphviz.render(filename=root_node + '.dot', format=file_format, view=view, cleanup=True)
 
     echo.echo_success("Output file is {}".format(output_file_name))

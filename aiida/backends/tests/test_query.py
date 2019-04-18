@@ -218,7 +218,6 @@ class TestQueryBuilder(AiidaTestCase):
         n2 = orm.CalculationNode()
         n2.label = 'node2'
         n2.set_attribute('foo', 1)
-        n2.store()
 
         n3 = orm.Data()
         n3.label = 'node3'
@@ -228,7 +227,6 @@ class TestQueryBuilder(AiidaTestCase):
         n4 = orm.CalculationNode()
         n4.label = 'node4'
         n4.set_attribute('foo', 'bar')
-        n4.store()
 
         n5 = orm.Data()
         n5.label = 'node5'
@@ -236,9 +234,11 @@ class TestQueryBuilder(AiidaTestCase):
         n5.store()
 
         n2.add_incoming(n1, link_type=LinkType.INPUT_CALC, link_label='link1')
+        n2.store()
         n3.add_incoming(n2, link_type=LinkType.CREATE, link_label='link2')
 
         n4.add_incoming(n3, link_type=LinkType.INPUT_CALC, link_label='link3')
+        n4.store()
         n5.add_incoming(n4, link_type=LinkType.CREATE, link_label='link4')
 
         qb1 = orm.QueryBuilder()
@@ -816,6 +816,7 @@ class QueryBuilderJoinsTests(AiidaTestCase):
         # Creating n1, who will be a parent:
         parent = orm.Data()
         parent.label = 'mother'
+        parent.store()
 
         good_child = orm.CalculationNode()
         good_child.label = 'good_child'
@@ -827,12 +828,12 @@ class QueryBuilderJoinsTests(AiidaTestCase):
 
         unrelated = orm.CalculationNode()
         unrelated.label = 'unrelated'
-
-        for n in (good_child, bad_child, parent, unrelated):
-            n.store()
+        unrelated.store()
 
         good_child.add_incoming(parent, link_type=LinkType.INPUT_CALC, link_label='parent')
         bad_child.add_incoming(parent, link_type=LinkType.INPUT_CALC, link_label='parent')
+        good_child.store()
+        bad_child.store()
 
         # Using a standard inner join
         qb = orm.QueryBuilder()
@@ -922,31 +923,22 @@ class QueryBuilderPath(AiidaTestCase):
         q = self.backend.query_manager
         n1 = orm.Data()
         n1.label = 'n1'
-        n1.store()
         n2 = orm.CalculationNode()
         n2.label = 'n2'
-        n2.store()
         n3 = orm.Data()
         n3.label = 'n3'
-        n3.store()
         n4 = orm.Data()
         n4.label = 'n4'
-        n4.store()
         n5 = orm.CalculationNode()
         n5.label = 'n5'
-        n5.store()
         n6 = orm.Data()
         n6.label = 'n6'
-        n6.store()
         n7 = orm.CalculationNode()
         n7.label = 'n7'
-        n7.store()
         n8 = orm.Data()
         n8.label = 'n8'
-        n8.store()
         n9 = orm.Data()
         n9.label = 'n9'
-        n9.store()
 
         # I create a strange graph, inserting links in a order
         # such that I often have to create the transitive closure
@@ -958,6 +950,9 @@ class QueryBuilderPath(AiidaTestCase):
         n4.add_incoming(n2, link_type=LinkType.CREATE, link_label='link5')
         n7.add_incoming(n6, link_type=LinkType.INPUT_CALC, link_label='link6')
         n8.add_incoming(n7, link_type=LinkType.CREATE, link_label='link7')
+
+        for node in [n1, n2, n3, n4, n5, n6, n7, n8, n9]:
+            node.store()
 
         # There are no parents to n9, checking that
         self.assertEqual(set([]), set(q.get_all_parents([n9.pk])))
@@ -1072,48 +1067,51 @@ class QueryBuilderPath(AiidaTestCase):
             frozenset([n1.pk, n2.pk, n4.pk, n5.pk, n6.pk, n7.pk, n8.pk])
         })
 
-        n7.add_incoming(n9, link_type=LinkType.INPUT_CALC, link_label='link0')
-        # Still two links...
+        # This part of the test is no longer possible as the nodes have already been stored and the previous parts of
+        # the test rely on this, which means however, that here, no more links can be added as that will raise.
 
-        self.assertEqual(
-            orm.QueryBuilder().append(orm.Node, filters={
-                'id': n1.pk
-            }, tag='anc').append(orm.Node, with_ancestors='anc', filters={
-                'id': n8.pk
-            }).count(), 2)
+        # n7.add_incoming(n9, link_type=LinkType.INPUT_CALC, link_label='link0')
+        # # Still two links...
 
-        self.assertEqual(
-            orm.QueryBuilder().append(orm.Node, filters={
-                'id': n8.pk
-            }, tag='desc').append(orm.Node, with_descendants='desc', filters={
-                'id': n1.pk
-            }).count(), 2)
-        n9.add_incoming(n5, link_type=LinkType.CREATE, link_label='link6')
-        # And now there should be 4 nodes
+        # self.assertEqual(
+        #     orm.QueryBuilder().append(orm.Node, filters={
+        #         'id': n1.pk
+        #     }, tag='anc').append(orm.Node, with_ancestors='anc', filters={
+        #         'id': n8.pk
+        #     }).count(), 2)
 
-        self.assertEqual(
-            orm.QueryBuilder().append(orm.Node, filters={
-                'id': n1.pk
-            }, tag='anc').append(orm.Node, with_ancestors='anc', filters={
-                'id': n8.pk
-            }).count(), 4)
+        # self.assertEqual(
+        #     orm.QueryBuilder().append(orm.Node, filters={
+        #         'id': n8.pk
+        #     }, tag='desc').append(orm.Node, with_descendants='desc', filters={
+        #         'id': n1.pk
+        #     }).count(), 2)
+        # n9.add_incoming(n5, link_type=LinkType.CREATE, link_label='link6')
+        # # And now there should be 4 nodes
 
-        self.assertEqual(
-            orm.QueryBuilder().append(orm.Node, filters={
-                'id': n8.pk
-            }, tag='desc').append(orm.Node, with_descendants='desc', filters={
-                'id': n1.pk
-            }).count(), 4)
+        # self.assertEqual(
+        #     orm.QueryBuilder().append(orm.Node, filters={
+        #         'id': n1.pk
+        #     }, tag='anc').append(orm.Node, with_ancestors='anc', filters={
+        #         'id': n8.pk
+        #     }).count(), 4)
 
-        qb = orm.QueryBuilder().append(
-            orm.Node, filters={
-                'id': n1.pk
-            }, tag='anc').append(
-                orm.Node, with_ancestors='anc', filters={'id': n8.pk}, edge_tag='edge')
-        qb.add_projection('edge', 'depth')
-        self.assertTrue(set(next(zip(*qb.all()))), set([5, 6]))
-        qb.add_filter('edge', {'depth': 5})
-        self.assertTrue(set(next(zip(*qb.all()))), set([5]))
+        # self.assertEqual(
+        #     orm.QueryBuilder().append(orm.Node, filters={
+        #         'id': n8.pk
+        #     }, tag='desc').append(orm.Node, with_descendants='desc', filters={
+        #         'id': n1.pk
+        #     }).count(), 4)
+
+        # qb = orm.QueryBuilder().append(
+        #     orm.Node, filters={
+        #         'id': n1.pk
+        #     }, tag='anc').append(
+        #         orm.Node, with_ancestors='anc', filters={'id': n8.pk}, edge_tag='edge')
+        # qb.add_projection('edge', 'depth')
+        # self.assertTrue(set(next(zip(*qb.all()))), set([5, 6]))
+        # qb.add_filter('edge', {'depth': 5})
+        # self.assertTrue(set(next(zip(*qb.all()))), set([5]))
 
 
 class TestConsistency(AiidaTestCase):

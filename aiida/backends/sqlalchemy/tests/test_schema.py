@@ -43,11 +43,12 @@ class TestRelationshipsSQLA(AiidaTestCase):
         corresponding properties work as expected.
         """
         n1 = Data().store()
-        n2 = CalculationNode().store()
+        n2 = CalculationNode()
         n3 = Data().store()
 
         # Create a link between these 2 nodes
         n2.add_incoming(n1, link_type=LinkType.INPUT_CALC, link_label="N1")
+        n2.store()
         n3.add_incoming(n2, link_type=LinkType.CREATE, link_label="N2")
 
         # Check that the result of outputs is a list
@@ -69,11 +70,12 @@ class TestRelationshipsSQLA(AiidaTestCase):
         corresponding properties work as expected.
         """
         n1 = Data().store()
-        n2 = CalculationNode().store()
+        n2 = CalculationNode()
         n3 = Data().store()
 
         # Create a link between these 2 nodes
         n2.add_incoming(n1, link_type=LinkType.INPUT_CALC, link_label="N1")
+        n2.store()
         n3.add_incoming(n2, link_type=LinkType.CREATE, link_label="N2")
 
         # Check that the result of outputs is a list

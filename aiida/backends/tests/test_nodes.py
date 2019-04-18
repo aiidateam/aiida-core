@@ -204,13 +204,15 @@ class TestTransitiveNoLoops(AiidaTestCase):
 
     def test_loop_not_allowed(self):
         d1 = orm.Data().store()
-        c1 = orm.CalculationNode().store()
+        c1 = orm.CalculationNode()
         d2 = orm.Data().store()
-        c2 = orm.CalculationNode().store()
+        c2 = orm.CalculationNode()
 
         c1.add_incoming(d1, link_type=LinkType.INPUT_CALC, link_label='link')
+        c1.store()
         d2.add_incoming(c1, link_type=LinkType.CREATE, link_label='link')
         c2.add_incoming(d2, link_type=LinkType.INPUT_CALC, link_label='link')
+        c2.store()
 
         with self.assertRaises(ValueError):  # This would generate a loop
             d1.add_incoming(c2, link_type=LinkType.CREATE, link_label='link')
@@ -1571,16 +1573,17 @@ class TestSubNodesAndLinks(AiidaTestCase):
     def test_links_label_constraints(self):
         d1 = orm.Data().store()
         d1bis = orm.Data().store()
-        calc = orm.CalculationNode().store()
+        calc = orm.CalculationNode()
         d2 = orm.Data().store()
         d3 = orm.Data().store()
         d4 = orm.Data().store()
-        calc2a = orm.CalculationNode().store()
-        calc2b = orm.CalculationNode().store()
+        calc2a = orm.CalculationNode()
+        calc2b = orm.CalculationNode()
 
         calc.add_incoming(d1, LinkType.INPUT_CALC, link_label='label1')
         with self.assertRaises(ValueError):
             calc.add_incoming(d1bis, LinkType.INPUT_CALC, link_label='label1')
+        calc.store()
 
         # This should be allowed since it is an output label with the same name
         # as an input label: no problem
@@ -1708,7 +1711,6 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # Load calculations with two different ways
         calc = orm.CalcJobNode(computer=self.computer)
         calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
-        calc.store()
 
         calc2 = orm.CalcJobNode(computer=self.computer)
         calc2.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
@@ -1730,6 +1732,8 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
         with self.assertRaises(ValueError):
             calc.add_incoming(calc2, link_type=LinkType.INPUT_CALC, link_label='link')
+
+        calc.store()
 
         calc_a = orm.CalcJobNode(computer=self.computer)
         calc_a.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
@@ -1773,38 +1777,38 @@ class TestSubNodesAndLinks(AiidaTestCase):
         Test that the link_type parameter in get_incoming and get_outgoing only
         returns those nodes with the correct link type for stored nodes
         """
-        node_origin = orm.WorkflowNode().store()
-        node_origin2 = orm.WorkflowNode().store()
+        node_origin = orm.WorkflowNode()
+        node_origin2 = orm.WorkflowNode()
         node_caller_stored = orm.WorkflowNode().store()
-        node_called = orm.WorkflowNode().store()
+        node_called = orm.WorkflowNode()
         node_input_stored = orm.Data().store()
         node_output = orm.Data().store()
         node_return = orm.Data().store()
-        node_caller_unstored = orm.WorkflowNode()
-        node_input_unstored = orm.Data()
 
         # Input links of node_origin
         node_origin.add_incoming(node_caller_stored, link_type=LinkType.CALL_WORK, link_label='caller_stored')
         node_origin.add_incoming(node_input_stored, link_type=LinkType.INPUT_WORK, link_label='input_stored')
-        node_origin.add_incoming(node_input_unstored, link_type=LinkType.INPUT_WORK, link_label='input_unstored')
+        node_origin.store()
 
-        node_origin2.add_incoming(node_caller_unstored, link_type=LinkType.CALL_WORK, link_label='caller_unstored')
+        node_origin2.add_incoming(node_caller_stored, link_type=LinkType.CALL_WORK, link_label='caller_unstored')
+        node_origin2.store()
 
         # Output links of node_origin
         node_called.add_incoming(node_origin, link_type=LinkType.CALL_WORK, link_label='called')
+        node_called.store()
         node_output.add_incoming(node_origin, link_type=LinkType.RETURN, link_label='return1')
         node_return.add_incoming(node_origin, link_type=LinkType.RETURN, link_label='return2')
 
         # All incoming and outgoing
-        self.assertEquals(len(node_origin.get_incoming().all()), 3)
+        self.assertEquals(len(node_origin.get_incoming().all()), 2)
         self.assertEquals(len(node_origin.get_outgoing().all()), 3)
 
         # Link specific incoming
         self.assertEquals(len(node_origin.get_incoming(link_type=LinkType.CALL_WORK).all()), 1)
         self.assertEquals(len(node_origin2.get_incoming(link_type=LinkType.CALL_WORK).all()), 1)
-        self.assertEquals(len(node_origin.get_incoming(link_type=LinkType.INPUT_WORK).all()), 2)
-        self.assertEquals(len(node_origin.get_incoming(link_label_filter="in_ut%").all()), 2)
-        self.assertEquals(len(node_origin.get_incoming(node_class=orm.Node).all()), 3)
+        self.assertEquals(len(node_origin.get_incoming(link_type=LinkType.INPUT_WORK).all()), 1)
+        self.assertEquals(len(node_origin.get_incoming(link_label_filter="in_ut%").all()), 1)
+        self.assertEquals(len(node_origin.get_incoming(node_class=orm.Node).all()), 2)
 
         # Link specific outgoing
         self.assertEquals(len(node_origin.get_outgoing(link_type=LinkType.CALL_WORK).all()), 1)
@@ -1869,11 +1873,11 @@ class TestNodeDeletion(AiidaTestCase):
         # ind
         in1 = orm.Data().store()
         in2 = orm.Data().store()
-        wf = orm.WorkflowNode().store()
-        slave1 = orm.WorkflowNode().store()
+        wf = orm.WorkflowNode()
+        slave1 = orm.WorkflowNode()
         outp1 = orm.Data().store()
         outp2 = orm.Data().store()
-        slave2 = orm.CalculationNode().store()
+        slave2 = orm.CalculationNode()
         outp3 = orm.Data().store()
         outp4 = orm.Data().store()
         wf.add_incoming(in1, link_type=LinkType.INPUT_WORK, link_label='link1')
@@ -1882,6 +1886,11 @@ class TestNodeDeletion(AiidaTestCase):
         slave2.add_incoming(in2, link_type=LinkType.INPUT_CALC, link_label='link4')
         slave1.add_incoming(wf, link_type=LinkType.CALL_WORK, link_label='link5')
         slave2.add_incoming(wf, link_type=LinkType.CALL_CALC, link_label='link6')
+
+        wf.store()
+        slave1.store()
+        slave2.store()
+
         outp1.add_incoming(slave1, link_type=LinkType.RETURN, link_label='link7')
         outp2.add_incoming(slave2, link_type=LinkType.CREATE, link_label='link8')
         outp2.add_incoming(wf, link_type=LinkType.RETURN, link_label='link9')
@@ -1905,9 +1914,6 @@ class TestNodeDeletion(AiidaTestCase):
             orm.CalculationNode(),  # 13
             orm.Data(),  # 14
         ]
-        # Store all of them
-        for node in nodes:
-            node.store()
 
         uuids_check_existence = [n.uuid for n in nodes[:3]]
         uuids_check_deleted = [n.uuid for n in nodes[3:]]
@@ -1930,6 +1936,9 @@ class TestNodeDeletion(AiidaTestCase):
             # First link to create: 10 (Data) -> 11 (Calc) via a INPUT_CALC
             link_type = LinkType.CREATE if i % 2 else LinkType.INPUT_CALC
             nodes[i + 1].add_incoming(nodes[i], link_type=link_type, link_label='link{}'.format(i))
+
+        for node in nodes:
+            node.store()
 
         with Capturing():
             delete_nodes((nodes[3].pk, nodes[10].pk), force=True, verbosity=2)
@@ -2019,9 +2028,10 @@ class TestNodeDeletion(AiidaTestCase):
         """
         Setting up a simple loop, to check that the following doesn't go bananas.
         """
-        in1, in2, wf = [orm.Data().store(), orm.Data().store(), orm.WorkflowNode().store()]
+        in1, in2, wf = [orm.Data().store(), orm.Data().store(), orm.WorkflowNode()]
         wf.add_incoming(in1, link_type=LinkType.INPUT_WORK, link_label='link1')
         wf.add_incoming(in2, link_type=LinkType.INPUT_WORK, link_label='link2')
+        wf.store()
         in2.add_incoming(wf, link_type=LinkType.RETURN, link_label='link3')
 
         uuids_check_existence = (in1.uuid,)
@@ -2037,8 +2047,10 @@ class TestNodeDeletion(AiidaTestCase):
         Check that deleting a ProcessNode that was called by another ProcessNode which won't be
         deleted works, even though it will raise a warning
         """
-        caller, called = [orm.WorkflowNode().store() for i in range(2)]
+        caller, called = [orm.WorkflowNode() for i in range(2)]
         called.add_incoming(caller, link_type=LinkType.CALL_WORK, link_label='link')
+        caller.store()
+        called.store()
 
         uuids_check_existence = (caller.uuid,)
         uuids_check_deleted = [n.uuid for n in (called,)]

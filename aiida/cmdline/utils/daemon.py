@@ -11,10 +11,14 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
+
 import click
 from tabulate import tabulate
 
+from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.common import format_local_time
+
+_START_CIRCUS_COMMAND = 'start-circus'
 
 
 def print_client_response_status(response):
@@ -89,3 +93,36 @@ def get_daemon_status(client):
                 'Use verdi daemon [incr | decr] [num] to increase / decrease the amount of workers')
 
     return template.format(**info)
+
+
+def delete_stale_pid_file(client):
+    """Delete a potentially state daemon PID file.
+
+    Checks if the PID contatined in the circus PID file (circus-{PROFILE_NAME}.pid) matches a valid running `verdi`
+    process. If it does not, the PID file is stale and will be removed.
+
+    This situation can arise if a system is shut down suddenly and so the process is killed but the PID file is not
+    deleted in time. When the `get_daemon_pid()` method is called, an incorrect PID is returned. Alternatively, another
+    process or the user may have meddled with the PID file in some way, corrupting it.
+
+    :param client: the `DaemonClient`
+    """
+    import os
+    import psutil
+
+    class StartCircusNotFound(Exception):
+        """For when 'start-circus' is not found in the ps command."""
+
+    pid = client.get_daemon_pid()
+
+    if pid is not None:
+        try:
+            process = psutil.Process(pid)
+            if _START_CIRCUS_COMMAND not in process.cmdline():
+                raise StartCircusNotFound()  # Also this is a case in which the process is not there anymore
+        except (psutil.AccessDenied, psutil.NoSuchProcess, StartCircusNotFound):
+            echo.echo_warning(
+                'Deleted apparently stale daemon PID file as its associated process<{}> does not exist anymore'.format(
+                    pid))
+            if os.path.isfile(client.circus_pid_file):
+                os.remove(client.circus_pid_file)

@@ -51,9 +51,10 @@ class TestNodeLinks(AiidaTestCase):
     def test_get_stored_link_triples(self):
         """Validate the `get_stored_link_triples` method."""
         data = Data().store()
-        calculation = CalculationNode().store()
+        calculation = CalculationNode()
 
         calculation.add_incoming(data, LinkType.INPUT_CALC, 'input')
+        calculation.store()
         stored_triples = calculation.get_stored_link_triples()
 
         self.assertEqual(len(stored_triples), 1)
@@ -209,7 +210,7 @@ class TestNodeLinks(AiidaTestCase):
         inputs or the outputs returned by another process and tries to attach it as an output. This would the provenance
         of that data node to be lost and should be explicitly forbidden by raising.
         """
-        source = WorkflowNode().store()
+        source = WorkflowNode()
         target = Data()
 
         with self.assertRaises(ValueError):
@@ -218,8 +219,8 @@ class TestNodeLinks(AiidaTestCase):
     def test_get_incoming(self):
         """Test that `Node.get_incoming` will return stored and cached input links."""
         source_one = Data().store()
-        source_two = Data()
-        target = CalculationNode().store()
+        source_two = Data().store()
+        target = CalculationNode()
 
         target.add_incoming(source_one, LinkType.INPUT_CALC, 'link_one')
         target.add_incoming(source_two, LinkType.INPUT_CALC, 'link_two')
@@ -264,8 +265,8 @@ class TestNodeLinks(AiidaTestCase):
         The example here is a `DataNode` that has two incoming RETURN links with the same label, but from different
         source nodes. This is legal and should pass validation.
         """
-        return_one = WorkflowNode().store()
-        return_two = WorkflowNode().store()
+        return_one = WorkflowNode()
+        return_two = WorkflowNode()
         data = Data().store()  # Needs to be stored: see `test_validate_outgoing_workflow`
 
         # Verify that adding two return links with the same link label but from different source is allowed
@@ -304,15 +305,19 @@ class TestNodeLinks(AiidaTestCase):
         exceptions where appropriate (missing link with a given label, or more than one link)
         """
         data = Data().store()
-        calc_one_a = CalculationNode().store()
-        calc_one_b = CalculationNode().store()
-        calc_two = CalculationNode().store()
+        calc_one_a = CalculationNode()
+        calc_one_b = CalculationNode()
+        calc_two = CalculationNode()
 
         # Two calcs using the data with the same label
         calc_one_a.add_incoming(data, link_type=LinkType.INPUT_CALC, link_label='input')
         calc_one_b.add_incoming(data, link_type=LinkType.INPUT_CALC, link_label='input')
         # A different label
         calc_two.add_incoming(data, link_type=LinkType.INPUT_CALC, link_label='the_input')
+
+        calc_one_a.store()
+        calc_one_b.store()
+        calc_two.store()
 
         # Retrieve a link when the label is unique
         output_the_input = data.get_outgoing(link_type=LinkType.INPUT_CALC).get_node_by_label('the_input')
@@ -326,13 +331,14 @@ class TestNodeLinks(AiidaTestCase):
 
     def test_tab_completable_properties(self):
         """Test properties to go from one node to a neighboring one"""
+        # pylint: disable=too-many-statements
         input1 = Data().store()
         input2 = Data().store()
 
-        top_workflow = WorkflowNode().store()
-        workflow = WorkflowNode().store()
-        calc1 = CalculationNode().store()
-        calc2 = CalculationNode().store()
+        top_workflow = WorkflowNode()
+        workflow = WorkflowNode()
+        calc1 = CalculationNode()
+        calc2 = CalculationNode()
 
         output1 = Data().store()
         output2 = Data().store()
@@ -341,17 +347,21 @@ class TestNodeLinks(AiidaTestCase):
         # one data node to each as input, and return the two data nodes returned one by each called calculation
         top_workflow.add_incoming(input1, link_type=LinkType.INPUT_WORK, link_label='a')
         top_workflow.add_incoming(input2, link_type=LinkType.INPUT_WORK, link_label='b')
+        top_workflow.store()
 
         workflow.add_incoming(input1, link_type=LinkType.INPUT_WORK, link_label='a')
         workflow.add_incoming(input2, link_type=LinkType.INPUT_WORK, link_label='b')
         workflow.add_incoming(top_workflow, link_type=LinkType.CALL_WORK, link_label='CALL')
+        workflow.store()
 
         calc1.add_incoming(input1, link_type=LinkType.INPUT_CALC, link_label='input_value')
         calc1.add_incoming(workflow, link_type=LinkType.CALL_CALC, link_label='CALL')
+        calc1.store()
         output1.add_incoming(calc1, link_type=LinkType.CREATE, link_label='result')
 
         calc2.add_incoming(input2, link_type=LinkType.INPUT_CALC, link_label='input_value')
         calc2.add_incoming(workflow, link_type=LinkType.CALL_CALC, link_label='CALL')
+        calc2.store()
         output2.add_incoming(calc2, link_type=LinkType.CREATE, link_label='result')
 
         output1.add_incoming(workflow, link_type=LinkType.RETURN, link_label='result_a')

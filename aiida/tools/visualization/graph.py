@@ -27,6 +27,9 @@ def default_link_styles(link_type):
     """map link_type to a graphviz edge style
 
     :param link_type: a LinkType attribute
+    :type link_type: One of the members from
+        :class:`aiida.common.links.LinkType`
+    :rtype: dict
 
     """
     return {
@@ -62,6 +65,7 @@ def default_data_styles(node):
 
     :param node: the node to map
     :type node: aiida.orm.nodes.node.Node
+    :rtype: dict
 
     """
     class_node_type = node.class_node_type
@@ -75,6 +79,7 @@ def default_data_sublabels(node):
 
     :param node: the node to map
     :type node: aiida.orm.nodes.node.Node
+    :rtype: str
 
     """
     sublabel = None
@@ -107,14 +112,11 @@ def default_data_sublabels(node):
 def _add_graphviz_node(graph, node, data_style_func, data_sublabel_func, style_override=None, include_sublabels=True):
     """create a node in the graph
 
-    :param graph: the graph to add the node to
-    :type graph: graphviz.Digraph
+    :param graph: the graphviz.Digraph to add the node to
     :param node: the node to add
     :type node: aiida.orm.nodes.node.Node
-    :param data_style_func: maps a node instance to a dictionary for the graphviz node style
-    :type data_style_func: function
-    :param data_sublabel_func: maps a node instance to a sub-label for the node text
-    :type data_sublabel_func: function
+    :param data_style_func: callable mapping a node instance to a dictionary for the graphviz node style
+    :param data_sublabel_func: callable mapping a node instance to a sub-label for the node text
     :param style_override: style dictionary, whose keys will override the final computed style (Default value = None)
     :type style_override: None or dict
     :param include_sublabels: whether to include the sublabels for nodes (Default value = True)
@@ -185,10 +187,11 @@ def _add_graphviz_node(graph, node, data_style_func, data_sublabel_func, style_o
 def _add_graphviz_edge(graph, in_node, out_node, style=None):
     """add graphviz edge between two nodes
 
-    :param graph: graphviz.DiGraph
+    :param graph: the graphviz.DiGraph to add the edge to
     :param in_node: the head node
     :param out_node: the tail node
     :param style: the graphviz style (Default value = None)
+    :type style: dict or None
 
     """
     if style is None:
@@ -222,15 +225,12 @@ class Graph(object):
         :type global_node_style: dict or None
         :param include_sublabels: if True, the note text will include node dependant sub-labels (Default value = True)
         :type include_sublabels: bool
-        :param link_styles: function mapping LinkType to graphviz style dict;
+        :param link_styles: callable mapping LinkType to graphviz style dict;
             link_styles(link_type) -> dict (Default value = None)
-        :type link_styles: function or None
-        :param data_styles: function mapping data node to a graphviz style dict;
+        :param data_styles: callable mapping data node to a graphviz style dict;
             data_styles(node) -> dict (Default value = None)
-        :type data_styles: function or None
-        :param data_sublabels: function mapping data node to a sublabel (e.g. specifying some attribute values)
+        :param data_sublabels: callable mapping data node to a sublabel (e.g. specifying some attribute values)
             data_sublabels(node) -> str (Default value = None)
-        :type data_sublabels: function or None
 
         """
         # pylint: disable=too-many-arguments
@@ -339,7 +339,7 @@ class Graph(object):
         :param node: node or node pk
         :type node: aiida.orm.nodes.node.Node or int
         :param link_types: filter by link types (Default value = ())
-        :type link_types: str or tuple[str] or LinkType or tuple[LinkType]
+        :type link_types: str or tuple[str] or aiida.common.links.LinkType or tuple[aiida.common.links.LinkType]
         :param annotate_links: label edges with the link 'label', 'type' or 'both' (Default value = False)
         :type annotate_links: bool or str
         :param return_pks: whether to return a list of nodes, or list of node pks (Default value = True)
@@ -377,7 +377,7 @@ class Graph(object):
         :param node: node or node pk
         :type node: aiida.orm.nodes.node.Node or int
         :param link_types: filter by link types (Default value = ())
-        :type link_types: str or tuple[str] or LinkType or tuple[LinkType]
+        :type link_types: str or tuple[str] or aiida.common.links.LinkType or tuple[aiida.common.links.LinkType]
         :param annotate_links: label edges with the link 'label', 'type' or 'both' (Default value = False)
         :type annotate_links: bool or str
         :param return_pks: whether to return a list of nodes, or list of node pks (Default value = True)

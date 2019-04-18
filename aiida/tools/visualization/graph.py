@@ -35,27 +35,27 @@ def default_link_styles(link_type):
     return {
         LinkType.INPUT_CALC: {
             "style": "solid",
-            "color": "black"
+            "color": "#000000"  # black
         },
         LinkType.INPUT_WORK: {
-            "style": "solid",
-            "color": "black"
-        },
-        LinkType.CREATE: {
-            "style": "solid",
-            "color": "#006400"
+            "style": "dashed",
+            "color": "#0000FF"  # blue
         },
         LinkType.CALL_CALC: {
             "style": "dotted",
-            "color": "blue"
+            "color": "#000000"  # black
         },
         LinkType.CALL_WORK: {
             "style": "dotted",
-            "color": "blue"
+            "color": "#0000FF"  # blue
+        },
+        LinkType.CREATE: {
+            "style": "solid",
+            "color": "#006400"  # green
         },
         LinkType.RETURN: {
             "style": "dashed",
-            "color": "#006400"
+            "color": "#006400"  # green
         }
     }[link_type]
 
@@ -72,7 +72,12 @@ def default_data_styles(node):
     if hasattr(node, "get_style_default"):
         default = node.get_style_default()
     else:
-        default = {"shape": "polygon", "sides": "4", "color": "black", "style": "solid"}
+        default = {
+            "shape": "ellipse",
+            "style": "filled",
+            "fillcolor": "#FFFFF0",  # ivory
+            "pencolor": "black"
+        }
     mapping = {"data.code.Code.": {'shape': 'diamond', "color": "orange", "style": "solid"}}
     return mapping.get(class_node_type, default)
 
@@ -127,26 +132,32 @@ def default_process_styles(node):
     if hasattr(node, "get_style_default"):
         default = node.get_style_default()
     else:
-        default = {"shape": "polygon", "sides": "6", "pencolor": "black"}
+        default = {"shape": "rectangle", "pencolor": "black"}
 
     process_map = {
         "process.calculation.calcjob.CalcJobNode.": {
-            'shape': 'ellipse',
-            "pencolor": "black"
+            "style": "filled",
+            "shape": "rectangle",
+            "pencolor": "black",
+            "fillcolor": "#87CEFA"  # light blue
         },
         "process.calculation.calcfunction.CalcFunctionNode.": {
-            'shape': 'ellipse',
-            "pencolor": "#FFF0F5"
+            "style": "filled",
+            "shape": "parallelogram",
+            "pencolor": "black",
+            "fillcolor": "#87CEFA"  # light blue
         },
         "process.workflow.workchain.WorkChainNode.": {
-            "shape": "polygon",
-            "sides": "6",
-            "pencolor": "black"
+            "style": "filled",
+            "shape": "octagon",
+            "pencolor": "black",
+            "fillcolor": "#FFA500"
         },
         "process.workflow.workfunction.WorkFunctionNode.": {
-            "shape": "polygon",
-            "sides": "6",
-            "pencolor": "FFF0F5"
+            "style": "filled",
+            "shape": "hexagon",
+            "pencolor": "black",
+            "fillcolor": "#FFA500"  # light blue
         }
     }
 
@@ -154,11 +165,11 @@ def default_process_styles(node):
 
     # style process node, based on success/failure of process
     if node.is_failed:
-        node_style['style'] = 'filled'
-        node_style['fillcolor'] = 'red'
+        node_style['penwidth'] = "3.0"
+        node_style['color'] = '#FF0000'  # red
     elif node.is_finished_ok:
-        node_style['style'] = 'filled'
-        node_style['fillcolor'] = '#90EE90'
+        node_style['penwidth'] = "3.0"
+        node_style['color'] = '#008000'  # green
 
     return node_style
 

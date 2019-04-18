@@ -28,7 +28,8 @@ try:
 except ImportError:
     import unittest
 
-from aiida.common.hashing import make_hash, create_unusable_pass, is_password_usable, truncate_float64
+from aiida.common.hashing import (make_hash, create_unusable_pass, is_password_usable, truncate_float64,
+                                  float64_to_text)
 from aiida.common.folders import SandboxFolder
 
 
@@ -69,12 +70,22 @@ class MakeHashTest(unittest.TestCase):
     """
 
     # pylint: disable=missing-docstring,too-few-public-methods
+    def test_float(self):
+
+        flt = 1.292934884888484388348398483985
+        for val in [flt, np.pi, flt * 1e60]:
+            val_text = '{:.15g}'.format(val)
+            val_limited = float(val_text)
+            # Test the hash is the same if the precision is lost doing float -> str -> float
+            self.assertEqual(make_hash(val), make_hash(val_limited))
+            # Make sure hash of a float is not the same as the hash of its text repr
+            self.assertNotEqual(make_hash(val_limited), make_hash(val_text))
 
     def test_builtin_types(self):
         test_data = {
             'something in ASCII': '06e87857590c91280d25e02f05637cd2381002bd1425dff3e36ca860bbb26a29',
             42: '9498ab55b7c66c66b2d19f9dd8b668acf8e2facf44da0fb466f6986999bb8a56',
-            3.141: 'd00f2e88a088626f5db3eadb6d9d40c74b4b4d3f9f07c1ca2f76b247fe39530b',
+            3.141: 'b3302aad550413e14fe44d5ead10b3aeda9884055fca77f9368c48517916d4be',
             complex(1, 2): '31800fbabb47c8fbf60c848571ee25e7dcbdfc5dfb60c1e8421c1c363a80ea6a',
             True: '31ad5fa163a0c478d966c7f7568f3248f0c58d294372b2e8f7cb0560d8c8b12f',
             None: '1729486cc7e56a6383542b1ec73125ccb26093651a5da05e04657ac416a74b8f',
@@ -179,7 +190,7 @@ class MakeHashTest(unittest.TestCase):
 
     def test_numpy_types(self):
         self.assertEqual(
-            make_hash(np.float64(3.141)), 'd00f2e88a088626f5db3eadb6d9d40c74b4b4d3f9f07c1ca2f76b247fe39530b')  # pylint: disable=no-member
+            make_hash(np.float64(3.141)), 'b3302aad550413e14fe44d5ead10b3aeda9884055fca77f9368c48517916d4be')  # pylint: disable=no-member
         self.assertEqual(make_hash(np.int64(42)), '9498ab55b7c66c66b2d19f9dd8b668acf8e2facf44da0fb466f6986999bb8a56')  # pylint: disable=no-member
 
     def test_numpy_arrays(self):

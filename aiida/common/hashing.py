@@ -253,7 +253,7 @@ def _(mapping, **kwargs):
 
 @_make_hash.register(numbers.Real)
 def _(val, **kwargs):
-    return [_single_digest('float', struct.pack("<d", truncate_float64(val)))]
+    return [_single_digest('float', float64_to_text(val).encode('utf-8'))]
 
 
 @_make_hash.register(numbers.Complex)
@@ -348,6 +348,16 @@ def _(arr, **kwargs):
         ]
 
     return [_single_digest('arr.*', little_endian_array(arr).tobytes())]
+
+
+def float64_to_text(value, sig=14):
+    """
+    Convert float to text string for computing hash.
+    Preseve up to N significant number given by sig.
+    """
+
+    fmt = '{:.' + str(sig) + 'g}'
+    return fmt.format(value)
 
 
 def truncate_float64(value, num_bits=4):

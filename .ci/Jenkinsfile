@@ -160,6 +160,7 @@ pipeline {
         always {
             // Some debug stuff
             sh 'whoami ; pwd; echo $TEST_AIIDA_BACKEND'
+            cleanWs()
         }
         success {
             echo 'The run finished successfully!'

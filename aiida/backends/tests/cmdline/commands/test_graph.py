@@ -69,7 +69,7 @@ class TestVerdiGraph(AiidaTestCase):
         """
         # Get a PK of a node which exists
         root_node = str(self.node.pk)
-        filename = root_node + '.pdf'
+        filename = root_node + '.dot.pdf'
         options = [root_node]
         try:
             result = self.cli_runner.invoke(cmd_graph.generate, options)
@@ -89,7 +89,7 @@ class TestVerdiGraph(AiidaTestCase):
         # Forbidden pk
         for root_node in ['xyz', '-5', '3.14']:
             options = [root_node]
-            filename = root_node + '.pdf'
+            filename = root_node + '.dot.pdf'
             try:
                 result = self.cli_runner.invoke(cmd_graph.generate, options)
                 self.assertIsNotNone(result.exception)
@@ -108,7 +108,7 @@ class TestVerdiGraph(AiidaTestCase):
             pass
         #  Make sure verdi graph rejects this non-existant pk
         try:
-            filename = str(root_node) + '.dot'
+            filename = str(root_node) + '.dot.pdf'
             options = [str(root_node)]
             result = self.cli_runner.invoke(cmd_graph.generate, options)
             self.assertIsNotNone(result.exception)
@@ -123,7 +123,7 @@ class TestVerdiGraph(AiidaTestCase):
         positive ints
         """
         root_node = str(self.node.pk)
-        filename = root_node + '.pdf'
+        filename = root_node + '.dot.pdf'
 
         # Test that the options don't fail
         for opt in ['-a', '--ancestor-depth', '-d', '--descendant-depth']:
@@ -162,7 +162,7 @@ class TestVerdiGraph(AiidaTestCase):
         Test the input and output flags work.
         """
         root_node = str(self.node.pk)
-        filename = root_node + '.pdf'
+        filename = root_node + '.dot.pdf'
 
         for flag in ['-i', '--inputs', '-o', '--outputs']:
             options = [flag, root_node]
@@ -186,7 +186,7 @@ class TestVerdiGraph(AiidaTestCase):
             # we just use the built-ins dot and canon as a minimal check that
             # the option works. After all, this test is for the cmdline.
             for fileformat in ['pdf', 'png']:
-                filename = root_node + '.' + fileformat
+                filename = root_node + '.dot.' + fileformat
                 options = [option, fileformat, root_node]
                 try:
                     result = self.cli_runner.invoke(cmd_graph.generate, options)

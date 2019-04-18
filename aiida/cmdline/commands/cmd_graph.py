@@ -47,7 +47,7 @@ def verdi_graph():
     "(see http://www.graphviz.org/doc/info/output.html)",
     default='dot')
 @click.option(
-    '-f', '--file-format', help="The output format used for rendering (``'pdf'``, ``'png'``, etc.).", default='pdf')
+    '-f', '--output-format', help="The output format used for rendering (``'pdf'``, ``'png'``, etc.).", default='pdf')
 @click.option('-v', '--view', is_flag=True, help="Open the rendered result with the default application")
 @decorators.with_dbenv()
 def generate(root_node, ancestor_depth, descendant_depth, outputs, inputs, engine, file_format, view):

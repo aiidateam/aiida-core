@@ -120,9 +120,6 @@ def _add_graphviz_node(graph, node, data_style_func, data_sublabel_func, style_o
     :param include_sublabels: whether to include the sublabels for nodes (Default value = True)
     :type include_sublabels: bool
 
-    Notes
-    -----
-
     nodes are styled based on the node type
 
     For subclasses of Data, the ``class_node_type`` attribute is used

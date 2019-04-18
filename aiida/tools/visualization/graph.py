@@ -112,9 +112,9 @@ def _add_graphviz_node(graph, node, data_style_func, data_sublabel_func, style_o
     :param node: the node to add
     :type node: aiida.orm.nodes.node.Node
     :param data_style_func: maps a node instance to a dictionary for the graphviz node style
-    :type data_style_func: func
+    :type data_style_func: function
     :param data_sublabel_func: maps a node instance to a sub-label for the node text
-    :type data_sublabel_func: func
+    :type data_sublabel_func: function
     :param style_override: style dictionary, whose keys will override the final computed style (Default value = None)
     :type style_override: None or dict
     :param include_sublabels: whether to include the sublabels for nodes (Default value = True)
@@ -227,14 +227,13 @@ class Graph(object):
         :type include_sublabels: bool
         :param link_styles: function mapping LinkType to graphviz style dict;
             link_styles(link_type) -> dict (Default value = None)
-        :type link_styles: func or None
+        :type link_styles: function or None
         :param data_styles: function mapping data node to a graphviz style dict;
             data_styles(node) -> dict (Default value = None)
-        :type data_styles: func or None
-        :param data_sublabels: function mapping data node to a sublabel
-             (e.g. specifying some attribute values);
+        :type data_styles: function or None
+        :param data_sublabels: function mapping data node to a sublabel (e.g. specifying some attribute values)
             data_sublabels(node) -> str (Default value = None)
-        :type data_sublabels: func or None
+        :type data_sublabels: function or None
 
         """
         # pylint: disable=too-many-arguments
@@ -260,7 +259,7 @@ class Graph(object):
 
     @property
     def graphviz(self):
-        """retrun a copy of the graphviz.Digraph"""
+        """return a copy of the graphviz.Digraph"""
         return self._graph.copy()
 
     @property
@@ -275,10 +274,11 @@ class Graph(object):
 
     @staticmethod
     def _load_node(node):
-        """ load a node
+        """ load a node (if not already loaded)
 
         :param node: node or node pk
         :type node: int or aiida.orm.nodes.node.Node
+        :returns: aiida.orm.nodes.node.Node
 
         """
         if isinstance(node, int):
@@ -347,6 +347,7 @@ class Graph(object):
         :type annotate_links: bool or str
         :param return_pks: whether to return a list of nodes, or list of node pks (Default value = True)
         :type return_pks: bool
+        :returns: list of nodes or node pks
 
         """
         if annotate_links not in [False, "label", "type", "both"]:
@@ -384,6 +385,7 @@ class Graph(object):
         :type annotate_links: bool or str
         :param return_pks: whether to return a list of nodes, or list of node pks (Default value = True)
         :type return_pks: bool
+        :returns: list of nodes or node pks
 
         """
         if annotate_links not in [False, "label", "type", "both"]:

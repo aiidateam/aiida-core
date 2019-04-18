@@ -61,6 +61,7 @@ def generate(root_node, ancestor_depth, descendant_depth, outputs, inputs, engin
     graph.recurse_ancestors(root_node, depth=ancestor_depth, annotate_links="both", include_calculation_outputs=outputs)
     graph.recurse_descendants(
         root_node, depth=descendant_depth, annotate_links="both", include_calculation_inputs=inputs)
-    output_file_name = graph.graphviz.render(filename=root_node + '.dot', format=file_format, view=view, cleanup=True)
+    output_file_name = graph.graphviz.render(
+        filename='{}.dot'.format(root_node.pk), format=file_format, view=view, cleanup=True)
 
     echo.echo_success("Output file is {}".format(output_file_name))

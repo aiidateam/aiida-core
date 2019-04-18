@@ -258,10 +258,7 @@ def update_environment_yml():
         Dumper=yaml.SafeDumper)
 
     # fix incompatibilities between conda and pypi
-    replacements = {
-        'psycopg2-binary': 'psycopg2',
-        'graphviz': 'python-graphviz'
-    }
+    replacements = {'psycopg2-binary': 'psycopg2', 'graphviz': 'python-graphviz'}
     install_requires = get_setup_json()['install_requires']
 
     conda_requires = []
@@ -272,7 +269,9 @@ def update_environment_yml():
             continue
 
         for (regex, replacement) in iter(replacements.items()):
-            conda_requires.append(re.sub(regex, replacement, req))
+            req = re.sub(regex, replacement, req)
+
+        conda_requires.append(req)
 
     environment = OrderedDict([
         ('name', 'aiida'),

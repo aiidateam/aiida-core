@@ -120,11 +120,11 @@ class TestSpecificImport(AiidaTestCase):
         parent_process.store()
         child_calculation = orm.CalculationNode()
         child_calculation.set_attribute('key', 'value')
-        child_calculation.store()
         remote_folder = orm.RemoteData(computer=self.computer, remote_path='/').store()
 
         remote_folder.add_incoming(parent_process, link_type=LinkType.CREATE, link_label='link')
         child_calculation.add_incoming(remote_folder, link_type=LinkType.INPUT_CALC, link_label='link')
+        child_calculation.store()
         structure.add_incoming(child_calculation, link_type=LinkType.CREATE, link_label='link')
 
         with tempfile.NamedTemporaryFile() as handle:
@@ -218,9 +218,8 @@ class TestSimple(AiidaTestCase):
         calc = orm.CalcJobNode()
         calc.computer = self.computer
         calc.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
-        calc.store()
-
         calc.add_incoming(struct, link_type=LinkType.INPUT_CALC, link_label='link')
+        calc.store()
 
         pks = [struct.pk, calc.pk]
 
@@ -390,8 +389,8 @@ class TestUsers(AiidaTestCase):
         jc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
         jc1.user = user
         jc1.label = 'jc1'
-        jc1.store()
         jc1.add_incoming(sd1, link_type=LinkType.INPUT_CALC, link_label='link')
+        jc1.store()
 
         # Create some nodes from a different user
         sd2 = orm.StructureData()
@@ -404,8 +403,8 @@ class TestUsers(AiidaTestCase):
         jc2.computer = self.computer
         jc2.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
         jc2.label = 'jc2'
-        jc2.store()
         jc2.add_incoming(sd2, link_type=LinkType.INPUT_CALC, link_label='l2')
+        jc2.store()
 
         sd3 = orm.StructureData()
         sd3.label = 'sd3'
@@ -458,8 +457,8 @@ class TestUsers(AiidaTestCase):
         jc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
         jc1.user = user
         jc1.label = 'jc1'
-        jc1.store()
         jc1.add_incoming(sd1, link_type=LinkType.INPUT_CALC, link_label='link')
+        jc1.store()
 
         # Create some nodes from a different user
         sd2 = orm.StructureData()
@@ -490,8 +489,8 @@ class TestUsers(AiidaTestCase):
         jc2.computer = self.computer
         jc2.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
         jc2.label = 'jc2'
-        jc2.store()
         jc2.add_incoming(sd2_imp, link_type=LinkType.INPUT_CALC, link_label='l2')
+        jc2.store()
 
         sd3 = orm.StructureData()
         sd3.label = 'sd3'
@@ -549,8 +548,8 @@ class TestGroups(AiidaTestCase):
         jc1.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
         jc1.user = user
         jc1.label = 'jc1'
-        jc1.store()
         jc1.add_incoming(sd1, link_type=LinkType.INPUT_CALC, link_label='link')
+        jc1.store()
 
         # Create a group and add the data inside
         gr1 = orm.Group(label="node_group")
@@ -718,8 +717,8 @@ class TestCalculations(AiidaTestCase):
         """Test simple master/slave WorkChainNodes"""
         from aiida.common.links import LinkType
 
-        master = orm.WorkChainNode().store()
-        slave = orm.WorkChainNode().store()
+        master = orm.WorkChainNode()
+        slave = orm.WorkChainNode()
 
         input_1 = orm.Int(3).store()
         input_2 = orm.Int(5).store()
@@ -728,6 +727,10 @@ class TestCalculations(AiidaTestCase):
         master.add_incoming(input_1, LinkType.INPUT_WORK, 'input_1')
         slave.add_incoming(master, LinkType.CALL_WORK, 'CALL')
         slave.add_incoming(input_2, LinkType.INPUT_WORK, 'input_2')
+
+        master.store()
+        slave.store()
+
         output_1.add_incoming(master, LinkType.RETURN, 'RETURN')
 
         uuids_values = [(v.uuid, v.value) for v in (output_1,)]
@@ -788,10 +791,10 @@ class TestComplex(AiidaTestCase):
         calc2.computer = self.computer
         calc2.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
         calc2.label = "calc2"
-        calc2.store()
         calc2.add_incoming(pd1, link_type=LinkType.INPUT_CALC, link_label='link1')
         calc2.add_incoming(pd2, link_type=LinkType.INPUT_CALC, link_label='link2')
         calc2.add_incoming(rd1, link_type=LinkType.INPUT_CALC, link_label='link3')
+        calc2.store()
 
         fd1 = orm.FolderData()
         fd1.label = "fd1"
@@ -894,13 +897,13 @@ class TestComplex(AiidaTestCase):
         c = orm.CalculationNode()
         # setting also trial dict as attributes, but randomizing the keys)
         (c.set_attribute(str(int(k) + np.random.randint(10)), v) for k, v in trial_dict.items())
-        c.store()
         a = orm.ArrayData()
         a.set_array('array', nparr)
         a.store()
         # LINKS
         # the calculation has input the parameters-instance
         c.add_incoming(p, link_type=LinkType.INPUT_CALC, link_label='input_parameters')
+        c.store()
         # I want the array to be an output of the calculation
         a.add_incoming(c, link_type=LinkType.CREATE, link_label='output_array')
         g = orm.Group(label='test-group')
@@ -1381,11 +1384,12 @@ class TestLinks(AiidaTestCase):
         """
         from aiida.common.links import LinkType
 
-        node_work = orm.CalculationNode().store()
+        node_work = orm.CalculationNode()
         node_input = orm.Int(1).store()
         node_output = orm.Int(2).store()
 
         node_work.add_incoming(node_input, LinkType.INPUT_CALC, 'input')
+        node_work.store()
         node_output.add_incoming(node_work, LinkType.CREATE, 'output')
 
         export_links = self.get_all_node_links()
@@ -1435,8 +1439,8 @@ class TestLinks(AiidaTestCase):
         # Node creation
         data1 = orm.Int(1).store()
         data2 = orm.Int(1).store()
-        work1 = string_to_class[work_nodes[0]]().store()
-        work2 = string_to_class[work_nodes[1]]().store()
+        work1 = string_to_class[work_nodes[0]]()
+        work2 = string_to_class[work_nodes[1]]()
 
         if calc_nodes[0] == "CalcJobNode":
             calc1 = orm.CalcJobNode()
@@ -1444,7 +1448,6 @@ class TestLinks(AiidaTestCase):
         else:
             calc1 = string_to_class[calc_nodes[0]]()
         calc1.computer = self.computer
-        calc1.store()
 
         # Waiting to store Data nodes until they have been "created" with the links below,
         # because @calcfunctions cannot return data, i.e. return stored Data nodes
@@ -1457,7 +1460,6 @@ class TestLinks(AiidaTestCase):
         else:
             calc2 = string_to_class[calc_nodes[1]]()
         calc2.computer = self.computer
-        calc2.store()
 
         # Waiting to store Data nodes until they have been "created" with the links below,
         # because @calcfunctions cannot return data, i.e. return stored Data nodes
@@ -1471,8 +1473,12 @@ class TestLinks(AiidaTestCase):
         work2.add_incoming(data1, LinkType.INPUT_WORK, 'input1')
         work2.add_incoming(work1, LinkType.CALL_WORK, 'call2')
 
+        work1.store()
+        work2.store()
+
         calc1.add_incoming(data1, LinkType.INPUT_CALC, 'input1')
         calc1.add_incoming(work2, LinkType.CALL_CALC, 'call1')
+        calc1.store()
 
         data3.add_incoming(calc1, LinkType.CREATE, 'create3')
         # data3 is stored now, because a @workfunction cannot return unstored Data,
@@ -1487,6 +1493,7 @@ class TestLinks(AiidaTestCase):
         data4.add_incoming(work2, LinkType.RETURN, 'return4')
 
         calc2.add_incoming(data4, LinkType.INPUT_CALC, 'input4')
+        calc2.store()
 
         data5.add_incoming(calc2, LinkType.CREATE, 'create5')
         data6.add_incoming(calc2, LinkType.CREATE, 'create6')
@@ -1525,9 +1532,9 @@ class TestLinks(AiidaTestCase):
         calc = orm.CalcJobNode()
         calc.computer = self.computer
         calc.set_option('resources', {"num_machines": 1, "num_mpiprocs_per_machine": 1})
-        calc.store()
 
         calc.add_incoming(data_input, LinkType.INPUT_CALC, 'input')
+        calc.store()
         data_output.add_incoming(calc, LinkType.CREATE, 'create')
         data_output_uuid = data_output.uuid
 
@@ -1703,13 +1710,14 @@ class TestLinks(AiidaTestCase):
         """
         from aiida.common.links import LinkType
 
-        w1 = orm.WorkflowNode().store()
+        w1 = orm.WorkflowNode()
         w2 = orm.WorkflowNode().store()
         i1 = orm.Int(1).store()
         o1 = orm.Int(2).store()
 
         w1.add_incoming(i1, LinkType.INPUT_WORK, 'input_i1')
         w1.add_incoming(w2, LinkType.CALL_WORK, 'call')
+        w1.store()
         o1.add_incoming(w1, LinkType.RETURN, 'returned')
 
         links_count_wanted = 2  # All 3 links, except CALL links (the CALL_WORK)
@@ -1746,13 +1754,14 @@ class TestLinks(AiidaTestCase):
         """
         from aiida.common.links import LinkType
 
-        w1 = orm.WorkflowNode().store()
+        w1 = orm.WorkflowNode()
         w2 = orm.WorkflowNode().store()
         i1 = orm.Int(1).store()
         o1 = orm.Int(2).store()
 
         w1.add_incoming(i1, LinkType.INPUT_WORK, 'input_i1')
         w1.add_incoming(w2, LinkType.CALL_WORK, 'call')
+        w1.store()
         o1.add_incoming(w1, LinkType.RETURN, 'return1')
         o1.add_incoming(w2, LinkType.RETURN, 'return2')
         links_count = 4
@@ -1841,9 +1850,9 @@ class TestCode(AiidaTestCase):
         jc.computer = self.computer
         jc.set_option('resources',
                      {"num_machines": 1, "num_mpiprocs_per_machine": 1})
-        jc.store()
 
         jc.add_incoming(code, LinkType.INPUT_CALC, 'code')
+        jc.store()
         links_count = 1
 
         export_links = self.get_all_node_links()

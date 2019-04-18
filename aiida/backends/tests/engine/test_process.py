@@ -132,6 +132,14 @@ class TestProcess(AiidaTestCase):
         # Check that if we pass no input the process runs fine
         run(test_processes.DummyProcess)
 
+    def test_input_after_stored(self):
+        """Verify that adding an input link after storing a `ProcessNode` will raise because it is illegal."""
+        from aiida.common import LinkType
+        process = test_processes.DummyProcess()
+
+        with self.assertRaises(ValueError):
+            process.node.add_incoming(orm.Int(1), link_type=LinkType.INPUT_WORK, link_label='illegal_link')
+
     def test_seal(self):
         result, pk = run_get_pk(test_processes.DummyProcess)
         self.assertTrue(orm.load_node(pk=pk).is_sealed)

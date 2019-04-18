@@ -82,7 +82,6 @@ def default_data_sublabels(node):
     :rtype: str
 
     """
-    sublabel = None
     class_node_type = node.class_node_type
     if class_node_type == "data.int.Int.":
         sublabel = "value: {}".format(node.get_attribute("value", ""))
@@ -105,6 +104,8 @@ def default_data_sublabels(node):
         if sg_numbers:
             sublabel_lines.append(", ".join(sg_numbers))
         sublabel = "; ".join(sublabel_lines)
+    else:
+        sublabel = node.get_description()
 
     return sublabel
 

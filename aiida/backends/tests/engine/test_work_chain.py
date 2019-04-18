@@ -1270,22 +1270,40 @@ class TestWorkChainExpose(AiidaTestCase):
         run(Child)
 
 
-class TestWorkChainReturnDict(AiidaTestCase):
+class TestWorkChainMisc(AiidaTestCase):
 
     class PointlessWorkChain(WorkChain):
 
         @classmethod
         def define(cls, spec):
-            super(TestWorkChainReturnDict.PointlessWorkChain, cls).define(spec)
+            super(TestWorkChainMisc.PointlessWorkChain, cls).define(spec)
             spec.outline(cls.return_dict)
 
         def return_dict(self):
             """Only return a dictionary, which should be allowed, even though it accomplishes nothing."""
             return {}
 
+    class IllegalSubmitWorkChain(WorkChain):
+
+        @classmethod
+        def define(cls, spec):
+            super(TestWorkChainMisc.IllegalSubmitWorkChain, cls).define(spec)
+            spec.outline(cls.illegal_submit)
+
+        def illegal_submit(self):
+            """Only return a dictionary, which should be allowed, even though it accomplishes nothing."""
+            from aiida.engine import submit
+            submit(TestWorkChainMisc.PointlessWorkChain)
+
     def test_run_pointless_workchain(self):
         """Running the pointless workchain should not incur any exceptions"""
-        run(TestWorkChainReturnDict.PointlessWorkChain)
+        run(TestWorkChainMisc.PointlessWorkChain)
+
+    def test_global_submit_raises(self):
+        """Using top-level submit should raise."""
+        with self.assertRaises(exceptions.InvalidOperation):
+            run(TestWorkChainMisc.IllegalSubmitWorkChain)
+
 
 
 class TestDefaultUniqueness(AiidaTestCase):

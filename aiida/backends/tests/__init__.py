@@ -112,6 +112,7 @@ DB_TEST_LIST = {
         'orm.comments': ['aiida.backends.tests.orm.test_comments'],
         'orm.computers': ['aiida.backends.tests.orm.test_computers'],
         'orm.data.dict': ['aiida.backends.tests.orm.data.test_dict'],
+        'orm.data.kpoints': ['aiida.backends.tests.orm.data.test_kpoints'],
         'orm.data.remote': ['aiida.backends.tests.orm.data.test_remote'],
         'orm.data.singlefile': ['aiida.backends.tests.orm.data.test_singlefile'],
         'orm.data.upf': ['aiida.backends.tests.orm.data.test_upf'],
@@ -129,7 +130,6 @@ DB_TEST_LIST = {
         'orm.utils.loaders': ['aiida.backends.tests.orm.utils.test_loaders'],
         'orm.utils.repository': ['aiida.backends.tests.orm.utils.test_repository'],
         'parsers.parser': ['aiida.backends.tests.parsers.test_parser'],
-        'parsers': ['aiida.backends.tests.test_parsers'],
         'plugin_loader': ['aiida.backends.tests.test_plugin_loader'],
         'query': ['aiida.backends.tests.test_query'],
         'restapi': ['aiida.backends.tests.test_restapi'],
@@ -146,11 +146,6 @@ def get_db_test_names():
     for backend in DB_TEST_LIST:
         for name in DB_TEST_LIST[backend]:
             retlist.append(name)
-
-    # This is a temporary solution to be able to run tests in plugins. Once the plugin fixtures
-    # have been made working and are released, we can replace this logic with them
-    for entrypoint in [ep for ep in ENTRYPOINT_MANAGER.iter_entry_points(group='aiida.tests')]:
-        retlist.append(entrypoint.name)
 
     # Explode the list so that if I have a.b.c,
     # I can run it also just with 'a' or with 'a.b'
@@ -196,11 +191,6 @@ def get_db_test_list():
     for k, tests in be_tests.items():
         for test in tests:
             retdict[k].append(test)
-
-    # This is a temporary solution to be able to run tests in plugins. Once the plugin fixtures
-    # have been made working and are released, we can replace this logic with them
-    for entrypoint in [ep for ep in ENTRYPOINT_MANAGER.iter_entry_points(group='aiida.tests')]:
-        retdict[entrypoint.name].append(entrypoint.module_name)
 
     # Explode the dictionary so that if I have a.b.c,
     # I can run it also just with 'a' or with 'a.b'

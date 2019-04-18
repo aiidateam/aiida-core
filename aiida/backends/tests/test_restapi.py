@@ -73,10 +73,10 @@ class RESTApiTestCase(AiidaTestCase):
         calc.set_option('resources', resources)
         calc.set_attribute("attr1", "OK")
         calc.set_attribute("attr2", "OK")
-        calc.store()
 
         calc.add_incoming(structure, link_type=LinkType.INPUT_CALC, link_label='link_structure')
         calc.add_incoming(parameter1, link_type=LinkType.INPUT_CALC, link_label='link_parameter')
+        calc.store()
         kpoint.add_incoming(calc, link_type=LinkType.CREATE, link_label='create')
 
         calc1 = orm.CalcJobNode(computer=cls.computer)

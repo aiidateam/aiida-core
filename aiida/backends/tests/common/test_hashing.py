@@ -48,6 +48,33 @@ class PasswordFunctions(unittest.TestCase):
         self.assertFalse(is_password_usable('random string without hash identification'))
 
 
+class FloatToTextTests(unittest.TestCase):
+    """
+    Tests for converting float to text
+    """
+
+    def test_text_truncation(self):
+        """Test for truncated text representation """
+        self.assertEqual(float64_to_text(np.pi), '3.1415926535898')
+        self.assertEqual(float64_to_text(3.14159), '3.14159')
+        self.assertEqual(float64_to_text(3.14159e20), '3.14159e+20')
+
+    def test_nan_inf(self):
+        """Test if nan and inf are treated correctly"""
+        self.assertEqual(float64_to_text(np.nan), 'nan')
+        self.assertEqual(float64_to_text(np.inf), 'inf')
+        self.assertEqual(float64_to_text(-np.inf), '-inf')
+
+    def test_round_trip(self):
+        """Test round trip conversion"""
+        vals = [3.14159265358, 3.14159265358e31, 0.00012222342]
+        for val in vals:
+            self.assertEqual(float(float64_to_text(val)), val)
+            # This would not work
+        val = 1. / 3
+        self.assertNotEqual(float(float64_to_text(val)), val)
+
+
 class TruncationTest(unittest.TestCase):
     """
     Tests for the truncate_* methods

@@ -72,12 +72,12 @@ class TestVerdiSetup(AiidaPostgresTestCase):
         self.assertEqual(user.institution, user_institution)
 
     @with_temporary_config_instance
-    def test_user_setup_from_config_file(self):
-        """Test `verdi quicksetup` non-interactively."""
+    def test_quicksetup_from_config_file(self):
+        """Test `verdi quicksetup` from configuration file."""
         import tempfile
         import os
 
-        with tempfile.NamedTemporaryFile('w', delete=False) as handle:
+        with tempfile.NamedTemporaryFile('w') as handle:
             handle.write("""---
 profile: testing
 first_name: Leopold

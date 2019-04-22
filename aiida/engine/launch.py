@@ -12,9 +12,10 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+from aiida.common import InvalidOperation
 from aiida.manage import manager
 from .processes.process import Process
-from .utils import is_process_function, instantiate_process
+from .utils import is_process_function, is_process_scoped, instantiate_process
 
 __all__ = ('run', 'run_get_pk', 'run_get_node', 'submit')
 
@@ -67,11 +68,17 @@ def run_get_pk(process, *args, **inputs):
 def submit(process, **inputs):
     """Submit the process with the supplied inputs to the daemon immediately returning control to the interpreter.
 
+    .. warning: this should not be used within another process. Instead, there one should use the `submit` method of
+        the wrapping process itself, i.e. use `self.submit`.
+
     :param process: the process class to submit
     :param inputs: the inputs to be passed to the process
     :return: the calculation node of the process
     """
     assert not is_process_function(process), 'Cannot submit a process function'
+
+    if is_process_scoped():
+        raise InvalidOperation('Cannot use top-level `submit` from within another process, use `self.submit` instead')
 
     runner = manager.get_manager().get_runner()
     controller = manager.get_manager().get_process_controller()

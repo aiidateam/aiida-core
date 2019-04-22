@@ -194,8 +194,7 @@ def exponential_backoff_retry(fct, initial_interval=10.0, max_attempts=5, logger
 
 
 def is_process_function(function):
-    """
-    Return whether the given function is a process function
+    """Return whether the given function is a process function
 
     :param function: a function
     :returns: True if the function is a wrapped process function, False otherwise
@@ -204,6 +203,15 @@ def is_process_function(function):
         return function.is_process_function
     except AttributeError:
         return False
+
+
+def is_process_scoped():
+    """Return whether the current scope is within a process.
+
+    :returns: True if the current scope is within a nested process, False otherwise
+    """
+    from .processes.process import Process
+    return Process.current() is not None
 
 
 @contextlib.contextmanager

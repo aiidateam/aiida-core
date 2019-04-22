@@ -99,7 +99,6 @@
         aiida/backends/tests/test_nodes.py|
         aiida/backends/tests/orm/data/test_remote.py|
         aiida/backends/tests/orm/utils/test_loaders.py|
-        aiida/backends/tests/test_parsers.py|
         aiida/backends/tests/test_caching_config.py|
         aiida/backends/tests/test_plugin_loader.py|
         aiida/backends/tests/engine/test_class_loader.py|
@@ -126,7 +125,6 @@
         aiida/orm/implementation/sqlalchemy/utils.py|
         aiida/orm/importexport.py|
         aiida/orm/nodes/data/array/bands.py|
-        aiida/orm/nodes/data/array/kpoints.py|
         aiida/orm/nodes/data/array/projection.py|
         aiida/orm/nodes/data/array/xy.py|
         aiida/orm/nodes/data/code.py|

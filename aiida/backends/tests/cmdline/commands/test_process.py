@@ -267,11 +267,13 @@ class TestVerdiProcess(AiidaTestCase):
     def test_report(self):
         """Test the report command."""
         grandparent = WorkChainNode().store()
-        parent = WorkChainNode().store()
-        child = WorkChainNode().store()
+        parent = WorkChainNode()
+        child = WorkChainNode()
 
         parent.add_incoming(grandparent, link_type=LinkType.CALL_WORK, link_label='link')
+        parent.store()
         child.add_incoming(parent, link_type=LinkType.CALL_WORK, link_label='link')
+        child.store()
 
         grandparent.logger.log(LOG_LEVEL_REPORT, 'grandparent_message')
         parent.logger.log(LOG_LEVEL_REPORT, 'parent_message')

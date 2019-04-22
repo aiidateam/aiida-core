@@ -24,41 +24,42 @@ from .overridable import OverridableOption
 
 def yaml_config_file_provider(file_path, cmd_name):  # pylint: disable=unused-argument
     """Read yaml config file."""
-    try:
-        with open(file_path, 'r') as handle:
-            return yaml.load(handle)
-    except IOError:
-        return {}
+    with open(file_path, 'r') as handle:
+        return yaml.load(handle)
 
 
 class ConfigFileOption(OverridableOption):
     """
-    Wrapper around click_config_file.configuration_option that increases reusability
+    Wrapper around click_config_file.configuration_option that increases reusability.
 
     Example::
 
         CONFIG_FILE = ConfigFileOption('--config', help='A configuration file')
 
         @click.command()
-        @click.option('my_option')
-        @CONFIG_FILE(help='Configuration file for this cmd')
-        def ls_or_create(my_option):
-            click.echo(os.listdir(folder))
+        @click.option('computer_name')
+        @CONFIG_FILE(help='Configuration file for computer_setup')
+        def computer_setup(computer_name):
+            click.echo("Setting up computer {}".format(computername))
 
-        ls_or_create --config myconfig.yml
+        computer_setup --config config.yml
+
+    with config.yml::
+
+        ---
+        computer_name: computer1
 
     """
 
-    def __init__(self, *args, **kwargs):  # pylint: disable=super-init-not-called
+    def __init__(self, *args, **kwargs):
         """
         Store the default args and kwargs.
 
         :param args: default arguments to be used for the option
         :param kwargs: default keyword arguments to be used that can be overridden in the call
         """
-        self.args = args
-        self.kwargs = {'provider': yaml_config_file_provider}
-        self.kwargs.update(kwargs)
+        kwargs.update({'provider': yaml_config_file_provider, 'implicit': False})
+        super(ConfigFileOption, self).__init__(*args, **kwargs)
 
     def __call__(self, **kwargs):
         """

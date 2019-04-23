@@ -47,6 +47,7 @@ class BaseTranslator(object):
     _result_type = __label__
 
     _default = _default_projections = ["**"]
+    _default_user_projections = None
 
     _schema_projections = {"column_order": [], "additional_info": {}}
 
@@ -80,6 +81,7 @@ class BaseTranslator(object):
 
         self._default = Class._default  # pylint: disable=protected-access
         self._default_projections = Class._default_projections  # pylint: disable=protected-access
+        self._default_user_projections = Class._default_user_projections  # pylint: disable=protected-access
         self._schema_projections = Class._schema_projections  # pylint: disable=protected-access
         self._is_qb_initialized = Class._is_qb_initialized  # pylint: disable=protected-access
         self._is_id_query = Class._is_id_query  # pylint: disable=protected-access
@@ -92,7 +94,7 @@ class BaseTranslator(object):
         # basic query_help object
         self._query_help = {
             "path": [{
-                "entity_type": self._qb_type,
+                "cls": self._aiida_class,
                 "tag": self.__label__
             }],
             "filters": {},
@@ -281,6 +283,11 @@ class BaseTranslator(object):
             if projections:
                 for project_key, project_list in projections.items():
                     self._query_help["project"][project_key] = project_list
+                if self._default_user_projections:
+                    from aiida.orm import User
+                    self._query_help["path"].insert(0, {"cls": User, "tag": "user"})
+                    self._query_help["path"][1]["with_user"] = "user"
+                    self._query_help["project"]["user"] = self._default_user_projections
         else:
             raise InputValidationError("Pass data in dictionary format where "
                                        "keys are the tag names given in the "
@@ -462,7 +469,11 @@ class BaseTranslator(object):
 
         results = []
         if self._total_count > 0:
-            results = [res[label] for res in self.qbobj.dict()]
+            for res in self.qbobj.dict():
+                tmp = res[label]
+                if self._default_user_projections:
+                    tmp["user_email"] = res["user"]["email"]
+                results.append(tmp)
 
         # TODO think how to make it less hardcoded
         if self._result_type == 'with_outgoing':

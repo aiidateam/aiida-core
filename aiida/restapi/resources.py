@@ -319,7 +319,7 @@ class Node(Resource):
                             results[query_type]["filename"])
                         return response
 
-                    results = results[query_type]["data"]
+                    results = results[query_type]
 
                 headers = self.utils.build_headers(url=request.url, total_count=total_count)
 

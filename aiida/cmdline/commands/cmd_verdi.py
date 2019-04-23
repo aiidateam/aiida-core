@@ -19,10 +19,9 @@ from aiida.common.extendeddicts import AttributeDict
 from aiida.common import exceptions
 
 
-@click.group(invoke_without_command=True)
+@click.group(invoke_without_command=True, context_settings={'help_option_names': ['-h', '--help']})
 @options.PROFILE()
 @click.option('--version', is_flag=True, is_eager=True, help='Print the version of AiiDA that is currently installed.')
-@click.help_option('-h', '--help')  # Note: needed only for the top level command
 @click.pass_context
 def verdi(ctx, profile, version):
     """The command line interface of AiiDA."""
@@ -51,5 +50,3 @@ def verdi(ctx, profile, version):
 
     ctx.obj.config = config
     ctx.obj.profile = profile
-
-    ctx.help_option_names = ['-h', '--help']

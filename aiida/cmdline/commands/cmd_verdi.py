@@ -22,6 +22,7 @@ from aiida.common import exceptions
 @click.group(invoke_without_command=True)
 @options.PROFILE()
 @click.option('--version', is_flag=True, is_eager=True, help='Print the version of AiiDA that is currently installed.')
+@click.help_option('-h', '--help')  # Note: needed only for the top level command
 @click.pass_context
 def verdi(ctx, profile, version):
     """The command line interface of AiiDA."""
